@@ -1,0 +1,5 @@
+artifacts/**/*.pt filter=lfs diff=lfs merge=lfs -text
+artifacts/**/*.pkl filter=lfs diff=lfs merge=lfs -text
+artifacts/**/*.json filter=lfs diff=lfs merge=lfs -text
+artifacts/**/*.log filter=lfs diff=lfs merge=lfs -text
+benchmarks/**/*.json filter=lfs diff=lfs merge=lfs -text
