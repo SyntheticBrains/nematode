@@ -1,0 +1,11 @@
+
+[project]
+name = "quantum-nematode"
+version = "0.1.0"
+description = "Quantum brain simulation of a nematode"
+dependencies = [
+    "qiskit",
+    "matplotlib",
+    "ipykernel>=6.29.5",
+    "qiskit-aer>=0.17.0",
+]
