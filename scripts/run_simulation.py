@@ -1,17 +1,42 @@
-import sys
-
-sys.path.append("..")
+import argparse
 
 from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.logging_config import logger
 
 
 def main():
-    agent = QuantumNematodeAgent()
-    path = agent.run_episode(max_steps=10)
+    parser = argparse.ArgumentParser(description="Run the Quantum Nematode simulation.")
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=100,
+        help="Maximum number of steps for the simulation (default: 100)",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "NONE"],
+        help="Set the logging level (default: INFO). Use 'NONE' to disable logging.",
+    )
 
-    print("Final path:")
-    print(path)
+    args = parser.parse_args()
+
+    # Configure logging level
+    if args.log_level == "NONE":
+        logger.disabled = True
+    else:
+        logger.setLevel(args.log_level)
+
+    agent = QuantumNematodeAgent()
+    path = agent.run_episode(max_steps=args.max_steps)
+
+    if logger.disabled:
+        print("Final path:")
+        print(path)
+    else:
+        logger.info("Simulation completed.")
+        logger.info(f"Path taken by the agent: {path}")
 
 
 if __name__ == "__main__":
