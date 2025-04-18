@@ -1,14 +1,11 @@
 from quantumnematode.logging_config import logger
 
-GRID_SIZE = 5
-START_POS = (1, 1)
-FOOD_POS = (GRID_SIZE - 1, GRID_SIZE - 1)
-
 
 class MazeEnvironment:
-    def __init__(self):
-        self.agent_pos = list(START_POS)
-        self.goal = FOOD_POS
+    def __init__(self, grid_size=5, start_pos=(1, 1), food_pos=None):
+        self.grid_size = grid_size
+        self.agent_pos = list(start_pos)
+        self.goal = (grid_size - 1, grid_size - 1) if food_pos is None else food_pos
 
     def get_state(self):
         dx = self.goal[0] - self.agent_pos[0]
@@ -22,11 +19,11 @@ class MazeEnvironment:
     def move_agent(self, action):
         logger.debug(f"Action received: {action}, Current position: {self.agent_pos}")
 
-        if action == "up" and self.agent_pos[1] < GRID_SIZE - 1:
+        if action == "up" and self.agent_pos[1] < self.grid_size - 1:
             self.agent_pos[1] += 1
         elif action == "down" and self.agent_pos[1] > 0:
             self.agent_pos[1] -= 1
-        elif action == "right" and self.agent_pos[0] < GRID_SIZE - 1:
+        elif action == "right" and self.agent_pos[0] < self.grid_size - 1:
             self.agent_pos[0] += 1
         elif action == "left" and self.agent_pos[0] > 0:
             self.agent_pos[0] -= 1
@@ -39,7 +36,7 @@ class MazeEnvironment:
         return tuple(self.agent_pos) == self.goal
 
     def render(self) -> list[str]:
-        grid = [["." for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+        grid = [["." for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         grid[self.goal[1]][self.goal[0]] = "G"  # Mark the goal
         grid[self.agent_pos[1]][self.agent_pos[0]] = "A"  # Mark the agent
 

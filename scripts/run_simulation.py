@@ -24,6 +24,12 @@ def main():
         help="Set the logging level (default: INFO). Use 'NONE' to disable logging.",
     )
     parser.add_argument(
+        "--maze-grid-size",
+        type=int,
+        default=5,
+        help="Size of the maze grid (default: 5)",
+    )
+    parser.add_argument(
         "--show-last-frame-only",
         action="store_true",
         help="Only display the last frame in the CLI output.",
@@ -37,7 +43,7 @@ def main():
     else:
         logger.setLevel(args.log_level)
 
-    agent = QuantumNematodeAgent()
+    agent = QuantumNematodeAgent(maze_grid_size=args.maze_grid_size)
     path = agent.run_episode(
         max_steps=args.max_steps, show_last_frame_only=args.show_last_frame_only
     )
