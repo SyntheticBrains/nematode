@@ -20,7 +20,7 @@ def build_brain():
     return qc, theta_x, theta_y, theta_z, theta_entangle
 
 
-def run_brain(dx, dy, grid_size=3):
+def run_brain(dx, dy, grid_size):
     qc, θx, θy, θz, θentangle = build_brain()
     input_x = dx / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
     input_y = dy / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
