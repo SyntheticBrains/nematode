@@ -1,7 +1,11 @@
 import argparse
+import logging
 
 from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.logging_config import logger
+
+# Suppress logs from external libraries like Qiskit
+logging.getLogger("qiskit").setLevel(logging.WARNING)
 
 
 def main():
