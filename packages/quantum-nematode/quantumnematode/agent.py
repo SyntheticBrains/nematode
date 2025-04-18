@@ -11,6 +11,7 @@ class QuantumNematodeAgent:
         self.env = MazeEnvironment(grid_size=maze_grid_size)
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
+        self.body_length = min(maze_grid_size - 1, 6)  # Set the maximum body length
 
     def run_episode(self, max_steps=100, show_last_frame_only=False):
         while not self.env.reached_goal() and self.steps < max_steps:
@@ -18,15 +19,18 @@ class QuantumNematodeAgent:
             counts = run_brain(dx, dy, self.env.grid_size)
             action = interpret_counts(counts, self.env.agent_pos, self.env.grid_size)
             self.env.move_agent(action)
+
+            # Update the body length dynamically
+            if len(self.env.body) < self.body_length:
+                self.env.body.append(self.env.body[-1])
+
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
 
-            # Render the maze after each step
             logger.info(f"Step {self.steps}: Action={action}")
 
-            # Render the last frame if the toggle is enabled
             if show_last_frame_only:
-                os.system("clear")  # Clear the CLI for a movie-like effect
+                os.system("clear")
 
             grid = self.env.render()
             for frame in grid:
