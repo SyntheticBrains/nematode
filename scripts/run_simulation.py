@@ -23,6 +23,11 @@ def main():
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "NONE"],
         help="Set the logging level (default: INFO). Use 'NONE' to disable logging.",
     )
+    parser.add_argument(
+        "--show-last-frame-only",
+        action="store_true",
+        help="Only display the last frame in the CLI output.",
+    )
 
     args = parser.parse_args()
 
@@ -33,7 +38,9 @@ def main():
         logger.setLevel(args.log_level)
 
     agent = QuantumNematodeAgent()
-    path = agent.run_episode(max_steps=args.max_steps)
+    path = agent.run_episode(
+        max_steps=args.max_steps, show_last_frame_only=args.show_last_frame_only
+    )
 
     if logger.disabled:
         print("Final path:")
