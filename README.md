@@ -55,9 +55,13 @@ uv sync
 jupyter notebook notebooks/simulate.ipynb
 ```
 
-### CLI (Python script version coming soon)
+### CLI (Python script version)
 
-> TBD: You can convert the `QuantumNematodeAgent` logic to a CLI runner script for headless simulation.
+```bash
+uv run ./scripts/run_simulation.py
+```
+
+> This script runs the simulation headlessly and logs the output.
 
 ---
 
