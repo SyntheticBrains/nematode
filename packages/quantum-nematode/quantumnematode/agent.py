@@ -22,6 +22,8 @@ class QuantumNematodeAgent:
 
             # Render the maze after each step
             logger.info(f"Step {self.steps}: Action={action}")
-            self.env.render()
+            grid = self.env.render()
+            for frame in grid:
+                print(frame)
 
         return self.path
