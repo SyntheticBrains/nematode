@@ -1,5 +1,8 @@
+import logging
+
 from .env import GRID_SIZE, MazeEnvironment
 from .brain import run_brain, interpret_counts
+from quantum_nematode.logging_config import logger
 
 
 class QuantumNematodeAgent:
@@ -18,7 +21,7 @@ class QuantumNematodeAgent:
             self.steps += 1
 
             # Render the maze after each step
-            print(f"Step {self.steps}: Action={action}")
+            logger.info(f"Step {self.steps}: Action={action}")
             self.env.render()
 
         return self.path
