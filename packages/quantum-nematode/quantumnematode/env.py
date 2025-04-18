@@ -1,4 +1,4 @@
-from quantum_nematode.logging_config import logger
+from quantumnematode.logging_config import logger
 
 GRID_SIZE = 5
 START_POS = (1, 1)
