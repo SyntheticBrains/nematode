@@ -2,6 +2,7 @@ import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import Aer
 from qiskit.circuit import Parameter
+from quantum_nematode.logging_config import logger
 
 
 def build_brain():
@@ -26,8 +27,7 @@ def run_brain(dx, dy, grid_size=5):
     input_z = np.random.uniform(0, 2 * np.pi)  # Random value for theta_z
     input_entangle = np.random.uniform(0, 2 * np.pi)  # Random value for entanglement
 
-    # Debug: Print parameter values
-    print(
+    logger.debug(
         f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, input_z={input_z}, input_entangle={input_entangle}"
     )
 
@@ -41,8 +41,7 @@ def run_brain(dx, dy, grid_size=5):
     result = simulator.run(transpiled, shots=1024).result()
     counts = result.get_counts()
 
-    # Debug: Print the counts
-    print(f"Counts: {counts}")
+    logger.debug(f"Counts: {counts}")
 
     return counts
 
@@ -53,8 +52,7 @@ def interpret_counts(counts, agent_pos, grid_size):
     # Sort counts by frequency
     sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
-    # Debug: Print sorted counts
-    print(f"Sorted counts: {sorted_counts}")
+    logger.debug(f"Sorted counts: {sorted_counts}")
 
     # Select the most common result or randomly choose among ties
     # TODO: Avoid randomly choosing among ties
@@ -79,7 +77,6 @@ def interpret_counts(counts, agent_pos, grid_size):
 
     # If the selected action is invalid, choose a random valid action
     if action not in valid_actions:
-        print(f"Invalid action: {action}, selecting a random valid action.")
-        action = np.random.choice(valid_actions)
+        logger.warning(f"Invalid action: {action}, selecting a random valid action.")
 
     return action
