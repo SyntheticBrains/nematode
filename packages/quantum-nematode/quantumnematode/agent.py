@@ -2,7 +2,7 @@ import logging
 
 from .env import GRID_SIZE, MazeEnvironment
 from .brain import run_brain, interpret_counts
-from quantum_nematode.logging_config import logger
+from quantumnematode.logging_config import logger
 
 
 class QuantumNematodeAgent:

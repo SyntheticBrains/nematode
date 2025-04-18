@@ -2,7 +2,7 @@ import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qiskit_aer import Aer
 from qiskit.circuit import Parameter
-from quantum_nematode.logging_config import logger
+from quantumnematode.logging_config import logger
 
 
 def build_brain():

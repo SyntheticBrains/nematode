@@ -1,6 +1,12 @@
 version = 1
 requires-python = ">=3.13"
 
+[manifest]
+members = [
+    "quantum-nematode",
+    "quantum-nematode-workspace",
+]
+
 [[package]]
 name = "appnope"
 version = "0.1.4"
@@ -638,7 +644,7 @@ wheels = [
 [[package]]
 name = "quantum-nematode"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "packages/quantum-nematode" }
 dependencies = [
     { name = "ipykernel" },
     { name = "matplotlib" },
@@ -649,10 +655,25 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "matplotlib" },
-    { name = "qiskit" },
+    { name = "matplotlib", specifier = ">=3.10.1" },
+    { name = "qiskit", specifier = ">=2.0.0" },
     { name = "qiskit-aer", specifier = ">=0.17.0" },
 ]
+
+[[package]]
+name = "quantum-nematode-workspace"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "quantum-nematode" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "quantum-nematode", editable = "packages/quantum-nematode" }]
 
 [[package]]
 name = "rustworkx"
