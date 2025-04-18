@@ -20,19 +20,30 @@ class MazeEnvironment:
     def move_agent(self, action):
         logger.debug(f"Action received: {action}, Current position: {self.agent_pos}")
 
+        # Calculate the new position based on the action
+        new_pos = list(self.agent_pos)
+        if action == "up" and self.agent_pos[1] < self.grid_size - 1:
+            new_pos[1] += 1
+        elif action == "down" and self.agent_pos[1] > 0:
+            new_pos[1] -= 1
+        elif action == "right" and self.agent_pos[0] < self.grid_size - 1:
+            new_pos[0] += 1
+        elif action == "left" and self.agent_pos[0] > 0:
+            new_pos[0] -= 1
+        else:
+            logger.warning(f"Invalid action: {action}, staying in place.")
+            return
+
+        # Check for collision with the body
+        if tuple(new_pos) in self.body:
+            logger.warning(f"Collision detected at {new_pos}, staying in place.")
+            return
+
         # Update the body positions
         self.body = [tuple(self.agent_pos)] + self.body[:-1]
 
-        if action == "up" and self.agent_pos[1] < self.grid_size - 1:
-            self.agent_pos[1] += 1
-        elif action == "down" and self.agent_pos[1] > 0:
-            self.agent_pos[1] -= 1
-        elif action == "right" and self.agent_pos[0] < self.grid_size - 1:
-            self.agent_pos[0] += 1
-        elif action == "left" and self.agent_pos[0] > 0:
-            self.agent_pos[0] -= 1
-        else:
-            logger.warning(f"Invalid action: {action}, staying in place.")
+        # Update the agent's position
+        self.agent_pos = new_pos
 
         logger.debug(f"New position: {self.agent_pos}")
 
