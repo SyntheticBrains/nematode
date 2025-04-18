@@ -38,13 +38,9 @@ class MazeEnvironment:
     def reached_goal(self):
         return tuple(self.agent_pos) == self.goal
 
-    def render(self):
+    def render(self) -> list[str]:
         grid = [["." for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
         grid[self.goal[1]][self.goal[0]] = "G"  # Mark the goal
         grid[self.agent_pos[1]][self.agent_pos[0]] = "A"  # Mark the agent
 
-        # Log the grid
-        logger.info(
-            "\n".join(" ".join(row) for row in reversed(grid))
-        )  # Reverse for correct y-axis
-        logger.info("")  # Add a blank line for spacing
+        return [" ".join(row) for row in reversed(grid)] + [""]
