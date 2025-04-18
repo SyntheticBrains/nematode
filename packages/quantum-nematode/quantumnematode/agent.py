@@ -1,14 +1,14 @@
 import logging
 import os
 
-from .env import GRID_SIZE, MazeEnvironment
+from .env import MazeEnvironment
 from .brain import run_brain, interpret_counts
 from quantumnematode.logging_config import logger
 
 
 class QuantumNematodeAgent:
-    def __init__(self):
-        self.env = MazeEnvironment()
+    def __init__(self, maze_grid_size=5):
+        self.env = MazeEnvironment(grid_size=maze_grid_size)
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
 
@@ -16,7 +16,7 @@ class QuantumNematodeAgent:
         while not self.env.reached_goal() and self.steps < max_steps:
             dx, dy = self.env.get_state()
             counts = run_brain(dx, dy)
-            action = interpret_counts(counts, self.env.agent_pos, GRID_SIZE)
+            action = interpret_counts(counts, self.env.agent_pos, self.env.grid_size)
             self.env.move_agent(action)
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
