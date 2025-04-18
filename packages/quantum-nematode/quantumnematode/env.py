@@ -8,8 +8,8 @@ class MazeEnvironment:
         self.goal = (grid_size - 1, grid_size - 1) if food_pos is None else food_pos
 
     def get_state(self):
-        dx = self.goal[0] - self.agent_pos[0]
-        dy = self.goal[1] - self.agent_pos[1]
+        dx = self.goal[0] - self.agent_pos[0] + 1
+        dy = self.goal[1] - self.agent_pos[1] + 1
 
         logger.debug(
             f"Agent position: {self.agent_pos}, Goal: {self.goal}, dx={dx}, dy={dy}"

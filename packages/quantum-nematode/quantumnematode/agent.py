@@ -15,7 +15,7 @@ class QuantumNematodeAgent:
     def run_episode(self, max_steps=100, show_last_frame_only=False):
         while not self.env.reached_goal() and self.steps < max_steps:
             dx, dy = self.env.get_state()
-            counts = run_brain(dx, dy)
+            counts = run_brain(dx, dy, self.env.grid_size)
             action = interpret_counts(counts, self.env.agent_pos, self.env.grid_size)
             self.env.move_agent(action)
             self.path.append(tuple(self.env.agent_pos))
