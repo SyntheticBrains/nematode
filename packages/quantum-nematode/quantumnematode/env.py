@@ -1,14 +1,55 @@
+"""
+Maze environment for the Quantum Nematode agent.
+
+This environment simulates a simple maze where the agent navigates to reach a goal position.
+The agent can move in four directions: up, down, left, or right.
+The agent must avoid colliding with itself.
+The environment provides methods to get the current state, move the agent,
+    check if the goal is reached, and render the maze.
+"""
+
 from quantumnematode.logging_config import logger
 
 
 class MazeEnvironment:
-    def __init__(self, grid_size=5, start_pos=(1, 1), food_pos=None):
+    """
+    A simple maze environment for the Quantum Nematode agent.
+
+    The agent navigates a grid to reach a goal position while avoiding its own body.
+    The agent can move in four directions: up, down, left, or right.
+
+    Attributes
+    ----------
+    grid_size : int
+        Size of the maze grid.
+    agent_pos : list[int]
+        Current position of the agent in the grid.
+    body : list[tuple[int, int]]
+        Positions of the agent's body segments.
+    goal : tuple[int, int]
+        Position of the goal in the grid.
+    """
+
+    def __init__(
+        self,
+        grid_size: int = 5,
+        start_pos: tuple[int, int] = (1, 1),
+        food_pos: tuple[int, int] | None = None,
+    ) -> None:
         self.grid_size = grid_size
         self.agent_pos = list(start_pos)
         self.body = [tuple(start_pos)]  # Initialize the body with the head position
         self.goal = (grid_size - 1, grid_size - 1) if food_pos is None else food_pos
 
-    def get_state(self):
+    def get_state(self) -> tuple[int, int]:
+        """
+        Get the current state of the agent in relation to the goal.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the x and y distances to the goal.
+        """
         dx = self.goal[0] - self.agent_pos[0] + 1
         dy = self.goal[1] - self.agent_pos[1] + 1
 
@@ -17,7 +58,15 @@ class MazeEnvironment:
         )
         return dx, dy
 
-    def move_agent(self, action):
+    def move_agent(self, action: str) -> None:
+        """
+        Move the agent in the specified direction.
+
+        Parameters
+        ----------
+        action : str
+            The action to take. Can be "up", "down", "left", or "right".
+        """
         logger.debug(f"Action received: {action}, Current position: {self.agent_pos}")
 
         # Calculate the new position based on the action
@@ -47,10 +96,26 @@ class MazeEnvironment:
 
         logger.debug(f"New position: {self.agent_pos}")
 
-    def reached_goal(self):
+    def reached_goal(self) -> bool:
+        """
+        Check if the agent has reached the goal.
+
+        Returns
+        -------
+        bool
+            True if the agent's position matches the goal position, False otherwise.
+        """
         return tuple(self.agent_pos) == self.goal
 
     def render(self) -> list[str]:
+        """
+        Render the current state of the maze.
+
+        Returns
+        -------
+        list[str]
+            A string representation of the maze grid.
+        """
         grid = [["." for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         grid[self.goal[1]][self.goal[0]] = "*"  # Mark the goal
 

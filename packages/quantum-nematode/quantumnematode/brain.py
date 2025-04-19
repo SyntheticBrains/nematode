@@ -1,3 +1,5 @@
+"""The quantum nematode brain module that simulates a quantum brain using Qiskit."""
+
 import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
@@ -18,7 +20,22 @@ def update_parameters(
     gradients: list[float],
     learning_rate: float = 0.1,
 ) -> None:
-    """Update quantum circuit parameter values based on gradients."""
+    """
+    Update quantum circuit parameter values based on gradients.
+
+    Parameters
+    ----------
+    parameters : list[Parameter]
+        List of quantum circuit parameters to update.
+    gradients : list[float]
+        Gradients for each parameter.
+    learning_rate : float, optional
+        Learning rate for parameter updates, by default 0.1.
+
+    Returns
+    -------
+    None
+    """
     for param, grad in zip(parameters, gradients, strict=False):
         param_name = param.name
         if param_name in parameter_values:
@@ -28,7 +45,21 @@ def update_parameters(
 
 
 def compute_gradients(counts: dict[str, int], reward: float) -> list[float]:
-    """Compute gradients based on counts and reward."""
+    """
+    Compute gradients based on counts and reward.
+
+    Parameters
+    ----------
+    counts : dict[str, int]
+        Measurement counts from the quantum circuit.
+    reward : float
+        Reward signal to guide gradient computation.
+
+    Returns
+    -------
+    list[float]
+        Gradients for each parameter.
+    """
     # Normalize counts to probabilities
     total_shots = sum(counts.values())
     probabilities = {key: value / total_shots for key, value in counts.items()}
@@ -44,6 +75,14 @@ def compute_gradients(counts: dict[str, int], reward: float) -> list[float]:
 
 
 def build_brain() -> tuple[QuantumCircuit, Parameter, Parameter, Parameter, Parameter]:
+    """
+    Build the quantum circuit for the nematode's brain.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the quantum circuit and its parameters.
+    """
     theta_x = Parameter("θx")
     theta_y = Parameter("θy")
     theta_z = Parameter("θz")
@@ -64,16 +103,41 @@ def run_brain(
     grid_size: int,
     reward: float | None = None,
 ) -> dict[str, int]:
+    """
+    Run the quantum brain simulation.
+
+    Parameters
+    ----------
+    dx : int
+        Distance to the goal along the x-axis.
+    dy : int
+        Distance to the goal along the y-axis.
+    grid_size : int
+        Size of the grid environment.
+    reward : float, optional
+        Reward signal for learning, by default None.
+
+    Returns
+    -------
+    dict[str, int]
+        Measurement counts from the quantum circuit.
+    """
     qc, theta_x, theta_y, theta_z, theta_entangle = build_brain()
 
     # Use stored parameter values
-    input_x = parameter_values["θx"] + dx / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
-    input_y = parameter_values["θy"] + dy / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
-    input_z = parameter_values["θz"] + np.random.uniform(0, 2 * np.pi)
-    input_entangle = parameter_values["θentangle"] + np.random.uniform(0, 2 * np.pi)
+    rng = np.random.default_rng()
+    input_x = (
+        parameter_values["θx"] + dx / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
+    )
+    input_y = (
+        parameter_values["θy"] + dy / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
+    )
+    input_z = parameter_values["θz"] + rng.uniform(0, 2 * np.pi)
+    input_entangle = parameter_values["θentangle"] + rng.uniform(0, 2 * np.pi)
 
     logger.debug(
-        f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, input_z={input_z}, input_entangle={input_entangle}",
+        f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, "
+        f"input_z={input_z}, input_entangle={input_entangle}",
     )
 
     bound_qc = qc.assign_parameters(
@@ -106,6 +170,23 @@ def interpret_counts(
     agent_pos: list[int],
     grid_size: int,
 ) -> str:
+    """
+    Interpret the quantum circuit's output counts into an action.
+
+    Parameters
+    ----------
+    counts : dict[str, int]
+        Measurement counts from the quantum circuit.
+    agent_pos : list[int]
+        Current position of the agent.
+    grid_size : int
+        Size of the grid environment.
+
+    Returns
+    -------
+    str
+        Action to be taken by the agent.
+    """
     # Sort counts by frequency
     sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
@@ -123,10 +204,11 @@ def interpret_counts(
         valid_action_map["10"] = "left"
 
     # Select the most common result or randomly choose among ties
-    top_results = [result for result, count in sorted_counts if count == sorted_counts[0][1]]
-    most_common = np.random.choice(top_results)
+    top_results = [
+        result for result, count in sorted_counts if count == sorted_counts[0][1]
+    ]
+    rng = np.random.default_rng()
+    most_common = rng.choice(top_results)
 
     # Map the result to an action
-    action = valid_action_map.get(most_common)
-
-    return action
+    return valid_action_map.get(most_common)

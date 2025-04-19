@@ -1,3 +1,5 @@
+"""Run the Quantum Nematode simulation."""
+
 import argparse
 import logging
 
@@ -8,7 +10,8 @@ from quantumnematode.logging_config import logger
 logging.getLogger("qiskit").setLevel(logging.WARNING)
 
 
-def main():
+def main() -> None:
+    """Run the Quantum Nematode simulation."""
     parser = argparse.ArgumentParser(description="Run the Quantum Nematode simulation.")
     parser.add_argument(
         "--max-steps",
@@ -50,8 +53,8 @@ def main():
     )
 
     if logger.disabled:
-        print("Final path:")
-        print(path)
+        print("Final path:")  # noqa: T201
+        print(path)  # noqa: T201
     else:
         logger.info("Simulation completed.")
         logger.info(f"Path taken by the agent: {path}")

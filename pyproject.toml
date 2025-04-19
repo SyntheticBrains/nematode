@@ -20,3 +20,13 @@ package = false
 dev-dependencies = [
     "quantum-nematode",
 ]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ['ALL']
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy" # https://numpydoc.readthedocs.io/en/latest/format.html#sections
