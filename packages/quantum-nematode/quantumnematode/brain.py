@@ -5,6 +5,43 @@ from qiskit.circuit import Parameter
 from quantumnematode.logging_config import logger
 
 
+parameter_values = {
+    "θx": 0.0,
+    "θy": 0.0,
+    "θz": 0.0,
+    "θentangle": 0.0,
+}
+
+
+def update_parameters(parameters, gradients, learning_rate=0.1):
+    """Update quantum circuit parameter values based on gradients."""
+    for param, grad in zip(parameters, gradients):
+        param_name = param.name
+        if param_name in parameter_values:
+            parameter_values[param_name] -= learning_rate * grad
+
+    logger.debug(
+        f"Updated parameters: {parameter_values}"
+    )
+
+
+
+def compute_gradients(counts, reward):
+    """Compute gradients based on counts and reward."""
+    # Normalize counts to probabilities
+    total_shots = sum(counts.values())
+    probabilities = {key: value / total_shots for key, value in counts.items()}
+
+    # Define a simple gradient computation based on reward and probabilities
+    gradients = []
+    for key in ["00", "01", "10", "11"]:
+        probability = probabilities.get(key, 0)
+        gradient = reward * (1 - probability)  # Encourage actions with higher rewards
+        gradients.append(gradient)
+
+    return gradients
+
+
 def build_brain():
     theta_x = Parameter("θx")
     theta_y = Parameter("θy")
@@ -20,19 +57,36 @@ def build_brain():
     return qc, theta_x, theta_y, theta_z, theta_entangle
 
 
-def run_brain(dx, dy, grid_size):
-    qc, θx, θy, θz, θentangle = build_brain()
-    input_x = dx / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
-    input_y = dy / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
-    input_z = np.random.uniform(0, 2 * np.pi)  # Random value for theta_z
-    input_entangle = np.random.uniform(0, 2 * np.pi)  # Random value for entanglement
+def run_brain(dx, dy, grid_size, reward=None):
+    qc, theta_x, theta_y, theta_z, theta_entangle = build_brain()
+
+    # Use stored parameter values
+    input_x = (
+        parameter_values["θx"]
+        + dx / (grid_size - 1) * np.pi
+        + np.random.uniform(-0.1, 0.1)
+    )
+    input_y = (
+        parameter_values["θy"]
+        + dy / (grid_size - 1) * np.pi
+        + np.random.uniform(-0.1, 0.1)
+    )
+    input_z = parameter_values["θz"] + np.random.uniform(0, 2 * np.pi)
+    input_entangle = parameter_values["θentangle"] + np.random.uniform(
+        0, 2 * np.pi
+    )
 
     logger.debug(
         f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, input_z={input_z}, input_entangle={input_entangle}"
     )
 
     bound_qc = qc.assign_parameters(
-        {θx: input_x, θy: input_y, θz: input_z, θentangle: input_entangle},
+        {
+            theta_x: input_x,
+            theta_y: input_y,
+            theta_z: input_z,
+            theta_entangle: input_entangle,
+        },
         inplace=False,
     )
 
@@ -42,6 +96,13 @@ def run_brain(dx, dy, grid_size):
     counts = result.get_counts()
 
     logger.debug(f"Counts: {counts}")
+
+    # If reward is provided, update parameters
+    if reward is not None:
+        gradients = compute_gradients(
+            counts, reward
+        )
+        update_parameters([theta_x, theta_y, theta_z, theta_entangle], gradients)
 
     return counts
 
