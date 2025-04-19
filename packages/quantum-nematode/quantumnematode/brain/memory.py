@@ -72,6 +72,25 @@ class MemoryBrain(Brain):
         # Apply a global phase shift to amplify successful paths
         self.circuit.p(np.pi / 4, self.memory_register)
 
+        # Quantum Amplitude Amplification for Action Selection
+        # Define an oracle to mark the desired action states
+        for i in range(len(self.action_register)):
+            self.circuit.z(self.action_register[i])  # Example: Mark all action states
+
+        # Apply a diffusion operator to amplify marked states
+        self.circuit.h(self.action_register)
+        for i in range(len(self.action_register)):
+            self.circuit.x(self.action_register[i])
+        self.circuit.h(self.action_register[-1])
+        self.circuit.mcx(
+            list(range(len(self.action_register) - 1)),
+            self.action_register[-1],
+        )
+        self.circuit.h(self.action_register[-1])
+        for i in range(len(self.action_register)):
+            self.circuit.x(self.action_register[i])
+        self.circuit.h(self.action_register)
+
         # Measure action qubits
         self.circuit.measure(self.action_register, self.classical_register)
 
