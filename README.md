@@ -61,6 +61,28 @@ quantum_nematode/
 
 ---
 
+## 🧠 Quantum Brain Architectures
+
+This project now supports multiple quantum brain architectures:
+
+- **SimpleBrain**: A lightweight quantum brain using parameterized circuits for basic decision-making.
+- **ComplexBrain**: A detailed quantum brain simulating 302 neurons, designed for real QPU testing.
+- **ReducedBrain**: A scaled-down version of the complex brain using 30 qubits, optimized for simulators.
+
+### How to Choose a Brain Architecture
+
+You can select the brain architecture when running the simulation using the `--brain` argument:
+
+```bash
+python scripts/run_simulation.py --brain simple
+python scripts/run_simulation.py --brain complex
+python scripts/run_simulation.py --brain reduced
+```
+
+The default architecture is `simple`. Use `complex` for real QPU testing and `reduced` for simulator-friendly experiments.
+
+---
+
 ## 🚀 Getting Started
 
 ### 1. Install [uv](https://github.com/astral-sh/uv)
