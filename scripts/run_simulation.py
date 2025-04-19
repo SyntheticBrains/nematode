@@ -51,7 +51,7 @@ def main() -> None:
     parser.add_argument(
         "--brain",
         type=str,
-        choices=["simple", "complex"],
+        choices=["simple", "complex", "reduced"],
         default="simple",
         help="Choose the quantum brain architecture to use (default: simple)",
     )
@@ -77,6 +77,12 @@ def main() -> None:
         )
 
         brain = ComplexBrain()
+    elif args.brain == "reduced":
+        from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
+            ReducedBrain,
+        )
+
+        brain = ReducedBrain()
     else:
         error_message = f"Unknown brain architecture: {args.brain}"
         raise ValueError(error_message)
