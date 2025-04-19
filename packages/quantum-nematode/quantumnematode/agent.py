@@ -1,5 +1,6 @@
 """The quantum nematode agent that navigates a grid environment using a quantum brain."""
 
+import logging
 import os
 
 from .brain._brain import Brain
@@ -39,6 +40,9 @@ class QuantumNematodeAgent:
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         self.body_length = min(maze_grid_size - 1, 6)  # Set the maximum body length
+        self.success_count = 0
+        self.total_steps = 0
+        self.total_rewards = 0
 
     def run_episode(
         self,
@@ -90,13 +94,25 @@ class QuantumNematodeAgent:
 
             logger.info(f"Step {self.steps}: Action={action}, Reward={reward}")
 
+            if action == "unknown":
+                logger.warning("Invalid action received: staying in place.")
+
+            if self.env.reached_goal():
+                self.success_count += 1
+
+            self.total_steps += 1
+            self.total_rewards += reward
+
             if show_last_frame_only:
                 os.system("clear")  # noqa: S605, S607
 
             grid = self.env.render()
             for frame in grid:
                 print(frame)  # noqa: T201
-                logger.debug(frame)
+
+            if logger.level == logging.DEBUG:
+                for frame in grid:
+                    logger.debug(frame)
 
         return self.path
 
@@ -127,3 +143,19 @@ class QuantumNematodeAgent:
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         logger.info("Environment reset. Retaining learned data.")
+
+    def calculate_metrics(self) -> dict:
+        """
+        Calculate and return performance metrics.
+
+        Returns
+        -------
+        dict
+            A dictionary containing success rate, average steps, and average reward.
+        """
+        total_runs = max(self.success_count, 1)  # Avoid division by zero
+        return {
+            "success_rate": self.success_count / total_runs,
+            "average_steps": self.total_steps / total_runs,
+            "average_reward": self.total_rewards / total_runs,
+        }
