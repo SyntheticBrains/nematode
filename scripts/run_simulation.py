@@ -116,6 +116,13 @@ def main() -> None:
         if run < args.runs - 1:
             agent.reset_environment()
 
+    # Calculate and log performance metrics
+    metrics = agent.calculate_metrics()
+    logger.info("\nPerformance Metrics:")
+    logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
+    logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
+    logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
+
     # Final summary of all runs.
     summary(args.runs, all_results)
 
