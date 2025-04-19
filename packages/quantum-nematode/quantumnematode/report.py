@@ -1,13 +1,23 @@
+"""Reporting module for Quantum Nematode simulation results."""
+
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
 
 
 def summary(num_runs: int, all_results: list[tuple[int, int, list[tuple]]]) -> None:
+    """
+    Print a summary of the simulation results.
+
+    Parameters
+    ----------
+    num_runs : int
+        The number of simulation runs.
+    all_results : list[tuple[int, int, list[tuple]]]
+        A list of tuples containing the run number, number of steps taken, and path taken.
+    """
     average_steps = sum(steps for _, steps, _ in all_results) / num_runs
-    improvement_rate = (
-        (all_results[0][1] - all_results[-1][1]) / all_results[0][1] * 100
-    )
+    improvement_rate = (all_results[0][1] - all_results[-1][1]) / all_results[0][1] * 100
 
     if logger.disabled:
         print("All runs completed:")  # noqa: T201

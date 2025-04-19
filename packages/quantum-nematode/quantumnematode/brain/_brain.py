@@ -1,7 +1,6 @@
-from qiskit import QuantumCircuit
-
-
 from typing import Protocol
+
+from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
 
 
 class Brain(Protocol):
@@ -18,17 +17,25 @@ class Brain(Protocol):
 
         This method should be implemented by subclasses.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        error_msg = (
+            "Subclasses must implement the build_brain method to create the quantum circuit."
+        )
+        raise NotImplementedError(error_msg)
 
     def run_brain(
-        self, dx: int, dy: int, grid_size: int, reward: float | None = None
+        self,
+        dx: int,
+        dy: int,
+        grid_size: int,
+        reward: float | None = None,
     ) -> dict[str, int]:
         """
         Run the quantum brain simulation.
 
         This method should be implemented by subclasses.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        error_msg = "Subclasses must implement the run_brain method to run the quantum circuit."
+        raise NotImplementedError(error_msg)
 
     def interpret_counts(
         self,
@@ -41,4 +48,5 @@ class Brain(Protocol):
 
         This method should be implemented by subclasses.
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        error_msg = "Subclasses must implement the interpret_counts method to interpret the counts."
+        raise NotImplementedError(error_msg)
