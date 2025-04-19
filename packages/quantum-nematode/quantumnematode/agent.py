@@ -101,3 +101,16 @@ class QuantumNematodeAgent:
         if tuple(self.env.agent_pos) in self.env.body:
             return -5  # Penalty for colliding with its own body
         return -0.1  # Small penalty for each step to encourage efficiency
+
+    def reset_environment(self) -> None:
+        """
+        Reset the environment while retaining the agent's learned data.
+
+        Returns
+        -------
+        None
+        """
+        self.env = MazeEnvironment(grid_size=self.env.grid_size)
+        self.steps = 0
+        self.path = [tuple(self.env.agent_pos)]
+        logger.info("Environment reset. Retaining learned data.")
