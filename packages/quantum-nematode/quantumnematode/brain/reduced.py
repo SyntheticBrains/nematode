@@ -1,16 +1,35 @@
-from qiskit import QuantumCircuit
-from qiskit.circuit import Parameter
-from qiskit_aer import AerSimulator
+"""Reduced Quantum Brain Architecture."""
+
+import numpy as np  # pyright: ignore[reportMissingImports]
+from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
+from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
+from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
+
 from quantumnematode.brain._brain import Brain
-import numpy as np
 
 
 class ReducedBrain(Brain):
     """
     Reduced quantum brain architecture using 30 qubits for simulation.
+
+    This implementation is a scaled-down version of the `ComplexBrain`, designed to fit within
+    the limitations of current simulators. It uses 30 qubits to represent a subset of the
+    nematode's neurons. The quantum circuit includes parameterized RX gates for each qubit to
+    encode the state of individual neurons. CX gates are used to entangle adjacent qubits,
+    simulating synaptic connections between neurons. The circuit is designed to balance
+    complexity and computational feasibility.
+
+    Key Features:
+    - Uses 30 qubits to represent a subset of the nematode's neurons.
+    - Parameterized gates allow for dynamic updates based on the agent's state and learning.
+    - Entanglement models the connectivity between neurons.
+    - Optimized for simulators with limited resources.
+
+    This architecture is ideal for testing and exploring quantum reinforcement learning concepts
+    on simulators while maintaining a balance between complexity and feasibility.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.neurons = [Parameter(f"θ{i}") for i in range(30)]
         self.parameter_values = {f"θ{i}": 0.0 for i in range(30)}
 
@@ -32,7 +51,11 @@ class ReducedBrain(Brain):
         return qc
 
     def run_brain(
-        self, dx: int, dy: int, grid_size: int, reward: float | None = None
+        self,
+        dx: int,  # noqa: ARG002
+        dy: int,  # noqa: ARG002
+        grid_size: int,  # noqa: ARG002
+        reward: float | None = None,
     ) -> dict[str, int]:
         """
         Run the quantum brain simulation.
@@ -61,10 +84,7 @@ class ReducedBrain(Brain):
             self.parameter_values[f"θ{i}"] += rng.uniform(-0.1, 0.1)
 
         bound_qc = qc.assign_parameters(
-            {
-                neuron: self.parameter_values[f"θ{i}"]
-                for i, neuron in enumerate(self.neurons)
-            },
+            {neuron: self.parameter_values[f"θ{i}"] for i, neuron in enumerate(self.neurons)},
             inplace=False,
         )
 
@@ -101,13 +121,14 @@ class ReducedBrain(Brain):
         gradients = []
         for i in range(30):
             probability = probabilities.get(
-                f"{i:05b}", 0
+                f"{i:05b}",
+                0,
             )  # Binary representation of neuron index
             gradient = reward * (1 - probability)
             gradients.append(gradient)
         return gradients
 
-    def update_parameters(self, gradients: list[float], learning_rate: float = 0.1):
+    def update_parameters(self, gradients: list[float], learning_rate: float = 0.1) -> None:
         """
         Update quantum circuit parameter values based on gradients.
 

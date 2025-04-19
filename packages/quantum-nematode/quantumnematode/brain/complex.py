@@ -3,7 +3,9 @@
 import numpy as np  # pyright: ignore[reportMissingImports]
 from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
-from qiskit.providers.fake_provider import GenericBackendV2  # pyright: ignore[reportMissingImports]
+from qiskit.providers.fake_provider import (  # pyright: ignore[reportMissingImports]
+    GenericBackendV2,
+)
 
 from quantumnematode.brain._brain import Brain
 
@@ -11,7 +13,26 @@ QUBIT_COUNT = 302
 
 
 class ComplexBrain(Brain):
-    """Complex quantum brain architecture simulating 302 neurons with memory and behavior."""
+    """
+    Complex quantum brain architecture simulating 302 neurons with memory and behavior.
+
+    This implementation models the nematode's brain with 302 qubits, each representing a neuron.
+    The quantum circuit includes parameterized RX gates for each qubit to encode the state of
+    individual neurons. CX gates are used to entangle adjacent qubits, simulating synaptic
+    connections between neurons. The circuit is designed to capture the complexity of the
+    nematode's neural network.
+
+    Key Features:
+    - Uses 302 qubits to represent the nematode's neurons.
+    - Parameterized gates allow for dynamic updates based on the agent's state and learning.
+    - Entanglement models the connectivity between neurons.
+    - Designed for real quantum hardware (QPU) testing but can be simulated with sufficient
+      computational resources.
+
+    This architecture is ideal for advanced simulations and testing on real quantum hardware.
+    Due to its complexity, it requires significant computational resources and is not suitable
+    for all simulators.
+    """
 
     def __init__(self) -> None:
         self.neurons = [Parameter(f"θ{i}") for i in range(QUBIT_COUNT)]
@@ -118,7 +139,11 @@ class ComplexBrain(Brain):
             gradients.append(gradient)
         return gradients
 
-    def update_parameters(self, gradients: list[float], learning_rate: float = 0.1) -> None:
+    def update_parameters(
+        self,
+        gradients: list[float],
+        learning_rate: float = 0.1,
+    ) -> None:
         """
         Update quantum circuit parameter values based on gradients.
 

@@ -10,7 +10,24 @@ from quantumnematode.logging_config import logger
 
 
 class SimpleBrain(Brain):
-    """Simple quantum brain architecture using parameterized quantum circuits."""
+    """
+    Simple quantum brain architecture using parameterized quantum circuits.
+
+    This implementation represents a lightweight quantum brain designed for basic decision-making.
+    It uses a 2-qubit quantum circuit with parameterized RX, RY, and RZ gates to encode the agent's
+    state. The circuit also includes a CX gate to introduce entanglement between the qubits. The
+    output of the circuit is measured and mapped to one of four possible actions: up, down, left,
+    or right.
+
+    Key Features:
+    - Uses 2 qubits for simplicity and efficiency.
+    - Parameterized gates allow for dynamic updates based on the agent's state and learning.
+    - Entanglement is introduced to model complex decision-making processes.
+    - Designed to be lightweight and suitable for simulators with limited resources.
+
+    This architecture is ideal for testing and exploring basic quantum reinforcement learning
+    concepts.
+    """
 
     def __init__(self) -> None:
         self.theta_x = Parameter("θx")
@@ -132,7 +149,11 @@ class SimpleBrain(Brain):
             gradients.append(gradient)
         return gradients
 
-    def update_parameters(self, gradients: list[float], learning_rate: float = 0.1) -> None:
+    def update_parameters(
+        self,
+        gradients: list[float],
+        learning_rate: float = 0.1,
+    ) -> None:
         """
         Update quantum circuit parameter values based on gradients.
 
@@ -143,7 +164,11 @@ class SimpleBrain(Brain):
         learning_rate : float, optional
             Learning rate for parameter updates, by default 0.1.
         """
-        for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
+        for param_name, grad in zip(
+            self.parameter_values.keys(),
+            gradients,
+            strict=False,
+        ):
             self.parameter_values[param_name] -= learning_rate * grad
 
         logger.debug(f"Updated parameters: {self.parameter_values}")
