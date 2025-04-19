@@ -29,6 +29,36 @@ quantum_nematode/
 - ✅ Supports both CLI scripts and Jupyter notebook workflows
 - 🚧 Expandable for training, hybrid QML, or hardware backends
 
+### Expanded Details
+
+#### Quantum Circuit for Decision-Making
+
+- The nematode's brain is implemented as a parameterized quantum circuit with 2 qubits.
+- The circuit uses RX, RY, and RZ gates to encode the agent's state and entanglement to model complex decision-making.
+- Measurements on the qubits are mapped to one of four possible actions: up, down, left, or right.
+
+#### Classical Grid-World Environment
+
+- A simple 2D grid maze serves as the nematode's environment.
+- The agent starts at a random position and must navigate to a food source while avoiding collisions with its own body.
+- The environment dynamically updates based on the agent's actions and provides feedback for learning.
+
+#### Quantum Reinforcement Learning (QRL)
+
+- A reward-based learning mechanism has been integrated to improve the agent's navigation efficiency.
+- Gradients are computed based on the quantum circuit's output probabilities and the reward signal.
+- The quantum circuit's parameters are updated iteratively to optimize the agent's performance.
+
+#### Hybrid Workflows
+
+- The project supports both CLI-based simulations and interactive Jupyter notebook workflows.
+- Users can visualize the agent's path and learning process in real-time.
+
+#### Expandability
+
+- The framework is designed to be modular and extensible.
+- Future enhancements could include integration with real quantum hardware, advanced quantum learning techniques, and visualization tools.
+
 ---
 
 ## 🚀 Getting Started
@@ -95,6 +125,47 @@ Final path:
 - [Python 3.10+]
 - [uv](https://github.com/astral-sh/uv) for modern dependency management
 - Jupyter for notebook visualization
+
+---
+
+## 🗺️ Roadmap
+
+### Planned Features
+
+- **Advanced Quantum Learning**: Explore more sophisticated quantum learning techniques, such as Quantum Boltzmann Machines (QBM) and Quantum Memory Encoding.
+- **Real Quantum Hardware Integration**: Transition from simulation to real quantum hardware for testing and validation.
+- **Visualization Tools**: Develop tools to visualize the agent's learning process and decision-making.
+
+### Other Possible Learning Approaches
+
+#### Quantum Memory Encoding
+
+- **Description**: Use quantum states to encode the nematode's memory of past actions or visited positions.
+- **Implementation**:
+  - Use quantum registers to store information about visited grid positions or actions.
+  - Apply quantum superposition to explore multiple paths simultaneously.
+  - Use quantum interference to reinforce paths that lead to food and suppress inefficient paths.
+
+#### Quantum Grover Search for Pathfinding
+
+- **Description**: Use Grover's algorithm to search for the shortest path to the food.
+- **Implementation**:
+  - Encode the maze as a quantum oracle.
+  - Use Grover's search to find the optimal sequence of actions leading to the goal.
+
+#### Quantum Boltzmann Machines (QBM)
+
+- **Description**: Use QBMs to model the nematode's environment and learn optimal navigation strategies.
+- **Implementation**:
+  - Train a QBM to represent the probability distribution of successful paths.
+  - Use the trained QBM to sample actions during navigation.
+
+#### Quantum Amplitude Amplification for Action Selection
+
+- **Description**: Use amplitude amplification to bias the nematode's action selection towards more promising actions.
+- **Implementation**:
+  - Encode action probabilities in quantum amplitudes.
+  - Amplify actions that are more likely to lead to the goal based on past experience.
 
 ---
 
