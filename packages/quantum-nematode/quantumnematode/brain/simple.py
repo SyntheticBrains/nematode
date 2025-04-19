@@ -1,18 +1,18 @@
-from qiskit import QuantumCircuit
-from qiskit.circuit import Parameter
-from qiskit_aer import Aer
-from qiskit import transpile
-import numpy as np
+"""Simple Quantum Brain Architecture."""
+
+import numpy as np  # pyright: ignore[reportMissingImports]
+from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
+from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
+from qiskit_aer import Aer  # pyright: ignore[reportMissingImports]
+
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
 
 
 class SimpleBrain(Brain):
-    """
-    Simple quantum brain architecture using parameterized quantum circuits.
-    """
+    """Simple quantum brain architecture using parameterized quantum circuits."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.theta_x = Parameter("θx")
         self.theta_y = Parameter("θy")
         self.theta_z = Parameter("θz")
@@ -42,7 +42,13 @@ class SimpleBrain(Brain):
         qc.measure([0, 1], [0, 1])
         return qc
 
-    def run_brain(self, dx: int, dy: int, grid_size: int, reward: float | None = None):
+    def run_brain(
+        self,
+        dx: int,
+        dy: int,
+        grid_size: int,
+        reward: float | None = None,
+    ) -> dict[str, int]:
         """
         Run the quantum brain simulation.
 
@@ -65,14 +71,10 @@ class SimpleBrain(Brain):
         qc = self.build_brain()
         rng = np.random.default_rng()
         input_x = (
-            self.parameter_values["θx"]
-            + dx / (grid_size - 1) * np.pi
-            + rng.uniform(-0.1, 0.1)
+            self.parameter_values["θx"] + dx / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
         )
         input_y = (
-            self.parameter_values["θy"]
-            + dy / (grid_size - 1) * np.pi
-            + rng.uniform(-0.1, 0.1)
+            self.parameter_values["θy"] + dy / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
         )
         input_z = self.parameter_values["θz"] + rng.uniform(0, 2 * np.pi)
         input_entangle = self.parameter_values["θentangle"] + rng.uniform(0, 2 * np.pi)
@@ -130,7 +132,7 @@ class SimpleBrain(Brain):
             gradients.append(gradient)
         return gradients
 
-    def update_parameters(self, gradients: list[float], learning_rate: float = 0.1):
+    def update_parameters(self, gradients: list[float], learning_rate: float = 0.1) -> None:
         """
         Update quantum circuit parameter values based on gradients.
 
@@ -141,7 +143,7 @@ class SimpleBrain(Brain):
         learning_rate : float, optional
             Learning rate for parameter updates, by default 0.1.
         """
-        for param_name, grad in zip(self.parameter_values.keys(), gradients):
+        for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
             self.parameter_values[param_name] -= learning_rate * grad
 
         logger.debug(f"Updated parameters: {self.parameter_values}")
@@ -186,9 +188,7 @@ class SimpleBrain(Brain):
             valid_action_map["10"] = "left"
 
         # Select the most common result or randomly choose among ties
-        top_results = [
-            result for result, count in sorted_counts if count == sorted_counts[0][1]
-        ]
+        top_results = [result for result, count in sorted_counts if count == sorted_counts[0][1]]
         rng = np.random.default_rng()
         most_common = rng.choice(top_results)
 

@@ -1,6 +1,6 @@
 """Module for quantum brain architectures."""
 
-from .simple import SimpleBrain
 from .complex import ComplexBrain
+from .simple import SimpleBrain
 
-__all__ = ["SimpleBrain", "ComplexBrain"]
+__all__ = ["ComplexBrain", "SimpleBrain"]
