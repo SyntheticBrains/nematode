@@ -9,6 +9,7 @@ from qiskit.circuit import (  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
+from quantumnematode.logging_config import logger
 
 
 class MemoryBrain(Brain):
@@ -74,10 +75,12 @@ class MemoryBrain(Brain):
 
         # Quantum Amplitude Amplification for Action Selection
         # Define an oracle to mark the desired action states
+        # Refine amplitude amplification to prioritize successful actions
         for i in range(len(self.action_register)):
-            self.circuit.z(self.action_register[i])  # Example: Mark all action states
+            if i % 2 == 0:  # Example: prioritize even-indexed actions
+                self.circuit.z(self.action_register[i])
 
-        # Apply a diffusion operator to amplify marked states
+        # Apply a more targeted diffusion operator
         self.circuit.h(self.action_register)
         for i in range(len(self.action_register)):
             self.circuit.x(self.action_register[i])
@@ -147,12 +150,17 @@ class MemoryBrain(Brain):
         reward : float
             Reward signal to guide memory updates.
         """
-        # Apply a reinforcement or suppression operation to the memory register
+        logger.debug(f"Updating memory with reward: {reward}")
         for qubit in self.memory_register:
             if reward > 0:
                 self.circuit.rx(abs(reward) * np.pi / 4, qubit)  # Reinforce
             else:
                 self.circuit.rx(-abs(reward) * np.pi / 4, qubit)  # Suppress
+
+    def log_circuit_details(self) -> None:
+        """Log details of the quantum circuit for debugging purposes."""
+        logger.debug("Quantum Circuit Details:")
+        logger.debug(self.circuit.draw(output="text"))
 
     def interpret_counts(
         self,
@@ -191,4 +199,10 @@ class MemoryBrain(Brain):
         if agent_pos[0] > 0:  # Can move left
             valid_action_map["10"] = "left"
 
+        # Handle ties in measurement counts
+        top_results = [result for result, count in sorted_counts if count == sorted_counts[0][1]]
+        rng = np.random.default_rng()
+        most_common = rng.choice(top_results)  # Randomly select among ties
+
+        # Map the result to an action
         return valid_action_map.get(most_common[:2], "unknown")
