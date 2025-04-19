@@ -1,10 +1,14 @@
 """Memory-based Quantum Brain Architecture."""
 
-from qiskit import QuantumCircuit
-from qiskit.circuit import QuantumRegister, ClassicalRegister
-from qiskit_aer import AerSimulator
+import numpy as np  # pyright: ignore[reportMissingImports]
+from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
+from qiskit.circuit import (  # pyright: ignore[reportMissingImports]
+    ClassicalRegister,
+    QuantumRegister,
+)
+from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
+
 from quantumnematode.brain._brain import Brain
-import numpy as np
 
 
 class MemoryBrain(Brain):
@@ -25,16 +29,20 @@ class MemoryBrain(Brain):
     This architecture is ideal for exploring the role of memory in quantum-enhanced decision-making.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.memory_register = QuantumRegister(
-            5, "memory"
+            5,
+            "memory",
         )  # 5 qubits for memory states
         self.action_register = QuantumRegister(2, "action")  # 2 qubits for actions
         self.classical_register = ClassicalRegister(
-            2, "classical"
+            2,
+            "classical",
         )  # 2 classical bits for measurement
         self.circuit = QuantumCircuit(
-            self.memory_register, self.action_register, self.classical_register
+            self.memory_register,
+            self.action_register,
+            self.classical_register,
         )
 
     def build_brain(self) -> QuantumCircuit:
@@ -54,13 +62,27 @@ class MemoryBrain(Brain):
         for i in range(len(self.memory_register)):  # Entangle memory with actions
             self.circuit.cx(self.memory_register[i], self.action_register[i % 2])
 
+        # Introduce quantum interference to prioritize successful memory states
+        for i in range(len(self.memory_register) - 1):
+            self.circuit.cz(
+                self.memory_register[i],
+                self.memory_register[i + 1],
+            )  # Apply controlled-Z gates
+
+        # Apply a global phase shift to amplify successful paths
+        self.circuit.p(np.pi / 4, self.memory_register)
+
         # Measure action qubits
         self.circuit.measure(self.action_register, self.classical_register)
 
         return self.circuit
 
     def run_brain(
-        self, dx: int, dy: int, grid_size: int, reward: float | None = None
+        self,
+        dx: int,  # noqa: ARG002
+        dy: int,  # noqa: ARG002
+        grid_size: int,  # noqa: ARG002
+        reward: float | None = None,
     ) -> dict[str, int]:
         """
         Run the quantum brain simulation.
@@ -83,8 +105,11 @@ class MemoryBrain(Brain):
         """
         qc = self.build_brain()
 
-        # Simulate the quantum circuit
+        # Optimize the circuit before simulation
         simulator = AerSimulator()
+        qc = transpile(qc, simulator, optimization_level=3)
+
+        # Simulate the quantum circuit
         result = simulator.run(qc, shots=1024).result()
         counts = result.get_counts()
 
@@ -94,7 +119,7 @@ class MemoryBrain(Brain):
 
         return counts
 
-    def update_memory(self, reward: float):
+    def update_memory(self, reward: float) -> None:
         """
         Update the memory states based on the reward signal.
 
@@ -105,7 +130,10 @@ class MemoryBrain(Brain):
         """
         # Apply a reinforcement or suppression operation to the memory register
         for qubit in self.memory_register:
-            self.circuit.rx(reward * np.pi / 4, qubit)
+            if reward > 0:
+                self.circuit.rx(abs(reward) * np.pi / 4, qubit)  # Reinforce
+            else:
+                self.circuit.rx(-abs(reward) * np.pi / 4, qubit)  # Suppress
 
     def interpret_counts(
         self,
