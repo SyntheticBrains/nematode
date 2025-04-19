@@ -96,6 +96,7 @@ class QuantumNematodeAgent:
             grid = self.env.render()
             for frame in grid:
                 print(frame)  # noqa: T201
+                logger.debug(frame)
 
         return self.path
 
