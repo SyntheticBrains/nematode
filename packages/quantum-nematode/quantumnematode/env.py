@@ -8,7 +8,7 @@ The environment provides methods to get the current state, move the agent,
     check if the goal is reached, and render the maze.
 """
 
-from quantumnematode.logging_config import logger
+from .logging_config import logger
 
 
 class MazeEnvironment:

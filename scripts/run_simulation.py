@@ -3,8 +3,8 @@
 import argparse
 import logging
 
-from quantumnematode.agent import QuantumNematodeAgent
-from quantumnematode.logging_config import logger
+from quantumnematode.agent import QuantumNematodeAgent  # pyright: ignore[reportMissingImports]
+from quantumnematode.logging_config import logger  # pyright: ignore[reportMissingImports]
 
 # Suppress logs from external libraries like Qiskit
 logging.getLogger("qiskit").setLevel(logging.WARNING)

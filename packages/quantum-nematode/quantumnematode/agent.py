@@ -2,10 +2,9 @@
 
 import os
 
-from quantumnematode.logging_config import logger
-
 from .brain import interpret_counts, run_brain
 from .env import MazeEnvironment
+from .logging_config import logger
 
 
 class QuantumNematodeAgent:
