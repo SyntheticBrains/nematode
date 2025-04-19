@@ -45,7 +45,8 @@ def main():
 
     agent = QuantumNematodeAgent(maze_grid_size=args.maze_grid_size)
     path = agent.run_episode(
-        max_steps=args.max_steps, show_last_frame_only=args.show_last_frame_only
+        max_steps=args.max_steps,
+        show_last_frame_only=args.show_last_frame_only,
     )
 
     if logger.disabled:

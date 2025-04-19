@@ -177,6 +177,20 @@ PRs welcome! To extend:
 - Integrate Qiskit runtime or real IBM Quantum backends
 - Create visualization tools for maze traversal
 
+### Pre-commit
+
+We use [pre-commit](https://pre-commit.com/) to automate linting and code validation checks. Run the following to install the pre-commmit:
+
+```sh
+uv run pre-commit install
+```
+
+Use the following command to manually run the pre-commit checks:
+
+```sh
+poetry run pre-commit run -a
+```
+
 ---
 
 ## 🧬 License

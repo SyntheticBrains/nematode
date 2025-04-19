@@ -3,7 +3,11 @@
 name = "quantum-nematode-workspace"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pre-commit>=4.2.0",
+    "pyright>=1.1.399",
+    "ruff>=0.11.6",
+]
 
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
