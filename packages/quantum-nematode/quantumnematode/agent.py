@@ -1,8 +1,9 @@
 import os
 
-from .env import MazeEnvironment
-from .brain import run_brain, interpret_counts
 from quantumnematode.logging_config import logger
+
+from .brain import interpret_counts, run_brain
+from .env import MazeEnvironment
 
 
 class QuantumNematodeAgent:
@@ -12,7 +13,11 @@ class QuantumNematodeAgent:
         self.path = [tuple(self.env.agent_pos)]
         self.body_length = min(maze_grid_size - 1, 6)  # Set the maximum body length
 
-    def run_episode(self, max_steps: int = 100, show_last_frame_only: bool = False) -> list[tuple]:
+    def run_episode(
+        self,
+        max_steps: int = 100,
+        show_last_frame_only: bool = False,
+    ) -> list[tuple]:
         total_reward = 0
         while not self.env.reached_goal() and self.steps < max_steps:
             dx, dy = self.env.get_state()
@@ -46,7 +51,6 @@ class QuantumNematodeAgent:
         """Calculate reward based on the agent's current state."""
         if self.env.reached_goal():
             return 10  # High reward for reaching the goal
-        elif tuple(self.env.agent_pos) in self.env.body:
+        if tuple(self.env.agent_pos) in self.env.body:
             return -5  # Penalty for colliding with its own body
-        else:
-            return -0.1  # Small penalty for each step to encourage efficiency
+        return -0.1  # Small penalty for each step to encourage efficiency

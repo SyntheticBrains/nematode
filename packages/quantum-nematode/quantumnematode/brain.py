@@ -1,9 +1,9 @@
 import numpy as np
 from qiskit import QuantumCircuit, transpile
-from qiskit_aer import Aer
 from qiskit.circuit import Parameter
-from quantumnematode.logging_config import logger
+from qiskit_aer import Aer
 
+from quantumnematode.logging_config import logger
 
 parameter_values = {
     "θx": 0.0,
@@ -13,16 +13,18 @@ parameter_values = {
 }
 
 
-def update_parameters(parameters: list[Parameter], gradients: list[float], learning_rate: float = 0.1) -> None:
+def update_parameters(
+    parameters: list[Parameter],
+    gradients: list[float],
+    learning_rate: float = 0.1,
+) -> None:
     """Update quantum circuit parameter values based on gradients."""
-    for param, grad in zip(parameters, gradients):
+    for param, grad in zip(parameters, gradients, strict=False):
         param_name = param.name
         if param_name in parameter_values:
             parameter_values[param_name] -= learning_rate * grad
 
-    logger.debug(
-        f"Updated parameters: {parameter_values}"
-    )
+    logger.debug(f"Updated parameters: {parameter_values}")
 
 
 def compute_gradients(counts: dict[str, int], reward: float) -> list[float]:
@@ -56,27 +58,22 @@ def build_brain() -> tuple[QuantumCircuit, Parameter, Parameter, Parameter, Para
     return qc, theta_x, theta_y, theta_z, theta_entangle
 
 
-def run_brain(dx: int, dy: int, grid_size: int, reward: float = None) -> dict[str, int]:
+def run_brain(
+    dx: int,
+    dy: int,
+    grid_size: int,
+    reward: float | None = None,
+) -> dict[str, int]:
     qc, theta_x, theta_y, theta_z, theta_entangle = build_brain()
 
     # Use stored parameter values
-    input_x = (
-        parameter_values["θx"]
-        + dx / (grid_size - 1) * np.pi
-        + np.random.uniform(-0.1, 0.1)
-    )
-    input_y = (
-        parameter_values["θy"]
-        + dy / (grid_size - 1) * np.pi
-        + np.random.uniform(-0.1, 0.1)
-    )
+    input_x = parameter_values["θx"] + dx / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
+    input_y = parameter_values["θy"] + dy / (grid_size - 1) * np.pi + np.random.uniform(-0.1, 0.1)
     input_z = parameter_values["θz"] + np.random.uniform(0, 2 * np.pi)
-    input_entangle = parameter_values["θentangle"] + np.random.uniform(
-        0, 2 * np.pi
-    )
+    input_entangle = parameter_values["θentangle"] + np.random.uniform(0, 2 * np.pi)
 
     logger.debug(
-        f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, input_z={input_z}, input_entangle={input_entangle}"
+        f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, input_z={input_z}, input_entangle={input_entangle}",
     )
 
     bound_qc = qc.assign_parameters(
@@ -98,15 +95,17 @@ def run_brain(dx: int, dy: int, grid_size: int, reward: float = None) -> dict[st
 
     # If reward is provided, update parameters
     if reward is not None:
-        gradients = compute_gradients(
-            counts, reward
-        )
+        gradients = compute_gradients(counts, reward)
         update_parameters([theta_x, theta_y, theta_z, theta_entangle], gradients)
 
     return counts
 
 
-def interpret_counts(counts: dict[str, int], agent_pos: list[int], grid_size: int) -> str:
+def interpret_counts(
+    counts: dict[str, int],
+    agent_pos: list[int],
+    grid_size: int,
+) -> str:
     # Sort counts by frequency
     sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
@@ -124,12 +123,10 @@ def interpret_counts(counts: dict[str, int], agent_pos: list[int], grid_size: in
         valid_action_map["10"] = "left"
 
     # Select the most common result or randomly choose among ties
-    top_results = [
-        result for result, count in sorted_counts if count == sorted_counts[0][1]
-    ]
+    top_results = [result for result, count in sorted_counts if count == sorted_counts[0][1]]
     most_common = np.random.choice(top_results)
 
     # Map the result to an action
-    action = valid_action_map.get(most_common, None)
+    action = valid_action_map.get(most_common)
 
     return action

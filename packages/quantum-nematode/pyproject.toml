@@ -8,6 +8,7 @@ dependencies = [
     "matplotlib>=3.10.1",
     "ipykernel>=6.29.5",
     "qiskit-aer>=0.17.0",
+    "numpy>=2.2.4",
 ]
 classifiers = ["Private :: Do Not Upload"]
 

@@ -13,7 +13,7 @@ class MazeEnvironment:
         dy = self.goal[1] - self.agent_pos[1] + 1
 
         logger.debug(
-            f"Agent position: {self.agent_pos}, Goal: {self.goal}, dx={dx}, dy={dy}"
+            f"Agent position: {self.agent_pos}, Goal: {self.goal}, dx={dx}, dy={dy}",
         )
         return dx, dy
 
