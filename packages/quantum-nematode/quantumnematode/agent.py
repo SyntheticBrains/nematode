@@ -2,7 +2,7 @@
 
 import os
 
-from .brain import interpret_counts, run_brain
+from .brain._brain import Brain
 from .env import MazeEnvironment
 from .logging_config import logger
 
@@ -23,15 +23,18 @@ class QuantumNematodeAgent:
         Maximum length of the agent's body.
     """
 
-    def __init__(self, maze_grid_size: int = 5) -> None:
+    def __init__(self, brain: Brain, maze_grid_size: int = 5) -> None:
         """
         Initialize the quantum nematode agent.
 
         Parameters
         ----------
+        brain : Brain
+            The quantum brain architecture used by the agent.
         maze_grid_size : int, optional
             Size of the grid environment, by default 5.
         """
+        self.brain = brain
         self.env = MazeEnvironment(grid_size=maze_grid_size)
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
@@ -61,8 +64,17 @@ class QuantumNematodeAgent:
         total_reward = 0
         while not self.env.reached_goal() and self.steps < max_steps:
             dx, dy = self.env.get_state()
-            counts = run_brain(dx, dy, self.env.grid_size, reward=total_reward)
-            action = interpret_counts(counts, self.env.agent_pos, self.env.grid_size)
+            counts = self.brain.run_brain(
+                dx,
+                dy,
+                self.env.grid_size,
+                reward=total_reward,
+            )
+            action = self.brain.interpret_counts(
+                counts,
+                self.env.agent_pos,
+                self.env.grid_size,
+            )
             self.env.move_agent(action)
 
             # Calculate reward based on efficiency and collision avoidance

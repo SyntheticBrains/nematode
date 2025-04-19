@@ -9,6 +9,7 @@ from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
+from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
 
 # Suppress logs from external libraries like Qiskit
 logging.getLogger("qiskit").setLevel(logging.WARNING)
@@ -47,6 +48,13 @@ def main() -> None:
         default=1,
         help="Number of simulation runs to perform (default: 1)",
     )
+    parser.add_argument(
+        "--brain",
+        type=str,
+        choices=["simple", "complex"],
+        default="simple",
+        help="Choose the quantum brain architecture to use (default: simple)",
+    )
 
     args = parser.parse_args()
 
@@ -56,7 +64,25 @@ def main() -> None:
     else:
         logger.setLevel(args.log_level)
 
-    agent = QuantumNematodeAgent(maze_grid_size=args.maze_grid_size)
+    # Select the brain architecture
+    if args.brain == "simple":
+        from quantumnematode.brain.simple import (  # pyright: ignore[reportMissingImports]
+            SimpleBrain,
+        )
+
+        brain = SimpleBrain()
+    elif args.brain == "complex":
+        from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
+            ComplexBrain,
+        )
+
+        brain = ComplexBrain()
+    else:
+        error_message = f"Unknown brain architecture: {args.brain}"
+        raise ValueError(error_message)
+
+    # Update the agent to use the selected brain architecture
+    agent = QuantumNematodeAgent(maze_grid_size=args.maze_grid_size, brain=brain)
 
     all_results = []
 
@@ -76,34 +102,7 @@ def main() -> None:
             agent.reset_environment()
 
     # Final summary of all runs.
-    average_steps = sum(steps for _, steps, _ in all_results) / args.runs
-    improvement_rate = (all_results[0][1] - all_results[-1][1]) / all_results[0][1] * 100
-
-    if logger.disabled:
-        print("All runs completed:")  # noqa: T201
-        for run, steps, path in all_results:
-            print(f"Run {run}: {steps} steps, Path: {path}")  # noqa: T201
-
-        print("Summary of all runs:")  # noqa: T201
-        for run, steps, _path in all_results:
-            print(f"Run {run}: {steps} steps")  # noqa: T201
-
-        print(f"Total runs: {len(all_results)}")  # noqa: T201
-
-        print(f"Average steps per run: {average_steps:.2f}")  # noqa: T201
-        print(f"Improvement metric (steps): {improvement_rate:.2f}%")  # noqa: T201
-    else:
-        logger.info("All runs completed:")
-        for run, steps, path in all_results:
-            logger.info(f"Run {run}: {steps} steps, Path: {path}")
-
-        logger.info("Summary of all runs:")
-        for run, steps, _path in all_results:
-            logger.info(f"Run {run}: {steps} steps")
-        logger.info(f"Total runs: {len(all_results)}")
-        logger.info(f"Average steps per run: {average_steps:.2f}")
-        logger.info(f"Improvement metric (steps): {improvement_rate:.2f}%")
-        logger.info("Simulation completed.")
+    summary(args.runs, all_results)
 
 
 if __name__ == "__main__":
