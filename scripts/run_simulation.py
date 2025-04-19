@@ -63,6 +63,9 @@ def main() -> None:
         logger.disabled = True
     else:
         logger.setLevel(args.log_level)
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.setLevel(args.log_level)
 
     # Select the brain architecture
     if args.brain == "simple":
