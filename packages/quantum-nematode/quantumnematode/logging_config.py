@@ -1,3 +1,5 @@
+"""Logging configuration for the Quantum Nematode package."""
+
 import logging
 
 # Configure logging
