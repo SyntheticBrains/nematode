@@ -1,11 +1,11 @@
 """The quantum nematode brain module that simulates a quantum brain using Qiskit."""
 
-import numpy as np
-from qiskit import QuantumCircuit, transpile
-from qiskit.circuit import Parameter
-from qiskit_aer import Aer
+import numpy as np  # pyright: ignore[reportMissingImports]
+from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
+from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
+from qiskit_aer import Aer  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.logging_config import logger
+from .logging_config import logger
 
 parameter_values = {
     "θx": 0.0,
@@ -126,12 +126,8 @@ def run_brain(
 
     # Use stored parameter values
     rng = np.random.default_rng()
-    input_x = (
-        parameter_values["θx"] + dx / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
-    )
-    input_y = (
-        parameter_values["θy"] + dy / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
-    )
+    input_x = parameter_values["θx"] + dx / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
+    input_y = parameter_values["θy"] + dy / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
     input_z = parameter_values["θz"] + rng.uniform(0, 2 * np.pi)
     input_entangle = parameter_values["θentangle"] + rng.uniform(0, 2 * np.pi)
 
@@ -204,11 +200,9 @@ def interpret_counts(
         valid_action_map["10"] = "left"
 
     # Select the most common result or randomly choose among ties
-    top_results = [
-        result for result, count in sorted_counts if count == sorted_counts[0][1]
-    ]
+    top_results = [result for result, count in sorted_counts if count == sorted_counts[0][1]]
     rng = np.random.default_rng()
     most_common = rng.choice(top_results)
 
     # Map the result to an action
-    return valid_action_map.get(most_common)
+    return valid_action_map.get(most_common, "unknown")
