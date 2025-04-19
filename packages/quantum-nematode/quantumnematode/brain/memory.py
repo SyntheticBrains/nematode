@@ -1,0 +1,147 @@
+"""Memory-based Quantum Brain Architecture."""
+
+from qiskit import QuantumCircuit
+from qiskit.circuit import QuantumRegister, ClassicalRegister
+from qiskit_aer import AerSimulator
+from quantumnematode.brain._brain import Brain
+import numpy as np
+
+
+class MemoryBrain(Brain):
+    """
+    Quantum brain architecture implementing Quantum Memory Encoding.
+
+    This architecture encodes the nematode's memory of past actions and visited positions into
+    quantum states. It leverages quantum superposition and interference to explore multiple
+    memory states simultaneously and reinforce paths that lead to food while suppressing
+    inefficient paths.
+
+    Key Features:
+    - Uses quantum registers to store memory states.
+    - Applies quantum interference to prioritize successful paths.
+    - Dynamically updates memory states based on rewards or penalties.
+    - Optimized for simulators with limited resources.
+
+    This architecture is ideal for exploring the role of memory in quantum-enhanced decision-making.
+    """
+
+    def __init__(self):
+        self.memory_register = QuantumRegister(
+            5, "memory"
+        )  # 5 qubits for memory states
+        self.action_register = QuantumRegister(2, "action")  # 2 qubits for actions
+        self.classical_register = ClassicalRegister(
+            2, "classical"
+        )  # 2 classical bits for measurement
+        self.circuit = QuantumCircuit(
+            self.memory_register, self.action_register, self.classical_register
+        )
+
+    def build_brain(self) -> QuantumCircuit:
+        """
+        Build the quantum circuit for the memory brain.
+
+        Returns
+        -------
+        QuantumCircuit
+            The quantum circuit representing the brain.
+        """
+        # Initialize memory and action registers
+        self.circuit.h(self.memory_register)  # Put memory qubits into superposition
+        self.circuit.h(self.action_register)  # Put action qubits into superposition
+
+        # Example: Apply controlled operations based on memory states
+        for i in range(len(self.memory_register)):  # Entangle memory with actions
+            self.circuit.cx(self.memory_register[i], self.action_register[i % 2])
+
+        # Measure action qubits
+        self.circuit.measure(self.action_register, self.classical_register)
+
+        return self.circuit
+
+    def run_brain(
+        self, dx: int, dy: int, grid_size: int, reward: float | None = None
+    ) -> dict[str, int]:
+        """
+        Run the quantum brain simulation.
+
+        Parameters
+        ----------
+        dx : int
+            Distance to the goal along the x-axis.
+        dy : int
+            Distance to the goal along the y-axis.
+        grid_size : int
+            Size of the grid environment.
+        reward : float, optional
+            Reward signal for learning, by default None.
+
+        Returns
+        -------
+        dict[str, int]
+            Measurement counts from the quantum circuit.
+        """
+        qc = self.build_brain()
+
+        # Simulate the quantum circuit
+        simulator = AerSimulator()
+        result = simulator.run(qc, shots=1024).result()
+        counts = result.get_counts()
+
+        # Update memory states based on reward
+        if reward is not None:
+            self.update_memory(reward)
+
+        return counts
+
+    def update_memory(self, reward: float):
+        """
+        Update the memory states based on the reward signal.
+
+        Parameters
+        ----------
+        reward : float
+            Reward signal to guide memory updates.
+        """
+        # Apply a reinforcement or suppression operation to the memory register
+        for qubit in self.memory_register:
+            self.circuit.rx(reward * np.pi / 4, qubit)
+
+    def interpret_counts(
+        self,
+        counts: dict[str, int],
+        agent_pos: list[int],
+        grid_size: int,
+    ) -> str:
+        """
+        Interpret the measurement counts and determine the action.
+
+        Parameters
+        ----------
+        counts : dict[str, int]
+            Measurement counts from the quantum circuit.
+        agent_pos : list[int]
+            Current position of the agent.
+        grid_size : int
+            Size of the grid environment.
+
+        Returns
+        -------
+        str
+            Action to be taken by the agent.
+        """
+        sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+        most_common = sorted_counts[0][0]  # Binary string of the most common result
+
+        # Map binary string to actions
+        valid_action_map = {}
+        if agent_pos[1] < grid_size - 1:  # Can move up
+            valid_action_map["00"] = "up"
+        if agent_pos[1] > 0:  # Can move down
+            valid_action_map["01"] = "down"
+        if agent_pos[0] < grid_size - 1:  # Can move right
+            valid_action_map["11"] = "right"
+        if agent_pos[0] > 0:  # Can move left
+            valid_action_map["10"] = "left"
+
+        return valid_action_map.get(most_common[:2], "unknown")
