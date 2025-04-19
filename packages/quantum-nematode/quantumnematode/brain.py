@@ -13,7 +13,7 @@ parameter_values = {
 }
 
 
-def update_parameters(parameters, gradients, learning_rate=0.1):
+def update_parameters(parameters: list[Parameter], gradients: list[float], learning_rate: float = 0.1) -> None:
     """Update quantum circuit parameter values based on gradients."""
     for param, grad in zip(parameters, gradients):
         param_name = param.name
@@ -25,8 +25,7 @@ def update_parameters(parameters, gradients, learning_rate=0.1):
     )
 
 
-
-def compute_gradients(counts, reward):
+def compute_gradients(counts: dict[str, int], reward: float) -> list[float]:
     """Compute gradients based on counts and reward."""
     # Normalize counts to probabilities
     total_shots = sum(counts.values())
@@ -42,7 +41,7 @@ def compute_gradients(counts, reward):
     return gradients
 
 
-def build_brain():
+def build_brain() -> tuple[QuantumCircuit, Parameter, Parameter, Parameter, Parameter]:
     theta_x = Parameter("θx")
     theta_y = Parameter("θy")
     theta_z = Parameter("θz")
@@ -57,7 +56,7 @@ def build_brain():
     return qc, theta_x, theta_y, theta_z, theta_entangle
 
 
-def run_brain(dx, dy, grid_size, reward=None):
+def run_brain(dx: int, dy: int, grid_size: int, reward: float = None) -> dict[str, int]:
     qc, theta_x, theta_y, theta_z, theta_entangle = build_brain()
 
     # Use stored parameter values
@@ -107,7 +106,7 @@ def run_brain(dx, dy, grid_size, reward=None):
     return counts
 
 
-def interpret_counts(counts, agent_pos, grid_size):
+def interpret_counts(counts: dict[str, int], agent_pos: list[int], grid_size: int) -> str:
     # Sort counts by frequency
     sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
 

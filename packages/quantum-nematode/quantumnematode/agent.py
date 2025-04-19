@@ -6,13 +6,13 @@ from quantumnematode.logging_config import logger
 
 
 class QuantumNematodeAgent:
-    def __init__(self, maze_grid_size=5):
+    def __init__(self, maze_grid_size: int = 5) -> None:
         self.env = MazeEnvironment(grid_size=maze_grid_size)
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         self.body_length = min(maze_grid_size - 1, 6)  # Set the maximum body length
 
-    def run_episode(self, max_steps=100, show_last_frame_only=False):
+    def run_episode(self, max_steps: int = 100, show_last_frame_only: bool = False) -> list[tuple]:
         total_reward = 0
         while not self.env.reached_goal() and self.steps < max_steps:
             dx, dy = self.env.get_state()
@@ -42,7 +42,7 @@ class QuantumNematodeAgent:
 
         return self.path
 
-    def calculate_reward(self):
+    def calculate_reward(self) -> float:
         """Calculate reward based on the agent's current state."""
         if self.env.reached_goal():
             return 10  # High reward for reaching the goal
