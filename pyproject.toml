@@ -1,8 +1,7 @@
-
 [project]
 name = "quantum-nematode-workspace"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "pre-commit>=4.2.0",
     "pyright>=1.1.399",
@@ -22,7 +21,7 @@ dev-dependencies = [
 ]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
@@ -47,7 +46,7 @@ reportMissingTypeStubs = false
 reportMatchNotExhaustive = "error"
 reportUnusedFunction = "error"
 reportConstantRedefinition = "error"
-pythonVersion = "3.13"
+pythonVersion = "3.12"
 pythonPlatform = "Linux"
 python.autoComplete.extraPaths = [
     "packages/quantum-nematode",
