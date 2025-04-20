@@ -30,8 +30,9 @@ class MemoryBrain(Brain):
     This architecture is ideal for exploring the role of memory in quantum-enhanced decision-making.
     """
 
-    def __init__(self, device: str = "CPU") -> None:
+    def __init__(self, device: str = "CPU", shots: int = 100) -> None:
         self.device = device.upper()
+        self.shots = shots
         self.memory_register = QuantumRegister(
             5,
             "memory",
@@ -133,7 +134,7 @@ class MemoryBrain(Brain):
         qc = transpile(qc, simulator, optimization_level=3)
 
         # Simulate the quantum circuit
-        result = simulator.run(qc, shots=1024).result()
+        result = simulator.run(qc, shots=self.shots).result()
         counts = result.get_counts()
 
         # Update memory states based on reward

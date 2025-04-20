@@ -15,7 +15,7 @@ from quantumnematode.report import summary  # pyright: ignore[reportMissingImpor
 logging.getLogger("qiskit").setLevel(logging.WARNING)
 
 
-def main() -> None:  # noqa: C901
+def main() -> None:  # noqa: C901, PLR0915
     """Run the Quantum Nematode simulation."""
     parser = argparse.ArgumentParser(description="Run the Quantum Nematode simulation.")
     parser.add_argument(
@@ -62,6 +62,12 @@ def main() -> None:  # noqa: C901
         choices=["cpu", "gpu"],
         help="Device to use for AerSimulator",
     )
+    parser.add_argument(
+        "--shots",
+        type=int,
+        default=100,
+        help="Number of shots for the AerSimulator",
+    )
 
     args = parser.parse_args()
 
@@ -74,8 +80,9 @@ def main() -> None:  # noqa: C901
             if isinstance(handler, logging.FileHandler):
                 handler.setLevel(args.log_level)
 
-    # Pass the device argument to the brain classes
+    # Pass the device and shots arguments to the brain classes
     device = args.device.upper()
+    shots = args.shots
 
     # Select the brain architecture
     if args.brain == "simple":
@@ -83,7 +90,7 @@ def main() -> None:  # noqa: C901
             SimpleBrain,
         )
 
-        brain = SimpleBrain(device=device)
+        brain = SimpleBrain(device=device, shots=shots)
     elif args.brain == "complex":
         from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
             ComplexBrain,
@@ -93,19 +100,19 @@ def main() -> None:  # noqa: C901
             logger.warning(
                 "ComplexBrain is not optimized for GPU. Using CPU instead.",
             )
-        brain = ComplexBrain()
+        brain = ComplexBrain(device=device, shots=shots)
     elif args.brain == "reduced":
         from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
             ReducedBrain,
         )
 
-        brain = ReducedBrain(device=device)
+        brain = ReducedBrain(device=device, shots=shots)
     elif args.brain == "memory":
         from quantumnematode.brain.memory import (  # pyright: ignore[reportMissingImports]
             MemoryBrain,
         )
 
-        brain = MemoryBrain(device=device)
+        brain = MemoryBrain(device=device, shots=shots)
     else:
         error_message = f"Unknown brain architecture: {args.brain}"
         raise ValueError(error_message)
