@@ -210,7 +210,7 @@ uv run pre-commit install
 Use the following command to manually run the pre-commit checks:
 
 ```sh
-poetry run pre-commit run -a
+uv run pre-commit run -a
 ```
 
 ---
