@@ -1,0 +1,18 @@
+# Ignore everything by default
+*
+
+# Allow specific directories and files
+!/packages/quantum-nematode
+!/scripts
+!/pyproject.toml
+!/uv.lock
+!/README.md
+
+# Ignore unnecessary files and directories
+**/__pycache__/
+**/.venv/
+**/.DS_Store
+**/Thumbs.db
+**/*.pyc
+**/dist
+**/*.code-workspace

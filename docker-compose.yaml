@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  quantum-nematode:
+    container_name: quantum-nematode
+    environment:
+      - PYTHONUNBUFFERED=1
+    tty: true
+    stdin_open: true
+    build:
+      context: .
+      dockerfile: Dockerfile
