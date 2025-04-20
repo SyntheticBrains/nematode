@@ -97,6 +97,14 @@ brew install uv
 uv sync
 ```
 
+### 3. Install dependencies with GPU support
+
+To install dependencies with GPU support, run the following command:
+
+```bash
+uv sync --extra gpu
+```
+
 ---
 
 ## 📓 Running the Simulation

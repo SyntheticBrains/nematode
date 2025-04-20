@@ -8,6 +8,11 @@ dependencies = [
     "ruff>=0.11.6",
 ]
 
+[project.optional-dependencies]
+gpu = [
+  "quantum-nematode[gpu]",
+]
+
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
 
