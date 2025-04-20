@@ -29,7 +29,8 @@ class ReducedBrain(Brain):
     on simulators while maintaining a balance between complexity and feasibility.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, device: str = "CPU") -> None:
+        self.device = device.upper()
         self.neurons = [Parameter(f"θ{i}") for i in range(30)]
         self.parameter_values = {f"θ{i}": 0.0 for i in range(30)}
 
@@ -89,7 +90,7 @@ class ReducedBrain(Brain):
         )
 
         # Use AerSimulator for simulation
-        simulator = AerSimulator()
+        simulator = AerSimulator(device=self.device)
         result = simulator.run(bound_qc, shots=1024).result()
         counts = result.get_counts()
 
