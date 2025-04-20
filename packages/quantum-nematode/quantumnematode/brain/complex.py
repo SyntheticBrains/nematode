@@ -34,7 +34,9 @@ class ComplexBrain(Brain):
     for all simulators.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, device: str = "CPU", shots: int = 100) -> None:
+        self.device = device.upper()
+        self.shots = shots
         self.neurons = [Parameter(f"θ{i}") for i in range(QUBIT_COUNT)]
         self.parameter_values = {f"θ{i}": 0.0 for i in range(QUBIT_COUNT)}
 
@@ -100,7 +102,7 @@ class ComplexBrain(Brain):
             coupling_map=None,  # Fully connected
         )
 
-        job = backend.run(bound_qc)
+        job = backend.run(bound_qc, shots=self.shots)
         result = job.result()
         counts = result.get_counts()
 

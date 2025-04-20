@@ -29,8 +29,9 @@ class SimpleBrain(Brain):
     concepts.
     """
 
-    def __init__(self, device: str = "CPU") -> None:
+    def __init__(self, device: str = "CPU", shots: int = 100) -> None:
         self.device = device.upper()
+        self.shots = shots
         self.theta_x = Parameter("θx")
         self.theta_y = Parameter("θy")
         self.theta_z = Parameter("θz")
@@ -114,7 +115,7 @@ class SimpleBrain(Brain):
 
         simulator = AerSimulator(device=self.device)
         transpiled = transpile(bound_qc, simulator)
-        result = simulator.run(transpiled, shots=1024).result()
+        result = simulator.run(transpiled, shots=self.shots).result()
         counts = result.get_counts()
 
         logger.debug(f"Counts: {counts}")
