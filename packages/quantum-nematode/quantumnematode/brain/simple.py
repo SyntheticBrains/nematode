@@ -3,7 +3,7 @@
 import numpy as np  # pyright: ignore[reportMissingImports]
 from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
-from qiskit_aer import Aer  # pyright: ignore[reportMissingImports]
+from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
@@ -29,7 +29,8 @@ class SimpleBrain(Brain):
     concepts.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, device: str = "CPU") -> None:
+        self.device = device.upper()
         self.theta_x = Parameter("θx")
         self.theta_y = Parameter("θy")
         self.theta_z = Parameter("θz")
@@ -111,7 +112,7 @@ class SimpleBrain(Brain):
             inplace=False,
         )
 
-        simulator = Aer.get_backend("aer_simulator")
+        simulator = AerSimulator(device=self.device)
         transpiled = transpile(bound_qc, simulator)
         result = simulator.run(transpiled, shots=1024).result()
         counts = result.get_counts()

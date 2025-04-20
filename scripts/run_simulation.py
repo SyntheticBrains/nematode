@@ -15,7 +15,7 @@ from quantumnematode.report import summary  # pyright: ignore[reportMissingImpor
 logging.getLogger("qiskit").setLevel(logging.WARNING)
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901
     """Run the Quantum Nematode simulation."""
     parser = argparse.ArgumentParser(description="Run the Quantum Nematode simulation.")
     parser.add_argument(
@@ -55,6 +55,13 @@ def main() -> None:
         default="simple",
         help="Choose the quantum brain architecture to use (default: simple)",
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        choices=["cpu", "gpu"],
+        help="Device to use for AerSimulator",
+    )
 
     args = parser.parse_args()
 
@@ -67,31 +74,38 @@ def main() -> None:
             if isinstance(handler, logging.FileHandler):
                 handler.setLevel(args.log_level)
 
+    # Pass the device argument to the brain classes
+    device = args.device.upper()
+
     # Select the brain architecture
     if args.brain == "simple":
         from quantumnematode.brain.simple import (  # pyright: ignore[reportMissingImports]
             SimpleBrain,
         )
 
-        brain = SimpleBrain()
+        brain = SimpleBrain(device=device)
     elif args.brain == "complex":
         from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
             ComplexBrain,
         )
 
+        if device != "CPU":
+            logger.warning(
+                "ComplexBrain is not optimized for GPU. Using CPU instead.",
+            )
         brain = ComplexBrain()
     elif args.brain == "reduced":
         from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
             ReducedBrain,
         )
 
-        brain = ReducedBrain()
+        brain = ReducedBrain(device=device)
     elif args.brain == "memory":
         from quantumnematode.brain.memory import (  # pyright: ignore[reportMissingImports]
             MemoryBrain,
         )
 
-        brain = MemoryBrain()
+        brain = MemoryBrain(device=device)
     else:
         error_message = f"Unknown brain architecture: {args.brain}"
         raise ValueError(error_message)
