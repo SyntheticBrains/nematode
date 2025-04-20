@@ -9,6 +9,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+cpu = [
+  "quantum-nematode[cpu]",
+]
 gpu = [
   "quantum-nematode[gpu]",
 ]

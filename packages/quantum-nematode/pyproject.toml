@@ -7,14 +7,24 @@ dependencies = [
     "qiskit>=2.0.0",
     "matplotlib>=3.10.1",
     "ipykernel>=6.29.5",
-    "qiskit-aer>=0.17.0",
     "numpy>=2.2.4",
 ]
 classifiers = ["Private :: Do Not Upload"]
 
 [project.optional-dependencies]
+cpu = [
+  "qiskit-aer>=0.17.0",
+]
 gpu = [
   "qiskit-aer-gpu>=0.15.1",
+]
+
+[tool.uv]
+conflicts = [
+    [
+      { extra = "cpu" },
+      { extra = "gpu" },
+    ],
 ]
 
 [build-system]

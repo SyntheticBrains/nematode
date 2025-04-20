@@ -91,15 +91,17 @@ The default architecture is `simple`. Use `complex` for real QPU testing and `re
 brew install uv
 ```
 
-### 2. Install dependencies
+### 2. Install dependencie
+
+You can install the project with either CPU or GPU support.
+
+Install with CPU support:
 
 ```bash
-uv sync
+uv sync --extra cpu
 ```
 
-### 3. Install dependencies with GPU support
-
-To install dependencies with GPU support, run the following command:
+Install with GPU support:
 
 ```bash
 uv sync --extra gpu

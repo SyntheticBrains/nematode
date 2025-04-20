@@ -1,6 +1,10 @@
 version = 1
 revision = 1
 requires-python = "==3.12.*"
+conflicts = [[
+    { package = "quantum-nematode", extra = "cpu" },
+    { package = "quantum-nematode", extra = "gpu" },
+]]
 
 [manifest]
 members = [
@@ -254,7 +258,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "sys_platform == 'darwin'" },
+    { name = "appnope", marker = "sys_platform == 'darwin' or (extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu')" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -278,12 +282,12 @@ name = "ipython"
 version = "9.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu')" },
     { name = "decorator" },
     { name = "ipython-pygments-lexers" },
     { name = "jedi" },
     { name = "matplotlib-inline" },
-    { name = "pexpect", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "pexpect", marker = "(sys_platform != 'emscripten' and sys_platform != 'win32') or (sys_platform == 'emscripten' and extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu') or (sys_platform == 'win32' and extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu')" },
     { name = "prompt-toolkit" },
     { name = "pygments" },
     { name = "stack-data" },
@@ -340,7 +344,7 @@ version = "5.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "platformdirs" },
-    { name = "pywin32", marker = "platform_python_implementation != 'PyPy' and sys_platform == 'win32'" },
+    { name = "pywin32", marker = "(platform_python_implementation != 'PyPy' and sys_platform == 'win32') or (platform_python_implementation == 'PyPy' and extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu') or (sys_platform != 'win32' and extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu')" },
     { name = "traitlets" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/00/11/b56381fa6c3f4cc5d2cf54a7dbf98ad9aa0b339ef7a601d6053538b079a7/jupyter_core-5.7.2.tar.gz", hash = "sha256:aa5f8d32bbf6b431ac830496da7392035d6f61b4f54872f15c4bd2a9c3f536d9", size = 87629 }
@@ -726,7 +730,7 @@ name = "pyzmq"
 version = "26.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "implementation_name == 'pypy'" },
+    { name = "cffi", marker = "implementation_name == 'pypy' or (extra == 'extra-16-quantum-nematode-cpu' and extra == 'extra-16-quantum-nematode-gpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b1/11/b9213d25230ac18a71b39b3723494e57adebe36e066397b961657b3b41c1/pyzmq-26.4.0.tar.gz", hash = "sha256:4bd13f85f80962f91a651a7356fe0472791a5f7a92f227822b5acf44795c626d", size = 278293 }
 wheels = [
@@ -820,10 +824,12 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "qiskit" },
-    { name = "qiskit-aer" },
 ]
 
 [package.optional-dependencies]
+cpu = [
+    { name = "qiskit-aer" },
+]
 gpu = [
     { name = "qiskit-aer-gpu" },
 ]
@@ -834,10 +840,10 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "qiskit", specifier = ">=2.0.0" },
-    { name = "qiskit-aer", specifier = ">=0.17.0" },
+    { name = "qiskit-aer", marker = "extra == 'cpu'", specifier = ">=0.17.0" },
     { name = "qiskit-aer-gpu", marker = "extra == 'gpu'", specifier = ">=0.15.1" },
 ]
-provides-extras = ["gpu"]
+provides-extras = ["cpu", "gpu"]
 
 [[package]]
 name = "quantum-nematode-workspace"
@@ -850,8 +856,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+cpu = [
+    { name = "quantum-nematode", extra = ["cpu"], marker = "extra == 'extra-16-quantum-nematode-cpu'" },
+]
 gpu = [
-    { name = "quantum-nematode", extra = ["gpu"] },
+    { name = "quantum-nematode", extra = ["gpu"], marker = "extra == 'extra-16-quantum-nematode-gpu'" },
 ]
 
 [package.dev-dependencies]
@@ -863,10 +872,11 @@ dev = [
 requires-dist = [
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pyright", specifier = ">=1.1.399" },
+    { name = "quantum-nematode", extras = ["cpu"], marker = "extra == 'cpu'", editable = "packages/quantum-nematode" },
     { name = "quantum-nematode", extras = ["gpu"], marker = "extra == 'gpu'", editable = "packages/quantum-nematode" },
     { name = "ruff", specifier = ">=0.11.6" },
 ]
-provides-extras = ["gpu"]
+provides-extras = ["cpu", "gpu"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "quantum-nematode", editable = "packages/quantum-nematode" }]

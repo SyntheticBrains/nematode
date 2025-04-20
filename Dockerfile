@@ -19,4 +19,4 @@ COPY packages/quantum-nematode /app/packages/quantum-nematode
 COPY scripts /app/scripts
 
 # Install project
-RUN uv sync
+RUN uv sync --extra gpu
