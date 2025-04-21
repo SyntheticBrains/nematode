@@ -6,6 +6,7 @@ from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
+from quantumnematode.logging_config import logger
 
 
 class ReducedBrain(Brain):
@@ -56,7 +57,6 @@ class ReducedBrain(Brain):
         self,
         dx: int,  # noqa: ARG002
         dy: int,  # noqa: ARG002
-        grid_size: int,  # noqa: ARG002
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -104,7 +104,7 @@ class ReducedBrain(Brain):
 
     def compute_gradients(self, counts: dict[str, int], reward: float) -> list[float]:
         """
-        Compute gradients based on counts and reward.
+        Compute gradients based on counts and reward, with normalization to prevent large updates.
 
         Parameters
         ----------
@@ -116,7 +116,7 @@ class ReducedBrain(Brain):
         Returns
         -------
         list[float]
-            Gradients for each parameter.
+            Normalized gradients for each parameter.
         """
         total_shots = sum(counts.values())
         probabilities = {key: value / total_shots for key, value in counts.items()}
@@ -128,6 +128,14 @@ class ReducedBrain(Brain):
             )  # Binary representation of neuron index
             gradient = reward * (1 - probability)
             gradients.append(gradient)
+
+        # Normalize gradients to prevent large updates
+        gradients = [
+            g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
+            for g in gradients
+        ]
+
+        logger.debug(f"Computed gradients: {gradients}")
         return gradients
 
     def update_parameters(self, gradients: list[float], learning_rate: float = 0.1) -> None:
@@ -147,8 +155,6 @@ class ReducedBrain(Brain):
     def interpret_counts(
         self,
         counts: dict[str, int],
-        agent_pos: list[int],
-        grid_size: int,
     ) -> str:
         """
         Interpret the measurement counts and determine the action.
@@ -157,28 +163,31 @@ class ReducedBrain(Brain):
         ----------
         counts : dict[str, int]
             Measurement counts from the quantum circuit.
-        agent_pos : list[int]
-            Current position of the agent.
-        grid_size : int
-            Size of the grid environment.
 
         Returns
         -------
         str
-            Action to be taken by the agent.
+            Action to be taken by the agent ('forward', 'left', 'right').
         """
         sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         most_common = sorted_counts[0][0]  # Binary string of the most common result
 
         # Map binary string to actions
-        valid_action_map = {}
-        if agent_pos[1] < grid_size - 1:  # Can move up
-            valid_action_map["00"] = "up"
-        if agent_pos[1] > 0:  # Can move down
-            valid_action_map["01"] = "down"
-        if agent_pos[0] < grid_size - 1:  # Can move right
-            valid_action_map["11"] = "right"
-        if agent_pos[0] > 0:  # Can move left
-            valid_action_map["10"] = "left"
+        action_map = {
+            "00": "forward",
+            "01": "left",
+            "11": "right",
+            "10": "stay",
+        }
 
-        return valid_action_map.get(most_common[:2], "unknown")
+        return action_map.get(most_common[:2], "unknown")
+
+    def update_memory(self, reward: float) -> None:
+        """
+        No-op method for updating memory in the ReducedBrain.
+
+        Parameters
+        ----------
+        reward : float
+            Reward signal (not used in ReducedBrain).
+        """

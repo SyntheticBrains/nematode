@@ -65,7 +65,6 @@ class SimpleBrain(Brain):
         self,
         dx: int,
         dy: int,
-        grid_size: int,
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -77,8 +76,6 @@ class SimpleBrain(Brain):
             Distance to the goal along the x-axis.
         dy : int
             Distance to the goal along the y-axis.
-        grid_size : int
-            Size of the grid environment.
         reward : float, optional
             Reward signal for learning, by default None.
 
@@ -89,12 +86,8 @@ class SimpleBrain(Brain):
         """
         qc = self.build_brain()
         rng = np.random.default_rng()
-        input_x = (
-            self.parameter_values["θx"] + dx / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
-        )
-        input_y = (
-            self.parameter_values["θy"] + dy / (grid_size - 1) * np.pi + rng.uniform(-0.1, 0.1)
-        )
+        input_x = self.parameter_values["θx"] + dx * np.pi + rng.uniform(-1.0, 1.0)
+        input_y = self.parameter_values["θy"] + dy * np.pi + rng.uniform(-1.0, 1.0)
         input_z = self.parameter_values["θz"] + rng.uniform(0, 2 * np.pi)
         input_entangle = self.parameter_values["θentangle"] + rng.uniform(0, 2 * np.pi)
 
@@ -149,6 +142,14 @@ class SimpleBrain(Brain):
             probability = probabilities.get(key, 0)
             gradient = reward * (1 - probability)
             gradients.append(gradient)
+
+        # Normalize gradients to prevent large updates
+        gradients = [
+            g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
+            for g in gradients
+        ]
+
+        logger.debug(f"Computed gradients: {gradients}")
         return gradients
 
     def update_parameters(
@@ -173,51 +174,44 @@ class SimpleBrain(Brain):
         ):
             self.parameter_values[param_name] -= learning_rate * grad
 
-        logger.debug(f"Updated parameters: {self.parameter_values}")
+        logger.debug(f"Updated parameters: {str(self.parameter_values).replace('θ', 'theta_')}")
 
     def interpret_counts(
         self,
         counts: dict[str, int],
-        agent_pos: list[int],
-        grid_size: int,
     ) -> str:
         """
-        Interpret the quantum circuit's output counts into an action.
+        Interpret the measurement counts and determine the action.
 
         Parameters
         ----------
         counts : dict[str, int]
             Measurement counts from the quantum circuit.
-        agent_pos : list[int]
-            Current position of the agent.
-        grid_size : int
-            Size of the grid environment.
 
         Returns
         -------
         str
-            Action to be taken by the agent.
+            Action to be taken by the agent ('forward', 'left', 'right').
         """
-        # Sort counts by frequency
         sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+        most_common = sorted_counts[0][0]  # Binary string of the most common result
 
-        logger.debug(f"Sorted counts: {sorted_counts}")
+        # Map binary string to actions
+        action_map = {
+            "00": "forward",
+            "01": "left",
+            "11": "right",
+            "10": "stay",
+        }
 
-        # Map the quantum output to valid actions dynamically
-        valid_action_map = {}
-        if agent_pos[1] < grid_size - 1:  # Can move up
-            valid_action_map["00"] = "up"
-        if agent_pos[1] > 0:  # Can move down
-            valid_action_map["01"] = "down"
-        if agent_pos[0] < grid_size - 1:  # Can move right
-            valid_action_map["11"] = "right"
-        if agent_pos[0] > 0:  # Can move left
-            valid_action_map["10"] = "left"
+        return action_map.get(most_common[:2], "unknown")
 
-        # Select the most common result or randomly choose among ties
-        top_results = [result for result, count in sorted_counts if count == sorted_counts[0][1]]
-        rng = np.random.default_rng()
-        most_common = rng.choice(top_results)
+    def update_memory(self, reward: float) -> None:
+        """
+        No-op method for updating memory in the SimpleBrain.
 
-        # Map the result to an action
-        return valid_action_map.get(most_common, "unknown")
+        Parameters
+        ----------
+        reward : float
+            Reward signal (not used in SimpleBrain).
+        """

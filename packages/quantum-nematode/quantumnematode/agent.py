@@ -1,11 +1,17 @@
 """The quantum nematode agent that navigates a grid environment using a quantum brain."""
 
-import logging
 import os
 
 from .brain._brain import Brain
 from .env import MazeEnvironment
 from .logging_config import logger
+
+PENALTY_STAY = -0.1
+PENALTY_STEP = -0.1
+REWARD_GOAL = 50
+REWARD_GOAL_PROXIMITY_1 = 20
+REWARD_GOAL_PROXIMITY_2 = 10
+REWARD_GOAL_PROXIMITY_3 = 5
 
 
 class QuantumNematodeAgent:
@@ -55,39 +61,32 @@ class QuantumNematodeAgent:
 
         Parameters
         ----------
-        max_steps : int, optional
-            Maximum number of steps for the episode, by default 100.
+        max_steps : int
+            Maximum number of steps for the episode.
         show_last_frame_only : bool, optional
-            Whether to display only the last frame, by default False.
+            Whether to show only the last frame of the simulation, by default False.
 
         Returns
         -------
         list[tuple]
-            Path taken by the agent during the episode.
+            The path taken by the agent during the episode.
         """
-        total_reward = 0
-        while not self.env.reached_goal() and self.steps < max_steps:
-            dx, dy = self.env.get_state()
-            counts = self.brain.run_brain(
-                dx,
-                dy,
-                self.env.grid_size,
-                reward=total_reward,
-            )
-            action = self.brain.interpret_counts(
-                counts,
-                self.env.agent_pos,
-                self.env.grid_size,
-            )
-            self.env.move_agent(action)
+        self.env.current_direction = "up"  # Initialize the agent's direction
 
-            # Calculate reward based on efficiency and collision avoidance
+        for _ in range(max_steps):
+            state = self.env.get_state()
             reward = self.calculate_reward()
-            total_reward += reward
+            counts = self.brain.run_brain(*state, reward=reward)
+            action = self.brain.interpret_counts(counts)
+
+            self.env.move_agent(action)
 
             # Update the body length dynamically
             if len(self.env.body) < self.body_length:
                 self.env.body.append(self.env.body[-1])
+
+            # Calculate reward based on efficiency and collision avoidance
+            self.brain.update_memory(reward)
 
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
@@ -98,21 +97,53 @@ class QuantumNematodeAgent:
                 logger.warning("Invalid action received: staying in place.")
 
             if self.env.reached_goal():
+                # Run the brain with the final state and reward
+                reward = self.calculate_reward()
+                counts = self.brain.run_brain(*state, reward=reward)
+
+                # Calculate reward based on efficiency and collision avoidance
+                self.brain.update_memory(reward)
+
+                self.path.append(tuple(self.env.agent_pos))
+                self.steps += 1
+
+                logger.info(f"Step {self.steps}: Action={action}, Reward={reward}")
+
+                self.total_rewards += reward
+                logger.info("Reward: goal reached!")
                 self.success_count += 1
+                break
 
             self.total_steps += 1
             self.total_rewards += reward
 
+            # Log action counts for debugging
+            logger.debug(f"Action counts: {counts}")
+
+            # Log distance to the goal
+            distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
+                self.env.agent_pos[1] - self.env.goal[1],
+            )
+            logger.debug(f"Distance to goal: {distance_to_goal}")
+
+            # Log cumulative reward and average reward per step at the end of each run
+            if self.steps > 0:
+                average_reward = self.total_rewards / self.steps
+                logger.info(
+                    f"Cumulative reward: {self.total_rewards}, "
+                    f"Average reward per step: {average_reward}",
+                )
+
             if show_last_frame_only:
-                os.system("clear")  # noqa: S605, S607
+                if os.name == "nt":  # For Windows
+                    os.system("cls")  # noqa: S605, S607
+                else:  # For macOS and Linux
+                    os.system("clear")  # noqa: S605, S607
 
             grid = self.env.render()
             for frame in grid:
                 print(frame)  # noqa: T201
-
-            if logger.level == logging.DEBUG:
-                for frame in grid:
-                    logger.debug(frame)
+                logger.debug(frame)
 
         return self.path
 
@@ -125,11 +156,32 @@ class QuantumNematodeAgent:
         float
             Reward value based on the agent's performance.
         """
-        if self.env.reached_goal():
-            return 10  # High reward for reaching the goal
-        if tuple(self.env.agent_pos) in self.env.body:
-            return -5  # Penalty for colliding with its own body
-        return -0.1  # Small penalty for each step to encourage efficiency
+        # Decaying penalty for staying in the same position
+        if len(self.path) > 1 and self.path[-1] == self.path[-2]:
+            penalty = PENALTY_STAY * self.steps  # Penalty increases with steps
+            logger.warning(f"Penalty: staying in the same position. Penalty: {penalty}")
+            return penalty
+
+        # Reward for reaching or in proximity of the goal
+        distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
+            self.env.agent_pos[1] - self.env.goal[1],
+        )
+
+        # Adjust reward for proximity to the goal
+        if distance_to_goal == 0:
+            logger.info("Reward: goal reached!")
+            return REWARD_GOAL
+        if distance_to_goal == 1:
+            logger.debug("Reward: close to the goal!")
+            return REWARD_GOAL_PROXIMITY_1
+        if distance_to_goal == 2:  # noqa: PLR2004
+            logger.debug("Reward: two spaces away from the goal.")
+            return REWARD_GOAL_PROXIMITY_2
+        if distance_to_goal == 3:  # noqa: PLR2004
+            logger.debug("Reward: three spaces away from the goal.")
+            return REWARD_GOAL_PROXIMITY_3
+
+        return PENALTY_STEP  # Small penalty for each step to encourage efficiency
 
     def reset_environment(self) -> None:
         """
@@ -144,7 +196,7 @@ class QuantumNematodeAgent:
         self.path = [tuple(self.env.agent_pos)]
         logger.info("Environment reset. Retaining learned data.")
 
-    def calculate_metrics(self) -> dict:
+    def calculate_metrics(self, total_runs: int) -> dict:
         """
         Calculate and return performance metrics.
 
@@ -153,7 +205,6 @@ class QuantumNematodeAgent:
         dict
             A dictionary containing success rate, average steps, and average reward.
         """
-        total_runs = max(self.success_count, 1)  # Avoid division by zero
         return {
             "success_rate": self.success_count / total_runs,
             "average_steps": self.total_steps / total_runs,

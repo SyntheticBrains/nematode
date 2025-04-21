@@ -26,7 +26,6 @@ class Brain(Protocol):
         self,
         dx: int,
         dy: int,
-        grid_size: int,
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -40,8 +39,6 @@ class Brain(Protocol):
     def interpret_counts(
         self,
         counts: dict[str, int],
-        agent_pos: list[int],
-        grid_size: int,
     ) -> str:
         """
         Interpret the measurement counts and determine the action.
@@ -49,4 +46,13 @@ class Brain(Protocol):
         This method should be implemented by subclasses.
         """
         error_msg = "Subclasses must implement the interpret_counts method to interpret the counts."
+        raise NotImplementedError(error_msg)
+
+    def update_memory(self, reward: float) -> None:
+        """
+        Update the memory states based on the reward signal.
+
+        This method should be implemented by subclasses.
+        """
+        error_msg = "Subclasses must implement the update_memory method to update memory states."
         raise NotImplementedError(error_msg)
