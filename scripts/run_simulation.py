@@ -142,7 +142,7 @@ def main() -> None:  # noqa: C901, PLR0915
     logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
 
     # Final summary of all runs.
-    summary(args.runs, all_results)
+    summary(args.runs, args.max_steps, all_results)
 
 
 if __name__ == "__main__":
