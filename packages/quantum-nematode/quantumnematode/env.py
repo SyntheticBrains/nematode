@@ -56,7 +56,7 @@ class MazeEnvironment:
 
         logger.debug(
             f"Agent position: {self.agent_pos}, Body positions: {self.body}, "
-            "Goal: {self.goal}, dx={dx}, dy={dy}",
+            f"Goal: {self.goal}, dx={dx}, dy={dy}",
         )
         return dx, dy
 
