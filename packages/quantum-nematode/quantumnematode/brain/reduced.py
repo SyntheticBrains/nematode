@@ -129,11 +129,11 @@ class ReducedBrain(Brain):
             gradient = reward * (1 - probability)
             gradients.append(gradient)
 
-        # Normalize gradients to prevent large updates
-        gradients = [
-            g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
-            for g in gradients
-        ]
+        # # Normalize gradients to prevent large updates
+        # gradients = [
+        #     g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
+        #     for g in gradients
+        # ]
 
         logger.debug(f"Computed gradients: {gradients}")
         return gradients
@@ -167,7 +167,7 @@ class ReducedBrain(Brain):
         Returns
         -------
         str
-            Action to be taken by the agent ('forward', 'left', 'right').
+            Action to be taken by the agent.
         """
         sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         most_common = sorted_counts[0][0]  # Binary string of the most common result
