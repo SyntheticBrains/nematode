@@ -11,9 +11,6 @@ from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImp
 )
 from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
 
-# Suppress logs from external libraries like Qiskit
-logging.getLogger("qiskit").setLevel(logging.WARNING)
-
 
 def main() -> None:  # noqa: C901, PLR0915
     """Run the Quantum Nematode simulation."""
@@ -138,7 +135,7 @@ def main() -> None:  # noqa: C901, PLR0915
             agent.reset_environment()
 
     # Calculate and log performance metrics
-    metrics = agent.calculate_metrics()
+    metrics = agent.calculate_metrics(total_runs=args.runs)
     logger.info("\nPerformance Metrics:")
     logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
     logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
