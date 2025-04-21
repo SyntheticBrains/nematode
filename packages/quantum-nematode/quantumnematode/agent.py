@@ -119,6 +119,7 @@ class QuantumNematodeAgent:
 
             # Log action counts for debugging
             logger.debug(f"Action counts: {counts}")
+            logger.debug(f"Sorted action counts: {sorted(counts.items(), key=lambda x: x[1], reverse=True)}")
 
             # Log distance to the goal
             distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
