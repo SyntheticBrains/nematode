@@ -178,7 +178,7 @@ class MemoryBrain(Brain):
         Returns
         -------
         str
-            Action to be taken by the agent ('forward', 'left', 'right').
+            Action to be taken by the agent.
         """
         sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         most_common = sorted_counts[0][0]  # Binary string of the most common result
