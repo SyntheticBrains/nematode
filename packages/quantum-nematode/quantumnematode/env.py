@@ -144,6 +144,15 @@ class MazeEnvironment:
         for segment in self.body:
             grid[segment[1]][segment[0]] = "O"
 
-        grid[self.agent_pos[1]][self.agent_pos[0]] = "@"  # Mark the agent
+        # Map the agent's direction to an arrow symbol
+        direction_map = {
+            "up": "^",
+            "down": "v",
+            "left": "<",
+            "right": ">",
+        }
+        agent_symbol = direction_map.get(self.current_direction, "@")
+
+        grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent with an arrow
 
         return [" ".join(row) for row in reversed(grid)] + [""]
