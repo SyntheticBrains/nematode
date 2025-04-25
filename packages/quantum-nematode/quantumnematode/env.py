@@ -9,6 +9,7 @@ The environment provides methods to get the current state, move the agent,
 """
 
 from .logging_config import logger
+import numpy as np
 
 
 class MazeEnvironment:

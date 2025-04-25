@@ -6,12 +6,9 @@ from .brain._brain import Brain
 from .env import MazeEnvironment
 from .logging_config import logger
 
-PENALTY_STAY = -0.1
+PENALTY_STAY = -0.5
 PENALTY_STEP = -0.1
 REWARD_GOAL = 50
-REWARD_GOAL_PROXIMITY_1 = 20
-REWARD_GOAL_PROXIMITY_2 = 10
-REWARD_GOAL_PROXIMITY_3 = 5
 
 
 class QuantumNematodeAgent:
@@ -74,9 +71,9 @@ class QuantumNematodeAgent:
         self.env.current_direction = "up"  # Initialize the agent's direction
 
         for _ in range(max_steps):
-            reward = self.calculate_reward()
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
+            reward = self.calculate_reward(max_steps=max_steps)
             counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
             action = self.brain.interpret_counts(counts)
 
@@ -99,7 +96,7 @@ class QuantumNematodeAgent:
 
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
-                reward = self.calculate_reward()
+                reward = self.calculate_reward(max_steps=max_steps)
                 counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
 
                 # Calculate reward based on efficiency and collision avoidance
@@ -148,41 +145,62 @@ class QuantumNematodeAgent:
 
         return self.path
 
-    def calculate_reward(self) -> float:
+    def calculate_reward(self, max_steps: int) -> float:
         """
-        Calculate reward based on the agent's current state.
+        Calculate reward based on the agent's current state using gradient strength.
 
         Returns
         -------
         float
             Reward value based on the agent's performance.
         """
-        # Decaying penalty for staying in the same position
-        if len(self.path) > 1 and self.path[-1] == self.path[-2]:
-            penalty = PENALTY_STAY * self.steps  # Penalty increases with steps
-            logger.warning(f"Penalty: staying in the same position. Penalty: {penalty}")
-            return penalty
+        reward = 0.0
+        
+        # Get the current gradient strength from the environment
+        gradient_strength, _ = self.env.get_state(self.path[-1])
 
-        # Reward for reaching or in proximity of the goal
-        distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
-            self.env.agent_pos[1] - self.env.goal[1],
+        # Calculate the change in gradient strength since the last step
+        previous_gradient_strength = None
+        if len(self.path) > 1:
+            previous_gradient_strength, _ = self.env.get_state(self.path[-2])
+            gradient_change = gradient_strength - previous_gradient_strength
+        else:
+            gradient_change = 0
+
+        # Enhance reward signal for gradient improvement
+        if previous_gradient_strength is not None:
+            if gradient_change > 0:
+                reward = gradient_change * 30  # Increased reward for improving gradient strength
+            elif gradient_change < 0:
+                reward -= gradient_change * 15  # Stronger penalty for weakening gradient strength
+            else:
+                reward = PENALTY_STEP * 2  # Small penalty for no change
+
+        # Strengthen penalties for revisiting positions
+        if self.path.count(tuple(self.env.agent_pos)) > 1:
+            reward += PENALTY_STEP * 10  # Stronger penalty for revisiting positions
+
+        # Strengthen penalties for collisions
+        if len(self.path) > 1 and self.path[-1] == self.path[-2]:
+            reward += PENALTY_STAY * 5  # Stronger penalty for staying in place due to collision
+
+        # Reward efficient paths by scaling inversely with steps
+        efficiency_factor = None
+        if self.env.reached_goal():
+            efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
+            reward += REWARD_GOAL * 10 * efficiency_factor  # Further scale goal reward dynamically based on speed
+
+        logger.debug(
+            f"Revisit penalty applied: {PENALTY_STEP * 10 if self.path.count(tuple(self.env.agent_pos)) > 1 else 0}, "
+            f"Collision penalty applied: {PENALTY_STAY * 5 if len(self.path) > 1 and self.path[-1] == self.path[-2] else 0}, "
+            f"Efficiency factor: {efficiency_factor if self.env.reached_goal() else 'N/A'}, Reward: {reward}"
         )
 
-        # Adjust reward for proximity to the goal
-        if distance_to_goal == 0:
-            logger.info("Reward: goal reached!")
-            return REWARD_GOAL
-        if distance_to_goal == 1:
-            logger.debug("Reward: close to the goal!")
-            return REWARD_GOAL_PROXIMITY_1
-        if distance_to_goal == 2:  # noqa: PLR2004
-            logger.debug("Reward: two spaces away from the goal.")
-            return REWARD_GOAL_PROXIMITY_2
-        if distance_to_goal == 3:  # noqa: PLR2004
-            logger.debug("Reward: three spaces away from the goal.")
-            return REWARD_GOAL_PROXIMITY_3
+        logger.debug(
+            f"Gradient strength: {gradient_strength}, Gradient change: {gradient_change}, Reward: {reward}"
+        )
 
-        return PENALTY_STEP  # Small penalty for each step to encourage efficiency
+        return reward
 
     def reset_environment(self) -> None:
         """
