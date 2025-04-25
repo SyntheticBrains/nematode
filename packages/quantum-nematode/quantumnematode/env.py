@@ -8,8 +8,9 @@ The environment provides methods to get the current state, move the agent,
     check if the goal is reached, and render the maze.
 """
 
+import numpy as np  # pyright: ignore[reportMissingImports]
+
 from .logging_config import logger
-import numpy as np
 
 
 class MazeEnvironment:
@@ -36,14 +37,17 @@ class MazeEnvironment:
         grid_size: int = 5,
         start_pos: tuple[int, int] = (1, 1),
         food_pos: tuple[int, int] | None = None,
+        max_body_length: int = 6,
     ) -> None:
         self.grid_size = grid_size
         self.agent_pos = list(start_pos)
-        self.body = [tuple(start_pos)]  # Initialize the body with the head position
+        self.body = (
+            [tuple(start_pos)] if max_body_length > 0 else []
+        )  # Initialize the body with the head position
         self.goal = (grid_size - 1, grid_size - 1) if food_pos is None else food_pos
         self.current_direction = "up"  # Initialize the agent's direction
 
-    def get_state(self, position: tuple[int, int]) -> tuple[float, float]:
+    def get_state(self, position: tuple[int, ...]) -> tuple[float, float]:
         """
         Get the current state of the agent in relation to the goal (chemical gradient).
 
@@ -66,12 +70,11 @@ class MazeEnvironment:
         # Debugging: Log detailed information about gradient computation
         logger.debug(
             f"Gradient computation details: dx={dx}, dy={dy}, "
-            f"gradient_strength={gradient_strength}, gradient_direction={gradient_direction}"
+            f"gradient_strength={gradient_strength}, gradient_direction={gradient_direction}",
         )
 
         logger.debug(
-            f"Agent position: {self.agent_pos}, Body positions: {self.body}, "
-            f"Goal: {self.goal}",
+            f"Agent position: {self.agent_pos}, Body positions: {self.body}, Goal: {self.goal}",
         )
         return gradient_strength, gradient_direction
 
@@ -130,7 +133,7 @@ class MazeEnvironment:
             return
 
         # Update the body positions
-        self.body = [tuple(self.agent_pos)] + self.body[:-1]
+        self.body = [tuple(self.agent_pos)] + self.body[:-1] if len(self.body) > 0 else []
 
         # Update the agent's position
         self.agent_pos = new_pos

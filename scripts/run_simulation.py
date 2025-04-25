@@ -65,6 +65,12 @@ def main() -> None:  # noqa: C901, PLR0915
         default=100,
         help="Number of shots for the AerSimulator",
     )
+    parser.add_argument(
+        "--body-length",
+        type=int,
+        default=0,
+        help="Length of the agent's body, excluding head (default: 0)",
+    )
 
     args = parser.parse_args()
 
@@ -116,7 +122,11 @@ def main() -> None:  # noqa: C901, PLR0915
 
     # Update the agent to use the selected brain architecture
     # TODO: Instantiate the environment separately
-    agent = QuantumNematodeAgent(maze_grid_size=args.maze_grid_size, brain=brain)
+    agent = QuantumNematodeAgent(
+        maze_grid_size=args.maze_grid_size,
+        brain=brain,
+        max_body_length=args.body_length,
+    )
 
     all_results = []
 
