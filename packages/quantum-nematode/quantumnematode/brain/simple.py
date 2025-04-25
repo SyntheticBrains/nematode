@@ -152,33 +152,46 @@ class SimpleBrain(Brain):
     def update_parameters(
         self,
         gradients: list[float],
-        learning_rate: float = 0.1,
+        initial_learning_rate: float = 0.1,
+        decay_rate: float = 0.01,
     ) -> None:
         """
-        Update quantum circuit parameter values based on gradients.
+        Update quantum circuit parameter values based on gradients with a dynamic learning rate.
 
         Parameters
         ----------
         gradients : list[float]
             Gradients for each parameter.
-        learning_rate : float, optional
-            Learning rate for parameter updates, by default 0.1.
+        initial_learning_rate : float, optional
+            Initial learning rate for parameter updates.
+        decay_rate : float, optional
+            Rate at which the learning rate decays over time, by default 0.01.
         """
+        # Increase learning rate for faster convergence
+        dynamic_learning_rate = initial_learning_rate / (1 + decay_rate * self.steps)
+        dynamic_learning_rate *= 1.5  # Scale up the learning rate by 1.5x
+
         for param_name, grad in zip(
             self.parameter_values.keys(),
             gradients,
             strict=False,
         ):
-            self.parameter_values[param_name] -= learning_rate * grad
+            self.parameter_values[param_name] -= dynamic_learning_rate * grad
 
-        logger.debug(f"Updated parameters: {str(self.parameter_values).replace('θ', 'theta_')}")
+        logger.debug(
+            f"Updated parameters with dynamic learning rate {dynamic_learning_rate}: "
+            f"{str(self.parameter_values).replace('θ', 'theta_')}"
+        )
+
+        # Increment the step count
+        self.steps += 1
 
     def interpret_counts(
         self,
         counts: dict[str, int],
     ) -> str:
         """
-        Interpret the measurement counts and determine the action.
+        Interpret the measurement counts and determine the action using a softmax-based mechanism.
 
         Parameters
         ----------
@@ -190,8 +203,36 @@ class SimpleBrain(Brain):
         str
             Action to be taken by the agent.
         """
-        sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-        most_common = sorted_counts[0][0]  # Binary string of the most common result
+        logger.debug(f"Raw counts from quantum circuit: {counts}")
+
+        valid_keys = {"00", "01", "10", "11"}
+        counts = {key: value for key, value in counts.items() if key in valid_keys}
+
+        if not counts:
+            logger.error("No valid actions found in counts. Defaulting to 'unknown'.")
+            return "unknown"
+
+        # Analyze distribution of counts
+        total_counts = sum(counts.values())
+        distribution = {key: value / total_counts for key, value in counts.items()}
+        logger.debug(f"Normalized distribution of counts: {distribution}")
+
+        # Identify potential biases in the distribution
+        max_action = max(distribution, key=distribution.get)
+        logger.debug(f"Most probable action: {max_action} with probability {distribution[max_action]:.2f}")
+
+        # Adjust softmax temperature dynamically based on steps to encourage exploration
+        exploration_factor = max(0.1, 1 - (self.steps / 1000))  # Decay exploration over time
+        temperature = 0.5 * exploration_factor  # Scale temperature by exploration factor
+
+        # Add noise to probabilities to encourage exploration
+        noise = np.random.uniform(0, 0.05, len(counts))  # Add small random noise
+        probabilities = {
+            key: math.exp((value / total_counts) / temperature) + noise[i]
+            for i, (key, value) in enumerate(counts.items())
+        }
+        total_prob = sum(probabilities.values())
+        probabilities = {key: value / total_prob for key, value in probabilities.items()}
 
         # Map binary string to actions
         action_map = {
@@ -201,14 +242,20 @@ class SimpleBrain(Brain):
             "10": "stay",
         }
 
-        return action_map.get(most_common[:2], "unknown")
+        # Select an action based on the softmax probabilities
+        actions, probs = zip(*[(action_map.get(key, "unknown"), prob) for key, prob in probabilities.items()])
+        selected_action = np.random.choice(actions, p=probs)
+
+        logger.debug(f"Softmax probabilities: {probabilities}, Selected action: {selected_action}")
+
+        return selected_action
 
     def update_memory(self, reward: float) -> None:
         """
-        No-op method for updating memory in the SimpleBrain.
+        No-op method for updating memory.
 
         Parameters
         ----------
         reward : float
-            Reward signal (not used in SimpleBrain).
+            Reward signal.
         """
