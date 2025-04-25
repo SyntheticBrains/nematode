@@ -74,9 +74,10 @@ class QuantumNematodeAgent:
         self.env.current_direction = "up"  # Initialize the agent's direction
 
         for _ in range(max_steps):
-            state = self.env.get_state()
             reward = self.calculate_reward()
-            counts = self.brain.run_brain(*state, reward=reward)
+            logger.debug("--- New Step ---")
+            gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
+            counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
             action = self.brain.interpret_counts(counts)
 
             self.env.move_agent(action)
@@ -99,7 +100,7 @@ class QuantumNematodeAgent:
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
                 reward = self.calculate_reward()
-                counts = self.brain.run_brain(*state, reward=reward)
+                counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
 
                 # Calculate reward based on efficiency and collision avoidance
                 self.brain.update_memory(reward)
@@ -118,7 +119,6 @@ class QuantumNematodeAgent:
             self.total_rewards += reward
 
             # Log action counts for debugging
-            logger.debug(f"Action counts: {counts}")
             logger.debug(f"Sorted action counts: {sorted(counts.items(), key=lambda x: x[1], reverse=True)}")
 
             # Log distance to the goal

@@ -103,8 +103,8 @@ class MemoryBrain(Brain):
 
     def run_brain(
         self,
-        dx: int,  # noqa: ARG002
-        dy: int,  # noqa: ARG002
+        gradient_strength: float,  # noqa: ARG002
+        gradient_direction: float,  # noqa: ARG002
         reward: float | None = None,
     ) -> dict[str, int]:
         """

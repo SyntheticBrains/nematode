@@ -60,8 +60,8 @@ class ComplexBrain(Brain):
 
     def run_brain(
         self,
-        dx: int,  # noqa: ARG002
-        dy: int,  # noqa: ARG002
+        gradient_strength: float,  # noqa: ARG002
+        gradient_direction: float,  # noqa: ARG002
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -196,12 +196,13 @@ class ComplexBrain(Brain):
 
         return action_map.get(most_common[:2], "unknown")
 
+
     def update_memory(self, reward: float) -> None:
         """
-        No-op method for updating memory in the ComplexBrain.
+        No-op method for updating memory.
 
         Parameters
         ----------
         reward : float
-            Reward signal (not used in ComplexBrain).
+            Reward signal.
         """

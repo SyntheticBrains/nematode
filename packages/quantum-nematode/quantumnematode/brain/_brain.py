@@ -24,8 +24,8 @@ class Brain(Protocol):
 
     def run_brain(
         self,
-        dx: int,
-        dy: int,
+        gradient_strength: float,
+        gradient_direction: float,
         reward: float | None = None,
     ) -> dict[str, int]:
         """

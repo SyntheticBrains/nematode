@@ -63,8 +63,8 @@ class SimpleBrain(Brain):
 
     def run_brain(
         self,
-        dx: int,
-        dy: int,
+        gradient_strength: float,
+        gradient_direction: float,
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -72,10 +72,10 @@ class SimpleBrain(Brain):
 
         Parameters
         ----------
-        dx : int
-            Distance to the goal along the x-axis.
-        dy : int
-            Distance to the goal along the y-axis.
+        gradient_strength : float
+            Intensity of the chemical gradient at the worm's position.
+        gradient_direction : float
+            Direction of the strongest gradient relative to the worm's orientation.
         reward : float, optional
             Reward signal for learning, by default None.
 
@@ -85,14 +85,13 @@ class SimpleBrain(Brain):
             Measurement counts from the quantum circuit.
         """
         qc = self.build_brain()
-        rng = np.random.default_rng()
-        input_x = self.parameter_values["θx"] + dx * np.pi + rng.uniform(-1.0, 1.0)
-        input_y = self.parameter_values["θy"] + dy * np.pi + rng.uniform(-1.0, 1.0)
-        input_z = self.parameter_values["θz"] + rng.uniform(0, 2 * np.pi)
-        input_entangle = self.parameter_values["θentangle"] + rng.uniform(0, 2 * np.pi)
+        input_x = self.parameter_values["θx"] + gradient_strength * np.pi + self.rng.uniform(-1.0, 1.0)
+        input_y = self.parameter_values["θy"] + gradient_direction * np.pi + self.rng.uniform(-1.0, 1.0)
+        input_z = self.parameter_values["θz"] + self.rng.uniform(0, 2 * np.pi)
+        input_entangle = self.parameter_values["θentangle"] + self.rng.uniform(0, 2 * np.pi)
 
         logger.debug(
-            f"dx={dx}, dy={dy}, input_x={input_x}, input_y={input_y}, "
+            f"input_x={input_x}, input_y={input_y}, "
             f"input_z={input_z}, input_entangle={input_entangle}",
         )
 
@@ -110,8 +109,6 @@ class SimpleBrain(Brain):
         transpiled = transpile(bound_qc, simulator)
         result = simulator.run(transpiled, shots=self.shots).result()
         counts = result.get_counts()
-
-        logger.debug(f"Counts: {counts}")
 
         if reward is not None:
             gradients = self.compute_gradients(counts, reward)

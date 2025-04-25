@@ -55,8 +55,8 @@ class ReducedBrain(Brain):
 
     def run_brain(
         self,
-        dx: int,  # noqa: ARG002
-        dy: int,  # noqa: ARG002
+        gradient_strength: float,  # noqa: ARG002
+        gradient_direction: float,  # noqa: ARG002
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -184,10 +184,10 @@ class ReducedBrain(Brain):
 
     def update_memory(self, reward: float) -> None:
         """
-        No-op method for updating memory in the ReducedBrain.
+        No-op method for updating memory.
 
         Parameters
         ----------
         reward : float
-            Reward signal (not used in ReducedBrain).
+            Reward signal.
         """
