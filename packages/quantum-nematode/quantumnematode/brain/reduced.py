@@ -130,10 +130,10 @@ class ReducedBrain(Brain):
             gradients.append(gradient)
 
         # # Normalize gradients to prevent large updates
-        # gradients = [
-        #     g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
-        #     for g in gradients
-        # ]
+        gradients = [
+            g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
+            for g in gradients
+        ]
 
         logger.debug(f"Computed gradients: {gradients}")
         return gradients
