@@ -196,7 +196,6 @@ class ComplexBrain(Brain):
 
         return action_map.get(most_common[:2], "unknown")
 
-
     def update_memory(self, reward: float) -> None:
         """
         No-op method for updating memory.

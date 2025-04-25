@@ -27,7 +27,7 @@ class QuantumNematodeAgent:
         Maximum length of the agent's body.
     """
 
-    def __init__(self, brain: Brain, maze_grid_size: int = 5) -> None:
+    def __init__(self, brain: Brain, maze_grid_size: int = 5, max_body_length: int = 6) -> None:
         """
         Initialize the quantum nematode agent.
 
@@ -39,10 +39,13 @@ class QuantumNematodeAgent:
             Size of the grid environment, by default 5.
         """
         self.brain = brain
-        self.env = MazeEnvironment(grid_size=maze_grid_size)
+        self.env = MazeEnvironment(grid_size=maze_grid_size, max_body_length=max_body_length)
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
-        self.body_length = min(maze_grid_size - 1, 6)  # Set the maximum body length
+        self.max_body_length = min(
+            maze_grid_size - 1,
+            max_body_length,
+        )  # Set the maximum body length
         self.success_count = 0
         self.total_steps = 0
         self.total_rewards = 0
@@ -80,7 +83,7 @@ class QuantumNematodeAgent:
             self.env.move_agent(action)
 
             # Update the body length dynamically
-            if len(self.env.body) < self.body_length:
+            if self.max_body_length > 0 and len(self.env.body) < self.max_body_length:
                 self.env.body.append(self.env.body[-1])
 
             # Calculate reward based on efficiency and collision avoidance
@@ -116,7 +119,9 @@ class QuantumNematodeAgent:
             self.total_rewards += reward
 
             # Log action counts for debugging
-            logger.debug(f"Sorted action counts: {sorted(counts.items(), key=lambda x: x[1], reverse=True)}")
+            logger.debug(
+                f"Sorted action counts: {sorted(counts.items(), key=lambda x: x[1], reverse=True)}",
+            )
 
             # Log distance to the goal
             distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
@@ -155,7 +160,7 @@ class QuantumNematodeAgent:
             Reward value based on the agent's performance.
         """
         reward = 0.0
-        
+
         # Get the current gradient strength from the environment
         gradient_strength, _ = self.env.get_state(self.path[-1])
 
@@ -171,33 +176,36 @@ class QuantumNematodeAgent:
         if previous_gradient_strength is not None:
             if gradient_change > 0:
                 reward = gradient_change * 30  # Increased reward for improving gradient strength
+                logger.debug("Reward: Gradient improvement reward applied.")
             elif gradient_change < 0:
                 reward -= gradient_change * 15  # Stronger penalty for weakening gradient strength
+                logger.debug("Penalty: Gradient weakening penalty applied.")
             else:
                 reward = PENALTY_STEP * 2  # Small penalty for no change
+                logger.debug("Penalty: No change penalty applied.")
 
         # Strengthen penalties for revisiting positions
         if self.path.count(tuple(self.env.agent_pos)) > 1:
             reward += PENALTY_STEP * 10  # Stronger penalty for revisiting positions
+            logger.debug("Penalty: Revisit penalty applied.")
 
         # Strengthen penalties for collisions
         if len(self.path) > 1 and self.path[-1] == self.path[-2]:
             reward += PENALTY_STAY * 5  # Stronger penalty for staying in place due to collision
+            logger.debug("Penalty: Collision penalty applied.")
 
         # Reward efficient paths by scaling inversely with steps
         efficiency_factor = None
         if self.env.reached_goal():
             efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
-            reward += REWARD_GOAL * 10 * efficiency_factor  # Further scale goal reward dynamically based on speed
+            reward += (
+                REWARD_GOAL * 10 * efficiency_factor
+            )  # Further scale goal reward dynamically based on speed
+            logger.debug("Reward: Goal reached, efficiency factor applied.")
 
         logger.debug(
-            f"Revisit penalty applied: {PENALTY_STEP * 10 if self.path.count(tuple(self.env.agent_pos)) > 1 else 0}, "
-            f"Collision penalty applied: {PENALTY_STAY * 5 if len(self.path) > 1 and self.path[-1] == self.path[-2] else 0}, "
-            f"Efficiency factor: {efficiency_factor if self.env.reached_goal() else 'N/A'}, Reward: {reward}"
-        )
-
-        logger.debug(
-            f"Gradient strength: {gradient_strength}, Gradient change: {gradient_change}, Reward: {reward}"
+            f"Gradient strength: {gradient_strength}, "
+            f"Gradient change: {gradient_change}, Reward: {reward}",
         )
 
         return reward
@@ -210,7 +218,10 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        self.env = MazeEnvironment(grid_size=self.env.grid_size)
+        self.env = MazeEnvironment(
+            grid_size=self.env.grid_size,
+            max_body_length=self.max_body_length,
+        )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         logger.info("Environment reset. Retaining learned data.")

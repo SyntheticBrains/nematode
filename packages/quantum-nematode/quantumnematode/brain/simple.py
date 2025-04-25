@@ -1,6 +1,7 @@
 """Simple Quantum Brain Architecture."""
 
 import math
+
 import numpy as np  # pyright: ignore[reportMissingImports]
 from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
@@ -88,8 +89,12 @@ class SimpleBrain(Brain):
             Measurement counts from the quantum circuit.
         """
         qc = self.build_brain()
-        input_x = self.parameter_values["θx"] + gradient_strength * np.pi + self.rng.uniform(-1.0, 1.0)
-        input_y = self.parameter_values["θy"] + gradient_direction * np.pi + self.rng.uniform(-1.0, 1.0)
+        input_x = (
+            self.parameter_values["θx"] + gradient_strength * np.pi + self.rng.uniform(-1.0, 1.0)
+        )
+        input_y = (
+            self.parameter_values["θy"] + gradient_direction * np.pi + self.rng.uniform(-1.0, 1.0)
+        )
         input_z = self.parameter_values["θz"] + self.rng.uniform(0, 2 * np.pi)
         input_entangle = self.parameter_values["θentangle"] + self.rng.uniform(0, 2 * np.pi)
 
@@ -183,7 +188,7 @@ class SimpleBrain(Brain):
 
         logger.debug(
             f"Updated parameters with dynamic learning rate {dynamic_learning_rate}: "
-            f"{str(self.parameter_values).replace('θ', 'theta_')}"
+            f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
         # Increment the step count
@@ -221,15 +226,17 @@ class SimpleBrain(Brain):
         logger.debug(f"Normalized distribution of counts: {distribution}")
 
         # Identify potential biases in the distribution
-        max_action = max(distribution, key=distribution.get)
-        logger.debug(f"Most probable action: {max_action} with probability {distribution[max_action]:.2f}")
+        max_action = max(distribution, key=lambda k: distribution[k])
+        logger.debug(
+            f"Most probable action: {max_action} with probability {distribution[max_action]:.2f}",
+        )
 
         # Adjust softmax temperature dynamically based on steps to encourage exploration
         exploration_factor = max(0.1, 1 - (self.steps / 1000))  # Decay exploration over time
         temperature = 0.5 * exploration_factor  # Scale temperature by exploration factor
 
         # Add noise to probabilities to encourage exploration
-        noise = np.random.uniform(0, 0.05, len(counts))  # Add small random noise
+        noise = self.rng.uniform(0, 0.05, len(counts))  # Add small random noise
         probabilities = {
             key: math.exp((value / total_counts) / temperature) + noise[i]
             for i, (key, value) in enumerate(counts.items())
@@ -246,8 +253,11 @@ class SimpleBrain(Brain):
         }
 
         # Select an action based on the softmax probabilities
-        actions, probs = zip(*[(action_map.get(key, "unknown"), prob) for key, prob in probabilities.items()])
-        selected_action = np.random.choice(actions, p=probs)
+        actions, probs = zip(
+            *[(action_map.get(key, "unknown"), prob) for key, prob in probabilities.items()],
+            strict=False,
+        )
+        selected_action = self.rng.choice(actions, p=probs)
 
         logger.debug(f"Softmax probabilities: {probabilities}, Selected action: {selected_action}")
 
