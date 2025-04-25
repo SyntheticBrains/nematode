@@ -115,6 +115,7 @@ def main() -> None:  # noqa: C901, PLR0915
         raise ValueError(error_message)
 
     # Update the agent to use the selected brain architecture
+    # TODO: Instantiate the environment separately
     agent = QuantumNematodeAgent(maze_grid_size=args.maze_grid_size, brain=brain)
 
     all_results = []

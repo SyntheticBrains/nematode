@@ -42,23 +42,37 @@ class MazeEnvironment:
         self.goal = (grid_size - 1, grid_size - 1) if food_pos is None else food_pos
         self.current_direction = "up"  # Initialize the agent's direction
 
-    def get_state(self) -> tuple[int, int]:
+    def get_state(self, position: tuple[int, int]) -> tuple[float, float]:
         """
-        Get the current state of the agent in relation to the goal.
+        Get the current state of the agent in relation to the goal (chemical gradient).
 
         Returns
         -------
         tuple
-            A tuple containing the x and y distances to the goal.
+            A tuple containing the gradient strength and direction.
         """
-        dx = self.goal[0] - self.agent_pos[0] + 1
-        dy = self.goal[1] - self.agent_pos[1] + 1
+        # Simulate chemical gradient strength and direction
+        dx = self.goal[0] - position[0]
+        dy = self.goal[1] - position[1]
+
+        # Refine gradient strength scaling to emphasize proximity to the goal
+        max_distance = self.grid_size * 2  # Maximum possible Manhattan distance in the grid
+        distance_to_goal = abs(dx) + abs(dy)
+        gradient_strength = max(0.0, 1.0 - (distance_to_goal / max_distance))
+        gradient_strength = np.tanh(gradient_strength * 5)  # Apply non-linear scaling with tanh
+        gradient_direction = np.arctan2(dy, dx) if dx != 0 or dy != 0 else 0.0
+
+        # Debugging: Log detailed information about gradient computation
+        logger.debug(
+            f"Gradient computation details: dx={dx}, dy={dy}, "
+            f"gradient_strength={gradient_strength}, gradient_direction={gradient_direction}"
+        )
 
         logger.debug(
             f"Agent position: {self.agent_pos}, Body positions: {self.body}, "
-            f"Goal: {self.goal}, dx={dx}, dy={dy}",
+            f"Goal: {self.goal}",
         )
-        return dx, dy
+        return gradient_strength, gradient_direction
 
     def move_agent(self, action: str) -> None:
         """
@@ -86,6 +100,9 @@ class MazeEnvironment:
             "right": {"forward": "right", "left": "up", "right": "down"},
         }
 
+        # Store the previous direction before attempting to move
+        previous_direction = self.current_direction
+
         # Determine the new direction based on the current direction and action
         new_direction = direction_map[self.current_direction][action]
         self.current_direction = new_direction
@@ -101,12 +118,14 @@ class MazeEnvironment:
         elif new_direction == "left" and self.agent_pos[0] > 0:
             new_pos[0] -= 1
         else:
-            logger.warning(f"Invalid action: {action}, staying in place.")
+            logger.warning(f"Collision against boundary with action: {action}, staying in place.")
+            self.current_direction = previous_direction  # Revert to the previous direction
             return
 
         # Check for collision with the body
         if tuple(new_pos) in self.body:
             logger.warning(f"Collision detected at {new_pos}, staying in place.")
+            self.current_direction = previous_direction  # Revert to the previous direction
             return
 
         # Update the body positions
