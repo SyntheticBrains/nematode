@@ -1,5 +1,6 @@
 """Simple Quantum Brain Architecture."""
 
+import math
 import numpy as np  # pyright: ignore[reportMissingImports]
 from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
@@ -36,12 +37,14 @@ class SimpleBrain(Brain):
         self.theta_y = Parameter("θy")
         self.theta_z = Parameter("θz")
         self.theta_entangle = Parameter("θentangle")
+        self.rng = np.random.default_rng()
         self.parameter_values = {
-            "θx": 0.0,
-            "θy": 0.0,
-            "θz": 0.0,
-            "θentangle": 0.0,
+            "θx": self.rng.uniform(-np.pi, np.pi),
+            "θy": self.rng.uniform(-np.pi, np.pi),
+            "θz": self.rng.uniform(-np.pi, np.pi),
+            "θentangle": self.rng.uniform(-np.pi, np.pi),
         }
+        self.steps = 0
 
     def build_brain(self) -> QuantumCircuit:
         """
