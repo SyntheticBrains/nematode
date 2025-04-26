@@ -95,7 +95,12 @@ class MazeEnvironment:
         )  # Initialize the body with the head position
         self.current_direction = "up"  # Initialize the agent's direction
 
-    def get_state(self, position: tuple[int, ...]) -> tuple[float, float]:
+    def get_state(
+        self,
+        position: tuple[int, ...],
+        *,
+        disable_log: bool = False,
+    ) -> tuple[float, float]:
         """
         Get the current state of the agent in relation to the goal (chemical gradient).
 
@@ -115,15 +120,17 @@ class MazeEnvironment:
         gradient_strength = np.tanh(gradient_strength * 5)  # Apply non-linear scaling with tanh
         gradient_direction = np.arctan2(dy, dx) if dx != 0 or dy != 0 else 0.0
 
-        # Debugging: Log detailed information about gradient computation
-        logger.debug(
-            f"Gradient computation details: dx={dx}, dy={dy}, "
-            f"gradient_strength={gradient_strength}, gradient_direction={gradient_direction}",
-        )
+        if not disable_log:
+            # Debugging: Log detailed information about gradient computation
+            logger.debug(
+                f"Gradient computation details: dx={dx}, dy={dy}, "
+                f"gradient_strength={gradient_strength}, gradient_direction={gradient_direction}",
+            )
 
-        logger.debug(
-            f"Agent position: {self.agent_pos}, Body positions: {self.body}, Goal: {self.goal}",
-        )
+            logger.debug(
+                f"Agent position: {self.agent_pos}, Body positions: {self.body}, Goal: {self.goal}",
+            )
+
         return gradient_strength, gradient_direction
 
     def move_agent(self, action: str) -> None:
