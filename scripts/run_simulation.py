@@ -172,6 +172,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     all_results = []
 
     total_runs_done = 0
+
+    # Initialize tracking variables for plotting
+    tracking_data = {
+        "run": [],
+        "input_parameters": [],
+        "computed_gradients": [],
+        "learning_rate": [],
+        "updated_parameters": [],
+        "exploration_factor": [],
+        "temperature": [],
+    }
+
     try:
         for run in range(args.runs):
             logger.info(f"Starting run {run + 1} of {args.runs}")
@@ -194,6 +206,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.reset_environment()
 
             total_runs_done += 1
+
+            # Track data for plotting, only supported for dynamic brain
+            if args.brain == "dynamic":
+                tracking_data["run"].append(run + 1)
+                tracking_data["input_parameters"].append(agent.brain.last_input_parameters)
+                tracking_data["computed_gradients"].append(agent.brain.last_gradients)
+                tracking_data["learning_rate"].append(agent.brain.last_learning_rate)
+                tracking_data["updated_parameters"].append(agent.brain.last_updated_parameters)
+                tracking_data["exploration_factor"].append(agent.brain.last_exploration_factor)
+                tracking_data["temperature"].append(agent.brain.last_temperature)
+
     except KeyboardInterrupt:
         logger.warning("User cancelled the session. Printing partial results.")
 
@@ -209,6 +232,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Generate plots after the simulation
     plot_results(all_results, metrics, timestamp, args.max_steps)
+
+    # Generate additional plots for tracking data
+    if args.brain == "dynamic":
+        plot_tracking_data(tracking_data, timestamp, args.brain, args.qubits)
 
 
 def plot_results(
@@ -264,6 +291,47 @@ def plot_results(
     plt.grid()
     plt.savefig(plot_dir / "success_rate_over_time.png")
     plt.close()
+
+
+def plot_tracking_data(
+    tracking_data: dict[str, list],
+    timestamp: str,
+    brain: str,
+    qubits: int,
+) -> None:
+    """Generate and save plots for tracking data."""
+    plot_dir: Path = Path.cwd() / "plots" / timestamp
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    title_postfix: str = f" [{brain} {qubits}Q]" if brain == "dynamic" else f" [{brain}]"
+
+    # Plot each tracked variable
+    for key, values in tracking_data.items():
+        if key == "run":
+            continue
+        if key in ["input_parameters", "updated_parameters"]:
+            # Flatten dictionaries into lists of values for plotting
+            title = key.replace("_", " ").title()
+            label = next(list(param_dict.keys()) for param_dict in values)
+            values = [list(param_dict.values()) for param_dict in values]  # noqa: PLW2901
+        elif key == "computed_gradients":
+            title = "Computed Gradients"
+            label = [str(n + 1) for n in range(len(values) + 1)]
+        else:
+            label = key.replace("_", " ").title()
+            title = label
+
+        title += title_postfix
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(tracking_data["run"], values, marker="o", label=label)
+        plt.title(title)
+        plt.xlabel("Run")
+        plt.ylabel(label)
+        plt.legend()
+        plt.grid()
+        plt.savefig(plot_dir / f"track_{key}_over_runs.png")
+        plt.close()
 
 
 if __name__ == "__main__":
