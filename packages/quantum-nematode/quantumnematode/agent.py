@@ -124,10 +124,11 @@ class QuantumNematodeAgent:
             )
 
             # Log distance to the goal
-            distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
-                self.env.agent_pos[1] - self.env.goal[1],
-            )
-            logger.debug(f"Distance to goal: {distance_to_goal}")
+            if self.env.goal is not None:
+                distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
+                    self.env.agent_pos[1] - self.env.goal[1],
+                )
+                logger.debug(f"Distance to goal: {distance_to_goal}")
 
             # Log cumulative reward and average reward per step at the end of each run
             if self.steps > 0:
@@ -175,33 +176,36 @@ class QuantumNematodeAgent:
         # Enhance reward signal for gradient improvement
         if previous_gradient_strength is not None:
             if gradient_change > 0:
-                reward = gradient_change * 30  # Increased reward for improving gradient strength
-                logger.debug("Reward: Gradient improvement reward applied.")
+                reward_amount = gradient_strength
+                reward += reward_amount  # Increased reward for improving gradient strength
+                logger.debug(f"[Reward] Gradient improvement reward applied: {reward_amount}.")
             elif gradient_change < 0:
-                reward -= gradient_change * 15  # Stronger penalty for weakening gradient strength
-                logger.debug("Penalty: Gradient weakening penalty applied.")
+                penalty_amount = -(gradient_strength / 2)
+                reward += penalty_amount  # Stronger penalty for weakening gradient strength
+                logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
             else:
-                reward = PENALTY_STEP * 2  # Small penalty for no change
-                logger.debug("Penalty: No change penalty applied.")
-
-        # Strengthen penalties for revisiting positions
-        if self.path.count(tuple(self.env.agent_pos)) > 1:
-            reward += PENALTY_STEP * 10  # Stronger penalty for revisiting positions
-            logger.debug("Penalty: Revisit penalty applied.")
+                penalty_amount = PENALTY_STEP * 2
+                reward += penalty_amount  # Small penalty for no change
+                logger.debug(f"[Penalty] No change penalty applied: {penalty_amount}.")
 
         # Strengthen penalties for collisions
         if len(self.path) > 1 and self.path[-1] == self.path[-2]:
-            reward += PENALTY_STAY * 5  # Stronger penalty for staying in place due to collision
-            logger.debug("Penalty: Collision penalty applied.")
+            penalty_amount = PENALTY_STAY * 3
+            reward += penalty_amount  # Stronger penalty for staying in place due to collision
+            logger.debug(f"[Penalty] Collision penalty applied: {penalty_amount}.")
+        # Strengthen penalties for revisiting positions
+        elif self.path.count(tuple(self.env.agent_pos)) > 1:
+            penalty_amount = PENALTY_STEP * 10
+            reward += penalty_amount  # Stronger penalty for revisiting positions
+            logger.debug(f"[Penalty] Revisit penalty applied: {penalty_amount}.")
 
         # Reward efficient paths by scaling inversely with steps
         efficiency_factor = None
         if self.env.reached_goal():
             efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
-            reward += (
-                REWARD_GOAL * 10 * efficiency_factor
-            )  # Further scale goal reward dynamically based on speed
-            logger.debug("Reward: Goal reached, efficiency factor applied.")
+            reward_amount = REWARD_GOAL * efficiency_factor * 10
+            reward += reward_amount  # Further scale goal reward dynamically based on speed
+            logger.debug(f"[Reward] Goal reached, efficiency factor applied: {reward_amount}.")
 
         logger.debug(
             f"Gradient strength: {gradient_strength}, "

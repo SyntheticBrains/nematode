@@ -6,13 +6,14 @@ import logging
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
     QuantumNematodeAgent,
 )
+from quantumnematode.constants import MIN_GRID_SIZE  # pyright: ignore[reportMissingImports]
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
 from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
 
 
-def main() -> None:  # noqa: C901, PLR0915
+def main() -> None:  # noqa: C901, PLR0912, PLR0915
     """Run the Quantum Nematode simulation."""
     parser = argparse.ArgumentParser(description="Run the Quantum Nematode simulation.")
     parser.add_argument(
@@ -74,8 +75,13 @@ def main() -> None:  # noqa: C901, PLR0915
 
     args = parser.parse_args()
 
-    if args.maze_grid_size < 5:
-        raise ValueError("Maze grid size must be at least 5.")
+    if args.maze_grid_size < MIN_GRID_SIZE:
+        error_message = (
+            f"Grid size must be at least {MIN_GRID_SIZE}. "
+            f"Provided grid size: {args.maze_grid_size}."
+        )
+        logger.error(error_message)
+        raise ValueError(error_message)
 
     # Configure logging level
     if args.log_level == "NONE":
@@ -124,7 +130,6 @@ def main() -> None:  # noqa: C901, PLR0915
         raise ValueError(error_message)
 
     # Update the agent to use the selected brain architecture
-    # TODO: Instantiate the environment separately
     agent = QuantumNematodeAgent(
         maze_grid_size=args.maze_grid_size,
         brain=brain,

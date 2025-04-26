@@ -8,9 +8,11 @@ The environment provides methods to get the current state, move the agent,
     check if the goal is reached, and render the maze.
 """
 
-import numpy as np  # pyright: ignore[reportMissingImports]
-import random
+import secrets
 
+import numpy as np  # pyright: ignore[reportMissingImports]
+
+from .constants import MIN_GRID_SIZE
 from .logging_config import logger
 
 
@@ -40,8 +42,12 @@ class MazeEnvironment:
         food_pos: tuple[int, int] | None = None,
         max_body_length: int = 6,
     ) -> None:
-        if grid_size < 5:
-            raise ValueError("Grid size must be at least 5.")
+        if grid_size < MIN_GRID_SIZE:
+            error_message = (
+                f"Grid size must be at least {MIN_GRID_SIZE}. Provided grid size: {grid_size}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
 
         self.grid_size = grid_size
 
@@ -62,7 +68,7 @@ class MazeEnvironment:
 
         agent_chosen_corner = None
         if start_pos is None:
-            agent_chosen_corner = random.choice(list(corners_map.keys()))
+            agent_chosen_corner = secrets.choice(list(corners_map.keys()))
             start_pos = corners_map[agent_chosen_corner]
 
         if food_pos is None:
@@ -76,9 +82,9 @@ class MazeEnvironment:
                 elif agent_chosen_corner == "bottom_right":
                     food_pos = corners_map["top_left"]
                 else:
-                    food_pos = random.choice(corners)
+                    food_pos = secrets.choice(corners)
             else:
-                food_pos = random.choice(corners)
+                food_pos = secrets.choice(corners)
 
         self.agent_pos = start_pos
         self.goal = food_pos
