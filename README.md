@@ -68,6 +68,7 @@ This project now supports multiple quantum brain architectures:
 - **SimpleBrain**: A lightweight quantum brain using parameterized circuits for basic decision-making.
 - **ComplexBrain**: A detailed quantum brain simulating 302 neurons, designed for real QPU testing.
 - **ReducedBrain**: A scaled-down version of the complex brain using 30 qubits, optimized for simulators.
+- **DynamicBrain**: A flexible quantum brain architecture supporting a dynamic number of qubits for advanced decision-making and experimentation.
 
 ### How to Choose a Brain Architecture
 

@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt  # pyright: ignore[reportMissingImports]
@@ -14,6 +14,8 @@ from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImp
     logger,
 )
 from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
+
+DEFAULT_QUBITS = 2
 
 
 def main() -> None:  # noqa: C901, PLR0912, PLR0915
@@ -52,7 +54,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     parser.add_argument(
         "--brain",
         type=str,
-        choices=["simple", "complex", "reduced", "memory"],
+        choices=["simple", "complex", "reduced", "memory", "dynamic"],
         default="simple",
         help="Choose the quantum brain architecture to use (default: simple)",
     )
@@ -75,6 +77,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         default=0,
         help="Length of the agent's body, excluding head (default: 0)",
     )
+    parser.add_argument(
+        "--qubits",
+        type=int,
+        default=DEFAULT_QUBITS,
+        help="Number of qubits to use in the quantum brain (default: 2). "
+        "Only supported by DynamicBrain.",
+    )
 
     args = parser.parse_args()
 
@@ -95,9 +104,16 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             if isinstance(handler, logging.FileHandler):
                 handler.setLevel(args.log_level)
 
+    # Set up the timestamp for saving results
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+
     # Pass the device and shots arguments to the brain classes
     device = args.device.upper()
     shots = args.shots
+
+    logger.info("Simulation arguments:")
+    for arg, value in vars(args).items():
+        logger.info(f"{arg}: {value}")
 
     # Select the brain architecture
     if args.brain == "simple":
@@ -128,8 +144,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
 
         brain = MemoryBrain(device=device, shots=shots)
+    elif args.brain == "dynamic":
+        from quantumnematode.brain.dynamic import (  # pyright: ignore[reportMissingImports]
+            DynamicBrain,
+        )
+
+        brain = DynamicBrain(device=device, shots=shots, num_qubits=args.qubits)
     else:
         error_message = f"Unknown brain architecture: {args.brain}"
+        raise ValueError(error_message)
+
+    if args.brain != "dynamic" and args.qubits != DEFAULT_QUBITS:
+        error_message = (
+            f"The 'qubits' parameter is only supported by the DynamicBrain architecture. "
+            f"Provided brain: {args.brain}, qubits: {args.qubits}."
+        )
+        logger.error(error_message)
         raise ValueError(error_message)
 
     # Update the agent to use the selected brain architecture
@@ -154,13 +184,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_reward = sum(
                 agent.env.get_state(pos, disable_log=True)[0] for pos in path
             )  # Calculate total reward for the run
-            all_results.append((run + 1, steps, path, total_reward))  # Include total reward in results
+            all_results.append(
+                (run + 1, steps, path, total_reward),
+            )  # Include total reward in results
 
             logger.info(f"Run {run + 1}/{args.runs} completed in {steps} steps.")
 
             if run < args.runs - 1:
                 agent.reset_environment()
-            
+
             total_runs_done += 1
     except KeyboardInterrupt:
         logger.warning("User cancelled the session. Printing partial results.")
@@ -176,7 +208,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     summary(total_runs_done, args.max_steps, all_results)
 
     # Generate plots after the simulation
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     plot_results(all_results, metrics, timestamp, args.max_steps)
 
 
@@ -233,6 +264,7 @@ def plot_results(
     plt.grid()
     plt.savefig(plot_dir / "success_rate_over_time.png")
     plt.close()
+
 
 if __name__ == "__main__":
     main()
