@@ -9,3 +9,4 @@ build/*
 builds/*
 log/*
 logs/*
+plots/*

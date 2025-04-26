@@ -2,7 +2,10 @@
 
 import argparse
 import logging
+from datetime import UTC
+from pathlib import Path
 
+import matplotlib.pyplot as plt  # pyright: ignore[reportMissingImports]
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
     QuantumNematodeAgent,
 )
@@ -146,7 +149,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
 
         steps = len(path)
-        all_results.append((run + 1, steps, path))
+        total_reward = sum(
+            agent.env.get_state(pos, disable_log=True)[0] for pos in path
+        )  # Calculate total reward for the run
+        all_results.append((run + 1, steps, path, total_reward))  # Include total reward in results
 
         logger.info(f"Run {run + 1}/{args.runs} completed in {steps} steps.")
 
@@ -162,6 +168,67 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Final summary of all runs.
     summary(args.runs, args.max_steps, all_results)
+
+    # Generate plots after the simulation
+    from datetime import datetime
+
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    plot_results(all_results, metrics, timestamp, args.max_steps)
+
+
+def plot_results(
+    all_results: list[tuple[int, int, list[tuple[int, int]], float]],
+    metrics: dict[str, float],
+    timestamp: str,
+    max_steps: int,
+) -> None:
+    """Generate and save plots for the simulation results."""
+    runs: list[int] = [result[0] for result in all_results]
+    steps: list[int] = [result[1] for result in all_results]
+
+    plot_dir: Path = Path.cwd() / "plots" / timestamp
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    # Plot: Steps per Run
+    plt.figure(figsize=(10, 6))
+    plt.plot(runs, steps, marker="o", label="Steps per Run")
+    plt.axhline(y=metrics["average_steps"], color="r", linestyle="--", label="Average Steps")
+    plt.title("Steps per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Steps")
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_dir / "steps_per_run.png")
+    plt.close()
+
+    # Plot: Cumulative Reward per Run
+    cumulative_rewards: list[float] = [
+        result[3] for result in all_results
+    ]  # Assuming rewards are stored as result[3]
+    plt.figure(figsize=(10, 6))
+    plt.plot(runs, cumulative_rewards, marker="o", label="Cumulative Reward per Run")
+    plt.title("Cumulative Reward per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Cumulative Reward")
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_dir / "cumulative_reward_per_run.png")
+    plt.close()
+
+    # Plot: Success Rate Over Time
+    success_rates: list[float] = [
+        sum(1 for r in all_results[:i] if r[1] < max_steps) / i
+        for i in range(1, len(all_results) + 1)
+    ]
+    plt.figure(figsize=(10, 6))
+    plt.plot(runs, success_rates, marker="o", label="Success Rate Over Time")
+    plt.title("Success Rate Over Time")
+    plt.xlabel("Run")
+    plt.ylabel("Success Rate")
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_dir / "success_rate_over_time.png")
+    plt.close()
 
 
 if __name__ == "__main__":
