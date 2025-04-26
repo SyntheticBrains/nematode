@@ -171,13 +171,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Generate plots after the simulation
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    plot_results(all_results, metrics, timestamp)
+    plot_results(all_results, metrics, timestamp, args.max_steps)
 
 
 def plot_results(
     all_results: list[tuple[int, int, list[tuple[int, int]], float]],
     metrics: dict[str, float],
     timestamp: str,
+    max_steps: int,
 ) -> None:
     """Generate and save plots for the simulation results."""
     runs: list[int] = [result[0] for result in all_results]
@@ -212,6 +213,20 @@ def plot_results(
     plt.savefig(plot_dir / "cumulative_reward_per_run.png")
     plt.close()
 
+    # Plot: Success Rate Over Time
+    success_rates: list[float] = [
+        sum(1 for r in all_results[:i] if r[1] < max_steps) / i
+        for i in range(1, len(all_results) + 1)
+    ]
+    plt.figure(figsize=(10, 6))
+    plt.plot(runs, success_rates, marker="o", label="Success Rate Over Time")
+    plt.title("Success Rate Over Time")
+    plt.xlabel("Run")
+    plt.ylabel("Success Rate")
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_dir / "success_rate_over_time.png")
+    plt.close()
 
 if __name__ == "__main__":
     main()
