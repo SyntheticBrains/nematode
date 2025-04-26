@@ -141,33 +141,39 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     all_results = []
 
-    for run in range(args.runs):
-        logger.info(f"Starting run {run + 1} of {args.runs}")
-        path = agent.run_episode(
-            max_steps=args.max_steps,
-            show_last_frame_only=args.show_last_frame_only,
-        )
+    total_runs_done = 0
+    try:
+        for run in range(args.runs):
+            logger.info(f"Starting run {run + 1} of {args.runs}")
+            path = agent.run_episode(
+                max_steps=args.max_steps,
+                show_last_frame_only=args.show_last_frame_only,
+            )
 
-        steps = len(path)
-        total_reward = sum(
-            agent.env.get_state(pos, disable_log=True)[0] for pos in path
-        )  # Calculate total reward for the run
-        all_results.append((run + 1, steps, path, total_reward))  # Include total reward in results
+            steps = len(path)
+            total_reward = sum(
+                agent.env.get_state(pos, disable_log=True)[0] for pos in path
+            )  # Calculate total reward for the run
+            all_results.append((run + 1, steps, path, total_reward))  # Include total reward in results
 
-        logger.info(f"Run {run + 1}/{args.runs} completed in {steps} steps.")
+            logger.info(f"Run {run + 1}/{args.runs} completed in {steps} steps.")
 
-        if run < args.runs - 1:
-            agent.reset_environment()
+            if run < args.runs - 1:
+                agent.reset_environment()
+            
+            total_runs_done += 1
+    except KeyboardInterrupt:
+        logger.warning("User cancelled the session. Printing partial results.")
 
     # Calculate and log performance metrics
-    metrics = agent.calculate_metrics(total_runs=args.runs)
+    metrics = agent.calculate_metrics(total_runs=total_runs_done)
     logger.info("\nPerformance Metrics:")
     logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
     logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
     logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
 
     # Final summary of all runs.
-    summary(args.runs, args.max_steps, all_results)
+    summary(total_runs_done, args.max_steps, all_results)
 
     # Generate plots after the simulation
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
