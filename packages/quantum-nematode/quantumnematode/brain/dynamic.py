@@ -53,10 +53,19 @@ class DynamicBrain(Brain):
             f"θ{i}": self.rng.uniform(-np.pi, np.pi) for i in range(num_qubits)
         }
         self.steps = 0
+        self.last_input_parameters = None
+        self.last_updated_parameters = None
+        self.last_gradients = None
+        self.last_learning_rate = None
+        self.last_exploration_factor = None
+        self.last_temperature = None
 
     def build_brain(self) -> QuantumCircuit:
         """
-        Build a dynamic quantum circuit based on the number of qubits and incorporate gradient information.
+        Build the quantum circuit for the dynamic brain.
+
+        Build a dynamic quantum circuit based on the number of qubits
+        and incorporate gradient information.
 
         Returns
         -------
@@ -100,11 +109,18 @@ class DynamicBrain(Brain):
 
         # Incorporate gradient information into the parameters
         input_params = {
-            f"θ{i}": self.parameter_values[f"θ{i}"] + gradient_strength * np.cos(gradient_direction + i * np.pi / self.num_qubits)
+            f"θ{i}": self.parameter_values[f"θ{i}"]
+            + gradient_strength * np.cos(gradient_direction + i * np.pi / self.num_qubits)
             for i in range(self.num_qubits)
         }
 
-        logger.debug(f"Input parameters with gradient information: {str(input_params).replace('θ', 'theta_')}")
+        # Store last input parameters for tracking
+        self.last_input_parameters = input_params
+
+        logger.debug(
+            "Input parameters with gradient information: "
+            f"{str(input_params).replace('θ', 'theta_')}",
+        )
 
         bound_qc = qc.assign_parameters(input_params, inplace=False)
 
@@ -150,6 +166,10 @@ class DynamicBrain(Brain):
         ]
 
         logger.debug(f"Computed gradients: {gradients}")
+
+        # Store gradients for tracking
+        self.last_gradients = gradients
+
         return gradients
 
     def update_parameters(
@@ -186,6 +206,12 @@ class DynamicBrain(Brain):
             f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
+        # Store last updated parameters for tracking
+        self.last_updated_parameters = self.parameter_values
+
+        # Store learning rate for tracking
+        self.last_learning_rate = dynamic_learning_rate
+
         # Increment the step count
         self.steps += 1
 
@@ -194,7 +220,10 @@ class DynamicBrain(Brain):
         counts: dict[str, int],
     ) -> str:
         """
-        Interpret the measurement counts and determine the action dynamically based on the number of qubits.
+        Interpret the measurement counts and determine the action dynamically.
+
+        Interpret the measurement counts and determine the action dynamically
+        based on the number of qubits.
 
         Parameters
         ----------
@@ -209,7 +238,7 @@ class DynamicBrain(Brain):
         logger.debug(f"Raw counts from quantum circuit: {counts}")
 
         # Generate all possible binary strings for the current number of qubits
-        num_states = 2 ** self.num_qubits
+        num_states = 2**self.num_qubits
         binary_states = [f"{{:0{self.num_qubits}b}}".format(i) for i in range(num_states)]
 
         # Define a pool of possible actions
@@ -235,12 +264,21 @@ class DynamicBrain(Brain):
         logger.debug(f"Normalized distribution of counts: {distribution}")
 
         logger.debug(
-            f"Most probable action: {max(counts, key=counts.get)} with count {max(counts.values())}",
+            f"Most probable action: {max(counts, key=lambda k: int(counts.get(k, 0)))} "
+            f"with count {max(counts.values())}",
         )
 
         # Adjust softmax temperature dynamically based on steps to encourage exploration
         exploration_factor = max(0.1, 1 - (self.steps / 1000))  # Decay exploration over time
         temperature = 0.5 * exploration_factor  # Scale temperature by exploration factor
+
+        logger.debug(
+            f"Dynamic exploration factor: {exploration_factor}, Temperature: {temperature}",
+        )
+
+        # Store last exploration factor and temperature for tracking
+        self.last_exploration_factor = exploration_factor
+        self.last_temperature = temperature
 
         # Add noise to probabilities to encourage exploration
         noise = self.rng.uniform(0, 0.05, len(counts))  # Add small random noise
@@ -256,6 +294,7 @@ class DynamicBrain(Brain):
         # Select an action based on the softmax probabilities
         actions, probs = zip(
             *[(action_map.get(key, "unknown"), prob) for key, prob in probabilities.items()],
+            strict=False,
         )
         selected_action = self.rng.choice(actions, p=probs)
 
