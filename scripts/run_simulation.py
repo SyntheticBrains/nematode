@@ -316,7 +316,7 @@ def plot_tracking_data(
             values = [list(param_dict.values()) for param_dict in values]  # noqa: PLW2901
         elif key == "computed_gradients":
             title = "Computed Gradients"
-            label = [str(n + 1) for n in range(len(values) + 1)]
+            label = [str(n + 1) for n in range(len(values[0]))]
         else:
             label = key.replace("_", " ").title()
             title = label
@@ -327,7 +327,7 @@ def plot_tracking_data(
         plt.plot(tracking_data["run"], values, marker="o", label=label)
         plt.title(title)
         plt.xlabel("Run")
-        plt.ylabel(label)
+        plt.ylabel(str(label))
         plt.legend()
         plt.grid()
         plt.savefig(plot_dir / f"track_{key}_over_runs.png")
