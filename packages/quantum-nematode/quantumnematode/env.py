@@ -14,7 +14,11 @@ import numpy as np  # pyright: ignore[reportMissingImports]
 
 from .constants import MIN_GRID_SIZE
 from .logging_config import logger
+from enum import Enum
 
+class ScalingMethod(Enum):
+    EXPONENTIAL = "exponential"
+    TANH = "tanh"
 
 class MazeEnvironment:
     """
@@ -99,6 +103,7 @@ class MazeEnvironment:
         self,
         position: tuple[int, ...],
         *,
+        scaling_method: ScalingMethod = ScalingMethod.EXPONENTIAL,
         disable_log: bool = False,
     ) -> tuple[float, float]:
         """
@@ -117,7 +122,13 @@ class MazeEnvironment:
         max_distance = self.grid_size * 2  # Maximum possible Manhattan distance in the grid
         distance_to_goal = abs(dx) + abs(dy)
         gradient_strength = max(0.0, 1.0 - (distance_to_goal / max_distance))
-        gradient_strength = np.tanh(gradient_strength * 5)  # Apply non-linear scaling with tanh
+
+        if scaling_method == ScalingMethod.EXPONENTIAL:
+            gradient_strength = np.exp(-distance_to_goal / max_distance)  # Apply exponential scaling
+        elif scaling_method == ScalingMethod.TANH:
+            gradient_strength = np.tanh(gradient_strength * 5)  # Apply non-linear scaling with tanh
+        else:
+            raise ValueError(f"Unsupported scaling method: {scaling_method}")
         gradient_direction = np.arctan2(dy, dx) if dx != 0 or dy != 0 else 0.0
 
         if not disable_log:
