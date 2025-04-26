@@ -32,7 +32,7 @@ def main() -> None:  # noqa: C901, PLR0915
         "--maze-grid-size",
         type=int,
         default=5,
-        help="Size of the maze grid (default: 5)",
+        help="Size of the maze grid (minimum: 5, default: 5)",
     )
     parser.add_argument(
         "--show-last-frame-only",
@@ -73,6 +73,9 @@ def main() -> None:  # noqa: C901, PLR0915
     )
 
     args = parser.parse_args()
+
+    if args.maze_grid_size < 5:
+        raise ValueError("Maze grid size must be at least 5.")
 
     # Configure logging level
     if args.log_level == "NONE":

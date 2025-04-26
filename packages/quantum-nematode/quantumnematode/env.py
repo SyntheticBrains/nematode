@@ -9,6 +9,7 @@ The environment provides methods to get the current state, move the agent,
 """
 
 import numpy as np  # pyright: ignore[reportMissingImports]
+import random
 
 from .logging_config import logger
 
@@ -35,16 +36,57 @@ class MazeEnvironment:
     def __init__(
         self,
         grid_size: int = 5,
-        start_pos: tuple[int, int] = (1, 1),
+        start_pos: tuple[int, int] | None = None,
         food_pos: tuple[int, int] | None = None,
         max_body_length: int = 6,
     ) -> None:
+        if grid_size < 5:
+            raise ValueError("Grid size must be at least 5.")
+
         self.grid_size = grid_size
-        self.agent_pos = list(start_pos)
+
+        # Randomize agent and goal positions to all 4 corners
+        corners = [
+            (1, 1),
+            (1, self.grid_size - 2),
+            (self.grid_size - 2, 1),
+            (self.grid_size - 2, self.grid_size - 2),
+        ]
+
+        corners_map = {
+            "top_left": corners[0],
+            "top_right": corners[1],
+            "bottom_left": corners[2],
+            "bottom_right": corners[3],
+        }
+
+        agent_chosen_corner = None
+        if start_pos is None:
+            agent_chosen_corner = random.choice(list(corners_map.keys()))
+            start_pos = corners_map[agent_chosen_corner]
+
+        if food_pos is None:
+            if agent_chosen_corner is not None:
+                if agent_chosen_corner == "top_left":
+                    food_pos = corners_map["bottom_right"]
+                elif agent_chosen_corner == "top_right":
+                    food_pos = corners_map["bottom_left"]
+                elif agent_chosen_corner == "bottom_left":
+                    food_pos = corners_map["top_right"]
+                elif agent_chosen_corner == "bottom_right":
+                    food_pos = corners_map["top_left"]
+                else:
+                    food_pos = random.choice(corners)
+            else:
+                food_pos = random.choice(corners)
+
+        self.agent_pos = start_pos
+        self.goal = food_pos
+
+        # Adjust body initialization
         self.body = (
-            [tuple(start_pos)] if max_body_length > 0 else []
+            [tuple(self.agent_pos)] if max_body_length > 0 else []
         )  # Initialize the body with the head position
-        self.goal = (grid_size - 1, grid_size - 1) if food_pos is None else food_pos
         self.current_direction = "up"  # Initialize the agent's direction
 
     def get_state(self, position: tuple[int, ...]) -> tuple[float, float]:
