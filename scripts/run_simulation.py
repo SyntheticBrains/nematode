@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from datetime import UTC
+from datetime import datetime, UTC
 from pathlib import Path
 
 import matplotlib.pyplot as plt  # pyright: ignore[reportMissingImports]
@@ -170,17 +170,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     summary(args.runs, args.max_steps, all_results)
 
     # Generate plots after the simulation
-    from datetime import datetime
-
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    plot_results(all_results, metrics, timestamp, args.max_steps)
+    plot_results(all_results, metrics, timestamp)
 
 
 def plot_results(
     all_results: list[tuple[int, int, list[tuple[int, int]], float]],
     metrics: dict[str, float],
     timestamp: str,
-    max_steps: int,
 ) -> None:
     """Generate and save plots for the simulation results."""
     runs: list[int] = [result[0] for result in all_results]
