@@ -4,23 +4,6 @@ This project simulates a simplified nematode (C. elegans) navigating a 2D grid m
 
 ---
 
-## 📦 Project Structure
-
-```
-quantum_nematode/
-├── quantum_nematode/
-│   ├── agent.py           # Core simulation logic combining brain + environment
-│   ├── brain.py           # Quantum circuit logic for nematode decision-making
-│   └── env.py             # Simple grid-based environment for navigation
-├── notebooks/
-│   └── simulate.ipynb     # Lightweight notebook that runs a simulation
-├── pyproject.toml         # Project config for uv / PEP 621-based tooling
-├── README.md              # You're here!
-└── .gitignore             # Standard ignore rules
-```
-
----
-
 ## 🧪 Features
 
 - ✅ Quantum circuit (2 qubits) that takes in state and outputs movement
