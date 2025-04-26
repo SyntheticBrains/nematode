@@ -173,30 +173,26 @@ class QuantumNematodeAgent:
         else:
             gradient_change = 0
 
-        # Enhance reward signal for gradient improvement
+        # Enhance reward signal for gradient improvement and vice versa
         if previous_gradient_strength is not None:
             if gradient_change > 0:
                 reward_amount = gradient_strength
-                reward += reward_amount  # Increased reward for improving gradient strength
+                reward += reward_amount
                 logger.debug(f"[Reward] Gradient improvement reward applied: {reward_amount}.")
             elif gradient_change < 0:
                 penalty_amount = -(gradient_strength / 2)
-                reward += penalty_amount  # Stronger penalty for weakening gradient strength
+                reward += penalty_amount
                 logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
-            else:
-                penalty_amount = PENALTY_STEP * 2
-                reward += penalty_amount  # Small penalty for no change
-                logger.debug(f"[Penalty] No change penalty applied: {penalty_amount}.")
 
-        # Strengthen penalties for collisions
+        # Strengthen penalties for no movements
         if len(self.path) > 1 and self.path[-1] == self.path[-2]:
             penalty_amount = PENALTY_STAY * 3
-            reward += penalty_amount  # Stronger penalty for staying in place due to collision
-            logger.debug(f"[Penalty] Collision penalty applied: {penalty_amount}.")
+            reward += penalty_amount
+            logger.debug(f"[Penalty] No movement penalty applied: {penalty_amount}.")
         # Strengthen penalties for revisiting positions
         elif self.path.count(tuple(self.env.agent_pos)) > 1:
-            penalty_amount = PENALTY_STEP * 10
-            reward += penalty_amount  # Stronger penalty for revisiting positions
+            penalty_amount = PENALTY_STEP * 3
+            reward += penalty_amount
             logger.debug(f"[Penalty] Revisit penalty applied: {penalty_amount}.")
 
         # Reward efficient paths by scaling inversely with steps
