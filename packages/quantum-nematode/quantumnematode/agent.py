@@ -203,7 +203,7 @@ class QuantumNematodeAgent:
         efficiency_factor = None
         if self.env.reached_goal():
             efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
-            reward_amount = REWARD_GOAL * efficiency_factor * 10
+            reward_amount = REWARD_GOAL * efficiency_factor * 2
             reward += reward_amount  # Further scale goal reward dynamically based on speed
             logger.debug(f"[Reward] Goal reached, efficiency factor applied: {reward_amount}.")
 
