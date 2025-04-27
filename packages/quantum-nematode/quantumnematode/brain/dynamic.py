@@ -65,6 +65,11 @@ class DynamicBrain(Brain):
         self.latest_learning_rate = None
         self.latest_exploration_factor = None
         self.latest_temperature = None
+        
+        # Log parameter initialization range
+        logger.debug(
+            f"Initializing parameters uniformly in the range [-pi, pi]: {str(self.parameter_values).replace('θ', 'theta_')}",
+        )
 
     def build_brain(self) -> QuantumCircuit:
         """
