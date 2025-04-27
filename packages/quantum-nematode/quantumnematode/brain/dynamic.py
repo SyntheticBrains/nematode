@@ -10,6 +10,8 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
 
+TEMPERATURE = 0.5  # Default temperature for softmax action selection
+
 
 class DynamicBrain(Brain):
     """
@@ -53,6 +55,7 @@ class DynamicBrain(Brain):
             f"θ{i}": self.rng.uniform(-np.pi, np.pi) for i in range(num_qubits)
         }
         self.steps = 0
+        self.satiety = 1.0
         self.last_input_parameters = None
         self.last_updated_parameters = None
         self.last_gradients = None
@@ -132,6 +135,20 @@ class DynamicBrain(Brain):
         if reward is not None:
             gradients = self.compute_gradients(counts, reward)
             self.update_parameters(gradients)
+
+        # Decrease satiety at each step
+        self.satiety = max(0.0, self.satiety - 0.01)  # Decrease satiety gradually
+
+        logger.debug(f"Satiety after step {self.steps}: {self.satiety}, ")
+
+        # Calculate exploration factor based on satiety
+        self.last_exploration_factor = 0.5 + 0.5 * self.satiety  # Scale between 0.5 and 1.0
+        self.last_temperature = TEMPERATURE * self.last_exploration_factor
+
+        logger.debug(
+            f"Exploration factor: {self.last_exploration_factor}, "
+            f"Temperature: {self.last_temperature}",
+        )
 
         return counts
 
@@ -268,20 +285,9 @@ class DynamicBrain(Brain):
             f"with count {max(counts.values())}",
         )
 
-        # Adjust softmax temperature dynamically based on steps to encourage exploration
-        exploration_factor = max(0.1, 1 - (self.steps / 1000))  # Decay exploration over time
-        temperature = 0.5 * exploration_factor  # Scale temperature by exploration factor
-
-        logger.debug(
-            f"Dynamic exploration factor: {exploration_factor}, Temperature: {temperature}",
-        )
-
-        # Store last exploration factor and temperature for tracking
-        self.last_exploration_factor = exploration_factor
-        self.last_temperature = temperature
-
         # Add noise to probabilities to encourage exploration
         noise = self.rng.uniform(0, 0.05, len(counts))  # Add small random noise
+        temperature = self.last_temperature or TEMPERATURE  # Use last temperature or default to 0.5
         probabilities = {
             key: math.exp((value / total_counts) / temperature) + noise[i]
             for i, (key, value) in enumerate(counts.items())
