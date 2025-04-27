@@ -105,6 +105,8 @@ class QuantumNematodeAgent:
                 # Calculate reward based on efficiency and collision avoidance
                 self.brain.update_memory(reward)
 
+                self.brain.satiety = 1.0  # Set satiety to maximum
+
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1
 

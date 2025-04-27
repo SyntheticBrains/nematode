@@ -11,6 +11,8 @@ class Brain(Protocol):
     Subclasses should implement the build_brain and run_brain methods.
     """
 
+    satiety: float
+
     def build_brain(self) -> QuantumCircuit:
         """
         Build the quantum circuit for the brain.
