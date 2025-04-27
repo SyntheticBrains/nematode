@@ -10,7 +10,9 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
 
-TEMPERATURE = 0.5  # Default temperature for softmax action selection
+EXPLORATION_MIN = 0.6  # Minimum exploration factor
+EXPLORATION_MAX = 1.0  # Maximum exploration factor
+TEMPERATURE = 0.9  # Default temperature for softmax action selection
 
 
 class DynamicBrain(Brain):
@@ -56,12 +58,12 @@ class DynamicBrain(Brain):
         }
         self.steps = 0
         self.satiety = 1.0
-        self.last_input_parameters = None
-        self.last_updated_parameters = None
-        self.last_gradients = None
-        self.last_learning_rate = None
-        self.last_exploration_factor = None
-        self.last_temperature = None
+        self.latest_input_parameters = None
+        self.latest_updated_parameters = None
+        self.latest_gradients = None
+        self.latest_learning_rate = None
+        self.latest_exploration_factor = None
+        self.latest_temperature = None
 
     def build_brain(self) -> QuantumCircuit:
         """
@@ -117,8 +119,8 @@ class DynamicBrain(Brain):
             for i in range(self.num_qubits)
         }
 
-        # Store last input parameters for tracking
-        self.last_input_parameters = input_params
+        # Store latest input parameters for tracking
+        self.latest_input_parameters = input_params
 
         logger.debug(
             "Input parameters with gradient information: "
@@ -142,12 +144,14 @@ class DynamicBrain(Brain):
         logger.debug(f"Satiety after step {self.steps}: {self.satiety}, ")
 
         # Calculate exploration factor based on satiety
-        self.last_exploration_factor = 0.5 + 0.5 * self.satiety  # Scale between 0.5 and 1.0
-        self.last_temperature = TEMPERATURE * self.last_exploration_factor
+        self.latest_exploration_factor = (
+            EXPLORATION_MIN + (EXPLORATION_MAX - EXPLORATION_MIN) * self.satiety
+        )
+        self.latest_temperature = TEMPERATURE * self.latest_exploration_factor
 
         logger.debug(
-            f"Exploration factor: {self.last_exploration_factor}, "
-            f"Temperature: {self.last_temperature}",
+            f"Exploration factor: {self.latest_exploration_factor}, "
+            f"Temperature: {self.latest_temperature}",
         )
 
         return counts
@@ -185,7 +189,7 @@ class DynamicBrain(Brain):
         logger.debug(f"Computed gradients: {gradients}")
 
         # Store gradients for tracking
-        self.last_gradients = gradients
+        self.latest_gradients = gradients
 
         return gradients
 
@@ -223,11 +227,11 @@ class DynamicBrain(Brain):
             f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
-        # Store last updated parameters for tracking
-        self.last_updated_parameters = self.parameter_values
+        # Store latest updated parameters for tracking
+        self.latest_updated_parameters = self.parameter_values
 
         # Store learning rate for tracking
-        self.last_learning_rate = dynamic_learning_rate
+        self.latest_learning_rate = dynamic_learning_rate
 
         # Increment the step count
         self.steps += 1
@@ -287,7 +291,9 @@ class DynamicBrain(Brain):
 
         # Add noise to probabilities to encourage exploration
         noise = self.rng.uniform(0, 0.05, len(counts))  # Add small random noise
-        temperature = self.last_temperature or TEMPERATURE  # Use last temperature or default to 0.5
+        temperature = (
+            self.latest_temperature or TEMPERATURE
+        )  # Use last temperature or default to 0.5
         probabilities = {
             key: math.exp((value / total_counts) / temperature) + noise[i]
             for i, (key, value) in enumerate(counts.items())

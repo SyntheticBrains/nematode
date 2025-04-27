@@ -210,12 +210,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Track data for plotting, only supported for dynamic brain
             if args.brain == "dynamic":
                 tracking_data["run"].append(run + 1)
-                tracking_data["input_parameters"].append(agent.brain.last_input_parameters)
-                tracking_data["computed_gradients"].append(agent.brain.last_gradients)
-                tracking_data["learning_rate"].append(agent.brain.last_learning_rate)
-                tracking_data["updated_parameters"].append(agent.brain.last_updated_parameters)
-                tracking_data["exploration_factor"].append(agent.brain.last_exploration_factor)
-                tracking_data["temperature"].append(agent.brain.last_temperature)
+                tracking_data["input_parameters"].append(agent.brain.latest_input_parameters)
+                tracking_data["computed_gradients"].append(agent.brain.latest_gradients)
+                tracking_data["learning_rate"].append(agent.brain.latest_learning_rate)
+                tracking_data["updated_parameters"].append(agent.brain.latest_updated_parameters)
+                tracking_data["exploration_factor"].append(agent.brain.latest_exploration_factor)
+                tracking_data["temperature"].append(agent.brain.latest_temperature)
 
     except KeyboardInterrupt:
         logger.warning("User cancelled the session. Printing partial results.")
