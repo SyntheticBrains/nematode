@@ -1,7 +1,7 @@
 """Dynamic Quantum Brain Architecture."""
 
-from copy import deepcopy
 import math
+from copy import deepcopy
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
@@ -10,6 +10,7 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
+from quantumnematode.optimizers.learning_rate import AdamLearningRate, DynamicLearningRate
 
 EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor
@@ -36,7 +37,13 @@ class DynamicBrain(Brain):
     concepts.
     """
 
-    def __init__(self, device: str = "CPU", shots: int = 100, num_qubits: int = 5) -> None:
+    def __init__(
+        self,
+        device: str = "CPU",
+        shots: int = 100,
+        num_qubits: int = 5,
+        learning_rate_type: str = "adam",
+    ) -> None:
         """
         Initialize the DynamicBrain with a dynamic number of qubits.
 
@@ -65,10 +72,16 @@ class DynamicBrain(Brain):
         self.latest_learning_rate = None
         self.latest_exploration_factor = None
         self.latest_temperature = None
-        
+        self.learning_rate_type = learning_rate_type.lower()
+        if self.learning_rate_type == "dynamic":
+            self.learning_rate = DynamicLearningRate()
+        else:
+            self.learning_rate = AdamLearningRate()
+
         # Log parameter initialization range
         logger.debug(
-            f"Initializing parameters uniformly in the range [-pi, pi]: {str(self.parameter_values).replace('θ', 'theta_')}",
+            "Initializing parameters uniformly in the range [-pi, pi]: "
+            f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
     def build_brain(self) -> QuantumCircuit:
@@ -202,8 +215,6 @@ class DynamicBrain(Brain):
     def update_parameters(
         self,
         gradients: list[float],
-        initial_learning_rate: float = 0.1,
-        decay_rate: float = 0.01,
     ) -> None:
         """
         Update quantum circuit parameter values based on gradients with a dynamic learning rate.
@@ -217,27 +228,57 @@ class DynamicBrain(Brain):
         decay_rate : float, optional
             Rate at which the learning rate decays over time, by default 0.01.
         """
-        # Increase learning rate for faster convergence
-        dynamic_learning_rate = initial_learning_rate / (1 + decay_rate * self.steps)
-        dynamic_learning_rate *= 1.5  # Scale up the learning rate by 1.5x
+        # Use the selected learning rate strategy
+        if self.learning_rate_type == "dynamic":
+            if not isinstance(self.learning_rate, DynamicLearningRate):
+                error_message = (
+                    f"Learning rate type '{self.learning_rate_type}' is not compatible with "
+                    f"DynamicLearningRate. Please check the configuration."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
 
-        for param_name, grad in zip(
-            self.parameter_values.keys(),
-            gradients,
-            strict=False,
-        ):
-            self.parameter_values[param_name] -= dynamic_learning_rate * grad
+            learning_rate = self.learning_rate.get_learning_rate()
+            for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
+                self.parameter_values[param_name] -= learning_rate * grad
 
-        logger.debug(
-            f"Updated parameters with dynamic learning rate {dynamic_learning_rate}: "
-            f"{str(self.parameter_values).replace('θ', 'theta_')}",
-        )
+            # Store learning rate for tracking
+            self.latest_learning_rate = learning_rate
+
+            logger.debug(
+                f"Updated parameters with dynamic learning rate {learning_rate}: "
+                f"{str(self.parameter_values).replace('θ', 'theta_')}",
+            )
+        elif self.learning_rate_type == "adam":
+            if not isinstance(self.learning_rate, AdamLearningRate):
+                error_message = (
+                    f"Learning rate type '{self.learning_rate_type}' is not compatible with "
+                    f"AdamLearningRate. Please check the configuration."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
+
+            effective_learning_rates = self.learning_rate.get_learning_rate(
+                gradients,
+                self.parameter_values.keys(),
+            )
+            for param_name, _grad in zip(self.parameter_values.keys(), gradients, strict=False):
+                self.parameter_values[param_name] -= effective_learning_rates[param_name]
+
+            # Store learning rate for tracking
+            self.latest_learning_rate = effective_learning_rates
+
+            logger.debug(
+                f"Updated parameters with Adam learning rate: "
+                f"{str(self.parameter_values).replace('θ', 'theta_')}",
+            )
+        else:
+            error_message = f"Unknown learning rate type: {self.learning_rate_type}."
+            logger.error(error_message)
+            raise ValueError(error_message)
 
         # Store latest updated parameters for tracking
         self.latest_updated_parameters = deepcopy(self.parameter_values)
-
-        # Store learning rate for tracking
-        self.latest_learning_rate = dynamic_learning_rate
 
         # Increment the step count
         self.steps += 1
