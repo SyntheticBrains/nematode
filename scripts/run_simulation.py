@@ -326,7 +326,7 @@ def plot_tracking_data(
 
         logger.debug(f"Tracking data for {key}: {str(values).replace('θ', 'theta_')}")
 
-        if key in ["input_parameters", "updated_parameters"]:
+        if isinstance(values, list) and all(isinstance(v, dict) for v in values):
             # Flatten dictionaries into lists of values for plotting
             title = key.replace("_", " ").title()
             label = next(list(param_dict.keys()) for param_dict in values)
