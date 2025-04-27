@@ -197,7 +197,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.env.get_state(pos, disable_log=True)[0] for pos in path
             )  # Calculate total reward for the run
             all_results.append(
-                (run + 1, steps, path, total_reward),
+                (run + 1, steps, path, total_reward, agent.total_rewards),
             )  # Include total reward in results
 
             logger.info(f"Run {run + 1}/{args.runs} completed in {steps} steps.")
@@ -239,7 +239,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
 
 def plot_results(
-    all_results: list[tuple[int, int, list[tuple[int, int]], float]],
+    all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
     metrics: dict[str, float],
     timestamp: str,
     max_steps: int,
@@ -275,6 +275,20 @@ def plot_results(
     plt.legend()
     plt.grid()
     plt.savefig(plot_dir / "cumulative_reward_per_run.png")
+    plt.close()
+
+    # Plot: Last Cumulative Rewards Over Runs
+    last_cumulative_rewards: list[float] = [
+        result[4] for result in all_results
+    ]  # Assuming rewards are stored as result[4]
+    plt.figure(figsize=(10, 6))
+    plt.plot(runs, last_cumulative_rewards, marker="o", label="Last Cumulative Rewards")
+    plt.title("Last Cumulative Reward Over Time")
+    plt.xlabel("Run")
+    plt.ylabel("Last Cumulative Reward")
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_dir / "cumulative_last_reward_over_time.png")
     plt.close()
 
     # Plot: Success Rate Over Time
