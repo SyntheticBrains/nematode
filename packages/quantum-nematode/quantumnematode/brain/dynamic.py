@@ -1,5 +1,6 @@
 """Dynamic Quantum Brain Architecture."""
 
+from copy import deepcopy
 import math
 
 import numpy as np  # pyright: ignore[reportMissingImports]
@@ -228,7 +229,7 @@ class DynamicBrain(Brain):
         )
 
         # Store latest updated parameters for tracking
-        self.latest_updated_parameters = self.parameter_values
+        self.latest_updated_parameters = deepcopy(self.parameter_values)
 
         # Store learning rate for tracking
         self.latest_learning_rate = dynamic_learning_rate
