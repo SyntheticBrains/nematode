@@ -309,6 +309,9 @@ def plot_tracking_data(
     for key, values in tracking_data.items():
         if key == "run":
             continue
+
+        logger.debug(f"Tracking data for {key}: {str(values).replace('θ', 'theta_')}")
+
         if key in ["input_parameters", "updated_parameters"]:
             # Flatten dictionaries into lists of values for plotting
             title = key.replace("_", " ").title()
