@@ -75,8 +75,22 @@ class DynamicBrain(Brain):
         self.learning_rate_type = learning_rate_type.lower()
         if self.learning_rate_type == "dynamic":
             self.learning_rate = DynamicLearningRate()
+
+            logger.debug(
+                "Using dynamic learning rate strategy for parameter updates.",
+                f"Initial learning rate: {self.learning_rate.initial_learning_rate}, ",
+                f"Decay rate: {self.learning_rate.decay_rate}, ",
+            )
         else:
             self.learning_rate = AdamLearningRate()
+
+            logger.debug(
+                "Using Adam learning rate strategy for parameter updates.",
+                f"Initial learning rate: {self.learning_rate.initial_learning_rate}, ",
+                f"Beta1: {self.learning_rate.beta1}, ",
+                f"Beta2: {self.learning_rate.beta2}, ",
+                f"Epsilon: {self.learning_rate.epsilon}, ",
+            )
 
         # Log parameter initialization range
         logger.debug(
