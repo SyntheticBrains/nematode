@@ -106,12 +106,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Set up the timestamp for saving results
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    logger.info(f"Session ID: {timestamp}")
 
     # Pass the device and shots arguments to the brain classes
     device = args.device.upper()
     shots = args.shots
 
-    logger.info("Simulation arguments:")
+    logger.info("Simulation parameters:")
     for arg, value in vars(args).items():
         logger.info(f"{arg}: {value}")
 
