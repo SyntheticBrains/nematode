@@ -203,3 +203,16 @@ class MemoryBrain(Brain):
         }
 
         return action_map.get(most_common[:2], "unknown")
+
+    def copy(self) -> "MemoryBrain":
+        """
+        Create a copy of the brain.
+
+        Returns
+        -------
+        MemoryBrain
+            A new instance of the MemoryBrain class with the same parameters.
+        """
+        error_msg = "Copying MemoryBrain is not implemented. Please implement the copy method."
+        logger.error(error_msg)
+        raise NotImplementedError(error_msg)

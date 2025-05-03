@@ -1,6 +1,15 @@
 """The quantum nematode agent that navigates a grid environment using a quantum brain."""
 
 import os
+import sys
+import time
+
+from quantumnematode.constants import (
+    SUPERPOSITION_MODE_MAX_COLUMNS,
+    SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
+    SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS,
+    SUPERPOSITION_MODE_TOP_N_ACTIONS,
+)
 
 from .brain._brain import Brain
 from .env import MazeEnvironment
@@ -50,7 +59,7 @@ class QuantumNematodeAgent:
         self.total_steps = 0
         self.total_rewards = 0
 
-    def run_episode(
+    def run_episode(  # noqa: C901
         self,
         max_steps: int = 100,
         *,
@@ -79,6 +88,11 @@ class QuantumNematodeAgent:
             reward = self.calculate_reward(max_steps=max_steps)
             counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
             action = self.brain.interpret_counts(counts)
+
+            if not isinstance(action, str):
+                error_msg = f"Invalid action type: {type(action)}. Expected str."
+                logger.error(error_msg)
+                raise TypeError(error_msg)
 
             self.env.move_agent(action)
 
@@ -152,6 +166,108 @@ class QuantumNematodeAgent:
                 logger.debug(frame)
 
         return self.path
+
+    def run_superposition_mode(  # noqa: C901, PLR0912, PLR0915
+        self,
+        max_steps: int = 100,
+        *,
+        show_last_frame_only: bool = False,
+    ) -> list[tuple]:
+        """
+        Run the agent in superposition mode.
+
+        Parameters
+        ----------
+        max_steps : int
+            Maximum number of steps for the episode.
+        show_last_frame_only : bool, optional
+            Whether to show only the last frame of the simulation, by default False.
+
+        Returns
+        -------
+        list[tuple]
+            The path taken by the agent during the episode.
+        """
+        # Initialize superposition mode
+        self.env.current_direction = "up"
+
+        logger.info(
+            "Superposition mode enabled. Visualizing top "
+            "{SUPERPOSITION_MODE_TOP_N_ACTIONS} decisions at each step.",
+        )
+        superpositions = [(self.brain.copy(), self.env.copy(), self.path.copy())]
+
+        new_superpositions = []
+        for _ in range(max_steps):
+            for brain_copy, env_copy, path_copy in superpositions:
+                gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
+                reward = self.calculate_reward(max_steps=max_steps)
+                counts = brain_copy.run_brain(gradient_strength, gradient_direction, reward=reward)
+                actions = brain_copy.interpret_counts(counts, best_only=False)
+                top_actions = list(dict.fromkeys([key for key, _ in actions]))[
+                    :SUPERPOSITION_MODE_TOP_N_ACTIONS
+                ]
+
+                # Update the body length dynamically
+                if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
+                    env_copy.body.append(env_copy.body[-1])
+
+                for action in top_actions:
+                    if len(new_superpositions) < SUPERPOSITION_MODE_MAX_SUPERPOSITIONS:
+                        new_env = env_copy.copy()
+                        new_path = path_copy.copy()
+                        new_brain = self.brain.copy()
+                        new_env.move_agent(action)
+                        new_path.append(new_env.agent_pos)
+                        new_superpositions.append((new_brain, new_env, new_path))
+                    else:
+                        # Stop splitting and let existing superpositions finish
+                        if env_copy.reached_goal():
+                            continue
+                        env_copy.move_agent(action)
+                        path_copy.append(env_copy.agent_pos)
+
+            superpositions = new_superpositions
+
+            if show_last_frame_only:
+                if os.name == "nt":  # For Windows
+                    os.system("cls")  # noqa: S605, S607
+                else:  # For macOS and Linux
+                    os.system("clear")  # noqa: S605, S607
+
+            # Render all grids for superpositions at each step
+            row = []
+            labels = []
+            for i, (_, env_copy, _) in enumerate(superpositions):
+                grid = env_copy.render()
+                label = f"#{i + 1} <= #{i // 2 + 1}"
+                row.append(grid)
+                labels.append(label)
+
+                # Print the row when reaching MAX_COLUMNS or the last grid
+                if (i + 1) % SUPERPOSITION_MODE_MAX_COLUMNS == 0 or i == len(superpositions) - 1:
+                    for line_set in zip(*row, strict=False):
+                        # Render side by side
+                        print("\t".join(line_set))  # noqa: T201
+                    # Add labels below the grids
+                    print("\t".join(labels))  # noqa: T201
+                    # Add spacing between rows
+                    print("\n")  # noqa: T201
+                    row = []  # Reset the row buffer
+                    labels = []  # Reset the labels buffer
+
+            time.sleep(SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS)  # Wait before the next render
+
+            # Stop if all superpositions have reached their goal
+            if all(env_copy.reached_goal() for _, env_copy, _ in superpositions):
+                msg = "All superpositions have reached their goal."
+                logger.info(msg)
+                print(msg)  # noqa: T201
+                sys.exit(0)  # Exit the program
+        msg = "Superposition mode completed as maximum number of steps reached."
+        logger.info(msg)
+        print(msg)  # noqa: T201
+        sys.exit(0)  # Exit the program
 
     def calculate_reward(self, max_steps: int) -> float:
         """
