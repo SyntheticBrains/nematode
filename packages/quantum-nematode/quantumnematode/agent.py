@@ -202,6 +202,7 @@ class QuantumNematodeAgent:
         for frame in grid:
             print(frame)  # noqa: T201
             logger.debug(frame)
+        print("#1")  # noqa: T201
 
         time.sleep(SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS)  # Wait before the next render
 
@@ -211,8 +212,9 @@ class QuantumNematodeAgent:
         )
         superpositions = [(self.brain.copy(), self.env.copy(), self.path.copy())]
 
-        new_superpositions = []
         for _ in range(max_steps):
+            total_superpositions = len(superpositions)
+            i = 0
             for brain_copy, env_copy, path_copy in superpositions:
                 gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
                 reward = self.calculate_reward(env_copy, path_copy, max_steps=max_steps)
@@ -226,18 +228,14 @@ class QuantumNematodeAgent:
                 if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
                     env_copy.body.append(env_copy.body[-1])
 
-                for action in top_actions:
-                    if len(new_superpositions) < SUPERPOSITION_MODE_MAX_SUPERPOSITIONS:
-                        new_env = env_copy.copy()
-                        new_path = path_copy.copy()
-                        new_brain = self.brain.copy()
-                        new_env.move_agent(action)
-                        new_brain.update_memory(reward)
-                        new_path.append(new_env.agent_pos)
-                        new_superpositions.append((new_brain, new_env, new_path))
-                    else:
-                        # Stop splitting and let existing superpositions finish
-                        continue
+                if len(superpositions) < SUPERPOSITION_MODE_MAX_SUPERPOSITIONS:
+                    new_env = env_copy.copy()
+                    new_path = path_copy.copy()
+                    new_brain = self.brain.copy()
+                    new_env.move_agent(top_actions[1])
+                    new_brain.update_memory(reward)
+                    new_path.append(new_env.agent_pos)
+                    superpositions.append((new_brain, new_env, new_path))
 
                 if env_copy.reached_goal():
                     continue
@@ -246,7 +244,9 @@ class QuantumNematodeAgent:
                 brain_copy.update_memory(reward)
                 path_copy.append(env_copy.agent_pos)
 
-            superpositions = new_superpositions
+                i += 1
+                if i >= total_superpositions:
+                    break
 
             self.steps += 1
 
@@ -261,7 +261,7 @@ class QuantumNematodeAgent:
             labels = []
             for i, (_, env_copy, _) in enumerate(superpositions):
                 grid = env_copy.render()
-                label = f"#{i + 1} <= #{i // 2 + 1}"
+                label = f"#{i + 1} <= #{i // 2 + 1}" if i > 0 else f"#{i + 1}      "
                 row.append(grid)
                 labels.append(label)
 
