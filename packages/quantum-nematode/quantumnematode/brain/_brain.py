@@ -65,5 +65,7 @@ class Brain(Protocol):
 
         This method should be implemented by subclasses.
         """
-        error_msg = "Subclasses must implement the inspect_circuit method to inspect the quantum circuit."
+        error_msg = (
+            "Subclasses must implement the inspect_circuit method to inspect the quantum circuit."
+        )
         raise NotImplementedError(error_msg)

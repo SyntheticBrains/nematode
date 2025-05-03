@@ -397,7 +397,6 @@ class DynamicBrain(Brain):
             Reward signal.
         """
 
-
     def inspect_circuit(self) -> QuantumCircuit:
         """
         Inspect the quantum circuit.

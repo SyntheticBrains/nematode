@@ -219,7 +219,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data["temperature"].append(agent.brain.latest_temperature)
 
     except KeyboardInterrupt:
-        logger.warning("User cancelled the session. Printing partial results.")
+        return manage_simulation_pause(
+            args,
+            timestamp,
+            agent,
+            all_results,
+            total_runs_done,
+            tracking_data,
+        )
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
@@ -238,12 +245,101 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if args.brain == "dynamic":
         plot_tracking_data(tracking_data, timestamp, args.brain, args.qubits)
 
+    return None
+
+
+def manage_simulation_pause(  # noqa: PLR0913
+    args: argparse.Namespace,
+    timestamp: str,
+    agent: QuantumNematodeAgent,
+    all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
+    total_runs_done: int,
+    tracking_data: dict[str, list],
+) -> None:
+    """
+    Handle simulation pause triggered by a KeyboardInterrupt.
+
+    This function provides options to the user to either continue the simulation,
+    output partial results and plots, print circuit details, or exit the session.
+
+    Args:
+        args (argparse.Namespace): Parsed command-line arguments.
+        timestamp (str): Timestamp for the current session.
+        agent (QuantumNematodeAgent): The simulation agent.
+        all_results (list[tuple[int, int, list[tuple[int, int]], float, float]]):
+            List of results for each run, including run number, steps, path,
+            total reward, and cumulative rewards.
+        total_runs_done (int): Total number of runs completed so far.
+        tracking_data (dict[str, list]): Data tracked during the simulation for plotting.
+
+    Returns
+    -------
+        None
+    """
+    while True:
+        prompt_intro_message = (
+            "KeyboardInterrupt detected. The simulation is paused. "
+            "You can choose to continue or output the results up to this point."
+        )
+        logger.warning(prompt_intro_message)
+        print(prompt_intro_message)  # noqa: T201
+        print("1. Continue")  # noqa: T201
+        print("2. Output the summary, plots, and tracking until this point in time.")  # noqa: T201
+        print("3. Print the circuit's details.")  # noqa: T201
+        print("4. Exit")  # noqa: T201
+
+        try:
+            choice = int(input("Enter your choice (1-4): "))
+        except ValueError:
+            logger.error("Invalid input. Please enter a number between 1 and 4.")
+            continue
+        except KeyboardInterrupt:
+            continue
+
+        if choice == 1:
+            logger.info("Resuming the session.")
+            break
+        if choice == 2:  # noqa: PLR2004
+            logger.info("Generating partial results and plots.")
+            metrics = agent.calculate_metrics(total_runs=total_runs_done)
+            logger.info("\nPerformance Metrics:")
+            logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
+            logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
+            logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
+
+            # Generate partial summary
+            summary(total_runs_done, args.max_steps, all_results)
+
+            # Generate plots with current timestamp
+            file_prefix = f"{total_runs_done}_"
+            plot_results(all_results, metrics, timestamp, args.max_steps, file_prefix=file_prefix)
+
+            if args.brain == "dynamic":
+                plot_tracking_data(
+                    tracking_data,
+                    timestamp,
+                    args.brain,
+                    args.qubits,
+                    file_prefix=file_prefix,
+                )
+        elif choice == 3:  # noqa: PLR2004
+            logger.info("Printing circuit details.")
+            circuit = agent.brain.inspect_circuit()
+            logger.info(f"Circuit details:\n{circuit}")
+            print(circuit)  # noqa: T201
+        elif choice == 4:  # noqa: PLR2004
+            logger.info("Exiting the session.")
+            return
+        else:
+            logger.error("Invalid choice. Please enter a number between 1 and 4.")
+
 
 def plot_results(
     all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
     metrics: dict[str, float],
     timestamp: str,
     max_steps: int,
+    file_prefix: str = "",
 ) -> None:
     """Generate and save plots for the simulation results."""
     runs: list[int] = [result[0] for result in all_results]
@@ -261,7 +357,7 @@ def plot_results(
     plt.ylabel("Steps")
     plt.legend()
     plt.grid()
-    plt.savefig(plot_dir / "steps_per_run.png")
+    plt.savefig(plot_dir / f"{file_prefix}steps_per_run.png")
     plt.close()
 
     # Plot: Cumulative Reward per Run
@@ -275,7 +371,7 @@ def plot_results(
     plt.ylabel("Cumulative Reward")
     plt.legend()
     plt.grid()
-    plt.savefig(plot_dir / "cumulative_reward_per_run.png")
+    plt.savefig(plot_dir / f"{file_prefix}cumulative_reward_per_run.png")
     plt.close()
 
     # Plot: Last Cumulative Rewards Over Runs
@@ -289,7 +385,7 @@ def plot_results(
     plt.ylabel("Last Cumulative Reward")
     plt.legend()
     plt.grid()
-    plt.savefig(plot_dir / "cumulative_last_reward_over_time.png")
+    plt.savefig(plot_dir / f"{file_prefix}cumulative_last_reward_over_time.png")
     plt.close()
 
     # Plot: Success Rate Over Time
@@ -304,7 +400,7 @@ def plot_results(
     plt.ylabel("Success Rate")
     plt.legend()
     plt.grid()
-    plt.savefig(plot_dir / "success_rate_over_time.png")
+    plt.savefig(plot_dir / f"{file_prefix}success_rate_over_time.png")
     plt.close()
 
 
@@ -313,6 +409,7 @@ def plot_tracking_data(
     timestamp: str,
     brain: str,
     qubits: int,
+    file_prefix: str = "",
 ) -> None:
     """Generate and save plots for tracking data."""
     plot_dir: Path = Path.cwd() / "plots" / timestamp
@@ -348,7 +445,7 @@ def plot_tracking_data(
         plt.ylabel(str(label))
         plt.legend()
         plt.grid()
-        plt.savefig(plot_dir / f"track_{key}_over_runs.png")
+        plt.savefig(plot_dir / f"{file_prefix}track_{key}_over_runs.png")
         plt.close()
 
 
