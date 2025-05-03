@@ -31,6 +31,7 @@ class MemoryBrain(Brain):
     """
 
     def __init__(self, device: str = "CPU", shots: int = 100) -> None:
+        self.satiety = 1.0  # NOTE: Not used in this implementation
         self.device = device.upper()
         self.shots = shots
         self.memory_register = QuantumRegister(
