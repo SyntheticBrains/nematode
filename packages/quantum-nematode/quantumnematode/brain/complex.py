@@ -170,7 +170,9 @@ class ComplexBrain(Brain):
     def interpret_counts(
         self,
         counts: dict[str, int],
-    ) -> str:
+        *,
+        best_only: bool = True,  # noqa: ARG002
+    ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action.
 

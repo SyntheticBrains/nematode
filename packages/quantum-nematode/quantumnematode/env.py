@@ -35,7 +35,7 @@ class MazeEnvironment:
     ----------
     grid_size : int
         Size of the maze grid.
-    agent_pos : list[int]
+    agent_pos : tuple[int, int]
         Current position of the agent in the grid.
     body : list[tuple[int, int]]
         Positions of the agent's body segments.
@@ -206,7 +206,7 @@ class MazeEnvironment:
         self.body = [tuple(self.agent_pos)] + self.body[:-1] if len(self.body) > 0 else []
 
         # Update the agent's position
-        self.agent_pos = new_pos
+        self.agent_pos = tuple(new_pos)
 
         logger.debug(f"New position: {self.agent_pos}, New direction: {self.current_direction}")
 
@@ -249,3 +249,24 @@ class MazeEnvironment:
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent with an arrow
 
         return [" ".join(row) for row in reversed(grid)] + [""]
+
+    def copy(self) -> "MazeEnvironment":
+        """
+        Create a deep copy of the MazeEnvironment instance.
+
+        Returns
+        -------
+        MazeEnvironment
+            A new instance of MazeEnvironment with the same state.
+        """
+        new_env = MazeEnvironment(
+            grid_size=self.grid_size,
+            start_pos=(self.agent_pos[0], self.agent_pos[1])
+            if self.agent_pos is not None
+            else None,
+            food_pos=self.goal,
+            max_body_length=len(self.body),
+        )
+        new_env.body = self.body.copy()
+        new_env.current_direction = self.current_direction
+        return new_env
