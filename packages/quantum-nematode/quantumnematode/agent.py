@@ -85,7 +85,7 @@ class QuantumNematodeAgent:
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
-            reward = self.calculate_reward(max_steps=max_steps)
+            reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
             counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
             action = self.brain.interpret_counts(counts)
 
@@ -113,7 +113,7 @@ class QuantumNematodeAgent:
 
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
-                reward = self.calculate_reward(max_steps=max_steps)
+                reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
                 counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
 
                 # Calculate reward based on efficiency and collision avoidance
@@ -191,6 +191,20 @@ class QuantumNematodeAgent:
         # Initialize superposition mode
         self.env.current_direction = "up"
 
+        if show_last_frame_only:
+            if os.name == "nt":  # For Windows
+                os.system("cls")  # noqa: S605, S607
+            else:  # For macOS and Linux
+                os.system("clear")  # noqa: S605, S607
+
+        # Render the initial grid
+        grid = self.env.render()
+        for frame in grid:
+            print(frame)  # noqa: T201
+            logger.debug(frame)
+
+        time.sleep(SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS)  # Wait before the next render
+
         logger.info(
             "Superposition mode enabled. Visualizing top "
             "{SUPERPOSITION_MODE_TOP_N_ACTIONS} decisions at each step.",
@@ -201,7 +215,7 @@ class QuantumNematodeAgent:
         for _ in range(max_steps):
             for brain_copy, env_copy, path_copy in superpositions:
                 gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
-                reward = self.calculate_reward(max_steps=max_steps)
+                reward = self.calculate_reward(env_copy, path_copy, max_steps=max_steps)
                 counts = brain_copy.run_brain(gradient_strength, gradient_direction, reward=reward)
                 actions = brain_copy.interpret_counts(counts, best_only=False)
                 top_actions = list(dict.fromkeys([key for key, _ in actions]))[
@@ -218,16 +232,23 @@ class QuantumNematodeAgent:
                         new_path = path_copy.copy()
                         new_brain = self.brain.copy()
                         new_env.move_agent(action)
+                        new_brain.update_memory(reward)
                         new_path.append(new_env.agent_pos)
                         new_superpositions.append((new_brain, new_env, new_path))
                     else:
                         # Stop splitting and let existing superpositions finish
-                        if env_copy.reached_goal():
-                            continue
-                        env_copy.move_agent(action)
-                        path_copy.append(env_copy.agent_pos)
+                        continue
+
+                if env_copy.reached_goal():
+                    continue
+
+                env_copy.move_agent(top_actions[0])
+                brain_copy.update_memory(reward)
+                path_copy.append(env_copy.agent_pos)
 
             superpositions = new_superpositions
+
+            self.steps += 1
 
             if show_last_frame_only:
                 if os.name == "nt":  # For Windows
@@ -256,7 +277,8 @@ class QuantumNematodeAgent:
                     row = []  # Reset the row buffer
                     labels = []  # Reset the labels buffer
 
-            time.sleep(SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS)  # Wait before the next render
+            if len(superpositions) < SUPERPOSITION_MODE_MAX_SUPERPOSITIONS:
+                time.sleep(SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS)  # Wait before the next render
 
             # Stop if all superpositions have reached their goal
             if all(env_copy.reached_goal() for _, env_copy, _ in superpositions):
@@ -269,7 +291,12 @@ class QuantumNematodeAgent:
         print(msg)  # noqa: T201
         sys.exit(0)  # Exit the program
 
-    def calculate_reward(self, max_steps: int) -> float:
+    def calculate_reward(
+        self,
+        env: MazeEnvironment,
+        path: list[tuple[int, ...]],
+        max_steps: int,
+    ) -> float:
         """
         Calculate reward based on the agent's current state using gradient strength.
 
@@ -281,12 +308,12 @@ class QuantumNematodeAgent:
         reward = 0.0
 
         # Get the current gradient strength from the environment
-        gradient_strength, _ = self.env.get_state(self.path[-1])
+        gradient_strength, _ = env.get_state(path[-1])
 
         # Calculate the change in gradient strength since the last step
         previous_gradient_strength = None
-        if len(self.path) > 1:
-            previous_gradient_strength, _ = self.env.get_state(self.path[-2])
+        if len(path) > 1:
+            previous_gradient_strength, _ = env.get_state(path[-2])
             gradient_change = gradient_strength - previous_gradient_strength
         else:
             gradient_change = 0
@@ -303,19 +330,19 @@ class QuantumNematodeAgent:
                 logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
 
         # Strengthen penalties for no movements
-        if len(self.path) > 1 and self.path[-1] == self.path[-2]:
+        if len(path) > 1 and path[-1] == path[-2]:
             penalty_amount = PENALTY_STAY * 3
             reward += penalty_amount
             logger.debug(f"[Penalty] No movement penalty applied: {penalty_amount}.")
         # Strengthen penalties for revisiting positions
-        elif self.path.count(tuple(self.env.agent_pos)) > 1:
+        elif path.count(tuple(env.agent_pos)) > 1:
             penalty_amount = PENALTY_STEP * 3
             reward += penalty_amount
             logger.debug(f"[Penalty] Revisit penalty applied: {penalty_amount}.")
 
         # Reward efficient paths by scaling inversely with steps
         efficiency_factor = None
-        if self.env.reached_goal():
+        if env.reached_goal():
             efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
             reward_amount = REWARD_GOAL * efficiency_factor * 2
             reward += reward_amount  # Further scale goal reward dynamically based on speed
