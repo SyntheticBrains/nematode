@@ -95,42 +95,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         qubits = config.get("qubits", qubits)
 
         # Load learning rate method and parameters if specified
-        learning_rate_config = config.get("learning_rate", {})
-        if learning_rate_config:
-            learning_rate_method = learning_rate_config.get("method", "default")
-            learning_rate_parameters = learning_rate_config.get("parameters", {})
-            if learning_rate_method == "dynamic":
-                learning_rate = DynamicLearningRate(
-                    initial_learning_rate=learning_rate_parameters.get(
-                        "initial_learning_rate",
-                        0.1,
-                    ),
-                    decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
-                )
-            elif learning_rate_method == "adam":
-                learning_rate = AdamLearningRate(
-                    initial_learning_rate=learning_rate_parameters.get(
-                        "initial_learning_rate",
-                        0.1,
-                    ),
-                    beta1=learning_rate_parameters.get("beta1", 0.9),
-                    beta2=learning_rate_parameters.get("beta2", 0.999),
-                    epsilon=learning_rate_parameters.get("epsilon", 1e-8),
-                )
-            else:
-                error_message = (
-                    f"Unknown learning rate method: {learning_rate_method}. "
-                    "Supported methods are 'dynamic' and 'adam'."
-                )
-                logger.error(error_message)
-                raise ValueError(error_message)
+        learning_rate = configure_learning_rate(config)
 
-    if maze_grid_size < MIN_GRID_SIZE:
-        error_message = (
-            f"Grid size must be at least {MIN_GRID_SIZE}. Provided grid size: {maze_grid_size}."
-        )
-        logger.error(error_message)
-        raise ValueError(error_message)
+    validate_simulation_parameters(maze_grid_size, brain_type, qubits)
 
     # Configure logging level
     if log_level == "NONE":
@@ -150,56 +117,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         logger.info(f"{arg}: {value}")
 
     # Select the brain architecture
-    if brain_type == "simple":
-        from quantumnematode.brain.simple import (  # pyright: ignore[reportMissingImports]
-            SimpleBrain,
-        )
-
-        brain = SimpleBrain(device=device, shots=shots)
-    elif brain_type == "complex":
-        from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
-            ComplexBrain,
-        )
-
-        if device != "CPU":
-            logger.warning(
-                "ComplexBrain is not optimized for GPU. Using CPU instead.",
-            )
-        brain = ComplexBrain(device=device, shots=shots)
-    elif brain_type == "reduced":
-        from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
-            ReducedBrain,
-        )
-
-        brain = ReducedBrain(device=device, shots=shots)
-    elif brain_type == "memory":
-        from quantumnematode.brain.memory import (  # pyright: ignore[reportMissingImports]
-            MemoryBrain,
-        )
-
-        brain = MemoryBrain(device=device, shots=shots)
-    elif brain_type == "dynamic":
-        from quantumnematode.brain.dynamic import (  # pyright: ignore[reportMissingImports]
-            DynamicBrain,
-        )
-
-        brain = DynamicBrain(
-            device=device,
-            shots=shots,
-            num_qubits=qubits,
-            learning_rate=learning_rate,
-        )
-    else:
-        error_message = f"Unknown brain architecture: {brain_type}"
-        raise ValueError(error_message)
-
-    if brain_type != "dynamic" and qubits != DEFAULT_QUBITS:
-        error_message = (
-            f"The 'qubits' parameter is only supported by the DynamicBrain architecture. "
-            f"Provided brain: {brain}, qubits: {qubits}."
-        )
-        logger.error(error_message)
-        raise ValueError(error_message)
+    brain = setup_brain_model(brain_type, shots, qubits, device, learning_rate)
 
     # Update the agent to use the selected brain architecture
     agent = QuantumNematodeAgent(
@@ -294,6 +212,155 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         plot_tracking_data(tracking_data, timestamp, brain_type, qubits)
 
     return
+
+
+def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits: int) -> None:
+    """
+    Validate the simulation parameters to ensure they meet the required constraints.
+
+    Args:
+        maze_grid_size (int): The size of the maze grid.
+        brain_type (str): The type of brain architecture being used.
+        qubits (int): The number of qubits specified for the simulation.
+
+    Raises
+    ------
+        ValueError: If the maze grid size is smaller than the minimum allowed size.
+        ValueError: If the 'qubits' parameter is used with a brain type other than 'dynamic'.
+    """
+    if maze_grid_size < MIN_GRID_SIZE:
+        error_message = (
+            f"Grid size must be at least {MIN_GRID_SIZE}. Provided grid size: {maze_grid_size}."
+        )
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+    if brain_type != "dynamic" and qubits != DEFAULT_QUBITS:
+        error_message = (
+            f"The 'qubits' parameter is only supported by the DynamicBrain architecture. "
+            f"Provided brain: {brain_type}, qubits: {qubits}."
+        )
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+
+def setup_brain_model(
+    brain_type: str,
+    shots: int,
+    qubits: int,
+    device: str,
+    learning_rate: DynamicLearningRate | AdamLearningRate,
+) -> object:
+    """
+    Set up the brain model based on the specified brain type.
+
+    Args:
+        brain_type (str): The type of brain architecture to use. Options include
+            "simple", "complex", "reduced", "memory", and "dynamic".
+        shots (int): The number of shots for quantum circuit execution.
+        qubits (int): The number of qubits to use (only applicable for "dynamic" brain).
+        device (str): The device to use for simulation ("CPU" or "GPU").
+        learning_rate (DynamicLearningRate | AdamLearningRate): The learning rate
+            configuration for the "dynamic" brain.
+
+    Returns
+    -------
+        object: An instance of the selected brain model.
+
+    Raises
+    ------
+        ValueError: If an unknown brain type is provided.
+    """
+    if brain_type == "simple":
+        from quantumnematode.brain.simple import (  # pyright: ignore[reportMissingImports]
+            SimpleBrain,
+        )
+
+        brain = SimpleBrain(device=device, shots=shots)
+    elif brain_type == "complex":
+        from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
+            ComplexBrain,
+        )
+
+        if device != "CPU":
+            logger.warning(
+                "ComplexBrain is not optimized for GPU. Using CPU instead.",
+            )
+        brain = ComplexBrain(device=device, shots=shots)
+    elif brain_type == "reduced":
+        from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
+            ReducedBrain,
+        )
+
+        brain = ReducedBrain(device=device, shots=shots)
+    elif brain_type == "memory":
+        from quantumnematode.brain.memory import (  # pyright: ignore[reportMissingImports]
+            MemoryBrain,
+        )
+
+        brain = MemoryBrain(device=device, shots=shots)
+    elif brain_type == "dynamic":
+        from quantumnematode.brain.dynamic import (  # pyright: ignore[reportMissingImports]
+            DynamicBrain,
+        )
+
+        brain = DynamicBrain(
+            device=device,
+            shots=shots,
+            num_qubits=qubits,
+            learning_rate=learning_rate,
+        )
+    else:
+        error_message = f"Unknown brain architecture: {brain_type}"
+        raise ValueError(error_message)
+    return brain
+
+
+def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningRate:
+    """
+    Configure the learning rate based on the provided configuration.
+
+    Args:
+        config (dict): Configuration dictionary containing learning rate settings.
+
+    Returns
+    -------
+        DynamicLearningRate | AdamLearningRate: Configured learning rate object.
+    """
+    learning_rate_config = config.get("learning_rate", {})
+
+    if not learning_rate_config:
+        logger.warning(
+            "No learning rate configuration found. Using default DynamicLearningRate.",
+        )
+        return DynamicLearningRate()
+
+    learning_rate_method = learning_rate_config.get("method", "default")
+    learning_rate_parameters = learning_rate_config.get("parameters", {})
+    if learning_rate_method == "dynamic":
+        return DynamicLearningRate(
+            initial_learning_rate=learning_rate_parameters.get(
+                "initial_learning_rate",
+                0.1,
+            ),
+            decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
+        )
+    if learning_rate_method == "adam":
+        return AdamLearningRate(
+            initial_learning_rate=learning_rate_parameters.get(
+                "initial_learning_rate",
+                0.1,
+            ),
+            beta1=learning_rate_parameters.get("beta1", 0.9),
+            beta2=learning_rate_parameters.get("beta2", 0.999),
+            epsilon=learning_rate_parameters.get("epsilon", 1e-8),
+        )
+    error_message = (
+        f"Unknown learning rate method: {learning_rate_method}. "
+        "Supported methods are 'dynamic' and 'adam'."
+    )
+    logger.error(error_message)
+    raise ValueError(error_message)
 
 
 def load_simulation_config(config_path: str) -> dict:
