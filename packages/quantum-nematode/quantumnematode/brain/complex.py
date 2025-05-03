@@ -205,3 +205,16 @@ class ComplexBrain(Brain):
         reward : float
             Reward signal.
         """
+
+    def inspect_circuit(self) -> QuantumCircuit:
+        """
+        Inspect the quantum circuit.
+
+        Returns
+        -------
+        QuantumCircuit
+            The quantum circuit representing the brain.
+        """
+        qc = self.build_brain()
+        qc.draw("text")
+        return qc

@@ -58,3 +58,12 @@ class Brain(Protocol):
         """
         error_msg = "Subclasses must implement the update_memory method to update memory states."
         raise NotImplementedError(error_msg)
+
+    def inspect_circuit(self) -> QuantumCircuit:
+        """
+        Inspect the quantum circuit.
+
+        This method should be implemented by subclasses.
+        """
+        error_msg = "Subclasses must implement the inspect_circuit method to inspect the quantum circuit."
+        raise NotImplementedError(error_msg)

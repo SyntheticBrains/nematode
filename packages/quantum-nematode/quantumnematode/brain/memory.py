@@ -158,10 +158,18 @@ class MemoryBrain(Brain):
             else:
                 self.circuit.rx(-abs(reward) * np.pi / 4, qubit)  # Suppress
 
-    def log_circuit_details(self) -> None:
-        """Log details of the quantum circuit for debugging purposes."""
-        logger.debug("Quantum Circuit Details:")
-        logger.debug(self.circuit.draw(output="text"))
+    def inspect_circuit(self) -> QuantumCircuit:
+        """
+        Inspect the quantum circuit.
+
+        Returns
+        -------
+        QuantumCircuit
+            The quantum circuit representing the brain.
+        """
+        qc = self.circuit.copy()
+        qc.draw("text")
+        return qc
 
     def interpret_counts(
         self,
