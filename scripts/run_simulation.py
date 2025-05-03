@@ -63,6 +63,13 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         help="Path to the YAML configuration file.",
     )
+    # Update the argument parser to include a flag for superposition mode
+    parser.add_argument(
+        "--superposition",
+        action="store_true",
+        help="Enable superposition mode to visualize top 2 decisions at each step. "
+        "Only one run is allowed in this mode.",
+    )
 
     return parser.parse_args()
 
@@ -72,6 +79,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     args = parse_arguments()
 
     config_file = args.config
+    superposition_mode = args.superposition
     max_steps = DEFAULT_MAX_STEPS
     maze_grid_size = DEFAULT_MAZE_GRID_SIZE
     runs = args.runs
@@ -141,6 +149,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     total_runs_done = 0
 
+    if superposition_mode:
+        try:
+            agent.run_superposition_mode(
+                max_steps=max_steps,
+                show_last_frame_only=show_last_frame_only,
+            )
+        except KeyboardInterrupt:
+            message = "KeyboardInterrupt detected. Exiting the simulation."
+            logger.info(message)
+            print(message)  # noqa: T201
+            return
+
     try:
         for run in range(total_runs_done, runs):
             logger.info(f"Starting run {run + 1} of {runs}")
@@ -191,7 +211,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_runs_done = resume_from
             main()  # Restart the main function to re-enter the loop
         else:
-            logger.info("KeyboardInterrupt detected. Exiting the simulation.")
+            message = "KeyboardInterrupt detected. Exiting the simulation."
+            logger.info(message)
+            print(message)  # noqa: T201
             return
 
     # Calculate and log performance metrics

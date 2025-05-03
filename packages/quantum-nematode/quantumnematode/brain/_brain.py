@@ -41,7 +41,9 @@ class Brain(Protocol):
     def interpret_counts(
         self,
         counts: dict[str, int],
-    ) -> str:
+        *,
+        best_only: bool = True,
+    ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action.
 

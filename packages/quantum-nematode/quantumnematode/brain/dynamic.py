@@ -292,7 +292,9 @@ class DynamicBrain(Brain):
     def interpret_counts(
         self,
         counts: dict[str, int],
-    ) -> str:
+        *,
+        best_only: bool = True,
+    ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action dynamically.
 
@@ -306,8 +308,9 @@ class DynamicBrain(Brain):
 
         Returns
         -------
-        str
-            Action to be taken by the agent.
+        list[tuple[str, float]] | str
+            List of tuples containing actions and their probabilities,
+            or the single most probable action.
         """
         logger.debug(f"Raw counts from quantum circuit: {counts}")
 
@@ -357,15 +360,21 @@ class DynamicBrain(Brain):
         logger.debug(f"Softmax probabilities with noise: {probabilities}")
 
         # Select an action based on the softmax probabilities
-        actions, probs = zip(
-            *[(action_map.get(key, "unknown"), prob) for key, prob in probabilities.items()],
-            strict=False,
+        sorted_actions = sorted(
+            [(action_map[key], prob) for key, prob in probabilities.items()],
+            key=lambda x: x[1],
+            reverse=True,
         )
-        selected_action = actions[probs.index(max(probs))]
 
-        logger.debug(f"Selected action: {selected_action}")
+        most_probable_action = sorted_actions[0][0]
+        logger.debug(
+            f"Most probable action: {most_probable_action} with probability {sorted_actions[0][1]}",
+        )
 
-        return selected_action
+        if best_only:
+            return most_probable_action
+
+        return sorted_actions
 
     def update_memory(self, reward: float) -> None:
         """
