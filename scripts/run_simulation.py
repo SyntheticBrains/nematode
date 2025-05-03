@@ -2,48 +2,43 @@
 
 import argparse
 import logging
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt  # pyright: ignore[reportMissingImports]
+import yaml
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
     QuantumNematodeAgent,
 )
-from quantumnematode.constants import MIN_GRID_SIZE  # pyright: ignore[reportMissingImports]
+from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
+    DEFAULT_AGENT_BODY_LENGTH,
+    DEFAULT_BRAIN,
+    DEFAULT_MAX_STEPS,
+    DEFAULT_MAZE_GRID_SIZE,
+    DEFAULT_QUBITS,
+    DEFAULT_SHOTS,
+    MIN_GRID_SIZE,
+    TOGGLE_PAUSE,
+)
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
+from quantumnematode.optimizers.learning_rate import (  # pyright: ignore[reportMissingImports]
+    AdamLearningRate,
+    DynamicLearningRate,
+)
 from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
 
-DEFAULT_QUBITS = 2
 
-# Feature flags
-# NOTE: Pausing is not implemented properly yet.
-TOGGLE_PAUSE = os.getenv("TOGGLE_PAUSE", "False").lower() == "false"
-
-
-def main() -> None:  # noqa: C901, PLR0912, PLR0915
-    """Run the Quantum Nematode simulation."""
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Run the Quantum Nematode simulation.")
-    parser.add_argument(
-        "--max-steps",
-        type=int,
-        default=100,
-        help="Maximum number of steps for the simulation (default: 100)",
-    )
     parser.add_argument(
         "--log-level",
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "NONE"],
         help="Set the logging level (default: INFO). Use 'NONE' to disable logging.",
-    )
-    parser.add_argument(
-        "--maze-grid-size",
-        type=int,
-        default=5,
-        help="Size of the maze grid (minimum: 5, default: 5)",
     )
     parser.add_argument(
         "--show-last-frame-only",
@@ -57,13 +52,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         help="Number of simulation runs to perform (default: 1)",
     )
     parser.add_argument(
-        "--brain",
-        type=str,
-        choices=["simple", "complex", "reduced", "memory", "dynamic"],
-        default="simple",
-        help="Choose the quantum brain architecture to use (default: simple)",
-    )
-    parser.add_argument(
         "--device",
         type=str,
         default="cpu",
@@ -71,64 +59,104 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         help="Device to use for AerSimulator",
     )
     parser.add_argument(
-        "--shots",
-        type=int,
-        default=100,
-        help="Number of shots for the AerSimulator",
-    )
-    parser.add_argument(
-        "--body-length",
-        type=int,
-        default=0,
-        help="Length of the agent's body, excluding head (default: 0)",
-    )
-    parser.add_argument(
-        "--qubits",
-        type=int,
-        default=DEFAULT_QUBITS,
-        help="Number of qubits to use in the quantum brain (default: 2). "
-        "Only supported by DynamicBrain.",
+        "--config",
+        type=str,
+        help="Path to the YAML configuration file.",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    if args.maze_grid_size < MIN_GRID_SIZE:
+
+def main() -> None:  # noqa: C901, PLR0912, PLR0915
+    """Run the Quantum Nematode simulation."""
+    args = parse_arguments()
+
+    config_file = args.config
+    max_steps = DEFAULT_MAX_STEPS
+    maze_grid_size = DEFAULT_MAZE_GRID_SIZE
+    runs = args.runs
+    brain_type = DEFAULT_BRAIN
+    shots = DEFAULT_SHOTS
+    body_length = DEFAULT_AGENT_BODY_LENGTH
+    qubits = DEFAULT_QUBITS
+    device = args.device.upper()
+    show_last_frame_only = args.show_last_frame_only
+    log_level = args.log_level.upper()
+    learning_rate = DynamicLearningRate()
+
+    if config_file:
+        config = load_simulation_config(config_file)
+
+        max_steps = config.get("max_steps", max_steps)
+        maze_grid_size = config.get("maze_grid_size", maze_grid_size)
+        brain_type = config.get("brain", brain_type)
+        shots = config.get("shots", shots)
+        body_length = config.get("body_length", body_length)
+        qubits = config.get("qubits", qubits)
+
+        # Load learning rate method and parameters if specified
+        learning_rate_config = config.get("learning_rate", {})
+        if learning_rate_config:
+            learning_rate_method = learning_rate_config.get("method", "default")
+            learning_rate_parameters = learning_rate_config.get("parameters", {})
+            if learning_rate_method == "dynamic":
+                learning_rate = DynamicLearningRate(
+                    initial_learning_rate=learning_rate_parameters.get(
+                        "initial_learning_rate",
+                        0.1,
+                    ),
+                    decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
+                )
+            elif learning_rate_method == "adam":
+                learning_rate = AdamLearningRate(
+                    initial_learning_rate=learning_rate_parameters.get(
+                        "initial_learning_rate",
+                        0.1,
+                    ),
+                    beta1=learning_rate_parameters.get("beta1", 0.9),
+                    beta2=learning_rate_parameters.get("beta2", 0.999),
+                    epsilon=learning_rate_parameters.get("epsilon", 1e-8),
+                )
+            else:
+                error_message = (
+                    f"Unknown learning rate method: {learning_rate_method}. "
+                    "Supported methods are 'dynamic' and 'adam'."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
+
+    if maze_grid_size < MIN_GRID_SIZE:
         error_message = (
-            f"Grid size must be at least {MIN_GRID_SIZE}. "
-            f"Provided grid size: {args.maze_grid_size}."
+            f"Grid size must be at least {MIN_GRID_SIZE}. Provided grid size: {maze_grid_size}."
         )
         logger.error(error_message)
         raise ValueError(error_message)
 
     # Configure logging level
-    if args.log_level == "NONE":
+    if log_level == "NONE":
         logger.disabled = True
     else:
-        logger.setLevel(args.log_level)
+        logger.setLevel(log_level)
         for handler in logger.handlers:
             if isinstance(handler, logging.FileHandler):
-                handler.setLevel(args.log_level)
+                handler.setLevel(log_level)
 
     # Set up the timestamp for saving results
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     logger.info(f"Session ID: {timestamp}")
-
-    # Pass the device and shots arguments to the brain classes
-    device = args.device.upper()
-    shots = args.shots
 
     logger.info("Simulation parameters:")
     for arg, value in vars(args).items():
         logger.info(f"{arg}: {value}")
 
     # Select the brain architecture
-    if args.brain == "simple":
+    if brain_type == "simple":
         from quantumnematode.brain.simple import (  # pyright: ignore[reportMissingImports]
             SimpleBrain,
         )
 
         brain = SimpleBrain(device=device, shots=shots)
-    elif args.brain == "complex":
+    elif brain_type == "complex":
         from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
             ComplexBrain,
         )
@@ -138,41 +166,46 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 "ComplexBrain is not optimized for GPU. Using CPU instead.",
             )
         brain = ComplexBrain(device=device, shots=shots)
-    elif args.brain == "reduced":
+    elif brain_type == "reduced":
         from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
             ReducedBrain,
         )
 
         brain = ReducedBrain(device=device, shots=shots)
-    elif args.brain == "memory":
+    elif brain_type == "memory":
         from quantumnematode.brain.memory import (  # pyright: ignore[reportMissingImports]
             MemoryBrain,
         )
 
         brain = MemoryBrain(device=device, shots=shots)
-    elif args.brain == "dynamic":
+    elif brain_type == "dynamic":
         from quantumnematode.brain.dynamic import (  # pyright: ignore[reportMissingImports]
             DynamicBrain,
         )
 
-        brain = DynamicBrain(device=device, shots=shots, num_qubits=args.qubits)
+        brain = DynamicBrain(
+            device=device,
+            shots=shots,
+            num_qubits=qubits,
+            learning_rate=learning_rate,
+        )
     else:
-        error_message = f"Unknown brain architecture: {args.brain}"
+        error_message = f"Unknown brain architecture: {brain_type}"
         raise ValueError(error_message)
 
-    if args.brain != "dynamic" and args.qubits != DEFAULT_QUBITS:
+    if brain_type != "dynamic" and qubits != DEFAULT_QUBITS:
         error_message = (
             f"The 'qubits' parameter is only supported by the DynamicBrain architecture. "
-            f"Provided brain: {args.brain}, qubits: {args.qubits}."
+            f"Provided brain: {brain}, qubits: {qubits}."
         )
         logger.error(error_message)
         raise ValueError(error_message)
 
     # Update the agent to use the selected brain architecture
     agent = QuantumNematodeAgent(
-        maze_grid_size=args.maze_grid_size,
+        maze_grid_size=maze_grid_size,
         brain=brain,
-        max_body_length=args.body_length,
+        max_body_length=body_length,
     )
 
     # Initialize tracking variables for plotting
@@ -191,11 +224,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     total_runs_done = 0
 
     try:
-        for run in range(total_runs_done, args.runs):
-            logger.info(f"Starting run {run + 1} of {args.runs}")
+        for run in range(total_runs_done, runs):
+            logger.info(f"Starting run {run + 1} of {runs}")
             path = agent.run_episode(
-                max_steps=args.max_steps,
-                show_last_frame_only=args.show_last_frame_only,
+                max_steps=max_steps,
+                show_last_frame_only=show_last_frame_only,
             )
 
             steps = len(path)
@@ -206,15 +239,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 (run + 1, steps, path, total_reward, agent.total_rewards),
             )  # Include total reward in results
 
-            logger.info(f"Run {run + 1}/{args.runs} completed in {steps} steps.")
+            logger.info(f"Run {run + 1}/{runs} completed in {steps} steps.")
 
-            if run < args.runs - 1:
+            if run < runs - 1:
                 agent.reset_environment()
 
             total_runs_done += 1
 
             # Track data for plotting, only supported for dynamic brain
-            if args.brain == "dynamic":
+            if brain == "dynamic":
                 tracking_data["run"].append(run + 1)
                 tracking_data["input_parameters"].append(agent.brain.latest_input_parameters)
                 tracking_data["computed_gradients"].append(agent.brain.latest_gradients)
@@ -226,7 +259,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     except KeyboardInterrupt:
         if TOGGLE_PAUSE == "true":
             resume_from = manage_simulation_pause(
-                args,
+                max_steps,
+                brain_type,
+                qubits,
                 timestamp,
                 agent,
                 all_results,
@@ -249,20 +284,37 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
 
     # Final summary of all runs.
-    summary(total_runs_done, args.max_steps, all_results)
+    summary(total_runs_done, max_steps, all_results)
 
     # Generate plots after the simulation
-    plot_results(all_results, metrics, timestamp, args.max_steps)
+    plot_results(all_results, metrics, timestamp, max_steps)
 
     # Generate additional plots for tracking data
-    if args.brain == "dynamic":
-        plot_tracking_data(tracking_data, timestamp, args.brain, args.qubits)
+    if brain == "dynamic":
+        plot_tracking_data(tracking_data, timestamp, brain_type, qubits)
 
     return
 
 
+def load_simulation_config(config_path: str) -> dict:
+    """
+    Load simulation configuration from a YAML file.
+
+    Args:
+        config_path (str): Path to the YAML configuration file.
+
+    Returns
+    -------
+        dict: Parsed configuration as a dictionary.
+    """
+    with Path(config_path).open() as file:
+        return yaml.safe_load(file)
+
+
 def manage_simulation_pause(  # noqa: PLR0913
-    args: argparse.Namespace,
+    max_steps: int,
+    brain: str,
+    qubits: int,
     timestamp: str,
     agent: QuantumNematodeAgent,
     all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
@@ -321,18 +373,18 @@ def manage_simulation_pause(  # noqa: PLR0913
             logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
 
             # Generate partial summary
-            summary(total_runs_done, args.max_steps, all_results)
+            summary(total_runs_done, max_steps, all_results)
 
             # Generate plots with current timestamp
             file_prefix = f"{total_runs_done}_"
-            plot_results(all_results, metrics, timestamp, args.max_steps, file_prefix=file_prefix)
+            plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
 
-            if args.brain == "dynamic":
+            if brain == "dynamic":
                 plot_tracking_data(
                     tracking_data,
                     timestamp,
-                    args.brain,
-                    args.qubits,
+                    brain,
+                    qubits,
                     file_prefix=file_prefix,
                 )
         elif choice == 3:  # noqa: PLR2004

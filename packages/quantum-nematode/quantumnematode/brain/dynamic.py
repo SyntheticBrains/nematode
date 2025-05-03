@@ -42,7 +42,7 @@ class DynamicBrain(Brain):
         device: str = "CPU",
         shots: int = 100,
         num_qubits: int = 5,
-        learning_rate_type: str = "adam",
+        learning_rate: DynamicLearningRate | AdamLearningRate | None = None,
     ) -> None:
         """
         Initialize the DynamicBrain with a dynamic number of qubits.
@@ -55,6 +55,9 @@ class DynamicBrain(Brain):
             The number of shots for the quantum simulation.
         num_qubits : int
             The number of qubits to use in the quantum circuit.
+        learning_rate : DynamicLearningRate | AdamLearningRate | None
+            The learning rate strategy for parameter updates, by default None.
+            If None, a default dynamic learning rate will be used.
         """
         self.device = device.upper()
         self.shots = shots
@@ -72,10 +75,9 @@ class DynamicBrain(Brain):
         self.latest_learning_rate = None
         self.latest_exploration_factor = None
         self.latest_temperature = None
-        self.learning_rate_type = learning_rate_type.lower()
-        if self.learning_rate_type == "dynamic":
-            self.learning_rate = DynamicLearningRate()
 
+        self.learning_rate = learning_rate or DynamicLearningRate()
+        if isinstance(self.learning_rate, DynamicLearningRate):
             logger.info(
                 "Using dynamic learning rate strategy for parameter updates.",
             )
@@ -85,9 +87,7 @@ class DynamicBrain(Brain):
             logger.info(
                 f"Decay rate: {self.learning_rate.decay_rate}",
             )
-        else:
-            self.learning_rate = AdamLearningRate()
-
+        elif isinstance(self.learning_rate, AdamLearningRate):
             logger.info(
                 "Using Adam learning rate strategy for parameter updates.",
             )
@@ -255,15 +255,7 @@ class DynamicBrain(Brain):
             Rate at which the learning rate decays over time, by default 0.01.
         """
         # Use the selected learning rate strategy
-        if self.learning_rate_type == "dynamic":
-            if not isinstance(self.learning_rate, DynamicLearningRate):
-                error_message = (
-                    f"Learning rate type '{self.learning_rate_type}' is not compatible with "
-                    f"DynamicLearningRate. Please check the configuration."
-                )
-                logger.error(error_message)
-                raise ValueError(error_message)
-
+        if isinstance(self.learning_rate, DynamicLearningRate):
             learning_rate = self.learning_rate.get_learning_rate()
             for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
                 self.parameter_values[param_name] -= learning_rate * grad
@@ -275,15 +267,7 @@ class DynamicBrain(Brain):
                 f"Updated parameters with dynamic learning rate {learning_rate}: "
                 f"{str(self.parameter_values).replace('θ', 'theta_')}",
             )
-        elif self.learning_rate_type == "adam":
-            if not isinstance(self.learning_rate, AdamLearningRate):
-                error_message = (
-                    f"Learning rate type '{self.learning_rate_type}' is not compatible with "
-                    f"AdamLearningRate. Please check the configuration."
-                )
-                logger.error(error_message)
-                raise ValueError(error_message)
-
+        elif isinstance(self.learning_rate, AdamLearningRate):
             effective_learning_rates = self.learning_rate.get_learning_rate(
                 gradients,
                 self.parameter_values.keys(),
@@ -298,10 +282,6 @@ class DynamicBrain(Brain):
                 f"Updated parameters with Adam learning rate: "
                 f"{str(self.parameter_values).replace('θ', 'theta_')}",
             )
-        else:
-            error_message = f"Unknown learning rate type: {self.learning_rate_type}."
-            logger.error(error_message)
-            raise ValueError(error_message)
 
         # Store latest updated parameters for tracking
         self.latest_updated_parameters = deepcopy(self.parameter_values)

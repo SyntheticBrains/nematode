@@ -36,6 +36,7 @@ class ComplexBrain(Brain):
     """
 
     def __init__(self, device: str = "CPU", shots: int = 100) -> None:
+        self.satiety = 1.0  # NOTE: Not used in this implementation
         self.device = device.upper()
         self.shots = shots
         self.neurons = [Parameter(f"θ{i}") for i in range(QUBIT_COUNT)]
