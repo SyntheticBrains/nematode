@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,6 +17,10 @@ from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImp
 from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
 
 DEFAULT_QUBITS = 2
+
+# Feature flags
+# NOTE: Pausing is not implemented properly yet.
+TOGGLE_PAUSE = os.getenv("TOGGLE_PAUSE", "False").lower() == "false"
 
 
 def main() -> None:  # noqa: C901, PLR0912, PLR0915
@@ -170,10 +175,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         max_body_length=args.body_length,
     )
 
-    all_results = []
-
-    total_runs_done = 0
-
     # Initialize tracking variables for plotting
     tracking_data = {
         "run": [],
@@ -185,8 +186,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         "temperature": [],
     }
 
+    all_results = []
+
+    total_runs_done = 0
+
     try:
-        for run in range(args.runs):
+        for run in range(total_runs_done, args.runs):
             logger.info(f"Starting run {run + 1} of {args.runs}")
             path = agent.run_episode(
                 max_steps=args.max_steps,
@@ -219,14 +224,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data["temperature"].append(agent.brain.latest_temperature)
 
     except KeyboardInterrupt:
-        return manage_simulation_pause(
-            args,
-            timestamp,
-            agent,
-            all_results,
-            total_runs_done,
-            tracking_data,
-        )
+        if TOGGLE_PAUSE == "true":
+            resume_from = manage_simulation_pause(
+                args,
+                timestamp,
+                agent,
+                all_results,
+                total_runs_done,
+                tracking_data,
+            )
+            if resume_from == -1:
+                return
+            total_runs_done = resume_from
+            main()  # Restart the main function to re-enter the loop
+        else:
+            logger.info("KeyboardInterrupt detected. Exiting the simulation.")
+            return
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
@@ -245,7 +258,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if args.brain == "dynamic":
         plot_tracking_data(tracking_data, timestamp, args.brain, args.qubits)
 
-    return None
+    return
 
 
 def manage_simulation_pause(  # noqa: PLR0913
@@ -255,7 +268,7 @@ def manage_simulation_pause(  # noqa: PLR0913
     all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
     total_runs_done: int,
     tracking_data: dict[str, list],
-) -> None:
+) -> int:
     """
     Handle simulation pause triggered by a KeyboardInterrupt.
 
@@ -274,7 +287,7 @@ def manage_simulation_pause(  # noqa: PLR0913
 
     Returns
     -------
-        None
+        int: The run number to resume from, or -1 to exit.
     """
     while True:
         prompt_intro_message = (
@@ -298,7 +311,7 @@ def manage_simulation_pause(  # noqa: PLR0913
 
         if choice == 1:
             logger.info("Resuming the session.")
-            break
+            return total_runs_done
         if choice == 2:  # noqa: PLR2004
             logger.info("Generating partial results and plots.")
             metrics = agent.calculate_metrics(total_runs=total_runs_done)
@@ -329,7 +342,7 @@ def manage_simulation_pause(  # noqa: PLR0913
             print(circuit)  # noqa: T201
         elif choice == 4:  # noqa: PLR2004
             logger.info("Exiting the session.")
-            return
+            return -1
         else:
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
