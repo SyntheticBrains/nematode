@@ -288,3 +288,16 @@ class SimpleBrain(Brain):
         qc = self.build_brain()
         qc.draw("text")
         return qc
+
+    def copy(self) -> "SimpleBrain":
+        """
+        Create a copy of the brain.
+
+        Returns
+        -------
+        SimpleBrain
+            A new instance of the SimpleBrain class with the same parameters.
+        """
+        error_msg = "Copying SimpleBrain is not implemented. Please implement the copy method."
+        logger.error(error_msg)
+        raise NotImplementedError(error_msg)

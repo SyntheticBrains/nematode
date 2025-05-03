@@ -398,3 +398,29 @@ class DynamicBrain(Brain):
         qc = self.build_brain()
         qc.draw("text")
         return qc
+
+    def copy(self) -> "DynamicBrain":
+        """
+        Create a deep copy of the DynamicBrain instance.
+
+        Returns
+        -------
+        DynamicBrain
+            A new instance of DynamicBrain with the same state.
+        """
+        new_brain = DynamicBrain(
+            device=self.device,
+            shots=self.shots,
+            num_qubits=self.num_qubits,
+            learning_rate=self.learning_rate,
+        )
+        new_brain.parameter_values = deepcopy(self.parameter_values)
+        new_brain.steps = self.steps
+        new_brain.satiety = self.satiety
+        new_brain.latest_input_parameters = deepcopy(self.latest_input_parameters)
+        new_brain.latest_updated_parameters = deepcopy(self.latest_updated_parameters)
+        new_brain.latest_gradients = deepcopy(self.latest_gradients)
+        new_brain.latest_learning_rate = self.latest_learning_rate
+        new_brain.latest_exploration_factor = self.latest_exploration_factor
+        new_brain.latest_temperature = self.latest_temperature
+        return new_brain

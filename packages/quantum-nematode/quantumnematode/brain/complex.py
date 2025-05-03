@@ -221,3 +221,16 @@ class ComplexBrain(Brain):
         qc = self.build_brain()
         qc.draw("text")
         return qc
+
+    def copy(self) -> "ComplexBrain":
+        """
+        Create a copy of the brain.
+
+        Returns
+        -------
+        ComplexBrain
+            A new instance of the ComplexBrain class with the same parameters.
+        """
+        error_msg = "Copying ComplexBrain is not implemented. Please implement the copy method."
+        logger.error(error_msg)
+        raise NotImplementedError(error_msg)

@@ -71,3 +71,12 @@ class Brain(Protocol):
             "Subclasses must implement the inspect_circuit method to inspect the quantum circuit."
         )
         raise NotImplementedError(error_msg)
+
+    def copy(self) -> "Brain":
+        """
+        Create a copy of the brain.
+
+        This method should be implemented by subclasses.
+        """
+        error_msg = "Subclasses must implement the copy method to create a copy of the brain."
+        raise NotImplementedError(error_msg)
