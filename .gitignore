@@ -5,6 +5,7 @@ __pycache__/
 *.egg
 *.log
 *.code-workspace
+.vscode/
 build/*
 builds/*
 log/*
