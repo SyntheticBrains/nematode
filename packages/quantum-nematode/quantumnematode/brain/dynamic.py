@@ -361,7 +361,7 @@ class DynamicBrain(Brain):
             *[(action_map.get(key, "unknown"), prob) for key, prob in probabilities.items()],
             strict=False,
         )
-        selected_action = self.rng.choice(actions, p=probs)
+        selected_action = actions[probs.index(max(probs))]
 
         logger.debug(f"Selected action: {selected_action}")
 
