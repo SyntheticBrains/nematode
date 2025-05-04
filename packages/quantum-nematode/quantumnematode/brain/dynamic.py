@@ -10,6 +10,7 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
+from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod, compute_gradients
 from quantumnematode.optimizers.learning_rate import AdamLearningRate, DynamicLearningRate
 
 EXPLORATION_MIN = 0.6  # Minimum exploration factor
@@ -43,6 +44,7 @@ class DynamicBrain(Brain):
         shots: int = 100,
         num_qubits: int = 5,
         learning_rate: DynamicLearningRate | AdamLearningRate | None = None,
+        gradient_method: GradientCalculationMethod = GradientCalculationMethod.RAW,
     ) -> None:
         """
         Initialize the DynamicBrain with a dynamic number of qubits.
@@ -58,6 +60,8 @@ class DynamicBrain(Brain):
         learning_rate : DynamicLearningRate | AdamLearningRate | None
             The learning rate strategy for parameter updates, by default None.
             If None, a default dynamic learning rate will be used.
+        gradient_method : GradientCalculationMethod
+            The method to use for gradient calculation, by default RAW.
         """
         self.device = device.upper()
         self.shots = shots
@@ -75,6 +79,7 @@ class DynamicBrain(Brain):
         self.latest_learning_rate = None
         self.latest_exploration_factor = None
         self.latest_temperature = None
+        self.gradient_method = gradient_method
 
         self.learning_rate = learning_rate or DynamicLearningRate()
         if isinstance(self.learning_rate, DynamicLearningRate):
@@ -206,7 +211,7 @@ class DynamicBrain(Brain):
 
     def compute_gradients(self, counts: dict[str, int], reward: float) -> list[float]:
         """
-        Compute gradients based on counts and reward.
+        Compute gradients based on counts and reward, using the selected gradient method.
 
         Parameters
         ----------
@@ -228,18 +233,17 @@ class DynamicBrain(Brain):
             gradient = reward * (1 - probability)
             gradients.append(gradient)
 
-        # Normalize gradients to prevent large updates
-        gradients = [
-            g / max(abs(g) for g in gradients) if max(abs(g) for g in gradients) > 0 else g
-            for g in gradients
-        ]
-
         logger.debug(f"Computed gradients: {gradients}")
 
-        # Store gradients for tracking
-        self.latest_gradients = gradients
+        post_processed_gradients = compute_gradients(
+            gradients,
+            self.gradient_method,
+        )
 
-        return gradients
+        self.latest_gradients = post_processed_gradients
+
+        logger.debug(f"Post-processed gradients: {post_processed_gradients}")
+        return post_processed_gradients
 
     def update_parameters(
         self,
@@ -416,6 +420,7 @@ class DynamicBrain(Brain):
             shots=self.shots,
             num_qubits=self.num_qubits,
             learning_rate=self.learning_rate,
+            gradient_method=self.gradient_method,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
         new_brain.steps = self.steps
