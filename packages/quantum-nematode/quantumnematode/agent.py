@@ -219,7 +219,7 @@ class QuantumNematodeAgent:
                 gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
                 reward = self.calculate_reward(env_copy, path_copy, max_steps=max_steps)
                 counts = brain_copy.run_brain(gradient_strength, gradient_direction, reward=reward)
-                actions = brain_copy.interpret_counts(counts, best_only=False)
+                actions = brain_copy.interpret_counts(counts, top_only=False)
                 top_actions = list(dict.fromkeys([key for key, _ in actions]))[
                     :SUPERPOSITION_MODE_TOP_N_ACTIONS
                 ]

@@ -314,7 +314,7 @@ class DynamicBrain(Brain):
         self,
         counts: dict[str, int],
         *,
-        best_only: bool = True,
+        top_only: bool = True,
     ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action dynamically.
@@ -392,8 +392,8 @@ class DynamicBrain(Brain):
             f"Most probable action: {most_probable_action} with probability {sorted_actions[0][1]}",
         )
 
-        if best_only:
             return most_probable_action
+        if top_only:
 
         return sorted_actions
 
