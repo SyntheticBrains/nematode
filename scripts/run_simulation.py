@@ -180,6 +180,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     try:
         for run in range(total_runs_done, runs):
             logger.info(f"Starting run {run + 1} of {runs}")
+
+            # Calculate the initial distance to the goal
+            initial_distance = agent.calculate_goal_distance()
+
             render_text = f"Run:\t{run + 1}/{runs}"
             path = agent.run_episode(
                 max_steps=max_steps,
@@ -191,12 +195,20 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_reward = sum(
                 agent.env.get_state(pos, disable_log=True)[0] for pos in path
             )  # Calculate total reward for the run
+
+            # Calculate efficiency score for the run
+            steps_taken = len(path)
+            efficiency_score = initial_distance - steps_taken
+
+            logger.info(f"Efficiency Score for run {run + 1}: {efficiency_score}")
+
             result = SimulationResult(
                 run=run + 1,
                 steps=steps,
                 path=path,
                 total_reward=total_reward,
                 last_total_reward=agent.total_rewards,
+                efficiency_score=efficiency_score,
             )
             all_results.append(result)
 
@@ -547,7 +559,7 @@ def manage_simulation_pause(  # noqa: PLR0913
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
-def plot_results(
+def plot_results(  # noqa: PLR0915
     all_results: list[SimulationResult],
     metrics: dict[str, float],
     timestamp: str,
@@ -614,6 +626,27 @@ def plot_results(
     plt.legend()
     plt.grid()
     plt.savefig(plot_dir / f"{file_prefix}success_rate_over_time.png")
+    plt.close()
+
+    # Plot: Efficiency Score Over Time
+    efficiency_scores: list[float] = [
+        result.efficiency_score for result in all_results
+    ]  # Assuming efficiency scores are stored as result[5]
+    average_efficiency_score = sum(efficiency_scores) / len(efficiency_scores)
+    plt.figure(figsize=(10, 6))
+    plt.plot(runs, efficiency_scores, marker="o", label="Efficiency Score Over Time")
+    plt.axhline(
+        y=average_efficiency_score,
+        color="r",
+        linestyle="--",
+        label="Average Efficiency Score",
+    )
+    plt.title("Efficiency Score Over Time")
+    plt.xlabel("Run")
+    plt.ylabel("Efficiency Score")
+    plt.legend()
+    plt.grid()
+    plt.savefig(plot_dir / f"{file_prefix}efficiency_score_over_time.png")
     plt.close()
 
 
