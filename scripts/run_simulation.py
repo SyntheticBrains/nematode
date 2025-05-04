@@ -10,6 +10,7 @@ import yaml
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
     QuantumNematodeAgent,
 )
+from quantumnematode.brain._brain import Brain  # pyright: ignore[reportMissingImports]
 from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_BRAIN,
@@ -23,6 +24,7 @@ from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
+from quantumnematode.models import SimulationResult  # pyright: ignore[reportMissingImports]
 from quantumnematode.optimizers.gradient_methods import (  # pyright: ignore[reportMissingImports]
     GradientCalculationMethod,
 )
@@ -159,7 +161,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         "temperature": [],
     }
 
-    all_results = []
+    all_results: list[SimulationResult] = []
 
     total_runs_done = 0
 
@@ -189,9 +191,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_reward = sum(
                 agent.env.get_state(pos, disable_log=True)[0] for pos in path
             )  # Calculate total reward for the run
-            all_results.append(
-                (run + 1, steps, path, total_reward, agent.total_rewards),
-            )  # Include total reward in results
+            result = SimulationResult(
+                run=run + 1,
+                steps=steps,
+                path=path,
+                total_reward=total_reward,
+                last_total_reward=agent.total_rewards,
+            )
+            all_results.append(result)
 
             logger.info(f"Run {run + 1}/{runs} completed in {steps} steps.")
 
@@ -289,7 +296,7 @@ def setup_brain_model(  # noqa: PLR0913
     device: str,
     learning_rate: DynamicLearningRate | AdamLearningRate,
     gradient_method: GradientCalculationMethod,
-) -> object:
+) -> Brain:
     """
     Set up the brain model based on the specified brain type.
 
@@ -304,7 +311,7 @@ def setup_brain_model(  # noqa: PLR0913
 
     Returns
     -------
-        object: An instance of the selected brain model.
+        Brain: An instance of the selected brain model.
 
     Raises
     ------
@@ -455,7 +462,7 @@ def manage_simulation_pause(  # noqa: PLR0913
     qubits: int,
     timestamp: str,
     agent: QuantumNematodeAgent,
-    all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
+    all_results: list[SimulationResult],
     total_runs_done: int,
     tracking_data: dict[str, list],
 ) -> int:
@@ -541,15 +548,15 @@ def manage_simulation_pause(  # noqa: PLR0913
 
 
 def plot_results(
-    all_results: list[tuple[int, int, list[tuple[int, int]], float, float]],
+    all_results: list[SimulationResult],
     metrics: dict[str, float],
     timestamp: str,
     max_steps: int,
     file_prefix: str = "",
 ) -> None:
     """Generate and save plots for the simulation results."""
-    runs: list[int] = [result[0] for result in all_results]
-    steps: list[int] = [result[1] for result in all_results]
+    runs: list[int] = [result.run for result in all_results]
+    steps: list[int] = [result.steps for result in all_results]
 
     plot_dir: Path = Path.cwd() / "plots" / timestamp
     plot_dir.mkdir(parents=True, exist_ok=True)
@@ -568,7 +575,7 @@ def plot_results(
 
     # Plot: Cumulative Reward per Run
     cumulative_rewards: list[float] = [
-        result[3] for result in all_results
+        result.total_reward for result in all_results
     ]  # Assuming rewards are stored as result[3]
     plt.figure(figsize=(10, 6))
     plt.plot(runs, cumulative_rewards, marker="o", label="Cumulative Reward per Run")
@@ -582,7 +589,7 @@ def plot_results(
 
     # Plot: Last Cumulative Rewards Over Runs
     last_cumulative_rewards: list[float] = [
-        result[4] for result in all_results
+        result.last_total_reward for result in all_results
     ]  # Assuming rewards are stored as result[4]
     plt.figure(figsize=(10, 6))
     plt.plot(runs, last_cumulative_rewards, marker="o", label="Last Cumulative Rewards")
@@ -596,7 +603,7 @@ def plot_results(
 
     # Plot: Success Rate Over Time
     success_rates: list[float] = [
-        sum(1 for r in all_results[:i] if r[1] < max_steps) / i
+        sum(1 for r in all_results[:i] if r.steps < max_steps) / i
         for i in range(1, len(all_results) + 1)
     ]
     plt.figure(figsize=(10, 6))
