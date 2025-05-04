@@ -4,11 +4,14 @@ import os
 import sys
 import time
 
+import numpy as np  # pyright: ignore[reportMissingImports]
+
 from quantumnematode.constants import (
     SUPERPOSITION_MODE_MAX_COLUMNS,
     SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
     SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS,
     SUPERPOSITION_MODE_TOP_N_ACTIONS,
+    SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
 
 from .brain._brain import Brain
@@ -221,9 +224,19 @@ class QuantumNematodeAgent:
                 reward = self.calculate_reward(env_copy, path_copy, max_steps=max_steps)
                 counts = brain_copy.run_brain(gradient_strength, gradient_direction, reward=reward)
                 actions = brain_copy.interpret_counts(counts, top_only=False)
-                top_actions = list(dict.fromkeys([key for key, _ in actions]))[
-                    :SUPERPOSITION_MODE_TOP_N_ACTIONS
-                ]
+
+                if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
+                    rng = np.random.default_rng()
+                    top_actions_and_probs = rng.choice(
+                        actions,
+                        p=[prob for _, prob in actions],
+                        size=SUPERPOSITION_MODE_TOP_N_ACTIONS,
+                    )
+                    top_actions = list(dict.fromkeys([key for key, _ in top_actions_and_probs]))
+                else:
+                    top_actions = list(dict.fromkeys([key for key, _ in actions]))[
+                        :SUPERPOSITION_MODE_TOP_N_ACTIONS
+                    ]
 
                 # Update the body length dynamically
                 if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
@@ -233,7 +246,8 @@ class QuantumNematodeAgent:
                     new_env = env_copy.copy()
                     new_path = path_copy.copy()
                     new_brain = self.brain.copy()
-                    new_env.move_agent(top_actions[1])
+                    runner_up_action = top_actions[1] if len(top_actions) > 1 else top_actions[0]
+                    new_env.move_agent(runner_up_action)
                     new_brain.update_memory(reward)
                     new_path.append(new_env.agent_pos)
                     superpositions.append((new_brain, new_env, new_path))
