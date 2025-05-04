@@ -242,7 +242,9 @@ class DynamicBrain(Brain):
 
         self.latest_gradients = post_processed_gradients
 
-        logger.debug(f"Post-processed gradients: {post_processed_gradients}")
+        logger.debug(
+            f"{self.gradient_method.value.capitalize()} gradients: {post_processed_gradients}",
+        )
         return post_processed_gradients
 
     def update_parameters(
