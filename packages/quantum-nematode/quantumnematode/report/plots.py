@@ -150,7 +150,7 @@ def plot_steps_per_run(
 
 
 def plot_tracking_data(
-    tracking_data: dict[str, list[int | float | dict[str, float]]],
+    tracking_data: dict[str, list[int | float | dict]],
     timestamp: str,
     brain_type: str,
     qubits: int,
@@ -184,11 +184,17 @@ def plot_tracking_data(
         if isinstance(values, list) and all(isinstance(v, dict) for v in values):
             # Flatten dictionaries into lists of values for plotting
             title = key.replace("_", " ").title()
-            label = next(list(param_dict.keys()) for param_dict in values)
-            values = [list(param_dict.values()) for param_dict in values]  # noqa: PLW2901
+            label = next(
+                list(param_dict.keys()) for param_dict in values if isinstance(param_dict, dict)
+            )
+            values = [  # noqa: PLW2901
+                list(param_dict.values()) for param_dict in values if isinstance(param_dict, dict)
+            ]
         elif key == "computed_gradients":
             title = "Computed Gradients"
-            label = [str(n + 1) for n in range(len(values[0]))]
+            label = (
+                [str(n + 1) for n in range(len(values[0]))] if isinstance(values[0], list) else []
+            )
         else:
             label = key.replace("_", " ").title()
             title = label
