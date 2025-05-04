@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "pre-commit>=4.2.0",
+    "pydantic>=2.11.4",
     "pyright>=1.1.399",
     "ruff>=0.11.6",
 ]
