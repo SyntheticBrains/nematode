@@ -10,8 +10,8 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
-from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod, compute_gradients
-from quantumnematode.optimizers.learning_rate import AdamLearningRate, DynamicLearningRate
+from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
+from quantumnematode.optimizer.learning_rate import AdamLearningRate, DynamicLearningRate
 
 EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor

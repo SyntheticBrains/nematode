@@ -25,10 +25,10 @@ from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImp
     logger,
 )
 from quantumnematode.models import SimulationResult  # pyright: ignore[reportMissingImports]
-from quantumnematode.optimizers.gradient_methods import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.optimizer.gradient_methods import (  # pyright: ignore[reportMissingImports]
     GradientCalculationMethod,
 )
-from quantumnematode.optimizers.learning_rate import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.optimizer.learning_rate import (  # pyright: ignore[reportMissingImports]
     AdamLearningRate,
     DynamicLearningRate,
 )
