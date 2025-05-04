@@ -88,7 +88,7 @@ class QuantumNematodeAgent:
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
             reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
             counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
-            action = self.brain.interpret_counts(counts)
+            action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
 
             if not isinstance(action, str):
                 error_msg = f"Invalid action type: {type(action)}. Expected str."
