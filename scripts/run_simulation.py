@@ -178,8 +178,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     try:
         for run in range(total_runs_done, runs):
             logger.info(f"Starting run {run + 1} of {runs}")
+            render_text = f"Run:\t{run + 1}/{runs}"
             path = agent.run_episode(
                 max_steps=max_steps,
+                render_text=render_text,
                 show_last_frame_only=show_last_frame_only,
             )
 

@@ -66,6 +66,7 @@ class QuantumNematodeAgent:
     def run_episode(  # noqa: C901
         self,
         max_steps: int = 100,
+        render_text: str | None = None,
         *,
         show_last_frame_only: bool = False,
     ) -> list[tuple]:
@@ -168,6 +169,11 @@ class QuantumNematodeAgent:
             for frame in grid:
                 print(frame)  # noqa: T201
                 logger.debug(frame)
+
+            if render_text:
+                print(render_text)  # noqa: T201
+
+            print(f"Step:\t{self.steps}/{max_steps}")  # noqa: T201
 
         return self.path
 
