@@ -32,7 +32,7 @@ from quantumnematode.optimizer.learning_rate import (  # pyright: ignore[reportM
     AdamLearningRate,
     DynamicLearningRate,
 )
-from quantumnematode.report import summary  # pyright: ignore[reportMissingImports]
+from quantumnematode.summary import summary  # pyright: ignore[reportMissingImports]
 
 
 def parse_arguments() -> argparse.Namespace:
