@@ -245,6 +245,18 @@ class DynamicBrain(Brain):
         logger.debug(
             f"{self.gradient_method.value.capitalize()} gradients: {post_processed_gradients}",
         )
+
+        # Log a warning if any gradient is out of the acceptable range
+        for i, gradient in enumerate(post_processed_gradients):
+            if gradient >= 1.0 or gradient <= -1.0:
+                warning_message = (
+                    f"Gradient for parameter θ{i} is out of bounds: {gradient}. "
+                    "Gradients should be in the range (-1.0, 1.0)."
+                )
+                logger.warning(
+                    warning_message.replace("θ", "theta_"),
+                )
+
         return post_processed_gradients
 
     def update_parameters(
