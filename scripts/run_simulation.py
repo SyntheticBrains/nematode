@@ -185,7 +185,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_runs_done += 1
 
             # Track data for plotting, only supported for dynamic brain
-            if brain == "dynamic":
+            if brain_type == "dynamic":
                 tracking_data["run"].append(run + 1)
                 tracking_data["input_parameters"].append(agent.brain.latest_input_parameters)
                 tracking_data["computed_gradients"].append(agent.brain.latest_gradients)
@@ -230,7 +230,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     plot_results(all_results, metrics, timestamp, max_steps)
 
     # Generate additional plots for tracking data
-    if brain == "dynamic":
+    if brain_type == "dynamic":
         plot_tracking_data(tracking_data, timestamp, brain_type, qubits)
 
     return
@@ -402,7 +402,7 @@ def load_simulation_config(config_path: str) -> dict:
 
 def manage_simulation_pause(  # noqa: PLR0913
     max_steps: int,
-    brain: str,
+    brain_type: str,
     qubits: int,
     timestamp: str,
     agent: QuantumNematodeAgent,
@@ -417,6 +417,9 @@ def manage_simulation_pause(  # noqa: PLR0913
     output partial results and plots, print circuit details, or exit the session.
 
     Args:
+        max_steps (int): Maximum number of steps for the simulation.
+        brain_type (str): Type of brain architecture used in the simulation.
+        qubits (int): Number of qubits used in the simulation.
         args (argparse.Namespace): Parsed command-line arguments.
         timestamp (str): Timestamp for the current session.
         agent (QuantumNematodeAgent): The simulation agent.
@@ -468,11 +471,11 @@ def manage_simulation_pause(  # noqa: PLR0913
             file_prefix = f"{total_runs_done}_"
             plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
 
-            if brain == "dynamic":
+            if brain_type == "dynamic":
                 plot_tracking_data(
                     tracking_data,
                     timestamp,
-                    brain,
+                    brain_type,
                     qubits,
                     file_prefix=file_prefix,
                 )
@@ -561,7 +564,7 @@ def plot_results(
 def plot_tracking_data(
     tracking_data: dict[str, list],
     timestamp: str,
-    brain: str,
+    brain_type: str,
     qubits: int,
     file_prefix: str = "",
 ) -> None:
@@ -569,7 +572,9 @@ def plot_tracking_data(
     plot_dir: Path = Path.cwd() / "plots" / timestamp
     plot_dir.mkdir(parents=True, exist_ok=True)
 
-    title_postfix: str = f" [{brain} {qubits}Q]" if brain == "dynamic" else f" [{brain}]"
+    title_postfix: str = (
+        f" [{brain_type} {qubits}Q]" if brain_type == "dynamic" else f" [{brain_type}]"
+    )
 
     # Plot each tracked variable
     for key, values in tracking_data.items():
