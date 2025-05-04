@@ -63,7 +63,7 @@ class QuantumNematodeAgent:
         self.total_steps = 0
         self.total_rewards = 0
 
-    def run_episode(  # noqa: C901
+    def run_episode(  # noqa: C901, PLR0915
         self,
         max_steps: int = 100,
         render_text: str | None = None,
@@ -146,9 +146,7 @@ class QuantumNematodeAgent:
 
             # Log distance to the goal
             if self.env.goal is not None:
-                distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
-                    self.env.agent_pos[1] - self.env.goal[1],
-                )
+                distance_to_goal = self.calculate_goal_distance()
                 logger.debug(f"Distance to goal: {distance_to_goal}")
 
             # Log cumulative reward and average reward per step at the end of each run
@@ -311,6 +309,19 @@ class QuantumNematodeAgent:
         logger.info(msg)
         print(msg)  # noqa: T201
         sys.exit(0)  # Exit the program
+
+    def calculate_goal_distance(self) -> int:
+        """
+        Calculate the Manhattan distance to the goal.
+
+        Returns
+        -------
+        int
+            The Manhattan distance to the goal.
+        """
+        return abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
+            self.env.agent_pos[1] - self.env.goal[1],
+        )
 
     def calculate_reward(
         self,
