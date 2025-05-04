@@ -121,8 +121,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Session ID: {timestamp}")
 
     logger.info("Simulation parameters:")
-    for arg, value in vars(args).items():
-        logger.info(f"{arg}: {value}")
+    logger.info(f"Config file: {config_file}")
+    logger.info(f"Runs: {runs}")
+    logger.info(f"Max steps: {max_steps}")
+    logger.info(f"Device: {device}")
+    logger.info(f"Grid size: {maze_grid_size}")
+    logger.info(f"Brain type: {brain_type}")
+    logger.info(f"Body length: {body_length}")
+    logger.info(f"Qubits: {qubits}")
+    logger.info(f"Shots: {shots}")
 
     # Select the brain architecture
     brain = setup_brain_model(brain_type, shots, qubits, device, learning_rate)
