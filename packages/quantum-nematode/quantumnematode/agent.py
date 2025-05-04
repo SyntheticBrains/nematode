@@ -15,9 +15,10 @@ from .brain._brain import Brain
 from .env import MazeEnvironment
 from .logging_config import logger
 
-PENALTY_STAY = -0.5
-PENALTY_STEP = -0.1
-REWARD_GOAL = 50
+PENALTY_STAY = -0.7
+PENALTY_STEP = -0.3
+REWARD_GOAL = 0.5
+REWARD_GOAL_PROXIMITY_FACTOR = 2
 
 
 class QuantumNematodeAgent:
@@ -321,22 +322,22 @@ class QuantumNematodeAgent:
         # Enhance reward signal for gradient improvement and vice versa
         if previous_gradient_strength is not None:
             if gradient_change > 0:
-                reward_amount = gradient_strength
+                reward_amount = gradient_strength / REWARD_GOAL_PROXIMITY_FACTOR
                 reward += reward_amount
                 logger.debug(f"[Reward] Gradient improvement reward applied: {reward_amount}.")
             elif gradient_change < 0:
-                penalty_amount = -(gradient_strength / 2)
+                penalty_amount = -(gradient_strength / REWARD_GOAL_PROXIMITY_FACTOR)
                 reward += penalty_amount
                 logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
 
         # Strengthen penalties for no movements
         if len(path) > 1 and path[-1] == path[-2]:
-            penalty_amount = PENALTY_STAY * 3
+            penalty_amount = PENALTY_STAY
             reward += penalty_amount
             logger.debug(f"[Penalty] No movement penalty applied: {penalty_amount}.")
         # Strengthen penalties for revisiting positions
         elif path.count(tuple(env.agent_pos)) > 1:
-            penalty_amount = PENALTY_STEP * 3
+            penalty_amount = PENALTY_STEP
             reward += penalty_amount
             logger.debug(f"[Penalty] Revisit penalty applied: {penalty_amount}.")
 
@@ -344,7 +345,7 @@ class QuantumNematodeAgent:
         efficiency_factor = None
         if env.reached_goal():
             efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
-            reward_amount = REWARD_GOAL * efficiency_factor * 2
+            reward_amount = REWARD_GOAL * efficiency_factor
             reward += reward_amount  # Further scale goal reward dynamically based on speed
             logger.debug(f"[Reward] Goal reached, efficiency factor applied: {reward_amount}.")
 
