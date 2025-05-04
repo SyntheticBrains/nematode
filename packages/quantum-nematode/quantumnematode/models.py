@@ -19,6 +19,9 @@ class SimulationResult(BaseModel):
         The total reward received during the simulation.
     last_total_reward : float
         The last total reward received during the simulation.
+    efficiency_score : float
+        The efficiency score of the simulation, calculated as the offset
+        from the perfect travel to the goal.
     """
 
     run: int
@@ -26,3 +29,4 @@ class SimulationResult(BaseModel):
     path: list[tuple[int, int]]
     total_reward: float
     last_total_reward: float
+    efficiency_score: float
