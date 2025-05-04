@@ -5,7 +5,6 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
-import matplotlib.pyplot as plt  # pyright: ignore[reportMissingImports]
 import yaml
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
     QuantumNematodeAgent,
@@ -32,7 +31,15 @@ from quantumnematode.optimizer.learning_rate import (  # pyright: ignore[reportM
     AdamLearningRate,
     DynamicLearningRate,
 )
-from quantumnematode.summary import summary  # pyright: ignore[reportMissingImports]
+from quantumnematode.report.plots import (  # pyright: ignore[reportMissingImports]
+    plot_cumulative_reward_per_run,
+    plot_efficiency_score_over_time,
+    plot_last_cumulative_rewards,
+    plot_steps_per_run,
+    plot_success_rate_over_time,
+    plot_tracking_data,
+)
+from quantumnematode.report.summary import summary  # pyright: ignore[reportMissingImports]
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -559,7 +566,7 @@ def manage_simulation_pause(  # noqa: PLR0913
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
-def plot_results(  # noqa: PLR0915
+def plot_results(
     all_results: list[SimulationResult],
     metrics: dict[str, float],
     timestamp: str,
@@ -574,127 +581,32 @@ def plot_results(  # noqa: PLR0915
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     # Plot: Steps per Run
-    plt.figure(figsize=(10, 6))
-    plt.plot(runs, steps, marker="o", label="Steps per Run")
-    plt.axhline(y=metrics["average_steps"], color="r", linestyle="--", label="Average Steps")
-    plt.title("Steps per Run")
-    plt.xlabel("Run")
-    plt.ylabel("Steps")
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_dir / f"{file_prefix}steps_per_run.png")
-    plt.close()
+    plot_steps_per_run(metrics, file_prefix, runs, steps, plot_dir)
 
     # Plot: Cumulative Reward per Run
     cumulative_rewards: list[float] = [
         result.total_reward for result in all_results
     ]  # Assuming rewards are stored as result[3]
-    plt.figure(figsize=(10, 6))
-    plt.plot(runs, cumulative_rewards, marker="o", label="Cumulative Reward per Run")
-    plt.title("Cumulative Reward per Run")
-    plt.xlabel("Run")
-    plt.ylabel("Cumulative Reward")
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_dir / f"{file_prefix}cumulative_reward_per_run.png")
-    plt.close()
+    plot_cumulative_reward_per_run(file_prefix, runs, plot_dir, cumulative_rewards)
 
     # Plot: Last Cumulative Rewards Over Runs
     last_cumulative_rewards: list[float] = [
         result.last_total_reward for result in all_results
     ]  # Assuming rewards are stored as result[4]
-    plt.figure(figsize=(10, 6))
-    plt.plot(runs, last_cumulative_rewards, marker="o", label="Last Cumulative Rewards")
-    plt.title("Last Cumulative Reward Over Time")
-    plt.xlabel("Run")
-    plt.ylabel("Last Cumulative Reward")
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_dir / f"{file_prefix}cumulative_last_reward_over_time.png")
-    plt.close()
+    plot_last_cumulative_rewards(file_prefix, runs, plot_dir, last_cumulative_rewards)
 
     # Plot: Success Rate Over Time
     success_rates: list[float] = [
         sum(1 for r in all_results[:i] if r.steps < max_steps) / i
         for i in range(1, len(all_results) + 1)
     ]
-    plt.figure(figsize=(10, 6))
-    plt.plot(runs, success_rates, marker="o", label="Success Rate Over Time")
-    plt.title("Success Rate Over Time")
-    plt.xlabel("Run")
-    plt.ylabel("Success Rate")
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_dir / f"{file_prefix}success_rate_over_time.png")
-    plt.close()
+    plot_success_rate_over_time(file_prefix, runs, plot_dir, success_rates)
 
     # Plot: Efficiency Score Over Time
     efficiency_scores: list[float] = [
         result.efficiency_score for result in all_results
     ]  # Assuming efficiency scores are stored as result[5]
-    average_efficiency_score = sum(efficiency_scores) / len(efficiency_scores)
-    plt.figure(figsize=(10, 6))
-    plt.plot(runs, efficiency_scores, marker="o", label="Efficiency Score Over Time")
-    plt.axhline(
-        y=average_efficiency_score,
-        color="r",
-        linestyle="--",
-        label="Average Efficiency Score",
-    )
-    plt.title("Efficiency Score Over Time")
-    plt.xlabel("Run")
-    plt.ylabel("Efficiency Score")
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_dir / f"{file_prefix}efficiency_score_over_time.png")
-    plt.close()
-
-
-def plot_tracking_data(
-    tracking_data: dict[str, list],
-    timestamp: str,
-    brain_type: str,
-    qubits: int,
-    file_prefix: str = "",
-) -> None:
-    """Generate and save plots for tracking data."""
-    plot_dir: Path = Path.cwd() / "plots" / timestamp
-    plot_dir.mkdir(parents=True, exist_ok=True)
-
-    title_postfix: str = (
-        f" [{brain_type} {qubits}Q]" if brain_type == "dynamic" else f" [{brain_type}]"
-    )
-
-    # Plot each tracked variable
-    for key, values in tracking_data.items():
-        if key == "run":
-            continue
-
-        logger.debug(f"Tracking data for {key}: {str(values).replace('θ', 'theta_')}")
-
-        if isinstance(values, list) and all(isinstance(v, dict) for v in values):
-            # Flatten dictionaries into lists of values for plotting
-            title = key.replace("_", " ").title()
-            label = next(list(param_dict.keys()) for param_dict in values)
-            values = [list(param_dict.values()) for param_dict in values]  # noqa: PLW2901
-        elif key == "computed_gradients":
-            title = "Computed Gradients"
-            label = [str(n + 1) for n in range(len(values[0]))]
-        else:
-            label = key.replace("_", " ").title()
-            title = label
-
-        title += title_postfix
-
-        plt.figure(figsize=(10, 6))
-        plt.plot(tracking_data["run"], values, marker="o", label=label)
-        plt.title(title)
-        plt.xlabel("Run")
-        plt.ylabel(str(label))
-        plt.legend()
-        plt.grid()
-        plt.savefig(plot_dir / f"{file_prefix}track_{key}_over_runs.png")
-        plt.close()
+    plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
 
 
 if __name__ == "__main__":
