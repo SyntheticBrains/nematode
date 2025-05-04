@@ -42,7 +42,7 @@ class Brain(Protocol):
         self,
         counts: dict[str, int],
         *,
-        best_only: bool = True,
+        top_only: bool = True,
     ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action.
