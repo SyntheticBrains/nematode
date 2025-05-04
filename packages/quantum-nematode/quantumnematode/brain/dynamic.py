@@ -163,10 +163,11 @@ class DynamicBrain(Brain):
         qc = self.build_brain()
 
         # Incorporate gradient information into the parameters
+        indices = np.arange(self.num_qubits)
+        phase_shifts = indices * np.pi / self.num_qubits
+        adjustments = gradient_strength * np.cos(gradient_direction + phase_shifts)
         input_params = {
-            f"θ{i}": self.parameter_values[f"θ{i}"]
-            + gradient_strength * np.cos(gradient_direction + i * np.pi / self.num_qubits)
-            for i in range(self.num_qubits)
+            f"θ{i}": self.parameter_values[f"θ{i}"] + adjustments[i] for i in range(self.num_qubits)
         }
 
         # Store latest input parameters for tracking
