@@ -200,6 +200,7 @@ class SimpleBrain(Brain):
         counts: dict[str, int],
         *,
         top_only: bool = True,  # noqa: ARG002
+        top_randomize: bool = True,  # noqa: ARG002
     ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action using a softmax-based mechanism.
