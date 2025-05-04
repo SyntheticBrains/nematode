@@ -188,6 +188,9 @@ class DynamicBrain(Brain):
 
         logger.debug(f"Satiety after step {self.steps}: {self.satiety}, ")
 
+        if self.satiety <= 0.0:
+            logger.warning("Satiety is zero.")
+
         # Calculate exploration factor based on satiety
         self.latest_exploration_factor = (
             EXPLORATION_MIN + (EXPLORATION_MAX - EXPLORATION_MIN) * self.satiety
