@@ -228,7 +228,11 @@ class DynamicBrain(Brain):
         total_shots = sum(counts.values())
         probabilities = {key: value / total_shots for key, value in counts.items()}
         gradients = []
-        for key in ["00", "01", "10", "11"]:
+
+        # Dynamically generate binary strings for the number of qubits
+        binary_states = [f"{{:0{self.num_qubits}b}}".format(i) for i in range(2**self.num_qubits)]
+
+        for key in binary_states:
             probability = probabilities.get(key, 0)
             gradient = reward * (1 - probability)
             gradients.append(gradient)
