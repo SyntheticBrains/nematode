@@ -291,7 +291,7 @@ class DynamicBrain(Brain):
         elif isinstance(self.learning_rate, AdamLearningRate):
             effective_learning_rates = self.learning_rate.get_learning_rate(
                 gradients,
-                self.parameter_values.keys(),
+                list(self.parameter_values.keys()),
             )
             for param_name, _grad in zip(self.parameter_values.keys(), gradients, strict=False):
                 self.parameter_values[param_name] -= effective_learning_rates[param_name]
