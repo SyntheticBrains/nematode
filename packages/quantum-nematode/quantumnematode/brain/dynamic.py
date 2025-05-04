@@ -315,6 +315,7 @@ class DynamicBrain(Brain):
         counts: dict[str, int],
         *,
         top_only: bool = True,
+        top_random: bool = True,
     ) -> list[tuple[str, float]] | str:
         """
         Interpret the measurement counts and determine the action dynamically.
@@ -326,6 +327,10 @@ class DynamicBrain(Brain):
         ----------
         counts : dict[str, int]
             Measurement counts from the quantum circuit.
+        top_only : bool, optional
+            If True, return only the most probable action, by default True.
+        top_random : bool, optional
+            If True, select the most probable action randomly, by default True.
 
         Returns
         -------
@@ -392,8 +397,19 @@ class DynamicBrain(Brain):
             f"Most probable action: {most_probable_action} with probability {sorted_actions[0][1]}",
         )
 
-            return most_probable_action
         if top_only:
+            if top_random:
+                # Select the most probable action randomly
+                selected_action = self.rng.choice(
+                    sorted_actions,
+                    p=[prob for _, prob in sorted_actions],
+                )
+                logger.debug(
+                    f"Selected action: {selected_action[0]} with probability {selected_action[1]}",
+                )
+                return selected_action[0]
+            # Return the most probable action directly
+            return most_probable_action
 
         return sorted_actions
 
