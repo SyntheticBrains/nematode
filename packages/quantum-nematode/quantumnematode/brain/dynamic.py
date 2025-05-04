@@ -466,4 +466,5 @@ class DynamicBrain(Brain):
         new_brain.latest_exploration_factor = self.latest_exploration_factor
         new_brain.latest_temperature = self.latest_temperature
         new_brain.learning_rate = deepcopy(self.learning_rate) if self.learning_rate else None
+        new_brain.gradient_method = self.gradient_method
         return new_brain
