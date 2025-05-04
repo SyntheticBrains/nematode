@@ -23,6 +23,9 @@ from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
+from quantumnematode.optimizers.gradient_methods import (  # pyright: ignore[reportMissingImports]
+    GradientCalculationMethod,
+)
 from quantumnematode.optimizers.learning_rate import (  # pyright: ignore[reportMissingImports]
     AdamLearningRate,
     DynamicLearningRate,
@@ -91,6 +94,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     show_last_frame_only = args.show_last_frame_only
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
+    gradient_method = GradientCalculationMethod.RAW
 
     if config_file:
         config = load_simulation_config(config_file)
@@ -104,6 +108,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         # Load learning rate method and parameters if specified
         learning_rate = configure_learning_rate(config)
+
+        # Load gradient method if specified
+        gradient_method = configure_gradient_method(gradient_method, config)
 
     validate_simulation_parameters(maze_grid_size, brain_type, qubits)
 
@@ -132,7 +139,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Shots: {shots}")
 
     # Select the brain architecture
-    brain = setup_brain_model(brain_type, shots, qubits, device, learning_rate)
+    brain = setup_brain_model(brain_type, shots, qubits, device, learning_rate, gradient_method)
 
     # Update the agent to use the selected brain architecture
     agent = QuantumNematodeAgent(
@@ -273,12 +280,13 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits:
         raise ValueError(error_message)
 
 
-def setup_brain_model(
+def setup_brain_model(  # noqa: PLR0913
     brain_type: str,
     shots: int,
     qubits: int,
     device: str,
     learning_rate: DynamicLearningRate | AdamLearningRate,
+    gradient_method: GradientCalculationMethod,
 ) -> object:
     """
     Set up the brain model based on the specified brain type.
@@ -338,6 +346,7 @@ def setup_brain_model(
             shots=shots,
             num_qubits=qubits,
             learning_rate=learning_rate,
+            gradient_method=gradient_method,
         )
     else:
         error_message = f"Unknown brain architecture: {brain_type}"
@@ -390,6 +399,37 @@ def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningR
     )
     logger.error(error_message)
     raise ValueError(error_message)
+
+
+def configure_gradient_method(
+    gradient_method: GradientCalculationMethod,
+    config: dict,
+) -> GradientCalculationMethod:
+    """
+    Configure the gradient calculation method based on the provided configuration.
+
+    Args:
+        gradient_method (GradientCalculationMethod): The default gradient calculation method.
+        config (dict): Configuration dictionary containing gradient method settings.
+
+    Returns
+    -------
+        GradientCalculationMethod: The configured gradient calculation method.
+
+    Raises
+    ------
+        ValueError: If an invalid gradient method is specified in the configuration.
+    """
+    gradient_config = config.get("gradient", {})
+    method_name = gradient_config.get("method", gradient_method.name).upper()
+    if method_name not in GradientCalculationMethod.__members__:
+        error_message = (
+            f"Invalid gradient method: {method_name}. "
+            f"Valid options are: {list(GradientCalculationMethod.__members__.keys())}"
+        )
+        logger.error(error_message)
+        raise ValueError(error_message)
+    return GradientCalculationMethod[method_name]
 
 
 def load_simulation_config(config_path: str) -> dict:
