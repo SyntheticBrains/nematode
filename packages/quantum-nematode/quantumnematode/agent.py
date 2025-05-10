@@ -18,8 +18,8 @@ from .brain._brain import Brain
 from .env import MazeEnvironment
 from .logging_config import logger
 
-REWARD_GOAL = 0.5
 PENALTY_STAY = 0
+REWARD_GOAL = 0.1
 REWARD_GOAL_PROXIMITY_FACTOR = 2
 
 
