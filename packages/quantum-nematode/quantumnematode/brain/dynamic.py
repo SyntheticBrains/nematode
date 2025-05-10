@@ -11,7 +11,7 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain._brain import Brain
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
-from quantumnematode.optimizer.learning_rate import AdamLearningRate, DynamicLearningRate
+from quantumnematode.optimizer.learning_rate import AdamLearningRate, DynamicLearningRate, PerformanceBasedLearningRate
 
 EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor
@@ -43,7 +43,7 @@ class DynamicBrain(Brain):
         device: str = "CPU",
         shots: int = 100,
         num_qubits: int = 5,
-        learning_rate: DynamicLearningRate | AdamLearningRate | None = None,
+        learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate | None = None,
         gradient_method: GradientCalculationMethod = GradientCalculationMethod.RAW,
     ) -> None:
         """
@@ -57,7 +57,7 @@ class DynamicBrain(Brain):
             The number of shots for the quantum simulation.
         num_qubits : int
             The number of qubits to use in the quantum circuit.
-        learning_rate : DynamicLearningRate | AdamLearningRate | None
+        learning_rate : DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate | None
             The learning rate strategy for parameter updates, by default None.
             If None, a default dynamic learning rate will be used.
         gradient_method : GradientCalculationMethod
@@ -107,6 +107,22 @@ class DynamicBrain(Brain):
             )
             logger.info(
                 f"Epsilon: {self.learning_rate.epsilon}",
+            )
+        elif isinstance(self.learning_rate, PerformanceBasedLearningRate):
+            logger.info(
+                "Using performance-based learning rate strategy for parameter updates.",
+            )
+            logger.info(
+                f"Initial learning rate: {self.learning_rate.learning_rate}",
+            )
+            logger.info(
+                f"Minimum learning rate: {self.learning_rate.min_learning_rate}",
+            )
+            logger.info(
+                f"Maximum learning rate: {self.learning_rate.max_learning_rate}",
+            )
+            logger.info(
+                f"Adjustment factor: {self.learning_rate.adjustment_factor}",
             )
 
         # Log parameter initialization range
@@ -187,7 +203,7 @@ class DynamicBrain(Brain):
 
         if reward is not None:
             gradients = self.compute_gradients(counts, reward)
-            self.update_parameters(gradients)
+            self.update_parameters(gradients, reward)
 
         # Decrease satiety at each step
         self.satiety = max(0.0, self.satiety - 0.01)  # Decrease satiety gradually
@@ -267,6 +283,7 @@ class DynamicBrain(Brain):
     def update_parameters(
         self,
         gradients: list[float],
+        reward: float | None = None,
     ) -> None:
         """
         Update quantum circuit parameter values based on gradients with a dynamic learning rate.
@@ -306,6 +323,20 @@ class DynamicBrain(Brain):
 
             logger.debug(
                 f"Updated parameters with Adam learning rate: "
+                f"{str(self.parameter_values).replace('θ', 'theta_')}",
+            )
+        elif isinstance(self.learning_rate, PerformanceBasedLearningRate):
+            # Use performance-based learning rate strategy
+            current_performance = reward if reward is not None else 0.0
+            learning_rate = self.learning_rate.get_learning_rate(current_performance)
+            for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
+                self.parameter_values[param_name] -= learning_rate * grad
+
+            # Store learning rate for tracking
+            self.latest_learning_rate = learning_rate
+
+            logger.debug(
+                f"Updated parameters with performance-based learning rate {learning_rate}: "
                 f"{str(self.parameter_values).replace('θ', 'theta_')}",
             )
 
