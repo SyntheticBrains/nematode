@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from quantumnematode.initializers.base import ParameterInitializer
+from quantumnematode.initializers._initializer import ParameterInitializer
 
 
 class RandomUniformInitializer(ParameterInitializer):
