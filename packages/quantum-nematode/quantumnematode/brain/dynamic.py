@@ -131,7 +131,7 @@ class DynamicBrain(Brain):
             f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
-    def build_brain(self) -> QuantumCircuit:
+    def build_brain(self, num_layers = 3) -> QuantumCircuit:
         """
         Build the quantum circuit for the dynamic brain.
 
@@ -144,12 +144,19 @@ class DynamicBrain(Brain):
             The quantum circuit representing the brain.
         """
         qc = QuantumCircuit(self.num_qubits, self.num_qubits)
-        for i, param in enumerate(self.parameters):
-            qc.rx(param, i)
-            qc.ry(param, i)
-            qc.rz(param, i)
-        for i in range(self.num_qubits - 1):
-            qc.cx(i, i + 1)  # Entangle adjacent qubits
+        
+        for _ in range(num_layers):
+            for i, param in enumerate(self.parameters):
+                qc.rx(param, i)
+                qc.ry(param, i)
+                qc.rz(param, i)
+            for i in range(self.num_qubits - 1):
+                qc.cx(i, i + 1)  # Entangle adjacent qubits
+            # Add additional entanglement between non-adjacent qubits
+            for i in range(self.num_qubits):
+                for j in range(i + 2, self.num_qubits):
+                    qc.cz(i, j)
+                    
         qc.measure(range(self.num_qubits), range(self.num_qubits))
         return qc
 
