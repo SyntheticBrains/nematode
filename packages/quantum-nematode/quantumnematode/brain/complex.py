@@ -7,7 +7,7 @@ from qiskit.providers.fake_provider import (  # pyright: ignore[reportMissingImp
     GenericBackendV2,
 )
 
-from quantumnematode.brain._brain import Brain
+from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
 
 QUBIT_COUNT = 302
@@ -61,8 +61,7 @@ class ComplexBrain(Brain):
 
     def run_brain(
         self,
-        gradient_strength: float,  # noqa: ARG002
-        gradient_direction: float,  # noqa: ARG002
+        params: BrainParams,  # noqa: ARG002
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -70,12 +69,8 @@ class ComplexBrain(Brain):
 
         Parameters
         ----------
-        dx : int
-            Distance to the goal along the x-axis.
-        dy : int
-            Distance to the goal along the y-axis.
-        grid_size : int
-            Size of the grid environment.
+        params : BrainParams
+            Parameters for the quantum brain.
         reward : float, optional
             Reward signal for learning, by default None.
 

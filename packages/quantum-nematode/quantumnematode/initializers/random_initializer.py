@@ -1,6 +1,6 @@
 """Random uniform initializer for quantum parameters."""
 
-import numpy as np
+import numpy as np  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.initializers._initializer import ParameterInitializer
 

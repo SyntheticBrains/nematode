@@ -14,7 +14,7 @@ from quantumnematode.constants import (
     SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
 
-from .brain._brain import Brain
+from .brain._brain import Brain, BrainParams
 from .env import MazeEnvironment
 from .logging_config import logger
 
@@ -90,7 +90,16 @@ class QuantumNematodeAgent:
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
             reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
-            counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
+            params = BrainParams(
+                gradient_strength=gradient_strength,
+                gradient_direction=gradient_direction,
+                agent_position=self.env.agent_pos,
+                agent_direction=self.env.current_direction,
+            )
+            counts = self.brain.run_brain(
+                params=params,
+                reward=reward,
+            )
             action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
 
             if not isinstance(action, str):
@@ -118,7 +127,16 @@ class QuantumNematodeAgent:
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
                 reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
-                counts = self.brain.run_brain(gradient_strength, gradient_direction, reward=reward)
+                params = BrainParams(
+                    gradient_strength=gradient_strength,
+                    gradient_direction=gradient_direction,
+                    agent_position=self.env.agent_pos,
+                    agent_direction=self.env.current_direction,
+                )
+                counts = self.brain.run_brain(
+                    params=params,
+                    reward=reward,
+                )
 
                 # Calculate reward based on efficiency and collision avoidance
                 self.brain.update_memory(reward)
@@ -226,7 +244,16 @@ class QuantumNematodeAgent:
             for brain_copy, env_copy, path_copy in superpositions:
                 gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
                 reward = self.calculate_reward(env_copy, path_copy, max_steps=max_steps)
-                counts = brain_copy.run_brain(gradient_strength, gradient_direction, reward=reward)
+                params = BrainParams(
+                    gradient_strength=gradient_strength,
+                    gradient_direction=gradient_direction,
+                    agent_position=self.env.agent_pos,
+                    agent_direction=self.env.current_direction,
+                )
+                counts = brain_copy.run_brain(
+                    params=params,
+                    reward=reward,
+                )
                 actions = brain_copy.interpret_counts(counts, top_only=False)
 
                 if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
