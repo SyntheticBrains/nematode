@@ -1,6 +1,6 @@
 """Zeros initializer for quantum parameters."""
 
-from quantumnematode.initializers.base import ParameterInitializer
+from quantumnematode.initializers._initializer import ParameterInitializer
 
 
 class ZeroInitializer(ParameterInitializer):
