@@ -4,6 +4,7 @@ import argparse
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+import sys
 
 import yaml
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
@@ -237,26 +238,16 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data["temperature"].append(agent.brain.latest_temperature)
 
     except KeyboardInterrupt:
-        if TOGGLE_PAUSE == "true":
-            resume_from = manage_simulation_pause(
-                max_steps,
-                brain_type,
-                qubits,
-                timestamp,
-                agent,
-                all_results,
-                total_runs_done,
-                tracking_data,
-            )
-            if resume_from == -1:
-                return
-            total_runs_done = resume_from
-            main()  # Restart the main function to re-enter the loop
-        else:
-            message = "KeyboardInterrupt detected. Exiting the simulation."
-            logger.info(message)
-            print(message)  # noqa: T201
-            return
+        manage_simulation_halt(
+            max_steps,
+            brain_type,
+            qubits,
+            timestamp,
+            agent,
+            all_results,
+            total_runs_done,
+            tracking_data,
+        )
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
@@ -475,7 +466,7 @@ def load_simulation_config(config_path: str) -> dict:
         return yaml.safe_load(file)
 
 
-def manage_simulation_pause(  # noqa: PLR0913
+def manage_simulation_halt(  # noqa: PLR0913
     max_steps: int,
     brain_type: str,
     qubits: int,
@@ -484,12 +475,12 @@ def manage_simulation_pause(  # noqa: PLR0913
     all_results: list[SimulationResult],
     total_runs_done: int,
     tracking_data: dict[str, list],
-) -> int:
+):
     """
-    Handle simulation pause triggered by a KeyboardInterrupt.
+    Handle simulation halt triggered by a KeyboardInterrupt.
 
-    This function provides options to the user to either continue the simulation,
-    output partial results and plots, print circuit details, or exit the session.
+    This function provides options to the user to either exit the simulation,
+    output partial results and plots, or print circuit details.
 
     Args:
         max_steps (int): Maximum number of steps for the simulation.
@@ -503,35 +494,30 @@ def manage_simulation_pause(  # noqa: PLR0913
             total reward, and cumulative rewards.
         total_runs_done (int): Total number of runs completed so far.
         tracking_data (dict[str, list]): Data tracked during the simulation for plotting.
-
-    Returns
-    -------
-        int: The run number to resume from, or -1 to exit.
     """
     while True:
         prompt_intro_message = (
-            "KeyboardInterrupt detected. The simulation is paused. "
-            "You can choose to continue or output the results up to this point."
+            "KeyboardInterrupt detected. The simulation has halted. "
+            "You can choose to exit or output the results up to this point."
         )
         logger.warning(prompt_intro_message)
         print(prompt_intro_message)  # noqa: T201
-        print("1. Continue")  # noqa: T201
-        print("2. Output the summary, plots, and tracking until this point in time.")  # noqa: T201
-        print("3. Print the circuit's details.")  # noqa: T201
-        print("4. Exit")  # noqa: T201
+        print("0. Exit")  # noqa: T201
+        print("1. Output the summary, plots, and tracking until this point in time.")  # noqa: T201
+        print("2. Print the circuit's details.")  # noqa: T201
 
         try:
-            choice = int(input("Enter your choice (1-4): "))
+            choice = int(input("Enter your choice (0-2): "))
         except ValueError:
-            logger.error("Invalid input. Please enter a number between 1 and 4.")
+            logger.error("Invalid input. Please enter a number between 0 and 2.")
             continue
         except KeyboardInterrupt:
             continue
 
-        if choice == 1:
-            logger.info("Resuming the session.")
-            return total_runs_done
-        if choice == 2:  # noqa: PLR2004
+        if choice == 0:  # noqa: PLR2004
+            logger.info("Exiting the session.")
+            sys.exit(0)
+        elif choice == 1:  # noqa: PLR2004
             logger.info("Generating partial results and plots.")
             metrics = agent.calculate_metrics(total_runs=total_runs_done)
             logger.info("\nPerformance Metrics:")
@@ -554,14 +540,11 @@ def manage_simulation_pause(  # noqa: PLR0913
                     qubits,
                     file_prefix=file_prefix,
                 )
-        elif choice == 3:  # noqa: PLR2004
+        elif choice == 2:  # noqa: PLR2004
             logger.info("Printing circuit details.")
             circuit = agent.brain.inspect_circuit()
             logger.info(f"Circuit details:\n{circuit}")
             print(circuit)  # noqa: T201
-        elif choice == 4:  # noqa: PLR2004
-            logger.info("Exiting the session.")
-            return -1
         else:
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 

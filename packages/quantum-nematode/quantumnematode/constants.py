@@ -2,10 +2,6 @@
 
 import os
 
-# Feature flags
-# NOTE: Pausing is not implemented properly yet.
-TOGGLE_PAUSE = os.getenv("TOGGLE_PAUSE", "False").lower() == "false"
-
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
 DEFAULT_BRAIN = "simple"
