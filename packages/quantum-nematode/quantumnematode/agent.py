@@ -18,8 +18,8 @@ from .brain._brain import Brain
 from .env import MazeEnvironment
 from .logging_config import logger
 
-PENALTY_STAY = -0.7
 REWARD_GOAL = 0.5
+PENALTY_STAY = 0
 REWARD_GOAL_PROXIMITY_FACTOR = 2
 
 
@@ -362,7 +362,7 @@ class QuantumNematodeAgent:
                 logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
 
         # Strengthen penalties for no movements
-        if len(path) > 1 and path[-1] == path[-2]:
+        if PENALTY_STAY != 0 and len(path) > 1 and path[-1] == path[-2]:
             penalty_amount = PENALTY_STAY
             reward += penalty_amount
             logger.debug(f"[Penalty] No movement penalty applied: {penalty_amount}.")
