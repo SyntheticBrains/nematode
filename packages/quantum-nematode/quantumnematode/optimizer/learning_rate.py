@@ -2,7 +2,6 @@
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 
-from ..logging_config import logger
 
 class DynamicLearningRate:
     """
@@ -27,6 +26,8 @@ class DynamicLearningRate:
 
     def get_learning_rate(self, reward_magnitude: float = 1.0) -> float:
         """
+        Compute the current learning rate.
+
         Compute the current learning rate based on the number of optimization steps taken
         and scale it based on the magnitude of the reward signal.
 
@@ -123,9 +124,6 @@ class AdamLearningRate:
             effective_learning_rates[param_name] = (self.initial_learning_rate * m_hat) / (
                 np.sqrt(v_hat) + self.epsilon
             )
-            logger.debug(f"~~~m: {self.m[param_name]}, v: {self.v[param_name]}")
-            logger.debug(f"~~~m_hat: {m_hat}, v_hat: {v_hat}")
-            logger.debug(f"~~~Effective learning rate for {param_name}: {effective_learning_rates[param_name]}")
 
         self.steps += 1
         return effective_learning_rates
@@ -184,7 +182,8 @@ class PerformanceBasedLearningRate:
 
         # Constrain learning rate within allowable bounds
         self.learning_rate = max(
-            self.min_learning_rate, min(self.max_learning_rate, self.learning_rate)
+            self.min_learning_rate,
+            min(self.max_learning_rate, self.learning_rate),
         )
 
         # Update previous performance

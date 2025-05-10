@@ -2,9 +2,9 @@
 
 import argparse
 import logging
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
-import sys
 
 import yaml
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
@@ -19,7 +19,6 @@ from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
     MIN_GRID_SIZE,
-    TOGGLE_PAUSE,
 )
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
@@ -88,7 +87,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:  # noqa: C901, PLR0912, PLR0915
+def main() -> None:  # noqa: C901, PLR0915
     """Run the Quantum Nematode simulation."""
     args = parse_arguments()
 
@@ -317,8 +316,8 @@ def setup_brain_model(  # noqa: PLR0913
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for "dynamic" brain).
         device (str): The device to use for simulation ("CPU" or "GPU").
-        learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate): The learning rate
-            configuration for the "dynamic" brain.
+        learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
+            The learning rate configuration for the "dynamic" brain.
 
     Returns
     -------
@@ -374,7 +373,9 @@ def setup_brain_model(  # noqa: PLR0913
     return brain
 
 
-def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
+def configure_learning_rate(
+    config: dict,
+) -> DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
     """
     Configure the learning rate based on the provided configuration.
 
@@ -383,7 +384,8 @@ def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningR
 
     Returns
     -------
-        DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate: Configured learning rate object.
+        DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
+            Configured learning rate object.
     """
     learning_rate_config = config.get("learning_rate", {})
 
@@ -495,7 +497,7 @@ def manage_simulation_halt(  # noqa: PLR0913
     all_results: list[SimulationResult],
     total_runs_done: int,
     tracking_data: dict[str, list],
-):
+) -> None:
     """
     Handle simulation halt triggered by a KeyboardInterrupt.
 
@@ -534,10 +536,10 @@ def manage_simulation_halt(  # noqa: PLR0913
         except KeyboardInterrupt:
             continue
 
-        if choice == 0:  # noqa: PLR2004
+        if choice == 0:
             logger.info("Exiting the session.")
             sys.exit(0)
-        elif choice == 1:  # noqa: PLR2004
+        elif choice == 1:
             logger.info("Generating partial results and plots.")
             metrics = agent.calculate_metrics(total_runs=total_runs_done)
             logger.info("\nPerformance Metrics:")
