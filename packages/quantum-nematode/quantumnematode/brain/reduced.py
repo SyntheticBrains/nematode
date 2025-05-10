@@ -5,7 +5,7 @@ from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain._brain import Brain
+from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
 
 
@@ -56,8 +56,7 @@ class ReducedBrain(Brain):
 
     def run_brain(
         self,
-        gradient_strength: float,  # noqa: ARG002
-        gradient_direction: float,  # noqa: ARG002
+        params: BrainParams,  # noqa: ARG002
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -65,10 +64,8 @@ class ReducedBrain(Brain):
 
         Parameters
         ----------
-        dx : int
-            Distance to the goal along the x-axis.
-        dy : int
-            Distance to the goal along the y-axis.
+        params : BrainParams
+            Parameters for the quantum brain.
         grid_size : int
             Size of the grid environment.
         reward : float, optional

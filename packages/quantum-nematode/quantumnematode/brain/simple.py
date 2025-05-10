@@ -7,7 +7,7 @@ from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImp
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain._brain import Brain
+from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
 
 
@@ -68,8 +68,7 @@ class SimpleBrain(Brain):
 
     def run_brain(
         self,
-        gradient_strength: float,
-        gradient_direction: float,
+        params: BrainParams,
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -77,10 +76,8 @@ class SimpleBrain(Brain):
 
         Parameters
         ----------
-        gradient_strength : float
-            Intensity of the chemical gradient at the worm's position.
-        gradient_direction : float
-            Direction of the strongest gradient relative to the worm's orientation.
+        params : BrainParams
+            Parameters for the quantum brain.
         reward : float, optional
             Reward signal for learning, by default None.
 
@@ -89,6 +86,13 @@ class SimpleBrain(Brain):
         dict[str, int]
             Measurement counts from the quantum circuit.
         """
+        gradient_strength = params.gradient_strength
+        gradient_direction = params.gradient_direction
+        if gradient_strength is None or gradient_direction is None:
+            error_msg = "Gradient strength and direction must be provided in the parameters."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
         qc = self.build_brain()
         input_x = (
             self.parameter_values["θx"] + gradient_strength * np.pi + self.rng.uniform(-1.0, 1.0)

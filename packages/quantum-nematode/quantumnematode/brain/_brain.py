@@ -1,6 +1,26 @@
 from typing import Protocol
 
+from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
 from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
+
+
+class BrainParams(BaseModel):
+    gradient_strength: float | None = Field(
+        default=None,
+        description="Strength of the chemical gradient.",
+    )
+    gradient_direction: float | None = Field(
+        default=None,
+        description="Direction of the chemical gradient.",
+    )
+    agent_position: tuple[float, float] | None = Field(
+        default=None,
+        description="Current position of the agent in the environment.",
+    )
+    agent_direction: str | None = Field(
+        default=None,
+        description="Current direction of the agent in the environment.",
+    )
 
 
 class Brain(Protocol):
@@ -26,8 +46,7 @@ class Brain(Protocol):
 
     def run_brain(
         self,
-        gradient_strength: float,
-        gradient_direction: float,
+        params: BrainParams,
         reward: float | None = None,
     ) -> dict[str, int]:
         """

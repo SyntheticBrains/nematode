@@ -8,7 +8,7 @@ from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImp
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain._brain import Brain
+from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.initializers import RandomUniformInitializer, ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
@@ -173,8 +173,7 @@ class DynamicBrain(Brain):
 
     def run_brain(
         self,
-        gradient_strength: float,
-        gradient_direction: float,
+        params: BrainParams,
         reward: float | None = None,
     ) -> dict[str, int]:
         """
@@ -182,10 +181,8 @@ class DynamicBrain(Brain):
 
         Parameters
         ----------
-        gradient_strength : float
-            Intensity of the chemical gradient at the worm's position.
-        gradient_direction : float
-            Direction of the strongest gradient relative to the worm's orientation.
+        params : BrainParams
+            Parameters for the quantum brain.
         reward : float, optional
             Reward signal for learning, by default None.
 
@@ -194,6 +191,16 @@ class DynamicBrain(Brain):
         dict[str, int]
             Measurement counts from the quantum circuit.
         """
+        gradient_strength = params.gradient_strength
+        gradient_direction = params.gradient_direction
+        agent_direction = params.agent_direction
+
+        # Validate input parameters
+        if gradient_strength is None or gradient_direction is None or agent_direction is None:
+            error_msg = "Gradient strength, direction, and agent direction must be provided."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
         qc = self.build_brain()
 
         # Incorporate gradient information into the parameters
