@@ -9,9 +9,14 @@ from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain
+from quantumnematode.initializers import RandomUniformInitializer, ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
-from quantumnematode.optimizer.learning_rate import AdamLearningRate, DynamicLearningRate, PerformanceBasedLearningRate
+from quantumnematode.optimizer.learning_rate import (
+    AdamLearningRate,
+    DynamicLearningRate,
+    PerformanceBasedLearningRate,
+)
 
 EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor
@@ -38,13 +43,17 @@ class DynamicBrain(Brain):
     concepts.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         device: str = "CPU",
         shots: int = 100,
         num_qubits: int = 5,
-        learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate | None = None,
+        learning_rate: DynamicLearningRate
+        | AdamLearningRate
+        | PerformanceBasedLearningRate
+        | None = None,
         gradient_method: GradientCalculationMethod = GradientCalculationMethod.RAW,
+        parameter_initializer: ZeroInitializer | RandomUniformInitializer | None = None,
     ) -> None:
         """
         Initialize the DynamicBrain with a dynamic number of qubits.
@@ -62,15 +71,14 @@ class DynamicBrain(Brain):
             If None, a default dynamic learning rate will be used.
         gradient_method : GradientCalculationMethod
             The method to use for gradient calculation, by default RAW.
+        parameter_initializer : ParameterInitializer, optional
+            The initializer to use for parameter initialization, by default ZeroInitializer.
         """
         self.device = device.upper()
         self.shots = shots
         self.num_qubits = num_qubits
         self.parameters = [Parameter(f"θ{i}") for i in range(num_qubits)]
         self.rng = np.random.default_rng()
-        self.parameter_values = {
-            f"θ{i}": self.rng.uniform(-np.pi, np.pi) for i in range(num_qubits)
-        }
         self.steps = 0
         self.satiety = 1.0
         self.latest_input_parameters = None
@@ -80,6 +88,9 @@ class DynamicBrain(Brain):
         self.latest_exploration_factor = None
         self.latest_temperature = None
         self.gradient_method = gradient_method
+
+        self.parameter_initializer = parameter_initializer or ZeroInitializer()
+        self.parameter_values = self.parameter_initializer.initialize(num_qubits)
 
         self.learning_rate = learning_rate or DynamicLearningRate()
         if isinstance(self.learning_rate, DynamicLearningRate):
@@ -131,7 +142,7 @@ class DynamicBrain(Brain):
             f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
-    def build_brain(self, num_layers = 3) -> QuantumCircuit:
+    def build_brain(self, num_layers: int = 3) -> QuantumCircuit:
         """
         Build the quantum circuit for the dynamic brain.
 
@@ -144,7 +155,7 @@ class DynamicBrain(Brain):
             The quantum circuit representing the brain.
         """
         qc = QuantumCircuit(self.num_qubits, self.num_qubits)
-        
+
         for _ in range(num_layers):
             for i, param in enumerate(self.parameters):
                 qc.rx(param, i)
@@ -156,7 +167,7 @@ class DynamicBrain(Brain):
             for i in range(self.num_qubits):
                 for j in range(i + 2, self.num_qubits):
                     qc.cz(i, j)
-                    
+
         qc.measure(range(self.num_qubits), range(self.num_qubits))
         return qc
 
@@ -494,6 +505,7 @@ class DynamicBrain(Brain):
             num_qubits=self.num_qubits,
             learning_rate=self.learning_rate,
             gradient_method=self.gradient_method,
+            parameter_initializer=self.parameter_initializer,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
         new_brain.steps = self.steps

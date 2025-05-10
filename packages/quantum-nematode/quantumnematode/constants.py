@@ -1,7 +1,5 @@
 """Constants."""
 
-import os
-
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
 DEFAULT_BRAIN = "simple"
