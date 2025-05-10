@@ -1,3 +1,4 @@
+"""Module for initializers."""
 
 __all__ = [
     "RandomUniformInitializer",
