@@ -19,7 +19,6 @@ from .env import MazeEnvironment
 from .logging_config import logger
 
 PENALTY_STAY = -0.7
-PENALTY_STEP = -0.3
 REWARD_GOAL = 0.5
 REWARD_GOAL_PROXIMITY_FACTOR = 2
 
@@ -367,11 +366,6 @@ class QuantumNematodeAgent:
             penalty_amount = PENALTY_STAY
             reward += penalty_amount
             logger.debug(f"[Penalty] No movement penalty applied: {penalty_amount}.")
-        # Strengthen penalties for revisiting positions
-        elif path.count(tuple(env.agent_pos)) > 1:
-            penalty_amount = PENALTY_STEP
-            reward += penalty_amount
-            logger.debug(f"[Penalty] Revisit penalty applied: {penalty_amount}.")
 
         # Reward efficient paths by scaling inversely with steps
         efficiency_factor = None
