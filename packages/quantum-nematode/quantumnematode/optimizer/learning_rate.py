@@ -24,17 +24,24 @@ class DynamicLearningRate:
         self.decay_rate = decay_rate
         self.steps = 0
 
-    def get_learning_rate(self) -> float:
+    def get_learning_rate(self, reward_magnitude: float = 1.0) -> float:
         """
-        Compute the current learning rate based on the number of optimization steps taken.
+        Compute the current learning rate based on the number of optimization steps taken
+        and scale it based on the magnitude of the reward signal.
+
+        Parameters
+        ----------
+        reward_magnitude : float, optional
+            The magnitude of the reward signal to scale the learning rate, by default 1.0.
 
         Returns
         -------
             float: The current learning rate.
         """
-        learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
+        base_learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
+        scaled_learning_rate = base_learning_rate * reward_magnitude
         self.steps += 1
-        return learning_rate
+        return scaled_learning_rate
 
 
 class AdamLearningRate:
