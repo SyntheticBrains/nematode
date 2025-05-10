@@ -31,6 +31,7 @@ from quantumnematode.optimizer.gradient_methods import (  # pyright: ignore[repo
 from quantumnematode.optimizer.learning_rate import (  # pyright: ignore[reportMissingImports]
     AdamLearningRate,
     DynamicLearningRate,
+    PerformanceBasedLearningRate,
 )
 from quantumnematode.report.plots import (  # pyright: ignore[reportMissingImports]
     plot_cumulative_reward_per_run,
@@ -304,7 +305,7 @@ def setup_brain_model(  # noqa: PLR0913
     shots: int,
     qubits: int,
     device: str,
-    learning_rate: DynamicLearningRate | AdamLearningRate,
+    learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,
 ) -> Brain:
     """
@@ -316,7 +317,7 @@ def setup_brain_model(  # noqa: PLR0913
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for "dynamic" brain).
         device (str): The device to use for simulation ("CPU" or "GPU").
-        learning_rate (DynamicLearningRate | AdamLearningRate): The learning rate
+        learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate): The learning rate
             configuration for the "dynamic" brain.
 
     Returns
@@ -373,7 +374,7 @@ def setup_brain_model(  # noqa: PLR0913
     return brain
 
 
-def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningRate:
+def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
     """
     Configure the learning rate based on the provided configuration.
 
@@ -382,7 +383,7 @@ def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningR
 
     Returns
     -------
-        DynamicLearningRate | AdamLearningRate: Configured learning rate object.
+        DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate: Configured learning rate object.
     """
     learning_rate_config = config.get("learning_rate", {})
 
@@ -411,6 +412,25 @@ def configure_learning_rate(config: dict) -> DynamicLearningRate | AdamLearningR
             beta1=learning_rate_parameters.get("beta1", 0.9),
             beta2=learning_rate_parameters.get("beta2", 0.999),
             epsilon=learning_rate_parameters.get("epsilon", 1e-8),
+        )
+    if learning_rate_method == "performance_based":
+        return PerformanceBasedLearningRate(
+            initial_learning_rate=learning_rate_parameters.get(
+                "initial_learning_rate",
+                0.1,
+            ),
+            min_learning_rate=learning_rate_parameters.get(
+                "min_learning_rate",
+                0.001,
+            ),
+            max_learning_rate=learning_rate_parameters.get(
+                "max_learning_rate",
+                0.5,
+            ),
+            adjustment_factor=learning_rate_parameters.get(
+                "adjustment_factor",
+                1.1,
+            ),
         )
     error_message = (
         f"Unknown learning rate method: {learning_rate_method}. "
