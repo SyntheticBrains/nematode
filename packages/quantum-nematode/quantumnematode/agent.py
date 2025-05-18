@@ -13,6 +13,7 @@ from quantumnematode.constants import (
     SUPERPOSITION_MODE_TOP_N_ACTIONS,
     SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
+from quantumnematode.models import ActionData
 
 from .brain._brain import Brain, BrainParams
 from .env import MazeEnvironment
@@ -116,12 +117,12 @@ class QuantumNematodeAgent:
             )
             action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
 
-            if not isinstance(action, str):
-                error_msg = f"Invalid action type: {type(action)}. Expected str."
+            if not isinstance(action, ActionData):
+                error_msg = f"Invalid action type: {type(action)}. Expected ActionData."
                 logger.error(error_msg)
                 raise TypeError(error_msg)
 
-            self.env.move_agent(action)
+            self.env.move_agent(action.action)
 
             # Update the body length dynamically
             if self.max_body_length > 0 and len(self.env.body) < self.max_body_length:
@@ -160,7 +161,7 @@ class QuantumNematodeAgent:
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1
 
-                logger.info(f"Step {self.steps}: Action={action}, Reward={reward}")
+                logger.info(f"Step {self.steps}: Action={action.action}, Reward={reward}")
 
                 self.total_rewards += reward
                 logger.info("Reward: goal reached!")
@@ -270,18 +271,53 @@ class QuantumNematodeAgent:
                 )
                 actions = brain_copy.interpret_counts(counts, top_only=False)
 
+                def get_action_and_prob(a):
+                    if hasattr(a, "action") and hasattr(a, "probability"):
+                        return a.action, a.probability
+                    if isinstance(a, tuple) and len(a) >= 2:
+                        return a[0], a[1]
+                    return None, None
+
                 if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
                     rng = np.random.default_rng()
                     top_actions_and_probs = rng.choice(
-                        actions,
-                        p=[prob for _, prob in actions],
-                        size=SUPERPOSITION_MODE_TOP_N_ACTIONS,
-                    )
-                    top_actions = list(dict.fromkeys([key for key, _ in top_actions_and_probs]))
-                else:
-                    top_actions = list(dict.fromkeys([key for key, _ in actions]))[
-                        :SUPERPOSITION_MODE_TOP_N_ACTIONS
+                    filtered_actions = [
+                        a
+                        for a in actions
+                        if isinstance(get_action_and_prob(a)[1], float)
+                        and get_action_and_prob(a)[0] is not None
                     ]
+                    if filtered_actions:
+                        probs = [get_action_and_prob(a)[1] for a in filtered_actions]
+                        # Remove None values from probs and corresponding actions
+                        filtered_pairs = [
+                            (a, p)
+                            for a, p in zip(filtered_actions, probs, strict=False)
+                            if p is not None
+                        ]
+                        if filtered_pairs:
+                            filtered_actions, probs = zip(*filtered_pairs, strict=False)
+                            probs = np.array(probs, dtype=float)
+                            probs_sum = probs.sum()
+                            if probs_sum > 0:
+                                norm_probs = probs / probs_sum
+                            else:
+                                norm_probs = np.ones_like(probs) / len(probs)
+                            filtered_actions = np.array(filtered_actions)
+                                filtered_actions,
+                                p=norm_probs,
+                                size=SUPERPOSITION_MODE_TOP_N_ACTIONS,
+                                replace=True,
+                            )
+                            top_actions = [
+                                get_action_and_prob(a)[0]
+                    else:
+                        top_actions = []
+                        if get_action_and_prob(a)[0] is not None
+                    ][:SUPERPOSITION_MODE_TOP_N_ACTIONS]
+
+                # Defensive: filter out None from top_actions
+                top_actions = [a for a in top_actions if a is not None]
 
                 # Update the body length dynamically
                 if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
@@ -292,10 +328,6 @@ class QuantumNematodeAgent:
                     new_path = path_copy.copy()
                     new_brain = self.brain.copy()
                     runner_up_action = top_actions[1] if len(top_actions) > 1 else top_actions[0]
-                    new_env.move_agent(runner_up_action)
-                    new_brain.update_memory(reward)
-                    new_path.append(new_env.agent_pos)
-                    superpositions.append((new_brain, new_env, new_path))
 
                 if env_copy.reached_goal():
                     continue

@@ -1,7 +1,9 @@
 from typing import Protocol
 
 from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
-from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
+from qiskit import QuantumCircuit
+
+from quantumnematode.models import ActionData  # pyright: ignore[reportMissingImports]
 
 
 class BrainParams(BaseModel):
@@ -63,7 +65,7 @@ class Brain(Protocol):
         *,
         top_only: bool = True,
         top_randomize: bool = True,
-    ) -> list[tuple[str, float]] | str:
+    ) -> list[ActionData] | ActionData:
         """
         Interpret the measurement counts and determine the action.
 

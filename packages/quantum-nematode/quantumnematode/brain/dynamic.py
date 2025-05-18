@@ -11,6 +11,7 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.initializers import RandomUniformInitializer, ZeroInitializer
 from quantumnematode.logging_config import logger
+from quantumnematode.models import ActionData
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
 from quantumnematode.optimizer.learning_rate import (
     AdamLearningRate,
@@ -379,7 +380,7 @@ class DynamicBrain(Brain):
         *,
         top_only: bool = True,
         top_randomize: bool = True,
-    ) -> list[tuple[str, float]] | str:
+    ) -> list[ActionData] | ActionData:
         """
         Interpret the measurement counts and determine the action dynamically.
 
@@ -397,9 +398,8 @@ class DynamicBrain(Brain):
 
         Returns
         -------
-        list[tuple[str, float]] | str
-            List of tuples containing actions and their probabilities,
-            or the single most probable action.
+        list[ActionData] | ActionData
+            The most probable action or a list of actions with their probabilities.
         """
         logger.debug(f"Raw counts from quantum circuit: {counts}")
 
@@ -421,8 +421,9 @@ class DynamicBrain(Brain):
         counts = {key: value for key, value in counts.items() if key in action_map}
 
         if not counts:
-            logger.error("No valid actions found in counts. Defaulting to 'unknown'.")
-            return "unknown"
+            error_msg = "No valid actions found in counts."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # Analyze distribution of counts
         total_counts = sum(counts.values())
@@ -449,28 +450,33 @@ class DynamicBrain(Brain):
         logger.debug(f"Softmax probabilities with noise: {probabilities}")
 
         # Select an action based on the softmax probabilities
-        sorted_actions = sorted(
-            [(action_map[key], prob) for key, prob in probabilities.items()],
-            key=lambda x: x[1],
+        sorted_actions: list[ActionData] = sorted(
+            [
+                ActionData(state=key, action=action_map[key], probability=prob)
+                for key, prob in probabilities.items()
+            ],
+            key=lambda x: x.probability,
             reverse=True,
         )
 
-        most_probable_action = sorted_actions[0][0]
+        most_probable_action = sorted_actions[0]
         logger.debug(
-            f"Most probable action: {most_probable_action} with probability {sorted_actions[0][1]}",
+            f"Most probable action: {most_probable_action} with probability {sorted_actions[0]}",
         )
 
         if top_only:
             if top_randomize:
                 # Select the most probable action randomly
-                selected_action = self.rng.choice(
-                    sorted_actions,
-                    p=[prob for _, prob in sorted_actions],
+                actions = [action.state for action in sorted_actions]
+                probabilities = [sorted_action.probability for sorted_action in sorted_actions]
+                chosen_action_state = self.rng.choice(actions, p=probabilities)
+                chosen_action = next(
+                    action for action in sorted_actions if action.state == chosen_action_state
                 )
                 logger.debug(
-                    f"Selected action: {selected_action[0]} with probability {selected_action[1]}",
+                    f"Selected action: {chosen_action.action} with probability {chosen_action.probability}",
                 )
-                return selected_action[0]
+                return chosen_action
             # Return the most probable action directly
             return most_probable_action
 

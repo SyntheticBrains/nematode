@@ -9,6 +9,7 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
+from quantumnematode.models import ActionData
 
 
 class SimpleBrain(Brain):
@@ -205,7 +206,7 @@ class SimpleBrain(Brain):
         *,
         top_only: bool = True,  # noqa: ARG002
         top_randomize: bool = True,  # noqa: ARG002
-    ) -> list[tuple[str, float]] | str:
+    ) -> list[ActionData] | ActionData:
         """
         Interpret the measurement counts and determine the action using a softmax-based mechanism.
 
@@ -223,10 +224,6 @@ class SimpleBrain(Brain):
 
         valid_keys = {"00", "01", "10", "11"}
         counts = {key: value for key, value in counts.items() if key in valid_keys}
-
-        if not counts:
-            logger.error("No valid actions found in counts. Defaulting to 'unknown'.")
-            return "unknown"
 
         # Analyze distribution of counts
         total_counts = sum(counts.values())
@@ -269,7 +266,11 @@ class SimpleBrain(Brain):
 
         logger.debug(f"Softmax probabilities: {probabilities}, Selected action: {selected_action}")
 
-        return selected_action
+        return ActionData(
+            state=max_action,
+            action=selected_action,
+            probability=probabilities.get(selected_action, 0),
+        )
 
     def update_memory(self, reward: float) -> None:
         """
