@@ -232,10 +232,12 @@ def plot_tracking_data_per_run(
         "input_parameters": getattr(agent.brain, "history_input_parameters", None),
         "updated_parameters": getattr(agent.brain, "history_updated_parameters", None),
         "gradients": getattr(agent.brain, "history_gradients", None),
+        "gradient_strengths": getattr(agent.brain, "history_gradient_strengths", None),
+        "gradient_directions": getattr(agent.brain, "history_gradient_directions", None),
+        "rewards": getattr(agent.brain, "history_rewards", None),
         "learning_rates": getattr(agent.brain, "history_learning_rates", None),
         "exploration_factors": getattr(agent.brain, "history_exploration_factors", None),
         "temperatures": getattr(agent.brain, "history_temperatures", None),
-        "rewards": getattr(agent.brain, "history_rewards", None),
     }
     for key, values in tracked.items():
         if values is not None and len(values) > 0:
