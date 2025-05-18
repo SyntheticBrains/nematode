@@ -100,6 +100,11 @@ class QuantumNematodeAgent:
 
             print(f"Reward: {reward}")  # noqa: T201
 
+            # Prepare input_data for data re-uploading (one float per qubit)
+            input_data = None
+            if hasattr(self.brain, "num_qubits"):
+                input_data = [float(gradient_strength)] * int(getattr(self.brain, "num_qubits", 1))
+
             # Fix agent_position type for BrainParams (must be exactly 2 floats)
             agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
             if len(agent_pos) != 2:
@@ -111,10 +116,22 @@ class QuantumNematodeAgent:
                 agent_position=agent_pos,
                 agent_direction=self.env.current_direction,
             )
-            counts = self.brain.run_brain(
-                params=params,
-                reward=reward,
-            )
+            # Only pass input_data if supported by run_brain (DynamicBrain)
+            if (
+                hasattr(self.brain, "run_brain")
+                and "input_data" in self.brain.run_brain.__code__.co_varnames
+            ):
+                counts = self.brain.run_brain(
+                    params=params,
+                    reward=reward,
+                    input_data=input_data,
+                )
+            else:
+                counts = self.brain.run_brain(
+                    params=params,
+                    reward=reward,
+                )
+
             action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
 
             if not isinstance(action, ActionData):
@@ -138,6 +155,14 @@ class QuantumNematodeAgent:
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
                 reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
+
+                # Prepare input_data for data re-uploading (one float per qubit)
+                input_data = None
+                if hasattr(self.brain, "num_qubits"):
+                    input_data = [float(gradient_strength)] * int(
+                        getattr(self.brain, "num_qubits", 1),
+                    )
+
                 agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
                 if len(agent_pos) != 2:
                     agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
@@ -157,6 +182,12 @@ class QuantumNematodeAgent:
                 self.brain.update_memory(reward)
 
                 self.brain.satiety = 1.0  # Set satiety to maximum
+
+                # Reset the brain's history (currently only for DynamicBrain)
+                if hasattr(self.brain, "history_params"):
+                    setattr(self.brain, "history_params", [])
+                if hasattr(self.brain, "history_gradients"):
+                    setattr(self.brain, "history_gradients", [])
 
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1

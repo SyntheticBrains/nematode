@@ -23,6 +23,8 @@ EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor
 TEMPERATURE = 0.9  # Default temperature for softmax action selection
 
+TOGGLE_PARAM_CLIP = True  # Toggle for parameter clipping
+TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
 
 class DynamicBrain(Brain):
     """
@@ -81,9 +83,15 @@ class DynamicBrain(Brain):
         self.device = device.upper()
         self.shots = shots
         self.num_qubits = num_qubits
-        self.parameters = [Parameter(f"θ{i}") for i in range(num_qubits)]
         self.num_layers = num_layers
         self.num_actions = num_qubits**2
+
+        # --- Parameter sharing: one parameter per gate per qubit, shared across all layers ---
+        self.parameters = {
+            "rx": [Parameter(f"θ_rx_{i}") for i in range(self.num_qubits)],
+            "ry": [Parameter(f"θ_ry_{i}") for i in range(self.num_qubits)],
+            "rz": [Parameter(f"θ_rz_{i}") for i in range(self.num_qubits)],
+        }
 
         self.rng = np.random.default_rng()
         self.steps = 0
@@ -102,11 +110,15 @@ class DynamicBrain(Brain):
 
         self.latest_input_parameters = None
         self.latest_updated_parameters = None
+        self.latest_counts = None
+        self.latest_action: ActionData | None = None
         self.latest_gradients = None
         self.latest_learning_rate = None
         self.latest_exploration_factor = None
         self.latest_temperature = None
 
+        self.history_params: list[BrainParams] = []
+        self.history_gradients: list[list[float]] = []
 
         self.learning_rate = learning_rate or DynamicLearningRate()
         if isinstance(self.learning_rate, DynamicLearningRate):
@@ -158,13 +170,32 @@ class DynamicBrain(Brain):
             f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
-    def build_brain(self, num_layers: int = 3) -> QuantumCircuit:
+        # --- Reward normalization and baseline tracking ---
+        self.reward_mean = 0.0
+        self.reward_var = 1.0
+        self.reward_count = 0
+        self.reward_baseline = 0.0
+        self.reward_alpha = 0.01  # For running average baseline
+
+        # --- Temperature annealing ---
+        self.initial_temperature = TEMPERATURE
+        self.min_temperature = 0.2
+        self.temperature_decay = 0.995
+
+    def build_brain(self, input_data: list[float] | None = None) -> QuantumCircuit:
         """
         Build the quantum circuit for the dynamic brain.
 
-        Build a dynamic quantum circuit based on the number of qubits
-        and incorporate gradient information.
+        Each layer consists of data re-uploading (Rx with input),
+        parameterized Rx, Ry, Rz on every qubit, followed by CZ between all pairs of qubits.
 
+        Parameters
+        ----------
+        input_data : list[float] | None
+            Input data to encode via data re-uploading at each layer (one float per qubit).
+            If None, default to zeros.
+            If provided, it should be a list of floats, one per qubit.
+        
         Returns
         -------
         QuantumCircuit
@@ -172,16 +203,20 @@ class DynamicBrain(Brain):
         """
         qc = QuantumCircuit(self.num_qubits, self.num_qubits)
 
-        for _ in range(num_layers):
-            for i, param in enumerate(self.parameters):
-                qc.rx(param, i)
-                qc.ry(param, i)
-                qc.rz(param, i)
-            for i in range(self.num_qubits - 1):
-                qc.cx(i, i + 1)  # Entangle adjacent qubits
-            # Add additional entanglement between non-adjacent qubits
+        # Default to zeros if no input_data provided
+        if input_data is None:
+            input_data = [0.0] * self.num_qubits
+
+        for _ in range(self.num_layers):
             for i in range(self.num_qubits):
-                for j in range(i + 2, self.num_qubits):
+                # Data re-uploading: encode input at each layer
+                qc.rx(input_data[i], i)
+                qc.rx(self.parameters["rx"][i], i)
+                qc.ry(self.parameters["ry"][i], i)
+                qc.rz(self.parameters["rz"][i], i)
+            # Entangle every unique pair of qubits with CZ (i < j)
+            for i in range(self.num_qubits):
+                for j in range(i + 1, self.num_qubits):
                     qc.cz(i, j)
 
         qc.measure(range(self.num_qubits), range(self.num_qubits))
@@ -191,9 +226,10 @@ class DynamicBrain(Brain):
         self,
         params: BrainParams,
         reward: float | None = None,
+        input_data: list[float] | None = None,
     ) -> dict[str, int]:
         """
-        Run the quantum brain simulation, incorporating gradient information.
+        Run the quantum brain simulation, incorporating gradient information and data re-uploading.
 
         Parameters
         ----------
@@ -201,6 +237,8 @@ class DynamicBrain(Brain):
             Parameters for the quantum brain.
         reward : float, optional
             Reward signal for learning, by default None.
+        input_data : list[float], optional
+            Input data to encode via data re-uploading at each layer (one float per qubit).
 
         Returns
         -------
@@ -217,17 +255,73 @@ class DynamicBrain(Brain):
             logger.error(error_msg)
             raise ValueError(error_msg)
 
-        qc = self.build_brain()
+        self.history_params.append(params)
 
-        # Update input parameters to use the agent's direction and gradient direction
-        direction_map = {"up": 0, "down": np.pi, "left": -np.pi / 2, "right": np.pi / 2}
+        qc = self.build_brain(input_data=input_data)
 
-        input_params = {
-            f"θ{i}": self.parameter_values[f"θ{i}"]
-            + gradient_strength * np.cos(gradient_direction + i * np.pi / self.num_qubits)
-            + direction_map[agent_direction]
-            for i in range(self.num_qubits)
-        }
+        # --- Reward normalization and baseline update ---
+        # Update running mean and variance (Welford's algorithm)
+        if reward is not None:
+            self.reward_count += 1
+            delta = reward - self.reward_mean
+            self.reward_mean += delta / self.reward_count
+            delta2 = reward - self.reward_mean
+            self.reward_var += delta * delta2
+            reward_std = max((self.reward_var / self.reward_count) ** 0.5, 1e-8)
+            # Update running baseline (exponential moving average)
+            self.reward_baseline = (
+                1 - self.reward_alpha
+            ) * self.reward_baseline + self.reward_alpha * reward
+            # Normalize and baseline-subtract reward
+            norm_reward = (reward - self.reward_baseline) / reward_std
+        else:
+            norm_reward = 0.0
+
+        # Anneal temperature (fix for None on first step)
+        if self.steps == 0 or self.latest_temperature is None:
+            self.latest_temperature = self.initial_temperature
+        else:
+            self.latest_temperature = max(
+                self.min_temperature,
+                self.latest_temperature * self.temperature_decay,
+            )
+
+        # Use normalized, baseline-subtracted reward for learning
+        if reward is not None and self.latest_counts is not None:
+            gradients = self.compute_gradients(
+                self.latest_counts,
+                norm_reward,
+                self.latest_action
+                if self.latest_action is not None
+                else ActionData(state="", action="", probability=0.0),
+            )
+            self.history_gradients.append(gradients)
+            self.update_parameters(gradients, norm_reward)
+
+        # Update input parameters to use parameter sharing (one per qubit per gate)
+        input_params = {}
+        rx_param = None
+        ry_param = None
+        rz_param = None
+
+        if TOGGLE_SHORT_TERM_MEMORY:
+            rx_param = self.history_params[-1].gradient_strength
+            ry_param = self.history_params[-2].gradient_strength if len(self.history_params) > 1 else rx_param
+            rz_param = self.history_params[-3].gradient_strength if len(self.history_params) > 2 else ry_param
+        else:
+            rx_param = ry_param = rz_param = self.history_params[-1].gradient_strength
+
+
+        for i in range(self.num_qubits):
+            input_params[self.parameters["rx"][i]] = self.parameter_values[
+                f"θ_rx_{i}"
+            ] + rx_param * np.cos(i * np.pi / self.num_qubits)
+            input_params[self.parameters["ry"][i]] = self.parameter_values[
+                f"θ_ry_{i}"
+            ] + ry_param * np.cos(i * np.pi / self.num_qubits)
+            input_params[self.parameters["rz"][i]] = self.parameter_values[
+                f"θ_rz_{i}"
+            ] + rz_param * np.cos(i * np.pi / self.num_qubits)
 
         # Store latest input parameters for tracking
         self.latest_input_parameters = input_params
@@ -243,10 +337,6 @@ class DynamicBrain(Brain):
         transpiled = transpile(bound_qc, simulator)
         result = simulator.run(transpiled, shots=self.shots).result()
         counts = result.get_counts()
-
-        if reward is not None:
-            gradients = self.compute_gradients(counts, reward)
-            self.update_parameters(gradients, reward)
 
         # Decrease satiety at each step
         self.satiety = max(0.0, self.satiety - 0.01)  # Decrease satiety gradually
@@ -267,9 +357,15 @@ class DynamicBrain(Brain):
             f"Temperature: {self.latest_temperature}",
         )
 
+        self.latest_counts = counts
         return counts
 
-    def compute_gradients(self, counts: dict[str, int], reward: float) -> list[float]:
+    def compute_gradients(
+        self,
+        counts: dict[str, int],
+        reward: float,
+        action: ActionData,
+    ) -> list[float]:
         """
         Compute gradients based on counts and reward, using the selected gradient method.
 
@@ -292,12 +388,25 @@ class DynamicBrain(Brain):
         # Dynamically generate binary strings for the number of qubits
         binary_states = [f"{{:0{self.num_qubits}b}}".format(i) for i in range(2**self.num_qubits)]
 
+        # --- Standard policy gradient: reward * grad(log(prob)) ---
+        # Also compute entropy for regularization
+        entropy = 0.0
+        gradients = []
         for key in binary_states:
-            probability = probabilities.get(key, 0)
-            gradient = reward * (1 - probability)
+            probability = probabilities.get(key, 1e-8)  # Avoid log(0)
+            log_prob = np.log(probability)
+            entropy -= probability * log_prob
+            if key == action.state:
+                gradient = reward * (1 - probability)  # grad(log(prob)) wrt prob is (1 - prob)
+            else:
+                gradient = -reward * probability  # for other actions
             gradients.append(gradient)
 
-        logger.debug(f"Computed gradients: {gradients}")
+        # Add entropy regularization to gradients
+        beta = 0.01  # Entropy regularization coefficient (tune as needed)
+        gradients = [g + beta * entropy for g in gradients]
+
+        logger.debug(f"Computed gradients (policy gradient + entropy): {gradients}")
 
         post_processed_gradients = compute_gradients(
             gradients,
@@ -340,20 +449,40 @@ class DynamicBrain(Brain):
         decay_rate : float, optional
             Rate at which the learning rate decays over time, by default 0.01.
         """
-        # Use the selected learning rate strategy
         if isinstance(self.learning_rate, DynamicLearningRate):
             learning_rate = self.learning_rate.get_learning_rate()
-            for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
-                self.parameter_values[param_name] -= learning_rate * grad
 
-            # Store learning rate for tracking
+            if len(gradients) != len(self.parameter_values) / 3 != self.num_qubits:
+                raise ValueError(
+                    f"Gradients length {len(gradients)} does not match parameter values length "
+                    f"{len(self.parameter_values) / 3} for {self.num_qubits} qubits.",
+                )
+            
+            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_gradients) >= 3:
+                grads_rx, grads_ry, grads_rz = (
+                    self.history_gradients[-1],
+                    self.history_gradients[-2],
+                    self.history_gradients[-3],
+                )
+            else:
+                grads_rx = grads_ry = grads_rz = self.history_gradients[-1]
+
+            for i in range(self.num_qubits):
+                self.parameter_values[f"θ_rx_{i}"] -= learning_rate * grads_rx[i]
+                self.parameter_values[f"θ_ry_{i}"] -= learning_rate * grads_ry[i]
+                self.parameter_values[f"θ_rz_{i}"] -= learning_rate * grads_rz[i]
+
             self.latest_learning_rate = learning_rate
-
             logger.debug(
                 f"Updated parameters with dynamic learning rate {learning_rate}: "
                 f"{str(self.parameter_values).replace('θ', 'theta_')}",
             )
         elif isinstance(self.learning_rate, AdamLearningRate):
+            if TOGGLE_SHORT_TERM_MEMORY:
+                logger.warning(
+                    "Adam learning rate strategy is not compatible with short-term memory.",
+                )
+                
             effective_learning_rates = self.learning_rate.get_learning_rate(
                 gradients,
                 list(self.parameter_values.keys()),
@@ -372,8 +501,24 @@ class DynamicBrain(Brain):
             # Use performance-based learning rate strategy
             current_performance = reward if reward is not None else 0.0
             learning_rate = self.learning_rate.get_learning_rate(current_performance)
-            for param_name, grad in zip(self.parameter_values.keys(), gradients, strict=False):
-                self.parameter_values[param_name] -= learning_rate * grad
+
+            if len(gradients) != len(self.parameter_values) / 3 != self.num_qubits:
+                raise ValueError(
+                    f"Gradients length {len(gradients)} does not match parameter values length "
+                    f"{len(self.parameter_values) / 3} for {self.num_qubits} qubits.",
+                )
+            
+            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_gradients) >= 3:
+                grads_rx = self.history_gradients[-1]
+                grads_ry = self.history_gradients[-2]
+                grads_rz = self.history_gradients[-3]
+            else:
+                grads_rx = grads_ry = grads_rz = gradients
+
+            for i in range(self.num_qubits):
+                self.parameter_values[f"θ_rx_{i}"] -= learning_rate * grads_rx[i]
+                self.parameter_values[f"θ_ry_{i}"] -= learning_rate * grads_ry[i]
+                self.parameter_values[f"θ_rz_{i}"] -= learning_rate * grads_rz[i]
 
             # Store learning rate for tracking
             self.latest_learning_rate = learning_rate
@@ -382,6 +527,28 @@ class DynamicBrain(Brain):
                 f"Updated parameters with performance-based learning rate {learning_rate}: "
                 f"{str(self.parameter_values).replace('θ', 'theta_')}",
             )
+
+        # Parameter clipping: keep all parameters in [-pi, pi]
+        if TOGGLE_PARAM_CLIP:
+            logger.debug(
+                "Clipping parameters to the range [-pi, pi]"
+            )
+            for i in range(self.num_qubits):
+                self.parameter_values[f"θ_rx_{i}"] = np.clip(
+                    self.parameter_values[f"θ_rx_{i}"],
+                    -np.pi,
+                    np.pi,
+                )
+                self.parameter_values[f"θ_ry_{i}"] = np.clip(
+                    self.parameter_values[f"θ_ry_{i}"],
+                    -np.pi,
+                    np.pi,
+                )
+                self.parameter_values[f"θ_rz_{i}"] = np.clip(
+                    self.parameter_values[f"θ_rz_{i}"],
+                    -np.pi,
+                    np.pi,
+                )
 
         # Store latest updated parameters for tracking
         self.latest_updated_parameters = deepcopy(self.parameter_values)
@@ -491,10 +658,13 @@ class DynamicBrain(Brain):
                 logger.debug(
                     f"Selected action: {chosen_action.action} with probability {chosen_action.probability}",
                 )
+                self.latest_action = chosen_action
                 return chosen_action
             # Return the most probable action directly
+            self.latest_action = most_probable_action
             return most_probable_action
 
+        self.latest_action = sorted_actions[0]
         return sorted_actions
 
     def update_memory(self, reward: float) -> None:
