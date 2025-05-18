@@ -38,7 +38,7 @@ from quantumnematode.report.plots import (  # pyright: ignore[reportMissingImpor
     plot_last_cumulative_rewards,
     plot_steps_per_run,
     plot_success_rate_over_time,
-    plot_tracking_data,
+    plot_tracking_data_per_session,
 )
 from quantumnematode.report.summary import summary  # pyright: ignore[reportMissingImports]
 
@@ -265,7 +265,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
     # Generate additional plots for tracking data
     if brain_type == "dynamic":
-        plot_tracking_data(tracking_data, timestamp, brain_type, qubits)
+        plot_tracking_data_per_session(tracking_data, timestamp, brain_type, qubits)
 
     return
 
@@ -556,7 +556,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
 
             if brain_type == "dynamic":
-                plot_tracking_data(
+                plot_tracking_data_per_session(
                     tracking_data,
                     timestamp,
                     brain_type,

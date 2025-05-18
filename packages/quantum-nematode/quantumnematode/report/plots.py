@@ -149,7 +149,7 @@ def plot_steps_per_run(
     plt.close()
 
 
-def plot_tracking_data(
+def plot_tracking_data_per_session(
     tracking_data: dict[str, list[int | float | dict]],
     timestamp: str,
     brain_type: str,
