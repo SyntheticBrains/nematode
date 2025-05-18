@@ -6,7 +6,7 @@ from typing import Protocol
 class ParameterInitializer(Protocol):
     """Base class for parameter initialization strategies."""
 
-    def initialize(self, num_qubits: int) -> dict[str, float]:
+    def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
         """
         Initialize parameters for a quantum circuit.
 
@@ -14,6 +14,8 @@ class ParameterInitializer(Protocol):
         ----------
         num_qubits : int
             Number of qubits in the quantum circuit.
+        parameters : list[str] | None
+            List of parameter names to initialize. If None, all parameters will be initialized.
 
         Returns
         -------
