@@ -4,6 +4,7 @@ from pathlib import Path
 
 from matplotlib import pyplot as plt  # pyright: ignore[reportMissingImports]
 
+from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.logging_config import (
     logger,
 )
@@ -210,3 +211,48 @@ def plot_tracking_data_per_session(
         plt.grid()
         plt.savefig(plot_dir / f"{file_prefix}track_{key}_over_runs.png")
         plt.close()
+
+
+def plot_tracking_data_per_run(
+    timestamp: str,
+    agent: QuantumNematodeAgent,
+    run: int,
+) -> None:
+    """
+    Generate and save plots for tracked agent data for a single run.
+
+    Args:
+        timestamp (str): Timestamp for the plot directory.
+        agent (QuantumNematodeAgent): Agent containing brain with tracking histories.
+        run (int): Index of the run.
+    """
+    run_dir = Path.cwd() / "plots" / timestamp / f"run_{run + 1}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    tracked: dict[str, list[dict[str, float]] | list[float] | None] = {
+        "input_parameters": getattr(agent.brain, "history_input_parameters", None),
+        "updated_parameters": getattr(agent.brain, "history_updated_parameters", None),
+        "gradients": getattr(agent.brain, "history_gradients", None),
+        "learning_rates": getattr(agent.brain, "history_learning_rates", None),
+        "exploration_factors": getattr(agent.brain, "history_exploration_factors", None),
+        "temperatures": getattr(agent.brain, "history_temperatures", None),
+        "rewards": getattr(agent.brain, "history_rewards", None),
+    }
+    for key, values in tracked.items():
+        if values is not None and len(values) > 0:
+            plt.figure(figsize=(8, 4))
+            if isinstance(values[0], dict):
+                # Plot each parameter in the dict
+                for param in values[0]:
+                    plt.plot(
+                        [v[param] for v in values if isinstance(v, dict) and param in v],
+                        label=param,
+                    )
+                plt.legend()
+            else:
+                plt.plot(values)
+            plt.title(f"{key} (run {run + 1})")
+            plt.xlabel("Step")
+            plt.ylabel(key)
+            plt.tight_layout()
+            plt.savefig(run_dir / f"{key}.png")
+            plt.close()
