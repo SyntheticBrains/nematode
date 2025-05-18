@@ -91,7 +91,14 @@ class DynamicBrain(Brain):
         self.gradient_method = gradient_method
 
         self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
-        self.parameter_values = self.parameter_initializer.initialize(num_qubits)
+        param_keys = [
+            f"θ_rx_{i}" for i in range(self.num_qubits)
+        ] + [
+            f"θ_ry_{i}" for i in range(self.num_qubits)
+        ] + [
+            f"θ_rz_{i}" for i in range(self.num_qubits)
+        ]
+        self.parameter_values = self.parameter_initializer.initialize(num_qubits, param_keys)
 
         self.latest_input_parameters = None
         self.latest_updated_parameters = None
