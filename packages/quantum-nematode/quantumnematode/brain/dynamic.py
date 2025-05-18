@@ -191,11 +191,6 @@ class DynamicBrain(Brain):
         self.reward_baseline = 0.0
         self.reward_alpha = 0.01  # For running average baseline
 
-        # --- Temperature annealing ---
-        self.initial_temperature = TEMPERATURE
-        self.min_temperature = 0.2
-        self.temperature_decay = 0.995
-
     def build_brain(self, input_data: list[float] | None = None) -> QuantumCircuit:
         """
         Build the quantum circuit for the dynamic brain.
@@ -295,16 +290,6 @@ class DynamicBrain(Brain):
 
         self.history_rewards.append(norm_reward)
 
-        # Anneal temperature (fix for None on first step)
-        if self.steps == 0 or self.latest_temperature is None:
-            self.latest_temperature = self.initial_temperature
-        else:
-            self.latest_temperature = max(
-                self.min_temperature,
-                self.latest_temperature * self.temperature_decay,
-            )
-        self.history_temperatures.append(self.latest_temperature)
-
         # Use normalized, baseline-subtracted reward for learning
         if norm_reward is not None and self.latest_counts is not None:
             gradients = self.compute_gradients(
@@ -378,6 +363,9 @@ class DynamicBrain(Brain):
         self.latest_exploration_factor = (
             EXPLORATION_MIN + (EXPLORATION_MAX - EXPLORATION_MIN) * self.satiety
         )
+        self.latest_temperature = TEMPERATURE * self.latest_exploration_factor
+
+        self.history_temperatures.append(self.latest_temperature)
         self.history_exploration_factors.append(self.latest_temperature)
 
         logger.debug(
@@ -768,7 +756,4 @@ class DynamicBrain(Brain):
         new_brain.reward_count = self.reward_count
         new_brain.reward_baseline = self.reward_baseline
         new_brain.reward_alpha = self.reward_alpha
-
-        new_brain.min_temperature = self.min_temperature
-        new_brain.temperature_decay = self.temperature_decay
         return new_brain
