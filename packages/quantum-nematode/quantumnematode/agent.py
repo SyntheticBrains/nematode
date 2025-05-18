@@ -89,7 +89,15 @@ class QuantumNematodeAgent:
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
+
+            print()  # noqa: T201
+            print(f"Gradient strength: {gradient_strength}")  # noqa: T201
+            print(f"Gradient direction: {gradient_direction}")  # noqa: T201
+
+            # Calculate reward based on efficiency and collision avoidance
             reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
+
+            print(f"Reward: {reward}")  # noqa: T201
             params = BrainParams(
                 gradient_strength=gradient_strength,
                 gradient_direction=gradient_direction,
@@ -113,7 +121,6 @@ class QuantumNematodeAgent:
             if self.max_body_length > 0 and len(self.env.body) < self.max_body_length:
                 self.env.body.append(self.env.body[-1])
 
-            # Calculate reward based on efficiency and collision avoidance
             self.brain.update_memory(reward)
 
             self.path.append(tuple(self.env.agent_pos))
