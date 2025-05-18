@@ -82,16 +82,18 @@ class DynamicBrain(Brain):
         self.rng = np.random.default_rng()
         self.steps = 0
         self.satiety = 1.0
+        self.gradient_method = gradient_method
+
+        self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
+        self.parameter_values = self.parameter_initializer.initialize(num_qubits)
+
         self.latest_input_parameters = None
         self.latest_updated_parameters = None
         self.latest_gradients = None
         self.latest_learning_rate = None
         self.latest_exploration_factor = None
         self.latest_temperature = None
-        self.gradient_method = gradient_method
 
-        self.parameter_initializer = parameter_initializer or ZeroInitializer()
-        self.parameter_values = self.parameter_initializer.initialize(num_qubits)
 
         self.learning_rate = learning_rate or DynamicLearningRate()
         if isinstance(self.learning_rate, DynamicLearningRate):
