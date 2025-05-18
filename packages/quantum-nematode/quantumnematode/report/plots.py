@@ -235,6 +235,7 @@ def plot_tracking_data_per_run(
         "gradient_strengths": getattr(agent.brain, "history_gradient_strengths", None),
         "gradient_directions": getattr(agent.brain, "history_gradient_directions", None),
         "rewards": getattr(agent.brain, "history_rewards", None),
+        "rewards_norm": getattr(agent.brain, "history_rewards_norm", None),
         "learning_rates": getattr(agent.brain, "history_learning_rates", None),
         "exploration_factors": getattr(agent.brain, "history_exploration_factors", None),
         "temperatures": getattr(agent.brain, "history_temperatures", None),

@@ -130,6 +130,7 @@ class DynamicBrain(Brain):
         self.history_gradient_strengths: list[float] = []
         self.history_gradient_directions: list[float] = []
         self.history_rewards: list[float] = []
+        self.history_rewards_norm: list[float] = []
         self.history_learning_rates: list[float | dict[str, float]] = []
         self.history_exploration_factors: list[float] = []
         self.history_temperatures: list[float] = []
@@ -288,7 +289,8 @@ class DynamicBrain(Brain):
         else:
             norm_reward = 0.0
 
-        self.history_rewards.append(norm_reward)
+        self.history_rewards.append(reward or 0.0)
+        self.history_rewards_norm.append(norm_reward or 0.0)
 
         # Use normalized, baseline-subtracted reward for learning
         if norm_reward is not None and self.latest_counts is not None:
