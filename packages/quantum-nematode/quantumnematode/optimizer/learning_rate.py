@@ -5,28 +5,40 @@ import numpy as np  # pyright: ignore[reportMissingImports]
 
 class DynamicLearningRate:
     """
-    Implements a dynamic learning rate adjustment strategy.
+    Implements a dynamic learning rate adjustment strategy with multiple decay options.
 
-    The learning rate is adjusted based on the number of optimization steps taken.
-
-    The formula used is:
-        learning_rate = initial_learning_rate / (1 + decay_rate * steps)
-
-    Attributes
-    ----------
-        initial_learning_rate (float): The initial learning rate.
-        decay_rate (float): The decay rate for the learning rate adjustment.
-        steps (int): Counter for the number of optimization steps taken.
+    Supported decay types:
+        - 'inverse_time': initial_lr / (1 + decay_rate * steps)
+        - 'exponential': initial_lr * exp(-decay_rate * steps)
+        - 'step': initial_lr * (decay_factor ** (steps // step_size))
+        - 'polynomial': initial_lr * (1 - steps / max_steps) ** power
+        - 'cosine': min_lr + 0.5 * (initial_lr - min_lr) * (1 + cos(pi * steps / max_steps))
     """
 
-    def __init__(self, initial_learning_rate: float = 0.1, decay_rate: float = 0.01) -> None:
+    def __init__(  # noqa: PLR0913
+        self,
+        initial_learning_rate: float = 0.1,
+        decay_rate: float = 0.01,
+        decay_type: str = "inverse_time",
+        decay_factor: float = 0.5,  # for step decay
+        step_size: int = 10,  # for step decay
+        max_steps: int = 1000,  # for polynomial/cosine decay
+        power: float = 1.0,  # for polynomial decay
+        min_lr: float = 0.0,  # for cosine decay
+    ) -> None:
         self.initial_learning_rate = initial_learning_rate
         self.decay_rate = decay_rate
+        self.decay_type = decay_type
+        self.decay_factor = decay_factor
+        self.step_size = step_size
+        self.max_steps = max_steps
+        self.power = power
+        self.min_lr = min_lr
         self.steps = 0
 
     def get_learning_rate(self, reward_magnitude: float = 1.0) -> float:
         """
-        Compute the current learning rate.
+        Compute the current learning rate using the selected decay method.
 
         Compute the current learning rate based on the number of optimization steps taken
         and scale it based on the magnitude of the reward signal.
@@ -40,7 +52,27 @@ class DynamicLearningRate:
         -------
             float: The current learning rate.
         """
-        base_learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
+        if self.decay_type == "inverse_time":
+            base_learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
+        elif self.decay_type == "exponential":
+            base_learning_rate = self.initial_learning_rate * np.exp(-self.decay_rate * self.steps)
+        elif self.decay_type == "step":
+            base_learning_rate = self.initial_learning_rate * (
+                self.decay_factor ** (self.steps // self.step_size)
+            )
+        elif self.decay_type == "polynomial":
+            frac = min(self.steps / self.max_steps, 1.0)
+            base_learning_rate = self.initial_learning_rate * (1 - frac) ** self.power
+        elif self.decay_type == "cosine":
+            from math import cos, pi
+
+            frac = min(self.steps / self.max_steps, 1.0)
+            base_learning_rate = self.min_lr + 0.5 * (self.initial_learning_rate - self.min_lr) * (
+                1 + cos(pi * frac)
+            )
+        else:
+            # Default to inverse time decay
+            base_learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
         scaled_learning_rate = base_learning_rate * reward_magnitude
         self.steps += 1
         return scaled_learning_rate
