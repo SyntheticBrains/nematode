@@ -49,6 +49,7 @@ class DynamicBrain(Brain):
         device: str = "CPU",
         shots: int = 100,
         num_qubits: int = 5,
+        num_layers: int = 3,
         learning_rate: DynamicLearningRate
         | AdamLearningRate
         | PerformanceBasedLearningRate
@@ -67,6 +68,8 @@ class DynamicBrain(Brain):
             The number of shots for the quantum simulation.
         num_qubits : int
             The number of qubits to use in the quantum circuit.
+        num_layers : int
+            The number of layers in the quantum circuit.
         learning_rate : DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate | None
             The learning rate strategy for parameter updates, by default None.
             If None, a default dynamic learning rate will be used.
@@ -79,6 +82,9 @@ class DynamicBrain(Brain):
         self.shots = shots
         self.num_qubits = num_qubits
         self.parameters = [Parameter(f"θ{i}") for i in range(num_qubits)]
+        self.num_layers = num_layers
+        self.num_actions = num_qubits**2
+
         self.rng = np.random.default_rng()
         self.steps = 0
         self.satiety = 1.0
@@ -520,6 +526,7 @@ class DynamicBrain(Brain):
             device=self.device,
             shots=self.shots,
             num_qubits=self.num_qubits,
+            num_layers=self.num_layers,
             learning_rate=self.learning_rate,
             gradient_method=self.gradient_method,
             parameter_initializer=self.parameter_initializer,
