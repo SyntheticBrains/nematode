@@ -1,7 +1,7 @@
 from typing import Protocol
 
 from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.models import ActionData  # pyright: ignore[reportMissingImports]
 
@@ -50,6 +50,7 @@ class Brain(Protocol):
         self,
         params: BrainParams,
         reward: float | None = None,
+        input_data: list[float] | None = None,
     ) -> dict[str, int]:
         """
         Run the quantum brain simulation.

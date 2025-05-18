@@ -26,8 +26,9 @@ class ZeroInitializer(ParameterInitializer):
             initialized_parameters = {}
             for param in parameters:
                 if param in initialized_parameters:
-                    raise ValueError(f"Parameter {param} is already initialized.")
+                    error_message = f"Parameter {param} is already initialized."
+                    raise ValueError(error_message)
                 initialized_parameters[param] = 0.0
             return initialized_parameters
-        
+
         return {f"θ{i}": 0.0 for i in range(num_qubits)}

@@ -34,11 +34,13 @@ class RandomPiUniformInitializer(ParameterInitializer):
             initialized_parameters = {}
             for param in parameters:
                 if param in initialized_parameters:
-                    raise ValueError(f"Parameter {param} is already initialized.")
+                    error_message = f"Parameter {param} is already initialized."
+                    raise ValueError(error_message)
                 initialized_parameters[param] = rng.uniform(-np.pi, np.pi)
             return initialized_parameters
-        
+
         return {f"θ{i}": rng.uniform(-np.pi, np.pi) for i in range(num_qubits)}
+
 
 class RandomSmallUniformInitializer(ParameterInitializer):
     """Initialize parameters uniformly in the range [-0.1, 0.1]."""
@@ -65,8 +67,9 @@ class RandomSmallUniformInitializer(ParameterInitializer):
             initialized_parameters = {}
             for param in parameters:
                 if param in initialized_parameters:
-                    raise ValueError(f"Parameter {param} is already initialized.")
+                    error_message = f"Parameter {param} is already initialized."
+                    raise ValueError(error_message)
                 initialized_parameters[param] = rng.uniform(-0.1, 0.1)
             return initialized_parameters
-        
+
         return {f"θ{i}": rng.uniform(-0.1, 0.1) for i in range(num_qubits)}
