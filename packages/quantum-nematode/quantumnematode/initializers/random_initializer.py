@@ -5,7 +5,7 @@ import numpy as np  # pyright: ignore[reportMissingImports]
 from quantumnematode.initializers._initializer import ParameterInitializer
 
 
-class RandomUniformInitializer(ParameterInitializer):
+class RandomPiUniformInitializer(ParameterInitializer):
     """Initialize parameters uniformly in the range [-pi, pi]."""
 
     def initialize(self, num_qubits: int) -> dict[str, float]:

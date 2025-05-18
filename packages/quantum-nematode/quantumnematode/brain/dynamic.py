@@ -9,7 +9,7 @@ from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain, BrainParams
-from quantumnematode.initializers import RandomUniformInitializer, ZeroInitializer
+from quantumnematode.initializers import RandomPiUniformInitializer, ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
@@ -54,7 +54,7 @@ class DynamicBrain(Brain):
         | PerformanceBasedLearningRate
         | None = None,
         gradient_method: GradientCalculationMethod = GradientCalculationMethod.RAW,
-        parameter_initializer: ZeroInitializer | RandomUniformInitializer | None = None,
+        parameter_initializer: ZeroInitializer | RandomPiUniformInitializer | None = None,
     ) -> None:
         """
         Initialize the DynamicBrain with a dynamic number of qubits.
