@@ -280,7 +280,6 @@ class QuantumNematodeAgent:
 
                 if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
                     rng = np.random.default_rng()
-                    top_actions_and_probs = rng.choice(
                     filtered_actions = [
                         a
                         for a in actions
@@ -304,6 +303,7 @@ class QuantumNematodeAgent:
                             else:
                                 norm_probs = np.ones_like(probs) / len(probs)
                             filtered_actions = np.array(filtered_actions)
+                            top_actions_and_probs = rng.choice(
                                 filtered_actions,
                                 p=norm_probs,
                                 size=SUPERPOSITION_MODE_TOP_N_ACTIONS,
@@ -311,8 +311,17 @@ class QuantumNematodeAgent:
                             )
                             top_actions = [
                                 get_action_and_prob(a)[0]
+                                for a in top_actions_and_probs
+                                if get_action_and_prob(a)[0] is not None
+                            ]
+                        else:
+                            top_actions = []
                     else:
                         top_actions = []
+                else:
+                    top_actions = [
+                        get_action_and_prob(a)[0]
+                        for a in actions
                         if get_action_and_prob(a)[0] is not None
                     ][:SUPERPOSITION_MODE_TOP_N_ACTIONS]
 
@@ -323,18 +332,24 @@ class QuantumNematodeAgent:
                 if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
                     env_copy.body.append(env_copy.body[-1])
 
-                if len(superpositions) < SUPERPOSITION_MODE_MAX_SUPERPOSITIONS:
+                if len(superpositions) < SUPERPOSITION_MODE_MAX_SUPERPOSITIONS and top_actions:
                     new_env = env_copy.copy()
                     new_path = path_copy.copy()
                     new_brain = self.brain.copy()
                     runner_up_action = top_actions[1] if len(top_actions) > 1 else top_actions[0]
+                    if runner_up_action is not None:
+                        new_env.move_agent(runner_up_action)
+                        new_brain.update_memory(reward)
+                        new_path.append(new_env.agent_pos)
+                        superpositions.append((new_brain, new_env, new_path))
 
                 if env_copy.reached_goal():
                     continue
 
-                env_copy.move_agent(top_actions[0])
-                brain_copy.update_memory(reward)
-                path_copy.append(env_copy.agent_pos)
+                if top_actions:
+                    env_copy.move_agent(top_actions[0])
+                    brain_copy.update_memory(reward)
+                    path_copy.append(env_copy.agent_pos)
 
                 i += 1
                 if i >= total_superpositions:
