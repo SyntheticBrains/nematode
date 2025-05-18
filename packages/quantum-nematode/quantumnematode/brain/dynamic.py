@@ -724,14 +724,28 @@ class DynamicBrain(Brain):
             parameter_initializer=self.parameter_initializer,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
+
         new_brain.steps = self.steps
         new_brain.satiety = self.satiety
+        new_brain.gradient_method = self.gradient_method
+
         new_brain.latest_input_parameters = deepcopy(self.latest_input_parameters)
         new_brain.latest_updated_parameters = deepcopy(self.latest_updated_parameters)
+        new_brain.latest_counts = deepcopy(self.latest_counts)
+        new_brain.latest_action = deepcopy(self.latest_action)
         new_brain.latest_gradients = deepcopy(self.latest_gradients)
         new_brain.latest_learning_rate = self.latest_learning_rate
         new_brain.latest_exploration_factor = self.latest_exploration_factor
         new_brain.latest_temperature = self.latest_temperature
+
         new_brain.learning_rate = deepcopy(self.learning_rate) if self.learning_rate else None
-        new_brain.gradient_method = self.gradient_method
+
+        new_brain.reward_mean = self.reward_mean
+        new_brain.reward_var = self.reward_var
+        new_brain.reward_count = self.reward_count
+        new_brain.reward_baseline = self.reward_baseline
+        new_brain.reward_alpha = self.reward_alpha
+
+        new_brain.min_temperature = self.min_temperature
+        new_brain.temperature_decay = self.temperature_decay
         return new_brain
