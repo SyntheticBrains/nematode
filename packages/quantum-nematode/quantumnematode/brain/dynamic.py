@@ -51,7 +51,7 @@ class DynamicBrain(Brain):
     concepts.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         device: str = "CPU",
         shots: int = 100,
@@ -124,7 +124,15 @@ class DynamicBrain(Brain):
         self.latest_temperature = None
 
         self.history_params: list[BrainParams] = []
+        self.history_input_parameters: list[dict[str, float]] = []
+        self.history_updated_parameters: list[dict[str, float]] = []
         self.history_gradients: list[list[float]] = []
+        self.history_gradient_strengths: list[float] = []
+        self.history_gradient_directions: list[float] = []
+        self.history_rewards: list[float] = []
+        self.history_learning_rates: list[float | dict[str, float]] = []
+        self.history_exploration_factors: list[float] = []
+        self.history_temperatures: list[float] = []
 
         self.learning_rate = learning_rate or DynamicLearningRate()
         if isinstance(self.learning_rate, DynamicLearningRate):
@@ -262,6 +270,8 @@ class DynamicBrain(Brain):
             raise ValueError(error_msg)
 
         self.history_params.append(params)
+        self.history_gradient_strengths.append(gradient_strength)  # Used for reporting only
+        self.history_gradient_directions.append(gradient_direction)  # Used for reporting only
 
         qc = self.build_brain(input_data=input_data)
 
@@ -283,6 +293,8 @@ class DynamicBrain(Brain):
         else:
             norm_reward = 0.0
 
+        self.history_rewards.append(norm_reward)
+
         # Anneal temperature (fix for None on first step)
         if self.steps == 0 or self.latest_temperature is None:
             self.latest_temperature = self.initial_temperature
@@ -291,9 +303,10 @@ class DynamicBrain(Brain):
                 self.min_temperature,
                 self.latest_temperature * self.temperature_decay,
             )
+        self.history_temperatures.append(self.latest_temperature)
 
         # Use normalized, baseline-subtracted reward for learning
-        if reward is not None and self.latest_counts is not None:
+        if norm_reward is not None and self.latest_counts is not None:
             gradients = self.compute_gradients(
                 self.latest_counts,
                 norm_reward,
@@ -338,6 +351,7 @@ class DynamicBrain(Brain):
 
         # Store latest input parameters for tracking
         self.latest_input_parameters = input_params
+        self.history_input_parameters.append(input_params)
 
         logger.debug(
             "Input parameters with gradient information: "
@@ -360,10 +374,11 @@ class DynamicBrain(Brain):
             logger.warning("Satiety is zero.")
 
         # Calculate exploration factor based on satiety
+        # NOTE: Not used anymore, previously used for temperature calculation
         self.latest_exploration_factor = (
             EXPLORATION_MIN + (EXPLORATION_MAX - EXPLORATION_MIN) * self.satiety
         )
-        self.latest_temperature = TEMPERATURE * self.latest_exploration_factor
+        self.history_exploration_factors.append(self.latest_temperature)
 
         logger.debug(
             f"Exploration factor: {self.latest_exploration_factor}, "
@@ -423,7 +438,9 @@ class DynamicBrain(Brain):
             self.gradient_method,
         )
 
+        # Store gradients for tracking
         self.latest_gradients = post_processed_gradients
+        self.history_gradients.append(post_processed_gradients)
 
         logger.debug(
             f"{self.gradient_method.value.capitalize()} gradients: {post_processed_gradients}",
@@ -442,7 +459,7 @@ class DynamicBrain(Brain):
 
         return post_processed_gradients
 
-    def update_parameters(  # noqa: C901, PLR0912
+    def update_parameters(  # noqa: C901, PLR0912, PLR0915
         self,
         gradients: list[float],
         reward: float | None = None,
@@ -484,7 +501,10 @@ class DynamicBrain(Brain):
                 self.parameter_values[f"θ_ry_{i}"] -= learning_rate * grads_ry[i]
                 self.parameter_values[f"θ_rz_{i}"] -= learning_rate * grads_rz[i]
 
+            # Store learning rate for tracking
             self.latest_learning_rate = learning_rate
+            self.history_learning_rates.append(learning_rate)
+
             logger.debug(
                 f"Updated parameters with dynamic learning rate {learning_rate}: "
                 f"{str(self.parameter_values).replace('θ', 'theta_')}",
@@ -504,6 +524,7 @@ class DynamicBrain(Brain):
 
             # Store learning rate for tracking
             self.latest_learning_rate = effective_learning_rates
+            self.history_learning_rates.append(effective_learning_rates)
 
             logger.debug(
                 f"Updated parameters with Adam learning rate: "
@@ -536,6 +557,7 @@ class DynamicBrain(Brain):
 
             # Store learning rate for tracking
             self.latest_learning_rate = learning_rate
+            self.history_learning_rates.append(learning_rate)
 
             logger.debug(
                 f"Updated parameters with performance-based learning rate {learning_rate}: "
@@ -566,6 +588,7 @@ class DynamicBrain(Brain):
 
         # Store latest updated parameters for tracking
         self.latest_updated_parameters = deepcopy(self.parameter_values)
+        self.history_updated_parameters.append(deepcopy(self.parameter_values))
 
         # Increment the step count
         self.steps += 1
