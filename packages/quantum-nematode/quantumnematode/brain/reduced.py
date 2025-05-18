@@ -7,6 +7,7 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
+from quantumnematode.models import ActionData
 
 
 class ReducedBrain(Brain):
@@ -156,7 +157,7 @@ class ReducedBrain(Brain):
         *,
         top_only: bool = True,  # noqa: ARG002
         top_randomize: bool = True,  # noqa: ARG002
-    ) -> list[tuple[str, float]] | str:
+    ) -> list[ActionData] | ActionData:
         """
         Interpret the measurement counts and determine the action.
 
@@ -167,8 +168,8 @@ class ReducedBrain(Brain):
 
         Returns
         -------
-        str
-            Action to be taken by the agent.
+        list[ActionData] | ActionData
+            The most common action and its probability.
         """
         sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         most_common = sorted_counts[0][0]  # Binary string of the most common result
@@ -181,7 +182,13 @@ class ReducedBrain(Brain):
             "10": "stay",
         }
 
-        return action_map.get(most_common[:2], "unknown")
+        chosen_action = action_map.get(most_common[:2], "unknown")
+        probability = sorted_counts[0][1] / self.shots
+        return ActionData(
+            state=most_common,
+            action=chosen_action,
+            probability=probability,
+        )
 
     def update_memory(self, reward: float) -> None:
         """

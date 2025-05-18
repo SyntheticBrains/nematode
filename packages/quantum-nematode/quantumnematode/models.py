@@ -30,3 +30,9 @@ class SimulationResult(BaseModel):
     total_reward: float
     last_total_reward: float
     efficiency_score: float
+
+
+class ActionData(BaseModel):
+    state: str
+    action: str
+    probability: float
