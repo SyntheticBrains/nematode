@@ -98,10 +98,16 @@ class QuantumNematodeAgent:
             reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
 
             print(f"Reward: {reward}")  # noqa: T201
+
+            # Fix agent_position type for BrainParams (must be exactly 2 floats)
+            agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
+            if len(agent_pos) != 2:
+                agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
+
             params = BrainParams(
                 gradient_strength=gradient_strength,
                 gradient_direction=gradient_direction,
-                agent_position=self.env.agent_pos,
+                agent_position=agent_pos,
                 agent_direction=self.env.current_direction,
             )
             counts = self.brain.run_brain(
