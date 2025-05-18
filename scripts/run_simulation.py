@@ -38,6 +38,7 @@ from quantumnematode.report.plots import (  # pyright: ignore[reportMissingImpor
     plot_last_cumulative_rewards,
     plot_steps_per_run,
     plot_success_rate_over_time,
+    plot_tracking_data_per_run,
     plot_tracking_data_per_session,
 )
 from quantumnematode.report.summary import summary  # pyright: ignore[reportMissingImports]
@@ -83,11 +84,16 @@ def parse_arguments() -> argparse.Namespace:
         help="Enable superposition mode to visualize top 2 decisions at each step. "
         "Only one run is allowed in this mode.",
     )
+    parser.add_argument(
+        "--track-per-run",
+        action="store_true",
+        help="If set, output tracked DynamicBrain data as separate plots per run in subfolders.",
+    )
 
     return parser.parse_args()
 
 
-def main() -> None:  # noqa: C901, PLR0915
+def main() -> None:  # noqa: C901, PLR0912, PLR0915
     """Run the Quantum Nematode simulation."""
     args = parse_arguments()
 
@@ -105,6 +111,7 @@ def main() -> None:  # noqa: C901, PLR0915
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
+    track_per_run = args.track_per_run
 
     if config_file:
         config = load_simulation_config(config_file)
@@ -222,10 +229,6 @@ def main() -> None:  # noqa: C901, PLR0915
 
             logger.info(f"Run {run + 1}/{runs} completed in {steps} steps.")
 
-            if run < runs - 1:
-                agent.reset_environment()
-                agent.reset_brain()
-
             total_runs_done += 1
 
             # Track data for plotting, only supported for dynamic brain
@@ -237,6 +240,13 @@ def main() -> None:  # noqa: C901, PLR0915
                 tracking_data["updated_parameters"].append(agent.brain.latest_updated_parameters)
                 tracking_data["exploration_factor"].append(agent.brain.latest_exploration_factor)
                 tracking_data["temperature"].append(agent.brain.latest_temperature)
+
+            if track_per_run and brain_type == "dynamic":
+                plot_tracking_data_per_run(timestamp, agent, run)
+
+            if run < runs - 1:
+                agent.reset_environment()
+                agent.reset_brain()
 
     except KeyboardInterrupt:
         manage_simulation_halt(
