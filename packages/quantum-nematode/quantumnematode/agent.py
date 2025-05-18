@@ -132,10 +132,7 @@ class QuantumNematodeAgent:
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
 
-            logger.info(f"Step {self.steps}: Action={action}, Reward={reward}")
-
-            if action == "unknown":
-                logger.warning("Invalid action received: staying in place.")
+            logger.info(f"Step {self.steps}: Action={action.action}, Reward={reward}")
 
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
