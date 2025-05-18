@@ -1,9 +1,9 @@
 """Module for initializers."""
 
 __all__ = [
-    "RandomUniformInitializer",
+    "RandomPiUniformInitializer",
     "ZeroInitializer",
 ]
 
-from .random_initializer import RandomUniformInitializer
+from .random_initializer import RandomPiUniformInitializer
 from .zero_initializer import ZeroInitializer
