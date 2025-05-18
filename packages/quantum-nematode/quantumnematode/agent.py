@@ -63,7 +63,7 @@ class QuantumNematodeAgent:
         self.total_steps = 0
         self.total_rewards = 0
 
-    def run_episode(  # noqa: C901, PLR0915
+    def run_episode(  # noqa: C901, PLR0912, PLR0915
         self,
         max_steps: int = 100,
         render_text: str | None = None,
@@ -107,7 +107,7 @@ class QuantumNematodeAgent:
 
             # Fix agent_position type for BrainParams (must be exactly 2 floats)
             agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-            if len(agent_pos) != 2:
+            if len(agent_pos) != 2:  # noqa: PLR2004
                 agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
 
             params = BrainParams(
@@ -164,7 +164,7 @@ class QuantumNematodeAgent:
                     )
 
                 agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-                if len(agent_pos) != 2:
+                if len(agent_pos) != 2:  # noqa: PLR2004
                     agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
 
                 params = BrainParams(
@@ -185,9 +185,9 @@ class QuantumNematodeAgent:
 
                 # Reset the brain's history (currently only for DynamicBrain)
                 if hasattr(self.brain, "history_params"):
-                    setattr(self.brain, "history_params", [])
+                    self.brain.history_params = []  # type: ignore[assignment]
                 if hasattr(self.brain, "history_gradients"):
-                    setattr(self.brain, "history_gradients", [])
+                    self.brain.history_gradients = []  # type: ignore[assignment]
 
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1
@@ -302,10 +302,10 @@ class QuantumNematodeAgent:
                 )
                 actions = brain_copy.interpret_counts(counts, top_only=False)
 
-                def get_action_and_prob(a):
+                def get_action_and_prob(a: ActionData) -> tuple:
                     if hasattr(a, "action") and hasattr(a, "probability"):
                         return a.action, a.probability
-                    if isinstance(a, tuple) and len(a) >= 2:
+                    if isinstance(a, tuple) and len(a) >= 2:  # noqa: PLR2004
                         return a[0], a[1]
                     return None, None
 

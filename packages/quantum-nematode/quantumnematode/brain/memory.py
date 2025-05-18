@@ -107,6 +107,7 @@ class MemoryBrain(Brain):
         self,
         params: BrainParams,  # noqa: ARG002
         reward: float | None = None,
+        input_data: list[float] | None = None,  # noqa: ARG002
     ) -> dict[str, int]:
         """
         Run the quantum brain simulation.

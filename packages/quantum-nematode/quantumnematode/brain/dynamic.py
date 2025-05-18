@@ -9,7 +9,11 @@ from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain._brain import Brain, BrainParams
-from quantumnematode.initializers import RandomPiUniformInitializer, RandomSmallUniformInitializer, ZeroInitializer
+from quantumnematode.initializers import (
+    RandomPiUniformInitializer,
+    RandomSmallUniformInitializer,
+    ZeroInitializer,
+)
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod, compute_gradients
@@ -25,6 +29,7 @@ TEMPERATURE = 0.9  # Default temperature for softmax action selection
 
 TOGGLE_PARAM_CLIP = True  # Toggle for parameter clipping
 TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
+
 
 class DynamicBrain(Brain):
     """
@@ -57,7 +62,10 @@ class DynamicBrain(Brain):
         | PerformanceBasedLearningRate
         | None = None,
         gradient_method: GradientCalculationMethod = GradientCalculationMethod.RAW,
-        parameter_initializer: ZeroInitializer | RandomPiUniformInitializer | RandomSmallUniformInitializer | None = None,
+        parameter_initializer: ZeroInitializer
+        | RandomPiUniformInitializer
+        | RandomSmallUniformInitializer
+        | None = None,
     ) -> None:
         """
         Initialize the DynamicBrain with a dynamic number of qubits.
@@ -99,13 +107,11 @@ class DynamicBrain(Brain):
         self.gradient_method = gradient_method
 
         self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
-        param_keys = [
-            f"θ_rx_{i}" for i in range(self.num_qubits)
-        ] + [
-            f"θ_ry_{i}" for i in range(self.num_qubits)
-        ] + [
-            f"θ_rz_{i}" for i in range(self.num_qubits)
-        ]
+        param_keys = (
+            [f"θ_rx_{i}" for i in range(self.num_qubits)]
+            + [f"θ_ry_{i}" for i in range(self.num_qubits)]
+            + [f"θ_rz_{i}" for i in range(self.num_qubits)]
+        )
         self.parameter_values = self.parameter_initializer.initialize(num_qubits, param_keys)
 
         self.latest_input_parameters = None
@@ -195,7 +201,7 @@ class DynamicBrain(Brain):
             Input data to encode via data re-uploading at each layer (one float per qubit).
             If None, default to zeros.
             If provided, it should be a list of floats, one per qubit.
-        
+
         Returns
         -------
         QuantumCircuit
@@ -222,7 +228,7 @@ class DynamicBrain(Brain):
         qc.measure(range(self.num_qubits), range(self.num_qubits))
         return qc
 
-    def run_brain(
+    def run_brain(  # noqa: PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,
@@ -306,11 +312,18 @@ class DynamicBrain(Brain):
 
         if TOGGLE_SHORT_TERM_MEMORY:
             rx_param = self.history_params[-1].gradient_strength
-            ry_param = self.history_params[-2].gradient_strength if len(self.history_params) > 1 else rx_param
-            rz_param = self.history_params[-3].gradient_strength if len(self.history_params) > 2 else ry_param
+            ry_param = (
+                self.history_params[-2].gradient_strength
+                if len(self.history_params) > 1
+                else rx_param
+            )
+            rz_param = (
+                self.history_params[-3].gradient_strength
+                if len(self.history_params) > 2  # noqa: PLR2004
+                else ry_param
+            )
         else:
             rx_param = ry_param = rz_param = self.history_params[-1].gradient_strength
-
 
         for i in range(self.num_qubits):
             input_params[self.parameters["rx"][i]] = self.parameter_values[
@@ -396,10 +409,7 @@ class DynamicBrain(Brain):
             probability = probabilities.get(key, 1e-8)  # Avoid log(0)
             log_prob = np.log(probability)
             entropy -= probability * log_prob
-            if key == action.state:
-                gradient = reward * (1 - probability)  # grad(log(prob)) wrt prob is (1 - prob)
-            else:
-                gradient = -reward * probability  # for other actions
+            gradient = reward * (1 - probability) if key == action.state else -reward * probability
             gradients.append(gradient)
 
         # Add entropy regularization to gradients
@@ -432,7 +442,7 @@ class DynamicBrain(Brain):
 
         return post_processed_gradients
 
-    def update_parameters(
+    def update_parameters(  # noqa: C901, PLR0912
         self,
         gradients: list[float],
         reward: float | None = None,
@@ -453,12 +463,14 @@ class DynamicBrain(Brain):
             learning_rate = self.learning_rate.get_learning_rate()
 
             if len(gradients) != len(self.parameter_values) / 3 != self.num_qubits:
-                raise ValueError(
+                error_message = (
                     f"Gradients length {len(gradients)} does not match parameter values length "
-                    f"{len(self.parameter_values) / 3} for {self.num_qubits} qubits.",
+                    f"{len(self.parameter_values) / 3} for {self.num_qubits} qubits."
                 )
-            
-            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_gradients) >= 3:
+                logger.error(error_message)
+                raise ValueError(error_message)
+
+            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_gradients) >= 3:  # noqa: PLR2004
                 grads_rx, grads_ry, grads_rz = (
                     self.history_gradients[-1],
                     self.history_gradients[-2],
@@ -482,7 +494,7 @@ class DynamicBrain(Brain):
                 logger.warning(
                     "Adam learning rate strategy is not compatible with short-term memory.",
                 )
-                
+
             effective_learning_rates = self.learning_rate.get_learning_rate(
                 gradients,
                 list(self.parameter_values.keys()),
@@ -503,12 +515,14 @@ class DynamicBrain(Brain):
             learning_rate = self.learning_rate.get_learning_rate(current_performance)
 
             if len(gradients) != len(self.parameter_values) / 3 != self.num_qubits:
-                raise ValueError(
+                error_message = (
                     f"Gradients length {len(gradients)} does not match parameter values length "
-                    f"{len(self.parameter_values) / 3} for {self.num_qubits} qubits.",
+                    f"{len(self.parameter_values) / 3} for {self.num_qubits} qubits."
                 )
-            
-            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_gradients) >= 3:
+                logger.error(error_message)
+                raise ValueError(error_message)
+
+            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_gradients) >= 3:  # noqa: PLR2004
                 grads_rx = self.history_gradients[-1]
                 grads_ry = self.history_gradients[-2]
                 grads_rz = self.history_gradients[-3]
@@ -531,7 +545,7 @@ class DynamicBrain(Brain):
         # Parameter clipping: keep all parameters in [-pi, pi]
         if TOGGLE_PARAM_CLIP:
             logger.debug(
-                "Clipping parameters to the range [-pi, pi]"
+                "Clipping parameters to the range [-pi, pi]",
             )
             for i in range(self.num_qubits):
                 self.parameter_values[f"θ_rx_{i}"] = np.clip(
@@ -656,7 +670,8 @@ class DynamicBrain(Brain):
                     action for action in sorted_actions if action.state == chosen_action_state
                 )
                 logger.debug(
-                    f"Selected action: {chosen_action.action} with probability {chosen_action.probability}",
+                    f"Selected action: {chosen_action.action} "
+                    "with probability {chosen_action.probability}",
                 )
                 self.latest_action = chosen_action
                 return chosen_action
