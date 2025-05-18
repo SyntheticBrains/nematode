@@ -224,6 +224,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
             if run < runs - 1:
                 agent.reset_environment()
+                agent.reset_brain()
 
             total_runs_done += 1
 
