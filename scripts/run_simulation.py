@@ -418,6 +418,7 @@ def configure_learning_rate(
                 0.1,
             ),
             decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
+            decay_type=learning_rate_parameters.get("decay_type", "inverse_time"),
         )
     if learning_rate_method == "adam":
         return AdamLearningRate(
