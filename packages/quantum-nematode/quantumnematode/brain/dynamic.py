@@ -103,6 +103,11 @@ class DynamicBrain(Brain):
         self.num_layers = num_layers
         self.num_actions = num_qubits**2
 
+        logger.info(
+            f"DynamicBrain initialized with {self.num_qubits} qubits, "
+            f"{self.num_layers} layers, and {self.shots} shots on {self.device}.",
+        )
+
         # --- Parameter sharing: one parameter per gate per qubit, shared across all layers ---
         self.parameters = {
             "rx": [Parameter(f"θ_rx_{i}") for i in range(self.num_qubits)],
@@ -114,6 +119,10 @@ class DynamicBrain(Brain):
         self.steps = 0
         self.satiety = 1.0
         self.gradient_method = gradient_method
+
+        logger.info(
+            f"Using gradient calculation method: {self.gradient_method.value.capitalize()}",
+        )
 
         self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
         logger.info(
@@ -164,6 +173,11 @@ class DynamicBrain(Brain):
         self.reward_count = 0
         self.reward_baseline = 0.0
         self.reward_alpha = 0.01  # For running average baseline
+        logger.info(
+            f"Reward normalization parameters: "
+            f"mean={self.reward_mean}, var={self.reward_var}, "
+            f"baseline={self.reward_baseline}, alpha={self.reward_alpha}",
+        )
 
     def build_brain(self, input_data: list[float] | None = None) -> QuantumCircuit:
         """
