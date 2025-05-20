@@ -116,12 +116,21 @@ class DynamicBrain(Brain):
         self.gradient_method = gradient_method
 
         self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
+        logger.info(
+            "Using parameter initializer: "
+            f"{str(self.parameter_initializer).replace('θ', 'theta_')}",
+        )
+
         param_keys = (
             [f"θ_rx_{i}" for i in range(self.num_qubits)]
             + [f"θ_ry_{i}" for i in range(self.num_qubits)]
             + [f"θ_rz_{i}" for i in range(self.num_qubits)]
         )
         self.parameter_values = self.parameter_initializer.initialize(num_qubits, param_keys)
+        logger.info(
+            "Initializing parameters uniformly in the range [-pi, pi]: "
+            f"{str(self.parameter_values).replace('θ', 'theta_')}",
+        )
 
         self.latest_input_parameters = None
         self.latest_updated_parameters = None
@@ -147,12 +156,6 @@ class DynamicBrain(Brain):
         self.learning_rate = learning_rate or DynamicLearningRate()
         logger.info(
             f"Using learning rate strategy: {str(self.learning_rate).replace('θ', 'theta_')}",
-        )
-
-        # Log parameter initialization range
-        logger.debug(
-            "Initializing parameters uniformly in the range [-pi, pi]: "
-            f"{str(self.parameter_values).replace('θ', 'theta_')}",
         )
 
         # --- Reward normalization and baseline tracking ---
