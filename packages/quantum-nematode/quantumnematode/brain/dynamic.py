@@ -310,7 +310,6 @@ class DynamicBrain(Brain):
                 if self.latest_action is not None
                 else ActionData(state="", action="", probability=0.0),
             )
-            self.history_gradients.append(gradients)
             self.update_parameters(gradients, norm_reward)
 
         # Update input parameters to use parameter sharing (one per qubit per gate)
