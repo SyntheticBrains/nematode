@@ -29,6 +29,7 @@ TEMPERATURE = 0.9  # Default temperature for softmax action selection
 
 TOGGLE_PARAM_CLIP = True  # Toggle for parameter clipping
 TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
+TOGGLE_PARAM_MODULO = True  # Toggle for parameter modulo wrapping ([-pi, pi])
 
 
 class DynamicBrain(Brain):
@@ -575,6 +576,22 @@ class DynamicBrain(Brain):
                     -np.pi,
                     np.pi,
                 )
+
+        # Parameter modulo wrapping: keep all parameters in [-pi, pi]
+        if TOGGLE_PARAM_MODULO:
+            logger.debug(
+                "Applying parameter modulo wrapping to the range [-pi, pi]",
+            )
+            for i in range(self.num_qubits):
+                self.parameter_values[f"θ_rx_{i}"] = (
+                    (self.parameter_values[f"θ_rx_{i}"] + np.pi) % (2 * np.pi)
+                ) - np.pi
+                self.parameter_values[f"θ_ry_{i}"] = (
+                    (self.parameter_values[f"θ_ry_{i}"] + np.pi) % (2 * np.pi)
+                ) - np.pi
+                self.parameter_values[f"θ_rz_{i}"] = (
+                    (self.parameter_values[f"θ_rz_{i}"] + np.pi) % (2 * np.pi)
+                ) - np.pi
 
         # Store latest updated parameters for tracking
         self.latest_updated_parameters = deepcopy(self.parameter_values)
