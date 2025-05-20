@@ -20,8 +20,11 @@ from .env import MazeEnvironment
 from .logging_config import logger
 
 PENALTY_STAY = 0
+PENALTY_STEP = 0.01
+PENALTY_STEP_FURTHER = 0.02
 REWARD_GOAL = 0.1
 REWARD_GOAL_PROXIMITY_FACTOR = 2
+REWARD_STEP_CLOSER = 0.05
 
 
 class QuantumNematodeAgent:
@@ -494,6 +497,19 @@ class QuantumNematodeAgent:
             else:
                 logger.debug("[No Change] No gradient change detected. Using last reward.")
                 reward = last_reward
+
+        # --- Reward shaping: step penalty and distance-based reward ---
+        reward -= PENALTY_STEP  # Small penalty for each step
+        if env.goal is not None:
+            curr_pos = env.agent_pos
+            curr_dist = abs(curr_pos[0] - env.goal[0]) + abs(curr_pos[1] - env.goal[1])
+            if len(path) > 1:
+                prev_pos = path[-2]
+                prev_dist = abs(prev_pos[0] - env.goal[0]) + abs(prev_pos[1] - env.goal[1])
+                if curr_dist < prev_dist:
+                    reward += REWARD_STEP_CLOSER  # Reward for getting closer
+                elif curr_dist > prev_dist:
+                    reward -= PENALTY_STEP_FURTHER  # Penalty for getting further
 
         # Strengthen penalties for no movements
         if PENALTY_STAY != 0 and len(path) > 1 and path[-1] == path[-2]:
