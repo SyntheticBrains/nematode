@@ -24,7 +24,7 @@ class DynamicLearningRate:
         step_size: int = 10,  # for step decay
         max_steps: int = 1000,  # for polynomial/cosine decay
         power: float = 1.0,  # for polynomial decay
-        min_lr: float = 0.0,  # for cosine decay
+        min_lr: float = 0.0,  # for cosine decay, if using should be 1% to 10% of initial_lr
     ) -> None:
         self.initial_learning_rate = initial_learning_rate
         self.decay_rate = decay_rate
