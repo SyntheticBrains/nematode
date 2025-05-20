@@ -9,6 +9,7 @@ learning_rate:
   parameters:
     initial_learning_rate: 0.01
     decay_rate: 0.001
+    decay_type: inverse_time
   # method: adam
   # parameters:
   #   initial_learning_rate: 0.1
