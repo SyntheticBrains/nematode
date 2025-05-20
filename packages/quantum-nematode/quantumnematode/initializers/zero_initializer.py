@@ -6,6 +6,10 @@ from quantumnematode.initializers._initializer import ParameterInitializer
 class ZeroInitializer(ParameterInitializer):
     """Initialize parameters to zero."""
 
+    def __str__(self) -> str:
+        """Return a string representation of the initializer."""
+        return "ZeroInitializer(all parameters set to 0.0)"
+
     def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
         """
         Initialize parameters to zero.

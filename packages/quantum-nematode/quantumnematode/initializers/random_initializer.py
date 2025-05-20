@@ -12,6 +12,10 @@ from quantumnematode.initializers._initializer import ParameterInitializer
 class RandomPiUniformInitializer(ParameterInitializer):
     """Initialize parameters uniformly in the range [-pi, pi]."""
 
+    def __str__(self) -> str:
+        """Return a string representation of the initializer."""
+        return "RandomPiUniformInitializer(range=[-pi, pi])"
+
     def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
         """
         Initialize parameters uniformly in the range [-pi, pi].
@@ -44,6 +48,10 @@ class RandomPiUniformInitializer(ParameterInitializer):
 
 class RandomSmallUniformInitializer(ParameterInitializer):
     """Initialize parameters uniformly in the range [-0.1, 0.1]."""
+
+    def __str__(self) -> str:
+        """Return a string representation of the initializer."""
+        return "RandomSmallUniformInitializer(range=[-0.1, 0.1])"
 
     def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
         """
