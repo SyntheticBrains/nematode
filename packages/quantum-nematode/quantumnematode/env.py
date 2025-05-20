@@ -16,6 +16,8 @@ import numpy as np  # pyright: ignore[reportMissingImports]
 from .constants import MIN_GRID_SIZE
 from .logging_config import logger
 
+GRADIENT_SCALING_TANH_FACTOR = 1.0
+
 
 class ScalingMethod(Enum):
     """Enum for scaling methods used in the maze environment."""
@@ -107,7 +109,7 @@ class MazeEnvironment:
         self,
         position: tuple[int, ...],
         *,
-        scaling_method: ScalingMethod = ScalingMethod.EXPONENTIAL,
+        scaling_method: ScalingMethod = ScalingMethod.TANH,
         disable_log: bool = False,
     ) -> tuple[float, float]:
         """
@@ -132,7 +134,9 @@ class MazeEnvironment:
                 -distance_to_goal / max_distance,
             )  # Apply exponential scaling
         elif scaling_method == ScalingMethod.TANH:
-            gradient_strength = np.tanh(gradient_strength * 5)  # Apply non-linear scaling with tanh
+            gradient_strength = np.tanh(
+                gradient_strength * GRADIENT_SCALING_TANH_FACTOR,
+            )  # Apply non-linear scaling with tanh
         gradient_direction = np.arctan2(dy, dx) if dx != 0 or dy != 0 else 0.0
 
         if not disable_log:
