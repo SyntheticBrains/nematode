@@ -413,41 +413,28 @@ def configure_learning_rate(
     learning_rate_parameters = learning_rate_config.get("parameters", {})
     if learning_rate_method == "dynamic":
         return DynamicLearningRate(
-            initial_learning_rate=learning_rate_parameters.get(
-                "initial_learning_rate",
-                0.1,
-            ),
+            initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
             decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
             decay_type=learning_rate_parameters.get("decay_type", "inverse_time"),
+            decay_factor=learning_rate_parameters.get("decay_factor", 0.5),
+            step_size=learning_rate_parameters.get("step_size", 10),
+            max_steps=learning_rate_parameters.get("max_steps", 1000),
+            power=learning_rate_parameters.get("power", 1.0),
+            min_lr=learning_rate_parameters.get("min_lr", 0.0001),
         )
     if learning_rate_method == "adam":
         return AdamLearningRate(
-            initial_learning_rate=learning_rate_parameters.get(
-                "initial_learning_rate",
-                0.1,
-            ),
+            initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
             beta1=learning_rate_parameters.get("beta1", 0.9),
             beta2=learning_rate_parameters.get("beta2", 0.999),
             epsilon=learning_rate_parameters.get("epsilon", 1e-8),
         )
     if learning_rate_method == "performance_based":
         return PerformanceBasedLearningRate(
-            initial_learning_rate=learning_rate_parameters.get(
-                "initial_learning_rate",
-                0.1,
-            ),
-            min_learning_rate=learning_rate_parameters.get(
-                "min_learning_rate",
-                0.001,
-            ),
-            max_learning_rate=learning_rate_parameters.get(
-                "max_learning_rate",
-                0.5,
-            ),
-            adjustment_factor=learning_rate_parameters.get(
-                "adjustment_factor",
-                1.1,
-            ),
+            initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
+            min_learning_rate=learning_rate_parameters.get("min_learning_rate", 0.001),
+            max_learning_rate=learning_rate_parameters.get("max_learning_rate", 0.5),
+            adjustment_factor=learning_rate_parameters.get("adjustment_factor", 1.1),
         )
     error_message = (
         f"Unknown learning rate method: {learning_rate_method}. "
