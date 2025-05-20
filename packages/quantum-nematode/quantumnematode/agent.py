@@ -87,6 +87,7 @@ class QuantumNematodeAgent:
         """
         self.env.current_direction = "up"  # Initialize the agent's direction
 
+        reward = 0.0
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
@@ -96,7 +97,12 @@ class QuantumNematodeAgent:
             print(f"Gradient direction: {gradient_direction}")  # noqa: T201
 
             # Calculate reward based on efficiency and collision avoidance
-            reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
+            reward = self.calculate_reward(
+                self.env,
+                self.path,
+                max_steps=max_steps,
+                last_reward=reward,
+            )
 
             print(f"Reward: {reward}")  # noqa: T201
 
@@ -154,7 +160,12 @@ class QuantumNematodeAgent:
 
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
-                reward = self.calculate_reward(self.env, self.path, max_steps=max_steps)
+                reward = self.calculate_reward(
+                    self.env,
+                    self.path,
+                    max_steps=max_steps,
+                    last_reward=reward,
+                )
 
                 # Prepare input_data for data re-uploading (one float per qubit)
                 input_data = None
@@ -278,12 +289,18 @@ class QuantumNematodeAgent:
         )
         superpositions = [(self.brain.copy(), self.env.copy(), self.path.copy())]
 
+        reward = 0.0
         for _ in range(max_steps):
             total_superpositions = len(superpositions)
             i = 0
             for brain_copy, env_copy, path_copy in superpositions:
                 gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
-                reward = self.calculate_reward(env_copy, path_copy, max_steps=max_steps)
+                reward = self.calculate_reward(
+                    env_copy,
+                    path_copy,
+                    max_steps=max_steps,
+                    last_reward=reward,
+                )
                 params = BrainParams(
                     gradient_strength=gradient_strength,
                     gradient_direction=gradient_direction,
@@ -436,11 +453,12 @@ class QuantumNematodeAgent:
             self.env.agent_pos[1] - self.env.goal[1],
         )
 
-    def calculate_reward(
+    def calculate_reward(  # noqa: C901
         self,
         env: MazeEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
+        last_reward: float = 0.0,
     ) -> float:
         """
         Calculate reward based on the agent's current state using gradient strength.
@@ -473,6 +491,9 @@ class QuantumNematodeAgent:
                 penalty_amount = -(gradient_strength / REWARD_GOAL_PROXIMITY_FACTOR)
                 reward += penalty_amount
                 logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
+            else:
+                logger.debug("[No Change] No gradient change detected. Using last reward.")
+                reward = last_reward
 
         # Strengthen penalties for no movements
         if PENALTY_STAY != 0 and len(path) > 1 and path[-1] == path[-2]:
