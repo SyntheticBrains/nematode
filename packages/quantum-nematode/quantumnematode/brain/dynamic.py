@@ -434,6 +434,7 @@ class DynamicBrain(Brain):
         post_processed_gradients = compute_gradients(
             gradients,
             self.gradient_method,
+            self.parameter_values,
         )
 
         # Store gradients for tracking
