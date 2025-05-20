@@ -1,15 +1,13 @@
-max_steps: 100
+max_steps: 200
 maze_grid_size: 5
 brain: dynamic
 shots: 1000
 body_length: 2
 qubits: 4
 learning_rate:
-  method: adam
+  method: dynamic
   parameters:
-    initial_learning_rate: 0.1
-    beta1: 0.9
-    beta2: 0.999
-    epsilon: 0.00000001
+    initial_learning_rate: 0.01
+    decay_rate: 0.001
 gradient:
   method: clip
