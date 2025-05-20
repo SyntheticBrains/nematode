@@ -267,6 +267,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
     logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
 
+    print()  # noqa: T201
+    print(f"Session ID: {timestamp}")  # noqa: T201
+
     # Final summary of all runs.
     summary(total_runs_done, max_steps, all_results)
 
@@ -557,6 +560,9 @@ def manage_simulation_halt(  # noqa: PLR0913
             logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
             logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
             logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
+
+            print()  # noqa: T201
+            print(f"Session ID: {timestamp}")  # noqa: T201
 
             # Generate partial summary
             summary(total_runs_done, max_steps, all_results)
