@@ -31,6 +31,14 @@ TOGGLE_PARAM_CLIP = True  # Toggle for parameter clipping
 TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
 TOGGLE_PARAM_MODULO = True  # Toggle for parameter modulo wrapping ([-pi, pi])
 
+# Entropy regularization coefficient for policy gradient loss.
+# Higher values (e.g., 0.1) encourage more exploration by making the policy more random,
+# which can help escape local optima but may slow convergence. Lower values (e.g., 0.01)
+# make the policy more deterministic, focusing on exploitation, but risk premature convergence.
+# Typical range: 0.01 (low exploration) to 0.1 (high exploration).
+# Example: 0.05 is a balanced default.
+ENTROPY_BETA = 0.05
+
 
 class DynamicBrain(Brain):
     """
@@ -419,8 +427,7 @@ class DynamicBrain(Brain):
             gradients.append(gradient)
 
         # Add entropy regularization to gradients
-        beta = 0.01  # Entropy regularization coefficient (tune as needed)
-        gradients = [g + beta * entropy for g in gradients]
+        gradients = [g + ENTROPY_BETA * entropy for g in gradients]
 
         logger.debug(f"Computed gradients (policy gradient + entropy): {gradients}")
 
