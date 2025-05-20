@@ -60,7 +60,7 @@ class DynamicBrain(Brain):
     concepts.
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
+    def __init__(  # noqa: PLR0913
         self,
         device: str = "CPU",
         shots: int = 100,
@@ -145,48 +145,9 @@ class DynamicBrain(Brain):
         self.history_temperatures: list[float] = []
 
         self.learning_rate = learning_rate or DynamicLearningRate()
-        if isinstance(self.learning_rate, DynamicLearningRate):
-            logger.info(
-                "Using dynamic learning rate strategy for parameter updates.",
-            )
-            logger.info(
-                f"Initial learning rate: {self.learning_rate.initial_learning_rate}",
-            )
-            logger.info(
-                f"Decay rate: {self.learning_rate.decay_rate}",
-            )
-        elif isinstance(self.learning_rate, AdamLearningRate):
-            logger.info(
-                "Using Adam learning rate strategy for parameter updates.",
-            )
-            logger.info(
-                f"Initial learning rate: {self.learning_rate.initial_learning_rate}",
-            )
-            logger.info(
-                f"Beta1: {self.learning_rate.beta1}",
-            )
-            logger.info(
-                f"Beta2: {self.learning_rate.beta2}",
-            )
-            logger.info(
-                f"Epsilon: {self.learning_rate.epsilon}",
-            )
-        elif isinstance(self.learning_rate, PerformanceBasedLearningRate):
-            logger.info(
-                "Using performance-based learning rate strategy for parameter updates.",
-            )
-            logger.info(
-                f"Initial learning rate: {self.learning_rate.learning_rate}",
-            )
-            logger.info(
-                f"Minimum learning rate: {self.learning_rate.min_learning_rate}",
-            )
-            logger.info(
-                f"Maximum learning rate: {self.learning_rate.max_learning_rate}",
-            )
-            logger.info(
-                f"Adjustment factor: {self.learning_rate.adjustment_factor}",
-            )
+        logger.info(
+            f"Using learning rate strategy: {str(self.learning_rate).replace('θ', 'theta_')}",
+        )
 
         # Log parameter initialization range
         logger.debug(

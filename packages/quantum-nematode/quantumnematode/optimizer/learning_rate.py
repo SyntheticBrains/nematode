@@ -77,6 +77,27 @@ class DynamicLearningRate:
         self.steps += 1
         return scaled_learning_rate
 
+    def __str__(self) -> str:
+        """
+        Return a string representation of the DynamicLearningRate object.
+
+        Returns
+        -------
+            str: A string representation of the object.
+        """
+        return (
+            f"DynamicLearningRate("
+            f"initial_learning_rate={self.initial_learning_rate}, "
+            f"decay_rate={self.decay_rate}, "
+            f"decay_type='{self.decay_type}', "
+            f"decay_factor={self.decay_factor}, "
+            f"step_size={self.step_size}, "
+            f"max_steps={self.max_steps}, "
+            f"power={self.power}, "
+            f"min_lr={self.min_lr}, "
+            f"steps={self.steps})"
+        )
+
 
 class AdamLearningRate:
     """
@@ -160,6 +181,25 @@ class AdamLearningRate:
         self.steps += 1
         return effective_learning_rates
 
+    def __str__(self) -> str:
+        """
+        Return a string representation of the AdamLearningRate object.
+
+        Returns
+        -------
+            str: A string representation of the object.
+        """
+        return (
+            f"AdamLearningRate("
+            f"initial_learning_rate={self.initial_learning_rate}, "
+            f"beta1={self.beta1}, "
+            f"beta2={self.beta2}, "
+            f"epsilon={self.epsilon}, "
+            f"steps={self.steps}, "
+            f"m_keys={list(self.m.keys())}, "
+            f"v_keys={list(self.v.keys())})"
+        )
+
 
 class PerformanceBasedLearningRate:
     """
@@ -222,3 +262,20 @@ class PerformanceBasedLearningRate:
         self.previous_performance = current_performance
 
         return self.learning_rate
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the PerformanceBasedLearningRate object.
+
+        Returns
+        -------
+            str: A string representation of the object.
+        """
+        return (
+            f"PerformanceBasedLearningRate("
+            f"learning_rate={self.learning_rate}, "
+            f"min_learning_rate={self.min_learning_rate}, "
+            f"max_learning_rate={self.max_learning_rate}, "
+            f"adjustment_factor={self.adjustment_factor}, "
+            f"previous_performance={self.previous_performance})"
+        )
