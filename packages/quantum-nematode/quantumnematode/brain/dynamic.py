@@ -27,9 +27,12 @@ EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor
 TEMPERATURE = 0.9  # Default temperature for softmax action selection
 
-TOGGLE_PARAM_CLIP = True  # Toggle for parameter clipping
+TOGGLE_INCLUDE_GRADIENT_STRENGTH = (
+    True  # Toggle for including gradient strength in input parameters
+)
+TOGGLE_PARAM_CLIP = False  # Toggle for parameter clipping
+TOGGLE_PARAM_MODULO = False  # Toggle for parameter modulo wrapping ([-pi, pi])
 TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
-TOGGLE_PARAM_MODULO = True  # Toggle for parameter modulo wrapping ([-pi, pi])
 
 # Entropy regularization coefficient for policy gradient loss.
 # Higher values (e.g., 0.1) encourage more exploration by making the policy more random,
@@ -300,20 +303,16 @@ class DynamicBrain(Brain):
         ry_param = None
         rz_param = None
 
-        if TOGGLE_SHORT_TERM_MEMORY:
-            rx_param = self.history_params[-1].gradient_strength
-            ry_param = (
-                self.history_params[-2].gradient_strength
-                if len(self.history_params) > 1
-                else rx_param
-            )
-            rz_param = (
-                self.history_params[-3].gradient_strength
-                if len(self.history_params) > 2  # noqa: PLR2004
-                else ry_param
-            )
+        # Determine gradient parameters for RX, RY, RZ
+        if TOGGLE_INCLUDE_GRADIENT_STRENGTH:
+            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_params) >= 3:  # noqa: PLR2004
+                rx_param = self.history_params[-1].gradient_strength
+                ry_param = self.history_params[-2].gradient_strength
+                rz_param = self.history_params[-3].gradient_strength
+            else:
+                rx_param = ry_param = rz_param = self.history_params[-1].gradient_strength
         else:
-            rx_param = ry_param = rz_param = self.history_params[-1].gradient_strength
+            rx_param = ry_param = rz_param = 0.0
 
         for i in range(self.num_qubits):
             input_params[self.parameters["rx"][i]] = self.parameter_values[
@@ -343,7 +342,10 @@ class DynamicBrain(Brain):
         counts = result.get_counts()
 
         # Decrease satiety at each step
-        self.satiety = max(0.0, self.satiety - SATIETY_DECREASE_PER_STEP)  # Decrease satiety gradually
+        self.satiety = max(
+            0.0,
+            self.satiety - SATIETY_DECREASE_PER_STEP,
+        )  # Decrease satiety gradually
 
         logger.debug(f"Satiety after step {self.steps}: {self.satiety}, ")
 
