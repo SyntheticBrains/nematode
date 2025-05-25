@@ -27,11 +27,14 @@ EXPLORATION_MIN = 0.6  # Minimum exploration factor
 EXPLORATION_MAX = 1.0  # Maximum exploration factor
 TEMPERATURE = 0.9  # Default temperature for softmax action selection
 
+TOGGLE_INCLUDE_GRADIENT_DIRECTION = (
+    True  # Toggle for including gradient direction in input parameters
+)
 TOGGLE_INCLUDE_GRADIENT_STRENGTH = (
     True  # Toggle for including gradient strength in input parameters
 )
-TOGGLE_PARAM_CLIP = False  # Toggle for parameter clipping
-TOGGLE_PARAM_MODULO = False  # Toggle for parameter modulo wrapping ([-pi, pi])
+TOGGLE_PARAM_CLIP = True  # Toggle for parameter clipping
+TOGGLE_PARAM_MODULO = True  # Toggle for parameter modulo wrapping ([-pi, pi])
 TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
 
 # Entropy regularization coefficient for policy gradient loss.
@@ -226,7 +229,7 @@ class DynamicBrain(Brain):
         qc.measure(range(self.num_qubits), range(self.num_qubits))
         return qc
 
-    def run_brain(  # noqa: PLR0915
+    def run_brain(  # noqa: PLR0912, PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,
@@ -297,33 +300,49 @@ class DynamicBrain(Brain):
             )
             self.update_parameters(gradients, norm_reward)
 
-        # Update input parameters to use parameter sharing (one per qubit per gate)
         input_params = {}
-        rx_param = None
-        ry_param = None
-        rz_param = None
+        rx_strength = None
+        ry_strength = None
+        rz_strength = None
 
-        # Determine gradient parameters for RX, RY, RZ
+        # Embed gradient strengths
         if TOGGLE_INCLUDE_GRADIENT_STRENGTH:
             if TOGGLE_SHORT_TERM_MEMORY and len(self.history_params) >= 3:  # noqa: PLR2004
-                rx_param = self.history_params[-1].gradient_strength
-                ry_param = self.history_params[-2].gradient_strength
-                rz_param = self.history_params[-3].gradient_strength
+                rx_strength = self.history_params[-1].gradient_strength
+                ry_strength = self.history_params[-2].gradient_strength
+                rz_strength = self.history_params[-3].gradient_strength
             else:
-                rx_param = ry_param = rz_param = self.history_params[-1].gradient_strength
+                rx_strength = ry_strength = rz_strength = self.history_params[-1].gradient_strength
         else:
-            rx_param = ry_param = rz_param = 0.0
+            rx_strength = ry_strength = rz_strength = 0.0
+
+        # Embed gradient directions
+        if TOGGLE_INCLUDE_GRADIENT_DIRECTION:
+            if TOGGLE_SHORT_TERM_MEMORY and len(self.history_params) >= 3:  # noqa: PLR2004
+                rx_dir = self.history_params[-1].gradient_direction
+                ry_dir = self.history_params[-2].gradient_direction
+                rz_dir = self.history_params[-3].gradient_direction
+            else:
+                rx_dir = ry_dir = rz_dir = self.history_params[-1].gradient_direction
+        else:
+            rx_dir = ry_dir = rz_dir = 0.0
 
         for i in range(self.num_qubits):
-            input_params[self.parameters["rx"][i]] = self.parameter_values[
-                f"θ_rx_{i}"
-            ] + rx_param * np.cos(i * np.pi / self.num_qubits)
-            input_params[self.parameters["ry"][i]] = self.parameter_values[
-                f"θ_ry_{i}"
-            ] + ry_param * np.cos(i * np.pi / self.num_qubits)
-            input_params[self.parameters["rz"][i]] = self.parameter_values[
-                f"θ_rz_{i}"
-            ] + rz_param * np.cos(i * np.pi / self.num_qubits)
+            input_params[self.parameters["rx"][i]] = (
+                self.parameter_values[f"θ_rx_{i}"]
+                + rx_strength * np.cos(i * np.pi / self.num_qubits)
+                + rx_dir * np.sin(i * np.pi / self.num_qubits)
+            )
+            input_params[self.parameters["ry"][i]] = (
+                self.parameter_values[f"θ_ry_{i}"]
+                + ry_strength * np.cos(i * np.pi / self.num_qubits)
+                + ry_dir * np.sin(i * np.pi / self.num_qubits)
+            )
+            input_params[self.parameters["rz"][i]] = (
+                self.parameter_values[f"θ_rz_{i}"]
+                + rz_strength * np.cos(i * np.pi / self.num_qubits)
+                + rz_dir * np.sin(i * np.pi / self.num_qubits)
+            )
 
         # Store latest input parameters for tracking
         self.latest_input_parameters = input_params
