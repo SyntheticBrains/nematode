@@ -39,6 +39,10 @@ TOGGLE_PARAM_MODULO = True  # Toggle for parameter modulo wrapping ([-pi, pi])
 # Example: 0.05 is a balanced default.
 ENTROPY_BETA = 0.05
 
+# Satiety decrease per step. Lower values slow down satiety decay (longer exploration),
+# higher values speed it up (faster exploitation). Typical: 0.001 (slow), 0.01 (fast).
+SATIETY_DECREASE_PER_STEP = 0.001
+
 
 class DynamicBrain(Brain):
     """
@@ -339,7 +343,7 @@ class DynamicBrain(Brain):
         counts = result.get_counts()
 
         # Decrease satiety at each step
-        self.satiety = max(0.0, self.satiety - 0.01)  # Decrease satiety gradually
+        self.satiety = max(0.0, self.satiety - SATIETY_DECREASE_PER_STEP)  # Decrease satiety gradually
 
         logger.debug(f"Satiety after step {self.steps}: {self.satiety}, ")
 
