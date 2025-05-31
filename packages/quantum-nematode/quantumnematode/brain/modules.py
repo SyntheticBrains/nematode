@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain import BrainParams
+from quantumnematode.brain.arch import BrainParams
 
 
 def proprioception_features(params: BrainParams, _satiety: float = 1.0) -> dict[str, float]:

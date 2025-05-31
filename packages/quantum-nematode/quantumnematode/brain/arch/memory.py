@@ -8,7 +8,7 @@ from qiskit.circuit import (  # pyright: ignore[reportMissingImports]
 )
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain import Brain, BrainParams
+from quantumnematode.brain.arch import Brain, BrainParams
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 
