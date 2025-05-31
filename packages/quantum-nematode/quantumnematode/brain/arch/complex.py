@@ -7,7 +7,7 @@ from qiskit.providers.fake_provider import (  # pyright: ignore[reportMissingImp
     GenericBackendV2,
 )
 
-from quantumnematode.brain._brain import Brain, BrainParams
+from quantumnematode.brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 
