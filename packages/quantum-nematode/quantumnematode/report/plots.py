@@ -237,7 +237,6 @@ def plot_tracking_data_per_run(
         "rewards": getattr(agent.brain, "history_rewards", None),
         "rewards_norm": getattr(agent.brain, "history_rewards_norm", None),
         "learning_rates": getattr(agent.brain, "history_learning_rates", None),
-        "exploration_factors": getattr(agent.brain, "history_exploration_factors", None),
         "temperatures": getattr(agent.brain, "history_temperatures", None),
     }
     for key, values in tracked.items():

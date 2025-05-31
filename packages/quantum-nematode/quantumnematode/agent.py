@@ -564,8 +564,6 @@ class QuantumNematodeAgent:
             self.brain.history_rewards_norm = []  # type: ignore[assignment]
         if hasattr(self.brain, "history_learning_rates"):
             self.brain.history_learning_rates = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_exploration_factors"):
-            self.brain.history_exploration_factors = []  # type: ignore[assignment]
         if hasattr(self.brain, "history_temperatures"):
             self.brain.history_temperatures = []  # type: ignore[assignment]
 

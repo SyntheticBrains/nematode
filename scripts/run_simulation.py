@@ -176,7 +176,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         "computed_gradients": [],
         "learning_rate": [],
         "updated_parameters": [],
-        "exploration_factor": [],
         "temperature": [],
     }
 
@@ -242,7 +241,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data["computed_gradients"].append(agent.brain.latest_gradients)
                 tracking_data["learning_rate"].append(agent.brain.latest_learning_rate)
                 tracking_data["updated_parameters"].append(agent.brain.latest_updated_parameters)
-                tracking_data["exploration_factor"].append(agent.brain.latest_exploration_factor)
                 tracking_data["temperature"].append(agent.brain.latest_temperature)
 
             if track_per_run and brain_type == "dynamic":
