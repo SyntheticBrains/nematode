@@ -9,7 +9,7 @@ from pathlib import Path
 from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
     QuantumNematodeAgent,
 )
-from quantumnematode.brain._brain import Brain  # pyright: ignore[reportMissingImports]
+from quantumnematode.brain.arch import Brain  # pyright: ignore[reportMissingImports]
 from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_BRAIN,
@@ -346,13 +346,13 @@ def setup_brain_model(  # noqa: PLR0913
         ValueError: If an unknown brain type is provided.
     """
     if brain_type == "simple":
-        from quantumnematode.brain.simple import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.simple import (  # pyright: ignore[reportMissingImports]
             SimpleBrain,
         )
 
         brain = SimpleBrain(device=device, shots=shots)
     elif brain_type == "complex":
-        from quantumnematode.brain.complex import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.complex import (  # pyright: ignore[reportMissingImports]
             ComplexBrain,
         )
 
@@ -362,19 +362,19 @@ def setup_brain_model(  # noqa: PLR0913
             )
         brain = ComplexBrain(device=device, shots=shots)
     elif brain_type == "reduced":
-        from quantumnematode.brain.reduced import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.reduced import (  # pyright: ignore[reportMissingImports]
             ReducedBrain,
         )
 
         brain = ReducedBrain(device=device, shots=shots)
     elif brain_type == "memory":
-        from quantumnematode.brain.memory import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.memory import (  # pyright: ignore[reportMissingImports]
             MemoryBrain,
         )
 
         brain = MemoryBrain(device=device, shots=shots)
     elif brain_type == "dynamic":
-        from quantumnematode.brain.dynamic import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.dynamic import (  # pyright: ignore[reportMissingImports]
             DynamicBrain,
         )
 
@@ -386,7 +386,7 @@ def setup_brain_model(  # noqa: PLR0913
             gradient_method=gradient_method,
         )
     elif brain_type == "modular":
-        from quantumnematode.brain.modular import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.modular import (  # pyright: ignore[reportMissingImports]
             ModularBrain,
         )
 

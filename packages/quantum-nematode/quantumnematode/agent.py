@@ -15,7 +15,7 @@ from quantumnematode.constants import (
 )
 from quantumnematode.models import ActionData
 
-from .brain import Brain, BrainParams
+from .brain.arch import Brain, BrainParams
 from .env import MazeEnvironment
 from .logging_config import logger
 
