@@ -19,12 +19,10 @@ from .brain._brain import Brain, BrainParams
 from .env import MazeEnvironment
 from .logging_config import logger
 
-PENALTY_STAY = 0
-PENALTY_STEP = 0.01
-PENALTY_STEP_FURTHER = 0.02
-REWARD_GOAL = 0.1
-REWARD_GOAL_PROXIMITY_FACTOR = 2
-REWARD_STEP_CLOSER = 0.05
+ANTI_DITHERING_PENALTY = 0.05  # Penalty for oscillating (revisiting previous cell)
+DISTANCE_REWARD_SCALE = 0.2  # Scale the distance reward for smoother learning
+GOAL_REWARD = 0.1
+STEP_PENALTY = 0.01
 
 
 class QuantumNematodeAgent:
@@ -104,7 +102,6 @@ class QuantumNematodeAgent:
                 self.env,
                 self.path,
                 max_steps=max_steps,
-                last_reward=reward,
             )
 
             print(f"Reward: {reward}")  # noqa: T201
@@ -167,7 +164,6 @@ class QuantumNematodeAgent:
                     self.env,
                     self.path,
                     max_steps=max_steps,
-                    last_reward=reward,
                 )
 
                 # Prepare input_data for data re-uploading (one float per qubit)
@@ -302,7 +298,6 @@ class QuantumNematodeAgent:
                     env_copy,
                     path_copy,
                     max_steps=max_steps,
-                    last_reward=reward,
                 )
                 params = BrainParams(
                     gradient_strength=gradient_strength,
@@ -456,15 +451,14 @@ class QuantumNematodeAgent:
             self.env.agent_pos[1] - self.env.goal[1],
         )
 
-    def calculate_reward(  # noqa: C901
+    def calculate_reward(
         self,
         env: MazeEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
-        last_reward: float = 0.0,
     ) -> float:
         """
-        Calculate reward based on the agent's current state using gradient strength.
+        Calculate reward based on the agent's movement toward the goal.
 
         Returns
         -------
@@ -472,64 +466,56 @@ class QuantumNematodeAgent:
             Reward value based on the agent's performance.
         """
         reward = 0.0
+        distance_reward = 0.0
+        goal_bonus = 0.0
+        anti_dither_penalty = 0.0
+        prev_dist = None
+        curr_dist = None
 
-        # Get the current gradient strength from the environment
-        gradient_strength, _ = env.get_state(path[-1])
-
-        # Calculate the change in gradient strength since the last step
-        previous_gradient_strength = None
-        if len(path) > 1:
-            previous_gradient_strength, _ = env.get_state(path[-2])
-            gradient_change = gradient_strength - previous_gradient_strength
-        else:
-            gradient_change = 0
-
-        # Enhance reward signal for gradient improvement and vice versa
-        if previous_gradient_strength is not None:
-            if gradient_change > 0:
-                reward_amount = gradient_strength / REWARD_GOAL_PROXIMITY_FACTOR
-                reward += reward_amount
-                logger.debug(f"[Reward] Gradient improvement reward applied: {reward_amount}.")
-            elif gradient_change < 0:
-                penalty_amount = -(gradient_strength / REWARD_GOAL_PROXIMITY_FACTOR)
-                reward += penalty_amount
-                logger.debug(f"[Penalty] Gradient weakening penalty applied: {penalty_amount}.")
-            else:
-                logger.debug("[No Change] No gradient change detected. Using last reward.")
-                reward = last_reward
-
-        # --- Reward shaping: step penalty and distance-based reward ---
-        reward -= PENALTY_STEP  # Small penalty for each step
+        # Only compute distance-based reward if goal exists
         if env.goal is not None:
             curr_pos = env.agent_pos
             curr_dist = abs(curr_pos[0] - env.goal[0]) + abs(curr_pos[1] - env.goal[1])
             if len(path) > 1:
                 prev_pos = path[-2]
                 prev_dist = abs(prev_pos[0] - env.goal[0]) + abs(prev_pos[1] - env.goal[1])
-                if curr_dist < prev_dist:
-                    reward += REWARD_STEP_CLOSER  # Reward for getting closer
-                elif curr_dist > prev_dist:
-                    reward -= PENALTY_STEP_FURTHER  # Penalty for getting further
+                # Magnitude-based reward: positive if agent gets closer, negative if further
+                distance_reward = DISTANCE_REWARD_SCALE * (prev_dist - curr_dist)
+                reward += distance_reward
+                logger.debug(
+                    f"[Reward] Scaled distance reward: {distance_reward} "
+                    f"(prev_dist={prev_dist}, curr_dist={curr_dist})",
+                )
+                # Anti-dithering: penalize if agent oscillates (returns to previous cell)
+                if len(path) > 2 and curr_pos == path[-3]:  # noqa: PLR2004
+                    anti_dither_penalty = ANTI_DITHERING_PENALTY
+                    reward -= anti_dither_penalty
+                    logger.debug(
+                        f"[Penalty] Anti-dithering penalty applied: "
+                        f"{-anti_dither_penalty} (oscillation detected)",
+                    )
+            else:
+                logger.debug("[Reward] First step, no previous position for distance reward.")
 
-        # Strengthen penalties for no movements
-        if PENALTY_STAY != 0 and len(path) > 1 and path[-1] == path[-2]:
-            penalty_amount = PENALTY_STAY
-            reward += penalty_amount
-            logger.debug(f"[Penalty] No movement penalty applied: {penalty_amount}.")
+        # Step penalty (applies every step)
+        reward -= STEP_PENALTY
+        logger.debug(f"[Penalty] Step penalty applied: {-STEP_PENALTY}.")
 
-        # Reward efficient paths by scaling inversely with steps
-        efficiency_factor = None
+        # Bonus for reaching the goal, scaled by efficiency (fewer steps = higher bonus)
         if env.reached_goal():
-            efficiency_factor = max(0.1, 1 - (self.steps / max_steps))  # Scale inversely with steps
-            reward_amount = REWARD_GOAL * efficiency_factor
-            reward += reward_amount  # Further scale goal reward dynamically based on speed
-            logger.debug(f"[Reward] Goal reached, efficiency factor applied: {reward_amount}.")
+            efficiency = max(0.1, 1 - (self.steps / max_steps))
+            goal_bonus = GOAL_REWARD * efficiency
+            reward += goal_bonus
+            logger.debug(
+                f"[Reward] Goal reached! Efficiency bonus applied: "
+                f"{goal_bonus} (efficiency={efficiency}).",
+            )
 
         logger.debug(
-            f"Gradient strength: {gradient_strength}, "
-            f"Gradient change: {gradient_change}, Reward: {reward}",
+            f"Reward breakdown: distance_reward={distance_reward}, "
+            f"step_penalty={-STEP_PENALTY}, anti_dither_penalty={-anti_dither_penalty}, "
+            f"goal_bonus={goal_bonus}, total_reward={reward}",
         )
-
         return reward
 
     def reset_environment(self) -> None:
