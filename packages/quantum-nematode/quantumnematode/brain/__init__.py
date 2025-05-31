@@ -1,9 +1,20 @@
-"""Module for quantum brain architectures."""
+"""Module for quantum brain."""
 
-from .complex import ComplexBrain
-from .dynamic import DynamicBrain
-from .memory import MemoryBrain
-from .reduced import ReducedBrain
-from .simple import SimpleBrain
+from .arch._brain import Brain, BrainParams
+from .arch.complex import ComplexBrain
+from .arch.dynamic import DynamicBrain
+from .arch.memory import MemoryBrain
+from .arch.modular import ModularBrain
+from .arch.reduced import ReducedBrain
+from .arch.simple import SimpleBrain
 
-__all__ = ["ComplexBrain", "DynamicBrain", "MemoryBrain", "ReducedBrain", "SimpleBrain"]
+__all__ = [
+    "Brain",
+    "BrainParams",
+    "ComplexBrain",
+    "DynamicBrain",
+    "MemoryBrain",
+    "ModularBrain",
+    "ReducedBrain",
+    "SimpleBrain",
+]

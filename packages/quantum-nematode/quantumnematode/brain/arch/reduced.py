@@ -5,7 +5,7 @@ from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain._brain import Brain, BrainParams
+from quantumnematode.brain import Brain, BrainParams
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 
