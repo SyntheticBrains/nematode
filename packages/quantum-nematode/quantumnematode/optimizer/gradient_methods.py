@@ -50,13 +50,8 @@ def compute_gradients(
             max_gradient = max(abs(g) for g in gradients)
             return [g / max_gradient if max_gradient > 0 else g for g in gradients]
         case GradientCalculationMethod.CLIP:
-            # If max_clip_gradient is a dict, use per-parameter clipping
+            # If max_clip_gradient is a dict, set clip to 1.0 for all gradients
             if isinstance(max_clip_gradient, dict):
-                return [
-                    max(
-                        -max_clip_gradient.get(param, 1.0),
-                        min(g, max_clip_gradient.get(param, 1.0)),
-                    )
-                    for g, param in zip(gradients, max_clip_gradient.keys(), strict=False)
-                ]
+                max_clip_gradient = 1.0
+
             return [max(-max_clip_gradient, min(g, max_clip_gradient)) for g in gradients]
