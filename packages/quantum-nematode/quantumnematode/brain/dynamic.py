@@ -241,7 +241,7 @@ class DynamicBrain(Brain):
         qc.measure(range(self.num_qubits), range(self.num_qubits))
         return qc
 
-    def run_brain(  # noqa: PLR0912, PLR0915
+    def run_brain(  # noqa: C901, PLR0912, PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,
@@ -331,8 +331,14 @@ class DynamicBrain(Brain):
         # Embed gradient directions
         if TOGGLE_INCLUDE_GRADIENT_DIRECTION:
 
-            def safe_dir(idx):
-                val = self.history_params[idx].gradient_direction
+            def safe_dir(idx: int) -> float:
+                val = getattr(self.history_params[idx], "gradient_direction", None)
+
+                if val is None:
+                    logger.warning(
+                        f"Gradient direction for index {idx} is None, defaulting to 0.0.",
+                    )
+
                 return (val if val is not None else 0.0) * GRADIENT_DIRECTION_FACTOR
 
             if TOGGLE_SHORT_TERM_MEMORY and len(self.history_params) >= 3:  # noqa: PLR2004
