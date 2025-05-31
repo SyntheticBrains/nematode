@@ -122,7 +122,7 @@ class QuantumNematodeAgent:
                 agent_position=agent_pos,
                 agent_direction=self.env.current_direction,
             )
-            # Only pass input_data if supported by run_brain (DynamicBrain)
+            # Only pass input_data if supported by run_brain (DynamicBrain/ModularBrain)
             if (
                 hasattr(self.brain, "run_brain")
                 and "input_data" in self.brain.run_brain.__code__.co_varnames
@@ -545,7 +545,7 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        # Reset the brain's history (currently only for DynamicBrain)
+        # Reset the brain's history (currently only for DynamicBrain/ModularBrain))
         if hasattr(self.brain, "history_params"):
             self.brain.history_params = []  # type: ignore[assignment]
         if hasattr(self.brain, "history_input_parameters"):
