@@ -157,8 +157,6 @@ class DynamicBrain(Brain):
         self.latest_action: ActionData | None = None
         self.latest_gradients = None
         self.latest_learning_rate = None
-        self.latest_exploration_factor = None
-        self.latest_temperature = None
 
         self.history_params: list[BrainParams] = []
         self.history_input_parameters: list[dict[str, float]] = []
@@ -169,7 +167,6 @@ class DynamicBrain(Brain):
         self.history_rewards: list[float] = []
         self.history_rewards_norm: list[float] = []
         self.history_learning_rates: list[float | dict[str, float]] = []
-        self.history_exploration_factors: list[float] = []
         self.history_temperatures: list[float] = []
 
         self.learning_rate = learning_rate or DynamicLearningRate()
@@ -188,6 +185,13 @@ class DynamicBrain(Brain):
             f"mean={self.reward_mean}, var={self.reward_var}, "
             f"baseline={self.reward_baseline}, alpha={self.reward_alpha}",
         )
+
+        # --- Temperature annealing parameters ---
+        self.initial_temperature = 1.0
+        self.final_temperature = 0.5
+        self.temperature_decay = 0.9999  # Exponential decay per step
+        self.anneal_step = 0
+        self.latest_temperature = self.initial_temperature
 
     def build_brain(self, input_data: list[float] | None = None) -> QuantumCircuit:
         """
@@ -371,19 +375,19 @@ class DynamicBrain(Brain):
         if self.satiety <= 0.0:
             logger.warning("Satiety is zero.")
 
-        # Calculate exploration factor based on satiety
-        # NOTE: Not used anymore, previously used for temperature calculation
-        self.latest_exploration_factor = (
-            EXPLORATION_MIN + (EXPLORATION_MAX - EXPLORATION_MIN) * self.satiety
+        # Update temperature using annealing schedule at the end of each run_brain call
+        self.latest_temperature = max(
+            self.final_temperature,
+            self.initial_temperature * (self.temperature_decay**self.anneal_step),
         )
-        self.latest_temperature = TEMPERATURE * self.latest_exploration_factor
-
-        self.history_temperatures.append(self.latest_temperature)
-        self.history_exploration_factors.append(self.latest_temperature)
+        self.anneal_step += 1
+        temp_to_log = (
+            self.latest_temperature if self.latest_temperature is not None else TEMPERATURE
+        )
+        self.history_temperatures.append(temp_to_log)
 
         logger.debug(
-            f"Exploration factor: {self.latest_exploration_factor}, "
-            f"Temperature: {self.latest_temperature}",
+            f"Temperature (annealed): {temp_to_log}",
         )
 
         self.latest_counts = counts
@@ -768,6 +772,7 @@ class DynamicBrain(Brain):
         new_brain.steps = self.steps
         new_brain.satiety = self.satiety
         new_brain.gradient_method = self.gradient_method
+        new_brain.anneal_step = self.anneal_step
 
         new_brain.latest_input_parameters = deepcopy(self.latest_input_parameters)
         new_brain.latest_updated_parameters = deepcopy(self.latest_updated_parameters)
@@ -775,7 +780,6 @@ class DynamicBrain(Brain):
         new_brain.latest_action = deepcopy(self.latest_action)
         new_brain.latest_gradients = deepcopy(self.latest_gradients)
         new_brain.latest_learning_rate = self.latest_learning_rate
-        new_brain.latest_exploration_factor = self.latest_exploration_factor
         new_brain.latest_temperature = self.latest_temperature
 
         new_brain.learning_rate = deepcopy(self.learning_rate) if self.learning_rate else None
