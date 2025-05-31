@@ -45,6 +45,14 @@ TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
 # Example: 0.05 is a balanced default.
 ENTROPY_BETA = 0.07
 
+# Factor to scale the gradient direction. This controls how much the agent's direction
+# is influenced by the gradient direction. A lower value (e.g., 0.25) means the agent
+# will follow the gradient direction more subtly, while a higher value (e.g., 1.0)
+# means it will follow it more strongly.
+# Typical range: 0.1 (subtle influence) to 1.0 (strong influence).
+# NOTE: Not tested thoroughly yet, so use with caution.
+GRADIENT_DIRECTION_FACTOR = 0.25
+
 # Satiety decrease per step. Lower values slow down satiety decay (longer exploration),
 # higher values speed it up (faster exploitation). Typical: 0.001 (slow), 0.01 (fast).
 SATIETY_DECREASE_PER_STEP = 0.001
@@ -322,12 +330,20 @@ class DynamicBrain(Brain):
 
         # Embed gradient directions
         if TOGGLE_INCLUDE_GRADIENT_DIRECTION:
+
+            def safe_dir(idx):
+                val = self.history_params[idx].gradient_direction
+                return (val if val is not None else 0.0) * GRADIENT_DIRECTION_FACTOR
+
             if TOGGLE_SHORT_TERM_MEMORY and len(self.history_params) >= 3:  # noqa: PLR2004
-                rx_dir = self.history_params[-1].gradient_direction
-                ry_dir = self.history_params[-2].gradient_direction
-                rz_dir = self.history_params[-3].gradient_direction
+                rx_dir = safe_dir(-1)
+                ry_dir = safe_dir(-2)
+                rz_dir = safe_dir(-3)
             else:
-                rx_dir = ry_dir = rz_dir = self.history_params[-1].gradient_direction
+                val = self.history_params[-1].gradient_direction
+                rx_dir = ry_dir = rz_dir = (
+                    val if val is not None else 0.0
+                ) * GRADIENT_DIRECTION_FACTOR
         else:
             rx_dir = ry_dir = rz_dir = 0.0
 
