@@ -43,7 +43,7 @@ TOGGLE_SHORT_TERM_MEMORY = True  # Toggle for short-term memory
 # make the policy more deterministic, focusing on exploitation, but risk premature convergence.
 # Typical range: 0.01 (low exploration) to 0.1 (high exploration).
 # Example: 0.05 is a balanced default.
-ENTROPY_BETA = 0.05
+ENTROPY_BETA = 0.07
 
 # Satiety decrease per step. Lower values slow down satiety decay (longer exploration),
 # higher values speed it up (faster exploitation). Typical: 0.001 (slow), 0.01 (fast).
