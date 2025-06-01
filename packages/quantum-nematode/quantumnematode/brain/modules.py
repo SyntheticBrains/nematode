@@ -63,9 +63,15 @@ def chemotaxis_features(
     -------
         Dictionary with rx, ry, rz values for chemotaxis qubit(s).
     """
+    # Normalize gradient_strength (0-1) to [-pi, pi]
+    grad_strength = params.gradient_strength or 0.0
+    grad_strength_scaled = grad_strength * 2 * np.pi - np.pi
+
+    # gradient_direction is assumed to already be in [-pi, pi]
+    grad_direction = params.gradient_direction or 0.0
     return {
-        "rx": params.gradient_strength or 0.0,
-        "ry": params.gradient_direction or 0.0,
+        "rx": grad_strength_scaled,
+        "ry": grad_direction,
         "rz": 0.0,
     }
 
