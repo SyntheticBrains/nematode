@@ -7,7 +7,10 @@ import numpy as np  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain.arch import BrainParams
 
 
-def proprioception_features(params: BrainParams, _satiety: float = 1.0) -> dict[str, float]:
+def proprioception_features(
+    params: BrainParams,
+    satiety: float = 1.0,  # noqa: ARG001
+) -> dict[str, float]:
     """
     Extract proprioception features: agent position and direction.
 
@@ -25,7 +28,10 @@ def proprioception_features(params: BrainParams, _satiety: float = 1.0) -> dict[
     return {"rx": x, "ry": y, "rz": direction}
 
 
-def chemotaxis_features(params: BrainParams, _satiety: float = 1.0) -> dict[str, float]:
+def chemotaxis_features(
+    params: BrainParams,
+    satiety: float = 1.0,  # noqa: ARG001
+) -> dict[str, float]:
     """
     Extract chemotaxis features: gradient strength and direction.
 
@@ -44,7 +50,10 @@ def chemotaxis_features(params: BrainParams, _satiety: float = 1.0) -> dict[str,
     }
 
 
-def thermotaxis_features(_params: BrainParams, _satiety: float = 1.0) -> dict[str, float]:
+def thermotaxis_features(
+    params: BrainParams,  # noqa: ARG001
+    satiety: float = 1.0,  # noqa: ARG001
+) -> dict[str, float]:
     """
     Extract thermotaxis features (placeholder).
 
@@ -59,7 +68,10 @@ def thermotaxis_features(_params: BrainParams, _satiety: float = 1.0) -> dict[st
     return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
 
 
-def oxygen_features(_params: BrainParams, _satiety: float = 1.0) -> dict[str, float]:
+def oxygen_features(
+    params: BrainParams,  # noqa: ARG001
+    satiety: float = 1.0,  # noqa: ARG001
+) -> dict[str, float]:
     """
     Extract oxygen sensing features (placeholder).
 
@@ -74,7 +86,10 @@ def oxygen_features(_params: BrainParams, _satiety: float = 1.0) -> dict[str, fl
     return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
 
 
-def vision_features(_params: BrainParams, satiety: float = 1.0) -> dict[str, float]:
+def vision_features(
+    params: BrainParams,  # noqa: ARG001
+    satiety: float = 1.0,
+) -> dict[str, float]:
     """
     Extract vision features (placeholder, encodes satiety in rz).
 
