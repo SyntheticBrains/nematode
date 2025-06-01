@@ -391,6 +391,20 @@ class ModularBrain(Brain):
         reward: float,  # noqa: ARG002
         action: ActionData,  # noqa: ARG002
     ) -> list[float]:
+        """
+        Compute gradients based on measurement counts, reward, and action.
+
+        This method is not implemented for ModularBrain. Use parameter_shift_gradients instead.
+
+        Args:
+            counts: Measurement counts from the quantum circuit.
+            reward: Reward signal to guide gradient computation.
+            action: The action taken (for log-prob gradient).
+
+        Raises
+        ------
+            NotImplementedError: This method is not implemented for ModularBrain.
+        """
         error_message = (
             "compute_gradients is not implemented for ModularBrain. "
             "Use parameter_shift_gradients instead."

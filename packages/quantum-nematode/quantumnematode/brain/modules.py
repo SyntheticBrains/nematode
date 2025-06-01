@@ -1,4 +1,13 @@
-"""Feature extraction modules for ModularBrain."""
+"""
+Feature extraction modules for ModularBrain.
+
+Other possible modules to add in the short term (excluding placeholders):
+- Satiety/hunger
+- Touch/tactile
+- Memory (short-term/long-term)
+- Decision-making (e.g., reinforcement learning)
+
+"""
 
 from typing import Any
 
@@ -12,7 +21,10 @@ def proprioception_features(
     satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[str, float]:
     """
-    Extract proprioception features: agent position and direction.
+    Extract proprioception features: agent's own direction only.
+
+    In future, this could be extended to include more complex proprioceptive data
+    such as joint angles, body posture/bend, local relative position, etc.
 
     Args:
         params: BrainParams containing agent state.
@@ -22,10 +34,9 @@ def proprioception_features(
     -------
         Dictionary with rx, ry, rz values for proprioception qubit(s).
     """
-    x, y = params.agent_position or (0.0, 0.0)
     direction_map = {"up": 0.0, "down": np.pi, "left": np.pi / 2, "right": -np.pi / 2}
     direction = direction_map.get(params.agent_direction or "up", 0.0)
-    return {"rx": x, "ry": y, "rz": direction}
+    return {"rx": 0.0, "ry": 0.0, "rz": direction}
 
 
 def chemotaxis_features(
@@ -88,20 +99,20 @@ def oxygen_features(
 
 def vision_features(
     params: BrainParams,  # noqa: ARG001
-    satiety: float = 1.0,
+    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[str, float]:
     """
-    Extract vision features (placeholder, encodes satiety in rz).
+    Extract vision features (placeholder).
 
     Args:
         params: BrainParams containing agent state.
-        satiety: Current satiety value.
+        satiety: Current satiety value (unused).
 
     Returns
     -------
         Dictionary with rx, ry, rz values for vision qubit(s).
     """
-    return {"rx": 0.0, "ry": 0.0, "rz": satiety}
+    return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
 
 
 MODULE_FEATURE_EXTRACTORS: dict[str, Any] = {
