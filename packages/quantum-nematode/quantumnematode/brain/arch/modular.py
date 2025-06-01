@@ -387,40 +387,16 @@ class ModularBrain(Brain):
 
     def compute_gradients(
         self,
-        counts: dict[str, int],
-        reward: float,
-        action: ActionData,
+        counts: dict[str, int],  # noqa: ARG002
+        reward: float,  # noqa: ARG002
+        action: ActionData,  # noqa: ARG002
     ) -> list[float]:
-        """
-        Compute gradients based on counts and reward, using a standard policy gradient approach.
-
-        Args:
-            counts: Measurement counts from the quantum circuit.
-            reward: Reward signal to guide gradient computation.
-            action: The action taken (for log-prob gradient).
-
-        Returns
-        -------
-            Gradients for each parameter.
-        """
-        total_shots = sum(counts.values())
-        probabilities = {key: value / total_shots for key, value in counts.items()}
-        gradients = []
-        binary_states = [f"{{:0{self.num_qubits}b}}".format(i) for i in range(2**self.num_qubits)]
-        entropy = 0.0
-
-        for key in binary_states:
-            probability = probabilities.get(key, 1e-8)
-            log_prob = np.log(probability)
-            entropy -= probability * log_prob
-            gradient = reward * (1 - probability) if key == action.state else -reward * probability
-            gradients.append(gradient)
-
-        # Entropy regularization
-        gradients = [g + ENTROPY_BETA * entropy for g in gradients]
-        self.latest_gradients = gradients
-
-        return gradients
+        error_message = (
+            "compute_gradients is not implemented for ModularBrain. "
+            "Use parameter_shift_gradients instead."
+        )
+        logger.error(error_message)
+        raise NotImplementedError(error_message)
 
     def update_parameters(
         self,
