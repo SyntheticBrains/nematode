@@ -12,6 +12,7 @@ from quantumnematode.brain.arch import Brain, BrainParams
 from quantumnematode.brain.modules import extract_features_for_module
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
+from quantumnematode.optimizer.learning_rate import DynamicLearningRate
 
 # Example: Define the available modules and their qubit assignments
 DEFAULT_MODULES: dict[str, list[int]] = {
@@ -37,6 +38,7 @@ class ModularBrain(Brain):
         modules: dict[str, list[int]] | None = None,
         shots: int = 100,
         device: str = "CPU",
+        learning_rate: DynamicLearningRate | None = None,
     ) -> None:
         """
         Initialize the ModularBrain.
@@ -54,6 +56,7 @@ class ModularBrain(Brain):
         self.shots: int = shots
         self.device: str = device.upper()
         self.satiety: float = 1.0
+        self.learning_rate = learning_rate or DynamicLearningRate()
 
         self.parameters: dict[str, list[Parameter]] = {
             "rx": [Parameter(f"θ_rx_{i}") for i in range(self.num_qubits)],
@@ -206,8 +209,8 @@ class ModularBrain(Brain):
         # --- Reward-based learning: compute gradients and update parameters ---
         if reward is not None and self.latest_action is not None:
             gradients = self.parameter_shift_gradients(params, self.latest_action, reward)
-            # TODO: Add dynamic learning rate based on reward
-            self.update_parameters(gradients, reward=reward, learning_rate=0.01)
+            lr = self.learning_rate.get_learning_rate()
+            self.update_parameters(gradients, reward=reward, learning_rate=lr)
 
         self.history_rewards.append(reward or 0.0)
 
