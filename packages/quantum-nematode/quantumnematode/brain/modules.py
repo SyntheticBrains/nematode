@@ -1,6 +1,15 @@
 """
 Feature extraction modules for ModularBrain.
 
+These modules extract features from the agent's state and environment,
+which are then used to inform the agent's actions. Each module corresponds to a
+specific aspect of the agent's sensory input or internal state.
+
+The features are extracted as RX, RY, and RZ values for the qubits assigned to each module.
+
+In the future, features can take more advanced forms, such as sub-circuits, groups of qubits,
+or even more complex quantum operations.
+
 Other possible modules to add in the short term (excluding placeholders):
 - Satiety/hunger
 - Touch/tactile
