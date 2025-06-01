@@ -64,18 +64,24 @@ class ModularBrain(Brain):
         self.parameter_values.update({f"θ_ry_{i}": 0.0 for i in range(self.num_qubits)})
         self.parameter_values.update({f"θ_rz_{i}": 0.0 for i in range(self.num_qubits)})
 
-        self.latest_input_parameters: dict[str, dict[str, float]] | None = None
+        self.latest_input_parameters: dict[str, float] | None = None
+        self.latest_updated_parameters: dict[str, float] | None = None
         self.latest_counts: dict[str, int] | None = None
         self.latest_action: ActionData | None = None
-        self.latest_gradients: Any = None
-        self.latest_learning_rate: Any = None
-        self.latest_updated_parameters: Any = None
-        self.latest_temperature: Any = None
+        self.latest_gradients: list[float] | None = None
+        self.latest_learning_rate: float | None = None
+        self.latest_temperature: float | None = None  # Not used
 
-        self.history_params: list[Any] = []
-        self.history_input_parameters: list[Any] = []
-        self.history_counts: list[Any] = []
-        self.history_actions: list[Any] = []
+        self.history_input_parameters: list[dict[str, float]] = []
+        self.history_updated_parameters: list[dict[str, float]] = []
+        self.history_gradients: list[list[float]] = []
+        self.history_gradient_strengths: list[float] = []
+        self.history_gradient_directions: list[float] = []
+        self.history_rewards: list[float] = []
+        self.history_learning_rates: list[float | dict[str, float]] = []
+        self.history_counts: list[dict[str, int]] = []
+        self.history_actions: list[ActionData] = []
+        self.history_temperature: list[float] = []  # Not used
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
@@ -165,12 +171,26 @@ class ModularBrain(Brain):
         -------
             Measurement counts from the quantum circuit.
         """
+        gradient_strength = params.gradient_strength
+        if gradient_strength:
+            self.history_gradient_strengths.append(gradient_strength)  # Used for reporting only
+
+        gradient_direction = params.gradient_direction
+        if gradient_direction:
+            self.history_gradient_directions.append(gradient_direction)  # Used for reporting only
+
         input_params = {
             module: extract_features_for_module(module, params, satiety=self.satiety)
             for module in self.modules
         }
-        self.latest_input_parameters = input_params
-        self.history_input_parameters.append(input_params)
+
+        flat_input_params = {
+            f"{module}_{k}": v
+            for module, features in input_params.items()
+            for k, v in features.items()
+        }
+        self.latest_input_parameters = flat_input_params
+        self.history_input_parameters.append(flat_input_params)
 
         # Efficient: use cached transpiled circuit and bind parameters
         param_values = self.parameter_values.copy()
@@ -188,6 +208,8 @@ class ModularBrain(Brain):
             gradients = self.parameter_shift_gradients(params, self.latest_action, reward)
             # TODO: Add dynamic learning rate based on reward
             self.update_parameters(gradients, reward=reward, learning_rate=0.01)
+
+        self.history_rewards.append(reward or 0.0)
 
         return counts
 
@@ -357,6 +379,10 @@ class ModularBrain(Brain):
             grad = 0.5 * (prob_plus - prob_minus) * reward
             gradients.append(grad)
 
+        # Store gradients for tracking
+        self.latest_gradients = gradients
+        self.history_gradients.append(gradients)
+
         return gradients
 
     def compute_gradients(
@@ -429,7 +455,11 @@ class ModularBrain(Brain):
                     (self.parameter_values[k] + np.pi) % (2 * np.pi)
                 ) - np.pi
 
+        self.latest_learning_rate = learning_rate
         self.latest_updated_parameters = deepcopy(self.parameter_values)
+
+        self.history_learning_rates.append(learning_rate)
+        self.history_updated_parameters.append(deepcopy(self.parameter_values))
 
     def _get_action_probability(self, counts: dict[str, int], state: str) -> float:
         """Return the probability of a given state (bitstring) from measurement counts."""
