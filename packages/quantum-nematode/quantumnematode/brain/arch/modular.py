@@ -19,6 +19,8 @@ DEFAULT_MODULES: dict[str, list[int]] = {
     "chemotaxis": [1],
 }
 
+ENTROPY_BETA = 0.07
+
 
 class ModularBrain(Brain):
     """
@@ -75,6 +77,10 @@ class ModularBrain(Brain):
         self.history_counts: list[Any] = []
         self.history_actions: list[Any] = []
 
+        self._circuit_cache: QuantumCircuit | None = None
+        self._transpiled_cache: Any = None
+        self._simulator: AerSimulator | None = None
+
     def build_brain(
         self,
         input_params: dict[str, dict[str, float]] | None = None,
@@ -90,6 +96,10 @@ class ModularBrain(Brain):
             QuantumCircuit with parameterized gates and entanglement.
         """
         qc = QuantumCircuit(self.num_qubits, self.num_qubits)
+
+        # Add Hadamard layer to create initial superposition
+        for q in range(self.num_qubits):
+            qc.h(q)
 
         # Encode features for each module into their assigned qubits
         for module, qubit_indices in self.modules.items():
@@ -111,14 +121,40 @@ class ModularBrain(Brain):
 
         return qc
 
+    def _get_simulator(self) -> AerSimulator:
+        if self._simulator is None:
+            self._simulator = AerSimulator(device=self.device)
+        return self._simulator
+
+    def _get_cached_circuit(self) -> QuantumCircuit:
+        """Build and cache the parameterized circuit structure (unbound parameters)."""
+        if self._circuit_cache is None:
+            # Use zeros for features, just to build the structure
+            input_params = {module: {} for module in self.modules}
+            self._circuit_cache = self.build_brain(input_params)
+
+        return self._circuit_cache
+
+    def _get_transpiled(self) -> QuantumCircuit:
+        """Transpile and cache the parameterized circuit structure."""
+        if self._transpiled_cache is None:
+            qc = self._get_cached_circuit()
+            simulator = self._get_simulator()
+            self._transpiled_cache = transpile(qc, simulator)
+
+        return self._transpiled_cache
+
     def run_brain(
         self,
         params: BrainParams,
-        reward: float | None = None,  # noqa: ARG002
+        reward: float | None = None,
         input_data: list[float] | None = None,  # noqa: ARG002
     ) -> dict:
         """
         Run the quantum brain simulation for the given parameters.
+
+        Run the quantum brain simulation for the given parameters,
+        and update parameters if reward is provided.
 
         Args:
             params: BrainParams for the agent/environment state.
@@ -129,7 +165,6 @@ class ModularBrain(Brain):
         -------
             Measurement counts from the quantum circuit.
         """
-        # Extract features for each module
         input_params = {
             module: extract_features_for_module(module, params, satiety=self.satiety)
             for module in self.modules
@@ -137,18 +172,22 @@ class ModularBrain(Brain):
         self.latest_input_parameters = input_params
         self.history_input_parameters.append(input_params)
 
-        qc = self.build_brain(input_params)
-
-        # Bind parameter values to the circuit
-        bound_qc = qc.assign_parameters(self.parameter_values, inplace=False)
-        simulator = AerSimulator(device=self.device)
-        transpiled = transpile(bound_qc, simulator)
-
-        result = simulator.run(transpiled, shots=self.shots).result()
+        # Efficient: use cached transpiled circuit and bind parameters
+        param_values = self.parameter_values.copy()
+        transpiled = self._get_transpiled()
+        bound_qc = transpiled.assign_parameters(param_values, inplace=False)
+        simulator = self._get_simulator()
+        result = simulator.run(bound_qc, shots=self.shots).result()
         counts = result.get_counts()
 
         self.latest_counts = counts
         self.history_counts.append(counts)
+
+        # --- Reward-based learning: compute gradients and update parameters ---
+        if reward is not None and self.latest_action is not None:
+            gradients = self.parameter_shift_gradients(params, self.latest_action, reward)
+            # TODO: Add dynamic learning rate based on reward
+            self.update_parameters(gradients, reward=reward, learning_rate=0.01)
 
         return counts
 
@@ -239,7 +278,7 @@ class ModularBrain(Brain):
         -------
             QuantumCircuit: The current quantum circuit.
         """
-        qc = self.build_brain(self.latest_input_parameters)
+        qc = self._get_cached_circuit()
         qc.draw("text")
 
         return qc
@@ -260,5 +299,142 @@ class ModularBrain(Brain):
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
         new_brain.satiety = self.satiety
+        new_brain._circuit_cache = deepcopy(self._circuit_cache)
+        new_brain._transpiled_cache = deepcopy(self._transpiled_cache)
+        new_brain._simulator = self._simulator
 
         return new_brain
+
+    def parameter_shift_gradients(
+        self,
+        params: BrainParams,  # noqa: ARG002
+        action: ActionData,
+        reward: float,
+        shift: float = np.pi / 2,
+    ) -> list[float]:
+        """
+        Compute parameter-wise gradients using the parameter-shift rule, batching all runs.
+
+        Args:
+            params: BrainParams for the agent/environment state.
+            action: The action taken (for log-prob gradient).
+            reward: Reward signal to guide gradient computation.
+            shift: The parameter shift value (default π/2).
+
+        Returns
+        -------
+            List of gradients, one per parameter.
+        """
+        param_keys = list(self.parameter_values.keys())
+        base_param_values = self.parameter_values.copy()
+        n = len(param_keys)
+
+        # Prepare all shifted parameter sets
+        param_sets = []
+        for _i, k in enumerate(param_keys):
+            plus = base_param_values.copy()
+            minus = base_param_values.copy()
+            plus[k] += shift
+            minus[k] -= shift
+            param_sets.append((plus, minus))
+
+        # Batch circuits
+        transpiled = self._get_transpiled()
+        simulator = self._get_simulator()
+        circuits = []
+        for plus, minus in param_sets:
+            circuits.append(transpiled.assign_parameters(plus, inplace=False))
+            circuits.append(transpiled.assign_parameters(minus, inplace=False))
+
+        # Run all circuits in one batch
+        results = simulator.run(circuits, shots=self.shots).result()
+        gradients = []
+        for i in range(n):
+            counts_plus = results.get_counts(i * 2)
+            counts_minus = results.get_counts(i * 2 + 1)
+            prob_plus = self._get_action_probability(counts_plus, action.state)
+            prob_minus = self._get_action_probability(counts_minus, action.state)
+            grad = 0.5 * (prob_plus - prob_minus) * reward
+            gradients.append(grad)
+
+        return gradients
+
+    def compute_gradients(
+        self,
+        counts: dict[str, int],
+        reward: float,
+        action: ActionData,
+    ) -> list[float]:
+        """
+        Compute gradients based on counts and reward, using a standard policy gradient approach.
+
+        Args:
+            counts: Measurement counts from the quantum circuit.
+            reward: Reward signal to guide gradient computation.
+            action: The action taken (for log-prob gradient).
+
+        Returns
+        -------
+            Gradients for each parameter.
+        """
+        total_shots = sum(counts.values())
+        probabilities = {key: value / total_shots for key, value in counts.items()}
+        gradients = []
+        binary_states = [f"{{:0{self.num_qubits}b}}".format(i) for i in range(2**self.num_qubits)]
+        entropy = 0.0
+
+        for key in binary_states:
+            probability = probabilities.get(key, 1e-8)
+            log_prob = np.log(probability)
+            entropy -= probability * log_prob
+            gradient = reward * (1 - probability) if key == action.state else -reward * probability
+            gradients.append(gradient)
+
+        # Entropy regularization
+        gradients = [g + ENTROPY_BETA * entropy for g in gradients]
+        self.latest_gradients = gradients
+
+        return gradients
+
+    def update_parameters(
+        self,
+        gradients: list[float],
+        reward: float | None = None,  # noqa: ARG002
+        learning_rate: float = 0.01,
+        *,
+        param_clip: bool = True,
+        param_modulo: bool = True,
+    ) -> None:
+        """
+        Update quantum circuit parameter values based on gradients and learning rate.
+
+        Args:
+            gradients: Gradients for each parameter.
+            reward: Reward signal (optional, for performance-based LR).
+            learning_rate: Learning rate for parameter updates.
+            param_clip: Whether to clip parameters to [-pi, pi].
+            param_modulo: Whether to wrap parameters to [-pi, pi].
+        """
+        param_keys = list(self.parameter_values.keys())
+        for i, k in enumerate(param_keys):
+            self.parameter_values[k] -= learning_rate * gradients[i]
+
+        if param_clip:
+            for k in param_keys:
+                self.parameter_values[k] = np.clip(self.parameter_values[k], -np.pi, np.pi)
+
+        if param_modulo:
+            for k in param_keys:
+                self.parameter_values[k] = (
+                    (self.parameter_values[k] + np.pi) % (2 * np.pi)
+                ) - np.pi
+
+        self.latest_updated_parameters = deepcopy(self.parameter_values)
+
+    def _get_action_probability(self, counts: dict[str, int], state: str) -> float:
+        """Return the probability of a given state (bitstring) from measurement counts."""
+        total = sum(counts.values())
+        if total == 0:
+            return 0.0
+
+        return counts.get(state, 0) / total
