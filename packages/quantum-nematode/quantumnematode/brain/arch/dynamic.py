@@ -268,6 +268,11 @@ class DynamicBrain(Brain):
         gradient_direction = params.gradient_direction
         agent_direction = params.agent_direction
 
+        direction_map = {"up": np.pi / 2, "down": -np.pi / 2, "left": np.pi, "right": 0.0}
+        agent_facing_angle = direction_map.get(params.agent_direction or "up", np.pi / 2)
+        # Compute relative angle to goal ([-pi, pi])
+        gradient_direction = (gradient_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
+
         # Validate input parameters
         if gradient_strength is None or gradient_direction is None or agent_direction is None:
             error_msg = "Gradient strength, direction, and agent direction must be provided."

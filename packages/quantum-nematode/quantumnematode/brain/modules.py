@@ -53,7 +53,7 @@ def chemotaxis_features(
     satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[str, float]:
     """
-    Extract chemotaxis features: gradient strength and direction.
+    Extract chemotaxis features: gradient strength and relative direction to goal.
 
     Args:
         params: BrainParams containing agent state.
@@ -67,11 +67,17 @@ def chemotaxis_features(
     grad_strength = params.gradient_strength or 0.0
     grad_strength_scaled = grad_strength * 2 * np.pi - np.pi
 
-    # gradient_direction is assumed to already be in [-pi, pi]
+    # gradient_direction is the absolute direction to the goal ([-pi, pi])
     grad_direction = params.gradient_direction or 0.0
+    # agent_direction is a string ("up", "down", etc.)
+    direction_map = {"up": np.pi / 2, "down": -np.pi / 2, "left": np.pi, "right": 0.0}
+    agent_facing_angle = direction_map.get(params.agent_direction or "up", np.pi / 2)
+    # Compute relative angle to goal ([-pi, pi])
+    relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
+
     return {
         "rx": grad_strength_scaled,
-        "ry": grad_direction,
+        "ry": relative_angle,
         "rz": 0.0,
     }
 
