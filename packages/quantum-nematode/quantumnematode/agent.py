@@ -19,10 +19,10 @@ from .brain.arch import Brain, BrainParams
 from .env import MazeEnvironment
 from .logging_config import logger
 
-ANTI_DITHERING_PENALTY = 0.05  # Penalty for oscillating (revisiting previous cell)
-DISTANCE_REWARD_SCALE = 0.2  # Scale the distance reward for smoother learning
-GOAL_REWARD = 0.1
-STEP_PENALTY = 0.01
+ANTI_DITHERING_PENALTY = 0.02  # Penalty for oscillating (revisiting previous cell)
+DISTANCE_REWARD_SCALE = 0.3  # Scale the distance reward for smoother learning
+GOAL_REWARD = 0.2
+STEP_PENALTY = 0.005
 
 
 class QuantumNematodeAgent:
