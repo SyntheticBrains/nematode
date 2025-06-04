@@ -10,6 +10,11 @@ from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain.arch import Brain, BrainParams
 from quantumnematode.brain.modules import extract_features_for_module
+from quantumnematode.initializers.random_initializer import (
+    RandomPiUniformInitializer,
+    RandomSmallUniformInitializer,
+)
+from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 from quantumnematode.optimizer.learning_rate import DynamicLearningRate
@@ -38,6 +43,11 @@ class ModularBrain(Brain):
         shots: int = 100,
         device: str = "CPU",
         learning_rate: DynamicLearningRate | None = None,
+        parameter_initializer: ZeroInitializer
+        | RandomPiUniformInitializer
+        | RandomSmallUniformInitializer
+        | None = None,
+        num_layers: int = 2,  # NEW: dynamic number of layers
     ) -> None:
         """
         Initialize the ModularBrain.
@@ -47,6 +57,7 @@ class ModularBrain(Brain):
             modules: Mapping of module names to qubit indices.
             shots: Number of shots for simulation.
             device: Device string for AerSimulator.
+            parameter_initializer : The initializer to use for parameter initialization.
         """
         num_qubits = 2  # TODO: Get num qubits from module definitions
 
@@ -57,14 +68,38 @@ class ModularBrain(Brain):
         self.satiety: float = 1.0
         self.learning_rate = learning_rate or DynamicLearningRate()
 
-        self.parameters: dict[str, list[Parameter]] = {
-            "rx": [Parameter(f"θ_rx_{i}") for i in range(self.num_qubits)],
-            "ry": [Parameter(f"θ_ry_{i}") for i in range(self.num_qubits)],
-            "rz": [Parameter(f"θ_rz_{i}") for i in range(self.num_qubits)],
-        }
-        self.parameter_values: dict[str, float] = {f"θ_rx_{i}": 0.0 for i in range(self.num_qubits)}
-        self.parameter_values.update({f"θ_ry_{i}": 0.0 for i in range(self.num_qubits)})
-        self.parameter_values.update({f"θ_rz_{i}": 0.0 for i in range(self.num_qubits)})
+        self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
+        logger.info(
+            "Using parameter initializer: "
+            f"{str(self.parameter_initializer).replace('θ', 'theta_')}",
+        )
+
+        self.num_layers = num_layers
+        # Dynamically create parameters for each layer
+        self.parameters = {}
+        for layer in range(self.num_layers):
+            self.parameters[f"rx_{layer + 1}"] = [
+                Parameter(f"θ_rx{layer + 1}_{i}") for i in range(self.num_qubits)
+            ]
+            self.parameters[f"ry_{layer + 1}"] = [
+                Parameter(f"θ_ry{layer + 1}_{i}") for i in range(self.num_qubits)
+            ]
+            self.parameters[f"rz_{layer + 1}"] = [
+                Parameter(f"θ_rz{layer + 1}_{i}") for i in range(self.num_qubits)
+            ]
+        rng = np.random.default_rng()
+        self.parameter_values = {}
+        # TODO: Use parameter_initializer to initialize parameters
+        for layer in range(self.num_layers):
+            self.parameter_values.update(
+                {f"θ_rx{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
+            )
+            self.parameter_values.update(
+                {f"θ_ry{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
+            )
+            self.parameter_values.update(
+                {f"θ_rz{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
+            )
 
         self.latest_input_parameters: dict[str, float] | None = None
         self.latest_updated_parameters: dict[str, float] | None = None
@@ -109,21 +144,22 @@ class ModularBrain(Brain):
         for q in range(self.num_qubits):
             qc.h(q)
 
-        # Encode features for each module into their assigned qubits
-        for module, qubit_indices in self.modules.items():
-            features = input_params.get(module, {}) if input_params else {}
-            for _idx, q in enumerate(qubit_indices):
-                rx = features.get("rx", 0.0)
-                ry = features.get("ry", 0.0)
-                rz = features.get("rz", 0.0)
-                qc.rx(rx + self.parameters["rx"][q], q)
-                qc.ry(ry + self.parameters["ry"][q], q)
-                qc.rz(rz + self.parameters["rz"][q], q)
-
-        # Entangle qubits
-        for i in range(self.num_qubits):
-            for j in range(i + 1, self.num_qubits):
-                qc.cz(i, j)
+        # Dynamically add layers
+        for layer in range(self.num_layers):
+            # Feature encoding for this layer
+            for module, qubit_indices in self.modules.items():
+                features = input_params.get(module, {}) if input_params else {}
+                for _idx, q in enumerate(qubit_indices):
+                    rx = features.get("rx", 0.0)
+                    ry = features.get("ry", 0.0)
+                    rz = features.get("rz", 0.0)
+                    qc.rx(rx + self.parameters[f"rx_{layer + 1}"][q], q)
+                    qc.ry(ry + self.parameters[f"ry_{layer + 1}"][q], q)
+                    qc.rz(rz + self.parameters[f"rz_{layer + 1}"][q], q)
+            # Entanglement for this layer
+            for i in range(self.num_qubits):
+                for j in range(i + 1, self.num_qubits):
+                    qc.cz(i, j)
 
         qc.measure(range(self.num_qubits), range(self.num_qubits))
 
@@ -194,11 +230,11 @@ class ModularBrain(Brain):
         self.latest_input_parameters = flat_input_params
         self.history_input_parameters.append(flat_input_params)
 
-        # Efficient: use cached transpiled circuit and bind parameters
-        param_values = self.parameter_values.copy()
-        transpiled = self._get_transpiled()
-        bound_qc = transpiled.assign_parameters(param_values, inplace=False)
+        # Build the circuit with current input_params (features)
+        qc = self.build_brain(input_params)
         simulator = self._get_simulator()
+        param_values = self.parameter_values.copy()
+        bound_qc = transpile(qc, simulator).assign_parameters(param_values, inplace=False)
         result = simulator.run(bound_qc, shots=self.shots).result()
         counts = result.get_counts()
 
