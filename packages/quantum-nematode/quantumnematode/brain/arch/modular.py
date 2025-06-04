@@ -414,7 +414,7 @@ class ModularBrain(Brain):
         logger.error(error_message)
         raise NotImplementedError(error_message)
 
-    def update_parameters(
+    def update_parameters(  # noqa: C901, PLR0913
         self,
         gradients: list[float],
         reward: float | None = None,  # noqa: ARG002
@@ -422,6 +422,8 @@ class ModularBrain(Brain):
         *,
         param_clip: bool = True,
         param_modulo: bool = True,
+        l2_reg: float = 0.01,  # L2 regularization strength
+        noise_std: float = 0.01,  # Parameter noise stddev
         gradient_norm_threshold: float = 1e-1,  # Threshold for reset
         reset_std: float = 0.1,  # stddev for parameter reset
         reset_on_stall: bool = True,  # Enable/disable reset
@@ -435,7 +437,10 @@ class ModularBrain(Brain):
         """
         param_keys = list(self.parameter_values.keys())
         for i, k in enumerate(param_keys):
-            self.parameter_values[k] -= learning_rate * gradients[i]
+            reg = l2_reg * self.parameter_values[k]
+            rng = np.random.default_rng()
+            noise = rng.normal(0, noise_std)
+            self.parameter_values[k] -= learning_rate * (gradients[i] + reg) + noise
 
         if param_clip:
             for k in param_keys:
