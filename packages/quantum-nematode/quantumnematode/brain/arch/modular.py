@@ -16,8 +16,7 @@ from quantumnematode.optimizer.learning_rate import DynamicLearningRate
 
 # Example: Define the available modules and their qubit assignments
 DEFAULT_MODULES: dict[str, list[int]] = {
-    "proprioception": [0],
-    "chemotaxis": [1],
+    "chemotaxis": [0, 1],
 }
 
 ENTROPY_BETA = 0.07
