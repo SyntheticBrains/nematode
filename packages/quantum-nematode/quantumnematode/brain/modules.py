@@ -136,12 +136,42 @@ def vision_features(
     return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
 
 
+def memory_action_features(
+    params: BrainParams,
+    satiety: float = 1.0,  # noqa: ARG001
+) -> dict[str, float]:
+    """
+    Extract action features: encode an action taken by the agent such as most recent.
+
+    Args:
+        params: BrainParams containing agent state (should have action attribute).
+        satiety: Current satiety value (unused).
+
+    Returns
+    -------
+        Dictionary with rx, ry, rz values for action qubit(s).
+    """
+    # Map possible actions to angles (expand as needed)
+    action_map = {
+        "up": 0.0,
+        "down": np.pi,
+        "left": np.pi / 2,
+        "right": -np.pi / 2,
+        None: 0.0,  # Default if no action
+    }
+    action_data = getattr(params, "action", None)
+    action = action_data.action if action_data and hasattr(action_data, "action") else None
+    angle = action_map.get(action, 0.0)
+    return {"rx": 0.0, "ry": 0.0, "rz": angle}
+
+
 MODULE_FEATURE_EXTRACTORS: dict[str, Any] = {
     "proprioception": proprioception_features,
     "chemotaxis": chemotaxis_features,
     "thermotaxis": thermotaxis_features,
     "oxygen": oxygen_features,
     "vision": vision_features,
+    "action": memory_action_features,
 }
 
 

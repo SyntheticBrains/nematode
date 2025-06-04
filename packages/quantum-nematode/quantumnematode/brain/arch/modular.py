@@ -32,7 +32,7 @@ class ModularBrain(Brain):
     Entanglement can be added within and between modules.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         num_qubits: int | None = None,
         modules: dict[str, list[int]] | None = None,

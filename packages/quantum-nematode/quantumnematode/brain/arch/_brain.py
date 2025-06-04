@@ -23,6 +23,10 @@ class BrainParams(BaseModel):
         default=None,
         description="Current direction of the agent in the environment.",
     )
+    action: ActionData | None = Field(
+        default=None,
+        description="Action taken by the agent.",
+    )
 
 
 class Brain(Protocol):
