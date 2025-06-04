@@ -89,6 +89,7 @@ class QuantumNematodeAgent:
         self.env.current_direction = "up"  # Initialize the agent's direction
 
         reward = 0.0
+        action = None
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
@@ -121,6 +122,7 @@ class QuantumNematodeAgent:
                 gradient_direction=gradient_direction,
                 agent_position=agent_pos,
                 agent_direction=self.env.current_direction,
+                action=action,
             )
             # Only pass input_data if supported by run_brain (DynamicBrain/ModularBrain)
             if (
@@ -182,6 +184,7 @@ class QuantumNematodeAgent:
                     gradient_direction=gradient_direction,
                     agent_position=agent_pos,
                     agent_direction=self.env.current_direction,
+                    action=action,
                 )
                 counts = self.brain.run_brain(
                     params=params,
