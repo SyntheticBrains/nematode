@@ -16,6 +16,9 @@ cpu = [
 gpu = [
   "quantum-nematode[gpu]",
 ]
+torch = [
+  "quantum-nematode[torch]",
+]
 
 [tool.uv.sources]
 quantum-nematode = { workspace = true }

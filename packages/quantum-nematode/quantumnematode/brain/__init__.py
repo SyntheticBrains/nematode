@@ -1,5 +1,6 @@
 """Module for quantum brain."""
 
+from .arch.classic import ClassicBrain
 from .arch.complex import ComplexBrain
 from .arch.dynamic import DynamicBrain
 from .arch.memory import MemoryBrain
@@ -8,6 +9,7 @@ from .arch.reduced import ReducedBrain
 from .arch.simple import SimpleBrain
 
 __all__ = [
+    "ClassicBrain",
     "ComplexBrain",
     "DynamicBrain",
     "MemoryBrain",

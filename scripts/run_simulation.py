@@ -398,6 +398,16 @@ def setup_brain_model(  # noqa: PLR0913
             shots=shots,
             learning_rate=learning_rate,
         )
+    elif brain_type == "classic":
+        from quantumnematode.brain.arch.classic import (  # pyright: ignore[reportMissingImports]
+            ClassicBrain,
+        )
+
+        brain = ClassicBrain(
+            input_dim=2,
+            num_actions=4,
+            device=device.lower(),
+        )
     else:
         error_message = f"Unknown brain architecture: {brain_type}"
         raise ValueError(error_message)
