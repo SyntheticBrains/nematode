@@ -391,7 +391,13 @@ def setup_brain_model(  # noqa: PLR0913
         )
 
         modules = None
-        brain = ModularBrain(num_qubits=qubits, modules=modules, device=device, shots=shots)
+        brain = ModularBrain(
+            num_qubits=qubits,
+            modules=modules,
+            device=device,
+            shots=shots,
+            learning_rate=learning_rate,
+        )
     else:
         error_message = f"Unknown brain architecture: {brain_type}"
         raise ValueError(error_message)
