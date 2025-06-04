@@ -18,6 +18,9 @@ cpu = [
 gpu = [
   "qiskit-aer-gpu>=0.15.1",
 ]
+torch = [
+  "torch>=2.7.0",
+]
 
 [tool.uv]
 conflicts = [
