@@ -422,16 +422,16 @@ class ModularBrain(Brain):
         *,
         param_clip: bool = True,
         param_modulo: bool = True,
+        gradient_norm_threshold: float = 1e-1,  # Threshold for reset
+        reset_std: float = 0.1,  # stddev for parameter reset
+        reset_on_stall: bool = True,  # Enable/disable reset
+        reset_patience: int = 20,  # Number of steps with low gradient before reset
     ) -> None:
         """
         Update quantum circuit parameter values based on gradients and learning rate.
 
-        Args:
-            gradients: Gradients for each parameter.
-            reward: Reward signal (optional, for performance-based LR).
-            learning_rate: Learning rate for parameter updates.
-            param_clip: Whether to clip parameters to [-pi, pi].
-            param_modulo: Whether to wrap parameters to [-pi, pi].
+        If the mean gradient norm is below a threshold for several steps,
+        parameters are re-initialized (reset).
         """
         param_keys = list(self.parameter_values.keys())
         for i, k in enumerate(param_keys):
@@ -452,6 +452,25 @@ class ModularBrain(Brain):
 
         self.history_learning_rates.append(learning_rate)
         self.history_updated_parameters.append(deepcopy(self.parameter_values))
+
+        # --- Gradient norm monitoring and parameter reset logic ---
+        if reset_on_stall:
+            grad_norm = np.mean(np.abs(gradients))
+            if not hasattr(self, "_low_grad_steps"):
+                self._low_grad_steps = 0
+            if grad_norm < gradient_norm_threshold:
+                self._low_grad_steps += 1
+            else:
+                self._low_grad_steps = 0
+            if self._low_grad_steps >= reset_patience:
+                logger.warning(
+                    f"Parameter reset: gradient norm {grad_norm:.2e} "
+                    "below threshold for {reset_patience} steps. Re-initializing parameters.",
+                )
+                rng = np.random.default_rng()
+                for k in param_keys:
+                    self.parameter_values[k] = rng.uniform(-reset_std, reset_std)
+                self._low_grad_steps = 0
 
     def _get_action_probability(self, counts: dict[str, int], state: str) -> float:
         """Return the probability of a given state (bitstring) from measurement counts."""
