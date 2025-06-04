@@ -48,13 +48,17 @@ class ClassicBrain(Brain):
             else None
         )
         self.loss_fn = nn.CrossEntropyLoss(reduction="none")
+        self.satiety = 1.0
+
         self.latest_action = None
         self.latest_probs = None
         self.latest_loss = None
+
         self.history_rewards = []
         self.history_losses = []
         self.history_actions = []
         self.history_probs = []
+
         self.training = True
         if action_names is not None:
             self.action_names = action_names
@@ -70,9 +74,7 @@ class ClassicBrain(Brain):
         return nn.Sequential(*layers)
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """
-        Convert BrainParams to a flat numpy array for the NN input.
-        """
+        """Convert BrainParams to a flat numpy array for the NN input."""
         # Concatenate normalized features
         features = [
             float(params.gradient_strength or 0.0),
@@ -94,6 +96,18 @@ class ClassicBrain(Brain):
         """
         x_tensor = torch.from_numpy(x).float().to(self.device)
         return self.policy(x_tensor)
+
+    def build_brain(self):  # noqa: ANN201
+        """
+        Build the brain architecture.
+
+        This method is not applicable to ClassicBrain as it does not have a quantum circuit.
+        """
+        error_msg = (
+            "ClassicBrain does not have a quantum circuit. "
+            "This method is not applicable to classical architectures."
+        )
+        raise NotImplementedError(error_msg)
 
     def run_brain(
         self,
