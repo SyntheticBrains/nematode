@@ -242,10 +242,10 @@ class MazeEnvironment:
         emoji_symbols = {
             "goal": "🦠",
             "body": "🔵",
-            "up": "⬆️ ",
-            "down": "⬇️ ",
-            "left": "⬅️ ",
-            "right": "➡️ ",
+            "up": "🔼",
+            "down": "🔽",
+            "left": "◀️ ",
+            "right": "▶️ ",
             "empty": "⬜️",
         }
         symbols = ascii_symbols if self.theme == "ascii" else emoji_symbols
