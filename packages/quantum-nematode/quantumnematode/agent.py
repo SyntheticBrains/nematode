@@ -41,7 +41,13 @@ class QuantumNematodeAgent:
         Maximum length of the agent's body.
     """
 
-    def __init__(self, brain: Brain, maze_grid_size: int = 5, max_body_length: int = 6) -> None:
+    def __init__(
+        self,
+        brain: Brain,
+        maze_grid_size: int = 5,
+        max_body_length: int = 6,
+        theme: str = "ascii",
+    ) -> None:
         """
         Initialize the quantum nematode agent.
 
@@ -53,7 +59,11 @@ class QuantumNematodeAgent:
             Size of the grid environment, by default 5.
         """
         self.brain = brain
-        self.env = MazeEnvironment(grid_size=maze_grid_size, max_body_length=max_body_length)
+        self.env = MazeEnvironment(
+            grid_size=maze_grid_size,
+            max_body_length=max_body_length,
+            theme=theme,
+        )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         self.max_body_length = min(
@@ -532,6 +542,7 @@ class QuantumNematodeAgent:
         self.env = MazeEnvironment(
             grid_size=self.env.grid_size,
             max_body_length=self.max_body_length,
+            theme=self.env.theme,
         )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
