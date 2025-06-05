@@ -93,6 +93,13 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="If set, output tracked DynamicBrain data as separate plots per run in subfolders.",
     )
+    parser.add_argument(
+        "--theme",
+        type=str,
+        default="ascii",
+        choices=["ascii", "emoji"],
+        help="Maze rendering theme: 'ascii' (default) or 'emoji' for emoji-based rendering.",
+    )
 
     return parser.parse_args()
 
@@ -167,6 +174,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         maze_grid_size=maze_grid_size,
         brain=brain,
         max_body_length=body_length,
+        theme=args.theme,
     )
 
     # Initialize tracking variables for plotting

@@ -51,6 +51,7 @@ class MazeEnvironment:
         start_pos: tuple[int, int] | None = None,
         food_pos: tuple[int, int] | None = None,
         max_body_length: int = 6,
+        theme: str = "ascii",
     ) -> None:
         if grid_size < MIN_GRID_SIZE:
             error_message = (
@@ -104,6 +105,7 @@ class MazeEnvironment:
             [tuple(self.agent_pos)] if max_body_length > 0 else []
         )  # Initialize the body with the head position
         self.current_direction = "up"  # Initialize the agent's direction
+        self.theme = theme
 
     def get_state(
         self,
@@ -226,31 +228,37 @@ class MazeEnvironment:
         return tuple(self.agent_pos) == self.goal
 
     def render(self) -> list[str]:
-        """
-        Render the current state of the maze.
-
-        Returns
-        -------
-        list[str]
-            A string representation of the maze grid.
-        """
-        grid = [["." for _ in range(self.grid_size)] for _ in range(self.grid_size)]
-        grid[self.goal[1]][self.goal[0]] = "*"  # Mark the goal
-
-        # Mark the body
-        for segment in self.body:
-            grid[segment[1]][segment[0]] = "O"
-
-        # Map the agent's direction to an arrow symbol
-        direction_map = {
+        """Render the current state of the maze using the selected theme."""
+        # Theme symbol sets
+        ascii_symbols = {
+            "goal": "*",
+            "body": "O",
             "up": "^",
             "down": "v",
             "left": "<",
             "right": ">",
+            "empty": ".",
         }
-        agent_symbol = direction_map.get(self.current_direction, "@")
+        emoji_symbols = {
+            "goal": "🦠",
+            "body": "🔵",
+            "up": "⬆️ ",
+            "down": "⬇️ ",
+            "left": "⬅️ ",
+            "right": "➡️ ",
+            "empty": "⬜️",
+        }
+        symbols = ascii_symbols if self.theme == "ascii" else emoji_symbols
 
-        grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent with an arrow
+        grid = [[symbols["empty"] for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        grid[self.goal[1]][self.goal[0]] = symbols["goal"]  # Mark the goal
+
+        # Mark the body
+        for segment in self.body:
+            grid[segment[1]][segment[0]] = symbols["body"]
+
+        agent_symbol = symbols.get(self.current_direction, "@")
+        grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
         return [" ".join(row) for row in reversed(grid)] + [""]
 
