@@ -281,6 +281,7 @@ class MazeEnvironment:
             else None,
             food_pos=self.goal,
             max_body_length=len(self.body),
+            theme=self.theme,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
