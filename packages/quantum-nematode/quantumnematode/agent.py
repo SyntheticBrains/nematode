@@ -159,6 +159,17 @@ class QuantumNematodeAgent:
 
             self.env.move_agent(action.action)
 
+            # ClassicBrain learning step
+            # TODO: Handle this in more generic way
+            try:
+                from quantumnematode.brain.arch.classic import ClassicBrain
+
+                if isinstance(self.brain, ClassicBrain):
+                    action_idx = self.brain.action_names.index(action.action)
+                    self.brain.learn(params, action_idx, reward)
+            except Exception:
+                pass
+
             # Update the body length dynamically
             if self.max_body_length > 0 and len(self.env.body) < self.max_body_length:
                 self.env.body.append(self.env.body[-1])
