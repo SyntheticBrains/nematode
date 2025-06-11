@@ -11,6 +11,7 @@ import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain.arch import Brain, BrainParams
+from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 
 
@@ -34,6 +35,19 @@ class ClassicBrain(Brain):
         action_names: list[str] | None = None,
     ) -> None:
         super().__init__()
+
+        logger.info(
+            "Initializing ClassicBrain with input_dim=%d, num_actions=%d, hidden_dim=%d, "
+            "num_hidden_layers=%d, device=%s, learning_rate=%.4f, entropy_beta=%.4f",
+            input_dim,
+            num_actions,
+            hidden_dim,
+            num_hidden_layers,
+            device,
+            learning_rate,
+            entropy_beta,
+        )
+
         self.input_dim = input_dim
         self.num_actions = num_actions
         self.device = torch.device(device)
