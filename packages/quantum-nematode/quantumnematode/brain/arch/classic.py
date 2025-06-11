@@ -80,6 +80,10 @@ class ClassicBrain(Brain):
             # Default action names for 4 actions
             self.action_names = ["forward", "left", "right", "stay"]
 
+        # Baseline for variance reduction in policy gradient
+        self.baseline = 0.0
+        self.baseline_alpha = 0.05  # Smoothing factor for running average
+
     def _build_network(self, hidden_dim: int, num_hidden_layers: int) -> nn.Sequential:
         layers = [nn.Linear(self.input_dim, hidden_dim), nn.ReLU()]
         for _ in range(num_hidden_layers - 1):
@@ -196,27 +200,61 @@ class ClassicBrain(Brain):
         This method is not used in ClassicBrain as it uses PyTorch autograd.
         """
 
+    def compute_discounted_return(self, rewards: list[float], gamma: float = 0.99) -> float:
+        """
+        Compute the discounted return for a list of rewards.
+
+        Args:
+            rewards: List of rewards from the current episode (most recent first).
+            gamma: Discount factor.
+
+        Returns
+        -------
+            Discounted return (float).
+        """
+        g = 0.0
+        for r in reversed(rewards):
+            g = r + gamma * g
+        return g
+
     def learn(
         self,
         params: BrainParams,
         action_idx: int,
         reward: float,
+        episode_rewards: list[float] | None = None,
+        gamma: float = 0.99,
     ) -> None:
-        """Perform a policy gradient update step."""
+        """Perform a policy gradient update step with baseline and discounted return."""
         x = self.preprocess(params)
         logits = self.forward(x)
         probs = torch.softmax(logits, dim=-1)
         log_prob = torch.log(probs[action_idx] + 1e-8)
         entropy = -torch.sum(probs * torch.log(probs + 1e-8))
-        loss = -log_prob * reward - self.entropy_beta * entropy
+
+        # Use discounted return if provided, else use immediate reward
+        if episode_rewards is None and self.history_rewards is not None:
+            episode_rewards = self.history_rewards
+        if episode_rewards is not None:
+            g = self.compute_discounted_return(episode_rewards, gamma=gamma)
+        else:
+            g = reward
+
+        # Subtract baseline from return
+        advantage = g - self.baseline
+        loss = -log_prob * advantage - self.entropy_beta * entropy
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         if self.lr_scheduler:
             self.lr_scheduler.step()
         self.latest_loss = loss.item()
+
         self.history_rewards.append(reward)
         self.history_losses.append(self.latest_loss)
+
+        # Update baseline (running average)
+        self.baseline = (1 - self.baseline_alpha) * self.baseline + self.baseline_alpha * g
 
     def update_memory(self, reward: float | None) -> None:
         """Store the reward in the history for diagnostics and future learning extensions."""
