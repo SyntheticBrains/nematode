@@ -88,13 +88,35 @@ class ClassicBrain(Brain):
         return nn.Sequential(*layers)
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Convert BrainParams to a flat numpy array for the NN input."""
-        # Concatenate normalized features
-        features = [
-            float(params.gradient_strength or 0.0),
-            float(params.gradient_direction or 0.0),
-        ]
-        # NOTE: Add more features as needed
+        """
+        Preprocess BrainParams to extract features for the neural network.
+
+        Convert BrainParams to a flat numpy array for the NN input, using relative angle to goal.
+
+        Parameters
+        ----------
+            params: BrainParams containing agent state, gradient strength, and direction.
+
+        Returns
+        -------
+            np.ndarray: Preprocessed features as a numpy array.
+        -----------
+        Features are:
+            - Gradient strength (float, [0, 1])
+            - Normalised relative angle to goal ([-1, 1])
+        """
+        # Use gradient_strength as-is (assumed [0, 1])
+        grad_strength = float(params.gradient_strength or 0.0)
+
+        # Compute relative angle to goal ([-pi, pi])
+        grad_direction = float(params.gradient_direction or 0.0)
+        direction_map = {"up": np.pi / 2, "down": -np.pi / 2, "left": np.pi, "right": 0.0}
+        agent_facing_angle = direction_map.get(params.agent_direction or "up", np.pi / 2)
+        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
+        # Normalise relative angle to [-1, 1]
+        rel_angle_norm = relative_angle / np.pi
+
+        features = [grad_strength, rel_angle_norm]
         return np.array(features, dtype=np.float32)
 
     def forward(self, x: np.ndarray) -> torch.Tensor:
