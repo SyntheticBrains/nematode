@@ -414,6 +414,7 @@ def setup_brain_model(  # noqa: PLR0913
         brain = ClassicBrain(
             input_dim=2,
             num_actions=4,
+            lr_scheduler=True,
             device=device.lower(),
         )
     else:
