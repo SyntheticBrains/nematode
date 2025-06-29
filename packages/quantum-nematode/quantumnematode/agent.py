@@ -6,6 +6,7 @@ import time
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 
+from quantumnematode.brain.arch._brain import ClassicalBrain
 from quantumnematode.constants import (
     SUPERPOSITION_MODE_MAX_COLUMNS,
     SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
@@ -148,6 +149,7 @@ class QuantumNematodeAgent:
                 counts = self.brain.run_brain(
                     params=params,
                     reward=reward,
+                    input_data=None,
                 )
 
             action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
@@ -160,15 +162,15 @@ class QuantumNematodeAgent:
             self.env.move_agent(action.action)
 
             # Learning step
-            # TODO: Handle this in more generic way
-            try:
-                from quantumnematode.brain.arch.mlp import MLPBrain
-
-                if isinstance(self.brain, MLPBrain):
-                    action_idx = self.brain.action_names.index(action.action)
-                    self.brain.learn(params, action_idx, reward)
-            except Exception:
-                pass
+            if isinstance(self.brain, ClassicalBrain):
+                action_idx = self.brain.action_names.index(action.action)
+                self.brain.learn(
+                    params=params,
+                    action_idx=action_idx,
+                    reward=reward,
+                    episode_rewards=None,
+                    gamma=0.99,
+                )
 
             # Update the body length dynamically
             if self.max_body_length > 0 and len(self.env.body) < self.max_body_length:
@@ -210,6 +212,7 @@ class QuantumNematodeAgent:
                 counts = self.brain.run_brain(
                     params=params,
                     reward=reward,
+                    input_data=None,
                 )
 
                 # Calculate reward based on efficiency and collision avoidance
@@ -332,8 +335,9 @@ class QuantumNematodeAgent:
                 counts = brain_copy.run_brain(
                     params=params,
                     reward=reward,
+                    input_data=None,
                 )
-                actions = brain_copy.interpret_counts(counts, top_only=False)
+                actions = brain_copy.interpret_counts(counts, top_only=False, top_randomize=True)
 
                 def get_action_and_prob(a: ActionData) -> tuple:
                     if hasattr(a, "action") and hasattr(a, "probability"):

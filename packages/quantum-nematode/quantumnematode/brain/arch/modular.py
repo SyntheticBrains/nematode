@@ -8,7 +8,6 @@ from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImp
 from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
 from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain.arch import Brain, BrainParams
 from quantumnematode.brain.modules import extract_features_for_module
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
@@ -19,6 +18,8 @@ from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 from quantumnematode.optimizer.learning_rate import DynamicLearningRate
 
+from ._brain import BrainParams, QuantumBrain
+
 # Example: Define the available modules and their qubit assignments
 DEFAULT_MODULES: dict[str, list[int]] = {
     "chemotaxis": [0, 1],
@@ -27,7 +28,7 @@ DEFAULT_MODULES: dict[str, list[int]] = {
 ENTROPY_BETA = 0.07
 
 
-class ModularBrain(Brain):
+class ModularBrain(QuantumBrain):
     """
     Modular quantum brain architecture.
 

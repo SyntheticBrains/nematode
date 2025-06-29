@@ -11,12 +11,13 @@ import numpy as np  # pyright: ignore[reportMissingImports]
 import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain.arch import Brain, BrainParams
 from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 
+from ._brain import BrainParams, ClassicalBrain
 
-class MLPBrain(Brain):
+
+class MLPBrain(ClassicalBrain):
     """
     Classical multi-layer perceptron (MLP) brain architecture.
 
@@ -76,10 +77,10 @@ class MLPBrain(Brain):
 
         self.training = True
         if action_names is not None:
-            self.action_names = action_names
+            self._action_names = action_names
         else:
             # Default action names for 4 actions
-            self.action_names = ["forward", "left", "right", "stay"]
+            self._action_names = ["forward", "left", "right", "stay"]
 
         # Baseline for variance reduction in policy gradient
         self.baseline = 0.0
@@ -262,18 +263,6 @@ class MLPBrain(Brain):
         if reward is not None:
             self.history_rewards.append(reward)
 
-    def inspect_circuit(self):  # noqa: ANN201
-        """
-        Inspect the quantum circuit.
-
-        This method is not applicable to MLPBrain as it does not have a quantum circuit.
-        """
-        error_msg = (
-            "MLPBrain does not have a quantum circuit to inspect. "
-            "This method is not applicable to classical architectures."
-        )
-        raise NotImplementedError(error_msg)
-
     def copy(self) -> "MLPBrain":
         """
         Create a copy of the MLPBrain instance.
@@ -283,3 +272,12 @@ class MLPBrain(Brain):
         """
         error_msg = "MLPBrain does not support copying. Use deepcopy if needed."
         raise NotImplementedError(error_msg)
+
+    @property
+    def action_names(self) -> list[str]:
+        """Get the list of action names."""
+        return self._action_names
+
+    @action_names.setter
+    def action_names(self, names: list[str]) -> None:
+        self._action_names = names

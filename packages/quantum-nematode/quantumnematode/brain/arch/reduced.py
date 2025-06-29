@@ -191,7 +191,7 @@ class ReducedBrain(Brain):
             probability=probability,
         )
 
-    def update_memory(self, reward: float) -> None:
+    def update_memory(self, reward: float | None) -> None:
         """
         No-op method for updating memory.
 

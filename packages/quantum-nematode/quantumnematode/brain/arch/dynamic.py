@@ -753,7 +753,7 @@ class DynamicBrain(Brain):
         self.latest_action = sorted_actions[0]
         return sorted_actions
 
-    def update_memory(self, reward: float) -> None:
+    def update_memory(self, reward: float | None) -> None:
         """
         No-op method for updating memory.
 
