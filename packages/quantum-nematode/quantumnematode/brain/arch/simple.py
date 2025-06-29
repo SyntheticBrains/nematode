@@ -273,7 +273,7 @@ class SimpleBrain(Brain):
             probability=probabilities.get(selected_action, 0),
         )
 
-    def update_memory(self, reward: float) -> None:
+    def update_memory(self, reward: float | None) -> None:
         """
         No-op method for updating memory.
 

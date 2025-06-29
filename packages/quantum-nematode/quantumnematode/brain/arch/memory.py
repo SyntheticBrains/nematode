@@ -140,7 +140,7 @@ class MemoryBrain(Brain):
 
         return counts
 
-    def update_memory(self, reward: float) -> None:
+    def update_memory(self, reward: float | None) -> None:
         """
         Update the memory states based on the reward signal.
 
@@ -149,6 +149,7 @@ class MemoryBrain(Brain):
         reward : float
             Reward signal to guide memory updates.
         """
+        reward = reward or 0.0  # Default to 0 if None
         logger.debug(f"Updating memory with reward: {reward}")
         for qubit in self.memory_register:
             if reward > 0:
