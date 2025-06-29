@@ -331,14 +331,14 @@ def setup_brain_model(  # noqa: PLR0913
     qubits: int,
     device: str,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
-    gradient_method: GradientCalculationMethod,
+    gradient_method: GradientCalculationMethod,  # noqa: ARG001
 ) -> Brain:
     """
     Set up the brain model based on the specified brain type.
 
     Args:
         brain_type (str): The type of brain architecture to use. Options include
-            "simple", "complex", "reduced", "memory", "modular" and "dynamic".
+            "modular" and "mlp".
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for "dynamic" brain).
         device (str): The device to use for simulation ("CPU" or "GPU").
@@ -353,47 +353,7 @@ def setup_brain_model(  # noqa: PLR0913
     ------
         ValueError: If an unknown brain type is provided.
     """
-    if brain_type == "simple":
-        from quantumnematode.brain.arch.simple import (  # pyright: ignore[reportMissingImports]
-            SimpleBrain,
-        )
-
-        brain = SimpleBrain(device=device, shots=shots)
-    elif brain_type == "complex":
-        from quantumnematode.brain.arch.complex import (  # pyright: ignore[reportMissingImports]
-            ComplexBrain,
-        )
-
-        if device != "CPU":
-            logger.warning(
-                "ComplexBrain is not optimized for GPU. Using CPU instead.",
-            )
-        brain = ComplexBrain(device=device, shots=shots)
-    elif brain_type == "reduced":
-        from quantumnematode.brain.arch.reduced import (  # pyright: ignore[reportMissingImports]
-            ReducedBrain,
-        )
-
-        brain = ReducedBrain(device=device, shots=shots)
-    elif brain_type == "memory":
-        from quantumnematode.brain.arch.memory import (  # pyright: ignore[reportMissingImports]
-            MemoryBrain,
-        )
-
-        brain = MemoryBrain(device=device, shots=shots)
-    elif brain_type == "dynamic":
-        from quantumnematode.brain.arch.dynamic import (  # pyright: ignore[reportMissingImports]
-            DynamicBrain,
-        )
-
-        brain = DynamicBrain(
-            device=device,
-            shots=shots,
-            num_qubits=qubits,
-            learning_rate=learning_rate,
-            gradient_method=gradient_method,
-        )
-    elif brain_type == "modular":
+    if brain_type == "modular":
         from quantumnematode.brain.arch.modular import (  # pyright: ignore[reportMissingImports]
             ModularBrain,
         )

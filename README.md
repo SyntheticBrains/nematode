@@ -1,24 +1,31 @@
 # 🧠 Quantum Nematode Simulation
 
-This project simulates a simplified nematode (C. elegans) navigating a 2D grid maze to find food, using a **quantum variational circuit** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for the environment.
+This project simulates a simplified nematode (C. elegans) navigating a 2D grid maze to find food, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for the environment.
 
 ---
 
 ## 🧪 Features
 
-- ✅ Quantum circuit (2 qubits) that takes in state and outputs movement
+- ✅ Modular quantum circuit (2+ qubits) that takes in state and outputs movement
+- ✅ Classical MLP (multi-layer perceptron) brain option
 - ✅ Classical grid-world environment
-- ✅ Agent that navigates based on circuit output
+- ✅ Agent that navigates based on brain output
 - ✅ Supports both CLI scripts and Jupyter notebook workflows
 - 🚧 Expandable for training, hybrid QML, or hardware backends
 
 ### Expanded Details
 
-#### Quantum Circuit for Decision-Making
+#### Modular Quantum Brain
 
-- The nematode's brain is implemented as a parameterized quantum circuit with 2 qubits.
+- The nematode's brain can be implemented as a parameterized quantum circuit with 2 or more qubits.
 - The circuit uses RX, RY, and RZ gates to encode the agent's state and entanglement to model complex decision-making.
-- Measurements on the qubits are mapped to one of four possible actions: up, down, left, or right.
+- Measurements on the qubits are mapped to one of four possible actions: forward, left, right, or stay.
+
+#### Classical MLP Brain
+
+- Alternatively, the agent can use a classical multi-layer perceptron (MLP) policy network for decision-making.
+- The MLP processes the agent's state and selects actions based on learned policies.
+- Supports GPU acceleration via PyTorch.
 
 #### Classical Grid-World Environment
 
@@ -44,26 +51,23 @@ This project simulates a simplified nematode (C. elegans) navigating a 2D grid m
 
 ---
 
-## 🧠 Quantum Brain Architectures
+## 🧠 Brain Architectures
 
-This project now supports multiple quantum brain architectures:
+This project now supports two brain architectures:
 
-- **SimpleBrain**: A lightweight quantum brain using parameterized circuits for basic decision-making.
-- **ComplexBrain**: A detailed quantum brain simulating 302 neurons, designed for real QPU testing.
-- **ReducedBrain**: A scaled-down version of the complex brain using 30 qubits, optimized for simulators.
-- **DynamicBrain**: A flexible quantum brain architecture supporting a dynamic number of qubits for advanced decision-making and experimentation.
+- **ModularBrain**: A modular quantum brain using parameterized circuits for decision-making.
+- **MLPBrain**: A classical multi-layer perceptron (MLP) brain for policy-based action selection.
 
 ### How to Choose a Brain Architecture
 
 You can select the brain architecture when running the simulation using the `--brain` argument:
 
 ```bash
-python scripts/run_simulation.py --brain simple
-python scripts/run_simulation.py --brain complex
-python scripts/run_simulation.py --brain reduced
+python scripts/run_simulation.py --brain modular
+python scripts/run_simulation.py --brain mlp
 ```
 
-The default architecture is `simple`. Use `complex` for real QPU testing and `reduced` for simulator-friendly experiments.
+The default architecture is `modular` (quantum). Use `mlp` for a classical neural network agent.
 
 ---
 
@@ -75,7 +79,7 @@ The default architecture is `simple`. Use `complex` for real QPU testing and `re
 brew install uv
 ```
 
-### 2. Install dependencie
+### 2. Install dependencies
 
 You can install the project with either CPU or GPU support.
 
@@ -114,8 +118,7 @@ uv run ./scripts/run_simulation.py
 ## 🧠 How It Works
 
 - The agent receives its state: distance (`dx`, `dy`) to food.
-- A quantum circuit is created with parameterized RX/RY gates.
-- Measurements on the 2-qubit output map to one of 4 actions: up, down, left, right.
+- The selected brain (quantum or classical) processes the state and outputs an action.
 - The environment updates the agent's position.
 - The process repeats until the agent reaches the food or max steps are hit.
 
@@ -138,6 +141,7 @@ Final path:
 ## 🧰 Tools Used
 
 - [Qiskit](https://qiskit.org/)
+- [PyTorch](https://pytorch.org/) (for MLPBrain)
 - [Python 3.10+]
 - [uv](https://github.com/astral-sh/uv) for modern dependency management
 - Jupyter for notebook visualization
