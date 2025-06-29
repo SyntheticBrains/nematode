@@ -159,12 +159,12 @@ class QuantumNematodeAgent:
 
             self.env.move_agent(action.action)
 
-            # ClassicBrain learning step
+            # Learning step
             # TODO: Handle this in more generic way
             try:
-                from quantumnematode.brain.arch.classic import ClassicBrain
+                from quantumnematode.brain.arch.mlp import MLPBrain
 
-                if isinstance(self.brain, ClassicBrain):
+                if isinstance(self.brain, MLPBrain):
                     action_idx = self.brain.action_names.index(action.action)
                     self.brain.learn(params, action_idx, reward)
             except Exception:

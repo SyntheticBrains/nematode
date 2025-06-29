@@ -1,9 +1,10 @@
 """
-ClassicBrain: A classical neural network-based agent.
+Classical Multi-Layer Perceptron (MLP) Brain Architecture.
 
-This architecture is used for benchmarking against quantum brain architectures.
-
-This implementation uses PyTorch for efficient CPU/GPU training and inference.
+This architecture uses a simple MLP policy network to process the agent's state and
+select actions based on learned policies.
+It supports GPU acceleration via PyTorch and includes features for training,
+action selection, and reward-based learning.
 """
 
 import numpy as np  # pyright: ignore[reportMissingImports]
@@ -15,9 +16,9 @@ from quantumnematode.logging_config import logger
 from quantumnematode.models import ActionData
 
 
-class ClassicBrain(Brain):
+class MLPBrain(Brain):
     """
-    ClassicBrain: A classical neural network policy for benchmarking.
+    Classical multi-layer perceptron (MLP) brain architecture.
 
     Uses a simple MLP policy network with optional GPU acceleration.
     """
@@ -37,7 +38,7 @@ class ClassicBrain(Brain):
         super().__init__()
 
         logger.info(
-            "Initializing ClassicBrain with input_dim=%d, num_actions=%d, hidden_dim=%d, "
+            "Initializing MLPBrain with input_dim=%d, num_actions=%d, hidden_dim=%d, "
             "num_hidden_layers=%d, device=%s, learning_rate=%.4f, entropy_beta=%.4f",
             input_dim,
             num_actions,
@@ -141,10 +142,10 @@ class ClassicBrain(Brain):
         """
         Build the brain architecture.
 
-        This method is not applicable to ClassicBrain as it does not have a quantum circuit.
+        This method is not applicable to MLPBrain as it does not have a quantum circuit.
         """
         error_msg = (
-            "ClassicBrain does not have a quantum circuit. "
+            "MLPBrain does not have a quantum circuit. "
             "This method is not applicable to classical architectures."
         )
         raise NotImplementedError(error_msg)
@@ -181,7 +182,7 @@ class ClassicBrain(Brain):
         top_randomize: bool = True,  # noqa: ARG002
     ) -> ActionData:
         """Return the most probable action (or sampled action)."""
-        # In ClassicBrain, counts is a one-hot dict from run_brain
+        # In MLPBrain, counts is a one-hot dict from run_brain
         action_name = max(counts.items(), key=lambda x: x[1])[0]
         idx = self.action_names.index(action_name)
         prob = self.latest_probs[idx] if self.latest_probs is not None else 1.0
@@ -197,7 +198,7 @@ class ClassicBrain(Brain):
         """
         Update the parameters of the policy network.
 
-        This method is not used in ClassicBrain as it uses PyTorch autograd.
+        This method is not used in MLPBrain as it uses PyTorch autograd.
         """
 
     def compute_discounted_return(self, rewards: list[float], gamma: float = 0.99) -> float:
@@ -265,20 +266,20 @@ class ClassicBrain(Brain):
         """
         Inspect the quantum circuit.
 
-        This method is not applicable to ClassicBrain as it does not have a quantum circuit.
+        This method is not applicable to MLPBrain as it does not have a quantum circuit.
         """
         error_msg = (
-            "ClassicBrain does not have a quantum circuit to inspect. "
+            "MLPBrain does not have a quantum circuit to inspect. "
             "This method is not applicable to classical architectures."
         )
         raise NotImplementedError(error_msg)
 
-    def copy(self) -> "ClassicBrain":
+    def copy(self) -> "MLPBrain":
         """
-        Create a copy of the ClassicBrain instance.
+        Create a copy of the MLPBrain instance.
 
-        ClassicBrain does not support copying as it is a simple neural network.
+        MLPBrain does not support copying as it is a simple neural network.
         Use deepcopy if needed.
         """
-        error_msg = "ClassicBrain does not support copying. Use deepcopy if needed."
+        error_msg = "MLPBrain does not support copying. Use deepcopy if needed."
         raise NotImplementedError(error_msg)

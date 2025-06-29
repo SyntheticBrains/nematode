@@ -406,12 +406,12 @@ def setup_brain_model(  # noqa: PLR0913
             shots=shots,
             learning_rate=learning_rate,
         )
-    elif brain_type == "classic":
-        from quantumnematode.brain.arch.classic import (  # pyright: ignore[reportMissingImports]
-            ClassicBrain,
+    elif brain_type == "mlp":
+        from quantumnematode.brain.arch.mlp import (  # pyright: ignore[reportMissingImports]
+            MLPBrain,
         )
 
-        brain = ClassicBrain(
+        brain = MLPBrain(
             input_dim=2,
             num_actions=4,
             lr_scheduler=True,
