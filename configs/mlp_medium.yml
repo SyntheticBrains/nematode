@@ -1,6 +1,6 @@
 max_steps: 300
 maze_grid_size: 10
-brain: classic
+brain: mlp
 shots: 1000
 body_length: 2
 qubits: 2
