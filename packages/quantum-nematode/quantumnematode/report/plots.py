@@ -164,7 +164,7 @@ def plot_tracking_data_per_session(
         tracking_data (dict[str, list[int | float | dict[str, float]]]): Dictionary
             containing tracking data.
         timestamp (str): Timestamp for the plot directory.
-        brain_type (str): Type of brain (e.g., "dynamic").
+        brain_type (str): Type of brain (e.g., "modular").
         qubits (int): Number of qubits.
         file_prefix (str, optional): Prefix for the output file name. Defaults to "".
     """

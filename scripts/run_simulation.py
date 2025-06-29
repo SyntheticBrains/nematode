@@ -91,7 +91,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--track-per-run",
         action="store_true",
-        help="If set, output tracked DynamicBrain data as separate plots per run in subfolders.",
+        help="If set, output tracked brain data as separate plots per run in subfolders.",
     )
     parser.add_argument(
         "--theme",
@@ -242,8 +242,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             total_runs_done += 1
 
-            # Track data for plotting, only supported for dynamic and modular brains
-            if brain_type in ("dynamic", "modular"):
+            # Track data for plotting, only supported for modular brains
+            if brain_type in ("modular"):
                 tracking_data["run"].append(run + 1)
                 tracking_data["input_parameters"].append(agent.brain.latest_input_parameters)
                 tracking_data["computed_gradients"].append(agent.brain.latest_gradients)
@@ -251,7 +251,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data["updated_parameters"].append(agent.brain.latest_updated_parameters)
                 tracking_data["temperature"].append(agent.brain.latest_temperature)
 
-            if track_per_run and brain_type in ("dynamic", "modular"):
+            if track_per_run and brain_type in ("modular"):
                 plot_tracking_data_per_run(timestamp, agent, run)
 
             if run < runs - 1:
@@ -287,7 +287,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     plot_results(all_results, metrics, timestamp, max_steps)
 
     # Generate additional plots for tracking data
-    if brain_type in ("dynamic", "modular"):
+    if brain_type in ("modular"):
         plot_tracking_data_per_session(tracking_data, timestamp, brain_type, qubits)
 
     return
@@ -306,7 +306,7 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits:
     ------
         ValueError: If the maze grid size is smaller than the minimum allowed size.
         ValueError: If the 'qubits' parameter is used with a brain type
-            other than 'dynamic' or 'modular'.
+            other than 'modular'.
     """
     if maze_grid_size < MIN_GRID_SIZE:
         error_message = (
@@ -315,10 +315,10 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits:
         logger.error(error_message)
         raise ValueError(error_message)
 
-    if brain_type not in ("dynamic", "modular") and qubits != DEFAULT_QUBITS:
+    if brain_type not in ("modular") and qubits != DEFAULT_QUBITS:
         error_message = (
-            f"The 'qubits' parameter is only supported by the DynamicBrain "
-            "and ModularBrain architectures. "
+            f"The 'qubits' parameter is only supported by the "
+            "ModularBrain architecture. "
             f"Provided brain: {brain_type}, qubits: {qubits}."
         )
         logger.error(error_message)
@@ -340,10 +340,10 @@ def setup_brain_model(  # noqa: PLR0913
         brain_type (str): The type of brain architecture to use. Options include
             "modular" and "mlp".
         shots (int): The number of shots for quantum circuit execution.
-        qubits (int): The number of qubits to use (only applicable for "dynamic" brain).
+        qubits (int): The number of qubits to use (only applicable for "modular" brain).
         device (str): The device to use for simulation ("CPU" or "GPU").
         learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
-            The learning rate configuration for the "dynamic" brain.
+            The learning rate configuration for the brain.
 
     Returns
     -------
@@ -452,7 +452,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             file_prefix = f"{total_runs_done}_"
             plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
 
-            if brain_type in ("dynamic", "modular"):
+            if brain_type in ("modular"):
                 plot_tracking_data_per_session(
                     tracking_data,
                     timestamp,

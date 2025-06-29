@@ -38,6 +38,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ['ALL']
+ignore = ['TD002', 'TD003']
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy" # https://numpydoc.readthedocs.io/en/latest/format.html#sections
