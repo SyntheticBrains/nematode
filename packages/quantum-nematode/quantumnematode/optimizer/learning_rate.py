@@ -1,10 +1,23 @@
 """Library for learning rate adjustment strategies."""
 
+from enum import Enum
+
 import numpy as np  # pyright: ignore[reportMissingImports]
+
+
+class DecayType(Enum):
+    """Enum for different learning rate decay types."""
+
+    COSINE = "cosine"
+    EXPONENTIAL = "exponential"
+    INVERSE_TIME = "inverse_time"
+    POLYNOMIAL = "polynomial"
+    STEP = "step"
+
 
 DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL = 0.1
 DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE = 0.01
-DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE = "inverse_time"
+DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE = DecayType.INVERSE_TIME
 DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR = 0.5
 DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE = 10
 DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS = 1000
@@ -28,12 +41,13 @@ class DynamicLearningRate:
         self,
         initial_learning_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL,
         decay_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
-        decay_type: str = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE,
+        decay_type: DecayType = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE,
         decay_factor: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,  # for step decay
         step_size: int = DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE,  # for step decay
         max_steps: int = DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS,  # for polynomial/cosine decay
         power: float = DEFAULT_DYNAMIC_LEARNING_RATE_POWER,  # for polynomial decay
-        min_lr: float = DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,  # for cosine decay, if using should be 1% to 10% of initial_lr
+        # for cosine decay, if using should be 1% to 10% of initial_lr
+        min_lr: float = DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,
     ) -> None:
         self.initial_learning_rate = initial_learning_rate
         self.decay_rate = decay_rate
@@ -61,18 +75,18 @@ class DynamicLearningRate:
         -------
             float: The current learning rate.
         """
-        if self.decay_type == "inverse_time":
+        if self.decay_type == DecayType.INVERSE_TIME:
             base_learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
-        elif self.decay_type == "exponential":
+        elif self.decay_type == DecayType.EXPONENTIAL:
             base_learning_rate = self.initial_learning_rate * np.exp(-self.decay_rate * self.steps)
-        elif self.decay_type == "step":
+        elif self.decay_type == DecayType.STEP:
             base_learning_rate = self.initial_learning_rate * (
                 self.decay_factor ** (self.steps // self.step_size)
             )
-        elif self.decay_type == "polynomial":
+        elif self.decay_type == DecayType.POLYNOMIAL:
             frac = min(self.steps / self.max_steps, 1.0)
             base_learning_rate = self.initial_learning_rate * (1 - frac) ** self.power
-        elif self.decay_type == "cosine":
+        elif self.decay_type == DecayType.COSINE:
             from math import cos, pi
 
             frac = min(self.steps / self.max_steps, 1.0)
@@ -80,8 +94,8 @@ class DynamicLearningRate:
                 1 + cos(pi * frac)
             )
         else:
-            # Default to inverse time decay
-            base_learning_rate = self.initial_learning_rate / (1 + self.decay_rate * self.steps)
+            error_message = f"Unsupported decay type: {self.decay_type}"
+            raise ValueError(error_message)
         scaled_learning_rate = base_learning_rate * reward_magnitude
         self.steps += 1
         return scaled_learning_rate
@@ -98,7 +112,7 @@ class DynamicLearningRate:
             f"DynamicLearningRate("
             f"initial_learning_rate={self.initial_learning_rate}, "
             f"decay_rate={self.decay_rate}, "
-            f"decay_type='{self.decay_type}', "
+            f"decay_type='{self.decay_type.value}', "
             f"decay_factor={self.decay_factor}, "
             f"step_size={self.step_size}, "
             f"max_steps={self.max_steps}, "
