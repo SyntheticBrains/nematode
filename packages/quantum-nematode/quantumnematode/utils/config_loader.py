@@ -10,6 +10,7 @@ from quantumnematode.logging_config import (
 from quantumnematode.optimizer.gradient_methods import GradientCalculationMethod
 from quantumnematode.optimizer.learning_rate import (
     AdamLearningRate,
+    DecayType,
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
@@ -55,10 +56,11 @@ def configure_learning_rate(
     learning_rate_method = learning_rate_config.get("method", "default")
     learning_rate_parameters = learning_rate_config.get("parameters", {})
     if learning_rate_method == "dynamic":
+        decay_type = _resolve_decay_type(learning_rate_parameters)
         return DynamicLearningRate(
             initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
             decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
-            decay_type=learning_rate_parameters.get("decay_type", "inverse_time"),
+            decay_type=decay_type,
             decay_factor=learning_rate_parameters.get("decay_factor", 0.5),
             step_size=learning_rate_parameters.get("step_size", 10),
             max_steps=learning_rate_parameters.get("max_steps", 1000),
@@ -85,6 +87,21 @@ def configure_learning_rate(
     )
     logger.error(error_message)
     raise ValueError(error_message)
+
+
+def _resolve_decay_type(learning_rate_parameters: dict) -> DecayType:
+    decay_type_value = learning_rate_parameters.get("decay_type", "inverse_time")
+    if isinstance(decay_type_value, DecayType):
+        decay_type = decay_type_value
+    else:
+        try:
+            decay_type = DecayType(decay_type_value)
+        except ValueError:
+            logger.warning(
+                f"Unknown decay_type '{decay_type_value}', defaulting to 'inverse_time'.",
+            )
+            decay_type = DecayType.INVERSE_TIME
+    return decay_type
 
 
 def configure_gradient_method(
