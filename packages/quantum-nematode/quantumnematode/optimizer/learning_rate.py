@@ -2,6 +2,15 @@
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 
+DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL = 0.1
+DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE = 0.01
+DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE = "inverse_time"
+DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR = 0.5
+DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE = 10
+DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS = 1000
+DEFAULT_DYNAMIC_LEARNING_RATE_POWER = 1.0
+DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR = 0.0
+
 
 class DynamicLearningRate:
     """
@@ -17,14 +26,14 @@ class DynamicLearningRate:
 
     def __init__(  # noqa: PLR0913
         self,
-        initial_learning_rate: float = 0.1,
-        decay_rate: float = 0.01,
-        decay_type: str = "inverse_time",
-        decay_factor: float = 0.5,  # for step decay
-        step_size: int = 10,  # for step decay
-        max_steps: int = 1000,  # for polynomial/cosine decay
-        power: float = 1.0,  # for polynomial decay
-        min_lr: float = 0.0,  # for cosine decay, if using should be 1% to 10% of initial_lr
+        initial_learning_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL,
+        decay_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
+        decay_type: str = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE,
+        decay_factor: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,  # for step decay
+        step_size: int = DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE,  # for step decay
+        max_steps: int = DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS,  # for polynomial/cosine decay
+        power: float = DEFAULT_DYNAMIC_LEARNING_RATE_POWER,  # for polynomial decay
+        min_lr: float = DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,  # for cosine decay, if using should be 1% to 10% of initial_lr
     ) -> None:
         self.initial_learning_rate = initial_learning_rate
         self.decay_rate = decay_rate
@@ -99,6 +108,12 @@ class DynamicLearningRate:
         )
 
 
+DEFAULT_ADAM_LEARNING_RATE_INITIAL = 0.1
+DEFAULT_ADAM_LEARNING_RATE_BETA1 = 0.9
+DEFAULT_ADAM_LEARNING_RATE_BETA2 = 0.999
+DEFAULT_ADAM_LEARNING_RATE_EPSILON = 1e-8
+
+
 class AdamLearningRate:
     """
     Implements the Adam optimization algorithm for learning rate adjustment.
@@ -121,10 +136,10 @@ class AdamLearningRate:
 
     def __init__(
         self,
-        initial_learning_rate: float = 0.1,
-        beta1: float = 0.9,
-        beta2: float = 0.999,
-        epsilon: float = 1e-8,
+        initial_learning_rate: float = DEFAULT_ADAM_LEARNING_RATE_INITIAL,
+        beta1: float = DEFAULT_ADAM_LEARNING_RATE_BETA1,
+        beta2: float = DEFAULT_ADAM_LEARNING_RATE_BETA2,
+        epsilon: float = DEFAULT_ADAM_LEARNING_RATE_EPSILON,
     ) -> None:
         self.initial_learning_rate = initial_learning_rate
         self.beta1 = beta1
@@ -201,6 +216,12 @@ class AdamLearningRate:
         )
 
 
+DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_INITIAL = 0.1
+DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN = 0.001
+DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX = 0.5
+DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR = 1.1
+
+
 class PerformanceBasedLearningRate:
     """
     Implements a performance-based adaptive learning rate strategy.
@@ -220,10 +241,10 @@ class PerformanceBasedLearningRate:
 
     def __init__(
         self,
-        initial_learning_rate: float = 0.1,
-        min_learning_rate: float = 0.001,
-        max_learning_rate: float = 0.5,
-        adjustment_factor: float = 1.1,
+        initial_learning_rate: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_INITIAL,
+        min_learning_rate: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN,
+        max_learning_rate: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
+        adjustment_factor: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR,
     ) -> None:
         self.learning_rate = initial_learning_rate
         self.min_learning_rate = min_learning_rate
