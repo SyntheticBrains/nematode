@@ -22,7 +22,7 @@ from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
-from quantumnematode.models import SimulationResult  # pyright: ignore[reportMissingImports]
+from quantumnematode.models import SimulationResult, TrackingData  # pyright: ignore[reportMissingImports]
 from quantumnematode.optimizer.gradient_methods import (  # pyright: ignore[reportMissingImports]
     GradientCalculationMethod,
 )
@@ -178,14 +178,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     )
 
     # Initialize tracking variables for plotting
-    tracking_data = {
-        "run": [],
-        "input_parameters": [],
-        "computed_gradients": [],
-        "learning_rate": [],
-        "updated_parameters": [],
-        "temperature": [],
-    }
+    tracking_data = TrackingData()
 
     all_results: list[SimulationResult] = []
 
@@ -244,12 +237,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             # Track data for plotting, only supported for modular brains
             if brain_type in ("modular"):
-                tracking_data["run"].append(run + 1)
-                tracking_data["input_parameters"].append(agent.brain.latest_input_parameters)
-                tracking_data["computed_gradients"].append(agent.brain.latest_gradients)
-                tracking_data["learning_rate"].append(agent.brain.latest_learning_rate)
-                tracking_data["updated_parameters"].append(agent.brain.latest_updated_parameters)
-                tracking_data["temperature"].append(agent.brain.latest_temperature)
+                tracking_data.run.append(run + 1)
+                tracking_data.input_parameters.append(agent.brain.latest_input_parameters)
+                tracking_data.computed_gradients.append(agent.brain.latest_gradients)
+                tracking_data.learning_rate.append(agent.brain.latest_learning_rate)
+                tracking_data.updated_parameters.append(agent.brain.latest_updated_parameters)
+                tracking_data.temperature.append(agent.brain.latest_temperature)
 
             if track_per_run and brain_type in ("modular"):
                 plot_tracking_data_per_run(timestamp, agent, run)
@@ -391,7 +384,7 @@ def manage_simulation_halt(  # noqa: PLR0913
     agent: QuantumNematodeAgent,
     all_results: list[SimulationResult],
     total_runs_done: int,
-    tracking_data: dict[str, list],
+    tracking_data: TrackingData,
 ) -> None:
     """
     Handle simulation halt triggered by a KeyboardInterrupt.
@@ -410,7 +403,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             List of results for each run, including run number, steps, path,
             total reward, and cumulative rewards.
         total_runs_done (int): Total number of runs completed so far.
-        tracking_data (dict[str, list]): Data tracked during the simulation for plotting.
+        tracking_data TrackingData: Data tracked during the simulation for plotting.
     """
     while True:
         prompt_intro_message = (
