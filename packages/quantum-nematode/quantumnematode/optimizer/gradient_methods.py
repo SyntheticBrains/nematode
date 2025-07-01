@@ -2,6 +2,8 @@
 
 from enum import Enum
 
+DEFAULT_MAX_CLIP_GRADIENT = 1.0
+
 
 class GradientCalculationMethod(Enum):
     """Enum for gradient calculation methods."""
@@ -14,7 +16,7 @@ class GradientCalculationMethod(Enum):
 def compute_gradients(
     gradients: list[float],
     method: GradientCalculationMethod,
-    max_clip_gradient: float | dict = 1.0,
+    max_clip_gradient: float | dict = DEFAULT_MAX_CLIP_GRADIENT,
 ) -> list[float]:
     """
     Compute gradients using the specified method.
