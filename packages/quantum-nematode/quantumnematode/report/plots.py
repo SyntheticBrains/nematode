@@ -8,6 +8,7 @@ from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.logging_config import (
     logger,
 )
+from quantumnematode.models import TrackingData
 
 
 def plot_efficiency_score_over_time(
@@ -151,7 +152,7 @@ def plot_steps_per_run(
 
 
 def plot_tracking_data_per_session(
-    tracking_data: dict[str, list[int | float | dict]],
+    tracking_data: TrackingData,
     timestamp: str,
     brain_type: str,
     qubits: int,
@@ -176,7 +177,7 @@ def plot_tracking_data_per_session(
     )
 
     # Plot each tracked variable
-    for key, values in tracking_data.items():
+    for key, values in tracking_data.__dict__.items():
         if key == "run":
             continue
 
@@ -203,7 +204,7 @@ def plot_tracking_data_per_session(
         title += title_postfix
 
         plt.figure(figsize=(10, 6))
-        plt.plot(tracking_data["run"], values, marker="o", label=label)
+        plt.plot(tracking_data.run, values, marker="o", label=label)
         plt.title(title)
         plt.xlabel("Run")
         plt.ylabel(str(label))
