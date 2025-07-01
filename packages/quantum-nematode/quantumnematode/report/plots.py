@@ -155,7 +155,7 @@ def plot_tracking_data_per_session(
     tracking_data: TrackingData,
     timestamp: str,
     brain_type: str,
-    qubits: int,
+    qubits: int | None = None,
     file_prefix: str = "",
 ) -> None:
     """
@@ -173,7 +173,7 @@ def plot_tracking_data_per_session(
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     title_postfix: str = (
-        f" [{brain_type} {qubits}Q]" if brain_type == "dynamic" else f" [{brain_type}]"
+        f" [{brain_type} {qubits}Q]" if isinstance(qubits, int) else f" [{brain_type}]"
     )
 
     # Plot each tracked variable
