@@ -6,7 +6,7 @@ import time
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain.arch._brain import ClassicalBrain
+from quantumnematode.brain.arch._brain import ClassicalBrain, QuantumBrain
 from quantumnematode.constants import (
     SUPERPOSITION_MODE_MAX_COLUMNS,
     SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
@@ -120,8 +120,8 @@ class QuantumNematodeAgent:
 
             # Prepare input_data for data re-uploading (one float per qubit)
             input_data = None
-            if hasattr(self.brain, "num_qubits"):
-                input_data = [float(gradient_strength)] * int(getattr(self.brain, "num_qubits", 1))
+            if isinstance(self.brain, QuantumBrain):
+                input_data = [float(gradient_strength)] * self.brain.num_qubits
 
             # Fix agent_position type for BrainParams (must be exactly 2 floats)
             agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
@@ -182,10 +182,8 @@ class QuantumNematodeAgent:
 
                 # Prepare input_data for data re-uploading (one float per qubit)
                 input_data = None
-                if hasattr(self.brain, "num_qubits"):
-                    input_data = [float(gradient_strength)] * int(
-                        getattr(self.brain, "num_qubits", 1),
-                    )
+                if isinstance(self.brain, QuantumBrain):
+                    input_data = [float(gradient_strength)] * self.brain.num_qubits
 
                 agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
                 if len(agent_pos) != 2:  # noqa: PLR2004

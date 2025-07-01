@@ -57,6 +57,8 @@ class Brain(Protocol):
 
 @runtime_checkable
 class QuantumBrain(Brain, Protocol):
+    num_qubits: int
+
     def build_brain(
         self,
         input_params: dict[str, dict[str, float]] | None,
