@@ -6,11 +6,11 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from quantumnematode.agent import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.agent import (
     QuantumNematodeAgent,
 )
-from quantumnematode.brain.arch import Brain  # pyright: ignore[reportMissingImports]
-from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.brain.arch import Brain
+from quantumnematode.constants import (
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_BRAIN,
     DEFAULT_MAX_STEPS,
@@ -19,22 +19,23 @@ from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
     DEFAULT_SHOTS,
     MIN_GRID_SIZE,
 )
-from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.models import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.models import (
     SimulationResult,
+    Theme,
     TrackingData,
 )
-from quantumnematode.optimizer.gradient_methods import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.optimizer.gradient_methods import (
     GradientCalculationMethod,
 )
-from quantumnematode.optimizer.learning_rate import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.optimizer.learning_rate import (
     AdamLearningRate,
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
-from quantumnematode.report.plots import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_efficiency_score_over_time,
     plot_last_cumulative_rewards,
@@ -43,8 +44,8 @@ from quantumnematode.report.plots import (  # pyright: ignore[reportMissingImpor
     plot_tracking_data_per_run,
     plot_tracking_data_per_session,
 )
-from quantumnematode.report.summary import summary  # pyright: ignore[reportMissingImports]
-from quantumnematode.utils.config_loader import (  # pyright: ignore[reportMissingImports]
+from quantumnematode.report.summary import summary
+from quantumnematode.utils.config_loader import (
     configure_gradient_method,
     configure_learning_rate,
     load_simulation_config,
@@ -102,8 +103,8 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--theme",
         type=str,
-        default="ascii",
-        choices=["ascii", "emoji"],
+        default=Theme.ASCII.value,
+        choices=[Theme.ASCII.value, Theme.EMOJI.value],
         help="Maze rendering theme: 'ascii' (default) or 'emoji' for emoji-based rendering.",
     )
 
@@ -129,6 +130,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
     track_per_run = args.track_per_run
+    theme = Theme(args.theme)
 
     if config_file:
         config = load_simulation_config(config_file)
@@ -180,7 +182,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         maze_grid_size=maze_grid_size,
         brain=brain,
         max_body_length=body_length,
-        theme=args.theme,
+        theme=theme,
     )
 
     # Initialize tracking variables for plotting
@@ -353,7 +355,7 @@ def setup_brain_model(  # noqa: PLR0913
         ValueError: If an unknown brain type is provided.
     """
     if brain_type == "modular":
-        from quantumnematode.brain.arch.modular import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.modular import (
             ModularBrain,
         )
 
@@ -366,7 +368,7 @@ def setup_brain_model(  # noqa: PLR0913
             learning_rate=learning_rate,
         )
     elif brain_type == "mlp":
-        from quantumnematode.brain.arch.mlp import (  # pyright: ignore[reportMissingImports]
+        from quantumnematode.brain.arch.mlp import (
             MLPBrain,
         )
 

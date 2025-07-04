@@ -7,7 +7,7 @@ It supports GPU acceleration via PyTorch and includes features for training,
 action selection, and reward-based learning.
 """
 
-import numpy as np  # pyright: ignore[reportMissingImports]
+import numpy as np
 import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
 

@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-import numpy as np  # pyright: ignore[reportMissingImports]
+import numpy as np
 
 
 class DecayType(Enum):
