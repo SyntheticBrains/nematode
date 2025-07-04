@@ -22,10 +22,10 @@ from quantumnematode.constants import (
     DEFAULT_SHOTS,
     MIN_GRID_SIZE,
 )
+from quantumnematode.dtypes import Theme
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.models import Theme
 from quantumnematode.optimizer.gradient_methods import (
     GradientCalculationMethod,
 )
