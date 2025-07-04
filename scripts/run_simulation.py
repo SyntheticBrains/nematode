@@ -9,7 +9,10 @@ from pathlib import Path
 from quantumnematode.agent import (
     QuantumNematodeAgent,
 )
-from quantumnematode.brain.arch import Brain
+from quantumnematode.brain.arch import (
+    Brain,
+    QuantumBrain,
+)
 from quantumnematode.constants import (
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_BRAIN,
@@ -463,9 +466,15 @@ def manage_simulation_halt(  # noqa: PLR0913
                 )
         elif choice == 2:  # noqa: PLR2004
             logger.info("Printing circuit details.")
-            circuit = agent.brain.inspect_circuit()
-            logger.info(f"Circuit details:\n{circuit}")
-            print(circuit)  # noqa: T201
+            if isinstance(agent.brain, QuantumBrain):
+                circuit = agent.brain.inspect_circuit()
+                logger.info(f"Circuit details:\n{circuit}")
+                print(circuit)  # noqa: T201
+            else:
+                logger.error(
+                    "Circuit details are only available for QuantumBrain architectures.",
+                )
+                print("Circuit details are only available for QuantumBrain architectures.")  # noqa: T201
         else:
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
