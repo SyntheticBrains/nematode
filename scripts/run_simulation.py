@@ -26,7 +26,6 @@ from quantumnematode.logging_config import (
     logger,
 )
 from quantumnematode.models import (
-    SimulationResult,
     Theme,
     TrackingData,
 )
@@ -38,6 +37,7 @@ from quantumnematode.optimizer.learning_rate import (
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
+from quantumnematode.report.dtypes import SimulationResult
 from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_efficiency_score_over_time,
