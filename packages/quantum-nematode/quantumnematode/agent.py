@@ -313,10 +313,15 @@ class QuantumNematodeAgent:
                     path_copy,
                     max_steps=max_steps,
                 )
+
+                agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
+                if len(agent_pos) != 2:  # noqa: PLR2004
+                    agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
+
                 params = BrainParams(
                     gradient_strength=gradient_strength,
                     gradient_direction=gradient_direction,
-                    agent_position=self.env.agent_pos,
+                    agent_position=agent_pos,
                     agent_direction=self.env.current_direction,
                 )
                 counts = brain_copy.run_brain(
