@@ -7,6 +7,7 @@ import time
 import numpy as np
 
 from quantumnematode.brain.arch._brain import ClassicalBrain, QuantumBrain
+from quantumnematode.brain.dtypes import ActionData
 from quantumnematode.constants import (
     SUPERPOSITION_MODE_MAX_COLUMNS,
     SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
@@ -14,7 +15,7 @@ from quantumnematode.constants import (
     SUPERPOSITION_MODE_TOP_N_ACTIONS,
     SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
-from quantumnematode.models import ActionData, Theme
+from quantumnematode.models import Theme
 
 from .brain.arch import Brain, BrainParams
 from .env import MazeEnvironment
