@@ -1,3 +1,5 @@
+"""Data types for brains in Quantum Nematode."""
+
 from pydantic import BaseModel
 
 

@@ -3,7 +3,7 @@
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.models import SimulationResult
+from quantumnematode.report.dtypes import SimulationResult
 
 
 def summary(
