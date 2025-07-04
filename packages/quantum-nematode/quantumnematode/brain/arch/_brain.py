@@ -8,7 +8,35 @@ if TYPE_CHECKING:
     from qiskit import QuantumCircuit
 
 
+class BrainData(BaseModel):
+    """Data for the brain's operation."""
+
+    run: list[int] = Field(default_factory=list, description="Run number")
+    input_parameters: list[dict[str, float]] = Field(
+        default_factory=list,
+        description="Input parameters for the brain",
+    )
+    computed_gradients: list[list[float]] = Field(
+        default_factory=list,
+        description="Computed gradients for the brain",
+    )
+    learning_rate: list[float] = Field(
+        default_factory=list,
+        description="Learning rate used in the brain",
+    )
+    updated_parameters: list[dict[str, float]] = Field(
+        default_factory=list,
+        description="Updated parameters after training",
+    )
+    temperature: list[float] = Field(
+        default_factory=list,
+        description="Temperature parameter for the brain",
+    )
+
+
 class BrainParams(BaseModel):
+    """Parameters for the brain's operation."""
+
     gradient_strength: float | None = Field(
         default=None,
         description="Strength of the chemical gradient.",

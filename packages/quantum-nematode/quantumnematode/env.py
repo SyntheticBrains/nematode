@@ -13,7 +13,7 @@ from enum import Enum
 
 import numpy as np
 
-from quantumnematode.models import Theme
+from quantumnematode.dtypes import Theme
 
 from .constants import MIN_GRID_SIZE
 from .logging_config import logger

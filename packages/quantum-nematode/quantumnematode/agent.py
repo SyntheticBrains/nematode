@@ -15,7 +15,7 @@ from quantumnematode.constants import (
     SUPERPOSITION_MODE_TOP_N_ACTIONS,
     SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
-from quantumnematode.models import Theme
+from quantumnematode.dtypes import Theme
 
 from .brain.arch import Brain, BrainParams
 from .env import MazeEnvironment
