@@ -8,7 +8,7 @@ from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
 from qiskit_aer import AerSimulator
 
-from quantumnematode.brain.dtypes import ActionData
+from quantumnematode.brain.actions import ActionData
 from quantumnematode.brain.modules import extract_features_for_module
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
