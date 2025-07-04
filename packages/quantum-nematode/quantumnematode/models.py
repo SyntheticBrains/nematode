@@ -3,6 +3,25 @@
 from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
 
 
+class ActionData(BaseModel):
+    """
+    A class to represent the action taken by the agent.
+
+    Attributes
+    ----------
+    state : str
+        The current state of the agent.
+    action : str
+        The action taken by the agent.
+    probability : float
+        The probability of taking the action in the current state.
+    """
+
+    state: str
+    action: str
+    probability: float
+
+
 class SimulationResult(BaseModel):
     """
     A class to represent the result of a simulation run.
@@ -30,25 +49,6 @@ class SimulationResult(BaseModel):
     total_reward: float
     last_total_reward: float
     efficiency_score: float
-
-
-class ActionData(BaseModel):
-    """
-    A class to represent the action taken by the agent.
-
-    Attributes
-    ----------
-    state : str
-        The current state of the agent.
-    action : str
-        The action taken by the agent.
-    probability : float
-        The probability of taking the action in the current state.
-    """
-
-    state: str
-    action: str
-    probability: float
 
 
 class TrackingData(BaseModel):
