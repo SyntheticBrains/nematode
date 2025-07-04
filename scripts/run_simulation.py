@@ -25,10 +25,7 @@ from quantumnematode.constants import (
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.models import (
-    Theme,
-    TrackingData,
-)
+from quantumnematode.models import Theme
 from quantumnematode.optimizer.gradient_methods import (
     GradientCalculationMethod,
 )
@@ -37,7 +34,7 @@ from quantumnematode.optimizer.learning_rate import (
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
-from quantumnematode.report.dtypes import SimulationResult
+from quantumnematode.report.dtypes import SimulationResult, TrackingData
 from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_efficiency_score_over_time,
