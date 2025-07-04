@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
+from pydantic import BaseModel, Field
 
 
 class ActionData(BaseModel):

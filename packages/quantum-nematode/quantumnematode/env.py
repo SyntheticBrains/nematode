@@ -11,7 +11,7 @@ The environment provides methods to get the current state, move the agent,
 import secrets
 from enum import Enum
 
-import numpy as np  # pyright: ignore[reportMissingImports]
+import numpy as np
 
 from quantumnematode.models import Theme
 

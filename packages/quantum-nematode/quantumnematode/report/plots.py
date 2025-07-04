@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from matplotlib import pyplot as plt  # pyright: ignore[reportMissingImports]
+from matplotlib import pyplot as plt
 
 from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.logging_config import (

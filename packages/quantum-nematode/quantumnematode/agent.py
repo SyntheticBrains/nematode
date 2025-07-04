@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-import numpy as np  # pyright: ignore[reportMissingImports]
+import numpy as np
 
 from quantumnematode.brain.arch._brain import ClassicalBrain, QuantumBrain
 from quantumnematode.constants import (

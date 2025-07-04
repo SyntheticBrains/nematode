@@ -20,7 +20,7 @@ Other possible modules to add in the short term (excluding placeholders):
 
 from typing import Any
 
-import numpy as np  # pyright: ignore[reportMissingImports]
+import numpy as np
 
 from quantumnematode.brain.arch import BrainParams
 

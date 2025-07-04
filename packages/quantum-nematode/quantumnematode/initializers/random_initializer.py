@@ -4,7 +4,7 @@ Random uniform initializer for quantum parameters.
 TODO: Merge the random uniform initializers into one class with a parameter for the range.
 """
 
-import numpy as np  # pyright: ignore[reportMissingImports]
+import numpy as np
 
 from quantumnematode.initializers._initializer import ParameterInitializer
 

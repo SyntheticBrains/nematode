@@ -3,10 +3,10 @@
 from copy import deepcopy
 from typing import Any
 
-import numpy as np  # pyright: ignore[reportMissingImports]
-from qiskit import QuantumCircuit, transpile  # pyright: ignore[reportMissingImports]
-from qiskit.circuit import Parameter  # pyright: ignore[reportMissingImports]
-from qiskit_aer import AerSimulator  # pyright: ignore[reportMissingImports]
+import numpy as np
+from qiskit import QuantumCircuit, transpile
+from qiskit.circuit import Parameter
+from qiskit_aer import AerSimulator
 
 from quantumnematode.brain.modules import extract_features_for_module
 from quantumnematode.initializers.random_initializer import (
@@ -68,6 +68,9 @@ class ModularBrain(QuantumBrain):
         self.device: str = device.upper()
         self.satiety: float = 1.0
         self.learning_rate = learning_rate or DynamicLearningRate()
+        logger.info(
+            f"Using learning rate: {str(self.learning_rate).replace('θ', 'theta_')}",
+        )
 
         self.parameter_initializer = parameter_initializer or RandomSmallUniformInitializer()
         logger.info(

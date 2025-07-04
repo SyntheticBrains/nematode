@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
+from pydantic import BaseModel, Field
 
-from quantumnematode.models import ActionData  # pyright: ignore[reportMissingImports]
+from quantumnematode.models import ActionData
 
 if TYPE_CHECKING:
-    from qiskit import QuantumCircuit  # pyright: ignore[reportMissingImports]
+    from qiskit import QuantumCircuit
 
 
 class BrainParams(BaseModel):
