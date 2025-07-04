@@ -95,6 +95,12 @@ Install with GPU support:
 uv sync --extra gpu
 ```
 
+To run classical ML brain architectures, you will also need to install `torch` as an extra:
+
+```bash
+uv sync [OTHER_EXTRAS] --extra torch
+```
+
 ---
 
 ## 📓 Running the Simulation
