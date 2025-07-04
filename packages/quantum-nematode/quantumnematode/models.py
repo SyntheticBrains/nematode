@@ -1,5 +1,7 @@
 """Models for the quantum nematode simulation."""
 
+from enum import Enum
+
 from pydantic import BaseModel, Field  # pyright: ignore[reportMissingImports]
 
 
@@ -49,6 +51,13 @@ class SimulationResult(BaseModel):
     total_reward: float
     last_total_reward: float
     efficiency_score: float
+
+
+class Theme(str, Enum):
+    """Enum for simulation themes."""
+
+    ASCII = "ascii"
+    EMOJI = "emoji"
 
 
 class TrackingData(BaseModel):

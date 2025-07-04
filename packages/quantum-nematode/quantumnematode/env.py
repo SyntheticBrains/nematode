@@ -13,6 +13,8 @@ from enum import Enum
 
 import numpy as np  # pyright: ignore[reportMissingImports]
 
+from quantumnematode.models import Theme
+
 from .constants import MIN_GRID_SIZE
 from .logging_config import logger
 
@@ -51,7 +53,7 @@ class MazeEnvironment:
         start_pos: tuple[int, int] | None = None,
         food_pos: tuple[int, int] | None = None,
         max_body_length: int = 6,
-        theme: str = "ascii",
+        theme: Theme = Theme.ASCII,
     ) -> None:
         if grid_size < MIN_GRID_SIZE:
             error_message = (
@@ -248,7 +250,7 @@ class MazeEnvironment:
             "right": "▶️ ",
             "empty": "⬜️",
         }
-        symbols = ascii_symbols if self.theme == "ascii" else emoji_symbols
+        symbols = ascii_symbols if self.theme == Theme.ASCII else emoji_symbols
 
         grid = [[symbols["empty"] for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         grid[self.goal[1]][self.goal[0]] = symbols["goal"]  # Mark the goal
