@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
-from quantumnematode.brain.dtypes import ActionData
+from quantumnematode.brain.actions import ActionData
 
 if TYPE_CHECKING:
     from qiskit import QuantumCircuit
