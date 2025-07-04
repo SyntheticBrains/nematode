@@ -1,4 +1,4 @@
-"""Models for the quantum nematode simulation."""
+"""Data types for the quantum nematode simulation."""
 
 from enum import Enum
 
