@@ -229,7 +229,7 @@ def plot_tracking_data_per_run(
     """
     run_dir = Path.cwd() / "plots" / timestamp / f"run_{run + 1}"
     run_dir.mkdir(parents=True, exist_ok=True)
-    tracked: dict[str, list[dict[str, float]] | list[float] | None] = {
+    tracked = {
         "input_parameters": getattr(agent.brain, "history_input_parameters", None),
         "updated_parameters": getattr(agent.brain, "history_updated_parameters", None),
         "gradients": getattr(agent.brain, "history_gradients", None),
