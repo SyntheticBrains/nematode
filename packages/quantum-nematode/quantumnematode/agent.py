@@ -331,62 +331,29 @@ class QuantumNematodeAgent:
                 )
                 actions = brain_copy.interpret_counts(counts, top_only=False, top_randomize=True)
 
-                def get_action_and_prob(a: ActionData) -> tuple:
-                    if hasattr(a, "action") and hasattr(a, "probability"):
-                        return a.action, a.probability
-                    if isinstance(a, tuple) and len(a) >= 2:  # noqa: PLR2004
-                        return a[0], a[1]
-                    return None, None
+                if not isinstance(actions, list):
+                    actions = [actions]
 
                 if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
                     rng = np.random.default_rng()
-                    filtered_actions = [
-                        a
-                        for a in actions
-                        if isinstance(get_action_and_prob(a)[1], float)
-                        and get_action_and_prob(a)[0] is not None
-                    ]
-                    if filtered_actions:
-                        probs = [get_action_and_prob(a)[1] for a in filtered_actions]
-                        # Remove None values from probs and corresponding actions
-                        filtered_pairs = [
-                            (a, p)
-                            for a, p in zip(filtered_actions, probs, strict=False)
-                            if p is not None
-                        ]
-                        if filtered_pairs:
-                            filtered_actions, probs = zip(*filtered_pairs, strict=False)
-                            probs = np.array(probs, dtype=float)
-                            probs_sum = probs.sum()
-                            if probs_sum > 0:
-                                norm_probs = probs / probs_sum
-                            else:
-                                norm_probs = np.ones_like(probs) / len(probs)
-                            filtered_actions = np.array(filtered_actions)
-                            top_actions_and_probs = rng.choice(
-                                filtered_actions,
-                                p=norm_probs,
-                                size=SUPERPOSITION_MODE_TOP_N_ACTIONS,
-                                replace=True,
-                            )
-                            top_actions = [
-                                get_action_and_prob(a)[0]
-                                for a in top_actions_and_probs
-                                if get_action_and_prob(a)[0] is not None
-                            ]
-                        else:
-                            top_actions = []
+                    probs = np.array([a.probability for a in actions], dtype=float)
+                    probs_sum = probs.sum()
+                    if probs_sum > 0:
+                        norm_probs = probs / probs_sum
                     else:
-                        top_actions = []
+                        norm_probs = np.ones_like(probs) / len(probs)
+                    actions_arr = np.array(actions)
+                    top_actions_and_probs = rng.choice(
+                        actions_arr,
+                        p=norm_probs,
+                        size=SUPERPOSITION_MODE_TOP_N_ACTIONS,
+                        replace=True,
+                    )
+                    top_actions = [a.action for a in top_actions_and_probs if a.action is not None]
                 else:
-                    top_actions = [
-                        get_action_and_prob(a)[0]
-                        for a in actions
-                        if get_action_and_prob(a)[0] is not None
-                    ][:SUPERPOSITION_MODE_TOP_N_ACTIONS]
-
-                # Defensive: filter out None from top_actions
-                top_actions = [a for a in top_actions if a is not None]
+                    top_actions = [a.action for a in actions if a.action is not None][
+                        :SUPERPOSITION_MODE_TOP_N_ACTIONS
+                    ]
 
                 # Update the body length dynamically
                 if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
