@@ -358,6 +358,14 @@ def setup_brain_model(  # noqa: PLR0913
         ValueError: If an unknown brain type is provided.
     """
     if brain_type == "modular":
+        if not isinstance(learning_rate, DynamicLearningRate):
+            error_message = (
+                "The 'modular' brain architecture requires a DynamicLearningRate. "
+                f"Provided learning rate type: {type(learning_rate)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
         from quantumnematode.brain.arch.modular import (
             ModularBrain,
         )
