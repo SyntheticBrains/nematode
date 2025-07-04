@@ -22,7 +22,10 @@ from quantumnematode.constants import (  # pyright: ignore[reportMissingImports]
 from quantumnematode.logging_config import (  # pyright: ignore[reportMissingImports]
     logger,
 )
-from quantumnematode.models import SimulationResult, TrackingData  # pyright: ignore[reportMissingImports]
+from quantumnematode.models import (  # pyright: ignore[reportMissingImports]
+    SimulationResult,
+    TrackingData,
+)
 from quantumnematode.optimizer.gradient_methods import (  # pyright: ignore[reportMissingImports]
     GradientCalculationMethod,
 )
@@ -47,6 +50,9 @@ from quantumnematode.utils.config_loader import (  # pyright: ignore[reportMissi
     load_simulation_config,
 )
 
+DEFAULT_DEVICE = "cpu"
+DEFAULT_RUNS = 1
+
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
@@ -66,15 +72,15 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--runs",
         type=int,
-        default=1,
-        help="Number of simulation runs to perform (default: 1)",
+        default=DEFAULT_RUNS,
+        help=f"Number of simulation runs to perform (default: {DEFAULT_RUNS}).",
     )
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",
+        default=DEFAULT_DEVICE,
         choices=["cpu", "gpu"],
-        help="Device to use for AerSimulator",
+        help=f"Device to use for AerSimulator ('cpu' or 'gpu', default: '{DEFAULT_DEVICE}').",
     )
     parser.add_argument(
         "--config",
