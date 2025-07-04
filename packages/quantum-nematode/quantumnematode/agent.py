@@ -6,8 +6,8 @@ import time
 
 import numpy as np
 
-from quantumnematode.brain.arch._brain import ClassicalBrain, QuantumBrain
-from quantumnematode.brain.dtypes import ActionData
+from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
+from quantumnematode.brain.actions import ActionData
 from quantumnematode.constants import (
     SUPERPOSITION_MODE_MAX_COLUMNS,
     SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,

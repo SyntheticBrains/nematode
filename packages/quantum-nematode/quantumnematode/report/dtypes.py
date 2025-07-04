@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from quantumnematode.brain.arch._brain import BrainData
+from quantumnematode.brain.arch import BrainData
 
 
 class SimulationResult(BaseModel):
