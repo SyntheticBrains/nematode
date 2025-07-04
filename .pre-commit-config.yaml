@@ -17,3 +17,4 @@ repos:
     rev: v1.1.399
     hooks:
       - id: pyright
+        entry: uv run pyright
