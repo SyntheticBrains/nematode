@@ -8,7 +8,7 @@ from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.models import TrackingData
+from quantumnematode.report.dtypes import TrackingData
 
 
 def plot_efficiency_score_over_time(
