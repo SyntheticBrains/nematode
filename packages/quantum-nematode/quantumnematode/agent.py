@@ -14,7 +14,7 @@ from quantumnematode.constants import (
     SUPERPOSITION_MODE_TOP_N_ACTIONS,
     SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
-from quantumnematode.models import ActionData
+from quantumnematode.models import ActionData, Theme
 
 from .brain.arch import Brain, BrainParams
 from .env import MazeEnvironment
@@ -47,7 +47,7 @@ class QuantumNematodeAgent:
         brain: Brain,
         maze_grid_size: int = 5,
         max_body_length: int = 6,
-        theme: str = "ascii",
+        theme: Theme = Theme.ASCII,
     ) -> None:
         """
         Initialize the quantum nematode agent.
