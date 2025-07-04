@@ -11,8 +11,8 @@ import numpy as np
 import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
 
+from quantumnematode.brain.dtypes import ActionData
 from quantumnematode.logging_config import logger
-from quantumnematode.models import ActionData
 
 from ._brain import BrainParams, ClassicalBrain
 
