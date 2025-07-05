@@ -40,6 +40,16 @@ line-length = 100
 select = ['ALL']
 ignore = ['TD002', 'TD003']
 
+[tool.ruff.lint.per-file-ignores]
+"/**/tests/**/*.py" = [
+  "ANN",
+  "ARG",
+  "D100",
+  "D104",
+  "PLR2004",
+  "S101",
+]
+
 [tool.ruff.lint.pydocstyle]
 convention = "numpy" # https://numpydoc.readthedocs.io/en/latest/format.html#sections
 
