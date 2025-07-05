@@ -13,7 +13,7 @@ from enum import Enum
 
 import numpy as np
 
-from quantumnematode.theme import Theme, ThemeSymbolSet
+from quantumnematode.theme import THEME_SYMBOLS, Theme
 
 from .constants import MIN_GRID_SIZE
 from .logging_config import logger
@@ -231,26 +231,7 @@ class MazeEnvironment:
 
     def render(self) -> list[str]:
         """Render the current state of the maze using the selected theme."""
-        # Theme symbol sets
-        ascii_symbols = ThemeSymbolSet(
-            goal="*",
-            body="O",
-            up="^",
-            down="v",
-            left="<",
-            right=">",
-            empty=".",
-        )
-        emoji_symbols = ThemeSymbolSet(
-            goal="🦠",
-            body="🔵",
-            up="🔼",
-            down="🔽",
-            left="◀️ ",
-            right="▶️ ",
-            empty="⬜️",
-        )
-        symbols = ascii_symbols if self.theme == Theme.ASCII else emoji_symbols
+        symbols = THEME_SYMBOLS[self.theme]
 
         grid = [[symbols.empty for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         grid[self.goal[1]][self.goal[0]] = symbols.goal  # Mark the goal

@@ -40,3 +40,25 @@ class ThemeSymbolSet(BaseModel):
     left: str
     right: str
     empty: str
+
+
+THEME_SYMBOLS = {
+    Theme.ASCII: ThemeSymbolSet(
+        goal="*",
+        body="O",
+        up="^",
+        down="v",
+        left="<",
+        right=">",
+        empty=".",
+    ),
+    Theme.EMOJI: ThemeSymbolSet(
+        goal="🦠",
+        body="🔵",
+        up="🔼",
+        down="🔽",
+        left="◀️ ",
+        right="▶️ ",
+        empty="⬜️",
+    ),
+}
