@@ -23,7 +23,6 @@ from quantumnematode.constants import (
     DEFAULT_SHOTS,
     MIN_GRID_SIZE,
 )
-from quantumnematode.dtypes import Theme
 from quantumnematode.logging_config import (
     logger,
 )
@@ -46,6 +45,7 @@ from quantumnematode.report.plots import (
     plot_tracking_data_by_session,
 )
 from quantumnematode.report.summary import summary
+from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
     configure_gradient_method,
     configure_learning_rate,
