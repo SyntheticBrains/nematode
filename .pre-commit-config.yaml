@@ -18,3 +18,10 @@ repos:
     hooks:
       - id: pyright
         entry: uv run pyright
+  - repo: local
+    hooks:
+      - id: pytest
+        name: tests
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
