@@ -50,3 +50,21 @@ class TrackingData(BaseModel):
         default_factory=dict,
         description="Tracking data for each run, indexed by run number",
     )
+
+
+class PerformanceMetrics(BaseModel):
+    """Performance metrics for the simulation.
+
+    Attributes
+    ----------
+    success_rate : float
+        The rate of successful runs.
+    average_steps : float
+        The average number of steps taken across all runs.
+    average_reward : float
+        The average reward received across all runs.
+    """
+
+    success_rate: float
+    average_steps: float
+    average_reward: float

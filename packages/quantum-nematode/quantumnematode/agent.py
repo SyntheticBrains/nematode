@@ -17,6 +17,7 @@ from quantumnematode.constants import (
     SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
 )
 from quantumnematode.dtypes import Theme
+from quantumnematode.report.dtypes import PerformanceMetrics
 
 from .brain.arch import Brain, BrainParams
 from .env import MazeEnvironment
@@ -539,17 +540,18 @@ class QuantumNematodeAgent:
         self.brain.history_data = BrainHistoryData()
         logger.info("Agent brain reset.")
 
-    def calculate_metrics(self, total_runs: int) -> dict:
+    def calculate_metrics(self, total_runs: int) -> PerformanceMetrics:
         """
         Calculate and return performance metrics.
 
         Returns
         -------
-        dict
-            A dictionary containing success rate, average steps, and average reward.
+        PerformanceMetrics
+            An object containing success rate, average steps, and average reward.
         """
-        return {
-            "success_rate": self.success_count / total_runs,
-            "average_steps": self.total_steps / total_runs,
-            "average_reward": self.total_rewards / total_runs,
-        }
+        # TODO: Convert to dataclass
+        return PerformanceMetrics(
+            success_rate=self.success_count / total_runs,
+            average_steps=self.total_steps / total_runs,
+            average_reward=self.total_rewards / total_runs,
+        )

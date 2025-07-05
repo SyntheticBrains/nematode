@@ -35,7 +35,7 @@ from quantumnematode.optimizers.learning_rate import (
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
-from quantumnematode.report.dtypes import SimulationResult, TrackingData
+from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
 from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_efficiency_score_over_time,
@@ -273,9 +273,9 @@ def main() -> None:  # noqa: C901, PLR0915
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
     logger.info("\nPerformance Metrics:")
-    logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
-    logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
-    logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
+    logger.info(f"Success Rate: {metrics.success_rate:.2f}")
+    logger.info(f"Average Steps: {metrics.average_steps:.2f}")
+    logger.info(f"Average Reward: {metrics.average_reward:.2f}")
 
     print()  # noqa: T201
     print(f"Session ID: {timestamp}")  # noqa: T201
@@ -445,9 +445,9 @@ def manage_simulation_halt(  # noqa: PLR0913
             logger.info("Generating partial results and plots.")
             metrics = agent.calculate_metrics(total_runs=total_runs_done)
             logger.info("\nPerformance Metrics:")
-            logger.info(f"Success Rate: {metrics['success_rate']:.2f}")
-            logger.info(f"Average Steps: {metrics['average_steps']:.2f}")
-            logger.info(f"Average Reward: {metrics['average_reward']:.2f}")
+            logger.info(f"Success Rate: {metrics.success_rate:.2f}")
+            logger.info(f"Average Steps: {metrics.average_steps:.2f}")
+            logger.info(f"Average Reward: {metrics.average_reward:.2f}")
 
             print()  # noqa: T201
             print(f"Session ID: {timestamp}")  # noqa: T201
@@ -482,7 +482,7 @@ def manage_simulation_halt(  # noqa: PLR0913
 
 def plot_results(
     all_results: list[SimulationResult],
-    metrics: dict[str, float],
+    metrics: PerformanceMetrics,
     timestamp: str,
     max_steps: int,
     file_prefix: str = "",

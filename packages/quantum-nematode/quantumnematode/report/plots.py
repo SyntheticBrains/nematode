@@ -9,7 +9,7 @@ from quantumnematode.brain.actions import ActionData
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.report.dtypes import TrackingData
+from quantumnematode.report.dtypes import PerformanceMetrics, TrackingData
 
 
 def plot_efficiency_score_over_time(
@@ -124,7 +124,7 @@ def plot_cumulative_reward_per_run(
 
 
 def plot_steps_per_run(
-    metrics: dict[str, int | float],
+    metrics: PerformanceMetrics,
     file_prefix: str,
     runs: list[int],
     steps: list[int],
@@ -134,7 +134,7 @@ def plot_steps_per_run(
     Plot steps per run and save the plot.
 
     Args:
-        metrics (dict[str, int | float]): Dictionary containing metrics like average steps.
+        metrics (PerformanceMetrics): An object containing metrics like average steps.
         file_prefix (str): Prefix for the output file name.
         runs (list[int]): List of run indices.
         steps (list[int]): List of steps per run.
@@ -142,7 +142,7 @@ def plot_steps_per_run(
     """
     plt.figure(figsize=(10, 6))
     plt.plot(runs, steps, marker="o", label="Steps per Run")
-    plt.axhline(y=metrics["average_steps"], color="r", linestyle="--", label="Average Steps")
+    plt.axhline(y=metrics.average_steps, color="r", linestyle="--", label="Average Steps")
     plt.title("Steps per Run")
     plt.xlabel("Run")
     plt.ylabel("Steps")
