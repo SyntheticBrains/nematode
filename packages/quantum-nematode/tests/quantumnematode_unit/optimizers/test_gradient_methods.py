@@ -1,4 +1,4 @@
-from quantumnematode.optimizer.gradient_methods import (
+from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
     compute_gradients,
 )

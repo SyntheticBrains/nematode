@@ -18,7 +18,7 @@ from quantumnematode.initializers.random_initializer import (
 )
 from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
-from quantumnematode.optimizer.learning_rate import DynamicLearningRate
+from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 # Example: Define the available modules and their qubit assignments
 DEFAULT_MODULES: dict[str, list[int]] = {

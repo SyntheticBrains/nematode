@@ -27,10 +27,10 @@ from quantumnematode.dtypes import Theme
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.optimizer.gradient_methods import (
+from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
 )
-from quantumnematode.optimizer.learning_rate import (
+from quantumnematode.optimizers.learning_rate import (
     AdamLearningRate,
     DynamicLearningRate,
     PerformanceBasedLearningRate,
