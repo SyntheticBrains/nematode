@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -41,8 +42,8 @@ from quantumnematode.report.plots import (
     plot_last_cumulative_rewards,
     plot_steps_per_run,
     plot_success_rate_over_time,
-    plot_tracking_data_per_run,
-    plot_tracking_data_per_session,
+    plot_tracking_data_by_latest_run,
+    plot_tracking_data_by_session,
 )
 from quantumnematode.report.summary import summary
 from quantumnematode.utils.config_loader import (
@@ -111,7 +112,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:  # noqa: C901, PLR0912, PLR0915
+def main() -> None:  # noqa: C901, PLR0915
     """Run the Quantum Nematode simulation."""
     args = parse_arguments()
 
@@ -206,12 +207,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     try:
         for run in range(total_runs_done, runs):
-            logger.info(f"Starting run {run + 1} of {runs}")
+            run_num = run + 1
+            logger.info(f"Starting run {run_num} of {runs}")
 
             # Calculate the initial distance to the goal
             initial_distance = agent.calculate_goal_distance()
 
-            render_text = f"Run:\t{run + 1}/{runs}"
+            render_text = f"Run:\t{run_num}/{runs}"
             path = agent.run_episode(
                 max_steps=max_steps,
                 render_text=render_text,
@@ -227,10 +229,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             steps_taken = len(path)
             efficiency_score = initial_distance - steps_taken
 
-            logger.info(f"Efficiency Score for run {run + 1}: {efficiency_score}")
+            logger.info(f"Efficiency Score for run {run_num}: {efficiency_score}")
 
             result = SimulationResult(
-                run=run + 1,
+                run=run_num,
                 steps=steps,
                 path=path,
                 total_reward=total_reward,
@@ -239,23 +241,20 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
             all_results.append(result)
 
-            logger.info(f"Run {run + 1}/{runs} completed in {steps} steps.")
+            logger.info(f"Run {run_num}/{runs} completed in {steps} steps.")
 
             total_runs_done += 1
 
-            # Track data for plotting, only supported for modular brains
-            if brain_type in ("modular"):
-                tracking_data.run.append(run + 1)
-                tracking_data.input_parameters.append(agent.brain.latest_input_parameters)
-                tracking_data.computed_gradients.append(agent.brain.latest_gradients)
-                tracking_data.learning_rate.append(agent.brain.latest_learning_rate)
-                tracking_data.updated_parameters.append(agent.brain.latest_updated_parameters)
-                tracking_data.temperature.append(agent.brain.latest_temperature)
+            tracking_data.data[run_num] = deepcopy(agent.brain.history_data)
 
             if track_per_run and brain_type in ("modular"):
-                plot_tracking_data_per_run(timestamp, agent, run)
+                plot_tracking_data_by_latest_run(
+                    tracking_data=tracking_data,
+                    timestamp=timestamp,
+                    run=run_num,
+                )
 
-            if run < runs - 1:
+            if run_num < runs:
                 agent.reset_environment()
                 agent.reset_brain()
 
@@ -288,8 +287,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     plot_results(all_results, metrics, timestamp, max_steps)
 
     # Generate additional plots for tracking data
-    if brain_type in ("modular"):
-        plot_tracking_data_per_session(tracking_data, timestamp, brain_type, qubits)
+    plot_tracking_data_by_session(tracking_data, timestamp, brain_type, qubits)
 
     return
 
@@ -462,7 +460,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
 
             if brain_type in ("modular"):
-                plot_tracking_data_per_session(
+                plot_tracking_data_by_session(
                     tracking_data,
                     timestamp,
                     brain_type,
