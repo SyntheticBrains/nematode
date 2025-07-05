@@ -8,6 +8,7 @@ import numpy as np
 
 from quantumnematode.brain.actions import ActionData
 from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
+from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.constants import (
     SUPERPOSITION_MODE_MAX_COLUMNS,
     SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
@@ -523,7 +524,7 @@ class QuantumNematodeAgent:
         self.path = [tuple(self.env.agent_pos)]
         logger.info("Environment reset. Retaining learned data.")
 
-    def reset_brain(self) -> None:  # noqa: C901
+    def reset_brain(self) -> None:
         """
         Reset the agent's brain state.
 
@@ -534,28 +535,8 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        # Reset the brain's history (currently only for ModularBrain))
-        if hasattr(self.brain, "history_params"):
-            self.brain.history_params = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_input_parameters"):
-            self.brain.history_input_parameters = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_updated_parameters"):
-            self.brain.history_updated_parameters = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_gradients"):
-            self.brain.history_gradients = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_gradient_strengths"):
-            self.brain.history_gradient_strengths = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_gradient_directions"):
-            self.brain.history_gradient_directions = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_rewards"):
-            self.brain.history_rewards = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_rewards_norm"):
-            self.brain.history_rewards_norm = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_learning_rates"):
-            self.brain.history_learning_rates = []  # type: ignore[assignment]
-        if hasattr(self.brain, "history_temperatures"):
-            self.brain.history_temperatures = []  # type: ignore[assignment]
-
+        # Reset the brain's history
+        self.brain.history_data = BrainHistoryData()
         logger.info("Agent brain reset.")
 
     def calculate_metrics(self, total_runs: int) -> dict:
