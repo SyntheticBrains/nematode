@@ -263,7 +263,7 @@ class MazeEnvironment:
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
         # For emoji theme, join with empty string to avoid extra spaces
-        if self.theme == "emoji":
+        if self.theme == Theme.EMOJI:
             return ["".join(row) for row in reversed(grid)] + [""]
         return [" ".join(row) for row in reversed(grid)] + [""]
 
