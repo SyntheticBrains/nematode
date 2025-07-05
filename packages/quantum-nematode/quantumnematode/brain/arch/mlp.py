@@ -68,14 +68,7 @@ class MLPBrain(ClassicalBrain):
         self.loss_fn = nn.CrossEntropyLoss(reduction="none")
         self.satiety = 1.0
 
-        self.latest_action = None
-        self.latest_probabilities = None
-        self.latest_loss = None
-
-        self.history_rewards = []
-        self.history_losses = []
-        self.history_actions = []
-        self.history_probabilities = []
+        self.current_probabilities = None
 
         self.training = True
         if action_names is not None:
@@ -167,14 +160,19 @@ class MLPBrain(ClassicalBrain):
         rng = np.random.default_rng()
         action_idx = rng.choice(self.num_actions, p=probs_np)
         action_name = self.action_names[action_idx]
-        self.latest_action = ActionData(
+
+        self.latest_data.action = ActionData(
             state=action_name,
             action=action_name,
             probability=probs_np[action_idx],
         )
-        self.latest_probabilities = probs_np
-        self.history_actions.append(self.latest_action)
-        self.history_probabilities.append(probs_np)
+
+        self.current_probabilities = probs_np
+        first_prob = float(probs_np[action_idx])
+        self.latest_data.probability = first_prob
+        self.history_data.actions.append(self.latest_data.action)
+        self.history_data.probabilities.append(first_prob)
+
         return {name: int(i == action_idx) for i, name in enumerate(self.action_names)}
 
     def interpret_counts(
@@ -188,7 +186,7 @@ class MLPBrain(ClassicalBrain):
         # In MLPBrain, counts is a one-hot dict from run_brain
         action_name = max(counts.items(), key=lambda x: x[1])[0]
         idx = self.action_names.index(action_name)
-        prob = self.latest_probabilities[idx] if self.latest_probabilities is not None else 1.0
+        prob = self.current_probabilities[idx] if self.current_probabilities is not None else 1.0
         return ActionData(state=action_name, action=action_name, probability=prob)
 
     def update_parameters(
@@ -237,8 +235,8 @@ class MLPBrain(ClassicalBrain):
         entropy = -torch.sum(probs * torch.log(probs + 1e-8))
 
         # Use discounted return if provided, else use immediate reward
-        if episode_rewards is None and self.history_rewards is not None:
-            episode_rewards = self.history_rewards
+        if episode_rewards is None and self.history_data.rewards is not None:
+            episode_rewards = self.history_data.rewards
         if episode_rewards is not None:
             g = self.compute_discounted_return(episode_rewards, gamma=gamma)
         else:
@@ -252,18 +250,20 @@ class MLPBrain(ClassicalBrain):
         self.optimizer.step()
         if self.lr_scheduler:
             self.lr_scheduler.step()
-        self.latest_loss = loss.item()
+        self.latest_data.loss = loss.item()
 
-        self.history_rewards.append(reward)
-        self.history_losses.append(self.latest_loss)
+        self.history_data.rewards.append(reward)
+        self.history_data.losses.append(self.latest_data.loss)
 
         # Update baseline (running average)
         self.baseline = (1 - self.baseline_alpha) * self.baseline + self.baseline_alpha * g
 
-    def update_memory(self, reward: float | None) -> None:
-        """Store the reward in the history for diagnostics and future learning extensions."""
-        if reward is not None:
-            self.history_rewards.append(reward)
+    def update_memory(
+        self,
+        reward: float | None = None,  # noqa: ARG002
+    ) -> None:
+        """No-op for MLPBrain."""
+        return
 
     def copy(self) -> "MLPBrain":
         """

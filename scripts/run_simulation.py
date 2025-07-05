@@ -247,7 +247,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
             tracking_data.data[run_num] = deepcopy(agent.brain.history_data)
 
-            if track_per_run and brain_type in ("modular"):
+            if track_per_run:
                 plot_tracking_data_by_latest_run(
                     tracking_data=tracking_data,
                     timestamp=timestamp,
@@ -458,15 +458,13 @@ def manage_simulation_halt(  # noqa: PLR0913
             # Generate plots with current timestamp
             file_prefix = f"{total_runs_done}_"
             plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
-
-            if brain_type in ("modular"):
-                plot_tracking_data_by_session(
-                    tracking_data,
-                    timestamp,
-                    brain_type,
-                    qubits,
-                    file_prefix=file_prefix,
-                )
+            plot_tracking_data_by_session(
+                tracking_data,
+                timestamp,
+                brain_type,
+                qubits,
+                file_prefix=file_prefix,
+            )
         elif choice == 2:  # noqa: PLR2004
             logger.info("Printing circuit details.")
             if isinstance(agent.brain, QuantumBrain):
