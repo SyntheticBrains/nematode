@@ -13,7 +13,7 @@ from enum import Enum
 
 import numpy as np
 
-from quantumnematode.dtypes import Theme
+from quantumnematode.theme import Theme, ThemeSymbolSet
 
 from .constants import MIN_GRID_SIZE
 from .logging_config import logger
@@ -232,34 +232,34 @@ class MazeEnvironment:
     def render(self) -> list[str]:
         """Render the current state of the maze using the selected theme."""
         # Theme symbol sets
-        ascii_symbols = {
-            "goal": "*",
-            "body": "O",
-            "up": "^",
-            "down": "v",
-            "left": "<",
-            "right": ">",
-            "empty": ".",
-        }
-        emoji_symbols = {
-            "goal": "🦠",
-            "body": "🔵",
-            "up": "🔼",
-            "down": "🔽",
-            "left": "◀️ ",
-            "right": "▶️ ",
-            "empty": "⬜️",
-        }
+        ascii_symbols = ThemeSymbolSet(
+            goal="*",
+            body="O",
+            up="^",
+            down="v",
+            left="<",
+            right=">",
+            empty=".",
+        )
+        emoji_symbols = ThemeSymbolSet(
+            goal="🦠",
+            body="🔵",
+            up="🔼",
+            down="🔽",
+            left="◀️ ",
+            right="▶️ ",
+            empty="⬜️",
+        )
         symbols = ascii_symbols if self.theme == Theme.ASCII else emoji_symbols
 
-        grid = [[symbols["empty"] for _ in range(self.grid_size)] for _ in range(self.grid_size)]
-        grid[self.goal[1]][self.goal[0]] = symbols["goal"]  # Mark the goal
+        grid = [[symbols.empty for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        grid[self.goal[1]][self.goal[0]] = symbols.goal  # Mark the goal
 
         # Mark the body
         for segment in self.body:
-            grid[segment[1]][segment[0]] = symbols["body"]
+            grid[segment[1]][segment[0]] = symbols.body
 
-        agent_symbol = symbols.get(self.current_direction, "@")
+        agent_symbol = getattr(symbols, self.current_direction, "@")
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
         # For emoji theme, join with empty string to avoid extra spaces
