@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from quantumnematode.brain.arch import BrainData
+from quantumnematode.brain.arch._brain import BrainHistoryData
 
 
 class SimulationResult(BaseModel):
@@ -34,7 +34,19 @@ class SimulationResult(BaseModel):
     efficiency_score: float
 
 
-class TrackingData(BrainData):
-    """Data structure for tracking agent's brain parameters."""
+TrackingRunIndex = int
 
-    run: list[int] = Field(default_factory=list, description="Run number")
+
+class TrackingData(BaseModel):
+    """Data structure for tracking agent's brain parameters across runs.
+
+    Attributes
+    ----------
+    data : dict[TrackingRunIndex, BrainHistoryData]
+        A dictionary mapping run indices to their corresponding brain history data.
+    """
+
+    data: dict[TrackingRunIndex, BrainHistoryData] = Field(
+        default_factory=dict,
+        description="Tracking data for each run, indexed by run number",
+    )

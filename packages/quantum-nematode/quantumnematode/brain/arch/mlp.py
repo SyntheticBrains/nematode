@@ -12,9 +12,9 @@ import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
 
 from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
+from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.logging_config import logger
-
-from ._brain import BrainParams, ClassicalBrain
 
 
 class MLPBrain(ClassicalBrain):
@@ -50,6 +50,8 @@ class MLPBrain(ClassicalBrain):
             entropy_beta,
         )
 
+        self.history_data = BrainHistoryData()
+        self.latest_data = BrainData()
         self.input_dim = input_dim
         self.num_actions = num_actions
         self.device = torch.device(device)
@@ -67,13 +69,13 @@ class MLPBrain(ClassicalBrain):
         self.satiety = 1.0
 
         self.latest_action = None
-        self.latest_probs = None
+        self.latest_probabilities = None
         self.latest_loss = None
 
         self.history_rewards = []
         self.history_losses = []
         self.history_actions = []
-        self.history_probs = []
+        self.history_probabilities = []
 
         self.training = True
         if action_names is not None:
@@ -170,9 +172,9 @@ class MLPBrain(ClassicalBrain):
             action=action_name,
             probability=probs_np[action_idx],
         )
-        self.latest_probs = probs_np
+        self.latest_probabilities = probs_np
         self.history_actions.append(self.latest_action)
-        self.history_probs.append(probs_np)
+        self.history_probabilities.append(probs_np)
         return {name: int(i == action_idx) for i, name in enumerate(self.action_names)}
 
     def interpret_counts(
@@ -186,7 +188,7 @@ class MLPBrain(ClassicalBrain):
         # In MLPBrain, counts is a one-hot dict from run_brain
         action_name = max(counts.items(), key=lambda x: x[1])[0]
         idx = self.action_names.index(action_name)
-        prob = self.latest_probs[idx] if self.latest_probs is not None else 1.0
+        prob = self.latest_probabilities[idx] if self.latest_probabilities is not None else 1.0
         return ActionData(state=action_name, action=action_name, probability=prob)
 
     def update_parameters(

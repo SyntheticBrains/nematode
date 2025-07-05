@@ -9,6 +9,8 @@ from qiskit.circuit import Parameter
 from qiskit_aer import AerSimulator
 
 from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
+from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.modules import extract_features_for_module
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
@@ -17,8 +19,6 @@ from quantumnematode.initializers.random_initializer import (
 from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizer.learning_rate import DynamicLearningRate
-
-from ._brain import BrainParams, QuantumBrain
 
 # Example: Define the available modules and their qubit assignments
 DEFAULT_MODULES: dict[str, list[int]] = {
@@ -60,6 +60,8 @@ class ModularBrain(QuantumBrain):
             device: Device string for AerSimulator.
             parameter_initializer : The initializer to use for parameter initialization.
         """
+        self.history_data = BrainHistoryData()
+        self.latest_data = BrainData()
         num_qubits = 2  # TODO: Get num qubits from module definitions
 
         self.num_qubits: int = num_qubits
@@ -104,25 +106,6 @@ class ModularBrain(QuantumBrain):
             self.parameter_values.update(
                 {f"θ_rz{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
             )
-
-        self.latest_input_parameters: dict[str, float] | None = None
-        self.latest_updated_parameters: dict[str, float] | None = None
-        self.latest_counts: dict[str, int] | None = None
-        self.latest_action: ActionData | None = None
-        self.latest_gradients: list[float] | None = None
-        self.latest_learning_rate: float | None = None
-        self.latest_temperature: float | None = None  # Not used
-
-        self.history_input_parameters: list[dict[str, float]] = []
-        self.history_updated_parameters: list[dict[str, float]] = []
-        self.history_gradients: list[list[float]] = []
-        self.history_gradient_strengths: list[float] = []
-        self.history_gradient_directions: list[float] = []
-        self.history_rewards: list[float] = []
-        self.history_learning_rates: list[float | dict[str, float]] = []
-        self.history_counts: list[dict[str, int]] = []
-        self.history_actions: list[ActionData] = []
-        self.history_temperature: list[float] = []  # Not used
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
@@ -215,11 +198,15 @@ class ModularBrain(QuantumBrain):
         """
         gradient_strength = params.gradient_strength
         if gradient_strength:
-            self.history_gradient_strengths.append(gradient_strength)  # Used for reporting only
+            self.history_data.gradient_strengths.append(
+                gradient_strength,
+            )  # Used for reporting only
 
         gradient_direction = params.gradient_direction
         if gradient_direction:
-            self.history_gradient_directions.append(gradient_direction)  # Used for reporting only
+            self.history_data.gradient_directions.append(
+                gradient_direction,
+            )  # Used for reporting only
 
         input_params = {
             module: extract_features_for_module(module, params, satiety=self.satiety)
@@ -231,8 +218,8 @@ class ModularBrain(QuantumBrain):
             for module, features in input_params.items()
             for k, v in features.items()
         }
-        self.latest_input_parameters = flat_input_params
-        self.history_input_parameters.append(flat_input_params)
+        self.latest_data.input_parameters = flat_input_params
+        self.history_data.input_parameters.append(flat_input_params)
 
         # Build the circuit with current input_params (features)
         qc = self.build_brain(input_params)
@@ -242,16 +229,16 @@ class ModularBrain(QuantumBrain):
         result = simulator.run(bound_qc, shots=self.shots).result()
         counts = result.get_counts()
 
-        self.latest_counts = counts
-        self.history_counts.append(counts)
+        self.latest_data.counts = counts
+        self.history_data.counts.append(counts)
 
         # --- Reward-based learning: compute gradients and update parameters ---
-        if reward is not None and self.latest_action is not None:
-            gradients = self.parameter_shift_gradients(params, self.latest_action, reward)
+        if reward is not None and self.latest_data.action is not None:
+            gradients = self.parameter_shift_gradients(params, self.latest_data.action, reward)
             lr = self.learning_rate.get_learning_rate()
             self.update_parameters(gradients, reward=reward, learning_rate=lr)
 
-        self.history_rewards.append(reward or 0.0)
+        self.history_data.rewards.append(reward or 0.0)
 
         return counts
 
@@ -308,18 +295,18 @@ class ModularBrain(QuantumBrain):
                 rng = np.random.default_rng()
                 chosen_state = rng.choice(actions, p=probs)
                 chosen_action = next(a for a in sorted_actions if a.state == chosen_state)
-                self.latest_action = chosen_action
-                self.history_actions.append(chosen_action)
+                self.latest_data.action = chosen_action
+                self.history_data.actions.append(chosen_action)
 
                 return chosen_action
 
-            self.latest_action = sorted_actions[0]
-            self.history_actions.append(sorted_actions[0])
+            self.latest_data.action = sorted_actions[0]
+            self.history_data.actions.append(sorted_actions[0])
 
             return sorted_actions[0]
 
-        self.latest_action = sorted_actions[0]
-        self.history_actions.append(sorted_actions[0])
+        self.latest_data.action = sorted_actions[0]
+        self.history_data.actions.append(sorted_actions[0])
 
         return sorted_actions
 
@@ -422,8 +409,8 @@ class ModularBrain(QuantumBrain):
             gradients.append(grad)
 
         # Store gradients for tracking
-        self.latest_gradients = gradients
-        self.history_gradients.append(gradients)
+        self.latest_data.computed_gradients = gradients
+        self.history_data.computed_gradients.append(gradients)
 
         return gradients
 
@@ -492,11 +479,11 @@ class ModularBrain(QuantumBrain):
                     (self.parameter_values[k] + np.pi) % (2 * np.pi)
                 ) - np.pi
 
-        self.latest_learning_rate = learning_rate
-        self.latest_updated_parameters = deepcopy(self.parameter_values)
+        self.latest_data.learning_rate = learning_rate
+        self.latest_data.updated_parameters = deepcopy(self.parameter_values)
 
-        self.history_learning_rates.append(learning_rate)
-        self.history_updated_parameters.append(deepcopy(self.parameter_values))
+        self.history_data.learning_rates.append(learning_rate)
+        self.history_data.updated_parameters.append(deepcopy(self.parameter_values))
 
         # --- Gradient norm monitoring and parameter reset logic ---
         if reset_on_stall:
