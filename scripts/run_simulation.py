@@ -314,10 +314,10 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits:
         logger.error(error_message)
         raise ValueError(error_message)
 
-    if brain_type not in ("modular") and qubits != DEFAULT_QUBITS:
+    if brain_type in ("mlp") and qubits != DEFAULT_QUBITS:
         error_message = (
-            f"The 'qubits' parameter is only supported by the "
-            "ModularBrain architecture. "
+            f"The 'qubits' parameter is only supported by "
+            "quantum brain architectures. "
             f"Provided brain: {brain_type}, qubits: {qubits}."
         )
         logger.error(error_message)
