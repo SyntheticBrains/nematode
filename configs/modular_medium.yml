@@ -12,3 +12,9 @@ learning_rate:
     decay_type: inverse_time
 gradient:
   method: clip
+superposition_mode:
+  max_superpositions: 32
+  max_columns: 8
+  render_sleep_seconds: 0.5
+  top_n_actions: 2
+  top_n_randomize: true
