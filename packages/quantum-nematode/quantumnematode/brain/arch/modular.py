@@ -97,19 +97,13 @@ class ModularBrain(QuantumBrain):
             self.parameters[f"rz_{layer + 1}"] = [
                 Parameter(f"θ_rz{layer + 1}_{i}") for i in range(self.num_qubits)
             ]
-        rng = np.random.default_rng()
         self.parameter_values = {}
-        # TODO: Use parameter_initializer to initialize parameters
         for layer in range(self.num_layers):
-            self.parameter_values.update(
-                {f"θ_rx{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
-            )
-            self.parameter_values.update(
-                {f"θ_ry{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
-            )
-            self.parameter_values.update(
-                {f"θ_rz{layer + 1}_{i}": rng.uniform(-0.1, 0.1) for i in range(self.num_qubits)},
-            )
+            for axis in ["rx", "ry", "rz"]:
+                param_names = [f"θ_{axis}{layer + 1}_{i}" for i in range(self.num_qubits)]
+                self.parameter_values.update(
+                    self.parameter_initializer.initialize(self.num_qubits, param_names),
+                )
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None

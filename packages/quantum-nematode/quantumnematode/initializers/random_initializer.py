@@ -1,6 +1,4 @@
-"""
-Random uniform initializer for quantum parameters.
-"""
+"""Random uniform initializer for quantum parameters."""
 
 import numpy as np
 
