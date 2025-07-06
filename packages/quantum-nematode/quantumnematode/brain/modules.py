@@ -205,6 +205,12 @@ MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
     ModuleName.ACTION: memory_action_features,
 }
 
+Modules = dict[ModuleName, list[int]]
+
+DEFAULT_MODULES = {
+    ModuleName.CHEMOTAXIS: [0, 1],
+}
+
 
 def extract_features_for_module(
     module: ModuleName,

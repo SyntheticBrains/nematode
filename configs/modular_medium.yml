@@ -12,6 +12,8 @@ learning_rate:
     decay_type: inverse_time
 gradient:
   method: clip
+modules:
+  chemotaxis: [0, 1]
 superposition_mode:
   max_superpositions: 32
   max_columns: 8
