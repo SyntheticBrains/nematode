@@ -11,3 +11,7 @@ builds/*
 log/*
 logs/*
 plots/*
+
+# Configuration files
+configs/*.yml
+!configs/examples/*.yml
