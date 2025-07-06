@@ -26,6 +26,7 @@ class MLPBrain(ClassicalBrain):
     Uses a simple MLP policy network with optional GPU acceleration.
     """
 
+    # TODO: Make the below parameters configurable
     def __init__(  # noqa: PLR0913
         self,
         input_dim: int,
