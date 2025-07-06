@@ -11,6 +11,7 @@ from qiskit_aer import AerSimulator
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch.dtypes import DEFAULT_SHOTS, DeviceType
 from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
     ModuleName,
@@ -39,8 +40,8 @@ class ModularBrain(QuantumBrain):
         self,
         modules: dict[ModuleName, list[int]],
         num_qubits: int | None = None,
-        shots: int = 100,
-        device: str = "CPU",
+        shots: int = DEFAULT_SHOTS,
+        device: DeviceType = DeviceType.CPU,
         learning_rate: DynamicLearningRate | None = None,
         parameter_initializer: ZeroInitializer
         | RandomPiUniformInitializer
@@ -69,7 +70,7 @@ class ModularBrain(QuantumBrain):
         self.num_qubits: int = num_qubits
         self.modules: dict[ModuleName, list[int]] = modules or deepcopy(DEFAULT_MODULES)
         self.shots: int = shots
-        self.device: str = device.upper()
+        self.device: DeviceType = device
         self.satiety: float = 1.0
         self.learning_rate = learning_rate or DynamicLearningRate()
         logger.info(
@@ -158,7 +159,7 @@ class ModularBrain(QuantumBrain):
 
     def _get_simulator(self) -> AerSimulator:
         if self._simulator is None:
-            self._simulator = AerSimulator(device=self.device)
+            self._simulator = AerSimulator(device=self.device.value.upper())
         return self._simulator
 
     def _get_cached_circuit(self) -> QuantumCircuit:

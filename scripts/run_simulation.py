@@ -23,6 +23,7 @@ from quantumnematode.brain.arch.dtypes import (
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
     BrainType,
+    DeviceType,
 )
 from quantumnematode.brain.modules import DEFAULT_MODULES, Modules
 from quantumnematode.env import MIN_GRID_SIZE
@@ -60,7 +61,7 @@ from quantumnematode.utils.config_loader import (
     load_simulation_config,
 )
 
-DEFAULT_DEVICE = "cpu"
+DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
 
 
@@ -88,9 +89,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--device",
         type=str,
-        default=DEFAULT_DEVICE,
-        choices=["cpu", "gpu"],
-        help=f"Device to use for AerSimulator ('cpu' or 'gpu', default: '{DEFAULT_DEVICE}').",
+        default=DEFAULT_DEVICE.value,
+        choices=[DeviceType.CPU.value, DeviceType.GPU.value],
+        help=f"Device to use for AerSimulator ('cpu' or 'gpu', default: '{DEFAULT_DEVICE.value}').",
     )
     parser.add_argument(
         "--config",
@@ -133,7 +134,7 @@ def main() -> None:  # noqa: C901, PLR0915
     shots = DEFAULT_SHOTS
     body_length = DEFAULT_AGENT_BODY_LENGTH
     qubits = DEFAULT_QUBITS
-    device = args.device.upper()
+    device = DeviceType(args.device.lower())
     show_last_frame_only = args.show_last_frame_only
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
@@ -361,7 +362,7 @@ def setup_brain_model(  # noqa: PLR0913
     brain_type: BrainType,
     shots: int,
     qubits: int,
-    device: str,
+    device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
     modules: Modules,
@@ -411,7 +412,7 @@ def setup_brain_model(  # noqa: PLR0913
             input_dim=2,
             num_actions=4,
             lr_scheduler=True,
-            device=device.lower(),
+            device=device,
         )
     else:
         error_message = f"Unknown brain architecture: {brain_type}"

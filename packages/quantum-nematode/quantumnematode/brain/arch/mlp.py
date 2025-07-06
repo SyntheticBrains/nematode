@@ -14,6 +14,7 @@ from torch import nn, optim  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 
@@ -31,7 +32,7 @@ class MLPBrain(ClassicalBrain):
         num_actions: int,
         hidden_dim: int = 64,
         num_hidden_layers: int = 2,
-        device: str = "cpu",
+        device: DeviceType = DeviceType.CPU,
         learning_rate: float = 0.01,
         action_set: list[Action] = DEFAULT_ACTIONS,
         lr_scheduler: bool | None = None,
@@ -55,7 +56,7 @@ class MLPBrain(ClassicalBrain):
         self.latest_data = BrainData()
         self.input_dim = input_dim
         self.num_actions = num_actions
-        self.device = torch.device(device)
+        self.device = torch.device(device.value)
         self.entropy_beta = entropy_beta
         self.policy = self._build_network(hidden_dim, num_hidden_layers).to(self.device)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
