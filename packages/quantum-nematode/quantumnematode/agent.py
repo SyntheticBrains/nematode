@@ -22,6 +22,11 @@ from .brain.arch import Brain, BrainParams
 from .env import Direction, MazeEnvironment
 from .logging_config import logger
 
+# Defaults
+DEFAULT_AGENT_BODY_LENGTH = 2
+DEFAULT_MAX_STEPS = 100
+DEFAULT_MAZE_GRID_SIZE = 5
+
 ANTI_DITHERING_PENALTY = 0.02  # Penalty for oscillating (revisiting previous cell)
 DISTANCE_REWARD_SCALE = 0.3  # Scale the distance reward for smoother learning
 GOAL_REWARD = 0.2

@@ -8,22 +8,23 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from quantumnematode.agent import (
+    DEFAULT_AGENT_BODY_LENGTH,
+    DEFAULT_MAX_STEPS,
+    DEFAULT_MAZE_GRID_SIZE,
     QuantumNematodeAgent,
 )
 from quantumnematode.brain.arch import (
     Brain,
     QuantumBrain,
 )
-from quantumnematode.brain.arch.dtypes import CLASSICAL_BRAIN_TYPES, BrainType
-from quantumnematode.constants import (
-    DEFAULT_AGENT_BODY_LENGTH,
+from quantumnematode.brain.arch.dtypes import (
+    CLASSICAL_BRAIN_TYPES,
     DEFAULT_BRAIN_TYPE,
-    DEFAULT_MAX_STEPS,
-    DEFAULT_MAZE_GRID_SIZE,
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
-    MIN_GRID_SIZE,
+    BrainType,
 )
+from quantumnematode.env import MIN_GRID_SIZE
 from quantumnematode.logging_config import (
     logger,
 )

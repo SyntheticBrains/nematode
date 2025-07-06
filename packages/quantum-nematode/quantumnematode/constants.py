@@ -1,18 +1,5 @@
 """Constants."""
 
-from quantumnematode.brain.arch.dtypes import BrainType
-
-# Defaults
-DEFAULT_AGENT_BODY_LENGTH = 2
-DEFAULT_BRAIN_TYPE = BrainType.MODULAR
-DEFAULT_MAX_STEPS = 100
-DEFAULT_MAZE_GRID_SIZE = 5
-DEFAULT_SHOTS = 1024
-DEFAULT_QUBITS = 2
-
-# Validation
-MIN_GRID_SIZE = 5
-
 # Superposition mode
 SUPERPOSITION_MODE_MAX_SUPERPOSITIONS = 16
 SUPERPOSITION_MODE_MAX_COLUMNS = 4
