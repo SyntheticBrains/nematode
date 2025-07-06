@@ -10,6 +10,11 @@ class BrainType(Enum):
     MODULAR = "modular"
     MLP = "mlp"
 
+class DeviceType(Enum):
+    """Different types of devices for running classical processing for brains."""
+
+    CPU = "cpu"
+    GPU = "gpu"
 
 BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.MLP]
 QUANTUM_BRAIN_TYPES = Literal[BrainType.MODULAR]
