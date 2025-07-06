@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.arch.dtypes import BrainType
 from quantumnematode.logging_config import (
     logger,
 )
@@ -155,7 +156,7 @@ def plot_steps_per_run(
 def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
     timestamp: str,
-    brain_type: str,
+    brain_type: BrainType,
     qubits: int | None = None,
     file_prefix: str = "",
 ) -> None:
@@ -165,7 +166,7 @@ def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
     Args:
         tracking_data (TrackingData): Tracking data containing brain history.
         timestamp (str): Timestamp for the plot directory.
-        brain_type (str): Type of the brain (e.g., "quantum", "classical").
+        brain_type (BrainType): Type of the brain (e.g., "quantum", "classical").
         qubits (int | None): Number of qubits if applicable, otherwise None.
         file_prefix (str): Prefix for the output file names.
     """
@@ -173,7 +174,7 @@ def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     title_postfix: str = (
-        f" [{brain_type} {qubits}Q]" if isinstance(qubits, int) else f" [{brain_type}]"
+        f" [{brain_type.value} {qubits}Q]" if isinstance(qubits, int) else f" [{brain_type.value}]"
     )
 
     runs = sorted(tracking_data.data.keys())

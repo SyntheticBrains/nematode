@@ -14,9 +14,10 @@ from quantumnematode.brain.arch import (
     Brain,
     QuantumBrain,
 )
+from quantumnematode.brain.arch.dtypes import CLASSICAL_BRAIN_TYPES, BrainType
 from quantumnematode.constants import (
     DEFAULT_AGENT_BODY_LENGTH,
-    DEFAULT_BRAIN,
+    DEFAULT_BRAIN_TYPE,
     DEFAULT_MAX_STEPS,
     DEFAULT_MAZE_GRID_SIZE,
     DEFAULT_QUBITS,
@@ -121,7 +122,7 @@ def main() -> None:  # noqa: C901, PLR0915
     max_steps = DEFAULT_MAX_STEPS
     maze_grid_size = DEFAULT_MAZE_GRID_SIZE
     runs = args.runs
-    brain_type = DEFAULT_BRAIN
+    brain_type: BrainType = DEFAULT_BRAIN_TYPE
     shots = DEFAULT_SHOTS
     body_length = DEFAULT_AGENT_BODY_LENGTH
     qubits = DEFAULT_QUBITS
@@ -138,7 +139,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
         max_steps = config.get("max_steps", max_steps)
         maze_grid_size = config.get("maze_grid_size", maze_grid_size)
-        brain_type = config.get("brain", brain_type)
+        brain_type = BrainType(config.get("brain", brain_type.value))
         shots = config.get("shots", shots)
         body_length = config.get("body_length", body_length)
         qubits = config.get("qubits", qubits)
@@ -170,7 +171,7 @@ def main() -> None:  # noqa: C901, PLR0915
     logger.info(f"Max steps: {max_steps}")
     logger.info(f"Device: {device}")
     logger.info(f"Grid size: {maze_grid_size}")
-    logger.info(f"Brain type: {brain_type}")
+    logger.info(f"Brain type: {brain_type.value}")
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
     logger.info(f"Shots: {shots}")
@@ -292,7 +293,7 @@ def main() -> None:  # noqa: C901, PLR0915
     return
 
 
-def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits: int) -> None:
+def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, qubits: int) -> None:
     """
     Validate the simulation parameters to ensure they meet the required constraints.
 
@@ -314,18 +315,18 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: str, qubits:
         logger.error(error_message)
         raise ValueError(error_message)
 
-    if brain_type in ("mlp") and qubits != DEFAULT_QUBITS:
+    if brain_type in CLASSICAL_BRAIN_TYPES and qubits != DEFAULT_QUBITS:
         error_message = (
             f"The 'qubits' parameter is only supported by "
             "quantum brain architectures. "
-            f"Provided brain: {brain_type}, qubits: {qubits}."
+            f"Provided brain: {brain_type.value}, qubits: {qubits}."
         )
         logger.error(error_message)
         raise ValueError(error_message)
 
 
 def setup_brain_model(  # noqa: PLR0913
-    brain_type: str,
+    brain_type: BrainType,
     shots: int,
     qubits: int,
     device: str,
@@ -352,7 +353,7 @@ def setup_brain_model(  # noqa: PLR0913
     ------
         ValueError: If an unknown brain type is provided.
     """
-    if brain_type == "modular":
+    if brain_type == BrainType.MODULAR:
         if not isinstance(learning_rate, DynamicLearningRate):
             error_message = (
                 "The 'modular' brain architecture requires a DynamicLearningRate. "
@@ -361,9 +362,7 @@ def setup_brain_model(  # noqa: PLR0913
             logger.error(error_message)
             raise ValueError(error_message)
 
-        from quantumnematode.brain.arch.modular import (
-            ModularBrain,
-        )
+        from quantumnematode.brain.arch.modular import ModularBrain
 
         modules = None
         brain = ModularBrain(
@@ -373,10 +372,8 @@ def setup_brain_model(  # noqa: PLR0913
             shots=shots,
             learning_rate=learning_rate,
         )
-    elif brain_type == "mlp":
-        from quantumnematode.brain.arch.mlp import (
-            MLPBrain,
-        )
+    elif brain_type == BrainType.MLP:
+        from quantumnematode.brain.arch.mlp import MLPBrain
 
         brain = MLPBrain(
             input_dim=2,
@@ -392,7 +389,7 @@ def setup_brain_model(  # noqa: PLR0913
 
 def manage_simulation_halt(  # noqa: PLR0913
     max_steps: int,
-    brain_type: str,
+    brain_type: BrainType,
     qubits: int,
     timestamp: str,
     agent: QuantumNematodeAgent,

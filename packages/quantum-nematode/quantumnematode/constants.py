@@ -1,8 +1,10 @@
 """Constants."""
 
+from quantumnematode.brain.arch.dtypes import BrainType
+
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
-DEFAULT_BRAIN = "dynamic"
+DEFAULT_BRAIN_TYPE = BrainType.MODULAR
 DEFAULT_MAX_STEPS = 100
 DEFAULT_MAZE_GRID_SIZE = 5
 DEFAULT_SHOTS = 1024
