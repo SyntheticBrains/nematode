@@ -16,9 +16,12 @@ import numpy as np
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
 from quantumnematode.theme import THEME_SYMBOLS, Theme
 
-from .constants import MIN_GRID_SIZE
 from .logging_config import logger
 
+# Validation
+MIN_GRID_SIZE = 5
+
+# Constants for gradient scaling
 GRADIENT_SCALING_TANH_FACTOR = 1.0
 
 

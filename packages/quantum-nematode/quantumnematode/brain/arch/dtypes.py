@@ -14,3 +14,8 @@ class BrainType(Enum):
 BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.MLP]
 QUANTUM_BRAIN_TYPES = Literal[BrainType.MODULAR]
 CLASSICAL_BRAIN_TYPES = Literal[BrainType.MLP]
+
+# Defaults
+DEFAULT_BRAIN_TYPE = BrainType.MODULAR
+DEFAULT_QUBITS = 2
+DEFAULT_SHOTS = 1024
