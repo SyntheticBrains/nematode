@@ -45,6 +45,16 @@ class RewardConfig(BaseModel):
     reward_goal: float = DEFAULT_REWARD_GOAL
 
 
+class SuperpositionModeConfig(BaseModel):
+    """Configuration for the superposition mode."""
+
+    max_superpositions: int = DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS
+    max_columns: int = DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS
+    render_sleep_seconds: float = DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS
+    top_n_actions: int = DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS
+    top_n_randomize: bool = DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE
+
+
 class QuantumNematodeAgent:
     """
     Quantum nematode agent that navigates a grid environment using a quantum brain.
@@ -281,17 +291,13 @@ class QuantumNematodeAgent:
 
         return self.path
 
-    def run_superposition_mode(  # noqa: C901, PLR0912, PLR0913, PLR0915
+    def run_superposition_mode(  # noqa: C901, PLR0912, PLR0915
         self,
+        config: SuperpositionModeConfig,
         reward_config: RewardConfig,
         max_steps: int = DEFAULT_MAX_STEPS,
-        max_superpositions: int = DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
-        max_columns: int = DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS,
-        render_sleep_seconds: float = DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS,
-        top_n_actions: int = DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS,
         *,
         show_last_frame_only: bool = False,
-        top_n_randomize: bool = DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
     ) -> list[tuple]:
         """
         Run the agent in superposition mode.
@@ -336,10 +342,11 @@ class QuantumNematodeAgent:
             logger.debug(frame)
         print("#1")  # noqa: T201
 
-        time.sleep(render_sleep_seconds)  # Wait before the next render
+        time.sleep(config.render_sleep_seconds)  # Wait before the next render
 
         logger.info(
-            f"Superposition mode enabled. Visualizing top {top_n_actions} decisions at each step.",
+            "Superposition mode enabled. "
+            f"Visualizing top {config.top_n_actions} decisions at each step.",
         )
         superpositions = [(self.brain.copy(), self.env.copy(), self.path.copy())]
 
@@ -374,7 +381,7 @@ class QuantumNematodeAgent:
                     top_randomize=True,
                 )
 
-                if top_n_randomize:
+                if config.top_n_randomize:
                     rng = np.random.default_rng()
                     probs = np.array([a.probability for a in actions], dtype=float)
                     probs_sum = probs.sum()
@@ -386,20 +393,20 @@ class QuantumNematodeAgent:
                     top_actions_and_probs = rng.choice(
                         actions_arr,
                         p=norm_probs,
-                        size=top_n_actions,
+                        size=config.top_n_actions,
                         replace=True,
                     )
                     top_actions = [a.action for a in top_actions_and_probs if a.action is not None]
                 else:
                     top_actions = [a.action for a in actions if a.action is not None][
-                        :top_n_actions
+                        : config.top_n_actions
                     ]
 
                 # Update the body length dynamically
                 if self.max_body_length > 0 and len(env_copy.body) < self.max_body_length:
                     env_copy.body.append(env_copy.body[-1])
 
-                if len(superpositions) < max_superpositions and top_actions:
+                if len(superpositions) < config.max_superpositions and top_actions:
                     new_env = env_copy.copy()
                     new_path = path_copy.copy()
                     new_brain = self.brain.copy()
@@ -440,7 +447,7 @@ class QuantumNematodeAgent:
                 labels.append(label)
 
                 # Print the row when reaching MAX_COLUMNS or the last grid
-                if (i + 1) % max_columns == 0 or i == len(superpositions) - 1:
+                if (i + 1) % config.max_columns == 0 or i == len(superpositions) - 1:
                     for line_set in zip(*row, strict=False):
                         # Render side by side
                         print("\t".join(line_set))  # noqa: T201
@@ -451,8 +458,8 @@ class QuantumNematodeAgent:
                     row = []  # Reset the row buffer
                     labels = []  # Reset the labels buffer
 
-            if len(superpositions) < max_superpositions:
-                time.sleep(render_sleep_seconds)  # Wait before the next render
+            if len(superpositions) < config.max_superpositions:
+                time.sleep(config.render_sleep_seconds)  # Wait before the next render
 
             # Stop if all superpositions have reached their goal
             if all(env_copy.reached_goal() for _, env_copy, _ in superpositions):

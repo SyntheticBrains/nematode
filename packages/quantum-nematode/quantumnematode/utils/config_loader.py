@@ -6,12 +6,8 @@ import yaml
 from pydantic import BaseModel
 
 from quantumnematode.agent import (
-    DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS,
-    DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
-    DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS,
-    DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS,
-    DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
     RewardConfig,
+    SuperpositionModeConfig,
 )
 from quantumnematode.logging_config import (
     logger,
@@ -75,16 +71,6 @@ class GradientConfig(BaseModel):
     """Configuration for the gradient calculation method."""
 
     method: GradientCalculationMethod = DEFAULT_GRADIENT_CALCULATION_METHOD
-
-
-class SuperpositionModeConfig(BaseModel):
-    """Configuration for the superposition mode."""
-
-    max_superpositions: int = DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS
-    max_columns: int = DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS
-    render_sleep_seconds: float = DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS
-    top_n_actions: int = DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS
-    top_n_randomize: bool = DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE
 
 
 class SimulationConfig(BaseModel):

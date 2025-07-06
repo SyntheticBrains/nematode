@@ -212,13 +212,9 @@ def main() -> None:  # noqa: C901, PLR0915
     if superposition_mode:
         try:
             agent.run_superposition_mode(
+                config=superposition_mode_config,
                 reward_config=reward_config,
                 max_steps=max_steps,
-                max_superpositions=superposition_mode_config.max_superpositions,
-                max_columns=superposition_mode_config.max_columns,
-                render_sleep_seconds=superposition_mode_config.render_sleep_seconds,
-                top_n_actions=superposition_mode_config.top_n_actions,
-                top_n_randomize=superposition_mode_config.top_n_randomize,
                 show_last_frame_only=show_last_frame_only,
             )
         except KeyboardInterrupt:
