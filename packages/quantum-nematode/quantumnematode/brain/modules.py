@@ -18,6 +18,7 @@ Other possible modules to add in the short term (excluding placeholders):
 
 """
 
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -176,18 +177,29 @@ def memory_action_features(
     return {"rx": 0.0, "ry": 0.0, "rz": angle}
 
 
-MODULE_FEATURE_EXTRACTORS: dict[str, Any] = {
-    "proprioception": proprioception_features,
-    "chemotaxis": chemotaxis_features,
-    "thermotaxis": thermotaxis_features,
-    "oxygen": oxygen_features,
-    "vision": vision_features,
-    "action": memory_action_features,
+class ModuleName(str, Enum):
+    """Module names used in ModularBrain."""
+
+    PROPRIOCEPTION = "proprioception"
+    CHEMOTAXIS = "chemotaxis"
+    THERMOTAXIS = "thermotaxis"
+    OXYGEN = "oxygen"
+    VISION = "vision"
+    ACTION = "action"
+
+
+MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
+    ModuleName.PROPRIOCEPTION: proprioception_features,
+    ModuleName.CHEMOTAXIS: chemotaxis_features,
+    ModuleName.THERMOTAXIS: thermotaxis_features,
+    ModuleName.OXYGEN: oxygen_features,
+    ModuleName.VISION: vision_features,
+    ModuleName.ACTION: memory_action_features,
 }
 
 
 def extract_features_for_module(
-    module: str,
+    module: ModuleName,
     params: BrainParams,
     satiety: float = 1.0,
 ) -> dict[str, float]:
@@ -195,7 +207,7 @@ def extract_features_for_module(
     Extract features for a given module using the appropriate extractor.
 
     Args:
-        module: Name of the module (e.g., 'proprioception').
+        module: Name of the module (e.g., ModuleName.PROPRIOCEPTION).
         params: BrainParams containing agent state.
         satiety: Current satiety value.
 

@@ -11,7 +11,7 @@ from qiskit_aer import AerSimulator
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.modules import extract_features_for_module
+from quantumnematode.brain.modules import ModuleName, extract_features_for_module
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
     RandomSmallUniformInitializer,
@@ -21,8 +21,8 @@ from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 # Example: Define the available modules and their qubit assignments
-DEFAULT_MODULES: dict[str, list[int]] = {
-    "chemotaxis": [0, 1],
+DEFAULT_MODULES: dict[ModuleName, list[int]] = {
+    ModuleName.CHEMOTAXIS: [0, 1],
 }
 
 ENTROPY_BETA = 0.07
@@ -40,7 +40,7 @@ class ModularBrain(QuantumBrain):
     def __init__(  # noqa: PLR0913
         self,
         num_qubits: int | None = None,
-        modules: dict[str, list[int]] | None = None,
+        modules: dict[ModuleName, list[int]] | None = None,
         shots: int = 100,
         device: str = "CPU",
         learning_rate: DynamicLearningRate | None = None,
@@ -69,7 +69,7 @@ class ModularBrain(QuantumBrain):
         num_qubits = 2  # TODO: Get num qubits from module definitions
 
         self.num_qubits: int = num_qubits
-        self.modules: dict[str, list[int]] = modules or deepcopy(DEFAULT_MODULES)
+        self.modules: dict[ModuleName, list[int]] = modules or deepcopy(DEFAULT_MODULES)
         self.shots: int = shots
         self.device: str = device.upper()
         self.satiety: float = 1.0
@@ -167,7 +167,7 @@ class ModularBrain(QuantumBrain):
         """Build and cache the parameterized circuit structure (unbound parameters)."""
         if self._circuit_cache is None:
             # Use zeros for features, just to build the structure
-            input_params = {module: {} for module in self.modules}
+            input_params = {module.value: {} for module in self.modules}
             self._circuit_cache = self.build_brain(input_params)
 
         return self._circuit_cache
@@ -221,7 +221,7 @@ class ModularBrain(QuantumBrain):
             )  # Used for reporting only
 
         input_params = {
-            module: extract_features_for_module(module, params, satiety=self.satiety)
+            module.value: extract_features_for_module(module, params, satiety=self.satiety)
             for module in self.modules
         }
 
