@@ -157,7 +157,7 @@ class QuantumNematodeAgent:
 
             # Learning step
             if isinstance(self.brain, ClassicalBrain):
-                action_idx = self.brain.action_names.index(top_action.action)
+                action_idx = self.brain.action_set.index(top_action.action)
                 self.brain.learn(
                     params=params,
                     action_idx=action_idx,

@@ -8,7 +8,7 @@ from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
 from qiskit_aer import AerSimulator
 
-from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.modules import extract_features_for_module
@@ -48,6 +48,7 @@ class ModularBrain(QuantumBrain):
         | RandomPiUniformInitializer
         | RandomSmallUniformInitializer
         | None = None,
+        action_set: list[Action] = DEFAULT_ACTIONS,
         num_layers: int = 2,  # NEW: dynamic number of layers
     ) -> None:
         """
@@ -58,7 +59,10 @@ class ModularBrain(QuantumBrain):
             modules: Mapping of module names to qubit indices.
             shots: Number of shots for simulation.
             device: Device string for AerSimulator.
+            learning_rate: Learning rate strategy (default is dynamic).
             parameter_initializer : The initializer to use for parameter initialization.
+            action_set: List of available actions (default is DEFAULT_ACTIONS).
+            num_layers: Number of layers in the quantum circuit.
         """
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -79,6 +83,8 @@ class ModularBrain(QuantumBrain):
             "Using parameter initializer: "
             f"{str(self.parameter_initializer).replace('θ', 'theta_')}",
         )
+
+        self.action_set = action_set
 
         self.num_layers = num_layers
         # Dynamically create parameters for each layer
@@ -275,7 +281,7 @@ class ModularBrain(QuantumBrain):
         num_states = 2**self.num_qubits
         binary_states = [f"{{:0{self.num_qubits}b}}".format(i) for i in range(num_states)]
 
-        action_pool = ["forward", "left", "right", "stay"]
+        action_pool = DEFAULT_ACTIONS
         action_map = {
             state: action_pool[i % len(action_pool)] for i, state in enumerate(binary_states)
         }
