@@ -9,7 +9,9 @@ from quantumnematode.agent import (
     RewardConfig,
     SuperpositionModeConfig,
 )
-from quantumnematode.brain.modules import DEFAULT_MODULES, Modules
+from quantumnematode.brain.arch.mlp import MLPBrainConfig
+from quantumnematode.brain.arch.modular import ModularBrainConfig
+from quantumnematode.brain.modules import Modules
 from quantumnematode.logging_config import (
     logger,
 )
@@ -37,6 +39,13 @@ from quantumnematode.optimizers.learning_rate import (
 
 DEFAULT_LEARNING_RATE_INITIAL = 0.1
 DEFAULT_LEARNING_RATE_METHOD = LearningRateMethod.DYNAMIC
+
+
+class BrainContainerConfig(BaseModel):
+    """Configuration for the brain architecture."""
+
+    name: str
+    config: ModularBrainConfig | MLPBrainConfig | None = None
 
 
 class LearningRateParameters(BaseModel):
@@ -77,9 +86,9 @@ class GradientConfig(BaseModel):
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
+    brain: BrainContainerConfig | None = None
     max_steps: int | None = None
     maze_grid_size: int | None = None
-    brain: str | None = None
     shots: int | None = None
     body_length: int | None = None
     qubits: int | None = None
@@ -104,6 +113,56 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
     with Path(config_path).open() as file:
         data = yaml.safe_load(file)
         return SimulationConfig(**data)
+
+
+def configure_brain(config: SimulationConfig) -> ModularBrainConfig | MLPBrainConfig:
+    """
+    Configure the brain architecture based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        ModularBrainConfig | MLPBrainConfig: The configured brain architecture.
+    """
+    if config.brain is None:
+        error_message = "No brain configuration found in the simulation config."
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+    if config.brain.name is None:
+        error_message = "No brain name specified in the simulation config."
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+    match config.brain.name:
+        case "modular":
+            if config.brain.config is None:
+                return ModularBrainConfig()
+            if isinstance(config.brain.config, ModularBrainConfig):
+                return config.brain.config
+            error_message = (
+                "Invalid brain configuration for 'modular' brain type. "
+                f"Expected ModularBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case "mlp":
+            if config.brain.config is None:
+                return MLPBrainConfig()
+            if isinstance(config.brain.config, MLPBrainConfig):
+                return config.brain.config
+            error_message = (
+                "Invalid brain configuration for 'mlp' brain type. "
+                f"Expected MLPBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case _:
+            error_message = f"Unknown brain type: {config.brain.name}."
+            logger.error(error_message)
+            raise ValueError(error_message)
 
 
 def configure_learning_rate(
@@ -237,17 +296,3 @@ def configure_reward(config: SimulationConfig) -> RewardConfig:
         RewardConfig: The configured reward function object.
     """
     return config.reward or RewardConfig()
-
-
-def configure_modules(config: SimulationConfig) -> Modules:
-    """
-    Configure the modules based on the provided configuration.
-
-    Args:
-        config (SimulationConfig): Simulation configuration object.
-
-    Returns
-    -------
-        Modules: The modules object.
-    """
-    return config.modules or DEFAULT_MODULES

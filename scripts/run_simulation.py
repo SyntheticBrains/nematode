@@ -15,6 +15,8 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch import (
     Brain,
+    MLPBrainConfig,
+    ModularBrainConfig,
     QuantumBrain,
 )
 from quantumnematode.brain.arch.dtypes import (
@@ -25,7 +27,6 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
-from quantumnematode.brain.modules import DEFAULT_MODULES, Modules
 from quantumnematode.env import MIN_GRID_SIZE
 from quantumnematode.logging_config import (
     logger,
@@ -51,11 +52,12 @@ from quantumnematode.report.plots import (
 from quantumnematode.report.summary import summary
 from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
+    BrainContainerConfig,
     RewardConfig,
     SuperpositionModeConfig,
+    configure_brain,
     configure_gradient_method,
     configure_learning_rate,
-    configure_modules,
     configure_reward,
     configure_superposition_mode,
     load_simulation_config,
@@ -121,7 +123,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:  # noqa: C901, PLR0915
+def main() -> None:  # noqa: C901, PLR0912, PLR0915
     """Run the Quantum Nematode simulation."""
     args = parse_arguments()
 
@@ -140,19 +142,33 @@ def main() -> None:  # noqa: C901, PLR0915
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
     reward_config = RewardConfig()
-    modules = DEFAULT_MODULES
     superposition_mode_config = SuperpositionModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
 
+    match brain_type:
+        case BrainType.MODULAR:
+            brain_config = ModularBrainConfig()
+        case BrainType.MLP:
+            brain_config = MLPBrainConfig()
+        case _:
+            error_message = f"Unknown brain type: {brain_type}"
+            logger.error(error_message)
+            raise ValueError(error_message)
+
     if config_file:
         config = load_simulation_config(config_file)
 
+        brain_config = configure_brain(config)
+        brain_type = (
+            BrainType(config.brain.name)
+            if config.brain is not None and isinstance(config.brain, BrainContainerConfig)
+            else brain_type
+        )
         max_steps = config.max_steps if config.max_steps is not None else max_steps
         maze_grid_size = (
             config.maze_grid_size if config.maze_grid_size is not None else maze_grid_size
         )
-        brain_type = BrainType(config.brain) if config.brain is not None else brain_type
         shots = config.shots if config.shots is not None else shots
         body_length = config.body_length if config.body_length is not None else body_length
         qubits = config.qubits if config.qubits is not None else qubits
@@ -165,9 +181,6 @@ def main() -> None:  # noqa: C901, PLR0915
 
         # Load reward configuration if specified
         reward_config = configure_reward(config)
-
-        # Load modules configuration if specified
-        modules = configure_modules(config)
 
         # Load superposition mode configuration if specified
         superposition_mode_config = configure_superposition_mode(config)
@@ -201,12 +214,12 @@ def main() -> None:  # noqa: C901, PLR0915
     # Select the brain architecture
     brain = setup_brain_model(
         brain_type,
+        brain_config,
         shots,
         qubits,
         device,
         learning_rate,
         gradient_method,
-        modules,
     )
 
     # Update the agent to use the selected brain architecture
@@ -360,12 +373,12 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
 
 def setup_brain_model(  # noqa: PLR0913
     brain_type: BrainType,
+    brain_config: ModularBrainConfig | MLPBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
-    modules: Modules,
 ) -> Brain:
     """
     Set up the brain model based on the specified brain type.
@@ -373,6 +386,7 @@ def setup_brain_model(  # noqa: PLR0913
     Args:
         brain_type (str): The type of brain architecture to use. Options include
             "modular" and "mlp".
+        brain_config (BrainConfig): Configuration for the brain architecture.
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for "modular" brain).
         device (str): The device to use for simulation ("CPU" or "GPU").
@@ -388,6 +402,14 @@ def setup_brain_model(  # noqa: PLR0913
         ValueError: If an unknown brain type is provided.
     """
     if brain_type == BrainType.MODULAR:
+        if not isinstance(brain_config, ModularBrainConfig):
+            error_message = (
+                "The 'modular' brain architecture requires a ModularBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
         if not isinstance(learning_rate, DynamicLearningRate):
             error_message = (
                 "The 'modular' brain architecture requires a DynamicLearningRate. "
@@ -399,7 +421,7 @@ def setup_brain_model(  # noqa: PLR0913
         from quantumnematode.brain.arch.modular import ModularBrain
 
         brain = ModularBrain(
-            modules=modules,
+            config=brain_config,
             device=device,
             shots=shots,
             learning_rate=learning_rate,
@@ -407,7 +429,16 @@ def setup_brain_model(  # noqa: PLR0913
     elif brain_type == BrainType.MLP:
         from quantumnematode.brain.arch.mlp import MLPBrain
 
+        if not isinstance(brain_config, MLPBrainConfig):
+            error_message = (
+                "The 'mlp' brain architecture requires an MLPBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
         brain = MLPBrain(
+            config=brain_config,
             input_dim=2,
             num_actions=4,
             lr_scheduler=True,

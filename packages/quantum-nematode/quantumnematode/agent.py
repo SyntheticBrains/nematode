@@ -194,7 +194,6 @@ class QuantumNematodeAgent:
                     action_idx=action_idx,
                     reward=reward,
                     episode_rewards=None,
-                    gamma=0.99,
                 )
 
             # Update the body length dynamically
