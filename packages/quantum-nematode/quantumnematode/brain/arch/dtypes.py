@@ -3,6 +3,8 @@
 from enum import Enum
 from typing import Literal
 
+from pydantic import BaseModel
+
 
 class BrainType(Enum):
     """Different types of brains."""
@@ -16,6 +18,10 @@ class DeviceType(Enum):
 
     CPU = "cpu"
     GPU = "gpu"
+
+
+class BrainConfig(BaseModel):
+    """Configuration for the brain architecture."""
 
 
 BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.MLP]

@@ -1,6 +1,11 @@
 max_steps: 300
 maze_grid_size: 10
-brain: modular
+brain:
+  name: modular
+  config:
+    modules:
+      chemotaxis: [0, 1]
+    num_layers: 2
 shots: 1000
 body_length: 2
 qubits: 2
@@ -12,8 +17,6 @@ learning_rate:
     decay_type: inverse_time
 gradient:
   method: clip
-modules:
-  chemotaxis: [0, 1]
 superposition_mode:
   max_superpositions: 32
   max_columns: 8

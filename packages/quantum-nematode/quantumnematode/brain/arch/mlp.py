@@ -14,9 +14,33 @@ from torch import nn, optim  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch.dtypes import DeviceType
+from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
+
+DEFAULT_HIDDEN_DIM = 64
+DEFAULT_NUM_HIDDEN_LAYERS = 2
+DEFAULT_LEARNING_RATE = 0.01
+DEFAULT_LR_SCHEDULER_STEP_SIZE = 100
+DEFAULT_LR_SCHEDULER_GAMMA = 0.9
+DEFAULT_ENTROPY_BETA = 0.01
+DEFAULT_BASELINE = 0.0
+DEFAULT_BASELINE_ALPHA = 0.05
+DEFAULT_GAMMA = 0.99
+
+
+class MLPBrainConfig(BrainConfig):
+    """Configuration for the MLPBrain architecture."""
+
+    baseline: float = DEFAULT_BASELINE
+    baseline_alpha: float = DEFAULT_BASELINE_ALPHA
+    entropy_beta: float = DEFAULT_ENTROPY_BETA
+    gamma: float = DEFAULT_GAMMA
+    hidden_dim: int = DEFAULT_HIDDEN_DIM
+    learning_rate: float = DEFAULT_LEARNING_RATE
+    lr_scheduler_step_size: int = DEFAULT_LR_SCHEDULER_STEP_SIZE
+    lr_scheduler_gamma: float = DEFAULT_LR_SCHEDULER_GAMMA
+    num_hidden_layers: int = DEFAULT_NUM_HIDDEN_LAYERS
 
 
 class MLPBrain(ClassicalBrain):
@@ -26,18 +50,14 @@ class MLPBrain(ClassicalBrain):
     Uses a simple MLP policy network with optional GPU acceleration.
     """
 
-    # TODO: Make the below parameters configurable
     def __init__(  # noqa: PLR0913
         self,
+        config: MLPBrainConfig,
         input_dim: int,
         num_actions: int,
-        hidden_dim: int = 64,
-        num_hidden_layers: int = 2,
         device: DeviceType = DeviceType.CPU,
-        learning_rate: float = 0.01,
         action_set: list[Action] = DEFAULT_ACTIONS,
         lr_scheduler: bool | None = None,
-        entropy_beta: float = 0.01,
     ) -> None:
         super().__init__()
 
@@ -46,11 +66,11 @@ class MLPBrain(ClassicalBrain):
             "num_hidden_layers=%d, device=%s, learning_rate=%.4f, entropy_beta=%.4f",
             input_dim,
             num_actions,
-            hidden_dim,
-            num_hidden_layers,
+            config.hidden_dim,
+            config.num_hidden_layers,
             device,
-            learning_rate,
-            entropy_beta,
+            config.learning_rate,
+            config.entropy_beta,
         )
 
         self.history_data = BrainHistoryData()
@@ -58,13 +78,19 @@ class MLPBrain(ClassicalBrain):
         self.input_dim = input_dim
         self.num_actions = num_actions
         self.device = torch.device(device.value)
-        self.entropy_beta = entropy_beta
-        self.policy = self._build_network(hidden_dim, num_hidden_layers).to(self.device)
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
+        self.entropy_beta = config.entropy_beta
+        self.policy = self._build_network(config.hidden_dim, config.num_hidden_layers).to(
+            self.device,
+        )
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=config.learning_rate)
         if lr_scheduler is None:
             lr_scheduler = False
         self.lr_scheduler = (
-            optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.9)
+            optim.lr_scheduler.StepLR(
+                self.optimizer,
+                step_size=config.lr_scheduler_step_size,
+                gamma=config.lr_scheduler_gamma,
+            )
             if lr_scheduler
             else None
         )
@@ -77,8 +103,11 @@ class MLPBrain(ClassicalBrain):
         self._action_set = action_set
 
         # Baseline for variance reduction in policy gradient
-        self.baseline = 0.0
-        self.baseline_alpha = 0.05  # Smoothing factor for running average
+        self.baseline = config.baseline
+        self.baseline_alpha = config.baseline_alpha  # Smoothing factor for running average
+
+        # Discount factor for future rewards
+        self.gamma = config.gamma
 
     def _build_network(self, hidden_dim: int, num_hidden_layers: int) -> nn.Sequential:
         layers = [nn.Linear(self.input_dim, hidden_dim), nn.ReLU()]
@@ -230,7 +259,7 @@ class MLPBrain(ClassicalBrain):
         action_idx: int,
         reward: float,
         episode_rewards: list[float] | None = None,
-        gamma: float = 0.99,
+        gamma: float | None = None,
     ) -> None:
         """Perform a policy gradient update step with baseline and discounted return."""
         x = self.preprocess(params)
@@ -243,7 +272,10 @@ class MLPBrain(ClassicalBrain):
         if episode_rewards is None and self.history_data.rewards is not None:
             episode_rewards = self.history_data.rewards
         if episode_rewards is not None:
-            g = self.compute_discounted_return(episode_rewards, gamma=gamma)
+            g = self.compute_discounted_return(
+                episode_rewards,
+                gamma=gamma if gamma is not None else self.gamma,
+            )
         else:
             g = reward
 

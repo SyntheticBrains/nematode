@@ -11,7 +11,7 @@ from qiskit_aer import AerSimulator
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch.dtypes import DEFAULT_SHOTS, DeviceType
+from quantumnematode.brain.arch.dtypes import DEFAULT_SHOTS, BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
     ModuleName,
@@ -27,6 +27,15 @@ from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
+DEFAULT_NUM_LAYERS = 2
+
+
+class ModularBrainConfig(BrainConfig):
+    """Configuration for the ModularBrain architecture."""
+
+    modules: dict[ModuleName, list[int]] = DEFAULT_MODULES
+    num_layers: int = DEFAULT_NUM_LAYERS
+
 
 class ModularBrain(QuantumBrain):
     """
@@ -39,7 +48,7 @@ class ModularBrain(QuantumBrain):
 
     def __init__(  # noqa: PLR0913
         self,
-        modules: dict[ModuleName, list[int]],
+        config: ModularBrainConfig,
         shots: int = DEFAULT_SHOTS,
         device: DeviceType = DeviceType.CPU,
         learning_rate: DynamicLearningRate | None = None,
@@ -48,7 +57,6 @@ class ModularBrain(QuantumBrain):
         | RandomSmallUniformInitializer
         | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
-        num_layers: int = 2,
     ) -> None:
         """
         Initialize the ModularBrain.
@@ -62,12 +70,13 @@ class ModularBrain(QuantumBrain):
             action_set: List of available actions (default is DEFAULT_ACTIONS).
             num_layers: Number of layers in the quantum circuit.
         """
+        self.config = config
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
-        num_qubits = count_total_qubits(modules)
+        num_qubits = count_total_qubits(config.modules)
 
         self.num_qubits: int = num_qubits
-        self.modules: dict[ModuleName, list[int]] = modules or deepcopy(DEFAULT_MODULES)
+        self.modules: dict[ModuleName, list[int]] = config.modules or deepcopy(DEFAULT_MODULES)
         self.shots: int = shots
         self.device: DeviceType = device
         self.satiety: float = 1.0
@@ -84,7 +93,7 @@ class ModularBrain(QuantumBrain):
 
         self.action_set = action_set
 
-        self.num_layers = num_layers
+        self.num_layers = config.num_layers
         # Dynamically create parameters for each layer
         self.parameters = {}
         for layer in range(self.num_layers):
@@ -351,7 +360,7 @@ class ModularBrain(QuantumBrain):
             ModularBrain: A new instance with the same state.
         """
         new_brain = ModularBrain(
-            modules=deepcopy(self.modules),
+            config=self.config,
             shots=self.shots,
             device=self.device,
         )
