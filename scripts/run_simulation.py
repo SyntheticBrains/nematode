@@ -24,6 +24,7 @@ from quantumnematode.brain.arch.dtypes import (
     DEFAULT_SHOTS,
     BrainType,
 )
+from quantumnematode.brain.modules import DEFAULT_MODULES, Modules
 from quantumnematode.env import MIN_GRID_SIZE
 from quantumnematode.logging_config import (
     logger,
@@ -53,6 +54,7 @@ from quantumnematode.utils.config_loader import (
     SuperpositionModeConfig,
     configure_gradient_method,
     configure_learning_rate,
+    configure_modules,
     configure_reward,
     configure_superposition_mode,
     load_simulation_config,
@@ -137,6 +139,7 @@ def main() -> None:  # noqa: C901, PLR0915
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
     reward_config = RewardConfig()
+    modules = DEFAULT_MODULES
     superposition_mode_config = SuperpositionModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
@@ -161,6 +164,9 @@ def main() -> None:  # noqa: C901, PLR0915
 
         # Load reward configuration if specified
         reward_config = configure_reward(config)
+
+        # Load modules configuration if specified
+        modules = configure_modules(config)
 
         # Load superposition mode configuration if specified
         superposition_mode_config = configure_superposition_mode(config)
@@ -192,7 +198,15 @@ def main() -> None:  # noqa: C901, PLR0915
     logger.info(f"Shots: {shots}")
 
     # Select the brain architecture
-    brain = setup_brain_model(brain_type, shots, qubits, device, learning_rate, gradient_method)
+    brain = setup_brain_model(
+        brain_type,
+        shots,
+        qubits,
+        device,
+        learning_rate,
+        gradient_method,
+        modules,
+    )
 
     # Update the agent to use the selected brain architecture
     agent = QuantumNematodeAgent(
@@ -350,6 +364,7 @@ def setup_brain_model(  # noqa: PLR0913
     device: str,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
+    modules: Modules,
 ) -> Brain:
     """
     Set up the brain model based on the specified brain type.
@@ -382,10 +397,9 @@ def setup_brain_model(  # noqa: PLR0913
 
         from quantumnematode.brain.arch.modular import ModularBrain
 
-        modules = None
         brain = ModularBrain(
-            num_qubits=qubits,
             modules=modules,
+            num_qubits=qubits,
             device=device,
             shots=shots,
             learning_rate=learning_rate,

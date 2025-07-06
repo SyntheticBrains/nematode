@@ -11,7 +11,12 @@ from qiskit_aer import AerSimulator
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.modules import ModuleName, RotationAxis, extract_features_for_module
+from quantumnematode.brain.modules import (
+    DEFAULT_MODULES,
+    ModuleName,
+    RotationAxis,
+    extract_features_for_module,
+)
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
     RandomSmallUniformInitializer,
@@ -19,11 +24,6 @@ from quantumnematode.initializers.random_initializer import (
 from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
-
-# Example: Define the available modules and their qubit assignments
-DEFAULT_MODULES: dict[ModuleName, list[int]] = {
-    ModuleName.CHEMOTAXIS: [0, 1],
-}
 
 ENTROPY_BETA = 0.07
 
@@ -39,8 +39,8 @@ class ModularBrain(QuantumBrain):
 
     def __init__(  # noqa: PLR0913
         self,
+        modules: dict[ModuleName, list[int]],
         num_qubits: int | None = None,
-        modules: dict[ModuleName, list[int]] | None = None,
         shots: int = 100,
         device: str = "CPU",
         learning_rate: DynamicLearningRate | None = None,
@@ -49,7 +49,7 @@ class ModularBrain(QuantumBrain):
         | RandomSmallUniformInitializer
         | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
-        num_layers: int = 2,  # NEW: dynamic number of layers
+        num_layers: int = 2,
     ) -> None:
         """
         Initialize the ModularBrain.
@@ -119,7 +119,7 @@ class ModularBrain(QuantumBrain):
 
     def build_brain(
         self,
-        input_params: dict[str, dict[str, float]] | None = None,
+        input_params: dict[str, dict[str, float]] | None,
     ) -> QuantumCircuit:
         """
         Build the quantum circuit for the modular brain.

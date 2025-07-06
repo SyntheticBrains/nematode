@@ -9,6 +9,7 @@ from quantumnematode.agent import (
     RewardConfig,
     SuperpositionModeConfig,
 )
+from quantumnematode.brain.modules import DEFAULT_MODULES, Modules
 from quantumnematode.logging_config import (
     logger,
 )
@@ -85,6 +86,7 @@ class SimulationConfig(BaseModel):
     learning_rate: LearningRateConfig | None = None
     gradient: GradientConfig | None = None
     reward: RewardConfig | None = None
+    modules: Modules | None = None
     superposition_mode: SuperpositionModeConfig | None = None
 
 
@@ -235,3 +237,17 @@ def configure_reward(config: SimulationConfig) -> RewardConfig:
         RewardConfig: The configured reward function object.
     """
     return config.reward or RewardConfig()
+
+
+def configure_modules(config: SimulationConfig) -> Modules:
+    """
+    Configure the modules based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        Modules: The modules object.
+    """
+    return config.modules or DEFAULT_MODULES
