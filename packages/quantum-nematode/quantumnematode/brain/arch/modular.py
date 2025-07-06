@@ -180,21 +180,27 @@ class ModularBrain(QuantumBrain):
         params: BrainParams,
         reward: float | None = None,
         input_data: list[float] | None = None,  # noqa: ARG002
-    ) -> dict:
+        *,
+        top_only: bool = True,
+        top_randomize: bool = True,
+    ) -> list[ActionData]:
         """
         Run the quantum brain simulation for the given parameters.
 
         Run the quantum brain simulation for the given parameters,
+        return action probabilities based on measurement counts,
         and update parameters if reward is provided.
 
         Args:
             params: BrainParams for the agent/environment state.
             reward: Optional reward (unused).
             input_data: Optional input data (unused).
+            top_only: If True, return only the most probable action.
+            top_randomize: If True, randomly select among top actions.
 
         Returns
         -------
-            Measurement counts from the quantum circuit.
+            list[ActionData]: List of ActionData with action and probability.
         """
         gradient_strength = params.gradient_strength
         if gradient_strength:
@@ -240,9 +246,13 @@ class ModularBrain(QuantumBrain):
 
         self.history_data.rewards.append(reward or 0.0)
 
-        return counts
+        return self._interpret_counts(
+            counts,
+            top_only=top_only,
+            top_randomize=top_randomize,
+        )
 
-    def interpret_counts(
+    def _interpret_counts(
         self,
         counts: dict,
         *,

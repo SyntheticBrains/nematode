@@ -158,11 +158,6 @@ class Brain(Protocol):
         params: BrainParams,
         reward: float | None,
         input_data: list[float] | None,
-    ) -> dict: ...
-
-    def interpret_counts(
-        self,
-        counts: dict,
         *,
         top_only: bool,
         top_randomize: bool,

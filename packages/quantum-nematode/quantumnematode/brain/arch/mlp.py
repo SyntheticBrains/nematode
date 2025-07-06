@@ -151,7 +151,10 @@ class MLPBrain(ClassicalBrain):
         params: BrainParams,
         reward: float | None = None,  # noqa: ARG002
         input_data: list[float] | None = None,  # noqa: ARG002
-    ) -> dict:
+        *,
+        top_only: bool,  # noqa: ARG002
+        top_randomize: bool,  # noqa: ARG002
+    ) -> list[ActionData]:
         """Run the policy network and select an action."""
         x = self.preprocess(params)
         logits = self.forward(x)
@@ -173,17 +176,15 @@ class MLPBrain(ClassicalBrain):
         self.history_data.actions.append(self.latest_data.action)
         self.history_data.probabilities.append(first_prob)
 
-        return {name: int(i == action_idx) for i, name in enumerate(self.action_names)}
+        actions = {name: int(i == action_idx) for i, name in enumerate(self.action_names)}
+        return self._get_most_probable_action(actions)
 
-    def interpret_counts(
+    def _get_most_probable_action(
         self,
         counts: dict,
-        *,
-        top_only: bool = True,  # noqa: ARG002
-        top_randomize: bool = True,  # noqa: ARG002
     ) -> list[ActionData]:
         """Return the most probable action (or sampled action)."""
-        # In MLPBrain, counts is a one-hot dict from run_brain
+        # Counts is a one-hot dict from run_brain
         action_name = max(counts.items(), key=lambda x: x[1])[0]
         idx = self.action_names.index(action_name)
         prob = self.current_probabilities[idx] if self.current_probabilities is not None else 1.0
