@@ -20,8 +20,8 @@ DEFAULT_AGENT_BODY_LENGTH = 2
 DEFAULT_MAX_AGENT_BODY_LENGTH = 6
 DEFAULT_MAX_STEPS = 100
 DEFAULT_MAZE_GRID_SIZE = 5
-DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS = 16
 DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS = 4
+DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS = 16
 DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS = 1.0
 DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS = 2
 DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE = True
@@ -564,7 +564,6 @@ class QuantumNematodeAgent:
         PerformanceMetrics
             An object containing success rate, average steps, and average reward.
         """
-        # TODO: Convert to dataclass
         return PerformanceMetrics(
             success_rate=self.success_count / total_runs,
             average_steps=self.total_steps / total_runs,

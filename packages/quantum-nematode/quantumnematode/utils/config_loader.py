@@ -5,6 +5,13 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
+from quantumnematode.agent import (
+    DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS,
+    DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
+    DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS,
+    DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS,
+    DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
+)
 from quantumnematode.logging_config import (
     logger,
 )
@@ -63,10 +70,23 @@ class LearningRateConfig(BaseModel):
     parameters: LearningRateParameters | None = LearningRateParameters()
 
 
+DEFAULT_GRADIENT_CALCULATION_METHOD = GradientCalculationMethod.RAW
+
+
 class GradientConfig(BaseModel):
     """Configuration for the gradient calculation method."""
 
-    method: GradientCalculationMethod | None = None
+    method: GradientCalculationMethod | None = DEFAULT_GRADIENT_CALCULATION_METHOD
+
+
+class SuperpositionModeConfig(BaseModel):
+    """Configuration for the superposition mode."""
+
+    max_superpositions: int = DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS
+    max_columns: int = DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS
+    render_sleep_seconds: float = DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS
+    top_n_actions: int = DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS
+    top_n_randomize: bool = DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE
 
 
 class SimulationConfig(BaseModel):
@@ -80,6 +100,7 @@ class SimulationConfig(BaseModel):
     qubits: int | None = None
     learning_rate: LearningRateConfig | None = None
     gradient: GradientConfig | None = None
+    superposition_mode: SuperpositionModeConfig | None = None
 
 
 def load_simulation_config(config_path: str) -> SimulationConfig:
@@ -220,3 +241,24 @@ def configure_gradient_method(
     if grad_cfg and grad_cfg.method is not None:
         return grad_cfg.method
     return gradient_method
+
+
+def configure_superposition_mode(config: SimulationConfig) -> SuperpositionModeConfig:
+    """
+    Configure the superposition mode based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        SuperpositionModeConfig: The configured superposition mode object.
+    """
+    sp_cfg = config.superposition_mode or SuperpositionModeConfig()
+    return SuperpositionModeConfig(
+        max_superpositions=sp_cfg.max_superpositions,
+        max_columns=sp_cfg.max_columns,
+        render_sleep_seconds=sp_cfg.render_sleep_seconds,
+        top_n_actions=sp_cfg.top_n_actions,
+        top_n_randomize=sp_cfg.top_n_randomize,
+    )

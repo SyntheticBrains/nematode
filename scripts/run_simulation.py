@@ -49,8 +49,10 @@ from quantumnematode.report.plots import (
 from quantumnematode.report.summary import summary
 from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
+    SuperpositionModeConfig,
     configure_gradient_method,
     configure_learning_rate,
+    configure_superposition_mode,
     load_simulation_config,
 )
 
@@ -132,6 +134,7 @@ def main() -> None:  # noqa: C901, PLR0915
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
+    superposition_mode_config = SuperpositionModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
 
@@ -152,6 +155,9 @@ def main() -> None:  # noqa: C901, PLR0915
 
         # Load gradient method if specified
         gradient_method = configure_gradient_method(gradient_method, config)
+
+        # Load superposition mode configuration if specified
+        superposition_mode_config = configure_superposition_mode(config)
 
     validate_simulation_parameters(maze_grid_size, brain_type, qubits)
 
@@ -201,6 +207,11 @@ def main() -> None:  # noqa: C901, PLR0915
         try:
             agent.run_superposition_mode(
                 max_steps=max_steps,
+                max_superpositions=superposition_mode_config.max_superpositions,
+                max_columns=superposition_mode_config.max_columns,
+                render_sleep_seconds=superposition_mode_config.render_sleep_seconds,
+                top_n_actions=superposition_mode_config.top_n_actions,
+                top_n_randomize=superposition_mode_config.top_n_randomize,
                 show_last_frame_only=show_last_frame_only,
             )
         except KeyboardInterrupt:
