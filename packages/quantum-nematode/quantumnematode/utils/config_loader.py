@@ -3,94 +3,186 @@
 from pathlib import Path
 
 import yaml
+from pydantic import BaseModel
 
 from quantumnematode.logging_config import (
     logger,
 )
 from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod
 from quantumnematode.optimizers.learning_rate import (
+    DEFAULT_ADAM_LEARNING_RATE_BETA1,
+    DEFAULT_ADAM_LEARNING_RATE_BETA2,
+    DEFAULT_ADAM_LEARNING_RATE_EPSILON,
+    DEFAULT_ADAM_LEARNING_RATE_INITIAL,
+    DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,
+    DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
+    DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE,
+    DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL,
+    DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS,
+    DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,
+    DEFAULT_DYNAMIC_LEARNING_RATE_POWER,
+    DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE,
+    DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR,
+    DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_INITIAL,
+    DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
+    DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN,
     AdamLearningRate,
     DecayType,
     DynamicLearningRate,
+    LearningRateMethod,
     PerformanceBasedLearningRate,
 )
 
+DEFAULT_LEARNING_RATE_INITIAL = 0.1
+DEFAULT_LEARNING_RATE_METHOD = LearningRateMethod.DYNAMIC
 
-def load_simulation_config(config_path: str) -> dict:
+
+class LearningRateParameters(BaseModel):
+    """Parameters for configuring the learning rate."""
+
+    initial_learning_rate: float | None = DEFAULT_LEARNING_RATE_INITIAL
+    decay_rate: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE
+    decay_type: str | None = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
+    decay_factor: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR
+    step_size: int | None = DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE
+    max_steps: int | None = DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS
+    power: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_POWER
+    min_lr: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR
+    beta1: float | None = DEFAULT_ADAM_LEARNING_RATE_BETA1
+    beta2: float | None = DEFAULT_ADAM_LEARNING_RATE_BETA2
+    epsilon: float | None = DEFAULT_ADAM_LEARNING_RATE_EPSILON
+    min_learning_rate: float | None = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN
+    max_learning_rate: float | None = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX
+    adjustment_factor: float | None = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR
+
+
+class LearningRateConfig(BaseModel):
+    """Configuration for the learning rate method and its parameters."""
+
+    method: LearningRateMethod = DEFAULT_LEARNING_RATE_METHOD
+    parameters: LearningRateParameters | None = LearningRateParameters()
+
+
+class GradientConfig(BaseModel):
+    """Configuration for the gradient calculation method."""
+
+    method: GradientCalculationMethod | None = None
+
+
+class SimulationConfig(BaseModel):
+    """Configuration for the simulation environment."""
+
+    max_steps: int | None = None
+    maze_grid_size: int | None = None
+    brain: str | None = None
+    shots: int | None = None
+    body_length: int | None = None
+    qubits: int | None = None
+    learning_rate: LearningRateConfig | None = None
+    gradient: GradientConfig | None = None
+
+
+def load_simulation_config(config_path: str) -> SimulationConfig:
     """
-    Load simulation configuration from a YAML file.
+    Load simulation configuration from a YAML file and parse it into a SimulationConfig model.
 
     Args:
         config_path (str): Path to the YAML configuration file.
 
     Returns
     -------
-        dict: Parsed configuration as a dictionary.
+        SimulationConfig: Parsed configuration as a Pydantic model.
     """
     with Path(config_path).open() as file:
-        return yaml.safe_load(file)
+        data = yaml.safe_load(file)
+        return SimulationConfig(**data)
 
 
 def configure_learning_rate(
-    config: dict,
+    config: SimulationConfig,
 ) -> DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
     """
     Configure the learning rate based on the provided configuration.
 
     Args:
-        config (dict): Configuration dictionary containing learning rate settings.
+        config (SimulationConfig): Simulation configuration object.
 
     Returns
     -------
         DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
             Configured learning rate object.
     """
-    learning_rate_config = config.get("learning_rate", {})
-
-    if not learning_rate_config:
+    lr_cfg = config.learning_rate
+    if lr_cfg is None:
         logger.warning(
             "No learning rate configuration found. Using default DynamicLearningRate.",
         )
         return DynamicLearningRate()
 
-    learning_rate_method = learning_rate_config.get("method", "default")
-    learning_rate_parameters = learning_rate_config.get("parameters", {})
-    if learning_rate_method == "dynamic":
-        decay_type = _resolve_decay_type(learning_rate_parameters)
+    method = lr_cfg.method
+    params = lr_cfg.parameters or LearningRateParameters()
+    if method == LearningRateMethod.DYNAMIC:
+        decay_type = _resolve_decay_type(params)
         return DynamicLearningRate(
-            initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
-            decay_rate=learning_rate_parameters.get("decay_rate", 0.01),
+            initial_learning_rate=params.initial_learning_rate
+            if params.initial_learning_rate is not None
+            else DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL,
+            decay_rate=params.decay_rate
+            if params.decay_rate is not None
+            else DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
             decay_type=decay_type,
-            decay_factor=learning_rate_parameters.get("decay_factor", 0.5),
-            step_size=learning_rate_parameters.get("step_size", 10),
-            max_steps=learning_rate_parameters.get("max_steps", 1000),
-            power=learning_rate_parameters.get("power", 1.0),
-            min_lr=learning_rate_parameters.get("min_lr", 0.0001),
+            decay_factor=params.decay_factor
+            if params.decay_factor is not None
+            else DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,
+            step_size=params.step_size
+            if params.step_size is not None
+            else DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE,
+            max_steps=params.max_steps
+            if params.max_steps is not None
+            else DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS,
+            power=params.power if params.power is not None else DEFAULT_DYNAMIC_LEARNING_RATE_POWER,
+            min_lr=params.min_lr
+            if params.min_lr is not None
+            else DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,
         )
-    if learning_rate_method == "adam":
+    if method == LearningRateMethod.ADAM:
         return AdamLearningRate(
-            initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
-            beta1=learning_rate_parameters.get("beta1", 0.9),
-            beta2=learning_rate_parameters.get("beta2", 0.999),
-            epsilon=learning_rate_parameters.get("epsilon", 1e-8),
+            initial_learning_rate=params.initial_learning_rate
+            if params.initial_learning_rate is not None
+            else DEFAULT_ADAM_LEARNING_RATE_INITIAL,
+            beta1=params.beta1 if params.beta1 is not None else DEFAULT_ADAM_LEARNING_RATE_BETA1,
+            beta2=params.beta2 if params.beta2 is not None else DEFAULT_ADAM_LEARNING_RATE_BETA2,
+            epsilon=params.epsilon
+            if params.epsilon is not None
+            else DEFAULT_ADAM_LEARNING_RATE_EPSILON,
         )
-    if learning_rate_method == "performance_based":
+    if method == LearningRateMethod.PERFORMANCE_BASED:
         return PerformanceBasedLearningRate(
-            initial_learning_rate=learning_rate_parameters.get("initial_learning_rate", 0.1),
-            min_learning_rate=learning_rate_parameters.get("min_learning_rate", 0.001),
-            max_learning_rate=learning_rate_parameters.get("max_learning_rate", 0.5),
-            adjustment_factor=learning_rate_parameters.get("adjustment_factor", 1.1),
+            initial_learning_rate=params.initial_learning_rate
+            if params.initial_learning_rate is not None
+            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_INITIAL,
+            min_learning_rate=params.min_learning_rate
+            if params.min_learning_rate is not None
+            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN,
+            max_learning_rate=params.max_learning_rate
+            if params.max_learning_rate is not None
+            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
+            adjustment_factor=params.adjustment_factor
+            if params.adjustment_factor is not None
+            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR,
         )
     error_message = (
-        f"Unknown learning rate method: {learning_rate_method}. "
-        "Supported methods are 'dynamic' and 'adam'."
+        f"Unknown learning rate method: {method}. "
+        f"Supported methods are {[m.value for m in LearningRateMethod]}."
     )
     logger.error(error_message)
     raise ValueError(error_message)
 
 
-def _resolve_decay_type(learning_rate_parameters: dict) -> DecayType:
-    decay_type_value = learning_rate_parameters.get("decay_type", "inverse_time")
+def _resolve_decay_type(learning_rate_parameters: LearningRateParameters) -> DecayType:
+    decay_type_value = (
+        learning_rate_parameters.decay_type or DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
+    )
     if isinstance(decay_type_value, DecayType):
         decay_type = decay_type_value
     else:
@@ -98,22 +190,23 @@ def _resolve_decay_type(learning_rate_parameters: dict) -> DecayType:
             decay_type = DecayType(decay_type_value)
         except ValueError:
             logger.warning(
-                f"Unknown decay_type '{decay_type_value}', defaulting to 'inverse_time'.",
+                f"Unknown decay_type '{decay_type_value}', "
+                "defaulting to '{DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value}'.",
             )
-            decay_type = DecayType.INVERSE_TIME
+            decay_type = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE
     return decay_type
 
 
 def configure_gradient_method(
     gradient_method: GradientCalculationMethod,
-    config: dict,
+    config: SimulationConfig,
 ) -> GradientCalculationMethod:
     """
     Configure the gradient calculation method based on the provided configuration.
 
     Args:
         gradient_method (GradientCalculationMethod): The default gradient calculation method.
-        config (dict): Configuration dictionary containing gradient method settings.
+        config (SimulationConfig): Simulation configuration object.
 
     Returns
     -------
@@ -123,13 +216,7 @@ def configure_gradient_method(
     ------
         ValueError: If an invalid gradient method is specified in the configuration.
     """
-    gradient_config = config.get("gradient", {})
-    method_name = gradient_config.get("method", gradient_method.name).upper()
-    if method_name not in GradientCalculationMethod.__members__:
-        error_message = (
-            f"Invalid gradient method: {method_name}. "
-            f"Valid options are: {list(GradientCalculationMethod.__members__.keys())}"
-        )
-        logger.error(error_message)
-        raise ValueError(error_message)
-    return GradientCalculationMethod[method_name]
+    grad_cfg = config.gradient
+    if grad_cfg and grad_cfg.method is not None:
+        return grad_cfg.method
+    return gradient_method

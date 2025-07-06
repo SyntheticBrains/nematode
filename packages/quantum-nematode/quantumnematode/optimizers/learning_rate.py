@@ -5,6 +5,14 @@ from enum import Enum
 import numpy as np
 
 
+class LearningRateMethod(Enum):
+    """Different learning rate adjustment methods."""
+
+    DYNAMIC = "dynamic"
+    ADAM = "adam"
+    PERFORMANCE_BASED = "performance_based"
+
+
 class DecayType(Enum):
     """Different learning rate decay types."""
 

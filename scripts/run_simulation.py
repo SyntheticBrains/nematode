@@ -137,12 +137,14 @@ def main() -> None:  # noqa: C901, PLR0915
     if config_file:
         config = load_simulation_config(config_file)
 
-        max_steps = config.get("max_steps", max_steps)
-        maze_grid_size = config.get("maze_grid_size", maze_grid_size)
-        brain_type = BrainType(config.get("brain", brain_type.value))
-        shots = config.get("shots", shots)
-        body_length = config.get("body_length", body_length)
-        qubits = config.get("qubits", qubits)
+        max_steps = config.max_steps if config.max_steps is not None else max_steps
+        maze_grid_size = (
+            config.maze_grid_size if config.maze_grid_size is not None else maze_grid_size
+        )
+        brain_type = BrainType(config.brain) if config.brain is not None else brain_type
+        shots = config.shots if config.shots is not None else shots
+        body_length = config.body_length if config.body_length is not None else body_length
+        qubits = config.qubits if config.qubits is not None else qubits
 
         # Load learning rate method and parameters if specified
         learning_rate = configure_learning_rate(config)
