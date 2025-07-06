@@ -1,6 +1,34 @@
 """Data types for brains in Quantum Nematode."""
 
+from enum import Enum
+
 from pydantic import BaseModel
+
+
+class Action(str, Enum):
+    """Actions that the agent can take."""
+
+    FORWARD = "forward"
+    LEFT = "left"
+    RIGHT = "right"
+    STAY = "stay"
+    FORWARD_LEFT = "forward-left"
+    FORWARD_RIGHT = "forward-right"
+
+
+# Default 4-action set
+DEFAULT_ACTIONS = [Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY]
+
+# 6-action set
+# NOTE: Not yet implemented.
+SIX_ACTIONS = [
+    Action.FORWARD,
+    Action.FORWARD_LEFT,
+    Action.LEFT,
+    Action.FORWARD_RIGHT,
+    Action.RIGHT,
+    Action.STAY,
+]
 
 
 class ActionData(BaseModel):
@@ -18,5 +46,5 @@ class ActionData(BaseModel):
     """
 
     state: str
-    action: str
+    action: Action
     probability: float

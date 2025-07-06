@@ -11,7 +11,7 @@ import numpy as np
 import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
 
-from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.logging_config import logger
@@ -32,9 +32,9 @@ class MLPBrain(ClassicalBrain):
         num_hidden_layers: int = 2,
         device: str = "cpu",
         learning_rate: float = 0.01,
+        action_set: list[Action] = DEFAULT_ACTIONS,
         lr_scheduler: bool | None = None,
         entropy_beta: float = 0.01,
-        action_names: list[str] | None = None,
     ) -> None:
         super().__init__()
 
@@ -71,11 +71,7 @@ class MLPBrain(ClassicalBrain):
         self.current_probabilities = None
 
         self.training = True
-        if action_names is not None:
-            self._action_names = action_names
-        else:
-            # Default action names for 4 actions
-            self._action_names = ["forward", "left", "right", "stay"]
+        self._action_set = action_set
 
         # Baseline for variance reduction in policy gradient
         self.baseline = 0.0
@@ -162,7 +158,7 @@ class MLPBrain(ClassicalBrain):
         probs_np = probs.detach().cpu().numpy()
         rng = np.random.default_rng()
         action_idx = rng.choice(self.num_actions, p=probs_np)
-        action_name = self.action_names[action_idx]
+        action_name = self.action_set[action_idx]
 
         self.latest_data.action = ActionData(
             state=action_name,
@@ -176,7 +172,7 @@ class MLPBrain(ClassicalBrain):
         self.history_data.actions.append(self.latest_data.action)
         self.history_data.probabilities.append(first_prob)
 
-        actions = {name: int(i == action_idx) for i, name in enumerate(self.action_names)}
+        actions = {name: int(i == action_idx) for i, name in enumerate(self.action_set)}
         return self._get_most_probable_action(actions)
 
     def _get_most_probable_action(
@@ -186,7 +182,7 @@ class MLPBrain(ClassicalBrain):
         """Return the most probable action (or sampled action)."""
         # Counts is a one-hot dict from run_brain
         action_name = max(counts.items(), key=lambda x: x[1])[0]
-        idx = self.action_names.index(action_name)
+        idx = self.action_set.index(action_name)
         prob = self.current_probabilities[idx] if self.current_probabilities is not None else 1.0
         return [ActionData(state=action_name, action=action_name, probability=prob)]
 
@@ -277,10 +273,10 @@ class MLPBrain(ClassicalBrain):
         raise NotImplementedError(error_msg)
 
     @property
-    def action_names(self) -> list[str]:
-        """Get the list of action names."""
-        return self._action_names
+    def action_set(self) -> list[Action]:
+        """Get the list of actions."""
+        return self._action_set
 
-    @action_names.setter
-    def action_names(self, names: list[str]) -> None:
-        self._action_names = names
+    @action_set.setter
+    def action_set(self, actions: list[Action]) -> None:
+        self._action_set = actions

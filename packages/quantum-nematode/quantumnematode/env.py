@@ -13,6 +13,7 @@ from enum import Enum
 
 import numpy as np
 
+from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
 from quantumnematode.theme import THEME_SYMBOLS, Theme
 
 from .constants import MIN_GRID_SIZE
@@ -47,13 +48,14 @@ class MazeEnvironment:
         Position of the goal in the grid.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         grid_size: int = 5,
         start_pos: tuple[int, int] | None = None,
         food_pos: tuple[int, int] | None = None,
         max_body_length: int = 6,
         theme: Theme = Theme.ASCII,
+        action_set: list[Action] = DEFAULT_ACTIONS,
     ) -> None:
         if grid_size < MIN_GRID_SIZE:
             error_message = (
@@ -108,6 +110,7 @@ class MazeEnvironment:
         )  # Initialize the body with the head position
         self.current_direction = "up"  # Initialize the agent's direction
         self.theme = theme
+        self.action_set = action_set
 
     def get_state(
         self,
@@ -156,22 +159,27 @@ class MazeEnvironment:
 
         return gradient_strength, gradient_direction
 
-    def move_agent(self, action: str) -> None:
+    def move_agent(self, action: Action) -> None:
         """
         Move the agent based on its perspective.
 
         Parameters
         ----------
-        action : str
-            The action to take. Can be "forward", "left", or "right".
+        action : Action
+            The action to take. Can be from the action set.
         """
-        logger.debug(f"Action received: {action}, Current position: {self.agent_pos}")
+        logger.debug(f"Action received: {action.value}, Current position: {self.agent_pos}")
 
-        if action == "stay":
+        if self.action_set != DEFAULT_ACTIONS:
+            error_message = (
+                f"Action set {self.action_set} is not supported. "
+                f"Only {DEFAULT_ACTIONS} are supported in this environment."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        if action == Action.STAY:
             logger.info("Action is stay: staying in place.")
-            return
-        if action == "unknown":
-            logger.warning("Action is either unknown: staying in place.")
             return
 
         # Define direction mappings
@@ -186,7 +194,7 @@ class MazeEnvironment:
         previous_direction = self.current_direction
 
         # Determine the new direction based on the current direction and action
-        new_direction = direction_map[self.current_direction][action]
+        new_direction = direction_map[self.current_direction][action.value]
         self.current_direction = new_direction
 
         # Calculate the new position based on the new direction
@@ -200,7 +208,9 @@ class MazeEnvironment:
         elif new_direction == "left" and self.agent_pos[0] > 0:
             new_pos[0] -= 1
         else:
-            logger.warning(f"Collision against boundary with action: {action}, staying in place.")
+            logger.warning(
+                f"Collision against boundary with action: {action.value}, staying in place.",
+            )
             self.current_direction = previous_direction  # Revert to the previous direction
             return
 

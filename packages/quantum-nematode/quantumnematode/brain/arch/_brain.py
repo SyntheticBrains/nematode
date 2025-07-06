@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
-from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.actions import Action, ActionData
 
 if TYPE_CHECKING:
     from qiskit import QuantumCircuit
@@ -183,7 +183,7 @@ class QuantumBrain(Brain, Protocol):
 @runtime_checkable
 class ClassicalBrain(Brain, Protocol):
     @property
-    def action_names(self) -> list[str]: ...
+    def action_set(self) -> list[Action]: ...
 
     def learn(
         self,
