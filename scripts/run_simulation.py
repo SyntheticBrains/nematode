@@ -49,9 +49,11 @@ from quantumnematode.report.plots import (
 from quantumnematode.report.summary import summary
 from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
+    RewardConfig,
     SuperpositionModeConfig,
     configure_gradient_method,
     configure_learning_rate,
+    configure_reward,
     configure_superposition_mode,
     load_simulation_config,
 )
@@ -134,6 +136,7 @@ def main() -> None:  # noqa: C901, PLR0915
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
+    reward_config = RewardConfig()
     superposition_mode_config = SuperpositionModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
@@ -155,6 +158,9 @@ def main() -> None:  # noqa: C901, PLR0915
 
         # Load gradient method if specified
         gradient_method = configure_gradient_method(gradient_method, config)
+
+        # Load reward configuration if specified
+        reward_config = configure_reward(config)
 
         # Load superposition mode configuration if specified
         superposition_mode_config = configure_superposition_mode(config)
@@ -206,6 +212,7 @@ def main() -> None:  # noqa: C901, PLR0915
     if superposition_mode:
         try:
             agent.run_superposition_mode(
+                reward_config=reward_config,
                 max_steps=max_steps,
                 max_superpositions=superposition_mode_config.max_superpositions,
                 max_columns=superposition_mode_config.max_columns,
@@ -230,6 +237,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
             render_text = f"Run:\t{run_num}/{runs}"
             path = agent.run_episode(
+                reward_config=reward_config,
                 max_steps=max_steps,
                 render_text=render_text,
                 show_last_frame_only=show_last_frame_only,

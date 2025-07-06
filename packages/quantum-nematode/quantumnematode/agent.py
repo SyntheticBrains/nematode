@@ -5,6 +5,7 @@ import sys
 import time
 
 import numpy as np
+from pydantic import BaseModel
 
 from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
@@ -20,16 +21,28 @@ DEFAULT_AGENT_BODY_LENGTH = 2
 DEFAULT_MAX_AGENT_BODY_LENGTH = 6
 DEFAULT_MAX_STEPS = 100
 DEFAULT_MAZE_GRID_SIZE = 5
+DEFAULT_PENALTY_ANTI_DITHERING = 0.02
+DEFAULT_PENALTY_STEP = 0.005
+DEFAULT_REWARD_DISTANCE_SCALE = 0.3
+DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS = 4
 DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS = 16
 DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS = 1.0
 DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS = 2
 DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE = True
 
-ANTI_DITHERING_PENALTY = 0.02  # Penalty for oscillating (revisiting previous cell)
-DISTANCE_REWARD_SCALE = 0.3  # Scale the distance reward for smoother learning
-GOAL_REWARD = 0.2
-STEP_PENALTY = 0.005
+
+class RewardConfig(BaseModel):
+    """Configuration for the reward function."""
+
+    penalty_anti_dithering: float = (
+        DEFAULT_PENALTY_ANTI_DITHERING  # Penalty for oscillating (revisiting previous cell)
+    )
+    penalty_step: float = DEFAULT_PENALTY_STEP
+    reward_distance_scale: float = (
+        DEFAULT_REWARD_DISTANCE_SCALE  # Scale the distance reward for smoother learning
+    )
+    reward_goal: float = DEFAULT_REWARD_GOAL
 
 
 class QuantumNematodeAgent:
@@ -83,6 +96,7 @@ class QuantumNematodeAgent:
 
     def run_episode(  # noqa: C901, PLR0912, PLR0915
         self,
+        reward_config: RewardConfig,
         max_steps: int = DEFAULT_MAX_STEPS,
         render_text: str | None = None,
         *,
@@ -93,6 +107,8 @@ class QuantumNematodeAgent:
 
         Parameters
         ----------
+        reward_config : RewardConfig
+            Configuration for the reward system.
         max_steps : int
             Maximum number of steps for the episode.
         show_last_frame_only : bool, optional
@@ -117,6 +133,7 @@ class QuantumNematodeAgent:
 
             # Calculate reward based on efficiency and collision avoidance
             reward = self.calculate_reward(
+                reward_config,
                 self.env,
                 self.path,
                 max_steps=max_steps,
@@ -184,6 +201,7 @@ class QuantumNematodeAgent:
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
                 reward = self.calculate_reward(
+                    reward_config,
                     self.env,
                     self.path,
                     max_steps=max_steps,
@@ -265,6 +283,7 @@ class QuantumNematodeAgent:
 
     def run_superposition_mode(  # noqa: C901, PLR0912, PLR0913, PLR0915
         self,
+        reward_config: RewardConfig,
         max_steps: int = DEFAULT_MAX_STEPS,
         max_superpositions: int = DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS,
         max_columns: int = DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS,
@@ -279,6 +298,8 @@ class QuantumNematodeAgent:
 
         Parameters
         ----------
+        reward_config : RewardConfig
+            Configuration for the reward system.
         max_steps : int
             Maximum number of steps for the episode.
         max_superpositions : int
@@ -329,6 +350,7 @@ class QuantumNematodeAgent:
             for brain_copy, env_copy, path_copy in superpositions:
                 gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
                 reward = self.calculate_reward(
+                    reward_config,
                     env_copy,
                     path_copy,
                     max_steps=max_steps,
@@ -458,6 +480,7 @@ class QuantumNematodeAgent:
 
     def calculate_reward(
         self,
+        config: RewardConfig,
         env: MazeEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
@@ -485,7 +508,7 @@ class QuantumNematodeAgent:
                 prev_pos = path[-2]
                 prev_dist = abs(prev_pos[0] - env.goal[0]) + abs(prev_pos[1] - env.goal[1])
                 # Magnitude-based reward: positive if agent gets closer, negative if further
-                distance_reward = DISTANCE_REWARD_SCALE * (prev_dist - curr_dist)
+                distance_reward = config.reward_distance_scale * (prev_dist - curr_dist)
                 reward += distance_reward
                 logger.debug(
                     f"[Reward] Scaled distance reward: {distance_reward} "
@@ -493,7 +516,7 @@ class QuantumNematodeAgent:
                 )
                 # Anti-dithering: penalize if agent oscillates (returns to previous cell)
                 if len(path) > 2 and curr_pos == path[-3]:  # noqa: PLR2004
-                    anti_dither_penalty = ANTI_DITHERING_PENALTY
+                    anti_dither_penalty = config.penalty_anti_dithering
                     reward -= anti_dither_penalty
                     logger.debug(
                         f"[Penalty] Anti-dithering penalty applied: "
@@ -503,13 +526,13 @@ class QuantumNematodeAgent:
                 logger.debug("[Reward] First step, no previous position for distance reward.")
 
         # Step penalty (applies every step)
-        reward -= STEP_PENALTY
-        logger.debug(f"[Penalty] Step penalty applied: {-STEP_PENALTY}.")
+        reward -= config.penalty_step
+        logger.debug(f"[Penalty] Step penalty applied: {-config.penalty_step}.")
 
         # Bonus for reaching the goal, scaled by efficiency (fewer steps = higher bonus)
         if env.reached_goal():
             efficiency = max(0.1, 1 - (self.steps / max_steps))
-            goal_bonus = GOAL_REWARD * efficiency
+            goal_bonus = config.reward_goal * efficiency
             reward += goal_bonus
             logger.debug(
                 f"[Reward] Goal reached! Efficiency bonus applied: "
@@ -518,7 +541,7 @@ class QuantumNematodeAgent:
 
         logger.debug(
             f"Reward breakdown: distance_reward={distance_reward}, "
-            f"step_penalty={-STEP_PENALTY}, anti_dither_penalty={-anti_dither_penalty}, "
+            f"step_penalty={-config.penalty_step}, anti_dither_penalty={-anti_dither_penalty}, "
             f"goal_bonus={goal_bonus}, total_reward={reward}",
         )
         return reward

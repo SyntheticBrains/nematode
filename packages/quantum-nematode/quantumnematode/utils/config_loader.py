@@ -11,6 +11,7 @@ from quantumnematode.agent import (
     DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS,
     DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS,
     DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE,
+    RewardConfig,
 )
 from quantumnematode.logging_config import (
     logger,
@@ -97,6 +98,7 @@ class SimulationConfig(BaseModel):
     qubits: int | None = None
     learning_rate: LearningRateConfig | None = None
     gradient: GradientConfig | None = None
+    reward: RewardConfig | None = None
     superposition_mode: SuperpositionModeConfig | None = None
 
 
@@ -233,3 +235,17 @@ def configure_superposition_mode(config: SimulationConfig) -> SuperpositionModeC
         top_n_actions=sp_cfg.top_n_actions,
         top_n_randomize=sp_cfg.top_n_randomize,
     )
+
+
+def configure_reward(config: SimulationConfig) -> RewardConfig:
+    """
+    Configure the reward function based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        RewardConfig: The configured reward function object.
+    """
+    return config.reward or RewardConfig()
