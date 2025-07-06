@@ -31,6 +31,16 @@ class Corner(Enum):
     BOTTOM_RIGHT = "bottom_right"
 
 
+class Direction(Enum):
+    """Enum for the directions the agent can move."""
+
+    UP = "up"
+    DOWN = "down"
+    LEFT = "left"
+    RIGHT = "right"
+    STAY = "stay"
+
+
 class ScalingMethod(Enum):
     """Enum for scaling methods used in the maze environment."""
 
@@ -117,7 +127,7 @@ class MazeEnvironment:
         self.body = (
             [tuple(self.agent_pos)] if max_body_length > 0 else []
         )  # Initialize the body with the head position
-        self.current_direction = "up"  # Initialize the agent's direction
+        self.current_direction = Direction.UP  # Initialize the agent's direction
         self.theme = theme
         self.action_set = action_set
 
@@ -193,10 +203,26 @@ class MazeEnvironment:
 
         # Define direction mappings
         direction_map = {
-            "up": {"forward": "up", "left": "left", "right": "right"},
-            "down": {"forward": "down", "left": "right", "right": "left"},
-            "left": {"forward": "left", "left": "down", "right": "up"},
-            "right": {"forward": "right", "left": "up", "right": "down"},
+            Direction.UP: {
+                "forward": Direction.UP,
+                "left": Direction.LEFT,
+                "right": Direction.RIGHT,
+            },
+            Direction.DOWN: {
+                "forward": Direction.DOWN,
+                "left": Direction.RIGHT,
+                "right": Direction.LEFT,
+            },
+            Direction.LEFT: {
+                "forward": Direction.LEFT,
+                "left": Direction.DOWN,
+                "right": Direction.UP,
+            },
+            Direction.RIGHT: {
+                "forward": Direction.RIGHT,
+                "left": Direction.UP,
+                "right": Direction.DOWN,
+            },
         }
 
         # Store the previous direction before attempting to move
@@ -208,13 +234,13 @@ class MazeEnvironment:
 
         # Calculate the new position based on the new direction
         new_pos = list(self.agent_pos)
-        if new_direction == "up" and self.agent_pos[1] < self.grid_size - 1:
+        if new_direction == Direction.UP and self.agent_pos[1] < self.grid_size - 1:
             new_pos[1] += 1
-        elif new_direction == "down" and self.agent_pos[1] > 0:
+        elif new_direction == Direction.DOWN and self.agent_pos[1] > 0:
             new_pos[1] -= 1
-        elif new_direction == "right" and self.agent_pos[0] < self.grid_size - 1:
+        elif new_direction == Direction.RIGHT and self.agent_pos[0] < self.grid_size - 1:
             new_pos[0] += 1
-        elif new_direction == "left" and self.agent_pos[0] > 0:
+        elif new_direction == Direction.LEFT and self.agent_pos[0] > 0:
             new_pos[0] -= 1
         else:
             logger.warning(
@@ -235,7 +261,9 @@ class MazeEnvironment:
         # Update the agent's position
         self.agent_pos = tuple(new_pos)
 
-        logger.debug(f"New position: {self.agent_pos}, New direction: {self.current_direction}")
+        logger.debug(
+            f"New position: {self.agent_pos}, New direction: {self.current_direction.value}",
+        )
 
     def reached_goal(self) -> bool:
         """
@@ -259,7 +287,7 @@ class MazeEnvironment:
         for segment in self.body:
             grid[segment[1]][segment[0]] = symbols.body
 
-        agent_symbol = getattr(symbols, self.current_direction, "@")
+        agent_symbol = getattr(symbols, self.current_direction.value, "@")
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
         # For emoji theme, join with empty string to avoid extra spaces

@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 
 from quantumnematode.brain.arch import BrainParams
+from quantumnematode.env import Direction
 
 
 def proprioception_features(
@@ -43,8 +44,13 @@ def proprioception_features(
     -------
         Dictionary with rx, ry, rz values for proprioception qubit(s).
     """
-    direction_map = {"up": 0.0, "down": np.pi, "left": np.pi / 2, "right": -np.pi / 2}
-    direction = direction_map.get(params.agent_direction or "up", 0.0)
+    direction_map = {
+        Direction.UP: 0.0,
+        Direction.DOWN: np.pi,
+        Direction.LEFT: np.pi / 2,
+        Direction.RIGHT: -np.pi / 2,
+    }
+    direction = direction_map.get(params.agent_direction or Direction.UP, 0.0)
     return {"rx": 0.0, "ry": 0.0, "rz": direction}
 
 
@@ -70,8 +76,13 @@ def chemotaxis_features(
     # gradient_direction is the absolute direction to the goal ([-pi, pi])
     grad_direction = params.gradient_direction or 0.0
     # agent_direction is a string ("up", "down", etc.)
-    direction_map = {"up": np.pi / 2, "down": -np.pi / 2, "left": np.pi, "right": 0.0}
-    agent_facing_angle = direction_map.get(params.agent_direction or "up", np.pi / 2)
+    direction_map = {
+        Direction.UP: np.pi / 2,
+        Direction.DOWN: -np.pi / 2,
+        Direction.LEFT: np.pi,
+        Direction.RIGHT: 0.0,
+    }
+    agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
     # Compute relative angle to goal ([-pi, pi])
     relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
 
@@ -153,10 +164,10 @@ def memory_action_features(
     """
     # Map possible actions to angles (expand as needed)
     action_map = {
-        "up": 0.0,
-        "down": np.pi,
-        "left": np.pi / 2,
-        "right": -np.pi / 2,
+        Direction.UP: 0.0,
+        Direction.DOWN: np.pi,
+        Direction.LEFT: np.pi / 2,
+        Direction.RIGHT: -np.pi / 2,
         None: 0.0,  # Default if no action
     }
     action_data = getattr(params, "action", None)

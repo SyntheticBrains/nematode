@@ -19,7 +19,7 @@ from quantumnematode.report.dtypes import PerformanceMetrics
 from quantumnematode.theme import Theme
 
 from .brain.arch import Brain, BrainParams
-from .env import MazeEnvironment
+from .env import Direction, MazeEnvironment
 from .logging_config import logger
 
 ANTI_DITHERING_PENALTY = 0.02  # Penalty for oscillating (revisiting previous cell)
@@ -99,7 +99,7 @@ class QuantumNematodeAgent:
         list[tuple]
             The path taken by the agent during the episode.
         """
-        self.env.current_direction = "up"  # Initialize the agent's direction
+        self.env.current_direction = Direction.UP  # Initialize the agent's direction
 
         reward = 0.0
         top_action = None
@@ -281,7 +281,7 @@ class QuantumNematodeAgent:
             The path taken by the agent during the episode.
         """
         # Initialize superposition mode
-        self.env.current_direction = "up"
+        self.env.current_direction = Direction.UP
 
         if show_last_frame_only:
             if os.name == "nt":  # For Windows
