@@ -12,6 +12,9 @@ class Theme(str, Enum):
     EMOJI = "emoji"
 
 
+DEFAULT_THEME = Theme.ASCII
+
+
 class ThemeSymbolSet(BaseModel):
     """Symbol set for a specific theme.
 
