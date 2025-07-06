@@ -14,6 +14,7 @@ from torch import nn, optim  # pyright: ignore[reportMissingImports]
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 
 
@@ -107,8 +108,13 @@ class MLPBrain(ClassicalBrain):
 
         # Compute relative angle to goal ([-pi, pi])
         grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {"up": np.pi / 2, "down": -np.pi / 2, "left": np.pi, "right": 0.0}
-        agent_facing_angle = direction_map.get(params.agent_direction or "up", np.pi / 2)
+        direction_map = {
+            Direction.UP: np.pi / 2,
+            Direction.DOWN: -np.pi / 2,
+            Direction.LEFT: np.pi,
+            Direction.RIGHT: 0.0,
+        }
+        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
         relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
         # Normalise relative angle to [-1, 1]
         rel_angle_norm = relative_angle / np.pi

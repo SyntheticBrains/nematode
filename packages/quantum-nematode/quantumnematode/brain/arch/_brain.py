@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from pydantic import BaseModel, Field
 
 from quantumnematode.brain.actions import Action, ActionData
+from quantumnematode.env import Direction
 
 if TYPE_CHECKING:
     from qiskit import QuantumCircuit
@@ -137,7 +138,7 @@ class BrainParams(BaseModel):
         default=None,
         description="Current position of the agent in the environment.",
     )
-    agent_direction: str | None = Field(
+    agent_direction: Direction | None = Field(
         default=None,
         description="Current direction of the agent in the environment.",
     )
