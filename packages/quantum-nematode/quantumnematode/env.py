@@ -204,24 +204,24 @@ class MazeEnvironment:
         # Define direction mappings
         direction_map = {
             Direction.UP: {
-                "forward": Direction.UP,
-                "left": Direction.LEFT,
-                "right": Direction.RIGHT,
+                Action.FORWARD: Direction.UP,
+                Action.LEFT: Direction.LEFT,
+                Action.RIGHT: Direction.RIGHT,
             },
             Direction.DOWN: {
-                "forward": Direction.DOWN,
-                "left": Direction.RIGHT,
-                "right": Direction.LEFT,
+                Action.FORWARD: Direction.DOWN,
+                Action.LEFT: Direction.RIGHT,
+                Action.RIGHT: Direction.LEFT,
             },
             Direction.LEFT: {
-                "forward": Direction.LEFT,
-                "left": Direction.DOWN,
-                "right": Direction.UP,
+                Action.FORWARD: Direction.LEFT,
+                Action.LEFT: Direction.DOWN,
+                Action.RIGHT: Direction.UP,
             },
             Direction.RIGHT: {
-                "forward": Direction.RIGHT,
-                "left": Direction.UP,
-                "right": Direction.DOWN,
+                Action.FORWARD: Direction.RIGHT,
+                Action.LEFT: Direction.UP,
+                Action.RIGHT: Direction.DOWN,
             },
         }
 
@@ -229,7 +229,7 @@ class MazeEnvironment:
         previous_direction = self.current_direction
 
         # Determine the new direction based on the current direction and action
-        new_direction = direction_map[self.current_direction][action.value]
+        new_direction = direction_map[self.current_direction][action]
         self.current_direction = new_direction
 
         # Calculate the new position based on the new direction
