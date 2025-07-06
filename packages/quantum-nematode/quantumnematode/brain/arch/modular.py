@@ -456,6 +456,7 @@ class ModularBrain(QuantumBrain):
         logger.error(error_message)
         raise NotImplementedError(error_message)
 
+    # TODO: Make the below parameters configurable
     def update_parameters(  # noqa: C901, PLR0913
         self,
         gradients: list[float],
