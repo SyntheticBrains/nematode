@@ -137,13 +137,13 @@ class QuantumNematodeAgent:
                 agent_direction=self.env.current_direction,
                 action=top_action,
             )
-            counts = self.brain.run_brain(
+            action = self.brain.run_brain(
                 params=params,
                 reward=reward,
                 input_data=input_data,
+                top_only=True,
+                top_randomize=True,
             )
-
-            action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
 
             # Only one action is supported
             if len(action) != 1:
@@ -201,10 +201,12 @@ class QuantumNematodeAgent:
                     agent_direction=self.env.current_direction,
                     action=top_action,
                 )
-                counts = self.brain.run_brain(
+                _ = self.brain.run_brain(
                     params=params,
                     reward=reward,
                     input_data=None,
+                    top_only=True,
+                    top_randomize=True,
                 )
 
                 # Calculate reward based on efficiency and collision avoidance
@@ -224,11 +226,6 @@ class QuantumNematodeAgent:
 
             self.total_steps += 1
             self.total_rewards += reward
-
-            # Log action counts for debugging
-            logger.debug(
-                f"Sorted action counts: {sorted(counts.items(), key=lambda x: x[1], reverse=True)}",
-            )
 
             # Log distance to the goal
             if self.env.goal is not None:
@@ -329,12 +326,13 @@ class QuantumNematodeAgent:
                     agent_position=agent_pos,
                     agent_direction=self.env.current_direction,
                 )
-                counts = brain_copy.run_brain(
+                actions = brain_copy.run_brain(
                     params=params,
                     reward=reward,
                     input_data=None,
+                    top_only=False,
+                    top_randomize=True,
                 )
-                actions = brain_copy.interpret_counts(counts, top_only=False, top_randomize=True)
 
                 if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
                     rng = np.random.default_rng()
