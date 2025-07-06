@@ -25,8 +25,6 @@ from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
-ENTROPY_BETA = 0.07
-
 
 class ModularBrain(QuantumBrain):
     """
