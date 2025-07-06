@@ -361,7 +361,7 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
 def setup_brain_model(  # noqa: PLR0913
     brain_type: BrainType,
     shots: int,
-    qubits: int,
+    qubits: int,  # noqa: ARG001
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
@@ -400,7 +400,6 @@ def setup_brain_model(  # noqa: PLR0913
 
         brain = ModularBrain(
             modules=modules,
-            num_qubits=qubits,
             device=device,
             shots=shots,
             learning_rate=learning_rate,

@@ -16,6 +16,7 @@ from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
     ModuleName,
     RotationAxis,
+    count_total_qubits,
     extract_features_for_module,
 )
 from quantumnematode.initializers.random_initializer import (
@@ -39,7 +40,6 @@ class ModularBrain(QuantumBrain):
     def __init__(  # noqa: PLR0913
         self,
         modules: dict[ModuleName, list[int]],
-        num_qubits: int | None = None,
         shots: int = DEFAULT_SHOTS,
         device: DeviceType = DeviceType.CPU,
         learning_rate: DynamicLearningRate | None = None,
@@ -54,7 +54,6 @@ class ModularBrain(QuantumBrain):
         Initialize the ModularBrain.
 
         Args:
-            num_qubits: Number of qubits (if None, inferred from modules).
             modules: Mapping of module names to qubit indices.
             shots: Number of shots for simulation.
             device: Device string for AerSimulator.
@@ -65,7 +64,7 @@ class ModularBrain(QuantumBrain):
         """
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
-        num_qubits = 2  # TODO: Get num qubits from module definitions
+        num_qubits = count_total_qubits(modules)
 
         self.num_qubits: int = num_qubits
         self.modules: dict[ModuleName, list[int]] = modules or deepcopy(DEFAULT_MODULES)
@@ -358,7 +357,6 @@ class ModularBrain(QuantumBrain):
             ModularBrain: A new instance with the same state.
         """
         new_brain = ModularBrain(
-            num_qubits=self.num_qubits,
             modules=deepcopy(self.modules),
             shots=self.shots,
             device=self.device,

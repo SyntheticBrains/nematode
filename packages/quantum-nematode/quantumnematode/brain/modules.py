@@ -234,3 +234,20 @@ def extract_features_for_module(
         features = extractor(params, satiety=satiety)
         return {axis.value: value for axis, value in features.items()}
     return {axis.value: 0.0 for axis in RotationAxis}
+
+
+def count_total_qubits(modules: Modules) -> int:
+    """
+    Count the total number of unique qubits used in the given modules mapping.
+
+    Args:
+        modules: Mapping from ModuleName to list of qubit indices.
+
+    Returns
+    -------
+        int: Total number of unique qubits used across all modules.
+    """
+    qubit_indices = set()
+    for qubits in modules.values():
+        qubit_indices.update(qubits)
+    return len(qubit_indices)
