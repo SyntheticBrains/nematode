@@ -248,7 +248,7 @@ class ModularBrain(QuantumBrain):
         *,
         top_only: bool = True,
         top_randomize: bool = True,
-    ) -> ActionData | list[ActionData]:
+    ) -> list[ActionData]:
         """
         Interpret measurement counts and return the most probable action(s).
 
@@ -298,12 +298,12 @@ class ModularBrain(QuantumBrain):
                 self.latest_data.action = chosen_action
                 self.history_data.actions.append(chosen_action)
 
-                return chosen_action
+                return [chosen_action]
 
             self.latest_data.action = sorted_actions[0]
             self.history_data.actions.append(sorted_actions[0])
 
-            return sorted_actions[0]
+            return [sorted_actions[0]]
 
         self.latest_data.action = sorted_actions[0]
         self.history_data.actions.append(sorted_actions[0])

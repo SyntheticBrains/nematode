@@ -181,13 +181,13 @@ class MLPBrain(ClassicalBrain):
         *,
         top_only: bool = True,  # noqa: ARG002
         top_randomize: bool = True,  # noqa: ARG002
-    ) -> ActionData:
+    ) -> list[ActionData]:
         """Return the most probable action (or sampled action)."""
         # In MLPBrain, counts is a one-hot dict from run_brain
         action_name = max(counts.items(), key=lambda x: x[1])[0]
         idx = self.action_names.index(action_name)
         prob = self.current_probabilities[idx] if self.current_probabilities is not None else 1.0
-        return ActionData(state=action_name, action=action_name, probability=prob)
+        return [ActionData(state=action_name, action=action_name, probability=prob)]
 
     def update_parameters(
         self,
