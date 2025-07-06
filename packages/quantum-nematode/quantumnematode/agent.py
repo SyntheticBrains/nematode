@@ -6,7 +6,6 @@ import time
 
 import numpy as np
 
-from quantumnematode.brain.actions import ActionData
 from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.constants import (
@@ -103,7 +102,7 @@ class QuantumNematodeAgent:
         self.env.current_direction = "up"  # Initialize the agent's direction
 
         reward = 0.0
-        action = None
+        top_action = None
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
@@ -136,7 +135,7 @@ class QuantumNematodeAgent:
                 gradient_direction=gradient_direction,
                 agent_position=agent_pos,
                 agent_direction=self.env.current_direction,
-                action=action,
+                action=top_action,
             )
             counts = self.brain.run_brain(
                 params=params,
@@ -146,16 +145,19 @@ class QuantumNematodeAgent:
 
             action = self.brain.interpret_counts(counts, top_only=True, top_randomize=True)
 
-            if not isinstance(action, ActionData):
-                error_msg = f"Invalid action type: {type(action)}. Expected ActionData."
+            # Only one action is supported
+            if len(action) != 1:
+                error_msg = f"Invalid action length: {len(action)}. Expected 1."
                 logger.error(error_msg)
-                raise TypeError(error_msg)
+                raise ValueError(error_msg)
 
-            self.env.move_agent(action.action)
+            top_action = action[0]
+
+            self.env.move_agent(top_action.action)
 
             # Learning step
             if isinstance(self.brain, ClassicalBrain):
-                action_idx = self.brain.action_names.index(action.action)
+                action_idx = self.brain.action_names.index(top_action.action)
                 self.brain.learn(
                     params=params,
                     action_idx=action_idx,
@@ -173,7 +175,7 @@ class QuantumNematodeAgent:
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
 
-            logger.info(f"Step {self.steps}: Action={action.action}, Reward={reward}")
+            logger.info(f"Step {self.steps}: Action={top_action.action}, Reward={reward}")
 
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
@@ -197,7 +199,7 @@ class QuantumNematodeAgent:
                     gradient_direction=gradient_direction,
                     agent_position=agent_pos,
                     agent_direction=self.env.current_direction,
-                    action=action,
+                    action=top_action,
                 )
                 counts = self.brain.run_brain(
                     params=params,
@@ -213,7 +215,7 @@ class QuantumNematodeAgent:
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1
 
-                logger.info(f"Step {self.steps}: Action={action.action}, Reward={reward}")
+                logger.info(f"Step {self.steps}: Action={top_action.action}, Reward={reward}")
 
                 self.total_rewards += reward
                 logger.info("Reward: goal reached!")
@@ -333,9 +335,6 @@ class QuantumNematodeAgent:
                     input_data=None,
                 )
                 actions = brain_copy.interpret_counts(counts, top_only=False, top_randomize=True)
-
-                if not isinstance(actions, list):
-                    actions = [actions]
 
                 if SUPERPOSITION_MODE_TOP_N_RANDOMIZE:
                     rng = np.random.default_rng()
