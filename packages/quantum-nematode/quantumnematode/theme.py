@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 
 class Theme(str, Enum):
-    """Enum for simulation themes."""
+    """Simulation themes."""
 
     ASCII = "ascii"
     EMOJI = "emoji"

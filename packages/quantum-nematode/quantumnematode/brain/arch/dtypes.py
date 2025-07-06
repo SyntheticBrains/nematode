@@ -5,7 +5,7 @@ from typing import Literal
 
 
 class BrainType(Enum):
-    """Enum for different types of brains."""
+    """Different types of brains."""
 
     MODULAR = "modular"
     MLP = "mlp"

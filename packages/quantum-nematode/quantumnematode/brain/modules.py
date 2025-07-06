@@ -27,10 +27,18 @@ from quantumnematode.brain.arch import BrainParams
 from quantumnematode.env import Direction
 
 
+class RotationAxis(str, Enum):
+    """Rotation axes used in feature extraction."""
+
+    RX = "rx"
+    RY = "ry"
+    RZ = "rz"
+
+
 def proprioception_features(
     params: BrainParams,
     satiety: float = 1.0,  # noqa: ARG001
-) -> dict[str, float]:
+) -> dict[RotationAxis, float]:
     """
     Extract proprioception features: agent's own direction only.
 
@@ -52,13 +60,13 @@ def proprioception_features(
         Direction.RIGHT: -np.pi / 2,
     }
     direction = direction_map.get(params.agent_direction or Direction.UP, 0.0)
-    return {"rx": 0.0, "ry": 0.0, "rz": direction}
+    return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: direction}
 
 
 def chemotaxis_features(
     params: BrainParams,
     satiety: float = 1.0,  # noqa: ARG001
-) -> dict[str, float]:
+) -> dict[RotationAxis, float]:
     """
     Extract chemotaxis features: gradient strength and relative direction to goal.
 
@@ -88,16 +96,16 @@ def chemotaxis_features(
     relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
 
     return {
-        "rx": grad_strength_scaled,
-        "ry": relative_angle,
-        "rz": 0.0,
+        RotationAxis.RX: grad_strength_scaled,
+        RotationAxis.RY: relative_angle,
+        RotationAxis.RZ: 0.0,
     }
 
 
 def thermotaxis_features(
     params: BrainParams,  # noqa: ARG001
     satiety: float = 1.0,  # noqa: ARG001
-) -> dict[str, float]:
+) -> dict[RotationAxis, float]:
     """
     Extract thermotaxis features (placeholder).
 
@@ -109,13 +117,13 @@ def thermotaxis_features(
     -------
         Dictionary with rx, ry, rz values for thermotaxis qubit(s).
     """
-    return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
+    return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
 def oxygen_features(
     params: BrainParams,  # noqa: ARG001
     satiety: float = 1.0,  # noqa: ARG001
-) -> dict[str, float]:
+) -> dict[RotationAxis, float]:
     """
     Extract oxygen sensing features (placeholder).
 
@@ -127,13 +135,13 @@ def oxygen_features(
     -------
         Dictionary with rx, ry, rz values for oxygen qubit(s).
     """
-    return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
+    return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
 def vision_features(
     params: BrainParams,  # noqa: ARG001
     satiety: float = 1.0,  # noqa: ARG001
-) -> dict[str, float]:
+) -> dict[RotationAxis, float]:
     """
     Extract vision features (placeholder).
 
@@ -145,13 +153,13 @@ def vision_features(
     -------
         Dictionary with rx, ry, rz values for vision qubit(s).
     """
-    return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
+    return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
 def memory_action_features(
     params: BrainParams,
     satiety: float = 1.0,  # noqa: ARG001
-) -> dict[str, float]:
+) -> dict[RotationAxis, float]:
     """
     Extract action features: encode an action taken by the agent such as most recent.
 
@@ -174,7 +182,7 @@ def memory_action_features(
     action_data = getattr(params, "action", None)
     action = action_data.action if action_data and hasattr(action_data, "action") else None
     angle = action_map.get(action, 0.0)
-    return {"rx": 0.0, "ry": 0.0, "rz": angle}
+    return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: angle}
 
 
 class ModuleName(str, Enum):
@@ -213,9 +221,10 @@ def extract_features_for_module(
 
     Returns
     -------
-        Dictionary with rx, ry, rz values for the module's qubit(s).
+        Dictionary with rx, ry, rz values for the module's qubit(s), with string keys.
     """
     extractor = MODULE_FEATURE_EXTRACTORS.get(module)
     if extractor:
-        return extractor(params, satiety=satiety)
-    return {"rx": 0.0, "ry": 0.0, "rz": 0.0}
+        features = extractor(params, satiety=satiety)
+        return {axis.value: value for axis, value in features.items()}
+    return {axis.value: 0.0 for axis in RotationAxis}
