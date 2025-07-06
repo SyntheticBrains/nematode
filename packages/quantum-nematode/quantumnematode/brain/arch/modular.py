@@ -11,7 +11,7 @@ from qiskit_aer import AerSimulator
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.modules import ModuleName, extract_features_for_module
+from quantumnematode.brain.modules import ModuleName, RotationAxis, extract_features_for_module
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
     RandomSmallUniformInitializer,
@@ -143,12 +143,12 @@ class ModularBrain(QuantumBrain):
             for module, qubit_indices in self.modules.items():
                 features = input_params.get(module, {}) if input_params else {}
                 for _idx, q in enumerate(qubit_indices):
-                    rx = features.get("rx", 0.0)
-                    ry = features.get("ry", 0.0)
-                    rz = features.get("rz", 0.0)
-                    qc.rx(rx + self.parameters[f"rx_{layer + 1}"][q], q)
-                    qc.ry(ry + self.parameters[f"ry_{layer + 1}"][q], q)
-                    qc.rz(rz + self.parameters[f"rz_{layer + 1}"][q], q)
+                    rx = features.get(RotationAxis.RX.value, 0.0)
+                    ry = features.get(RotationAxis.RY.value, 0.0)
+                    rz = features.get(RotationAxis.RZ.value, 0.0)
+                    qc.rx(rx + self.parameters[f"{RotationAxis.RX.value}_{layer + 1}"][q], q)
+                    qc.ry(ry + self.parameters[f"{RotationAxis.RY.value}_{layer + 1}"][q], q)
+                    qc.rz(rz + self.parameters[f"{RotationAxis.RZ.value}_{layer + 1}"][q], q)
             # Entanglement for this layer
             for i in range(self.num_qubits):
                 for j in range(i + 1, self.num_qubits):

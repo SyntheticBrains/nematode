@@ -6,7 +6,7 @@ DEFAULT_MAX_CLIP_GRADIENT = 1.0
 
 
 class GradientCalculationMethod(Enum):
-    """Enum for gradient calculation methods."""
+    """Gradient calculation methods."""
 
     RAW = "raw"  # Keep gradients as is
     NORMALIZE = "normalize"  # Normalize gradients

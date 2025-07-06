@@ -23,7 +23,7 @@ GRADIENT_SCALING_TANH_FACTOR = 1.0
 
 
 class Corner(Enum):
-    """Enum for the corners of the maze grid."""
+    """Corners of the maze grid."""
 
     TOP_LEFT = "top_left"
     TOP_RIGHT = "top_right"
@@ -32,7 +32,7 @@ class Corner(Enum):
 
 
 class Direction(Enum):
-    """Enum for the directions the agent can move."""
+    """Directions the agent can move."""
 
     UP = "up"
     DOWN = "down"
@@ -42,7 +42,7 @@ class Direction(Enum):
 
 
 class ScalingMethod(Enum):
-    """Enum for scaling methods used in the maze environment."""
+    """Scaling methods used in the maze environment."""
 
     EXPONENTIAL = "exponential"
     TANH = "tanh"

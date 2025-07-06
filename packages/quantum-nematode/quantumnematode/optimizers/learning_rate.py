@@ -6,7 +6,7 @@ import numpy as np
 
 
 class DecayType(Enum):
-    """Enum for different learning rate decay types."""
+    """Different learning rate decay types."""
 
     COSINE = "cosine"
     EXPONENTIAL = "exponential"
