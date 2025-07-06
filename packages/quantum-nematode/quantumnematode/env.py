@@ -22,6 +22,15 @@ from .logging_config import logger
 GRADIENT_SCALING_TANH_FACTOR = 1.0
 
 
+class Corner(Enum):
+    """Enum for the corners of the maze grid."""
+
+    TOP_LEFT = "top_left"
+    TOP_RIGHT = "top_right"
+    BOTTOM_LEFT = "bottom_left"
+    BOTTOM_RIGHT = "bottom_right"
+
+
 class ScalingMethod(Enum):
     """Enum for scaling methods used in the maze environment."""
 
@@ -75,27 +84,27 @@ class MazeEnvironment:
         ]
 
         corners_map = {
-            "top_left": corners[0],
-            "top_right": corners[1],
-            "bottom_left": corners[2],
-            "bottom_right": corners[3],
+            Corner.TOP_LEFT: corners[0],
+            Corner.TOP_RIGHT: corners[1],
+            Corner.BOTTOM_LEFT: corners[2],
+            Corner.BOTTOM_RIGHT: corners[3],
         }
 
         agent_chosen_corner = None
         if start_pos is None:
-            agent_chosen_corner = secrets.choice(list(corners_map.keys()))
+            agent_chosen_corner = secrets.choice(list(Corner))
             start_pos = corners_map[agent_chosen_corner]
 
         if food_pos is None:
             if agent_chosen_corner is not None:
-                if agent_chosen_corner == "top_left":
-                    food_pos = corners_map["bottom_right"]
-                elif agent_chosen_corner == "top_right":
-                    food_pos = corners_map["bottom_left"]
-                elif agent_chosen_corner == "bottom_left":
-                    food_pos = corners_map["top_right"]
-                elif agent_chosen_corner == "bottom_right":
-                    food_pos = corners_map["top_left"]
+                if agent_chosen_corner == Corner.TOP_LEFT:
+                    food_pos = corners_map[Corner.BOTTOM_RIGHT]
+                elif agent_chosen_corner == Corner.TOP_RIGHT:
+                    food_pos = corners_map[Corner.BOTTOM_LEFT]
+                elif agent_chosen_corner == Corner.BOTTOM_LEFT:
+                    food_pos = corners_map[Corner.TOP_RIGHT]
+                elif agent_chosen_corner == Corner.BOTTOM_RIGHT:
+                    food_pos = corners_map[Corner.TOP_LEFT]
                 else:
                     food_pos = secrets.choice(corners)
             else:
