@@ -20,17 +20,14 @@ from quantumnematode.optimizers.learning_rate import (
     DEFAULT_ADAM_LEARNING_RATE_BETA1,
     DEFAULT_ADAM_LEARNING_RATE_BETA2,
     DEFAULT_ADAM_LEARNING_RATE_EPSILON,
-    DEFAULT_ADAM_LEARNING_RATE_INITIAL,
     DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,
     DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
     DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE,
-    DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL,
     DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS,
     DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,
     DEFAULT_DYNAMIC_LEARNING_RATE_POWER,
     DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE,
     DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR,
-    DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_INITIAL,
     DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
     DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN,
     AdamLearningRate,
@@ -47,27 +44,27 @@ DEFAULT_LEARNING_RATE_METHOD = LearningRateMethod.DYNAMIC
 class LearningRateParameters(BaseModel):
     """Parameters for configuring the learning rate."""
 
-    initial_learning_rate: float | None = DEFAULT_LEARNING_RATE_INITIAL
-    decay_rate: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE
-    decay_type: str | None = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
-    decay_factor: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR
-    step_size: int | None = DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE
-    max_steps: int | None = DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS
-    power: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_POWER
-    min_lr: float | None = DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR
-    beta1: float | None = DEFAULT_ADAM_LEARNING_RATE_BETA1
-    beta2: float | None = DEFAULT_ADAM_LEARNING_RATE_BETA2
-    epsilon: float | None = DEFAULT_ADAM_LEARNING_RATE_EPSILON
-    min_learning_rate: float | None = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN
-    max_learning_rate: float | None = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX
-    adjustment_factor: float | None = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR
+    initial_learning_rate: float = DEFAULT_LEARNING_RATE_INITIAL
+    decay_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE
+    decay_type: str = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
+    decay_factor: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR
+    step_size: int = DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE
+    max_steps: int = DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS
+    power: float = DEFAULT_DYNAMIC_LEARNING_RATE_POWER
+    min_lr: float = DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR
+    beta1: float = DEFAULT_ADAM_LEARNING_RATE_BETA1
+    beta2: float = DEFAULT_ADAM_LEARNING_RATE_BETA2
+    epsilon: float = DEFAULT_ADAM_LEARNING_RATE_EPSILON
+    min_learning_rate: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN
+    max_learning_rate: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX
+    adjustment_factor: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR
 
 
 class LearningRateConfig(BaseModel):
     """Configuration for the learning rate method and its parameters."""
 
     method: LearningRateMethod = DEFAULT_LEARNING_RATE_METHOD
-    parameters: LearningRateParameters | None = LearningRateParameters()
+    parameters: LearningRateParameters = LearningRateParameters()
 
 
 DEFAULT_GRADIENT_CALCULATION_METHOD = GradientCalculationMethod.RAW
@@ -76,7 +73,7 @@ DEFAULT_GRADIENT_CALCULATION_METHOD = GradientCalculationMethod.RAW
 class GradientConfig(BaseModel):
     """Configuration for the gradient calculation method."""
 
-    method: GradientCalculationMethod | None = DEFAULT_GRADIENT_CALCULATION_METHOD
+    method: GradientCalculationMethod = DEFAULT_GRADIENT_CALCULATION_METHOD
 
 
 class SuperpositionModeConfig(BaseModel):
@@ -145,52 +142,28 @@ def configure_learning_rate(
     if method == LearningRateMethod.DYNAMIC:
         decay_type = _resolve_decay_type(params)
         return DynamicLearningRate(
-            initial_learning_rate=params.initial_learning_rate
-            if params.initial_learning_rate is not None
-            else DEFAULT_DYNAMIC_LEARNING_RATE_INITIAL,
-            decay_rate=params.decay_rate
-            if params.decay_rate is not None
-            else DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
+            initial_learning_rate=params.initial_learning_rate,
+            decay_rate=params.decay_rate,
             decay_type=decay_type,
-            decay_factor=params.decay_factor
-            if params.decay_factor is not None
-            else DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,
-            step_size=params.step_size
-            if params.step_size is not None
-            else DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE,
-            max_steps=params.max_steps
-            if params.max_steps is not None
-            else DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS,
-            power=params.power if params.power is not None else DEFAULT_DYNAMIC_LEARNING_RATE_POWER,
-            min_lr=params.min_lr
-            if params.min_lr is not None
-            else DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR,
+            decay_factor=params.decay_factor,
+            step_size=params.step_size,
+            max_steps=params.max_steps,
+            power=params.power,
+            min_lr=params.min_lr,
         )
     if method == LearningRateMethod.ADAM:
         return AdamLearningRate(
-            initial_learning_rate=params.initial_learning_rate
-            if params.initial_learning_rate is not None
-            else DEFAULT_ADAM_LEARNING_RATE_INITIAL,
-            beta1=params.beta1 if params.beta1 is not None else DEFAULT_ADAM_LEARNING_RATE_BETA1,
-            beta2=params.beta2 if params.beta2 is not None else DEFAULT_ADAM_LEARNING_RATE_BETA2,
-            epsilon=params.epsilon
-            if params.epsilon is not None
-            else DEFAULT_ADAM_LEARNING_RATE_EPSILON,
+            initial_learning_rate=params.initial_learning_rate,
+            beta1=params.beta1,
+            beta2=params.beta2,
+            epsilon=params.epsilon,
         )
     if method == LearningRateMethod.PERFORMANCE_BASED:
         return PerformanceBasedLearningRate(
-            initial_learning_rate=params.initial_learning_rate
-            if params.initial_learning_rate is not None
-            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_INITIAL,
-            min_learning_rate=params.min_learning_rate
-            if params.min_learning_rate is not None
-            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN,
-            max_learning_rate=params.max_learning_rate
-            if params.max_learning_rate is not None
-            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
-            adjustment_factor=params.adjustment_factor
-            if params.adjustment_factor is not None
-            else DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR,
+            initial_learning_rate=params.initial_learning_rate,
+            min_learning_rate=params.min_learning_rate,
+            max_learning_rate=params.max_learning_rate,
+            adjustment_factor=params.adjustment_factor,
         )
     error_message = (
         f"Unknown learning rate method: {method}. "
@@ -237,10 +210,8 @@ def configure_gradient_method(
     ------
         ValueError: If an invalid gradient method is specified in the configuration.
     """
-    grad_cfg = config.gradient
-    if grad_cfg and grad_cfg.method is not None:
-        return grad_cfg.method
-    return gradient_method
+    grad_cfg = config.gradient or GradientConfig()
+    return grad_cfg.method or gradient_method
 
 
 def configure_superposition_mode(config: SimulationConfig) -> SuperpositionModeConfig:
