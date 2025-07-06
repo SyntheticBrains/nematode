@@ -27,14 +27,33 @@ from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
+# Defaults
+DEFAULT_GRADIENT_NORM_THRESHOLD = 1e-1
+DEFAULT_L2_REG = 0.01
+DEFAULT_NOISE_STD = 0.01
 DEFAULT_NUM_LAYERS = 2
+DEFAULT_PARAM_CLIP = True
+DEFAULT_PARAM_MODULO = True
+DEFAULT_RESET_ON_STALL = True
+DEFAULT_RESET_PATIENCE = 20
+DEFAULT_RESET_STD = 0.1
 
 
 class ModularBrainConfig(BrainConfig):
     """Configuration for the ModularBrain architecture."""
 
-    modules: dict[ModuleName, list[int]] = DEFAULT_MODULES
-    num_layers: int = DEFAULT_NUM_LAYERS
+    gradient_norm_threshold: float = DEFAULT_GRADIENT_NORM_THRESHOLD  # Threshold for gradient reset
+    l2_reg: float = DEFAULT_L2_REG  # L2 regularization strength
+    modules: dict[ModuleName, list[int]] = (
+        DEFAULT_MODULES  # Mapping of module names to qubit indices
+    )
+    noise_std: float = DEFAULT_NOISE_STD  # Standard deviation for parameter noise
+    num_layers: int = DEFAULT_NUM_LAYERS  # Number of layers in the quantum circuit
+    param_clip: bool = DEFAULT_PARAM_CLIP  # Toggle parameter clipping
+    param_modulo: bool = DEFAULT_PARAM_MODULO  # Toggle parameter modulo
+    reset_on_stall: bool = DEFAULT_RESET_ON_STALL  # Toggle reset
+    reset_patience: int = DEFAULT_RESET_PATIENCE  # Number of steps with low gradient before reset
+    reset_std: float = DEFAULT_RESET_STD  # Standard deviation for parameter reset
 
 
 class ModularBrain(QuantumBrain):
@@ -457,21 +476,11 @@ class ModularBrain(QuantumBrain):
         logger.error(error_message)
         raise NotImplementedError(error_message)
 
-    # TODO: Make the below parameters configurable
-    def update_parameters(  # noqa: C901, PLR0913
+    def update_parameters(  # noqa: C901
         self,
         gradients: list[float],
         reward: float | None = None,  # noqa: ARG002
         learning_rate: float = 0.01,
-        *,
-        param_clip: bool = True,
-        param_modulo: bool = True,
-        l2_reg: float = 0.01,  # L2 regularization strength
-        noise_std: float = 0.01,  # Parameter noise stddev
-        gradient_norm_threshold: float = 1e-1,  # Threshold for reset
-        reset_std: float = 0.1,  # stddev for parameter reset
-        reset_on_stall: bool = True,  # Enable/disable reset
-        reset_patience: int = 20,  # Number of steps with low gradient before reset
     ) -> None:
         """
         Update quantum circuit parameter values based on gradients and learning rate.
@@ -481,16 +490,16 @@ class ModularBrain(QuantumBrain):
         """
         param_keys = list(self.parameter_values.keys())
         for i, k in enumerate(param_keys):
-            reg = l2_reg * self.parameter_values[k]
+            reg = self.config.l2_reg * self.parameter_values[k]
             rng = np.random.default_rng()
-            noise = rng.normal(0, noise_std)
+            noise = rng.normal(0, self.config.noise_std)
             self.parameter_values[k] -= learning_rate * (gradients[i] + reg) + noise
 
-        if param_clip:
+        if self.config.param_clip:
             for k in param_keys:
                 self.parameter_values[k] = np.clip(self.parameter_values[k], -np.pi, np.pi)
 
-        if param_modulo:
+        if self.config.param_modulo:
             for k in param_keys:
                 self.parameter_values[k] = (
                     (self.parameter_values[k] + np.pi) % (2 * np.pi)
@@ -503,22 +512,25 @@ class ModularBrain(QuantumBrain):
         self.history_data.updated_parameters.append(deepcopy(self.parameter_values))
 
         # --- Gradient norm monitoring and parameter reset logic ---
-        if reset_on_stall:
+        if self.config.reset_on_stall:
             grad_norm = np.mean(np.abs(gradients))
             if not hasattr(self, "_low_grad_steps"):
                 self._low_grad_steps = 0
-            if grad_norm < gradient_norm_threshold:
+            if grad_norm < self.config.gradient_norm_threshold:
                 self._low_grad_steps += 1
             else:
                 self._low_grad_steps = 0
-            if self._low_grad_steps >= reset_patience:
+            if self._low_grad_steps >= self.config.reset_patience:
                 logger.warning(
                     f"Parameter reset: gradient norm {grad_norm:.2e} "
                     "below threshold for {reset_patience} steps. Re-initializing parameters.",
                 )
                 rng = np.random.default_rng()
                 for k in param_keys:
-                    self.parameter_values[k] = rng.uniform(-reset_std, reset_std)
+                    self.parameter_values[k] = rng.uniform(
+                        -self.config.reset_std,
+                        self.config.reset_std,
+                    )
                 self._low_grad_steps = 0
 
     def _get_action_probability(self, counts: dict[str, int], state: str) -> float:
