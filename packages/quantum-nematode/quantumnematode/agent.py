@@ -205,7 +205,7 @@ class QuantumNematodeAgent:
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
 
-            logger.info(f"Step {self.steps}: Action={top_action.action}, Reward={reward}")
+            logger.info(f"Step {self.steps}: Action={top_action.action.value}, Reward={reward}")
 
             if self.env.reached_goal():
                 # Run the brain with the final state and reward
@@ -248,7 +248,7 @@ class QuantumNematodeAgent:
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1
 
-                logger.info(f"Step {self.steps}: Action={top_action.action}, Reward={reward}")
+                logger.info(f"Step {self.steps}: Action={top_action.action.value}, Reward={reward}")
 
                 self.total_rewards += reward
                 logger.info("Reward: goal reached!")
