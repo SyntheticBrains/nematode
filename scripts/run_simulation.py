@@ -28,6 +28,7 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.env import MIN_GRID_SIZE
+from quantumnematode.errors import ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
 from quantumnematode.logging_config import (
     logger,
 )
@@ -159,10 +160,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         try:
             from quantumnematode.auth.ibm_quantum import IBMQuantumAuthenticator
         except ImportError:
-            error_message = (
-                "IBM Quantum support requires the 'qiskit_ibm_runtime' package. "
-                "Install it with the extra `qpu`."
-            )
+            error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
             logger.error(error_message)
             sys.exit(1)
 

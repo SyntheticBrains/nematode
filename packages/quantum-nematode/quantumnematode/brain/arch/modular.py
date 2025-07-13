@@ -1,12 +1,11 @@
 """Modular Quantum Brain Architecture for Multi-Modal Sensing."""
 
 from copy import deepcopy
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import Parameter
-from qiskit_aer import AerSimulator
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, QuantumBrain
@@ -19,6 +18,10 @@ from quantumnematode.brain.modules import (
     count_total_qubits,
     extract_features_for_module,
 )
+from quantumnematode.errors import (
+    ERROR_MISSING_IMPORT_QISKIT_AER,
+    ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME,
+)
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
     RandomSmallUniformInitializer,
@@ -26,6 +29,10 @@ from quantumnematode.initializers.random_initializer import (
 from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
+
+if TYPE_CHECKING:
+    from qiskit_aer import AerSimulator
+    from qiskit_ibm_runtime import IBMBackend
 
 # Defaults
 DEFAULT_GRADIENT_NORM_THRESHOLD = 1e-1
@@ -83,7 +90,7 @@ class ModularBrain(QuantumBrain):
         Args:
             modules: Mapping of module names to qubit indices.
             shots: Number of shots for simulation.
-            device: Device string for AerSimulator.
+            device: Device string for AerSimulator or real QPU backend.
             learning_rate: Learning rate strategy (default is dynamic).
             parameter_initializer : The initializer to use for parameter initialization.
             action_set: List of available actions (default is DEFAULT_ACTIONS).
@@ -135,7 +142,7 @@ class ModularBrain(QuantumBrain):
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
-        self._simulator: AerSimulator | None = None
+        self._backend: AerSimulator | IBMBackend | None = None
 
     def build_brain(
         self,
@@ -178,10 +185,37 @@ class ModularBrain(QuantumBrain):
 
         return qc
 
-    def _get_simulator(self) -> AerSimulator:
-        if self._simulator is None:
-            self._simulator = AerSimulator(device=self.device.value.upper())
-        return self._simulator
+    def _get_backend(self) -> "AerSimulator | IBMBackend":
+        """Return the backend: AerSimulator or IBM QPU backend."""
+        if self._backend is None:
+            if self.device == DeviceType.QPU:
+                try:
+                    from qiskit_ibm_runtime import QiskitRuntimeService
+
+                    service = QiskitRuntimeService()
+                    self._backend = service.least_busy(
+                        operational=True,
+                        simulator=False,
+                        min_num_qubits=self.num_qubits,
+                    )
+                except ImportError as err:
+                    error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
+                    logger.error(error_message)
+                    raise ImportError(error_message) from err
+                except Exception as err:
+                    error_message = f"Failed to load IBM Quantum backend: {err}"
+                    logger.error(error_message)
+                    raise RuntimeError(error_message) from err
+            else:
+                try:
+                    from qiskit_aer import AerSimulator
+                except ImportError as err:
+                    error_message = ERROR_MISSING_IMPORT_QISKIT_AER
+                    logger.error(error_message)
+                    raise ImportError(error_message) from err
+
+                self._backend = AerSimulator(device=self.device.value.upper())
+        return self._backend
 
     def _get_cached_circuit(self) -> QuantumCircuit:
         """Build and cache the parameterized circuit structure (unbound parameters)."""
@@ -196,8 +230,8 @@ class ModularBrain(QuantumBrain):
         """Transpile and cache the parameterized circuit structure."""
         if self._transpiled_cache is None:
             qc = self._get_cached_circuit()
-            simulator = self._get_simulator()
-            self._transpiled_cache = transpile(qc, simulator)
+            backend = self._get_backend()
+            self._transpiled_cache = transpile(qc, backend)
 
         return self._transpiled_cache
 
@@ -255,11 +289,35 @@ class ModularBrain(QuantumBrain):
 
         # Build the circuit with current input_params (features)
         qc = self.build_brain(input_params)
-        simulator = self._get_simulator()
+        backend = self._get_backend()
         param_values = self.parameter_values.copy()
-        bound_qc = transpile(qc, simulator).assign_parameters(param_values, inplace=False)
-        result = simulator.run(bound_qc, shots=self.shots).result()
-        counts = result.get_counts()
+        bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
+
+        if self.device == DeviceType.QPU:
+            try:
+                from qiskit_ibm_runtime import Sampler
+            except ImportError as err:
+                error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
+                logger.error(error_message)
+                raise ImportError(error_message) from err
+
+            # Use Qiskit Runtime Sampler
+            sampler = Sampler(mode=backend)
+            job = sampler.run([bound_qc], shots=self.shots)
+            result = job.result()
+            pub_result = result[0]
+            bitstrings = pub_result.data.c
+            counts = bitstrings.get_counts()
+        else:
+            # Use AerSimulator
+            job = backend.run(bound_qc, shots=self.shots)
+            if job is None:
+                error_message = "Backend run did not return a valid job object."
+                logger.error(error_message)
+                raise RuntimeError(error_message)
+
+            result = job.result()
+            counts = result.get_counts()
 
         self.latest_data.counts = counts
         self.history_data.counts.append(counts)
@@ -387,7 +445,7 @@ class ModularBrain(QuantumBrain):
         new_brain.satiety = self.satiety
         new_brain._circuit_cache = deepcopy(self._circuit_cache)
         new_brain._transpiled_cache = deepcopy(self._transpiled_cache)
-        new_brain._simulator = self._simulator
+        new_brain._backend = self._backend
 
         return new_brain
 
@@ -426,18 +484,49 @@ class ModularBrain(QuantumBrain):
 
         # Batch circuits
         transpiled = self._get_transpiled()
-        simulator = self._get_simulator()
+        backend = self._get_backend()
         circuits = []
         for plus, minus in param_sets:
             circuits.append(transpiled.assign_parameters(plus, inplace=False))
             circuits.append(transpiled.assign_parameters(minus, inplace=False))
 
-        # Run all circuits in one batch
-        results = simulator.run(circuits, shots=self.shots).result()
         gradients = []
+
+        # Run all circuits in a batch
+        if self.device == DeviceType.QPU:
+            try:
+                from qiskit_ibm_runtime import Sampler
+            except ImportError as err:
+                error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
+                logger.error(error_message)
+                raise ImportError(error_message) from err
+
+            # Use Qiskit Runtime Sampler for real QPU
+            sampler = Sampler(mode=backend)
+            job = sampler.run(circuits, shots=self.shots)
+            result = job.result()
+
+            def get_counts_qpu(idx: int) -> dict[str, int]:
+                return result[idx].data.c.get_counts()
+
+            get_counts = get_counts_qpu
+        else:
+            # Use AerSimulator
+            job = backend.run(circuits, shots=self.shots)
+            if job is None:
+                error_message = "Backend run did not return a valid job object."
+                logger.error(error_message)
+                raise RuntimeError(error_message)
+            results = job.result()
+
+            def get_counts_sim(idx: int) -> dict[str, int]:
+                return results.get_counts(idx)
+
+            get_counts = get_counts_sim
+
         for i in range(n):
-            counts_plus = results.get_counts(i * 2)
-            counts_minus = results.get_counts(i * 2 + 1)
+            counts_plus = get_counts(i * 2)
+            counts_minus = get_counts(i * 2 + 1)
             prob_plus = self._get_action_probability(counts_plus, action.state)
             prob_minus = self._get_action_probability(counts_minus, action.state)
             grad = 0.5 * (prob_plus - prob_minus) * reward
