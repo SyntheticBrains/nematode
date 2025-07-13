@@ -109,6 +109,22 @@ uv sync [OTHER_EXTRAS] --extra torch
 
 > ℹ️ Only the `cpu` and `qpu` extras conflict and cannot be installed together.
 
+### 3. Set up environment variables
+
+Copy the provided `.env.template` file to `.env` and edit it to include your required environment variables (such as your IBM Quantum API key):
+
+```bash
+cp .env.template .env
+```
+
+Open `.env` in your favorite editor and set the values as needed, for example:
+
+```
+IBM_QUANTUM_API_KEY=your-ibm-quantum-api-key-here
+```
+
+This file will be loaded automatically when running the simulation.
+
 ---
 
 ## 📓 Running the Simulation
