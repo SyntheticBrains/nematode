@@ -83,6 +83,12 @@ brew install uv
 
 You can install the project with either CPU or GPU support.
 
+Install with QPU support:
+
+```bash
+uv sync --extra qpu
+```
+
 Install with CPU support:
 
 ```bash
@@ -100,6 +106,8 @@ To run classical ML brain architectures, you will also need to install `torch` a
 ```bash
 uv sync [OTHER_EXTRAS] --extra torch
 ```
+
+> ℹ️ Only the `cpu` and `qpu` extras conflict and cannot be installed together.
 
 ---
 
