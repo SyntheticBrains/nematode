@@ -15,3 +15,9 @@ plots/*
 # Configuration files
 configs/*.yml
 !configs/examples/*.yml
+
+# Environment files
+.env
+.env.local
+!.env.template
+!.env.example
