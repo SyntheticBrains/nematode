@@ -153,10 +153,21 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             brain_config = ModularBrainConfig()
         case BrainType.MLP:
             brain_config = MLPBrainConfig()
-        case _:
-            error_message = f"Unknown brain type: {brain_type}"
+
+    # Authenticate
+    if device == DeviceType.QPU:
+        try:
+            from quantumnematode.auth.ibm_quantum import IBMQuantumAuthenticator
+        except ImportError:
+            error_message = (
+                "IBM Quantum support requires the 'qiskit_ibm_runtime' package. "
+                "Install it with the extra `qpu`."
+            )
             logger.error(error_message)
-            raise ValueError(error_message)
+            sys.exit(1)
+
+        ibmq_authenticator = IBMQuantumAuthenticator()
+        ibmq_authenticator.authenticate()
 
     if config_file:
         config = load_simulation_config(config_file)
