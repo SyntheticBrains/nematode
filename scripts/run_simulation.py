@@ -88,12 +88,14 @@ def parse_arguments() -> argparse.Namespace:
         default=DEFAULT_RUNS,
         help=f"Number of simulation runs to perform (default: {DEFAULT_RUNS}).",
     )
+    device_choices = [dt.value for dt in DeviceType]
     parser.add_argument(
         "--device",
         type=str,
         default=DEFAULT_DEVICE.value,
-        choices=[DeviceType.CPU.value, DeviceType.GPU.value],
-        help=f"Device to use for AerSimulator ('cpu' or 'gpu', default: '{DEFAULT_DEVICE.value}').",
+        choices=device_choices,
+        help="Device to use for quantum execution "
+        f"({', '.join(device_choices)}; default: '{DEFAULT_DEVICE.value}').",
     )
     parser.add_argument(
         "--config",
