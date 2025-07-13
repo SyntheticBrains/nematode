@@ -14,10 +14,20 @@ class BrainType(Enum):
 
 
 class DeviceType(Enum):
-    """Different types of devices for running classical processing for brains."""
+    """
+    Different types of devices for running processing for brains.
+
+    For quantum brains, choosing a device other than 'qpu'
+    will result in the brain being run on a classical simulator.
+
+    - CPU: Central Processing Unit
+    - GPU: Graphics Processing Unit
+    - QPU: Quantum Processing Unit
+    """
 
     CPU = "cpu"
     GPU = "gpu"
+    QPU = "qpu"
 
 
 class BrainConfig(BaseModel):
