@@ -28,7 +28,6 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.env import MIN_GRID_SIZE
-from quantumnematode.errors import ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
 from quantumnematode.logging_config import (
     logger,
 )
@@ -122,6 +121,11 @@ def parse_arguments() -> argparse.Namespace:
         choices=[Theme.ASCII.value, Theme.EMOJI.value],
         help="Maze rendering theme: 'ascii' (default) or 'emoji' for emoji-based rendering.",
     )
+    parser.add_argument(
+        "--optimize",
+        action="store_true",
+        help="Enable Q-CTRL's Fire Opal error suppression techniques on QPUs.",
+    )
 
     return parser.parse_args()
 
@@ -148,6 +152,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     superposition_mode_config = SuperpositionModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
+    optimize_quantum_performance = args.optimize
 
     match brain_type:
         case BrainType.MODULAR:
@@ -157,15 +162,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Authenticate
     if device == DeviceType.QPU:
-        try:
-            from quantumnematode.auth.ibm_quantum import IBMQuantumAuthenticator
-        except ImportError:
-            error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
-            logger.error(error_message)
-            sys.exit(1)
+        from quantumnematode.auth.ibm_quantum import IBMQuantumAuthenticator
 
         ibmq_authenticator = IBMQuantumAuthenticator()
-        ibmq_authenticator.authenticate()
+
+        if optimize_quantum_performance:
+            catalog = ibmq_authenticator.get_functions_catalog()
+            perf_mgmt = catalog.load("q-ctrl/performance-management")  # noqa: F841
+            # TODO: Implement Q-CTRL's Fire Opal error suppression techniques
+            error_message = "Q-CTRL's Fire Opal error suppression techniques are "
+            "not yet implemented in this version."
+            raise NotImplementedError(error_message)
+        ibmq_authenticator.authenticate_runtime_service()
 
     if config_file:
         config = load_simulation_config(config_file)
