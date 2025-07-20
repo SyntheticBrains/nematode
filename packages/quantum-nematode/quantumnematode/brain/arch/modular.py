@@ -36,9 +36,9 @@ if TYPE_CHECKING:
     from qiskit_aer import AerSimulator
 
 # Defaults
-DEFAULT_GRADIENT_NORM_THRESHOLD = 1e-1
-DEFAULT_L2_REG = 0.01
-DEFAULT_NOISE_STD = 0.01
+DEFAULT_GRADIENT_NORM_THRESHOLD = 5e-2
+DEFAULT_L2_REG = 0.005
+DEFAULT_NOISE_STD = 0.005
 DEFAULT_NUM_LAYERS = 2
 DEFAULT_PARAM_CLIP = True
 DEFAULT_PARAM_MODULO = True
@@ -452,7 +452,7 @@ class ModularBrain(QuantumBrain):
         params: BrainParams,  # noqa: ARG002
         action: ActionData,
         reward: float,
-        shift: float = np.pi / 2,
+        shift: float = np.pi / 4,
     ) -> list[float]:
         """
         Compute parameter-wise gradients using the parameter-shift rule, batching all runs.
@@ -461,7 +461,7 @@ class ModularBrain(QuantumBrain):
             params: BrainParams for the agent/environment state.
             action: The action taken (for log-prob gradient).
             reward: Reward signal to guide gradient computation.
-            shift: The parameter shift value (default π/2).
+            shift: The parameter shift value.
 
         Returns
         -------
