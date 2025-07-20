@@ -1,5 +1,6 @@
 """Modular Quantum Brain Architecture for Multi-Modal Sensing."""
 
+import os
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
@@ -31,8 +32,8 @@ from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 if TYPE_CHECKING:
+    from qiskit.providers import BackendV2
     from qiskit_aer import AerSimulator
-    from qiskit_ibm_runtime import IBMBackend
 
 # Defaults
 DEFAULT_GRADIENT_NORM_THRESHOLD = 1e-1
@@ -142,7 +143,7 @@ class ModularBrain(QuantumBrain):
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
-        self._backend: AerSimulator | IBMBackend | None = None
+        self._backend: AerSimulator | BackendV2 | None = None
 
     def build_brain(
         self,
@@ -185,7 +186,7 @@ class ModularBrain(QuantumBrain):
 
         return qc
 
-    def _get_backend(self) -> "AerSimulator | IBMBackend":
+    def _get_backend(self) -> "AerSimulator | BackendV2":
         """Return the backend: AerSimulator or IBM QPU backend."""
         if self._backend is None:
             if self.device == DeviceType.QPU:
@@ -193,11 +194,14 @@ class ModularBrain(QuantumBrain):
                     from qiskit_ibm_runtime import QiskitRuntimeService
 
                     service = QiskitRuntimeService()
-                    self._backend = service.least_busy(
-                        operational=True,
-                        simulator=False,
-                        min_num_qubits=self.num_qubits,
-                    )
+                    if backend_name := os.environ.get("IBM_QUANTUM_BACKEND"):
+                        self._backend = service.backend(backend_name)
+                    else:
+                        self._backend = service.least_busy(
+                            operational=True,
+                            simulator=False,
+                            min_num_qubits=self.num_qubits,
+                        )
                 except ImportError as err:
                     error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
                     logger.error(error_message)
