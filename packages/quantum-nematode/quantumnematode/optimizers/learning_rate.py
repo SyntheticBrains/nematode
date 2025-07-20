@@ -104,8 +104,8 @@ class DynamicLearningRate:
         else:
             error_message = f"Unsupported decay type: {self.decay_type}"
             raise ValueError(error_message)
-        
-        base_learning_rate = max(base_learning_rate, self.min_lr)        
+
+        base_learning_rate = max(base_learning_rate, self.min_lr)
         scaled_learning_rate = base_learning_rate * reward_magnitude
         self.steps += 1
         return scaled_learning_rate
