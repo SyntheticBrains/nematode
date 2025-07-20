@@ -42,9 +42,6 @@ DEFAULT_NOISE_STD = 0.01
 DEFAULT_NUM_LAYERS = 2
 DEFAULT_PARAM_CLIP = True
 DEFAULT_PARAM_MODULO = True
-DEFAULT_RESET_ON_STALL = True
-DEFAULT_RESET_PATIENCE = 20
-DEFAULT_RESET_STD = 0.1
 
 
 class ModularBrainConfig(BrainConfig):
@@ -59,9 +56,6 @@ class ModularBrainConfig(BrainConfig):
     num_layers: int = DEFAULT_NUM_LAYERS  # Number of layers in the quantum circuit
     param_clip: bool = DEFAULT_PARAM_CLIP  # Toggle parameter clipping
     param_modulo: bool = DEFAULT_PARAM_MODULO  # Toggle parameter modulo
-    reset_on_stall: bool = DEFAULT_RESET_ON_STALL  # Toggle reset
-    reset_patience: int = DEFAULT_RESET_PATIENCE  # Number of steps with low gradient before reset
-    reset_std: float = DEFAULT_RESET_STD  # Standard deviation for parameter reset
 
 
 class ModularBrain(QuantumBrain):
@@ -603,28 +597,6 @@ class ModularBrain(QuantumBrain):
 
         self.history_data.learning_rates.append(learning_rate)
         self.history_data.updated_parameters.append(deepcopy(self.parameter_values))
-
-        # --- Gradient norm monitoring and parameter reset logic ---
-        if self.config.reset_on_stall:
-            grad_norm = np.mean(np.abs(gradients))
-            if not hasattr(self, "_low_grad_steps"):
-                self._low_grad_steps = 0
-            if grad_norm < self.config.gradient_norm_threshold:
-                self._low_grad_steps += 1
-            else:
-                self._low_grad_steps = 0
-            if self._low_grad_steps >= self.config.reset_patience:
-                logger.warning(
-                    f"Parameter reset: gradient norm {grad_norm:.2e} "
-                    "below threshold for {reset_patience} steps. Re-initializing parameters.",
-                )
-                rng = np.random.default_rng()
-                for k in param_keys:
-                    self.parameter_values[k] = rng.uniform(
-                        -self.config.reset_std,
-                        self.config.reset_std,
-                    )
-                self._low_grad_steps = 0
 
     def _get_action_probability(self, counts: dict[str, int], state: str) -> float:
         """Return the probability of a given state (bitstring) from measurement counts."""
