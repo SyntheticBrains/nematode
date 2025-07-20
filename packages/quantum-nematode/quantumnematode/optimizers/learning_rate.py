@@ -30,7 +30,7 @@ DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR = 0.5
 DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE = 10
 DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS = 1000
 DEFAULT_DYNAMIC_LEARNING_RATE_POWER = 1.0
-DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR = 0.0
+DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR = 0.012
 
 
 class DynamicLearningRate:
@@ -104,6 +104,8 @@ class DynamicLearningRate:
         else:
             error_message = f"Unsupported decay type: {self.decay_type}"
             raise ValueError(error_message)
+        
+        base_learning_rate = max(base_learning_rate, self.min_lr)        
         scaled_learning_rate = base_learning_rate * reward_magnitude
         self.steps += 1
         return scaled_learning_rate
