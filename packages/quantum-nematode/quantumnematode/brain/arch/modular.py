@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 # Defaults
 DEFAULT_GRADIENT_NORM_THRESHOLD = 5e-2
 DEFAULT_L2_REG = 0.005
+DEFAULT_MIN_GRADIENT_MAGNITUDE = 1e-4
 DEFAULT_NOISE_STD = 0.005
 DEFAULT_NUM_LAYERS = 2
 DEFAULT_PARAM_CLIP = True
@@ -49,6 +50,9 @@ class ModularBrainConfig(BrainConfig):
 
     gradient_norm_threshold: float = DEFAULT_GRADIENT_NORM_THRESHOLD  # Threshold for gradient reset
     l2_reg: float = DEFAULT_L2_REG  # L2 regularization strength
+    min_gradient_magnitude: float = (
+        DEFAULT_MIN_GRADIENT_MAGNITUDE  # Minimum gradient magnitude for updates
+    )
     modules: dict[ModuleName, list[int]] = (
         DEFAULT_MODULES  # Mapping of module names to qubit indices
     )
@@ -138,6 +142,11 @@ class ModularBrain(QuantumBrain):
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
         self._backend: AerSimulator | BackendV2 | None = None
+
+        self._momentum: dict[str, float] = {}  # Momentum for parameter updates, if needed
+        self._gradient_magnitude_history: list[
+            Any
+        ] = []  # Track gradient magnitudes for normalization
 
     def build_brain(
         self,
@@ -447,7 +456,7 @@ class ModularBrain(QuantumBrain):
 
         return new_brain
 
-    def parameter_shift_gradients(
+    def parameter_shift_gradients(  # noqa: C901
         self,
         params: BrainParams,  # noqa: ARG002
         action: ActionData,
@@ -527,7 +536,26 @@ class ModularBrain(QuantumBrain):
             counts_minus = get_counts(i * 2 + 1)
             prob_plus = self._get_action_probability(counts_plus, action.state)
             prob_minus = self._get_action_probability(counts_minus, action.state)
-            grad = 0.5 * (prob_plus - prob_minus) * reward
+
+            # Enhanced gradient computation with minimum threshold
+            prob_diff = prob_plus - prob_minus
+
+            # Add small regularization to prevent vanishing gradients
+            min_gradient_magnitude = self.config.min_gradient_magnitude
+            if abs(prob_diff) < min_gradient_magnitude:
+                # Use sign preservation with minimum magnitude
+                prob_diff = (
+                    min_gradient_magnitude * np.sign(prob_diff)
+                    if prob_diff != 0
+                    else min_gradient_magnitude
+                )
+
+            grad = 0.5 * prob_diff * reward
+
+            # Scale gradient based on reward magnitude to improve learning signal
+            if abs(reward) > 0.1:  # For significant rewards
+                grad *= min(2.0, abs(reward))  # Amplify but cap at 2x
+
             gradients.append(grad)
 
         # Store gradients for tracking
@@ -563,7 +591,7 @@ class ModularBrain(QuantumBrain):
         logger.error(error_message)
         raise NotImplementedError(error_message)
 
-    def update_parameters(  # noqa: C901
+    def update_parameters(
         self,
         gradients: list[float],
         reward: float | None = None,  # noqa: ARG002
@@ -576,11 +604,44 @@ class ModularBrain(QuantumBrain):
         parameters are re-initialized (reset).
         """
         param_keys = list(self.parameter_values.keys())
+
+        # Initialize momentum if not exists
+        if len(self._momentum) == 0:
+            self._momentum = dict.fromkeys(param_keys, 0.0)
+
+        # Momentum coefficient
+        momentum = 0.9
+
+        # Calculate gradient magnitude and track history
+        gradient_magnitude = np.sqrt(np.mean([g**2 for g in gradients]))
+        self._gradient_magnitude_history.append(gradient_magnitude)
+
+        # Keep only recent history (last 10 steps)
+        if len(self._gradient_magnitude_history) > 10:
+            self._gradient_magnitude_history.pop(0)
+
+        # Adaptive learning rate based on gradient magnitude
+        adaptive_lr = learning_rate
+        if gradient_magnitude < 1e-3:  # Very small gradients
+            # Increase learning rate to amplify weak signals
+            adaptive_lr *= min(3.0, 1e-3 / max(gradient_magnitude, 1e-6))
+        elif gradient_magnitude > 0.1:  # Large gradients
+            # Reduce learning rate to prevent overshooting
+            adaptive_lr *= 0.7
+
         for i, k in enumerate(param_keys):
+            # L2 regularization
             reg = self.config.l2_reg * self.parameter_values[k]
+
+            # Add exploration noise
             rng = np.random.default_rng()
             noise = rng.normal(0, self.config.noise_std)
-            self.parameter_values[k] -= learning_rate * (gradients[i] + reg) + noise
+
+            # Momentum update with adaptive learning rate
+            self._momentum[k] = momentum * self._momentum[k] + adaptive_lr * (gradients[i] + reg)
+
+            # Update parameter
+            self.parameter_values[k] -= self._momentum[k] + noise
 
         if self.config.param_clip:
             for k in param_keys:
@@ -592,10 +653,10 @@ class ModularBrain(QuantumBrain):
                     (self.parameter_values[k] + np.pi) % (2 * np.pi)
                 ) - np.pi
 
-        self.latest_data.learning_rate = learning_rate
+        self.latest_data.learning_rate = adaptive_lr
         self.latest_data.updated_parameters = deepcopy(self.parameter_values)
 
-        self.history_data.learning_rates.append(learning_rate)
+        self.history_data.learning_rates.append(adaptive_lr)
         self.history_data.updated_parameters.append(deepcopy(self.parameter_values))
 
     def _get_action_probability(self, counts: dict[str, int], state: str) -> float:
