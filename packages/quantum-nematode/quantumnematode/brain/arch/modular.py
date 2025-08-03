@@ -625,11 +625,10 @@ class ModularBrain(QuantumBrain):
         # Adaptive learning rate based on gradient magnitude
         adaptive_lr = learning_rate
         if gradient_magnitude < 1e-3:  # Very small gradients
-            # Increase learning rate to amplify weak signals
-            adaptive_lr *= min(3.0, 1e-3 / max(gradient_magnitude, 1e-6))
+            adaptive_lr = max(learning_rate, 0.001)  # Ensure minimum effective learning rate
         elif gradient_magnitude > 0.1:  # Large gradients
             # Reduce learning rate to prevent overshooting
-            adaptive_lr *= 0.7
+            adaptive_lr *= 0.8
 
         for i, k in enumerate(param_keys):
             # L2 regularization
