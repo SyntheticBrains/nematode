@@ -44,6 +44,7 @@ from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_efficiency_score_over_time,
     plot_last_cumulative_rewards,
+    plot_running_average_steps,
     plot_steps_per_run,
     plot_success_rate_over_time,
     plot_tracking_data_by_latest_run,
@@ -583,6 +584,9 @@ def plot_results(
 
     # Plot: Steps per Run
     plot_steps_per_run(metrics, file_prefix, runs, steps, plot_dir)
+
+    # Plot: Running Average Steps per Run
+    plot_running_average_steps(file_prefix, runs, steps, plot_dir)
 
     # Plot: Cumulative Reward per Run
     cumulative_rewards: list[float] = [

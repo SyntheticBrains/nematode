@@ -153,6 +153,86 @@ def plot_steps_per_run(
     plt.close()
 
 
+def plot_running_average_steps(
+    file_prefix: str,
+    runs: list[int],
+    steps: list[int],
+    plot_dir: Path,
+    window_size: int = 5,
+) -> None:
+    """
+    Plot running/moving average of steps per run and save the plot.
+
+    Args:
+        file_prefix (str): Prefix for the output file name.
+        runs (list[int]): List of run indices.
+        steps (list[int]): List of steps per run.
+        plot_dir (Path): Directory to save the plot.
+        window_size (int): Window size for moving average calculation (default: 5).
+    """
+    if len(steps) < window_size:
+        logger.warning(
+            f"Not enough data points ({len(steps)}) for moving average "
+            f"with window size {window_size}. Using smaller window.",
+        )
+        window_size = max(1, len(steps))
+
+    # Calculate running average
+    running_avg = []
+    for i in range(len(steps)):
+        start_idx = max(0, i - window_size + 1)
+        end_idx = i + 1
+        avg = sum(steps[start_idx:end_idx]) / (end_idx - start_idx)
+        running_avg.append(avg)
+
+    # Calculate overall session average
+    session_avg = sum(steps) / len(steps)
+
+    plt.figure(figsize=(12, 8))
+
+    # Plot actual steps per run
+    plt.plot(runs, steps, marker="o", alpha=0.6, color="lightblue", label="Actual Steps per Run")
+
+    # Plot running average
+    plt.plot(
+        runs,
+        running_avg,
+        marker="s",
+        linewidth=2,
+        color="blue",
+        label=f"Running Average (window={window_size})",
+    )
+
+    # Plot session average line
+    plt.axhline(
+        y=session_avg,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f"Session Average ({session_avg:.1f})",
+    )
+
+    plt.title(f"Running Average Steps per Run (Window Size: {window_size})")
+    plt.xlabel("Run")
+    plt.ylabel("Steps")
+    plt.legend()
+    plt.grid(alpha=0.3)
+
+    # Add text annotation with session stats
+    plt.text(
+        0.02,
+        0.98,
+        f"Total Runs: {len(runs)}\nSession Avg: {session_avg:.2f}\nWindow Size: {window_size}",
+        transform=plt.gca().transAxes,
+        verticalalignment="top",
+        bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
+    )
+
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}running_average_steps.png")
+    plt.close()
+
+
 def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
     timestamp: str,
