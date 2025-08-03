@@ -137,9 +137,10 @@ class QuantumNematodeAgent:
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
 
-            print()  # noqa: T201
-            print(f"Gradient strength: {gradient_strength}")  # noqa: T201
-            print(f"Gradient direction: {gradient_direction}")  # noqa: T201
+            if logger.isEnabledFor(logging.DEBUG):
+                print()  # noqa: T201
+                print(f"Gradient strength: {gradient_strength}")  # noqa: T201
+                print(f"Gradient direction: {gradient_direction}")  # noqa: T201
 
             # Calculate reward based on efficiency and collision avoidance
             reward = self.calculate_reward(
@@ -149,7 +150,8 @@ class QuantumNematodeAgent:
                 max_steps=max_steps,
             )
 
-            print(f"Reward: {reward}")  # noqa: T201
+            if logger.isEnabledFor(logging.DEBUG):
+                print(f"Reward: {reward}")  # noqa: T201
 
             # Prepare input_data for data re-uploading (one float per qubit)
             input_data = None
