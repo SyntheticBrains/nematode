@@ -329,6 +329,12 @@ class ModularBrain(QuantumBrain):
         self.latest_data.counts = counts
         self.history_data.counts.append(counts)
 
+        actions = self._interpret_counts(
+            counts,
+            top_only=top_only,
+            top_randomize=top_randomize,
+        )
+
         # --- Reward-based learning: compute gradients and update parameters ---
         if reward is not None and self.latest_data.action is not None:
             gradients = self.parameter_shift_gradients(params, self.latest_data.action, reward)
@@ -337,11 +343,7 @@ class ModularBrain(QuantumBrain):
 
         self.history_data.rewards.append(reward or 0.0)
 
-        return self._interpret_counts(
-            counts,
-            top_only=top_only,
-            top_randomize=top_randomize,
-        )
+        return actions
 
     def _interpret_counts(
         self,
