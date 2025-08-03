@@ -458,7 +458,7 @@ class ModularBrain(QuantumBrain):
 
         return new_brain
 
-    def parameter_shift_gradients(  # noqa: C901
+    def parameter_shift_gradients(  # noqa: C901, PLR0915
         self,
         params: BrainParams,  # noqa: ARG002
         action: ActionData,

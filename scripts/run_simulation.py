@@ -282,7 +282,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             if len(all_results) > 1:
                 # Running average steps per run
-                total_steps_all_runs = sum([result.steps for result in all_results]) / total_runs_done + 1
+                total_steps_all_runs = (
+                    sum([result.steps for result in all_results]) / total_runs_done + 1
+                )
                 render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{total_runs_done + 1}\n"
 
             path = agent.run_episode(
