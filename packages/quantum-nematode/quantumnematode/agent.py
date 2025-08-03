@@ -1,5 +1,6 @@
 """The quantum nematode agent that navigates a grid environment using a quantum brain."""
 
+import logging
 import os
 import sys
 import time
@@ -22,7 +23,8 @@ DEFAULT_MAX_AGENT_BODY_LENGTH = 6
 DEFAULT_MAX_STEPS = 100
 DEFAULT_MAZE_GRID_SIZE = 5
 DEFAULT_PENALTY_ANTI_DITHERING = 0.02
-DEFAULT_PENALTY_STEP = 0.005
+DEFAULT_PENALTY_STEP = 0.05
+DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS = 4
@@ -30,6 +32,7 @@ DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS = 16
 DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS = 1.0
 DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS = 2
 DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE = True
+DEFAULT_STUCK_POSITION_THRESHOLD = 2
 
 
 class RewardConfig(BaseModel):
@@ -39,6 +42,12 @@ class RewardConfig(BaseModel):
         DEFAULT_PENALTY_ANTI_DITHERING  # Penalty for oscillating (revisiting previous cell)
     )
     penalty_step: float = DEFAULT_PENALTY_STEP
+    penalty_stuck_position: float = (
+        DEFAULT_PENALTY_STUCK_POSITION  # Penalty for staying in same position
+    )
+    stuck_position_threshold: int = (
+        DEFAULT_STUCK_POSITION_THRESHOLD  # Steps before stuck penalty applies
+    )
     reward_distance_scale: float = (
         DEFAULT_REWARD_DISTANCE_SCALE  # Scale the distance reward for smoother learning
     )
@@ -133,6 +142,9 @@ class QuantumNematodeAgent:
 
         reward = 0.0
         top_action = None
+        stuck_position_count = 0  # Track if agent gets stuck
+        previous_position = None
+
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = self.env.get_state(self.path[-1])
@@ -142,12 +154,21 @@ class QuantumNematodeAgent:
                 print(f"Gradient strength: {gradient_strength}")  # noqa: T201
                 print(f"Gradient direction: {gradient_direction}")  # noqa: T201
 
+            # Track if agent stays in same position
+            current_position = tuple(self.env.agent_pos)
+            if current_position == previous_position:
+                stuck_position_count += 1
+            else:
+                stuck_position_count = 0
+            previous_position = current_position
+
             # Calculate reward based on efficiency and collision avoidance
             reward = self.calculate_reward(
                 reward_config,
                 self.env,
                 self.path,
                 max_steps=max_steps,
+                stuck_position_count=stuck_position_count,
             )
 
             if logger.isEnabledFor(logging.DEBUG):
@@ -216,6 +237,7 @@ class QuantumNematodeAgent:
                     self.env,
                     self.path,
                     max_steps=max_steps,
+                    stuck_position_count=stuck_position_count,
                 )
 
                 # Prepare input_data for data re-uploading (one float per qubit)
@@ -362,6 +384,7 @@ class QuantumNematodeAgent:
                     env_copy,
                     path_copy,
                     max_steps=max_steps,
+                    stuck_position_count=0,  # Superposition mode doesn't track stuck positions
                 )
 
                 agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
@@ -492,6 +515,7 @@ class QuantumNematodeAgent:
         env: MazeEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
+        stuck_position_count: int = 0,
     ) -> float:
         """
         Calculate reward based on the agent's movement toward the goal.
@@ -537,6 +561,19 @@ class QuantumNematodeAgent:
         reward -= config.penalty_step
         logger.debug(f"[Penalty] Step penalty applied: {-config.penalty_step}.")
 
+        # Stuck position penalty: penalize agent for staying in same position
+        stuck_penalty = 0.0
+        if stuck_position_count > config.stuck_position_threshold:
+            stuck_penalty = config.penalty_stuck_position * min(
+                stuck_position_count - config.stuck_position_threshold,
+                10,
+            )
+            reward -= stuck_penalty
+            logger.debug(
+                f"[Penalty] Stuck position penalty applied: {-stuck_penalty:.3f} "
+                f"(stuck for {stuck_position_count} steps)",
+            )
+
         # Bonus for reaching the goal, scaled by efficiency (fewer steps = higher bonus)
         if env.reached_goal():
             efficiency = max(0.1, 1 - (self.steps / max_steps))
@@ -550,7 +587,7 @@ class QuantumNematodeAgent:
         logger.debug(
             f"Reward breakdown: distance_reward={distance_reward}, "
             f"step_penalty={-config.penalty_step}, anti_dither_penalty={-anti_dither_penalty}, "
-            f"goal_bonus={goal_bonus}, total_reward={reward}",
+            f"stuck_penalty={-stuck_penalty}, goal_bonus={goal_bonus}, total_reward={reward}",
         )
         return reward
 
