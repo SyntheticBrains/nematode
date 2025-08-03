@@ -287,8 +287,8 @@ class QuantumNematodeAgent:
             if render_text:
                 print(render_text)  # noqa: T201
 
-            print(f"Step:\t{self.steps}/{max_steps}")  # noqa: T201
-            print(f"Wins:\t{self.success_count}")  # noqa: T201
+            print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
+            print(f"Wins:\t\t{self.success_count}")  # noqa: T201
 
         return self.path
 
