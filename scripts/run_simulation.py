@@ -39,6 +39,12 @@ from quantumnematode.optimizers.learning_rate import (
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
+from quantumnematode.report.csv_export import (
+    export_performance_metrics_to_csv,
+    export_run_data_to_csv,
+    export_simulation_results_to_csv,
+    export_tracking_data_to_csv,
+)
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
 from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
@@ -250,8 +256,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         theme=theme,
     )
 
-    # Set the plot directory
+    # Set the plot and data directories
     plot_dir = Path.cwd() / "exports" / timestamp / "session" / "plots"
+    data_dir = Path.cwd() / "exports" / timestamp / "session" / "data"
 
     # Initialize tracking variables for plotting
     tracking_data = TrackingData()
@@ -331,6 +338,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     timestamp=timestamp,
                     run=run_num,
                 )
+                export_run_data_to_csv(
+                    tracking_data=tracking_data,
+                    run=run_num,
+                    timestamp=timestamp,
+                )
 
             if run_num < runs:
                 agent.reset_environment()
@@ -365,11 +377,23 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Generate plots after the simulation
     plot_results(all_results=all_results, metrics=metrics, max_steps=max_steps, plot_dir=plot_dir)
 
+    # Export data to CSV files
+    export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
+    export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+
     # Generate additional plots for tracking data
     plot_tracking_data_by_session(
         tracking_data=tracking_data,
         brain_type=brain_type,
         plot_dir=plot_dir,
+        qubits=qubits,
+    )
+
+    # Export tracking data to CSV files
+    export_tracking_data_to_csv(
+        tracking_data=tracking_data,
+        brain_type=brain_type,
+        data_dir=data_dir,
         qubits=qubits,
     )
 
@@ -508,16 +532,15 @@ def manage_simulation_halt(  # noqa: PLR0913
         max_steps (int): Maximum number of steps for the simulation.
         brain_type (str): Type of brain architecture used in the simulation.
         qubits (int): Number of qubits used in the simulation.
-        args (argparse.Namespace): Parsed command-line arguments.
         timestamp (str): Timestamp for the current session.
         agent (QuantumNematodeAgent): The simulation agent.
-        all_results (list[tuple[int, int, list[tuple[int, int]], float, float]]):
-            List of results for each run, including run number, steps, path,
-            total reward, and cumulative rewards.
+        all_results (list[SimulationResult]):
+            List of results for each run.
         total_runs_done (int): Total number of runs completed so far.
         tracking_data TrackingData: Data tracked during the simulation for plotting.
         plot_dir (Path): Directory where plots will be saved.
     """
+    data_dir = Path.cwd() / "exports" / timestamp / "session" / "data"
     while True:
         prompt_intro_message = (
             "KeyboardInterrupt detected. The simulation has halted. "
@@ -567,6 +590,25 @@ def manage_simulation_halt(  # noqa: PLR0913
                 tracking_data=tracking_data,
                 plot_dir=plot_dir,
                 brain_type=brain_type,
+                qubits=qubits,
+                file_prefix=file_prefix,
+            )
+
+            # Export partial results to CSV
+            export_simulation_results_to_csv(
+                all_results=all_results,
+                data_dir=data_dir,
+                file_prefix=file_prefix,
+            )
+            export_performance_metrics_to_csv(
+                metrics=metrics,
+                data_dir=data_dir,
+                file_prefix=file_prefix,
+            )
+            export_tracking_data_to_csv(
+                tracking_data=tracking_data,
+                brain_type=brain_type,
+                data_dir=data_dir,
                 qubits=qubits,
                 file_prefix=file_prefix,
             )
