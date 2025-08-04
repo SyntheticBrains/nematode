@@ -250,6 +250,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         theme=theme,
     )
 
+    # Set the plot directory
+    plot_dir = Path.cwd() / "exports" / timestamp / "session" / "plots"
+
     # Initialize tracking variables for plotting
     tracking_data = TrackingData()
 
@@ -335,14 +338,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     except KeyboardInterrupt:
         manage_simulation_halt(
-            max_steps,
-            brain_type,
-            qubits,
-            timestamp,
-            agent,
-            all_results,
-            total_runs_done,
-            tracking_data,
+            max_steps=max_steps,
+            brain_type=brain_type,
+            qubits=qubits,
+            timestamp=timestamp,
+            agent=agent,
+            all_results=all_results,
+            total_runs_done=total_runs_done,
+            tracking_data=tracking_data,
+            plot_dir=plot_dir,
         )
 
     # Calculate and log performance metrics
@@ -359,10 +363,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     summary(total_runs_done, max_steps, all_results)
 
     # Generate plots after the simulation
-    plot_results(all_results, metrics, timestamp, max_steps)
+    plot_results(all_results=all_results, metrics=metrics, max_steps=max_steps, plot_dir=plot_dir)
 
     # Generate additional plots for tracking data
-    plot_tracking_data_by_session(tracking_data, timestamp, brain_type, qubits)
+    plot_tracking_data_by_session(
+        tracking_data=tracking_data,
+        brain_type=brain_type,
+        plot_dir=plot_dir,
+        qubits=qubits,
+    )
 
     return
 
@@ -487,6 +496,7 @@ def manage_simulation_halt(  # noqa: PLR0913
     all_results: list[SimulationResult],
     total_runs_done: int,
     tracking_data: TrackingData,
+    plot_dir: Path,
 ) -> None:
     """
     Handle simulation halt triggered by a KeyboardInterrupt.
@@ -506,6 +516,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             total reward, and cumulative rewards.
         total_runs_done (int): Total number of runs completed so far.
         tracking_data TrackingData: Data tracked during the simulation for plotting.
+        plot_dir (Path): Directory where plots will be saved.
     """
     while True:
         prompt_intro_message = (
@@ -545,12 +556,18 @@ def manage_simulation_halt(  # noqa: PLR0913
 
             # Generate plots with current timestamp
             file_prefix = f"{total_runs_done}_"
-            plot_results(all_results, metrics, timestamp, max_steps, file_prefix=file_prefix)
+            plot_results(
+                all_results=all_results,
+                metrics=metrics,
+                max_steps=max_steps,
+                file_prefix=file_prefix,
+                plot_dir=plot_dir,
+            )
             plot_tracking_data_by_session(
-                tracking_data,
-                timestamp,
-                brain_type,
-                qubits,
+                tracking_data=tracking_data,
+                plot_dir=plot_dir,
+                brain_type=brain_type,
+                qubits=qubits,
                 file_prefix=file_prefix,
             )
         elif choice == 2:  # noqa: PLR2004
@@ -571,15 +588,14 @@ def manage_simulation_halt(  # noqa: PLR0913
 def plot_results(
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
-    timestamp: str,
     max_steps: int,
+    plot_dir: Path,
     file_prefix: str = "",
 ) -> None:
     """Generate and save plots for the simulation results."""
     runs: list[int] = [result.run for result in all_results]
     steps: list[int] = [result.steps for result in all_results]
 
-    plot_dir: Path = Path.cwd() / "plots" / timestamp
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     # Plot: Steps per Run

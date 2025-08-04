@@ -235,8 +235,8 @@ def plot_running_average_steps(
 
 def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
-    timestamp: str,
     brain_type: BrainType,
+    plot_dir: Path,
     qubits: int | None = None,
     file_prefix: str = "",
 ) -> None:
@@ -245,12 +245,11 @@ def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
 
     Args:
         tracking_data (TrackingData): Tracking data containing brain history.
-        timestamp (str): Timestamp for the plot directory.
         brain_type (BrainType): Type of the brain (e.g., "quantum", "classical").
+        plot_dir (Path): Directory to save the plots.
         qubits (int | None): Number of qubits if applicable, otherwise None.
         file_prefix (str): Prefix for the output file names.
     """
-    plot_dir: Path = Path.cwd() / "plots" / timestamp
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     title_postfix: str = (
@@ -350,7 +349,7 @@ def plot_tracking_data_by_latest_run(
         agent (QuantumNematodeAgent): Agent containing brain with tracking histories.
         run (int): Index of the run.
     """
-    run_dir = Path.cwd() / "plots" / timestamp / f"run_{run}"
+    run_dir = Path.cwd() / "exports" / timestamp / f"run_{run}" / "plots"
     run_dir.mkdir(parents=True, exist_ok=True)
     current_run_data = tracking_data.data.get(run, None)
 

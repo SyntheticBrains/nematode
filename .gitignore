@@ -10,6 +10,7 @@ build/*
 builds/*
 log/*
 logs/*
+exports/*
 plots/*
 
 # Configuration files
