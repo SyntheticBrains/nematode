@@ -36,20 +36,28 @@ if TYPE_CHECKING:
     from qiskit_aer import AerSimulator
 
 # Defaults
+DEFAULT_GRADIENT_HISTORY_LIMIT = 10
 DEFAULT_GRADIENT_NORM_THRESHOLD = 5e-2
 DEFAULT_L2_REG = 0.005
+DEFAULT_LARGE_GRADIENT_THRESHOLD = 0.1
 DEFAULT_MIN_GRADIENT_MAGNITUDE = 1e-4
 DEFAULT_NOISE_STD = 0.005
 DEFAULT_NUM_LAYERS = 2
 DEFAULT_PARAM_CLIP = True
 DEFAULT_PARAM_MODULO = True
+DEFAULT_SIGNIFICANT_REWARD_THRESHOLD = 0.1
+DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-3
 
 
 class ModularBrainConfig(BrainConfig):
     """Configuration for the ModularBrain architecture."""
 
+    gradient_history_limit: int = DEFAULT_GRADIENT_HISTORY_LIMIT  # Maximum gradient history length
     gradient_norm_threshold: float = DEFAULT_GRADIENT_NORM_THRESHOLD  # Threshold for gradient reset
     l2_reg: float = DEFAULT_L2_REG  # L2 regularization strength
+    large_gradient_threshold: float = (
+        DEFAULT_LARGE_GRADIENT_THRESHOLD  # Threshold for large gradients
+    )
     min_gradient_magnitude: float = (
         DEFAULT_MIN_GRADIENT_MAGNITUDE  # Minimum gradient magnitude for updates
     )
@@ -60,6 +68,12 @@ class ModularBrainConfig(BrainConfig):
     num_layers: int = DEFAULT_NUM_LAYERS  # Number of layers in the quantum circuit
     param_clip: bool = DEFAULT_PARAM_CLIP  # Toggle parameter clipping
     param_modulo: bool = DEFAULT_PARAM_MODULO  # Toggle parameter modulo
+    significant_reward_threshold: float = (
+        DEFAULT_SIGNIFICANT_REWARD_THRESHOLD  # Threshold for significant rewards
+    )
+    small_gradient_threshold: float = (
+        DEFAULT_SMALL_GRADIENT_THRESHOLD  # Threshold for small gradients
+    )
 
 
 class ModularBrain(QuantumBrain):
@@ -555,7 +569,7 @@ class ModularBrain(QuantumBrain):
             grad = 0.5 * prob_diff * reward
 
             # Scale gradient based on reward magnitude to improve learning signal
-            if abs(reward) > 0.1:  # For significant rewards
+            if abs(reward) > self.config.significant_reward_threshold:  # For significant rewards
                 grad *= min(2.0, abs(reward))  # Amplify but cap at 2x
 
             gradients.append(grad)
@@ -618,15 +632,15 @@ class ModularBrain(QuantumBrain):
         gradient_magnitude = np.sqrt(np.mean([g**2 for g in gradients]))
         self._gradient_magnitude_history.append(gradient_magnitude)
 
-        # Keep only recent history (last 10 steps)
-        if len(self._gradient_magnitude_history) > 10:
+        # Keep only recent history (last N steps)
+        if len(self._gradient_magnitude_history) > self.config.gradient_history_limit:
             self._gradient_magnitude_history.pop(0)
 
         # Adaptive learning rate based on gradient magnitude
         adaptive_lr = learning_rate
-        if gradient_magnitude < 1e-3:  # Very small gradients
+        if gradient_magnitude < self.config.small_gradient_threshold:  # Very small gradients
             adaptive_lr = max(learning_rate, 0.001)  # Ensure minimum effective learning rate
-        elif gradient_magnitude > 0.1:  # Large gradients
+        elif gradient_magnitude > self.config.large_gradient_threshold:  # Large gradients
             # Reduce learning rate to prevent overshooting
             adaptive_lr *= 0.8
 
