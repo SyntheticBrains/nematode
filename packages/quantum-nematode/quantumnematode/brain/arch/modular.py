@@ -111,6 +111,9 @@ class ModularBrain(QuantumBrain):
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
         num_qubits = count_total_qubits(config.modules)
+        logger.info(
+            f"Using configuration: {config}"
+        )
 
         self.num_qubits: int = num_qubits
         self.modules: dict[ModuleName, list[int]] = config.modules or deepcopy(DEFAULT_MODULES)
