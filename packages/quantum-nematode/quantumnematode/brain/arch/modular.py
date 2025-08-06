@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
 # Defaults
 DEFAULT_GRADIENT_HISTORY_LIMIT = 10
-DEFAULT_GRADIENT_NORM_THRESHOLD = 5e-2
 DEFAULT_L2_REG = 0.005
 DEFAULT_LARGE_GRADIENT_THRESHOLD = 0.1
 DEFAULT_MIN_GRADIENT_MAGNITUDE = 1e-4
@@ -53,7 +52,6 @@ class ModularBrainConfig(BrainConfig):
     """Configuration for the ModularBrain architecture."""
 
     gradient_history_limit: int = DEFAULT_GRADIENT_HISTORY_LIMIT  # Maximum gradient history length
-    gradient_norm_threshold: float = DEFAULT_GRADIENT_NORM_THRESHOLD  # Threshold for gradient reset
     l2_reg: float = DEFAULT_L2_REG  # L2 regularization strength
     large_gradient_threshold: float = (
         DEFAULT_LARGE_GRADIENT_THRESHOLD  # Threshold for large gradients
