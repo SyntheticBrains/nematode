@@ -420,6 +420,58 @@ def retrieve_qctrl_job_result(job_id: str) -> None:
         sys.exit(1)
 
 
+def retrieve_qctrl_job_logs(job_id: str) -> None:
+    """
+    Retrieve and display the logs of a Q-CTRL Qiskit Function job.
+
+    Args:
+        job_id: The Q-CTRL job ID to retrieve logs for.
+    """
+    logger = setup_logging()
+
+    try:
+        # Authenticate with IBM Quantum and get Q-CTRL catalog
+        print("Authenticating with IBM Quantum for Q-CTRL access...")
+        logger.info("Authenticating with IBM Quantum for Q-CTRL access...")
+
+        catalog = _get_qctrl_catalog()
+
+        print(f"Successfully authenticated. Retrieving job {job_id}...")
+        logger.info("Successfully authenticated. Retrieving job %s...", job_id)
+
+        # Get the job from the catalog
+        job = _get_qctrl_job(catalog, job_id)
+
+        # Display job information first
+        job_info = format_qctrl_job_info(job)
+        print(job_info)
+
+        # Retrieve logs
+        print("\n📋 Retrieving job logs...")
+        try:
+            logs = job.logs()
+            if logs:
+                print("✅ Logs retrieved successfully!")
+                print("\n" + "=" * 60)
+                print("JOB LOGS")
+                print("=" * 60)
+                print(logs)
+                print("=" * 60)
+            else:
+                print("📭 No logs available for this job.")
+        except Exception as e:
+            print(f"❌ Error retrieving logs: {e!s}")
+            logger.exception("Error retrieving logs for job %s", job_id)
+
+    except KeyboardInterrupt:
+        print("\n\nOperation cancelled by user.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"ERROR: Failed to retrieve Q-CTRL job logs: {e!s}")
+        logger.exception("Failed to retrieve Q-CTRL job logs")
+        sys.exit(1)
+
+
 def check_qctrl_job_status(job_id: str) -> None:
     """
     Check the status of a Q-CTRL Qiskit Function job.
@@ -688,6 +740,61 @@ def retrieve_ibm_job_result(job_id: str) -> None:
         sys.exit(1)
 
 
+def retrieve_ibm_job_logs(job_id: str) -> None:
+    """
+    Retrieve and display the logs of an IBM Quantum Runtime job.
+
+    Args:
+        job_id: The IBM Quantum job ID to retrieve logs for.
+    """
+    logger = setup_logging()
+
+    try:
+        # Authenticate with IBM Quantum
+        print("Authenticating with IBM Quantum...")
+        logger.info("Authenticating with IBM Quantum...")
+        ibmq_authenticator = IBMQuantumAuthenticator()
+        ibmq_authenticator.authenticate_runtime_service()
+
+        # Get the runtime service
+        service = _initialize_ibm_runtime_service()
+
+        print(f"Successfully authenticated. Retrieving job {job_id}...")
+        logger.info("Successfully authenticated. Retrieving job %s...", job_id)
+
+        # Get the job
+        job = _get_ibm_job(service, job_id)
+
+        # Display job information first
+        job_info = format_job_info(job)
+        print(job_info)
+
+        # Retrieve logs
+        print("\n📋 Retrieving job logs...")
+        try:
+            logs = job.logs()
+            if logs:
+                print("✅ Logs retrieved successfully!")
+                print("\n" + "=" * 60)
+                print("JOB LOGS")
+                print("=" * 60)
+                print(logs)
+                print("=" * 60)
+            else:
+                print("📭 No logs available for this job.")
+        except Exception as e:
+            print(f"❌ Error retrieving logs: {e!s}")
+            logger.exception("Error retrieving logs for job %s", job_id)
+
+    except KeyboardInterrupt:
+        print("\n\nOperation cancelled by user.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"ERROR: Failed to retrieve IBM Quantum job logs: {e!s}")
+        logger.exception("Failed to retrieve IBM Quantum job logs")
+        sys.exit(1)
+
+
 def _print_status_message(status: str) -> None:
     """Print appropriate status message based on job status."""
     if status == IBMJobStatus.DONE:
@@ -928,6 +1035,10 @@ Examples:
   Retrieve results:
     %(prog)s 12345678-1234-5678-9abc-123456789def --result           # Get IBM job result
     %(prog)s 12345678-1234-5678-9abc-123456789def --result --qctrl   # Get Q-CTRL job result
+
+  Retrieve logs:
+    %(prog)s 12345678-1234-5678-9abc-123456789def --logs             # Get IBM job logs
+    %(prog)s 12345678-1234-5678-9abc-123456789def --logs --qctrl     # Get Q-CTRL job logs
         """,
     )
 
@@ -987,15 +1098,21 @@ Examples:
         help="Retrieve and display the job result",
     )
 
+    parser.add_argument(
+        "--logs",
+        action="store_true",
+        help="Retrieve and display the job logs",
+    )
+
     args = parser.parse_args()
 
     # Validate arguments
-    action_count = sum([args.watch, args.list, args.cancel, args.result])
+    action_count = sum([args.watch, args.list, args.cancel, args.result, args.logs])
 
     if action_count > 1:
         print(
             "ERROR: Only one action can be specified at a time "
-            "(--watch, --list, --cancel, or --result)",
+            "(--watch, --list, --cancel, --result, or --logs)",
         )
         sys.exit(1)
 
@@ -1035,6 +1152,11 @@ Examples:
                 retrieve_qctrl_job_result(args.job_id)
             else:
                 retrieve_ibm_job_result(args.job_id)
+        elif args.logs:
+            if args.qctrl:
+                retrieve_qctrl_job_logs(args.job_id)
+            else:
+                retrieve_ibm_job_logs(args.job_id)
         elif args.watch:
             if args.qctrl:
                 watch_qctrl_job_status(args.job_id, args.interval)
