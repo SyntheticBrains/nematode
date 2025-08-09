@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from quantumnematode.auth.ibm_quantum import IBMQuantumAuthenticator
+from quantumnematode.executors.ibm_job_status import IBMJobStatus, IBMJobStatusInfo
 
 
 def setup_logging() -> logging.Logger:
@@ -117,7 +118,11 @@ Created: {creation_str}"""
         # Add status-specific information
         info += _format_result_info(job, status)
 
-        if status in ["QUEUED", "VALIDATING", "RUNNING"]:
+        if (
+            IBMJobStatus.is_queued_or_initializing(status)
+            or status == IBMJobStatus.VALIDATING
+            or IBMJobStatus.is_running(status)
+        ):
             info += f"\nStatus: Job is {status.lower()}"
             if queue_position is not None:
                 info += f" (position {queue_position} in queue)"
@@ -144,23 +149,7 @@ Status: {status}
 Job Type: Q-CTRL Qiskit Function"""
 
         # Add status-specific information with Q-CTRL specific statuses
-        status_descriptions = {
-            "QUEUED": "Job is in the Qiskit Function queue",
-            "INITIALIZING": "Setting up remote environment and installing dependencies",
-            "RUNNING": "Job is running",
-            "RUNNING: MAPPING": "Mapping classical inputs to quantum inputs",
-            "RUNNING: OPTIMIZING_FOR_HARDWARE": (
-                "Optimizing for selected QPU (transpilation, characterization, etc.)"
-            ),
-            "RUNNING: WAITING_FOR_QPU": "Submitted to Qiskit Runtime, waiting in QPU queue",
-            "RUNNING: EXECUTING_QPU": "Active Qiskit Runtime job executing on QPU",
-            "RUNNING: POST_PROCESSING": "Post-processing results (error mitigation, mapping, etc.)",
-            "DONE": "Job completed successfully",
-            "ERROR": "Job stopped due to an error",
-            "CANCELED": "Job was canceled",
-        }
-
-        description = status_descriptions.get(status, status)
+        description = IBMJobStatusInfo.get_description(status)
         info += f"\nDescription: {description}"
 
     except Exception as e:  # noqa: BLE001
@@ -202,19 +191,19 @@ def _get_qctrl_job(catalog: Any, job_id: str) -> Any:  # noqa: ANN401
 
 def _print_qctrl_status_message(status: str) -> None:
     """Print appropriate status message for Q-CTRL jobs."""
-    if status == "DONE":
+    if status == IBMJobStatus.DONE:
         print("\n✅ Q-CTRL job completed successfully!")
         print("💡 You can retrieve results with: job.result()")
-    elif status == "ERROR":
+    elif status == IBMJobStatus.ERROR:
         print("\n❌ Q-CTRL job completed with errors!")
         print("💡 Check the error details above or use: job.result()")
-    elif status in ["QUEUED", "INITIALIZING"]:
+    elif IBMJobStatus.is_queued_or_initializing(status):
         print(f"\n⏳ Q-CTRL job is {status.lower()}...")
         print("💡 Check again later or use --watch flag for continuous monitoring")
-    elif "RUNNING" in status:
+    elif IBMJobStatus.is_running(status):
         print(f"\n🏃 Q-CTRL job is running: {status}")
         print("💡 Check again later or use --watch flag for continuous monitoring")
-    elif status == "CANCELED":
+    elif status in (IBMJobStatus.CANCELED, IBMJobStatus.CANCELLED):
         print("\n⛔ Q-CTRL job was cancelled")
     else:
         print(f"\n📋 Q-CTRL job status: {status}")
@@ -292,19 +281,19 @@ def _get_ibm_job(service: Any, job_id: str) -> Any:  # noqa: ANN401
 
 def _print_status_message(status: str) -> None:
     """Print appropriate status message based on job status."""
-    if status == "DONE":
+    if status == IBMJobStatus.DONE:
         print("\n✅ Job completed successfully!")
         print("💡 You can retrieve results with: job.result()")
-    elif status == "ERROR":
+    elif status == IBMJobStatus.ERROR:
         print("\n❌ Job completed with errors!")
         print("💡 Check the error details above or use: job.result()")
-    elif status in ["QUEUED", "VALIDATING"]:
+    elif IBMJobStatus.is_queued_or_initializing(status) or status == IBMJobStatus.VALIDATING:
         print(f"\n⏳ Job is {status.lower()}...")
         print("💡 Check again later or use --watch flag for continuous monitoring")
-    elif status == "RUNNING":
+    elif IBMJobStatus.is_running(status):
         print("\n🏃 Job is currently running...")
         print("💡 Check again later or use --watch flag for continuous monitoring")
-    elif status == "CANCELLED":
+    elif status in (IBMJobStatus.CANCELED, IBMJobStatus.CANCELLED):
         print("\n⛔ Job was cancelled")
     else:
         print(f"\n📋 Job status: {status}")
@@ -390,7 +379,7 @@ def watch_qctrl_job_status(job_id: str, interval: int = 10) -> None:
                     last_status = current_status
 
                     # Stop monitoring if job is complete
-                    if current_status in ["DONE", "ERROR", "CANCELED"]:
+                    if IBMJobStatus.is_terminal(current_status):
                         print(f"\n🏁 Q-CTRL job finished with status: {current_status}")
                         job_info = format_qctrl_job_info(job)
                         print(job_info)
@@ -479,7 +468,7 @@ def watch_job_status(job_id: str, interval: int = 10) -> None:
                     last_status = current_status
 
                     # Stop monitoring if job is complete
-                    if current_status in ["DONE", "ERROR", "CANCELLED"]:
+                    if IBMJobStatus.is_terminal(current_status):
                         print(f"\n🏁 Job finished with status: {current_status}")
                         job_info = format_job_info(job)
                         print(job_info)
