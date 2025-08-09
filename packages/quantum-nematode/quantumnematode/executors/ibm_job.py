@@ -3,6 +3,7 @@
 import time
 from typing import TYPE_CHECKING
 
+from quantumnematode.executors.ibm_job_status import IBMJobStatus, IBMJobStatusInfo
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
@@ -89,35 +90,18 @@ def monitor_job(job: "Job", job_description: str = "IBM job") -> None:
     status = _get_job_status_with_retry(job, job_description)
     logger.info(f"{job_description} initial status: {status}")
 
-    # Define status descriptions for better logging
-    status_descriptions = {
-        "QUEUED": "Job is in the Qiskit Function queue",
-        "INITIALIZING": "Setting up remote environment and installing dependencies",
-        "RUNNING": "Job is running",
-        "RUNNING: MAPPING": "Mapping classical inputs to quantum inputs",
-        "RUNNING: OPTIMIZING_FOR_HARDWARE": (
-            "Optimizing for selected QPU (transpilation, characterization, etc.)"
-        ),
-        "RUNNING: WAITING_FOR_QPU": "Submitted to Qiskit Runtime, waiting in QPU queue",
-        "RUNNING: EXECUTING_QPU": "Active Qiskit Runtime job executing on QPU",
-        "RUNNING: POST_PROCESSING": "Post-processing results (error mitigation, mapping, etc.)",
-        "DONE": "Job completed successfully",
-        "ERROR": "Job stopped due to an error",
-        "CANCELED": "Job was canceled",
-    }
-
     # Monitor status changes with periodic checks
     last_status = status
     start_time = time.time()
 
-    while status not in ["DONE", "ERROR", "CANCELED"]:
+    while not IBMJobStatus.is_terminal(status):
         time.sleep(POLL_INTERVAL)
         current_status = _get_job_status_with_retry(job, job_description)
 
         # Log status changes
         if current_status != last_status:
             elapsed_time = time.time() - start_time
-            description = status_descriptions.get(current_status, current_status)
+            description = IBMJobStatusInfo.get_description(current_status)
             logger.info(
                 f"{job_description} status changed to: {current_status} - {description} "
                 f"(elapsed: {elapsed_time:.1f}s)",
@@ -137,21 +121,21 @@ def monitor_job(job: "Job", job_description: str = "IBM job") -> None:
 
     # Final status
     final_elapsed = time.time() - start_time
-    description = status_descriptions.get(status, status)
+    description = IBMJobStatusInfo.get_description(status)
     logger.info(
         f"{job_description} final status: {status} - {description} "
         f"(total time: {final_elapsed:.1f}s)",
     )
 
-    if status == "ERROR":
+    if status == IBMJobStatus.ERROR:
         error_message = (
             f"{job_description} completed with errors. Use job.result() to get error details."
         )
         logger.error(error_message)
         raise RuntimeError(error_message)
-    if status == "CANCELED":
+    if status in (IBMJobStatus.CANCELED, IBMJobStatus.CANCELLED):
         error_message = f"{job_description} was canceled."
         logger.warning(error_message)
         raise RuntimeError(error_message)
-    if status == "DONE":
+    if status == IBMJobStatus.DONE:
         logger.info(f"{job_description} completed successfully.")
