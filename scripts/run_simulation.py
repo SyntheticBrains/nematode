@@ -6,6 +6,7 @@ import sys
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
@@ -167,7 +168,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         case BrainType.MLP:
             brain_config = MLPBrainConfig()
 
-    # Authenticate
+    # Authenticate and setup Q-CTRL if needed
+    perf_mgmt = None
     if device == DeviceType.QPU:
         from quantumnematode.auth.ibm_quantum import IBMQuantumAuthenticator
 
@@ -175,12 +177,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         if optimize_quantum_performance:
             catalog = ibmq_authenticator.get_functions_catalog()
-            perf_mgmt = catalog.load("q-ctrl/performance-management")  # noqa: F841
-            # TODO: Implement Q-CTRL's Fire Opal error suppression techniques
-            error_message = "Q-CTRL's Fire Opal error suppression techniques are "
-            "not yet implemented in this version."
-            raise NotImplementedError(error_message)
-        ibmq_authenticator.authenticate_runtime_service()
+            perf_mgmt = catalog.load("q-ctrl/performance-management")
+            logger.info("Q-CTRL Fire Opal Performance Management loaded successfully")
+        else:
+            ibmq_authenticator.authenticate_runtime_service()
 
     if config_file:
         config = load_simulation_config(config_file)
@@ -246,6 +246,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         device,
         learning_rate,
         gradient_method,
+        optimize_quantum_performance,
+        perf_mgmt,
     )
 
     # Update the agent to use the selected brain architecture
@@ -440,6 +442,8 @@ def setup_brain_model(  # noqa: PLR0913
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
+    optimize_quantum_performance: bool = False,
+    perf_mgmt: Any = None,
 ) -> Brain:
     """
     Set up the brain model based on the specified brain type.
@@ -453,6 +457,9 @@ def setup_brain_model(  # noqa: PLR0913
         device (str): The device to use for simulation ("CPU" or "GPU").
         learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
             The learning rate configuration for the brain.
+        gradient_method: The gradient calculation method.
+        optimize_quantum_performance (bool): Whether to use Q-CTRL's Fire Opal optimization.
+        perf_mgmt: Q-CTRL performance management function instance.
 
     Returns
     -------
@@ -486,6 +493,8 @@ def setup_brain_model(  # noqa: PLR0913
             device=device,
             shots=shots,
             learning_rate=learning_rate,
+            optimize_quantum_performance=optimize_quantum_performance,
+            perf_mgmt=perf_mgmt,
         )
     elif brain_type == BrainType.MLP:
         from quantumnematode.brain.arch.mlp import MLPBrain
