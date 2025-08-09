@@ -23,6 +23,7 @@ from quantumnematode.errors import (
     ERROR_MISSING_IMPORT_QISKIT_AER,
     ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME,
 )
+from quantumnematode.executors.ibm_job import monitor_job
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
     RandomSmallUniformInitializer,
@@ -432,22 +433,31 @@ class ModularBrain(QuantumBrain):
 
         Logs:
             - Logs an error if performance management is not initialized.
-            - Logs the Qiskit Function Job ID upon job submission.
+            - Logs detailed job status updates during execution.
+            - Logs job completion status and timing information.
         """
         if not self.perf_mgmt:
             error_message = "Performance management is not initialized."
             logger.error(error_message)
             raise RuntimeError(error_message)
 
+        # Submit the Q-CTRL job
+        logger.info(f"Submitting Q-CTRL sampler job with {len(sampler_pubs)} publication(s)")
         qctrl_sampler_job = self.perf_mgmt.run(
             primitive="sampler",
             pubs=sampler_pubs,
             backend_name=self._get_backend_name(),
         )
-        logger.info(f"Qiskit Function Job ID: {qctrl_sampler_job.job_id}")
 
-        # Get results
-        return qctrl_sampler_job.result()
+        # Monitor job status with detailed logging
+        monitor_job(qctrl_sampler_job, "Q-CTRL Sampler")
+
+        # Retrieve results
+        logger.info("Retrieving Q-CTRL sampler job results...")
+        result = qctrl_sampler_job.result()
+        logger.info("Q-CTRL sampler job results retrieved successfully")
+
+        return result
 
     def _interpret_counts(
         self,
