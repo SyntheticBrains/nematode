@@ -48,6 +48,10 @@ DEFAULT_SIGNIFICANT_REWARD_THRESHOLD = 0.1
 DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-4
 
 
+if TYPE_CHECKING:
+    from qiskit_serverless.core.function import RunnableQiskitFunction
+
+
 class ModularBrainConfig(BrainConfig):
     """Configuration for the ModularBrain architecture."""
 
@@ -94,8 +98,7 @@ class ModularBrain(QuantumBrain):
         | RandomSmallUniformInitializer
         | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
-        optimize_quantum_performance: bool = False,
-        perf_mgmt: Any = None,
+        perf_mgmt: "RunnableQiskitFunction | None" = None,
     ) -> None:
         """
         Initialize the ModularBrain.
@@ -107,7 +110,6 @@ class ModularBrain(QuantumBrain):
             learning_rate: Learning rate strategy (default is dynamic).
             parameter_initializer : The initializer to use for parameter initialization.
             action_set: List of available actions (default is DEFAULT_ACTIONS).
-            optimize_quantum_performance: Whether to use Q-CTRL's Fire Opal optimization.
             perf_mgmt: Q-CTRL performance management function instance.
         """
         self.config = config
@@ -115,7 +117,7 @@ class ModularBrain(QuantumBrain):
         self.latest_data = BrainData()
         num_qubits = count_total_qubits(config.modules)
         logger.info(
-            f"Using configuration: {config}"
+            f"Using configuration: {config}",
         )
 
         self.num_qubits: int = num_qubits
@@ -135,11 +137,16 @@ class ModularBrain(QuantumBrain):
         )
 
         self.action_set = action_set
-        self.optimize_quantum_performance = optimize_quantum_performance
         self.perf_mgmt = perf_mgmt
 
-        if optimize_quantum_performance and perf_mgmt is not None:
-            logger.info(f"Q-CTRL Fire Opal Performance Management enabled.")
+        if perf_mgmt is not None:
+            if device != DeviceType.QPU:
+                error_message = (
+                    "Q-CTRL Fire Opal Performance Management can only be used with QPU devices."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
+            logger.info("Q-CTRL Fire Opal Performance Management enabled.")
 
         self.num_layers = config.num_layers
         # Dynamically create parameters for each layer
@@ -271,15 +278,13 @@ class ModularBrain(QuantumBrain):
             # For QPU, get the backend name from environment or use least busy
             if backend_name := os.environ.get("IBM_QUANTUM_BACKEND"):
                 return backend_name
-            else:
-                # Get the backend object to extract its name
-                backend = self._get_backend()
-                return getattr(backend, 'name', str(backend))
-        else:
-            # For simulators, use the device type
-            return f"aer_simulator_{self.device.value}"
+            # Get the backend object to extract its name
+            backend = self._get_backend()
+            return getattr(backend, "name", str(backend))
+        # For simulators, use the device type
+        return f"aer_simulator_{self.device.value}"
 
-    def run_brain(
+    def run_brain(  # noqa: PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,
@@ -334,18 +339,18 @@ class ModularBrain(QuantumBrain):
         # Build the circuit with current input_params (features)
         qc = self.build_brain(input_params)
         param_values = self.parameter_values.copy()
-        
+
         if self.device == DeviceType.QPU:
-            if self.optimize_quantum_performance and self.perf_mgmt is not None:
+            if self.perf_mgmt is not None:
                 # Use Q-CTRL's Fire Opal Performance Management Sampler
-                
+
                 # Q-CTRL recommends not transpiling circuits before submission
                 # Bind parameters to the untranspiled circuit
                 bound_qc = qc.assign_parameters(param_values, inplace=False)
-                
+
                 # Create sampler PUB (circuit, parameter_values, shots)
                 sampler_pubs = [(bound_qc, None, self.shots)]
-                
+
                 # Run the circuit using Q-CTRL's performance management sampler
                 qctrl_sampler_job = self.perf_mgmt.run(
                     primitive="sampler",
@@ -521,7 +526,6 @@ class ModularBrain(QuantumBrain):
             config=self.config,
             shots=self.shots,
             device=self.device,
-            optimize_quantum_performance=self.optimize_quantum_performance,
             perf_mgmt=self.perf_mgmt,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
@@ -532,7 +536,7 @@ class ModularBrain(QuantumBrain):
 
         return new_brain
 
-    def parameter_shift_gradients(  # noqa: C901, PLR0915
+    def parameter_shift_gradients(  # noqa: C901, PLR0912, PLR0915
         self,
         params: BrainParams,  # noqa: ARG002
         action: ActionData,
@@ -567,8 +571,8 @@ class ModularBrain(QuantumBrain):
 
         # Batch circuits
         circuits = []
-        
-        if self.device == DeviceType.QPU and self.optimize_quantum_performance and self.perf_mgmt is not None:
+
+        if self.device == DeviceType.QPU and self.perf_mgmt is not None:
             # For Q-CTRL, use untranspiled circuit
             cached_circuit = self._get_cached_circuit()
             for plus, minus in param_sets:
@@ -585,13 +589,13 @@ class ModularBrain(QuantumBrain):
 
         # Run all circuits in a batch
         if self.device == DeviceType.QPU:
-            if self.optimize_quantum_performance and self.perf_mgmt is not None:
+            if self.perf_mgmt is not None:
                 # Use Q-CTRL's Fire Opal Performance Management Sampler for gradients
-                
+
                 # Q-CTRL recommends not transpiling circuits before submission
                 # Create sampler PUBs for all circuits
                 sampler_pubs = [(circuit, None, self.shots) for circuit in circuits]
-                
+
                 # Run all circuits using Q-CTRL's performance management sampler
                 qctrl_sampler_job = self.perf_mgmt.run(
                     primitive="sampler",

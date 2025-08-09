@@ -6,7 +6,7 @@ import sys
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
@@ -73,6 +73,9 @@ from quantumnematode.utils.config_loader import (
 
 DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
+
+if TYPE_CHECKING:
+    from qiskit_serverless.core.function import RunnableQiskitFunction
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -239,15 +242,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Select the brain architecture
     brain = setup_brain_model(
-        brain_type,
-        brain_config,
-        shots,
-        qubits,
-        device,
-        learning_rate,
-        gradient_method,
-        optimize_quantum_performance,
-        perf_mgmt,
+        brain_type=brain_type,
+        brain_config=brain_config,
+        shots=shots,
+        qubits=qubits,
+        device=device,
+        learning_rate=learning_rate,
+        gradient_method=gradient_method,
+        perf_mgmt=perf_mgmt,
     )
 
     # Update the agent to use the selected brain architecture
@@ -442,8 +444,7 @@ def setup_brain_model(  # noqa: PLR0913
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
-    optimize_quantum_performance: bool = False,
-    perf_mgmt: Any = None,
+    perf_mgmt: "RunnableQiskitFunction | None" = None,
 ) -> Brain:
     """
     Set up the brain model based on the specified brain type.
@@ -458,7 +459,6 @@ def setup_brain_model(  # noqa: PLR0913
         learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
             The learning rate configuration for the brain.
         gradient_method: The gradient calculation method.
-        optimize_quantum_performance (bool): Whether to use Q-CTRL's Fire Opal optimization.
         perf_mgmt: Q-CTRL performance management function instance.
 
     Returns
@@ -493,7 +493,6 @@ def setup_brain_model(  # noqa: PLR0913
             device=device,
             shots=shots,
             learning_rate=learning_rate,
-            optimize_quantum_performance=optimize_quantum_performance,
             perf_mgmt=perf_mgmt,
         )
     elif brain_type == BrainType.MLP:
