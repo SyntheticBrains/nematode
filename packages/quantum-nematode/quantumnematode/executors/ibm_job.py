@@ -1,4 +1,3 @@
-
 import time
 from typing import TYPE_CHECKING
 
@@ -10,6 +9,7 @@ import os
 
 IBM_JOB_POLL_INTERVAL = int(os.getenv("IBM_JOB_POLL_INTERVAL", 10))  # Polling interval in seconds
 IBM_JOB_TIMEOUT = int(os.getenv("IBM_JOB_TIMEOUT", 60 * 60 * 24))  # Timeout in seconds (24 hours)
+
 
 def monitor_job(job: "Job", job_description: str = "IBM job") -> None:
     """
@@ -62,9 +62,7 @@ def monitor_job(job: "Job", job_description: str = "IBM job") -> None:
 
         # Safety timeout
         if time.time() - start_time > IBM_JOB_TIMEOUT:
-            error_message = (
-                f"{job_description} monitoring timeout after {IBM_JOB_TIMEOUT} seconds. Last status: {status}"
-            )
+            error_message = f"{job_description} monitoring timeout after {IBM_JOB_TIMEOUT} seconds. Last status: {status}"
             logger.warning(error_message)
             raise TimeoutError(error_message)
 
@@ -82,9 +80,9 @@ def monitor_job(job: "Job", job_description: str = "IBM job") -> None:
         )
         logger.error(error_message)
         raise RuntimeError(error_message)
-    elif status == "CANCELED":
+    if status == "CANCELED":
         error_message = f"{job_description} was canceled."
         logger.warning(error_message)
         raise RuntimeError(error_message)
-    elif status == "DONE":
+    if status == "DONE":
         logger.info(f"{job_description} completed successfully.")
