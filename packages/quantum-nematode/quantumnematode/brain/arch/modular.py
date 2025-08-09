@@ -351,16 +351,8 @@ class ModularBrain(QuantumBrain):
                 # Create sampler PUB (circuit, parameter_values, shots)
                 sampler_pubs = [(bound_qc, None, self.shots)]
 
-                # Run the circuit using Q-CTRL's performance management sampler
-                qctrl_sampler_job = self.perf_mgmt.run(
-                    primitive="sampler",
-                    pubs=sampler_pubs,
-                    backend_name=self._get_backend_name(),
-                )
-                logger.info(f"Qiskit Function Job ID: {qctrl_sampler_job.job_id}")
-
-                # Get results
-                result = qctrl_sampler_job.result()
+                # Execute Q-CTRL sampler job
+                result = self._execute_qctrl_sampler_job(sampler_pubs)
                 pub_result = result[0]
                 bitstrings = pub_result.data.c
                 counts = bitstrings.get_counts()
@@ -421,6 +413,41 @@ class ModularBrain(QuantumBrain):
         self.history_data.rewards.append(reward or 0.0)
 
         return actions
+
+    def _execute_qctrl_sampler_job(self, sampler_pubs: list[tuple]) -> list:
+        """
+        Execute a Q-CTRL Qiskit Function sampler job using the provided sampler publications.
+
+        Args:
+            sampler_pubs (list[tuple]): A list of tuples representing sampler
+                publications to be executed.
+
+        Returns
+        -------
+            list: The results obtained from executing the Q-CTRL sampler job.
+
+        Raises
+        ------
+            RuntimeError: If performance management is not initialized.
+
+        Logs:
+            - Logs an error if performance management is not initialized.
+            - Logs the Qiskit Function Job ID upon job submission.
+        """
+        if not self.perf_mgmt:
+            error_message = "Performance management is not initialized."
+            logger.error(error_message)
+            raise RuntimeError(error_message)
+
+        qctrl_sampler_job = self.perf_mgmt.run(
+            primitive="sampler",
+            pubs=sampler_pubs,
+            backend_name=self._get_backend_name(),
+        )
+        logger.info(f"Qiskit Function Job ID: {qctrl_sampler_job.job_id}")
+
+        # Get results
+        return qctrl_sampler_job.result()
 
     def _interpret_counts(
         self,
@@ -596,16 +623,8 @@ class ModularBrain(QuantumBrain):
                 # Create sampler PUBs for all circuits
                 sampler_pubs = [(circuit, None, self.shots) for circuit in circuits]
 
-                # Run all circuits using Q-CTRL's performance management sampler
-                qctrl_sampler_job = self.perf_mgmt.run(
-                    primitive="sampler",
-                    pubs=sampler_pubs,
-                    backend_name=self._get_backend_name(),
-                )
-                logger.info(f"Qiskit Function Job ID: {qctrl_sampler_job.job_id}")
-
-                # Get results
-                result = qctrl_sampler_job.result()
+                # Execute Q-CTRL sampler job
+                result = self._execute_qctrl_sampler_job(sampler_pubs)
 
                 def get_counts_qctrl(idx: int) -> dict[str, int]:
                     return result[idx].data.c.get_counts()
