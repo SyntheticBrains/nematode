@@ -94,18 +94,21 @@ class ModularBrain(QuantumBrain):
         | RandomSmallUniformInitializer
         | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
+        optimize_quantum_performance: bool = False,
+        perf_mgmt: Any = None,
     ) -> None:
         """
         Initialize the ModularBrain.
 
         Args:
-            modules: Mapping of module names to qubit indices.
+            config: Configuration for the ModularBrain architecture.
             shots: Number of shots for simulation.
             device: Device string for AerSimulator or real QPU backend.
             learning_rate: Learning rate strategy (default is dynamic).
             parameter_initializer : The initializer to use for parameter initialization.
             action_set: List of available actions (default is DEFAULT_ACTIONS).
-            num_layers: Number of layers in the quantum circuit.
+            optimize_quantum_performance: Whether to use Q-CTRL's Fire Opal optimization.
+            perf_mgmt: Q-CTRL performance management function instance.
         """
         self.config = config
         self.history_data = BrainHistoryData()
@@ -132,6 +135,11 @@ class ModularBrain(QuantumBrain):
         )
 
         self.action_set = action_set
+        self.optimize_quantum_performance = optimize_quantum_performance
+        self.perf_mgmt = perf_mgmt
+
+        if optimize_quantum_performance and perf_mgmt is not None:
+            logger.info(f"Q-CTRL Fire Opal Performance Management enabled.")
 
         self.num_layers = config.num_layers
         # Dynamically create parameters for each layer
@@ -257,6 +265,20 @@ class ModularBrain(QuantumBrain):
 
         return self._transpiled_cache
 
+    def _get_backend_name(self) -> str:
+        """Return the backend name as a string for Q-CTRL Fire Opal."""
+        if self.device == DeviceType.QPU:
+            # For QPU, get the backend name from environment or use least busy
+            if backend_name := os.environ.get("IBM_QUANTUM_BACKEND"):
+                return backend_name
+            else:
+                # Get the backend object to extract its name
+                backend = self._get_backend()
+                return getattr(backend, 'name', str(backend))
+        else:
+            # For simulators, use the device type
+            return f"aer_simulator_{self.device.value}"
+
     def run_brain(
         self,
         params: BrainParams,
@@ -311,27 +333,62 @@ class ModularBrain(QuantumBrain):
 
         # Build the circuit with current input_params (features)
         qc = self.build_brain(input_params)
-        backend = self._get_backend()
         param_values = self.parameter_values.copy()
-        bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
-
+        
         if self.device == DeviceType.QPU:
-            try:
-                from qiskit_ibm_runtime import Sampler
-            except ImportError as err:
-                error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
-                logger.error(error_message)
-                raise ImportError(error_message) from err
+            if self.optimize_quantum_performance and self.perf_mgmt is not None:
+                # Use Q-CTRL's Fire Opal Performance Management Sampler
+                
+                # Q-CTRL recommends not transpiling circuits before submission
+                # Bind parameters to the untranspiled circuit
+                bound_qc = qc.assign_parameters(param_values, inplace=False)
+                
+                # Create sampler PUB (circuit, parameter_values, shots)
+                sampler_pubs = [(bound_qc, None, self.shots)]
+                
+                # Run the circuit using Q-CTRL's performance management sampler
+                qctrl_sampler_job = self.perf_mgmt.run(
+                    primitive="sampler",
+                    pubs=sampler_pubs,
+                    backend_name=self._get_backend_name(),
+                )
+                logger.info(f"Qiskit Function Job ID: {qctrl_sampler_job.job_id}")
 
-            # Use Qiskit Runtime Sampler
-            sampler = Sampler(mode=backend)
-            job = sampler.run([bound_qc], shots=self.shots)
-            result = job.result()
-            pub_result = result[0]
-            bitstrings = pub_result.data.c
-            counts = bitstrings.get_counts()
+                # Get results
+                result = qctrl_sampler_job.result()
+                pub_result = result[0]
+                bitstrings = pub_result.data.c
+                counts = bitstrings.get_counts()
+            else:
+                # Use standard Qiskit Runtime Sampler
+                try:
+                    from qiskit_ibm_runtime import Sampler
+                except ImportError as err:
+                    error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
+                    logger.error(error_message)
+                    raise ImportError(error_message) from err
+
+                # Get backend
+                backend = self._get_backend()
+
+                # Transpile and bind parameters
+                bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
+
+                # Create sampler
+                sampler = Sampler(mode=backend)
+
+                # Submit job
+                job = sampler.run([bound_qc], shots=self.shots)
+                logger.info(f"Qiskit Runtime Job ID: {job.job_id}")
+
+                result = job.result()
+                pub_result = result[0]
+                bitstrings = pub_result.data.c
+                counts = bitstrings.get_counts()
         else:
             # Use AerSimulator
+            backend = self._get_backend()
+            bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
             job = backend.run(bound_qc, shots=self.shots)
             if job is None:
                 error_message = "Backend run did not return a valid job object."
@@ -464,6 +521,8 @@ class ModularBrain(QuantumBrain):
             config=self.config,
             shots=self.shots,
             device=self.device,
+            optimize_quantum_performance=self.optimize_quantum_performance,
+            perf_mgmt=self.perf_mgmt,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
         new_brain.satiety = self.satiety
@@ -507,35 +566,76 @@ class ModularBrain(QuantumBrain):
             param_sets.append((plus, minus))
 
         # Batch circuits
-        transpiled = self._get_transpiled()
-        backend = self._get_backend()
         circuits = []
-        for plus, minus in param_sets:
-            circuits.append(transpiled.assign_parameters(plus, inplace=False))
-            circuits.append(transpiled.assign_parameters(minus, inplace=False))
+        
+        if self.device == DeviceType.QPU and self.optimize_quantum_performance and self.perf_mgmt is not None:
+            # For Q-CTRL, use untranspiled circuit
+            cached_circuit = self._get_cached_circuit()
+            for plus, minus in param_sets:
+                circuits.append(cached_circuit.assign_parameters(plus, inplace=False))
+                circuits.append(cached_circuit.assign_parameters(minus, inplace=False))
+        else:
+            # For standard execution, use transpiled circuit
+            transpiled = self._get_transpiled()
+            for plus, minus in param_sets:
+                circuits.append(transpiled.assign_parameters(plus, inplace=False))
+                circuits.append(transpiled.assign_parameters(minus, inplace=False))
 
         gradients = []
 
         # Run all circuits in a batch
         if self.device == DeviceType.QPU:
-            try:
-                from qiskit_ibm_runtime import Sampler
-            except ImportError as err:
-                error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
-                logger.error(error_message)
-                raise ImportError(error_message) from err
+            if self.optimize_quantum_performance and self.perf_mgmt is not None:
+                # Use Q-CTRL's Fire Opal Performance Management Sampler for gradients
+                
+                # Q-CTRL recommends not transpiling circuits before submission
+                # Create sampler PUBs for all circuits
+                sampler_pubs = [(circuit, None, self.shots) for circuit in circuits]
+                
+                # Run all circuits using Q-CTRL's performance management sampler
+                qctrl_sampler_job = self.perf_mgmt.run(
+                    primitive="sampler",
+                    pubs=sampler_pubs,
+                    backend_name=self._get_backend_name(),
+                )
+                logger.info(f"Qiskit Function Job ID: {qctrl_sampler_job.job_id}")
 
-            # Use Qiskit Runtime Sampler for real QPU
-            sampler = Sampler(mode=backend)
-            job = sampler.run(circuits, shots=self.shots)
-            result = job.result()
+                # Get results
+                result = qctrl_sampler_job.result()
 
-            def get_counts_qpu(idx: int) -> dict[str, int]:
-                return result[idx].data.c.get_counts()
+                def get_counts_qctrl(idx: int) -> dict[str, int]:
+                    return result[idx].data.c.get_counts()
 
-            get_counts = get_counts_qpu
+                get_counts = get_counts_qctrl
+            else:
+                # Use standard Qiskit Runtime Sampler for real QPU
+                try:
+                    from qiskit_ibm_runtime import Sampler
+                except ImportError as err:
+                    error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
+                    logger.error(error_message)
+                    raise ImportError(error_message) from err
+
+                # Get backend
+                backend = self._get_backend()
+
+                # Create sampler
+                sampler = Sampler(mode=backend)
+
+                # Submit job
+                job = sampler.run(circuits, shots=self.shots)
+                logger.info(f"Qiskit Runtime Job ID: {job.job_id}")
+
+                # Get results
+                result = job.result()
+
+                def get_counts_qpu(idx: int) -> dict[str, int]:
+                    return result[idx].data.c.get_counts()
+
+                get_counts = get_counts_qpu
         else:
             # Use AerSimulator
+            backend = self._get_backend()
             job = backend.run(circuits, shots=self.shots)
             if job is None:
                 error_message = "Backend run did not return a valid job object."
