@@ -169,6 +169,57 @@ Job Type: Q-CTRL Qiskit Function"""
         return info
 
 
+def _get_qctrl_catalog() -> Any:  # noqa: ANN401
+    """Get Q-CTRL functions catalog."""
+    logger = setup_logging()
+    ibmq_authenticator = IBMQuantumAuthenticator()
+
+    try:
+        return ibmq_authenticator.get_functions_catalog()
+    except Exception as e:
+        print(f"ERROR: Failed to get Q-CTRL functions catalog: {e!s}")
+        logger.exception("Failed to get Q-CTRL functions catalog")
+        sys.exit(1)
+
+
+def _get_qctrl_job(catalog: Any, job_id: str) -> Any:  # noqa: ANN401
+    """Get Q-CTRL job by ID."""
+    logger = setup_logging()
+    try:
+        job = catalog.get_job_by_id(job_id)
+        if job is None:
+            print("ERROR: Retrieved job is None")
+            sys.exit(1)
+    except Exception as e:
+        print(f"ERROR: Failed to retrieve Q-CTRL job {job_id}: {e!s}")
+        print("Please verify the job ID is correct and you have access to it.")
+        logger.exception("Failed to retrieve Q-CTRL job %s", job_id)
+        logger.exception("Please verify the job ID is correct and you have access to it.")
+        sys.exit(1)
+    else:
+        return job
+
+
+def _print_qctrl_status_message(status: str) -> None:
+    """Print appropriate status message for Q-CTRL jobs."""
+    if status == "DONE":
+        print("\n✅ Q-CTRL job completed successfully!")
+        print("💡 You can retrieve results with: job.result()")
+    elif status == "ERROR":
+        print("\n❌ Q-CTRL job completed with errors!")
+        print("💡 Check the error details above or use: job.result()")
+    elif status in ["QUEUED", "INITIALIZING"]:
+        print(f"\n⏳ Q-CTRL job is {status.lower()}...")
+        print("💡 Check again later or use --watch flag for continuous monitoring")
+    elif "RUNNING" in status:
+        print(f"\n🏃 Q-CTRL job is running: {status}")
+        print("💡 Check again later or use --watch flag for continuous monitoring")
+    elif status == "CANCELED":
+        print("\n⛔ Q-CTRL job was cancelled")
+    else:
+        print(f"\n📋 Q-CTRL job status: {status}")
+
+
 def check_qctrl_job_status(job_id: str) -> None:
     """
     Check the status of a Q-CTRL Qiskit Function job.
@@ -182,27 +233,14 @@ def check_qctrl_job_status(job_id: str) -> None:
         # Authenticate with IBM Quantum and get Q-CTRL catalog
         print("Authenticating with IBM Quantum for Q-CTRL access...")
         logger.info("Authenticating with IBM Quantum for Q-CTRL access...")
-        ibmq_authenticator = IBMQuantumAuthenticator()
 
-        try:
-            catalog = ibmq_authenticator.get_functions_catalog()
-        except Exception as e:
-            print(f"ERROR: Failed to get Q-CTRL functions catalog: {e!s}")
-            logger.exception("Failed to get Q-CTRL functions catalog")
-            sys.exit(1)
+        catalog = _get_qctrl_catalog()
 
         print(f"Successfully authenticated. Checking Q-CTRL job {job_id}...")
         logger.info("Successfully authenticated. Checking Q-CTRL job %s...", job_id)
 
         # Get the job from the catalog
-        try:
-            job = catalog.get_job_by_id(job_id)
-        except Exception as e:
-            print(f"ERROR: Failed to retrieve Q-CTRL job {job_id}: {e!s}")
-            print("Please verify the job ID is correct and you have access to it.")
-            logger.exception("Failed to retrieve Q-CTRL job %s", job_id)
-            logger.exception("Please verify the job ID is correct and you have access to it.")
-            sys.exit(1)
+        job = _get_qctrl_job(catalog, job_id)
 
         # Display job information
         job_info = format_qctrl_job_info(job)
@@ -210,22 +248,7 @@ def check_qctrl_job_status(job_id: str) -> None:
 
         # Additional actions based on status
         status = job.status()
-        if status == "DONE":
-            print("\n✅ Q-CTRL job completed successfully!")
-            print("💡 You can retrieve results with: job.result()")
-        elif status == "ERROR":
-            print("\n❌ Q-CTRL job completed with errors!")
-            print("💡 Check the error details above or use: job.result()")
-        elif status in ["QUEUED", "INITIALIZING"]:
-            print(f"\n⏳ Q-CTRL job is {status.lower()}...")
-            print("💡 Check again later or use --watch flag for continuous monitoring")
-        elif "RUNNING" in status:
-            print(f"\n🏃 Q-CTRL job is running: {status}")
-            print("💡 Check again later or use --watch flag for continuous monitoring")
-        elif status == "CANCELED":
-            print("\n⛔ Q-CTRL job was cancelled")
-        else:
-            print(f"\n📋 Q-CTRL job status: {status}")
+        _print_qctrl_status_message(status)
 
     except KeyboardInterrupt:
         print("\n\nOperation cancelled by user.")
@@ -346,27 +369,17 @@ def watch_qctrl_job_status(job_id: str, interval: int = 10) -> None:
         # Authenticate with IBM Quantum and get Q-CTRL catalog
         print("Authenticating with IBM Quantum for Q-CTRL access...")
         logger.info("Authenticating with IBM Quantum for Q-CTRL access...")
-        ibmq_authenticator = IBMQuantumAuthenticator()
 
-        try:
-            catalog = ibmq_authenticator.get_functions_catalog()
-        except Exception as e:
-            print(f"ERROR: Failed to get Q-CTRL functions catalog: {e!s}")
-            logger.exception("Failed to get Q-CTRL functions catalog")
-            sys.exit(1)
+        catalog = _get_qctrl_catalog()
 
         # Get the job
-        try:
-            job = catalog.get_job_by_id(job_id)
-        except Exception as e:
-            print(f"ERROR: Failed to retrieve Q-CTRL job {job_id}: {e!s}")
-            logger.exception("Failed to retrieve Q-CTRL job %s", job_id)
-            sys.exit(1)
+        job = _get_qctrl_job(catalog, job_id)
 
         print(f"🔍 Monitoring Q-CTRL job {job_id} (checking every {interval} seconds)")
         print("Press Ctrl+C to stop monitoring\n")
 
         last_status = None
+        timestamp = datetime.now(tz=UTC).strftime("%H:%M:%S")  # Initialize timestamp
         while True:
             try:
                 current_status = job.status()
@@ -455,6 +468,7 @@ def watch_job_status(job_id: str, interval: int = 10) -> None:
         print("Press Ctrl+C to stop monitoring\n")
 
         last_status = None
+        timestamp = datetime.now(tz=UTC).strftime("%H:%M:%S")  # Initialize timestamp
         while True:
             try:
                 current_status = job.status()
