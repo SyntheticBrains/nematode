@@ -48,6 +48,30 @@ class ThemeSymbolSet(BaseModel):
     empty: str
 
 
+class DarkColorRichStyleConfig(BaseModel):
+    """Rich styling configuration for colored on dark backgroubd Rich theme.
+
+    Attributes
+    ----------
+    goal_style : str
+        Rich style string for the goal (e.g., "bold red").
+    body_style : str
+        Rich style string for body segments.
+    agent_style : str
+        Rich style string for the agent.
+    empty_style : str
+        Rich style string for empty cells.
+    grid_background : str
+        Rich style string for grid cell backgrounds.
+    """
+
+    goal_style: str = "bold red"
+    body_style: str = "bold blue"
+    agent_style: str = "bold green"
+    empty_style: str = "dim grey93"
+    grid_background: str = "bold grey93"
+
+
 THEME_SYMBOLS = {
     Theme.ASCII: ThemeSymbolSet(
         goal="*",

@@ -12,9 +12,13 @@ import secrets
 from enum import Enum
 
 import numpy as np
+from rich import box
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.theme import THEME_SYMBOLS, Theme
+from quantumnematode.theme import THEME_SYMBOLS, DarkColorRichStyleConfig, Theme
 
 from .logging_config import logger
 
@@ -78,6 +82,7 @@ class MazeEnvironment:
         max_body_length: int = 6,
         theme: Theme = Theme.ASCII,
         action_set: list[Action] = DEFAULT_ACTIONS,
+        rich_style_config: DarkColorRichStyleConfig | None = None,
     ) -> None:
         if grid_size < MIN_GRID_SIZE:
             error_message = (
@@ -133,6 +138,7 @@ class MazeEnvironment:
         self.current_direction = Direction.UP  # Initialize the agent's direction
         self.theme = theme
         self.action_set = action_set
+        self.rich_style_config = rich_style_config or DarkColorRichStyleConfig()
 
     def get_state(
         self,
@@ -293,12 +299,106 @@ class MazeEnvironment:
         agent_symbol = getattr(symbols, self.current_direction.value, "@")
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
+        # Handle Rich theme
+        if self.theme == Theme.RICH:
+            return self._render_rich(grid)
+
         # Handle different spacing for different themes
         if self.theme == Theme.EMOJI:
             return ["".join(row) for row in reversed(grid)] + [""]
-        if self.theme in (Theme.UNICODE, Theme.RICH):
+        if self.theme == Theme.UNICODE:
             return [" ".join(row) for row in reversed(grid)] + [""]
+        if self.theme == Theme.RICH:
+            return ["".join(row) for row in reversed(grid)] + [""]
         return [" ".join(row) for row in reversed(grid)] + [""]
+
+    def _render_rich(self, grid: list[list[str]]) -> list[str]:
+        """Render the grid with Rich styling and colors as strings."""
+        # Calculate the minimum width needed for the table
+        # Each cell is 1 char + borders
+        table_width = (self.grid_size * 4) + 1
+
+        # Create a console with exactly the width we need
+        console = Console(
+            record=True,
+            width=table_width,
+            legacy_windows=False,
+            force_terminal=True,
+        )
+
+        symbols = THEME_SYMBOLS[self.theme]
+
+        # Create a Rich table with minimal styling
+        table = Table(
+            show_header=False,
+            show_lines=True,
+            box=box.SQUARE,
+            padding=(0, 0),
+            pad_edge=False,
+            style=self.rich_style_config.grid_background,
+        )
+
+        # Add columns with exact sizing
+        for _ in range(self.grid_size):
+            table.add_column(
+                justify="center",
+                width=3,
+                min_width=3,
+                max_width=3,
+                no_wrap=True,
+            )
+
+        # Add rows (reversed because we display from top to bottom)
+        for row in reversed(grid):
+            styled_cells = []
+            for cell in row:
+                if cell == symbols.goal:
+                    styled_cell = RichText(cell, style=self.rich_style_config.goal_style)
+                elif cell == symbols.body:
+                    styled_cell = RichText(cell, style=self.rich_style_config.body_style)
+                elif cell in [symbols.up, symbols.down, symbols.left, symbols.right]:
+                    styled_cell = RichText(cell, style=self.rich_style_config.agent_style)
+                else:  # empty cell
+                    styled_cell = RichText(
+                        cell if cell != " " else "·",
+                        style=self.rich_style_config.empty_style,
+                    )
+                styled_cells.append(styled_cell)
+
+            table.add_row(*styled_cells)
+
+        # Render the table to string
+        with console.capture() as capture:
+            console.print(table, crop=True)
+
+        # Get the output and strip any trailing whitespace from each line
+        output_lines = capture.get().splitlines()
+        cleaned_lines = [line.rstrip() for line in output_lines if line.strip()]
+
+        return [*cleaned_lines, ""]
+
+    def print_rich(self) -> None:
+        """Print the grid using Rich console with colors (Rich theme only)."""
+        console = Console()
+
+        symbols = THEME_SYMBOLS[self.theme]
+
+        grid = [[symbols.empty for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        grid[self.goal[1]][self.goal[0]] = symbols.goal
+
+        for segment in self.body:
+            grid[segment[1]][segment[0]] = symbols.body
+
+        agent_symbol = getattr(symbols, self.current_direction.value, "@")
+        grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol
+
+        styled_grid = self._render_rich(grid)
+
+        for row in styled_grid:
+            if row:  # Skip empty rows
+                console.print(" ".join(str(cell) for cell in row))
+            else:
+                console.print()
 
     def copy(self) -> "MazeEnvironment":
         """

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.report.dtypes import PerformanceMetrics
-from quantumnematode.theme import DEFAULT_THEME, Theme
+from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 
 from .brain.arch import Brain, BrainParams
 from .env import Direction, MazeEnvironment
@@ -86,6 +86,7 @@ class QuantumNematodeAgent:
         maze_grid_size: int = DEFAULT_MAZE_GRID_SIZE,
         max_body_length: int = DEFAULT_MAX_AGENT_BODY_LENGTH,
         theme: Theme = DEFAULT_THEME,
+        rich_style_config: DarkColorRichStyleConfig | None = None,
     ) -> None:
         """
         Initialize the quantum nematode agent.
@@ -102,6 +103,7 @@ class QuantumNematodeAgent:
             grid_size=maze_grid_size,
             max_body_length=max_body_length,
             theme=theme,
+            rich_style_config=rich_style_config,
         )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
@@ -603,6 +605,7 @@ class QuantumNematodeAgent:
             grid_size=self.env.grid_size,
             max_body_length=self.max_body_length,
             theme=self.env.theme,
+            rich_style_config=self.env.rich_style_config,
         )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
