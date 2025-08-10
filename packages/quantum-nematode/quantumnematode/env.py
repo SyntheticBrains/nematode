@@ -301,7 +301,7 @@ class MazeEnvironment:
 
         # Handle Rich themes
         if self.theme in (Theme.RICH, Theme.EMOJI_RICH):
-            return self._render_rich(grid)
+            return self._render_rich(grid, theme=self.theme)
 
         # Handle different spacing for different themes
         if self.theme == Theme.EMOJI:
@@ -312,11 +312,12 @@ class MazeEnvironment:
             return ["".join(row) for row in reversed(grid)] + [""]
         return [" ".join(row) for row in reversed(grid)] + [""]
 
-    def _render_rich(self, grid: list[list[str]]) -> list[str]:
+    def _render_rich(self, grid: list[list[str]], theme: Theme) -> list[str]:
         """Render the grid with Rich styling and colors as strings."""
+        width_extra_pad = 1 if theme == Theme.EMOJI_RICH else 0
         # Calculate the minimum width needed for the table
         # Each cell is 1 char + borders
-        table_width = (self.grid_size * 4) + 1
+        table_width = (self.grid_size * (4 + width_extra_pad)) + 1
 
         # Create a console with exactly the width we need
         console = Console(
@@ -342,9 +343,9 @@ class MazeEnvironment:
         for _ in range(self.grid_size):
             table.add_column(
                 justify="center",
-                width=3,
-                min_width=3,
-                max_width=3,
+                width=3 + width_extra_pad,
+                min_width=3 + width_extra_pad,
+                max_width=3 + width_extra_pad,
                 no_wrap=True,
             )
 
@@ -360,8 +361,9 @@ class MazeEnvironment:
                     styled_cell = RichText(cell, style=self.rich_style_config.agent_style)
                 else:  # empty cell
                     styled_cell = RichText(
-                        cell if cell != " " else "·",
+                        cell,
                         style=self.rich_style_config.empty_style,
+                        justify="center",
                     )
                 styled_cells.append(styled_cell)
 
@@ -392,7 +394,7 @@ class MazeEnvironment:
         agent_symbol = getattr(symbols, self.current_direction.value, "@")
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol
 
-        styled_grid = self._render_rich(grid)
+        styled_grid = self._render_rich(grid, theme=self.theme)
 
         for row in styled_grid:
             if row:  # Skip empty rows
