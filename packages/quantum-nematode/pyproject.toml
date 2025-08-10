@@ -40,10 +40,5 @@ conflicts = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[dependency-groups]
-dev = [
-    "pytest>=8.4.1",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["quantumnematode"]
