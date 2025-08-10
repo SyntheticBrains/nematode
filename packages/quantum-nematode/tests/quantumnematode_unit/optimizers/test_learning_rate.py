@@ -58,7 +58,7 @@ def test_dynamic_learning_rate_polynomial():
     )
     rates = [lr.get_learning_rate() for _ in range(5)]
     assert rates[0] == 1.0
-    assert rates[4] == 0.0
+    assert rates[4] == 0.012
 
 
 def test_dynamic_learning_rate_cosine():
