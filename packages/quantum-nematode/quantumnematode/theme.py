@@ -117,7 +117,7 @@ THEME_SYMBOLS = {
         down="▼",
         left="◀",
         right="▶",
-        empty=" ",
+        empty="·",
     ),
     Theme.EMOJI_RICH: ThemeSymbolSet(
         goal=" 🦠",
