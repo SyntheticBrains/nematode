@@ -293,9 +293,11 @@ class MazeEnvironment:
         agent_symbol = getattr(symbols, self.current_direction.value, "@")
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
-        # For emoji theme, join with empty string to avoid extra spaces
+        # Handle different spacing for different themes
         if self.theme == Theme.EMOJI:
             return ["".join(row) for row in reversed(grid)] + [""]
+        if self.theme in (Theme.UNICODE, Theme.RICH):
+            return [" ".join(row) for row in reversed(grid)] + [""]
         return [" ".join(row) for row in reversed(grid)] + [""]
 
     def copy(self) -> "MazeEnvironment":

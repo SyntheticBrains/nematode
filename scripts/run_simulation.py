@@ -129,8 +129,15 @@ def parse_arguments() -> argparse.Namespace:
         "--theme",
         type=str,
         default=Theme.ASCII.value,
-        choices=[Theme.ASCII.value, Theme.EMOJI.value],
-        help="Maze rendering theme: 'ascii' (default) or 'emoji' for emoji-based rendering.",
+        choices=[
+            Theme.ASCII.value,
+            Theme.EMOJI.value,
+            Theme.UNICODE.value,
+            Theme.COLORED_ASCII.value,
+            Theme.RICH.value,
+        ],
+        help="Maze rendering theme: 'ascii' (default), "
+        "'emoji', 'unicode', 'colored_ascii', or 'rich'.",
     )
     parser.add_argument(
         "--optimize",
