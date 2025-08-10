@@ -13,6 +13,7 @@ class Theme(str, Enum):
     UNICODE = "unicode"
     COLORED_ASCII = "colored_ascii"
     RICH = "rich"
+    EMOJI_RICH = "emoji_rich"
 
 
 DEFAULT_THEME = Theme.ASCII
@@ -116,6 +117,15 @@ THEME_SYMBOLS = {
         down="▼",
         left="◀",
         right="▶",
+        empty=" ",
+    ),
+    Theme.EMOJI_RICH: ThemeSymbolSet(
+        goal=" 🦠",
+        body=" 🔵",
+        up=" 🔼",
+        down=" 🔽",
+        left="◀️",
+        right="▶️",
         empty=" ",
     ),
 }

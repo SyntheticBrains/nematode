@@ -299,8 +299,8 @@ class MazeEnvironment:
         agent_symbol = getattr(symbols, self.current_direction.value, "@")
         grid[self.agent_pos[1]][self.agent_pos[0]] = agent_symbol  # Mark the agent
 
-        # Handle Rich theme
-        if self.theme == Theme.RICH:
+        # Handle Rich themes
+        if self.theme in (Theme.RICH, Theme.EMOJI_RICH):
             return self._render_rich(grid)
 
         # Handle different spacing for different themes
