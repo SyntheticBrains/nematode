@@ -33,6 +33,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 if TYPE_CHECKING:
+    from qiskit.primitives import PrimitiveResult
     from qiskit.providers import BackendV2
     from qiskit_aer import AerSimulator
 
@@ -415,7 +416,7 @@ class ModularBrain(QuantumBrain):
 
         return actions
 
-    def _execute_qctrl_sampler_job(self, sampler_pubs: list[tuple]) -> list:
+    def _execute_qctrl_sampler_job(self, sampler_pubs: list[tuple]) -> "PrimitiveResult":
         """
         Execute a Q-CTRL Qiskit Function sampler job using the provided sampler publications.
 
@@ -425,7 +426,7 @@ class ModularBrain(QuantumBrain):
 
         Returns
         -------
-            list: The results obtained from executing the Q-CTRL sampler job.
+            PrimitiveResult: The results obtained from executing the Q-CTRL sampler job.
 
         Raises
         ------
@@ -457,7 +458,7 @@ class ModularBrain(QuantumBrain):
         result = qctrl_sampler_job.result()
         logger.info("Q-CTRL sampler job results retrieved successfully")
 
-        return result
+        return result  # type: ignore[reportReturnType]
 
     def _interpret_counts(
         self,
