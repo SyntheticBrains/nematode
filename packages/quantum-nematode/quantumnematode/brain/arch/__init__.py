@@ -3,6 +3,7 @@
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
 from .mlp import MLPBrain, MLPBrainConfig
 from .modular import ModularBrain, ModularBrainConfig
+from .qmlp import QMLPBrain, QMLPBrainConfig
 
 __all__ = [
     "Brain",
@@ -13,5 +14,7 @@ __all__ = [
     "MLPBrainConfig",
     "ModularBrain",
     "ModularBrainConfig",
+    "QMLPBrain",
+    "QMLPBrainConfig",
     "QuantumBrain",
 ]
