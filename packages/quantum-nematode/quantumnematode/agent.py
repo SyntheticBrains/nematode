@@ -27,11 +27,11 @@ DEFAULT_PENALTY_STEP = 0.05
 DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
-DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS = 4
-DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS = 16
-DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS = 1.0
-DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS = 2
-DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE = True
+DEFAULT_MANYWORLDS_MODE_MAX_COLUMNS = 4
+DEFAULT_MANYWORLDS_MODE_MAX_SUPERPOSITIONS = 16
+DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS = 1.0
+DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS = 2
+DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE = True
 DEFAULT_STUCK_POSITION_THRESHOLD = 2
 
 
@@ -54,14 +54,14 @@ class RewardConfig(BaseModel):
     reward_goal: float = DEFAULT_REWARD_GOAL
 
 
-class SuperpositionModeConfig(BaseModel):
-    """Configuration for the superposition mode."""
+class ManyworldsModeConfig(BaseModel):
+    """Configuration for the many-worlds mode."""
 
-    max_superpositions: int = DEFAULT_SUPERPOSITION_MODE_MAX_SUPERPOSITIONS
-    max_columns: int = DEFAULT_SUPERPOSITION_MODE_MAX_COLUMNS
-    render_sleep_seconds: float = DEFAULT_SUPERPOSITION_MODE_RENDER_SLEEP_SECONDS
-    top_n_actions: int = DEFAULT_SUPERPOSITION_MODE_TOP_N_ACTIONS
-    top_n_randomize: bool = DEFAULT_SUPERPOSITION_MODE_TOP_N_RANDOMIZE
+    max_superpositions: int = DEFAULT_MANYWORLDS_MODE_MAX_SUPERPOSITIONS
+    max_columns: int = DEFAULT_MANYWORLDS_MODE_MAX_COLUMNS
+    render_sleep_seconds: float = DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS
+    top_n_actions: int = DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS
+    top_n_randomize: bool = DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE
 
 
 class QuantumNematodeAgent:
@@ -316,42 +316,46 @@ class QuantumNematodeAgent:
 
         return self.path
 
-    def run_superposition_mode(  # noqa: C901, PLR0912, PLR0915
+    def run_manyworlds_mode(  # noqa: C901, PLR0912, PLR0915
         self,
-        config: SuperpositionModeConfig,
+        config: ManyworldsModeConfig,
         reward_config: RewardConfig,
         max_steps: int = DEFAULT_MAX_STEPS,
         *,
         show_last_frame_only: bool = False,
     ) -> list[tuple]:
         """
-        Run the agent in superposition mode.
+        Run the agent in many-worlds mode.
+
+        Runs the agent in "many-worlds mode", inspired by the many-worlds interpretation in
+        quantum mechanics, where all possible outcomes of a decision are explored in parallel.
+        In this mode, the agent simulates multiple parallel universes by branching at each step
+        according to the top N actions, visualizing how different choices lead to divergent paths
+        and outcomes.
+
+        At each step, the agent considers the top N actions (as set in the configuration) and
+        creates new superpositions (parallel environments) for each action, up to a maximum number
+        of superpositions. This allows users to observe how the agent's trajectory diverges based
+        on different decisions, providing insight into the agent's decision-making process and the
+        landscape of possible futures.
 
         Parameters
         ----------
+        config : ManyworldsModeConfig
+            Configuration for many-worlds mode, including rendering and branching options.
         reward_config : RewardConfig
             Configuration for the reward system.
-        max_steps : int
-            Maximum number of steps for the episode.
-        max_superpositions : int
-            Maximum number of superpositions to maintain.
-        max_columns : int
-            Maximum number of columns to render side by side.
-        render_sleep_seconds : float
-            Seconds to wait before rendering the next frame.
-        top_n_actions : int
-            Number of top actions to consider at each step.
+        max_steps : int, optional
+            Maximum number of steps for the episode (default: DEFAULT_MAX_STEPS).
         show_last_frame_only : bool, optional
             Whether to show only the last frame of the simulation.
-        top_n_randomize : bool, optional
-            Whether to randomize the top N actions.
 
         Returns
         -------
         list[tuple]
-            The path taken by the agent during the episode.
+            The paths taken by the agent during the episode, representing the explored branches.
         """
-        # Initialize superposition mode
+        # Initialize many-worlds mode
         self.env.current_direction = Direction.UP
 
         if show_last_frame_only:
@@ -370,7 +374,7 @@ class QuantumNematodeAgent:
         time.sleep(config.render_sleep_seconds)  # Wait before the next render
 
         logger.info(
-            "Superposition mode enabled. "
+            "Many-worlds mode enabled. "
             f"Visualizing top {config.top_n_actions} decisions at each step.",
         )
         superpositions = [(self.brain.copy(), self.env.copy(), self.path.copy())]
@@ -386,7 +390,7 @@ class QuantumNematodeAgent:
                     env_copy,
                     path_copy,
                     max_steps=max_steps,
-                    stuck_position_count=0,  # Superposition mode doesn't track stuck positions
+                    stuck_position_count=0,  # Many-worlds mode doesn't track stuck positions
                 )
 
                 agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
@@ -493,7 +497,7 @@ class QuantumNematodeAgent:
                 logger.info(msg)
                 print(msg)  # noqa: T201
                 sys.exit(0)  # Exit the program
-        msg = "Superposition mode completed as maximum number of steps reached."
+        msg = "Many-worlds mode completed as maximum number of steps reached."
         logger.info(msg)
         print(msg)  # noqa: T201
         sys.exit(0)  # Exit the program

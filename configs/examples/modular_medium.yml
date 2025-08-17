@@ -28,7 +28,7 @@ reward:
   penalty_anti_dithering: 0.05
   penalty_stuck_position: 0.05
   stuck_position_threshold: 2
-superposition_mode:
+manyworlds_mode:
   max_superpositions: 32
   max_columns: 8
   render_sleep_seconds: 0.5

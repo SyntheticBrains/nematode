@@ -6,8 +6,8 @@ import yaml
 from pydantic import BaseModel
 
 from quantumnematode.agent import (
+    ManyworldsModeConfig,
     RewardConfig,
-    SuperpositionModeConfig,
 )
 from quantumnematode.brain.arch.mlp import MLPBrainConfig
 from quantumnematode.brain.arch.modular import ModularBrainConfig
@@ -96,7 +96,7 @@ class SimulationConfig(BaseModel):
     gradient: GradientConfig | None = None
     reward: RewardConfig | None = None
     modules: Modules | None = None
-    superposition_mode: SuperpositionModeConfig | None = None
+    manyworlds_mode: ManyworldsModeConfig | None = None
 
 
 def load_simulation_config(config_path: str) -> SimulationConfig:
@@ -263,19 +263,19 @@ def configure_gradient_method(
     return grad_cfg.method or gradient_method
 
 
-def configure_superposition_mode(config: SimulationConfig) -> SuperpositionModeConfig:
+def configure_manyworlds_mode(config: SimulationConfig) -> ManyworldsModeConfig:
     """
-    Configure the superposition mode based on the provided configuration.
+    Configure the many-worlds mode based on the provided configuration.
 
     Args:
         config (SimulationConfig): Simulation configuration object.
 
     Returns
     -------
-        SuperpositionModeConfig: The configured superposition mode object.
+        ManyworldsModeConfig: The configured many-worlds mode object.
     """
-    sp_cfg = config.superposition_mode or SuperpositionModeConfig()
-    return SuperpositionModeConfig(
+    sp_cfg = config.manyworlds_mode or ManyworldsModeConfig()
+    return ManyworldsModeConfig(
         max_superpositions=sp_cfg.max_superpositions,
         max_columns=sp_cfg.max_columns,
         render_sleep_seconds=sp_cfg.render_sleep_seconds,
