@@ -8,7 +8,7 @@ Key Features:
 - **Deep Q-Learning**: Uses neural networks to approximate Q-values for state-action pairs
 - **Target Networks**: Maintains separate target network for stable Q-learning updates
 - **Epsilon-Greedy Exploration**: Balances exploration vs exploitation with decaying epsilon
-- **Experience-Based Learning**: Updates Q-values based on observed state transitions and rewards
+- **Experience Replay**: Uses experience buffer for stable batch learning
 - **Gradient Clipping**: Prevents training instability through bounded gradient updates
 
 Architecture:
@@ -18,18 +18,21 @@ Architecture:
 
 The QMLP brain learns by:
 1. Observing current state and selecting action via epsilon-greedy policy
-2. Experiencing reward and next state from environment
-3. Computing Q-learning target: reward + gamma * max(Q(next_state))
-4. Updating main network to minimize TD error
-5. Periodically copying weights to target network for stability
+2. Storing experience (state, action, reward, next_state) in replay buffer
+3. Sampling random batch from buffer for learning
+4. Computing Q-learning targets using target network
+5. Updating main network to minimize TD error
+6. Periodically copying weights to target network for stability
 
-This approach typically provides more stable and sample-efficient learning compared
+This approach provides more stable and sample-efficient learning compared
 to policy gradient methods for discrete action spaces like grid navigation.
 """
 
 import numpy as np
 import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
+from collections import deque
+import random
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
@@ -50,6 +53,8 @@ class QMLPBrainConfig(BrainConfig):
     gamma: float = 0.95  # Discount factor
     target_update_freq: int = 100  # How often to update target network
     num_hidden_layers: int = 2
+    buffer_size: int = 10000  # Experience replay buffer size
+    batch_size: int = 32  # Batch size for training
 
 
 class QMLPBrain(ClassicalBrain):
@@ -96,6 +101,11 @@ class QMLPBrain(ClassicalBrain):
         self.gamma = config.gamma
         self.target_update_freq = config.target_update_freq
         self.update_count = 0
+        
+        # Experience replay buffer
+        self.buffer_size = config.buffer_size
+        self.batch_size = config.batch_size
+        self.experience_buffer = deque(maxlen=self.buffer_size)
 
         self.satiety = 1.0
         self.training = True
@@ -194,27 +204,47 @@ class QMLPBrain(ClassicalBrain):
         params: BrainParams,
         reward: float,
     ) -> None:
-        """Q-learning update."""
+        """Q-learning update with experience replay."""
         if self.last_state is None or self.last_action is None:
             return  # No previous state to learn from
 
-        # Current state Q-values (for next Q-value)
+        # Store experience in buffer
         current_state = self.preprocess(params)
+        is_terminal = reward >= 1.0
+        
+        experience = (
+            self.last_state.copy(),  # state
+            self.last_action,        # action  
+            reward,                  # reward
+            current_state.copy(),    # next_state
+            is_terminal              # done
+        )
+        self.experience_buffer.append(experience)
+        
+        # Only train if we have enough experiences
+        if len(self.experience_buffer) < self.batch_size:
+            return
+            
+        # Sample batch from experience buffer
+        batch = random.sample(self.experience_buffer, self.batch_size)
+        states = torch.tensor([exp[0] for exp in batch], dtype=torch.float32, device=self.device)
+        actions = torch.tensor([exp[1] for exp in batch], dtype=torch.long, device=self.device)
+        rewards = torch.tensor([exp[2] for exp in batch], dtype=torch.float32, device=self.device)
+        next_states = torch.tensor([exp[3] for exp in batch], dtype=torch.float32, device=self.device)
+        dones = torch.tensor([exp[4] for exp in batch], dtype=torch.bool, device=self.device)
+        
+        # Current Q-values for selected actions
+        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
+        
+        # Next Q-values from target network
         with torch.no_grad():
-            current_q_values = self.forward(current_state)
-            next_q_value = torch.max(current_q_values).item()
-
-        # Q-learning target
-        target_q_value = reward + self.gamma * next_q_value
-
-        # Recompute Q-values for the previous state to get gradients
-        last_state_tensor = torch.from_numpy(self.last_state).float().to(self.device)
-        previous_q_values = self.q_network(last_state_tensor)
-        current_q_value = previous_q_values[int(self.last_action)]
-
+            next_q_values = self.target_q_network(next_states).max(1)[0]
+            # Set next Q-value to 0 for terminal states
+            next_q_values[dones] = 0.0
+            target_q_values = rewards + (self.gamma * next_q_values)
+        
         # Compute loss
-        target_tensor = torch.tensor(target_q_value, device=self.device, dtype=torch.float32)
-        loss = self.loss_fn(current_q_value, target_tensor)
+        loss = self.loss_fn(current_q_values.squeeze(), target_q_values)
 
         # Update network
         self.optimizer.zero_grad()
