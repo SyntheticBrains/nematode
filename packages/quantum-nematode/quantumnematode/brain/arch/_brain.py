@@ -191,6 +191,4 @@ class ClassicalBrain(Brain, Protocol):
         params: BrainParams,
         action_idx: int,
         reward: float,
-        episode_rewards: list[float] | None,
-        gamma: float | None = None,
     ) -> None: ...

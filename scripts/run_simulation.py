@@ -18,10 +18,10 @@ from quantumnematode.brain.arch import (
     Brain,
     MLPBrainConfig,
     ModularBrainConfig,
+    QMLPBrainConfig,
     QuantumBrain,
 )
 from quantumnematode.brain.arch.dtypes import (
-    CLASSICAL_BRAIN_TYPES,
     DEFAULT_BRAIN_TYPE,
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
@@ -178,6 +178,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             brain_config = ModularBrainConfig()
         case BrainType.MLP:
             brain_config = MLPBrainConfig()
+        case BrainType.QMLP:
+            brain_config = QMLPBrainConfig()
 
     # Authenticate and setup Q-CTRL if needed
     perf_mgmt = None
@@ -434,7 +436,8 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
         logger.error(error_message)
         raise ValueError(error_message)
 
-    if brain_type in CLASSICAL_BRAIN_TYPES and qubits != DEFAULT_QUBITS:
+    # Validate qubits parameter for classical brain types
+    if brain_type in (BrainType.MLP, BrainType.QMLP) and qubits != DEFAULT_QUBITS:
         error_message = (
             f"The 'qubits' parameter is only supported by "
             "quantum brain architectures. "
@@ -446,7 +449,7 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
 
 def setup_brain_model(  # noqa: PLR0913
     brain_type: BrainType,
-    brain_config: ModularBrainConfig | MLPBrainConfig,
+    brain_config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
     device: DeviceType,
@@ -458,8 +461,7 @@ def setup_brain_model(  # noqa: PLR0913
     Set up the brain model based on the specified brain type.
 
     Args:
-        brain_type (str): The type of brain architecture to use. Options include
-            "modular" and "mlp".
+        brain_type (str): The type of brain architecture to use.
         brain_config (BrainConfig): Configuration for the brain architecture.
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for "modular" brain).
@@ -519,6 +521,23 @@ def setup_brain_model(  # noqa: PLR0913
             input_dim=2,
             num_actions=4,
             lr_scheduler=True,
+            device=device,
+        )
+    elif brain_type == BrainType.QMLP:
+        from quantumnematode.brain.arch.qmlp import QMLPBrain
+
+        if not isinstance(brain_config, QMLPBrainConfig):
+            error_message = (
+                "The 'qmlp' brain architecture requires a QMLPBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QMLPBrain(
+            config=brain_config,
+            input_dim=2,
+            num_actions=4,
             device=device,
         )
     else:

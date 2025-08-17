@@ -11,6 +11,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch.mlp import MLPBrainConfig
 from quantumnematode.brain.arch.modular import ModularBrainConfig
+from quantumnematode.brain.arch.qmlp import QMLPBrainConfig
 from quantumnematode.brain.modules import Modules
 from quantumnematode.logging_config import (
     logger,
@@ -45,7 +46,7 @@ class BrainContainerConfig(BaseModel):
     """Configuration for the brain architecture."""
 
     name: str
-    config: ModularBrainConfig | MLPBrainConfig | None = None
+    config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | None = None
 
 
 class LearningRateParameters(BaseModel):
@@ -115,7 +116,9 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
         return SimulationConfig(**data)
 
 
-def configure_brain(config: SimulationConfig) -> ModularBrainConfig | MLPBrainConfig:
+def configure_brain(  # noqa: C901
+    config: SimulationConfig,
+) -> ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig:
     """
     Configure the brain architecture based on the provided configuration.
 
@@ -156,6 +159,17 @@ def configure_brain(config: SimulationConfig) -> ModularBrainConfig | MLPBrainCo
             error_message = (
                 "Invalid brain configuration for 'mlp' brain type. "
                 f"Expected MLPBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case "qmlp":
+            if config.brain.config is None:
+                return QMLPBrainConfig()
+            if isinstance(config.brain.config, QMLPBrainConfig):
+                return config.brain.config
+            error_message = (
+                "Invalid brain configuration for 'qmlp' brain type. "
+                f"Expected QMLPBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
