@@ -1,10 +1,30 @@
 """
-Classical Multi-Layer Perceptron (MLP) Brain Architecture.
+Policy Gradient Multi-Layer Perceptron (MLP) Brain Architecture.
 
-This architecture uses a simple MLP policy network to process the agent's state and
-select actions based on learned policies.
-It supports GPU acceleration via PyTorch and includes features for training,
-action selection, and reward-based learning.
+This architecture implements a REINFORCE-style policy gradient approach using a classical
+multi-layer perceptron to learn optimal action policies for navigation tasks.
+
+Key Features:
+- **Policy Gradients**: Directly optimizes action selection policy using REINFORCE algorithm
+- **Baseline Subtraction**: Uses running average baseline for variance reduction
+- **Entropy Regularization**: Encourages exploration through entropy bonus
+- **Experience Buffering**: Collects episode trajectories for batch updates
+- **Adaptive Learning**: Learning rate scheduling and gradient clipping for stability
+
+Architecture:
+- Input: 2D state features (gradient strength, relative direction to goal)
+- Hidden: Configurable MLP layers with ReLU activation
+- Output: Action probabilities via softmax (forward, left, right, stay)
+
+The MLP brain learns by:
+1. Collecting complete episode trajectories of state-action-reward sequences
+2. Computing discounted returns for each time step
+3. Updating policy to increase probability of good actions (high return)
+4. Using baseline subtraction and entropy regularization for stability
+5. Performing batch updates for more stable learning
+
+This approach learns policies directly but can be less sample-efficient than value-based
+methods like Q-learning, especially for environments with sparse or delayed rewards.
 """
 
 import numpy as np
@@ -27,6 +47,7 @@ DEFAULT_ENTROPY_BETA = 0.01
 DEFAULT_BASELINE = 0.0
 DEFAULT_BASELINE_ALPHA = 0.05
 DEFAULT_GAMMA = 0.99
+DEFAULT_MAX_EPISODE_LENGTH = 1000
 
 
 class MLPBrainConfig(BrainConfig):
@@ -76,7 +97,7 @@ class MLPBrain(ClassicalBrain):
         )
         self.optimizer = optim.Adam(self.policy.parameters(), lr=config.learning_rate)
         if lr_scheduler is None:
-            lr_scheduler = False
+            lr_scheduler = True
         self.lr_scheduler = (
             optim.lr_scheduler.StepLR(
                 self.optimizer,
@@ -100,6 +121,16 @@ class MLPBrain(ClassicalBrain):
 
         # Discount factor for future rewards
         self.gamma = config.gamma
+
+        # Episode buffer for batch learning
+        self.episode_states = []
+        self.episode_actions = []
+        self.episode_rewards = []
+        self.episode_log_probs = []
+
+        # Learning frequency control
+        self.steps_since_update = 0
+        self.update_frequency = 5  # Update every N steps for stability
 
     def _build_network(self, hidden_dim: int, num_hidden_layers: int) -> nn.Sequential:
         layers = [nn.Linear(self.input_dim, hidden_dim), nn.ReLU()]
@@ -183,17 +214,38 @@ class MLPBrain(ClassicalBrain):
         """Run the policy network and select an action."""
         x = self.preprocess(params)
         logits = self.forward(x)
+
+        # Add exploration noise to logits for better exploration
+        if self.training:
+            noise_std = 0.1  # Small amount of noise
+            noise = torch.normal(0, noise_std, size=logits.shape).to(self.device)
+            logits = logits + noise
+
         probs = torch.softmax(logits, dim=-1)
         probs_np = probs.detach().cpu().numpy()
+
+        # Use temperature sampling for better exploration
+        temperature = 1.2 if self.training else 1.0
+        probs_temp = torch.softmax(logits / temperature, dim=-1)
+        probs_temp_np = probs_temp.detach().cpu().numpy()
+
         rng = np.random.default_rng()
-        action_idx = rng.choice(self.num_actions, p=probs_np)
+        action_idx = rng.choice(self.num_actions, p=probs_temp_np)
         action_name = self.action_set[action_idx]
+
+        # Store log probability for learning (using original probs, not temperature)
+        log_prob = torch.log(probs[action_idx] + 1e-8)
 
         self.latest_data.action = ActionData(
             state=action_name,
             action=action_name,
             probability=probs_np[action_idx],
         )
+
+        # Store for episode-based learning
+        self.episode_states.append(x)
+        self.episode_actions.append(action_idx)
+        self.episode_log_probs.append(log_prob)
 
         self.current_probabilities = probs_np
         first_prob = float(probs_np[action_idx])
@@ -247,45 +299,118 @@ class MLPBrain(ClassicalBrain):
 
     def learn(
         self,
-        params: BrainParams,
-        action_idx: int,
+        params: BrainParams,  # noqa: ARG002
         reward: float,
-        episode_rewards: list[float] | None = None,
-        gamma: float | None = None,
     ) -> None:
-        """Perform a policy gradient update step with baseline and discounted return."""
-        x = self.preprocess(params)
-        logits = self.forward(x)
-        probs = torch.softmax(logits, dim=-1)
-        log_prob = torch.log(probs[action_idx] + 1e-8)
-        entropy = -torch.sum(probs * torch.log(probs + 1e-8))
+        """Perform policy gradient learning with episode buffering."""
+        # Store the reward for this step
+        self.episode_rewards.append(reward)
+        self.steps_since_update += 1
 
-        # Use discounted return if provided, else use immediate reward
-        if episode_rewards is None and self.history_data.rewards is not None:
-            episode_rewards = self.history_data.rewards
-        if episode_rewards is not None:
-            g = self.compute_discounted_return(
-                episode_rewards,
-                gamma=gamma if gamma is not None else self.gamma,
-            )
-        else:
-            g = reward
+        # Check if episode is done (goal reached or max steps)
+        episode_done = (
+            reward > 1.0  # Large positive reward indicates goal
+            or self.steps_since_update >= DEFAULT_MAX_EPISODE_LENGTH  # Max episode length
+            or len(self.episode_rewards) >= self.update_frequency
+        )
 
-        # Subtract baseline from return
-        advantage = g - self.baseline
-        loss = -log_prob * advantage - self.entropy_beta * entropy
+        if episode_done and len(self.episode_rewards) > 0:
+            self._perform_policy_update()
+            self._reset_episode_buffer()
+
+        # Store for history tracking
+        if hasattr(self.latest_data, "loss") and self.latest_data.loss is not None:
+            self.history_data.losses.append(self.latest_data.loss)
+        self.history_data.rewards.append(reward)
+
+    def _perform_policy_update(self) -> None:
+        """Perform the actual policy gradient update using collected episode data."""
+        if len(self.episode_states) == 0:
+            return
+
+        # Ensure all lists have the same length
+        min_length = min(
+            len(self.episode_states),
+            len(self.episode_actions),
+            len(self.episode_rewards),
+            len(self.episode_log_probs),
+        )
+
+        if min_length == 0:
+            return
+
+        # Truncate all lists to the same length
+        self.episode_states = self.episode_states[:min_length]
+        self.episode_actions = self.episode_actions[:min_length]
+        self.episode_rewards = self.episode_rewards[:min_length]
+        self.episode_log_probs = self.episode_log_probs[:min_length]
+
+        # Compute discounted returns
+        returns = []
+        discounted_return = 0
+        for reward in reversed(self.episode_rewards):
+            discounted_return = reward + self.gamma * discounted_return
+            returns.insert(0, discounted_return)
+
+        # Convert to tensor and normalize
+        returns = torch.tensor(returns, dtype=torch.float32, device=self.device)
+        if len(returns) > 1:
+            returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+
+        # Update baseline (moving average of returns)
+        mean_return = returns.mean().item()
+        self.baseline = (
+            1 - self.baseline_alpha
+        ) * self.baseline + self.baseline_alpha * mean_return
+
+        # Compute advantages
+        advantages = returns - self.baseline
+
+        # Compute policy loss
+        policy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+        entropy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+
+        for t in range(len(self.episode_log_probs)):
+            # Policy gradient loss
+            policy_loss = policy_loss - self.episode_log_probs[t] * advantages[t]
+
+            # Entropy regularization (recompute for current state)
+            x = self.episode_states[t]
+            logits = self.forward(x)
+            probs = torch.softmax(logits, dim=-1)
+            entropy = -torch.sum(probs * torch.log(probs + 1e-8))
+            entropy_loss = entropy_loss - self.entropy_beta * entropy
+
+        # Total loss
+        total_loss = (policy_loss + entropy_loss) / len(self.episode_log_probs)
+
+        # Ensure we have a tensor and clip loss to prevent extreme updates
+        if not isinstance(total_loss, torch.Tensor):
+            total_loss = torch.tensor(total_loss, device=self.device, requires_grad=True)
+        total_loss = torch.clamp(total_loss, -10.0, 10.0)
+
+        # Backprop and update
         self.optimizer.zero_grad()
-        loss.backward()
+        total_loss.backward()
+
+        # Gradient clipping
+        torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+
         self.optimizer.step()
+
         if self.lr_scheduler:
             self.lr_scheduler.step()
-        self.latest_data.loss = loss.item()
 
-        self.history_data.rewards.append(reward)
-        self.history_data.losses.append(self.latest_data.loss)
+        # Store loss for tracking
+        self.latest_data.loss = total_loss.item()
 
-        # Update baseline (running average)
-        self.baseline = (1 - self.baseline_alpha) * self.baseline + self.baseline_alpha * g
+    def _reset_episode_buffer(self) -> None:
+        """Reset the episode buffer for the next episode."""
+        self.episode_states.clear()
+        self.episode_actions.clear()
+        self.episode_rewards.clear()
+        self.episode_log_probs.clear()
+        self.steps_since_update = 0
 
     def update_memory(
         self,
