@@ -189,6 +189,5 @@ class ClassicalBrain(Brain, Protocol):
     def learn(
         self,
         params: BrainParams,
-        action_idx: int,
         reward: float,
     ) -> None: ...
