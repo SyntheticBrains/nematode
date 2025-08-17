@@ -10,6 +10,7 @@ class BrainType(Enum):
     """Different types of brains."""
 
     MODULAR = "modular"
+    QMODULAR = "qmodular"
     MLP = "mlp"
     QMLP = "qmlp"
 
@@ -35,8 +36,8 @@ class BrainConfig(BaseModel):
     """Configuration for the brain architecture."""
 
 
-BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.MLP, BrainType.QMLP]
-QUANTUM_BRAIN_TYPES = Literal[BrainType.MODULAR]
+BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.QMODULAR, BrainType.MLP, BrainType.QMLP]
+QUANTUM_BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.QMODULAR]
 CLASSICAL_BRAIN_TYPES = Literal[BrainType.MLP, BrainType.QMLP]
 
 # Defaults

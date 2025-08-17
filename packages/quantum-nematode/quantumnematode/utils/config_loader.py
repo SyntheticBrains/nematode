@@ -9,9 +9,12 @@ from quantumnematode.agent import (
     ManyworldsModeConfig,
     RewardConfig,
 )
-from quantumnematode.brain.arch.mlp import MLPBrainConfig
-from quantumnematode.brain.arch.modular import ModularBrainConfig
-from quantumnematode.brain.arch.qmlp import QMLPBrainConfig
+from quantumnematode.brain.arch import (
+    MLPBrainConfig,
+    ModularBrainConfig,
+    QMLPBrainConfig,
+    QModularBrainConfig,
+)
 from quantumnematode.brain.modules import Modules
 from quantumnematode.logging_config import (
     logger,
@@ -46,7 +49,9 @@ class BrainContainerConfig(BaseModel):
     """Configuration for the brain architecture."""
 
     name: str
-    config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | None = None
+    config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig | None = (
+        None
+    )
 
 
 class LearningRateParameters(BaseModel):
@@ -116,9 +121,9 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
         return SimulationConfig(**data)
 
 
-def configure_brain(  # noqa: C901
+def configure_brain(  # noqa: C901, PLR0911, PLR0912
     config: SimulationConfig,
-) -> ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig:
+) -> ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig:
     """
     Configure the brain architecture based on the provided configuration.
 
@@ -127,7 +132,8 @@ def configure_brain(  # noqa: C901
 
     Returns
     -------
-        ModularBrainConfig | MLPBrainConfig: The configured brain architecture.
+        ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig:
+            The configured brain architecture.
     """
     if config.brain is None:
         error_message = "No brain configuration found in the simulation config."
@@ -148,6 +154,17 @@ def configure_brain(  # noqa: C901
             error_message = (
                 "Invalid brain configuration for 'modular' brain type. "
                 f"Expected ModularBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case "qmodular":
+            if config.brain.config is None:
+                return QModularBrainConfig()
+            if isinstance(config.brain.config, QModularBrainConfig):
+                return config.brain.config
+            error_message = (
+                "Invalid brain configuration for 'qmodular' brain type. "
+                f"Expected QModularBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)

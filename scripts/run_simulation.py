@@ -19,6 +19,7 @@ from quantumnematode.brain.arch import (
     MLPBrainConfig,
     ModularBrainConfig,
     QMLPBrainConfig,
+    QModularBrainConfig,
     QuantumBrain,
 )
 from quantumnematode.brain.arch.dtypes import (
@@ -180,6 +181,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             brain_config = MLPBrainConfig()
         case BrainType.QMLP:
             brain_config = QMLPBrainConfig()
+        case BrainType.QMODULAR:
+            brain_config = QModularBrainConfig()
 
     # Authenticate and setup Q-CTRL if needed
     perf_mgmt = None
@@ -427,7 +430,7 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
     ------
         ValueError: If the maze grid size is smaller than the minimum allowed size.
         ValueError: If the 'qubits' parameter is used with a brain type
-            other than 'modular'.
+            other than quantum based architectures.
     """
     if maze_grid_size < MIN_GRID_SIZE:
         error_message = (
@@ -447,9 +450,9 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
         raise ValueError(error_message)
 
 
-def setup_brain_model(  # noqa: PLR0913
+def setup_brain_model(  # noqa: C901, PLR0913
     brain_type: BrainType,
-    brain_config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig,
+    brain_config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
     device: DeviceType,
@@ -464,7 +467,7 @@ def setup_brain_model(  # noqa: PLR0913
         brain_type (str): The type of brain architecture to use.
         brain_config (BrainConfig): Configuration for the brain architecture.
         shots (int): The number of shots for quantum circuit execution.
-        qubits (int): The number of qubits to use (only applicable for "modular" brain).
+        qubits (int): The number of qubits to use (only applicable for quantum brain architectures).
         device (str): The device to use for simulation ("CPU" or "GPU").
         learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
             The learning rate configuration for the brain.
@@ -505,6 +508,32 @@ def setup_brain_model(  # noqa: PLR0913
             learning_rate=learning_rate,
             perf_mgmt=perf_mgmt,
         )
+    elif brain_type == BrainType.QMODULAR:
+        if not isinstance(brain_config, QModularBrainConfig):
+            error_message = (
+                "The 'qmodular' brain architecture requires a QModularBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        if not isinstance(learning_rate, DynamicLearningRate):
+            error_message = (
+                "The 'qmodular' brain architecture requires a DynamicLearningRate. "
+                f"Provided learning rate type: {type(learning_rate)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        from quantumnematode.brain.arch.qmodular import QModularBrain
+
+        brain = QModularBrain(
+            config=brain_config,
+            device=device,
+            shots=shots,
+            learning_rate=learning_rate,
+        )
+
     elif brain_type == BrainType.MLP:
         from quantumnematode.brain.arch.mlp import MLPBrain
 
