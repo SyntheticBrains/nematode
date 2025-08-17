@@ -61,13 +61,13 @@ from quantumnematode.report.summary import summary
 from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
+    ManyworldsModeConfig,
     RewardConfig,
-    SuperpositionModeConfig,
     configure_brain,
     configure_gradient_method,
     configure_learning_rate,
+    configure_manyworlds_mode,
     configure_reward,
-    configure_superposition_mode,
     load_simulation_config,
 )
 
@@ -113,11 +113,11 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         help="Path to the YAML configuration file.",
     )
-    # Update the argument parser to include a flag for superposition mode
+    # Update the argument parser to include a flag for many-worlds mode
     parser.add_argument(
-        "--superposition",
+        "--manyworlds",
         action="store_true",
-        help="Enable superposition mode to visualize top 2 decisions at each step. "
+        help="Enable many-worlds mode to visualize top 2 decisions at each step. "
         "Only one run is allowed in this mode.",
     )
     parser.add_argument(
@@ -154,7 +154,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     args = parse_arguments()
 
     config_file = args.config
-    superposition_mode = args.superposition
+    manyworlds_mode = args.manyworlds
     max_steps = DEFAULT_MAX_STEPS
     maze_grid_size = DEFAULT_MAZE_GRID_SIZE
     runs = args.runs
@@ -168,7 +168,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
     reward_config = RewardConfig()
-    superposition_mode_config = SuperpositionModeConfig()
+    manyworlds_mode_config = ManyworldsModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
     optimize_quantum_performance = args.optimize
@@ -219,8 +219,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load reward configuration if specified
         reward_config = configure_reward(config)
 
-        # Load superposition mode configuration if specified
-        superposition_mode_config = configure_superposition_mode(config)
+        # Load many-worlds mode configuration if specified
+        manyworlds_mode_config = configure_manyworlds_mode(config)
 
     validate_simulation_parameters(maze_grid_size, brain_type, qubits)
 
@@ -279,10 +279,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     total_runs_done = 0
 
-    if superposition_mode:
+    if manyworlds_mode:
         try:
-            agent.run_superposition_mode(
-                config=superposition_mode_config,
+            agent.run_manyworlds_mode(
+                config=manyworlds_mode_config,
                 reward_config=reward_config,
                 max_steps=max_steps,
                 show_last_frame_only=show_last_frame_only,
