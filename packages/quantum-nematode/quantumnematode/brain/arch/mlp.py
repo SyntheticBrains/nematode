@@ -62,15 +62,7 @@ class MLPBrain(ClassicalBrain):
         super().__init__()
 
         logger.info(
-            "Initializing MLPBrain with input_dim=%d, num_actions=%d, hidden_dim=%d, "
-            "num_hidden_layers=%d, device=%s, learning_rate=%.4f, entropy_beta=%.4f",
-            input_dim,
-            num_actions,
-            config.hidden_dim,
-            config.num_hidden_layers,
-            device,
-            config.learning_rate,
-            config.entropy_beta,
+            f"Using configuration: {config}",
         )
 
         self.history_data = BrainHistoryData()
