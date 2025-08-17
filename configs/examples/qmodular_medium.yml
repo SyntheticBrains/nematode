@@ -1,0 +1,38 @@
+max_steps: 300
+maze_grid_size: 10
+brain:
+  name: qmodular
+  config:
+    modules:
+      chemotaxis: [0, 1]
+    num_layers: 2
+    # Q-learning specific parameters
+    buffer_size: 1800
+    batch_size: 32
+    target_update_freq: 25
+    epsilon_decay: 0.996
+    min_epsilon: 0.01
+    # Reward shaping and threshold parameters
+    negative_reward_threshold: -0.01
+    min_state_features_for_proximity: 6
+    high_gradient_threshold: 0.8
+    medium_gradient_threshold: 0.5
+shots: 1000
+body_length: 2
+qubits: 2
+learning_rate:
+  method: dynamic
+  parameters:
+    initial_learning_rate: 0.015
+    decay_type: exponential
+    decay_rate: 0.9995
+    min_lr: 0.003
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  stuck_position_threshold: 3
+gradient:
+  method: clip

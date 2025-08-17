@@ -28,11 +28,12 @@ This approach provides more stable and sample-efficient learning compared
 to policy gradient methods for discrete action spaces like grid navigation.
 """
 
+import random
+from collections import deque
+
 import numpy as np
 import torch  # pyright: ignore[reportMissingImports]
 from torch import nn, optim  # pyright: ignore[reportMissingImports]
-from collections import deque
-import random
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
@@ -101,7 +102,7 @@ class QMLPBrain(ClassicalBrain):
         self.gamma = config.gamma
         self.target_update_freq = config.target_update_freq
         self.update_count = 0
-        
+
         # Experience replay buffer
         self.buffer_size = config.buffer_size
         self.batch_size = config.batch_size
@@ -211,38 +212,42 @@ class QMLPBrain(ClassicalBrain):
         # Store experience in buffer
         current_state = self.preprocess(params)
         is_terminal = reward >= 1.0
-        
+
         experience = (
             self.last_state.copy(),  # state
-            self.last_action,        # action  
-            reward,                  # reward
-            current_state.copy(),    # next_state
-            is_terminal              # done
+            self.last_action,  # action
+            reward,  # reward
+            current_state.copy(),  # next_state
+            is_terminal,  # done
         )
         self.experience_buffer.append(experience)
-        
+
         # Only train if we have enough experiences
         if len(self.experience_buffer) < self.batch_size:
             return
-            
+
         # Sample batch from experience buffer
         batch = random.sample(self.experience_buffer, self.batch_size)
         states = torch.tensor([exp[0] for exp in batch], dtype=torch.float32, device=self.device)
         actions = torch.tensor([exp[1] for exp in batch], dtype=torch.long, device=self.device)
         rewards = torch.tensor([exp[2] for exp in batch], dtype=torch.float32, device=self.device)
-        next_states = torch.tensor([exp[3] for exp in batch], dtype=torch.float32, device=self.device)
+        next_states = torch.tensor(
+            [exp[3] for exp in batch],
+            dtype=torch.float32,
+            device=self.device,
+        )
         dones = torch.tensor([exp[4] for exp in batch], dtype=torch.bool, device=self.device)
-        
+
         # Current Q-values for selected actions
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
-        
+
         # Next Q-values from target network
         with torch.no_grad():
             next_q_values = self.target_q_network(next_states).max(1)[0]
             # Set next Q-value to 0 for terminal states
             next_q_values[dones] = 0.0
             target_q_values = rewards + (self.gamma * next_q_values)
-        
+
         # Compute loss
         loss = self.loss_fn(current_q_values.squeeze(), target_q_values)
 

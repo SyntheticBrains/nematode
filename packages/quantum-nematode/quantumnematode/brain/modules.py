@@ -78,9 +78,10 @@ def chemotaxis_features(
     -------
         Dictionary with rx, ry, rz values for chemotaxis qubit(s).
     """
-    # Normalize gradient_strength (0-1) to [-pi, pi]
+    # Use gradient_strength directly (0-1) scaled to a moderate range
     grad_strength = params.gradient_strength or 0.0
-    grad_strength_scaled = grad_strength * 2 * np.pi - np.pi
+    # Scale to [-π/2, π/2] for stability
+    grad_strength_scaled = grad_strength * np.pi - np.pi / 2
 
     # gradient_direction is the absolute direction to the goal ([-pi, pi])
     grad_direction = params.gradient_direction or 0.0
@@ -95,9 +96,14 @@ def chemotaxis_features(
     # Compute relative angle to goal ([-pi, pi])
     relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
 
+    # Normalize relative angle
+    relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
+    # Scale back to moderate quantum range
+    relative_angle_scaled = relative_angle_normalized * np.pi / 2  # [-π/2, π/2]
+
     return {
         RotationAxis.RX: grad_strength_scaled,
-        RotationAxis.RY: relative_angle,
+        RotationAxis.RY: relative_angle_scaled,
         RotationAxis.RZ: 0.0,
     }
 
