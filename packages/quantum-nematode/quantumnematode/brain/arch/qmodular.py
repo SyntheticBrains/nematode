@@ -65,11 +65,12 @@ DEFAULT_MEDIUM_GRADIENT_THRESHOLD = 0.5
 
 
 if TYPE_CHECKING:
-    from quantumnematode.initializers.random_initializer import (
+    from quantumnematode.initializers import (
+        ManualParameterInitializer,
         RandomPiUniformInitializer,
         RandomSmallUniformInitializer,
+        ZeroInitializer,
     )
-    from quantumnematode.initializers.zero_initializer import ZeroInitializer
 
 
 class QModularBrainConfig(BrainConfig):
@@ -118,6 +119,7 @@ class QModularBrain:
         parameter_initializer: ZeroInitializer  # noqa: ARG002
         | RandomPiUniformInitializer
         | RandomSmallUniformInitializer
+        | ManualParameterInitializer
         | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
         buffer_size: int = DEFAULT_BUFFER_SIZE,

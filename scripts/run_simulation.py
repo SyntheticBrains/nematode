@@ -63,12 +63,15 @@ from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
     ManyworldsModeConfig,
+    ParameterInitializerConfig,
     RewardConfig,
     configure_brain,
     configure_gradient_method,
     configure_learning_rate,
     configure_manyworlds_mode,
+    configure_parameter_initializer,
     configure_reward,
+    create_parameter_initializer_instance,
     load_simulation_config,
 )
 
@@ -168,6 +171,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
+    parameter_initializer_config = ParameterInitializerConfig()
     reward_config = RewardConfig()
     manyworlds_mode_config = ManyworldsModeConfig()
     track_per_run = args.track_per_run
@@ -221,6 +225,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load gradient method if specified
         gradient_method = configure_gradient_method(gradient_method, config)
 
+        # Load parameter initializer configuration if specified
+        parameter_initializer_config = configure_parameter_initializer(config)
+
         # Load reward configuration if specified
         reward_config = configure_reward(config)
 
@@ -262,6 +269,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         device=device,
         learning_rate=learning_rate,
         gradient_method=gradient_method,
+        parameter_initializer_config=parameter_initializer_config,
         perf_mgmt=perf_mgmt,
     )
 
@@ -458,6 +466,7 @@ def setup_brain_model(  # noqa: C901, PLR0913
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,  # noqa: ARG001
+    parameter_initializer_config: ParameterInitializerConfig,
     perf_mgmt: "RunnableQiskitFunction | None" = None,
 ) -> Brain:
     """
@@ -472,6 +481,7 @@ def setup_brain_model(  # noqa: C901, PLR0913
         learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
             The learning rate configuration for the brain.
         gradient_method: The gradient calculation method.
+        parameter_initializer_config: Configuration for parameter initialization.
         perf_mgmt: Q-CTRL performance management function instance.
 
     Returns
@@ -501,11 +511,15 @@ def setup_brain_model(  # noqa: C901, PLR0913
 
         from quantumnematode.brain.arch.modular import ModularBrain
 
+        # Create parameter initializer instance from config
+        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
+
         brain = ModularBrain(
             config=brain_config,
             device=device,
             shots=shots,
             learning_rate=learning_rate,
+            parameter_initializer=parameter_initializer,
             perf_mgmt=perf_mgmt,
         )
     elif brain_type == BrainType.QMODULAR:
@@ -527,11 +541,15 @@ def setup_brain_model(  # noqa: C901, PLR0913
 
         from quantumnematode.brain.arch.qmodular import QModularBrain
 
+        # Create parameter initializer instance from config
+        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
+
         brain = QModularBrain(
             config=brain_config,
             device=device,
             shots=shots,
             learning_rate=learning_rate,
+            parameter_initializer=parameter_initializer,
         )
 
     elif brain_type == BrainType.MLP:
