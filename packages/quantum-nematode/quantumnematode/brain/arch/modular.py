@@ -24,6 +24,7 @@ from quantumnematode.errors import (
     ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME,
 )
 from quantumnematode.executors.ibm_job import monitor_job
+from quantumnematode.initializers.manual_initializer import ManualParameterInitializer
 from quantumnematode.initializers.random_initializer import (
     RandomPiUniformInitializer,
     RandomSmallUniformInitializer,
@@ -98,6 +99,7 @@ class ModularBrain(QuantumBrain):
         parameter_initializer: ZeroInitializer
         | RandomPiUniformInitializer
         | RandomSmallUniformInitializer
+        | ManualParameterInitializer
         | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
         perf_mgmt: "RunnableQiskitFunction | None" = None,
@@ -163,13 +165,14 @@ class ModularBrain(QuantumBrain):
             self.parameters[f"rz_{layer + 1}"] = [
                 Parameter(f"θ_rz{layer + 1}_{i}") for i in range(self.num_qubits)
             ]
-        self.parameter_values = {}
+
+        # Initialize parameter values using the configured initializer
+        param_names = []
         for layer in range(self.num_layers):
             for axis in ["rx", "ry", "rz"]:
-                param_names = [f"θ_{axis}{layer + 1}_{i}" for i in range(self.num_qubits)]
-                self.parameter_values.update(
-                    self.parameter_initializer.initialize(self.num_qubits, param_names),
-                )
+                param_names.extend([f"θ_{axis}{layer + 1}_{i}" for i in range(self.num_qubits)])
+
+        self.parameter_values = self.parameter_initializer.initialize(self.num_qubits, param_names)
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None

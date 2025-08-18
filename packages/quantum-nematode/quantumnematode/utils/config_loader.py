@@ -16,6 +16,12 @@ from quantumnematode.brain.arch import (
     QModularBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
+from quantumnematode.initializers import (
+    ManualParameterInitializer,
+    RandomPiUniformInitializer,
+    RandomSmallUniformInitializer,
+    ZeroInitializer,
+)
 from quantumnematode.logging_config import (
     logger,
 )
@@ -89,6 +95,16 @@ class GradientConfig(BaseModel):
     method: GradientCalculationMethod = DEFAULT_GRADIENT_CALCULATION_METHOD
 
 
+DEFAULT_PARAMETER_INITIALIZER_TYPE = "random_small"
+
+
+class ParameterInitializerConfig(BaseModel):
+    """Configuration for parameter initialization."""
+
+    type: str = DEFAULT_PARAMETER_INITIALIZER_TYPE
+    manual_parameter_values: dict[str, float] | None = None
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -100,6 +116,7 @@ class SimulationConfig(BaseModel):
     qubits: int | None = None
     learning_rate: LearningRateConfig | None = None
     gradient: GradientConfig | None = None
+    parameter_initializer: ParameterInitializerConfig | None = None
     reward: RewardConfig | None = None
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
@@ -121,7 +138,7 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
         return SimulationConfig(**data)
 
 
-def configure_brain(  # noqa: C901, PLR0911, PLR0912
+def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
     config: SimulationConfig,
 ) -> ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig:
     """
@@ -151,6 +168,9 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912
                 return ModularBrainConfig()
             if isinstance(config.brain.config, ModularBrainConfig):
                 return config.brain.config
+            # Handle case where YAML parsed as wrong type - reconstruct as ModularBrainConfig
+            if hasattr(config.brain.config, "__dict__"):
+                return ModularBrainConfig(**config.brain.config.__dict__)
             error_message = (
                 "Invalid brain configuration for 'modular' brain type. "
                 f"Expected ModularBrainConfig, got {type(config.brain.config)}."
@@ -162,6 +182,14 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912
                 return QModularBrainConfig()
             if isinstance(config.brain.config, QModularBrainConfig):
                 return config.brain.config
+            # Handle case where YAML parsed as wrong type - reconstruct as QModularBrainConfig
+            if hasattr(config.brain.config, "__dict__"):
+                # Filter only attributes that exist in QModularBrainConfig
+                config_dict = {}
+                for field_name in QModularBrainConfig.model_fields:
+                    if hasattr(config.brain.config, field_name):
+                        config_dict[field_name] = getattr(config.brain.config, field_name)
+                return QModularBrainConfig(**config_dict)
             error_message = (
                 "Invalid brain configuration for 'qmodular' brain type. "
                 f"Expected QModularBrainConfig, got {type(config.brain.config)}."
@@ -173,6 +201,13 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912
                 return MLPBrainConfig()
             if isinstance(config.brain.config, MLPBrainConfig):
                 return config.brain.config
+            # Handle case where YAML parsed as wrong type - reconstruct as MLPBrainConfig
+            if hasattr(config.brain.config, "__dict__"):
+                config_dict = {}
+                for field_name in MLPBrainConfig.model_fields:
+                    if hasattr(config.brain.config, field_name):
+                        config_dict[field_name] = getattr(config.brain.config, field_name)
+                return MLPBrainConfig(**config_dict)
             error_message = (
                 "Invalid brain configuration for 'mlp' brain type. "
                 f"Expected MLPBrainConfig, got {type(config.brain.config)}."
@@ -184,6 +219,13 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912
                 return QMLPBrainConfig()
             if isinstance(config.brain.config, QMLPBrainConfig):
                 return config.brain.config
+            # Handle case where YAML parsed as wrong type - reconstruct as QMLPBrainConfig
+            if hasattr(config.brain.config, "__dict__"):
+                config_dict = {}
+                for field_name in QMLPBrainConfig.model_fields:
+                    if hasattr(config.brain.config, field_name):
+                        config_dict[field_name] = getattr(config.brain.config, field_name)
+                return QMLPBrainConfig(**config_dict)
             error_message = (
                 "Invalid brain configuration for 'qmlp' brain type. "
                 f"Expected QMLPBrainConfig, got {type(config.brain.config)}."
@@ -292,6 +334,68 @@ def configure_gradient_method(
     """
     grad_cfg = config.gradient or GradientConfig()
     return grad_cfg.method or gradient_method
+
+
+def configure_parameter_initializer(
+    config: SimulationConfig,
+) -> ParameterInitializerConfig:
+    """
+    Configure the parameter initializer based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        ParameterInitializerConfig: The configured parameter initializer object.
+    """
+    return config.parameter_initializer or ParameterInitializerConfig()
+
+
+def create_parameter_initializer_instance(
+    param_config: ParameterInitializerConfig,
+) -> (
+    ZeroInitializer
+    | RandomPiUniformInitializer
+    | RandomSmallUniformInitializer
+    | ManualParameterInitializer
+    | None
+):
+    """
+    Create a parameter initializer instance from configuration.
+
+    Args:
+        param_config: Parameter initializer configuration.
+
+    Returns
+    -------
+        Parameter initializer instance.
+
+    Raises
+    ------
+        ValueError: If an unknown parameter initializer type is specified.
+    """
+    init_type = param_config.type.lower()
+
+    if init_type == "manual":
+        if param_config.manual_parameter_values is None:
+            error_message = "Manual parameter initializer type specified "
+            "but no manual_parameter_values provided in config."
+            logger.error(error_message)
+            raise ValueError(error_message)
+        return ManualParameterInitializer(param_config.manual_parameter_values)
+    if init_type == "zero":
+        return ZeroInitializer()
+    if init_type == "random_pi":
+        return RandomPiUniformInitializer()
+    if init_type == "random_small":
+        return RandomSmallUniformInitializer()
+    error_message = (
+        f"Unknown parameter initializer type: {init_type}. "
+        "Valid options are: 'manual', 'zero', 'random_pi', 'random_small'."
+    )
+    logger.error(error_message)
+    raise ValueError(error_message)
 
 
 def configure_manyworlds_mode(config: SimulationConfig) -> ManyworldsModeConfig:
