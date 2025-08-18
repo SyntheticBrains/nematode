@@ -22,12 +22,12 @@ learning_rate:
     decay_rate: 0.5
     min_lr: 0
 reward:
-  reward_goal: 1.5
-  reward_distance_scale: 0.25
-  penalty_step: 0.01
-  penalty_anti_dithering: 0.05
-  penalty_stuck_position: 0.05
-  stuck_position_threshold: 2
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  stuck_position_threshold: 10
 manyworlds_mode:
   max_superpositions: 32
   max_columns: 8
