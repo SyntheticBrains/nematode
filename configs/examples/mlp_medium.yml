@@ -7,7 +7,7 @@ brain:
     baseline_alpha: 0.05
     entropy_beta: 0.01
     gamma: 0.99
-    hidden_dim: 64
+    hidden_dim: 512
     learning_rate: 0.001
     lr_scheduler_step_size: 100
     lr_scheduler_gamma: 0.9
