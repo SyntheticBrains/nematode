@@ -36,6 +36,7 @@ from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
+from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 
 DEFAULT_HIDDEN_DIM = 64
@@ -79,6 +80,7 @@ class MLPBrain(ClassicalBrain):
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
         lr_scheduler: bool | None = None,
+        parameter_initializer: ParameterInitializer | None = None,
     ) -> None:
         super().__init__()
 
@@ -95,6 +97,10 @@ class MLPBrain(ClassicalBrain):
         self.policy = self._build_network(config.hidden_dim, config.num_hidden_layers).to(
             self.device,
         )
+
+        # Initialize parameters with custom initializer or log default initialization
+        self._initialize_parameters(parameter_initializer)
+
         self.optimizer = optim.Adam(self.policy.parameters(), lr=config.learning_rate)
         if lr_scheduler is None:
             lr_scheduler = True
@@ -138,6 +144,46 @@ class MLPBrain(ClassicalBrain):
             layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
         layers.append(nn.Linear(hidden_dim, self.num_actions))
         return nn.Sequential(*layers)
+
+    def _initialize_parameters(self, parameter_initializer: ParameterInitializer | None) -> None:
+        """
+        Initialize network parameters and log the initialization details.
+
+        Args:
+            parameter_initializer: Optional parameter initializer to use.
+                                 If None, uses PyTorch's default initialization.
+        """
+        param_count = 0
+        param_details = []
+
+        with torch.no_grad():
+            for name, param in self.policy.named_parameters():
+                param_count += param.numel()
+
+                if parameter_initializer is not None:
+                    # NOTE: This is a placeholder for future custom initialization logic
+                    logger.info(
+                        f"Custom parameter initialization not fully implemented for MLP {name}",
+                    )
+                    # Keep PyTorch default for now, but log that custom initializer was provided
+                    param_details.append(
+                        f"  {name}: shape {list(param.shape)}, "
+                        f"mean={param.mean().item():.6f}, std={param.std().item():.6f} "
+                        f"(custom initializer provided but using PyTorch default)",
+                    )
+                else:
+                    # Log PyTorch's default initialization
+                    param_details.append(
+                        f"  {name}: shape {list(param.shape)}, "
+                        f"mean={param.mean().item():.6f}, std={param.std().item():.6f} "
+                        f"(PyTorch default)",
+                    )
+
+        logger.info("MLPBrain parameter initialization complete:")
+        logger.info(f"  Total parameters: {param_count:,}")
+        logger.info("  Parameter details:")
+        for detail in param_details:
+            logger.info(detail)
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """

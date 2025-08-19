@@ -40,6 +40,7 @@ from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
+from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 
 
@@ -65,13 +66,14 @@ class QMLPBrain(ClassicalBrain):
     Uses epsilon-greedy exploration and experience replay for more stable learning.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         config: QMLPBrainConfig,
         input_dim: int,
         num_actions: int,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
+        parameter_initializer: ParameterInitializer | None = None,
     ) -> None:
         super().__init__()
 
@@ -90,6 +92,10 @@ class QMLPBrain(ClassicalBrain):
         self.target_q_network = self._build_network(config.hidden_dim, config.num_hidden_layers).to(
             self.device,
         )
+
+        # Initialize parameters with custom initializer or log default initialization
+        self._initialize_parameters(parameter_initializer)
+
         self.target_q_network.load_state_dict(self.q_network.state_dict())
 
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=config.learning_rate)
@@ -123,6 +129,46 @@ class QMLPBrain(ClassicalBrain):
             layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU()]
         layers.append(nn.Linear(hidden_dim, self.num_actions))
         return nn.Sequential(*layers)
+
+    def _initialize_parameters(self, parameter_initializer: ParameterInitializer | None) -> None:
+        """
+        Initialize network parameters and log the initialization details.
+
+        Args:
+            parameter_initializer: Optional parameter initializer to use.
+                                 If None, uses PyTorch's default initialization.
+        """
+        param_count = 0
+        param_details = []
+
+        with torch.no_grad():
+            for name, param in self.q_network.named_parameters():
+                param_count += param.numel()
+
+                if parameter_initializer is not None:
+                    # NOTE: This is a placeholder for future custom initialization logic
+                    logger.info(
+                        f"Custom parameter initialization not fully implemented for QMLP {name}",
+                    )
+                    # Keep PyTorch default for now, but log that custom initializer was provided
+                    param_details.append(
+                        f"  {name}: shape {list(param.shape)}, "
+                        f"mean={param.mean().item():.6f}, std={param.std().item():.6f} "
+                        f"(custom initializer provided but using PyTorch default)",
+                    )
+                else:
+                    # Log PyTorch's default initialization
+                    param_details.append(
+                        f"  {name}: shape {list(param.shape)}, "
+                        f"mean={param.mean().item():.6f}, std={param.std().item():.6f} "
+                        f"(PyTorch default)",
+                    )
+
+        logger.info("QMLPBrain parameter initialization complete:")
+        logger.info(f"  Total parameters: {param_count:,}")
+        logger.info("  Parameter details:")
+        for detail in param_details:
+            logger.info(detail)
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Preprocess brain parameters into feature vector."""

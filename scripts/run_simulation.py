@@ -563,12 +563,16 @@ def setup_brain_model(  # noqa: C901, PLR0913
             logger.error(error_message)
             raise ValueError(error_message)
 
+        # Create parameter initializer instance from config
+        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
+
         brain = MLPBrain(
             config=brain_config,
             input_dim=2,
             num_actions=4,
             lr_scheduler=True,
             device=device,
+            parameter_initializer=parameter_initializer,
         )
     elif brain_type == BrainType.QMLP:
         from quantumnematode.brain.arch.qmlp import QMLPBrain
@@ -581,11 +585,15 @@ def setup_brain_model(  # noqa: C901, PLR0913
             logger.error(error_message)
             raise ValueError(error_message)
 
+        # Create parameter initializer instance from config
+        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
+
         brain = QMLPBrain(
             config=brain_config,
             input_dim=2,
             num_actions=4,
             device=device,
+            parameter_initializer=parameter_initializer,
         )
     else:
         error_message = f"Unknown brain architecture: {brain_type}"
