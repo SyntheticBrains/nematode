@@ -268,6 +268,9 @@ class QuantumNematodeAgent:
 
                 self.brain.satiety = 1.0  # Set satiety to maximum
 
+                # Run any post-processing steps
+                self.brain.post_process_episode()
+
                 self.path.append(tuple(self.env.agent_pos))
                 self.steps += 1
 

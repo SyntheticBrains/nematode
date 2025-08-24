@@ -747,6 +747,11 @@ class QModularBrain:
         if reward is not None:
             self.satiety = min(1.0, max(0.0, self.satiety + reward))
 
+    def post_process_episode(self) -> None:
+        """Post-process the brain's state after each episode."""
+        # Not implemented
+        return
+
     def inspect_circuit(self) -> QuantumCircuit:
         """Inspect the quantum circuit structure."""
         # Build a circuit with default input params for inspection
