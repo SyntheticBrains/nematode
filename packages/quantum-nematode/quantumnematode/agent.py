@@ -213,9 +213,11 @@ class QuantumNematodeAgent:
 
             # Learning step
             if isinstance(self.brain, ClassicalBrain):
+                episode_done = bool(self.steps >= max_steps or self.env.reached_goal())
                 self.brain.learn(
                     params=params,
                     reward=reward,
+                    episode_done=episode_done,
                 )
 
             # Update the body length dynamically
@@ -313,6 +315,14 @@ class QuantumNematodeAgent:
 
             print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
             print(f"Wins:\t\t{self.success_count}")  # noqa: T201
+
+            # Handle max steps reached
+            if self.steps >= max_steps:
+                logger.warning("Max steps reached.")
+
+                # Run any post-processing steps
+                self.brain.post_process_episode()
+                break
 
         return self.path
 

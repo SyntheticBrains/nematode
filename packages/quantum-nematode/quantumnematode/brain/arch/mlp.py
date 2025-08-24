@@ -38,6 +38,7 @@ from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
+from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 
 DEFAULT_HIDDEN_DIM = 64
 DEFAULT_NUM_HIDDEN_LAYERS = 2
@@ -48,7 +49,10 @@ DEFAULT_ENTROPY_BETA = 0.01
 DEFAULT_BASELINE = 0.0
 DEFAULT_BASELINE_ALPHA = 0.05
 DEFAULT_GAMMA = 0.99
-DEFAULT_MAX_EPISODE_LENGTH = 1000
+
+# Episode logging interval constant
+# TODO: Make this configurable
+EPISODE_LOG_INTERVAL = 25
 
 
 class MLPBrainConfig(BrainConfig):
@@ -137,6 +141,12 @@ class MLPBrain(ClassicalBrain):
         # Learning frequency control
         self.steps_since_update = 0
         self.update_frequency = 5  # Update every N steps for stability
+
+        # Overfitting detection
+        self.overfitting_detector = create_overfitting_detector_for_brain("mlp")
+        self.episode_count = 0
+        self.current_episode_actions = []
+        self.current_episode_positions = []
 
     def _build_network(self, hidden_dim: int, num_hidden_layers: int) -> nn.Sequential:
         layers = [nn.Linear(self.input_dim, hidden_dim), nn.ReLU()]
@@ -293,6 +303,9 @@ class MLPBrain(ClassicalBrain):
         self.episode_actions.append(action_idx)
         self.episode_log_probs.append(log_prob)
 
+        # Track for overfitting detection
+        self._track_episode_metrics(params, probs_np, action_name)
+
         self.current_probabilities = probs_np
         first_prob = float(probs_np[action_idx])
         self.latest_data.probability = first_prob
@@ -301,6 +314,20 @@ class MLPBrain(ClassicalBrain):
 
         actions = {name: int(i == action_idx) for i, name in enumerate(self.action_set)}
         return self._get_most_probable_action(actions)
+
+    def _track_episode_metrics(
+        self,
+        params: BrainParams,
+        probs_np: np.ndarray,
+        action_name: str,
+    ) -> None:
+        """Track metrics for the current episode."""
+        self.current_episode_actions.append(action_name)
+        if params.agent_position is not None:
+            self.current_episode_positions.append(params.agent_position)
+
+        # Track policy outputs for consistency analysis
+        self.overfitting_detector.update_learning_metrics(loss=None, policy_probs=probs_np)
 
     def _get_most_probable_action(
         self,
@@ -347,6 +374,8 @@ class MLPBrain(ClassicalBrain):
         self,
         params: BrainParams,  # noqa: ARG002
         reward: float,
+        *,
+        episode_done: bool = False,
     ) -> None:
         """Perform policy gradient learning with episode buffering."""
         # Store the reward for this step
@@ -354,11 +383,7 @@ class MLPBrain(ClassicalBrain):
         self.steps_since_update += 1
 
         # Check if episode is done (goal reached or max steps)
-        episode_done = (
-            reward > 1.0  # Large positive reward indicates goal
-            or self.steps_since_update >= DEFAULT_MAX_EPISODE_LENGTH  # Max episode length
-            or len(self.episode_rewards) >= self.update_frequency
-        )
+        episode_done = episode_done or len(self.episode_rewards) >= self.update_frequency
 
         if episode_done and len(self.episode_rewards) > 0:
             self._perform_policy_update()
@@ -450,6 +475,11 @@ class MLPBrain(ClassicalBrain):
         # Store loss for tracking
         self.latest_data.loss = total_loss.item()
 
+        # Update overfitting detector with loss information
+        dummy_probs = np.zeros(self.num_actions)  # Placeholder since we track probs elsewhere
+        # TODO: This may not be working properly, loss reported looks incorrect later in sessions
+        self.overfitting_detector.update_learning_metrics(total_loss.item(), dummy_probs)
+
     def _reset_episode_buffer(self) -> None:
         """Reset the episode buffer for the next episode."""
         self.episode_states.clear()
@@ -467,8 +497,35 @@ class MLPBrain(ClassicalBrain):
 
     def post_process_episode(self) -> None:
         """Post-process the brain's state after each episode."""
-        # Not implemented
-        return
+        # Update overfitting detector with episode data
+        self._complete_episode_tracking()
+
+    def _complete_episode_tracking(self) -> None:
+        """Complete episode tracking for overfitting detection."""
+        total_steps = len(self.episode_rewards)
+        total_reward = sum(self.episode_rewards)
+
+        self.overfitting_detector.update_performance_metrics(total_steps, total_reward)
+
+        if self.current_episode_actions and self.current_episode_positions:
+            start_pos = (
+                self.current_episode_positions[0] if self.current_episode_positions else (0, 0)
+            )
+            self.overfitting_detector.update_behavioral_metrics(
+                self.current_episode_actions.copy(),
+                self.current_episode_positions.copy(),
+                start_pos,
+            )
+
+        self.episode_count += 1
+
+        # Log overfitting analysis every EPISODE_LOG_INTERVAL episodes
+        if self.episode_count % EPISODE_LOG_INTERVAL == 0:
+            self.overfitting_detector.log_overfitting_analysis()
+
+        # Reset overfitting tracking for new episode
+        self.current_episode_actions.clear()
+        self.current_episode_positions.clear()
 
     def copy(self) -> "MLPBrain":
         """

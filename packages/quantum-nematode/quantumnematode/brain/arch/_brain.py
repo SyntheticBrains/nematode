@@ -192,4 +192,6 @@ class ClassicalBrain(Brain, Protocol):
         self,
         params: BrainParams,
         reward: float,
+        *,
+        episode_done: bool,
     ) -> None: ...
