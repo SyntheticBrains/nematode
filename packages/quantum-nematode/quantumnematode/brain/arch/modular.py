@@ -184,10 +184,10 @@ class ModularBrain(QuantumBrain):
 
         # Overfitting detection
         self.overfitting_detector = create_overfitting_detector_for_brain("modular")
-        self.episode_count = 0
-        self.current_episode_actions = []
-        self.current_episode_positions = []
-        self.current_episode_rewards = []
+        self.overfit_detector_episode_count = 0
+        self.overfit_detector_episode_actions = []
+        self.overfit_detector_current_episode_positions = []
+        self.overfit_detector_current_episode_rewards = []
 
     def build_brain(
         self,
@@ -437,12 +437,12 @@ class ModularBrain(QuantumBrain):
     ) -> None:
         """Track metrics for the current episode."""
         selected_action = actions[0].action
-        self.current_episode_actions.append(selected_action)
+        self.overfit_detector_episode_actions.append(selected_action)
 
         if params.agent_position is not None:
-            self.current_episode_positions.append(params.agent_position)
+            self.overfit_detector_current_episode_positions.append(params.agent_position)
 
-        self.current_episode_rewards.append(reward or 0.0)
+        self.overfit_detector_current_episode_rewards.append(reward or 0.0)
 
         # Track policy outputs (action probabilities) for consistency analysis
         action_probs = np.array([action.probability for action in actions])
@@ -588,40 +588,45 @@ class ModularBrain(QuantumBrain):
 
     def _complete_episode_tracking(self, final_reward: float) -> None:
         """Complete episode tracking for overfitting detection."""
-        if not self.current_episode_actions:
+        if not self.overfit_detector_episode_actions:
             return
 
         # Calculate episode metrics
-        total_steps = len(self.current_episode_actions)
+        total_steps = len(self.overfit_detector_episode_actions)
         total_reward = (
-            sum(self.current_episode_rewards[-total_steps:])
-            if self.current_episode_rewards
+            sum(self.overfit_detector_current_episode_rewards[-total_steps:])
+            if self.overfit_detector_current_episode_rewards
             else final_reward
         )
 
         # Update overfitting detector
         self.overfitting_detector.update_performance_metrics(total_steps, total_reward)
 
-        if self.current_episode_actions and self.current_episode_positions:
+        if (
+            self.overfit_detector_episode_actions
+            and self.overfit_detector_current_episode_positions
+        ):
             start_pos = (
-                self.current_episode_positions[0] if self.current_episode_positions else (0, 0)
+                self.overfit_detector_current_episode_positions[0]
+                if self.overfit_detector_current_episode_positions
+                else (0, 0)
             )
             self.overfitting_detector.update_behavioral_metrics(
-                self.current_episode_actions.copy(),
-                self.current_episode_positions.copy(),
+                self.overfit_detector_episode_actions.copy(),
+                self.overfit_detector_current_episode_positions.copy(),
                 start_pos,
             )
 
-        self.episode_count += 1
+        self.overfit_detector_episode_count += 1
 
         # Log overfitting analysis every EPISODE_LOG_INTERVAL episodes
-        if self.episode_count % EPISODE_LOG_INTERVAL == 0:
+        if self.overfit_detector_episode_count % EPISODE_LOG_INTERVAL == 0:
             self.overfitting_detector.log_overfitting_analysis()
 
         # Reset overfitting tracking for new episode
-        self.current_episode_actions.clear()
-        self.current_episode_positions.clear()
-        self.current_episode_rewards.clear()
+        self.overfit_detector_episode_actions.clear()
+        self.overfit_detector_current_episode_positions.clear()
+        self.overfit_detector_current_episode_rewards.clear()
 
     def inspect_circuit(self) -> QuantumCircuit:
         """

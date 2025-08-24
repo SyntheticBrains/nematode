@@ -144,9 +144,9 @@ class MLPBrain(ClassicalBrain):
 
         # Overfitting detection
         self.overfitting_detector = create_overfitting_detector_for_brain("mlp")
-        self.episode_count = 0
-        self.current_episode_actions = []
-        self.current_episode_positions = []
+        self.overfit_detector_episode_count = 0
+        self.overfit_detector_current_episode_actions = []
+        self.overfit_detector_current_episode_positions = []
 
     def _build_network(self, hidden_dim: int, num_hidden_layers: int) -> nn.Sequential:
         layers = [nn.Linear(self.input_dim, hidden_dim), nn.ReLU()]
@@ -322,9 +322,9 @@ class MLPBrain(ClassicalBrain):
         action_name: str,
     ) -> None:
         """Track metrics for the current episode."""
-        self.current_episode_actions.append(action_name)
+        self.overfit_detector_current_episode_actions.append(action_name)
         if params.agent_position is not None:
-            self.current_episode_positions.append(params.agent_position)
+            self.overfit_detector_current_episode_positions.append(params.agent_position)
 
         # Track policy outputs for consistency analysis
         self.overfitting_detector.update_learning_metrics(loss=None, policy_probs=probs_np)
@@ -507,25 +507,30 @@ class MLPBrain(ClassicalBrain):
 
         self.overfitting_detector.update_performance_metrics(total_steps, total_reward)
 
-        if self.current_episode_actions and self.current_episode_positions:
+        if (
+            self.overfit_detector_current_episode_actions
+            and self.overfit_detector_current_episode_positions
+        ):
             start_pos = (
-                self.current_episode_positions[0] if self.current_episode_positions else (0, 0)
+                self.overfit_detector_current_episode_positions[0]
+                if self.overfit_detector_current_episode_positions
+                else (0, 0)
             )
             self.overfitting_detector.update_behavioral_metrics(
-                self.current_episode_actions.copy(),
-                self.current_episode_positions.copy(),
+                self.overfit_detector_current_episode_actions.copy(),
+                self.overfit_detector_current_episode_positions.copy(),
                 start_pos,
             )
 
-        self.episode_count += 1
+        self.overfit_detector_episode_count += 1
 
         # Log overfitting analysis every EPISODE_LOG_INTERVAL episodes
-        if self.episode_count % EPISODE_LOG_INTERVAL == 0:
+        if self.overfit_detector_episode_count % EPISODE_LOG_INTERVAL == 0:
             self.overfitting_detector.log_overfitting_analysis()
 
         # Reset overfitting tracking for new episode
-        self.current_episode_actions.clear()
-        self.current_episode_positions.clear()
+        self.overfit_detector_current_episode_actions.clear()
+        self.overfit_detector_current_episode_positions.clear()
 
     def copy(self) -> "MLPBrain":
         """
