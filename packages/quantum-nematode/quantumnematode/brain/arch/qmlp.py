@@ -334,6 +334,11 @@ class QMLPBrain(ClassicalBrain):
         """No-op for Q-MLP."""
         return
 
+    def post_process_episode(self) -> None:
+        """Post-process the brain's state after each episode."""
+        # Not implemented
+        return
+
     def build_brain(self):  # noqa: ANN201
         """Not applicable to Q-MLP brain."""
         error_msg = "Q-MLPBrain does not have a quantum circuit."

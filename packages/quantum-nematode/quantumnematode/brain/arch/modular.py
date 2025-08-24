@@ -31,6 +31,7 @@ from quantumnematode.initializers.random_initializer import (
 )
 from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
+from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 if TYPE_CHECKING:
@@ -49,6 +50,9 @@ DEFAULT_PARAM_MODULO = True
 DEFAULT_SIGNIFICANT_REWARD_THRESHOLD = 0.1
 DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-4
 
+# Episode logging interval constant
+# TODO: Make this configurable
+EPISODE_LOG_INTERVAL = 25
 
 if TYPE_CHECKING:
     from qiskit_serverless.core.function import RunnableQiskitFunction
@@ -177,6 +181,13 @@ class ModularBrain(QuantumBrain):
         self._backend: AerSimulator | BackendV2 | None = None
 
         self._momentum: dict[str, float] = {}
+
+        # Overfitting detection
+        self.overfitting_detector = create_overfitting_detector_for_brain("modular")
+        self.episode_count = 0
+        self.current_episode_actions = []
+        self.current_episode_positions = []
+        self.current_episode_rewards = []
 
     def build_brain(
         self,
@@ -410,9 +421,42 @@ class ModularBrain(QuantumBrain):
             lr = self.learning_rate.get_learning_rate()
             self.update_parameters(gradients, reward=reward, learning_rate=lr)
 
+        # Track for overfitting detection
+        if actions:
+            self._track_episode_metrics(params, actions, reward)
+
         self.history_data.rewards.append(reward or 0.0)
 
         return actions
+
+    def _track_episode_metrics(
+        self,
+        params: BrainParams,
+        actions: list[ActionData],
+        reward: float | None,
+    ) -> None:
+        """Track metrics for the current episode."""
+        selected_action = actions[0].action
+        self.current_episode_actions.append(selected_action)
+
+        if params.agent_position is not None:
+            self.current_episode_positions.append(params.agent_position)
+
+        self.current_episode_rewards.append(reward or 0.0)
+
+        # Track policy outputs (action probabilities) for consistency analysis
+        action_probs = np.array([action.probability for action in actions])
+
+        # Pad to full action space if needed
+        if len(action_probs) < len(self.action_set):
+            full_probs = np.zeros(len(self.action_set))
+            for _, action in enumerate(actions):
+                if action.action in self.action_set:
+                    action_idx = self.action_set.index(action.action)
+                    full_probs[action_idx] = action.probability
+            action_probs = full_probs
+
+        self.overfitting_detector.update_learning_metrics(None, action_probs)
 
     def _execute_qctrl_sampler_job(self, sampler_pubs: list[tuple]) -> "PrimitiveResult":
         """
@@ -536,6 +580,48 @@ class ModularBrain(QuantumBrain):
         # Example: satiety increases with positive reward, decreases otherwise
         if reward is not None:
             self.satiety = min(1.0, max(0.0, self.satiety + reward))
+
+    def post_process_episode(self) -> None:
+        """Post-process the episode data."""
+        final_reward = self.history_data.rewards[-1] if self.history_data.rewards else 0.0
+        self._complete_episode_tracking(final_reward=final_reward)
+
+    def _complete_episode_tracking(self, final_reward: float) -> None:
+        """Complete episode tracking for overfitting detection."""
+        if not self.current_episode_actions:
+            return
+
+        # Calculate episode metrics
+        total_steps = len(self.current_episode_actions)
+        total_reward = (
+            sum(self.current_episode_rewards[-total_steps:])
+            if self.current_episode_rewards
+            else final_reward
+        )
+
+        # Update overfitting detector
+        self.overfitting_detector.update_performance_metrics(total_steps, total_reward)
+
+        if self.current_episode_actions and self.current_episode_positions:
+            start_pos = (
+                self.current_episode_positions[0] if self.current_episode_positions else (0, 0)
+            )
+            self.overfitting_detector.update_behavioral_metrics(
+                self.current_episode_actions.copy(),
+                self.current_episode_positions.copy(),
+                start_pos,
+            )
+
+        self.episode_count += 1
+
+        # Log overfitting analysis every EPISODE_LOG_INTERVAL episodes
+        if self.episode_count % EPISODE_LOG_INTERVAL == 0:
+            self.overfitting_detector.log_overfitting_analysis()
+
+        # Reset episode tracking
+        self.current_episode_actions.clear()
+        self.current_episode_positions.clear()
+        self.current_episode_rewards.clear()
 
     def inspect_circuit(self) -> QuantumCircuit:
         """

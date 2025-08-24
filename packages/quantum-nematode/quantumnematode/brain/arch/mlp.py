@@ -465,6 +465,11 @@ class MLPBrain(ClassicalBrain):
         """No-op for MLPBrain."""
         return
 
+    def post_process_episode(self) -> None:
+        """Post-process the brain's state after each episode."""
+        # Not implemented
+        return
+
     def copy(self) -> "MLPBrain":
         """
         Create a copy of the MLPBrain instance.
