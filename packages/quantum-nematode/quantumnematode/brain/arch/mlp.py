@@ -147,6 +147,7 @@ class MLPBrain(ClassicalBrain):
         self.overfit_detector_episode_count = 0
         self.overfit_detector_current_episode_actions = []
         self.overfit_detector_current_episode_positions = []
+        self.overfit_detector_current_episode_rewards = []
 
     def _build_network(self, hidden_dim: int, num_hidden_layers: int) -> nn.Sequential:
         layers = [nn.Linear(self.input_dim, hidden_dim), nn.ReLU()]
@@ -380,6 +381,7 @@ class MLPBrain(ClassicalBrain):
         """Perform policy gradient learning with episode buffering."""
         # Store the reward for this step
         self.episode_rewards.append(reward)
+        self.overfit_detector_current_episode_rewards.append(reward)
         self.steps_since_update += 1
 
         # Check if episode is done (goal reached or max steps)
@@ -502,8 +504,8 @@ class MLPBrain(ClassicalBrain):
 
     def _complete_episode_tracking(self) -> None:
         """Complete episode tracking for overfitting detection."""
-        total_steps = len(self.episode_rewards)
-        total_reward = sum(self.episode_rewards)
+        total_steps = len(self.overfit_detector_current_episode_rewards)
+        total_reward = sum(self.overfit_detector_current_episode_rewards)
 
         self.overfitting_detector.update_performance_metrics(total_steps, total_reward)
 
@@ -531,6 +533,7 @@ class MLPBrain(ClassicalBrain):
         # Reset overfitting tracking for new episode
         self.overfit_detector_current_episode_actions.clear()
         self.overfit_detector_current_episode_positions.clear()
+        self.overfit_detector_current_episode_rewards.clear()
 
     def copy(self) -> "MLPBrain":
         """
