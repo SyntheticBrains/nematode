@@ -618,7 +618,7 @@ class ModularBrain(QuantumBrain):
         if self.episode_count % EPISODE_LOG_INTERVAL == 0:
             self.overfitting_detector.log_overfitting_analysis()
 
-        # Reset episode tracking
+        # Reset overfitting tracking for new episode
         self.current_episode_actions.clear()
         self.current_episode_positions.clear()
         self.current_episode_rewards.clear()

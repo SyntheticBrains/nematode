@@ -250,6 +250,8 @@ class QMLPBrain(ClassicalBrain):
         self,
         params: BrainParams,
         reward: float,
+        *,
+        episode_done: bool = False,  # noqa: ARG002
     ) -> None:
         """Q-learning update with experience replay."""
         if self.last_state is None or self.last_action is None:
