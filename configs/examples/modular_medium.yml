@@ -32,7 +32,7 @@ parameter_initializer:
 learning_rate:
   method: dynamic
   parameters:
-    initial_learning_rate: 0.1
+    initial_learning_rate: 0.01
     decay_type: inverse_time
     decay_rate: 0.9
     min_lr: 0
