@@ -30,6 +30,11 @@ POSITION_DIVERSITY_LOW = 0.3
 START_POSITION_SENSITIVITY_HIGH = 0.7
 POLICY_CONSISTENCY_LOW = 0.3
 
+# Use loss variance in risk score calculation
+# NOTE: Disabled since we can't currently calculate this for quantum
+# brains, which prevents fair comparison between brain types.
+TOGGLE_RISK_SCORE_LOSS_VARIANCE = False
+
 
 @dataclass
 class OverfittingMetrics:
@@ -267,9 +272,13 @@ class OverfittingDetector:
             float((1.0 - action_entropy) * 0.25),  # Low action diversity = risk
             float((1.0 - position_diversity) * 0.20),  # Low position diversity = risk
             float(start_sensitivity * 0.20),  # High start sensitivity = risk
-            float(loss_variance * 0.15),  # High loss variance = risk
             float((1.0 - policy_consistency) * 0.20),  # Low policy consistency = risk
         ]
+
+        if TOGGLE_RISK_SCORE_LOSS_VARIANCE:
+            risk_factors.append(float(loss_variance * 0.15))  # High loss variance = risk
+        else:
+            logger.warning("Loss variance not included in risk score calculation.")
 
         risk_score = float(np.sum(risk_factors))
 
