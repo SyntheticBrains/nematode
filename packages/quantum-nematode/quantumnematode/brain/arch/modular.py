@@ -53,6 +53,13 @@ DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-4
 # Overfitting detector defaults
 OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL = 25
 
+# Learning rate boost defaults
+DEFAULT_LR_BOOST = True
+DEFAULT_LR_BOOST_FACTOR = 5.0
+DEFAULT_LR_BOOST_DURATION = 10
+DEFAULT_LOW_REWARD_THRESHOLD = -0.25
+DEFAULT_LOW_REWARD_WINDOW = 15
+
 if TYPE_CHECKING:
     from qiskit_serverless.core.function import RunnableQiskitFunction
 
@@ -82,6 +89,13 @@ class ModularBrainConfig(BrainConfig):
     overfit_detector_episode_log_interval: int = (
         OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL  # Interval for episode logging
     )
+
+    # Learning rate boost configuration
+    lr_boost: bool = DEFAULT_LR_BOOST  # Toggle learning rate boost
+    lr_boost_factor: float = DEFAULT_LR_BOOST_FACTOR  # Factor by which to boost learning rate
+    lr_boost_duration: int = DEFAULT_LR_BOOST_DURATION  # Duration of learning rate boost
+    low_reward_threshold: float = DEFAULT_LOW_REWARD_THRESHOLD  # Threshold for low rewards
+    low_reward_window: int = DEFAULT_LOW_REWARD_WINDOW  # Window for low reward tracking
 
 
 class ModularBrain(QuantumBrain):
@@ -181,7 +195,15 @@ class ModularBrain(QuantumBrain):
         self._transpiled_cache: Any = None
         self._backend: AerSimulator | BackendV2 | None = None
 
-        self._momentum: dict[str, float] = {}
+        self._momentum = {}
+
+        # Learning rate boost logic
+        self._lr_boost_active = False
+        self._lr_boost_steps_remaining = 0
+        self._lr_boost_factor = config.lr_boost_factor
+        self._lr_boost_duration = config.lr_boost_duration
+        self._low_reward_threshold = config.low_reward_threshold
+        self._low_reward_window = config.low_reward_window
 
         # Overfitting detection
         self.overfitting_detector = create_overfitting_detector_for_brain("modular")
@@ -419,8 +441,12 @@ class ModularBrain(QuantumBrain):
 
         # --- Reward-based learning: compute gradients and update parameters ---
         if reward is not None and self.latest_data.action is not None:
+            # Learning rate boost logic
+            if self.config.lr_boost:
+                lr = self._handle_learning_rate_boost()
+            else:
+                lr = self.learning_rate.get_learning_rate()
             gradients = self.parameter_shift_gradients(params, self.latest_data.action, reward)
-            lr = self.learning_rate.get_learning_rate()
             self.update_parameters(gradients, reward=reward, learning_rate=lr)
 
         # Track for overfitting detection
@@ -430,6 +456,33 @@ class ModularBrain(QuantumBrain):
         self.history_data.rewards.append(reward or 0.0)
 
         return actions
+
+    def _handle_learning_rate_boost(self) -> float:
+        """Handle learning rate boost based on recent rewards."""
+        recent_rewards = (
+            self.history_data.rewards[-self._low_reward_window :]
+            if len(self.history_data.rewards) >= self._low_reward_window
+            else self.history_data.rewards
+        )
+        avg_reward = np.mean(recent_rewards) if recent_rewards else 0.0
+        if (
+            not self._lr_boost_active
+            and avg_reward < self._low_reward_threshold
+            and len(recent_rewards) == self._low_reward_window
+        ):
+            self._lr_boost_active = True
+            self._lr_boost_steps_remaining = self._lr_boost_duration
+            logger.info(f"Learning rate boost activated: avg_reward={avg_reward:.4f}")
+        if self._lr_boost_active:
+            lr = self.learning_rate.get_learning_rate() * self._lr_boost_factor
+            self._lr_boost_steps_remaining -= 1
+            if self._lr_boost_steps_remaining <= 0:
+                self._lr_boost_active = False
+                logger.info("Learning rate boost deactivated.")
+        else:
+            lr = self.learning_rate.get_learning_rate()
+
+        return lr
 
     def _track_episode_metrics(
         self,
