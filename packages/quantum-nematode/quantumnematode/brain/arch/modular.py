@@ -78,8 +78,6 @@ class ModularBrainConfig(BrainConfig):
     significant_reward_threshold: float = (
         DEFAULT_SIGNIFICANT_REWARD_THRESHOLD  # Threshold for significant rewards
     )
-    small_gradient_threshold: float = (
-        DEFAULT_SMALL_GRADIENT_THRESHOLD  # Threshold for small gradients
     )
 
 
@@ -838,12 +836,7 @@ class ModularBrain(QuantumBrain):
         reward: float | None = None,  # noqa: ARG002
         learning_rate: float = 0.01,
     ) -> None:
-        """
-        Update quantum circuit parameter values based on gradients and learning rate.
-
-        If the mean gradient norm is below a threshold for several steps,
-        parameters are re-initialized (reset).
-        """
+        """Update quantum circuit parameter values based on gradients and learning rate."""
         param_keys = list(self.parameter_values.keys())
 
         # Initialize momentum if not exists
