@@ -50,9 +50,8 @@ DEFAULT_PARAM_MODULO = True
 DEFAULT_SIGNIFICANT_REWARD_THRESHOLD = 0.1
 DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-4
 
-# Episode logging interval constant
-# TODO: Make this configurable
-EPISODE_LOG_INTERVAL = 25
+# Overfitting detector defaults
+OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL = 25
 
 if TYPE_CHECKING:
     from qiskit_serverless.core.function import RunnableQiskitFunction
@@ -78,6 +77,10 @@ class ModularBrainConfig(BrainConfig):
     significant_reward_threshold: float = (
         DEFAULT_SIGNIFICANT_REWARD_THRESHOLD  # Threshold for significant rewards
     )
+
+    # Overfitting detector configuration
+    overfit_detector_episode_log_interval: int = (
+        OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL  # Interval for episode logging
     )
 
 
@@ -186,6 +189,7 @@ class ModularBrain(QuantumBrain):
         self.overfit_detector_episode_actions = []
         self.overfit_detector_current_episode_positions = []
         self.overfit_detector_current_episode_rewards = []
+        self.overfit_detector_episode_log_interval = config.overfit_detector_episode_log_interval
 
     def build_brain(
         self,
@@ -617,8 +621,8 @@ class ModularBrain(QuantumBrain):
 
         self.overfit_detector_episode_count += 1
 
-        # Log overfitting analysis every EPISODE_LOG_INTERVAL episodes
-        if self.overfit_detector_episode_count % EPISODE_LOG_INTERVAL == 0:
+        # Log overfitting analysis every n episodes
+        if self.overfit_detector_episode_count % self.overfit_detector_episode_log_interval == 0:
             self.overfitting_detector.log_overfitting_analysis()
 
         # Reset overfitting tracking for new episode
