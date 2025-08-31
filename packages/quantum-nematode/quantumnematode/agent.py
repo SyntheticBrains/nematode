@@ -480,9 +480,15 @@ class QuantumNematodeAgent:
             # Render all grids for superpositions at each step
             row = []
             labels = []
+            label_padding_first = " " * 8
+            label_padding_all = " " * self.env.grid_size
             for i, (_, env_copy, _) in enumerate(superpositions):
                 grid = env_copy.render()
-                label = f"#{i + 1} <= #{i // 2 + 1}" if i > 0 else f"#{i + 1}      "
+                label = (
+                    f"#{i + 1} <= #{i // 2 + 1}{label_padding_all}"
+                    if i > 0
+                    else f"#{i + 1}{label_padding_first}{label_padding_all}"
+                )
                 row.append(grid)
                 labels.append(label)
 
