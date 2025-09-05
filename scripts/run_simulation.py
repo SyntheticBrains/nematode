@@ -595,9 +595,6 @@ def setup_brain_model(  # noqa: C901, PLR0913
             device=device,
             parameter_initializer=parameter_initializer,
         )
-    else:
-        error_message = f"Unknown brain architecture: {brain_type}"
-        raise ValueError(error_message)
     return brain
 
 
