@@ -2,247 +2,196 @@
 
 This project simulates a simplified nematode (C. elegans) navigating a 2D grid maze to find food, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for the environment.
 
----
-
 ## 🧪 Features
 
-- ✅ Modular quantum circuit (2+ qubits) that takes in state and outputs movement
-- ✅ Classical MLP (multi-layer perceptron) brain option
-- ✅ Classical grid-world environment
-- ✅ Agent that navigates based on brain output
-- ✅ Supports both CLI scripts and Jupyter notebook workflows
-- 🚧 Expandable for training, hybrid QML, or hardware backends
-
-### Expanded Details
-
-#### Modular Quantum Brain
-
-- The nematode's brain can be implemented as a parameterized quantum circuit with 2 or more qubits.
-- The circuit uses RX, RY, and RZ gates to encode the agent's state and entanglement to model complex decision-making.
-- Measurements on the qubits are mapped to one of four possible actions: forward, left, right, or stay.
-
-#### Classical MLP Brain
-
-- Alternatively, the agent can use a classical multi-layer perceptron (MLP) policy network for decision-making.
-- The MLP processes the agent's state and selects actions based on learned policies.
-- Supports GPU acceleration via PyTorch.
-
-#### Classical Grid-World Environment
-
-- A simple 2D grid maze serves as the nematode's environment.
-- The agent starts at a random position and must navigate to a food source while avoiding collisions with its own body.
-- The environment dynamically updates based on the agent's actions and provides feedback for learning.
-
-#### Quantum Reinforcement Learning (QRL)
-
-- A reward-based learning mechanism has been integrated to improve the agent's navigation efficiency.
-- Gradients are computed based on the quantum circuit's output probabilities and the reward signal.
-- The quantum circuit's parameters are updated iteratively to optimize the agent's performance.
-
-#### Hybrid Workflows
-
-- The project supports both CLI-based simulations and interactive Jupyter notebook workflows.
-- Users can visualize the agent's path and learning process in real-time.
-
-#### Expandability
-
-- The framework is designed to be modular and extensible.
-- Future enhancements could include integration with real quantum hardware, advanced quantum learning techniques, and visualization tools.
-
----
+- ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
+- ✅ **Classical ML Alternatives**: MLP and Q-learning brain architectures
+- ✅ **Grid-World Environment**: 2D maze navigation with food-seeking behavior
+- ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
+- ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
+- ✅ **Interactive Workflows**: CLI scripts to run simulations
+- 🚧 **Expandable Framework**: Modular design for research and experimentation
 
 ## 🧠 Brain Architectures
 
-This project now supports two brain architectures:
+Choose from multiple brain architectures for your nematode:
 
-- **ModularBrain**: A modular quantum brain using parameterized circuits for decision-making.
-- **MLPBrain**: A classical multi-layer perceptron (MLP) brain for policy-based action selection.
+- **ModularBrain**: Quantum variational circuit with modular sensory processing
+- **QModularBrain**: Hybrid quantum-classical Q-learning with experience replay
+- **MLPBrain**: Classical multi-layer perceptron with policy gradients (REINFORCE)
+- **QMLPBrain**: Classical MLP with Deep Q-Network (DQN) learning
 
-### How to Choose a Brain Architecture
-
-You can select the brain architecture when running the simulation using the `--brain` argument:
+Select the brain architecture when running simulations:
 
 ```bash
-python scripts/run_simulation.py --brain modular
-python scripts/run_simulation.py --brain mlp
+python scripts/run_simulation.py --brain modular    # Quantum (default)
+python scripts/run_simulation.py --brain qmodular  # Hybrid quantum-classical
+python scripts/run_simulation.py --brain mlp       # Classical policy gradient
+python scripts/run_simulation.py --brain qmlp      # Classical Q-learning
 ```
 
-The default architecture is `modular` (quantum). Use `mlp` for a classical neural network agent.
+## 🚀 Quick Start
 
----
+### 1. Install Dependencies
 
-## 🚀 Getting Started
-
-### 1. Install [uv](https://github.com/astral-sh/uv)
+Install [uv](https://github.com/astral-sh/uv) for dependency management:
 
 ```bash
 brew install uv
 ```
 
-### 2. Install dependencies
-
-You can install the project with either CPU or GPU support.
-
-Install with QPU support:
+Install the project (choose one based on your needs):
 
 ```bash
+# For CPU simulation (recommended for beginners)
+uv sync --extra cpu --extra torch
+
+# For quantum hardware access (requires IBM Quantum account)
 uv sync --extra qpu
+
+# For GPU acceleration
+uv sync --extra gpu --extra torch
 ```
 
-Install with CPU support:
+### 2. Configure Environment (Optional)
 
-```bash
-uv sync --extra cpu
-```
-
-Install with GPU support:
-
-```bash
-uv sync --extra gpu
-```
-
-To run classical ML brain architectures, you will also need to install `torch` as an extra:
-
-```bash
-uv sync [OTHER_EXTRAS] --extra torch
-```
-
-> ℹ️ Only the `cpu` and `qpu` extras conflict and cannot be installed together.
-
-### 3. Set up environment variables
-
-Copy the provided `.env.template` file to `.env` and edit it to include your required environment variables (such as your IBM Quantum API key):
+If using quantum hardware, set up your IBM Quantum API key:
 
 ```bash
 cp .env.template .env
+# Edit .env to add your IBM_QUANTUM_API_KEY
 ```
 
-Open `.env` in your favorite editor and set the values as needed, for example:
+### 3. Run a Simulation
 
-```
-IBM_QUANTUM_API_KEY=your-ibm-quantum-api-key-here
-```
-
-This file will be loaded automatically when running the simulation.
-
----
-
-## 📓 Running the Simulation
-
-### Jupyter Notebook (Recommended for Exploration)
+**Command Line Examples:**
 
 ```bash
-jupyter notebook notebooks/simulate.ipynb
+# Quantum modular brain (CPU simulation)
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_medium.yml --theme emoji
+
+# Quantum modular brain (IBM QPU)
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --device qpu
+
+# Classical MLP brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
+
+# Many-worlds quantum simulation
+uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --manyworlds
 ```
 
-### CLI (Python script version)
+## � How It Works
 
-```bash
-uv run ./scripts/run_simulation.py
+1. **State Perception**: The nematode perceives its environment (distance to food, obstacles)
+2. **Brain Processing**: The selected brain architecture processes the state
+3. **Action Selection**: Brain outputs action probabilities (forward, left, right, stay)
+4. **Environment Update**: Agent moves and receives reward signal
+5. **Learning**: Brain parameters are updated based on reward feedback
+6. **Repeat**: Process continues until food is found or maximum steps reached
+
+### Quantum Learning Process
+
+For quantum brains, the learning process uses:
+- **Quantum Feature Encoding**: Environmental data encoded as qubit rotations
+- **Parameterized Quantum Circuits**: Trainable quantum gates for decision-making
+- **Parameter-Shift Rule**: Quantum gradient computation for optimization
+- **Entanglement**: Quantum correlations between different sensory modules
+
+## 📊 Example Output
+
+The simulation provides real-time visualization of the nematode's navigation:
+
+```
+⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️🦠⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️🔼⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️🔵⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️🔵⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️⬜️
+
+Run:            10/10
+Steps(Avg):     35.89/10
+Step:		        20/300
+Wins:		        10
+
+Session ID: 20250101_000000
+All runs completed:
+Run 1: 28 steps    Run 6: 23 steps
+Run 2: 44 steps    Run 7: 40 steps
+Run 3: 21 steps    Run 8: 30 steps
+Run 4: 66 steps    Run 9: 29 steps
+Run 5: 33 steps    Run 10: 23 steps
+
+Average steps per run: 33.70
+Average efficiency score: -19.70
+Improvement metric (steps): 17.86%
+Success rate: 100.00%
 ```
 
-> This script runs the simulation headlessly and logs the output.
+Where:
+- 🦠 = Nematode agent
+- 🔼 = Food target
+- 🔵 = Agent's trail/body
+- ⬜️ = Empty space
 
----
+## 🧰 Built With
 
-## 🧠 How It Works
+- **[Qiskit](https://qiskit.org/)**: Quantum computing framework
+- **[PyTorch](https://pytorch.org/)**: Classical neural networks
+- **[uv](https://github.com/astral-sh/uv)**: Modern Python dependency management
+- **[Pydantic](https://pydantic.dev/)**: Data validation and settings
+- **[Rich](https://rich.readthedocs.io/)**: Beautiful terminal output
 
-- The agent receives its state: distance (`dx`, `dy`) to food.
-- The selected brain (quantum or classical) processes the state and outputs an action.
-- The environment updates the agent's position.
-- The process repeats until the agent reaches the food or max steps are hit.
+## 🔬 Research Applications
 
----
+This project serves as a platform for exploring:
 
-## 🧪 Example Output
-
-```
-Step 1: Action=right, Position=[1, 0]
-Step 2: Action=right, Position=[2, 0]
-...
-Step 11: Action=up, Position=[4, 4]
-
-Final path:
-[(0, 0), (1, 0), ..., (4, 4)]
-```
-
----
-
-## 🧰 Tools Used
-
-- [Qiskit](https://qiskit.org/)
-- [PyTorch](https://pytorch.org/) (for MLPBrain)
-- [Python 3.10+]
-- [uv](https://github.com/astral-sh/uv) for modern dependency management
-- Jupyter for notebook visualization
-
----
+- **Quantum Machine Learning**: Investigating quantum advantages in learning tasks
+- **Biological Modeling**: Simplified models of neural decision-making
+- **Hybrid Algorithms**: Combining quantum and classical computation
+- **NISQ Applications**: Near-term quantum computing applications
 
 ## 🗺️ Roadmap
 
-### Planned Features
+### Upcoming Features
 
-- **Advanced Quantum Learning**: Explore more sophisticated quantum learning techniques, such as Quantum Boltzmann Machines (QBM) and Quantum Memory Encoding.
-- **Real Quantum Hardware Integration**: Transition from simulation to real quantum hardware for testing and validation.
-- **Visualization Tools**: Develop tools to visualize the agent's learning process and decision-making.
+- **Enhanced Brain Architectures**: More sophisticated quantum learning algorithms
+- **Improved Environments**: Multi-agent scenarios and dynamic obstacles
+- **Better Visualization**: Real-time learning analysis and performance tracking
+- **Hardware Optimization**: Circuit compilation and quantum error mitigation
+- **Research Tools**: Advanced analysis and experimentation capabilities
 
-### Other Possible Learning Approaches
+### Research Applications
 
-#### Quantum Memory Encoding
-
-- **Description**: Use quantum states to encode the nematode's memory of past actions or visited positions.
-- **Implementation**:
-  - Use quantum registers to store information about visited grid positions or actions.
-  - Apply quantum superposition to explore multiple paths simultaneously.
-  - Use quantum interference to reinforce paths that lead to food and suppress inefficient paths.
-
-#### Quantum Grover Search for Pathfinding
-
-- **Description**: Use Grover's algorithm to search for the shortest path to the food.
-- **Implementation**:
-  - Encode the maze as a quantum oracle.
-  - Use Grover's search to find the optimal sequence of actions leading to the goal.
-
-#### Quantum Boltzmann Machines (QBM)
-
-- **Description**: Use QBMs to model the nematode's environment and learn optimal navigation strategies.
-- **Implementation**:
-  - Train a QBM to represent the probability distribution of successful paths.
-  - Use the trained QBM to sample actions during navigation.
-
-#### Quantum Amplitude Amplification for Action Selection
-
-- **Description**: Use amplitude amplification to bias the nematode's action selection towards more promising actions.
-- **Implementation**:
-  - Encode action probabilities in quantum amplitudes.
-  - Amplify actions that are more likely to lead to the goal based on past experience.
-
----
+This platform enables research in:
+- Quantum advantages in machine learning tasks
+- Bio-inspired quantum algorithms
+- Hybrid quantum-classical computation
+- Near-term quantum device applications
 
 ## 🤝 Contributing
 
-PRs welcome! To extend:
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for complete development setup instructions, code style guidelines, testing procedures, and pull request process.
 
-- Add more sophisticated brain logic
-- Integrate Qiskit runtime or real IBM Quantum backends
-- Create visualization tools for maze traversal
+### Areas We Need Help With
 
-### Pre-commit
+- **Quantum Algorithm Development**: New quantum learning techniques
+- **Environment Extensions**: Multi-agent scenarios, dynamic obstacles  
+- **Visualization Tools**: Real-time learning analysis
+- **Documentation**: Tutorials and examples
+- **Testing**: Performance benchmarks and edge cases
 
-We use [pre-commit](https://pre-commit.com/) to automate linting and code validation checks. Run the following to install the pre-commmit:
+## 📄 License
 
-```sh
-uv run pre-commit install
-```
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
-Use the following command to manually run the pre-commit checks:
+## 🙏 Acknowledgments
 
-```sh
-uv run pre-commit run -a
-```
-
----
-
-## 🧬 License
-
-Unlicensed
+- **[Q-CTRL](https://q-ctrl.com/)**: For providing quantum hardware access with Fire Opal performance management tools to suppress quantum hardware errors and optimize quantum circuits
+- **C. elegans Research Community**: For inspiring this computational model
+- **Qiskit Team**: For providing excellent quantum computing tools
+- **Quantum ML Community**: For advancing the field of quantum machine learning
