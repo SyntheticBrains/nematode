@@ -265,7 +265,7 @@ class MazeEnvironment:
             return
 
         # Update the body positions
-        self.body = [tuple(self.agent_pos)] + self.body[:-1] if len(self.body) > 0 else []
+        self.body = [tuple(self.agent_pos), *self.body[:-1]] if len(self.body) > 0 else []
 
         # Update the agent's position
         self.agent_pos = tuple(new_pos)
