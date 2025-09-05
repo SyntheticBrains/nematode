@@ -1,8 +1,40 @@
 [project]
 name = "quantum-nematode"
-version = "0.1.0"
+version = "1.0.0"
+description = "Quantum brain simulation of a nematode (C. elegans) using variational quantum circuits"
+readme = "../../README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Chris Zaharia", email = "chris.zaharia@gmail.com" },
+]
+maintainers = [
+    { name = "Chris Zaharia", email = "chris.zaharia@gmail.com" },
+]
 requires-python = ">=3.12,<3.13"
-description = "Quantum brain simulation of a nematode"
+keywords = [
+    "quantum",
+    "machine-learning",
+    "nematode",
+    "c-elegans",
+    "simulation",
+    "qiskit",
+    "quantum-circuits",
+    "variational-quantum-eigensolver",
+    "quantum-reinforcement-learning",
+    "parameter-shift-rule",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Private :: Do Not Upload",
+]
 dependencies = [
     "qiskit>=1.0.0,<2.0.0",
     "matplotlib>=3.10.1",
@@ -12,7 +44,12 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "rich>=13.0.0",
 ]
-classifiers = ["Private :: Do Not Upload"]
+
+[project.urls]
+Homepage = "https://github.com/chrisjz/nematode"
+Repository = "https://github.com/chrisjz/nematode"
+Documentation = "https://github.com/chrisjz/nematode#readme"
+Issues = "https://github.com/chrisjz/nematode/issues"
 
 [project.optional-dependencies]
 cpu = [
