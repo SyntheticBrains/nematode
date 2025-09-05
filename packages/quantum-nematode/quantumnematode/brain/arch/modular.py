@@ -1,4 +1,51 @@
-"""Modular Quantum Brain Architecture for Multi-Modal Sensing."""
+"""
+Modular Quantum Brain Architecture for Multi-Modal Sensing.
+
+This quantum brain architecture implements a modular approach where different sensory and
+cognitive functions are mapped to specific qubits, allowing for specialized processing
+of different types of environmental information while maintaining quantum coherence
+and entanglement between modules.
+
+Key Features:
+- **Modular Quantum Architecture**: Different modules (vision, chemotaxis, mechanosensation,
+  memory, etc.) are mapped to specific qubits for specialized processing
+- **Parameter-Shift Gradient Descent**: Uses quantum parameter-shift rule for gradient
+  computation and parameter optimization
+- **Multi-Layer Quantum Circuits**: Configurable circuit depth with feature encoding
+  and entanglement layers
+- **Quantum Feature Encoding**: Environmental features encoded as RX/RY/RZ rotations
+  on module-specific qubits
+- **Cross-Module Entanglement**: CZ gates create entanglement between all qubit pairs
+  for information sharing
+- **Momentum-Based Optimization**: Uses momentum updates with L2 regularization for
+  stable parameter learning
+- **Adaptive Learning Rate**: Dynamic learning rate scheduling with optional boost
+  mechanism for poor performance periods
+- **Hardware-Agnostic Execution**: Supports both classical simulation (AerSimulator)
+  and real quantum hardware (IBM QPU) with Q-CTRL performance management
+- **Overfitting Detection**: Built-in monitoring for learning stability and
+  generalization performance
+
+Architecture:
+- Input: Multi-modal environmental features (gradients, distances, orientations, etc.)
+- Modules: Specialized qubit groups for chemotaxis, mechanosensation, memory, etc.
+- Layers: Multiple encoding-entanglement layers with parameterized rotation gates
+- Output: Action probabilities derived from quantum measurement statistics
+- Learning: Parameter-shift rule gradients with momentum-based optimization
+
+The modular brain learns by:
+1. Encoding environmental features into module-specific qubit rotations
+2. Applying parameterized quantum gates in multiple layers with entanglement
+3. Measuring quantum states to obtain action probability distributions
+4. Using parameter-shift rule to compute gradients of action log-probabilities
+5. Updating quantum parameters using momentum-based gradient descent with regularization
+6. Adapting learning rate based on performance and gradient characteristics
+
+This architecture provides quantum advantages through superposition and entanglement
+while maintaining interpretable modular structure for different sensory modalities.
+Supports both noisy intermediate-scale quantum (NISQ) devices and classical simulation
+for scalable quantum machine learning applications.
+"""
 
 import os
 from copy import deepcopy
