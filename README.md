@@ -49,9 +49,14 @@ uv sync --extra cpu --extra torch
 # For quantum hardware access (requires IBM Quantum account)
 uv sync --extra qpu
 
-# For GPU acceleration
+# For GPU acceleration (local installation)
 uv sync --extra gpu --extra torch
+
+# For GPU acceleration (Docker with NVIDIA GPU support)
+docker compose up --build
 ```
+
+> **Docker GPU Requirements**: For the Docker setup, you need Docker with NVIDIA Container Toolkit installed for GPU acceleration.
 
 ### 2. Configure Environment (Optional)
 
@@ -78,6 +83,16 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 
 # Many-worlds quantum simulation
 uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --manyworlds
+```
+
+**Docker GPU Examples:**
+
+```bash
+# Run classical MLP brain with GPU acceleration
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
+
+# Interactive Docker shell for development
+docker-compose exec quantum-nematode bash
 ```
 
 ## � How It Works
