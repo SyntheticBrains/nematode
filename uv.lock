@@ -1907,7 +1907,7 @@ wheels = [
 
 [[package]]
 name = "quantum-nematode"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "packages/quantum-nematode" }
 dependencies = [
     { name = "ipykernel" },
@@ -1953,7 +1953,7 @@ provides-extras = ["cpu", "gpu", "torch", "qpu"]
 
 [[package]]
 name = "quantum-nematode-workspace"
-version = "0.1.0"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "pre-commit" },

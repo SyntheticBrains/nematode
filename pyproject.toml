@@ -1,12 +1,47 @@
 [project]
 name = "quantum-nematode-workspace"
-version = "0.1.0"
+version = "1.0.0"
+description = "Quantum brain simulation workspace for C. elegans nematode navigation"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Chris Zaharia", email = "chris.zaharia@gmail.com" },
+]
+maintainers = [
+    { name = "Chris Zaharia", email = "chris.zaharia@gmail.com" },
+]
 requires-python = ">=3.12,<3.13"
+keywords = [
+    "quantum",
+    "machine-learning",
+    "nematode",
+    "simulation",
+    "qiskit",
+    "quantum-computing",
+    "reinforcement-learning",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Private :: Do Not Upload",
+]
 dependencies = [
     "pre-commit>=4.2.0",
     "pyright>=1.1.399",
     "ruff>=0.11.6",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chrisjz/nematode"
+Repository = "https://github.com/chrisjz/nematode"
+Documentation = "https://github.com/chrisjz/nematode#readme"
+Issues = "https://github.com/chrisjz/nematode/issues"
 
 [project.optional-dependencies]
 cpu = [
