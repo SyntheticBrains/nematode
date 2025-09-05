@@ -128,10 +128,10 @@ The simulation provides real-time visualization of the nematode's navigation:
 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
 
-Run:            10/10
-Steps(Avg):     35.89/10
-Step:		        20/300
-Wins:		        10
+Run:          10/10
+Steps(Avg):   35.89/10
+Step:         20/300
+Wins:         10
 
 Session ID: 20250101_000000
 All runs completed:
