@@ -11,6 +11,7 @@ brain:
     noise_std: 0.003
     param_clip: true
     param_modulo: true
+    lr_boost: false
 shots: 1500
 body_length: 2
 qubits: 2
