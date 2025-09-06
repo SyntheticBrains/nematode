@@ -4,12 +4,8 @@ version = "1.0.0"
 description = "Quantum brain simulation workspace for C. elegans nematode navigation"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-authors = [
-    { name = "Chris Zaharia", email = "chris.zaharia@gmail.com" },
-]
-maintainers = [
-    { name = "Chris Zaharia", email = "chris.zaharia@gmail.com" },
-]
+authors = []
+maintainers = []
 requires-python = ">=3.12,<3.13"
 keywords = [
     "quantum",
@@ -38,10 +34,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/chrisjz/nematode"
-Repository = "https://github.com/chrisjz/nematode"
-Documentation = "https://github.com/chrisjz/nematode#readme"
-Issues = "https://github.com/chrisjz/nematode/issues"
+Homepage = "https://github.com/SyntheticBrains/nematode"
+Repository = "https://github.com/SyntheticBrains/nematode"
+Documentation = "https://github.com/SyntheticBrains/nematode#readme"
+Issues = "https://github.com/SyntheticBrains/nematode/issues"
 
 [project.optional-dependencies]
 cpu = [
