@@ -18,7 +18,7 @@ brew install uv
 ### 2. Clone and Setup
 
 ```bash
-git clone https://github.com/chrisjz/nematode.git
+git clone https://github.com/SyntheticBrains/nematode.git
 cd nematode
 ```
 
