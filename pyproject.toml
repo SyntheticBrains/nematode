@@ -56,16 +56,18 @@ qpu = [
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
 
+[dependency-groups]
+dev = [
+    "quantum-nematode",
+    "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
+]
+
 [tool.uv.workspace]
 members = ["packages/*"]
 
 [tool.uv]
 package = false
-dev-dependencies = [
-    "quantum-nematode",
-    "pytest>=8.4.1",
-    "pytest-cov>=7.0.0",
-]
 
 [tool.ruff]
 target-version = "py312"
