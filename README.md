@@ -24,6 +24,7 @@ Choose from multiple brain architectures for your nematode:
 - **QModularBrain**: Hybrid quantum-classical Q-learning with experience replay
 - **MLPBrain**: Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **QMLPBrain**: Classical MLP with Deep Q-Network (DQN) learning
+- **SpikingBrain**: Biologically realistic spiking neural network with LIF neurons and STDP learning
 
 Select the brain architecture when running simulations:
 
@@ -32,6 +33,7 @@ python scripts/run_simulation.py --brain modular    # Quantum (default)
 python scripts/run_simulation.py --brain qmodular  # Hybrid quantum-classical
 python scripts/run_simulation.py --brain mlp       # Classical policy gradient
 python scripts/run_simulation.py --brain qmlp      # Classical Q-learning
+python scripts/run_simulation.py --brain spiking   # Biologically realistic
 ```
 
 ## 🚀 Quick Start
@@ -85,6 +87,9 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 # Classical MLP brain
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
 
+# Spiking neural network brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_medium.yml --theme emoji
+
 # Many-worlds quantum simulation
 uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --manyworlds
 ```
@@ -115,6 +120,22 @@ For quantum brains, the learning process uses:
 - **Parameterized Quantum Circuits**: Trainable quantum gates for decision-making
 - **Parameter-Shift Rule**: Quantum gradient computation for optimization
 - **Entanglement**: Quantum correlations between different sensory modules
+
+### Spiking Neural Network
+
+The spiking brain architecture provides biologically realistic neural computation:
+
+- **Leaky Integrate-and-Fire (LIF) Neurons**: Membrane potential dynamics with spike generation
+- **Spike-Timing-Dependent Plasticity (STDP)**: Temporal Hebbian learning rule
+- **Rate Coding**: Environmental input encoding as spike frequency patterns
+- **Reward Modulation**: STDP learning strength modulated by environmental rewards
+
+**Key Features:**
+- Biologically realistic temporal dynamics
+- Event-driven sparse computation
+- Plasticity rules based on spike timing
+- Configurable neuron and synapse parameters
+```
 
 ## 📊 Example Output
 
