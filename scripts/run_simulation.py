@@ -21,6 +21,7 @@ from quantumnematode.brain.arch import (
     QMLPBrainConfig,
     QModularBrainConfig,
     QuantumBrain,
+    SpikingBrainConfig,
 )
 from quantumnematode.brain.arch.dtypes import (
     DEFAULT_BRAIN_TYPE,
@@ -187,6 +188,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             brain_config = QMLPBrainConfig()
         case BrainType.QMODULAR:
             brain_config = QModularBrainConfig()
+        case BrainType.SPIKING:
+            brain_config = SpikingBrainConfig()
 
     # Authenticate and setup Q-CTRL if needed
     perf_mgmt = None
@@ -458,9 +461,13 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
         raise ValueError(error_message)
 
 
-def setup_brain_model(  # noqa: C901, PLR0913
+def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     brain_type: BrainType,
-    brain_config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig,
+    brain_config: ModularBrainConfig
+    | MLPBrainConfig
+    | QMLPBrainConfig
+    | QModularBrainConfig
+    | SpikingBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
     device: DeviceType,
@@ -595,6 +602,32 @@ def setup_brain_model(  # noqa: C901, PLR0913
             device=device,
             parameter_initializer=parameter_initializer,
         )
+    elif brain_type == BrainType.SPIKING:
+        from quantumnematode.brain.arch.spiking import SpikingBrain
+
+        if not isinstance(brain_config, SpikingBrainConfig):
+            error_message = (
+                "The 'spiking' brain architecture requires a SpikingBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        # Create parameter initializer instance from config
+        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
+
+        brain = SpikingBrain(
+            config=brain_config,
+            input_dim=2,
+            num_actions=4,
+            device=device,
+            parameter_initializer=parameter_initializer,
+        )
+    else:
+        error_message = f"Unknown brain type: {brain_type}"
+        logger.error(error_message)
+        raise ValueError(error_message)
+
     return brain
 
 
