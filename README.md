@@ -232,6 +232,7 @@ This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) fo
 ## 🙏 Acknowledgments
 
 - **[Q-CTRL](https://q-ctrl.com/)**: For providing quantum hardware access with Fire Opal performance management tools to suppress quantum hardware errors and optimize quantum circuits
+- **[OpenSpec](https://github.com/Fission-AI/OpenSpec)**: For providing the OpenSpec framework for structured, spec-driven AI development
 - **C. elegans Research Community**: For inspiring this computational model
 - **Qiskit Team**: For providing excellent quantum computing tools
 - **Quantum ML Community**: For advancing the field of quantum machine learning
