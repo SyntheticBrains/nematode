@@ -1,5 +1,8 @@
 # 🪱 Quantum Nematode
 
+[![Pre-commit](https://github.com/SyntheticBrains/nematode/workflows/Pre-commit/badge.svg)](https://github.com/SyntheticBrains/nematode/actions/workflows/pre-commit.yml)
+[![Tests](https://github.com/SyntheticBrains/nematode/workflows/Tests/badge.svg)](https://github.com/SyntheticBrains/nematode/actions/workflows/tests.yml)
+
 <p align="center">
   <img src="./docs/assets/images/demo.gif" alt="nematode simulation demo" />
 </p>
