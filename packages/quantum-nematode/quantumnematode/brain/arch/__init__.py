@@ -5,6 +5,7 @@ from .mlp import MLPBrain, MLPBrainConfig
 from .modular import ModularBrain, ModularBrainConfig
 from .qmlp import QMLPBrain, QMLPBrainConfig
 from .qmodular import QModularBrain, QModularBrainConfig
+from .spiking import SpikingBrain, SpikingBrainConfig
 
 __all__ = [
     "Brain",
@@ -20,4 +21,6 @@ __all__ = [
     "QModularBrain",
     "QModularBrainConfig",
     "QuantumBrain",
+    "SpikingBrain",
+    "SpikingBrainConfig",
 ]
