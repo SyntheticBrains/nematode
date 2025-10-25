@@ -22,3 +22,10 @@ configs/*.yml
 .env.local
 !.env.template
 !.env.example
+
+# Coverage files
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/

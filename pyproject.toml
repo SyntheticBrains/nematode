@@ -64,6 +64,7 @@ package = false
 dev-dependencies = [
     "quantum-nematode",
     "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
 ]
 
 [tool.ruff]
