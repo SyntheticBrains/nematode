@@ -14,6 +14,7 @@ from quantumnematode.brain.arch import (
     ModularBrainConfig,
     QMLPBrainConfig,
     QModularBrainConfig,
+    SpikingBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
 from quantumnematode.initializers import (
@@ -50,14 +51,16 @@ from quantumnematode.optimizers.learning_rate import (
 DEFAULT_LEARNING_RATE_INITIAL = 0.1
 DEFAULT_LEARNING_RATE_METHOD = LearningRateMethod.DYNAMIC
 
+BrainConfigType = (
+    ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig | SpikingBrainConfig
+)
+
 
 class BrainContainerConfig(BaseModel):
     """Configuration for the brain architecture."""
 
     name: str
-    config: ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig | None = (
-        None
-    )
+    config: BrainConfigType | None = None
 
 
 class LearningRateParameters(BaseModel):
@@ -140,7 +143,7 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
 
 def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
     config: SimulationConfig,
-) -> ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig:
+) -> BrainConfigType:
     """
     Configure the brain architecture based on the provided configuration.
 
@@ -149,7 +152,7 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     Returns
     -------
-        ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig:
+        BrainConfigType:
             The configured brain architecture.
     """
     if config.brain is None:
@@ -229,6 +232,24 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
             error_message = (
                 "Invalid brain configuration for 'qmlp' brain type. "
                 f"Expected QMLPBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case "spiking":
+            if config.brain.config is None:
+                return SpikingBrainConfig()
+            if isinstance(config.brain.config, SpikingBrainConfig):
+                return config.brain.config
+            # Handle case where YAML parsed as wrong type - reconstruct as SpikingBrainConfig
+            if hasattr(config.brain.config, "__dict__"):
+                config_dict = {}
+                for field_name in SpikingBrainConfig.model_fields:
+                    if hasattr(config.brain.config, field_name):
+                        config_dict[field_name] = getattr(config.brain.config, field_name)
+                return SpikingBrainConfig(**config_dict)
+            error_message = (
+                "Invalid brain configuration for 'spiking' brain type. "
+                f"Expected SpikingBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
