@@ -585,12 +585,12 @@ class QModularBrain:
         batch = [self.experience_buffer[i] for i in batch_indices]
         states, actions, rewards, next_states, dones = zip(*batch, strict=False)
 
-        # Convert to tensors
-        states_tensor = torch.FloatTensor(states)
-        actions_tensor = torch.LongTensor(actions)
-        rewards_tensor = torch.FloatTensor(rewards)
-        next_states_tensor = torch.FloatTensor(next_states)
-        dones_tensor = torch.BoolTensor(dones)
+        # Convert to tensors (convert to numpy arrays first for performance)
+        states_tensor = torch.FloatTensor(np.array(states))
+        actions_tensor = torch.LongTensor(np.array(actions))
+        rewards_tensor = torch.FloatTensor(np.array(rewards))
+        next_states_tensor = torch.FloatTensor(np.array(next_states))
+        dones_tensor = torch.BoolTensor(np.array(dones))
 
         # Current Q-values
         current_q_values = self.q_network(states_tensor).gather(1, actions_tensor.unsqueeze(1))
