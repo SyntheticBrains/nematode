@@ -83,6 +83,7 @@ class MLPBrain(ClassicalBrain):
         num_actions: int,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
+        *,
         lr_scheduler: bool | None = None,
         parameter_initializer: ParameterInitializer | None = None,
     ) -> None:

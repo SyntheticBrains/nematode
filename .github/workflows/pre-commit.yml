@@ -1,0 +1,47 @@
+name: Pre-commit
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra cpu --extra qpu --extra torch --dev
+
+      - name: Run pre-commit hooks
+        uses: pre-commit/action@v3.0.1
+        env:
+          # Skip pytest in pre-commit as it runs in a separate workflow
+          SKIP: pytest
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "❌ Pre-commit hooks modified files. Please run 'pre-commit run --all-files' locally and commit the changes."
+            exit 1
+          fi

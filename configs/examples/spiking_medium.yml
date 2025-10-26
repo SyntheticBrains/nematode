@@ -1,0 +1,33 @@
+max_steps: 300
+maze_grid_size: 10
+brain:
+  name: spiking
+  config:
+    hidden_size: 64
+    simulation_duration: 75.0
+    time_step: 1.0
+    tau_m: 25.0
+    v_threshold: 1.2
+    v_reset: 0.0
+    v_rest: 0.0
+    max_rate: 120.0
+    min_rate: 0.0
+    tau_plus: 25.0
+    tau_minus: 25.0
+    a_plus: 0.08
+    a_minus: 0.084
+    learning_rate: 0.0008
+    reward_scaling: 0.3
+    weight_mean: 0.1
+    weight_std: 0.05
+    weight_clip: 1.0
+body_length: 2
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  stuck_position_threshold: 5
+gradient:
+  method: clip

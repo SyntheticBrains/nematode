@@ -56,15 +56,18 @@ qpu = [
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
 
+[dependency-groups]
+dev = [
+    "quantum-nematode",
+    "pytest>=8.4.1",
+    "pytest-cov>=7.0.0",
+]
+
 [tool.uv.workspace]
 members = ["packages/*"]
 
 [tool.uv]
 package = false
-dev-dependencies = [
-    "quantum-nematode",
-    "pytest>=8.4.1",
-]
 
 [tool.ruff]
 target-version = "py312"
@@ -72,7 +75,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ['ALL']
-ignore = ['TD002', 'TD003']
+ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
 
 [tool.ruff.lint.per-file-ignores]
 "/**/tests/**/*.py" = [

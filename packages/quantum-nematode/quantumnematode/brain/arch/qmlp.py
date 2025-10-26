@@ -276,15 +276,31 @@ class QMLPBrain(ClassicalBrain):
 
         # Sample batch from experience buffer
         batch = random.sample(self.experience_buffer, self.batch_size)
-        states = torch.tensor([exp[0] for exp in batch], dtype=torch.float32, device=self.device)
-        actions = torch.tensor([exp[1] for exp in batch], dtype=torch.long, device=self.device)
-        rewards = torch.tensor([exp[2] for exp in batch], dtype=torch.float32, device=self.device)
-        next_states = torch.tensor(
-            [exp[3] for exp in batch],
+        states = torch.tensor(
+            np.array([exp[0] for exp in batch]),
             dtype=torch.float32,
             device=self.device,
         )
-        dones = torch.tensor([exp[4] for exp in batch], dtype=torch.bool, device=self.device)
+        actions = torch.tensor(
+            np.array([exp[1] for exp in batch]),
+            dtype=torch.long,
+            device=self.device,
+        )
+        rewards = torch.tensor(
+            np.array([exp[2] for exp in batch]),
+            dtype=torch.float32,
+            device=self.device,
+        )
+        next_states = torch.tensor(
+            np.array([exp[3] for exp in batch]),
+            dtype=torch.float32,
+            device=self.device,
+        )
+        dones = torch.tensor(
+            np.array([exp[4] for exp in batch]),
+            dtype=torch.bool,
+            device=self.device,
+        )
 
         # Current Q-values for selected actions
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
