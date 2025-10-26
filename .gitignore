@@ -29,3 +29,7 @@ configs/*.yml
 coverage.xml
 htmlcov/
 .pytest_cache/
+
+# Claude
+.claude/
+CLAUDE.md
