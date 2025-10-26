@@ -82,22 +82,20 @@ The SpikingBrain SHALL implement the ClassicalBrain protocol for seamless integr
 **And** SHALL validate plasticity rule parameters  
 **And** SHALL provide meaningful error messages for invalid configurations  
 
-## MODIFIED Requirements
-
 ### Requirement: Brain Factory Extension
-The brain factory method SHALL be extended to support spiking neural network instantiation.
+The brain factory method SHALL support spiking neural network instantiation.
 
 #### Scenario: Brain Type Resolution
-**Given** a configuration specifies brain type as "spiking"  
-**When** the brain factory creates a brain instance  
-**Then** it SHALL return a SpikingBrain object  
-**And** SHALL pass through all spiking-specific configuration parameters  
+**Given** a configuration specifies brain type as "spiking"
+**When** the brain factory creates a brain instance
+**Then** it SHALL return a SpikingBrain object
+**And** SHALL pass through all spiking-specific configuration parameters
 
 ### Requirement: CLI Argument Extension
 The command-line interface SHALL accept "spiking" as a valid brain type option.
 
 #### Scenario: Argument Validation
-**Given** a user specifies `--brain spiking`  
-**When** command-line arguments are parsed  
-**Then** the system SHALL recognize "spiking" as a valid brain type  
+**Given** a user specifies `--brain spiking`
+**When** command-line arguments are parsed
+**Then** the system SHALL recognize "spiking" as a valid brain type
 **And** SHALL pass the selection to the brain factory

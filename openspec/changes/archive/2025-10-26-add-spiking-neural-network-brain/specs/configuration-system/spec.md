@@ -54,13 +54,11 @@ The system SHALL provide example configurations for common spiking brain use cas
 **Then** the system SHALL configure a balanced network  
 **And** SHALL use parameters suitable for robust learning  
 
-## MODIFIED Requirements
-
 ### Requirement: Brain Type Enumeration Extension
 The brain type validation SHALL include "spiking" as a valid option.
 
 #### Scenario: Brain Type Validation
-**Given** configuration specifies brain type  
-**When** validation occurs  
-**Then** "spiking" SHALL be accepted as valid  
+**Given** configuration specifies brain type
+**When** validation occurs
+**Then** "spiking" SHALL be accepted as valid
 **Along with** existing "modular", "qmodular", "mlp", "qmlp" types

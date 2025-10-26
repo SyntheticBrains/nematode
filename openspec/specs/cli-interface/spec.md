@@ -1,9 +1,8 @@
-# CLI Interface Capability - Delta Specification
+# cli-interface Specification
 
-This document specifies the changes needed for the command-line interface to support spiking neural network brain architecture selection.
-
-## MODIFIED Requirements
-
+## Purpose
+TBD - created by archiving change add-spiking-neural-network-brain. Update Purpose after archive.
+## Requirements
 ### Requirement: Brain Type Argument Extension
 The CLI argument parser SHALL accept "spiking" as a valid brain type option.
 
@@ -18,7 +17,7 @@ The CLI argument parser SHALL accept "spiking" as a valid brain type option.
 **Given** a user requests help for brain type options  
 **When** they execute `python scripts/run_simulation.py --help`  
 **Then** the help text SHALL list "spiking" among valid brain types  
-**And** SHALL provide brief description of spiking neural network approach  
+**And** SHALL provide brief description of spiking neural network approach
 
 ### Requirement: Configuration Compatibility
 The CLI SHALL support loading spiking brain configurations through existing configuration mechanisms.
@@ -34,7 +33,7 @@ The CLI SHALL support loading spiking brain configurations through existing conf
 **Given** a configuration file specifies a different brain type  
 **When** user provides `--brain spiking` CLI argument  
 **Then** the CLI argument SHALL override the configuration file  
-**And** SHALL use spiking brain regardless of config file brain type  
+**And** SHALL use spiking brain regardless of config file brain type
 
 ### Requirement: Error Handling
 The CLI SHALL provide clear error messages for spiking brain configuration issues.
@@ -51,3 +50,4 @@ The CLI SHALL provide clear error messages for spiking brain configuration issue
 **When** the CLI attempts initialization  
 **Then** SHALL provide clear error about missing dependencies  
 **And** SHALL suggest installation commands
+
