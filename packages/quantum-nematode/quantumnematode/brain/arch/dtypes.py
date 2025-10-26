@@ -13,6 +13,7 @@ class BrainType(Enum):
     QMODULAR = "qmodular"
     MLP = "mlp"
     QMLP = "qmlp"
+    SPIKING = "spiking"
 
 
 class DeviceType(Enum):
@@ -36,9 +37,15 @@ class BrainConfig(BaseModel):
     """Configuration for the brain architecture."""
 
 
-BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.QMODULAR, BrainType.MLP, BrainType.QMLP]
+BRAIN_TYPES = Literal[
+    BrainType.MODULAR,
+    BrainType.QMODULAR,
+    BrainType.MLP,
+    BrainType.QMLP,
+    BrainType.SPIKING,
+]
 QUANTUM_BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.QMODULAR]
-CLASSICAL_BRAIN_TYPES = Literal[BrainType.MLP, BrainType.QMLP]
+CLASSICAL_BRAIN_TYPES = Literal[BrainType.MLP, BrainType.QMLP, BrainType.SPIKING]
 
 # Defaults
 DEFAULT_BRAIN_TYPE = BrainType.MODULAR
