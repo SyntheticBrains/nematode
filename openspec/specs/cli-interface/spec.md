@@ -50,4 +50,3 @@ The CLI SHALL provide clear error messages for spiking brain configuration issue
 **When** the CLI attempts initialization  
 **Then** SHALL provide clear error about missing dependencies  
 **And** SHALL suggest installation commands
-

@@ -61,4 +61,3 @@ The brain type validation SHALL include "spiking" as a valid option.
 **When** validation occurs
 **Then** "spiking" SHALL be accepted as valid
 **Along with** existing "modular", "qmodular", "mlp", "qmlp" types
-

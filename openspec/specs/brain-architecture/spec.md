@@ -98,4 +98,3 @@ The command-line interface SHALL accept "spiking" as a valid brain type option.
 **When** command-line arguments are parsed
 **Then** the system SHALL recognize "spiking" as a valid brain type
 **And** SHALL pass the selection to the brain factory
-
