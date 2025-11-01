@@ -63,8 +63,17 @@ class PerformanceMetrics(BaseModel):
         The average number of steps taken across all runs.
     average_reward : float
         The average reward received across all runs.
+    foraging_efficiency : float | None
+        Foods collected per step (dynamic environments only).
+    average_distance_efficiency : float | None
+        Average distance efficiency per food (dynamic environments only).
+    average_foods_collected : float | None
+        Average number of foods collected per run (dynamic environments only).
     """
 
     success_rate: float
     average_steps: float
     average_reward: float
+    foraging_efficiency: float | None = None
+    average_distance_efficiency: float | None = None
+    average_foods_collected: float | None = None
