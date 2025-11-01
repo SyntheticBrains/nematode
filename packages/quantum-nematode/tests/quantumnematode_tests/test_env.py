@@ -4,11 +4,9 @@ import numpy as np
 import pytest
 from quantumnematode.brain.actions import Action
 from quantumnematode.env import (
-    BaseEnvironment,
     Direction,
     DynamicForagingEnvironment,
     MazeEnvironment,
-    ScalingMethod,
     Theme,
 )
 
@@ -174,10 +172,10 @@ class TestGradientSuperposition:
     def test_gradient_direction_accuracy(self, env):
         """Test gradient direction points toward food."""
         test_cases = [
-            ((15, 10), 0.0),      # Food to east
-            ((5, 10), np.pi),     # Food to west
-            ((10, 15), np.pi/2),  # Food to north
-            ((10, 5), -np.pi/2),  # Food to south
+            ((15, 10), 0.0),  # Food to east
+            ((5, 10), np.pi),  # Food to west
+            ((10, 15), np.pi / 2),  # Food to north
+            ((10, 5), -np.pi / 2),  # Food to south
         ]
 
         for food_pos, expected_angle in test_cases:
@@ -201,7 +199,7 @@ class TestGradientSuperposition:
 
         # Should point generally east
         assert strength > 0.0
-        assert -np.pi/4 < direction < np.pi/4  # Roughly eastward
+        assert -np.pi / 4 < direction < np.pi / 4  # Roughly eastward
 
     def test_no_food_gradient(self, env):
         """Test gradient when no food is present."""
@@ -229,8 +227,8 @@ class TestGradientSuperposition:
 
         # Verify exponential decay: each step should decay by roughly constant factor
         for i in range(len(strengths) - 1):
-            if strengths[i] > 0 and strengths[i+1] > 0:
-                ratio = strengths[i+1] / strengths[i]
+            if strengths[i] > 0 and strengths[i + 1] > 0:
+                ratio = strengths[i + 1] / strengths[i]
                 # Ratio should be consistent (exponential decay)
                 assert 0.0 < ratio < 1.0
 
@@ -267,10 +265,12 @@ class TestPoissonDiskSampling:
 
         # Check all pairs of foods
         for i, food1 in enumerate(env.foods):
-            for food2 in env.foods[i+1:]:
-                distance = np.sqrt((food1[0] - food2[0])**2 + (food1[1] - food2[1])**2)
+            for food2 in env.foods[i + 1 :]:
+                distance = np.sqrt((food1[0] - food2[0]) ** 2 + (food1[1] - food2[1]) ** 2)
                 # Allow small tolerance for floating point
-                assert distance >= 7.99, f"Foods too close: {food1} and {food2} (distance={distance})"
+                assert distance >= 7.99, (
+                    f"Foods too close: {food1} and {food2} (distance={distance})"
+                )
 
     def test_agent_exclusion_radius(self):
         """Test that foods don't spawn too close to agent."""
@@ -288,9 +288,11 @@ class TestPoissonDiskSampling:
 
         # Check all foods are outside exclusion radius
         for food in env.foods:
-            distance = np.sqrt((food[0] - start_pos[0])**2 + (food[1] - start_pos[1])**2)
+            distance = np.sqrt((food[0] - start_pos[0]) ** 2 + (food[1] - start_pos[1]) ** 2)
             # Allow small tolerance for floating point
-            assert distance >= 14.99, f"Food {food} too close to agent at {start_pos} (distance={distance})"
+            assert distance >= 14.99, (
+                f"Food {food} too close to agent at {start_pos} (distance={distance})"
+            )
 
     def test_foods_within_grid_bounds(self):
         """Test that all foods are within grid boundaries."""
@@ -330,11 +332,13 @@ class TestPoissonDiskSampling:
 
             # Check minimum distance to other foods
             for other_food in env.foods[:-1]:
-                distance = np.sqrt((new_food[0] - other_food[0])**2 + (new_food[1] - other_food[1])**2)
+                distance = np.sqrt(
+                    (new_food[0] - other_food[0]) ** 2 + (new_food[1] - other_food[1]) ** 2,
+                )
                 assert distance >= 5
 
             # Check agent exclusion
-            agent_dist = np.sqrt((new_food[0] - 25)**2 + (new_food[1] - 25)**2)
+            agent_dist = np.sqrt((new_food[0] - 25) ** 2 + (new_food[1] - 25) ** 2)
             assert agent_dist >= 8
 
 
@@ -677,7 +681,7 @@ class TestNearestFoodDistance:
         nearest_dist = env.get_nearest_food_distance()
 
         # Nearest should be (8, 8) with distance 4
-        expected_dist = abs(10-8) + abs(10-8)
+        expected_dist = abs(10 - 8) + abs(10 - 8)
         assert nearest_dist == expected_dist
 
     def test_no_food_distance(self):
