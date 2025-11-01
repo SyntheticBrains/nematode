@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_MAX_STEPS,
-    DEFAULT_MAZE_GRID_SIZE,
     QuantumNematodeAgent,
+    SatietyConfig,
 )
 from quantumnematode.brain.arch import (
     Brain,
@@ -30,7 +30,7 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
-from quantumnematode.env import MIN_GRID_SIZE
+from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, MazeEnvironment
 from quantumnematode.logging_config import (
     logger,
 )
@@ -63,15 +63,20 @@ from quantumnematode.report.summary import summary
 from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
+    DynamicEnvironmentConfig,
+    EnvironmentConfig,
     ManyworldsModeConfig,
     ParameterInitializerConfig,
     RewardConfig,
+    StaticEnvironmentConfig,
     configure_brain,
+    configure_environment,
     configure_gradient_method,
     configure_learning_rate,
     configure_manyworlds_mode,
     configure_parameter_initializer,
     configure_reward,
+    configure_satiety,
     create_parameter_initializer_instance,
     load_simulation_config,
 )
@@ -161,7 +166,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     config_file = args.config
     manyworlds_mode = args.manyworlds
     max_steps = DEFAULT_MAX_STEPS
-    maze_grid_size = DEFAULT_MAZE_GRID_SIZE
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
     shots = DEFAULT_SHOTS
@@ -174,6 +178,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     gradient_method = GradientCalculationMethod.RAW
     parameter_initializer_config = ParameterInitializerConfig()
     reward_config = RewardConfig()
+    satiety_config = SatietyConfig()
+    environment_config = EnvironmentConfig()
     manyworlds_mode_config = ManyworldsModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
@@ -215,9 +221,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             else brain_type
         )
         max_steps = config.max_steps if config.max_steps is not None else max_steps
-        maze_grid_size = (
-            config.maze_grid_size if config.maze_grid_size is not None else maze_grid_size
-        )
         shots = config.shots if config.shots is not None else shots
         body_length = config.body_length if config.body_length is not None else body_length
         qubits = config.qubits if config.qubits is not None else qubits
@@ -234,10 +237,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load reward configuration if specified
         reward_config = configure_reward(config)
 
+        # Load satiety configuration if specified
+        satiety_config = configure_satiety(config)
+
+        # Load environment configuration if specified
+        environment_config = configure_environment(config)
+
         # Load many-worlds mode configuration if specified
         manyworlds_mode_config = configure_manyworlds_mode(config)
 
-    validate_simulation_parameters(maze_grid_size, brain_type, qubits)
+    # Get grid size from environment config for validation and logging
+    if environment_config.type == "dynamic":
+        grid_size = (environment_config.dynamic or DynamicEnvironmentConfig()).grid_size
+    else:
+        grid_size = (environment_config.static or StaticEnvironmentConfig()).grid_size
+
+    validate_simulation_parameters(grid_size, brain_type, qubits)
 
     # Configure logging level
     if log_level == "NONE":
@@ -257,7 +272,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Runs: {runs}")
     logger.info(f"Max steps: {max_steps}")
     logger.info(f"Device: {device}")
-    logger.info(f"Grid size: {maze_grid_size}")
+    logger.info(f"Grid size: {grid_size}")
+    logger.info(f"Environment type: {environment_config.type}")
     logger.info(f"Brain type: {brain_type.value}")
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
@@ -276,12 +292,46 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         perf_mgmt=perf_mgmt,
     )
 
-    # Update the agent to use the selected brain architecture
+    # Create the environment based on configuration
+    env = None
+    if environment_config.type == "dynamic":
+        logger.info("Using dynamic foraging environment")
+        dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+        env = DynamicForagingEnvironment(
+            grid_size=dynamic_config.grid_size,
+            num_initial_foods=dynamic_config.num_initial_foods,
+            max_active_foods=dynamic_config.max_active_foods,
+            min_food_distance=dynamic_config.min_food_distance,
+            agent_exclusion_radius=dynamic_config.agent_exclusion_radius,
+            gradient_decay_constant=dynamic_config.gradient_decay_constant,
+            gradient_strength=dynamic_config.gradient_strength,
+            viewport_size=dynamic_config.viewport_size,
+            max_body_length=body_length,
+            theme=theme,
+        )
+        logger.info(
+            f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
+            f"{dynamic_config.num_initial_foods} initial foods",
+        )
+    else:
+        logger.info("Using static maze environment")
+        static_config = environment_config.static or StaticEnvironmentConfig()
+        env = MazeEnvironment(
+            grid_size=static_config.grid_size,
+            max_body_length=body_length,
+            theme=theme,
+        )
+        logger.info(
+            f"Static maze environment: {static_config.grid_size}x{static_config.grid_size} grid",
+        )
+
+    # Update the agent to use the selected brain architecture and environment
     agent = QuantumNematodeAgent(
-        maze_grid_size=maze_grid_size,
         brain=brain,
+        env=env,
         max_body_length=body_length,
         theme=theme,
+        satiety_config=satiety_config,
     )
 
     # Set the plot and data directories

@@ -13,7 +13,7 @@ from quantumnematode.logging_config import (
 from quantumnematode.report.dtypes import PerformanceMetrics, TrackingData
 
 
-def plot_efficiency_score_over_time(
+def plot_efficiency_score_over_time(  # pragma: no cover
     file_prefix: str,
     runs: list[int],
     plot_dir: Path,
@@ -46,7 +46,7 @@ def plot_efficiency_score_over_time(
     plt.close()
 
 
-def plot_success_rate_over_time(
+def plot_success_rate_over_time(  # pragma: no cover
     file_prefix: str,
     runs: list[int],
     plot_dir: Path,
@@ -72,7 +72,7 @@ def plot_success_rate_over_time(
     plt.close()
 
 
-def plot_last_cumulative_rewards(
+def plot_last_cumulative_rewards(  # pragma: no cover
     file_prefix: str,
     runs: list[int],
     plot_dir: Path,
@@ -98,7 +98,7 @@ def plot_last_cumulative_rewards(
     plt.close()
 
 
-def plot_cumulative_reward_per_run(
+def plot_cumulative_reward_per_run(  # pragma: no cover
     file_prefix: str,
     runs: list[int],
     plot_dir: Path,
@@ -124,7 +124,7 @@ def plot_cumulative_reward_per_run(
     plt.close()
 
 
-def plot_steps_per_run(
+def plot_steps_per_run(  # pragma: no cover
     metrics: PerformanceMetrics,
     file_prefix: str,
     runs: list[int],
@@ -153,7 +153,7 @@ def plot_steps_per_run(
     plt.close()
 
 
-def plot_running_average_steps(
+def plot_running_average_steps(  # pragma: no cover
     file_prefix: str,
     runs: list[int],
     steps: list[int],
@@ -233,7 +233,7 @@ def plot_running_average_steps(
     plt.close()
 
 
-def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
+def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
     brain_type: BrainType,
     plot_dir: Path,
@@ -336,7 +336,7 @@ def plot_tracking_data_by_session(  # noqa: C901, PLR0912, PLR0915
             logger.warning(f"Unrecognized data type for {key}. Skipping plot.")
 
 
-def plot_tracking_data_by_latest_run(
+def plot_tracking_data_by_latest_run(  # pragma: no cover
     tracking_data: TrackingData,
     timestamp: str,
     run: int,

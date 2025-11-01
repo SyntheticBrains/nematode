@@ -1,5 +1,8 @@
 max_steps: 300
-maze_grid_size: 10
+environment:
+  type: static
+  static:
+    grid_size: 10
 brain:
   name: qmlp
   config:
@@ -13,9 +16,7 @@ brain:
     num_hidden_layers: 2
     buffer_size: 10000
     batch_size: 32
-shots: 1000
 body_length: 2
-qubits: 2
 learning_rate:
   method: dynamic
   parameters:

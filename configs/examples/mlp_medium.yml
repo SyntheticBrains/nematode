@@ -1,5 +1,8 @@
 max_steps: 300
-maze_grid_size: 10
+environment:
+  type: static
+  static:
+    grid_size: 10
 brain:
   name: mlp
   config:
@@ -12,9 +15,7 @@ brain:
     lr_scheduler_step_size: 100
     lr_scheduler_gamma: 0.9
     num_hidden_layers: 2
-shots: 1000
 body_length: 2
-qubits: 2
 learning_rate:
   method: dynamic
   parameters:
