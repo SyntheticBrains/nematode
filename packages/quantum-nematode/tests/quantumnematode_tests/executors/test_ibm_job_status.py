@@ -1,6 +1,5 @@
 """Tests for IBM Job Status utilities."""
 
-
 from quantumnematode.executors.ibm_job_status import IBMJobStatus, IBMJobStatusInfo
 
 
@@ -79,11 +78,13 @@ class TestIBMJobStatus:
         """Test that status categories are mutually exclusive."""
         for status in IBMJobStatus:
             # Count how many categories this status belongs to
-            categories = sum([
-                IBMJobStatus.is_terminal(status.value),
-                IBMJobStatus.is_running(status.value),
-                IBMJobStatus.is_queued_or_initializing(status.value),
-            ])
+            categories = sum(
+                [
+                    IBMJobStatus.is_terminal(status.value),
+                    IBMJobStatus.is_running(status.value),
+                    IBMJobStatus.is_queued_or_initializing(status.value),
+                ],
+            )
             assert categories == 1, (
                 f"Status {status.value} belongs to {categories} categories (should be exactly 1)"
             )
