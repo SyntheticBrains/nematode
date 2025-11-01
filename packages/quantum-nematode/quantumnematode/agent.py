@@ -1,13 +1,18 @@
 """The quantum nematode agent that navigates a grid environment using a quantum brain."""
 
+from __future__ import annotations
+
 import logging
 import os
 import sys
 import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 from pydantic import BaseModel
 
+from quantumnematode.brain.actions import Action  # noqa: TC001 - needed at runtime for dataclass
 from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.report.dtypes import PerformanceMetrics
@@ -16,6 +21,9 @@ from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from .brain.arch import Brain, BrainParams
 from .env import BaseEnvironment, Direction, DynamicForagingEnvironment, MazeEnvironment
 from .logging_config import logger
+
+if TYPE_CHECKING:
+    from quantumnematode.agent import QuantumNematodeAgent
 
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
@@ -77,6 +85,115 @@ class ManyworldsModeConfig(BaseModel):
     render_sleep_seconds: float = DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS
     top_n_actions: int = DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS
     top_n_randomize: bool = DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE
+
+
+# Data Transfer Objects for component interfaces
+
+
+@dataclass
+class StepResult:
+    """Result of processing a single simulation step.
+
+    Attributes
+    ----------
+    action : Action
+        The action chosen by the brain for this step.
+    reward : float
+        The reward received for taking this action.
+    done : bool
+        Whether the episode has terminated (goal reached, starvation, or max steps).
+    info : dict[str, Any]
+        Additional information about the step (e.g., termination reason, metrics).
+    """
+
+    action: Action
+    reward: float
+    done: bool
+    info: dict[str, Any]
+
+
+@dataclass
+class FoodConsumptionResult:
+    """Result of checking and potentially consuming food.
+
+    Attributes
+    ----------
+    food_consumed : bool
+        Whether food was consumed at the current position.
+    satiety_restored : float
+        Amount of satiety restored (0.0 if no food consumed).
+    reward : float
+        Reward for consuming food (0.0 if no food consumed).
+    distance_efficiency : float | None
+        For dynamic environments, the ratio of optimal distance to actual distance traveled.
+        None for static environments or when no food was consumed.
+    """
+
+    food_consumed: bool
+    satiety_restored: float
+    reward: float
+    distance_efficiency: float | None = None
+
+
+@dataclass
+class EpisodeResult:
+    """Complete result of running an episode.
+
+    Attributes
+    ----------
+    path : list[tuple[int, int]]
+        The path taken by the agent during the episode.
+    success : bool
+        Whether the agent successfully reached a goal.
+    total_reward : float
+        Cumulative reward obtained during the episode.
+    steps_taken : int
+        Number of steps taken in the episode.
+    metrics : dict[str, Any]
+        Additional episode metrics (food collected, efficiency, etc.).
+    """
+
+    path: list[tuple[int, int]]
+    success: bool
+    total_reward: float
+    steps_taken: int
+    metrics: dict[str, Any]
+
+
+class EpisodeRunner(Protocol):
+    """Protocol for episode execution strategies.
+
+    Episode runners encapsulate different modes of executing simulation episodes
+    (e.g., standard single-trajectory, many-worlds branching). They delegate
+    step execution to components and orchestrate the overall episode flow.
+    """
+
+    def run(
+        self,
+        agent: QuantumNematodeAgent,
+        reward_config: RewardConfig,
+        max_steps: int,
+        **kwargs: dict[str, Any],
+    ) -> EpisodeResult:
+        """Execute an episode using this runner's strategy.
+
+        Parameters
+        ----------
+        agent : QuantumNematodeAgent
+            The agent instance containing brain, environment, and components.
+        reward_config : RewardConfig
+            Configuration for the reward system.
+        max_steps : int
+            Maximum number of steps for the episode.
+        **kwargs : Any
+            Additional runner-specific parameters.
+
+        Returns
+        -------
+        EpisodeResult
+            Complete result of the episode execution.
+        """
+        ...
 
 
 class QuantumNematodeAgent:
