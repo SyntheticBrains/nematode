@@ -191,8 +191,8 @@ class TestPlaceholderModules:
 class TestMemoryActionFeatures:
     """Test memory action feature extraction."""
 
-    def test_action_up(self):
-        """Test action features for UP action."""
+    def test_action_forward(self):
+        """Test action features for FORWARD action."""
         from quantumnematode.brain.actions import Action, ActionData
 
         action_data = ActionData(action=Action.FORWARD, probability=0.75, state="00")
@@ -203,7 +203,43 @@ class TestMemoryActionFeatures:
 
         assert features[RotationAxis.RX] == 0.0
         assert features[RotationAxis.RY] == 0.0
+        assert features[RotationAxis.RZ] == np.pi
+
+    def test_action_stay(self):
+        """Test action features for STAY action."""
+        from quantumnematode.brain.actions import Action, ActionData
+
+        action_data = ActionData(action=Action.STAY, probability=0.75, state="00")
+        params = BrainParams()
+        params.action = action_data
+
+        features = memory_action_features(params)
+
         assert features[RotationAxis.RZ] == 0.0
+
+    def test_action_left(self):
+        """Test action features for LEFT action."""
+        from quantumnematode.brain.actions import Action, ActionData
+
+        action_data = ActionData(action=Action.LEFT, probability=0.75, state="00")
+        params = BrainParams()
+        params.action = action_data
+
+        features = memory_action_features(params)
+
+        assert features[RotationAxis.RZ] == pytest.approx(np.pi / 2)
+
+    def test_action_right(self):
+        """Test action features for RIGHT action."""
+        from quantumnematode.brain.actions import Action, ActionData
+
+        action_data = ActionData(action=Action.RIGHT, probability=0.75, state="00")
+        params = BrainParams()
+        params.action = action_data
+
+        features = memory_action_features(params)
+
+        assert features[RotationAxis.RZ] == pytest.approx(-np.pi / 2)
 
     def test_no_action(self):
         """Test action features when no action is present."""

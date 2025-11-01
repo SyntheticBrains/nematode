@@ -23,6 +23,7 @@ from typing import Any
 
 import numpy as np
 
+from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.env import Direction
 
@@ -179,10 +180,10 @@ def memory_action_features(
     """
     # Map possible actions to angles (expand as needed)
     action_map = {
-        Direction.UP: 0.0,
-        Direction.DOWN: np.pi,
-        Direction.LEFT: np.pi / 2,
-        Direction.RIGHT: -np.pi / 2,
+        Action.FORWARD: np.pi,
+        Action.LEFT: np.pi / 2,
+        Action.RIGHT: -np.pi / 2,
+        Action.STAY: 0.0,
         None: 0.0,  # Default if no action
     }
     action_data = getattr(params, "action", None)
