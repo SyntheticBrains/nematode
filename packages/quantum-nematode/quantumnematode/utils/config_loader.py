@@ -108,6 +108,26 @@ class ParameterInitializerConfig(BaseModel):
     manual_parameter_values: dict[str, float] | None = None
 
 
+class DynamicEnvironmentConfig(BaseModel):
+    """Configuration for dynamic foraging environment."""
+
+    grid_size: int = 50
+    num_initial_foods: int = 10
+    max_active_foods: int = 15
+    min_food_distance: int = 5
+    agent_exclusion_radius: int = 10
+    gradient_decay_constant: float = 10.0
+    gradient_strength: float = 1.0
+    viewport_size: tuple[int, int] = (11, 11)
+
+
+class EnvironmentConfig(BaseModel):
+    """Configuration for environment selection and parameters."""
+
+    type: str = "static"  # "static" or "dynamic"
+    dynamic: DynamicEnvironmentConfig | None = None
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -123,6 +143,7 @@ class SimulationConfig(BaseModel):
     reward: RewardConfig | None = None
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
+    environment: EnvironmentConfig | None = None
 
 
 def load_simulation_config(config_path: str) -> SimulationConfig:
@@ -452,3 +473,17 @@ def configure_reward(config: SimulationConfig) -> RewardConfig:
         RewardConfig: The configured reward function object.
     """
     return config.reward or RewardConfig()
+
+
+def configure_environment(config: SimulationConfig) -> EnvironmentConfig:
+    """
+    Configure the environment based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        EnvironmentConfig: The configured environment object.
+    """
+    return config.environment or EnvironmentConfig()
