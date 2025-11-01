@@ -156,6 +156,22 @@ class TestChemotaxisFeatures:
         # Should have a non-zero relative angle for RY
         assert features[RotationAxis.RY] != 0.0
 
+    def test_none_gradient_values(self):
+        """Test chemotaxis features when gradient values are None."""
+        params = BrainParams(
+            gradient_strength=None,
+            gradient_direction=None,
+            agent_direction=Direction.UP,
+        )
+        features = chemotaxis_features(params)
+
+        # gradient_strength=None defaults to 0.0, scaled to -π/2
+        assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
+        # gradient_direction=None defaults to 0.0 with agent facing UP at angle π/2.
+        # The relative angle calculation yields -π/2, which normalizes to -0.5,
+        # then scales to -π/4 for the final RY rotation value.
+        assert features[RotationAxis.RY] == pytest.approx(-np.pi / 4)
+
 
 class TestPlaceholderModules:
     """Test placeholder modules that return zero features."""
