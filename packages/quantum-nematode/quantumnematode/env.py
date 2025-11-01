@@ -511,7 +511,7 @@ class MazeEnvironment(BaseEnvironment):
         tuple
             A tuple containing the gradient strength and direction.
         """
-        gradient_strength, gradient_direction, distance_to_goal = self._compute_single_gradient(
+        gradient_strength, gradient_direction, _ = self._compute_single_gradient(
             position,
             self.goal,
             scaling_method,
@@ -677,6 +677,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         Check if a position is valid for food placement.
 
+        Uses Euclidean distance to ensure proper Poisson disk sampling.
+
         Parameters
         ----------
         pos : tuple[int, int]
@@ -687,14 +689,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
         bool
             True if position is valid, False otherwise.
         """
-        # Check distance from agent
-        agent_dist = abs(pos[0] - self.agent_pos[0]) + abs(pos[1] - self.agent_pos[1])
+        # Check Euclidean distance from agent
+        agent_dist = np.sqrt(
+            (pos[0] - self.agent_pos[0]) ** 2 + (pos[1] - self.agent_pos[1]) ** 2,
+        )
         if agent_dist < self.agent_exclusion_radius:
             return False
 
-        # Check distance from other foods
+        # Check Euclidean distance from other foods
         for food in self.foods:
-            dist = abs(pos[0] - food[0]) + abs(pos[1] - food[1])
+            dist = np.sqrt((pos[0] - food[0]) ** 2 + (pos[1] - food[1]) ** 2)
             if dist < self.min_food_distance:
                 return False
 
