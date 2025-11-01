@@ -14,7 +14,7 @@ from quantumnematode.report.dtypes import PerformanceMetrics
 from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 
 from .brain.arch import Brain, BrainParams
-from .env import Direction, MazeEnvironment
+from .env import BaseEnvironment, Direction, DynamicForagingEnvironment, MazeEnvironment
 from .logging_config import logger
 
 # Defaults
@@ -25,14 +25,27 @@ DEFAULT_MAZE_GRID_SIZE = 5
 DEFAULT_PENALTY_ANTI_DITHERING = 0.02
 DEFAULT_PENALTY_STEP = 0.05
 DEFAULT_PENALTY_STUCK_POSITION = 0.5
+DEFAULT_PENALTY_STARVATION = 10.0
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
+DEFAULT_REWARD_EXPLORATION = 0.05
 DEFAULT_MANYWORLDS_MODE_MAX_COLUMNS = 4
 DEFAULT_MANYWORLDS_MODE_MAX_SUPERPOSITIONS = 16
 DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS = 1.0
 DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS = 2
 DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE = True
 DEFAULT_STUCK_POSITION_THRESHOLD = 2
+DEFAULT_SATIETY_INITIAL = 200.0
+DEFAULT_SATIETY_DECAY_RATE = 1.0
+DEFAULT_SATIETY_GAIN_PER_FOOD = 0.2
+
+
+class SatietyConfig(BaseModel):
+    """Configuration for the satiety (hunger) system."""
+
+    initial_satiety: float = DEFAULT_SATIETY_INITIAL
+    satiety_decay_rate: float = DEFAULT_SATIETY_DECAY_RATE
+    satiety_gain_per_food: float = DEFAULT_SATIETY_GAIN_PER_FOOD  # Fraction of max
 
 
 class RewardConfig(BaseModel):
@@ -52,6 +65,8 @@ class RewardConfig(BaseModel):
         DEFAULT_REWARD_DISTANCE_SCALE  # Scale the distance reward for smoother learning
     )
     reward_goal: float = DEFAULT_REWARD_GOAL
+    reward_exploration: float = DEFAULT_REWARD_EXPLORATION  # Bonus for visiting new cells
+    penalty_starvation: float = DEFAULT_PENALTY_STARVATION  # Penalty when satiety reaches 0
 
 
 class ManyworldsModeConfig(BaseModel):
@@ -66,11 +81,11 @@ class ManyworldsModeConfig(BaseModel):
 
 class QuantumNematodeAgent:
     """
-    Quantum nematode agent that navigates a grid environment using a quantum brain.
+    Nematode agent that navigates a grid environment using a quantum brain.
 
     Attributes
     ----------
-    env : MazeEnvironment
+    env : BaseEnvironment
         The grid environment for the agent.
     steps : int
         Number of steps taken by the agent.
@@ -78,42 +93,75 @@ class QuantumNematodeAgent:
         Path taken by the agent.
     body_length : int
         Maximum length of the agent's body.
+    satiety : float
+        Current satiety (hunger) level.
+    max_satiety : float
+        Maximum satiety level.
+    foods_collected : int
+        Number of foods collected in current episode.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         brain: Brain,
+        env: BaseEnvironment | None = None,
         maze_grid_size: int = DEFAULT_MAZE_GRID_SIZE,
         max_body_length: int = DEFAULT_MAX_AGENT_BODY_LENGTH,
         theme: Theme = DEFAULT_THEME,
         rich_style_config: DarkColorRichStyleConfig | None = None,
+        satiety_config: SatietyConfig | None = None,
     ) -> None:
         """
-        Initialize the quantum nematode agent.
+        Initialize the nematode agent.
 
         Parameters
         ----------
         brain : Brain
-            The quantum brain architecture used by the agent.
+            The brain architecture used by the agent.
+        env : BaseEnvironment | None
+            The environment to use. If None, creates a default MazeEnvironment.
         maze_grid_size : int, optional
-            Size of the grid environment, by default 5.
+            Size of the grid environment, by default 5 (only used if env is None).
+        max_body_length : int, optional
+            Maximum body length.
+        theme : Theme, optional
+            Visual theme for rendering.
+        rich_style_config : DarkColorRichStyleConfig | None, optional
+            Rich styling configuration.
+        satiety_config : SatietyConfig | None, optional
+            Satiety system configuration.
         """
         self.brain = brain
-        self.env = MazeEnvironment(
-            grid_size=maze_grid_size,
-            max_body_length=max_body_length,
-            theme=theme,
-            rich_style_config=rich_style_config,
-        )
+        self.satiety_config = satiety_config or SatietyConfig()
+
+        if env is None:
+            self.env = MazeEnvironment(
+                grid_size=maze_grid_size,
+                max_body_length=max_body_length,
+                theme=theme,
+                rich_style_config=rich_style_config,
+            )
+        else:
+            self.env = env
+
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         self.max_body_length = min(
-            maze_grid_size - 1,
+            self.env.grid_size - 1,
             max_body_length,
-        )  # Set the maximum body length
+        )
         self.success_count = 0
         self.total_steps = 0
         self.total_rewards = 0
+
+        # Satiety tracking
+        self.max_satiety = self.satiety_config.initial_satiety
+        self.satiety = self.max_satiety
+        self.foods_collected = 0
+
+        # For dynamic environments, track initial distance for metrics
+        self.initial_distance_to_food: int | None = None
+        self.distance_efficiencies: list[float] = []
 
     def run_episode(  # noqa: C901, PLR0912, PLR0915
         self,
@@ -141,6 +189,12 @@ class QuantumNematodeAgent:
             The path taken by the agent during the episode.
         """
         self.env.current_direction = Direction.UP  # Initialize the agent's direction
+
+        # Initialize distance tracking for dynamic environments
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self.initial_distance_to_food = self.env.get_nearest_food_distance()
+            self.distance_efficiencies = []
+            self.foods_collected = 0
 
         reward = 0.0
         top_action = None
@@ -229,65 +283,117 @@ class QuantumNematodeAgent:
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
 
+            # Satiety decay (for dynamic environments)
+            if isinstance(self.env, DynamicForagingEnvironment):
+                self.satiety -= self.satiety_config.satiety_decay_rate
+                self.env.satiety = self.satiety
+                logger.debug(f"Satiety: {self.satiety:.1f}/{self.max_satiety}")
+
+                # Check for starvation
+                if self.satiety <= 0:
+                    logger.warning("Agent starved!")
+                    reward -= reward_config.penalty_starvation
+                    self.brain.update_memory(reward)
+                    self.brain.post_process_episode()
+                    break
+
             logger.info(f"Step {self.steps}: Action={top_action.action.value}, Reward={reward}")
 
             if self.env.reached_goal():
-                # Run the brain with the final state and reward
-                reward = self.calculate_reward(
-                    reward_config,
-                    self.env,
-                    self.path,
-                    max_steps=max_steps,
-                    stuck_position_count=stuck_position_count,
-                )
+                # Handle food consumption differently for each environment type
+                if isinstance(self.env, DynamicForagingEnvironment):
+                    # Multi-food environment: consume food and continue
+                    consumed_food = self.env.consume_food()
+                    if consumed_food:
+                        self.foods_collected += 1
+                        self.success_count += 1
 
-                # Prepare input_data for data re-uploading (one float per qubit)
-                input_data = None
-                if isinstance(self.brain, QuantumBrain):
-                    input_data = [float(gradient_strength)] * self.brain.num_qubits
+                        # Restore satiety
+                        satiety_gain = self.max_satiety * self.satiety_config.satiety_gain_per_food
+                        self.satiety = min(self.max_satiety, self.satiety + satiety_gain)
+                        self.env.satiety = self.satiety
+                        logger.info(
+                            f"Food #{self.foods_collected} collected! "
+                            f"Satiety restored by {satiety_gain:.1f} to "
+                            f"{self.satiety:.1f}/{self.max_satiety}",
+                        )
 
-                agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-                if len(agent_pos) != 2:  # noqa: PLR2004
-                    agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
+                        # Calculate distance efficiency for this food
+                        if self.initial_distance_to_food is not None:
+                            steps_for_this_food = self.steps  # Simplification
+                            distance_efficiency = (
+                                self.initial_distance_to_food - steps_for_this_food
+                            ) / self.initial_distance_to_food
+                            self.distance_efficiencies.append(distance_efficiency)
+                            logger.debug(
+                                f"Distance efficiency for this food: {distance_efficiency:.2f}",
+                            )
 
-                params = BrainParams(
-                    gradient_strength=gradient_strength,
-                    gradient_direction=gradient_direction,
-                    agent_position=agent_pos,
-                    agent_direction=self.env.current_direction,
-                    action=top_action,
-                )
-                _ = self.brain.run_brain(
-                    params=params,
-                    reward=reward,
-                    input_data=None,
-                    top_only=True,
-                    top_randomize=True,
-                )
+                        # Update initial distance for next food
+                        self.initial_distance_to_food = self.env.get_nearest_food_distance()
 
-                # Calculate reward based on efficiency and collision avoidance
-                self.brain.update_memory(reward)
+                    # Continue foraging (don't break)
+                    self.total_rewards += reward
+                else:
+                    # Single goal environment: episode ends when goal is reached
+                    # Run the brain with the final state and reward
+                    reward = self.calculate_reward(
+                        reward_config,
+                        self.env,
+                        self.path,
+                        max_steps=max_steps,
+                        stuck_position_count=stuck_position_count,
+                    )
 
-                self.brain.satiety = 1.0  # Set satiety to maximum
+                    # Prepare input_data for data re-uploading (one float per qubit)
+                    input_data = None
+                    if isinstance(self.brain, QuantumBrain):
+                        input_data = [float(gradient_strength)] * self.brain.num_qubits
 
-                # Run any post-processing steps
-                self.brain.post_process_episode()
+                    agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
+                    if len(agent_pos) != 2:  # noqa: PLR2004
+                        agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
 
-                self.path.append(tuple(self.env.agent_pos))
-                self.steps += 1
+                    params = BrainParams(
+                        gradient_strength=gradient_strength,
+                        gradient_direction=gradient_direction,
+                        agent_position=agent_pos,
+                        agent_direction=self.env.current_direction,
+                        action=top_action,
+                    )
+                    _ = self.brain.run_brain(
+                        params=params,
+                        reward=reward,
+                        input_data=None,
+                        top_only=True,
+                        top_randomize=True,
+                    )
 
-                logger.info(f"Step {self.steps}: Action={top_action.action.value}, Reward={reward}")
+                    # Calculate reward based on efficiency and collision avoidance
+                    self.brain.update_memory(reward)
 
-                self.total_rewards += reward
-                logger.info("Reward: goal reached!")
-                self.success_count += 1
-                break
+                    self.brain.satiety = 1.0  # Set satiety to maximum
+
+                    # Run any post-processing steps
+                    self.brain.post_process_episode()
+
+                    self.path.append(tuple(self.env.agent_pos))
+                    self.steps += 1
+
+                    logger.info(
+                        f"Step {self.steps}: Action={top_action.action.value}, Reward={reward}",
+                    )
+
+                    self.total_rewards += reward
+                    logger.info("Reward: goal reached!")
+                    self.success_count += 1
+                    break
 
             self.total_steps += 1
             self.total_rewards += reward
 
-            # Log distance to the goal
-            if self.env.goal is not None:
+            # Log distance to the goal (only for MazeEnvironment)
+            if isinstance(self.env, MazeEnvironment) and self.env.goal is not None:
                 distance_to_goal = self.calculate_goal_distance()
                 logger.debug(f"Distance to goal: {distance_to_goal}")
 
@@ -520,27 +626,34 @@ class QuantumNematodeAgent:
 
     def calculate_goal_distance(self) -> int:
         """
-        Calculate the Manhattan distance to the goal.
+        Calculate the Manhattan distance to the goal (or nearest food).
 
         Returns
         -------
         int
-            The Manhattan distance to the goal.
+            The Manhattan distance to the goal/nearest food.
         """
-        return abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
-            self.env.agent_pos[1] - self.env.goal[1],
-        )
+        if isinstance(self.env, DynamicForagingEnvironment):
+            dist = self.env.get_nearest_food_distance()
+            return dist if dist is not None else 0
+        if isinstance(self.env, MazeEnvironment):
+            return abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
+                self.env.agent_pos[1] - self.env.goal[1],
+            )
+        return 0
 
     def calculate_reward(
         self,
         config: RewardConfig,
-        env: MazeEnvironment,
+        env: BaseEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
         stuck_position_count: int = 0,
     ) -> float:
         """
         Calculate reward based on the agent's movement toward the goal.
+
+        Handles both MazeEnvironment (single goal) and DynamicForagingEnvironment (multiple foods).
 
         Returns
         -------
@@ -551,33 +664,59 @@ class QuantumNematodeAgent:
         distance_reward = 0.0
         goal_bonus = 0.0
         anti_dither_penalty = 0.0
+        exploration_bonus = 0.0
         prev_dist = None
         curr_dist = None
 
-        # Only compute distance-based reward if goal exists
-        if env.goal is not None:
+        # Handle distance-based rewards differently for each environment type
+        if isinstance(env, MazeEnvironment):
+            # Single goal environment
             curr_pos = env.agent_pos
             curr_dist = abs(curr_pos[0] - env.goal[0]) + abs(curr_pos[1] - env.goal[1])
             if len(path) > 1:
                 prev_pos = path[-2]
                 prev_dist = abs(prev_pos[0] - env.goal[0]) + abs(prev_pos[1] - env.goal[1])
-                # Magnitude-based reward: positive if agent gets closer, negative if further
                 distance_reward = config.reward_distance_scale * (prev_dist - curr_dist)
                 reward += distance_reward
                 logger.debug(
                     f"[Reward] Scaled distance reward: {distance_reward} "
                     f"(prev_dist={prev_dist}, curr_dist={curr_dist})",
                 )
-                # Anti-dithering: penalize if agent oscillates (returns to previous cell)
-                if len(path) > 2 and curr_pos == path[-3]:  # noqa: PLR2004
-                    anti_dither_penalty = config.penalty_anti_dithering
-                    reward -= anti_dither_penalty
+        elif isinstance(env, DynamicForagingEnvironment):
+            # Multi-food environment: use nearest food distance
+            curr_dist = env.get_nearest_food_distance()
+            if curr_dist is not None and len(path) > 1:
+                # Calculate previous nearest food distance
+                prev_pos = path[-2]
+                prev_distances = [
+                    abs(prev_pos[0] - food[0]) + abs(prev_pos[1] - food[1]) for food in env.foods
+                ]
+                prev_dist = min(prev_distances) if prev_distances else None
+
+                if prev_dist is not None:
+                    distance_reward = config.reward_distance_scale * (prev_dist - curr_dist)
+                    reward += distance_reward
                     logger.debug(
-                        f"[Penalty] Anti-dithering penalty applied: "
-                        f"{-anti_dither_penalty} (oscillation detected)",
+                        f"[Reward] Scaled distance reward (nearest food): {distance_reward} "
+                        f"(prev_dist={prev_dist}, curr_dist={curr_dist})",
                     )
-            else:
-                logger.debug("[Reward] First step, no previous position for distance reward.")
+
+            # Exploration bonus for visiting new cells
+            curr_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
+            if curr_pos_tuple not in env.visited_cells:
+                exploration_bonus = config.reward_exploration
+                reward += exploration_bonus
+                env.visited_cells.add(curr_pos_tuple)
+                logger.debug(f"[Reward] Exploration bonus: {exploration_bonus}")
+
+        # Anti-dithering: penalize if agent oscillates (returns to previous cell)
+        if len(path) > 2 and env.agent_pos == path[-3]:  # noqa: PLR2004
+            anti_dither_penalty = config.penalty_anti_dithering
+            reward -= anti_dither_penalty
+            logger.debug(
+                f"[Penalty] Anti-dithering penalty applied: "
+                f"{-anti_dither_penalty} (oscillation detected)",
+            )
 
         # Step penalty (applies every step)
         reward -= config.penalty_step
@@ -596,7 +735,7 @@ class QuantumNematodeAgent:
                 f"(stuck for {stuck_position_count} steps)",
             )
 
-        # Bonus for reaching the goal, scaled by efficiency (fewer steps = higher bonus)
+        # Bonus for reaching the goal, scaled by efficiency
         if env.reached_goal():
             efficiency = max(0.1, 1 - (self.steps / max_steps))
             goal_bonus = config.reward_goal * efficiency
@@ -609,7 +748,8 @@ class QuantumNematodeAgent:
         logger.debug(
             f"Reward breakdown: distance_reward={distance_reward}, "
             f"step_penalty={-config.penalty_step}, anti_dither_penalty={-anti_dither_penalty}, "
-            f"stuck_penalty={-stuck_penalty}, goal_bonus={goal_bonus}, total_reward={reward}",
+            f"stuck_penalty={-stuck_penalty}, exploration_bonus={exploration_bonus}, "
+            f"goal_bonus={goal_bonus}, total_reward={reward}",
         )
         return reward
 
@@ -621,14 +761,31 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        self.env = MazeEnvironment(
-            grid_size=self.env.grid_size,
-            max_body_length=self.max_body_length,
-            theme=self.env.theme,
-            rich_style_config=self.env.rich_style_config,
-        )
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self.env = DynamicForagingEnvironment(
+                grid_size=self.env.grid_size,
+                num_initial_foods=self.env.num_initial_foods,
+                max_active_foods=self.env.max_active_foods,
+                min_food_distance=self.env.min_food_distance,
+                agent_exclusion_radius=self.env.agent_exclusion_radius,
+                gradient_decay_constant=self.env.gradient_decay_constant,
+                gradient_strength=self.env.gradient_strength_base,
+                viewport_size=self.env.viewport_size,
+                max_body_length=self.max_body_length,
+                theme=self.env.theme,
+                rich_style_config=self.env.rich_style_config,
+            )
+        else:
+            self.env = MazeEnvironment(
+                grid_size=self.env.grid_size,
+                max_body_length=self.max_body_length,
+                theme=self.env.theme,
+                rich_style_config=self.env.rich_style_config,
+            )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
+        self.satiety = self.max_satiety
+        self.foods_collected = 0
         logger.info("Environment reset. Retaining learned data.")
 
     def reset_brain(self) -> None:
