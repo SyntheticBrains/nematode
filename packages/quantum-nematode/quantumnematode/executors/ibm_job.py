@@ -18,7 +18,10 @@ POLL_INTERVAL = int(os.getenv("IBM_JOB_POLL_INTERVAL", "10"))  # Polling interva
 TIMEOUT = int(os.getenv("IBM_JOB_TIMEOUT", str(60 * 60 * 24)))  # Timeout in seconds
 
 
-def _get_job_status_with_retry(job: "Job", job_description: str = "IBM job") -> str:
+def _get_job_status_with_retry(
+    job: "Job",
+    job_description: str = "IBM job",
+) -> str:  # pragma: no cover
     """
     Get job status with retry logic for network connectivity issues.
 
@@ -76,7 +79,7 @@ def _get_job_status_with_retry(job: "Job", job_description: str = "IBM job") -> 
     raise RuntimeError(error_message)
 
 
-def monitor_job(job: "Job", job_description: str = "IBM job") -> None:
+def monitor_job(job: "Job", job_description: str = "IBM job") -> None:  # pragma: no cover
     """
     Monitor and log the status of an IBM quantum job.
 

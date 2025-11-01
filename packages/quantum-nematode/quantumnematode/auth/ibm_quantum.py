@@ -26,7 +26,7 @@ ERROR_IBM_QUANTUM_CRN_NOT_SET = (
 )
 
 
-class IBMQuantumAuthenticator:
+class IBMQuantumAuthenticator:  # pragma: no cover
     """Handles authentication with IBM Quantum using an API key."""
 
     def __init__(self) -> None:

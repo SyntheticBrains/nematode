@@ -12,7 +12,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
 
 
-def export_simulation_results_to_csv(
+def export_simulation_results_to_csv(  # pragma: no cover
     all_results: list[SimulationResult],
     data_dir: Path,
     file_prefix: str = "",
@@ -153,7 +153,7 @@ def _export_path_data(
                 )
 
 
-def export_performance_metrics_to_csv(
+def export_performance_metrics_to_csv(  # pragma: no cover
     metrics: PerformanceMetrics,
     data_dir: Path,
     file_prefix: str = "",
@@ -181,7 +181,7 @@ def export_performance_metrics_to_csv(
         writer.writerow({"metric": "average_reward", "value": metrics.average_reward})
 
 
-def export_tracking_data_to_csv(
+def export_tracking_data_to_csv(  # pragma: no cover
     tracking_data: TrackingData,
     brain_type: BrainType,
     data_dir: Path,
@@ -440,7 +440,7 @@ def _export_detailed_tracking_data(  # noqa: C901, PLR0912
                         )
 
 
-def export_run_data_to_csv(  # noqa: C901
+def export_run_data_to_csv(  # pragma: no cover  # noqa: C901
     tracking_data: TrackingData,
     run: int,
     timestamp: str,

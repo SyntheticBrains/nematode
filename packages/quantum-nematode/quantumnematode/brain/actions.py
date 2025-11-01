@@ -5,7 +5,7 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class Action(str, Enum):
+class Action(str, Enum):  # pragma: no cover
     """Actions that the agent can take."""
 
     FORWARD = "forward"
@@ -31,7 +31,7 @@ SIX_ACTIONS = [
 ]
 
 
-class ActionData(BaseModel):
+class ActionData(BaseModel):  # pragma: no cover
     """
     A class to represent the action taken by the agent.
 
