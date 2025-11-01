@@ -650,13 +650,36 @@ class QuantumNematodeAgent:
         """
         Calculate and return performance metrics.
 
+        Parameters
+        ----------
+        total_runs : int
+            Total number of runs.
+
         Returns
         -------
         PerformanceMetrics
-            An object containing success rate, average steps, and average reward.
+            An object containing success rate, average steps, average reward, and dynamic metrics.
         """
+        # Calculate dynamic environment metrics if applicable
+        foraging_efficiency = None
+        average_distance_efficiency = None
+        average_foods_collected = None
+
+        if isinstance(self.env, DynamicForagingEnvironment):
+            if self.total_steps > 0:
+                foraging_efficiency = self.foods_collected / self.total_steps
+            if self.distance_efficiencies:
+                average_distance_efficiency = sum(self.distance_efficiencies) / len(
+                    self.distance_efficiencies,
+                )
+            if total_runs > 0:
+                average_foods_collected = self.foods_collected / total_runs
+
         return PerformanceMetrics(
             success_rate=self.success_count / total_runs,
             average_steps=self.total_steps / total_runs,
             average_reward=self.total_rewards / total_runs,
+            foraging_efficiency=foraging_efficiency,
+            average_distance_efficiency=average_distance_efficiency,
+            average_foods_collected=average_foods_collected,
         )
