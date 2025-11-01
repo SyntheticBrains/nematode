@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from quantumnematode.agent import (
     ManyworldsModeConfig,
     RewardConfig,
+    SatietyConfig,
 )
 from quantumnematode.brain.arch import (
     MLPBrainConfig,
@@ -141,6 +142,7 @@ class SimulationConfig(BaseModel):
     gradient: GradientConfig | None = None
     parameter_initializer: ParameterInitializerConfig | None = None
     reward: RewardConfig | None = None
+    satiety: SatietyConfig | None = None
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
     environment: EnvironmentConfig | None = None
@@ -473,6 +475,20 @@ def configure_reward(config: SimulationConfig) -> RewardConfig:
         RewardConfig: The configured reward function object.
     """
     return config.reward or RewardConfig()
+
+
+def configure_satiety(config: SimulationConfig) -> SatietyConfig:
+    """
+    Configure the satiety system based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        SatietyConfig: The configured satiety system object.
+    """
+    return config.satiety or SatietyConfig()
 
 
 def configure_environment(config: SimulationConfig) -> EnvironmentConfig:
