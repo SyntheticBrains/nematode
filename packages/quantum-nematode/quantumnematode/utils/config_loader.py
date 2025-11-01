@@ -109,6 +109,12 @@ class ParameterInitializerConfig(BaseModel):
     manual_parameter_values: dict[str, float] | None = None
 
 
+class StaticEnvironmentConfig(BaseModel):
+    """Configuration for static maze environment."""
+
+    grid_size: int = 10
+
+
 class DynamicEnvironmentConfig(BaseModel):
     """Configuration for dynamic foraging environment."""
 
@@ -126,6 +132,7 @@ class EnvironmentConfig(BaseModel):
     """Configuration for environment selection and parameters."""
 
     type: str = "static"  # "static" or "dynamic"
+    static: StaticEnvironmentConfig | None = None
     dynamic: DynamicEnvironmentConfig | None = None
 
 
@@ -134,7 +141,6 @@ class SimulationConfig(BaseModel):
 
     brain: BrainContainerConfig | None = None
     max_steps: int | None = None
-    maze_grid_size: int | None = None
     shots: int | None = None
     body_length: int | None = None
     qubits: int | None = None

@@ -86,9 +86,22 @@ class TestPresetConfigurations:
             assert "satiety_decay_rate" in satiety_config
             assert "satiety_gain_per_food" in satiety_config
         else:
-            # Static maze configs use maze_grid_size instead of environment section
-            assert "maze_grid_size" in config, (
-                f"Missing 'maze_grid_size' in static config {config_file}"
+            # Static maze configs use environment.static section
+            assert "environment" in config, f"Missing 'environment' in {config_file}"
+            env_type_msg = (
+                f"Expected environment type 'static' but got "
+                f"'{config['environment']['type']}' in {config_file}"
+            )
+            assert config["environment"]["type"] == "static", env_type_msg
+
+            assert "static" in config["environment"], (
+                f"Missing 'environment.static' section in static config {config_file}"
+            )
+
+            # Verify static environment parameters
+            static_config = config["environment"]["static"]
+            assert "grid_size" in static_config, (
+                f"Missing 'grid_size' in static config {config_file}"
             )
 
         # Verify common required fields

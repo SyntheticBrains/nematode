@@ -1,5 +1,8 @@
 max_steps: 300
-maze_grid_size: 10
+environment:
+  type: static
+  static:
+    grid_size: 10
 brain:
   name: qmodular
   config:

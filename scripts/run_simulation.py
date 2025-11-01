@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_MAX_STEPS,
-    DEFAULT_MAZE_GRID_SIZE,
     QuantumNematodeAgent,
     SatietyConfig,
 )
@@ -69,6 +68,7 @@ from quantumnematode.utils.config_loader import (
     ManyworldsModeConfig,
     ParameterInitializerConfig,
     RewardConfig,
+    StaticEnvironmentConfig,
     configure_brain,
     configure_environment,
     configure_gradient_method,
@@ -166,7 +166,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     config_file = args.config
     manyworlds_mode = args.manyworlds
     max_steps = DEFAULT_MAX_STEPS
-    maze_grid_size = DEFAULT_MAZE_GRID_SIZE
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
     shots = DEFAULT_SHOTS
@@ -222,9 +221,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             else brain_type
         )
         max_steps = config.max_steps if config.max_steps is not None else max_steps
-        maze_grid_size = (
-            config.maze_grid_size if config.maze_grid_size is not None else maze_grid_size
-        )
         shots = config.shots if config.shots is not None else shots
         body_length = config.body_length if config.body_length is not None else body_length
         qubits = config.qubits if config.qubits is not None else qubits
@@ -250,7 +246,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load many-worlds mode configuration if specified
         manyworlds_mode_config = configure_manyworlds_mode(config)
 
-    validate_simulation_parameters(maze_grid_size, brain_type, qubits)
+    # Get grid size from environment config for validation and logging
+    if environment_config.type == "dynamic":
+        grid_size = (environment_config.dynamic or DynamicEnvironmentConfig()).grid_size
+    else:
+        grid_size = (environment_config.static or StaticEnvironmentConfig()).grid_size
+
+    validate_simulation_parameters(grid_size, brain_type, qubits)
 
     # Configure logging level
     if log_level == "NONE":
@@ -270,7 +272,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Runs: {runs}")
     logger.info(f"Max steps: {max_steps}")
     logger.info(f"Device: {device}")
-    logger.info(f"Grid size: {maze_grid_size}")
+    logger.info(f"Grid size: {grid_size}")
+    logger.info(f"Environment type: {environment_config.type}")
     logger.info(f"Brain type: {brain_type.value}")
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
@@ -312,10 +315,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
     else:
         logger.info("Using static maze environment")
+        static_config = environment_config.static or StaticEnvironmentConfig()
         env = MazeEnvironment(
-            grid_size=maze_grid_size,
+            grid_size=static_config.grid_size,
             max_body_length=body_length,
             theme=theme,
+        )
+        logger.info(
+            f"Static maze environment: {static_config.grid_size}x{static_config.grid_size} grid",
         )
 
     # Update the agent to use the selected brain architecture and environment
