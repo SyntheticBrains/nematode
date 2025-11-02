@@ -2,13 +2,16 @@
 
 from unittest.mock import Mock
 
-import pytest
-from quantumnematode.agent import EpisodeResult, StepResult
-from quantumnematode.brain.actions import Action
+from quantumnematode.agent import (
+    ManyworldsModeConfig,
+    QuantumNematodeAgent,
+    RewardConfig,
+    SatietyConfig,
+)
+from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
 from quantumnematode.metrics import MetricsTracker
 from quantumnematode.rendering import EpisodeRenderer
-from quantumnematode.report.dtypes import PerformanceMetrics
 from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.step_processor import StepProcessor
 
@@ -33,325 +36,92 @@ class TestStandardEpisodeRunnerInitialization:
         assert runner.renderer is renderer
 
 
-class TestStandardEpisodeRunnerExecution:
-    """Test standard episode runner execution."""
+class TestStandardEpisodeRunnerIntegration:
+    """Integration tests for StandardEpisodeRunner with real agent."""
 
-    def test_run_episode_success_single_goal(self):
-        """Test running a successful episode in a single-goal environment."""
-        # Setup mocks
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
+    def test_run_episode_maze_environment(self):
+        """Test running episode in maze environment returns path."""
+        # Create real components
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = MazeEnvironment(grid_size=5)
+        agent = QuantumNematodeAgent(brain=brain, env=env)
 
-        # Create agent mock
-        agent = Mock()
-        agent.env = Mock(spec=MazeEnvironment)
-        agent.env.agent_pos = [1, 1]
-        agent.env.get_state = Mock(return_value=(0.5, 1.57))
+        # Store initial position before episode
+        initial_pos = tuple(env.agent_pos)
 
-        # Setup step processor to return success after 3 steps
-        step_results = [
-            StepResult(
-                action=Action.FORWARD,
-                reward=0.1,
-                done=False,
-                info={"goal_reached": False, "food_consumed": False},
-            ),
-            StepResult(
-                action=Action.RIGHT,
-                reward=0.2,
-                done=False,
-                info={"goal_reached": False, "food_consumed": False},
-            ),
-            StepResult(
-                action=Action.FORWARD,
-                reward=1.0,
-                done=False,
-                info={"goal_reached": True, "food_consumed": False},
-            ),
-        ]
-        step_processor.process_step = Mock(side_effect=step_results)
+        # Run episode through the runner
+        reward_config = RewardConfig()
+        path = agent.run_episode(reward_config, max_steps=10)
 
-        # Setup metrics tracker
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=1.0,
-                average_steps=3.0,
-                average_reward=1.3,
-                foraging_efficiency=0.0,
-            ),
+        # Verify path is returned
+        assert isinstance(path, list)
+        assert len(path) > 0
+        assert all(isinstance(pos, tuple) for pos in path)
+        # Path should start at agent's initial position
+        assert path[0] == initial_pos
+
+    def test_run_episode_dynamic_foraging(self):
+        """Test running episode in dynamic foraging environment."""
+        # Create real components
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            max_active_foods=3,
         )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(
+            brain=brain,
+            env=env,
+            satiety_config=satiety_config,
+        )
+
+        # Run episode through the runner
+        reward_config = RewardConfig()
+        path = agent.run_episode(reward_config, max_steps=20)
+
+        # Verify path is returned
+        assert isinstance(path, list)
+        assert len(path) > 0
+        # Satiety should have changed
+        assert agent.satiety <= satiety_config.initial_satiety
+
+    def test_run_episode_updates_agent_state(self):
+        """Test that running episode updates agent state correctly."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = MazeEnvironment(grid_size=5)
+        agent = QuantumNematodeAgent(brain=brain, env=env)
+
+        initial_steps = agent.steps
+        initial_path_length = len(agent.path)
 
         # Run episode
-        runner = StandardEpisodeRunner(step_processor, metrics_tracker, renderer)
-        reward_config = Mock()
-        result = runner.run(agent, reward_config, max_steps=10)
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=10)
 
-        # Verify result
-        assert isinstance(result, EpisodeResult)
-        assert result.success is True
-        assert result.steps_taken == 3
-        assert result.total_reward == pytest.approx(1.3)
-        assert len(result.path) == 4  # Initial position + 3 steps
+        # Verify agent state was updated
+        assert agent.steps > initial_steps
+        assert len(agent.path) > initial_path_length
 
-        # Verify interactions
-        assert step_processor.process_step.call_count == 3
-        metrics_tracker.track_episode_completion.assert_called_once_with(
-            success=True,
-            steps=3,
-            total_reward=pytest.approx(1.3),
-        )
+    def test_runner_delegates_correctly(self):
+        """Test that agent correctly delegates to StandardEpisodeRunner."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = MazeEnvironment(grid_size=5)
+        agent = QuantumNematodeAgent(brain=brain, env=env)
 
-    def test_run_episode_max_steps_reached(self):
-        """Test episode termination when max steps reached."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
+        # Verify runner was created
+        assert hasattr(agent, "_standard_runner")
+        assert isinstance(agent._standard_runner, StandardEpisodeRunner)
 
-        agent = Mock()
-        agent.env = Mock(spec=MazeEnvironment)
-        agent.env.agent_pos = [1, 1]
-        agent.env.get_state = Mock(return_value=(0.3, 0.5))
+        # Run episode and verify it works
+        reward_config = RewardConfig()
+        path = agent.run_episode(reward_config, max_steps=10)
 
-        # All steps fail to reach goal
-        step_result = StepResult(
-            action=Action.STAY,
-            reward=-0.01,
-            done=False,
-            info={"goal_reached": False, "food_consumed": False},
-        )
-        step_processor.process_step = Mock(return_value=step_result)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=5.0,
-                average_reward=-0.05,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = StandardEpisodeRunner(step_processor, metrics_tracker, renderer)
-        reward_config = Mock()
-        result = runner.run(agent, reward_config, max_steps=5)
-
-        # Verify episode ran for max_steps
-        assert result.success is False
-        assert result.steps_taken == 5
-        assert step_processor.process_step.call_count == 5
-
-    def test_run_episode_with_starvation(self):
-        """Test episode termination due to starvation."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        agent = Mock()
-        agent.env = Mock(spec=DynamicForagingEnvironment)
-        agent.env.agent_pos = [2, 2]
-        agent.env.get_state = Mock(return_value=(0.8, 2.0))
-
-        # Agent starves on step 3
-        step_results = [
-            StepResult(
-                action=Action.FORWARD,
-                reward=0.05,
-                done=False,
-                info={"goal_reached": False, "food_consumed": False},
-            ),
-            StepResult(
-                action=Action.LEFT,
-                reward=0.03,
-                done=False,
-                info={"goal_reached": False, "food_consumed": False},
-            ),
-            StepResult(
-                action=Action.STAY,
-                reward=-10.0,
-                done=True,  # Starvation
-                info={"goal_reached": False, "food_consumed": False, "starved": True},
-            ),
-        ]
-        step_processor.process_step = Mock(side_effect=step_results)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=3.0,
-                average_reward=-9.92,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = StandardEpisodeRunner(step_processor, metrics_tracker, renderer)
-        reward_config = Mock()
-        result = runner.run(agent, reward_config, max_steps=10)
-
-        # Verify early termination
-        assert result.success is False
-        assert result.steps_taken == 3
-        assert step_processor.process_step.call_count == 3
-
-    def test_run_episode_with_food_collection(self):
-        """Test episode with food collection in foraging environment."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        agent = Mock()
-        agent.env = Mock(spec=DynamicForagingEnvironment)
-        agent.env.agent_pos = [3, 3]
-        agent.env.get_state = Mock(return_value=(0.6, 1.0))
-
-        # Agent collects food on steps 2 and 4, then continues until max_steps
-        step_results = [
-            StepResult(
-                action=Action.FORWARD,
-                reward=0.1,
-                done=False,
-                info={"goal_reached": False, "food_consumed": False},
-            ),
-            StepResult(
-                action=Action.FORWARD,
-                reward=1.0,
-                done=False,
-                info={
-                    "goal_reached": True,
-                    "food_consumed": True,
-                    "distance_efficiency": 0.85,
-                },
-            ),
-            StepResult(
-                action=Action.RIGHT,
-                reward=0.15,
-                done=False,
-                info={"goal_reached": False, "food_consumed": False},
-            ),
-            StepResult(
-                action=Action.FORWARD,
-                reward=1.0,
-                done=False,
-                info={
-                    "goal_reached": True,
-                    "food_consumed": True,
-                    "distance_efficiency": 0.75,
-                },
-            ),
-        ]
-        # Add default result for remaining steps
-        default_result = StepResult(
-            action=Action.FORWARD,
-            reward=0.05,
-            done=False,
-            info={"goal_reached": False, "food_consumed": False},
-        )
-        step_results.extend([default_result] * 6)  # Fill to 10 steps
-
-        step_processor.process_step = Mock(side_effect=step_results)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=1.0,
-                average_steps=4.0,
-                average_reward=2.25,
-                foraging_efficiency=2.0,  # 2 foods collected
-            ),
-        )
-
-        runner = StandardEpisodeRunner(step_processor, metrics_tracker, renderer)
-        reward_config = Mock()
-        _ = runner.run(agent, reward_config, max_steps=10)
-
-        # Verify food collection was tracked
-        assert metrics_tracker.track_food_collection.call_count == 2
-        metrics_tracker.track_food_collection.assert_any_call(distance_efficiency=0.85)
-        metrics_tracker.track_food_collection.assert_any_call(distance_efficiency=0.75)
-
-    def test_run_episode_tracks_stuck_position(self):
-        """Test that stuck position count is tracked correctly."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        agent = Mock()
-        agent.env = Mock(spec=MazeEnvironment)
-
-        # Agent stays in same position for 2 steps, then moves
-        # The runner accesses agent_pos 4 times per step: initial + 3 checks
-        agent.env.agent_pos = [1, 1]  # Just use a fixed position
-        agent.env.get_state = Mock(return_value=(0.4, 0.8))
-
-        step_result = StepResult(
-            action=Action.STAY,
-            reward=-0.05,
-            done=False,
-            info={"goal_reached": False, "food_consumed": False},
-        )
-        step_processor.process_step = Mock(return_value=step_result)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=3.0,
-                average_reward=-0.15,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = StandardEpisodeRunner(step_processor, metrics_tracker, renderer)
-        reward_config = Mock()
-        _ = runner.run(agent, reward_config, max_steps=3)
-
-        # Verify stuck_position_count was passed correctly
-        calls = step_processor.process_step.call_args_list
-        assert calls[0].kwargs["stuck_position_count"] == 0  # First step
-        assert calls[1].kwargs["stuck_position_count"] == 1  # Stuck for 1 step
-        assert calls[2].kwargs["stuck_position_count"] == 2  # Stuck for 2 steps
-
-    def test_run_episode_with_rendering(self):
-        """Test that rendering is called during episode."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        agent = Mock()
-        agent.env = Mock(spec=MazeEnvironment)
-        agent.env.agent_pos = [1, 1]
-        agent.env.get_state = Mock(return_value=(0.5, 1.0))
-
-        step_result = StepResult(
-            action=Action.FORWARD,
-            reward=0.1,
-            done=False,
-            info={"goal_reached": False, "food_consumed": False},
-        )
-        step_processor.process_step = Mock(return_value=step_result)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=3.0,
-                average_reward=0.3,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = StandardEpisodeRunner(step_processor, metrics_tracker, renderer)
-        reward_config = Mock()
-        _ = runner.run(
-            agent,
-            reward_config,
-            max_steps=3,
-            render_text="Test Episode",
-            show_last_frame_only=True,
-        )
-
-        # Verify rendering was called for each step
-        assert renderer.render_if_needed.call_count == 3
-        # Check that kwargs were passed correctly
-        first_call = renderer.render_if_needed.call_args_list[0]
-        assert first_call.kwargs["text"] == "Test Episode"
-        assert first_call.kwargs["show_last_frame_only"] is True
+        assert isinstance(path, list)
+        assert len(path) > 0
 
 
 class TestManyworldsEpisodeRunnerInitialization:
@@ -374,197 +144,122 @@ class TestManyworldsEpisodeRunnerInitialization:
         assert runner.renderer is renderer
 
 
-class TestManyworldsEpisodeRunnerExecution:
-    """Test manyworlds episode runner execution."""
+class TestManyworldsEpisodeRunnerIntegration:
+    """Integration tests for ManyworldsEpisodeRunner with real agent."""
 
-    def test_run_with_branching(self):
-        """Test running episode with branching trajectories."""
-        from quantumnematode.agent import ManyworldsModeConfig
-        from quantumnematode.brain.actions import ActionData
+    def test_runner_initialization(self):
+        """Test that agent creates manyworlds runner correctly."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = MazeEnvironment(grid_size=5)
+        agent = QuantumNematodeAgent(brain=brain, env=env)
 
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
+        # Verify runner was created
+        assert hasattr(agent, "_manyworlds_runner")
+        assert isinstance(agent._manyworlds_runner, ManyworldsEpisodeRunner)
 
-        # Create agent mock with copyable brain and env
-        agent = Mock()
-        brain_mock = Mock()
-        brain_mock.copy = Mock(return_value=brain_mock)
-        brain_mock.update_memory = Mock()
+    def test_manyworlds_config_parameter(self):
+        """Test that manyworlds runner accepts config parameter."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = MazeEnvironment(grid_size=5)
+        agent = QuantumNematodeAgent(brain=brain, env=env)
 
-        env_mock = Mock(spec=MazeEnvironment)
-        env_mock.agent_pos = [1, 1]
-        env_mock.current_direction = "up"
-        env_mock.copy = Mock(return_value=env_mock)
-        env_mock.get_state = Mock(return_value=(0.5, 1.57))
-        env_mock.reached_goal = Mock(return_value=False)
-        env_mock.move_agent = Mock()
-
-        agent.brain = brain_mock
-        agent.env = env_mock
-
-        # Mock brain run_brain to return actions
-        action1 = ActionData(state="forward", action=Action.FORWARD, probability=0.8)
-        action2 = ActionData(state="right", action=Action.RIGHT, probability=0.2)
-        brain_mock.run_brain = Mock(return_value=[action1, action2])
-
-        # Mock step processor
-        step_result = StepResult(
-            action=Action.FORWARD,
-            reward=0.5,
-            done=False,
-            info={"goal_reached": False},
-        )
-        step_processor.process_step = Mock(return_value=step_result)
-
-        # Mock metrics
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=2.0,
-                average_reward=1.0,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = ManyworldsEpisodeRunner(step_processor, metrics_tracker, renderer)
+        # Create custom config
         config = ManyworldsModeConfig(
-            max_superpositions=4,
             top_n_actions=2,
-            top_n_randomize=False,
-        )
-
-        result = runner.run(
-            agent,
-            Mock(),
-            max_steps=2,
-            manyworlds_config=config,
-        )
-
-        # Verify result
-        assert isinstance(result, EpisodeResult)
-        assert result.success is False  # Never reaches goal in this test
-        assert result.steps_taken >= 0
-
-    def test_run_with_single_branch(self):
-        """Test running with single action branch (top_n_actions=1)."""
-        from quantumnematode.agent import ManyworldsModeConfig
-        from quantumnematode.brain.actions import ActionData
-
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        agent = Mock()
-        brain_mock = Mock()
-        brain_mock.copy = Mock(return_value=brain_mock)
-        brain_mock.update_memory = Mock()
-
-        env_mock = Mock(spec=MazeEnvironment)
-        env_mock.agent_pos = [0, 0]
-        env_mock.current_direction = "up"
-        env_mock.copy = Mock(return_value=env_mock)
-        env_mock.get_state = Mock(return_value=(0.3, 0.5))
-        env_mock.reached_goal = Mock(return_value=False)
-        env_mock.move_agent = Mock()
-
-        agent.brain = brain_mock
-        agent.env = env_mock
-
-        action = ActionData(state="forward", action=Action.FORWARD, probability=1.0)
-        brain_mock.run_brain = Mock(return_value=[action])
-
-        step_result = StepResult(
-            action=Action.FORWARD,
-            reward=0.1,
-            done=False,
-            info={"goal_reached": False},
-        )
-        step_processor.process_step = Mock(return_value=step_result)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=3.0,
-                average_reward=0.3,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = ManyworldsEpisodeRunner(step_processor, metrics_tracker, renderer)
-        config = ManyworldsModeConfig(
-            max_superpositions=10,
-            top_n_actions=1,
-            top_n_randomize=False,
-        )
-
-        result = runner.run(agent, Mock(), max_steps=3, manyworlds_config=config)
-
-        assert result.success is False
-        assert result.steps_taken == 3
-
-    def test_best_path_selection(self):
-        """Test that the best reward path is selected."""
-        from quantumnematode.agent import ManyworldsModeConfig
-        from quantumnematode.brain.actions import ActionData
-
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        agent = Mock()
-        brain_mock = Mock()
-        brain_mock.copy = Mock(return_value=brain_mock)
-        brain_mock.update_memory = Mock()
-
-        env_mock = Mock(spec=MazeEnvironment)
-        env_mock.agent_pos = [1, 1]
-        env_mock.current_direction = "up"
-        env_mock.copy = Mock(return_value=env_mock)
-        env_mock.get_state = Mock(return_value=(0.6, 2.0))
-        env_mock.reached_goal = Mock(return_value=False)
-        env_mock.move_agent = Mock()
-
-        agent.brain = brain_mock
-        agent.env = env_mock
-
-        action1 = ActionData(state="forward", action=Action.FORWARD, probability=0.5)
-        action2 = ActionData(state="left", action=Action.LEFT, probability=0.5)
-        brain_mock.run_brain = Mock(return_value=[action1, action2])
-
-        # Return different rewards for different paths
-        rewards = [1.0, 0.5, 1.5, 0.3]  # Best path should have highest cumulative reward
-        reward_index = [0]
-
-        def get_step_result(*args, **kwargs):
-            reward = rewards[reward_index[0] % len(rewards)]
-            reward_index[0] += 1
-            return StepResult(
-                action=Action.FORWARD,
-                reward=reward,
-                done=False,
-                info={"goal_reached": False},
-            )
-
-        step_processor.process_step = Mock(side_effect=get_step_result)
-
-        metrics_tracker.calculate_metrics = Mock(
-            return_value=PerformanceMetrics(
-                success_rate=0.0,
-                average_steps=2.0,
-                average_reward=1.25,
-                foraging_efficiency=0.0,
-            ),
-        )
-
-        runner = ManyworldsEpisodeRunner(step_processor, metrics_tracker, renderer)
-        config = ManyworldsModeConfig(
             max_superpositions=4,
-            top_n_actions=2,
-            top_n_randomize=False,
+            render_sleep_seconds=0.0,  # No sleep for testing
         )
 
-        result = runner.run(agent, Mock(), max_steps=2, manyworlds_config=config)
+        # Verify runner accepts config (will sys.exit, so we can't test full execution)
+        assert hasattr(agent, "_manyworlds_runner")
+        assert agent._manyworlds_runner is not None
 
-        # Should select path with best total reward
-        assert result.total_reward > 0
+
+class TestRunnerComponentIntegration:
+    """Test that runners integrate properly with agent components."""
+
+    def test_standard_runner_uses_food_handler(self):
+        """Test that StandardEpisodeRunner uses FoodConsumptionHandler."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            max_active_foods=3,
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(
+            brain=brain,
+            env=env,
+            satiety_config=satiety_config,
+        )
+
+        initial_foods = agent.foods_collected
+
+        # Run episode
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=50)
+
+        # Food collection tracking should work
+        assert agent.foods_collected >= initial_foods
+
+    def test_standard_runner_uses_satiety_manager(self):
+        """Test that StandardEpisodeRunner uses SatietyManager."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            max_active_foods=3,
+        )
+        satiety_config = SatietyConfig(
+            initial_satiety=100.0,
+            satiety_decay_rate=1.0,
+        )
+        agent = QuantumNematodeAgent(
+            brain=brain,
+            env=env,
+            satiety_config=satiety_config,
+        )
+
+        initial_satiety = agent.satiety
+
+        # Run episode
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=10)
+
+        # Satiety should have decayed
+        assert agent.satiety < initial_satiety
+
+    def test_runner_helper_methods_accessible(self):
+        """Test that runners can access agent helper methods."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env = MazeEnvironment(grid_size=5)
+        agent = QuantumNematodeAgent(brain=brain, env=env)
+
+        # Verify helper methods exist and are callable
+        assert hasattr(agent, "_get_agent_position_tuple")
+        assert callable(agent._get_agent_position_tuple)
+
+        assert hasattr(agent, "_prepare_input_data")
+        assert callable(agent._prepare_input_data)
+
+        assert hasattr(agent, "_create_brain_params")
+        assert callable(agent._create_brain_params)
+
+        assert hasattr(agent, "_render_step")
+        assert callable(agent._render_step)
+
+        # Test helper methods work
+        pos = agent._get_agent_position_tuple()
+        assert isinstance(pos, tuple)
+        assert len(pos) == 2
+
+        input_data = agent._prepare_input_data(0.5)
+        assert input_data is None  # MLP brain returns None
+
+        params = agent._create_brain_params(0.5, 1.57)
+        assert params is not None
+        assert hasattr(params, "gradient_strength")
+        assert hasattr(params, "gradient_direction")

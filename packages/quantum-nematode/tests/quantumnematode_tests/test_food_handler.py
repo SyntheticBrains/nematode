@@ -1,7 +1,5 @@
 """Tests for the food consumption handler."""
 
-# ruff: noqa: SLF001 - Testing private members is intentional
-
 from unittest.mock import MagicMock
 
 import pytest

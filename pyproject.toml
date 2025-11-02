@@ -85,6 +85,10 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
   "D104",
   "PLR2004",
   "S101",
+  "SLF001",  # Tests can access private members for testing
+]
+"/**/runners.py" = [
+  "SLF001",  # Runners intentionally access private agent members
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -108,9 +112,3 @@ reportUnusedFunction = "error"
 reportConstantRedefinition = "error"
 pythonVersion = "3.12"
 pythonPlatform = "Linux"
-python.autoComplete.extraPaths = [
-    "packages/quantum-nematode",
-]
-python.analysis.extraPaths = [
-    "packages/quantum-nematode",
-]
