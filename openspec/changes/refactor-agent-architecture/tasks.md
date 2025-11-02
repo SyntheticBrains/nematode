@@ -83,18 +83,29 @@
 
 ## Phase 3: Step Processing and Episode Runners
 
-### Task 3.1: Implement StepProcessor
-- [ ] Create `StepProcessor` class in new file `quantumnematode/step_processor.py`
-- [ ] Implement `__init__(brain, env, food_handler, satiety_manager)` with DI
-- [ ] Implement `prepare_brain_params(gradient_strength, gradient_direction, previous_action, previous_reward)` method
-- [ ] Implement `process_step(gradient_strength, gradient_direction, previous_action, previous_reward)` returning StepResult
-- [ ] Ensure stateless design (no episode state retained)
-- [ ] Write unit tests (~15 tests) in `tests/quantumnematode_tests/test_step_processor.py`
-- [ ] Test with mocked brain, env, food_handler, satiety_manager
-- [ ] Achieve >95% coverage for StepProcessor
+### Task 3.0: Create RewardCalculator ✅
+- [x] Extract reward calculation logic to break circular dependency
+- [x] Create `RewardCalculator` class in `quantumnematode/reward_calculator.py`
+- [x] Implement reward calculation for maze and foraging environments
+- [x] Write comprehensive unit tests (11 tests) in `tests/quantumnematode_tests/test_reward_calculator.py`
+- [x] Achieve 90.67% coverage for RewardCalculator
 
-**Dependencies**: Tasks 2.1, 2.4
-**Validation**: All tests pass, coverage >95%, ruff/pyright clean
+**Dependencies**: None
+**Validation**: ✅ All tests pass, coverage 90.67%, ruff/pyright clean
+**Parallelizable**: Yes
+
+### Task 3.1: Implement StepProcessor ✅
+- [x] Create `StepProcessor` class in new file `quantumnematode/step_processor.py`
+- [x] Implement `__init__(brain, env, reward_calculator, food_handler, satiety_manager)` with DI
+- [x] Implement `prepare_brain_params(gradient_strength, gradient_direction, previous_action)` method
+- [x] Implement `process_step(gradient_strength, gradient_direction, previous_action, previous_reward)` returning StepResult
+- [x] Ensure stateless design (no episode state retained)
+- [x] Write unit tests (11 tests) in `tests/quantumnematode_tests/test_step_processor.py`
+- [x] Test with mocked brain, env, food_handler, satiety_manager, reward_calculator
+- [x] Achieve 96.55% coverage for StepProcessor
+
+**Dependencies**: Tasks 2.1, 2.4, 3.0
+**Validation**: ✅ All tests pass, coverage 96.55%, ruff/pyright clean
 **Parallelizable**: No (needs Phase 2 complete)
 
 ### Task 3.2: Implement StandardEpisodeRunner
