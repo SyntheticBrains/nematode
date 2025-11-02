@@ -99,13 +99,28 @@ class MetricsTracker:
         average_reward = self.total_rewards / total_runs if total_runs > 0 else 0.0
 
         # Calculate foraging efficiency (foods per run)
+        # Note: This differs from foods_per_step which is tracked separately
         foraging_efficiency = self.foods_collected / total_runs if total_runs > 0 else 0.0
+
+        # Calculate average distance efficiency
+        average_distance_efficiency = None
+        if self.distance_efficiencies:
+            average_distance_efficiency = sum(self.distance_efficiencies) / len(
+                self.distance_efficiencies,
+            )
+
+        # Calculate average foods collected per run (only if in dynamic environment)
+        average_foods_collected = None
+        if self.foods_collected > 0 and total_runs > 0:
+            average_foods_collected = self.foods_collected / total_runs
 
         return PerformanceMetrics(
             success_rate=success_rate,
             average_steps=average_steps,
             average_reward=average_reward,
             foraging_efficiency=foraging_efficiency,
+            average_distance_efficiency=average_distance_efficiency,
+            average_foods_collected=average_foods_collected,
         )
 
     def reset(self) -> None:

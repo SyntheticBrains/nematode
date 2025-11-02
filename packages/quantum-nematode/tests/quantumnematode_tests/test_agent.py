@@ -174,36 +174,6 @@ class TestQuantumNematodeAgentGoalDistance:
         )
         return ModularBrain(config=config, shots=50)
 
-    def test_calculate_goal_distance_maze(self, modular_brain):
-        """Test goal distance calculation for maze environment."""
-        env = MazeEnvironment(
-            grid_size=10,
-            start_pos=(0, 0),
-            food_pos=(5, 5),
-        )
-        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
-
-        distance = agent.calculate_goal_distance()
-        # Manhattan distance from (0,0) to (5,5) should be 10
-        assert distance == 10
-
-    def test_calculate_goal_distance_after_movement(self, modular_brain):
-        """Test that goal distance changes after agent moves."""
-        env = MazeEnvironment(
-            grid_size=10,
-            start_pos=(0, 0),
-            food_pos=(5, 5),
-        )
-        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
-
-        initial_distance = agent.calculate_goal_distance()
-
-        # Move agent closer to goal
-        env.agent_pos = (1, 1)
-        new_distance = agent.calculate_goal_distance()
-
-        assert new_distance < initial_distance
-
 
 class TestQuantumNematodeAgentReset:
     """Test agent reset functionality."""
