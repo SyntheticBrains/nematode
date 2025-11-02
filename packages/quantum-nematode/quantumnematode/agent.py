@@ -532,30 +532,8 @@ class QuantumNematodeAgent:
                     f"Average reward per step: {average_reward}",
                 )
 
-            if show_last_frame_only:
-                if os.name == "nt":  # For Windows
-                    os.system("cls")  # noqa: S605, S607
-                else:  # For macOS and Linux
-                    os.system("clear")  # noqa: S605, S607
-
-            grid = self.env.render()
-            for frame in grid:
-                print(frame)  # noqa: T201
-                logger.debug(frame)
-
-            if render_text:
-                print(render_text)  # noqa: T201
-
-            match self.env:
-                case MazeEnvironment():
-                    print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
-                    print(f"Wins:\t\t{self.success_count}")  # noqa: T201
-                case DynamicForagingEnvironment():
-                    print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
-                    print(f"Eaten:\t\t{self.foods_collected}/{self.env.max_active_foods}")  # noqa: T201
-                    print(f"Satiety:\t{self.satiety:.1f}/{self.max_satiety}")  # noqa: T201
-                case _:
-                    pass
+            # Render current step
+            self._render_step(max_steps, render_text, show_last_frame_only=show_last_frame_only)
 
             # Handle max steps reached
             if self.steps >= max_steps:
@@ -815,6 +793,53 @@ class QuantumNematodeAgent:
             agent_direction=self.env.current_direction,
             action=action,
         )
+
+    def _render_step(
+        self,
+        max_steps: int,
+        render_text: str | None = None,
+        *,
+        show_last_frame_only: bool = False,
+    ) -> None:
+        """Render the current step with environment state and status.
+
+        Parameters
+        ----------
+        max_steps : int
+            Maximum number of steps for the episode.
+        render_text : str | None, optional
+            Additional text to display, by default None.
+        show_last_frame_only : bool, optional
+            Whether to clear screen before rendering, by default False.
+        """
+        # Clear screen if showing last frame only
+        if show_last_frame_only:
+            if os.name == "nt":  # For Windows
+                os.system("cls")  # noqa: S605, S607
+            else:  # For macOS and Linux
+                os.system("clear")  # noqa: S605, S607
+
+        # Render environment grid
+        grid = self.env.render()
+        for frame in grid:
+            print(frame)  # noqa: T201
+            logger.debug(frame)
+
+        # Display custom render text
+        if render_text:
+            print(render_text)  # noqa: T201
+
+        # Display environment-specific status
+        match self.env:
+            case MazeEnvironment():
+                print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
+                print(f"Wins:\t\t{self.success_count}")  # noqa: T201
+            case DynamicForagingEnvironment():
+                print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
+                print(f"Eaten:\t\t{self.foods_collected}/{self.env.max_active_foods}")  # noqa: T201
+                print(f"Satiety:\t{self.satiety:.1f}/{self.max_satiety}")  # noqa: T201
+            case _:
+                pass
 
     def calculate_reward(
         self,
