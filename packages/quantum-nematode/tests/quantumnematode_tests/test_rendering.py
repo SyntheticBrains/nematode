@@ -148,10 +148,13 @@ class TestRenderFrame:
         mock_env = MagicMock()
         mock_env.render.return_value = "grid"
 
-        with patch("builtins.print"), patch.object(
-            EpisodeRenderer,
-            "clear_screen",
-        ) as mock_clear:
+        with (
+            patch("builtins.print"),
+            patch.object(
+                EpisodeRenderer,
+                "clear_screen",
+            ) as mock_clear,
+        ):
             renderer.render_frame(mock_env, clear_screen=False)
 
             # Should NOT have cleared screen
@@ -163,10 +166,13 @@ class TestRenderFrame:
         mock_env = MagicMock()
         mock_env.render.return_value = "grid"
 
-        with patch("builtins.print"), patch.object(
-            EpisodeRenderer,
-            "clear_screen",
-        ) as mock_clear:
+        with (
+            patch("builtins.print"),
+            patch.object(
+                EpisodeRenderer,
+                "clear_screen",
+            ) as mock_clear,
+        ):
             renderer.render_frame(mock_env, clear_screen=True)
 
             # Should have cleared screen
