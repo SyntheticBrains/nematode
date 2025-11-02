@@ -131,37 +131,12 @@ class FoodConsumptionResult:
     distance_efficiency: float | None = None
 
 
-@dataclass
-class EpisodeResult:
-    """Complete result of running an episode.
-
-    Attributes
-    ----------
-    path : list[tuple[int, int]]
-        The path taken by the agent during the episode.
-    success : bool
-        Whether the agent successfully reached a goal.
-    total_reward : float
-        Cumulative reward obtained during the episode.
-    steps_taken : int
-        Number of steps taken in the episode.
-    metrics : dict[str, Any]
-        Additional episode metrics (food collected, efficiency, etc.).
-    """
-
-    path: list[tuple[int, int]]
-    success: bool
-    total_reward: float
-    steps_taken: int
-    metrics: dict[str, Any]
-
-
 class EpisodeRunner(Protocol):
     """Protocol for episode execution strategies.
 
     Episode runners encapsulate different modes of executing simulation episodes
-    (e.g., standard single-trajectory, many-worlds branching). They delegate
-    step execution to components and orchestrate the overall episode flow.
+    (e.g., standard single-trajectory, many-worlds branching). They access agent
+    components and helper methods to execute the episode logic.
     """
 
     def run(
@@ -170,7 +145,7 @@ class EpisodeRunner(Protocol):
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: dict[str, Any],
-    ) -> EpisodeResult:
+    ) -> list[tuple]:
         """Execute an episode using this runner's strategy.
 
         Parameters
@@ -186,8 +161,8 @@ class EpisodeRunner(Protocol):
 
         Returns
         -------
-        EpisodeResult
-            Complete result of the episode execution.
+        list[tuple]
+            The path taken by the agent during the episode.
         """
         ...
 
@@ -276,42 +251,24 @@ class QuantumNematodeAgent:
         self.initial_distance_to_food: int | None = None
         self.distance_efficiencies: list[float] = []
 
-        # Component instantiation (Phase 4 refactoring - for future use)
+        # Component instantiation
         # Import at runtime to avoid circular dependencies
         from quantumnematode.food_handler import FoodConsumptionHandler
         from quantumnematode.metrics import MetricsTracker
-        from quantumnematode.rendering import EpisodeRenderer
         from quantumnematode.reward_calculator import RewardCalculator
         from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
         from quantumnematode.satiety import SatietyManager
-        from quantumnematode.step_processor import StepProcessor
 
         self._satiety_manager = SatietyManager(self.satiety_config)
         self._metrics_tracker = MetricsTracker()
         self._reward_calculator = RewardCalculator(RewardConfig())  # Default config
-        self._renderer = EpisodeRenderer()
         self._food_handler = FoodConsumptionHandler(
             env=self.env,
             satiety_manager=self._satiety_manager,
             satiety_gain_fraction=self.satiety_config.satiety_gain_per_food,
         )
-        self._step_processor = StepProcessor(
-            brain=self.brain,
-            env=self.env,
-            reward_calculator=self._reward_calculator,
-            food_handler=self._food_handler,
-            satiety_manager=self._satiety_manager,
-        )
-        self._standard_runner = StandardEpisodeRunner(
-            step_processor=self._step_processor,
-            metrics_tracker=self._metrics_tracker,
-            renderer=self._renderer,
-        )
-        self._manyworlds_runner = ManyworldsEpisodeRunner(
-            step_processor=self._step_processor,
-            metrics_tracker=self._metrics_tracker,
-            renderer=self._renderer,
-        )
+        self._standard_runner = StandardEpisodeRunner()
+        self._manyworlds_runner = ManyworldsEpisodeRunner()
 
     def run_episode(
         self,
@@ -567,7 +524,6 @@ class QuantumNematodeAgent:
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
-        self._step_processor.env = self.env
 
         # Reset satiety manager to initial satiety
         self._satiety_manager.reset()

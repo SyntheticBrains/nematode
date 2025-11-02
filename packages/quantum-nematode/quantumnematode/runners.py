@@ -16,57 +16,26 @@ from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
-    from quantumnematode.metrics import MetricsTracker
-    from quantumnematode.rendering import EpisodeRenderer
-    from quantumnematode.step_processor import StepProcessor
 
 
 class StandardEpisodeRunner:
     """Runs a standard episode using step-by-step execution.
 
-    This runner orchestrates the main episode loop, delegating step execution
-    to the StepProcessor and handling episode-level concerns like rendering
-    and metrics tracking.
+    This runner orchestrates the main episode loop by directly accessing agent
+    components and helper methods. The runner delegates to the agent's internal
+    components (FoodConsumptionHandler, SatietyManager) and helper methods for
+    episode execution.
 
-    Parameters
-    ----------
-    step_processor : StepProcessor
-        Processor for individual step execution.
-    metrics_tracker : MetricsTracker
-        Tracker for performance metrics.
-    renderer : EpisodeRenderer
-        Renderer for episode visualization.
-
-    Attributes
-    ----------
-    step_processor : StepProcessor
-        The step processor instance.
-    metrics_tracker : MetricsTracker
-        The metrics tracker instance.
-    renderer : EpisodeRenderer
-        The renderer instance.
+    Notes
+    -----
+    The implementation directly accesses agent private members (_food_handler,
+    _satiety_manager, helper methods) as part of the episode execution architecture.
+    This provides a clean separation between episode orchestration (runner) and
+    agent state management.
     """
 
-    def __init__(
-        self,
-        step_processor: StepProcessor,
-        metrics_tracker: MetricsTracker,
-        renderer: EpisodeRenderer,
-    ) -> None:
-        """Initialize the standard episode runner.
-
-        Parameters
-        ----------
-        step_processor : StepProcessor
-            Processor for individual step execution.
-        metrics_tracker : MetricsTracker
-            Tracker for performance metrics.
-        renderer : EpisodeRenderer
-            Renderer for episode visualization.
-        """
-        self.step_processor = step_processor
-        self.metrics_tracker = metrics_tracker
-        self.renderer = renderer
+    def __init__(self) -> None:
+        """Initialize the standard episode runner."""
 
     def run(  # noqa: C901, PLR0912, PLR0915
         self,
@@ -318,45 +287,15 @@ class ManyworldsEpisodeRunner:
     interpretation of quantum mechanics. At each step, multiple action branches
     are explored in parallel, creating a tree of possible futures.
 
-    Parameters
-    ----------
-    step_processor : StepProcessor
-        Processor for individual step execution.
-    metrics_tracker : MetricsTracker
-        Tracker for performance metrics.
-    renderer : EpisodeRenderer
-        Renderer for episode visualization.
-
-    Attributes
-    ----------
-    step_processor : StepProcessor
-        The step processor instance.
-    metrics_tracker : MetricsTracker
-        The metrics tracker instance.
-    renderer : EpisodeRenderer
-        The renderer instance.
+    Notes
+    -----
+    The implementation directly accesses agent helper methods (_create_brain_params)
+    and uses inline rendering for visualizing parallel universes. This specialized
+    execution mode is fundamentally different from standard single-trajectory episodes.
     """
 
-    def __init__(
-        self,
-        step_processor: StepProcessor,
-        metrics_tracker: MetricsTracker,
-        renderer: EpisodeRenderer,
-    ) -> None:
-        """Initialize the manyworlds episode runner.
-
-        Parameters
-        ----------
-        step_processor : StepProcessor
-            Processor for individual step execution.
-        metrics_tracker : MetricsTracker
-            Tracker for performance metrics.
-        renderer : EpisodeRenderer
-            Renderer for episode visualization.
-        """
-        self.step_processor = step_processor
-        self.metrics_tracker = metrics_tracker
-        self.renderer = renderer
+    def __init__(self) -> None:
+        """Initialize the manyworlds episode runner."""
 
     def run(  # noqa: C901, PLR0912, PLR0915
         self,
