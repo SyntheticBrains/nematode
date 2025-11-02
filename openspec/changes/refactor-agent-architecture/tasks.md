@@ -139,23 +139,26 @@
 **Validation**: ✅ All tests pass, coverage 53% for runners.py, ruff/pyright clean
 **Parallelizable**: Can be done in parallel with Task 3.2
 
-## Phase 4: Integration - Refactor QuantumNematodeAgent
+## Phase 4: Integration - Refactor QuantumNematodeAgent (Partial - Task 4.1 Complete)
 
-### Task 4.1: Refactor QuantumNematodeAgent.__init__
-- [ ] Update `__init__` to instantiate all component classes
-- [ ] Create SatietyManager with satiety_config
-- [ ] Create MetricsTracker
-- [ ] Create FoodConsumptionHandler with env and satiety_manager
-- [ ] Create StepProcessor with brain, env, food_handler, satiety_manager
-- [ ] Create EpisodeRenderer with rendering config
-- [ ] Maintain all existing public attributes for backward compatibility
-- [ ] Add read-only properties for component access
+### Task 4.1: Refactor QuantumNematodeAgent.__init__ ✅
+- [x] Update `__init__` to instantiate all component classes
+- [x] Create SatietyManager with satiety_config
+- [x] Create MetricsTracker
+- [x] Create FoodConsumptionHandler with env and satiety_manager
+- [x] Create RewardCalculator with default RewardConfig
+- [x] Create StepProcessor with brain, env, food_handler, satiety_manager, reward_calculator
+- [x] Create EpisodeRenderer
+- [x] Maintain all existing public attributes for backward compatibility
+- [x] Fixed circular import by using TYPE_CHECKING and runtime imports
 
 **Dependencies**: All of Phase 3
-**Validation**: Agent instantiates without errors, existing tests pass
+**Validation**: ✅ Agent instantiates without errors, all 19 existing tests pass
 **Parallelizable**: No (integration point)
 
-### Task 4.2: Refactor QuantumNematodeAgent.run_episode
+**Note**: Components are instantiated and ready for future use (Tasks 4.2, 4.3 deferred).
+
+### Task 4.2: Refactor QuantumNematodeAgent.run_episode [DEFERRED]
 - [ ] Replace 268-line implementation with delegation to StandardEpisodeRunner
 - [ ] Create StandardEpisodeRunner instance with components
 - [ ] Call runner.run() with appropriate parameters
@@ -164,11 +167,12 @@
 - [ ] Remove duplicated code now handled by components
 - [ ] Reduce method to <50 lines (mostly orchestration)
 
-**Dependencies**: Task 4.1, Task 3.2
-**Validation**: All existing integration tests pass, method <50 lines
+**Dependencies**: Task 4.1, Task 3.2, Complete StandardEpisodeRunner implementation
+**Validation**: All existing tests pass, method <50 lines
 **Parallelizable**: Can be done in parallel with Task 4.3
+**Status**: DEFERRED - StandardEpisodeRunner is a test stub, needs full implementation before use
 
-### Task 4.3: Refactor QuantumNematodeAgent.run_manyworlds_mode
+### Task 4.3: Refactor QuantumNematodeAgent.run_manyworlds_mode [DEFERRED]
 - [ ] Replace 192-line implementation with delegation to ManyworldsEpisodeRunner
 - [ ] Create ManyworldsEpisodeRunner instance with components
 - [ ] Call runner.run() with appropriate parameters
@@ -177,9 +181,10 @@
 - [ ] Remove duplicated code now handled by components
 - [ ] Reduce method to <50 lines (mostly orchestration)
 
-**Dependencies**: Task 4.1, Task 3.3
-**Validation**: All existing integration tests pass, method <50 lines
+**Dependencies**: Task 4.1, Task 3.3, Complete ManyworldsEpisodeRunner implementation
+**Validation**: All existing tests pass, method <50 lines
 **Parallelizable**: Can be done in parallel with Task 4.2
+**Status**: DEFERRED - ManyworldsEpisodeRunner is a test stub, needs full implementation before use
 
 ### Task 4.4: Refactor helper methods to use components
 - [ ] Update `calculate_reward` to delegate to components where appropriate

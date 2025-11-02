@@ -36,8 +36,10 @@ class TestMazeEnvironmentRewards:
     def test_maze_distance_reward_moving_closer(self, default_config):
         """Test reward when agent moves closer to goal."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [2, 3]
         env.goal = [5, 5]
+        env.reached_goal.return_value = False
 
         calculator = RewardCalculator(default_config)
         path = [(3, 3), (2, 3)]  # Moved from (3,3) to (2,3)
@@ -53,8 +55,10 @@ class TestMazeEnvironmentRewards:
     def test_maze_distance_reward_first_step(self, default_config):
         """Test reward on first step (no previous position)."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [1, 1]
         env.goal = [5, 5]
+        env.reached_goal.return_value = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 1)]  # First step
@@ -71,6 +75,7 @@ class TestDynamicForagingRewards:
     def test_foraging_distance_reward(self, default_config):
         """Test distance reward in foraging environment."""
         env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.foods = [(5, 5), (1, 1)]
         env.get_nearest_food_distance = Mock(return_value=1)
@@ -89,6 +94,7 @@ class TestDynamicForagingRewards:
     def test_foraging_exploration_bonus(self, default_config):
         """Test exploration bonus for visiting new cells."""
         env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = set()
@@ -105,6 +111,7 @@ class TestDynamicForagingRewards:
     def test_foraging_no_exploration_bonus_for_visited_cell(self, default_config):
         """Test no exploration bonus for already visited cells."""
         env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(1, 2)}
@@ -124,6 +131,7 @@ class TestAntiDitheringPenalty:
     def test_anti_dithering_penalty_applied(self, default_config):
         """Test penalty when agent oscillates back to previous position."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [1, 1]
         env.goal = [5, 5]
 
@@ -142,6 +150,7 @@ class TestAntiDitheringPenalty:
     def test_no_anti_dithering_penalty_normal_movement(self, default_config):
         """Test no penalty for normal movement."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [3, 3]
         env.goal = [5, 5]
 
@@ -163,6 +172,7 @@ class TestStuckPositionPenalty:
     def test_stuck_position_penalty_applied(self, default_config):
         """Test penalty when agent is stuck."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.goal = [5, 5]
 
@@ -178,6 +188,7 @@ class TestStuckPositionPenalty:
     def test_no_stuck_penalty_below_threshold(self, default_config):
         """Test no penalty when below stuck threshold."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.goal = [5, 5]
 
@@ -192,6 +203,7 @@ class TestStuckPositionPenalty:
     def test_stuck_penalty_capped_at_10(self, default_config):
         """Test stuck penalty is capped at 10 extra steps."""
         env = Mock(spec=MazeEnvironment)
+        env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.goal = [5, 5]
 

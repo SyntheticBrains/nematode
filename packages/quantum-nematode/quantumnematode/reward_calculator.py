@@ -44,6 +44,8 @@ class RewardCalculator:
         env: BaseEnvironment,
         path: list[tuple[int, ...]],
         stuck_position_count: int = 0,
+        current_step: int = 0,
+        max_steps: int = 100,
     ) -> float:
         """Calculate reward based on the agent's movement toward the goal.
 
@@ -58,6 +60,10 @@ class RewardCalculator:
             The agent's path history.
         stuck_position_count : int, optional
             Number of consecutive steps in the same position, by default 0.
+        current_step : int, optional
+            Current step number for efficiency calculation, by default 0.
+        max_steps : int, optional
+            Maximum steps for efficiency calculation, by default 100.
 
         Returns
         -------
@@ -71,6 +77,7 @@ class RewardCalculator:
         distance_reward = 0.0
         anti_dither_penalty = 0.0
         exploration_bonus = 0.0
+        goal_bonus = 0.0
 
         # Handle distance-based rewards differently for each environment type
         if isinstance(env, MazeEnvironment):
@@ -103,6 +110,16 @@ class RewardCalculator:
             logger.debug(
                 f"[Penalty] Stuck position penalty applied: {-stuck_penalty} "
                 f"(count={stuck_position_count})",
+            )
+
+        # Bonus for reaching the goal, scaled by efficiency
+        if env.reached_goal():
+            efficiency = max(0.1, 1 - (current_step / max_steps))
+            goal_bonus = self.config.reward_goal * efficiency
+            reward += goal_bonus
+            logger.debug(
+                f"[Reward] Goal reached! Efficiency bonus applied: "
+                f"{goal_bonus} (efficiency={efficiency}).",
             )
 
         return reward
