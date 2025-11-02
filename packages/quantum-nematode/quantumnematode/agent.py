@@ -557,8 +557,16 @@ class QuantumNematodeAgent:
             if render_text:
                 print(render_text)  # noqa: T201
 
-            print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
-            print(f"Wins:\t\t{self.success_count}")  # noqa: T201
+            match self.env:
+                case MazeEnvironment():
+                    print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
+                    print(f"Wins:\t\t{self.success_count}")  # noqa: T201
+                case DynamicForagingEnvironment():
+                    print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
+                    print(f"Eaten:\t\t{self.foods_collected}/{self.env.max_active_foods}")  # noqa: T201
+                    print(f"Satiety:\t{self.satiety:.1f}/{self.max_satiety}")  # noqa: T201
+                case _:
+                    pass
 
             # Handle max steps reached
             if self.steps >= max_steps:
