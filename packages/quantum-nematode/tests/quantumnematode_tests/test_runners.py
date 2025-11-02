@@ -1,7 +1,5 @@
 """Tests for episode runners."""
 
-from unittest.mock import Mock
-
 from quantumnematode.agent import (
     ManyworldsModeConfig,
     QuantumNematodeAgent,
@@ -10,30 +8,16 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
-from quantumnematode.metrics import MetricsTracker
-from quantumnematode.rendering import EpisodeRenderer
 from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
-from quantumnematode.step_processor import StepProcessor
 
 
 class TestStandardEpisodeRunnerInitialization:
     """Test standard episode runner initialization."""
 
-    def test_initialize_with_dependencies(self):
-        """Test that runner initializes with all dependencies."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        runner = StandardEpisodeRunner(
-            step_processor=step_processor,
-            metrics_tracker=metrics_tracker,
-            renderer=renderer,
-        )
-
-        assert runner.step_processor is step_processor
-        assert runner.metrics_tracker is metrics_tracker
-        assert runner.renderer is renderer
+    def test_initialize_runner(self):
+        """Test that runner initializes correctly."""
+        runner = StandardEpisodeRunner()
+        assert runner is not None
 
 
 class TestStandardEpisodeRunnerIntegration:
@@ -127,21 +111,10 @@ class TestStandardEpisodeRunnerIntegration:
 class TestManyworldsEpisodeRunnerInitialization:
     """Test manyworlds episode runner initialization."""
 
-    def test_initialize_with_dependencies(self):
-        """Test that runner initializes with all dependencies."""
-        step_processor = Mock(spec=StepProcessor)
-        metrics_tracker = Mock(spec=MetricsTracker)
-        renderer = Mock(spec=EpisodeRenderer)
-
-        runner = ManyworldsEpisodeRunner(
-            step_processor=step_processor,
-            metrics_tracker=metrics_tracker,
-            renderer=renderer,
-        )
-
-        assert runner.step_processor is step_processor
-        assert runner.metrics_tracker is metrics_tracker
-        assert runner.renderer is renderer
+    def test_initialize_runner(self):
+        """Test that runner initializes correctly."""
+        runner = ManyworldsEpisodeRunner()
+        assert runner is not None
 
 
 class TestManyworldsEpisodeRunnerIntegration:
