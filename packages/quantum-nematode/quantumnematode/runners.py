@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from quantumnematode.agent import EpisodeResult
+from quantumnematode.brain.arch import BrainParams
 from quantumnematode.env import DynamicForagingEnvironment
 
 if TYPE_CHECKING:
@@ -296,7 +297,6 @@ class ManyworldsEpisodeRunner:
                     agent_pos_tuple[0] if len(agent_pos_tuple) > 0 else 0.0,
                     agent_pos_tuple[1] if len(agent_pos_tuple) > 1 else 0.0,
                 )
-                from quantumnematode.brain.arch import BrainParams
 
                 params = BrainParams(
                     gradient_strength=gradient_strength,

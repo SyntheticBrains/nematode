@@ -335,9 +335,10 @@ class QuantumNematodeAgent:
 
         # Initialize distance tracking for dynamic environments
         if isinstance(self.env, DynamicForagingEnvironment):
-            self.initial_distance_to_food = self.env.get_nearest_food_distance()
             self.distance_efficiencies = []
             self.foods_collected = 0
+            # Reset food handler tracking for new episode
+            self._food_handler.reset()
 
         reward = 0.0
         top_action = None
@@ -426,6 +427,10 @@ class QuantumNematodeAgent:
             self.path.append(tuple(self.env.agent_pos))
             self.steps += 1
 
+            # Track step for food distance efficiency calculation
+            if isinstance(self.env, DynamicForagingEnvironment):
+                self._food_handler.track_step()
+
             # Satiety decay (for dynamic environments)
             if isinstance(self.env, DynamicForagingEnvironment):
                 self.satiety -= self.satiety_config.satiety_decay_rate
@@ -445,35 +450,29 @@ class QuantumNematodeAgent:
             if self.env.reached_goal():
                 # Handle food consumption differently for each environment type
                 if isinstance(self.env, DynamicForagingEnvironment):
-                    # Multi-food environment: consume food and continue
-                    consumed_food = self.env.consume_food()
-                    if consumed_food:
+                    # Multi-food environment: delegate to food handler
+                    food_result = self._food_handler.check_and_consume_food()
+                    if food_result.food_consumed:
                         self.foods_collected += 1
                         self.success_count += 1
 
-                        # Restore satiety
-                        satiety_gain = self.max_satiety * self.satiety_config.satiety_gain_per_food
-                        self.satiety = min(self.max_satiety, self.satiety + satiety_gain)
-                        self.env.satiety = self.satiety
                         logger.info(
                             f"Food #{self.foods_collected} collected! "
-                            f"Satiety restored by {satiety_gain:.1f} to "
-                            f"{self.satiety:.1f}/{self.max_satiety}",
+                            f"Satiety restored by {food_result.satiety_restored:.1f} to "
+                            f"{self._satiety_manager.current_satiety:.1f}/{self._satiety_manager.max_satiety}",
                         )
 
-                        # Calculate distance efficiency for this food
-                        if self.initial_distance_to_food is not None:
-                            steps_for_this_food = self.steps  # Simplification
-                            distance_efficiency = (
-                                self.initial_distance_to_food - steps_for_this_food
-                            ) / self.initial_distance_to_food
-                            self.distance_efficiencies.append(distance_efficiency)
+                        # Track distance efficiency
+                        if food_result.distance_efficiency is not None:
+                            self.distance_efficiencies.append(food_result.distance_efficiency)
                             logger.debug(
-                                f"Distance efficiency for this food: {distance_efficiency:.2f}",
+                                "Distance efficiency for this food: "
+                                f"{food_result.distance_efficiency:.2f}",
                             )
 
-                        # Update initial distance for next food
-                        self.initial_distance_to_food = self.env.get_nearest_food_distance()
+                        # Sync agent satiety with satiety manager
+                        self.satiety = self._satiety_manager.current_satiety
+                        self.env.satiety = self.satiety
 
                     # Continue foraging (don't break)
                     self.total_rewards += reward
@@ -537,7 +536,9 @@ class QuantumNematodeAgent:
 
             # Log distance to the goal (only for MazeEnvironment)
             if isinstance(self.env, MazeEnvironment) and self.env.goal is not None:
-                distance_to_goal = self.calculate_goal_distance()
+                distance_to_goal = abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
+                    self.env.agent_pos[1] - self.env.goal[1],
+                )
                 logger.debug(f"Distance to goal: {distance_to_goal}")
 
             # Log cumulative reward and average reward per step at the end of each run
@@ -767,24 +768,6 @@ class QuantumNematodeAgent:
         print(msg)  # noqa: T201
         sys.exit(0)  # Exit the program
 
-    def calculate_goal_distance(self) -> int:
-        """
-        Calculate the Manhattan distance to the goal (or nearest food).
-
-        Returns
-        -------
-        int
-            The Manhattan distance to the goal/nearest food.
-        """
-        if isinstance(self.env, DynamicForagingEnvironment):
-            dist = self.env.get_nearest_food_distance()
-            return dist if dist is not None else 0
-        if isinstance(self.env, MazeEnvironment):
-            return abs(self.env.agent_pos[0] - self.env.goal[0]) + abs(
-                self.env.agent_pos[1] - self.env.goal[1],
-            )
-        return 0
-
     def calculate_reward(
         self,
         config: RewardConfig,
@@ -846,6 +829,18 @@ class QuantumNematodeAgent:
         self.path = [tuple(self.env.agent_pos)]
         self.satiety = self.max_satiety
         self.foods_collected = 0
+
+        # Update component references to new environment instance
+        self._food_handler.env = self.env
+        self._step_processor.env = self.env
+
+        # Reset satiety manager to initial satiety
+        self._satiety_manager.reset()
+
+        # Reset food handler tracking for new environment
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self._food_handler.reset()
+
         logger.info("Environment reset. Retaining learned data.")
 
     def reset_brain(self) -> None:
@@ -877,26 +872,38 @@ class QuantumNematodeAgent:
         PerformanceMetrics
             An object containing success rate, average steps, average reward, and dynamic metrics.
         """
-        # Calculate dynamic environment metrics if applicable
-        foraging_efficiency = None
-        average_distance_efficiency = None
-        average_foods_collected = None
+        # Delegate to MetricsTracker component (Phase 4 refactoring)
+        # Sync current agent state to metrics tracker
+        self._metrics_tracker.success_count = self.success_count
+        self._metrics_tracker.total_steps = self.total_steps
+        self._metrics_tracker.total_rewards = self.total_rewards
+        self._metrics_tracker.foods_collected = self.foods_collected
+        self._metrics_tracker.distance_efficiencies = self.distance_efficiencies
 
-        if isinstance(self.env, DynamicForagingEnvironment):
-            if self.total_steps > 0:
-                foraging_efficiency = self.foods_collected / self.total_steps
-            if self.distance_efficiencies:
-                average_distance_efficiency = sum(self.distance_efficiencies) / len(
-                    self.distance_efficiencies,
-                )
-            if total_runs > 0:
-                average_foods_collected = self.foods_collected / total_runs
+        metrics = self._metrics_tracker.calculate_metrics(total_runs)
+
+        # For non-dynamic environments, set foraging metrics to None (agent's original behavior)
+        if not isinstance(self.env, DynamicForagingEnvironment):
+            # Replace the foraging efficiency with agent's original calculation
+            return PerformanceMetrics(
+                success_rate=metrics.success_rate,
+                average_steps=metrics.average_steps,
+                average_reward=metrics.average_reward,
+                foraging_efficiency=None,
+                average_distance_efficiency=None,
+                average_foods_collected=None,
+            )
+
+        # For dynamic environments, convert foraging_efficiency from foods/run to foods/step
+        foraging_efficiency_per_step = None
+        if self.total_steps > 0:
+            foraging_efficiency_per_step = self.foods_collected / self.total_steps
 
         return PerformanceMetrics(
-            success_rate=self.success_count / total_runs,
-            average_steps=self.total_steps / total_runs,
-            average_reward=self.total_rewards / total_runs,
-            foraging_efficiency=foraging_efficiency,
-            average_distance_efficiency=average_distance_efficiency,
-            average_foods_collected=average_foods_collected,
+            success_rate=metrics.success_rate,
+            average_steps=metrics.average_steps,
+            average_reward=metrics.average_reward,
+            foraging_efficiency=foraging_efficiency_per_step,
+            average_distance_efficiency=metrics.average_distance_efficiency,
+            average_foods_collected=metrics.average_foods_collected,
         )

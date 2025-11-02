@@ -365,7 +365,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.info(f"Starting run {run_num} of {runs}")
 
             # Calculate the initial distance to the goal
-            initial_distance = agent.calculate_goal_distance()
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                dist = agent.env.get_nearest_food_distance()
+                initial_distance = dist if dist is not None else 0
+            elif isinstance(agent.env, MazeEnvironment):
+                initial_distance = abs(agent.env.agent_pos[0] - agent.env.goal[0]) + abs(
+                    agent.env.agent_pos[1] - agent.env.goal[1],
+                )
+            else:
+                initial_distance = 0
 
             render_text = f"Run:\t\t{run_num}/{runs}\n"
 
