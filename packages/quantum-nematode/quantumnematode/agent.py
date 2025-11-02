@@ -803,98 +803,15 @@ class QuantumNematodeAgent:
         float
             Reward value based on the agent's performance.
         """
-        reward = 0.0
-        distance_reward = 0.0
-        goal_bonus = 0.0
-        anti_dither_penalty = 0.0
-        exploration_bonus = 0.0
-        prev_dist = None
-        curr_dist = None
-
-        # Handle distance-based rewards differently for each environment type
-        if isinstance(env, MazeEnvironment):
-            # Single goal environment
-            curr_pos = env.agent_pos
-            curr_dist = abs(curr_pos[0] - env.goal[0]) + abs(curr_pos[1] - env.goal[1])
-            if len(path) > 1:
-                prev_pos = path[-2]
-                prev_dist = abs(prev_pos[0] - env.goal[0]) + abs(prev_pos[1] - env.goal[1])
-                distance_reward = config.reward_distance_scale * (prev_dist - curr_dist)
-                reward += distance_reward
-                logger.debug(
-                    f"[Reward] Scaled distance reward: {distance_reward} "
-                    f"(prev_dist={prev_dist}, curr_dist={curr_dist})",
-                )
-        elif isinstance(env, DynamicForagingEnvironment):
-            # Multi-food environment: use nearest food distance
-            curr_dist = env.get_nearest_food_distance()
-            if curr_dist is not None and len(path) > 1:
-                # Calculate previous nearest food distance
-                prev_pos = path[-2]
-                prev_distances = [
-                    abs(prev_pos[0] - food[0]) + abs(prev_pos[1] - food[1]) for food in env.foods
-                ]
-                prev_dist = min(prev_distances) if prev_distances else None
-
-                if prev_dist is not None:
-                    distance_reward = config.reward_distance_scale * (prev_dist - curr_dist)
-                    reward += distance_reward
-                    logger.debug(
-                        f"[Reward] Scaled distance reward (nearest food): {distance_reward} "
-                        f"(prev_dist={prev_dist}, curr_dist={curr_dist})",
-                    )
-
-            # Exploration bonus for visiting new cells
-            curr_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
-            if curr_pos_tuple not in env.visited_cells:
-                exploration_bonus = config.reward_exploration
-                reward += exploration_bonus
-                env.visited_cells.add(curr_pos_tuple)
-                logger.debug(f"[Reward] Exploration bonus: {exploration_bonus}")
-
-        # Anti-dithering: penalize if agent oscillates (returns to previous cell)
-        if len(path) > 2 and env.agent_pos == path[-3]:  # noqa: PLR2004
-            anti_dither_penalty = config.penalty_anti_dithering
-            reward -= anti_dither_penalty
-            logger.debug(
-                f"[Penalty] Anti-dithering penalty applied: "
-                f"{-anti_dither_penalty} (oscillation detected)",
-            )
-
-        # Step penalty (applies every step)
-        reward -= config.penalty_step
-        logger.debug(f"[Penalty] Step penalty applied: {-config.penalty_step}.")
-
-        # Stuck position penalty: penalize agent for staying in same position
-        stuck_penalty = 0.0
-        if stuck_position_count > config.stuck_position_threshold:
-            stuck_penalty = config.penalty_stuck_position * min(
-                stuck_position_count - config.stuck_position_threshold,
-                10,
-            )
-            reward -= stuck_penalty
-            logger.debug(
-                f"[Penalty] Stuck position penalty applied: {-stuck_penalty:.3f} "
-                f"(stuck for {stuck_position_count} steps)",
-            )
-
-        # Bonus for reaching the goal, scaled by efficiency
-        if env.reached_goal():
-            efficiency = max(0.1, 1 - (self.steps / max_steps))
-            goal_bonus = config.reward_goal * efficiency
-            reward += goal_bonus
-            logger.debug(
-                f"[Reward] Goal reached! Efficiency bonus applied: "
-                f"{goal_bonus} (efficiency={efficiency}).",
-            )
-
-        logger.debug(
-            f"Reward breakdown: distance_reward={distance_reward}, "
-            f"step_penalty={-config.penalty_step}, anti_dither_penalty={-anti_dither_penalty}, "
-            f"stuck_penalty={-stuck_penalty}, exploration_bonus={exploration_bonus}, "
-            f"goal_bonus={goal_bonus}, total_reward={reward}",
+        # Delegate to RewardCalculator component (Phase 4 refactoring)
+        self._reward_calculator.config = config
+        return self._reward_calculator.calculate_reward(
+            env=env,
+            path=path,
+            stuck_position_count=stuck_position_count,
+            current_step=self.steps,
+            max_steps=max_steps,
         )
-        return reward
 
     def reset_environment(self) -> None:
         """
