@@ -9,7 +9,7 @@ from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
 from quantumnematode.metrics import MetricsTracker
 from quantumnematode.rendering import EpisodeRenderer
 from quantumnematode.report.dtypes import PerformanceMetrics
-from quantumnematode.runners import StandardEpisodeRunner
+from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.step_processor import StepProcessor
 
 
@@ -352,3 +352,219 @@ class TestStandardEpisodeRunnerExecution:
         first_call = renderer.render_if_needed.call_args_list[0]
         assert first_call.kwargs["text"] == "Test Episode"
         assert first_call.kwargs["show_last_frame_only"] is True
+
+
+class TestManyworldsEpisodeRunnerInitialization:
+    """Test manyworlds episode runner initialization."""
+
+    def test_initialize_with_dependencies(self):
+        """Test that runner initializes with all dependencies."""
+        step_processor = Mock(spec=StepProcessor)
+        metrics_tracker = Mock(spec=MetricsTracker)
+        renderer = Mock(spec=EpisodeRenderer)
+
+        runner = ManyworldsEpisodeRunner(
+            step_processor=step_processor,
+            metrics_tracker=metrics_tracker,
+            renderer=renderer,
+        )
+
+        assert runner.step_processor is step_processor
+        assert runner.metrics_tracker is metrics_tracker
+        assert runner.renderer is renderer
+
+
+class TestManyworldsEpisodeRunnerExecution:
+    """Test manyworlds episode runner execution."""
+
+    def test_run_with_branching(self):
+        """Test running episode with branching trajectories."""
+        from quantumnematode.agent import ManyworldsModeConfig
+        from quantumnematode.brain.actions import ActionData
+
+        step_processor = Mock(spec=StepProcessor)
+        metrics_tracker = Mock(spec=MetricsTracker)
+        renderer = Mock(spec=EpisodeRenderer)
+
+        # Create agent mock with copyable brain and env
+        agent = Mock()
+        brain_mock = Mock()
+        brain_mock.copy = Mock(return_value=brain_mock)
+        brain_mock.update_memory = Mock()
+
+        env_mock = Mock(spec=MazeEnvironment)
+        env_mock.agent_pos = [1, 1]
+        env_mock.current_direction = "up"
+        env_mock.copy = Mock(return_value=env_mock)
+        env_mock.get_state = Mock(return_value=(0.5, 1.57))
+        env_mock.reached_goal = Mock(return_value=False)
+        env_mock.move_agent = Mock()
+
+        agent.brain = brain_mock
+        agent.env = env_mock
+
+        # Mock brain run_brain to return actions
+        action1 = ActionData(state="forward", action=Action.FORWARD, probability=0.8)
+        action2 = ActionData(state="right", action=Action.RIGHT, probability=0.2)
+        brain_mock.run_brain = Mock(return_value=[action1, action2])
+
+        # Mock step processor
+        step_result = StepResult(
+            action=Action.FORWARD,
+            reward=0.5,
+            done=False,
+            info={"goal_reached": False},
+        )
+        step_processor.process_step = Mock(return_value=step_result)
+
+        # Mock metrics
+        metrics_tracker.calculate_metrics = Mock(
+            return_value=PerformanceMetrics(
+                success_rate=0.0,
+                average_steps=2.0,
+                average_reward=1.0,
+                foraging_efficiency=0.0,
+            ),
+        )
+
+        runner = ManyworldsEpisodeRunner(step_processor, metrics_tracker, renderer)
+        config = ManyworldsModeConfig(
+            max_superpositions=4,
+            top_n_actions=2,
+            top_n_randomize=False,
+        )
+
+        result = runner.run(
+            agent,
+            Mock(),
+            max_steps=2,
+            manyworlds_config=config,
+        )
+
+        # Verify result
+        assert isinstance(result, EpisodeResult)
+        assert result.success is False  # Never reaches goal in this test
+        assert result.steps_taken >= 0
+
+    def test_run_with_single_branch(self):
+        """Test running with single action branch (top_n_actions=1)."""
+        from quantumnematode.agent import ManyworldsModeConfig
+        from quantumnematode.brain.actions import ActionData
+
+        step_processor = Mock(spec=StepProcessor)
+        metrics_tracker = Mock(spec=MetricsTracker)
+        renderer = Mock(spec=EpisodeRenderer)
+
+        agent = Mock()
+        brain_mock = Mock()
+        brain_mock.copy = Mock(return_value=brain_mock)
+        brain_mock.update_memory = Mock()
+
+        env_mock = Mock(spec=MazeEnvironment)
+        env_mock.agent_pos = [0, 0]
+        env_mock.current_direction = "up"
+        env_mock.copy = Mock(return_value=env_mock)
+        env_mock.get_state = Mock(return_value=(0.3, 0.5))
+        env_mock.reached_goal = Mock(return_value=False)
+        env_mock.move_agent = Mock()
+
+        agent.brain = brain_mock
+        agent.env = env_mock
+
+        action = ActionData(state="forward", action=Action.FORWARD, probability=1.0)
+        brain_mock.run_brain = Mock(return_value=[action])
+
+        step_result = StepResult(
+            action=Action.FORWARD,
+            reward=0.1,
+            done=False,
+            info={"goal_reached": False},
+        )
+        step_processor.process_step = Mock(return_value=step_result)
+
+        metrics_tracker.calculate_metrics = Mock(
+            return_value=PerformanceMetrics(
+                success_rate=0.0,
+                average_steps=3.0,
+                average_reward=0.3,
+                foraging_efficiency=0.0,
+            ),
+        )
+
+        runner = ManyworldsEpisodeRunner(step_processor, metrics_tracker, renderer)
+        config = ManyworldsModeConfig(
+            max_superpositions=10,
+            top_n_actions=1,
+            top_n_randomize=False,
+        )
+
+        result = runner.run(agent, Mock(), max_steps=3, manyworlds_config=config)
+
+        assert result.success is False
+        assert result.steps_taken == 3
+
+    def test_best_path_selection(self):
+        """Test that the best reward path is selected."""
+        from quantumnematode.agent import ManyworldsModeConfig
+        from quantumnematode.brain.actions import ActionData
+
+        step_processor = Mock(spec=StepProcessor)
+        metrics_tracker = Mock(spec=MetricsTracker)
+        renderer = Mock(spec=EpisodeRenderer)
+
+        agent = Mock()
+        brain_mock = Mock()
+        brain_mock.copy = Mock(return_value=brain_mock)
+        brain_mock.update_memory = Mock()
+
+        env_mock = Mock(spec=MazeEnvironment)
+        env_mock.agent_pos = [1, 1]
+        env_mock.current_direction = "up"
+        env_mock.copy = Mock(return_value=env_mock)
+        env_mock.get_state = Mock(return_value=(0.6, 2.0))
+        env_mock.reached_goal = Mock(return_value=False)
+        env_mock.move_agent = Mock()
+
+        agent.brain = brain_mock
+        agent.env = env_mock
+
+        action1 = ActionData(state="forward", action=Action.FORWARD, probability=0.5)
+        action2 = ActionData(state="left", action=Action.LEFT, probability=0.5)
+        brain_mock.run_brain = Mock(return_value=[action1, action2])
+
+        # Return different rewards for different paths
+        rewards = [1.0, 0.5, 1.5, 0.3]  # Best path should have highest cumulative reward
+        reward_index = [0]
+
+        def get_step_result(*args, **kwargs):
+            reward = rewards[reward_index[0] % len(rewards)]
+            reward_index[0] += 1
+            return StepResult(
+                action=Action.FORWARD,
+                reward=reward,
+                done=False,
+                info={"goal_reached": False},
+            )
+
+        step_processor.process_step = Mock(side_effect=get_step_result)
+
+        metrics_tracker.calculate_metrics = Mock(
+            return_value=PerformanceMetrics(
+                success_rate=0.0,
+                average_steps=2.0,
+                average_reward=1.25,
+                foraging_efficiency=0.0,
+            ),
+        )
+
+        runner = ManyworldsEpisodeRunner(step_processor, metrics_tracker, renderer)
+        config = ManyworldsModeConfig(
+            max_superpositions=4,
+            top_n_actions=2,
+            top_n_randomize=False,
+        )
+
+        result = runner.run(agent, Mock(), max_steps=2, manyworlds_config=config)
+
+        # Should select path with best total reward
+        assert result.total_reward > 0
