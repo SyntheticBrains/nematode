@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 import numpy as np
 from pydantic import BaseModel
 
-from quantumnematode.brain.actions import Action  # noqa: TC001 - needed at runtime for dataclass
+from quantumnematode.brain.actions import Action, ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import ClassicalBrain, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.report.dtypes import PerformanceMetrics
@@ -375,17 +375,11 @@ class QuantumNematodeAgent:
             if logger.isEnabledFor(logging.DEBUG):
                 print(f"Reward: {reward}")  # noqa: T201
 
-            # Prepare input_data for data re-uploading (one float per qubit)
-            input_data = None
-            if isinstance(self.brain, QuantumBrain):
-                input_data = [float(gradient_strength)] * self.brain.num_qubits
-
-            # Prepare brain parameters
-            params = BrainParams(
-                gradient_strength=gradient_strength,
-                gradient_direction=gradient_direction,
-                agent_position=self._get_agent_position_tuple(),
-                agent_direction=self.env.current_direction,
+            # Prepare input_data and brain parameters
+            input_data = self._prepare_input_data(gradient_strength)
+            params = self._create_brain_params(
+                gradient_strength,
+                gradient_direction,
                 action=top_action,
             )
             action = self.brain.run_brain(
@@ -485,16 +479,11 @@ class QuantumNematodeAgent:
                         stuck_position_count=stuck_position_count,
                     )
 
-                    # Prepare input_data for data re-uploading (one float per qubit)
-                    input_data = None
-                    if isinstance(self.brain, QuantumBrain):
-                        input_data = [float(gradient_strength)] * self.brain.num_qubits
-
-                    params = BrainParams(
-                        gradient_strength=gradient_strength,
-                        gradient_direction=gradient_direction,
-                        agent_position=self._get_agent_position_tuple(),
-                        agent_direction=self.env.current_direction,
+                    # Prepare input_data and brain parameters for final goal state
+                    input_data = self._prepare_input_data(gradient_strength)
+                    params = self._create_brain_params(
+                        gradient_strength,
+                        gradient_direction,
                         action=top_action,
                     )
                     _ = self.brain.run_brain(
@@ -655,11 +644,9 @@ class QuantumNematodeAgent:
                     stuck_position_count=0,  # Many-worlds mode doesn't track stuck positions
                 )
 
-                params = BrainParams(
-                    gradient_strength=gradient_strength,
-                    gradient_direction=gradient_direction,
-                    agent_position=self._get_agent_position_tuple(),
-                    agent_direction=self.env.current_direction,
+                params = self._create_brain_params(
+                    gradient_strength,
+                    gradient_direction,
                 )
                 actions = brain_copy.run_brain(
                     params=params,
@@ -778,6 +765,56 @@ class QuantumNematodeAgent:
         if len(agent_pos) != 2:  # noqa: PLR2004
             return (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
         return agent_pos  # type: ignore[return-value]
+
+    def _prepare_input_data(self, gradient_strength: float) -> list[float] | None:
+        """Prepare input data for quantum brain data re-uploading.
+
+        For quantum brains, returns a list of gradient_strength repeated for each qubit.
+        For classical brains, returns None.
+
+        Parameters
+        ----------
+        gradient_strength : float
+            The gradient strength value to use for data re-uploading.
+
+        Returns
+        -------
+        list[float] | None
+            List of floats for quantum brains, None for classical brains.
+        """
+        if isinstance(self.brain, QuantumBrain):
+            return [float(gradient_strength)] * self.brain.num_qubits
+        return None
+
+    def _create_brain_params(
+        self,
+        gradient_strength: float,
+        gradient_direction: float,
+        action: ActionData | None = None,
+    ) -> BrainParams:
+        """Create BrainParams for brain execution.
+
+        Parameters
+        ----------
+        gradient_strength : float
+            Strength of the gradient (distance to goal/food).
+        gradient_direction : float
+            Direction of the gradient (angle in radians).
+        action : ActionData | None, optional
+            Previous action taken, by default None.
+
+        Returns
+        -------
+        BrainParams
+            Brain parameters ready for execution.
+        """
+        return BrainParams(
+            gradient_strength=gradient_strength,
+            gradient_direction=gradient_direction,
+            agent_position=self._get_agent_position_tuple(),
+            agent_direction=self.env.current_direction,
+            action=action,
+        )
 
     def calculate_reward(
         self,
