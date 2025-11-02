@@ -280,6 +280,32 @@ class QuantumNematodeAgent:
         self.initial_distance_to_food: int | None = None
         self.distance_efficiencies: list[float] = []
 
+        # Component instantiation (Phase 4 refactoring - for future use)
+        # Import at runtime to avoid circular dependencies
+        from quantumnematode.food_handler import FoodConsumptionHandler
+        from quantumnematode.metrics import MetricsTracker
+        from quantumnematode.rendering import EpisodeRenderer
+        from quantumnematode.reward_calculator import RewardCalculator
+        from quantumnematode.satiety import SatietyManager
+        from quantumnematode.step_processor import StepProcessor
+
+        self._satiety_manager = SatietyManager(self.satiety_config)
+        self._metrics_tracker = MetricsTracker()
+        self._reward_calculator = RewardCalculator(RewardConfig())  # Default config
+        self._renderer = EpisodeRenderer()
+        self._food_handler = FoodConsumptionHandler(
+            env=self.env,
+            satiety_manager=self._satiety_manager,
+            satiety_gain_fraction=self.satiety_config.satiety_gain_per_food,
+        )
+        self._step_processor = StepProcessor(
+            brain=self.brain,
+            env=self.env,
+            reward_calculator=self._reward_calculator,
+            food_handler=self._food_handler,
+            satiety_manager=self._satiety_manager,
+        )
+
     def run_episode(  # noqa: C901, PLR0912, PLR0915
         self,
         reward_config: RewardConfig,
