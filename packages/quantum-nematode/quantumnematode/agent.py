@@ -339,6 +339,7 @@ class QuantumNematodeAgent:
             self.foods_collected = 0
             # Reset food handler tracking for new episode
             self._food_handler.reset()
+            # Note: satiety manager already initialized in __init__ or reset_environment
 
         reward = 0.0
         top_action = None
@@ -379,15 +380,11 @@ class QuantumNematodeAgent:
             if isinstance(self.brain, QuantumBrain):
                 input_data = [float(gradient_strength)] * self.brain.num_qubits
 
-            # Fix agent_position type for BrainParams (must be exactly 2 floats)
-            agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-            if len(agent_pos) != 2:  # noqa: PLR2004
-                agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
-
+            # Prepare brain parameters
             params = BrainParams(
                 gradient_strength=gradient_strength,
                 gradient_direction=gradient_direction,
-                agent_position=agent_pos,
+                agent_position=self._get_agent_position_tuple(),
                 agent_direction=self.env.current_direction,
                 action=top_action,
             )
@@ -433,12 +430,13 @@ class QuantumNematodeAgent:
 
             # Satiety decay (for dynamic environments)
             if isinstance(self.env, DynamicForagingEnvironment):
-                self.satiety -= self.satiety_config.satiety_decay_rate
+                # Delegate to satiety manager
+                self.satiety = self._satiety_manager.decay_satiety()
                 self.env.satiety = self.satiety
                 logger.debug(f"Satiety: {self.satiety:.1f}/{self.max_satiety}")
 
                 # Check for starvation
-                if self.satiety <= 0:
+                if self._satiety_manager.is_starved():
                     logger.warning("Agent starved!")
                     reward -= reward_config.penalty_starvation
                     self.brain.update_memory(reward)
@@ -492,14 +490,10 @@ class QuantumNematodeAgent:
                     if isinstance(self.brain, QuantumBrain):
                         input_data = [float(gradient_strength)] * self.brain.num_qubits
 
-                    agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-                    if len(agent_pos) != 2:  # noqa: PLR2004
-                        agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
-
                     params = BrainParams(
                         gradient_strength=gradient_strength,
                         gradient_direction=gradient_direction,
-                        agent_position=agent_pos,
+                        agent_position=self._get_agent_position_tuple(),
                         agent_direction=self.env.current_direction,
                         action=top_action,
                     )
@@ -653,14 +647,10 @@ class QuantumNematodeAgent:
                     stuck_position_count=0,  # Many-worlds mode doesn't track stuck positions
                 )
 
-                agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-                if len(agent_pos) != 2:  # noqa: PLR2004
-                    agent_pos = (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
-
                 params = BrainParams(
                     gradient_strength=gradient_strength,
                     gradient_direction=gradient_direction,
-                    agent_position=agent_pos,
+                    agent_position=self._get_agent_position_tuple(),
                     agent_direction=self.env.current_direction,
                 )
                 actions = brain_copy.run_brain(
@@ -767,6 +757,19 @@ class QuantumNematodeAgent:
         logger.info(msg)
         print(msg)  # noqa: T201
         sys.exit(0)  # Exit the program
+
+    def _get_agent_position_tuple(self) -> tuple[float, float]:
+        """Get agent position as a 2-element float tuple.
+
+        Returns
+        -------
+        tuple[float, float]
+            Agent position (x, y) as floats.
+        """
+        agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
+        if len(agent_pos) != 2:  # noqa: PLR2004
+            return (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
+        return agent_pos  # type: ignore[return-value]
 
     def calculate_reward(
         self,
