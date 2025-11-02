@@ -121,7 +121,7 @@ class TestModularBrain:
 
     def test_get_backend(self, brain):
         """Test backend initialization."""
-        backend = brain._get_backend()  # noqa: SLF001
+        backend = brain._get_backend()
         assert backend is not None
         # For CPU device, should get AerSimulator
         assert hasattr(backend, "run")
@@ -129,9 +129,9 @@ class TestModularBrain:
     def test_cached_circuit(self, brain):
         """Test circuit caching."""
         # First call should create cache
-        qc1 = brain._get_cached_circuit()  # noqa: SLF001
+        qc1 = brain._get_cached_circuit()
         # Second call should return cached circuit
-        qc2 = brain._get_cached_circuit()  # noqa: SLF001
+        qc2 = brain._get_cached_circuit()
 
         assert qc1 is qc2  # Should be same object
 
@@ -181,7 +181,7 @@ class TestModularBrain:
         # Create mock counts
         counts = {"00": 30, "01": 20, "10": 15, "11": 10}
 
-        actions = brain._interpret_counts(counts, top_only=True, top_randomize=False)  # noqa: SLF001
+        actions = brain._interpret_counts(counts, top_only=True, top_randomize=False)
 
         assert len(actions) == 1
         assert isinstance(actions[0], ActionData)
@@ -191,7 +191,7 @@ class TestModularBrain:
         """Test interpretation returning all actions."""
         counts = {"00": 30, "01": 20, "10": 15, "11": 10}
 
-        actions = brain._interpret_counts(counts, top_only=False, top_randomize=False)  # noqa: SLF001
+        actions = brain._interpret_counts(counts, top_only=False, top_randomize=False)
 
         assert len(actions) > 1
         # Probabilities should sum to approximately 1
@@ -373,7 +373,7 @@ class TestModularBrainIntegration:
 
         # Boost should have activated at some point
         # (Hard to test deterministically, but shouldn't crash)
-        assert brain._lr_boost_active or not brain._lr_boost_active  # noqa: SLF001
+        assert brain._lr_boost_active or not brain._lr_boost_active
 
     def test_momentum_updates(self):
         """Test momentum-based parameter updates."""
@@ -391,7 +391,7 @@ class TestModularBrainIntegration:
             brain.run_brain(params, reward=0.5, top_only=True, top_randomize=False)
 
         # Momentum should be initialized
-        assert len(brain._momentum) > 0  # noqa: SLF001
+        assert len(brain._momentum) > 0
 
     def test_l2_regularization(self):
         """Test L2 regularization in parameter updates."""
@@ -427,9 +427,9 @@ class TestModularBrainIntegration:
         # Mock the backend
         mock_backend = MagicMock()
         mock_backend.name = "test_backend"
-        brain._backend = mock_backend  # noqa: SLF001
+        brain._backend = mock_backend
 
-        backend_name = brain._get_backend_name()  # noqa: SLF001
+        backend_name = brain._get_backend_name()
         assert backend_name == "test_backend"
 
     def test_custom_parameter_initializer(self):
@@ -467,7 +467,7 @@ class TestModularBrainEdgeCases:
 
         # Empty counts should raise error
         with pytest.raises(ValueError, match="No valid actions found"):
-            brain._interpret_counts({}, top_only=True, top_randomize=False)  # noqa: SLF001
+            brain._interpret_counts({}, top_only=True, top_randomize=False)
 
     def test_invalid_counts(self):
         """Test handling of invalid measurement counts."""
@@ -481,7 +481,7 @@ class TestModularBrainEdgeCases:
         invalid_counts = {"invalid": 10, "not_binary": 20}
 
         with pytest.raises(ValueError, match="No valid actions found"):
-            brain._interpret_counts(invalid_counts, top_only=True, top_randomize=False)  # noqa: SLF001
+            brain._interpret_counts(invalid_counts, top_only=True, top_randomize=False)
 
     def test_zero_reward(self):
         """Test handling of zero reward."""

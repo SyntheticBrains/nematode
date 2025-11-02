@@ -1,7 +1,5 @@
 """Tests for the satiety management system."""
 
-# ruff: noqa: SLF001 - Testing private members is intentional
-
 import pytest
 from quantumnematode.agent import SatietyConfig
 from quantumnematode.satiety import SatietyManager

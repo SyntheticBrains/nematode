@@ -565,7 +565,7 @@ class TestQModularBrainIntegration:
 
         # Simulate poor performance (negative rewards)
         for _ in range(5):
-            brain._step_count += 1  # noqa: SLF001
+            brain._step_count += 1
             brain.run_brain(params, reward=-0.5, top_only=True, top_randomize=False)
 
         # Should trigger double learning
