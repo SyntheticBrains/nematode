@@ -11,6 +11,10 @@ class DummyLogger:
         self.disabled = False
         self.infos = []
 
+    def debug(self, msg):
+        """Capture debug messages."""
+        self.infos.append(msg)
+
     def info(self, msg):
         """Capture info messages."""
         self.infos.append(msg)
