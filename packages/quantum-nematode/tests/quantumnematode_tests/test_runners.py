@@ -8,6 +8,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.report.dtypes import TerminationReason
 from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 
 
@@ -24,7 +25,7 @@ class TestStandardEpisodeRunnerIntegration:
     """Integration tests for StandardEpisodeRunner with real agent."""
 
     def test_run_episode_maze_environment(self):
-        """Test running episode in maze environment returns path."""
+        """Test running episode in maze environment returns path and termination reason."""
         # Create real components
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
@@ -36,7 +37,7 @@ class TestStandardEpisodeRunnerIntegration:
 
         # Run episode through the runner
         reward_config = RewardConfig()
-        path = agent.run_episode(reward_config, max_steps=10)
+        path, termination_reason = agent.run_episode(reward_config, max_steps=10)
 
         # Verify path is returned
         assert isinstance(path, list)
@@ -44,6 +45,8 @@ class TestStandardEpisodeRunnerIntegration:
         assert all(isinstance(pos, tuple) for pos in path)
         # Path should start at agent's initial position
         assert path[0] == initial_pos
+        # Verify termination reason
+        assert isinstance(termination_reason, TerminationReason)
 
     def test_run_episode_dynamic_foraging(self):
         """Test running episode in dynamic foraging environment."""
@@ -63,13 +66,15 @@ class TestStandardEpisodeRunnerIntegration:
 
         # Run episode through the runner
         reward_config = RewardConfig()
-        path = agent.run_episode(reward_config, max_steps=20)
+        path, termination_reason = agent.run_episode(reward_config, max_steps=20)
 
         # Verify path is returned
         assert isinstance(path, list)
         assert len(path) > 0
         # Satiety should have changed
         assert agent.current_satiety <= satiety_config.initial_satiety
+        # Verify termination reason
+        assert isinstance(termination_reason, TerminationReason)
 
     def test_run_episode_updates_agent_state(self):
         """Test that running episode updates agent state correctly."""
@@ -102,10 +107,11 @@ class TestStandardEpisodeRunnerIntegration:
 
         # Run episode and verify it works
         reward_config = RewardConfig()
-        path = agent.run_episode(reward_config, max_steps=10)
+        path, termination_reason = agent.run_episode(reward_config, max_steps=10)
 
         assert isinstance(path, list)
         assert len(path) > 0
+        assert isinstance(termination_reason, TerminationReason)
 
 
 class TestManyworldsEpisodeRunnerInitialization:

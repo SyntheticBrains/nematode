@@ -3,7 +3,12 @@
 import pytest
 from pydantic import ValidationError
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
+from quantumnematode.report.dtypes import (
+    PerformanceMetrics,
+    SimulationResult,
+    TerminationReason,
+    TrackingData,
+)
 
 
 class TestSimulationResult:
@@ -18,6 +23,8 @@ class TestSimulationResult:
             total_reward=50.0,
             last_total_reward=45.0,
             efficiency_score=0.85,
+            termination_reason=TerminationReason.GOAL_REACHED,
+            success=True,
         )
 
         assert result.run == 1
@@ -26,6 +33,9 @@ class TestSimulationResult:
         assert result.total_reward == 50.0
         assert result.last_total_reward == 45.0
         assert result.efficiency_score == 0.85
+        assert result.termination_reason == TerminationReason.GOAL_REACHED
+        assert result.success is True
+        assert result.foods_collected is None
 
     def test_simulation_result_with_empty_path(self):
         """Test SimulationResult with an empty path."""
@@ -36,10 +46,13 @@ class TestSimulationResult:
             total_reward=0.0,
             last_total_reward=0.0,
             efficiency_score=0.0,
+            termination_reason=TerminationReason.MAX_STEPS,
+            success=False,
         )
 
         assert len(result.path) == 0
         assert result.steps == 0
+        assert result.success is False
 
     def test_simulation_result_negative_values(self):
         """Test SimulationResult can handle negative rewards."""
@@ -50,10 +63,13 @@ class TestSimulationResult:
             total_reward=-10.5,
             last_total_reward=-15.0,
             efficiency_score=0.2,
+            termination_reason=TerminationReason.STARVED,
+            success=False,
         )
 
         assert result.total_reward == -10.5
         assert result.last_total_reward == -15.0
+        assert result.termination_reason == TerminationReason.STARVED
 
     def test_simulation_result_missing_required_field(self):
         """Test that missing required fields raise validation error."""
@@ -73,6 +89,9 @@ class TestSimulationResult:
             total_reward=50.0,
             last_total_reward=45.0,
             efficiency_score=0.85,
+            termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+            success=True,
+            foods_collected=5,
         )
 
         data = result.model_dump()
@@ -80,6 +99,9 @@ class TestSimulationResult:
         assert data["run"] == 1
         assert data["steps"] == 100
         assert len(data["path"]) == 2
+        assert data["termination_reason"] == "completed_all_food"
+        assert data["success"] is True
+        assert data["foods_collected"] == 5
 
 
 class TestTrackingData:

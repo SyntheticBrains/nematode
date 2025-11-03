@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from quantumnematode.brain.actions import Action, ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.report.dtypes import PerformanceMetrics
+from quantumnematode.report.dtypes import PerformanceMetrics, TerminationReason
 from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 
 from .brain.arch import Brain, BrainParams
@@ -298,7 +298,7 @@ class QuantumNematodeAgent:
         render_text: str | None = None,
         *,
         show_last_frame_only: bool = False,
-    ) -> list[tuple]:
+    ) -> tuple[list[tuple], TerminationReason]:
         """Run a single episode using StandardEpisodeRunner.
 
         Parameters
@@ -314,8 +314,8 @@ class QuantumNematodeAgent:
 
         Returns
         -------
-        list[tuple]
-            The path taken by the agent during the episode.
+        tuple[list[tuple], TerminationReason]
+            A tuple containing the path taken and the reason for episode termination.
         """
         return self._standard_runner.run(
             agent=self,
@@ -332,7 +332,7 @@ class QuantumNematodeAgent:
         max_steps: int = DEFAULT_MAX_STEPS,
         *,
         show_last_frame_only: bool = False,
-    ) -> list[tuple]:
+    ) -> tuple[list[tuple], TerminationReason]:
         """Run the agent in many-worlds mode using ManyworldsEpisodeRunner.
 
         Runs the agent in "many-worlds mode", inspired by the many-worlds interpretation in
@@ -360,8 +360,8 @@ class QuantumNematodeAgent:
 
         Returns
         -------
-        list[tuple]
-            The paths taken by the agent during the episode, representing the explored branches.
+        tuple[list[tuple], TerminationReason]
+            A tuple containing the paths taken and the reason for episode termination.
         """
         return self._manyworlds_runner.run(
             agent=self,
