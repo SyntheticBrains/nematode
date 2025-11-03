@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 
@@ -18,7 +19,59 @@ if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
 
 
-class StandardEpisodeRunner:
+@dataclass
+class StepResult:
+    """Result of processing a single simulation step.
+
+    Attributes
+    ----------
+    agent_path : list[tuple]
+        The path taken by the agent up to this step.
+    termination_reason : TerminationReason
+        The reason for episode termination, if applicable.
+    """
+
+    agent_path: list[tuple]
+    termination_reason: TerminationReason
+
+
+class EpisodeRunner(Protocol):
+    """Protocol for episode execution strategies.
+
+    Episode runners encapsulate different modes of executing simulation episodes
+    (e.g., standard single-trajectory, many-worlds branching). They access agent
+    components and helper methods to execute the episode logic.
+    """
+
+    def run(
+        self,
+        agent: QuantumNematodeAgent,
+        reward_config: RewardConfig,
+        max_steps: int,
+        **kwargs: dict[str, Any],
+    ) -> StepResult:
+        """Execute an episode using this runner's strategy.
+
+        Parameters
+        ----------
+        agent : QuantumNematodeAgent
+            The agent instance containing brain, environment, and components.
+        reward_config : RewardConfig
+            Configuration for the reward system.
+        max_steps : int
+            Maximum number of steps for the episode.
+        **kwargs : Any
+            Additional runner-specific parameters.
+
+        Returns
+        -------
+        StepResult
+            The result of the episode execution, including path and termination reason.
+        """
+        ...
+
+
+class StandardEpisodeRunner(EpisodeRunner):
     """Runs a standard episode using step-by-step execution.
 
     This runner orchestrates the main episode loop by directly accessing agent
@@ -43,7 +96,7 @@ class StandardEpisodeRunner:
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: Any,  # noqa: ANN401
-    ) -> tuple[list[tuple], TerminationReason]:
+    ) -> StepResult:
         """Run a standard episode.
 
         Complete implementation that matches agent.run_episode() logic exactly.
@@ -67,8 +120,8 @@ class StandardEpisodeRunner:
 
         Returns
         -------
-        tuple[list[tuple], TerminationReason]
-            A tuple containing the path taken and the reason for episode termination.
+        StepResult
+            The result of the episode execution, including path and termination reason.
         """
         render_text: str | None = kwargs.get("render_text")
         show_last_frame_only: bool = kwargs.get("show_last_frame_only", False)
@@ -178,7 +231,10 @@ class StandardEpisodeRunner:
                     reward -= reward_config.penalty_starvation
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode()
-                    return agent.path, TerminationReason.STARVED
+                    return StepResult(
+                        agent_path=agent.path,
+                        termination_reason=TerminationReason.STARVED,
+                    )
 
             logger.info(f"Step {agent.steps}: Action={top_action.action.value}, Reward={reward}")
 
@@ -246,7 +302,10 @@ class StandardEpisodeRunner:
                     agent.total_rewards += reward
                     logger.info("Reward: goal reached!")
                     agent.success_count += 1
-                    return agent.path, TerminationReason.GOAL_REACHED
+                    return StepResult(
+                        agent_path=agent.path,
+                        termination_reason=TerminationReason.GOAL_REACHED,
+                    )
 
             agent.total_steps += 1
             agent.total_rewards += reward
@@ -273,7 +332,10 @@ class StandardEpisodeRunner:
             if agent.steps >= max_steps:
                 logger.warning("Max steps reached.")
                 agent.brain.post_process_episode()
-                return agent.path, TerminationReason.MAX_STEPS
+                return StepResult(
+                    agent_path=agent.path,
+                    termination_reason=TerminationReason.MAX_STEPS,
+                )
 
             # Handle all food collected (for dynamic environments)
             if (
@@ -282,13 +344,19 @@ class StandardEpisodeRunner:
             ):
                 logger.info("All food collected.")
                 agent.brain.post_process_episode()
-                return agent.path, TerminationReason.COMPLETED_ALL_FOOD
+                return StepResult(
+                    agent_path=agent.path,
+                    termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                )
 
         # Episode ended normally (loop completed without specific termination)
-        return agent.path, TerminationReason.MAX_STEPS
+        return StepResult(
+            agent_path=agent.path,
+            termination_reason=TerminationReason.MAX_STEPS,
+        )
 
 
-class ManyworldsEpisodeRunner:
+class ManyworldsEpisodeRunner(EpisodeRunner):
     """Runs an episode with many-worlds branching.
 
     This runner implements branching trajectories inspired by the many-worlds
@@ -311,7 +379,7 @@ class ManyworldsEpisodeRunner:
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: Any,  # noqa: ANN401
-    ) -> tuple[list[tuple], TerminationReason]:
+    ) -> StepResult:
         """Run an episode with many-worlds branching.
 
         Complete implementation that matches agent.run_manyworlds_mode() logic exactly.
@@ -334,8 +402,8 @@ class ManyworldsEpisodeRunner:
 
         Returns
         -------
-        tuple[list[tuple], TerminationReason]
-            A tuple containing the paths taken and the reason for episode termination.
+        StepResult
+            The result of the episode execution, including path and termination reason.
         """
         from quantumnematode.agent import ManyworldsModeConfig
 
@@ -485,9 +553,15 @@ class ManyworldsEpisodeRunner:
                 logger.info(msg)
                 print(msg)  # noqa: T201
                 # Return the path from the first superposition (primary path)
-                return superpositions[0][2], TerminationReason.GOAL_REACHED
+                return StepResult(
+                    agent_path=superpositions[0][2],
+                    termination_reason=TerminationReason.GOAL_REACHED,
+                )
         msg = "Many-worlds mode completed as maximum number of steps reached."
         logger.info(msg)
         print(msg)  # noqa: T201
         # Return the path from the first superposition (primary path)
-        return superpositions[0][2], TerminationReason.MAX_STEPS
+        return StepResult(
+            agent_path=superpositions[0][2],
+            termination_reason=TerminationReason.MAX_STEPS,
+        )

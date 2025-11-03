@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from quantumnematode.brain.actions import Action, ActionData  # noqa: TC001 - needed at runtime
+from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.report.dtypes import PerformanceMetrics, TerminationReason
+from quantumnematode.report.dtypes import PerformanceMetrics
 from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 
 from .brain.arch import Brain, BrainParams
@@ -20,6 +19,7 @@ from .logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
+    from quantumnematode.runners import StepResult
 
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
@@ -81,90 +81,6 @@ class ManyworldsModeConfig(BaseModel):
     render_sleep_seconds: float = DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS
     top_n_actions: int = DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS
     top_n_randomize: bool = DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE
-
-
-# Data Transfer Objects for component interfaces
-
-
-@dataclass
-class StepResult:
-    """Result of processing a single simulation step.
-
-    Attributes
-    ----------
-    action : Action
-        The action chosen by the brain for this step.
-    reward : float
-        The reward received for taking this action.
-    done : bool
-        Whether the episode has terminated (goal reached, starvation, or max steps).
-    info : dict[str, Any]
-        Additional information about the step (e.g., termination reason, metrics).
-    """
-
-    action: Action
-    reward: float
-    done: bool
-    info: dict[str, Any]
-
-
-@dataclass
-class FoodConsumptionResult:
-    """Result of checking and potentially consuming food.
-
-    Attributes
-    ----------
-    food_consumed : bool
-        Whether food was consumed at the current position.
-    satiety_restored : float
-        Amount of satiety restored (0.0 if no food consumed).
-    reward : float
-        Reward for consuming food (0.0 if no food consumed).
-    distance_efficiency : float | None
-        For dynamic environments, the ratio of optimal distance to actual distance traveled.
-        None for static environments or when no food was consumed.
-    """
-
-    food_consumed: bool
-    satiety_restored: float
-    reward: float
-    distance_efficiency: float | None = None
-
-
-class EpisodeRunner(Protocol):
-    """Protocol for episode execution strategies.
-
-    Episode runners encapsulate different modes of executing simulation episodes
-    (e.g., standard single-trajectory, many-worlds branching). They access agent
-    components and helper methods to execute the episode logic.
-    """
-
-    def run(
-        self,
-        agent: QuantumNematodeAgent,
-        reward_config: RewardConfig,
-        max_steps: int,
-        **kwargs: dict[str, Any],
-    ) -> list[tuple]:
-        """Execute an episode using this runner's strategy.
-
-        Parameters
-        ----------
-        agent : QuantumNematodeAgent
-            The agent instance containing brain, environment, and components.
-        reward_config : RewardConfig
-            Configuration for the reward system.
-        max_steps : int
-            Maximum number of steps for the episode.
-        **kwargs : Any
-            Additional runner-specific parameters.
-
-        Returns
-        -------
-        list[tuple]
-            The path taken by the agent during the episode.
-        """
-        ...
 
 
 class QuantumNematodeAgent:
@@ -298,7 +214,7 @@ class QuantumNematodeAgent:
         render_text: str | None = None,
         *,
         show_last_frame_only: bool = False,
-    ) -> tuple[list[tuple], TerminationReason]:
+    ) -> StepResult:
         """Run a single episode using StandardEpisodeRunner.
 
         Parameters
@@ -314,8 +230,8 @@ class QuantumNematodeAgent:
 
         Returns
         -------
-        tuple[list[tuple], TerminationReason]
-            A tuple containing the path taken and the reason for episode termination.
+        StepResult
+            The result of the episode execution, including path and termination reason.
         """
         return self._standard_runner.run(
             agent=self,
@@ -332,7 +248,7 @@ class QuantumNematodeAgent:
         max_steps: int = DEFAULT_MAX_STEPS,
         *,
         show_last_frame_only: bool = False,
-    ) -> tuple[list[tuple], TerminationReason]:
+    ) -> StepResult:
         """Run the agent in many-worlds mode using ManyworldsEpisodeRunner.
 
         Runs the agent in "many-worlds mode", inspired by the many-worlds interpretation in
@@ -360,8 +276,8 @@ class QuantumNematodeAgent:
 
         Returns
         -------
-        tuple[list[tuple], TerminationReason]
-            A tuple containing the paths taken and the reason for episode termination.
+        StepResult
+            The result of the episode execution, including path and termination reason.
         """
         return self._manyworlds_runner.run(
             agent=self,
