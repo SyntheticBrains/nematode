@@ -39,7 +39,11 @@ def summary(
     if not logger.disabled:
         logger.info("All runs completed:")
         for result in all_results:
-            logger.info(f"Run {result.run}: {result.steps} steps, Path: {result.path}")
+            logger.info(f"Run {result.run}: {result.steps} steps")
+
+        # Verbose run results logging for debug level
+        for result in all_results:
+            logger.debug(f"Run {result.run}: {result.steps} steps, Path: {result.path}")
 
         logger.info(f"Average steps per run: {average_steps:.2f}")
         logger.info(f"Average efficiency score: {average_efficiency_score:.2f}")
