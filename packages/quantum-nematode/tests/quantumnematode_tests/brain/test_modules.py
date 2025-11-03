@@ -80,11 +80,11 @@ class TestProprioceptionFeatures:
 
         assert features[RotationAxis.RZ] == 0.0
 
-    def test_satiety_parameter_unused(self):
-        """Test that satiety parameter doesn't affect proprioception features."""
+    def test_proprioception_features_deterministic(self):
+        """Test that proprioception features are deterministic."""
         params = BrainParams(agent_direction=Direction.UP)
-        features1 = proprioception_features(params, satiety=1.0)
-        features2 = proprioception_features(params, satiety=0.5)
+        features1 = proprioception_features(params)
+        features2 = proprioception_features(params)
 
         assert features1 == features2
 
@@ -327,16 +327,18 @@ class TestExtractFeaturesForModule:
         assert features["ry"] == 0.0
         assert features["rz"] == 0.0
 
-    def test_satiety_parameter_passed(self):
-        """Test that satiety parameter is passed to extractors."""
+    def test_extract_features_works(self):
+        """Test that extract_features_for_module works correctly."""
         params = BrainParams(gradient_strength=0.5)
         # Should not raise an error
         features = extract_features_for_module(
             ModuleName.CHEMOTAXIS,
             params,
-            satiety=0.8,
         )
         assert isinstance(features, dict)
+        assert "rx" in features
+        assert "ry" in features
+        assert "rz" in features
 
 
 class TestCountTotalQubits:

@@ -167,9 +167,11 @@ class StandardEpisodeRunner:
             # Satiety decay (for dynamic environments)
             if isinstance(agent.env, DynamicForagingEnvironment):
                 # Delegate to satiety manager
-                agent.satiety = agent._satiety_manager.decay_satiety()
-                agent.env.satiety = agent.satiety
-                logger.debug(f"Satiety: {agent.satiety:.1f}/{agent.max_satiety}")
+                agent._satiety_manager.decay_satiety()
+                logger.debug(
+                    f"Satiety: {agent._satiety_manager.current_satiety:.1f}/"
+                    f"{agent._satiety_manager.max_satiety}",
+                )
 
                 # Check for starvation
                 if agent._satiety_manager.is_starved():
@@ -202,10 +204,6 @@ class StandardEpisodeRunner:
                             dist_eff = food_result.distance_efficiency
                             logger.debug(f"Distance efficiency for this food: {dist_eff:.2f}")
 
-                        # Sync agent satiety with satiety manager
-                        agent.satiety = agent._satiety_manager.current_satiety
-                        agent.env.satiety = agent.satiety
-
                     # Continue foraging (don't break)
                     agent.total_rewards += reward
                 else:
@@ -235,7 +233,6 @@ class StandardEpisodeRunner:
                     )
 
                     agent.brain.update_memory(reward)
-                    agent.brain.satiety = 1.0  # Set satiety to maximum
                     agent.brain.post_process_episode()
 
                     agent.path.append(tuple(agent.env.agent_pos))

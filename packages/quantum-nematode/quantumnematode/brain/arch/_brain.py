@@ -152,7 +152,6 @@ class BrainParams(BaseModel):
 class Brain(Protocol):
     history_data: BrainHistoryData
     latest_data: BrainData
-    satiety: float
 
     def run_brain(
         self,

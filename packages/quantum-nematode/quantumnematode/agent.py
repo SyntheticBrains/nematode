@@ -181,12 +181,13 @@ class QuantumNematodeAgent:
         Path taken by the agent.
     body_length : int
         Maximum length of the agent's body.
-    satiety : float
-        Current satiety (hunger) level.
-    max_satiety : float
-        Maximum satiety level.
     foods_collected : int
         Number of foods collected in current episode.
+
+    Notes
+    -----
+    Satiety is managed internally by the SatietyManager component.
+    Access via `agent._satiety_manager.current_satiety`.
     """
 
     def __init__(  # noqa: PLR0913
@@ -242,9 +243,7 @@ class QuantumNematodeAgent:
         self.total_steps = 0
         self.total_rewards = 0.0
 
-        # Satiety tracking
-        self.max_satiety = self.satiety_config.initial_satiety
-        self.satiety = self.max_satiety
+        # Satiety tracking (managed by SatietyManager)
         self.foods_collected = 0
 
         # For dynamic environments, track initial distance for metrics
@@ -456,7 +455,9 @@ class QuantumNematodeAgent:
             case DynamicForagingEnvironment():
                 print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
                 print(f"Eaten:\t\t{self.foods_collected}/{self.env.max_active_foods}")  # noqa: T201
-                print(f"Satiety:\t{self.satiety:.1f}/{self.max_satiety}")  # noqa: T201
+                print(  # noqa: T201
+                    f"Satiety:\t{self._satiety_manager.current_satiety:.1f}/{self._satiety_manager.max_satiety}",
+                )
             case _:
                 pass
 
@@ -519,7 +520,6 @@ class QuantumNematodeAgent:
             )
         self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
-        self.satiety = self.max_satiety
         self.foods_collected = 0
 
         # Update component references to new environment instance

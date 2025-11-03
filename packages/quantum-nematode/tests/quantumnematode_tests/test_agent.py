@@ -150,8 +150,8 @@ class TestQuantumNematodeAgentInitialization:
             satiety_config=satiety_config,
         )
 
-        assert agent.satiety == 200.0
-        assert agent.max_satiety == 200.0
+        assert agent._satiety_manager.current_satiety == 200.0
+        assert agent._satiety_manager.max_satiety == 200.0
         assert agent.satiety_config.satiety_decay_rate == 1.5
 
     def test_agent_path_initialization(self, modular_brain):
@@ -219,14 +219,14 @@ class TestQuantumNematodeAgentReset:
         )
 
         # Modify agent state
-        agent.satiety = 50.0
+        agent._satiety_manager.decay_satiety()  # Reduce satiety
         agent.foods_collected = 10
 
         # Reset environment
         agent.reset_environment()
 
         # Satiety should be restored to initial value
-        assert agent.satiety == 100.0
+        assert agent._satiety_manager.current_satiety == 100.0
         # Foods collected should be reset
         assert agent.foods_collected == 0
 

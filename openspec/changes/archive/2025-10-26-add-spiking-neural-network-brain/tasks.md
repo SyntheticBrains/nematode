@@ -64,7 +64,7 @@
 
 ### 9. Configuration Examples
 - [ ] Create `configs/examples/spiking_small.yml` for basic testing
-- [ ] Create `configs/examples/spiking_medium.yml` for standard experiments
+- [ ] Create `configs/examples/spiking_simple_medium.yml` for standard experiments
 - [ ] Add configuration comments explaining spiking-specific parameters
 - [ ] Provide parameter tuning guidelines for different scenarios
 - [ ] Include example CLI commands in documentation
