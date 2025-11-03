@@ -186,7 +186,9 @@ class StandardEpisodeRunner:
                 # Handle food consumption differently for each environment type
                 if isinstance(agent.env, DynamicForagingEnvironment):
                     # Multi-food environment: delegate to food handler
-                    food_result = agent._food_handler.check_and_consume_food()
+                    food_result = agent._food_handler.check_and_consume_food(
+                        foods_collected=agent.foods_collected,
+                    )
                     if food_result.food_consumed:
                         agent.foods_collected += 1
                         agent.success_count += 1
