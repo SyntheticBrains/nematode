@@ -48,7 +48,12 @@ from quantumnematode.report.csv_export import (
     export_simulation_results_to_csv,
     export_tracking_data_to_csv,
 )
-from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
+from quantumnematode.report.dtypes import (
+    PerformanceMetrics,
+    SimulationResult,
+    TerminationReason,
+    TrackingData,
+)
 from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_efficiency_score_over_time,
@@ -345,6 +350,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     total_runs_done = 0
 
+    # Session-level termination tracking
+    total_successes = 0
+    total_starved = 0
+    total_max_steps = 0
+    total_interrupted = 0
+
     if manyworlds_mode:
         try:
             agent.run_manyworlds_mode(
@@ -412,7 +423,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
                 render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{total_runs_done + 1}\n"
 
-            path = agent.run_episode(
+            path, termination_reason = agent.run_episode(
                 reward_config=reward_config,
                 max_steps=max_steps,
                 render_text=render_text,
@@ -430,6 +441,25 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             logger.info(f"Efficiency Score for run {run_num}: {efficiency_score}")
 
+            # Determine success and track termination types
+            success = termination_reason in (
+                TerminationReason.GOAL_REACHED,
+                TerminationReason.COMPLETED_ALL_FOOD,
+            )
+
+            # Update session-level counters
+            if success:
+                total_successes += 1
+            if termination_reason == TerminationReason.STARVED:
+                total_starved += 1
+            elif termination_reason == TerminationReason.MAX_STEPS:
+                total_max_steps += 1
+
+            # Get foods collected for dynamic environments
+            foods_collected_this_run = None
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                foods_collected_this_run = agent.foods_collected
+
             result = SimulationResult(
                 run=run_num,
                 steps=steps,
@@ -437,10 +467,25 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_reward=total_reward,
                 last_total_reward=agent.total_rewards,
                 efficiency_score=efficiency_score,
+                termination_reason=termination_reason,
+                success=success,
+                foods_collected=foods_collected_this_run,
             )
             all_results.append(result)
 
-            logger.info(f"Run {run_num}/{runs} completed in {steps} steps.")
+            # Log run outcome clearly
+            outcome_msg = f"Run {run_num}/{runs} completed in {steps} steps - "
+            if success:
+                if termination_reason == TerminationReason.GOAL_REACHED:
+                    outcome_msg += "SUCCESS: Goal reached"
+                elif termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
+                    outcome_msg += f"SUCCESS: All food collected ({foods_collected_this_run} foods)"
+            elif termination_reason == TerminationReason.STARVED:
+                outcome_msg += "FAILED: Agent starved"
+            elif termination_reason == TerminationReason.MAX_STEPS:
+                outcome_msg += "FAILED: Max steps reached"
+
+            logger.info(outcome_msg)
 
             total_runs_done += 1
 
@@ -463,6 +508,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.reset_brain()
 
     except KeyboardInterrupt:
+        total_interrupted = runs - total_runs_done
         manage_simulation_halt(
             max_steps=max_steps,
             brain_type=brain_type,
@@ -477,10 +523,27 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
-    logger.info("\nPerformance Metrics:")
+
+    # Update metrics with session-level termination counts
+    metrics.total_successes = total_successes
+    metrics.total_starved = total_starved
+    metrics.total_max_steps = total_max_steps
+    metrics.total_interrupted = total_interrupted
+
+    logger.info("Performance Metrics:")
     logger.info(f"Success Rate: {metrics.success_rate:.2f}")
     logger.info(f"Average Steps: {metrics.average_steps:.2f}")
     logger.info(f"Average Reward: {metrics.average_reward:.2f}")
+
+    logger.info("Session Termination Summary:")
+    logger.info(f"Total runs completed: {total_runs_done}")
+    logger.info(
+        f"Successful runs: {total_successes} ({total_successes / total_runs_done * 100:.1f}%)",
+    )
+    logger.info(f"Failed - Starved: {total_starved}")
+    logger.info(f"Failed - Max steps: {total_max_steps}")
+    if total_interrupted > 0:
+        logger.info(f"Interrupted: {total_interrupted}")
 
     print()  # noqa: T201
     print(f"Session ID: {timestamp}")  # noqa: T201

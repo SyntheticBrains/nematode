@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +12,7 @@ import numpy as np
 from quantumnematode.brain.arch import ClassicalBrain
 from quantumnematode.env import Direction, DynamicForagingEnvironment, MazeEnvironment
 from quantumnematode.logging_config import logger
+from quantumnematode.report.dtypes import TerminationReason
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent, RewardConfig
@@ -43,7 +43,7 @@ class StandardEpisodeRunner:
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: Any,  # noqa: ANN401
-    ) -> list[tuple]:
+    ) -> tuple[list[tuple], TerminationReason]:
         """Run a standard episode.
 
         Complete implementation that matches agent.run_episode() logic exactly.
@@ -67,8 +67,8 @@ class StandardEpisodeRunner:
 
         Returns
         -------
-        list[tuple]
-            The path taken by the agent during the episode.
+        tuple[list[tuple], TerminationReason]
+            A tuple containing the path taken and the reason for episode termination.
         """
         render_text: str | None = kwargs.get("render_text")
         show_last_frame_only: bool = kwargs.get("show_last_frame_only", False)
@@ -174,12 +174,11 @@ class StandardEpisodeRunner:
 
                 # Check for starvation
                 if agent._satiety_manager.is_starved():
-                    # TODO: Mark episode as failed due to starvation
                     logger.warning("Agent starved!")
                     reward -= reward_config.penalty_starvation
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode()
-                    break
+                    return agent.path, TerminationReason.STARVED
 
             logger.info(f"Step {agent.steps}: Action={top_action.action.value}, Reward={reward}")
 
@@ -245,10 +244,9 @@ class StandardEpisodeRunner:
                     )
 
                     agent.total_rewards += reward
-                    # TODO: Mark episode as successful
                     logger.info("Reward: goal reached!")
                     agent.success_count += 1
-                    break
+                    return agent.path, TerminationReason.GOAL_REACHED
 
             agent.total_steps += 1
             agent.total_rewards += reward
@@ -273,22 +271,21 @@ class StandardEpisodeRunner:
 
             # Handle max steps reached
             if agent.steps >= max_steps:
-                # TODO: Mark episode as failed due to max steps reached
                 logger.warning("Max steps reached.")
                 agent.brain.post_process_episode()
-                break
+                return agent.path, TerminationReason.MAX_STEPS
 
             # Handle all food collected (for dynamic environments)
             if (
                 isinstance(agent.env, DynamicForagingEnvironment)
                 and agent.foods_collected >= agent.env.max_active_foods
             ):
-                # TODO: Mark episode as successful
                 logger.info("All food collected.")
                 agent.brain.post_process_episode()
-                break
+                return agent.path, TerminationReason.COMPLETED_ALL_FOOD
 
-        return agent.path
+        # Episode ended normally (loop completed without specific termination)
+        return agent.path, TerminationReason.MAX_STEPS
 
 
 class ManyworldsEpisodeRunner:
@@ -314,7 +311,7 @@ class ManyworldsEpisodeRunner:
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: Any,  # noqa: ANN401
-    ) -> list[tuple]:
+    ) -> tuple[list[tuple], TerminationReason]:
         """Run an episode with many-worlds branching.
 
         Complete implementation that matches agent.run_manyworlds_mode() logic exactly.
@@ -337,8 +334,8 @@ class ManyworldsEpisodeRunner:
 
         Returns
         -------
-        list[tuple]
-            The paths taken by the agent during the episode.
+        tuple[list[tuple], TerminationReason]
+            A tuple containing the paths taken and the reason for episode termination.
         """
         from quantumnematode.agent import ManyworldsModeConfig
 
@@ -487,8 +484,10 @@ class ManyworldsEpisodeRunner:
                 msg = "All superpositions have reached their goal."
                 logger.info(msg)
                 print(msg)  # noqa: T201
-                sys.exit(0)  # Exit the program
+                # Return the path from the first superposition (primary path)
+                return superpositions[0][2], TerminationReason.GOAL_REACHED
         msg = "Many-worlds mode completed as maximum number of steps reached."
         logger.info(msg)
         print(msg)  # noqa: T201
-        sys.exit(0)  # Exit the program
+        # Return the path from the first superposition (primary path)
+        return superpositions[0][2], TerminationReason.MAX_STEPS

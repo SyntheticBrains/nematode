@@ -1,7 +1,7 @@
 import builtins
 
 from quantumnematode.report import summary as summary_mod
-from quantumnematode.report.dtypes import SimulationResult
+from quantumnematode.report.dtypes import SimulationResult, TerminationReason
 
 
 class DummyLogger:
@@ -49,6 +49,8 @@ def make_sim_result(run, steps, efficiency_score, path=None):
         path=path,
         total_reward=0.0,
         last_total_reward=0.0,
+        termination_reason=TerminationReason.GOAL_REACHED,
+        success=True,
     )
 
 

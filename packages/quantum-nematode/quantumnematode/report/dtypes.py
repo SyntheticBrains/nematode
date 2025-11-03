@@ -1,8 +1,34 @@
 """Data types for reporting in Quantum Nematode."""
 
+from enum import Enum
+
 from pydantic import BaseModel, Field
 
 from quantumnematode.brain.arch._brain import BrainHistoryData
+
+
+class TerminationReason(str, Enum):
+    """Reason why an episode terminated.
+
+    Attributes
+    ----------
+    GOAL_REACHED : str
+        Agent reached the goal (MazeEnvironment).
+    COMPLETED_ALL_FOOD : str
+        Agent collected all available food (DynamicForagingEnvironment - not yet implemented).
+    STARVED : str
+        Agent's satiety reached zero (DynamicForagingEnvironment).
+    MAX_STEPS : str
+        Agent reached maximum allowed steps.
+    INTERRUPTED : str
+        Episode was interrupted (e.g., by user).
+    """
+
+    GOAL_REACHED = "goal_reached"
+    COMPLETED_ALL_FOOD = "completed_all_food"
+    STARVED = "starved"
+    MAX_STEPS = "max_steps"
+    INTERRUPTED = "interrupted"
 
 
 class SimulationResult(BaseModel):
@@ -24,6 +50,12 @@ class SimulationResult(BaseModel):
     efficiency_score : float
         The efficiency score of the simulation, calculated as the offset
         from the perfect travel to the goal.
+    termination_reason : TerminationReason
+        The reason why the episode terminated.
+    success : bool
+        Whether the run was successful (goal_reached or completed_all_food).
+    foods_collected : int | None
+        Number of foods collected (DynamicForagingEnvironment only).
     """
 
     run: int
@@ -32,6 +64,9 @@ class SimulationResult(BaseModel):
     total_reward: float
     last_total_reward: float
     efficiency_score: float
+    termination_reason: TerminationReason
+    success: bool
+    foods_collected: int | None = None
 
 
 TrackingRunIndex = int
@@ -69,6 +104,14 @@ class PerformanceMetrics(BaseModel):
         Average distance efficiency per food (dynamic environments only).
     average_foods_collected : float | None
         Average number of foods collected per run (dynamic environments only).
+    total_successes : int
+        Total number of successful runs.
+    total_starved : int
+        Total number of runs that ended due to starvation.
+    total_max_steps : int
+        Total number of runs that hit maximum steps.
+    total_interrupted : int
+        Total number of runs that were interrupted.
     """
 
     success_rate: float
@@ -77,3 +120,7 @@ class PerformanceMetrics(BaseModel):
     foraging_efficiency: float | None = None
     average_distance_efficiency: float | None = None
     average_foods_collected: float | None = None
+    total_successes: int = 0
+    total_starved: int = 0
+    total_max_steps: int = 0
+    total_interrupted: int = 0
