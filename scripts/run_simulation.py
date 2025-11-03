@@ -423,26 +423,26 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
                 render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{total_runs_done + 1}\n"
 
-            path, termination_reason = agent.run_episode(
+            step_result = agent.run_episode(
                 reward_config=reward_config,
                 max_steps=max_steps,
                 render_text=render_text,
                 show_last_frame_only=show_last_frame_only,
             )
 
-            steps = len(path)
+            steps = len(step_result.agent_path)
             total_reward = sum(
-                agent.env.get_state(pos, disable_log=True)[0] for pos in path
+                agent.env.get_state(pos, disable_log=True)[0] for pos in step_result.agent_path
             )  # Calculate total reward for the run
 
             # Calculate efficiency score for the run
-            steps_taken = len(path)
+            steps_taken = len(step_result.agent_path)
             efficiency_score = initial_distance - steps_taken
 
             logger.info(f"Efficiency Score for run {run_num}: {efficiency_score}")
 
             # Determine success and track termination types
-            success = termination_reason in (
+            success = step_result.termination_reason in (
                 TerminationReason.GOAL_REACHED,
                 TerminationReason.COMPLETED_ALL_FOOD,
             )
@@ -450,9 +450,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Update session-level counters
             if success:
                 total_successes += 1
-            if termination_reason == TerminationReason.STARVED:
+            if step_result.termination_reason == TerminationReason.STARVED:
                 total_starved += 1
-            elif termination_reason == TerminationReason.MAX_STEPS:
+            elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 total_max_steps += 1
 
             # Get foods collected for dynamic environments
@@ -463,11 +463,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             result = SimulationResult(
                 run=run_num,
                 steps=steps,
-                path=path,
+                path=step_result.agent_path,
                 total_reward=total_reward,
                 last_total_reward=agent.total_rewards,
                 efficiency_score=efficiency_score,
-                termination_reason=termination_reason,
+                termination_reason=step_result.termination_reason,
                 success=success,
                 foods_collected=foods_collected_this_run,
             )
@@ -476,13 +476,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Log run outcome clearly
             outcome_msg = f"Run {run_num}/{runs} completed in {steps} steps - "
             if success:
-                if termination_reason == TerminationReason.GOAL_REACHED:
+                if step_result.termination_reason == TerminationReason.GOAL_REACHED:
                     outcome_msg += "SUCCESS: Goal reached"
-                elif termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
+                elif step_result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
                     outcome_msg += f"SUCCESS: All food collected ({foods_collected_this_run} foods)"
-            elif termination_reason == TerminationReason.STARVED:
+            elif step_result.termination_reason == TerminationReason.STARVED:
                 outcome_msg += "FAILED: Agent starved"
-            elif termination_reason == TerminationReason.MAX_STEPS:
+            elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 outcome_msg += "FAILED: Max steps reached"
 
             logger.info(outcome_msg)

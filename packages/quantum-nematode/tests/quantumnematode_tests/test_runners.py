@@ -37,16 +37,16 @@ class TestStandardEpisodeRunnerIntegration:
 
         # Run episode through the runner
         reward_config = RewardConfig()
-        path, termination_reason = agent.run_episode(reward_config, max_steps=10)
+        step_result = agent.run_episode(reward_config, max_steps=10)
 
         # Verify path is returned
-        assert isinstance(path, list)
-        assert len(path) > 0
-        assert all(isinstance(pos, tuple) for pos in path)
+        assert isinstance(step_result.agent_path, list)
+        assert len(step_result.agent_path) > 0
+        assert all(isinstance(pos, tuple) for pos in step_result.agent_path)
         # Path should start at agent's initial position
-        assert path[0] == initial_pos
+        assert step_result.agent_path[0] == initial_pos
         # Verify termination reason
-        assert isinstance(termination_reason, TerminationReason)
+        assert isinstance(step_result.termination_reason, TerminationReason)
 
     def test_run_episode_dynamic_foraging(self):
         """Test running episode in dynamic foraging environment."""
@@ -66,15 +66,15 @@ class TestStandardEpisodeRunnerIntegration:
 
         # Run episode through the runner
         reward_config = RewardConfig()
-        path, termination_reason = agent.run_episode(reward_config, max_steps=20)
+        step_result = agent.run_episode(reward_config, max_steps=20)
 
         # Verify path is returned
-        assert isinstance(path, list)
-        assert len(path) > 0
+        assert isinstance(step_result.agent_path, list)
+        assert len(step_result.agent_path) > 0
         # Satiety should have changed
         assert agent.current_satiety <= satiety_config.initial_satiety
         # Verify termination reason
-        assert isinstance(termination_reason, TerminationReason)
+        assert isinstance(step_result.termination_reason, TerminationReason)
 
     def test_run_episode_updates_agent_state(self):
         """Test that running episode updates agent state correctly."""
@@ -107,11 +107,11 @@ class TestStandardEpisodeRunnerIntegration:
 
         # Run episode and verify it works
         reward_config = RewardConfig()
-        path, termination_reason = agent.run_episode(reward_config, max_steps=10)
+        step_result = agent.run_episode(reward_config, max_steps=10)
 
-        assert isinstance(path, list)
-        assert len(path) > 0
-        assert isinstance(termination_reason, TerminationReason)
+        assert isinstance(step_result.agent_path, list)
+        assert len(step_result.agent_path) > 0
+        assert isinstance(step_result.termination_reason, TerminationReason)
 
 
 class TestManyworldsEpisodeRunnerInitialization:

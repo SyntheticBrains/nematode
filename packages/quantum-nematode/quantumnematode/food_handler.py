@@ -2,14 +2,37 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from quantumnematode.agent import FoodConsumptionResult
 from quantumnematode.env import DynamicForagingEnvironment
 
 if TYPE_CHECKING:
     from quantumnematode.env import BaseEnvironment
     from quantumnematode.satiety import SatietyManager
+
+
+@dataclass
+class FoodConsumptionResult:
+    """Result of checking and potentially consuming food.
+
+    Attributes
+    ----------
+    food_consumed : bool
+        Whether food was consumed at the current position.
+    satiety_restored : float
+        Amount of satiety restored (0.0 if no food consumed).
+    reward : float
+        Reward for consuming food (0.0 if no food consumed).
+    distance_efficiency : float | None
+        For dynamic environments, the ratio of optimal distance to actual distance traveled.
+        None for static environments or when no food was consumed.
+    """
+
+    food_consumed: bool
+    satiety_restored: float
+    reward: float
+    distance_efficiency: float | None = None
 
 
 class FoodConsumptionHandler:
