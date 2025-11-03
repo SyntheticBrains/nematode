@@ -27,26 +27,40 @@ def summary(
     improvement_rate = (all_results[0].steps - all_results[-1].steps) / all_results[0].steps * 100
     success_rate = sum(1 for result in all_results if result.steps < max_steps) / num_runs * 100
 
-    print("All runs completed:")  # noqa: T201
+    # Build output lines once - use fixed-width formatting for alignment
+    output_lines = ["All runs completed:"]
+
     for result in all_results:
-        print(f"Run {result.run}: {result.steps} steps")  # noqa: T201
+        final_status = "SUCCESS" if result.success else "FAILED"
+        # Use fixed-width fields: Run(3), Status(7), Reason(20), Steps(6), ...
+        # ... Eaten(6), Reward(8), Efficiency(11)
+        output_lines.append(
+            f"Run: {result.run:<3} "
+            f"Status: {final_status:<7} "
+            f"Reason: {result.termination_reason.value:<20} "
+            f"Steps: {result.steps:<6} "
+            f"Eaten: {result.foods_collected!s:<6} "
+            f"Reward: {result.total_reward:>7.2f} "
+            f"Efficiency: {result.efficiency_score:>10.4f}",
+        )
 
-    print(f"Average steps per run: {average_steps:.2f}")  # noqa: T201
-    print(f"Average efficiency score: {average_efficiency_score:.2f}")  # noqa: T201
-    print(f"Improvement metric (steps): {improvement_rate:.2f}%")  # noqa: T201
-    print(f"Success rate: {success_rate:.2f}%")  # noqa: T201
+    output_lines.append("")
+    output_lines.append(f"Average steps per run: {average_steps:.2f}")
+    output_lines.append(f"Average efficiency score: {average_efficiency_score:.2f}")
+    output_lines.append(f"Improvement metric (steps): {improvement_rate:.2f}%")
+    output_lines.append(f"Success rate: {success_rate:.2f}%")
 
+    # Print to console
+    for line in output_lines:
+        print(line)  # noqa: T201
+
+    # Log if logger is enabled
     if not logger.disabled:
-        logger.info("All runs completed:")
-        for result in all_results:
-            logger.info(f"Run {result.run}: {result.steps} steps")
+        for line in output_lines:
+            logger.info(line)
 
         # Verbose run results logging for debug level
         for result in all_results:
-            logger.debug(f"Run {result.run}: {result.steps} steps, Path: {result.path}")
+            logger.debug(f"Run: {result.run:<3} Path: {result.path}")
 
-        logger.info(f"Average steps per run: {average_steps:.2f}")
-        logger.info(f"Average efficiency score: {average_efficiency_score:.2f}")
-        logger.info(f"Improvement metric (steps): {improvement_rate:.2f}%")
-        logger.info(f"Success rate: {success_rate:.2f}%")
         logger.info("Simulation completed.")
