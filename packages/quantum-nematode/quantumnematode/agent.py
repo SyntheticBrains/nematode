@@ -470,6 +470,7 @@ class QuantumNematodeAgent:
             print(render_text)  # noqa: T201
 
         # Display environment-specific status
+        print("Run:\n----")  # noqa: T201
         match self.env:
             case MazeEnvironment():
                 print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
