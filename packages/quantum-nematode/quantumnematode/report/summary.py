@@ -32,6 +32,16 @@ def summary(
 
     for result in all_results:
         final_status = "SUCCESS" if result.success else "FAILED"
+        
+        # Handle both maze and dynamic environments (since maze does not track foods_collected)
+        foods_collected = (
+            result.foods_collected
+            if result.foods_collected is not None
+            else 1
+            if result.success
+            else 0
+        )
+
         # Use fixed-width fields: Run(3), Status(7), Reason(20), Steps(6), ...
         # ... Eaten(6), Reward(8), Efficiency(11)
         output_lines.append(
@@ -39,7 +49,7 @@ def summary(
             f"Status: {final_status:<7} "
             f"Reason: {result.termination_reason.value:<20} "
             f"Steps: {result.steps:<6} "
-            f"Eaten: {result.foods_collected!s:<6} "
+            f"Eaten: {foods_collected!s:<6} "
             f"Reward: {result.total_reward:>7.2f} "
             f"Efficiency: {result.efficiency_score:>10.4f}",
         )
