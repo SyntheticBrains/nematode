@@ -701,16 +701,25 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return True
 
-    def spawn_food(self) -> bool:
+    def spawn_food(
+        self,
+        foods_collected: int = 0,
+    ) -> bool:
         """
         Spawn a new food source if under the maximum limit.
+
+        Parameters
+        ----------
+        foods_collected : int
+            Number of foods collected so far.
 
         Returns
         -------
         bool
             True if food was spawned, False otherwise.
         """
-        if len(self.foods) >= self.max_active_foods:
+        spawns_remaining = self.max_active_foods - self.num_initial_foods
+        if foods_collected > spawns_remaining:
             return False
 
         for _ in range(MAX_POISSON_ATTEMPTS):
@@ -802,9 +811,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         return tuple(self.agent_pos) in self.foods
 
-    def consume_food(self) -> tuple[int, int] | None:
+    def consume_food(
+        self,
+        foods_collected: int = 0,
+    ) -> tuple[int, int] | None:
         """
         Consume food at the agent's current position.
+
+        Parameters
+        ----------
+        foods_collected : int
+            Number of foods collected so far.
 
         Returns
         -------
@@ -817,7 +834,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             logger.info(f"Food consumed at {agent_tuple}")
 
             # Spawn new food
-            self.spawn_food()
+            self.spawn_food(foods_collected=foods_collected + 1)
 
             return agent_tuple
 

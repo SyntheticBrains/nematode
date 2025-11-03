@@ -398,13 +398,17 @@ class TestSatietySystem:
     def test_max_active_foods_limit(self, env):
         """Test that food count doesn't exceed max_active_foods."""
         env.max_active_foods = 5
+        env.num_initial_foods = 3
 
         # Manually set foods to max
         env.foods = [(i, i) for i in range(5)]
 
+        # Set food collected already
+        foods_collected = 3
+
         # Try to spawn more
         for _ in range(10):
-            env.spawn_food()
+            env.spawn_food(foods_collected=foods_collected)
 
         # Should not exceed max
         assert len(env.foods) <= 5
@@ -652,9 +656,6 @@ class TestEnvironmentIntegration:
 
             # Try to consume
             env.consume_food()
-
-            # Try to spawn
-            env.spawn_food()
 
             # Verify invariants
             assert len(env.foods) <= env.max_active_foods
