@@ -49,7 +49,7 @@ The system SHALL provide example configurations for common spiking brain use cas
 
 #### Scenario: Medium Network Configuration
 **Given** a need for standard experimental setup  
-**When** loading spiking_medium.yml configuration  
+**When** loading spiking_simple_medium.yml configuration  
 **Then** the system SHALL configure a balanced network  
 **And** SHALL use parameters suitable for robust learning
 

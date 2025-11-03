@@ -28,11 +28,11 @@ class TestPresetConfigurations:
             ("modular_dynamic_medium.yml", "modular", "dynamic"),
             ("modular_dynamic_large.yml", "modular", "dynamic"),
             # Static maze configs
-            ("modular_medium.yml", "modular", "static"),
-            ("qmodular_medium.yml", "qmodular", "static"),
-            ("mlp_medium.yml", "mlp", "static"),
-            ("qmlp_medium.yml", "qmlp", "static"),
-            ("spiking_medium.yml", "spiking", "static"),
+            ("modular_simple_medium.yml", "modular", "static"),
+            ("qmodular_simple_medium.yml", "qmodular", "static"),
+            ("mlp_simple_medium.yml", "mlp", "static"),
+            ("qmlp_simple_medium.yml", "qmlp", "static"),
+            ("spiking_simple_medium.yml", "spiking", "static"),
         ],
     )
     def test_config_loads_correctly(
@@ -123,9 +123,9 @@ class TestPresetConfigurations:
             ("modular_dynamic_small.yml", 1500),
             ("modular_dynamic_medium.yml", 1500),
             ("modular_dynamic_large.yml", 1500),
-            ("modular_medium.yml", 1500),
+            ("modular_simple_medium.yml", 1500),
             # Other quantum architectures
-            ("qmodular_medium.yml", 1000),
+            ("qmodular_simple_medium.yml", 1000),
             # Note: qmlp is Q-learning MLP, not quantum - it doesn't use shots
         ],
     )
@@ -148,7 +148,7 @@ class TestPresetConfigurations:
     @pytest.mark.parametrize(
         "config_file",
         [
-            "spiking_medium.yml",
+            "spiking_simple_medium.yml",
         ],
     )
     def test_classical_configs_structure(self, config_dir, config_file):
