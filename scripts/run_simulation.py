@@ -364,6 +364,27 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             run_num = run + 1
             logger.info(f"Starting run {run_num} of {runs}")
 
+            # Log full initial environment state
+            logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                logger.info(f"Initial food positions: {agent.env.foods}")
+                logger.info(f"Active foods: {len(agent.env.foods)}/{agent.env.max_active_foods}")
+                logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
+
+                # Log full environment render
+                logger.info("Initial environment state (full render):")
+                full_render = agent.env.render_full()
+                for line in full_render:
+                    logger.info(line)
+            elif isinstance(agent.env, MazeEnvironment):
+                logger.info(f"Goal position: {agent.env.goal}")
+
+                # Log full environment render
+                logger.info("Initial environment state (full render):")
+                full_render = agent.env.render()
+                for line in full_render:
+                    logger.info(line)
+
             # Calculate the initial distance to the goal
             if isinstance(agent.env, DynamicForagingEnvironment):
                 dist = agent.env.get_nearest_food_distance()

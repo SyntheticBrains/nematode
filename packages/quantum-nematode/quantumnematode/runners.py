@@ -169,8 +169,7 @@ class StandardEpisodeRunner:
                 # Delegate to satiety manager
                 agent._satiety_manager.decay_satiety()
                 logger.debug(
-                    f"Satiety: {agent._satiety_manager.current_satiety:.1f}/"
-                    f"{agent._satiety_manager.max_satiety}",
+                    f"Satiety: {agent.current_satiety:.1f}/{agent.max_satiety}",
                 )
 
                 # Check for starvation
@@ -195,7 +194,7 @@ class StandardEpisodeRunner:
                         logger.info(
                             f"Food #{agent.foods_collected} collected! "
                             f"Satiety restored by {food_result.satiety_restored:.1f} to "
-                            f"{agent._satiety_manager.current_satiety:.1f}/{agent._satiety_manager.max_satiety}",
+                            f"{agent.current_satiety:.1f}/{agent.max_satiety}",
                         )
 
                         # Track distance efficiency
