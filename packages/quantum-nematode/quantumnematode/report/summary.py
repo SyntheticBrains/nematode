@@ -32,7 +32,7 @@ def summary(
 
     for result in all_results:
         final_status = "SUCCESS" if result.success else "FAILED"
-        
+
         # Handle both maze and dynamic environments (since maze does not track foods_collected)
         foods_collected = (
             result.foods_collected
