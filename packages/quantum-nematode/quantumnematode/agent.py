@@ -500,7 +500,7 @@ class QuantumNematodeAgent:
         float
             Reward value based on the agent's performance.
         """
-        # Delegate to RewardCalculator component (Phase 4 refactoring)
+        # Delegate to RewardCalculator component
         self._reward_calculator.config = config
         return self._reward_calculator.calculate_reward(
             env=env,
@@ -584,7 +584,7 @@ class QuantumNematodeAgent:
         PerformanceMetrics
             An object containing success rate, average steps, average reward, and dynamic metrics.
         """
-        # Delegate to MetricsTracker component (Phase 4 refactoring)
+        # Delegate to MetricsTracker component
         # Sync current agent state to metrics tracker
         self._metrics_tracker.success_count = self.success_count
         self._metrics_tracker.total_steps = self.total_steps
