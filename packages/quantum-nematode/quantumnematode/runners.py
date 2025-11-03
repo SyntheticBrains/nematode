@@ -174,6 +174,7 @@ class StandardEpisodeRunner:
 
                 # Check for starvation
                 if agent._satiety_manager.is_starved():
+                    # TODO: Mark episode as failed due to starvation
                     logger.warning("Agent starved!")
                     reward -= reward_config.penalty_starvation
                     agent.brain.update_memory(reward)
@@ -244,6 +245,7 @@ class StandardEpisodeRunner:
                     )
 
                     agent.total_rewards += reward
+                    # TODO: Mark episode as successful
                     logger.info("Reward: goal reached!")
                     agent.success_count += 1
                     break
@@ -271,7 +273,18 @@ class StandardEpisodeRunner:
 
             # Handle max steps reached
             if agent.steps >= max_steps:
+                # TODO: Mark episode as failed due to max steps reached
                 logger.warning("Max steps reached.")
+                agent.brain.post_process_episode()
+                break
+
+            # Handle all food collected (for dynamic environments)
+            if (
+                isinstance(agent.env, DynamicForagingEnvironment)
+                and agent.foods_collected >= agent.env.max_active_foods
+            ):
+                # TODO: Mark episode as successful
+                logger.info("All food collected.")
                 agent.brain.post_process_episode()
                 break
 
