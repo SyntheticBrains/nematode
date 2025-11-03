@@ -208,7 +208,6 @@ class SpikingBrain(ClassicalBrain):
         # Initialize data structures
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
-        self.satiety = 1.0
 
         # Network dimensions
         self.hidden_size = config.hidden_size

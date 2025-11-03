@@ -162,9 +162,6 @@ class QModularBrain:
         self.update_count = 0
         self._step_count = 0
 
-        # Initialize satiety (required by Brain protocol)
-        self.satiety = 1.0
-
         # Initialize Brain protocol required attributes
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -368,7 +365,6 @@ class QModularBrain:
             features = extract_features_for_module(
                 module,
                 brain_params,
-                satiety=getattr(self, "satiety", 1.0),
             )
             input_params[module.value] = features
 
@@ -741,11 +737,9 @@ class QModularBrain:
         Update internal memory based on reward.
 
         Args:
-            reward: Reward signal for updating satiety or other memory.
+            reward: Reward signal for updating memory.
         """
-        # Update satiety similar to modular brain
-        if reward is not None:
-            self.satiety = min(1.0, max(0.0, self.satiety + reward))
+        # Reserved for future brain-internal memory mechanisms
 
     def post_process_episode(self) -> None:
         """Post-process the brain's state after each episode."""

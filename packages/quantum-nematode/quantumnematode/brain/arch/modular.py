@@ -192,7 +192,6 @@ class ModularBrain(QuantumBrain):
         self.modules: dict[ModuleName, list[int]] = config.modules or deepcopy(DEFAULT_MODULES)
         self.shots: int = shots
         self.device: DeviceType = device
-        self.satiety: float = 1.0
         self.learning_rate = learning_rate or DynamicLearningRate()
         logger.info(
             f"Using learning rate: {str(self.learning_rate).replace('θ', 'theta_')}",
@@ -406,8 +405,7 @@ class ModularBrain(QuantumBrain):
             )  # Used for reporting only
 
         input_params = {
-            module.value: extract_features_for_module(module, params, satiety=self.satiety)
-            for module in self.modules
+            module.value: extract_features_for_module(module, params) for module in self.modules
         }
 
         flat_input_params = {
@@ -674,14 +672,12 @@ class ModularBrain(QuantumBrain):
 
     def update_memory(self, reward: float | None) -> None:
         """
-        Update internal memory (e.g., satiety) based on reward.
+        Update internal memory based on reward.
 
         Args:
             reward: Reward signal (positive or negative).
         """
-        # Example: satiety increases with positive reward, decreases otherwise
-        if reward is not None:
-            self.satiety = min(1.0, max(0.0, self.satiety + reward))
+        # Reserved for future brain-internal memory mechanisms
 
     def post_process_episode(self) -> None:
         """Post-process the episode data."""
@@ -758,7 +754,6 @@ class ModularBrain(QuantumBrain):
             perf_mgmt=self.perf_mgmt,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
-        new_brain.satiety = self.satiety
         new_brain._circuit_cache = deepcopy(self._circuit_cache)
         new_brain._transpiled_cache = deepcopy(self._transpiled_cache)
         new_brain._backend = self._backend

@@ -647,9 +647,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Track visited cells for exploration bonus
         self.visited_cells: set[tuple[int, int]] = {(self.agent_pos[0], self.agent_pos[1])}
 
-        # Satiety tracking (will be set by agent)
-        self.satiety = 0.0
-
     def _initialize_foods(self) -> None:
         """Initialize food sources using Poisson disk sampling."""
         self.foods = []
@@ -902,5 +899,4 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env.current_direction = self.current_direction
         new_env.foods = self.foods.copy()
         new_env.visited_cells = self.visited_cells.copy()
-        new_env.satiety = self.satiety
         return new_env

@@ -152,7 +152,7 @@ class TestGradientSuperposition:
         # Add two foods equidistant from agent
         env.foods = [(15, 10), (5, 10)]  # East and west
 
-        strength, direction = env.get_state((10, 10))
+        strength, _direction = env.get_state((10, 10))
 
         # Gradients should cancel out (opposite directions)
         # Strength should be near zero or very small

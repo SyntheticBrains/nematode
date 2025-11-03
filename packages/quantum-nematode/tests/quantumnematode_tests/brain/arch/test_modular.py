@@ -78,7 +78,6 @@ class TestModularBrain:
         assert brain.modules == config.modules
         assert brain.shots == 100
         assert brain.device == DeviceType.CPU
-        assert brain.satiety == 1.0
         assert brain.num_layers == config.num_layers
 
         # Check that parameters are initialized
@@ -199,24 +198,12 @@ class TestModularBrain:
         assert np.isclose(total_prob, 1.0, atol=0.01)
 
     def test_update_memory(self, brain):
-        """Test memory update with reward."""
-        initial_satiety = brain.satiety
-
-        # Positive reward should increase satiety
+        """Test memory update with reward (currently a no-op)."""
+        # update_memory is now reserved for future brain-internal memory mechanisms
+        # Just verify it doesn't raise an error
         brain.update_memory(reward=0.5)
-        assert brain.satiety >= initial_satiety
-
-        # Negative reward should decrease satiety
         brain.update_memory(reward=-0.3)
-        assert brain.satiety < initial_satiety
-
-        # Satiety should be bounded [0, 1]
-        brain.update_memory(reward=10.0)
-        assert brain.satiety <= 1.0
-
-        brain.satiety = 0.5
-        brain.update_memory(reward=-10.0)
-        assert brain.satiety >= 0.0
+        brain.update_memory(reward=None)
 
     def test_parameter_shift_gradients(self, brain):
         """Test parameter-shift gradient computation."""
@@ -293,19 +280,17 @@ class TestModularBrain:
     def test_copy(self, brain):
         """Test brain copying."""
         # Modify original brain
-        brain.satiety = 0.7
         brain.parameter_values[next(iter(brain.parameter_values.keys()))] = 0.123
 
         # Create copy
         copied_brain = brain.copy()
 
         assert copied_brain.num_qubits == brain.num_qubits
-        assert copied_brain.satiety == brain.satiety
         assert copied_brain.parameter_values == brain.parameter_values
 
         # Modify copy - should not affect original
-        copied_brain.satiety = 0.3
-        assert brain.satiety == 0.7
+        copied_brain.parameter_values[next(iter(brain.parameter_values.keys()))] = 0.456
+        assert brain.parameter_values[next(iter(brain.parameter_values.keys()))] == 0.123
 
 
 class TestModularBrainIntegration:

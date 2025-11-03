@@ -217,8 +217,8 @@ class TestDynamicEnvironmentWithBrain:
             satiety_config=satiety_config,
         )
 
-        assert agent.satiety == 100.0
-        assert agent.max_satiety == 100.0
+        assert agent._satiety_manager.current_satiety == 100.0
+        assert agent._satiety_manager.max_satiety == 100.0
         assert agent.foods_collected == 0
         assert isinstance(agent.env, DynamicForagingEnvironment)
 
@@ -241,7 +241,7 @@ class TestDynamicEnvironmentWithBrain:
         # Type narrowing: ensure env is DynamicForagingEnvironment
         assert isinstance(agent.env, DynamicForagingEnvironment)
 
-        initial_satiety = agent.satiety
+        initial_satiety = agent._satiety_manager.current_satiety
         initial_food_count = len(agent.env.foods)
 
         # Manually place agent on food and consume
@@ -252,13 +252,19 @@ class TestDynamicEnvironmentWithBrain:
             consumed = agent.env.consume_food()
 
             if consumed:
-                # Update agent satiety as would happen in run_episode
-                satiety_gain = agent.max_satiety * satiety_config.satiety_gain_per_food
-                agent.satiety = min(agent.max_satiety, agent.satiety + satiety_gain)
+                # Update agent satiety via satiety manager
+                satiety_gain = (
+                    agent._satiety_manager.max_satiety * satiety_config.satiety_gain_per_food
+                )
+                agent._satiety_manager.restore_satiety(satiety_gain)
                 agent.foods_collected += 1
 
                 # Verify satiety increased
-                assert agent.satiety > initial_satiety or agent.satiety == agent.max_satiety
+                current_satiety = agent._satiety_manager.current_satiety
+                assert (
+                    current_satiety > initial_satiety
+                    or current_satiety == agent._satiety_manager.max_satiety
+                )
 
                 # Verify food respawned
                 assert len(agent.env.foods) == initial_food_count
@@ -283,9 +289,9 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         # Just verify satiety system exists and is functional
-        assert hasattr(agent, "satiety")
-        assert agent.satiety >= 0.0
-        assert agent.satiety <= agent.max_satiety
+        assert hasattr(agent, "_satiety_manager")
+        assert agent._satiety_manager.current_satiety >= 0.0
+        assert agent._satiety_manager.current_satiety <= agent._satiety_manager.max_satiety
 
 
 class TestBackwardCompatibility:
@@ -327,6 +333,7 @@ class TestBackwardCompatibility:
             env=maze_env,
         )
 
-        # Agent has satiety even with MazeEnvironment (defaults to 200.0)
-        assert hasattr(agent, "satiety")
+        # Agent has satiety manager even with MazeEnvironment (defaults to 200.0)
+        assert hasattr(agent, "_satiety_manager")
+        assert agent._satiety_manager.current_satiety == 200.0
         assert isinstance(agent.env, MazeEnvironment)
