@@ -83,26 +83,26 @@ cp .env.template .env
 
 ```bash
 # Quantum modular brain (CPU simulation)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_simple_medium.yml --theme emoji
 
 # Quantum modular brain (IBM QPU)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --device qpu
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_simple_medium.yml --theme emoji --device qpu
 
 # Classical MLP brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_simple_medium.yml --theme emoji
 
 # Spiking neural network brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
 
 # Many-worlds quantum simulation
-uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --manyworlds
+uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_simple_medium.yml --theme emoji --manyworlds
 ```
 
 **Docker GPU Examples:**
 
 ```bash
 # Run classical MLP brain with GPU acceleration
-docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_simple_medium.yml --theme emoji
 
 # Interactive Docker shell for development
 docker-compose exec quantum-nematode bash
