@@ -69,7 +69,7 @@ class TestStandardEpisodeRunnerIntegration:
         assert isinstance(path, list)
         assert len(path) > 0
         # Satiety should have changed
-        assert agent._satiety_manager.current_satiety <= satiety_config.initial_satiety
+        assert agent.current_satiety <= satiety_config.initial_satiety
 
     def test_run_episode_updates_agent_state(self):
         """Test that running episode updates agent state correctly."""
@@ -195,14 +195,14 @@ class TestRunnerComponentIntegration:
             satiety_config=satiety_config,
         )
 
-        initial_satiety = agent._satiety_manager.current_satiety
+        initial_satiety = agent.current_satiety
 
         # Run episode
         reward_config = RewardConfig()
         agent.run_episode(reward_config, max_steps=10)
 
         # Satiety should have decayed
-        assert agent._satiety_manager.current_satiety < initial_satiety
+        assert agent.current_satiety < initial_satiety
 
     def test_runner_helper_methods_accessible(self):
         """Test that runners can access agent helper methods."""

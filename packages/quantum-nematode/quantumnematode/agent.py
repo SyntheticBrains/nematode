@@ -187,7 +187,7 @@ class QuantumNematodeAgent:
     Notes
     -----
     Satiety is managed internally by the SatietyManager component.
-    Access via `agent._satiety_manager.current_satiety`.
+    Access via `agent.current_satiety`.
     """
 
     def __init__(  # noqa: PLR0913
@@ -268,6 +268,28 @@ class QuantumNematodeAgent:
         )
         self._standard_runner = StandardEpisodeRunner()
         self._manyworlds_runner = ManyworldsEpisodeRunner()
+
+    @property
+    def current_satiety(self) -> float:
+        """Get current satiety level from the satiety manager.
+
+        Returns
+        -------
+        float
+            Current satiety level.
+        """
+        return self._satiety_manager.current_satiety
+
+    @property
+    def max_satiety(self) -> float:
+        """Get maximum satiety level from the satiety manager.
+
+        Returns
+        -------
+        float
+            Maximum satiety level.
+        """
+        return self._satiety_manager.max_satiety
 
     def run_episode(
         self,
@@ -455,9 +477,7 @@ class QuantumNematodeAgent:
             case DynamicForagingEnvironment():
                 print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
                 print(f"Eaten:\t\t{self.foods_collected}/{self.env.max_active_foods}")  # noqa: T201
-                print(  # noqa: T201
-                    f"Satiety:\t{self._satiety_manager.current_satiety:.1f}/{self._satiety_manager.max_satiety}",
-                )
+                print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
             case _:
                 pass
 
