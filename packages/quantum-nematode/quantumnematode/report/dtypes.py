@@ -56,6 +56,10 @@ class SimulationResult(BaseModel):
         Whether the run was successful (goal_reached or completed_all_food).
     foods_collected : int | None
         Number of foods collected (DynamicForagingEnvironment only).
+    foods_available : int | None
+        Total number of foods available in the environment (DynamicForagingEnvironment only).
+    satiety_remaining : float | None
+        Remaining satiety at the end of the run (DynamicForagingEnvironment only).
     """
 
     run: int
@@ -67,6 +71,8 @@ class SimulationResult(BaseModel):
     termination_reason: TerminationReason
     success: bool
     foods_collected: int | None = None
+    foods_available: int | None = None
+    satiety_remaining: float | None = None
 
 
 TrackingRunIndex = int
