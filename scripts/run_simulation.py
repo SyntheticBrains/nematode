@@ -455,10 +455,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 total_max_steps += 1
 
-            # Get foods collected for dynamic environments
+            # Get additional data for dynamic environments
             foods_collected_this_run = None
+            foods_available_this_run = None
+            satiety_remaining_this_run = None
             if isinstance(agent.env, DynamicForagingEnvironment):
                 foods_collected_this_run = agent.foods_collected
+                foods_available_this_run = agent.env.max_active_foods
+                satiety_remaining_this_run = agent.current_satiety
 
             result = SimulationResult(
                 run=run_num,
@@ -470,6 +474,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 termination_reason=step_result.termination_reason,
                 success=success,
                 foods_collected=foods_collected_this_run,
+                foods_available=foods_available_this_run,
+                satiety_remaining=satiety_remaining_this_run,
             )
             all_results.append(result)
 
