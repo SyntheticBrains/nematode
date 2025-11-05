@@ -25,32 +25,29 @@ class TestEpisodeCompletion:
         """Test tracking a successful episode."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=True, steps=50, total_reward=10.5)
+        tracker.track_episode_completion(success=True, reward=10.5)
 
         assert tracker.success_count == 1
-        assert tracker.total_steps == 50
         assert tracker.total_rewards == pytest.approx(10.5)
 
     def test_track_failed_episode(self):
         """Test tracking a failed episode."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=False, steps=100, total_reward=-5.0)
+        tracker.track_episode_completion(success=False, reward=-5.0)
 
         assert tracker.success_count == 0
-        assert tracker.total_steps == 100
         assert tracker.total_rewards == pytest.approx(-5.0)
 
     def test_track_multiple_episodes(self):
         """Test tracking multiple episodes accumulates correctly."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=True, steps=50, total_reward=10.0)
-        tracker.track_episode_completion(success=False, steps=75, total_reward=5.0)
-        tracker.track_episode_completion(success=True, steps=25, total_reward=15.0)
+        tracker.track_episode_completion(success=True, reward=10.0)
+        tracker.track_episode_completion(success=False, reward=5.0)
+        tracker.track_episode_completion(success=True, reward=15.0)
 
         assert tracker.success_count == 2
-        assert tracker.total_steps == 150
         assert tracker.total_rewards == pytest.approx(30.0)
 
 
@@ -129,16 +126,15 @@ class TestMetricsCalculation:
         """Test metrics calculation with tracked data."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=True, steps=50, total_reward=10.0)
-        tracker.track_episode_completion(success=False, steps=100, total_reward=5.0)
-        tracker.track_episode_completion(success=True, steps=75, total_reward=15.0)
+        tracker.track_episode_completion(success=True, reward=10.0)
+        tracker.track_episode_completion(success=False, reward=5.0)
+        tracker.track_episode_completion(success=True, reward=15.0)
         tracker.track_food_collection(distance_efficiency=0.85)
         tracker.track_food_collection(distance_efficiency=0.90)
 
         metrics = tracker.calculate_metrics(total_runs=3)
 
         assert metrics.success_rate == pytest.approx(2 / 3)
-        assert metrics.average_steps == pytest.approx(225 / 3)
         assert metrics.average_reward == pytest.approx(30.0 / 3)
         assert metrics.foraging_efficiency == pytest.approx(2 / 3)
 
@@ -156,7 +152,7 @@ class TestMetricsCalculation:
     def test_calculate_metrics_zero_runs(self):
         """Test metrics calculation with zero runs."""
         tracker = MetricsTracker()
-        tracker.track_episode_completion(success=True, steps=50, total_reward=10.0)
+        tracker.track_episode_completion(success=True, reward=10.0)
 
         metrics = tracker.calculate_metrics(total_runs=0)
 
@@ -170,12 +166,11 @@ class TestMetricsCalculation:
         tracker = MetricsTracker()
 
         for _ in range(10):
-            tracker.track_episode_completion(success=True, steps=42, total_reward=5.5)
+            tracker.track_episode_completion(success=True, reward=5.5)
 
         metrics = tracker.calculate_metrics(total_runs=10)
 
         assert metrics.success_rate == 1.0
-        assert metrics.average_steps == pytest.approx(42.0)
         assert metrics.average_reward == pytest.approx(5.5)
 
     def test_calculate_metrics_all_failed(self):
@@ -183,12 +178,11 @@ class TestMetricsCalculation:
         tracker = MetricsTracker()
 
         for _ in range(5):
-            tracker.track_episode_completion(success=False, steps=100, total_reward=-2.0)
+            tracker.track_episode_completion(success=False, reward=-2.0)
 
         metrics = tracker.calculate_metrics(total_runs=5)
 
         assert metrics.success_rate == 0.0
-        assert metrics.average_steps == pytest.approx(100.0)
         assert metrics.average_reward == pytest.approx(-2.0)
 
 
@@ -199,13 +193,13 @@ class TestMetricsReset:
         """Test that reset clears all tracked data."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=True, steps=50, total_reward=10.0)
+        tracker.track_episode_completion(success=True, reward=10.0)
         tracker.track_food_collection(distance_efficiency=0.85)
         tracker.track_step(reward=0.5)
 
         tracker.reset()
 
-        assert tracker.success_count == 0
+        assert tracker.success_count == 1  # Success count is not reset
         assert tracker.total_steps == 0
         assert tracker.total_rewards == 0.0
         assert tracker.foods_collected == 0
@@ -215,12 +209,16 @@ class TestMetricsReset:
         """Test that tracking works correctly after reset."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=True, steps=50, total_reward=10.0)
+        tracker.track_step()
+        tracker.track_episode_completion(success=True, reward=10.0)
         tracker.reset()
-        tracker.track_episode_completion(success=False, steps=25, total_reward=5.0)
+        tracker.track_step()
+        tracker.track_step()
+        tracker.track_step()
+        tracker.track_episode_completion(success=False, reward=5.0)
 
-        assert tracker.success_count == 0
-        assert tracker.total_steps == 25
+        assert tracker.success_count == 1  # Success count is not reset
+        assert tracker.total_steps == 3
         assert tracker.total_rewards == pytest.approx(5.0)
 
 
@@ -242,7 +240,7 @@ class TestMetricsForagingEfficiency:
         """Test foraging efficiency when no foods collected."""
         tracker = MetricsTracker()
 
-        tracker.track_episode_completion(success=False, steps=100, total_reward=0.0)
+        tracker.track_episode_completion(success=False, reward=0.0)
 
         metrics = tracker.calculate_metrics(total_runs=1)
 

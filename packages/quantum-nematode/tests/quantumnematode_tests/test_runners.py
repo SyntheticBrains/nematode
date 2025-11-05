@@ -83,7 +83,7 @@ class TestStandardEpisodeRunnerIntegration:
         env = MazeEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
-        initial_steps = agent.steps
+        initial_steps = agent._metrics_tracker.total_steps
         initial_path_length = len(agent.path)
 
         # Run episode
@@ -91,7 +91,7 @@ class TestStandardEpisodeRunnerIntegration:
         agent.run_episode(reward_config, max_steps=10)
 
         # Verify agent state was updated
-        assert agent.steps > initial_steps
+        assert agent._metrics_tracker.total_steps > initial_steps
         assert len(agent.path) > initial_path_length
 
     def test_runner_delegates_correctly(self):
@@ -174,14 +174,14 @@ class TestRunnerComponentIntegration:
             satiety_config=satiety_config,
         )
 
-        initial_foods = agent.foods_collected
+        initial_foods = agent._metrics_tracker.foods_collected
 
         # Run episode
         reward_config = RewardConfig()
         agent.run_episode(reward_config, max_steps=50)
 
         # Food collection tracking should work
-        assert agent.foods_collected >= initial_foods
+        assert agent._metrics_tracker.foods_collected >= initial_foods
 
     def test_standard_runner_uses_satiety_manager(self):
         """Test that StandardEpisodeRunner uses SatietyManager."""
