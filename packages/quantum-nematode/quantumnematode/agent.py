@@ -97,8 +97,6 @@ class QuantumNematodeAgent:
         Path taken by the agent.
     body_length : int
         Maximum length of the agent's body.
-    foods_collected : int
-        Number of foods collected in current episode.
 
     Notes
     -----
@@ -149,22 +147,14 @@ class QuantumNematodeAgent:
         else:
             self.env = env
 
-        self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
         self.max_body_length = min(
             self.env.grid_size - 1,
             max_body_length,
         )
-        self.success_count = 0
-        self.total_steps = 0
-        self.total_rewards = 0.0
-
-        # Satiety tracking (managed by SatietyManager)
-        self.foods_collected = 0
 
         # For dynamic environments, track initial distance for metrics
         self.initial_distance_to_food: int | None = None
-        self.distance_efficiencies: list[float] = []
 
         # Component instantiation
         # Import at runtime to avoid circular dependencies
@@ -387,13 +377,15 @@ class QuantumNematodeAgent:
 
         # Display environment-specific status
         print("Run:\n----")  # noqa: T201
-        print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
+        print(f"Step:\t\t{self._metrics_tracker.total_steps}/{max_steps}")  # noqa: T201
         match self.env:
             case MazeEnvironment():
                 pass
             case DynamicForagingEnvironment():
-                print(f"Step:\t\t{self.steps}/{max_steps}")  # noqa: T201
-                print(f"Eaten:\t\t{self.foods_collected}/{self.env.max_active_foods}")  # noqa: T201
+                print(f"Step:\t\t{self._metrics_tracker.total_steps}/{max_steps}")  # noqa: T201
+                print(  # noqa: T201
+                    f"Eaten:\t\t{self._metrics_tracker.foods_collected}/{self.env.max_active_foods}",
+                )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
 
     def calculate_reward(
@@ -420,7 +412,7 @@ class QuantumNematodeAgent:
             env=env,
             path=path,
             stuck_position_count=stuck_position_count,
-            current_step=self.steps,
+            current_step=self._metrics_tracker.total_steps,
             max_steps=max_steps,
         )
 
@@ -453,9 +445,7 @@ class QuantumNematodeAgent:
                 theme=self.env.theme,
                 rich_style_config=self.env.rich_style_config,
             )
-        self.steps = 0
         self.path = [tuple(self.env.agent_pos)]
-        self.foods_collected = 0
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
@@ -466,6 +456,9 @@ class QuantumNematodeAgent:
         # Reset food handler tracking for new environment
         if isinstance(self.env, DynamicForagingEnvironment):
             self._food_handler.reset()
+
+        # Reset metrics tracker
+        self._metrics_tracker.reset()
 
         logger.info("Environment reset. Retaining learned data.")
 
@@ -498,14 +491,6 @@ class QuantumNematodeAgent:
         PerformanceMetrics
             An object containing success rate, average steps, average reward, and dynamic metrics.
         """
-        # Delegate to MetricsTracker component
-        # Sync current agent state to metrics tracker
-        self._metrics_tracker.success_count = self.success_count
-        self._metrics_tracker.total_steps = self.total_steps
-        self._metrics_tracker.total_rewards = self.total_rewards
-        self._metrics_tracker.foods_collected = self.foods_collected
-        self._metrics_tracker.distance_efficiencies = self.distance_efficiencies
-
         metrics = self._metrics_tracker.calculate_metrics(total_runs)
 
         # For non-dynamic environments, set foraging metrics to None (agent's original behavior)
@@ -522,8 +507,10 @@ class QuantumNematodeAgent:
 
         # For dynamic environments, convert foraging_efficiency from foods/run to foods/step
         foraging_efficiency_per_step = None
-        if self.total_steps > 0:
-            foraging_efficiency_per_step = self.foods_collected / self.total_steps
+        if self._metrics_tracker.total_steps > 0:
+            foraging_efficiency_per_step = (
+                self._metrics_tracker.foods_collected / self._metrics_tracker.total_steps
+            )
 
         return PerformanceMetrics(
             success_rate=metrics.success_rate,

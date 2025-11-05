@@ -429,7 +429,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     )
                     render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
                 case MazeEnvironment():
-                    wins = agent.success_count
+                    wins = agent._metrics_tracker.success_count  # noqa: SLF001
                     render_text += f"Wins:\t\t{wins}/{runs}\n"
 
             if len(all_results) > 1:
@@ -476,7 +476,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     steps_taken = len(step_result.agent_path)
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():
-                    foods_collected_this_run = agent.foods_collected
+                    foods_collected_this_run = agent._metrics_tracker.foods_collected  # noqa: SLF001
                     foods_available_this_run = agent.env.max_active_foods
                     satiety_remaining_this_run = agent.current_satiety
                     # Efficiency score not defined for dynamic environment
@@ -488,7 +488,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 steps=steps,
                 path=step_result.agent_path,
                 total_reward=total_reward,
-                last_total_reward=agent.total_rewards,
+                last_total_reward=agent._metrics_tracker.total_rewards,  # noqa: SLF001
                 efficiency_score=efficiency_score,
                 termination_reason=step_result.termination_reason,
                 success=success,

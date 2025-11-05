@@ -219,7 +219,7 @@ class TestDynamicEnvironmentWithBrain:
 
         assert agent.current_satiety == 100.0
         assert agent.max_satiety == 100.0
-        assert agent.foods_collected == 0
+        assert agent._metrics_tracker.foods_collected == 0
         assert isinstance(agent.env, DynamicForagingEnvironment)
 
     def test_food_consumption_workflow(self, dynamic_env_small, modular_brain):
@@ -255,7 +255,7 @@ class TestDynamicEnvironmentWithBrain:
                 # Update agent satiety via satiety manager
                 satiety_gain = agent.max_satiety * satiety_config.satiety_gain_per_food
                 agent._satiety_manager.restore_satiety(satiety_gain)
-                agent.foods_collected += 1
+                agent._metrics_tracker.foods_collected += 1
 
                 # Verify satiety increased
                 current_satiety = agent.current_satiety
