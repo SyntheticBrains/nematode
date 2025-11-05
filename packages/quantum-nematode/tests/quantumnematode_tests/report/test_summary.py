@@ -1,5 +1,6 @@
 import builtins
 
+from quantumnematode.env import MazeEnvironment
 from quantumnematode.report import summary as summary_mod
 from quantumnematode.report.dtypes import SimulationResult, TerminationReason
 
@@ -68,7 +69,12 @@ def test_summary_print_and_logger(monkeypatch):
     monkeypatch.setattr(summary_mod, "logger", dummy_logger)
     printed = []
     monkeypatch.setattr(builtins, "print", lambda *args, **kwargs: printed.append(args))
-    summary_mod.summary(num_runs, max_steps, results)
+    summary_mod.summary(
+        num_runs=num_runs,
+        max_steps=max_steps,
+        all_results=results,
+        env_type=MazeEnvironment(),
+    )
     # Check print output
     assert any("Average steps per run:" in str(x) for x in printed)
     assert any("Success rate:" in str(x) for x in printed)
@@ -87,7 +93,12 @@ def test_summary_logger_disabled(monkeypatch):
     monkeypatch.setattr(summary_mod, "logger", dummy_logger)
     printed = []
     monkeypatch.setattr(builtins, "print", lambda *args, **kwargs: printed.append(args))
-    summary_mod.summary(num_runs, max_steps, results)
+    summary_mod.summary(
+        num_runs=num_runs,
+        max_steps=max_steps,
+        all_results=results,
+        env_type=MazeEnvironment(),
+    )
     # Logger should not be called
     assert dummy_logger.infos == []
     # Print output should still be present

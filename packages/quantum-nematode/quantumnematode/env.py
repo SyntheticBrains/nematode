@@ -917,3 +917,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env.foods = self.foods.copy()
         new_env.visited_cells = self.visited_cells.copy()
         return new_env
+
+
+type EnvironmentType = MazeEnvironment | DynamicForagingEnvironment

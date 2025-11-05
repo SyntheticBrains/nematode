@@ -14,7 +14,7 @@ from quantumnematode.report.dtypes import PerformanceMetrics
 from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 
 from .brain.arch import Brain, BrainParams
-from .env import BaseEnvironment, DynamicForagingEnvironment, MazeEnvironment
+from .env import BaseEnvironment, DynamicForagingEnvironment, EnvironmentType, MazeEnvironment
 from .logging_config import logger
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ class QuantumNematodeAgent:
 
     Attributes
     ----------
-    env : BaseEnvironment
+    env : EnvironmentType
         The grid environment for the agent.
     steps : int
         Number of steps taken by the agent.
@@ -109,7 +109,7 @@ class QuantumNematodeAgent:
     def __init__(  # noqa: PLR0913
         self,
         brain: Brain,
-        env: BaseEnvironment | None = None,
+        env: EnvironmentType | None = None,
         maze_grid_size: int = DEFAULT_MAZE_GRID_SIZE,
         max_body_length: int = DEFAULT_MAX_AGENT_BODY_LENGTH,
         theme: Theme = DEFAULT_THEME,
@@ -123,7 +123,7 @@ class QuantumNematodeAgent:
         ----------
         brain : Brain
             The brain architecture used by the agent.
-        env : BaseEnvironment | None
+        env : EnvironmentType | None
             The environment to use. If None, creates a default MazeEnvironment.
         maze_grid_size : int, optional
             Size of the grid environment, by default 5 (only used if env is None).

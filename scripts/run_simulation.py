@@ -435,12 +435,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.env.get_state(pos, disable_log=True)[0] for pos in step_result.agent_path
             )  # Calculate total reward for the run
 
-            # Calculate efficiency score for the run
-            steps_taken = len(step_result.agent_path)
-            efficiency_score = initial_distance - steps_taken
-
-            logger.info(f"Efficiency Score for run {run_num}: {efficiency_score}")
-
             # Determine success and track termination types
             success = step_result.termination_reason in (
                 TerminationReason.GOAL_REACHED,
@@ -455,14 +449,23 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 total_max_steps += 1
 
-            # Get additional data for dynamic environments
+            # Get environment specific data
+            efficiency_score = None
             foods_collected_this_run = None
             foods_available_this_run = None
             satiety_remaining_this_run = None
-            if isinstance(agent.env, DynamicForagingEnvironment):
-                foods_collected_this_run = agent.foods_collected
-                foods_available_this_run = agent.env.max_active_foods
-                satiety_remaining_this_run = agent.current_satiety
+            match agent.env:
+                case MazeEnvironment():
+                    # Calculate efficiency score for the run
+                    steps_taken = len(step_result.agent_path)
+                    efficiency_score = initial_distance - steps_taken
+                case DynamicForagingEnvironment():
+                    foods_collected_this_run = agent.foods_collected
+                    foods_available_this_run = agent.env.max_active_foods
+                    satiety_remaining_this_run = agent.current_satiety
+                    # Efficiency score not defined for dynamic environment
+                case _:
+                    pass
 
             result = SimulationResult(
                 run=run_num,
@@ -555,7 +558,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     print(f"Session ID: {timestamp}")  # noqa: T201
 
     # Final summary of all runs.
-    summary(total_runs_done, max_steps, all_results)
+    summary(
+        num_runs=total_runs_done,
+        max_steps=max_steps,
+        all_results=all_results,
+        env_type=agent.env,
+    )
 
     # Generate plots after the simulation
     plot_results(all_results=all_results, metrics=metrics, max_steps=max_steps, plot_dir=plot_dir)
@@ -850,7 +858,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             print(f"Session ID: {timestamp}")  # noqa: T201
 
             # Generate partial summary
-            summary(total_runs_done, max_steps, all_results)
+            summary(total_runs_done, max_steps, all_results, agent.env)
 
             # Generate plots with current timestamp
             file_prefix = f"{total_runs_done}_"
@@ -922,15 +930,11 @@ def plot_results(
     plot_running_average_steps(file_prefix, runs, steps, plot_dir)
 
     # Plot: Cumulative Reward per Run
-    cumulative_rewards: list[float] = [
-        result.total_reward for result in all_results
-    ]  # Assuming rewards are stored as result[3]
+    cumulative_rewards: list[float] = [result.total_reward for result in all_results]
     plot_cumulative_reward_per_run(file_prefix, runs, plot_dir, cumulative_rewards)
 
     # Plot: Last Cumulative Rewards Over Runs
-    last_cumulative_rewards: list[float] = [
-        result.last_total_reward for result in all_results
-    ]  # Assuming rewards are stored as result[4]
+    last_cumulative_rewards: list[float] = [result.last_total_reward for result in all_results]
     plot_last_cumulative_rewards(file_prefix, runs, plot_dir, last_cumulative_rewards)
 
     # Plot: Success Rate Over Time
@@ -942,9 +946,10 @@ def plot_results(
 
     # Plot: Efficiency Score Over Time
     efficiency_scores: list[float] = [
-        result.efficiency_score for result in all_results
-    ]  # Assuming efficiency scores are stored as result[5]
-    plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
+        result.efficiency_score for result in all_results if result.efficiency_score is not None
+    ]
+    if len(efficiency_scores) > 0:
+        plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
 
 
 if __name__ == "__main__":
