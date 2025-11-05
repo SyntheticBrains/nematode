@@ -247,7 +247,6 @@ class StandardEpisodeRunner(EpisodeRunner):
                     )
                     if food_result.food_consumed:
                         agent.foods_collected += 1
-                        agent.success_count += 1
 
                         logger.info(
                             f"Food #{agent.foods_collected} collected! "
@@ -343,6 +342,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 and agent.foods_collected >= agent.env.max_active_foods
             ):
                 logger.info("All food collected.")
+                agent.success_count += 1
                 agent.brain.post_process_episode()
                 return StepResult(
                     agent_path=agent.path,
