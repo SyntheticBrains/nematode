@@ -28,12 +28,13 @@ def summary(  # noqa: C901, PLR0912
         The type of environment used in the simulation.
     """
     average_steps = sum(result.steps for result in all_results) / num_runs
-    success_rate = sum(1 for result in all_results if result.steps < max_steps) / num_runs * 100
 
     average_efficiency_score = None
     improvement_rate = None
 
     if isinstance(env_type, MazeEnvironment):
+        success_rate = sum(1 for result in all_results if result.steps < max_steps) / num_runs * 100
+
         # Calculate average efficiency score for maze environment, filtering out None values
         efficiency_scores = [
             result.efficiency_score for result in all_results if result.efficiency_score is not None
@@ -47,8 +48,7 @@ def summary(  # noqa: C901, PLR0912
                 (all_results[0].steps - all_results[-1].steps) / all_results[0].steps * 100
             )
     elif isinstance(env_type, DynamicForagingEnvironment):
-        # TODO: Implement dynamic foraging specific summary metrics
-        pass
+        success_rate = sum(result.success for result in all_results) / num_runs * 100
 
     # Build output lines once - use fixed-width formatting for alignment
     output_lines = ["All runs completed:"]

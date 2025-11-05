@@ -410,11 +410,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             render_text = "Session:\n--------\n"
             render_text += f"Run:\t\t{run_num}/{runs}\n"
 
-            if isinstance(agent.env, DynamicForagingEnvironment):
-                # NOTE: Total food calculation won't be accurate if we introduce different max
-                # active foods per run
-                total_foods = agent.env.max_active_foods * runs
-                render_text += f"Eaten:\t\t{agent.success_count}/{total_foods}\n"
+            wins = 0
+            match agent.env:
+                case DynamicForagingEnvironment():
+                    # NOTE: Total food calculation won't be accurate if we introduce different max
+                    # active foods per run
+                    wins = sum(result.success for result in all_results)
+                    render_text += f"Wins:\t\t{wins}/{runs}\n"
+                    total_foods = agent.env.max_active_foods * runs
+                    render_text += f"Eaten:\t\t{agent.success_count}/{total_foods}\n"
+                case MazeEnvironment():
+                    wins = agent.success_count
+                    render_text += f"Wins:\t\t{wins}/{runs}\n"
 
             if len(all_results) > 1:
                 # Running average steps per run
