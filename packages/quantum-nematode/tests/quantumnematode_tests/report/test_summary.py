@@ -71,6 +71,9 @@ def test_summary_print_and_logger(monkeypatch):
         total_starved=0,
         total_max_steps=0,
         total_interrupted=0,
+        average_distance_efficiency=0.85,
+        average_foods_collected=2.0,
+        foraging_efficiency=0.025,
     )
     num_runs = 3
     max_steps = 120
@@ -105,6 +108,9 @@ def test_summary_logger_disabled(monkeypatch):
         total_starved=0,
         total_max_steps=0,
         total_interrupted=0,
+        average_distance_efficiency=0.85,
+        average_foods_collected=2.0,
+        foraging_efficiency=0.025,
     )
     num_runs = 2
     max_steps = 20

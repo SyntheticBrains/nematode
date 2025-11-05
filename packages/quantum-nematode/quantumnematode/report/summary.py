@@ -7,7 +7,7 @@ from quantumnematode.logging_config import (
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult
 
 
-def summary(  # noqa: C901, PLR0912, PLR0913
+def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     metrics: PerformanceMetrics,
     session_id: str,
     num_runs: int,
@@ -101,6 +101,11 @@ def summary(  # noqa: C901, PLR0912, PLR0913
 
     output_lines.append(f"Average steps per run: {metrics.average_steps:.2f}")
     output_lines.append(f"Average reward per run: {metrics.average_reward:.2f}")
+    output_lines.append(
+        f"Average distance efficiency per run: {metrics.average_distance_efficiency:.2f}",
+    )
+    output_lines.append(f"Average food collected per run: {metrics.average_foods_collected:.2f}")
+    output_lines.append(f"Foraging efficiency per run: {metrics.foraging_efficiency:.2f}")
     output_lines.append(f"Success rate: {success_rate:.2f}%")
 
     if average_efficiency_score is not None:

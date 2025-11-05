@@ -53,7 +53,7 @@ class SimulationResult(BaseModel):
         Whether the run was successful (goal_reached or completed_all_food).
     efficiency_score : float | None
         The efficiency score of the simulation, calculated as the offset
-        from the perfect travel to the goal (DynamicForagingEnvironment only).
+        from the perfect travel to the goal (MazeEnvironment only).
     foods_collected : int | None
         Number of foods collected (DynamicForagingEnvironment only).
     foods_available : int | None
