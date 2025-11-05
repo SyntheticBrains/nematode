@@ -47,13 +47,13 @@ class SimulationResult(BaseModel):
         The total reward received during the simulation.
     last_total_reward : float
         The last total reward received during the simulation.
-    efficiency_score : float
-        The efficiency score of the simulation, calculated as the offset
-        from the perfect travel to the goal.
     termination_reason : TerminationReason
         The reason why the episode terminated.
     success : bool
         Whether the run was successful (goal_reached or completed_all_food).
+    efficiency_score : float | None
+        The efficiency score of the simulation, calculated as the offset
+        from the perfect travel to the goal (DynamicForagingEnvironment only).
     foods_collected : int | None
         Number of foods collected (DynamicForagingEnvironment only).
     foods_available : int | None
@@ -67,9 +67,9 @@ class SimulationResult(BaseModel):
     path: list[tuple[int, int]]
     total_reward: float
     last_total_reward: float
-    efficiency_score: float
     termination_reason: TerminationReason
     success: bool
+    efficiency_score: float | None = None
     foods_collected: int | None = None
     foods_available: int | None = None
     satiety_remaining: float | None = None
