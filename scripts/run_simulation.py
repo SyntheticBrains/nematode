@@ -555,26 +555,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     metrics.total_max_steps = total_max_steps
     metrics.total_interrupted = total_interrupted
 
-    logger.info("Performance Metrics:")
-    logger.info(f"Success Rate: {metrics.success_rate:.2f}")
-    logger.info(f"Average Steps: {metrics.average_steps:.2f}")
-    logger.info(f"Average Reward: {metrics.average_reward:.2f}")
-
-    logger.info("Session Termination Summary:")
-    logger.info(f"Total runs completed: {total_runs_done}")
-    logger.info(
-        f"Successful runs: {total_successes} ({total_successes / total_runs_done * 100:.1f}%)",
-    )
-    logger.info(f"Failed - Starved: {total_starved}")
-    logger.info(f"Failed - Max steps: {total_max_steps}")
-    if total_interrupted > 0:
-        logger.info(f"Interrupted: {total_interrupted}")
-
-    print()  # noqa: T201
-    print(f"Session ID: {timestamp}")  # noqa: T201
-
     # Final summary of all runs.
     summary(
+        metrics=metrics,
+        session_id=timestamp,
         num_runs=total_runs_done,
         max_steps=max_steps,
         all_results=all_results,
@@ -865,16 +849,16 @@ def manage_simulation_halt(  # noqa: PLR0913
         elif choice == 1:
             logger.info("Generating partial results and plots.")
             metrics = agent.calculate_metrics(total_runs=total_runs_done)
-            logger.info("\nPerformance Metrics:")
-            logger.info(f"Success Rate: {metrics.success_rate:.2f}")
-            logger.info(f"Average Steps: {metrics.average_steps:.2f}")
-            logger.info(f"Average Reward: {metrics.average_reward:.2f}")
-
-            print()  # noqa: T201
-            print(f"Session ID: {timestamp}")  # noqa: T201
 
             # Generate partial summary
-            summary(total_runs_done, max_steps, all_results, agent.env)
+            summary(
+                metrics=metrics,
+                session_id=timestamp,
+                num_runs=total_runs_done,
+                max_steps=max_steps,
+                all_results=all_results,
+                env_type=agent.env,
+            )
 
             # Generate plots with current timestamp
             file_prefix = f"{total_runs_done}_"

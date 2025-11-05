@@ -4,10 +4,12 @@ from quantumnematode.env import DynamicForagingEnvironment, EnvironmentType, Maz
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.report.dtypes import SimulationResult
+from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult
 
 
-def summary(  # noqa: C901, PLR0912
+def summary(  # noqa: C901, PLR0912, PLR0913
+    metrics: PerformanceMetrics,
+    session_id: str,
     num_runs: int,
     max_steps: int,
     all_results: list[SimulationResult],
@@ -18,6 +20,10 @@ def summary(  # noqa: C901, PLR0912
 
     Parameters
     ----------
+    metrics : PerformanceMetrics
+        The performance metrics calculated from the simulation.
+    session_id : str
+        The unique identifier for the simulation session.
     num_runs : int
         The number of simulation runs.
     max_steps : int
@@ -27,7 +33,7 @@ def summary(  # noqa: C901, PLR0912
     env_type : EnvironmentType
         The type of environment used in the simulation.
     """
-    average_steps = sum(result.steps for result in all_results) / num_runs
+    total_runs_done = len(all_results)
 
     average_efficiency_score = None
     improvement_rate = None
@@ -51,7 +57,10 @@ def summary(  # noqa: C901, PLR0912
         success_rate = sum(result.success for result in all_results) / num_runs * 100
 
     # Build output lines once - use fixed-width formatting for alignment
-    output_lines = ["All runs completed:"]
+    output_lines = [""]
+    output_lines.append("All runs completed:")
+    output_lines.append(f"Session ID: {session_id}")
+    output_lines.append("")
 
     for result in all_results:
         final_status = "SUCCESS" if result.success else "FAILED"
@@ -77,7 +86,21 @@ def summary(  # noqa: C901, PLR0912
         )
 
     output_lines.append("")
-    output_lines.append(f"Average steps per run: {average_steps:.2f}")
+    output_lines.append(f"Total runs completed: {total_runs_done}")
+    output_lines.append(
+        f"Successful runs: {metrics.total_successes} "
+        f"({metrics.total_successes / total_runs_done * 100:.1f}%)",
+    )
+
+    if metrics.total_starved is not None:
+        output_lines.append(f"Failed runs - Starved: {metrics.total_starved} ")
+    if metrics.total_max_steps is not None:
+        output_lines.append(f"Failed runs - Max Steps: {metrics.total_max_steps} ")
+    if metrics.total_interrupted > 0:
+        output_lines.append(f"Failed runs - Interrupted: {metrics.total_interrupted} ")
+
+    output_lines.append(f"Average steps per run: {metrics.average_steps:.2f}")
+    output_lines.append(f"Average reward per run: {metrics.average_reward:.2f}")
     output_lines.append(f"Success rate: {success_rate:.2f}%")
 
     if average_efficiency_score is not None:
