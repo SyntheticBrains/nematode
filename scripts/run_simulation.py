@@ -417,8 +417,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     # active foods per run
                     wins = sum(result.success for result in all_results)
                     render_text += f"Wins:\t\t{wins}/{runs}\n"
-                    total_foods = agent.env.max_active_foods * runs
-                    render_text += f"Eaten:\t\t{agent.success_count}/{total_foods}\n"
+                    total_foods_collected = sum(
+                        result.foods_collected
+                        for result in all_results
+                        if result.foods_collected is not None
+                    )
+                    total_foods_available = sum(
+                        result.foods_available
+                        for result in all_results
+                        if result.foods_available is not None
+                    )
+                    render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
                 case MazeEnvironment():
                     wins = agent.success_count
                     render_text += f"Wins:\t\t{wins}/{runs}\n"
