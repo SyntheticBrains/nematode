@@ -480,9 +480,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
                     foods_available_this_run = agent.env.max_active_foods
                     satiety_remaining_this_run = agent.current_satiety
-                    average_distance_efficiency = sum(
-                        agent._episode_tracker.distance_efficiencies,  # noqa: SLF001
-                    ) / len(agent._episode_tracker.distance_efficiencies)  # noqa: SLF001
+                    distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
+                    average_distance_efficiency = (
+                        sum(distance_efficiencies) / len(distance_efficiencies)
+                        if distance_efficiencies
+                        else 0.0
+                    )
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
