@@ -70,10 +70,10 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if result.satiety_remaining is not None:
             additional_info += f"Satiety: {result.satiety_remaining:<6} "
         if result.foods_collected is not None and result.foods_available is not None:
-            foods_info = f"Eaten: {result.foods_collected}/{result.foods_available}"
+            foods_info = f"Eaten: {result.foods_collected}/{result.foods_available:<6} "
             additional_info += foods_info
         if result.efficiency_score is not None:
-            additional_info += f"Efficiency: {result.efficiency_score:<10.4f}"
+            additional_info += f"Efficiency: {result.efficiency_score:<10.4f} "
         if result.average_distance_efficiency is not None:
             additional_info += f"Avg Dist Eff: {result.average_distance_efficiency:<10.4f} "
 
@@ -101,6 +101,7 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     if metrics.total_interrupted > 0:
         output_lines.append(f"Failed runs - Interrupted: {metrics.total_interrupted} ")
 
+    output_lines.append(f"Average foods collected per run: {metrics.average_foods_collected:.2f}")
     output_lines.append(f"Average steps per run: {metrics.average_steps:.2f}")
     output_lines.append(f"Average reward per run: {metrics.average_reward:.2f}")
     if metrics.average_distance_efficiency is not None:
