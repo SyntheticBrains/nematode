@@ -6,10 +6,10 @@ from quantumnematode.agent import (
     RewardConfig,
     SatietyConfig,
 )
+from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
 from quantumnematode.report.dtypes import TerminationReason
-from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 
 
 class TestStandardEpisodeRunnerInitialization:

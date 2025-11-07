@@ -10,10 +10,15 @@ from pydantic import BaseModel
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.report.dtypes import PerformanceMetrics
-from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
-from quantumnematode.env import BaseEnvironment, DynamicForagingEnvironment, EnvironmentType, MazeEnvironment
+from quantumnematode.env import (
+    BaseEnvironment,
+    DynamicForagingEnvironment,
+    EnvironmentType,
+    MazeEnvironment,
+)
+from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
+from quantumnematode.report.dtypes import PerformanceMetrics
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent

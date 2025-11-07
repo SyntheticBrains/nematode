@@ -7,8 +7,8 @@ from quantumnematode.env import (
     Direction,
     DynamicForagingEnvironment,
     MazeEnvironment,
-    Theme,
 )
+from quantumnematode.env.theme import Theme
 
 
 class TestMazeEnvironment:

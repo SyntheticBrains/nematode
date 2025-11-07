@@ -19,9 +19,8 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.theme import THEME_SYMBOLS, DarkColorRichStyleConfig, Theme
-
-from .logging_config import logger
+from quantumnematode.env.theme import THEME_SYMBOLS, DarkColorRichStyleConfig, Theme
+from quantumnematode.logging_config import logger
 
 # Validation
 MIN_GRID_SIZE = 5

@@ -31,6 +31,7 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env.theme import Theme
 from quantumnematode.logging_config import (
     logger,
 )
@@ -65,7 +66,6 @@ from quantumnematode.report.plots import (
     plot_tracking_data_by_session,
 )
 from quantumnematode.report.summary import summary
-from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
     DynamicEnvironmentConfig,
