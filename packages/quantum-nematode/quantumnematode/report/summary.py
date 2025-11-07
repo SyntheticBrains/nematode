@@ -62,10 +62,12 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     output_lines.append(f"Session ID: {session_id}")
     output_lines.append("")
 
+    total_foods_collected: int | None = None
+    total_foods_available: int | None = None
     for result in all_results:
         final_status = "SUCCESS" if result.success else "FAILED"
 
-        # Add dynamic environment specific data
+        # Add environment specific data
         additional_info = " "
         if result.satiety_remaining is not None:
             additional_info += f"Satiety: {result.satiety_remaining:<6} "
@@ -76,6 +78,16 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
             additional_info += f"Efficiency: {result.efficiency_score:<10.4f} "
         if result.average_distance_efficiency is not None:
             additional_info += f"Avg Dist Eff: {result.average_distance_efficiency:<10.4f} "
+
+        # Set other environment totals
+        if result.foods_collected is not None:
+            if total_foods_collected is None:
+                total_foods_collected = 0
+            total_foods_collected += result.foods_collected
+        if result.foods_available is not None:
+            if total_foods_available is None:
+                total_foods_available = 0
+            total_foods_available += result.foods_available
 
         # Use fixed-width fields
         output_lines.append(
@@ -114,6 +126,11 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
     if metrics.foraging_efficiency is not None:
         output_lines.append(f"Foraging efficiency per run: {metrics.foraging_efficiency:.2f}")
+    if total_foods_collected is not None and total_foods_available is not None:
+        output_lines.append(
+            f"Total foods collected: {total_foods_collected}/{total_foods_available}",
+        )
+
     output_lines.append(f"Success rate: {success_rate:.2f}%")
 
     if average_efficiency_score is not None:
