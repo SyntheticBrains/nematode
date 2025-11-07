@@ -39,6 +39,7 @@ class MetricsTracker:
         success: bool,  # noqa: FBT001 - simple boolean flag is clearest API
         steps: int,
         reward: float = 0.0,
+        foods_collected: int = 0,
         distance_efficiencies: list[float] | None = None,
     ) -> None:
         """Track the completion of an episode.
@@ -51,6 +52,8 @@ class MetricsTracker:
             Number of steps taken in the episode.
         reward : float
             Total reward received for the episode.
+        foods_collected : int, optional
+            Number of foods collected during the episode (dynamic environments only).
         distance_efficiencies : list[float] | None, optional
             For dynamic environments, list of distance efficiencies for foods
             collected during the episode. None for static environments.
@@ -59,6 +62,7 @@ class MetricsTracker:
             self.success_count += 1
         self.total_steps += steps
         self.total_rewards += reward
+        self.foods_collected += foods_collected
         if distance_efficiencies is not None:
             self.distance_efficiencies.extend(distance_efficiencies)
 

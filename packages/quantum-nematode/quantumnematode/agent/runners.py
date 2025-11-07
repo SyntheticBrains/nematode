@@ -257,6 +257,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         success=False,
                         steps=agent._episode_tracker.steps,
                         reward=agent._episode_tracker.rewards,
+                        foods_collected=agent._episode_tracker.foods_collected,
                         distance_efficiencies=agent._episode_tracker.distance_efficiencies,
                     )
                     return EpisodeResult(
@@ -339,6 +340,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         success=True,
                         steps=agent._episode_tracker.steps,
                         reward=agent._episode_tracker.rewards,
+                        foods_collected=agent._episode_tracker.foods_collected,
                         distance_efficiencies=agent._episode_tracker.distance_efficiencies,
                     )
                     return EpisodeResult(
@@ -372,6 +374,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     success=False,
                     steps=agent._episode_tracker.steps,
                     reward=agent._episode_tracker.rewards,
+                    foods_collected=agent._episode_tracker.foods_collected,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies,
                 )
                 return EpisodeResult(
@@ -390,6 +393,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     success=True,
                     steps=agent._episode_tracker.steps,
                     reward=agent._episode_tracker.rewards,
+                    foods_collected=agent._episode_tracker.foods_collected,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies,
                 )
                 return EpisodeResult(
@@ -402,6 +406,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             success=False,
             steps=agent._episode_tracker.steps,
             reward=agent._episode_tracker.rewards,
+            foods_collected=agent._episode_tracker.foods_collected,
             distance_efficiencies=agent._episode_tracker.distance_efficiencies,
         )
         return EpisodeResult(
