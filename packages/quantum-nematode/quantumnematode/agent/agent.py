@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
+from quantumnematode.agent.tracker import EpisodeTracker
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
@@ -167,6 +168,7 @@ class QuantumNematodeAgent:
         from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
         from quantumnematode.agent.satiety import SatietyManager
 
+        self._episode_tracker = EpisodeTracker()
         self._satiety_manager = SatietyManager(self.satiety_config)
         self._metrics_tracker = MetricsTracker()
         self._reward_calculator = RewardCalculator(RewardConfig())  # Default config
@@ -380,14 +382,14 @@ class QuantumNematodeAgent:
 
         # Display environment-specific status
         print("Run:\n----")  # noqa: T201
-        print(f"Step:\t\t{self._metrics_tracker.total_steps}/{max_steps}")  # noqa: T201
+        print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
         match self.env:
             case MazeEnvironment():
                 pass
             case DynamicForagingEnvironment():
-                print(f"Step:\t\t{self._metrics_tracker.total_steps}/{max_steps}")  # noqa: T201
+                print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
                 print(  # noqa: T201
-                    f"Eaten:\t\t{self._metrics_tracker.foods_collected}/{self.env.max_active_foods}",
+                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.max_active_foods}",
                 )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
 
@@ -415,7 +417,7 @@ class QuantumNematodeAgent:
             env=env,
             path=path,
             stuck_position_count=stuck_position_count,
-            current_step=self._metrics_tracker.total_steps,
+            current_step=self._episode_tracker.steps,
             max_steps=max_steps,
         )
 
@@ -460,8 +462,8 @@ class QuantumNematodeAgent:
         if isinstance(self.env, DynamicForagingEnvironment):
             self._food_handler.reset()
 
-        # Reset metrics tracker
-        self._metrics_tracker.reset()
+        # Reset episode tracker
+        self._episode_tracker.reset()
 
         logger.info("Environment reset. Retaining learned data.")
 
