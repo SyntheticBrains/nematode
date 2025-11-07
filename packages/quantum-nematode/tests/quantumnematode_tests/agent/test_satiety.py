@@ -2,7 +2,7 @@
 
 import pytest
 from quantumnematode.agent import SatietyConfig
-from quantumnematode.satiety import SatietyManager
+from quantumnematode.agent.satiety import SatietyManager
 
 
 class TestSatietyManagerInitialization:

@@ -1,7 +1,7 @@
 """Tests for the metrics tracking system."""
 
 import pytest
-from quantumnematode.metrics import MetricsTracker
+from quantumnematode.agent.metrics import MetricsTracker
 
 
 class TestMetricsTrackerInitialization:

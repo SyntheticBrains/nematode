@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 from quantumnematode.agent import SatietyConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
-from quantumnematode.food_handler import FoodConsumptionHandler
-from quantumnematode.satiety import SatietyManager
+from quantumnematode.agent.food_handler import FoodConsumptionHandler
+from quantumnematode.agent.satiety import SatietyManager
 
 
 class TestFoodConsumptionHandlerInitialization:

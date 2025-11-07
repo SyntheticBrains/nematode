@@ -8,18 +8,16 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
-from quantumnematode.brain.arch import QuantumBrain
+from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.report.dtypes import PerformanceMetrics
 from quantumnematode.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
-
-from .brain.arch import Brain, BrainParams
-from .env import BaseEnvironment, DynamicForagingEnvironment, EnvironmentType, MazeEnvironment
-from .logging_config import logger
+from quantumnematode.env import BaseEnvironment, DynamicForagingEnvironment, EnvironmentType, MazeEnvironment
+from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
-    from quantumnematode.runners import StepResult
+    from quantumnematode.agent.runners import EpisodeResult
 
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
@@ -158,11 +156,11 @@ class QuantumNematodeAgent:
 
         # Component instantiation
         # Import at runtime to avoid circular dependencies
-        from quantumnematode.food_handler import FoodConsumptionHandler
-        from quantumnematode.metrics import MetricsTracker
-        from quantumnematode.reward_calculator import RewardCalculator
-        from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
-        from quantumnematode.satiety import SatietyManager
+        from quantumnematode.agent.food_handler import FoodConsumptionHandler
+        from quantumnematode.agent.metrics import MetricsTracker
+        from quantumnematode.agent.reward_calculator import RewardCalculator
+        from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
+        from quantumnematode.agent.satiety import SatietyManager
 
         self._satiety_manager = SatietyManager(self.satiety_config)
         self._metrics_tracker = MetricsTracker()
@@ -204,7 +202,7 @@ class QuantumNematodeAgent:
         render_text: str | None = None,
         *,
         show_last_frame_only: bool = False,
-    ) -> StepResult:
+    ) -> EpisodeResult:
         """Run a single episode using StandardEpisodeRunner.
 
         Parameters
@@ -238,7 +236,7 @@ class QuantumNematodeAgent:
         max_steps: int = DEFAULT_MAX_STEPS,
         *,
         show_last_frame_only: bool = False,
-    ) -> StepResult:
+    ) -> EpisodeResult:
         """Run the agent in many-worlds mode using ManyworldsEpisodeRunner.
 
         Runs the agent in "many-worlds mode", inspired by the many-worlds interpretation in
