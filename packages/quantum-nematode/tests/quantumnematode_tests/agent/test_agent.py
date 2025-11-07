@@ -192,7 +192,8 @@ class TestQuantumNematodeAgentReset:
         agent = QuantumNematodeAgent(brain=modular_brain)
 
         # Modify agent state
-        agent._metrics_tracker.total_steps = 100
+        for _ in range(3):
+            agent._episode_tracker.track_step()
         agent.path = [(0, 0), (1, 1), (2, 2)]
         agent._metrics_tracker.success_count = 5
 
@@ -200,7 +201,7 @@ class TestQuantumNematodeAgentReset:
         agent.reset_environment()
 
         # Steps and path should be reset, but success_count should persist
-        assert agent._metrics_tracker.total_steps == 0
+        assert agent._episode_tracker.steps == 0
         assert len(agent.path) == 1
         assert agent._metrics_tracker.success_count == 5  # Success count should not be reset
 
@@ -220,7 +221,8 @@ class TestQuantumNematodeAgentReset:
 
         # Modify agent state
         agent._satiety_manager.decay_satiety()  # Reduce satiety
-        agent._metrics_tracker.foods_collected = 10
+        for _ in range(4):
+            agent._episode_tracker.track_food_collection()
 
         # Reset environment
         agent.reset_environment()

@@ -37,7 +37,9 @@ class MetricsTracker:
     def track_episode_completion(
         self,
         success: bool,  # noqa: FBT001 - simple boolean flag is clearest API
+        steps: int,
         reward: float = 0.0,
+        distance_efficiencies: list[float] | None = None,
     ) -> None:
         """Track the completion of an episode.
 
@@ -45,46 +47,20 @@ class MetricsTracker:
         ----------
         success : bool
             Whether the episode ended successfully (goal reached).
+        steps : int
+            Number of steps taken in the episode.
         reward : float
-            Reward received for the last step.
+            Total reward received for the episode.
+        distance_efficiencies : list[float] | None, optional
+            For dynamic environments, list of distance efficiencies for foods
+            collected during the episode. None for static environments.
         """
         if success:
             self.success_count += 1
+        self.total_steps += steps
         self.total_rewards += reward
-
-    def track_food_collection(self, distance_efficiency: float | None = None) -> None:
-        """Track food collection event.
-
-        Parameters
-        ----------
-        distance_efficiency : float | None, optional
-            For dynamic environments, the ratio of optimal distance to actual
-            distance traveled. None for static environments.
-        """
-        self.foods_collected += 1
-        if distance_efficiency is not None:
-            self.distance_efficiencies.append(distance_efficiency)
-
-    def track_reward(self, reward: float) -> None:
-        """Track a single reward.
-
-        Parameters
-        ----------
-        reward : float
-            Reward received for this instance.
-        """
-        self.total_rewards += reward
-
-    def track_step(self, reward: float = 0.0) -> None:
-        """Track a single step.
-
-        Parameters
-        ----------
-        reward : float
-            Reward received for this step.
-        """
-        self.total_steps += 1
-        self.total_rewards += reward
+        if distance_efficiencies is not None:
+            self.distance_efficiencies.extend(distance_efficiencies)
 
     def calculate_metrics(self, total_runs: int) -> PerformanceMetrics:
         """Calculate final performance metrics.

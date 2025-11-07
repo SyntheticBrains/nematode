@@ -446,7 +446,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 show_last_frame_only=show_last_frame_only,
             )
 
-            steps = len(step_result.agent_path)
+            steps_taken = agent._episode_tracker.steps  # noqa: SLF001
+
             total_reward = sum(
                 agent.env.get_state(pos, disable_log=True)[0] for pos in step_result.agent_path
             )  # Calculate total reward for the run
@@ -473,10 +474,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             match agent.env:
                 case MazeEnvironment():
                     # Calculate efficiency score for the run
-                    steps_taken = len(step_result.agent_path)
+
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():
-                    foods_collected_this_run = agent._metrics_tracker.foods_collected  # noqa: SLF001
+                    foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
                     foods_available_this_run = agent.env.max_active_foods
                     satiety_remaining_this_run = agent.current_satiety
                     # Efficiency score not defined for dynamic environment
@@ -485,10 +486,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             result = SimulationResult(
                 run=run_num,
-                steps=steps,
+                steps=steps_taken,
                 path=step_result.agent_path,
                 total_reward=total_reward,
-                last_total_reward=agent._metrics_tracker.total_rewards,  # noqa: SLF001
+                last_total_reward=agent._episode_tracker.rewards,  # noqa: SLF001
                 efficiency_score=efficiency_score,
                 termination_reason=step_result.termination_reason,
                 success=success,
@@ -499,7 +500,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             all_results.append(result)
 
             # Log run outcome clearly
-            outcome_msg = f"Run {run_num}/{runs} completed in {steps} steps - "
+            outcome_msg = f"Run {run_num}/{runs} completed in {steps_taken} steps - "
             if success:
                 if step_result.termination_reason == TerminationReason.GOAL_REACHED:
                     outcome_msg += "SUCCESS: Goal reached"
