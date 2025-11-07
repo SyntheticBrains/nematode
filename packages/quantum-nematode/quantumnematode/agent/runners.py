@@ -20,13 +20,13 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class StepResult:
-    """Result of processing a single simulation step.
+class EpisodeResult:
+    """Result of processing a single simulation episode.
 
     Attributes
     ----------
     agent_path : list[tuple]
-        The path taken by the agent up to this step.
+        The path taken by the agent in the episode.
     termination_reason : TerminationReason
         The reason for episode termination, if applicable.
     """
@@ -49,7 +49,7 @@ class EpisodeRunner(Protocol):
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: dict[str, Any],
-    ) -> StepResult:
+    ) -> EpisodeResult:
         """Execute an episode using this runner's strategy.
 
         Parameters
@@ -96,7 +96,7 @@ class StandardEpisodeRunner(EpisodeRunner):
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: Any,  # noqa: ANN401
-    ) -> StepResult:
+    ) -> EpisodeResult:
         """Run a standard episode.
 
         Complete implementation that matches agent.run_episode() logic exactly.
@@ -236,7 +236,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     agent._metrics_tracker.track_episode_completion(
                         success=False,
                     )
-                    return StepResult(
+                    return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.STARVED,
                     )
@@ -314,7 +314,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         success=True,
                         reward=reward,
                     )
-                    return StepResult(
+                    return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.GOAL_REACHED,
                     )
@@ -346,7 +346,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 agent._metrics_tracker.track_episode_completion(
                     success=False,
                 )
-                return StepResult(
+                return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.MAX_STEPS,
                 )
@@ -361,7 +361,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 agent._metrics_tracker.track_episode_completion(
                     success=True,
                 )
-                return StepResult(
+                return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
                 )
@@ -370,7 +370,7 @@ class StandardEpisodeRunner(EpisodeRunner):
         agent._metrics_tracker.track_episode_completion(
             success=False,
         )
-        return StepResult(
+        return EpisodeResult(
             agent_path=agent.path,
             termination_reason=TerminationReason.MAX_STEPS,
         )
@@ -399,7 +399,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
         reward_config: RewardConfig,
         max_steps: int,
         **kwargs: Any,  # noqa: ANN401
-    ) -> StepResult:
+    ) -> EpisodeResult:
         """Run an episode with many-worlds branching.
 
         Complete implementation that matches agent.run_manyworlds_mode() logic exactly.
@@ -573,7 +573,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                 logger.info(msg)
                 print(msg)  # noqa: T201
                 # Return the path from the first superposition (primary path)
-                return StepResult(
+                return EpisodeResult(
                     agent_path=superpositions[0][2],
                     termination_reason=TerminationReason.GOAL_REACHED,
                 )
@@ -581,7 +581,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
         logger.info(msg)
         print(msg)  # noqa: T201
         # Return the path from the first superposition (primary path)
-        return StepResult(
+        return EpisodeResult(
             agent_path=superpositions[0][2],
             termination_reason=TerminationReason.MAX_STEPS,
         )

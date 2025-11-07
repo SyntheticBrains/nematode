@@ -9,7 +9,7 @@ from quantumnematode.agent import (
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
 from quantumnematode.report.dtypes import TerminationReason
-from quantumnematode.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
+from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 
 
 class TestStandardEpisodeRunnerInitialization:

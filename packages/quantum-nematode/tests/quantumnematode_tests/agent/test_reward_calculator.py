@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from quantumnematode.agent import RewardConfig
 from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
-from quantumnematode.reward_calculator import RewardCalculator
+from quantumnematode.agent.reward_calculator import RewardCalculator
 
 
 @pytest.fixture

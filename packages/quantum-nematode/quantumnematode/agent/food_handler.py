@@ -9,7 +9,7 @@ from quantumnematode.env import DynamicForagingEnvironment
 
 if TYPE_CHECKING:
     from quantumnematode.env import BaseEnvironment
-    from quantumnematode.satiety import SatietyManager
+    from quantumnematode.agent.satiety import SatietyManager
 
 
 @dataclass
