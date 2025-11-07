@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/SyntheticBrains/nematode/branch/main/graph/badge.svg)](https://codecov.io/gh/SyntheticBrains/nematode)
 
 <p align="center">
-  <img src="./docs/assets/images/demo.gif" alt="nematode simulation demo" />
+  <img src="./docs/assets/images/demo-dynamic.gif" alt="nematode simulation demo" />
 </p>
 
 This project simulates a simplified nematode (C. elegans) navigating a 2D grid maze to find food, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for the environment.
