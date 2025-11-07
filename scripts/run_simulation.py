@@ -471,15 +471,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             foods_collected_this_run = None
             foods_available_this_run = None
             satiety_remaining_this_run = None
+            average_distance_efficiency = None
             match agent.env:
                 case MazeEnvironment():
                     # Calculate efficiency score for the run
-
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():
                     foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
                     foods_available_this_run = agent.env.max_active_foods
                     satiety_remaining_this_run = agent.current_satiety
+                    average_distance_efficiency = sum(
+                        agent._episode_tracker.distance_efficiencies,  # noqa: SLF001
+                    ) / len(agent._episode_tracker.distance_efficiencies)  # noqa: SLF001
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
@@ -496,6 +499,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 foods_collected=foods_collected_this_run,
                 foods_available=foods_available_this_run,
                 satiety_remaining=satiety_remaining_this_run,
+                average_distance_efficiency=average_distance_efficiency,
             )
             all_results.append(result)
 

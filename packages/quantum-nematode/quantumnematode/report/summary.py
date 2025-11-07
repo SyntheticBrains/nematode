@@ -74,6 +74,8 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
             additional_info += foods_info
         if result.efficiency_score is not None:
             additional_info += f"Efficiency: {result.efficiency_score:<10.4f}"
+        if result.average_distance_efficiency is not None:
+            additional_info += f"Avg Dist Eff: {result.average_distance_efficiency:<10.4f} "
 
         # Use fixed-width fields
         output_lines.append(
