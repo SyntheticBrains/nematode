@@ -54,6 +54,12 @@ def _export_main_results(
             "last_total_reward",
             "efficiency_score",
             "path_length",
+            "termination_reason",
+            "success",
+            "foods_collected",
+            "foods_available",
+            "satiety_remaining",
+            "avg_distance_efficiency",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -65,8 +71,24 @@ def _export_main_results(
                     "steps": result.steps,
                     "total_reward": result.total_reward,
                     "last_total_reward": result.last_total_reward,
-                    "efficiency_score": result.efficiency_score,
+                    "efficiency_score": result.efficiency_score
+                    if result.efficiency_score is not None
+                    else np.nan,
                     "path_length": len(result.path),
+                    "termination_reason": result.termination_reason.value,
+                    "success": result.success,
+                    "foods_collected": result.foods_collected
+                    if result.foods_collected is not None
+                    else np.nan,
+                    "foods_available": result.foods_available
+                    if result.foods_available is not None
+                    else np.nan,
+                    "satiety_remaining": result.satiety_remaining
+                    if result.satiety_remaining is not None
+                    else np.nan,
+                    "avg_distance_efficiency": result.average_distance_efficiency
+                    if result.average_distance_efficiency is not None
+                    else np.nan,
                 },
             )
 
@@ -515,3 +537,201 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901
                             key: value if value is not None else np.nan,
                         },
                     )
+
+
+# Dynamic Foraging Environment Specific Exports
+
+
+def export_foraging_results_to_csv(  # pragma: no cover
+    all_results: list[SimulationResult],
+    data_dir: Path,
+    file_prefix: str = "",
+) -> None:
+    """Export foraging-specific results to CSV.
+
+    Parameters
+    ----------
+    all_results : list[SimulationResult]
+        List of simulation results with foraging data.
+    data_dir : Path
+        Directory to save the CSV file.
+    file_prefix : str, optional
+        Prefix for the output file name.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{file_prefix}foraging_results.csv"
+    filepath = data_dir / filename
+
+    with filepath.open("w", newline="") as csvfile:
+        fieldnames = [
+            "run",
+            "foods_collected",
+            "foods_available",
+            "satiety_remaining",
+            "avg_distance_efficiency",
+            "foraging_efficiency",  # foods per step
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for result in all_results:
+            # Only export if this is a dynamic foraging environment result
+            if result.foods_collected is not None:
+                # Calculate foraging efficiency (foods per step)
+                foraging_efficiency = (
+                    result.foods_collected / result.steps if result.steps > 0 else 0.0
+                )
+
+                writer.writerow(
+                    {
+                        "run": result.run,
+                        "foods_collected": result.foods_collected,
+                        "foods_available": result.foods_available
+                        if result.foods_available is not None
+                        else np.nan,
+                        "satiety_remaining": result.satiety_remaining
+                        if result.satiety_remaining is not None
+                        else np.nan,
+                        "avg_distance_efficiency": result.average_distance_efficiency
+                        if result.average_distance_efficiency is not None
+                        else np.nan,
+                        "foraging_efficiency": foraging_efficiency,
+                    },
+                )
+
+    logger.info(f"Foraging results exported to {filepath}")
+
+
+def export_distance_efficiencies_to_csv(  # pragma: no cover
+    all_results: list[SimulationResult],  # noqa: ARG001 - Placeholder for future implementation
+    data_dir: Path,
+    file_prefix: str = "",
+) -> None:
+    """Export all individual distance efficiencies to CSV.
+
+    Parameters
+    ----------
+    all_results : list[SimulationResult]
+        List of simulation results.
+    data_dir : Path
+        Directory to save the CSV file.
+    file_prefix : str, optional
+        Prefix for the output file name.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{file_prefix}distance_efficiencies.csv"
+    filepath = data_dir / filename
+
+    with filepath.open("w", newline="") as csvfile:
+        fieldnames = ["run", "food_number", "distance_efficiency"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        # TODO: This function needs individual food distance efficiency data
+        # Currently, we only store the average per run in SimulationResult
+        # To implement this, we would need to:
+        # 1. Pass the full distance_efficiencies list from EpisodeTracker
+        # 2. Store it in SimulationResult (as a new field or expand existing)
+        # 3. Export each food collection with its efficiency here
+        #
+        # For now, this creates an empty CSV with the correct structure
+
+    logger.info(f"Distance efficiencies exported to {filepath} (placeholder)")
+
+
+def export_foraging_session_metrics_to_csv(  # pragma: no cover
+    all_results: list[SimulationResult],
+    metrics: PerformanceMetrics,
+    data_dir: Path,
+    file_prefix: str = "",
+) -> None:
+    """Export session-level foraging metrics to CSV.
+
+    Parameters
+    ----------
+    all_results : list[SimulationResult]
+        List of all simulation results.
+    metrics : PerformanceMetrics
+        Session performance metrics.
+    data_dir : Path
+        Directory to save the CSV file.
+    file_prefix : str, optional
+        Prefix for the output file name.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{file_prefix}foraging_session_metrics.csv"
+    filepath = data_dir / filename
+
+    # Calculate session-level foraging statistics
+    foraging_results = [r for r in all_results if r.foods_collected is not None]
+
+    if not foraging_results:
+        logger.warning("No foraging results to export")
+        return
+
+    total_foods_collected = sum(
+        r.foods_collected for r in foraging_results if r.foods_collected is not None
+    )
+    total_runs = len(foraging_results)
+    avg_foods_per_run = total_foods_collected / total_runs if total_runs > 0 else 0.0
+
+    # Get all distance efficiencies
+    all_distance_effs = [
+        r.average_distance_efficiency
+        for r in foraging_results
+        if r.average_distance_efficiency is not None
+    ]
+
+    overall_distance_eff = (
+        sum(all_distance_effs) / len(all_distance_effs) if all_distance_effs else 0.0
+    )
+
+    # Count termination reasons
+    starvation_count = sum(
+        1 for r in foraging_results if "starv" in r.termination_reason.value.lower()
+    )
+    max_steps_count = sum(
+        1 for r in foraging_results if "max_steps" in r.termination_reason.value.lower()
+    )
+    success_count = sum(1 for r in foraging_results if r.success)
+
+    with filepath.open("w", newline="") as csvfile:
+        fieldnames = ["metric", "value"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        writer.writerow({"metric": "total_runs", "value": total_runs})
+        writer.writerow({"metric": "total_foods_collected", "value": total_foods_collected})
+        writer.writerow({"metric": "avg_foods_per_run", "value": f"{avg_foods_per_run:.2f}"})
+        writer.writerow(
+            {"metric": "overall_distance_efficiency", "value": f"{overall_distance_eff:.4f}"},
+        )
+        writer.writerow({"metric": "success_count", "value": success_count})
+        writer.writerow({"metric": "starvation_count", "value": starvation_count})
+        writer.writerow({"metric": "max_steps_count", "value": max_steps_count})
+        writer.writerow({"metric": "success_rate", "value": f"{metrics.success_rate:.4f}"})
+
+        # Add foraging-specific metrics from PerformanceMetrics
+        if metrics.foraging_efficiency is not None:
+            writer.writerow(
+                {
+                    "metric": "foraging_efficiency_foods_per_step",
+                    "value": f"{metrics.foraging_efficiency:.6f}",
+                },
+            )
+        if metrics.average_distance_efficiency is not None:
+            writer.writerow(
+                {
+                    "metric": "avg_distance_efficiency_from_metrics",
+                    "value": f"{metrics.average_distance_efficiency:.4f}",
+                },
+            )
+        if metrics.average_foods_collected is not None:
+            writer.writerow(
+                {
+                    "metric": "avg_foods_collected_from_metrics",
+                    "value": f"{metrics.average_foods_collected:.2f}",
+                },
+            )
+
+    logger.info(f"Foraging session metrics exported to {filepath}")

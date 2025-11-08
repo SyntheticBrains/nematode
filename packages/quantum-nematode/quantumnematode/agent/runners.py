@@ -33,12 +33,15 @@ class EpisodeData:
         The number of food items collected during the episode.
     distance_efficiencies : list[float]
         The distance efficiencies recorded during the episode.
+    satiety_history : list[float]
+        The satiety levels at each step (for dynamic foraging environments).
     """
 
     steps: int
     rewards: float
     foods_collected: int
     distance_efficiencies: list[float]
+    satiety_history: list[float]
 
 
 @dataclass
@@ -214,6 +217,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             top_action = action[0]
 
             agent.env.move_agent(top_action.action)
+
+            # Track step (will add satiety later if dynamic environment)
             agent._episode_tracker.track_step()
 
             # Classical brain learning step
@@ -243,6 +248,10 @@ class StandardEpisodeRunner(EpisodeRunner):
             if isinstance(agent.env, DynamicForagingEnvironment):
                 # Delegate to satiety manager
                 agent._satiety_manager.decay_satiety()
+
+                # Track satiety after decay
+                agent._episode_tracker.track_satiety(agent.current_satiety)
+
                 logger.debug(
                     f"Satiety: {agent.current_satiety:.1f}/{agent.max_satiety}",
                 )

@@ -44,6 +44,8 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
+    export_foraging_results_to_csv,
+    export_foraging_session_metrics_to_csv,
     export_performance_metrics_to_csv,
     export_run_data_to_csv,
     export_simulation_results_to_csv,
@@ -56,12 +58,21 @@ from quantumnematode.report.dtypes import (
     TrackingData,
 )
 from quantumnematode.report.plots import (
+    plot_all_distance_efficiencies_distribution,
     plot_cumulative_reward_per_run,
+    plot_distance_efficiency_trend,
     plot_efficiency_score_over_time,
+    plot_foods_collected_per_run,
+    plot_foods_vs_reward_correlation,
+    plot_foods_vs_steps_correlation,
+    plot_foraging_efficiency_per_run,
     plot_last_cumulative_rewards,
     plot_running_average_steps,
+    plot_satiety_at_episode_end,
+    plot_satiety_progression_single_run,
     plot_steps_per_run,
     plot_success_rate_over_time,
+    plot_termination_reasons_breakdown,
     plot_tracking_data_by_latest_run,
     plot_tracking_data_by_session,
 )
@@ -472,6 +483,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             foods_available_this_run = None
             satiety_remaining_this_run = None
             average_distance_efficiency = None
+            satiety_history_this_run = None
             match agent.env:
                 case MazeEnvironment():
                     # Calculate efficiency score for the run
@@ -486,6 +498,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         if distance_efficiencies
                         else 0.0
                     )
+                    satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
@@ -503,6 +516,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 foods_available=foods_available_this_run,
                 satiety_remaining=satiety_remaining_this_run,
                 average_distance_efficiency=average_distance_efficiency,
+                satiety_history=satiety_history_this_run,
             )
             all_results.append(result)
 
@@ -579,6 +593,16 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Export data to CSV files
     export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
     export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+
+    # Export foraging-specific data (if dynamic environment)
+    foraging_results = [r for r in all_results if r.foods_collected is not None]
+    if foraging_results:
+        export_foraging_results_to_csv(all_results=all_results, data_dir=data_dir)
+        export_foraging_session_metrics_to_csv(
+            all_results=all_results,
+            metrics=metrics,
+            data_dir=data_dir,
+        )
 
     # Generate additional plots for tracking data
     plot_tracking_data_by_session(
@@ -918,7 +942,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
-def plot_results(
+def plot_results(  # noqa: C901, PLR0912
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
     max_steps: int,
@@ -958,6 +982,125 @@ def plot_results(
     ]
     if len(efficiency_scores) > 0:
         plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
+
+    # Dynamic Foraging Environment Specific Plots
+    foraging_results = [r for r in all_results if r.foods_collected is not None]
+    if foraging_results:
+        # Extract foraging-specific data
+        foods_collected_list = [
+            r.foods_collected for r in foraging_results if r.foods_collected is not None
+        ]
+        foods_available = (
+            foraging_results[0].foods_available
+            if foraging_results[0].foods_available is not None
+            else 0
+        )
+        satiety_remaining_list = [
+            r.satiety_remaining for r in foraging_results if r.satiety_remaining is not None
+        ]
+        avg_distance_effs = [
+            r.average_distance_efficiency
+            for r in foraging_results
+            if r.average_distance_efficiency is not None
+        ]
+        foraging_runs = [r.run for r in foraging_results]
+        foraging_steps = [r.steps for r in foraging_results]
+        foraging_rewards = [r.total_reward for r in foraging_results]
+
+        # Plot: Foods Collected Per Run
+        if foods_collected_list:
+            plot_foods_collected_per_run(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                foods_collected_list,
+                foods_available,
+            )
+
+        # Plot: Distance Efficiency Trend
+        if avg_distance_effs:
+            plot_distance_efficiency_trend(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                avg_distance_effs,
+            )
+
+        # Plot: Foraging Efficiency (foods per step)
+        if foods_collected_list:
+            plot_foraging_efficiency_per_run(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                foods_collected_list,
+                foraging_steps,
+            )
+
+        # Plot: Satiety at Episode End
+        if satiety_remaining_list:
+            max_satiety = max(satiety_remaining_list) if satiety_remaining_list else 100.0
+            # Get actual max satiety from first result's history if available
+            if foraging_results[0].satiety_history:
+                max_satiety = max(foraging_results[0].satiety_history)
+            plot_satiety_at_episode_end(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                satiety_remaining_list,
+                max_satiety,
+            )
+
+        # Plot: All Distance Efficiencies Distribution
+        if avg_distance_effs:
+            plot_all_distance_efficiencies_distribution(
+                file_prefix,
+                plot_dir,
+                avg_distance_effs,
+            )
+
+        # Plot: Termination Reasons Breakdown
+        termination_counts: dict[str, int] = {}
+        for result in foraging_results:
+            reason = result.termination_reason.value
+            termination_counts[reason] = termination_counts.get(reason, 0) + 1
+        if termination_counts:
+            plot_termination_reasons_breakdown(
+                file_prefix,
+                plot_dir,
+                termination_counts,
+            )
+
+        # Plot: Foods vs Reward Correlation
+        if foods_collected_list and foraging_rewards:
+            plot_foods_vs_reward_correlation(
+                file_prefix,
+                plot_dir,
+                foods_collected_list,
+                foraging_rewards,
+            )
+
+        # Plot: Foods vs Steps Correlation
+        if foods_collected_list and foraging_steps:
+            plot_foods_vs_steps_correlation(
+                file_prefix,
+                plot_dir,
+                foods_collected_list,
+                foraging_steps,
+            )
+
+        # Plot: Satiety Progression for the first and last runs
+        for result in [foraging_results[0], foraging_results[-1]]:
+            if result.satiety_history:
+                max_satiety_for_run = (
+                    max(result.satiety_history) if result.satiety_history else 100.0
+                )
+                plot_satiety_progression_single_run(
+                    file_prefix,
+                    plot_dir,
+                    result.run,
+                    result.satiety_history,
+                    max_satiety_for_run,
+                )
 
 
 if __name__ == "__main__":

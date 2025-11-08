@@ -404,3 +404,494 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover
         plt.tight_layout()
         plt.savefig(run_dir / f"{key}.png")
         plt.close()
+
+
+# Dynamic Foraging Environment Specific Plots
+
+
+def plot_foods_collected_per_run(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    foods_collected: list[int],
+    foods_available: int,
+) -> None:
+    """Plot foods collected per run with foods available reference line.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    foods_collected : list[int]
+        Number of foods collected in each run.
+    foods_available : int
+        Maximum number of foods available per run.
+    """
+    plt.figure(figsize=(12, 6))
+    plt.bar(runs, foods_collected, alpha=0.7, label="Foods Collected")
+    plt.axhline(
+        y=foods_available,
+        color="r",
+        linestyle="--",
+        linewidth=2,
+        label=f"Foods Available ({foods_available})",
+    )
+    average_foods = sum(foods_collected) / len(foods_collected)
+    plt.axhline(
+        y=average_foods,
+        color="g",
+        linestyle=":",
+        linewidth=2,
+        label=f"Average ({average_foods:.1f})",
+    )
+    plt.title("Foods Collected Per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Foods Collected")
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}foods_collected_per_run.png")
+    plt.close()
+
+
+def plot_distance_efficiency_trend(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    avg_distance_efficiencies: list[float],
+) -> None:
+    """Plot average distance efficiency trend over runs.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    avg_distance_efficiencies : list[float]
+        Average distance efficiency for each run.
+    """
+    plt.figure(figsize=(12, 6))
+    plt.plot(
+        runs,
+        avg_distance_efficiencies,
+        marker="o",
+        linestyle="-",
+        linewidth=2,
+        markersize=6,
+        label="Avg Distance Efficiency",
+    )
+    overall_avg = sum(avg_distance_efficiencies) / len(avg_distance_efficiencies)
+    plt.axhline(
+        y=overall_avg,
+        color="r",
+        linestyle="--",
+        linewidth=2,
+        label=f"Overall Average ({overall_avg:.3f})",
+    )
+    plt.axhline(y=1.0, color="gray", linestyle=":", linewidth=1, alpha=0.5)
+    plt.title("Distance Efficiency Trend Over Runs")
+    plt.xlabel("Run")
+    plt.ylabel("Average Distance Efficiency")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}distance_efficiency_trend.png")
+    plt.close()
+
+
+def plot_foraging_efficiency_per_run(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    foods_collected: list[int],
+    steps: list[int],
+) -> None:
+    """Plot foraging efficiency (foods per step) over runs.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    foods_collected : list[int]
+        Number of foods collected in each run.
+    steps : list[int]
+        Number of steps taken in each run.
+    """
+    # Calculate foods per step ratio
+    foraging_efficiency = [
+        foods / step if step > 0 else 0.0
+        for foods, step in zip(foods_collected, steps, strict=False)
+    ]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(
+        runs,
+        foraging_efficiency,
+        marker="s",
+        linestyle="-",
+        linewidth=2,
+        markersize=6,
+        color="purple",
+        label="Foraging Efficiency",
+    )
+    avg_efficiency = sum(foraging_efficiency) / len(foraging_efficiency)
+    plt.axhline(
+        y=avg_efficiency,
+        color="r",
+        linestyle="--",
+        linewidth=2,
+        label=f"Average ({avg_efficiency:.4f} foods/step)",
+    )
+    plt.title("Foraging Efficiency (Foods per Step) Over Runs")
+    plt.xlabel("Run")
+    plt.ylabel("Foods per Step")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}foraging_efficiency_per_run.png")
+    plt.close()
+
+
+def plot_satiety_at_episode_end(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    satiety_remaining: list[float],
+    max_satiety: float,
+) -> None:
+    """Plot satiety levels at episode end per run.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    satiety_remaining : list[float]
+        Final satiety level at end of each run.
+    max_satiety : float
+        Maximum satiety level.
+    """
+    plt.figure(figsize=(12, 6))
+    colors = [
+        "red" if s <= 0 else "orange" if s < max_satiety * 0.2 else "green"
+        for s in satiety_remaining
+    ]
+    plt.bar(runs, satiety_remaining, alpha=0.7, color=colors, label="Satiety Remaining")
+    plt.axhline(
+        y=0,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Starvation Threshold",
+    )
+    plt.axhline(
+        y=max_satiety * 0.2,
+        color="orange",
+        linestyle=":",
+        linewidth=1.5,
+        label="Low Satiety (20%)",
+    )
+    avg_satiety = sum(satiety_remaining) / len(satiety_remaining)
+    plt.axhline(
+        y=avg_satiety,
+        color="blue",
+        linestyle="--",
+        linewidth=2,
+        label=f"Average ({avg_satiety:.1f})",
+    )
+    plt.title("Satiety at Episode End Per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Satiety Level")
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}satiety_at_episode_end.png")
+    plt.close()
+
+
+def plot_all_distance_efficiencies_distribution(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    all_distance_efficiencies: list[float],
+) -> None:
+    """Plot distribution of all distance efficiencies across all runs.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    all_distance_efficiencies : list[float]
+        All distance efficiency values from all food collections across all runs.
+    """
+    if not all_distance_efficiencies:
+        logger.warning("No distance efficiencies to plot")
+        return
+
+    _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Histogram
+    ax1.hist(all_distance_efficiencies, bins=30, alpha=0.7, color="skyblue", edgecolor="black")
+    mean_eff = np.mean(all_distance_efficiencies)
+    median_eff = np.median(all_distance_efficiencies)
+    ax1.axvline(mean_eff, color="r", linestyle="--", linewidth=2, label=f"Mean: {mean_eff:.3f}")
+    ax1.axvline(
+        median_eff,
+        color="g",
+        linestyle="--",
+        linewidth=2,
+        label=f"Median: {median_eff:.3f}",
+    )
+    ax1.axvline(1.0, color="gray", linestyle=":", linewidth=1, alpha=0.5, label="Optimal (1.0)")
+    ax1.set_title("Distribution of Distance Efficiencies")
+    ax1.set_xlabel("Distance Efficiency")
+    ax1.set_ylabel("Frequency")
+    ax1.legend()
+    ax1.grid(axis="y", alpha=0.3)
+
+    # Box plot
+    ax2.boxplot(all_distance_efficiencies, vert=True, patch_artist=True)
+    ax2.axhline(1.0, color="gray", linestyle=":", linewidth=1, alpha=0.5, label="Optimal (1.0)")
+    ax2.set_title("Distance Efficiency Box Plot")
+    ax2.set_ylabel("Distance Efficiency")
+    ax2.set_xticklabels(["All Foods"])
+    ax2.legend()
+    ax2.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}distance_efficiency_distribution.png")
+    plt.close()
+
+
+def plot_termination_reasons_breakdown(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    termination_counts: dict[str, int],
+) -> None:
+    """Plot breakdown of termination reasons across all runs.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    termination_counts : dict[str, int]
+        Dictionary mapping termination reason names to counts.
+    """
+    if not termination_counts:
+        logger.warning("No termination data to plot")
+        return
+
+    reasons = list(termination_counts.keys())
+    counts = list(termination_counts.values())
+    colors = [
+        "green"
+        if "goal" in r.lower() or "food" in r.lower()
+        else "red"
+        if "starved" in r.lower()
+        else "orange"
+        if "max_steps" in r.lower()
+        else "gray"
+        for r in reasons
+    ]
+
+    _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Bar chart
+    ax1.bar(reasons, counts, color=colors, alpha=0.7, edgecolor="black")
+    ax1.set_title("Termination Reasons Breakdown")
+    ax1.set_xlabel("Termination Reason")
+    ax1.set_ylabel("Count")
+    ax1.tick_params(axis="x", rotation=45)
+    ax1.grid(axis="y", alpha=0.3)
+    for i, (_reason, count) in enumerate(zip(reasons, counts, strict=False)):
+        ax1.text(i, count, str(count), ha="center", va="bottom", fontweight="bold")
+
+    # Pie chart
+    ax2.pie(counts, labels=reasons, colors=colors, autopct="%1.1f%%", startangle=90)
+    ax2.set_title("Termination Reasons Distribution")
+
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}termination_reasons_breakdown.png")
+    plt.close()
+
+
+def plot_foods_vs_reward_correlation(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    foods_collected: list[int],
+    total_rewards: list[float],
+) -> None:
+    """Plot correlation between foods collected and total reward.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    foods_collected : list[int]
+        Number of foods collected in each run.
+    total_rewards : list[float]
+        Total reward for each run.
+    """
+    plt.figure(figsize=(10, 8))
+    plt.scatter(foods_collected, total_rewards, alpha=0.6, s=100, edgecolors="black")
+
+    # Add trend line
+    if len(foods_collected) > 1:
+        z = np.polyfit(foods_collected, total_rewards, 1)
+        p = np.poly1d(z)
+        x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
+        plt.plot(x_line, p(x_line), "r--", linewidth=2, label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}")
+
+        # Calculate correlation
+        correlation = np.corrcoef(foods_collected, total_rewards)[0, 1]
+        plt.text(
+            0.05,
+            0.95,
+            f"Correlation: {correlation:.3f}",
+            transform=plt.gca().transAxes,
+            fontsize=12,
+            verticalalignment="top",
+            bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
+        )
+
+    plt.title("Foods Collected vs Total Reward")
+    plt.xlabel("Foods Collected")
+    plt.ylabel("Total Reward")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}foods_vs_reward_correlation.png")
+    plt.close()
+
+
+def plot_foods_vs_steps_correlation(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    foods_collected: list[int],
+    steps: list[int],
+) -> None:
+    """Plot correlation between foods collected and steps taken.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    foods_collected : list[int]
+        Number of foods collected in each run.
+    steps : list[int]
+        Number of steps taken in each run.
+    """
+    plt.figure(figsize=(10, 8))
+    plt.scatter(foods_collected, steps, alpha=0.6, s=100, color="purple", edgecolors="black")
+
+    # Add trend line
+    if len(foods_collected) > 1:
+        z = np.polyfit(foods_collected, steps, 1)
+        p = np.poly1d(z)
+        x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
+        plt.plot(x_line, p(x_line), "r--", linewidth=2, label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}")
+
+        # Calculate correlation
+        correlation = np.corrcoef(foods_collected, steps)[0, 1]
+        plt.text(
+            0.05,
+            0.95,
+            f"Correlation: {correlation:.3f}",
+            transform=plt.gca().transAxes,
+            fontsize=12,
+            verticalalignment="top",
+            bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
+        )
+
+    plt.title("Foods Collected vs Steps Taken")
+    plt.xlabel("Foods Collected")
+    plt.ylabel("Steps")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}foods_vs_steps_correlation.png")
+    plt.close()
+
+
+def plot_satiety_progression_single_run(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    run_number: int,
+    satiety_history: list[float],
+    max_satiety: float,
+) -> None:
+    """Plot satiety progression throughout a single run.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    run_number : int
+        The run number being plotted.
+    satiety_history : list[float]
+        Satiety levels at each step.
+    max_satiety : float
+        Maximum satiety level.
+    """
+    if not satiety_history:
+        logger.warning(f"No satiety history for run {run_number}")
+        return
+
+    steps = list(range(len(satiety_history)))
+
+    plt.figure(figsize=(14, 6))
+    plt.plot(steps, satiety_history, linewidth=2, label="Satiety Level")
+    plt.axhline(
+        y=0,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Starvation Threshold",
+    )
+    plt.axhline(
+        y=max_satiety * 0.2,
+        color="orange",
+        linestyle=":",
+        linewidth=1.5,
+        label="Low Satiety (20%)",
+    )
+    plt.axhline(
+        y=max_satiety,
+        color="green",
+        linestyle=":",
+        linewidth=1.5,
+        alpha=0.5,
+        label=f"Max Satiety ({max_satiety:.0f})",
+    )
+    plt.fill_between(steps, 0, satiety_history, alpha=0.2)
+    plt.title(f"Satiety Progression - Run {run_number}")
+    plt.xlabel("Step")
+    plt.ylabel("Satiety Level")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}satiety_progression_run_{run_number}.png")
+    plt.close()
