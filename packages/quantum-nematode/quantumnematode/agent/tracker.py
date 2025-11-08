@@ -19,6 +19,7 @@ class EpisodeTracker:
             rewards=0.0,
             foods_collected=0,
             distance_efficiencies=[],
+            satiety_history=[],
         )
 
     @property
@@ -40,6 +41,11 @@ class EpisodeTracker:
     def steps(self) -> int:
         """Get the total steps for the episode."""
         return self.data.steps
+
+    @property
+    def satiety_history(self) -> list[float]:
+        """Get the satiety history for the episode."""
+        return self.data.satiety_history
 
     def track_food_collection(self, distance_efficiency: float | None = None) -> None:
         """Track food collection event.
@@ -64,16 +70,30 @@ class EpisodeTracker:
         """
         self.data.rewards += reward
 
-    def track_step(self, reward: float = 0.0) -> None:
+    def track_satiety(self, satiety: float) -> None:
+        """Track current satiety level.
+
+        Parameters
+        ----------
+        satiety : float
+            Current satiety level for this step.
+        """
+        self.data.satiety_history.append(satiety)
+
+    def track_step(self, reward: float = 0.0, satiety: float | None = None) -> None:
         """Track a single step.
 
         Parameters
         ----------
         reward : float
             Reward received for this step.
+        satiety : float | None, optional
+            Current satiety level (for dynamic foraging environments).
         """
         self.data.steps += 1
         self.data.rewards += reward
+        if satiety is not None:
+            self.data.satiety_history.append(satiety)
 
     def reset(self) -> None:
         """Reset the episode data for a new episode."""
@@ -82,4 +102,5 @@ class EpisodeTracker:
             steps=0,
             foods_collected=0,
             distance_efficiencies=[],
+            satiety_history=[],
         )

@@ -62,6 +62,8 @@ class SimulationResult(BaseModel):
         Remaining satiety at the end of the run (DynamicForagingEnvironment only).
     average_distance_efficiency : float | None
         Average distance efficiency per food collected (DynamicForagingEnvironment only).
+    satiety_history : list[float] | None
+        Step-by-step satiety levels throughout the run (DynamicForagingEnvironment only).
     """
 
     run: int
@@ -76,6 +78,7 @@ class SimulationResult(BaseModel):
     foods_available: int | None = None
     satiety_remaining: float | None = None
     average_distance_efficiency: float | None = None
+    satiety_history: list[float] | None = None
 
 
 TrackingRunIndex = int
