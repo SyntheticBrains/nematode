@@ -648,7 +648,7 @@ def export_foraging_results_to_csv(  # pragma: no cover
 
 
 def export_distance_efficiencies_to_csv(  # pragma: no cover
-    all_results: list[SimulationResult],  # noqa: ARG001 - Placeholder for future implementation
+    tracking_data: TrackingData,
     data_dir: Path,
     file_prefix: str = "",
 ) -> None:
@@ -656,8 +656,8 @@ def export_distance_efficiencies_to_csv(  # pragma: no cover
 
     Parameters
     ----------
-    all_results : list[SimulationResult]
-        List of simulation results.
+    tracking_data : TrackingData
+        Tracking data containing episode data for all runs.
     data_dir : Path
         Directory to save the CSV file.
     file_prefix : str, optional
@@ -672,16 +672,19 @@ def export_distance_efficiencies_to_csv(  # pragma: no cover
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
-        # TODO: This function needs individual food distance efficiency data
-        # Currently, we only store the average per run in SimulationResult
-        # To implement this, we would need to:
-        # 1. Pass the full distance_efficiencies list from EpisodeTracker
-        # 2. Store it in SimulationResult (as a new field or expand existing)
-        # 3. Export each food collection with its efficiency here
-        #
-        # For now, this creates an empty CSV with the correct structure
+        # Iterate through episode data and export individual distance efficiencies
+        for run_num in sorted(tracking_data.episode_data.keys()):
+            episode_data = tracking_data.episode_data[run_num]
+            for food_num, dist_eff in enumerate(episode_data.distance_efficiencies, start=1):
+                writer.writerow(
+                    {
+                        "run": run_num,
+                        "food_number": food_num,
+                        "distance_efficiency": dist_eff,
+                    },
+                )
 
-    logger.info(f"Distance efficiencies exported to {filepath} (placeholder)")
+    logger.info(f"Distance efficiencies exported to {filepath}")
 
 
 def export_foraging_session_metrics_to_csv(  # pragma: no cover
