@@ -359,6 +359,7 @@ Step 2: Agent at (15,12) requests state
 4. Add configuration schemas and validation
 5. Create preset configuration files
 6. Update metrics and reporting
+7. Rename `MazeEnvironment` to `StaticEnvironment`
 
 ### Phase 2: Testing and Validation
 1. Run full test suite (existing + new tests)
