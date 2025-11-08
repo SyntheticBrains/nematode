@@ -291,19 +291,17 @@ class StandardEpisodeRunner(EpisodeRunner):
                             distance_efficiency=food_result.distance_efficiency,
                         )
 
+                        # Log food collection with distance efficiency
+                        dist_eff_msg = ""
+                        if food_result.distance_efficiency is not None:
+                            dist_eff = food_result.distance_efficiency
+                            dist_eff_msg = f" (Distance efficiency: {dist_eff:.2f})"
+
                         logger.info(
                             f"Food #{agent._episode_tracker.foods_collected} collected! "
                             f"Satiety restored by {food_result.satiety_restored:.1f} to "
-                            f"{agent.current_satiety:.1f}/{agent.max_satiety}",
+                            f"{agent.current_satiety:.1f}/{agent.max_satiety}{dist_eff_msg}",
                         )
-
-                        # Track distance efficiency
-                        if food_result.distance_efficiency is not None:
-                            agent._episode_tracker.distance_efficiencies.append(
-                                food_result.distance_efficiency,
-                            )
-                            dist_eff = food_result.distance_efficiency
-                            logger.debug(f"Distance efficiency for this food: {dist_eff:.2f}")
 
                     # Continue foraging (don't break)
                     agent._episode_tracker.track_reward(reward)

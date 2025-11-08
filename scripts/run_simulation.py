@@ -44,6 +44,7 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
+    export_distance_efficiencies_to_csv,
     export_foraging_results_to_csv,
     export_foraging_session_metrics_to_csv,
     export_performance_metrics_to_csv,
@@ -611,6 +612,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         export_foraging_session_metrics_to_csv(
             all_results=all_results,
             metrics=metrics,
+            data_dir=data_dir,
+        )
+        export_distance_efficiencies_to_csv(
+            tracking_data=tracking_data,
             data_dir=data_dir,
         )
 
