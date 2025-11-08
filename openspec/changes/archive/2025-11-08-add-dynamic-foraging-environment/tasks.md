@@ -60,7 +60,7 @@
 - [x] 8.4 Unit tests for viewport calculations
 - [x] 8.5 Integration tests with each preset configuration
 - [x] 8.6 Backward compatibility tests with existing configs
-- [ ] 8.7 Performance benchmarks for large environments
+- [x] 8.7 Performance benchmarks for large environments
 - [x] 8.8 Test exploration reward mechanics
 
 ## 9. Documentation
@@ -71,8 +71,8 @@
 
 ## 10. Validation and Testing
 - [x] 10.1 Run full test suite and ensure all tests pass
-- [ ] 10.2 Run simulations with all three preset configs to verify behavior
+- [x] 10.2 Run simulations with all three preset configs to verify behavior
 - [x] 10.3 Validate metrics are computed correctly
 - [x] 10.4 Check rendering works correctly in all themes
 - [x] 10.5 Verify backward compatibility with legacy configurations
-- [ ] 10.6 Performance test with 100×100 grid and 50 foods
+- [x] 10.6 Performance test with 100×100 grid and 50 foods
