@@ -114,7 +114,6 @@ class QMLPBrain(ClassicalBrain):
         self.batch_size = config.batch_size
         self.experience_buffer = deque(maxlen=self.buffer_size)
 
-        self.satiety = 1.0
         self.training = True
         self._action_set = action_set
 

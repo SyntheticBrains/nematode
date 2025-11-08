@@ -23,6 +23,7 @@ from typing import Any
 
 import numpy as np
 
+from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.env import Direction
 
@@ -37,7 +38,6 @@ class RotationAxis(str, Enum):
 
 def proprioception_features(
     params: BrainParams,
-    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
     Extract proprioception features: agent's own direction only.
@@ -47,7 +47,6 @@ def proprioception_features(
 
     Args:
         params: BrainParams containing agent state.
-        satiety: Current satiety value (unused).
 
     Returns
     -------
@@ -65,14 +64,12 @@ def proprioception_features(
 
 def chemotaxis_features(
     params: BrainParams,
-    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
     Extract chemotaxis features: gradient strength and relative direction to goal.
 
     Args:
         params: BrainParams containing agent state.
-        satiety: Current satiety value (unused).
 
     Returns
     -------
@@ -110,14 +107,12 @@ def chemotaxis_features(
 
 def thermotaxis_features(
     params: BrainParams,  # noqa: ARG001
-    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
     Extract thermotaxis features (placeholder).
 
     Args:
         params: BrainParams containing agent state.
-        satiety: Current satiety value (unused).
 
     Returns
     -------
@@ -128,14 +123,12 @@ def thermotaxis_features(
 
 def oxygen_features(
     params: BrainParams,  # noqa: ARG001
-    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
     Extract oxygen sensing features (placeholder).
 
     Args:
         params: BrainParams containing agent state.
-        satiety: Current satiety value (unused).
 
     Returns
     -------
@@ -146,14 +139,12 @@ def oxygen_features(
 
 def vision_features(
     params: BrainParams,  # noqa: ARG001
-    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
     Extract vision features (placeholder).
 
     Args:
         params: BrainParams containing agent state.
-        satiety: Current satiety value (unused).
 
     Returns
     -------
@@ -164,14 +155,12 @@ def vision_features(
 
 def memory_action_features(
     params: BrainParams,
-    satiety: float = 1.0,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
     Extract action features: encode an action taken by the agent such as most recent.
 
     Args:
         params: BrainParams containing agent state (should have action attribute).
-        satiety: Current satiety value (unused).
 
     Returns
     -------
@@ -179,10 +168,10 @@ def memory_action_features(
     """
     # Map possible actions to angles (expand as needed)
     action_map = {
-        Direction.UP: 0.0,
-        Direction.DOWN: np.pi,
-        Direction.LEFT: np.pi / 2,
-        Direction.RIGHT: -np.pi / 2,
+        Action.FORWARD: np.pi,
+        Action.LEFT: np.pi / 2,
+        Action.RIGHT: -np.pi / 2,
+        Action.STAY: 0.0,
         None: 0.0,  # Default if no action
     }
     action_data = getattr(params, "action", None)
@@ -221,7 +210,6 @@ DEFAULT_MODULES = {
 def extract_features_for_module(
     module: ModuleName,
     params: BrainParams,
-    satiety: float = 1.0,
 ) -> dict[str, float]:
     """
     Extract features for a given module using the appropriate extractor.
@@ -229,7 +217,6 @@ def extract_features_for_module(
     Args:
         module: Name of the module (e.g., ModuleName.PROPRIOCEPTION).
         params: BrainParams containing agent state.
-        satiety: Current satiety value.
 
     Returns
     -------
@@ -237,7 +224,7 @@ def extract_features_for_module(
     """
     extractor = MODULE_FEATURE_EXTRACTORS.get(module)
     if extractor:
-        features = extractor(params, satiety=satiety)
+        features = extractor(params)
         return {axis.value: value for axis, value in features.items()}
     return {axis.value: 0.0 for axis in RotationAxis}
 

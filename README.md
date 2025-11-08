@@ -5,19 +5,21 @@
 [![codecov](https://codecov.io/gh/SyntheticBrains/nematode/branch/main/graph/badge.svg)](https://codecov.io/gh/SyntheticBrains/nematode)
 
 <p align="center">
-  <img src="./docs/assets/images/demo.gif" alt="nematode simulation demo" />
+  <img src="./docs/assets/images/demo-dynamic.gif" alt="nematode simulation demo" />
 </p>
 
-This project simulates a simplified nematode (C. elegans) navigating a 2D grid maze to find food, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for the environment.
+This project simulates a simplified nematode (C. elegans) navigating dynamic foraging environments to find food while managing satiety, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for realistic foraging dynamics.
 
 ## 🧪 Features
 
+- ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
-- ✅ **Classical ML Alternatives**: MLP and Q-learning brain architectures
-- ✅ **Grid-World Environment**: 2D maze navigation with food-seeking behavior
+- ✅ **Classical ML Alternatives**: MLP, Q-learning, and spiking neural network brain architectures
+- ✅ **Static Maze Environment**: Traditional 2D grid navigation with single-goal seeking
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
-- ✅ **Interactive Workflows**: CLI scripts to run simulations
+- ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
+- ✅ **Interactive Workflows**: CLI scripts with flexible configuration
 - 🚧 **Expandable Framework**: Modular design for research and experimentation
 
 ## 🧠 Brain Architectures
@@ -82,27 +84,30 @@ cp .env.template .env
 **Command Line Examples:**
 
 ```bash
-# Quantum modular brain (CPU simulation)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_medium.yml --theme emoji
+# Dynamic foraging with quantum modular brain (recommended)
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
 
-# Quantum modular brain (IBM QPU)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --device qpu
+# Dynamic foraging with classical MLP brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
-# Classical MLP brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
+# Static maze with quantum modular brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_simple_medium.yml --theme emoji
 
 # Spiking neural network brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
+
+# Quantum hardware (IBM QPU) with dynamic foraging
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_dynamic_small.yml --theme emoji --device qpu
 
 # Many-worlds quantum simulation
-uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_medium.yml --theme emoji --manyworlds
+uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_simple_medium.yml --theme emoji --manyworlds
 ```
 
 **Docker GPU Examples:**
 
 ```bash
-# Run classical MLP brain with GPU acceleration
-docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_medium.yml --theme emoji
+# Run dynamic foraging with MLP brain and GPU acceleration
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
 # Interactive Docker shell for development
 docker-compose exec quantum-nematode bash
@@ -110,12 +115,19 @@ docker-compose exec quantum-nematode bash
 
 ## � How It Works
 
-1. **State Perception**: The nematode perceives its environment (distance to food, obstacles)
+### Dynamic Foraging Environment (Primary)
+
+1. **State Perception**: The nematode perceives its environment through a viewport (distance to nearest food, gradient information, satiety level)
 2. **Brain Processing**: The selected brain architecture processes the state
 3. **Action Selection**: Brain outputs action probabilities (forward, left, right, stay)
-4. **Environment Update**: Agent moves and receives reward signal
-5. **Learning**: Brain parameters are updated based on reward feedback
-6. **Repeat**: Process continues until food is found or maximum steps reached
+4. **Environment Update**: Agent moves, satiety decays, and receives reward signal
+5. **Food Collection**: When reaching food, satiety is restored and new food spawns
+6. **Learning**: Brain parameters are updated based on reward feedback
+7. **Repeat**: Process continues until all foods are collected, satiety reaches zero (starvation), or maximum steps reached
+
+### Static Maze Environment (Legacy)
+
+The traditional single-goal navigation follows a simpler loop without satiety management, terminating when the goal is reached or maximum steps are exceeded.
 
 ### Quantum Learning Process
 
@@ -204,18 +216,20 @@ This project serves as a platform for exploring:
 ### Upcoming Features
 
 - **Enhanced Brain Architectures**: More sophisticated quantum learning algorithms
-- **Improved Environments**: Multi-agent scenarios and dynamic obstacles
-- **Better Visualization**: Real-time learning analysis and performance tracking
+- **Extended Foraging Dynamics**: Temperature gradients, food quality variations, and social foraging
+- **Multi-Agent Scenarios**: Cooperative and competitive foraging behaviors
+- **Better Visualization**: Real-time learning analysis and 3D environment rendering
 - **Hardware Optimization**: Circuit compilation and quantum error mitigation
 - **Research Tools**: Advanced analysis and experimentation capabilities
 
 ### Research Applications
 
 This platform enables research in:
-- Quantum advantages in machine learning tasks
-- Bio-inspired quantum algorithms
-- Hybrid quantum-classical computation
-- Near-term quantum device applications
+- Quantum advantages in reinforcement learning and foraging tasks
+- Bio-inspired quantum algorithms for decision-making
+- Hybrid quantum-classical computation in realistic environments
+- Near-term quantum device applications (NISQ algorithms)
+- Comparative analysis of quantum vs classical learning in complex environments
 
 ## 🤝 Contributing
 
@@ -223,11 +237,12 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ### Areas We Need Help With
 
-- **Quantum Algorithm Development**: New quantum learning techniques
-- **Environment Extensions**: Multi-agent scenarios, dynamic obstacles  
-- **Visualization Tools**: Real-time learning analysis
-- **Documentation**: Tutorials and examples
-- **Testing**: Performance benchmarks and edge cases
+- **Quantum Algorithm Development**: New quantum learning techniques for foraging
+- **Foraging Environment Extensions**: Social behaviors, food quality, temperature gradients
+- **Multi-Agent Scenarios**: Cooperative and competitive foraging dynamics
+- **Visualization Tools**: Real-time learning analysis and environment rendering
+- **Documentation**: Tutorials and examples for dynamic environments
+- **Testing**: Performance benchmarks and foraging strategy analysis
 
 ## 📄 License
 

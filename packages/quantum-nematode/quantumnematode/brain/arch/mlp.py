@@ -119,7 +119,6 @@ class MLPBrain(ClassicalBrain):
             else None
         )
         self.loss_fn = nn.CrossEntropyLoss(reduction="none")
-        self.satiety = 1.0
 
         self.current_probabilities = None
 
