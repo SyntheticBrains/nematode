@@ -52,6 +52,7 @@ from quantumnematode.report.csv_export import (
     export_tracking_data_to_csv,
 )
 from quantumnematode.report.dtypes import (
+    EpisodeTrackingData,
     PerformanceMetrics,
     SimulationResult,
     TerminationReason,
@@ -69,7 +70,6 @@ from quantumnematode.report.plots import (
     plot_last_cumulative_rewards,
     plot_running_average_steps,
     plot_satiety_at_episode_end,
-    plot_satiety_progression_single_run,
     plot_steps_per_run,
     plot_success_rate_over_time,
     plot_termination_reasons_breakdown,
@@ -536,7 +536,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             total_runs_done += 1
 
-            tracking_data.data[run_num] = deepcopy(agent.brain.history_data)
+            tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
+
+            # Store episode tracking data for foraging environments
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                tracking_data.episode_data[run_num] = EpisodeTrackingData(
+                    satiety_history=satiety_history_this_run.copy()
+                    if satiety_history_this_run
+                    else [],
+                    foods_collected=foods_collected_this_run or 0,
+                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                )
 
             if track_per_run:
                 plot_tracking_data_by_latest_run(
@@ -942,7 +952,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
-def plot_results(  # noqa: C901, PLR0912
+def plot_results(  # noqa: C901
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
     max_steps: int,
@@ -1087,20 +1097,6 @@ def plot_results(  # noqa: C901, PLR0912
                 foods_collected_list,
                 foraging_steps,
             )
-
-        # Plot: Satiety Progression for the first and last runs
-        for result in [foraging_results[0], foraging_results[-1]]:
-            if result.satiety_history:
-                max_satiety_for_run = (
-                    max(result.satiety_history) if result.satiety_history else 100.0
-                )
-                plot_satiety_progression_single_run(
-                    file_prefix,
-                    plot_dir,
-                    result.run,
-                    result.satiety_history,
-                    max_satiety_for_run,
-                )
 
 
 if __name__ == "__main__":

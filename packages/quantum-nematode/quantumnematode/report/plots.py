@@ -256,18 +256,18 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
         f" [{brain_type.value} {qubits}Q]" if isinstance(qubits, int) else f" [{brain_type.value}]"
     )
 
-    runs = sorted(tracking_data.data.keys())
+    runs = sorted(tracking_data.brain_data.keys())
     if not runs:
         logger.warning("No runs found in tracking data. Skipping plots.")
         return
-    first_run_data = tracking_data.data[runs[0]]
+    first_run_data = tracking_data.brain_data[runs[0]]
     keys = list(first_run_data.__dict__.keys())
 
     for key in keys:
         # Gather the last value for this key in each run
         last_values = []
         for run in runs:
-            v = getattr(tracking_data.data[run], key, None)
+            v = getattr(tracking_data.brain_data[run], key, None)
             if isinstance(v, list) and v:
                 last_values.append(v[-1])
             else:
@@ -336,7 +336,7 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
             logger.warning(f"Unrecognized data type for {key}. Skipping plot.")
 
 
-def plot_tracking_data_by_latest_run(  # pragma: no cover
+def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0915
     tracking_data: TrackingData,
     timestamp: str,
     run: int,
@@ -351,7 +351,7 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover
     """
     run_dir = Path.cwd() / "exports" / timestamp / f"run_{run}" / "plots"
     run_dir.mkdir(parents=True, exist_ok=True)
-    current_run_data = tracking_data.data.get(run, None)
+    current_run_data = tracking_data.brain_data.get(run, None)
 
     if current_run_data is None:
         logger.warning(f"No tracking data available for run {run}. Skipping plots.")
@@ -404,6 +404,81 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover
         plt.tight_layout()
         plt.savefig(run_dir / f"{key}.png")
         plt.close()
+
+    # Plot episode tracking data (foraging environments)
+    episode_data = tracking_data.episode_data.get(run, None)
+    if episode_data is not None:
+        # Plot satiety progression
+        if episode_data.satiety_history:
+            satiety_history = episode_data.satiety_history
+            max_satiety = max(satiety_history) if satiety_history else 100.0
+            steps = list(range(len(satiety_history)))
+
+            plt.figure(figsize=(14, 6))
+            plt.plot(steps, satiety_history, linewidth=2, label="Satiety Level", color="blue")
+            plt.axhline(
+                y=0,
+                color="red",
+                linestyle="--",
+                linewidth=2,
+                label="Starvation Threshold",
+            )
+            plt.axhline(
+                y=max_satiety * 0.2,
+                color="orange",
+                linestyle=":",
+                linewidth=1.5,
+                label="Low Satiety (20%)",
+            )
+            plt.axhline(
+                y=max_satiety,
+                color="green",
+                linestyle=":",
+                linewidth=1.5,
+                alpha=0.5,
+                label=f"Max Satiety ({max_satiety:.0f})",
+            )
+            plt.fill_between(steps, 0, satiety_history, alpha=0.2, color="blue")
+            plt.title(f"Satiety Progression (run {run})")
+            plt.xlabel("Step")
+            plt.ylabel("Satiety Level")
+            plt.legend()
+            plt.grid(alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(run_dir / "satiety_progression.png")
+            plt.close()
+
+        # Plot distance efficiencies for this run
+        if episode_data.distance_efficiencies:
+            dist_effs = episode_data.distance_efficiencies
+            food_numbers = list(range(1, len(dist_effs) + 1))
+
+            plt.figure(figsize=(10, 6))
+            plt.bar(food_numbers, dist_effs, alpha=0.7, color="skyblue", edgecolor="black")
+            mean_eff = float(np.mean(dist_effs))
+            plt.axhline(
+                y=mean_eff,
+                color="r",
+                linestyle="--",
+                linewidth=2,
+                label=f"Average: {mean_eff:.3f}",
+            )
+            plt.axhline(
+                y=1.0,
+                color="gray",
+                linestyle=":",
+                linewidth=1,
+                alpha=0.5,
+                label="Optimal (1.0)",
+            )
+            plt.title(f"Distance Efficiency per Food (run {run})")
+            plt.xlabel("Food Number")
+            plt.ylabel("Distance Efficiency")
+            plt.legend()
+            plt.grid(axis="y", alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(run_dir / "distance_efficiencies.png")
+            plt.close()
 
 
 # Dynamic Foraging Environment Specific Plots

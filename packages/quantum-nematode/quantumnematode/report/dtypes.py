@@ -84,18 +84,42 @@ class SimulationResult(BaseModel):
 TrackingRunIndex = int
 
 
-class TrackingData(BaseModel):
-    """Data structure for tracking agent's brain parameters across runs.
+class EpisodeTrackingData(BaseModel):
+    """Per-episode tracking data for foraging environments.
 
     Attributes
     ----------
-    data : dict[TrackingRunIndex, BrainHistoryData]
-        A dictionary mapping run indices to their corresponding brain history data.
+    satiety_history : list[float]
+        Step-by-step satiety levels throughout the episode.
+    foods_collected : int
+        Number of foods collected in this episode.
+    distance_efficiencies : list[float]
+        Distance efficiency for each food collected.
     """
 
-    data: dict[TrackingRunIndex, BrainHistoryData] = Field(
+    satiety_history: list[float] = Field(default_factory=list)
+    foods_collected: int = 0
+    distance_efficiencies: list[float] = Field(default_factory=list)
+
+
+class TrackingData(BaseModel):
+    """Data structure for tracking agent's brain parameters and episode data across runs.
+
+    Attributes
+    ----------
+    brain_data : dict[TrackingRunIndex, BrainHistoryData]
+        A dictionary mapping run indices to their corresponding brain history data.
+    episode_data : dict[TrackingRunIndex, EpisodeTrackingData]
+        A dictionary mapping run indices to episode tracking data (foraging environments).
+    """
+
+    brain_data: dict[TrackingRunIndex, BrainHistoryData] = Field(
         default_factory=dict,
-        description="Tracking data for each run, indexed by run number",
+        description="Brain tracking data for each run, indexed by run number",
+    )
+    episode_data: dict[TrackingRunIndex, EpisodeTrackingData] = Field(
+        default_factory=dict,
+        description="Episode tracking data for each run, indexed by run number",
     )
 
 
