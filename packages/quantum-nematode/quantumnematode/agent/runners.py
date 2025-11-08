@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 import numpy as np
 
 from quantumnematode.brain.arch import ClassicalBrain
-from quantumnematode.env import Direction, DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import Direction, DynamicForagingEnvironment, StaticEnvironment
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import TerminationReason
 
@@ -355,8 +355,8 @@ class StandardEpisodeRunner(EpisodeRunner):
                         termination_reason=TerminationReason.GOAL_REACHED,
                     )
 
-            # Log distance to the goal (only for MazeEnvironment)
-            if isinstance(agent.env, MazeEnvironment) and agent.env.goal is not None:
+            # Log distance to the goal (only for StaticEnvironment)
+            if isinstance(agent.env, StaticEnvironment) and agent.env.goal is not None:
                 distance_to_goal = abs(agent.env.agent_pos[0] - agent.env.goal[0]) + abs(
                     agent.env.agent_pos[1] - agent.env.goal[1],
                 )

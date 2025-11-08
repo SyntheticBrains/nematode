@@ -29,7 +29,7 @@ Quantum Nematode is a research platform that simulates a simplified nematode (C.
 - **Workspace Structure**: UV workspace with packages/quantum-nematode as the core package
 - **Configuration-Driven**: YAML-based simulation configurations with environment-specific settings
 - **Quantum-Classical Hybrid**: Support for both quantum circuits and classical ML approaches
-- **Environment Abstraction**: Dual environment system (DynamicForagingEnvironment for multi-food foraging and MazeEnvironment for single-food)
+- **Environment Abstraction**: Dual environment system (DynamicForagingEnvironment for multi-food foraging and StaticEnvironment for single-food)
 - **Executor Pattern**: Different execution backends (CPU, GPU, QPU)
 - **Tracking and Metrics**: Comprehensive per-run and session-level tracking with EpisodeTracker and TrackingData
 - **Data Export Pipeline**: Automated CSV exports and matplotlib plotting for foraging metrics
@@ -50,7 +50,7 @@ Quantum Nematode is a research platform that simulates a simplified nematode (C.
 - **Quantum Computing**: Variational quantum circuits, parameter-shift rule optimization, quantum feature encoding, entanglement for multi-sensory integration
 - **Reinforcement Learning**: Policy gradients (REINFORCE), Deep Q-Networks (DQN), experience replay, reward shaping for complex behaviors
 - **Foraging Environments**: Dynamic multi-food foraging with satiety decay, distance efficiency tracking, viewport-based perception, gradient-based navigation
-- **Grid World Environments**: 2D environments with realistic foraging dynamics (primary) and legacy maze navigation (secondary)
+- **Grid World Environments**: 2D environments with realistic foraging dynamics (primary) and legacy static environment navigation (secondary)
 - **Quantum-Classical Hybrid Learning**: Combining quantum circuits with classical optimization techniques for sequential decision-making
 - **Biologically Inspired Computing**: Spiking neural networks with LIF neurons and STDP learning
 

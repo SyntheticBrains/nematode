@@ -6,7 +6,7 @@ import pytest
 from quantumnematode.agent import SatietyConfig
 from quantumnematode.agent.food_handler import FoodConsumptionHandler
 from quantumnematode.agent.satiety import SatietyManager
-from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
 
 
 class TestFoodConsumptionHandlerInitialization:
@@ -14,7 +14,7 @@ class TestFoodConsumptionHandlerInitialization:
 
     def test_initialize_with_static_environment(self):
         """Test initialization with a static maze environment."""
-        env = MazeEnvironment(grid_size=10)
+        env = StaticEnvironment(grid_size=10)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
 
@@ -36,7 +36,7 @@ class TestFoodConsumptionHandlerInitialization:
 
     def test_initialize_with_custom_satiety_gain(self):
         """Test initialization with custom satiety gain fraction."""
-        env = MazeEnvironment(grid_size=10)
+        env = StaticEnvironment(grid_size=10)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(
             env,
@@ -52,7 +52,7 @@ class TestStepTracking:
 
     def test_track_step_increments_counter(self):
         """Test that track_step increments the step counter."""
-        env = MazeEnvironment(grid_size=10)
+        env = StaticEnvironment(grid_size=10)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
 
@@ -66,7 +66,7 @@ class TestStepTracking:
 
     def test_track_multiple_steps(self):
         """Test tracking multiple steps."""
-        env = MazeEnvironment(grid_size=10)
+        env = StaticEnvironment(grid_size=10)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
 
@@ -81,7 +81,7 @@ class TestFoodConsumptionStaticEnvironment:
 
     def test_no_food_at_position(self):
         """Test when agent is not at food position."""
-        env = MagicMock(spec=MazeEnvironment)
+        env = MagicMock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         satiety_manager = SatietyManager(SatietyConfig(initial_satiety=100.0))
         handler = FoodConsumptionHandler(env, satiety_manager)
@@ -95,7 +95,7 @@ class TestFoodConsumptionStaticEnvironment:
 
     def test_consume_food_static_environment(self):
         """Test consuming food in static environment."""
-        env = MagicMock(spec=MazeEnvironment)
+        env = MagicMock(spec=StaticEnvironment)
         env.reached_goal.return_value = True
         satiety_manager = SatietyManager(SatietyConfig(initial_satiety=100.0))
         satiety_manager._current_satiety = 50.0
@@ -252,7 +252,7 @@ class TestSatietyRestoration:
 
     def test_satiety_restored_to_max(self):
         """Test that satiety is clamped at max when restored."""
-        env = MagicMock(spec=MazeEnvironment)
+        env = MagicMock(spec=StaticEnvironment)
         env.reached_goal.return_value = True
         satiety_manager = SatietyManager(SatietyConfig(initial_satiety=100.0))
         satiety_manager._current_satiety = 95.0
@@ -269,7 +269,7 @@ class TestSatietyRestoration:
 
     def test_satiety_restored_from_low(self):
         """Test satiety restoration from very low level."""
-        env = MagicMock(spec=MazeEnvironment)
+        env = MagicMock(spec=StaticEnvironment)
         env.reached_goal.return_value = True
         satiety_manager = SatietyManager(SatietyConfig(initial_satiety=100.0))
         satiety_manager._current_satiety = 10.0
@@ -290,7 +290,7 @@ class TestReset:
 
     def test_reset_clears_step_counter(self):
         """Test that reset clears the step counter."""
-        env = MazeEnvironment(grid_size=10)
+        env = StaticEnvironment(grid_size=10)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
         handler._steps_since_last_food = 42
@@ -314,7 +314,7 @@ class TestReset:
 
     def test_reset_static_environment(self):
         """Test reset with static environment."""
-        env = MazeEnvironment(grid_size=10)
+        env = StaticEnvironment(grid_size=10)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
         handler._steps_since_last_food = 10

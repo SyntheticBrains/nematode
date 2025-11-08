@@ -13,7 +13,7 @@ class TerminationReason(str, Enum):
     Attributes
     ----------
     GOAL_REACHED : str
-        Agent reached the goal (MazeEnvironment).
+        Agent reached the goal (StaticEnvironment).
     COMPLETED_ALL_FOOD : str
         Agent collected all available food (DynamicForagingEnvironment - not yet implemented).
     STARVED : str
@@ -53,7 +53,7 @@ class SimulationResult(BaseModel):
         Whether the run was successful (goal_reached or completed_all_food).
     efficiency_score : float | None
         The efficiency score of the simulation, calculated as the offset
-        from the perfect travel to the goal (MazeEnvironment only).
+        from the perfect travel to the goal (StaticEnvironment only).
     foods_collected : int | None
         Number of foods collected (DynamicForagingEnvironment only).
     foods_available : int | None

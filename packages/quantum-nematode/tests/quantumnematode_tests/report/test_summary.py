@@ -1,6 +1,6 @@
 import builtins
 
-from quantumnematode.env import MazeEnvironment
+from quantumnematode.env import StaticEnvironment
 from quantumnematode.report import summary as summary_mod
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TerminationReason
 
@@ -87,7 +87,7 @@ def test_summary_print_and_logger(monkeypatch):
         num_runs=num_runs,
         max_steps=max_steps,
         all_results=results,
-        env_type=MazeEnvironment(),
+        env_type=StaticEnvironment(),
     )
     # Check print output
     assert any("Average steps per run:" in str(x) for x in printed)
@@ -125,7 +125,7 @@ def test_summary_logger_disabled(monkeypatch):
         num_runs=num_runs,
         max_steps=max_steps,
         all_results=results,
-        env_type=MazeEnvironment(),
+        env_type=StaticEnvironment(),
     )
     # Logger should not be called
     assert dummy_logger.infos == []

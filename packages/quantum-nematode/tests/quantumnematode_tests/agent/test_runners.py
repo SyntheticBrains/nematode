@@ -8,7 +8,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
-from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
 from quantumnematode.report.dtypes import TerminationReason
 
 
@@ -29,7 +29,7 @@ class TestStandardEpisodeRunnerIntegration:
         # Create real components
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = MazeEnvironment(grid_size=5)
+        env = StaticEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
         # Store initial position before episode
@@ -80,7 +80,7 @@ class TestStandardEpisodeRunnerIntegration:
         """Test that running episode updates agent state correctly."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = MazeEnvironment(grid_size=5)
+        env = StaticEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
         initial_steps = agent._metrics_tracker.total_steps
@@ -98,7 +98,7 @@ class TestStandardEpisodeRunnerIntegration:
         """Test that agent correctly delegates to StandardEpisodeRunner."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = MazeEnvironment(grid_size=5)
+        env = StaticEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
         # Verify runner was created
@@ -130,7 +130,7 @@ class TestManyworldsEpisodeRunnerIntegration:
         """Test that agent creates manyworlds runner correctly."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = MazeEnvironment(grid_size=5)
+        env = StaticEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
         # Verify runner was created
@@ -141,7 +141,7 @@ class TestManyworldsEpisodeRunnerIntegration:
         """Test that manyworlds runner accepts config parameter."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = MazeEnvironment(grid_size=5)
+        env = StaticEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
         # Create custom config
@@ -214,7 +214,7 @@ class TestRunnerComponentIntegration:
         """Test that runners can access agent helper methods."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = MazeEnvironment(grid_size=5)
+        env = StaticEnvironment(grid_size=5)
         agent = QuantumNematodeAgent(brain=brain, env=env)
 
         # Verify helper methods exist and are callable
