@@ -137,7 +137,7 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_
 uv run ./scripts/run_simulation.py --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
 ```
 
-#### Testing with Static Environment
+##### Testing with Static Environment
 
 ```bash
 uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_simple_medium.yml --theme emoji
