@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.report.dtypes import (
+    EpisodeTrackingData,
     PerformanceMetrics,
     SimulationResult,
     TerminationReason,
@@ -104,26 +105,90 @@ class TestSimulationResult:
         assert data["foods_collected"] == 5
 
 
+class TestEpisodeTrackingData:
+    """Test EpisodeTrackingData data model."""
+
+    def test_create_episode_tracking_data(self):
+        """Test creating EpisodeTrackingData with all fields."""
+        episode_data = EpisodeTrackingData(
+            satiety_history=[100.0, 95.0, 90.0, 85.0],
+            foods_collected=2,
+            distance_efficiencies=[0.95, 0.88],
+        )
+
+        assert len(episode_data.satiety_history) == 4
+        assert episode_data.satiety_history[0] == 100.0
+        assert episode_data.foods_collected == 2
+        assert len(episode_data.distance_efficiencies) == 2
+        assert episode_data.distance_efficiencies[0] == 0.95
+
+    def test_create_empty_episode_tracking_data(self):
+        """Test creating EpisodeTrackingData with default values."""
+        episode_data = EpisodeTrackingData()
+
+        assert episode_data.satiety_history == []
+        assert episode_data.foods_collected == 0
+        assert episode_data.distance_efficiencies == []
+
+    def test_episode_tracking_data_partial(self):
+        """Test creating EpisodeTrackingData with only some fields."""
+        episode_data = EpisodeTrackingData(foods_collected=5)
+
+        assert episode_data.foods_collected == 5
+        assert episode_data.satiety_history == []
+        assert episode_data.distance_efficiencies == []
+
+    def test_episode_tracking_data_serialization(self):
+        """Test serializing EpisodeTrackingData to dict."""
+        episode_data = EpisodeTrackingData(
+            satiety_history=[100.0, 90.0],
+            foods_collected=3,
+            distance_efficiencies=[0.9, 0.85, 0.92],
+        )
+
+        data = episode_data.model_dump()
+
+        assert isinstance(data, dict)
+        assert data["satiety_history"] == [100.0, 90.0]
+        assert data["foods_collected"] == 3
+        assert data["distance_efficiencies"] == [0.9, 0.85, 0.92]
+
+    def test_episode_tracking_data_modification(self):
+        """Test modifying EpisodeTrackingData after creation."""
+        episode_data = EpisodeTrackingData()
+
+        episode_data.satiety_history.append(100.0)
+        episode_data.satiety_history.append(95.0)
+        episode_data.foods_collected = 1
+        episode_data.distance_efficiencies.append(0.88)
+
+        assert len(episode_data.satiety_history) == 2
+        assert episode_data.foods_collected == 1
+        assert len(episode_data.distance_efficiencies) == 1
+
+
 class TestTrackingData:
     """Test TrackingData data model."""
 
     def test_create_empty_tracking_data(self):
-        """Test creating TrackingData with default empty dict."""
+        """Test creating TrackingData with default empty dicts."""
         tracking = TrackingData()
 
-        assert isinstance(tracking.data, dict)
-        assert len(tracking.data) == 0
+        assert isinstance(tracking.brain_data, dict)
+        assert len(tracking.brain_data) == 0
+        assert isinstance(tracking.episode_data, dict)
+        assert len(tracking.episode_data) == 0
 
     def test_create_tracking_data_with_data(self):
         """Test creating TrackingData with initial data."""
         brain_history = BrainHistoryData()
         brain_history.rewards.append(10.0)
 
-        tracking = TrackingData(data={0: brain_history})
+        tracking = TrackingData(brain_data={0: brain_history})
 
-        assert len(tracking.data) == 1
-        assert 0 in tracking.data
-        assert tracking.data[0].rewards == [10.0]
+        assert len(tracking.brain_data) == 1
+        assert 0 in tracking.brain_data
+        assert tracking.brain_data[0].rewards == [10.0]
 
     def test_add_data_to_tracking(self):
         """Test adding data to TrackingData after creation."""
@@ -135,30 +200,119 @@ class TestTrackingData:
         brain_history2 = BrainHistoryData()
         brain_history2.rewards.append(15.0)
 
-        tracking.data[0] = brain_history1
-        tracking.data[1] = brain_history2
+        tracking.brain_data[0] = brain_history1
+        tracking.brain_data[1] = brain_history2
 
-        assert len(tracking.data) == 2
-        assert tracking.data[0].rewards == [10.0]
-        assert tracking.data[1].rewards == [15.0]
+        assert len(tracking.brain_data) == 2
+        assert tracking.brain_data[0].rewards == [10.0]
+        assert tracking.brain_data[1].rewards == [15.0]
 
     def test_tracking_data_type_annotation(self):
         """Test that tracking data properly validates types."""
         # This should work - valid BrainHistoryData
-        tracking = TrackingData(data={0: BrainHistoryData()})
-        assert len(tracking.data) == 1
+        tracking = TrackingData(brain_data={0: BrainHistoryData()})
+        assert len(tracking.brain_data) == 1
 
     def test_tracking_data_serialization(self):
         """Test that TrackingData can be serialized."""
         brain_history = BrainHistoryData()
         brain_history.rewards.append(10.0)
 
-        tracking = TrackingData(data={0: brain_history})
+        tracking = TrackingData(brain_data={0: brain_history})
         data = tracking.model_dump()
 
         assert isinstance(data, dict)
-        assert "data" in data
-        assert 0 in data["data"]
+        assert "brain_data" in data
+        assert "episode_data" in data
+        assert 0 in data["brain_data"]
+
+    def test_tracking_data_with_episode_data(self):
+        """Test creating TrackingData with both brain and episode data."""
+        brain_history = BrainHistoryData()
+        brain_history.rewards.append(10.0)
+
+        episode_data = EpisodeTrackingData(
+            satiety_history=[100.0, 95.0],
+            foods_collected=1,
+            distance_efficiencies=[0.9],
+        )
+
+        tracking = TrackingData(
+            brain_data={0: brain_history},
+            episode_data={0: episode_data},
+        )
+
+        assert len(tracking.brain_data) == 1
+        assert len(tracking.episode_data) == 1
+        assert tracking.brain_data[0].rewards == [10.0]
+        assert tracking.episode_data[0].foods_collected == 1
+        assert len(tracking.episode_data[0].satiety_history) == 2
+
+    def test_add_episode_data_to_tracking(self):
+        """Test adding episode data to TrackingData after creation."""
+        tracking = TrackingData()
+
+        # Add brain data for run 0
+        brain_history = BrainHistoryData()
+        brain_history.rewards.append(10.0)
+        tracking.brain_data[0] = brain_history
+
+        # Add episode data for run 0
+        episode_data = EpisodeTrackingData(
+            satiety_history=[100.0, 90.0, 80.0],
+            foods_collected=2,
+            distance_efficiencies=[0.95, 0.88],
+        )
+        tracking.episode_data[0] = episode_data
+
+        assert len(tracking.brain_data) == 1
+        assert len(tracking.episode_data) == 1
+        assert tracking.episode_data[0].foods_collected == 2
+        assert len(tracking.episode_data[0].distance_efficiencies) == 2
+
+    def test_tracking_data_multiple_runs_with_episodes(self):
+        """Test TrackingData with multiple runs including episode data."""
+        tracking = TrackingData()
+
+        # Run 0
+        brain_history_0 = BrainHistoryData()
+        brain_history_0.rewards.append(10.0)
+        episode_data_0 = EpisodeTrackingData(foods_collected=3)
+
+        tracking.brain_data[0] = brain_history_0
+        tracking.episode_data[0] = episode_data_0
+
+        # Run 1
+        brain_history_1 = BrainHistoryData()
+        brain_history_1.rewards.append(15.0)
+        episode_data_1 = EpisodeTrackingData(foods_collected=5)
+
+        tracking.brain_data[1] = brain_history_1
+        tracking.episode_data[1] = episode_data_1
+
+        assert len(tracking.brain_data) == 2
+        assert len(tracking.episode_data) == 2
+        assert tracking.episode_data[0].foods_collected == 3
+        assert tracking.episode_data[1].foods_collected == 5
+
+    def test_tracking_data_partial_episode_data(self):
+        """Test TrackingData where only some runs have episode data (mixed environments)."""
+        tracking = TrackingData()
+
+        # Run 0 - both brain and episode data (foraging environment)
+        brain_history_0 = BrainHistoryData()
+        episode_data_0 = EpisodeTrackingData(foods_collected=2)
+        tracking.brain_data[0] = brain_history_0
+        tracking.episode_data[0] = episode_data_0
+
+        # Run 1 - only brain data (maze environment)
+        brain_history_1 = BrainHistoryData()
+        tracking.brain_data[1] = brain_history_1
+
+        assert len(tracking.brain_data) == 2
+        assert len(tracking.episode_data) == 1
+        assert 0 in tracking.episode_data
+        assert 1 not in tracking.episode_data
 
 
 class TestPerformanceMetrics:
