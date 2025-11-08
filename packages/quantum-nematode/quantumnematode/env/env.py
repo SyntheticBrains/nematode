@@ -1,7 +1,8 @@
 """
-Maze environment for the Nematode agent.
+Maze environments for the Nematode agent.
 
-This environment simulates a simple maze where the agent navigates to reach a goal position.
+These environments simulate mazes where the agent navigates to reach
+either a single (StaticEnvironment) or multiple (DynamicForagingEnvironment) food sources.
 The agent can move in four directions: up, down, left, or right.
 The agent must avoid colliding with itself.
 The environment provides methods to get the current state, move the agent,
@@ -420,7 +421,7 @@ class BaseEnvironment(ABC):
         """
 
 
-class MazeEnvironment(BaseEnvironment):
+class StaticEnvironment(BaseEnvironment):
     """
     A simple maze environment for the Nematode agent.
 
@@ -555,16 +556,16 @@ class MazeEnvironment(BaseEnvironment):
             else:
                 console.print()
 
-    def copy(self) -> "MazeEnvironment":
+    def copy(self) -> "StaticEnvironment":
         """
-        Create a deep copy of the MazeEnvironment instance.
+        Create a deep copy of the StaticEnvironment instance.
 
         Returns
         -------
-        MazeEnvironment
-            A new instance of MazeEnvironment with the same state.
+        StaticEnvironment
+            A new instance of StaticEnvironment with the same state.
         """
-        new_env = MazeEnvironment(
+        new_env = StaticEnvironment(
             grid_size=self.grid_size,
             start_pos=(self.agent_pos[0], self.agent_pos[1])
             if self.agent_pos is not None
@@ -918,4 +919,4 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return new_env
 
 
-type EnvironmentType = MazeEnvironment | DynamicForagingEnvironment
+type EnvironmentType = StaticEnvironment | DynamicForagingEnvironment

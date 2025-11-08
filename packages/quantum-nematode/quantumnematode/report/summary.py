@@ -1,6 +1,6 @@
 """Reporting module for Quantum Nematode simulation results."""
 
-from quantumnematode.env import DynamicForagingEnvironment, EnvironmentType, MazeEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, EnvironmentType, StaticEnvironment
 from quantumnematode.logging_config import (
     logger,
 )
@@ -38,7 +38,7 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     average_efficiency_score = None
     improvement_rate = None
 
-    if isinstance(env_type, MazeEnvironment):
+    if isinstance(env_type, StaticEnvironment):
         success_rate = sum(1 for result in all_results if result.steps < max_steps) / num_runs * 100
 
         # Calculate average efficiency score for maze environment, filtering out None values

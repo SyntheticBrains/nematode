@@ -30,7 +30,7 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
-from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, StaticEnvironment
 from quantumnematode.env.theme import Theme
 from quantumnematode.logging_config import (
     logger,
@@ -333,7 +333,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     else:
         logger.info("Using static maze environment")
         static_config = environment_config.static or StaticEnvironmentConfig()
-        env = MazeEnvironment(
+        env = StaticEnvironment(
             grid_size=static_config.grid_size,
             max_body_length=body_length,
             theme=theme,
@@ -399,7 +399,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 full_render = agent.env.render_full()
                 for line in full_render:
                     logger.info(line)
-            elif isinstance(agent.env, MazeEnvironment):
+            elif isinstance(agent.env, StaticEnvironment):
                 logger.info(f"Goal position: {agent.env.goal}")
 
                 # Log full environment render
@@ -412,7 +412,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             if isinstance(agent.env, DynamicForagingEnvironment):
                 dist = agent.env.get_nearest_food_distance()
                 initial_distance = dist if dist is not None else 0
-            elif isinstance(agent.env, MazeEnvironment):
+            elif isinstance(agent.env, StaticEnvironment):
                 initial_distance = abs(agent.env.agent_pos[0] - agent.env.goal[0]) + abs(
                     agent.env.agent_pos[1] - agent.env.goal[1],
                 )
@@ -440,7 +440,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         if result.foods_available is not None
                     )
                     render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
-                case MazeEnvironment():
+                case StaticEnvironment():
                     wins = agent._metrics_tracker.success_count  # noqa: SLF001
                     render_text += f"Wins:\t\t{wins}/{runs}\n"
 
@@ -486,7 +486,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             average_distance_efficiency = None
             satiety_history_this_run = None
             match agent.env:
-                case MazeEnvironment():
+                case StaticEnvironment():
                     # Calculate efficiency score for the run
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():

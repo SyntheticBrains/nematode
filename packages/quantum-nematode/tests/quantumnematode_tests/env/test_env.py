@@ -6,18 +6,18 @@ from quantumnematode.brain.actions import Action
 from quantumnematode.env import (
     Direction,
     DynamicForagingEnvironment,
-    MazeEnvironment,
+    StaticEnvironment,
 )
 from quantumnematode.env.theme import Theme
 
 
-class TestMazeEnvironment:
-    """Test cases for MazeEnvironment (backward compatibility)."""
+class TestStaticEnvironment:
+    """Test cases for StaticEnvironment (backward compatibility)."""
 
     @pytest.fixture
     def maze_env(self):
         """Create a test maze environment."""
-        return MazeEnvironment(
+        return StaticEnvironment(
             grid_size=10,
             start_pos=(1, 1),
             food_pos=(8, 8),

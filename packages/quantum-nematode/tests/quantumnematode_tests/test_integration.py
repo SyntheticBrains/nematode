@@ -8,7 +8,7 @@ from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.modular import ModularBrain
-from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
 
 
 class TestPresetConfigurations:
@@ -290,12 +290,12 @@ class TestDynamicEnvironmentWithBrain:
 
 
 class TestBackwardCompatibility:
-    """Test backward compatibility with existing MazeEnvironment."""
+    """Test backward compatibility with existing StaticEnvironment."""
 
     @pytest.fixture
     def maze_env(self):
         """Create traditional maze environment."""
-        return MazeEnvironment(
+        return StaticEnvironment(
             grid_size=15,
             start_pos=(2, 2),
             food_pos=(12, 12),
@@ -322,13 +322,13 @@ class TestBackwardCompatibility:
         )
 
     def test_agent_with_maze_environment(self, maze_env, modular_brain):
-        """Test agent works with traditional MazeEnvironment."""
+        """Test agent works with traditional StaticEnvironment."""
         agent = QuantumNematodeAgent(
             brain=modular_brain,
             env=maze_env,
         )
 
-        # Agent has satiety manager even with MazeEnvironment (defaults to 200.0)
+        # Agent has satiety manager even with StaticEnvironment (defaults to 200.0)
         assert hasattr(agent, "_satiety_manager")
         assert agent.current_satiety == 200.0
-        assert isinstance(agent.env, MazeEnvironment)
+        assert isinstance(agent.env, StaticEnvironment)

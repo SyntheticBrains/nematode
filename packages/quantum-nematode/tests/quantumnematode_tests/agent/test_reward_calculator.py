@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from quantumnematode.agent import RewardConfig
 from quantumnematode.agent.reward_calculator import RewardCalculator
-from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
 
 
 @pytest.fixture
@@ -30,12 +30,12 @@ class TestRewardCalculatorInitialization:
         assert calculator.config is default_config
 
 
-class TestMazeEnvironmentRewards:
+class TestStaticEnvironmentRewards:
     """Test reward calculation for maze environments."""
 
     def test_maze_distance_reward_moving_closer(self, default_config):
         """Test reward when agent moves closer to goal."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [2, 3]
         env.goal = [5, 5]
@@ -54,7 +54,7 @@ class TestMazeEnvironmentRewards:
 
     def test_maze_distance_reward_first_step(self, default_config):
         """Test reward on first step (no previous position)."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [1, 1]
         env.goal = [5, 5]
@@ -130,7 +130,7 @@ class TestAntiDitheringPenalty:
 
     def test_anti_dithering_penalty_applied(self, default_config):
         """Test penalty when agent oscillates back to previous position."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [1, 1]
         env.goal = [5, 5]
@@ -149,7 +149,7 @@ class TestAntiDitheringPenalty:
 
     def test_no_anti_dithering_penalty_normal_movement(self, default_config):
         """Test no penalty for normal movement."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [3, 3]
         env.goal = [5, 5]
@@ -171,7 +171,7 @@ class TestStuckPositionPenalty:
 
     def test_stuck_position_penalty_applied(self, default_config):
         """Test penalty when agent is stuck."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.goal = [5, 5]
@@ -187,7 +187,7 @@ class TestStuckPositionPenalty:
 
     def test_no_stuck_penalty_below_threshold(self, default_config):
         """Test no penalty when below stuck threshold."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.goal = [5, 5]
@@ -202,7 +202,7 @@ class TestStuckPositionPenalty:
 
     def test_stuck_penalty_capped_at_10(self, default_config):
         """Test stuck penalty is capped at 10 extra steps."""
-        env = Mock(spec=MazeEnvironment)
+        env = Mock(spec=StaticEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [2, 2]
         env.goal = [5, 5]

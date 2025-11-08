@@ -15,7 +15,7 @@ from quantumnematode.env import (
     BaseEnvironment,
     DynamicForagingEnvironment,
     EnvironmentType,
-    MazeEnvironment,
+    StaticEnvironment,
 )
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
@@ -126,7 +126,7 @@ class QuantumNematodeAgent:
         brain : Brain
             The brain architecture used by the agent.
         env : EnvironmentType | None
-            The environment to use. If None, creates a default MazeEnvironment.
+            The environment to use. If None, creates a default StaticEnvironment.
         maze_grid_size : int, optional
             Size of the grid environment, by default 5 (only used if env is None).
         max_body_length : int, optional
@@ -142,7 +142,7 @@ class QuantumNematodeAgent:
         self.satiety_config = satiety_config or SatietyConfig()
 
         if env is None:
-            self.env = MazeEnvironment(
+            self.env = StaticEnvironment(
                 grid_size=maze_grid_size,
                 max_body_length=max_body_length,
                 theme=theme,
@@ -384,7 +384,7 @@ class QuantumNematodeAgent:
         print("Run:\n----")  # noqa: T201
         print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
         match self.env:
-            case MazeEnvironment():
+            case StaticEnvironment():
                 pass
             case DynamicForagingEnvironment():
                 print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
@@ -404,7 +404,7 @@ class QuantumNematodeAgent:
         """
         Calculate reward based on the agent's movement toward the goal.
 
-        Handles both MazeEnvironment (single goal) and DynamicForagingEnvironment (multiple foods).
+        Handles both StaticEnvironment (single goal) and DynamicForagingEnvironment (multiple foods)
 
         Returns
         -------
@@ -444,7 +444,7 @@ class QuantumNematodeAgent:
                 rich_style_config=self.env.rich_style_config,
             )
         else:
-            self.env = MazeEnvironment(
+            self.env = StaticEnvironment(
                 grid_size=self.env.grid_size,
                 max_body_length=self.max_body_length,
                 theme=self.env.theme,

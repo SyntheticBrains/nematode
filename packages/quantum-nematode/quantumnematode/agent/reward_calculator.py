@@ -8,14 +8,14 @@ from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.agent import RewardConfig
-    from quantumnematode.env import BaseEnvironment, DynamicForagingEnvironment, MazeEnvironment
+    from quantumnematode.env import BaseEnvironment, DynamicForagingEnvironment, StaticEnvironment
 
 
 class RewardCalculator:
     """Calculates rewards based on agent movement and environment state.
 
     The reward calculator handles reward computation for both single-goal
-    environments (MazeEnvironment) and multi-food environments (DynamicForagingEnvironment).
+    environments (StaticEnvironment) and multi-food environments (DynamicForagingEnvironment).
     It considers distance to goal/food, exploration, anti-dithering, and various penalties.
 
     Parameters
@@ -49,7 +49,7 @@ class RewardCalculator:
     ) -> float:
         """Calculate reward based on the agent's movement toward the goal.
 
-        Handles both MazeEnvironment (single goal) and DynamicForagingEnvironment
+        Handles both StaticEnvironment (single goal) and DynamicForagingEnvironment
         (multiple foods).
 
         Parameters
@@ -71,7 +71,7 @@ class RewardCalculator:
             Reward value based on the agent's performance.
         """
         # Import here to avoid circular dependency
-        from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+        from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
 
         reward = 0.0
         distance_reward = 0.0
@@ -80,7 +80,7 @@ class RewardCalculator:
         goal_bonus = 0.0
 
         # Handle distance-based rewards differently for each environment type
-        if isinstance(env, MazeEnvironment):
+        if isinstance(env, StaticEnvironment):
             reward += self._calculate_maze_distance_reward(env, path)
         elif isinstance(env, DynamicForagingEnvironment):
             distance_reward = self._calculate_foraging_distance_reward(env, path)
@@ -126,14 +126,14 @@ class RewardCalculator:
 
     def _calculate_maze_distance_reward(
         self,
-        env: MazeEnvironment,
+        env: StaticEnvironment,
         path: list[tuple[int, ...]],
     ) -> float:
         """Calculate distance-based reward for maze environments.
 
         Parameters
         ----------
-        env : MazeEnvironment
+        env : StaticEnvironment
             The maze environment.
         path : list[tuple[int, ...]]
             The agent's path history.

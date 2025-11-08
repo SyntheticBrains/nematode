@@ -9,7 +9,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
 from quantumnematode.brain.modules import ModuleName
-from quantumnematode.env import DynamicForagingEnvironment, MazeEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
 
 
 class TestSatietyConfig:
@@ -113,14 +113,14 @@ class TestQuantumNematodeAgentInitialization:
         agent = QuantumNematodeAgent(brain=modular_brain)
 
         assert agent.brain is modular_brain
-        assert isinstance(agent.env, MazeEnvironment)
+        assert isinstance(agent.env, StaticEnvironment)
         assert agent._metrics_tracker.total_steps == 0
         assert len(agent.path) == 1  # Initial position
         assert agent._metrics_tracker.success_count == 0
 
     def test_agent_init_with_custom_maze_env(self, modular_brain):
         """Test agent initialization with custom maze environment."""
-        env = MazeEnvironment(grid_size=15, max_body_length=3)
+        env = StaticEnvironment(grid_size=15, max_body_length=3)
         agent = QuantumNematodeAgent(brain=modular_brain, env=env)
 
         assert agent.env is env
