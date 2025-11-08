@@ -113,16 +113,13 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     if metrics.total_interrupted > 0:
         output_lines.append(f"Failed runs - Interrupted: {metrics.total_interrupted} ")
 
-    output_lines.append(f"Average foods collected per run: {metrics.average_foods_collected:.2f}")
+    if metrics.average_foods_collected is not None:
+        output_lines.append(f"Average foods collected per run: {metrics.average_foods_collected:.2f}")
     output_lines.append(f"Average steps per run: {metrics.average_steps:.2f}")
     output_lines.append(f"Average reward per run: {metrics.average_reward:.2f}")
     if metrics.average_distance_efficiency is not None:
         output_lines.append(
             f"Average distance efficiency per run: {metrics.average_distance_efficiency:.2f}",
-        )
-    if metrics.average_foods_collected is not None:
-        output_lines.append(
-            f"Average food collected per run: {metrics.average_foods_collected:.2f}",
         )
     if metrics.foraging_efficiency is not None:
         output_lines.append(f"Foraging efficiency per run: {metrics.foraging_efficiency:.2f}")
