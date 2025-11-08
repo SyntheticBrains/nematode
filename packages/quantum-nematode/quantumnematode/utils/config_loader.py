@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from quantumnematode.agent import (
     ManyworldsModeConfig,
     RewardConfig,
+    SatietyConfig,
 )
 from quantumnematode.brain.arch import (
     MLPBrainConfig,
@@ -108,12 +109,38 @@ class ParameterInitializerConfig(BaseModel):
     manual_parameter_values: dict[str, float] | None = None
 
 
+class StaticEnvironmentConfig(BaseModel):
+    """Configuration for static maze environment."""
+
+    grid_size: int = 10
+
+
+class DynamicEnvironmentConfig(BaseModel):
+    """Configuration for dynamic foraging environment."""
+
+    grid_size: int = 50
+    num_initial_foods: int = 10
+    max_active_foods: int = 15
+    min_food_distance: int = 5
+    agent_exclusion_radius: int = 10
+    gradient_decay_constant: float = 10.0
+    gradient_strength: float = 1.0
+    viewport_size: tuple[int, int] = (11, 11)
+
+
+class EnvironmentConfig(BaseModel):
+    """Configuration for environment selection and parameters."""
+
+    type: str = "static"  # "static" or "dynamic"
+    static: StaticEnvironmentConfig | None = None
+    dynamic: DynamicEnvironmentConfig | None = None
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
     brain: BrainContainerConfig | None = None
     max_steps: int | None = None
-    maze_grid_size: int | None = None
     shots: int | None = None
     body_length: int | None = None
     qubits: int | None = None
@@ -121,8 +148,10 @@ class SimulationConfig(BaseModel):
     gradient: GradientConfig | None = None
     parameter_initializer: ParameterInitializerConfig | None = None
     reward: RewardConfig | None = None
+    satiety: SatietyConfig | None = None
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
+    environment: EnvironmentConfig | None = None
 
 
 def load_simulation_config(config_path: str) -> SimulationConfig:
@@ -452,3 +481,31 @@ def configure_reward(config: SimulationConfig) -> RewardConfig:
         RewardConfig: The configured reward function object.
     """
     return config.reward or RewardConfig()
+
+
+def configure_satiety(config: SimulationConfig) -> SatietyConfig:
+    """
+    Configure the satiety system based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        SatietyConfig: The configured satiety system object.
+    """
+    return config.satiety or SatietyConfig()
+
+
+def configure_environment(config: SimulationConfig) -> EnvironmentConfig:
+    """
+    Configure the environment based on the provided configuration.
+
+    Args:
+        config (SimulationConfig): Simulation configuration object.
+
+    Returns
+    -------
+        EnvironmentConfig: The configured environment object.
+    """
+    return config.environment or EnvironmentConfig()

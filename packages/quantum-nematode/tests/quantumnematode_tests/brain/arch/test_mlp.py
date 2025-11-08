@@ -72,7 +72,6 @@ class TestMLPBrain:
         assert brain.entropy_beta == config.entropy_beta
         assert brain.gamma == config.gamma
         assert brain.baseline == config.baseline
-        assert brain.satiety == 1.0
         assert brain.training is True
 
         # Check policy network exists

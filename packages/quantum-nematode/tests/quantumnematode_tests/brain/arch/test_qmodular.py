@@ -89,7 +89,6 @@ class TestQModularBrain:
         assert brain.shots == 50
         assert brain.device == DeviceType.CPU
         assert brain.num_layers == config.num_layers
-        assert brain.satiety == 1.0
 
         # Q-learning parameters
         assert brain.epsilon == 1.0  # Starts at 1.0
@@ -414,24 +413,12 @@ class TestQModularBrain:
         assert brain.episode_count == initial_count + 1
 
     def test_update_memory(self, brain):
-        """Test memory update with satiety."""
-        initial_satiety = brain.satiety
-
-        # Positive reward
+        """Test memory update (currently a no-op)."""
+        # update_memory is now reserved for future brain-internal memory mechanisms
+        # Just verify it doesn't raise an error
         brain.update_memory(reward=0.3)
-        assert brain.satiety >= initial_satiety
-
-        # Negative reward
         brain.update_memory(reward=-0.5)
-        assert brain.satiety < initial_satiety
-
-        # Bounds check
-        brain.update_memory(reward=10.0)
-        assert brain.satiety <= 1.0
-
-        brain.satiety = 0.5
-        brain.update_memory(reward=-10.0)
-        assert brain.satiety >= 0.0
+        brain.update_memory(reward=None)
 
     def test_inspect_circuit(self, brain):
         """Test circuit inspection."""
@@ -565,7 +552,7 @@ class TestQModularBrainIntegration:
 
         # Simulate poor performance (negative rewards)
         for _ in range(5):
-            brain._step_count += 1  # noqa: SLF001
+            brain._step_count += 1
             brain.run_brain(params, reward=-0.5, top_only=True, top_randomize=False)
 
         # Should trigger double learning

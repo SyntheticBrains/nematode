@@ -247,7 +247,7 @@ class TestSpikingBrain:
     def test_encode_state_to_spikes(self, brain):
         """Test encoding continuous state to spike trains."""
         state = [0.5, 0.8]
-        spike_trains = brain._encode_state_to_spikes(state)  # noqa: SLF001
+        spike_trains = brain._encode_state_to_spikes(state)
 
         assert len(spike_trains) == 2
         # Higher values should tend to generate more spikes
@@ -262,7 +262,7 @@ class TestSpikingBrain:
         # Create simple spike trains
         input_spike_trains = [[10.0, 20.0], [15.0, 25.0]]
 
-        output_spike_counts, spike_history = brain._simulate_network(input_spike_trains)  # noqa: SLF001
+        output_spike_counts, spike_history = brain._simulate_network(input_spike_trains)
 
         assert len(output_spike_counts) == 4  # 4 output neurons
         assert "input" in spike_history
@@ -278,7 +278,7 @@ class TestSpikingBrain:
     def test_decode_action_probabilities(self, brain):
         """Test decoding spike counts to action probabilities."""
         spike_counts = [5, 3, 1, 0]
-        probabilities = brain._decode_action_probabilities(spike_counts)  # noqa: SLF001
+        probabilities = brain._decode_action_probabilities(spike_counts)
 
         assert len(probabilities) == 4
         assert np.isclose(np.sum(probabilities), 1.0)  # Should sum to 1
@@ -376,7 +376,7 @@ class TestSpikingBrain:
         brain.weights_input_hidden[0, 0] = 10.0
         brain.weights_hidden_output[0, 0] = -10.0
 
-        brain._clip_weights()  # noqa: SLF001
+        brain._clip_weights()
 
         # Weights should be clipped
         assert torch.all(brain.weights_input_hidden <= brain.config.weight_clip)

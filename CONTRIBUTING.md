@@ -126,8 +126,21 @@ uv run pytest
 ### Running Simulations
 
 #### Development Testing
+
+##### Testing with Dynamic Foraging Environment
+
 ```bash
-uv run ./scripts/run_simulation.py --brain modular --episodes 10
+# Quick test with small dynamic environment
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_dynamic_small.yml --theme emoji
+
+# Full test with medium environment
+uv run ./scripts/run_simulation.py --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
+```
+
+##### Testing with Static Environment
+
+```bash
+uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_simple_medium.yml --theme emoji
 ```
 
 ### Adding New Features
@@ -176,9 +189,27 @@ class MyNewBrainConfig(BrainConfig):
 
 #### Adding New Environment Features
 
-1. Extend `quantumnematode.env` classes
+1. Extend `quantumnematode.env` classes (base classes: `StaticEnvironment`, `DynamicForagingEnvironment`)
 2. Ensure compatibility with `BrainParams` interface
-3. Add visualization support if needed
+3. Add visualization support for new features
+4. Update environment state encoding for brain input
+5. Add tracking for new metrics in `EpisodeTracker`
+6. Create corresponding plots and CSV exports
+
+Example for adding a new foraging feature:
+```python
+# In quantumnematode/env/dynamic_foraging.py
+class ExtendedForagingEnvironment(DynamicForagingEnvironment):
+    def __init__(self, temperature_variation: bool = False, **kwargs):
+        super().__init__(**kwargs)
+        self.temperature_variation = temperature_variation
+
+    def get_state_vector(self) -> list[float]:
+        state = super().get_state_vector()
+        if self.temperature_variation:
+            state.append(self.get_temperature_at_position())
+        return state
+```
 
 ### Code Style Guidelines
 
@@ -245,32 +276,39 @@ class MyNewBrainConfig(BrainConfig):
 
 ### High Priority
 
-1. **Quantum Hardware Integration**
+1. **Dynamic Foraging Enhancements**
+   - Temperature gradient integration
+   - Food quality variations and preferences
+   - Social foraging behaviors (multi-agent)
+   - Realistic chemotaxis modeling
+
+2. **Quantum Hardware Integration**
    - Add support for new quantum backends
-   - Implement noise-aware training
+   - Implement noise-aware training for foraging tasks
    - Add hardware-specific optimizations
 
-2. **Advanced Learning Algorithms**
-   - Quantum natural gradients
-   - Variational quantum eigensolvers
-   - Quantum advantage demonstrations
+3. **Advanced Learning Algorithms**
+   - Quantum natural gradients for foraging
+   - Meta-learning across environment variations
+   - Transfer learning from simple to complex foraging
 
-3. **Visualization and Analysis**
-   - Real-time training visualization
-   - Performance analysis tools
-   - Circuit analysis and optimization
+4. **Visualization and Analysis**
+   - Real-time foraging trajectory visualization
+   - Satiety and efficiency heatmaps
+   - Comparative analysis tools (quantum vs classical)
 
 ### Medium Priority
 
 1. **Environment Extensions**
-   - Multi-agent environments
-   - Dynamic obstacles
+   - Multi-agent cooperative foraging
+   - Competitive foraging scenarios
+   - Predator-prey dynamics
    - Continuous action spaces
 
 2. **Monitoring and Logging**
-   - Advanced overfitting detection
-   - Performance metrics tracking
-   - Experiment management
+   - Advanced foraging strategy detection
+   - Performance metrics tracking per food type
+   - Experiment management and reproducibility
 
 ### Documentation
 
@@ -317,23 +355,26 @@ class MyNewBrainConfig(BrainConfig):
 
 ## 🔬 Research Directions
 
-### Quantum Machine Learning
+### Quantum Machine Learning in Foraging
 
-- **Quantum Advantage**: Identify scenarios where quantum algorithms provide computational advantages
-- **Noise Resilience**: Develop training methods robust to quantum hardware noise
-- **Hybrid Algorithms**: Explore quantum-classical hybrid approaches
+- **Quantum Advantage in Foraging**: Identify scenarios where quantum algorithms excel at multi-objective foraging tasks
+- **Noise Resilience**: Develop training methods robust to quantum hardware noise in dynamic environments
+- **Hybrid Algorithms**: Explore quantum-classical hybrid approaches for foraging strategy optimization
+- **Entanglement in Decision-Making**: Study role of quantum entanglement in balancing exploration vs exploitation
 
 ### Biological Modeling
 
-- **Neural Modeling**: More accurate modeling of C. elegans neural networks
-- **Behavioral Patterns**: Implementation of realistic nematode behaviors
-- **Multi-scale Modeling**: From molecular to behavioral levels
+- **Neural Modeling**: More accurate modeling of C. elegans chemosensory neurons and interneurons
+- **Behavioral Patterns**: Implementation of realistic nematode foraging behaviors (area-restricted search, klinokinesis)
+- **Multi-scale Modeling**: From molecular signaling to behavioral strategies
+- **Satiety and Homeostasis**: Realistic modeling of internal state management
 
 ### Algorithm Development
 
-- **Novel Quantum Algorithms**: Development of new quantum learning algorithms
-- **Optimization Techniques**: Advanced parameter optimization methods
-- **Scalability**: Methods for larger quantum systems
+- **Novel Quantum Algorithms**: Development of new quantum learning algorithms for sequential decision-making
+- **Optimization Techniques**: Advanced parameter optimization methods for foraging
+- **Scalability**: Methods for larger quantum systems and complex environments
+- **Transfer Learning**: Strategies for adapting from simple to complex foraging scenarios
 
 ## 🤝 Community
 

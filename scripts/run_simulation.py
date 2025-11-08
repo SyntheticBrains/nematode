@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
     DEFAULT_MAX_STEPS,
-    DEFAULT_MAZE_GRID_SIZE,
     QuantumNematodeAgent,
+    SatietyConfig,
 )
 from quantumnematode.brain.arch import (
     Brain,
@@ -30,7 +30,8 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
-from quantumnematode.env import MIN_GRID_SIZE
+from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, StaticEnvironment
+from quantumnematode.env.theme import Theme
 from quantumnematode.logging_config import (
     logger,
 )
@@ -43,35 +44,56 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
+    export_distance_efficiencies_to_csv,
+    export_foraging_results_to_csv,
+    export_foraging_session_metrics_to_csv,
     export_performance_metrics_to_csv,
     export_run_data_to_csv,
     export_simulation_results_to_csv,
     export_tracking_data_to_csv,
 )
-from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
+from quantumnematode.report.dtypes import (
+    EpisodeTrackingData,
+    PerformanceMetrics,
+    SimulationResult,
+    TerminationReason,
+    TrackingData,
+)
 from quantumnematode.report.plots import (
+    plot_all_distance_efficiencies_distribution,
     plot_cumulative_reward_per_run,
+    plot_distance_efficiency_trend,
     plot_efficiency_score_over_time,
+    plot_foods_collected_per_run,
+    plot_foods_vs_reward_correlation,
+    plot_foods_vs_steps_correlation,
+    plot_foraging_efficiency_per_run,
     plot_last_cumulative_rewards,
     plot_running_average_steps,
+    plot_satiety_at_episode_end,
     plot_steps_per_run,
     plot_success_rate_over_time,
+    plot_termination_reasons_breakdown,
     plot_tracking_data_by_latest_run,
     plot_tracking_data_by_session,
 )
 from quantumnematode.report.summary import summary
-from quantumnematode.theme import Theme
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
+    DynamicEnvironmentConfig,
+    EnvironmentConfig,
     ManyworldsModeConfig,
     ParameterInitializerConfig,
     RewardConfig,
+    StaticEnvironmentConfig,
     configure_brain,
+    configure_environment,
     configure_gradient_method,
     configure_learning_rate,
     configure_manyworlds_mode,
     configure_parameter_initializer,
     configure_reward,
+    configure_satiety,
     create_parameter_initializer_instance,
     load_simulation_config,
 )
@@ -161,7 +183,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     config_file = args.config
     manyworlds_mode = args.manyworlds
     max_steps = DEFAULT_MAX_STEPS
-    maze_grid_size = DEFAULT_MAZE_GRID_SIZE
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
     shots = DEFAULT_SHOTS
@@ -174,6 +195,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     gradient_method = GradientCalculationMethod.RAW
     parameter_initializer_config = ParameterInitializerConfig()
     reward_config = RewardConfig()
+    satiety_config = SatietyConfig()
+    environment_config = EnvironmentConfig()
     manyworlds_mode_config = ManyworldsModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
@@ -215,9 +238,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             else brain_type
         )
         max_steps = config.max_steps if config.max_steps is not None else max_steps
-        maze_grid_size = (
-            config.maze_grid_size if config.maze_grid_size is not None else maze_grid_size
-        )
         shots = config.shots if config.shots is not None else shots
         body_length = config.body_length if config.body_length is not None else body_length
         qubits = config.qubits if config.qubits is not None else qubits
@@ -234,10 +254,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load reward configuration if specified
         reward_config = configure_reward(config)
 
+        # Load satiety configuration if specified
+        satiety_config = configure_satiety(config)
+
+        # Load environment configuration if specified
+        environment_config = configure_environment(config)
+
         # Load many-worlds mode configuration if specified
         manyworlds_mode_config = configure_manyworlds_mode(config)
 
-    validate_simulation_parameters(maze_grid_size, brain_type, qubits)
+    # Get grid size from environment config for validation and logging
+    if environment_config.type == "dynamic":
+        grid_size = (environment_config.dynamic or DynamicEnvironmentConfig()).grid_size
+    else:
+        grid_size = (environment_config.static or StaticEnvironmentConfig()).grid_size
+
+    validate_simulation_parameters(grid_size, brain_type, qubits)
 
     # Configure logging level
     if log_level == "NONE":
@@ -257,7 +289,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Runs: {runs}")
     logger.info(f"Max steps: {max_steps}")
     logger.info(f"Device: {device}")
-    logger.info(f"Grid size: {maze_grid_size}")
+    logger.info(f"Grid size: {grid_size}")
+    logger.info(f"Environment type: {environment_config.type}")
     logger.info(f"Brain type: {brain_type.value}")
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
@@ -276,12 +309,46 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         perf_mgmt=perf_mgmt,
     )
 
-    # Update the agent to use the selected brain architecture
+    # Create the environment based on configuration
+    env = None
+    if environment_config.type == "dynamic":
+        logger.info("Using dynamic foraging environment")
+        dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+        env = DynamicForagingEnvironment(
+            grid_size=dynamic_config.grid_size,
+            num_initial_foods=dynamic_config.num_initial_foods,
+            max_active_foods=dynamic_config.max_active_foods,
+            min_food_distance=dynamic_config.min_food_distance,
+            agent_exclusion_radius=dynamic_config.agent_exclusion_radius,
+            gradient_decay_constant=dynamic_config.gradient_decay_constant,
+            gradient_strength=dynamic_config.gradient_strength,
+            viewport_size=dynamic_config.viewport_size,
+            max_body_length=body_length,
+            theme=theme,
+        )
+        logger.info(
+            f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
+            f"{dynamic_config.num_initial_foods} initial foods",
+        )
+    else:
+        logger.info("Using static maze environment")
+        static_config = environment_config.static or StaticEnvironmentConfig()
+        env = StaticEnvironment(
+            grid_size=static_config.grid_size,
+            max_body_length=body_length,
+            theme=theme,
+        )
+        logger.info(
+            f"Static maze environment: {static_config.grid_size}x{static_config.grid_size} grid",
+        )
+
+    # Update the agent to use the selected brain architecture and environment
     agent = QuantumNematodeAgent(
-        maze_grid_size=maze_grid_size,
         brain=brain,
+        env=env,
         max_body_length=body_length,
         theme=theme,
+        satiety_config=satiety_config,
     )
 
     # Set the plot and data directories
@@ -294,6 +361,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     all_results: list[SimulationResult] = []
 
     total_runs_done = 0
+
+    # Session-level termination tracking
+    total_successes = 0
+    total_starved = 0
+    total_max_steps = 0
+    total_interrupted = 0
 
     if manyworlds_mode:
         try:
@@ -314,10 +387,62 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             run_num = run + 1
             logger.info(f"Starting run {run_num} of {runs}")
 
-            # Calculate the initial distance to the goal
-            initial_distance = agent.calculate_goal_distance()
+            # Log full initial environment state
+            logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                logger.info(f"Initial food positions: {agent.env.foods}")
+                logger.info(f"Active foods: {len(agent.env.foods)}/{agent.env.max_active_foods}")
+                logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
-            render_text = f"Run:\t\t{run_num}/{runs}\n"
+                # Log full environment render
+                logger.info("Initial environment state (full render):")
+                full_render = agent.env.render_full()
+                for line in full_render:
+                    logger.info(line)
+            elif isinstance(agent.env, StaticEnvironment):
+                logger.info(f"Goal position: {agent.env.goal}")
+
+                # Log full environment render
+                logger.info("Initial environment state (full render):")
+                full_render = agent.env.render()
+                for line in full_render:
+                    logger.info(line)
+
+            # Calculate the initial distance to the goal
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                dist = agent.env.get_nearest_food_distance()
+                initial_distance = dist if dist is not None else 0
+            elif isinstance(agent.env, StaticEnvironment):
+                initial_distance = abs(agent.env.agent_pos[0] - agent.env.goal[0]) + abs(
+                    agent.env.agent_pos[1] - agent.env.goal[1],
+                )
+            else:
+                initial_distance = 0
+
+            render_text = "Session:\n--------\n"
+            render_text += f"Run:\t\t{run_num}/{runs}\n"
+
+            wins = 0
+            match agent.env:
+                case DynamicForagingEnvironment():
+                    # NOTE: Total food calculation won't be accurate if we introduce different max
+                    # active foods per run
+                    wins = sum(result.success for result in all_results)
+                    render_text += f"Wins:\t\t{wins}/{runs}\n"
+                    total_foods_collected = sum(
+                        result.foods_collected
+                        for result in all_results
+                        if result.foods_collected is not None
+                    )
+                    total_foods_available = sum(
+                        result.foods_available
+                        for result in all_results
+                        if result.foods_available is not None
+                    )
+                    render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
+                case StaticEnvironment():
+                    wins = agent._metrics_tracker.success_count  # noqa: SLF001
+                    render_text += f"Wins:\t\t{wins}/{runs}\n"
 
             if len(all_results) > 1:
                 # Running average steps per run
@@ -326,39 +451,103 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
                 render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{total_runs_done + 1}\n"
 
-            path = agent.run_episode(
+            step_result = agent.run_episode(
                 reward_config=reward_config,
                 max_steps=max_steps,
                 render_text=render_text,
                 show_last_frame_only=show_last_frame_only,
             )
 
-            steps = len(path)
+            steps_taken = agent._episode_tracker.steps  # noqa: SLF001
+
             total_reward = sum(
-                agent.env.get_state(pos, disable_log=True)[0] for pos in path
+                agent.env.get_state(pos, disable_log=True)[0] for pos in step_result.agent_path
             )  # Calculate total reward for the run
 
-            # Calculate efficiency score for the run
-            steps_taken = len(path)
-            efficiency_score = initial_distance - steps_taken
+            # Determine success and track termination types
+            success = step_result.termination_reason in (
+                TerminationReason.GOAL_REACHED,
+                TerminationReason.COMPLETED_ALL_FOOD,
+            )
 
-            logger.info(f"Efficiency Score for run {run_num}: {efficiency_score}")
+            # Update session-level counters
+            if success:
+                total_successes += 1
+            if step_result.termination_reason == TerminationReason.STARVED:
+                total_starved += 1
+            elif step_result.termination_reason == TerminationReason.MAX_STEPS:
+                total_max_steps += 1
+
+            # Get environment specific data
+            efficiency_score = None
+            foods_collected_this_run = None
+            foods_available_this_run = None
+            satiety_remaining_this_run = None
+            average_distance_efficiency = None
+            satiety_history_this_run = None
+            match agent.env:
+                case StaticEnvironment():
+                    # Calculate efficiency score for the run
+                    efficiency_score = initial_distance - steps_taken
+                case DynamicForagingEnvironment():
+                    foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
+                    foods_available_this_run = agent.env.max_active_foods
+                    satiety_remaining_this_run = agent.current_satiety
+                    distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
+                    average_distance_efficiency = (
+                        sum(distance_efficiencies) / len(distance_efficiencies)
+                        if distance_efficiencies
+                        else 0.0
+                    )
+                    satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
+                    # Efficiency score not defined for dynamic environment
+                case _:
+                    pass
 
             result = SimulationResult(
                 run=run_num,
-                steps=steps,
-                path=path,
+                steps=steps_taken,
+                path=step_result.agent_path,
                 total_reward=total_reward,
-                last_total_reward=agent.total_rewards,
+                last_total_reward=agent._episode_tracker.rewards,  # noqa: SLF001
                 efficiency_score=efficiency_score,
+                termination_reason=step_result.termination_reason,
+                success=success,
+                foods_collected=foods_collected_this_run,
+                foods_available=foods_available_this_run,
+                satiety_remaining=satiety_remaining_this_run,
+                average_distance_efficiency=average_distance_efficiency,
+                satiety_history=satiety_history_this_run,
             )
             all_results.append(result)
 
-            logger.info(f"Run {run_num}/{runs} completed in {steps} steps.")
+            # Log run outcome clearly
+            outcome_msg = f"Run {run_num}/{runs} completed in {steps_taken} steps - "
+            if success:
+                if step_result.termination_reason == TerminationReason.GOAL_REACHED:
+                    outcome_msg += "SUCCESS: Goal reached"
+                elif step_result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
+                    outcome_msg += f"SUCCESS: All food collected ({foods_collected_this_run} foods)"
+            elif step_result.termination_reason == TerminationReason.STARVED:
+                outcome_msg += "FAILED: Agent starved"
+            elif step_result.termination_reason == TerminationReason.MAX_STEPS:
+                outcome_msg += "FAILED: Max steps reached"
+
+            logger.info(outcome_msg)
 
             total_runs_done += 1
 
-            tracking_data.data[run_num] = deepcopy(agent.brain.history_data)
+            tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
+
+            # Store episode tracking data for foraging environments
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                tracking_data.episode_data[run_num] = EpisodeTrackingData(
+                    satiety_history=satiety_history_this_run.copy()
+                    if satiety_history_this_run
+                    else [],
+                    foods_collected=foods_collected_this_run or 0,
+                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                )
 
             if track_per_run:
                 plot_tracking_data_by_latest_run(
@@ -377,6 +566,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.reset_brain()
 
     except KeyboardInterrupt:
+        total_interrupted = runs - total_runs_done
         manage_simulation_halt(
             max_steps=max_steps,
             brain_type=brain_type,
@@ -391,16 +581,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
-    logger.info("\nPerformance Metrics:")
-    logger.info(f"Success Rate: {metrics.success_rate:.2f}")
-    logger.info(f"Average Steps: {metrics.average_steps:.2f}")
-    logger.info(f"Average Reward: {metrics.average_reward:.2f}")
 
-    print()  # noqa: T201
-    print(f"Session ID: {timestamp}")  # noqa: T201
+    # Update metrics with session-level termination counts
+    metrics.total_successes = total_successes
+    metrics.total_starved = total_starved
+    metrics.total_max_steps = total_max_steps
+    metrics.total_interrupted = total_interrupted
 
     # Final summary of all runs.
-    summary(total_runs_done, max_steps, all_results)
+    summary(
+        metrics=metrics,
+        session_id=timestamp,
+        num_runs=total_runs_done,
+        max_steps=max_steps,
+        all_results=all_results,
+        env_type=agent.env,
+    )
 
     # Generate plots after the simulation
     plot_results(all_results=all_results, metrics=metrics, max_steps=max_steps, plot_dir=plot_dir)
@@ -408,6 +604,20 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Export data to CSV files
     export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
     export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+
+    # Export foraging-specific data (if dynamic environment)
+    foraging_results = [r for r in all_results if r.foods_collected is not None]
+    if foraging_results:
+        export_foraging_results_to_csv(all_results=all_results, data_dir=data_dir)
+        export_foraging_session_metrics_to_csv(
+            all_results=all_results,
+            metrics=metrics,
+            data_dir=data_dir,
+        )
+        export_distance_efficiencies_to_csv(
+            tracking_data=tracking_data,
+            data_dir=data_dir,
+        )
 
     # Generate additional plots for tracking data
     plot_tracking_data_by_session(
@@ -686,16 +896,16 @@ def manage_simulation_halt(  # noqa: PLR0913
         elif choice == 1:
             logger.info("Generating partial results and plots.")
             metrics = agent.calculate_metrics(total_runs=total_runs_done)
-            logger.info("\nPerformance Metrics:")
-            logger.info(f"Success Rate: {metrics.success_rate:.2f}")
-            logger.info(f"Average Steps: {metrics.average_steps:.2f}")
-            logger.info(f"Average Reward: {metrics.average_reward:.2f}")
-
-            print()  # noqa: T201
-            print(f"Session ID: {timestamp}")  # noqa: T201
 
             # Generate partial summary
-            summary(total_runs_done, max_steps, all_results)
+            summary(
+                metrics=metrics,
+                session_id=timestamp,
+                num_runs=total_runs_done,
+                max_steps=max_steps,
+                all_results=all_results,
+                env_type=agent.env,
+            )
 
             # Generate plots with current timestamp
             file_prefix = f"{total_runs_done}_"
@@ -747,7 +957,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
-def plot_results(
+def plot_results(  # noqa: C901
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
     max_steps: int,
@@ -767,15 +977,11 @@ def plot_results(
     plot_running_average_steps(file_prefix, runs, steps, plot_dir)
 
     # Plot: Cumulative Reward per Run
-    cumulative_rewards: list[float] = [
-        result.total_reward for result in all_results
-    ]  # Assuming rewards are stored as result[3]
+    cumulative_rewards: list[float] = [result.total_reward for result in all_results]
     plot_cumulative_reward_per_run(file_prefix, runs, plot_dir, cumulative_rewards)
 
     # Plot: Last Cumulative Rewards Over Runs
-    last_cumulative_rewards: list[float] = [
-        result.last_total_reward for result in all_results
-    ]  # Assuming rewards are stored as result[4]
+    last_cumulative_rewards: list[float] = [result.last_total_reward for result in all_results]
     plot_last_cumulative_rewards(file_prefix, runs, plot_dir, last_cumulative_rewards)
 
     # Plot: Success Rate Over Time
@@ -787,9 +993,115 @@ def plot_results(
 
     # Plot: Efficiency Score Over Time
     efficiency_scores: list[float] = [
-        result.efficiency_score for result in all_results
-    ]  # Assuming efficiency scores are stored as result[5]
-    plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
+        result.efficiency_score for result in all_results if result.efficiency_score is not None
+    ]
+    if len(efficiency_scores) > 0:
+        plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
+
+    # Dynamic Foraging Environment Specific Plots
+    foraging_results = [r for r in all_results if r.foods_collected is not None]
+    if foraging_results:
+        # Extract foraging-specific data
+        foods_collected_list = [
+            r.foods_collected for r in foraging_results if r.foods_collected is not None
+        ]
+        foods_available = (
+            foraging_results[0].foods_available
+            if foraging_results[0].foods_available is not None
+            else 0
+        )
+        satiety_remaining_list = [
+            r.satiety_remaining for r in foraging_results if r.satiety_remaining is not None
+        ]
+        avg_distance_effs = [
+            r.average_distance_efficiency
+            for r in foraging_results
+            if r.average_distance_efficiency is not None
+        ]
+        foraging_runs = [r.run for r in foraging_results]
+        foraging_steps = [r.steps for r in foraging_results]
+        foraging_rewards = [r.total_reward for r in foraging_results]
+
+        # Plot: Foods Collected Per Run
+        if foods_collected_list:
+            plot_foods_collected_per_run(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                foods_collected_list,
+                foods_available,
+            )
+
+        # Plot: Distance Efficiency Trend
+        if avg_distance_effs:
+            plot_distance_efficiency_trend(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                avg_distance_effs,
+            )
+
+        # Plot: Foraging Efficiency (foods per step)
+        if foods_collected_list:
+            plot_foraging_efficiency_per_run(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                foods_collected_list,
+                foraging_steps,
+            )
+
+        # Plot: Satiety at Episode End
+        if satiety_remaining_list:
+            max_satiety = max(satiety_remaining_list) if satiety_remaining_list else 100.0
+            # Get actual max satiety from first result's history if available
+            if foraging_results[0].satiety_history:
+                max_satiety = max(foraging_results[0].satiety_history)
+            plot_satiety_at_episode_end(
+                file_prefix,
+                foraging_runs,
+                plot_dir,
+                satiety_remaining_list,
+                max_satiety,
+            )
+
+        # Plot: All Distance Efficiencies Distribution
+        if avg_distance_effs:
+            plot_all_distance_efficiencies_distribution(
+                file_prefix,
+                plot_dir,
+                avg_distance_effs,
+            )
+
+        # Plot: Termination Reasons Breakdown
+        termination_counts: dict[str, int] = {}
+        for result in foraging_results:
+            reason = result.termination_reason.value
+            termination_counts[reason] = termination_counts.get(reason, 0) + 1
+        if termination_counts:
+            plot_termination_reasons_breakdown(
+                file_prefix,
+                plot_dir,
+                termination_counts,
+            )
+
+        # Plot: Foods vs Reward Correlation
+        if foods_collected_list and foraging_rewards:
+            plot_foods_vs_reward_correlation(
+                file_prefix,
+                plot_dir,
+                foods_collected_list,
+                foraging_rewards,
+            )
+
+        # Plot: Foods vs Steps Correlation
+        if foods_collected_list and foraging_steps:
+            plot_foods_vs_steps_correlation(
+                file_prefix,
+                plot_dir,
+                foods_collected_list,
+                foraging_steps,
+            )
 
 
 if __name__ == "__main__":

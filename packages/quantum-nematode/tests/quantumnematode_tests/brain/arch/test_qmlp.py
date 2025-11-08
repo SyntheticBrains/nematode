@@ -75,7 +75,6 @@ class TestQMLPBrain:
         assert brain.num_actions == 4
         assert brain.epsilon == config.epsilon
         assert brain.gamma == config.gamma
-        assert brain.satiety == 1.0
         assert brain.training is True
 
         # Check Q-networks exist

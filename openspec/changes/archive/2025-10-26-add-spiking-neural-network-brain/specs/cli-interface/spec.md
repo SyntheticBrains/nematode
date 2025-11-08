@@ -25,7 +25,7 @@ The CLI SHALL support loading spiking brain configurations through existing conf
 
 #### Scenario: Spiking Configuration Loading
 **Given** a YAML configuration file with spiking brain parameters  
-**When** loaded via `--config spiking_medium.yml`  
+**When** loaded via `--config spiking_simple_medium.yml`  
 **Then** the CLI SHALL parse the configuration  
 **And** SHALL validate spiking-specific parameters  
 **And** SHALL initialize the spiking brain with specified parameters  
