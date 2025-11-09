@@ -4,7 +4,7 @@
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 
 from quantumnematode.experiment import compare_experiments, list_experiments, load_experiment
 from quantumnematode.experiment.metadata import ExperimentMetadata
@@ -188,7 +188,7 @@ def cmd_list(args: argparse.Namespace) -> None:
     # Parse since date if provided
     since = None
     if args.since:
-        since = datetime.fromisoformat(args.since)
+        since = datetime.fromisoformat(args.since).replace(tzinfo=UTC)
 
     experiments = list_experiments(
         environment_type=args.env_type,
