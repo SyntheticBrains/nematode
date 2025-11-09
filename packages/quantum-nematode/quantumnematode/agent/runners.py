@@ -189,6 +189,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 max_steps=max_steps,
                 stuck_position_count=stuck_position_count,
             )
+            agent._episode_tracker.track_reward(reward)
 
             if logger.isEnabledFor(logging.DEBUG):
                 print(f"Reward: {reward}")  # noqa: T201
@@ -304,7 +305,6 @@ class StandardEpisodeRunner(EpisodeRunner):
                         )
 
                     # Continue foraging (don't break)
-                    agent._episode_tracker.track_reward(reward)
                 else:
                     # Single goal environment: episode ends when goal is reached
                     # Run the brain with the final state and reward
@@ -315,6 +315,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         max_steps=max_steps,
                         stuck_position_count=stuck_position_count,
                     )
+                    agent._episode_tracker.track_reward(reward)
 
                     # Prepare input_data and brain parameters for final goal state
                     input_data = agent._prepare_input_data(gradient_strength)
@@ -514,6 +515,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                     max_steps=max_steps,
                     stuck_position_count=0,  # Many-worlds mode doesn't track stuck positions
                 )
+                agent._episode_tracker.track_reward(reward)
 
                 params = agent._create_brain_params(
                     gradient_strength,
