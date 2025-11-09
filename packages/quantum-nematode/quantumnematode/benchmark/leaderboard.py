@@ -103,28 +103,45 @@ def generate_category_table(category: str, limit: int = 10) -> str:
 
 
 def generate_readme_section() -> str:
-    """Generate benchmarks section for README.md.
+    """Generate "Current Leaders" section content for README.md.
+
+    This generates only the dynamic content that goes under the "### Current Leaders"
+    heading in README.md. Replace the content between "### Current Leaders" and
+    "See [BENCHMARKS.md]" with the output of this function.
 
     Returns
     -------
     str
-        Markdown content for README benchmarks section.
+        Markdown content for the Current Leaders section only.
     """
     sections = []
 
-    sections.append("## 🏆 Top Benchmarks\n")
+    categories = [
+        ("Static Maze - Quantum", "static_maze_quantum"),
+        ("Static Maze - Classical", "static_maze_classical"),
+        ("Dynamic Small - Quantum", "dynamic_small_quantum"),
+        ("Dynamic Small - Classical", "dynamic_small_classical"),
+        ("Dynamic Medium - Quantum", "dynamic_medium_quantum"),
+        ("Dynamic Medium - Classical", "dynamic_medium_classical"),
+        ("Dynamic Large - Quantum", "dynamic_large_quantum"),
+        ("Dynamic Large - Classical", "dynamic_large_classical"),
+    ]
 
-    # Dynamic Medium (most common benchmark category)
-    sections.append("### Dynamic Foraging - Medium (50x50, 20 foods)\n")
-    sections.append("#### Quantum Brains\n")
-    sections.append(generate_category_table("dynamic_medium_quantum", limit=3))
-    sections.append("\n#### Classical Brains\n")
-    sections.append(generate_category_table("dynamic_medium_classical", limit=3))
+    # Check if we have any benchmarks at all
+    all_benchmarks = []
+    for _, category_id in categories:
+        all_benchmarks.extend(list_benchmarks(category_id))
 
-    sections.append(
-        "\nSee [BENCHMARKS.md](BENCHMARKS.md) for detailed results "
-        "and reproduction instructions.\n",
-    )
+    if not all_benchmarks:
+        sections.append("*No benchmarks submitted yet. Be the first to set a benchmark!*")
+    else:
+        # Show top performers from all categories
+        for display_name, category_id in categories:
+            category_benchmarks = list_benchmarks(category_id)
+            if category_benchmarks:
+                sections.append(f"#### {display_name}\n")
+                table = generate_category_table(category_id, limit=3)
+                sections.append(table)
 
     return "\n".join(sections)
 
