@@ -65,7 +65,7 @@ class BrainMetadata(BaseModel):
     num_layers: int | None = None
     hidden_dim: int | None = None
     num_hidden_layers: int | None = None
-    learning_rate: float
+    learning_rate: float | None = None
     modules: dict[str, list[int]] | None = None
 
 

@@ -90,9 +90,10 @@ def extract_brain_metadata(brain: object, brain_type: str, config: dict) -> Brai
     # Extract common parameters
     qubits = config.get("qubits")
     shots = config.get("shots")
-    learning_rate = config.get("learning_rate", 0.001)
-    if isinstance(learning_rate, dict):
-        learning_rate = learning_rate.get("parameters", {}).get("initial_learning_rate", 0.001)
+    learning_rate_config = config.get("learning_rate")
+    learning_rate = None
+    if isinstance(learning_rate_config, dict):
+        learning_rate = learning_rate_config.get("initial_learning_rate", None)
 
     # Extract architecture-specific parameters
     num_layers = brain_config.get("num_layers")
