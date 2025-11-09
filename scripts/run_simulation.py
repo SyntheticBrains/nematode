@@ -14,6 +14,7 @@ from quantumnematode.agent import (
     QuantumNematodeAgent,
     SatietyConfig,
 )
+from quantumnematode.benchmark import save_benchmark
 from quantumnematode.brain.arch import (
     Brain,
     MLPBrainConfig,
@@ -32,6 +33,7 @@ from quantumnematode.brain.arch.dtypes import (
 )
 from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, StaticEnvironment
 from quantumnematode.env.theme import Theme
+from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
     logger,
 )
@@ -171,6 +173,21 @@ def parse_arguments() -> argparse.Namespace:
         "--optimize",
         action="store_true",
         help="Enable Q-CTRL's Fire Opal error suppression techniques on QPUs.",
+    )
+    parser.add_argument(
+        "--track-experiment",
+        action="store_true",
+        help="Save experiment metadata for reproducibility and comparison.",
+    )
+    parser.add_argument(
+        "--save-benchmark",
+        action="store_true",
+        help="Save experiment as a benchmark submission (implies --track-experiment).",
+    )
+    parser.add_argument(
+        "--benchmark-notes",
+        type=str,
+        help="Optional notes about optimization approach (requires --save-benchmark).",
     )
 
     return parser.parse_args()
@@ -379,7 +396,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         except KeyboardInterrupt:
             message = "KeyboardInterrupt detected. Exiting the simulation."
             logger.info(message)
-            print(message)  # noqa: T201
+            print(message)
             return
 
     try:
@@ -635,6 +652,80 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         qubits=qubits,
     )
 
+    # Experiment tracking (opt-in)
+    track_experiment = args.track_experiment or args.save_benchmark
+    if track_experiment:
+        try:
+            # Capture experiment metadata
+            config_path = Path(config_file) if config_file else Path("config.yml")
+            exports_rel_path = f"exports/{timestamp}"
+
+            experiment_metadata = capture_experiment_metadata(
+                config_path=config_path,
+                env=agent.env,
+                brain=agent.brain,
+                brain_type=brain_type.value,
+                config={
+                    "brain": {
+                        "config": brain_config.__dict__
+                        if hasattr(brain_config, "__dict__")
+                        else {},
+                        "qubits": qubits,
+                        "shots": shots,
+                        "learning_rate": learning_rate.__dict__
+                        if hasattr(learning_rate, "__dict__")
+                        else {},
+                    },
+                },
+                all_results=all_results,
+                metrics=metrics,
+                device_type=device,
+                qpu_backend=None,  # TODO: Extract from device config
+                exports_path=exports_rel_path,
+            )
+
+            if args.save_benchmark:
+                # Interactive benchmark submission
+                print("\n" + "=" * 80)
+                print("Benchmark Submission")
+                print("=" * 80)
+
+                contributor = input("\nContributor name (required): ").strip()
+                if not contributor:
+                    logger.error("Contributor name is required for benchmark submission")
+                else:
+                    github_username = input(
+                        "GitHub username (optional, press Enter to skip): ",
+                    ).strip()
+                    github_username = github_username if github_username else None
+
+                    notes = args.benchmark_notes
+                    if not notes:
+                        notes = input(
+                            "Optimization notes (optional, press Enter to skip): ",
+                        ).strip()
+                        notes = notes if notes else None
+
+                    # Save as benchmark
+                    benchmark_path = save_benchmark(
+                        metadata=experiment_metadata,
+                        contributor=contributor,
+                        github_username=github_username,
+                        notes=notes,
+                    )
+                    print(f"\n✓ Benchmark saved: {benchmark_path}")
+            else:
+                # Save as regular experiment
+                experiment_path = save_experiment(experiment_metadata)
+                print(f"\n✓ Experiment metadata saved: {experiment_path}")
+                print(f"  Experiment ID: {experiment_metadata.experiment_id}")
+                print(
+                    f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to save experiment metadata: {e}")
+
     return
 
 
@@ -877,10 +968,10 @@ def manage_simulation_halt(  # noqa: PLR0913
             "You can choose to exit or output the results up to this point."
         )
         logger.warning(prompt_intro_message)
-        print(prompt_intro_message)  # noqa: T201
-        print("0. Exit")  # noqa: T201
-        print("1. Output the summary, plots, and tracking until this point in time.")  # noqa: T201
-        print("2. Print the circuit's details.")  # noqa: T201
+        print(prompt_intro_message)
+        print("0. Exit")
+        print("1. Output the summary, plots, and tracking until this point in time.")
+        print("2. Print the circuit's details.")
 
         try:
             choice = int(input("Enter your choice (0-2): "))
@@ -942,17 +1033,17 @@ def manage_simulation_halt(  # noqa: PLR0913
                 qubits=qubits,
                 file_prefix=file_prefix,
             )
-        elif choice == 2:  # noqa: PLR2004
+        elif choice == 2:
             logger.info("Printing circuit details.")
             if isinstance(agent.brain, QuantumBrain):
                 circuit = agent.brain.inspect_circuit()
                 logger.info(f"Circuit details:\n{circuit}")
-                print(circuit)  # noqa: T201
+                print(circuit)
             else:
                 logger.error(
                     "Circuit details are only available for QuantumBrain architectures.",
                 )
-                print("Circuit details are only available for QuantumBrain architectures.")  # noqa: T201
+                print("Circuit details are only available for QuantumBrain architectures.")
         else:
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
