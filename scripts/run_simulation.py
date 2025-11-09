@@ -477,10 +477,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
 
             steps_taken = agent._episode_tracker.steps  # noqa: SLF001
-
-            total_reward = sum(
-                agent.env.get_state(pos, disable_log=True)[0] for pos in step_result.agent_path
-            )  # Calculate total reward for the run
+            total_reward = agent._episode_tracker.rewards  # noqa: SLF001
 
             # Determine success and track termination types
             success = step_result.termination_reason in (
