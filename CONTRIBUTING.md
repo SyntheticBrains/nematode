@@ -143,6 +143,142 @@ uv run ./scripts/run_simulation.py --runs 20 --config ./configs/examples/modular
 uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_simple_medium.yml --theme emoji
 ```
 
+### Experiment Tracking and Benchmarks
+
+The project includes a comprehensive experiment tracking and benchmark management system to facilitate reproducibility and performance comparison.
+
+#### Experiment Tracking
+
+Track any simulation run automatically with the `--track-experiment` flag:
+
+```bash
+# Run with experiment tracking
+uv run ./scripts/run_simulation.py \
+  --config configs/examples/modular_dynamic_medium.yml \
+  --runs 20 \
+  --track-experiment
+```
+
+This saves complete metadata to `experiments/<experiment-id>.json` including:
+- Configuration file and hash
+- Git commit, branch, and dirty state
+- System information and dependency versions
+- Brain and environment parameters
+- Complete results and performance metrics
+- Export paths for plots and CSV files
+
+#### Querying Experiments
+
+Use the experiment query CLI to explore your tracked experiments:
+
+```bash
+# List recent experiments
+uv run scripts/experiment_query.py list
+
+# Filter by environment or brain type
+uv run scripts/experiment_query.py list --env-type dynamic --brain-type modular
+
+# Show detailed experiment info
+uv run scripts/experiment_query.py show <experiment-id>
+
+# Compare two experiments
+uv run scripts/experiment_query.py compare <exp-id-1> <exp-id-2>
+
+# Export as JSON for analysis
+uv run scripts/experiment_query.py show <experiment-id> --format json > results.json
+```
+
+#### Submitting Benchmarks
+
+When you achieve noteworthy results, submit them as benchmarks:
+
+**Method 1: From existing experiment**
+```bash
+# Submit a tracked experiment as benchmark
+uv run scripts/benchmark_submit.py submit <experiment-id> \
+  --contributor "Your Name" \
+  --github "your-username" \
+  --notes "Brief description of optimization approach"
+```
+
+**Method 2: Direct from simulation**
+```bash
+# Run and submit as benchmark in one step
+uv run scripts/run_simulation.py \
+  --config configs/examples/modular_dynamic_medium.yml \
+  --runs 20 \
+  --save-benchmark \
+  --benchmark-notes "Your optimization approach"
+```
+
+The CLI will interactively prompt for contributor information if not provided via flags.
+
+#### Benchmark Quality Standards
+
+To ensure benchmark quality and reproducibility, submissions must meet these criteria:
+
+**Required**:
+- Minimum 20 simulation runs for statistical significance
+- Clean git state (no uncommitted changes)
+- Complete contributor information
+- Valid configuration file
+
+**Recommended**:
+- High success rate (category-dependent)
+- Meaningful optimization notes explaining your approach
+- Standard environment configurations
+- Documented novel techniques or insights
+
+#### Benchmark Workflow
+
+1. **Develop and Test**: Experiment with different configurations, learning rates, and brain architectures
+2. **Track Experiments**: Use `--track-experiment` to save metadata for promising runs
+3. **Review Results**: Query and compare experiments to identify best performers
+4. **Submit Benchmark**: Use `benchmark_submit.py` to create benchmark submission
+5. **Create PR**: Add the generated benchmark JSON file to git and create a pull request
+6. **Verification**: Maintainers will verify reproducibility and merge
+
+Example workflow:
+
+```bash
+# 1. Run multiple experiments while developing
+uv run scripts/run_simulation.py --config configs/my_config.yml --runs 20 --track-experiment
+
+# 2. Review your experiments
+uv run scripts/experiment_query.py list --limit 10
+
+# 3. Compare top performers
+uv run scripts/experiment_query.py compare exp_001 exp_002
+
+# 4. Submit your best result
+uv run scripts/benchmark_submit.py submit exp_001 \
+  --contributor "Jane Doe" \
+  --github "janedoe" \
+  --notes "Tuned learning rate schedule with adaptive exploration"
+
+# 5. Create PR
+git add benchmarks/dynamic_medium/quantum/exp_001.json
+git commit -m "Add benchmark: Adaptive exploration for dynamic medium"
+git push origin feature/my-benchmark
+```
+
+#### Viewing Leaderboards
+
+Check current benchmark standings:
+
+```bash
+# View summary of all categories
+uv run scripts/benchmark_submit.py leaderboard
+
+# View specific category
+uv run scripts/benchmark_submit.py leaderboard --category dynamic_medium_quantum
+
+# Regenerate leaderboard documentation
+uv run scripts/benchmark_submit.py regenerate
+```
+
+See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and detailed submission guidelines.
+
 ### Adding New Features
 
 #### Adding a New Brain Architecture

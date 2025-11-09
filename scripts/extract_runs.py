@@ -44,11 +44,11 @@ def extract_runs_and_steps(log_file_path: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:  # noqa: PLR2004
-        print("Usage: python extract_runs.py <log_file_path>")  # noqa: T201
+    if len(sys.argv) != 2:
+        print("Usage: python extract_runs.py <log_file_path>")
         sys.exit(1)
 
     log_file_path = sys.argv[1]
     extracted_data = extract_runs_and_steps(log_file_path)
     for entry in extracted_data:
-        print(entry)  # noqa: T201
+        print(entry)

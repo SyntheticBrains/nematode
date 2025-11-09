@@ -13,6 +13,12 @@ logs/*
 exports/*
 plots/*
 
+# Experiment tracking (auto-tracked experiments are gitignored)
+experiments/*
+
+# Benchmarks are tracked in git
+!benchmarks/
+
 # Configuration files
 configs/*.yml
 !configs/examples/*.yml

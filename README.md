@@ -113,7 +113,7 @@ docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-le
 docker-compose exec quantum-nematode bash
 ```
 
-## � How It Works
+## ❓ How It Works
 
 ### Dynamic Foraging Environment (Primary)
 
@@ -151,7 +151,66 @@ The spiking brain architecture provides biologically realistic neural computatio
 - Event-driven sparse computation
 - Plasticity rules based on spike timing
 - Configurable neuron and synapse parameters
+
+## 🏆 Top Benchmarks
+
+Track and compare performance across different brain architectures and optimization strategies. The benchmark system helps identify effective approaches and advances the state-of-the-art in quantum navigation.
+
+### Quick Start with Benchmarks
+
+```bash
+# Run a simulation with experiment tracking
+uv run scripts/run_simulation.py \
+  --config configs/your_config.yml \
+  --track-experiment
+
+# View your results
+uv run scripts/experiment_query.py list
+uv run scripts/experiment_query.py show <experiment-id>
+
+# Submit as a benchmark
+uv run scripts/benchmark_submit.py submit <experiment-id> \
+  --contributor "Your Name" \
+  --github "your-username" \
+  --notes "Your optimization approach"
 ```
+
+### Current Leaders
+
+#### Static Maze - Quantum
+
+| Brain | Success Rate | Avg Steps | Contributor | Date |
+|---|---|---|---|---|
+| qmodular | 100% | 42 | @chrisjz | 2025-11-09 |
+| modular | 100% | 35 | @chrisjz | 2025-11-09 |
+
+#### Static Maze - Classical
+
+| Brain | Success Rate | Avg Steps | Contributor | Date |
+|---|---|---|---|---|
+| qmlp | 100% | 49 | @chrisjz | 2025-11-09 |
+| mlp | 100% | 66 | @chrisjz | 2025-11-09 |
+| spiking | 75% | 189 | @chrisjz | 2025-11-09 |
+
+#### Dynamic Small - Quantum
+
+| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
+|---|---|---|---|---|---|---|
+| modular | 30% | 430 | 7.8 | 0.27 | @chrisjz | 2025-11-09 |
+
+#### Dynamic Small - Classical
+
+| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
+|---|---|---|---|---|---|---|
+| mlp | 60% | 351 | 8.0 | 0.25 | @chrisjz | 2025-11-09 |
+
+#### Dynamic Medium - Classical
+
+| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
+|---|---|---|---|---|---|---|
+| mlp | 80% | 804 | 27.2 | 0.52 | @chrisjz | 2025-11-09 |
+
+See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
 ## 📊 Example Output
 
