@@ -177,7 +177,38 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 ### Current Leaders
 
-*No benchmarks submitted yet. Be the first to set a benchmark!*
+#### Static Maze - Quantum
+
+| Brain | Success Rate | Avg Steps | Contributor | Date |
+|---|---|---|---|---|
+| qmodular | 100% | 42 | @chrisjz | 2025-11-09 |
+| modular | 100% | 35 | @chrisjz | 2025-11-09 |
+
+#### Static Maze - Classical
+
+| Brain | Success Rate | Avg Steps | Contributor | Date |
+|---|---|---|---|---|
+| qmlp | 100% | 49 | @chrisjz | 2025-11-09 |
+| mlp | 100% | 66 | @chrisjz | 2025-11-09 |
+| spiking | 75% | 189 | @chrisjz | 2025-11-09 |
+
+#### Dynamic Small - Quantum
+
+| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
+|---|---|---|---|---|---|---|
+| modular | 30% | 430 | 7.8 | 0.27 | @chrisjz | 2025-11-09 |
+
+#### Dynamic Small - Classical
+
+| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
+|---|---|---|---|---|---|---|
+| mlp | 60% | 351 | 8.0 | 0.25 | @chrisjz | 2025-11-09 |
+
+#### Dynamic Medium - Classical
+
+| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
+|---|---|---|---|---|---|---|
+| mlp | 80% | 804 | 27.2 | 0.52 | @chrisjz | 2025-11-09 |
 
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
