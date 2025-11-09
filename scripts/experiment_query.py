@@ -169,7 +169,9 @@ def print_comparison(comparison: dict) -> None:
 
     print("\nPerformance Delta:")
     delta = comparison["performance_delta"]
-    print(f"  Success Rate: {delta['success_rate_diff']:+.1%} (Better: {delta['better_success_rate']})")
+    print(
+        f"  Success Rate: {delta['success_rate_diff']:+.1%} (Better: {delta['better_success_rate']})",
+    )
     print(f"  Avg Steps: {delta['avg_steps_diff']:+.1f} (Better: {delta['better_avg_steps']})")
     print(f"  Avg Reward: {delta['avg_reward_diff']:+.2f} (Better: {delta['better_avg_reward']})")
     print()
@@ -242,7 +244,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    """Main CLI entry point."""
+    """Query experiments entrypoint."""
     parser = argparse.ArgumentParser(
         description="Query and compare Quantum Nematode experiments",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -253,7 +255,11 @@ def main() -> None:
     list_parser = subparsers.add_parser("list", help="List experiments with optional filtering")
     list_parser.add_argument("--env-type", help="Filter by environment type (static/dynamic)")
     list_parser.add_argument("--brain-type", help="Filter by brain type")
-    list_parser.add_argument("--min-success-rate", type=float, help="Minimum success rate (0.0-1.0)")
+    list_parser.add_argument(
+        "--min-success-rate",
+        type=float,
+        help="Minimum success rate (0.0-1.0)",
+    )
     list_parser.add_argument("--since", help="Only show experiments after date (ISO format)")
     list_parser.add_argument("--limit", type=int, help="Maximum number of results")
     list_parser.add_argument("--json", action="store_true", help="Output as JSON")
