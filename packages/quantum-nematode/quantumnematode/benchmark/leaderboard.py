@@ -2,6 +2,9 @@
 
 """Leaderboard generation for benchmarks."""
 
+import re
+from pathlib import Path
+
 from quantumnematode.benchmark.submission import list_benchmarks
 from quantumnematode.experiment.metadata import ExperimentMetadata
 
@@ -171,3 +174,108 @@ def generate_leaderboards() -> dict[str, str]:
         leaderboards[category] = table
 
     return leaderboards
+
+
+def generate_benchmarks_doc() -> str:
+    """Generate complete BENCHMARKS.md leaderboard section.
+
+    This generates the leaderboard tables that should replace the content
+    under the "## Leaderboards" heading in BENCHMARKS.md.
+
+    Returns
+    -------
+    str
+        Markdown content for the Leaderboards section.
+    """
+    sections = []
+
+    # Category mappings with full names
+    category_groups = [
+        (
+            "### Static Maze",
+            [
+                ("#### Quantum Architectures", "static_maze_quantum"),
+                ("#### Classical Architectures", "static_maze_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Small (≤20x20)",
+            [
+                ("#### Quantum Architectures", "dynamic_small_quantum"),
+                ("#### Classical Architectures", "dynamic_small_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Medium (≤50x50)",
+            [
+                ("#### Quantum Architectures", "dynamic_medium_quantum"),
+                ("#### Classical Architectures", "dynamic_medium_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Large (>50x50)",
+            [
+                ("#### Quantum Architectures", "dynamic_large_quantum"),
+                ("#### Classical Architectures", "dynamic_large_classical"),
+            ],
+        ),
+    ]
+
+    for group_title, subcategories in category_groups:
+        sections.append(f"{group_title}\n")
+
+        for subcat_title, category_id in subcategories:
+            sections.append(f"{subcat_title}\n")
+            table = generate_category_table(category_id, limit=20)
+            sections.append(table)
+
+    return "\n".join(sections)
+
+
+def update_readme(readme_path: Path | str) -> None:
+    """Update README.md with latest benchmark leaderboard.
+
+    Parameters
+    ----------
+    readme_path : Path | str
+        Path to README.md file.
+    """
+    readme_path = Path(readme_path)
+    content = readme_path.read_text()
+
+    # Generate new section
+    new_section = generate_readme_section()
+
+    # Find the section to replace (between "### Current Leaders" and "See [BENCHMARKS.md]")
+    pattern = r"(### Current Leaders\n\n)(.*?)(See \[BENCHMARKS\.md\])"
+    replacement = f"\\1{new_section}\\n\\3"
+
+    updated_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+    # Write back
+    readme_path.write_text(updated_content)
+
+
+def update_benchmarks_doc(benchmarks_path: Path | str) -> None:
+    """Update BENCHMARKS.md with latest leaderboard tables.
+
+    Parameters
+    ----------
+    benchmarks_path : Path | str
+        Path to BENCHMARKS.md file.
+    """
+    benchmarks_path = Path(benchmarks_path)
+    content = benchmarks_path.read_text()
+
+    # Generate new leaderboards section
+    new_section = generate_benchmarks_doc()
+
+    # Find and replace the Leaderboards section (between heading and horizontal rule)
+    # Match everything between "## Leaderboards\n\n" and "\n---\n"
+    pattern = r"(## Leaderboards\n\n).*?(\n---\n)"
+    replacement = f"\\1{new_section}\\2"
+
+    updated_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+    # Write back
+    benchmarks_path.write_text(updated_content)
