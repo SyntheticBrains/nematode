@@ -1,0 +1,63 @@
+{
+  "experiment_id": "20251109_070420",
+  "timestamp": "2025-11-09T07:04:20.347401+00:00",
+  "config_file": "configs/examples/modular_dynamic_small.yml",
+  "config_hash": "145ec25bb84e8092f9eefb0a50de5817429778801b7524e76fb10beaffd694d5",
+  "git_commit": "81498ea3a53cac690ae998ae64fc246a763e183f",
+  "git_branch": "benchmarking",
+  "git_dirty": false,
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "num_foods": 5,
+    "max_active_foods": 10,
+    "initial_satiety": null,
+    "satiety_decay_rate": null,
+    "viewport_size": [
+      11,
+      11
+    ]
+  },
+  "brain": {
+    "type": "modular",
+    "qubits": 2,
+    "shots": 1500,
+    "num_layers": 2,
+    "hidden_dim": null,
+    "num_hidden_layers": null,
+    "learning_rate": 0.001,
+    "modules": {
+      "chemotaxis": [
+        0,
+        1
+      ]
+    }
+  },
+  "results": {
+    "total_runs": 20,
+    "success_rate": 0.3,
+    "avg_steps": 429.7,
+    "avg_reward": 149.11353176205262,
+    "avg_foods_collected": 7.8,
+    "avg_distance_efficiency": 0.27169643431679236,
+    "completed_all_food": 6,
+    "starved": 6,
+    "max_steps_reached": 8,
+    "goal_reached": 0
+  },
+  "system": {
+    "python_version": "3.12.10",
+    "qiskit_version": "1.4.5",
+    "torch_version": "2.9.0",
+    "device_type": "cpu",
+    "qpu_backend": null
+  },
+  "exports_path": "exports/20251109_065415",
+  "benchmark": {
+    "contributor": "Chris Zaharia",
+    "github_username": "chrisjz",
+    "category": "dynamic_small_quantum",
+    "notes": null,
+    "verified": false
+  }
+}

@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """IBM Quantum Authenticator."""
 
 import os
@@ -26,7 +28,7 @@ ERROR_IBM_QUANTUM_CRN_NOT_SET = (
 )
 
 
-class IBMQuantumAuthenticator:  # pragma: no cover
+class IBMQuantumAuthenticator:
     """Handles authentication with IBM Quantum using an API key."""
 
     def __init__(self) -> None:

@@ -44,8 +44,12 @@ BRAIN_TYPES = Literal[
     BrainType.QMLP,
     BrainType.SPIKING,
 ]
-QUANTUM_BRAIN_TYPES = Literal[BrainType.MODULAR, BrainType.QMODULAR]
-CLASSICAL_BRAIN_TYPES = Literal[BrainType.MLP, BrainType.QMLP, BrainType.SPIKING]
+QUANTUM_BRAIN_TYPES: set[BrainType] = {BrainType.MODULAR, BrainType.QMODULAR}
+CLASSICAL_BRAIN_TYPES: set[BrainType] = {
+    BrainType.MLP,
+    BrainType.QMLP,
+    BrainType.SPIKING,
+}
 
 # Defaults
 DEFAULT_BRAIN_TYPE = BrainType.MODULAR
