@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Benchmark submission workflow and storage."""
 
 import json

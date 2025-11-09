@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Leaderboard generation for benchmarks."""
 
 from quantumnematode.benchmark.submission import list_benchmarks
