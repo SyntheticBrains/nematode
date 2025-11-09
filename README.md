@@ -113,7 +113,7 @@ docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-le
 docker-compose exec quantum-nematode bash
 ```
 
-## � How It Works
+## ❓ How It Works
 
 ### Dynamic Foraging Environment (Primary)
 
@@ -151,7 +151,35 @@ The spiking brain architecture provides biologically realistic neural computatio
 - Event-driven sparse computation
 - Plasticity rules based on spike timing
 - Configurable neuron and synapse parameters
+
+## 🏆 Top Benchmarks
+
+Track and compare performance across different brain architectures and optimization strategies. The benchmark system helps identify effective approaches and advances the state-of-the-art in quantum navigation.
+
+### Quick Start with Benchmarks
+
+```bash
+# Run a simulation with experiment tracking
+uv run scripts/run_simulation.py \
+  --config configs/your_config.yml \
+  --track-experiment
+
+# View your results
+uv run scripts/experiment_query.py list
+uv run scripts/experiment_query.py show <experiment-id>
+
+# Submit as a benchmark
+uv run scripts/benchmark_submit.py submit <experiment-id> \
+  --contributor "Your Name" \
+  --github "your-username" \
+  --notes "Your optimization approach"
 ```
+
+### Current Leaders
+
+*No benchmarks submitted yet. Be the first to set a benchmark!*
+
+See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
 ## 📊 Example Output
 
