@@ -38,13 +38,18 @@ def compute_config_hash(config_path: Path) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def extract_environment_metadata(env: DynamicForagingEnvironment | object) -> EnvironmentMetadata:
+def extract_environment_metadata(
+    env: DynamicForagingEnvironment | object,
+    satiety_config: dict,
+) -> EnvironmentMetadata:
     """Extract environment metadata from environment instance.
 
     Parameters
     ----------
     env : DynamicForagingEnvironment | object
         Environment instance.
+    satiety_config : dict
+        Satiety configuration dictionary.
 
     Returns
     -------
@@ -57,8 +62,8 @@ def extract_environment_metadata(env: DynamicForagingEnvironment | object) -> En
             grid_size=env.grid_size,
             num_foods=env.num_initial_foods,
             max_active_foods=env.max_active_foods,
-            initial_satiety=getattr(env, "initial_satiety", None),
-            satiety_decay_rate=getattr(env, "satiety_decay_rate", None),
+            initial_satiety=satiety_config.get("initial"),
+            satiety_decay_rate=satiety_config.get("decay_rate"),
             viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,
         )
     # Static environment
@@ -236,7 +241,7 @@ def capture_experiment_metadata(
     config_hash = compute_config_hash(config_path)
 
     # Extract metadata from components
-    environment_metadata = extract_environment_metadata(env)
+    environment_metadata = extract_environment_metadata(env, config.get("satiety", {}))
     brain_metadata = extract_brain_metadata(brain, brain_type, config.get("brain", {}))
     results_metadata = aggregate_results_metadata(all_results)
     system_metadata_dict = capture_system_info(device_type, qpu_backend)

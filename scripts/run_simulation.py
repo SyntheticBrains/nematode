@@ -674,6 +674,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         if hasattr(learning_rate, "__dict__")
                         else {},
                     },
+                    "satiety": {
+                        "initial": satiety_config.initial_satiety,
+                        "decay_rate": satiety_config.satiety_decay_rate,
+                    },
                 },
                 all_results=all_results,
                 metrics=metrics,
