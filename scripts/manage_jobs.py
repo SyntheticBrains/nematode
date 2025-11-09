@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Check the status of an IBM Quantum job or Q-CTRL Qiskit Function job by job ID."""
-# ruff: noqa: T201
 
 import argparse
 import logging
