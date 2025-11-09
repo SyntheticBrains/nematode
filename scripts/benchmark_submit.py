@@ -3,8 +3,15 @@
 
 import argparse
 import sys
+from pathlib import Path
 
-from quantumnematode.benchmark import generate_leaderboards, generate_readme_section, save_benchmark
+from quantumnematode.benchmark import (
+    generate_leaderboards,
+    generate_readme_section,
+    save_benchmark,
+    update_benchmarks_doc,
+    update_readme,
+)
 from quantumnematode.benchmark.submission import list_benchmarks
 from quantumnematode.experiment import load_experiment
 
@@ -126,21 +133,48 @@ def cmd_regenerate(args: argparse.Namespace) -> None:  # noqa: ARG001
     """
     print("Generating leaderboards...")
 
-    # Generate README section
-    readme_section = generate_readme_section()
-    print("\nREADME.md benchmark section generated.")
-    print("=" * 80)
-    print(readme_section)
-    print("=" * 80)
+    # Find repository root (assumes script is in scripts/ subdirectory)
+    script_dir = Path(__file__).parent
+    repo_root = script_dir.parent
+    readme_path = repo_root / "README.md"
+    benchmarks_path = repo_root / "BENCHMARKS.md"
 
-    # Generate full leaderboards
-    leaderboards = generate_leaderboards()
-    print(f"\nGenerated {len(leaderboards)} category leaderboards.")
+    try:
+        # Update README.md
+        if readme_path.exists():
+            update_readme(readme_path)
+            print(f"✓ Updated {readme_path}")
+        else:
+            print(f"Warning: README.md not found at {readme_path}", file=sys.stderr)
 
-    print("\nTo update documentation:")
-    print("  1. Copy the README section above into README.md")
-    print("  2. Update BENCHMARKS.md with full leaderboard tables")
-    print("  3. Commit and push changes")
+        # Update BENCHMARKS.md
+        if benchmarks_path.exists():
+            update_benchmarks_doc(benchmarks_path)
+            print(f"✓ Updated {benchmarks_path}")
+        else:
+            print(f"Warning: BENCHMARKS.md not found at {benchmarks_path}", file=sys.stderr)
+
+        # Generate preview of README section
+        readme_section = generate_readme_section()
+        print("\n" + "=" * 80)
+        print("Preview of README.md 'Current Leaders' section:")
+        print("=" * 80)
+        print(readme_section)
+        print("=" * 80)
+
+        # Generate summary of leaderboards
+        leaderboards = generate_leaderboards()
+        print(f"\n✓ Generated {len(leaderboards)} category leaderboards.")
+
+        print("\nNext steps:")
+        print("  1. Review the updated files")
+        print("  2. Run: git add README.md BENCHMARKS.md")
+        print("  3. Run: git commit -m 'Update benchmark leaderboards'")
+        print("  4. Push changes")
+
+    except Exception as e:
+        print(f"Error regenerating documentation: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def main() -> None:
