@@ -690,6 +690,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     "information to the experiment metadata. Example: `ibm_strasbourg`.",
                 )
 
+            # Save experiment
+            experiment_path = save_experiment(experiment_metadata)
+            print(f"\n✓ Experiment metadata saved: {experiment_path}")
+            print(f"  Experiment ID: {experiment_metadata.experiment_id}")
+            print(
+                f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
+            )
+
             if args.save_benchmark:
                 # Interactive benchmark submission
                 print("\n" + "=" * 80)
@@ -712,7 +720,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         ).strip()
                         notes = notes if notes else None
 
-                    # Save as benchmark
+                    # Save benchmark
                     benchmark_path = save_benchmark(
                         metadata=experiment_metadata,
                         contributor=contributor,
@@ -720,14 +728,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         notes=notes,
                     )
                     print(f"\n✓ Benchmark saved: {benchmark_path}")
-            else:
-                # Save as regular experiment
-                experiment_path = save_experiment(experiment_metadata)
-                print(f"\n✓ Experiment metadata saved: {experiment_path}")
-                print(f"  Experiment ID: {experiment_metadata.experiment_id}")
-                print(
-                    f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
-                )
 
         except Exception as e:
             logger.error(f"Failed to save experiment metadata: {e}")
