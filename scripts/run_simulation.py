@@ -28,6 +28,7 @@ from quantumnematode.brain.arch.dtypes import (
     DEFAULT_BRAIN_TYPE,
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
+    QUANTUM_BRAIN_TYPES,
     BrainType,
     DeviceType,
 )
@@ -670,8 +671,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         "config": brain_config.__dict__
                         if hasattr(brain_config, "__dict__")
                         else {},
-                        "qubits": qubits,
-                        "shots": shots,
+                        "qubits": qubits if brain_type in QUANTUM_BRAIN_TYPES else None,
+                        "shots": shots if brain_type in QUANTUM_BRAIN_TYPES else None,
                         "learning_rate": learning_rate.__dict__
                         if hasattr(learning_rate, "__dict__")
                         else {},
