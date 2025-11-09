@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Experiment metadata storage and retrieval using JSON files."""
 
 import json

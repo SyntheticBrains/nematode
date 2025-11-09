@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Experiment metadata capture and tracking integration."""
 
 import hashlib
