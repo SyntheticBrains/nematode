@@ -680,9 +680,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 all_results=all_results,
                 metrics=metrics,
                 device_type=device,
-                qpu_backend=None,  # TODO: Extract from device config
+                qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
             )
+
+            if device == DeviceType.QPU:
+                print(
+                    "Warning: You will need to manually add the QPU backend "
+                    "information to the experiment metadata. Example: `ibm_strasbourg`.",
+                )
 
             if args.save_benchmark:
                 # Interactive benchmark submission
