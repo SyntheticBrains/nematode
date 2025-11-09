@@ -81,7 +81,7 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
         print(f"Leaderboard: {args.category}")
         print(f"{'=' * 80}\n")
 
-        for i, benchmark in enumerate(benchmarks[:args.limit], 1):
+        for i, benchmark in enumerate(benchmarks[: args.limit], 1):
             contributor = benchmark.benchmark.contributor if benchmark.benchmark else "Unknown"
             print(f"{i}. {benchmark.brain.type} - {benchmark.results.success_rate:.0%} success")
             print(f"   {contributor} | {benchmark.timestamp.strftime('%Y-%m-%d')}")
@@ -144,7 +144,7 @@ def cmd_regenerate(args: argparse.Namespace) -> None:  # noqa: ARG001
 
 
 def main() -> None:
-    """Main CLI entry point."""
+    """Submit benchmarks entrypoint."""
     parser = argparse.ArgumentParser(
         description="Manage Quantum Nematode benchmark submissions",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -157,12 +157,21 @@ def main() -> None:
     submit_parser.add_argument("--contributor", help="Contributor name")
     submit_parser.add_argument("--github", help="GitHub username")
     submit_parser.add_argument("--notes", help="Optimization notes")
-    submit_parser.add_argument("--no-prompt", action="store_true", help="Don't prompt for optional fields")
+    submit_parser.add_argument(
+        "--no-prompt",
+        action="store_true",
+        help="Don't prompt for optional fields",
+    )
 
     # Leaderboard command
     leaderboard_parser = subparsers.add_parser("leaderboard", help="View benchmark leaderboards")
     leaderboard_parser.add_argument("--category", help="Show specific category")
-    leaderboard_parser.add_argument("--limit", type=int, default=10, help="Max results per category")
+    leaderboard_parser.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Max results per category",
+    )
 
     # Regenerate command
     subparsers.add_parser("regenerate", help="Regenerate leaderboard documentation")
