@@ -1,0 +1,60 @@
+{
+  "experiment_id": "20251109_100529",
+  "timestamp": "2025-11-09T10:05:29.415783+00:00",
+  "config_file": "configs/examples/qmodular_simple_medium.yml",
+  "config_hash": "7af1190ea0026e68661ba21f4cf970479349a1f4a9f84e9453ff5890a08e250e",
+  "git_commit": "81498ea3a53cac690ae998ae64fc246a763e183f",
+  "git_branch": "benchmarking",
+  "git_dirty": false,
+  "environment": {
+    "type": "static",
+    "grid_size": 10,
+    "num_foods": null,
+    "max_active_foods": null,
+    "initial_satiety": null,
+    "satiety_decay_rate": null,
+    "viewport_size": null
+  },
+  "brain": {
+    "type": "qmodular",
+    "qubits": 2,
+    "shots": 1000,
+    "num_layers": 2,
+    "hidden_dim": null,
+    "num_hidden_layers": null,
+    "learning_rate": 0.001,
+    "modules": {
+      "chemotaxis": [
+        0,
+        1
+      ]
+    }
+  },
+  "results": {
+    "total_runs": 20,
+    "success_rate": 1.0,
+    "avg_steps": 41.95,
+    "avg_reward": 24.233153162328012,
+    "avg_foods_collected": null,
+    "avg_distance_efficiency": null,
+    "completed_all_food": 0,
+    "starved": 0,
+    "max_steps_reached": 0,
+    "goal_reached": 20
+  },
+  "system": {
+    "python_version": "3.12.10",
+    "qiskit_version": "1.4.5",
+    "torch_version": "2.9.0",
+    "device_type": "cpu",
+    "qpu_backend": null
+  },
+  "exports_path": "exports/20251109_100241",
+  "benchmark": {
+    "contributor": "Chris Zaharia",
+    "github_username": "chrisjz",
+    "category": "static_maze_quantum",
+    "notes": null,
+    "verified": false
+  }
+}
