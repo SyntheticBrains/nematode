@@ -23,6 +23,7 @@ def is_quantum_brain(brain_type: str) -> bool:
 def get_environment_category(
     env_type: str,
     grid_size: int,
+    *,
     predators_enabled: bool = False,
 ) -> str:
     """Get environment category string.
@@ -39,7 +40,8 @@ def get_environment_category(
     Returns
     -------
     str
-        Environment category (e.g., "static_maze", "dynamic_small", "dynamic_predator_small").
+        Environment category (e.g., "static_maze", "dynamic_small",
+        "dynamic_predator_small").
     """
     if env_type == "static":
         return "static_maze"
@@ -64,12 +66,13 @@ def determine_benchmark_category(metadata: ExperimentMetadata) -> str:
     Returns
     -------
     str
-        Benchmark category string (e.g., "dynamic_medium_quantum", "dynamic_predator_small_quantum").
+        Benchmark category string (e.g., "dynamic_medium_quantum",
+        "dynamic_predator_small_quantum").
     """
     env_category = get_environment_category(
         metadata.environment.type,
         metadata.environment.grid_size,
-        metadata.environment.predators_enabled,
+        predators_enabled=metadata.environment.predators_enabled,
     )
 
     brain_class = "quantum" if is_quantum_brain(metadata.brain.type) else "classical"

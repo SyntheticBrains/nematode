@@ -179,7 +179,8 @@ class DynamicEnvironmentConfig(BaseModel):
                 "Flat dynamic environment configuration is deprecated. "
                 "Please restructure configuration with 'foraging' subsection. "
                 "Parameters being migrated: num_initial_foods, max_active_foods, "
-                "min_food_distance, agent_exclusion_radius, gradient_decay_constant, gradient_strength",
+                "min_food_distance, agent_exclusion_radius, gradient_decay_constant, "
+                "gradient_strength",
             )
             return ForagingConfig(
                 num_initial_foods=self.num_initial_foods or 10,

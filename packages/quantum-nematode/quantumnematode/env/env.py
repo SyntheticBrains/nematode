@@ -107,16 +107,21 @@ class Predator:
         self.movement_accumulator -= 1.0
 
         # Random movement in one of four directions
+        up = 0
+        down = 1
+        left = 2
+        right = 3
+
         direction_choice = secrets.randbelow(4)
         x, y = self.position
 
-        if direction_choice == 0:  # Up
+        if direction_choice == up:
             y = max(0, y - 1)
-        elif direction_choice == 1:  # Down
+        elif direction_choice == down:
             y = min(grid_size - 1, y + 1)
-        elif direction_choice == 2:  # Left
+        elif direction_choice == left:
             x = max(0, x - 1)
-        else:  # Right
+        elif direction_choice == right:
             x = min(grid_size - 1, x + 1)
 
         self.position = (x, y)
@@ -684,6 +689,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         action_set: list[Action] = DEFAULT_ACTIONS,
         rich_style_config: DarkColorRichStyleConfig | None = None,
         # Predator parameters
+        *,
         predators_enabled: bool = False,
         num_predators: int = 2,
         predator_speed: float = 1.0,
