@@ -25,6 +25,10 @@ class EnvironmentMetadata(BaseModel):
         Satiety decay per step (dynamic environments only).
     viewport_size : list[int] | None
         Viewport dimensions [height, width] (dynamic environments only).
+    predators_enabled : bool
+        Whether predators are enabled (dynamic environments only).
+    num_predators : int | None
+        Number of predators (dynamic environments with predators only).
     """
 
     type: str
@@ -34,6 +38,8 @@ class EnvironmentMetadata(BaseModel):
     initial_satiety: float | None = None
     satiety_decay_rate: float | None = None
     viewport_size: list[int] | None = None
+    predators_enabled: bool = False
+    num_predators: int | None = None
 
 
 class BrainMetadata(BaseModel):

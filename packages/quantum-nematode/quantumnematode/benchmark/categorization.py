@@ -20,7 +20,11 @@ def is_quantum_brain(brain_type: str) -> bool:
     return brain_type in quantum_brains
 
 
-def get_environment_category(env_type: str, grid_size: int) -> str:
+def get_environment_category(
+    env_type: str,
+    grid_size: int,
+    predators_enabled: bool = False,
+) -> str:
     """Get environment category string.
 
     Parameters
@@ -29,21 +33,24 @@ def get_environment_category(env_type: str, grid_size: int) -> str:
         Environment type ("static" or "dynamic").
     grid_size : int
         Grid size.
+    predators_enabled : bool, optional
+        Whether predators are enabled (dynamic environments only), by default False.
 
     Returns
     -------
     str
-        Environment category (e.g., "static_maze", "dynamic_small").
+        Environment category (e.g., "static_maze", "dynamic_small", "dynamic_predator_small").
     """
     if env_type == "static":
         return "static_maze"
 
     # Dynamic foraging categories based on grid size
-    if grid_size <= 20:
-        return "dynamic_small"
-    if grid_size <= 50:
-        return "dynamic_medium"
-    return "dynamic_large"
+    size_category = "small" if grid_size <= 20 else "medium" if grid_size <= 50 else "large"
+
+    # Add predator prefix if enabled
+    if predators_enabled:
+        return f"dynamic_predator_{size_category}"
+    return f"dynamic_{size_category}"
 
 
 def determine_benchmark_category(metadata: ExperimentMetadata) -> str:
@@ -57,11 +64,12 @@ def determine_benchmark_category(metadata: ExperimentMetadata) -> str:
     Returns
     -------
     str
-        Benchmark category string (e.g., "dynamic_medium_quantum").
+        Benchmark category string (e.g., "dynamic_medium_quantum", "dynamic_predator_small_quantum").
     """
     env_category = get_environment_category(
         metadata.environment.type,
         metadata.environment.grid_size,
+        metadata.environment.predators_enabled,
     )
 
     brain_class = "quantum" if is_quantum_brain(metadata.brain.type) else "classical"
