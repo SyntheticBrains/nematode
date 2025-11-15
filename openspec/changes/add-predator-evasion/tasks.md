@@ -2,81 +2,81 @@
 
 ## 1. Core Predator Mechanics
 
-- [ ] 1.1 Create `Predator` class in `env.py` with position, speed, and movement methods
-- [ ] 1.2 Implement random movement pattern for predators with configurable speed
-- [ ] 1.3 Add predator collection to `DynamicForagingEnvironment.__init__`
-- [ ] 1.4 Implement predator spawning with random valid positions
-- [ ] 1.5 Add predator position update method called each environment step
-- [ ] 1.6 Implement collision detection between agent and predators (kill_radius check)
-- [ ] 1.7 Add `TerminationReason.PREDATOR` enum value to termination reasons
-- [ ] 1.8 Implement episode termination on predator collision with death penalty reward
+- [x] 1.1 Create `Predator` class in `env.py` with position, speed, and movement methods
+- [x] 1.2 Implement random movement pattern for predators with configurable speed
+- [x] 1.3 Add predator collection to `DynamicForagingEnvironment.__init__`
+- [x] 1.4 Implement predator spawning with random valid positions
+- [x] 1.5 Add predator position update method called each environment step
+- [x] 1.6 Implement collision detection between agent and predators (kill_radius check)
+- [x] 1.7 Add `TerminationReason.PREDATOR` enum value to termination reasons
+- [x] 1.8 Implement episode termination on predator collision with death penalty reward
 
 ## 2. Unified Gradient System
 
-- [ ] 2.1 Rename existing gradient methods for clarity (`calculate_gradient` → `calculate_food_gradient`)
-- [ ] 2.2 Implement `calculate_predator_gradient` method using negative exponential decay
-- [ ] 2.3 Implement `calculate_combined_gradient` method for vector superposition
-- [ ] 2.4 Update environment observation to use combined gradient (food + predator)
-- [ ] 2.5 Add gradient_decay_constant and gradient_strength to predator configuration
-- [ ] 2.6 Ensure gradient direction points away from predators (repulsive)
-- [ ] 2.7 Test gradient superposition with multiple foods and multiple predators
+- [x] 2.1 Rename existing gradient methods for clarity (`calculate_gradient` → `calculate_food_gradient`)
+- [x] 2.2 Implement `calculate_predator_gradient` method using negative exponential decay
+- [x] 2.3 Implement `calculate_combined_gradient` method for vector superposition
+- [x] 2.4 Update environment observation to use combined gradient (food + predator)
+- [x] 2.5 Add gradient_decay_constant and gradient_strength to predator configuration
+- [x] 2.6 Ensure gradient direction points away from predators (repulsive)
+- [x] 2.7 Test gradient superposition with multiple foods and multiple predators
 
 ## 3. Detection and Proximity System
 
-- [ ] 3.1 Implement `is_agent_in_danger` method checking if agent within any predator's detection_radius
-- [ ] 3.2 Add proximity penalty calculation in `RewardCalculator` when agent in danger
-- [ ] 3.3 Make proximity_penalty configurable (default -0.1)
-- [ ] 3.4 Ensure proximity penalty applied per step, not stacked per predator
-- [ ] 3.5 Add agent danger status tracking for visualization output
+- [x] 3.1 Implement `is_agent_in_danger` method checking if agent within any predator's detection_radius
+- [x] 3.2 Add proximity penalty calculation in `RewardCalculator` when agent in danger
+- [x] 3.3 Make proximity_penalty configurable (default -0.1)
+- [x] 3.4 Ensure proximity penalty applied per step, not stacked per predator
+- [x] 3.5 Add agent danger status tracking for visualization output
 
 ## 4. Configuration System Updates
 
-- [ ] 4.1 Create `PredatorConfig` Pydantic model with all predator parameters
-- [ ] 4.2 Create `ForagingConfig` Pydantic model for nested foraging parameters
-- [ ] 4.3 Update `DynamicEnvironmentConfig` to include `foraging` and `predators` subsections
-- [ ] 4.4 Implement automatic migration from flat to nested configuration structure
-- [ ] 4.5 Add deprecation warning logging for legacy flat configurations
-- [ ] 4.6 Add validation for `movement_pattern` (only "random" allowed, clear error for future patterns)
-- [ ] 4.7 Set default values: `enabled: false`, `count: 2`, `speed: 1.0`, `detection_radius: 8`, `kill_radius: 1`
-- [ ] 4.8 Add `show_detection_radius: true` configuration parameter
+- [x] 4.1 Create `PredatorConfig` Pydantic model with all predator parameters
+- [x] 4.2 Create `ForagingConfig` Pydantic model for nested foraging parameters
+- [x] 4.3 Update `DynamicEnvironmentConfig` to include `foraging` and `predators` subsections
+- [x] 4.4 Implement automatic migration from flat to nested configuration structure
+- [x] 4.5 Add deprecation warning logging for legacy flat configurations
+- [x] 4.6 Add validation for `movement_pattern` (only "random" allowed, clear error for future patterns)
+- [x] 4.7 Set default values: `enabled: false`, `count: 2`, `speed: 1.0`, `detection_radius: 8`, `kill_radius: 1`
+- [x] 4.8 Add `show_detection_radius: true` configuration parameter
 
 ## 5. Metrics and Tracking
 
-- [ ] 5.1 Add predator metrics fields to `PerformanceMetrics` dataclass:
+- [x] 5.1 Add predator metrics fields to `PerformanceMetrics` dataclass:
   - `predator_encounters: int | None`
   - `successful_evasions: int | None`
   - `deaths_by_predator: int | None`
   - `foods_collected_before_death: int | None`
-- [ ] 5.2 Implement encounter tracking logic (count when entering detection radius)
-- [ ] 5.3 Implement evasion tracking (increment when exiting detection radius without death)
-- [ ] 5.4 Set predator metrics to None when `predators.enabled: false` (backward compatibility)
-- [ ] 5.5 Add predator metrics to `EpisodeTracker` tracking data
-- [ ] 5.6 Update experiment metadata JSON to include predator configuration
-- [ ] 5.7 Ensure termination reason correctly recorded as "predator" in tracking data
+- [x] 5.2 Implement encounter tracking logic (count when entering detection radius)
+- [x] 5.3 Implement evasion tracking (increment when exiting detection radius without death)
+- [x] 5.4 Set predator metrics to None when `predators.enabled: false` (backward compatibility)
+- [x] 5.5 Add predator metrics to `EpisodeTracker` tracking data
+- [x] 5.6 Update experiment metadata JSON to include predator configuration
+- [x] 5.7 Ensure termination reason correctly recorded as "predator" in tracking data
 
 ## 6. Visualization and Rendering
 
-- [ ] 6.1 Add predator rendering in emoji theme mode using 🕷️ spider emoji
-- [ ] 6.2 Add predator rendering in ASCII theme mode using `#` symbol
-- [ ] 6.3 Implement detection radius visualization (configurable, default enabled)
-- [ ] 6.4 Add danger status display to simulation run output ("SAFE" / "IN DANGER")
-- [ ] 6.5 Ensure predators within viewport are rendered correctly
-- [ ] 6.6 Test rendering with multiple predators and overlapping detection radii
+- [x] 6.1 Add predator rendering in emoji theme mode using 🕷️ spider emoji
+- [x] 6.2 Add predator rendering in ASCII theme mode using `#` symbol
+- [x] 6.3 Implement detection radius visualization (configurable, default enabled)
+- [x] 6.4 Add danger status display to simulation run output ("SAFE" / "IN DANGER")
+- [x] 6.5 Ensure predators within viewport are rendered correctly
+- [x] 6.6 Test rendering with multiple predators and overlapping detection radii
 
 ## 7. Benchmark Categories
 
-- [ ] 7.1 Add six new benchmark categories to `categorization.py`:
+- [x] 7.1 Add six new benchmark categories to `categorization.py`:
   - `dynamic_predator_quantum_small`
   - `dynamic_predator_quantum_medium`
   - `dynamic_predator_quantum_large`
   - `dynamic_predator_classical_small`
   - `dynamic_predator_classical_medium`
   - `dynamic_predator_classical_large`
-- [ ] 7.2 Update categorization logic to check `predators.enabled` flag
-- [ ] 7.3 Use same grid size thresholds as non-predator benchmarks (≤20, ≤50, >50)
-- [ ] 7.4 Ensure non-predator simulations still use existing categories (backward compatibility)
-- [ ] 7.5 Add predator configuration metadata to benchmark submissions
-- [ ] 7.6 Update benchmark comparison to include predator-specific metrics
+- [x] 7.2 Update categorization logic to check `predators.enabled` flag
+- [x] 7.3 Use same grid size thresholds as non-predator benchmarks (≤20, ≤50, >50)
+- [x] 7.4 Ensure non-predator simulations still use existing categories (backward compatibility)
+- [x] 7.5 Add predator configuration metadata to benchmark submissions
+- [x] 7.6 Update benchmark comparison to include predator-specific metrics
 
 ## 8. Plotting and Exports
 
