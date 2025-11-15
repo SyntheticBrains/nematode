@@ -48,7 +48,7 @@ environment:
   type: dynamic
   dynamic:
     grid_size: 100
-    num_initial_foods: 50
+    num_initial_foods: 35
     max_active_foods: 50
     min_food_distance: 10
     agent_exclusion_radius: 15
