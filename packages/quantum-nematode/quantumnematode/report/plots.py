@@ -970,3 +970,204 @@ def plot_satiety_progression_single_run(  # pragma: no cover
     plt.tight_layout()
     plt.savefig(plot_dir / f"{file_prefix}satiety_progression_run_{run_number}.png")
     plt.close()
+
+
+# Predator Evasion Environment Specific Plots
+
+
+def plot_predator_encounters_over_time(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    predator_encounters: list[int],
+) -> None:
+    """Plot predator encounters over time.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    predator_encounters : list[int]
+        Number of predator encounters in each run.
+    """
+    plt.figure(figsize=(12, 6))
+    plt.bar(
+        runs,
+        predator_encounters,
+        alpha=0.7,
+        color="red",
+        edgecolor="black",
+        label="Encounters",
+    )
+    avg_encounters = sum(predator_encounters) / len(predator_encounters)
+    plt.axhline(
+        y=avg_encounters,
+        color="darkred",
+        linestyle="--",
+        linewidth=2,
+        label=f"Average ({avg_encounters:.1f})",
+    )
+    plt.title("Predator Encounters Per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Number of Encounters")
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}predator_encounters_over_time.png")
+    plt.close()
+
+
+def plot_evasion_success_rate_over_time(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    predator_encounters: list[int],
+    successful_evasions: list[int],
+) -> None:
+    """Plot evasion success rate over time.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    predator_encounters : list[int]
+        Number of predator encounters in each run.
+    successful_evasions : list[int]
+        Number of successful evasions in each run.
+    """
+    # Calculate evasion success rate per run
+    evasion_rates = [
+        evasions / encounters if encounters > 0 else 0.0
+        for encounters, evasions in zip(predator_encounters, successful_evasions, strict=False)
+    ]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(
+        runs,
+        evasion_rates,
+        marker="o",
+        linestyle="-",
+        linewidth=2,
+        markersize=6,
+        color="green",
+        label="Evasion Success Rate",
+    )
+
+    # Calculate overall average (only for runs with encounters)
+    valid_rates = [
+        rate
+        for rate, encounters in zip(evasion_rates, predator_encounters, strict=False)
+        if encounters > 0
+    ]
+    if valid_rates:
+        avg_rate = sum(valid_rates) / len(valid_rates)
+        plt.axhline(
+            y=avg_rate,
+            color="darkgreen",
+            linestyle="--",
+            linewidth=2,
+            label=f"Average ({avg_rate:.2%})",
+        )
+
+    plt.ylim(-0.05, 1.05)
+    plt.title("Evasion Success Rate Over Runs")
+    plt.xlabel("Run")
+    plt.ylabel("Success Rate (Evasions / Encounters)")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}evasion_success_rate_over_time.png")
+    plt.close()
+
+
+def plot_survival_vs_food_collection(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    foods_collected: list[int],
+    deaths_by_predator: list[bool],
+) -> None:
+    """Plot survival rate vs food collection scatter plot.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    foods_collected : list[int]
+        Number of foods collected in each run.
+    deaths_by_predator : list[bool]
+        Whether each run ended in predator death (True) or survival (False).
+    """
+    # Separate data by survival status
+    survived_foods = [
+        foods for foods, died in zip(foods_collected, deaths_by_predator, strict=False) if not died
+    ]
+    died_foods = [
+        foods for foods, died in zip(foods_collected, deaths_by_predator, strict=False) if died
+    ]
+
+    plt.figure(figsize=(10, 8))
+
+    # Plot survived runs
+    if survived_foods:
+        plt.scatter(
+            survived_foods,
+            [1] * len(survived_foods),
+            alpha=0.6,
+            s=100,
+            color="green",
+            edgecolors="black",
+            label=f"Survived ({len(survived_foods)} runs)",
+        )
+
+    # Plot died runs
+    if died_foods:
+        plt.scatter(
+            died_foods,
+            [0] * len(died_foods),
+            alpha=0.6,
+            s=100,
+            color="red",
+            edgecolors="black",
+            label=f"Killed by Predator ({len(died_foods)} runs)",
+        )
+
+    # Add statistics
+    total_runs = len(deaths_by_predator)
+    survival_rate = len(survived_foods) / total_runs if total_runs > 0 else 0.0
+    avg_foods_survived = sum(survived_foods) / len(survived_foods) if survived_foods else 0.0
+    avg_foods_died = sum(died_foods) / len(died_foods) if died_foods else 0.0
+
+    stats_text = (
+        f"Survival Rate: {survival_rate:.1%}\n"
+        f"Avg Foods (Survived): {avg_foods_survived:.1f}\n"
+        f"Avg Foods (Died): {avg_foods_died:.1f}"
+    )
+    plt.text(
+        0.05,
+        0.5,
+        stats_text,
+        transform=plt.gca().transAxes,
+        fontsize=11,
+        verticalalignment="center",
+        bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
+    )
+
+    plt.yticks([0, 1], ["Killed", "Survived"])
+    plt.title("Survival vs Food Collection")
+    plt.xlabel("Foods Collected")
+    plt.ylabel("Outcome")
+    plt.legend()
+    plt.grid(alpha=0.3, axis="x")
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}survival_vs_food_collection.png")
+    plt.close()
