@@ -446,6 +446,16 @@ class QuantumNematodeAgent:
                 max_body_length=self.max_body_length,
                 theme=self.env.theme,
                 rich_style_config=self.env.rich_style_config,
+                # Predator parameters (preserve from original env)
+                predators_enabled=self.env.predators_enabled,
+                num_predators=self.env.num_predators,
+                predator_speed=self.env.predator_speed,
+                predator_detection_radius=self.env.predator_detection_radius,
+                predator_kill_radius=self.env.predator_kill_radius,
+                predator_gradient_decay=self.env.predator_gradient_decay,
+                predator_gradient_strength=self.env.predator_gradient_strength,
+                predator_proximity_penalty=self.env.predator_proximity_penalty,
+                show_detection_radius=self.env.show_detection_radius,
             )
         else:
             self.env = StaticEnvironment(

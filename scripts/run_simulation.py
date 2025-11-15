@@ -332,21 +332,37 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if environment_config.type == "dynamic":
         logger.info("Using dynamic foraging environment")
         dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+
+        # Get foraging and predator configs (with automatic migration)
+        foraging_config = dynamic_config.get_foraging_config()
+        predator_config = dynamic_config.get_predator_config()
+
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
-            num_initial_foods=dynamic_config.num_initial_foods,
-            max_active_foods=dynamic_config.max_active_foods,
-            min_food_distance=dynamic_config.min_food_distance,
-            agent_exclusion_radius=dynamic_config.agent_exclusion_radius,
-            gradient_decay_constant=dynamic_config.gradient_decay_constant,
-            gradient_strength=dynamic_config.gradient_strength,
+            num_initial_foods=foraging_config.num_initial_foods,
+            max_active_foods=foraging_config.max_active_foods,
+            min_food_distance=foraging_config.min_food_distance,
+            agent_exclusion_radius=foraging_config.agent_exclusion_radius,
+            gradient_decay_constant=foraging_config.gradient_decay_constant,
+            gradient_strength=foraging_config.gradient_strength,
             viewport_size=dynamic_config.viewport_size,
             max_body_length=body_length,
             theme=theme,
+            # Predator parameters
+            predators_enabled=predator_config.enabled,
+            num_predators=predator_config.count,
+            predator_speed=predator_config.speed,
+            predator_detection_radius=predator_config.detection_radius,
+            predator_kill_radius=predator_config.kill_radius,
+            predator_gradient_decay=predator_config.gradient_decay_constant,
+            predator_gradient_strength=predator_config.gradient_strength,
+            predator_proximity_penalty=predator_config.proximity_penalty,
+            show_detection_radius=predator_config.show_detection_radius,
         )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
-            f"{dynamic_config.num_initial_foods} initial foods",
+            f"{foraging_config.num_initial_foods} initial foods"
+            + (f", {predator_config.count} predators" if predator_config.enabled else ""),
         )
     else:
         logger.info("Using static maze environment")

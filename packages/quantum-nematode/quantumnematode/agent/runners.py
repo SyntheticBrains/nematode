@@ -250,6 +250,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                         reward=agent._episode_tracker.rewards,
                         foods_collected=agent._episode_tracker.foods_collected,
                         distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                        predator_encounters=agent._episode_tracker.predator_encounters,
+                        successful_evasions=agent._episode_tracker.successful_evasions,
+                        termination_reason="predator",
                     )
                     return EpisodeResult(
                         agent_path=agent.path,
@@ -306,6 +309,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                         reward=agent._episode_tracker.rewards,
                         foods_collected=agent._episode_tracker.foods_collected,
                         distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                        predator_encounters=agent._episode_tracker.predator_encounters,
+                        successful_evasions=agent._episode_tracker.successful_evasions,
+                        termination_reason="starved",
                     )
                     return EpisodeResult(
                         agent_path=agent.path,
@@ -387,6 +393,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                         reward=agent._episode_tracker.rewards,
                         foods_collected=agent._episode_tracker.foods_collected,
                         distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                        predator_encounters=agent._episode_tracker.predator_encounters,
+                        successful_evasions=agent._episode_tracker.successful_evasions,
+                        termination_reason="goal_reached",
                     )
                     return EpisodeResult(
                         agent_path=agent.path,
@@ -421,6 +430,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                     reward=agent._episode_tracker.rewards,
                     foods_collected=agent._episode_tracker.foods_collected,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                    predator_encounters=agent._episode_tracker.predator_encounters,
+                    successful_evasions=agent._episode_tracker.successful_evasions,
+                    termination_reason="max_steps",
                 )
                 return EpisodeResult(
                     agent_path=agent.path,
@@ -440,6 +452,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                     reward=agent._episode_tracker.rewards,
                     foods_collected=agent._episode_tracker.foods_collected,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                    predator_encounters=agent._episode_tracker.predator_encounters,
+                    successful_evasions=agent._episode_tracker.successful_evasions,
+                    termination_reason="completed_all_food",
                 )
                 return EpisodeResult(
                     agent_path=agent.path,
@@ -453,6 +468,9 @@ class StandardEpisodeRunner(EpisodeRunner):
             reward=agent._episode_tracker.rewards,
             foods_collected=agent._episode_tracker.foods_collected,
             distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+            predator_encounters=agent._episode_tracker.predator_encounters,
+            successful_evasions=agent._episode_tracker.successful_evasions,
+            termination_reason="max_steps",
         )
         return EpisodeResult(
             agent_path=agent.path,
