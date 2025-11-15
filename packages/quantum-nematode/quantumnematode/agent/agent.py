@@ -34,6 +34,7 @@ DEFAULT_PENALTY_ANTI_DITHERING = 0.02
 DEFAULT_PENALTY_STEP = 0.05
 DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_PENALTY_STARVATION = 10.0
+DEFAULT_PENALTY_PREDATOR_DEATH = 10.0
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -75,6 +76,9 @@ class RewardConfig(BaseModel):
     reward_goal: float = DEFAULT_REWARD_GOAL
     reward_exploration: float = DEFAULT_REWARD_EXPLORATION  # Bonus for visiting new cells
     penalty_starvation: float = DEFAULT_PENALTY_STARVATION  # Penalty when satiety reaches 0
+    penalty_predator_death: float = (
+        DEFAULT_PENALTY_PREDATOR_DEATH  # Penalty when caught by predator
+    )
 
 
 class ManyworldsModeConfig(BaseModel):
