@@ -100,6 +100,15 @@ class RewardCalculator:
         reward -= self.config.penalty_step
         logger.debug(f"[Penalty] Step penalty applied: {-self.config.penalty_step}.")
 
+        # Proximity penalty for being near predators (dynamic foraging only)
+        if isinstance(env, DynamicForagingEnvironment) and env.predators_enabled:
+            if env.is_agent_in_danger():
+                proximity_penalty = abs(env.predator_proximity_penalty)
+                reward -= proximity_penalty
+                logger.debug(
+                    f"[Penalty] Predator proximity penalty applied: {-proximity_penalty}",
+                )
+
         # Stuck position penalty: penalize agent for staying in same position
         if stuck_position_count > self.config.stuck_position_threshold:
             stuck_penalty = self.config.penalty_stuck_position * min(

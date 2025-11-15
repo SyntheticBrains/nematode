@@ -222,6 +222,43 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Track step (will add satiety later if dynamic environment)
             agent._episode_tracker.track_step()
 
+            # Update predators and check for collision (dynamic environment only)
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                # Update predator encounter tracking
+                was_in_danger = agent._episode_tracker.in_danger
+                is_in_danger = agent.env.is_agent_in_danger()
+
+                if not was_in_danger and is_in_danger:
+                    # Entered danger zone - increment encounters
+                    agent._episode_tracker.predator_encounters += 1
+                elif was_in_danger and not is_in_danger:
+                    # Exited danger zone without dying - successful evasion
+                    agent._episode_tracker.successful_evasions += 1
+
+                agent._episode_tracker.in_danger = is_in_danger
+
+                # Check for predator collision
+                if agent.env.check_predator_collision():
+                    logger.warning("Agent caught by predator!")
+                    # Apply death penalty
+                    reward -= reward_config.penalty_predator_death
+                    agent.brain.update_memory(reward)
+                    agent.brain.post_process_episode()
+                    agent._metrics_tracker.track_episode_completion(
+                        success=False,
+                        steps=agent._episode_tracker.steps,
+                        reward=agent._episode_tracker.rewards,
+                        foods_collected=agent._episode_tracker.foods_collected,
+                        distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                    )
+                    return EpisodeResult(
+                        agent_path=agent.path,
+                        termination_reason=TerminationReason.PREDATOR,
+                    )
+
+                # Move predators after agent moves
+                agent.env.update_predators()
+
             # Classical brain learning step
             if isinstance(agent.brain, ClassicalBrain):
                 episode_done = bool(
