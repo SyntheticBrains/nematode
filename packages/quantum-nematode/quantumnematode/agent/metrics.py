@@ -41,7 +41,7 @@ class MetricsTracker:
         self.total_max_steps = 0
         self.total_interrupted = 0
 
-    def track_episode_completion(
+    def track_episode_completion(  # noqa: PLR0913 - comprehensive episode tracking requires many parameters
         self,
         success: bool,  # noqa: FBT001 - simple boolean flag is clearest API
         steps: int,

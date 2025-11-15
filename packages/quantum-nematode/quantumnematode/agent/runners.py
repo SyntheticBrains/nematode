@@ -35,6 +35,12 @@ class EpisodeData:
         The distance efficiencies recorded during the episode.
     satiety_history : list[float]
         The satiety levels at each step (for dynamic foraging environments).
+    predator_encounters : int
+        Number of times agent entered predator detection radius.
+    successful_evasions : int
+        Number of times agent exited predator detection radius without dying.
+    in_danger : bool
+        Whether agent is currently within predator detection radius.
     """
 
     steps: int
@@ -42,6 +48,9 @@ class EpisodeData:
     foods_collected: int
     distance_efficiencies: list[float]
     satiety_history: list[float]
+    predator_encounters: int = 0
+    successful_evasions: int = 0
+    in_danger: bool = False
 
 
 @dataclass

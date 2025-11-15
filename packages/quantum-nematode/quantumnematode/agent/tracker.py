@@ -20,6 +20,9 @@ class EpisodeTracker:
             foods_collected=0,
             distance_efficiencies=[],
             satiety_history=[],
+            predator_encounters=0,
+            successful_evasions=0,
+            in_danger=False,
         )
 
     @property
@@ -46,6 +49,36 @@ class EpisodeTracker:
     def satiety_history(self) -> list[float]:
         """Get the satiety history for the episode."""
         return self.data.satiety_history
+
+    @property
+    def predator_encounters(self) -> int:
+        """Get the total predator encounters for the episode."""
+        return self.data.predator_encounters
+
+    @predator_encounters.setter
+    def predator_encounters(self, value: int) -> None:
+        """Set the total predator encounters for the episode."""
+        self.data.predator_encounters = value
+
+    @property
+    def successful_evasions(self) -> int:
+        """Get the total successful evasions for the episode."""
+        return self.data.successful_evasions
+
+    @successful_evasions.setter
+    def successful_evasions(self, value: int) -> None:
+        """Set the total successful evasions for the episode."""
+        self.data.successful_evasions = value
+
+    @property
+    def in_danger(self) -> bool:
+        """Get whether agent is currently in danger."""
+        return self.data.in_danger
+
+    @in_danger.setter
+    def in_danger(self, value: bool) -> None:
+        """Set whether agent is currently in danger."""
+        self.data.in_danger = value
 
     def track_food_collection(self, distance_efficiency: float | None = None) -> None:
         """Track food collection event.
@@ -103,4 +136,7 @@ class EpisodeTracker:
             foods_collected=0,
             distance_efficiencies=[],
             satiety_history=[],
+            predator_encounters=0,
+            successful_evasions=0,
+            in_danger=False,
         )
