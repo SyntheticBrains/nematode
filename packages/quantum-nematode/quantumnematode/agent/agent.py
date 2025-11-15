@@ -396,6 +396,10 @@ class QuantumNematodeAgent:
                     f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.max_active_foods}",
                 )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
+                # Display danger status if predators are enabled
+                if self.env.predators_enabled:
+                    danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
+                    print(f"Status:\t\t{danger_status}")  # noqa: T201
 
     def calculate_reward(
         self,

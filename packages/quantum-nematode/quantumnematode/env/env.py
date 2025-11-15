@@ -1061,12 +1061,56 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Render the viewport centered on the agent."""
         viewport = self._get_viewport_bounds()
         grid = self._render_grid(self.foods, viewport=viewport)
+
+        # Add predators to grid if enabled
+        if self.predators_enabled:
+            self._render_predators(grid, viewport)
+
         return self._render_grid_to_strings(grid)
 
     def render_full(self) -> list[str]:
         """Render the entire environment (for logging/debugging)."""
         grid = self._render_grid(self.foods)
+
+        # Add predators to grid if enabled
+        if self.predators_enabled:
+            self._render_predators(grid, viewport=None)
+
         return self._render_grid_to_strings(grid)
+
+    def _render_predators(
+        self,
+        grid: list[list[str]],
+        viewport: tuple[int, int, int, int] | None = None,
+    ) -> None:
+        """
+        Add predators to the rendered grid.
+
+        Parameters
+        ----------
+        grid : list[list[str]]
+            The grid to render predators onto.
+        viewport : tuple[int, int, int, int] | None
+            Viewport bounds (min_x, min_y, max_x, max_y) or None for full grid.
+        """
+        symbols = THEME_SYMBOLS[self.theme]
+
+        for predator in self.predators:
+            if viewport:
+                min_x, min_y, max_x, max_y = viewport
+                # Only render predator if in viewport
+                if min_x <= predator.position[0] < max_x and min_y <= predator.position[1] < max_y:
+                    grid_y = predator.position[1] - min_y
+                    grid_x = predator.position[0] - min_x
+                    # Don't overwrite agent position
+                    agent_y = self.agent_pos[1] - min_y
+                    agent_x = self.agent_pos[0] - min_x
+                    if grid_y != agent_y or grid_x != agent_x:
+                        grid[grid_y][grid_x] = symbols.predator
+            # Full grid rendering
+            # Don't overwrite agent position
+            elif predator.position != tuple(self.agent_pos):
+                grid[predator.position[1]][predator.position[0]] = symbols.predator
 
     def copy(self) -> "DynamicForagingEnvironment":
         """
