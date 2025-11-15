@@ -152,6 +152,111 @@ class TestDetermineBenchmarkCategory:
             category = determine_benchmark_category(experiment)
             assert category.endswith("_classical")
 
+    def test_dynamic_predator_small_quantum(self):
+        """Test categorizing small dynamic environment with predators and quantum brain."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=20,
+            num_foods=10,
+            predators_enabled=True,
+            num_predators=2,
+        )
+        brain = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_predator_small_quantum"
+
+    def test_dynamic_predator_small_classical(self):
+        """Test categorizing small dynamic environment with predators and classical brain."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=15,
+            num_foods=10,
+            predators_enabled=True,
+            num_predators=2,
+        )
+        brain = BrainMetadata(type="mlp", learning_rate=0.001)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_predator_small_classical"
+
+    def test_dynamic_predator_medium_quantum(self):
+        """Test categorizing medium dynamic environment with predators and quantum brain."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=50,
+            num_foods=20,
+            predators_enabled=True,
+            num_predators=3,
+        )
+        brain = BrainMetadata(type="qmodular", qubits=6, learning_rate=0.01)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_predator_medium_quantum"
+
+    def test_dynamic_predator_medium_classical(self):
+        """Test categorizing medium dynamic environment with predators and classical brain."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=40,
+            num_foods=18,
+            predators_enabled=True,
+            num_predators=3,
+        )
+        brain = BrainMetadata(type="qmlp", learning_rate=0.001)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_predator_medium_classical"
+
+    def test_dynamic_predator_large_quantum(self):
+        """Test categorizing large dynamic environment with predators and quantum brain."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=100,
+            num_foods=50,
+            predators_enabled=True,
+            num_predators=5,
+        )
+        brain = BrainMetadata(type="modular", qubits=8, learning_rate=0.005)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_predator_large_quantum"
+
+    def test_dynamic_predator_large_classical(self):
+        """Test categorizing large dynamic environment with predators and classical brain."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=75,
+            num_foods=30,
+            predators_enabled=True,
+            num_predators=5,
+        )
+        brain = BrainMetadata(type="mlp", learning_rate=0.0005)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_predator_large_classical"
+
+    def test_predators_disabled_uses_regular_category(self):
+        """Test that predators_enabled=False uses regular (non-predator) categories."""
+        env = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=30,
+            num_foods=15,
+            predators_enabled=False,
+        )
+        brain = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
+        experiment = create_test_experiment(env, brain)
+
+        category = determine_benchmark_category(experiment)
+        assert category == "dynamic_medium_quantum"
+        assert "predator" not in category
+
 
 class TestGetCategoryDirectory:
     """Test category directory path generation."""
@@ -206,3 +311,18 @@ class TestGetCategoryDirectory:
             parts = path.split("/")
             assert len(parts) == 2
             assert parts[1] in ["quantum", "classical"]
+
+    def test_predator_category_directories(self):
+        """Test directory paths for all 6 predator category combinations."""
+        predator_categories = [
+            ("dynamic_predator_small_quantum", "dynamic_predator_small/quantum"),
+            ("dynamic_predator_small_classical", "dynamic_predator_small/classical"),
+            ("dynamic_predator_medium_quantum", "dynamic_predator_medium/quantum"),
+            ("dynamic_predator_medium_classical", "dynamic_predator_medium/classical"),
+            ("dynamic_predator_large_quantum", "dynamic_predator_large/quantum"),
+            ("dynamic_predator_large_classical", "dynamic_predator_large/classical"),
+        ]
+
+        for category, expected_path in predator_categories:
+            path = get_category_directory(category)
+            assert path == expected_path

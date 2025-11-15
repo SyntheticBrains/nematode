@@ -65,6 +65,8 @@ def extract_environment_metadata(
             initial_satiety=satiety_config.get("initial"),
             satiety_decay_rate=satiety_config.get("decay_rate"),
             viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,
+            predators_enabled=env.predators_enabled,
+            num_predators=env.num_predators if env.predators_enabled else None,
         )
     # Static environment
     return EnvironmentMetadata(
