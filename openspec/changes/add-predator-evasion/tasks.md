@@ -80,29 +80,29 @@
 
 ## 8. Plotting and Exports
 
-- [ ] 8.1 Add predator encounters over time plot to `plots.py`
-- [ ] 8.2 Add evasion success rate over time plot (successful_evasions / encounters)
-- [ ] 8.3 Add survival rate vs food collection scatter plot showing trade-offs
-- [ ] 8.4 Update CSV export in `csv_export.py` to include predator metric columns
-- [ ] 8.5 Ensure predator columns are empty/null when predators disabled
-- [ ] 8.6 Add predator configuration to experiment JSON exports
+- [x] 8.1 Add predator encounters over time plot to `plots.py`
+- [x] 8.2 Add evasion success rate over time plot (successful_evasions / encounters)
+- [x] 8.3 Add survival rate vs food collection scatter plot showing trade-offs
+- [x] 8.4 Update CSV export in `csv_export.py` to include predator metric columns
+- [x] 8.5 Ensure predator columns are empty/null when predators disabled
+- [x] 8.6 Add predator configuration to experiment JSON exports
 
 ## 9. Example Configurations
 
-- [ ] 9.1 Create `configs/examples/mlp_dynamic_small_predators.yml` with:
+- [x] 9.1 Create `configs/examples/mlp_dynamic_small_predators.yml` with:
   - 20×20 grid
   - 2 predators
   - All parameters explicitly shown with inline comments
   - Nested foraging/predators structure
-- [ ] 9.2 Create `configs/examples/modular_dynamic_medium_predators.yml` with:
+- [x] 9.2 Create `configs/examples/modular_dynamic_medium_predators.yml` with:
   - 50×50 grid
   - 3 predators
   - ModularBrain configuration
-- [ ] 9.3 Create `configs/examples/mlp_dynamic_large_predators.yml` with:
+- [x] 9.3 Create `configs/examples/mlp_dynamic_large_predators.yml` with:
   - 100×100 grid
   - 5 predators
   - Advanced difficulty demonstration
-- [ ] 9.4 Add comprehensive inline documentation to all example configs explaining predator mechanics
+- [x] 9.4 Add comprehensive inline documentation to all example configs explaining predator mechanics
 
 ## 10. Testing
 

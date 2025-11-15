@@ -29,6 +29,12 @@ class EnvironmentMetadata(BaseModel):
         Whether predators are enabled (dynamic environments only).
     num_predators : int | None
         Number of predators (dynamic environments with predators only).
+    predator_speed : float | None
+        Predator movement speed (predator environments only).
+    predator_detection_radius : int | None
+        Predator detection radius (predator environments only).
+    predator_kill_radius : int | None
+        Predator kill radius (predator environments only).
     """
 
     type: str
@@ -40,6 +46,9 @@ class EnvironmentMetadata(BaseModel):
     viewport_size: list[int] | None = None
     predators_enabled: bool = False
     num_predators: int | None = None
+    predator_speed: float | None = None
+    predator_detection_radius: int | None = None
+    predator_kill_radius: int | None = None
 
 
 class BrainMetadata(BaseModel):
@@ -100,6 +109,12 @@ class ResultsMetadata(BaseModel):
         Number of runs that reached max steps.
     goal_reached : int
         Number of runs that reached the goal.
+    predator_deaths : int
+        Number of runs that ended due to predator collision.
+    avg_predator_encounters : float | None
+        Average predator encounters per run (predator environments only).
+    avg_successful_evasions : float | None
+        Average successful evasions per run (predator environments only).
     """
 
     total_runs: int
@@ -112,6 +127,9 @@ class ResultsMetadata(BaseModel):
     starved: int = 0
     max_steps_reached: int = 0
     goal_reached: int = 0
+    predator_deaths: int = 0
+    avg_predator_encounters: float | None = None
+    avg_successful_evasions: float | None = None
 
 
 class SystemMetadata(BaseModel):

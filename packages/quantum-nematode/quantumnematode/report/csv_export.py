@@ -60,6 +60,9 @@ def _export_main_results(
             "foods_available",
             "satiety_remaining",
             "avg_distance_efficiency",
+            "predator_encounters",
+            "successful_evasions",
+            "died_to_predator",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -88,6 +91,15 @@ def _export_main_results(
                     else np.nan,
                     "avg_distance_efficiency": result.average_distance_efficiency
                     if result.average_distance_efficiency is not None
+                    else np.nan,
+                    "predator_encounters": result.predator_encounters
+                    if result.predator_encounters is not None
+                    else np.nan,
+                    "successful_evasions": result.successful_evasions
+                    if result.successful_evasions is not None
+                    else np.nan,
+                    "died_to_predator": result.died_to_predator
+                    if result.died_to_predator is not None
                     else np.nan,
                 },
             )
@@ -615,6 +627,9 @@ def export_foraging_results_to_csv(  # pragma: no cover
             "satiety_remaining",
             "avg_distance_efficiency",
             "foraging_efficiency",  # foods per step
+            "predator_encounters",
+            "successful_evasions",
+            "died_to_predator",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -641,6 +656,15 @@ def export_foraging_results_to_csv(  # pragma: no cover
                         if result.average_distance_efficiency is not None
                         else np.nan,
                         "foraging_efficiency": foraging_efficiency,
+                        "predator_encounters": result.predator_encounters
+                        if result.predator_encounters is not None
+                        else np.nan,
+                        "successful_evasions": result.successful_evasions
+                        if result.successful_evasions is not None
+                        else np.nan,
+                        "died_to_predator": result.died_to_predator
+                        if result.died_to_predator is not None
+                        else np.nan,
                     },
                 )
 
@@ -783,3 +807,140 @@ def export_foraging_session_metrics_to_csv(  # pragma: no cover
             )
 
     logger.info(f"Foraging session metrics exported to {filepath}")
+
+
+def export_predator_results_to_csv(  # pragma: no cover
+    all_results: list[SimulationResult],
+    data_dir: Path,
+    file_prefix: str = "",
+) -> None:
+    """Export predator-specific results to CSV.
+
+    Parameters
+    ----------
+    all_results : list[SimulationResult]
+        List of simulation results with predator data.
+    data_dir : Path
+        Directory to save the CSV file.
+    file_prefix : str, optional
+        Prefix for the output file name.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{file_prefix}predator_results.csv"
+    filepath = data_dir / filename
+
+    # Filter for results with predator data
+    predator_results = [r for r in all_results if r.predator_encounters is not None]
+
+    if not predator_results:
+        logger.warning("No predator results to export")
+        return
+
+    with filepath.open("w", newline="") as csvfile:
+        fieldnames = [
+            "run",
+            "predator_encounters",
+            "successful_evasions",
+            "evasion_rate",
+            "died_to_predator",
+            "foods_collected",
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for result in predator_results:
+            # Calculate evasion rate
+            evasion_rate = (
+                result.successful_evasions / result.predator_encounters
+                if result.predator_encounters
+                and result.predator_encounters > 0
+                and result.successful_evasions is not None
+                else 0.0
+            )
+
+            writer.writerow(
+                {
+                    "run": result.run,
+                    "predator_encounters": result.predator_encounters,
+                    "successful_evasions": result.successful_evasions,
+                    "evasion_rate": evasion_rate,
+                    "died_to_predator": result.died_to_predator,
+                    "foods_collected": result.foods_collected
+                    if result.foods_collected is not None
+                    else np.nan,
+                },
+            )
+
+    logger.info(f"Predator results exported to {filepath}")
+
+
+def export_predator_session_metrics_to_csv(  # pragma: no cover
+    all_results: list[SimulationResult],
+    metrics: PerformanceMetrics,
+    data_dir: Path,
+    file_prefix: str = "",
+) -> None:
+    """Export session-level predator metrics to CSV.
+
+    Parameters
+    ----------
+    all_results : list[SimulationResult]
+        List of all simulation results.
+    metrics : PerformanceMetrics
+        Session performance metrics.
+    data_dir : Path
+        Directory to save the CSV file.
+    file_prefix : str, optional
+        Prefix for the output file name.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{file_prefix}predator_session_metrics.csv"
+    filepath = data_dir / filename
+
+    # Filter for results with predator data
+    predator_results = [r for r in all_results if r.predator_encounters is not None]
+
+    if not predator_results:
+        logger.warning("No predator results to export")
+        return
+
+    total_runs = len(predator_results)
+    total_encounters = sum(
+        r.predator_encounters for r in predator_results if r.predator_encounters is not None
+    )
+    total_evasions = sum(
+        r.successful_evasions for r in predator_results if r.successful_evasions is not None
+    )
+    total_deaths = sum(1 for r in predator_results if r.died_to_predator)
+    survival_rate = 1.0 - (total_deaths / total_runs) if total_runs > 0 else 0.0
+    overall_evasion_rate = total_evasions / total_encounters if total_encounters > 0 else 0.0
+
+    with filepath.open("w", newline="") as csvfile:
+        fieldnames = ["metric", "value"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        writer.writerow({"metric": "total_runs", "value": total_runs})
+        writer.writerow({"metric": "total_predator_encounters", "value": total_encounters})
+        writer.writerow({"metric": "total_successful_evasions", "value": total_evasions})
+        writer.writerow({"metric": "total_predator_deaths", "value": total_deaths})
+        writer.writerow({"metric": "survival_rate", "value": f"{survival_rate:.4f}"})
+        writer.writerow({"metric": "overall_evasion_rate", "value": f"{overall_evasion_rate:.4f}"})
+
+        # Add metrics from PerformanceMetrics
+        if metrics.average_predator_encounters is not None:
+            writer.writerow(
+                {
+                    "metric": "avg_predator_encounters_per_run",
+                    "value": f"{metrics.average_predator_encounters:.2f}",
+                },
+            )
+        if metrics.average_successful_evasions is not None:
+            writer.writerow(
+                {
+                    "metric": "avg_successful_evasions_per_run",
+                    "value": f"{metrics.average_successful_evasions:.2f}",
+                },
+            )
+
+    logger.info(f"Predator session metrics exported to {filepath}")
