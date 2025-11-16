@@ -700,3 +700,201 @@ class TestNearestFoodDistance:
 
         nearest_dist = env.get_nearest_food_distance()
         assert nearest_dist is None
+
+
+class TestPredatorMechanics:
+    """Test cases for Predator class and predator mechanics."""
+
+    @pytest.fixture
+    def predator_env(self):
+        """Create a test environment with predators enabled."""
+        return DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            num_initial_foods=5,
+            max_active_foods=10,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            predators_enabled=True,
+            num_predators=2,
+            predator_speed=1.0,
+            predator_detection_radius=8,
+            predator_kill_radius=1,
+        )
+
+    def test_predator_initialization(self, predator_env):
+        """Test predator initialization."""
+        assert predator_env.predators_enabled is True
+        assert len(predator_env.predators) == 2
+
+        for predator in predator_env.predators:
+            # Check predator has valid position within grid
+            assert 0 <= predator.position[0] < predator_env.grid_size
+            assert 0 <= predator.position[1] < predator_env.grid_size
+
+            # Check predator has correct speed
+            assert predator.speed == 1.0
+
+    def test_predator_movement(self, predator_env):
+        """Test predator random movement."""
+        predator = predator_env.predators[0]
+
+        # Move predator multiple times
+        for _ in range(10):
+            predator.update_position(predator_env.grid_size)
+
+            # Check position is still valid
+            assert 0 <= predator.position[0] < predator_env.grid_size
+            assert 0 <= predator.position[1] < predator_env.grid_size
+
+        # Movement is random, just verify it doesn't crash
+        assert True
+
+    def test_gradient_with_predators(self, predator_env):
+        """Test that state includes gradient information with predators."""
+        # Place agent at known position
+        predator_env.agent_pos = (10, 10)
+
+        # Get state which includes gradients (pass agent position)
+        state = predator_env.get_state(predator_env.agent_pos)
+
+        # State should be a tuple with gradient information (x, y components)
+        assert isinstance(state, tuple)
+        assert len(state) == 2
+
+        # Verify all values are finite (no NaN or Inf)
+        assert all(np.isfinite(val) for val in state)
+
+    def test_collision_detection_kill_radius(self, predator_env):
+        """Test collision detection with kill_radius."""
+        # Place predator at agent position (distance = 0)
+        predator_env.predators[0].position = predator_env.agent_pos
+
+        # Check if agent is killed
+        is_killed = predator_env.check_predator_collision()
+        assert is_killed is True
+
+        # Place predator 1 unit away (at kill_radius boundary)
+        predator_env.agent_pos = (10, 10)
+        predator_env.predators[0].position = (10, 11)
+
+        is_killed = predator_env.check_predator_collision()
+        assert is_killed is True  # kill_radius=1, so distance=1 should kill
+
+        # Place predator 2 units away (outside kill_radius)
+        predator_env.predators[0].position = (10, 12)
+
+        is_killed = predator_env.check_predator_collision()
+        assert is_killed is False
+
+    def test_proximity_detection(self, predator_env):
+        """Test proximity detection with detection_radius."""
+        # Place agent at (10, 10)
+        predator_env.agent_pos = (10, 10)
+
+        # Place predator within detection radius (8 units)
+        predator_env.predators[0].position = (10, 17)  # 7 units away
+        predator_env.predators = [predator_env.predators[0]]  # Keep only one
+
+        in_danger = predator_env.is_agent_in_danger()
+        assert in_danger is True
+
+        # Place predator outside detection radius
+        predator_env.predators[0].position = (10, 19)  # 9 units away
+
+        in_danger = predator_env.is_agent_in_danger()
+        assert in_danger is False
+
+    def test_predators_disabled_by_default(self):
+        """Test that predators are disabled by default."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            num_initial_foods=5,
+            max_active_foods=10,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        assert env.predators_enabled is False
+        assert len(env.predators) == 0
+
+    def test_predator_update_positions(self, predator_env):
+        """Test that predator positions update each step."""
+        # Update predator positions
+        predator_env.update_predators()
+
+        # Verify the method runs without error and predators remain valid
+        assert len(predator_env.predators) == 2
+        for predator in predator_env.predators:
+            assert 0 <= predator.position[0] < predator_env.grid_size
+            assert 0 <= predator.position[1] < predator_env.grid_size
+
+    def test_proximity_penalty(self, predator_env):
+        """Test proximity penalty calculation when agent is in danger."""
+        # Place agent at (10, 10)
+        predator_env.agent_pos = (10, 10)
+
+        # Place predator within detection radius
+        predator_env.predators[0].position = (10, 15)  # 5 units away, within detection_radius=8
+        predator_env.predators = [predator_env.predators[0]]
+
+        # Agent should be in danger
+        assert predator_env.is_agent_in_danger() is True
+
+        # Proximity penalty should be applied (configured as -0.1)
+        # We can verify this by checking the reward calculation includes the penalty
+        # For now, just verify that the is_agent_in_danger() method works correctly
+
+    def test_full_episode_with_predators(self, predator_env):
+        """Integration test: Verify predators work with environment operations."""
+        # Verify environment has predators
+        assert len(predator_env.predators) == 2
+        assert predator_env.predators_enabled is True
+
+        # Run a few update cycles
+        for _ in range(10):
+            # Get current state
+            state = predator_env.get_state(predator_env.agent_pos)
+            assert isinstance(state, tuple)
+            assert len(state) == 2
+
+            # Update predators
+            predator_env.update_predators()
+
+            # Verify all predator positions are valid
+            for predator in predator_env.predators:
+                assert 0 <= predator.position[0] < predator_env.grid_size
+                assert 0 <= predator.position[1] < predator_env.grid_size
+
+            # Check collision detection works
+            collision = predator_env.check_predator_collision()
+            assert isinstance(collision, bool)
+
+            # Check danger detection works
+            in_danger = predator_env.is_agent_in_danger()
+            assert isinstance(in_danger, bool)
+
+    def test_config_backward_compatibility(self):
+        """Test that predators are disabled by default for backward compatibility."""
+        # Create environment without predator config
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            num_initial_foods=5,
+            max_active_foods=10,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # Predators should be disabled
+        assert env.predators_enabled is False
+        assert len(env.predators) == 0
+        assert env.predator_detection_radius == 8  # Default value
+        assert env.predator_kill_radius == 1  # Default value
+
+        # is_agent_in_danger should return False
+        assert env.is_agent_in_danger() is False
+
+        # check_predator_collision should return False
+        assert env.check_predator_collision() is False
