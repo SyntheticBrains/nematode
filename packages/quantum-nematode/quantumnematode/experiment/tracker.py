@@ -6,6 +6,7 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+from quantumnematode.benchmark.convergence import analyze_convergence
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import DynamicForagingEnvironment
 from quantumnematode.experiment.git_utils import capture_git_context, get_relative_config_path
@@ -173,6 +174,30 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         1 for r in all_results if r.termination_reason == TerminationReason.GOAL_REACHED
     )
 
+    # Predator-specific metrics
+    predator_deaths = sum(
+        1 for r in all_results if r.termination_reason == TerminationReason.PREDATOR
+    )
+    predator_encounters_list = [
+        r.predator_encounters for r in all_results if r.predator_encounters is not None
+    ]
+    avg_predator_encounters = (
+        sum(predator_encounters_list) / len(predator_encounters_list)
+        if predator_encounters_list
+        else None
+    )
+    successful_evasions_list = [
+        r.successful_evasions for r in all_results if r.successful_evasions is not None
+    ]
+    avg_successful_evasions = (
+        sum(successful_evasions_list) / len(successful_evasions_list)
+        if successful_evasions_list
+        else None
+    )
+
+    # CONVERGENCE ANALYSIS
+    convergence_metrics = analyze_convergence(all_results, total_runs)
+
     return ResultsMetadata(
         total_runs=total_runs,
         success_rate=success_rate,
@@ -184,6 +209,19 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         starved=starved,
         max_steps_reached=max_steps_reached,
         goal_reached=goal_reached,
+        predator_deaths=predator_deaths,
+        avg_predator_encounters=avg_predator_encounters,
+        avg_successful_evasions=avg_successful_evasions,
+        # Convergence-based metrics
+        converged=convergence_metrics.converged,
+        convergence_run=convergence_metrics.convergence_run,
+        runs_to_convergence=convergence_metrics.runs_to_convergence,
+        post_convergence_success_rate=convergence_metrics.post_convergence_success_rate,
+        post_convergence_avg_steps=convergence_metrics.post_convergence_avg_steps,
+        post_convergence_avg_foods=convergence_metrics.post_convergence_avg_foods,
+        post_convergence_variance=convergence_metrics.post_convergence_variance,
+        distance_efficiency=convergence_metrics.distance_efficiency,
+        composite_benchmark_score=convergence_metrics.composite_score,
     )
 
 
