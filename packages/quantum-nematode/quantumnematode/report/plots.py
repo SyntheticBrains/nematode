@@ -276,6 +276,12 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
         if all(val is None for val in last_values):
             logger.warning(f"No data available for {key} across runs. Skipping plot.")
             continue
+        # Handle last value is list (e.g., satiety_history) - skip plotting
+        if isinstance(last_values[0], list):
+            logger.warning(
+                f"Skipping plot for {key} - list data type not supported for session plots.",
+            )
+            continue
         # Handle last value is dict (e.g., parameter dicts)
         if isinstance(last_values[0], dict):
             param_keys = set()
