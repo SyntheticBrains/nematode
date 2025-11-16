@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -139,6 +139,20 @@ class PredatorConfig(BaseModel):
     gradient_strength: float = 1.0
     proximity_penalty: float = -0.1
     show_detection_radius: bool = True
+
+    @field_validator("movement_pattern")
+    @classmethod
+    def validate_movement_pattern(cls, v: str) -> str:
+        """Validate movement pattern is supported."""
+        valid_patterns = ["random"]
+        if v not in valid_patterns:
+            msg = (
+                f"Invalid movement_pattern: '{v}'. "
+                f"Currently only 'random' is supported. "
+                f"Future patterns (e.g., 'pursuit', 'patrol') are planned but not yet implemented."
+            )
+            raise ValueError(msg)
+        return v
 
 
 class DynamicEnvironmentConfig(BaseModel):
