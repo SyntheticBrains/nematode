@@ -106,18 +106,18 @@
 
 ## 10. Testing
 
-- [ ] 10.1 Unit tests for `Predator` class movement and position updates
-- [ ] 10.2 Unit tests for predator gradient calculation (negative, exponential decay)
-- [ ] 10.3 Unit tests for gradient superposition (food + predator vectors)
-- [ ] 10.4 Unit tests for collision detection (kill_radius boundaries)
-- [ ] 10.5 Unit tests for proximity detection (detection_radius boundaries)
-- [ ] 10.6 Unit tests for proximity penalty calculation
-- [ ] 10.7 Integration tests for complete episode with predators
-- [ ] 10.8 Integration tests for predator collision termination
+- [x] 10.1 Unit tests for `Predator` class movement and position updates
+- [x] 10.2 Unit tests for predator gradient calculation (negative, exponential decay)
+- [x] 10.3 Unit tests for gradient superposition (food + predator vectors)
+- [x] 10.4 Unit tests for collision detection (kill_radius boundaries)
+- [x] 10.5 Unit tests for proximity detection (detection_radius boundaries)
+- [x] 10.6 Unit tests for proximity penalty calculation
+- [x] 10.7 Integration tests for complete episode with predators
+- [x] 10.8 Integration tests for predator collision termination
 - [ ] 10.9 Tests for configuration migration from flat to nested structure
-- [ ] 10.10 Tests for backward compatibility (predators disabled by default)
-- [ ] 10.11 Tests for predator metrics tracking (encounters, evasions, deaths)
-- [ ] 10.12 Tests for benchmark categorization with predators
+- [x] 10.10 Tests for backward compatibility (predators disabled by default)
+- [x] 10.11 Tests for predator metrics tracking (encounters, evasions, deaths)
+- [x] 10.12 Tests for benchmark categorization with predators
 - [ ] 10.13 Performance tests ensuring <100ms step time with predators enabled
 
 ## 11. Documentation
@@ -133,9 +133,9 @@
 
 ## 12. Validation and Quality Assurance
 
-- [ ] 12.1 Run full test suite and ensure all tests pass
-- [ ] 12.2 Run type checking with Pyright and resolve any errors
-- [ ] 12.3 Run linting with Ruff and resolve any issues
+- [x] 12.1 Run full test suite and ensure all tests pass
+- [x] 12.2 Run type checking with Pyright and resolve any errors
+- [x] 12.3 Run linting with Ruff and resolve any issues
 - [ ] 12.4 Verify backward compatibility: run existing configs unchanged
 - [ ] 12.5 Verify predator-enabled configs run successfully
 - [ ] 12.6 Validate OpenSpec change with `openspec validate add-predator-evasion --strict`
