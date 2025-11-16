@@ -114,7 +114,7 @@
 - [x] 10.6 Unit tests for proximity penalty calculation
 - [x] 10.7 Integration tests for complete episode with predators
 - [x] 10.8 Integration tests for predator collision termination
-- [ ] 10.9 Tests for configuration migration from flat to nested structure
+- [x] 10.9 Configuration migration: Migrated all 7 legacy configs to nested format, removed deprecated flat config support
 - [x] 10.10 Tests for backward compatibility (predators disabled by default)
 - [x] 10.11 Tests for predator metrics tracking (encounters, evasions, deaths)
 - [x] 10.12 Tests for benchmark categorization with predators

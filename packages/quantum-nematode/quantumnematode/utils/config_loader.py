@@ -151,48 +151,9 @@ class DynamicEnvironmentConfig(BaseModel):
     foraging: ForagingConfig | None = None
     predators: PredatorConfig | None = None
 
-    # Legacy flat fields (for backward compatibility)
-    num_initial_foods: int | None = None
-    max_active_foods: int | None = None
-    min_food_distance: int | None = None
-    agent_exclusion_radius: int | None = None
-    gradient_decay_constant: float | None = None
-    gradient_strength: float | None = None
-
     def get_foraging_config(self) -> ForagingConfig:
-        """Get foraging configuration, migrating from legacy fields if needed."""
-        if self.foraging is not None:
-            return self.foraging
-
-        # Migrate from legacy flat configuration
-        if any(
-            [
-                self.num_initial_foods is not None,
-                self.max_active_foods is not None,
-                self.min_food_distance is not None,
-                self.agent_exclusion_radius is not None,
-                self.gradient_decay_constant is not None,
-                self.gradient_strength is not None,
-            ],
-        ):
-            logger.warning(
-                "Flat dynamic environment configuration is deprecated. "
-                "Please restructure configuration with 'foraging' subsection. "
-                "Parameters being migrated: num_initial_foods, max_active_foods, "
-                "min_food_distance, agent_exclusion_radius, gradient_decay_constant, "
-                "gradient_strength",
-            )
-            return ForagingConfig(
-                num_initial_foods=self.num_initial_foods or 10,
-                max_active_foods=self.max_active_foods or 15,
-                min_food_distance=self.min_food_distance or 5,
-                agent_exclusion_radius=self.agent_exclusion_radius or 10,
-                gradient_decay_constant=self.gradient_decay_constant or 10.0,
-                gradient_strength=self.gradient_strength or 1.0,
-            )
-
-        # No config provided, use defaults
-        return ForagingConfig()
+        """Get foraging configuration with defaults."""
+        return self.foraging or ForagingConfig()
 
     def get_predator_config(self) -> PredatorConfig:
         """Get predator configuration with defaults."""

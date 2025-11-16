@@ -50,13 +50,16 @@ environment:
   type: dynamic
   dynamic:
     grid_size: 50
-    num_initial_foods: 20
-    max_active_foods: 30
-    min_food_distance: 5
-    agent_exclusion_radius: 10
-    gradient_decay_constant: 10.0
-    gradient_strength: 1.0
     viewport_size: [11, 11]
+
+    # Foraging configuration (food mechanics)
+    foraging:
+      num_initial_foods: 20
+      max_active_foods: 30
+      min_food_distance: 5
+      agent_exclusion_radius: 10
+      gradient_decay_constant: 10.0
+      gradient_strength: 1.0
 
 gradient:
   method: clip

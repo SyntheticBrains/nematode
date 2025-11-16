@@ -77,8 +77,14 @@ class TestPresetConfigurations:
             # Verify dynamic environment parameters
             dynamic_config = config["environment"]["dynamic"]
             assert "grid_size" in dynamic_config
-            assert "num_initial_foods" in dynamic_config
-            assert "max_active_foods" in dynamic_config
+
+            # Verify foraging subsection exists and has required fields
+            assert "foraging" in dynamic_config, (
+                f"Missing 'foraging' subsection in dynamic config {config_file}"
+            )
+            foraging_config = dynamic_config["foraging"]
+            assert "num_initial_foods" in foraging_config
+            assert "max_active_foods" in foraging_config
 
             # Verify satiety parameters
             satiety_config = config["satiety"]
