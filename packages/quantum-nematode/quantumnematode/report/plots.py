@@ -897,24 +897,35 @@ def plot_foods_vs_steps_correlation(  # pragma: no cover
     plt.figure(figsize=(10, 8))
     plt.scatter(foods_collected, steps, alpha=0.6, s=100, color="purple", edgecolors="black")
 
-    # Add trend line
-    if len(foods_collected) > 1:
-        z = np.polyfit(foods_collected, steps, 1)
-        p = np.poly1d(z)
-        x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
-        plt.plot(x_line, p(x_line), "r--", linewidth=2, label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}")
+    # Add trend line only if there's variation in the data
+    if len(foods_collected) > 1 and len(set(foods_collected)) > 1 and len(set(steps)) > 1:
+        try:
+            z = np.polyfit(foods_collected, steps, 1)
+            p = np.poly1d(z)
+            x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
+            plt.plot(
+                x_line,
+                p(x_line),
+                "r--",
+                linewidth=2,
+                label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}",
+            )
 
-        # Calculate correlation
-        correlation = np.corrcoef(foods_collected, steps)[0, 1]
-        plt.text(
-            0.05,
-            0.95,
-            f"Correlation: {correlation:.3f}",
-            transform=plt.gca().transAxes,
-            fontsize=12,
-            verticalalignment="top",
-            bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
-        )
+            # Calculate correlation
+            correlation = np.corrcoef(foods_collected, steps)[0, 1]
+            plt.text(
+                0.05,
+                0.95,
+                f"Correlation: {correlation:.3f}",
+                transform=plt.gca().transAxes,
+                fontsize=12,
+                verticalalignment="top",
+                bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
+            )
+        except np.linalg.LinAlgError:
+            logger.warning(
+                "Insufficient variation for trend line calculation; skipping trend line.",
+            )
 
     plt.title("Foods Collected vs Steps Taken")
     plt.xlabel("Foods Collected")
