@@ -2,7 +2,7 @@
 
 import csv
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -10,6 +10,9 @@ from quantumnematode.brain.actions import ActionData
 from quantumnematode.brain.arch.dtypes import BrainType
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
+
+if TYPE_CHECKING:
+    from quantumnematode.experiment.metadata import ExperimentMetadata
 
 
 def export_simulation_results_to_csv(  # pragma: no cover
@@ -213,6 +216,122 @@ def export_performance_metrics_to_csv(  # pragma: no cover
         writer.writerow({"metric": "success_rate", "value": metrics.success_rate})
         writer.writerow({"metric": "average_steps", "value": metrics.average_steps})
         writer.writerow({"metric": "average_reward", "value": metrics.average_reward})
+
+
+def export_convergence_metrics_to_csv(  # pragma: no cover
+    experiment_metadata: "ExperimentMetadata",
+    data_dir: Path,
+    file_prefix: str = "",
+) -> None:
+    """
+    Export convergence analysis metrics to CSV.
+
+    This exports the convergence-based benchmark metrics including convergence
+    detection results, post-convergence performance, and composite scores.
+
+    Args:
+        experiment_metadata (ExperimentMetadata): Complete experiment metadata
+            with convergence analysis.
+        data_dir (Path): Directory to save the CSV file.
+        file_prefix (str): Prefix for the output file name.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{file_prefix}convergence_analysis.csv"
+    filepath = data_dir / filename
+
+    results = experiment_metadata.results
+
+    with filepath.open("w", newline="") as csvfile:
+        fieldnames = ["metric", "value"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        # Convergence status
+        writer.writerow({"metric": "converged", "value": results.converged})
+        writer.writerow({"metric": "convergence_run", "value": results.convergence_run or "N/A"})
+        writer.writerow(
+            {"metric": "runs_to_convergence", "value": results.runs_to_convergence or "N/A"},
+        )
+
+        # Post-convergence performance
+        writer.writerow(
+            {
+                "metric": "post_convergence_success_rate",
+                "value": (
+                    f"{results.post_convergence_success_rate:.4f}"
+                    if results.post_convergence_success_rate is not None
+                    else "N/A"
+                ),
+            },
+        )
+        writer.writerow(
+            {
+                "metric": "post_convergence_avg_steps",
+                "value": (
+                    f"{results.post_convergence_avg_steps:.2f}"
+                    if results.post_convergence_avg_steps is not None
+                    else "N/A"
+                ),
+            },
+        )
+        writer.writerow(
+            {
+                "metric": "post_convergence_avg_foods",
+                "value": (
+                    f"{results.post_convergence_avg_foods:.2f}"
+                    if results.post_convergence_avg_foods is not None
+                    else "N/A"
+                ),
+            },
+        )
+
+        # Stability and efficiency
+        writer.writerow(
+            {
+                "metric": "post_convergence_variance",
+                "value": (
+                    f"{results.post_convergence_variance:.4f}"
+                    if results.post_convergence_variance is not None
+                    else "N/A"
+                ),
+            },
+        )
+        writer.writerow(
+            {
+                "metric": "distance_efficiency",
+                "value": (
+                    f"{results.distance_efficiency:.4f}"
+                    if results.distance_efficiency is not None
+                    else "N/A"
+                ),
+            },
+        )
+
+        # Composite benchmark score
+        writer.writerow(
+            {
+                "metric": "composite_benchmark_score",
+                "value": (
+                    f"{results.composite_benchmark_score:.4f}"
+                    if results.composite_benchmark_score is not None
+                    else "N/A"
+                ),
+            },
+        )
+
+        # Comparison metrics (all-run vs post-convergence)
+        writer.writerow({"metric": "all_run_success_rate", "value": f"{results.success_rate:.4f}"})
+        writer.writerow(
+            {
+                "metric": "success_rate_improvement",
+                "value": (
+                    f"{(results.post_convergence_success_rate - results.success_rate):.4f}"
+                    if results.post_convergence_success_rate is not None
+                    else "N/A"
+                ),
+            },
+        )
 
 
 def export_tracking_data_to_csv(  # pragma: no cover
