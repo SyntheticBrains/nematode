@@ -161,3 +161,110 @@ class TestEpisodeReset:
         assert tracker.distance_efficiencies == []
         assert tracker.steps == 3
         assert tracker.rewards == pytest.approx(5.0)
+
+
+class TestPredatorMetricsTracking:
+    """Test predator-specific metrics tracking."""
+
+    def test_initialization_includes_predator_metrics(self):
+        """Test that the EpisodeTracker initializes with predator metrics."""
+        tracker = EpisodeTracker()
+
+        assert tracker.predator_encounters == 0
+        assert tracker.successful_evasions == 0
+        assert tracker.in_danger is False
+
+    def test_track_predator_encounter(self):
+        """Test tracking predator encounters."""
+        tracker = EpisodeTracker()
+
+        tracker.predator_encounters = 1
+        assert tracker.predator_encounters == 1
+
+        tracker.predator_encounters = 5
+        assert tracker.predator_encounters == 5
+
+    def test_track_successful_evasion(self):
+        """Test tracking successful predator evasions."""
+        tracker = EpisodeTracker()
+
+        tracker.successful_evasions = 1
+        assert tracker.successful_evasions == 1
+
+        tracker.successful_evasions = 3
+        assert tracker.successful_evasions == 3
+
+    def test_track_danger_status(self):
+        """Test tracking whether agent is in danger."""
+        tracker = EpisodeTracker()
+
+        # Initially not in danger
+        assert tracker.in_danger is False
+
+        # Enter danger
+        tracker.in_danger = True
+        assert tracker.in_danger is True
+
+        # Exit danger
+        tracker.in_danger = False
+        assert tracker.in_danger is False
+
+    def test_multiple_encounters_and_evasions(self):
+        """Test tracking multiple encounters and evasions."""
+        tracker = EpisodeTracker()
+
+        # Simulate episode with predator interactions
+        tracker.predator_encounters = 10
+        tracker.successful_evasions = 7
+
+        assert tracker.predator_encounters == 10
+        assert tracker.successful_evasions == 7
+
+        # Calculate evasion rate
+        evasion_rate = tracker.successful_evasions / tracker.predator_encounters
+        assert evasion_rate == pytest.approx(0.7)
+
+    def test_reset_clears_predator_metrics(self):
+        """Test that reset clears predator metrics."""
+        tracker = EpisodeTracker()
+
+        # Set predator metrics
+        tracker.predator_encounters = 5
+        tracker.successful_evasions = 3
+        tracker.in_danger = True
+
+        # Reset
+        tracker.reset()
+
+        # Verify all predator metrics are cleared
+        assert tracker.predator_encounters == 0
+        assert tracker.successful_evasions == 0
+        assert tracker.in_danger is False
+
+    def test_predator_metrics_with_food_tracking(self):
+        """Test that predator metrics work alongside food tracking."""
+        tracker = EpisodeTracker()
+
+        # Track food and predator metrics together
+        tracker.track_food_collection(distance_efficiency=0.85)
+        tracker.predator_encounters = 2
+        tracker.successful_evasions = 1
+        tracker.track_step(reward=0.5)
+
+        # Verify both types of metrics are tracked
+        assert tracker.foods_collected == 1
+        assert tracker.distance_efficiencies == [0.85]
+        assert tracker.predator_encounters == 2
+        assert tracker.successful_evasions == 1
+        assert tracker.steps == 1
+        assert tracker.rewards == pytest.approx(0.5)
+
+    def test_satiety_history_tracking(self):
+        """Test satiety history tracking."""
+        tracker = EpisodeTracker()
+
+        # Satiety history should be empty initially
+        assert tracker.satiety_history == []
+
+        # This is tested via integration, but the property should exist
+        assert hasattr(tracker, "satiety_history")
