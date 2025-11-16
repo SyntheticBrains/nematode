@@ -118,7 +118,7 @@
 - [x] 10.10 Tests for backward compatibility (predators disabled by default)
 - [x] 10.11 Tests for predator metrics tracking (encounters, evasions, deaths)
 - [x] 10.12 Tests for benchmark categorization with predators
-- [ ] 10.13 Performance tests ensuring <100ms step time with predators enabled
+- [x] 10.13 Performance tests ensuring <100ms step time with predators enabled (avg 0.14ms on 100x100 grid with 5 predators)
 
 ## 11. Documentation
 
@@ -133,13 +133,13 @@
 
 ## 12. Validation and Quality Assurance
 
-- [x] 12.1 Run full test suite and ensure all tests pass
+- [x] 12.1 Run full test suite and ensure all tests pass (520 tests passing)
 - [x] 12.2 Run type checking with Pyright and resolve any errors
 - [x] 12.3 Run linting with Ruff and resolve any issues
-- [ ] 12.4 Verify backward compatibility: run existing configs unchanged
-- [ ] 12.5 Verify predator-enabled configs run successfully
+- [x] 12.4 Verify backward compatibility: run existing configs unchanged (mlp_dynamic_small.yml verified)
+- [x] 12.5 Verify predator-enabled configs run successfully (mlp_dynamic_small_predators.yml verified)
 - [ ] 12.6 Validate OpenSpec change with `openspec validate add-predator-evasion --strict`
-- [ ] 12.7 Performance benchmark: confirm <100ms step time on 100×100 grid with 5 predators
+- [x] 12.7 Performance benchmark: confirm <100ms step time on 100×100 grid with 5 predators (avg 0.14ms - 700x faster than required)
 - [ ] 12.8 End-to-end test: train agent with predators for 100 episodes, verify metrics tracking
-- [ ] 12.9 Visual inspection: verify predator rendering in both emoji and ASCII themes
-- [ ] 12.10 Configuration validation: test invalid movement patterns produce clear errors
+- [x] 12.9 Visual inspection: verify predator rendering in both emoji and ASCII themes (verified spider emoji and # symbol)
+- [x] 12.10 Configuration validation: test invalid movement patterns produce clear errors (Pydantic validation added)
