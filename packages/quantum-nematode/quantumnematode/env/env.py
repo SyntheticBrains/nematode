@@ -800,17 +800,39 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return True
 
     def _initialize_predators(self) -> None:
-        """Initialize predators at random positions."""
+        """Initialize predators at random positions outside detection radius of agent."""
         self.predators = []
         for _ in range(self.num_predators):
-            # Spawn predators at random positions (no exclusion constraints)
-            position = (
-                secrets.randbelow(self.grid_size),
-                secrets.randbelow(self.grid_size),
-            )
-            predator = Predator(position=position, speed=self.predator_speed)
-            self.predators.append(predator)
-            logger.debug(f"Initialized predator at {position}")
+            # Spawn predators outside detection radius to avoid immediate danger
+            candidate = (0, 0)  # Default position in case loop never runs
+            for _ in range(MAX_POISSON_ATTEMPTS):
+                candidate = (
+                    secrets.randbelow(self.grid_size),
+                    secrets.randbelow(self.grid_size),
+                )
+                # Calculate Manhattan distance to agent
+                distance_to_agent = abs(candidate[0] - self.agent_pos[0]) + abs(
+                    candidate[1] - self.agent_pos[1],
+                )
+                # Ensure predator spawns outside detection radius
+                if distance_to_agent > self.predator_detection_radius:
+                    predator = Predator(position=candidate, speed=self.predator_speed)
+                    self.predators.append(predator)
+                    logger.debug(
+                        f"Initialized predator at {candidate} "
+                        f"(distance to agent: {distance_to_agent})",
+                    )
+                    break
+            else:
+                # If we couldn't find a valid position after max attempts, log warning
+                # but still spawn the predator (edge case for very small grids)
+                logger.warning(
+                    "Could not find safe spawn position for predator "
+                    f"after {MAX_POISSON_ATTEMPTS} attempts. "
+                    f"Spawning at {candidate} anyway.",
+                )
+                predator = Predator(position=candidate, speed=self.predator_speed)
+                self.predators.append(predator)
 
     def spawn_food(
         self,
