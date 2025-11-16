@@ -115,6 +115,25 @@ class ResultsMetadata(BaseModel):
         Average predator encounters per run (predator environments only).
     avg_successful_evasions : float | None
         Average successful evasions per run (predator environments only).
+    converged : bool
+        Whether the learning strategy converged within the session.
+    convergence_run : int | None
+        Run number where convergence was detected (None if never converged).
+    runs_to_convergence : int | None
+        Number of runs required to reach convergence (None if never converged).
+    post_convergence_success_rate : float | None
+        Success rate after convergence point (or last N runs if not converged).
+    post_convergence_avg_steps : float | None
+        Average steps in successful runs after convergence.
+    post_convergence_avg_foods : float | None
+        Average foods collected after convergence (dynamic environments only).
+    post_convergence_variance : float | None
+        Variance in success rate after convergence (measures stability).
+    distance_efficiency : float | None
+        Average distance efficiency in successful runs (dynamic environments only).
+        Range: 0.0 to 1.0, where 1.0 means perfect optimal navigation.
+    composite_benchmark_score : float | None
+        Weighted composite score combining success, efficiency, speed, and stability.
     """
 
     total_runs: int
@@ -130,6 +149,16 @@ class ResultsMetadata(BaseModel):
     predator_deaths: int = 0
     avg_predator_encounters: float | None = None
     avg_successful_evasions: float | None = None
+    # Convergence-based metrics (added for benchmark v2)
+    converged: bool = False
+    convergence_run: int | None = None
+    runs_to_convergence: int | None = None
+    post_convergence_success_rate: float | None = None
+    post_convergence_avg_steps: float | None = None
+    post_convergence_avg_foods: float | None = None
+    post_convergence_variance: float | None = None
+    distance_efficiency: float | None = None
+    composite_benchmark_score: float | None = None
 
 
 class SystemMetadata(BaseModel):

@@ -36,7 +36,7 @@ def basic_experiment():
         environment=EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20),
         brain=BrainMetadata(type="modular", qubits=4, learning_rate=0.01),
         results=ResultsMetadata(
-            total_runs=20,
+            total_runs=50,  # Updated from 20 to 50 to match new default
             success_rate=0.9,
             avg_steps=40.0,
             avg_reward=120.0,
@@ -60,7 +60,7 @@ class TestBenchmarkValidationRules:
         """Test default validation rules."""
         rules = BenchmarkValidationRules()
 
-        assert rules.min_runs == 20
+        assert rules.min_runs == 50  # Updated from 20 to 50 for convergence detection
         assert rules.require_clean_git is True
         assert rules.min_success_rate is None
 
@@ -185,7 +185,7 @@ class TestValidateBenchmark:
     def test_validate_benchmark_pass_all(self, basic_experiment):
         """Test validation passes all checks."""
         rules = BenchmarkValidationRules(
-            min_runs=20,
+            min_runs=50,
             require_clean_git=True,
             min_success_rate=0.8,
         )
@@ -214,7 +214,7 @@ class TestValidateBenchmark:
     def test_validate_benchmark_pass_with_warnings(self, basic_experiment):
         """Test validation passes but with warnings."""
         rules = BenchmarkValidationRules(
-            min_runs=20,
+            min_runs=50,
             require_clean_git=True,
             min_success_rate=0.95,  # Higher than actual
         )

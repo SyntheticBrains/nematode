@@ -183,10 +183,17 @@ def list_benchmarks(category: str | None = None) -> list[ExperimentMetadata]:
             except Exception as e:
                 logger.warning(f"Failed to load benchmark {json_file.name}: {e}")
 
-    # Sort by success rate (descending), then by avg_foods_collected if available
-    def sort_key(b: ExperimentMetadata) -> tuple[float, float]:
+    # Sort by composite score (descending), fallback to success rate if no convergence data
+    def sort_key(b: ExperimentMetadata) -> tuple[float, float, float]:
+        # Primary: Composite benchmark score (if available)
+        composite = (
+            b.results.composite_benchmark_score if b.results.composite_benchmark_score else 0.0
+        )
+        # Secondary: Success rate (for legacy benchmarks or tiebreaker)
+        success = b.results.success_rate
+        # Tertiary: Foods collected (for foraging environments)
         foods = b.results.avg_foods_collected if b.results.avg_foods_collected else 0.0
-        return (b.results.success_rate, foods)
+        return (composite, success, foods)
 
     benchmarks.sort(key=sort_key, reverse=True)
 
