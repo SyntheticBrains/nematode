@@ -47,6 +47,7 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
+    export_convergence_metrics_to_csv,
     export_distance_efficiencies_to_csv,
     export_foraging_results_to_csv,
     export_foraging_session_metrics_to_csv,
@@ -700,6 +701,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 device_type=device,
                 qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
+            )
+
+            # Export convergence metrics to CSV (includes composite score and all convergence analysis)
+            export_convergence_metrics_to_csv(
+                experiment_metadata=experiment_metadata,
+                data_dir=data_dir,
             )
 
             if device == DeviceType.QPU:
