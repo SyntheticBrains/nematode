@@ -391,7 +391,6 @@ class QuantumNematodeAgent:
             case StaticEnvironment():
                 pass
             case DynamicForagingEnvironment():
-                print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
                 print(  # noqa: T201
                     f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.target_foods_to_collect}",
                 )

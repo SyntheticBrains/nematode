@@ -442,9 +442,6 @@ class StandardEpisodeRunner(EpisodeRunner):
                 agent.brain.update_memory(reward)
                 agent.brain.post_process_episode()
 
-                agent.path.append(tuple(agent.env.agent_pos))
-                agent._episode_tracker.track_step(reward=reward)
-
                 logger.info(
                     f"Step {agent._episode_tracker.steps}: "
                     f"Action={top_action.action.value}, Reward={reward}",
