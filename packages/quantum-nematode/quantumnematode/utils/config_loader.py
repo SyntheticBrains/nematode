@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -115,17 +115,62 @@ class StaticEnvironmentConfig(BaseModel):
     grid_size: int = 10
 
 
-class DynamicEnvironmentConfig(BaseModel):
-    """Configuration for dynamic foraging environment."""
+class ForagingConfig(BaseModel):
+    """Configuration for foraging mechanics in dynamic environment."""
 
-    grid_size: int = 50
     num_initial_foods: int = 10
     max_active_foods: int = 15
     min_food_distance: int = 5
     agent_exclusion_radius: int = 10
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
+
+
+class PredatorConfig(BaseModel):
+    """Configuration for predator mechanics in dynamic environment."""
+
+    enabled: bool = False
+    count: int = 2
+    speed: float = 1.0
+    movement_pattern: str = "random"
+    detection_radius: int = 8
+    kill_radius: int = 1
+    gradient_decay_constant: float = 12.0
+    gradient_strength: float = 1.0
+    proximity_penalty: float = -0.1
+
+    @field_validator("movement_pattern")
+    @classmethod
+    def validate_movement_pattern(cls, v: str) -> str:
+        """Validate movement pattern is supported."""
+        valid_patterns = ["random"]
+        if v not in valid_patterns:
+            msg = (
+                f"Invalid movement_pattern: '{v}'. "
+                f"Currently only 'random' is supported. "
+                f"Future patterns (e.g., 'pursuit', 'patrol') are planned but not yet implemented."
+            )
+            raise ValueError(msg)
+        return v
+
+
+class DynamicEnvironmentConfig(BaseModel):
+    """Configuration for dynamic foraging environment."""
+
+    grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
+
+    # Nested configuration subsections
+    foraging: ForagingConfig | None = None
+    predators: PredatorConfig | None = None
+
+    def get_foraging_config(self) -> ForagingConfig:
+        """Get foraging configuration with defaults."""
+        return self.foraging or ForagingConfig()
+
+    def get_predator_config(self) -> PredatorConfig:
+        """Get predator configuration with defaults."""
+        return self.predators or PredatorConfig()
 
 
 class EnvironmentConfig(BaseModel):

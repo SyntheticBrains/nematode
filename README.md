@@ -13,6 +13,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 ## 🧪 Features
 
 - ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
+- ✅ **Predator Evasion**: Multi-objective learning with random-moving predators and gradient-based danger perception
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
 - ✅ **Classical ML Alternatives**: MLP, Q-learning, and spiking neural network brain architectures
 - ✅ **Static Maze Environment**: Traditional 2D grid navigation with single-goal seeking
@@ -87,6 +88,9 @@ cp .env.template .env
 # Dynamic foraging with quantum modular brain (recommended)
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
 
+# Dynamic foraging and predator evasion with quantum modular brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_dynamic_medium_predators.yml --theme emoji
+
 # Dynamic foraging with classical MLP brain
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
@@ -151,6 +155,28 @@ The spiking brain architecture provides biologically realistic neural computatio
 - Event-driven sparse computation
 - Plasticity rules based on spike timing
 - Configurable neuron and synapse parameters
+
+### Predator Evasion
+
+The predator evasion system adds a challenging multi-objective learning task where agents must balance food collection with survival:
+
+**Predator Mechanics:**
+- Random movement patterns with configurable speed
+- Detection radius (default 8 units) creating danger zones
+- Kill radius (default 1 unit) for lethal collisions
+- Multiple predators with independent movement
+
+**Gradient-Based Perception:**
+- **Food gradients**: Attractive exponential decay guiding agents toward food
+- **Predator gradients**: Repulsive exponential decay warning of danger
+- **Gradient superposition**: Combined vector field for multi-objective decision-making
+- Agent perceives both food and threat locations through unified gradient system
+
+**Learning Dynamics:**
+- **Proximity penalty**: Continuous negative reward when in danger zone (detection radius)
+- **Death penalty**: Large negative reward (default -10.0) on predator collision
+- **Multi-objective optimization**: Agents learn to collect food while avoiding threats
+- **Predator metrics**: Track encounters, successful evasions, and survival strategies
 
 ## 🏆 Top Benchmarks
 
@@ -248,10 +274,13 @@ Success rate: 100.00%
 ```
 
 Where:
-- 🦠 = Nematode agent
-- 🔼 = Food target
+- 🔼 = Nematode agent (🔼/🔽/◀️/▶️ with direction)
 - 🔵 = Agent's trail/body
+- 🦠 = Food target
+- 🕷️ = Predator
 - ⬜️ = Empty space
+
+When predators are enabled, the status line shows "IN DANGER" when the agent is within a predator's detection radius.
 
 ## 🧰 Built With
 
@@ -275,6 +304,7 @@ This project serves as a platform for exploring:
 ### Upcoming Features
 
 - **Enhanced Brain Architectures**: More sophisticated quantum learning algorithms
+- **Advanced Predator Behaviors**: Pursuit/chase patterns, patrol routes, and adaptive hunting strategies
 - **Extended Foraging Dynamics**: Temperature gradients, food quality variations, and social foraging
 - **Multi-Agent Scenarios**: Cooperative and competitive foraging behaviors
 - **Better Visualization**: Real-time learning analysis and 3D environment rendering

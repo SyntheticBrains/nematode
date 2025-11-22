@@ -47,10 +47,13 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
+    export_convergence_metrics_to_csv,
     export_distance_efficiencies_to_csv,
     export_foraging_results_to_csv,
     export_foraging_session_metrics_to_csv,
     export_performance_metrics_to_csv,
+    export_predator_results_to_csv,
+    export_predator_session_metrics_to_csv,
     export_run_data_to_csv,
     export_simulation_results_to_csv,
     export_tracking_data_to_csv,
@@ -67,15 +70,19 @@ from quantumnematode.report.plots import (
     plot_cumulative_reward_per_run,
     plot_distance_efficiency_trend,
     plot_efficiency_score_over_time,
+    plot_evasion_success_rate_over_time,
     plot_foods_collected_per_run,
     plot_foods_vs_reward_correlation,
     plot_foods_vs_steps_correlation,
     plot_foraging_efficiency_per_run,
     plot_last_cumulative_rewards,
+    plot_predator_encounters_over_time,
     plot_running_average_steps,
     plot_satiety_at_episode_end,
+    plot_satiety_progression_single_run,
     plot_steps_per_run,
     plot_success_rate_over_time,
+    plot_survival_vs_food_collection,
     plot_termination_reasons_breakdown,
     plot_tracking_data_by_latest_run,
     plot_tracking_data_by_session,
@@ -332,21 +339,43 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if environment_config.type == "dynamic":
         logger.info("Using dynamic foraging environment")
         dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+
+        # Get foraging and predator configs (with automatic migration)
+        foraging_config = dynamic_config.get_foraging_config()
+        predator_config = dynamic_config.get_predator_config()
+
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
-            num_initial_foods=dynamic_config.num_initial_foods,
-            max_active_foods=dynamic_config.max_active_foods,
-            min_food_distance=dynamic_config.min_food_distance,
-            agent_exclusion_radius=dynamic_config.agent_exclusion_radius,
-            gradient_decay_constant=dynamic_config.gradient_decay_constant,
-            gradient_strength=dynamic_config.gradient_strength,
+            num_initial_foods=foraging_config.num_initial_foods,
+            max_active_foods=foraging_config.max_active_foods,
+            min_food_distance=foraging_config.min_food_distance,
+            agent_exclusion_radius=foraging_config.agent_exclusion_radius,
+            gradient_decay_constant=foraging_config.gradient_decay_constant,
+            gradient_strength=foraging_config.gradient_strength,
             viewport_size=dynamic_config.viewport_size,
             max_body_length=body_length,
             theme=theme,
+            # Predator parameters
+            predators_enabled=predator_config.enabled,
+            num_predators=predator_config.count,
+            predator_speed=predator_config.speed,
+            predator_detection_radius=predator_config.detection_radius,
+            predator_kill_radius=predator_config.kill_radius,
+            predator_gradient_decay=predator_config.gradient_decay_constant,
+            predator_gradient_strength=predator_config.gradient_strength,
+            predator_proximity_penalty=predator_config.proximity_penalty,
         )
+        predator_info = ""
+        if predator_config.enabled:
+            predator_info = (
+                f", {predator_config.count} predators "
+                f"(detection_radius={predator_config.detection_radius}, "
+                f"kill_radius={predator_config.kill_radius}, "
+                f"proximity_penalty={predator_config.proximity_penalty})"
+            )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
-            f"{dynamic_config.num_initial_foods} initial foods",
+            f"{foraging_config.num_initial_foods} initial foods{predator_info}",
         )
     else:
         logger.info("Using static maze environment")
@@ -500,6 +529,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             satiety_remaining_this_run = None
             average_distance_efficiency = None
             satiety_history_this_run = None
+            predator_encounters_this_run = None
+            successful_evasions_this_run = None
+            died_to_predator_this_run = None
             match agent.env:
                 case StaticEnvironment():
                     # Calculate efficiency score for the run
@@ -515,6 +547,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         else 0.0
                     )
                     satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
+                    predator_encounters_this_run = agent._episode_tracker.predator_encounters  # noqa: SLF001
+                    successful_evasions_this_run = agent._episode_tracker.successful_evasions  # noqa: SLF001
+                    died_to_predator_this_run = (
+                        step_result.termination_reason == TerminationReason.PREDATOR
+                    )
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
@@ -533,6 +570,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 satiety_remaining=satiety_remaining_this_run,
                 average_distance_efficiency=average_distance_efficiency,
                 satiety_history=satiety_history_this_run,
+                predator_encounters=predator_encounters_this_run,
+                successful_evasions=successful_evasions_this_run,
+                died_to_predator=died_to_predator_this_run,
             )
             all_results.append(result)
 
@@ -634,6 +674,21 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             data_dir=data_dir,
         )
 
+    # Export predator-specific data (only if predator mechanics were actually in play)
+    predator_results = [
+        r
+        for r in all_results
+        if r.predator_encounters is not None
+        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
+    ]
+    if predator_results:
+        export_predator_results_to_csv(all_results=all_results, data_dir=data_dir)
+        export_predator_session_metrics_to_csv(
+            all_results=all_results,
+            metrics=metrics,
+            data_dir=data_dir,
+        )
+
     # Generate additional plots for tracking data
     plot_tracking_data_by_session(
         tracking_data=tracking_data,
@@ -684,6 +739,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 device_type=device,
                 qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
+            )
+
+            # Export convergence metrics to CSV (includes composite score and all convergence analysis)
+            export_convergence_metrics_to_csv(
+                experiment_metadata=experiment_metadata,
+                data_dir=data_dir,
             )
 
             if device == DeviceType.QPU:
@@ -1056,7 +1117,7 @@ def manage_simulation_halt(  # noqa: PLR0913
             logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
-def plot_results(  # noqa: C901
+def plot_results(  # noqa: C901, PLR0912, PLR0915
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
     max_steps: int,
@@ -1201,6 +1262,80 @@ def plot_results(  # noqa: C901
                 foods_collected_list,
                 foraging_steps,
             )
+
+    # Predator Evasion Environment Specific Plots (only if predator mechanics were in play)
+    predator_results = [
+        r
+        for r in all_results
+        if r.predator_encounters is not None
+        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
+    ]
+    if predator_results:
+        # Extract predator-specific data
+        predator_encounters_list = [
+            r.predator_encounters for r in predator_results if r.predator_encounters is not None
+        ]
+        successful_evasions_list = [
+            r.successful_evasions for r in predator_results if r.successful_evasions is not None
+        ]
+        predator_runs = [r.run for r in predator_results]
+
+        # Plot: Predator Encounters Over Time
+        if predator_encounters_list:
+            plot_predator_encounters_over_time(
+                file_prefix,
+                predator_runs,
+                plot_dir,
+                predator_encounters_list,
+            )
+
+        # Plot: Evasion Success Rate Over Time
+        if predator_encounters_list and successful_evasions_list:
+            plot_evasion_success_rate_over_time(
+                file_prefix,
+                predator_runs,
+                plot_dir,
+                predator_encounters_list,
+                successful_evasions_list,
+            )
+
+        # Plot: Survival vs Food Collection (for predator environments that also track food)
+        # Build paired lists in single loop to ensure correspondence
+        predator_foraging_results = [
+            r
+            for r in predator_results
+            if r.foods_collected is not None and r.died_to_predator is not None
+        ]
+        if predator_foraging_results:
+            foods_in_predator = []
+            deaths_in_predator = []
+            for r in predator_foraging_results:
+                foods_in_predator.append(r.foods_collected)
+                deaths_in_predator.append(r.died_to_predator)
+
+            if foods_in_predator and deaths_in_predator:
+                plot_survival_vs_food_collection(
+                    file_prefix,
+                    plot_dir,
+                    foods_in_predator,
+                    deaths_in_predator,
+                )
+
+        # Plot: Satiety Progression for Single Run (if requested via --track-per-run)
+        # This is typically generated in the per-run tracking section, but we can add
+        # a sample run here for predator environments
+        if predator_results and predator_results[0].satiety_history:
+            # Get the last run's satiety history as an example
+            last_run = predator_results[-1]
+            if last_run.satiety_history:
+                max_satiety_pred = max(last_run.satiety_history)
+                plot_satiety_progression_single_run(
+                    file_prefix,
+                    plot_dir,
+                    last_run.run,
+                    last_run.satiety_history,
+                    max_satiety_pred,
+                )
 
 
 if __name__ == "__main__":

@@ -80,6 +80,7 @@ class TestDynamicForagingRewards:
         env.foods = [(5, 5), (1, 1)]
         env.get_nearest_food_distance = Mock(return_value=1)
         env.visited_cells = set()
+        env.predators_enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(3, 3), (2, 2)]  # Previous nearest was Manhattan=4, now=1
@@ -98,6 +99,7 @@ class TestDynamicForagingRewards:
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = set()
+        env.predators_enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -115,6 +117,7 @@ class TestDynamicForagingRewards:
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(1, 2)}
+        env.predators_enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
