@@ -38,7 +38,7 @@
 - [x] 4.5 Add deprecation warning logging for legacy flat configurations
 - [x] 4.6 Add validation for `movement_pattern` (only "random" allowed, clear error for future patterns)
 - [x] 4.7 Set default values: `enabled: false`, `count: 2`, `speed: 1.0`, `detection_radius: 8`, `kill_radius: 1`
-- [x] 4.8 Add `show_detection_radius: true` configuration parameter
+- [x] 4.8 Add `show_detection_radius: true` configuration parameter -> UPDATE: removed this feature
 
 ## 5. Metrics and Tracking
 

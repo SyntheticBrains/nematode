@@ -459,7 +459,6 @@ class QuantumNematodeAgent:
                 predator_gradient_decay=self.env.predator_gradient_decay,
                 predator_gradient_strength=self.env.predator_gradient_strength,
                 predator_proximity_penalty=self.env.predator_proximity_penalty,
-                show_detection_radius=self.env.show_detection_radius,
             )
         else:
             self.env = StaticEnvironment(
