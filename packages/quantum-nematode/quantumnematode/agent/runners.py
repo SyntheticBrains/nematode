@@ -124,7 +124,7 @@ class StandardEpisodeRunner(EpisodeRunner):
     def __init__(self) -> None:
         """Initialize the standard episode runner."""
 
-    def run(  # noqa: C901, PLR0912, PLR0915
+    def run(  # noqa: C901, PLR0911, PLR0912, PLR0915
         self,
         agent: QuantumNematodeAgent,
         reward_config: RewardConfig,
@@ -272,6 +272,31 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Move predators after agent moves
                 agent.env.update_predators()
+
+                # Check for predator collision AFTER predators move
+                # (predator may step onto agent's position)
+                if agent.env.check_predator_collision():
+                    logger.warning("Agent caught by predator (after predator movement)!")
+                    # Apply death penalty to both brain reward and episode tracker
+                    penalty = -reward_config.penalty_predator_death
+                    reward += penalty
+                    agent._episode_tracker.track_reward(penalty)
+                    agent.brain.update_memory(reward)
+                    agent.brain.post_process_episode()
+                    agent._metrics_tracker.track_episode_completion(
+                        success=False,
+                        steps=agent._episode_tracker.steps,
+                        reward=agent._episode_tracker.rewards,
+                        foods_collected=agent._episode_tracker.foods_collected,
+                        distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                        predator_encounters=agent._episode_tracker.predator_encounters,
+                        successful_evasions=agent._episode_tracker.successful_evasions,
+                        termination_reason=TerminationReason.PREDATOR,
+                    )
+                    return EpisodeResult(
+                        agent_path=agent.path,
+                        termination_reason=TerminationReason.PREDATOR,
+                    )
 
             # Classical brain learning step
             if isinstance(agent.brain, ClassicalBrain):
