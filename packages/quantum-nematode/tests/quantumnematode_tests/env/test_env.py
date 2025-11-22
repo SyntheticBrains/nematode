@@ -926,3 +926,154 @@ class TestPredatorMechanics:
 
         # Agent should not be in danger at initialization
         assert predator_env.is_agent_in_danger() is False
+
+    def test_predator_fractional_speed(self):
+        """Test predator with fractional speed (< 1.0)."""
+        from quantumnematode.env.env import Predator
+
+        # Speed 0.5 should move every 2 updates
+        predator = Predator(position=(5, 5), speed=0.5)
+        initial_pos = predator.position
+
+        # First update: accumulator = 0.5, no movement
+        predator.update_position(grid_size=10)
+        assert predator.position == initial_pos
+        assert predator.movement_accumulator == 0.5
+
+        # Second update: accumulator = 1.0, movement occurs
+        predator.update_position(grid_size=10)
+        assert predator.position != initial_pos  # Should have moved
+        assert predator.movement_accumulator == 0.0
+
+    def test_predator_normal_speed(self):
+        """Test predator with normal speed (1.0)."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=1.0)
+        initial_pos = predator.position
+
+        # Each update should move exactly once
+        predator.update_position(grid_size=10)
+        first_pos = predator.position
+        assert first_pos != initial_pos  # Should have moved
+        assert predator.movement_accumulator == 0.0
+
+        # Second update should also move once
+        predator.update_position(grid_size=10)
+        assert predator.position != first_pos  # Should have moved again
+        assert predator.movement_accumulator == 0.0
+
+    def test_predator_double_speed(self):
+        """Test predator with double speed (2.0) takes two movement steps per update."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=2.0)
+
+        # Single update should take 2 steps (movement is random, check accumulator)
+        predator.update_position(grid_size=10)
+
+        # After speed 2.0, accumulator should be 0.0 (2 steps taken)
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after 2 steps (speed=2.0), "
+            f"got {predator.movement_accumulator}"
+        )
+
+    def test_predator_triple_speed(self):
+        """Test predator with triple speed (3.0) takes three movement steps per update."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=3.0)
+
+        # Single update should take 3 steps (movement is random, check accumulator)
+        predator.update_position(grid_size=10)
+
+        # After speed 3.0, accumulator should be 0.0 (3 steps taken)
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after 3 steps (speed=3.0), "
+            f"got {predator.movement_accumulator}"
+        )
+
+    def test_predator_fractional_multi_speed(self):
+        """Test predator with fractional multi-step speed (2.5)."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=2.5)
+
+        # First update: 2 steps, 0.5 remaining
+        # Note: Movement is random, but accumulator should be decremented correctly
+        predator.update_position(grid_size=10)
+        assert predator.movement_accumulator == 0.5, (
+            f"Expected accumulator 0.5 after speed 2.5 (2 steps taken), "
+            f"got {predator.movement_accumulator}"
+        )
+
+        # Second update: accumulator 0.5 + 2.5 = 3.0, so 3 steps
+        predator.update_position(grid_size=10)
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after 3 steps, got {predator.movement_accumulator}"
+        )
+
+    def test_predator_high_speed_capped(self):
+        """Test predator with very high speed is capped at 10 steps per update."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=15.0)
+
+        # Single update should be capped at 10 steps
+        # Movement is random, but accumulator should show capping occurred
+        predator.update_position(grid_size=20)
+
+        # Accumulator should have 5.0 remaining (15.0 - 10.0 cap)
+        assert predator.movement_accumulator == 5.0, (
+            f"Expected accumulator 5.0 after speed 15.0 capped at 10 steps, "
+            f"got {predator.movement_accumulator}"
+        )
+
+    def test_predator_speed_boundary_clamping(self):
+        """Test that high-speed predators respect grid boundaries."""
+        from quantumnematode.env.env import Predator
+
+        # Place predator near edge with high speed
+        predator = Predator(position=(1, 1), speed=5.0)
+
+        # Update position - should not go out of bounds
+        predator.update_position(grid_size=10)
+
+        # Verify position is still within grid
+        assert 0 <= predator.position[0] < 10
+        assert 0 <= predator.position[1] < 10
+
+    def test_predator_zero_speed(self):
+        """Test predator with zero speed never moves."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=0.0)
+        initial_pos = predator.position
+
+        # Multiple updates should never move
+        for _ in range(10):
+            predator.update_position(grid_size=10)
+            assert predator.position == initial_pos
+            assert predator.movement_accumulator == 0.0
+
+    def test_predator_very_slow_speed(self):
+        """Test predator with very slow speed (0.25)."""
+        from quantumnematode.env.env import Predator
+
+        # Use 0.25 to avoid floating point precision issues (4 * 0.25 = 1.0 exactly)
+        predator = Predator(position=(5, 5), speed=0.25)
+        initial_pos = predator.position
+
+        # Should not move for 3 updates (accumulator below 1.0)
+        for i in range(3):
+            predator.update_position(grid_size=10)
+            assert predator.position == initial_pos
+            expected_accumulator = (i + 1) * 0.25
+            assert abs(predator.movement_accumulator - expected_accumulator) < 0.001
+
+        # 4th update should trigger movement (accumulator reaches 1.0)
+        predator.update_position(grid_size=10)
+        # Movement is random, but accumulator should reset to 0.0
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after reaching 1.0, got {predator.movement_accumulator}"
+        )

@@ -67,8 +67,10 @@ class Predator:
         Current position of the predator.
     speed : float
         Movement speed relative to agent (1.0 = same speed).
+        Supports fractional speeds (< 1.0) and multi-step movement (> 1.0).
+        Capped at 10 steps per update for safety.
     movement_accumulator : float
-        Accumulator for fractional movement when speed < 1.0.
+        Accumulator for fractional movement (handles both speed < 1.0 and > 1.0).
     """
 
     def __init__(
@@ -94,37 +96,48 @@ class Predator:
         """
         Update predator position with random movement.
 
+        Supports speeds > 1.0 for multiple steps per update.
+        For safety, caps maximum steps per update at 10 to prevent
+        pathological behavior with very high speeds.
+
         Parameters
         ----------
         grid_size : int
             Size of the grid (for boundary checking).
         """
-        # Handle fractional speed
+        # Handle fractional and multi-step movement
         self.movement_accumulator += self.speed
         if self.movement_accumulator < 1.0:
             return  # Don't move yet
 
-        self.movement_accumulator -= 1.0
+        # Take multiple steps if speed > 1.0
+        # Cap at 10 steps per update for safety
+        max_steps_per_update = 10
+        steps_taken = 0
 
-        # Random movement in one of four directions
-        up = 0
-        down = 1
-        left = 2
-        right = 3
+        while self.movement_accumulator >= 1.0 and steps_taken < max_steps_per_update:
+            self.movement_accumulator -= 1.0
+            steps_taken += 1
 
-        direction_choice = secrets.randbelow(4)
-        x, y = self.position
+            # Random movement in one of four directions
+            up = 0
+            down = 1
+            left = 2
+            right = 3
 
-        if direction_choice == up:
-            y = max(0, y - 1)
-        elif direction_choice == down:
-            y = min(grid_size - 1, y + 1)
-        elif direction_choice == left:
-            x = max(0, x - 1)
-        elif direction_choice == right:
-            x = min(grid_size - 1, x + 1)
+            direction_choice = secrets.randbelow(4)
+            x, y = self.position
 
-        self.position = (x, y)
+            if direction_choice == up:
+                y = max(0, y - 1)
+            elif direction_choice == down:
+                y = min(grid_size - 1, y + 1)
+            elif direction_choice == left:
+                x = max(0, x - 1)
+            elif direction_choice == right:
+                x = min(grid_size - 1, x + 1)
+
+            self.position = (x, y)
 
 
 class BaseEnvironment(ABC):
