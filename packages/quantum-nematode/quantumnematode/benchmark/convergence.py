@@ -19,10 +19,13 @@ class ConvergenceMetrics(BaseModel):
     """Whether the learning strategy converged within the session."""
 
     convergence_run: int | None
-    """Run number where convergence was detected (None if never converged)."""
+    """Zero-based index into results where convergence was detected (None if never converged)."""
 
     runs_to_convergence: int | None
-    """Number of runs required to reach convergence (None if never converged)."""
+    """
+    Number of runs before converged region starts
+    (equal to convergence_run, None if never converged).
+    """
 
     post_convergence_success_rate: float | None
     """Success rate after convergence point (or last 10 runs if not converged)."""
@@ -45,7 +48,6 @@ class ConvergenceMetrics(BaseModel):
 
 def detect_convergence(
     results: list[SimulationResult],
-    window_size: int = 5,  # noqa: ARG001
     variance_threshold: float = 0.05,
     stability_runs: int = 10,
     min_runs: int = 20,
@@ -60,8 +62,6 @@ def detect_convergence(
     ----------
     results : list[SimulationResult]
         Ordered list of simulation results from a session.
-    window_size : int, optional
-        Size of moving average window for smoothing (default: 5).
     variance_threshold : float, optional
         Maximum variance to consider converged (default: 0.05 = 5%).
     stability_runs : int, optional
@@ -72,13 +72,13 @@ def detect_convergence(
     Returns
     -------
     int | None
-        Run number where convergence was detected, or None if never converged.
+        Zero-based index into results where convergence was detected, or None if never converged.
 
     Notes
     -----
-    The algorithm uses a moving window to check if success rate variance
-    remains below the threshold for `stability_runs` consecutive runs.
-    This prevents declaring convergence during temporary plateaus.
+    The algorithm checks if success rate variance in a sliding window of
+    `stability_runs` remains below the threshold. This prevents declaring
+    convergence during temporary plateaus and ensures genuine stabilization.
     """
     if len(results) < min_runs + stability_runs:
         return None
