@@ -1163,11 +1163,24 @@ class DynamicForagingEnvironment(BaseEnvironment):
             theme=self.theme,
             action_set=self.action_set,
             rich_style_config=self.rich_style_config,
+            predators_enabled=self.predators_enabled,
+            num_predators=self.num_predators,
+            predator_speed=self.predator_speed,
+            predator_detection_radius=self.predator_detection_radius,
+            predator_kill_radius=self.predator_kill_radius,
+            predator_gradient_decay=self.predator_gradient_decay,
+            predator_gradient_strength=self.predator_gradient_strength,
+            predator_proximity_penalty=self.predator_proximity_penalty,
+            show_detection_radius=self.show_detection_radius,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
         new_env.foods = self.foods.copy()
         new_env.visited_cells = self.visited_cells.copy()
+        if self.predators_enabled:
+            new_env.predators = [
+                Predator(position=p.position, speed=p.speed) for p in self.predators
+            ]
         return new_env
 
 
