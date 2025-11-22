@@ -9,6 +9,7 @@ from quantumnematode.experiment.metadata import (
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
+    ParameterInitializer,
     ResultsMetadata,
     SystemMetadata,
 )
@@ -154,6 +155,60 @@ class TestBrainMetadata:
         assert brain_meta.hidden_dim == 128
         assert brain_meta.num_hidden_layers == 2
 
+    def test_create_brain_with_random_initializer(self):
+        """Test creating brain metadata with random parameter initializer."""
+        brain_meta = BrainMetadata(
+            type="modular",
+            qubits=4,
+            shots=1000,
+            learning_rate=0.01,
+            parameter_initializer=ParameterInitializer(type="random_pi"),
+        )
+
+        assert brain_meta.type == "modular"
+        assert brain_meta.parameter_initializer is not None
+        assert brain_meta.parameter_initializer.type == "random_pi"
+        assert brain_meta.parameter_initializer.manual_parameter_values is None
+
+    def test_create_brain_with_manual_initializer(self):
+        """Test creating brain metadata with manual parameter initialization."""
+        manual_params = {
+            "θ_rx1_0": -2.4,
+            "θ_rx1_1": -2.7,
+            "θ_rx2_0": -1.3,
+            "θ_rx2_1": -2.4,
+            "θ_ry1_0": 2.9,
+            "θ_ry1_1": -2.4,
+        }
+
+        brain_meta = BrainMetadata(
+            type="modular",
+            qubits=2,
+            num_layers=2,
+            learning_rate=1.0,
+            parameter_initializer=ParameterInitializer(
+                type="manual",
+                manual_parameter_values=manual_params,
+            ),
+        )
+
+        assert brain_meta.parameter_initializer is not None
+        assert brain_meta.parameter_initializer.type == "manual"
+        assert brain_meta.parameter_initializer.manual_parameter_values == manual_params
+        assert brain_meta.parameter_initializer.manual_parameter_values is not None
+        assert brain_meta.parameter_initializer.manual_parameter_values["θ_rx1_0"] == -2.4
+        assert brain_meta.parameter_initializer.manual_parameter_values["θ_ry1_1"] == -2.4
+
+    def test_create_brain_no_initializer(self):
+        """Test creating brain metadata without initializer info."""
+        brain_meta = BrainMetadata(
+            type="mlp",
+            hidden_dim=64,
+            learning_rate=0.001,
+        )
+
+        assert brain_meta.parameter_initializer is None
+
     def test_model_dump(self):
         """Test Pydantic model_dump."""
         brain_meta = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
@@ -163,6 +218,25 @@ class TestBrainMetadata:
         assert data["type"] == "modular"
         assert data["qubits"] == 4
         assert data["learning_rate"] == 0.01
+
+    def test_model_dump_with_initializer(self):
+        """Test Pydantic model_dump with parameter initializer."""
+        manual_params = {"θ_rx1_0": -2.4, "θ_ry1_0": 2.9}
+        brain_meta = BrainMetadata(
+            type="modular",
+            qubits=2,
+            learning_rate=1.0,
+            parameter_initializer=ParameterInitializer(
+                type="manual",
+                manual_parameter_values=manual_params,
+            ),
+        )
+
+        data = brain_meta.model_dump()
+        assert data["parameter_initializer"] is not None
+        assert data["parameter_initializer"]["type"] == "manual"
+        assert data["parameter_initializer"]["manual_parameter_values"] == manual_params
+        assert data["parameter_initializer"]["manual_parameter_values"]["θ_rx1_0"] == -2.4
 
 
 class TestResultsMetadata:

@@ -717,7 +717,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             experiment_metadata = capture_experiment_metadata(
                 config_path=config_path,
                 env=agent.env,
-                brain=agent.brain,
                 brain_type=brain_type.value,
                 config={
                     "brain": {
@@ -733,6 +732,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     "satiety": {
                         "initial": satiety_config.initial_satiety,
                         "decay_rate": satiety_config.satiety_decay_rate,
+                    },
+                    "parameter_initializer": {
+                        "type": parameter_initializer_config.type,
+                        "manual_parameter_values": parameter_initializer_config.manual_parameter_values,
                     },
                 },
                 all_results=all_results,

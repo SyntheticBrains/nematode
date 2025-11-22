@@ -14,6 +14,7 @@ from quantumnematode.experiment.metadata import (
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
+    ParameterInitializer,
     ResultsMetadata,
     SystemMetadata,
 )
@@ -88,13 +89,15 @@ def extract_environment_metadata(
     )
 
 
-def extract_brain_metadata(brain: object, brain_type: str, config: dict) -> BrainMetadata:  # noqa: ARG001
+def extract_brain_metadata(
+    brain_type: str,
+    config: dict,
+    parameter_initializer_config: dict,
+) -> BrainMetadata:
     """Extract brain metadata from brain instance and configuration.
 
     Parameters
     ----------
-    brain : object
-        Brain instance.
     brain_type : str
         Brain type string.
     config : dict
@@ -121,6 +124,21 @@ def extract_brain_metadata(brain: object, brain_type: str, config: dict) -> Brai
     num_hidden_layers = brain_config.get("num_hidden_layers")
     modules = brain_config.get("modules")
 
+    # Extract parameter initializer information
+    parameter_initializer = None
+    if parameter_initializer_config is not None and isinstance(parameter_initializer_config, dict):
+        initializer_type = parameter_initializer_config.get("type")
+        if initializer_type is not None:
+            # If manual initialization, capture the parameter values
+            manual_values = None
+            if initializer_type == "manual":
+                manual_values = parameter_initializer_config.get("manual_parameter_values")
+
+            parameter_initializer = ParameterInitializer(
+                type=initializer_type,
+                manual_parameter_values=manual_values,
+            )
+
     return BrainMetadata(
         type=brain_type,
         qubits=qubits,
@@ -130,6 +148,7 @@ def extract_brain_metadata(brain: object, brain_type: str, config: dict) -> Brai
         num_hidden_layers=num_hidden_layers,
         learning_rate=learning_rate,
         modules=modules,
+        parameter_initializer=parameter_initializer,
     )
 
 
@@ -241,7 +260,6 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
 def capture_experiment_metadata(
     config_path: Path,
     env: object,
-    brain: object,
     brain_type: str,
     config: dict,
     all_results: list[SimulationResult],
@@ -258,8 +276,6 @@ def capture_experiment_metadata(
         Path to configuration file.
     env : object
         Environment instance.
-    brain : object
-        Brain instance.
     brain_type : str
         Brain type string.
     config : dict
@@ -295,7 +311,11 @@ def capture_experiment_metadata(
 
     # Extract metadata from components
     environment_metadata = extract_environment_metadata(env, config.get("satiety", {}))
-    brain_metadata = extract_brain_metadata(brain, brain_type, config.get("brain", {}))
+    brain_metadata = extract_brain_metadata(
+        brain_type=brain_type,
+        config=config.get("brain", {}),
+        parameter_initializer_config=config.get("parameter_initializer", {}),
+    )
     results_metadata = aggregate_results_metadata(all_results)
     system_metadata_dict = capture_system_info(device_type, qpu_backend)
 
