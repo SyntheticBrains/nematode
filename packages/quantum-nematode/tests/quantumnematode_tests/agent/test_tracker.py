@@ -265,6 +265,3 @@ class TestPredatorMetricsTracking:
 
         # Satiety history should be empty initially
         assert tracker.satiety_history == []
-
-        # This is tested via integration, but the property should exist
-        assert hasattr(tracker, "satiety_history")
