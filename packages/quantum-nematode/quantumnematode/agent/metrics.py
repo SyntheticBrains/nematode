@@ -171,3 +171,9 @@ class MetricsTracker:
         self.total_rewards = 0.0
         self.foods_collected = 0
         self.distance_efficiencies = []
+        self.total_predator_encounters = 0
+        self.total_successful_evasions = 0
+        self.total_predator_deaths = 0
+        self.total_starved = 0
+        self.total_max_steps = 0
+        self.total_interrupted = 0
