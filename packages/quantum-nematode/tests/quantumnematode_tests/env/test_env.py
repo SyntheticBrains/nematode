@@ -830,8 +830,12 @@ class TestPredatorMechanics:
             assert 0 <= predator.position[0] < predator_env.grid_size
             assert 0 <= predator.position[1] < predator_env.grid_size
 
-    def test_proximity_penalty(self, predator_env):
-        """Test proximity penalty calculation when agent is in danger."""
+    def test_predator_proximity_detection(self, predator_env):
+        """Test agent danger detection when within predator detection radius.
+
+        Note: The actual proximity penalty (-0.1) is applied by the reward calculator,
+        not the environment. This test validates the environment's danger detection helper.
+        """
         # Place agent at (10, 10)
         predator_env.agent_pos = (10, 10)
 
@@ -839,12 +843,17 @@ class TestPredatorMechanics:
         predator_env.predators[0].position = (10, 15)  # 5 units away, within detection_radius=8
         predator_env.predators = [predator_env.predators[0]]
 
-        # Agent should be in danger
+        # Agent should be in danger (within detection radius)
         assert predator_env.is_agent_in_danger() is True
 
-        # Proximity penalty should be applied (configured as -0.1)
-        # We can verify this by checking the reward calculation includes the penalty
-        # For now, just verify that the is_agent_in_danger() method works correctly
+        # Verify proximity penalty value is configured and accessible
+        assert predator_env.predator_proximity_penalty == -0.1
+
+        # Place predator outside detection radius
+        predator_env.predators[0].position = (10, 20)  # 10 units away, outside detection_radius=8
+
+        # Agent should not be in danger
+        assert predator_env.is_agent_in_danger() is False
 
     def test_full_episode_with_predators(self, predator_env):
         """Integration test: Verify predators work with environment operations."""
