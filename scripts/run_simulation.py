@@ -360,10 +360,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_proximity_penalty=predator_config.proximity_penalty,
             show_detection_radius=predator_config.show_detection_radius,
         )
+        predator_info = ""
+        if predator_config.enabled:
+            predator_info = (
+                f", {predator_config.count} predators "
+                f"(detection_radius={predator_config.detection_radius}, "
+                f"kill_radius={predator_config.kill_radius}, "
+                f"proximity_penalty={predator_config.proximity_penalty})"
+            )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
-            f"{foraging_config.num_initial_foods} initial foods"
-            + (f", {predator_config.count} predators" if predator_config.enabled else ""),
+            f"{foraging_config.num_initial_foods} initial foods{predator_info}",
         )
     else:
         logger.info("Using static maze environment")
