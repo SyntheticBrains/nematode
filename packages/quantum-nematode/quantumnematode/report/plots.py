@@ -836,7 +836,12 @@ def plot_foods_vs_reward_correlation(  # pragma: no cover
     plt.scatter(foods_collected, total_rewards, alpha=0.6, s=100, edgecolors="black")
 
     # Add trend line only if there's variation in the data
-    if len(foods_collected) > 1 and len(set(foods_collected)) > 1 and len(set(total_rewards)) > 1:
+    if (
+        len(foods_collected) > 1
+        and len(total_rewards) == len(foods_collected)
+        and len(set(foods_collected)) > 1
+        and len(set(total_rewards)) > 1
+    ):
         try:
             z = np.polyfit(foods_collected, total_rewards, 1)
             p = np.poly1d(z)
@@ -860,7 +865,7 @@ def plot_foods_vs_reward_correlation(  # pragma: no cover
                 verticalalignment="top",
                 bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
             )
-        except np.linalg.LinAlgError:
+        except (np.linalg.LinAlgError, ValueError):
             logger.warning(
                 "Insufficient variation for trend line calculation; skipping trend line.",
             )
@@ -898,7 +903,12 @@ def plot_foods_vs_steps_correlation(  # pragma: no cover
     plt.scatter(foods_collected, steps, alpha=0.6, s=100, color="purple", edgecolors="black")
 
     # Add trend line only if there's variation in the data
-    if len(foods_collected) > 1 and len(set(foods_collected)) > 1 and len(set(steps)) > 1:
+    if (
+        len(foods_collected) > 1
+        and len(steps) == len(foods_collected)
+        and len(set(foods_collected)) > 1
+        and len(set(steps)) > 1
+    ):
         try:
             z = np.polyfit(foods_collected, steps, 1)
             p = np.poly1d(z)
@@ -922,7 +932,7 @@ def plot_foods_vs_steps_correlation(  # pragma: no cover
                 verticalalignment="top",
                 bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
             )
-        except np.linalg.LinAlgError:
+        except (np.linalg.LinAlgError, ValueError):
             logger.warning(
                 "Insufficient variation for trend line calculation; skipping trend line.",
             )
