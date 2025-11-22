@@ -8,6 +8,7 @@ converged behavior rather than all-run averages.
 import numpy as np
 from pydantic import BaseModel
 
+from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import SimulationResult
 
 
@@ -285,6 +286,18 @@ def analyze_convergence(
     >>> print(f"Converged: {metrics.converged}")
     >>> print(f"Composite Score: {metrics.composite_score:.3f}")
     """
+    if total_runs == 0:
+        error_message = "Total runs must be greater than zero for convergence analysis."
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+    if total_runs != len(results):
+        error_message = (
+            f"Total runs ({total_runs}) does not match number of results ({len(results)})."
+        )
+        logger.error(error_message)
+        raise ValueError(error_message)
+
     # Step 1: Detect convergence
     convergence_run = detect_convergence(results)
 
