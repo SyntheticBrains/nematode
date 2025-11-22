@@ -265,3 +265,10 @@ class TestPredatorMetricsTracking:
 
         # Satiety history should be empty initially
         assert tracker.satiety_history == []
+
+        # Track satiety values
+        tracker.track_step(reward=0.1, satiety=100.0)
+        tracker.track_step(reward=0.2, satiety=95.0)
+
+        # Verify satiety history is populated
+        assert tracker.satiety_history == [100.0, 95.0]

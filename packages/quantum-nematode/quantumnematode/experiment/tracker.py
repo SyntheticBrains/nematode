@@ -141,6 +141,7 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
             success_rate=0.0,
             avg_steps=0.0,
             avg_reward=0.0,
+            converged=False,
         )
 
     # Count successes

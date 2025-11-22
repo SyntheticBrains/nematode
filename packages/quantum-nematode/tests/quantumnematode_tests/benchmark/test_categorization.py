@@ -325,6 +325,7 @@ class TestGetCategoryDirectory:
 
     def test_all_valid_categories(self):
         """Test all valid category combinations (14 total: 2 static + 6 dynamic + 6 predator)."""
+        assert len(VALID_CATEGORIES) == 14
         for category in VALID_CATEGORIES:
             path = get_category_directory(category)
             assert "/" in path
