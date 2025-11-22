@@ -85,6 +85,8 @@ class TestPresetConfigurations:
             foraging_config = dynamic_config["foraging"]
             assert "num_initial_foods" in foraging_config
             assert "max_active_foods" in foraging_config
+            assert "min_food_distance" in foraging_config
+            assert "agent_exclusion_radius" in foraging_config
 
             # Verify satiety parameters
             satiety_config = config["satiety"]
