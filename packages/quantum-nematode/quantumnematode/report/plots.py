@@ -1027,6 +1027,14 @@ def plot_predator_encounters_over_time(  # pragma: no cover
         logger.warning("No predator encounter data to plot")
         return
 
+    # Validate input lengths match
+    if len(runs) != len(predator_encounters):
+        logger.warning(
+            f"Length mismatch: runs ({len(runs)}) vs predator_encounters "
+            f"({len(predator_encounters)}). Skipping plot.",
+        )
+        return
+
     plt.figure(figsize=(12, 6))
     plt.bar(
         runs,
@@ -1079,6 +1087,15 @@ def plot_evasion_success_rate_over_time(  # pragma: no cover
     # Guard against empty inputs
     if not runs or not predator_encounters or not successful_evasions:
         logger.warning("No evasion data to plot")
+        return
+
+    # Validate input lengths match
+    if len(runs) != len(predator_encounters) or len(runs) != len(successful_evasions):
+        logger.warning(
+            f"Length mismatch: runs ({len(runs)}) vs predator_encounters "
+            f"({len(predator_encounters)}) vs successful_evasions "
+            f"({len(successful_evasions)}). Skipping plot.",
+        )
         return
 
     # Calculate evasion success rate per run
@@ -1148,6 +1165,14 @@ def plot_survival_vs_food_collection(  # pragma: no cover
     # Guard against empty inputs
     if not foods_collected or not deaths_by_predator:
         logger.warning("No survival/food collection data to plot")
+        return
+
+    # Validate input lengths match
+    if len(foods_collected) != len(deaths_by_predator):
+        logger.warning(
+            f"Length mismatch: foods_collected ({len(foods_collected)}) vs "
+            f"deaths_by_predator ({len(deaths_by_predator)}). Skipping plot.",
+        )
         return
 
     # Separate data by survival status
