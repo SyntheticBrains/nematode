@@ -68,7 +68,7 @@ environment:
       speed: 1.0
       movement_pattern: random
       detection_radius: 8
-      kill_radius: 1
+      kill_radius: 0
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
       proximity_penalty: -0.1
