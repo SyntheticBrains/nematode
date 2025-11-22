@@ -655,7 +655,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     )
 
     # Generate plots after the simulation
-    plot_results(all_results=all_results, metrics=metrics, max_steps=max_steps, plot_dir=plot_dir)
+    plot_results(all_results=all_results, metrics=metrics, plot_dir=plot_dir)
 
     # Export data to CSV files
     export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
@@ -1076,7 +1076,6 @@ def manage_simulation_halt(  # noqa: PLR0913
             plot_results(
                 all_results=all_results,
                 metrics=metrics,
-                max_steps=max_steps,
                 file_prefix=file_prefix,
                 plot_dir=plot_dir,
             )
@@ -1124,11 +1123,20 @@ def manage_simulation_halt(  # noqa: PLR0913
 def plot_results(  # noqa: C901, PLR0912, PLR0915
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
-    max_steps: int,
     plot_dir: Path,
     file_prefix: str = "",
 ) -> None:
-    """Generate and save plots for the simulation results."""
+    """
+    Generate and save plots for the simulation results.
+
+    Args:
+        all_results (list[SimulationResult]):
+            List of results for each run.
+        metrics (PerformanceMetrics): Performance metrics calculated from the simulation.
+        plot_dir (Path): Directory where plots will be saved.
+        file_prefix (str, optional): Prefix to add to plot filenames. Defaults to "".
+
+    """
     runs: list[int] = [result.run for result in all_results]
     steps: list[int] = [result.steps for result in all_results]
 
@@ -1150,8 +1158,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
 
     # Plot: Success Rate Over Time
     success_rates: list[float] = [
-        sum(1 for r in all_results[:i] if r.steps < max_steps) / i
-        for i in range(1, len(all_results) + 1)
+        sum(1 for r in all_results[:i] if r.success) / i for i in range(1, len(all_results) + 1)
     ]
     plot_success_rate_over_time(file_prefix, runs, plot_dir, success_rates)
 
