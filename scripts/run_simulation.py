@@ -674,8 +674,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             data_dir=data_dir,
         )
 
-    # Export predator-specific data (if predator environment)
-    predator_results = [r for r in all_results if r.predator_encounters is not None]
+    # Export predator-specific data (only if predator mechanics were actually in play)
+    predator_results = [
+        r
+        for r in all_results
+        if r.predator_encounters is not None
+        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
+    ]
     if predator_results:
         export_predator_results_to_csv(all_results=all_results, data_dir=data_dir)
         export_predator_session_metrics_to_csv(
@@ -1258,8 +1263,13 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
                 foraging_steps,
             )
 
-    # Predator Evasion Environment Specific Plots
-    predator_results = [r for r in all_results if r.predator_encounters is not None]
+    # Predator Evasion Environment Specific Plots (only if predator mechanics were in play)
+    predator_results = [
+        r
+        for r in all_results
+        if r.predator_encounters is not None
+        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
+    ]
     if predator_results:
         # Extract predator-specific data
         predator_encounters_list = [
