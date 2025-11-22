@@ -147,6 +147,7 @@ class MetricsTracker:
             # Predator-enabled environment: use 0.0 for zero encounters
             average_predator_encounters = self.total_predator_encounters / total_runs
             average_successful_evasions = self.total_successful_evasions / total_runs
+
         # else: Non-predator environment: keep as None
 
         return PerformanceMetrics(
@@ -158,7 +159,9 @@ class MetricsTracker:
             average_foods_collected=average_foods_collected,
             total_successes=self.success_count,
             total_starved=self.total_starved,
+            total_predator_encounters=self.total_predator_encounters,
             total_predator_deaths=self.total_predator_deaths,
+            total_successful_evasions=self.total_successful_evasions,
             total_max_steps=self.total_max_steps,
             total_interrupted=self.total_interrupted,
             average_predator_encounters=average_predator_encounters,

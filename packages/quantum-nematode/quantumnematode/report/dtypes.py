@@ -165,8 +165,12 @@ class PerformanceMetrics(BaseModel):
         Total number of successful runs.
     total_starved : int
         Total number of runs that ended due to starvation.
+    total_predator_encounters : int
+        Total number of predator encounters across all runs.
     total_predator_deaths : int
         Total number of runs that ended due to predator collision.
+    total_successful_evasions : int
+        Total number of successful predator evasions across all runs.
     total_max_steps : int
         Total number of runs that hit maximum steps.
     total_interrupted : int
@@ -185,7 +189,9 @@ class PerformanceMetrics(BaseModel):
     average_foods_collected: float | None = None
     total_successes: int = 0
     total_starved: int = 0
+    total_predator_encounters: int = 0
     total_predator_deaths: int = 0
+    total_successful_evasions: int = 0
     total_max_steps: int = 0
     total_interrupted: int = 0
     average_predator_encounters: float | None = None
