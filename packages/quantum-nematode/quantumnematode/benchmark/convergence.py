@@ -162,11 +162,11 @@ def calculate_post_convergence_metrics(
     distance_efficiency = None
 
     # Calculate average foods collected if available
-    if analysis_runs[0].foods_collected is not None:
+    if any(r.foods_collected is not None for r in analysis_runs) is not None:
         avg_foods = float(np.mean([r.foods_collected or 0 for r in analysis_runs]))
 
     # Calculate distance efficiency if available (has average_distance_efficiency field)
-    if analysis_runs[0].average_distance_efficiency is not None:
+    if any(r.average_distance_efficiency is not None for r in analysis_runs):
         # Calculate average distance efficiency from SUCCESSFUL runs only
         if successful_runs:
             # Filter out None values and calculate average
