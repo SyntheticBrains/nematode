@@ -77,6 +77,7 @@ class Predator:
         self,
         position: tuple[int, int],
         speed: float = 1.0,
+        movement_accumulator: float = 0.0,
     ) -> None:
         """
         Initialize a predator.
@@ -90,7 +91,7 @@ class Predator:
         """
         self.position = position
         self.speed = speed
-        self.movement_accumulator = 0.0
+        self.movement_accumulator = movement_accumulator
 
     def update_position(self, grid_size: int) -> None:
         """
@@ -1189,7 +1190,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env.visited_cells = self.visited_cells.copy()
         if self.predators_enabled:
             new_env.predators = [
-                Predator(position=p.position, speed=p.speed) for p in self.predators
+                Predator(
+                    position=p.position,
+                    speed=p.speed,
+                    movement_accumulator=p.movement_accumulator,
+                )
+                for p in self.predators
             ]
         return new_env
 
