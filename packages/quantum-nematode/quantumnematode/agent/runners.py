@@ -256,18 +256,8 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             # Update predators and check for collision (dynamic environment only)
             if isinstance(agent.env, DynamicForagingEnvironment):
-                # Update predator encounter tracking
-                was_in_danger = agent._episode_tracker.in_danger
-                is_in_danger = agent.env.is_agent_in_danger()
-
-                if not was_in_danger and is_in_danger:
-                    # Entered danger zone - increment encounters
-                    agent._episode_tracker.predator_encounters += 1
-                elif was_in_danger and not is_in_danger:
-                    # Exited danger zone without dying - successful evasion
-                    agent._episode_tracker.successful_evasions += 1
-
-                agent._episode_tracker.in_danger = is_in_danger
+                # Track danger status at start of step (before any movement)
+                was_in_danger_at_step_start = agent._episode_tracker.in_danger
 
                 # Check for predator collision BEFORE predators move
                 if agent.env.check_predator_collision():
@@ -295,6 +285,19 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Move predators after agent moves
                 agent.env.update_predators()
+
+                # Check danger status at end of step (after both agent and predators moved)
+                is_in_danger_at_step_end = agent.env.is_agent_in_danger()
+
+                # Track state transitions across the entire step
+                if not was_in_danger_at_step_start and is_in_danger_at_step_end:
+                    # Entered danger zone during this step - increment encounters
+                    agent._episode_tracker.predator_encounters += 1
+                elif was_in_danger_at_step_start and not is_in_danger_at_step_end:
+                    # Exited danger zone during this step - successful evasion
+                    agent._episode_tracker.successful_evasions += 1
+
+                agent._episode_tracker.in_danger = is_in_danger_at_step_end
 
                 # Check for predator collision AFTER predators move
                 # (predator may step onto agent's position)
