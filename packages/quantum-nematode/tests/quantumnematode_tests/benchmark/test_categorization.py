@@ -15,6 +15,38 @@ from quantumnematode.experiment.metadata import (
     SystemMetadata,
 )
 
+# Centralized list of all valid benchmark categories
+# Used by multiple tests to avoid duplication and drift
+VALID_CATEGORIES = [
+    # Static maze categories
+    "static_maze_quantum",
+    "static_maze_classical",
+    # Dynamic foraging categories
+    "dynamic_small_quantum",
+    "dynamic_small_classical",
+    "dynamic_medium_quantum",
+    "dynamic_medium_classical",
+    "dynamic_large_quantum",
+    "dynamic_large_classical",
+    # Predator-enabled dynamic categories
+    "dynamic_predator_small_quantum",
+    "dynamic_predator_small_classical",
+    "dynamic_predator_medium_quantum",
+    "dynamic_predator_medium_classical",
+    "dynamic_predator_large_quantum",
+    "dynamic_predator_large_classical",
+]
+
+# Expected directory mappings for predator categories
+PREDATOR_CATEGORY_DIRECTORIES = {
+    "dynamic_predator_small_quantum": "dynamic_predator_small/quantum",
+    "dynamic_predator_small_classical": "dynamic_predator_small/classical",
+    "dynamic_predator_medium_quantum": "dynamic_predator_medium/quantum",
+    "dynamic_predator_medium_classical": "dynamic_predator_medium/classical",
+    "dynamic_predator_large_quantum": "dynamic_predator_large/quantum",
+    "dynamic_predator_large_classical": "dynamic_predator_large/classical",
+}
+
 
 def create_test_experiment(env: EnvironmentMetadata, brain: BrainMetadata) -> ExperimentMetadata:
     """Create test experiment metadata."""
@@ -292,19 +324,8 @@ class TestGetCategoryDirectory:
             get_category_directory("invalid")
 
     def test_all_valid_categories(self):
-        """Test all 8 valid category combinations."""
-        valid_categories = [
-            "static_maze_quantum",
-            "static_maze_classical",
-            "dynamic_small_quantum",
-            "dynamic_small_classical",
-            "dynamic_medium_quantum",
-            "dynamic_medium_classical",
-            "dynamic_large_quantum",
-            "dynamic_large_classical",
-        ]
-
-        for category in valid_categories:
+        """Test all valid category combinations (14 total: 2 static + 6 dynamic + 6 predator)."""
+        for category in VALID_CATEGORIES:
             path = get_category_directory(category)
             assert "/" in path
             assert path.count("/") == 1
@@ -314,15 +335,6 @@ class TestGetCategoryDirectory:
 
     def test_predator_category_directories(self):
         """Test directory paths for all 6 predator category combinations."""
-        predator_categories = [
-            ("dynamic_predator_small_quantum", "dynamic_predator_small/quantum"),
-            ("dynamic_predator_small_classical", "dynamic_predator_small/classical"),
-            ("dynamic_predator_medium_quantum", "dynamic_predator_medium/quantum"),
-            ("dynamic_predator_medium_classical", "dynamic_predator_medium/classical"),
-            ("dynamic_predator_large_quantum", "dynamic_predator_large/quantum"),
-            ("dynamic_predator_large_classical", "dynamic_predator_large/classical"),
-        ]
-
-        for category, expected_path in predator_categories:
+        for category, expected_path in PREDATOR_CATEGORY_DIRECTORIES.items():
             path = get_category_directory(category)
             assert path == expected_path
