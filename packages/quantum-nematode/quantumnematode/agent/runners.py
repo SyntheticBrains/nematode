@@ -246,11 +246,13 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 agent._episode_tracker.in_danger = is_in_danger
 
-                # Check for predator collision
+                # Check for predator collision BEFORE predators move
                 if agent.env.check_predator_collision():
                     logger.warning("Agent caught by predator!")
-                    # Apply death penalty
-                    reward -= reward_config.penalty_predator_death
+                    # Apply death penalty to both brain reward and episode tracker
+                    penalty = -reward_config.penalty_predator_death
+                    reward += penalty
+                    agent._episode_tracker.track_reward(penalty)
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode()
                     agent._metrics_tracker.track_episode_completion(
@@ -309,7 +311,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Check for starvation
                 if agent._satiety_manager.is_starved():
                     logger.warning("Agent starved!")
-                    reward -= reward_config.penalty_starvation
+                    # Apply starvation penalty to both brain reward and episode tracker
+                    penalty = -reward_config.penalty_starvation
+                    reward += penalty
+                    agent._episode_tracker.track_reward(penalty)
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode()
                     agent._metrics_tracker.track_episode_completion(
