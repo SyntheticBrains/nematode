@@ -358,7 +358,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_gradient_decay=predator_config.gradient_decay_constant,
             predator_gradient_strength=predator_config.gradient_strength,
             predator_proximity_penalty=predator_config.proximity_penalty,
-            show_detection_radius=predator_config.show_detection_radius,
         )
         predator_info = ""
         if predator_config.enabled:

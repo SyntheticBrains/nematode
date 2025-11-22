@@ -33,12 +33,6 @@ The system SHALL support comprehensive configuration of predator behavior, appea
   - `proximity_penalty` (float, default -0.1) - reward penalty per step within detection radius
 - **AND** penalty value of 0.0 SHALL disable proximity penalties
 
-#### Scenario: Predator Visualization Configuration
-- **GIVEN** a configuration with predator rendering settings
-- **WHEN** the configuration is loaded
-- **THEN** the system SHALL accept:
-  - `show_detection_radius` (boolean, default true) - visualize detection zones
-- **AND** this SHALL control whether detection radius indicators are rendered
 
 #### Scenario: Minimal Predator Enablement
 - **GIVEN** a configuration with only `predators.enabled: true`
@@ -99,7 +93,6 @@ environment:
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
       proximity_penalty: -0.1
-      show_detection_radius: true
 ```
 
 ### Requirement: Backward Compatibility with Legacy Configuration

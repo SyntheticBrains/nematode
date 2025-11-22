@@ -698,7 +698,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         predator_gradient_decay: float = 12.0,
         predator_gradient_strength: float = 1.0,
         predator_proximity_penalty: float = -0.1,
-        show_detection_radius: bool = True,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -731,7 +730,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.predator_gradient_decay = predator_gradient_decay
         self.predator_gradient_strength = predator_gradient_strength
         self.predator_proximity_penalty = predator_proximity_penalty
-        self.show_detection_radius = show_detection_radius
 
         # Initialize food sources using Poisson disk sampling
         self.foods: list[tuple[int, int]] = []
@@ -1171,7 +1169,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
             predator_gradient_decay=self.predator_gradient_decay,
             predator_gradient_strength=self.predator_gradient_strength,
             predator_proximity_penalty=self.predator_proximity_penalty,
-            show_detection_radius=self.show_detection_radius,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction

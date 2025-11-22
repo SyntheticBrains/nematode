@@ -131,19 +131,6 @@ The system SHALL render predators in the viewport with theme-appropriate symbols
 - **THEN** the predator SHALL be displayed with hash symbol `#`
 - **AND** the predator SHALL be visually distinct from food and agent symbols
 
-#### Scenario: Detection Radius Visualization Enabled
-- **GIVEN** a configuration with `predators.show_detection_radius: true` (default)
-- **WHEN** the environment is rendered
-- **THEN** the detection radius around each predator SHALL be visually indicated
-- **AND** cells within detection radius SHALL have modified background or indicator
-- **AND** this SHALL help visualize the danger zone
-
-#### Scenario: Detection Radius Visualization Disabled
-- **GIVEN** a configuration with `predators.show_detection_radius: false`
-- **WHEN** the environment is rendered
-- **THEN** only the predator position SHALL be shown
-- **AND** no detection radius visualization SHALL appear
-
 #### Scenario: Agent Danger Status Display
 - **GIVEN** an agent within detection radius of any predator
 - **WHEN** the simulation run output is displayed
