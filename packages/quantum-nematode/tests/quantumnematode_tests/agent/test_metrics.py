@@ -222,6 +222,9 @@ class TestPredatorMetrics:
         # Non-predator environment: metrics should be None
         assert metrics.average_predator_encounters is None
         assert metrics.average_successful_evasions is None
+        assert metrics.total_predator_deaths == 0
+        assert metrics.total_predator_encounters == 0
+        assert metrics.total_successful_evasions == 0
 
     def test_predator_metrics_enabled_zero_encounters(self):
         """Test that predator metrics are 0.0 for predator environments with zero encounters."""
@@ -236,6 +239,9 @@ class TestPredatorMetrics:
         # Predator-enabled environment with zero encounters: metrics should be 0.0
         assert metrics.average_predator_encounters == 0.0
         assert metrics.average_successful_evasions == 0.0
+        assert metrics.total_predator_deaths == 0
+        assert metrics.total_predator_encounters == 0
+        assert metrics.total_successful_evasions == 0
 
     def test_predator_metrics_enabled_with_encounters(self):
         """Test predator metrics calculation with encounters."""
@@ -263,6 +269,11 @@ class TestPredatorMetrics:
         assert metrics.average_predator_encounters == pytest.approx(2.0)
         assert metrics.average_successful_evasions == pytest.approx(1.5)
 
+        # Total counts
+        assert metrics.total_predator_encounters == 4
+        assert metrics.total_successful_evasions == 3
+        assert metrics.total_predator_deaths == 0
+
     def test_predator_metrics_distinction(self):
         """Test that we can distinguish predator-enabled from non-predator environments."""
         tracker1 = MetricsTracker()
@@ -286,6 +297,12 @@ class TestPredatorMetrics:
         assert metrics_with_predators.average_predator_encounters == 0.0
         assert metrics_no_predators.average_successful_evasions is None
         assert metrics_with_predators.average_successful_evasions == 0.0
+        assert metrics_no_predators.total_predator_deaths == 0
+        assert metrics_with_predators.total_predator_deaths == 0
+        assert metrics_no_predators.total_predator_encounters == 0
+        assert metrics_with_predators.total_predator_encounters == 0
+        assert metrics_no_predators.total_successful_evasions == 0
+        assert metrics_with_predators.total_successful_evasions == 0
 
 
 class TestTerminationReasonTracking:
