@@ -53,7 +53,7 @@ class ThemeSymbolSet(BaseModel):
 
 
 class DarkColorRichStyleConfig(BaseModel):
-    """Rich styling configuration for colored on dark backgroubd Rich theme.
+    """Rich styling configuration for colored on dark background Rich theme.
 
     Attributes
     ----------
