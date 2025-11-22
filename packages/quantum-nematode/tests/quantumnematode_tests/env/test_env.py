@@ -656,7 +656,7 @@ class TestEnvironmentIntegration:
             env.consume_food()
 
             # Verify invariants
-            assert len(env.foods) <= env.target_foods_to_collect
+            assert len(env.foods) <= env.foods_on_grid
             assert all(0 <= f[0] < env.grid_size and 0 <= f[1] < env.grid_size for f in env.foods)
 
 
