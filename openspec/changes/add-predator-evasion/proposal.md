@@ -26,8 +26,8 @@ This change introduces biologically realistic predator avoidance based on C. ele
 - **Affected code**:
   - `packages/quantum-nematode/quantumnematode/env.py` - Add Predator class and predator support to DynamicForagingEnvironment
   - `packages/quantum-nematode/quantumnematode/config_loader.py` - Extend configuration schema with predator settings and restructured foraging config
-  - `packages/quantum-nematode/quantumnematode/metrics.py` - Add predator-specific metrics
-  - `packages/quantum-nematode/quantumnematode/reward_calculator.py` - Add proximity penalty calculation
+  - `packages/quantum-nematode/quantumnematode/agent/metrics.py` - Add predator-specific metrics
+  - `packages/quantum-nematode/quantumnematode/agent/reward_calculator.py` - Add proximity penalty calculation
   - `packages/quantum-nematode/quantumnematode/report/plots.py` - Add predator-specific plots
   - `packages/quantum-nematode/quantumnematode/report/csv_export.py` - Include predator metrics in exports
   - `packages/quantum-nematode/quantumnematode/benchmark/categorization.py` - Add predator benchmark categories
