@@ -267,11 +267,13 @@ The system SHALL provide three preset configurations for curriculum learning: sm
 - **WHEN** the environment initializes
 - **THEN** grid size SHALL be 20×20
 - **AND** foraging configuration SHALL include:
-  - initial food count: 5
-  - max active foods: 10
+  - foods on grid (constant): 5
+  - target foods to collect (victory condition): 10
   - min food distance: 3 cells
   - gradient decay constant: 12.0
   - gradient strength: 1.0
+- **AND** food SHALL respawn immediately after collection to maintain constant 5 on grid
+- **AND** episode SHALL complete successfully when 10 foods have been collected
 - **AND** initial satiety SHALL be 200 steps
 - **AND** viewport size SHALL be 11×11
 - **AND** predator configuration SHALL be optional (default disabled)
@@ -281,11 +283,13 @@ The system SHALL provide three preset configurations for curriculum learning: sm
 - **WHEN** the environment initializes
 - **THEN** grid size SHALL be 50×50
 - **AND** foraging configuration SHALL include:
-  - initial food count: 20
-  - max active foods: 30
+  - foods on grid (constant): 20
+  - target foods to collect (victory condition): 30
   - min food distance: 5 cells
   - gradient decay constant: 12.0
   - gradient strength: 1.0
+- **AND** food SHALL respawn immediately after collection to maintain constant 20 on grid
+- **AND** episode SHALL complete successfully when 30 foods have been collected
 - **AND** initial satiety SHALL be 500 steps
 - **AND** viewport size SHALL be 11×11
 - **AND** predator configuration SHALL be optional (default disabled)
@@ -295,11 +299,13 @@ The system SHALL provide three preset configurations for curriculum learning: sm
 - **WHEN** the environment initializes
 - **THEN** grid size SHALL be 100×100
 - **AND** foraging configuration SHALL include:
-  - initial food count: 50
-  - max active foods: 50
+  - foods on grid (constant): 50
+  - target foods to collect (victory condition): 50
   - min food distance: 10 cells
   - gradient decay constant: 12.0
   - gradient strength: 1.0
+- **AND** food SHALL respawn immediately after collection to maintain constant 50 on grid
+- **AND** episode SHALL complete successfully when 50 foods have been collected
 - **AND** initial satiety SHALL be 800 steps
 - **AND** viewport size SHALL be 11×11
 - **AND** predator configuration SHALL be optional (default disabled)

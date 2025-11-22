@@ -234,9 +234,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Food collection (must happen immediately after agent moves)
             if isinstance(agent.env, DynamicForagingEnvironment) and agent.env.reached_goal():
                 # Multi-food environment: delegate to food handler
-                food_result = agent._food_handler.check_and_consume_food(
-                    foods_collected=agent._episode_tracker.foods_collected,
-                )
+                food_result = agent._food_handler.check_and_consume_food()
                 if food_result.food_consumed:
                     agent._episode_tracker.track_food_collection(
                         distance_efficiency=food_result.distance_efficiency,
@@ -254,6 +252,28 @@ class StandardEpisodeRunner(EpisodeRunner):
                         f"{agent.current_satiety:.1f}/{agent.max_satiety}{dist_eff_msg}",
                     )
 
+                    # Check for victory condition (collected target number of foods)
+                    if agent.env.has_collected_target_foods(agent._episode_tracker.foods_collected):
+                        logger.info(
+                            "Successfully completed episode: collected target of "
+                            f"{agent.env.target_foods_to_collect} food!",
+                        )
+                        agent.brain.post_process_episode()
+                        agent._metrics_tracker.track_episode_completion(
+                            success=True,
+                            steps=agent._episode_tracker.steps,
+                            reward=agent._episode_tracker.rewards,
+                            foods_collected=agent._episode_tracker.foods_collected,
+                            distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                            predator_encounters=agent._episode_tracker.predator_encounters,
+                            successful_evasions=agent._episode_tracker.successful_evasions,
+                            termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                        )
+                        return EpisodeResult(
+                            agent_path=agent.path,
+                            termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                        )
+
             # Update predators and check for collision (dynamic environment only)
             if isinstance(agent.env, DynamicForagingEnvironment):
                 # Track danger status at start of step (before any movement)
@@ -261,7 +281,7 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Check for predator collision BEFORE predators move
                 if agent.env.check_predator_collision():
-                    logger.warning("Agent caught by predator!")
+                    logger.warning("Failed to complete episode: agent caught by predator!")
                     # Apply death penalty to both brain reward and episode tracker
                     penalty = -reward_config.penalty_predator_death
                     reward += penalty
@@ -302,7 +322,11 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Check for predator collision AFTER predators move
                 # (predator may step onto agent's position)
                 if agent.env.check_predator_collision():
-                    logger.warning("Agent caught by predator (after predator movement)!")
+                    warning_message = (
+                        "Failed to complete episode: agent caught by predator "
+                        "(after predator movement)!"
+                    )
+                    logger.warning(warning_message)
                     # Apply death penalty to both brain reward and episode tracker
                     penalty = -reward_config.penalty_predator_death
                     reward += penalty
@@ -337,7 +361,7 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Check for starvation (after satiety decay)
                 if agent._satiety_manager.is_starved():
-                    logger.warning("Agent starved!")
+                    logger.warning("Failed to complete episode: agent starved!")
                     # Apply starvation penalty to both brain reward and episode tracker
                     penalty = -reward_config.penalty_starvation
                     reward += penalty
@@ -427,6 +451,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 )
 
                 logger.info("Reward: goal reached!")
+                logger.info("Successfully completed episode: goal reached!")
                 agent._metrics_tracker.track_episode_completion(
                     success=True,
                     steps=agent._episode_tracker.steps,
@@ -462,7 +487,7 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             # Handle max steps reached
             if agent._episode_tracker.steps >= max_steps:
-                logger.warning("Max steps reached.")
+                logger.warning("Failed to complete episode: max steps reached.")
                 agent.brain.post_process_episode()
                 agent._metrics_tracker.track_episode_completion(
                     success=False,
@@ -482,9 +507,12 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Handle all food collected (for dynamic environments)
             if (
                 isinstance(agent.env, DynamicForagingEnvironment)
-                and agent._episode_tracker.foods_collected >= agent.env.max_active_foods
+                and agent._episode_tracker.foods_collected >= agent.env.target_foods_to_collect
             ):
-                logger.info("All food collected.")
+                logger.info(
+                    "Successfully completed episode: collected target of "
+                    f"{agent.env.target_foods_to_collect} food.",
+                )
                 agent.brain.post_process_episode()
                 agent._metrics_tracker.track_episode_completion(
                     success=True,
@@ -502,6 +530,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 )
 
         # Episode ended normally (loop completed without specific termination)
+        logger.warning("Failed to complete episode: max steps reached.")
         agent._metrics_tracker.track_episode_completion(
             success=False,
             steps=agent._episode_tracker.steps,
@@ -712,7 +741,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
 
             # Stop if all superpositions have reached their goal
             if all(env_copy.reached_goal() for _, env_copy, _ in superpositions):
-                msg = "All superpositions have reached their goal."
+                msg = "Successfully completed episode: all superpositions have reached their goal."
                 logger.info(msg)
                 print(msg)  # noqa: T201
                 # Return the path from the first superposition (primary path)
@@ -720,8 +749,11 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                     agent_path=superpositions[0][2],
                     termination_reason=TerminationReason.GOAL_REACHED,
                 )
-        msg = "Many-worlds mode completed as maximum number of steps reached."
-        logger.info(msg)
+        msg = (
+            "Failed to complete episode: "
+            "Many-worlds mode completed as maximum number of steps reached."
+        )
+        logger.warning(msg)
         print(msg)  # noqa: T201
         # Return the path from the first superposition (primary path)
         return EpisodeResult(

@@ -691,8 +691,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self,
         grid_size: int = 50,
         start_pos: tuple[int, int] | None = None,
-        num_initial_foods: int = 10,
-        max_active_foods: int = 15,
+        foods_on_grid: int = 10,
+        target_foods_to_collect: int = 15,
         min_food_distance: int = 5,
         agent_exclusion_radius: int = 10,
         gradient_decay_constant: float = 10.0,
@@ -727,8 +727,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         )
 
         # Foraging configuration
-        self.num_initial_foods = num_initial_foods
-        self.max_active_foods = max_active_foods
+        self.foods_on_grid = foods_on_grid
+        self.target_foods_to_collect = target_foods_to_collect
         self.min_food_distance = min_food_distance
         self.agent_exclusion_radius = agent_exclusion_radius
         self.gradient_decay_constant = gradient_decay_constant
@@ -761,9 +761,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Initialize food sources using Poisson disk sampling."""
         self.foods = []
         attempts = 0
-        max_total_attempts = MAX_POISSON_ATTEMPTS * self.num_initial_foods
+        max_total_attempts = MAX_POISSON_ATTEMPTS * self.foods_on_grid
 
-        while len(self.foods) < self.num_initial_foods and attempts < max_total_attempts:
+        while len(self.foods) < self.foods_on_grid and attempts < max_total_attempts:
             candidate = (
                 secrets.randbelow(self.grid_size),
                 secrets.randbelow(self.grid_size),
@@ -774,9 +774,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
             attempts += 1
 
-        if len(self.foods) < self.num_initial_foods:
+        if len(self.foods) < self.foods_on_grid:
             logger.warning(
-                f"Could only place {len(self.foods)}/{self.num_initial_foods} initial foods "
+                f"Could only place {len(self.foods)}/{self.foods_on_grid} initial foods "
                 f"after {attempts} attempts.",
             )
 
@@ -846,27 +846,23 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 predator = Predator(position=candidate, speed=self.predator_speed)
                 self.predators.append(predator)
 
-    def spawn_food(
-        self,
-        foods_collected: int = 0,
-    ) -> bool:
+    def spawn_food(self) -> bool:
         """
-        Spawn a new food source if under the maximum limit.
+        Spawn a new food source to maintain target count on grid.
 
-        Parameters
-        ----------
-        foods_collected : int
-            Number of foods collected so far.
+        Always attempts to maintain foods_on_grid count on the grid.
+        Food spawns immediately after collection to ensure constant supply.
 
         Returns
         -------
         bool
             True if food was spawned, False otherwise.
         """
-        spawns_remaining = self.max_active_foods - self.num_initial_foods
-        if foods_collected > spawns_remaining:
+        # Check if we're already at target grid capacity
+        if len(self.foods) >= self.foods_on_grid:
             return False
 
+        # Attempt to spawn food at valid location
         for _ in range(MAX_POISSON_ATTEMPTS):
             candidate = (
                 secrets.randbelow(self.grid_size),
@@ -875,10 +871,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
             if self._is_valid_food_position(candidate):
                 self.foods.append(candidate)
-                logger.debug(f"Spawned new food at {candidate}")
+                logger.debug(
+                    f"Spawned food at {candidate} ({len(self.foods)}/{self.foods_on_grid} on grid)",
+                )
                 return True
 
-        logger.warning("Failed to spawn new food after maximum attempts")
+        logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
     def get_state(
@@ -977,17 +975,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         return tuple(self.agent_pos) in self.foods
 
-    def consume_food(
-        self,
-        foods_collected: int = 0,
-    ) -> tuple[int, int] | None:
+    def consume_food(self) -> tuple[int, int] | None:
         """
-        Consume food at the agent's current position.
+        Consume food at the agent's current position and respawn immediately.
 
-        Parameters
-        ----------
-        foods_collected : int
-            Number of foods collected so far.
+        Automatically respawns a new food to maintain constant foods_on_grid count.
 
         Returns
         -------
@@ -999,12 +991,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
             self.foods.remove(agent_tuple)
             logger.info(f"Food consumed at {agent_tuple}")
 
-            # Spawn new food
-            self.spawn_food(foods_collected=foods_collected + 1)
+            # Immediately spawn new food to maintain constant supply
+            self.spawn_food()
 
             return agent_tuple
 
         return None
+
+    def has_collected_target_foods(self, foods_collected: int) -> bool:
+        """
+        Check if agent has collected enough foods to win.
+
+        Parameters
+        ----------
+        foods_collected : int
+            Number of foods collected so far in this episode.
+
+        Returns
+        -------
+        bool
+            True if agent has collected target_foods_to_collect, False otherwise.
+        """
+        return foods_collected >= self.target_foods_to_collect
 
     def get_nearest_food_distance(self) -> int | None:
         """
@@ -1164,8 +1172,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,
             start_pos=(self.agent_pos[0], self.agent_pos[1]),
-            num_initial_foods=self.num_initial_foods,
-            max_active_foods=self.max_active_foods,
+            foods_on_grid=self.foods_on_grid,
+            target_foods_to_collect=self.target_foods_to_collect,
             min_food_distance=self.min_food_distance,
             agent_exclusion_radius=self.agent_exclusion_radius,
             gradient_decay_constant=self.gradient_decay_constant,

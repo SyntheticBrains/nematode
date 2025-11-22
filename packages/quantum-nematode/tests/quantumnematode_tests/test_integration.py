@@ -83,8 +83,8 @@ class TestPresetConfigurations:
                 f"Missing 'foraging' subsection in dynamic config {config_file}"
             )
             foraging_config = dynamic_config["foraging"]
-            assert "num_initial_foods" in foraging_config
-            assert "max_active_foods" in foraging_config
+            assert "foods_on_grid" in foraging_config
+            assert "target_foods_to_collect" in foraging_config
             assert "min_food_distance" in foraging_config
             assert "agent_exclusion_radius" in foraging_config
 
@@ -180,8 +180,8 @@ class TestDynamicEnvironmentWithBrain:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=3,
             agent_exclusion_radius=5,
             gradient_decay_constant=8.0,

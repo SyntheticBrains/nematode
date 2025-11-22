@@ -55,7 +55,7 @@ class TestStandardEpisodeRunnerIntegration:
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
-            max_active_foods=3,
+            target_foods_to_collect=3,
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
@@ -165,7 +165,7 @@ class TestRunnerComponentIntegration:
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
-            max_active_foods=3,
+            target_foods_to_collect=3,
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
@@ -189,7 +189,7 @@ class TestRunnerComponentIntegration:
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
-            max_active_foods=3,
+            target_foods_to_collect=3,
         )
         satiety_config = SatietyConfig(
             initial_satiety=100.0,

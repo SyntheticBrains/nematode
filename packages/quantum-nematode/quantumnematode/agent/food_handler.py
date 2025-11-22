@@ -98,16 +98,8 @@ class FoodConsumptionHandler:
         """Track a step for distance efficiency calculation."""
         self._steps_since_last_food += 1
 
-    def check_and_consume_food(
-        self,
-        foods_collected: int = 0,
-    ) -> FoodConsumptionResult:
+    def check_and_consume_food(self) -> FoodConsumptionResult:
         """Check if food is at current position and consume if present.
-
-        Parameters
-        ----------
-        foods_collected : int, optional
-            Number of foods collected so far in the episode, by default 0.
 
         Returns
         -------
@@ -128,7 +120,7 @@ class FoodConsumptionHandler:
 
         # For dynamic environments, calculate distance efficiency and update tracking
         if isinstance(self.env, DynamicForagingEnvironment):
-            consumed = self.env.consume_food(foods_collected=foods_collected)
+            consumed = self.env.consume_food()
             if not consumed:
                 return FoodConsumptionResult(
                     food_consumed=False,

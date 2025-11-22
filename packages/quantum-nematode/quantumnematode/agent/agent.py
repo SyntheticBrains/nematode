@@ -393,7 +393,7 @@ class QuantumNematodeAgent:
             case DynamicForagingEnvironment():
                 print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
                 print(  # noqa: T201
-                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.max_active_foods}",
+                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.target_foods_to_collect}",
                 )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
                 # Display danger status if predators are enabled
@@ -440,8 +440,8 @@ class QuantumNematodeAgent:
         if isinstance(self.env, DynamicForagingEnvironment):
             self.env = DynamicForagingEnvironment(
                 grid_size=self.env.grid_size,
-                num_initial_foods=self.env.num_initial_foods,
-                max_active_foods=self.env.max_active_foods,
+                foods_on_grid=self.env.foods_on_grid,
+                target_foods_to_collect=self.env.target_foods_to_collect,
                 min_food_distance=self.env.min_food_distance,
                 agent_exclusion_radius=self.env.agent_exclusion_radius,
                 gradient_decay_constant=self.env.gradient_decay_constant,
