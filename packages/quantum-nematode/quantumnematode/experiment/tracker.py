@@ -68,6 +68,18 @@ def extract_environment_metadata(
             viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,
             predators_enabled=env.predators_enabled,
             num_predators=env.num_predators if env.predators_enabled else None,
+            predator_speed=env.predator_speed if env.predators_enabled else None,
+            predator_detection_radius=env.predator_detection_radius
+            if env.predators_enabled
+            else None,
+            predator_kill_radius=env.predator_kill_radius if env.predators_enabled else None,
+            predator_gradient_decay=env.predator_gradient_decay if env.predators_enabled else None,
+            predator_gradient_strength=env.predator_gradient_strength
+            if env.predators_enabled
+            else None,
+            predator_proximity_penalty=env.predator_proximity_penalty
+            if env.predators_enabled
+            else None,
         )
     # Static environment
     return EnvironmentMetadata(
