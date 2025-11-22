@@ -211,6 +211,65 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 - **THEN** existing categories SHALL be used (`dynamic_small_quantum`, etc.)
 - **AND** backward compatibility with existing benchmarks SHALL be maintained
 
+### Requirement: Step Execution Order with Predators
+The system SHALL execute each simulation step in a deterministic order to ensure consistent collision detection and predator movement behavior.
+
+#### Scenario: Single Step Execution Sequence
+- **GIVEN** a simulation step with predators enabled
+- **WHEN** the step is executed
+- **THEN** the following operations SHALL occur in order:
+  1. Agent observes current state (including predator gradients)
+  2. Agent selects and executes action (moves to new position)
+  3. Food collection is checked and processed (if applicable)
+  4. Predator encounter status is updated (detection radius entry/exit)
+  5. Predator collision is checked at agent's new position (before predators move)
+  6. If collision detected, episode terminates immediately
+  7. If no collision, predators update their positions
+  8. Satiety is decremented (if applicable)
+  9. Other termination conditions checked (starvation, max steps)
+- **AND** this order SHALL be deterministic and consistent across all episodes
+
+#### Scenario: Collision Detection Before Predator Movement
+- **GIVEN** an agent at (10, 10) after moving, and a predator at (10, 10) before predator update
+- **WHEN** the step sequence executes
+- **THEN** collision SHALL be detected at step 5 (before predator movement)
+- **AND** the episode SHALL terminate with `TerminationReason.PREDATOR`
+- **AND** predator movement (step 7) SHALL NOT occur after collision
+- **AND** this prevents predators from moving away before collision is registered
+
+#### Scenario: Predator Movement After Safe Step
+- **GIVEN** an agent step where no collision occurs
+- **WHEN** the step sequence completes
+- **THEN** all predators SHALL update positions after collision check
+- **AND** predator positions at step N+1 SHALL reflect movement from step N
+- **AND** the new predator positions SHALL be used for gradient calculation in step N+1
+
+### Requirement: Rendering Symbol Verification
+The system SHALL use consistent, documented symbols for predators across all rendering themes to maintain visual clarity and documentation accuracy.
+
+#### Scenario: Emoji Theme Predator Symbol
+- **GIVEN** rendering with theme mode "emoji"
+- **WHEN** a predator is rendered
+- **THEN** the predator SHALL be displayed as spider emoji: 🕷️
+- **AND** this SHALL match the documented spec exactly
+- **AND** the symbol SHALL be visually distinct from food (🍎) and agent (🪱)
+
+#### Scenario: ASCII Theme Predator Symbol
+- **GIVEN** rendering with theme mode "ascii"
+- **WHEN** a predator is rendered
+- **THEN** the predator SHALL be displayed as hash symbol: #
+- **AND** this SHALL match the documented spec exactly
+- **AND** the symbol SHALL be visually distinct from food and agent ASCII symbols
+
+#### Scenario: Benchmark Category Name Verification
+- **GIVEN** a predator-enabled simulation for benchmarking
+- **WHEN** the benchmark category is determined
+- **THEN** category names SHALL exactly match the documented format:
+  - Quantum brains: `dynamic_predator_quantum_small`, `dynamic_predator_quantum_medium`, `dynamic_predator_quantum_large`
+  - Classical brains: `dynamic_predator_classical_small`, `dynamic_predator_classical_medium`, `dynamic_predator_classical_large`
+- **AND** the underscore separator SHALL be used (not hyphen or space)
+- **AND** category names SHALL match the implementation exactly to prevent doc-code drift
+
 ## MODIFIED Requirements
 
 ### Requirement: Preset Environment Configurations
