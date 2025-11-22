@@ -60,6 +60,21 @@ class EnvironmentMetadata(BaseModel):
     predator_proximity_penalty: float | None = None
 
 
+class ParameterInitializer(BaseModel):
+    """Parameter initialization configuration.
+
+    Attributes
+    ----------
+    type : str
+        Type of parameter initializer ("manual", "random_pi", "zero", etc.).
+    manual_parameter_values : dict[str, float] | None
+        Manual parameter initialization values (only when type is "manual").
+    """
+
+    type: str
+    manual_parameter_values: dict[str, float] | None = None
+
+
 class BrainMetadata(BaseModel):
     """Metadata about the brain architecture.
 
@@ -81,6 +96,8 @@ class BrainMetadata(BaseModel):
         Initial learning rate.
     modules : dict[str, list[int]] | None
         Module configuration (modular brains only).
+    parameter_initializer : ParameterInitializer | None
+        Parameter initialization configuration (quantum brains only).
     """
 
     type: str
@@ -91,6 +108,7 @@ class BrainMetadata(BaseModel):
     num_hidden_layers: int | None = None
     learning_rate: float | None = None
     modules: dict[str, list[int]] | None = None
+    parameter_initializer: ParameterInitializer | None = None
 
 
 class ResultsMetadata(BaseModel):
