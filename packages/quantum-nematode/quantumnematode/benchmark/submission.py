@@ -187,12 +187,14 @@ def list_benchmarks(category: str | None = None) -> list[ExperimentMetadata]:
     def sort_key(b: ExperimentMetadata) -> tuple[float, float, float]:
         # Primary: Composite benchmark score (if available)
         composite = (
-            b.results.composite_benchmark_score if b.results.composite_benchmark_score else 0.0
+            b.results.composite_benchmark_score
+            if b.results.composite_benchmark_score is not None
+            else 0.0
         )
         # Secondary: Success rate (for legacy benchmarks or tiebreaker)
         success = b.results.success_rate
         # Tertiary: Foods collected (for foraging environments)
-        foods = b.results.avg_foods_collected if b.results.avg_foods_collected else 0.0
+        foods = b.results.avg_foods_collected if b.results.avg_foods_collected is not None else 0.0
         return (composite, success, foods)
 
     benchmarks.sort(key=sort_key, reverse=True)
