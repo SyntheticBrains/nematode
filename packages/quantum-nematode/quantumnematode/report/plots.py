@@ -1022,6 +1022,11 @@ def plot_predator_encounters_over_time(  # pragma: no cover
     predator_encounters : list[int]
         Number of predator encounters in each run.
     """
+    # Guard against empty inputs
+    if not runs or not predator_encounters:
+        logger.warning("No predator encounter data to plot")
+        return
+
     plt.figure(figsize=(12, 6))
     plt.bar(
         runs,
@@ -1071,6 +1076,11 @@ def plot_evasion_success_rate_over_time(  # pragma: no cover
     successful_evasions : list[int]
         Number of successful evasions in each run.
     """
+    # Guard against empty inputs
+    if not runs or not predator_encounters or not successful_evasions:
+        logger.warning("No evasion data to plot")
+        return
+
     # Calculate evasion success rate per run
     evasion_rates = [
         evasions / encounters if encounters > 0 else 0.0
@@ -1135,6 +1145,11 @@ def plot_survival_vs_food_collection(  # pragma: no cover
     deaths_by_predator : list[bool]
         Whether each run ended in predator death (True) or survival (False).
     """
+    # Guard against empty inputs
+    if not foods_collected or not deaths_by_predator:
+        logger.warning("No survival/food collection data to plot")
+        return
+
     # Separate data by survival status
     survived_foods = [
         foods for foods, died in zip(foods_collected, deaths_by_predator, strict=False) if not died
