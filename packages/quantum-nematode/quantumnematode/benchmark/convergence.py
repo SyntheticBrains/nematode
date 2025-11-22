@@ -169,8 +169,11 @@ def calculate_post_convergence_metrics(
         # Calculate average distance efficiency from SUCCESSFUL runs only
         if successful_runs:
             # Filter out None values and calculate average
-            efficiencies = [r.average_distance_efficiency for r in successful_runs
-                          if r.average_distance_efficiency is not None]
+            efficiencies = [
+                r.average_distance_efficiency
+                for r in successful_runs
+                if r.average_distance_efficiency is not None
+            ]
             distance_efficiency = float(np.mean(efficiencies)) if efficiencies else 0.0
         else:
             distance_efficiency = 0.0
