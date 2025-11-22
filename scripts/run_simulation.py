@@ -1278,9 +1278,6 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         successful_evasions_list = [
             r.successful_evasions for r in predator_results if r.successful_evasions is not None
         ]
-        deaths_by_predator_list = [
-            r.died_to_predator for r in predator_results if r.died_to_predator is not None
-        ]
         predator_runs = [r.run for r in predator_results]
 
         # Plot: Predator Encounters Over Time
@@ -1303,19 +1300,25 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
             )
 
         # Plot: Survival vs Food Collection (for predator environments that also track food)
-        predator_foraging_results = [r for r in predator_results if r.foods_collected is not None]
-        if predator_foraging_results and deaths_by_predator_list:
-            foods_in_predator = [
-                r.foods_collected
-                for r in predator_foraging_results
-                if r.foods_collected is not None
-            ]
-            if foods_in_predator:
+        # Build paired lists in single loop to ensure correspondence
+        predator_foraging_results = [
+            r
+            for r in predator_results
+            if r.foods_collected is not None and r.died_to_predator is not None
+        ]
+        if predator_foraging_results:
+            foods_in_predator = []
+            deaths_in_predator = []
+            for r in predator_foraging_results:
+                foods_in_predator.append(r.foods_collected)
+                deaths_in_predator.append(r.died_to_predator)
+
+            if foods_in_predator and deaths_in_predator:
                 plot_survival_vs_food_collection(
                     file_prefix,
                     plot_dir,
                     foods_in_predator,
-                    deaths_by_predator_list[: len(foods_in_predator)],
+                    deaths_in_predator,
                 )
 
         # Plot: Satiety Progression for Single Run (if requested via --track-per-run)
