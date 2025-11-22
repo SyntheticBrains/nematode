@@ -54,8 +54,8 @@ environment:
 
     # Foraging configuration (food mechanics)
     foraging:
-      num_initial_foods: 35
-      max_active_foods: 50
+      foods_on_grid: 35
+      target_foods_to_collect: 50
       min_food_distance: 10
       agent_exclusion_radius: 15
       gradient_decay_constant: 12.0

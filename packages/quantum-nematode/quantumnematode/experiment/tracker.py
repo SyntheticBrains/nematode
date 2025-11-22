@@ -61,8 +61,8 @@ def extract_environment_metadata(
         return EnvironmentMetadata(
             type="dynamic",
             grid_size=env.grid_size,
-            num_foods=env.num_initial_foods,
-            max_active_foods=env.max_active_foods,
+            num_foods=env.foods_on_grid,
+            target_foods_to_collect=env.target_foods_to_collect,
             initial_satiety=satiety_config.get("initial"),
             satiety_decay_rate=satiety_config.get("decay_rate"),
             viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,

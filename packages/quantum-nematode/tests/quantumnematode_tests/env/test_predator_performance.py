@@ -16,8 +16,8 @@ class TestPredatorPerformance:
         return DynamicForagingEnvironment(
             grid_size=100,
             start_pos=(50, 50),
-            num_initial_foods=50,
-            max_active_foods=75,
+            foods_on_grid=50,
+            target_foods_to_collect=75,
             min_food_distance=5,
             agent_exclusion_radius=10,
             gradient_decay_constant=10.0,

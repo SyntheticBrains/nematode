@@ -16,9 +16,9 @@ class EnvironmentMetadata(BaseModel):
     grid_size : int
         Size of the grid environment.
     num_foods : int | None
-        Number of food items (dynamic environments only).
-    max_active_foods : int | None
-        Maximum active foods (dynamic environments only).
+        Number of food items on grid (constant supply, dynamic environments only).
+    target_foods_to_collect : int | None
+        Target foods to collect for victory (dynamic environments only).
     initial_satiety : float | None
         Initial satiety level (dynamic environments only).
     satiety_decay_rate : float | None
@@ -40,7 +40,7 @@ class EnvironmentMetadata(BaseModel):
     type: str
     grid_size: int
     num_foods: int | None = None
-    max_active_foods: int | None = None
+    target_foods_to_collect: int | None = None
     initial_satiety: float | None = None
     satiety_decay_rate: float | None = None
     viewport_size: list[int] | None = None

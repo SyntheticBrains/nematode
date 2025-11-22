@@ -26,7 +26,7 @@ class TestFoodConsumptionHandlerInitialization:
 
     def test_initialize_with_dynamic_environment(self):
         """Test initialization with a dynamic foraging environment."""
-        env = DynamicForagingEnvironment(grid_size=30, num_initial_foods=5)
+        env = DynamicForagingEnvironment(grid_size=30, foods_on_grid=5)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
 
@@ -301,7 +301,7 @@ class TestReset:
 
     def test_reset_updates_initial_distance_dynamic(self):
         """Test that reset updates initial distance for dynamic environments."""
-        env = DynamicForagingEnvironment(grid_size=30, num_initial_foods=5)
+        env = DynamicForagingEnvironment(grid_size=30, foods_on_grid=5)
         satiety_manager = SatietyManager(SatietyConfig())
         handler = FoodConsumptionHandler(env, satiety_manager)
 

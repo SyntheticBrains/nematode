@@ -130,8 +130,8 @@ class TestQuantumNematodeAgentInitialization:
         """Test agent initialization with dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            num_initial_foods=5,
-            max_active_foods=8,
+            foods_on_grid=5,
+            target_foods_to_collect=8,
         )
         agent = QuantumNematodeAgent(brain=modular_brain, env=env)
 
@@ -209,8 +209,8 @@ class TestQuantumNematodeAgentReset:
         """Test resetting dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            num_initial_foods=5,
-            max_active_foods=8,
+            foods_on_grid=5,
+            target_foods_to_collect=8,
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
@@ -283,8 +283,8 @@ class TestQuantumNematodeAgentMetrics:
         """Test metrics calculation for dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            num_initial_foods=5,
-            max_active_foods=8,
+            foods_on_grid=5,
+            target_foods_to_collect=8,
         )
         agent = QuantumNematodeAgent(brain=modular_brain, env=env)
 

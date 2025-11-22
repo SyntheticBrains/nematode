@@ -118,8 +118,8 @@ class StaticEnvironmentConfig(BaseModel):
 class ForagingConfig(BaseModel):
     """Configuration for foraging mechanics in dynamic environment."""
 
-    num_initial_foods: int = 10
-    max_active_foods: int = 15
+    foods_on_grid: int = 10
+    target_foods_to_collect: int = 15
     min_food_distance: int = 5
     agent_exclusion_radius: int = 10
     gradient_decay_constant: float = 10.0

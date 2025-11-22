@@ -98,7 +98,7 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:
     print(f"  Grid Size: {metadata.environment.grid_size}")
     if metadata.environment.num_foods:
         print(f"  Foods: {metadata.environment.num_foods}")
-        print(f"  Max Active: {metadata.environment.max_active_foods}")
+        print(f"  Max Active: {metadata.environment.target_foods_to_collect}")
         print(f"  Initial Satiety: {metadata.environment.initial_satiety}")
 
     print("\nBrain:")

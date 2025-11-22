@@ -49,8 +49,8 @@ environment:
     viewport_size: [11, 11]
 
     foraging:
-      num_initial_foods: 20
-      max_active_foods: 30
+      foods_on_grid: 20
+      target_foods_to_collect: 30
       min_food_distance: 5
       agent_exclusion_radius: 10
       gradient_decay_constant: 10.0

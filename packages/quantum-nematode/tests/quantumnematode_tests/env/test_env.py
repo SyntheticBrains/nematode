@@ -77,15 +77,15 @@ class TestDynamicForagingEnvironmentInit:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
 
         assert env.grid_size == 20
-        assert env.num_initial_foods == 5
-        assert env.max_active_foods == 10
+        assert env.foods_on_grid == 5
+        assert env.target_foods_to_collect == 10
         assert len(env.foods) == 5
         assert env.agent_pos == (10, 10)
         assert len(env.visited_cells) == 1
@@ -96,8 +96,8 @@ class TestDynamicForagingEnvironmentInit:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(5, 5),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -109,8 +109,8 @@ class TestDynamicForagingEnvironmentInit:
         """Test initialization with custom viewport size."""
         env = DynamicForagingEnvironment(
             grid_size=50,
-            num_initial_foods=10,
-            max_active_foods=15,
+            foods_on_grid=10,
+            target_foods_to_collect=15,
             viewport_size=(15, 15),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -128,8 +128,8 @@ class TestGradientSuperposition:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=0,  # Start with no food, we'll add manually
-            max_active_foods=10,
+            foods_on_grid=0,  # Start with no food, we'll add manually
+            target_foods_to_collect=10,
             gradient_decay_constant=5.0,
             gradient_strength=1.0,
             theme=Theme.ASCII,
@@ -240,8 +240,8 @@ class TestPoissonDiskSampling:
         """Test that correct number of foods are spawned initially."""
         env = DynamicForagingEnvironment(
             grid_size=50,
-            num_initial_foods=10,
-            max_active_foods=20,
+            foods_on_grid=10,
+            target_foods_to_collect=20,
             min_food_distance=3,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -255,8 +255,8 @@ class TestPoissonDiskSampling:
         env = DynamicForagingEnvironment(
             grid_size=80,
             start_pos=(40, 40),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=8,
             agent_exclusion_radius=15,
             theme=Theme.ASCII,
@@ -278,8 +278,8 @@ class TestPoissonDiskSampling:
         env = DynamicForagingEnvironment(
             grid_size=80,
             start_pos=start_pos,
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=8,
             agent_exclusion_radius=15,
             theme=Theme.ASCII,
@@ -298,8 +298,8 @@ class TestPoissonDiskSampling:
         """Test that all foods are within grid boundaries."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            num_initial_foods=20,
-            max_active_foods=30,
+            foods_on_grid=20,
+            target_foods_to_collect=30,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -313,8 +313,8 @@ class TestPoissonDiskSampling:
         env = DynamicForagingEnvironment(
             grid_size=50,
             start_pos=(25, 25),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=5,
             agent_exclusion_radius=8,
             theme=Theme.ASCII,
@@ -351,8 +351,8 @@ class TestSatietySystem:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -395,23 +395,21 @@ class TestSatietySystem:
         # Original food should be gone
         assert (10, 10) not in env.foods
 
-    def test_max_active_foods_limit(self, env):
-        """Test that food count doesn't exceed max_active_foods."""
-        env.max_active_foods = 5
-        env.num_initial_foods = 3
+    def test_target_foods_to_collect_limit(self, env):
+        """Test that food count doesn't exceed foods_on_grid (constant supply)."""
+        env.target_foods_to_collect = 10  # Victory condition
+        env.foods_on_grid = 3  # Constant foods maintained on grid
 
-        # Manually set foods to max
-        env.foods = [(i, i) for i in range(5)]
+        # Manually set foods to foods_on_grid count
+        env.foods = [(i, i) for i in range(3)]
 
-        # Set food collected already
-        foods_collected = 3
-
-        # Try to spawn more
+        # Try to spawn more - should not exceed foods_on_grid
         for _ in range(10):
-            env.spawn_food(foods_collected=foods_collected)
+            env.spawn_food()
 
-        # Should not exceed max
-        assert len(env.foods) <= 5
+        # Should not exceed foods_on_grid (constant supply maintained)
+        assert len(env.foods) <= env.foods_on_grid
+        assert len(env.foods) == 3  # Maintains exactly foods_on_grid
 
 
 class TestViewportCalculations:
@@ -423,8 +421,8 @@ class TestViewportCalculations:
         return DynamicForagingEnvironment(
             grid_size=50,
             start_pos=(25, 25),
-            num_initial_foods=10,
-            max_active_foods=20,
+            foods_on_grid=10,
+            target_foods_to_collect=20,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -448,8 +446,8 @@ class TestViewportCalculations:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(2, 2),  # Near edge
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -471,8 +469,8 @@ class TestViewportCalculations:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),  # Corner
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -492,8 +490,8 @@ class TestViewportCalculations:
         env = DynamicForagingEnvironment(
             grid_size=10,
             start_pos=(5, 5),
-            num_initial_foods=3,
-            max_active_foods=5,
+            foods_on_grid=3,
+            target_foods_to_collect=5,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -516,8 +514,8 @@ class TestExplorationTracking:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -555,8 +553,8 @@ class TestEnvironmentCopy:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(5, 5),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -589,8 +587,8 @@ class TestEnvironmentIntegration:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=3,
-            max_active_foods=5,
+            foods_on_grid=3,
+            target_foods_to_collect=5,
             min_food_distance=3,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -617,8 +615,8 @@ class TestEnvironmentIntegration:
         env = DynamicForagingEnvironment(
             grid_size=30,
             start_pos=(15, 15),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -641,8 +639,8 @@ class TestEnvironmentIntegration:
         env = DynamicForagingEnvironment(
             grid_size=25,
             start_pos=(12, 12),
-            num_initial_foods=7,
-            max_active_foods=10,
+            foods_on_grid=7,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -658,7 +656,7 @@ class TestEnvironmentIntegration:
             env.consume_food()
 
             # Verify invariants
-            assert len(env.foods) <= env.max_active_foods
+            assert len(env.foods) <= env.target_foods_to_collect
             assert all(0 <= f[0] < env.grid_size and 0 <= f[1] < env.grid_size for f in env.foods)
 
 
@@ -670,8 +668,8 @@ class TestNearestFoodDistance:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=0,
-            max_active_foods=10,
+            foods_on_grid=0,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -690,8 +688,8 @@ class TestNearestFoodDistance:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=0,
-            max_active_foods=10,
+            foods_on_grid=0,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -711,8 +709,8 @@ class TestPredatorMechanics:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             predators_enabled=True,
@@ -810,8 +808,8 @@ class TestPredatorMechanics:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -890,8 +888,8 @@ class TestPredatorMechanics:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )

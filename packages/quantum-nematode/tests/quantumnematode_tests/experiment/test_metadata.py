@@ -24,7 +24,7 @@ class TestEnvironmentMetadata:
         assert env_meta.type == "static"
         assert env_meta.grid_size == 10
         assert env_meta.num_foods is None
-        assert env_meta.max_active_foods is None
+        assert env_meta.target_foods_to_collect is None
 
     def test_create_dynamic_environment(self):
         """Test creating dynamic environment metadata."""
@@ -32,7 +32,7 @@ class TestEnvironmentMetadata:
             type="dynamic",
             grid_size=50,
             num_foods=20,
-            max_active_foods=5,
+            target_foods_to_collect=5,
             initial_satiety=100.0,
             satiety_decay_rate=0.1,
             viewport_size=[5, 5],
@@ -41,7 +41,7 @@ class TestEnvironmentMetadata:
         assert env_meta.type == "dynamic"
         assert env_meta.grid_size == 50
         assert env_meta.num_foods == 20
-        assert env_meta.max_active_foods == 5
+        assert env_meta.target_foods_to_collect == 5
         assert env_meta.initial_satiety == 100.0
         assert env_meta.satiety_decay_rate == 0.1
         assert env_meta.viewport_size == [5, 5]

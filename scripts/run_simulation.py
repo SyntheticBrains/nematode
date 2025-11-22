@@ -346,8 +346,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
-            num_initial_foods=foraging_config.num_initial_foods,
-            max_active_foods=foraging_config.max_active_foods,
+            foods_on_grid=foraging_config.foods_on_grid,
+            target_foods_to_collect=foraging_config.target_foods_to_collect,
             min_food_distance=foraging_config.min_food_distance,
             agent_exclusion_radius=foraging_config.agent_exclusion_radius,
             gradient_decay_constant=foraging_config.gradient_decay_constant,
@@ -375,7 +375,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
-            f"{foraging_config.num_initial_foods} initial foods{predator_info}",
+            f"{foraging_config.foods_on_grid} foods on grid, "
+            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}",
         )
     else:
         logger.info("Using static maze environment")
@@ -438,7 +439,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
             if isinstance(agent.env, DynamicForagingEnvironment):
                 logger.info(f"Initial food positions: {agent.env.foods}")
-                logger.info(f"Active foods: {len(agent.env.foods)}/{agent.env.max_active_foods}")
+                logger.info(f"Foods on grid: {len(agent.env.foods)}/{agent.env.foods_on_grid}")
                 logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
                 # Log full environment render
@@ -538,7 +539,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():
                     foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
-                    foods_available_this_run = agent.env.max_active_foods
+                    foods_available_this_run = agent.env.target_foods_to_collect
                     satiety_remaining_this_run = agent.current_satiety
                     distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
                     average_distance_efficiency = (
