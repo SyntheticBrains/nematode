@@ -95,7 +95,7 @@ THEME_SYMBOLS = {
         left="◀️ ",
         right="▶️ ",
         empty="⬜️",
-        predator=" 🕷️",
+        predator="🕷️ ",
     ),
     Theme.UNICODE: ThemeSymbolSet(
         goal="◆",
