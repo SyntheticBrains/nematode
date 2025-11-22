@@ -514,7 +514,15 @@ class QuantumNematodeAgent:
         PerformanceMetrics
             An object containing success rate, average steps, average reward, and dynamic metrics.
         """
-        metrics = self._metrics_tracker.calculate_metrics(total_runs)
+        # Determine if predators are enabled for proper metrics calculation
+        predators_enabled = (
+            isinstance(self.env, DynamicForagingEnvironment) and self.env.predators_enabled
+        )
+
+        metrics = self._metrics_tracker.calculate_metrics(
+            total_runs=total_runs,
+            predators_enabled=predators_enabled,
+        )
 
         # For non-dynamic environments, set foraging metrics to None (agent's original behavior)
         if not isinstance(self.env, DynamicForagingEnvironment):
@@ -526,6 +534,13 @@ class QuantumNematodeAgent:
                 foraging_efficiency=None,
                 average_distance_efficiency=None,
                 average_foods_collected=None,
+                total_successes=metrics.total_successes,
+                total_starved=metrics.total_starved,
+                total_predator_deaths=metrics.total_predator_deaths,
+                total_max_steps=metrics.total_max_steps,
+                total_interrupted=metrics.total_interrupted,
+                average_predator_encounters=metrics.average_predator_encounters,
+                average_successful_evasions=metrics.average_successful_evasions,
             )
 
         # For dynamic environments, convert foraging_efficiency from foods/run to foods/step
@@ -542,4 +557,11 @@ class QuantumNematodeAgent:
             foraging_efficiency=foraging_efficiency_per_step,
             average_distance_efficiency=metrics.average_distance_efficiency,
             average_foods_collected=metrics.average_foods_collected,
+            total_successes=metrics.total_successes,
+            total_starved=metrics.total_starved,
+            total_predator_deaths=metrics.total_predator_deaths,
+            total_max_steps=metrics.total_max_steps,
+            total_interrupted=metrics.total_interrupted,
+            average_predator_encounters=metrics.average_predator_encounters,
+            average_successful_evasions=metrics.average_successful_evasions,
         )

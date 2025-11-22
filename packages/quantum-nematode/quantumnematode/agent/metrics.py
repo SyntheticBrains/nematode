@@ -97,13 +97,21 @@ class MetricsTracker:
             elif termination_reason == TerminationReason.INTERRUPTED:
                 self.total_interrupted += 1
 
-    def calculate_metrics(self, total_runs: int) -> PerformanceMetrics:
+    def calculate_metrics(
+        self,
+        total_runs: int,
+        predators_enabled: bool = False,  # noqa: FBT001, FBT002 - flag needed to distinguish predator/non-predator envs
+    ) -> PerformanceMetrics:
         """Calculate final performance metrics.
 
         Parameters
         ----------
         total_runs : int
             Total number of episodes/runs executed.
+        predators_enabled : bool, optional
+            Whether predators are enabled in the environment (default: False).
+            When True, predator metrics will be 0.0 for zero encounters.
+            When False, predator metrics will be None (non-predator environment).
 
         Returns
         -------
@@ -132,11 +140,14 @@ class MetricsTracker:
             average_foods_collected = self.foods_collected / total_runs
 
         # Calculate predator metrics
+        # Distinguish between predator-enabled environments (0.0) and non-predator (None)
         average_predator_encounters = None
         average_successful_evasions = None
-        if self.total_predator_encounters > 0 and total_runs > 0:
+        if predators_enabled and total_runs > 0:
+            # Predator-enabled environment: use 0.0 for zero encounters
             average_predator_encounters = self.total_predator_encounters / total_runs
             average_successful_evasions = self.total_successful_evasions / total_runs
+        # else: Non-predator environment: keep as None
 
         return PerformanceMetrics(
             success_rate=success_rate,

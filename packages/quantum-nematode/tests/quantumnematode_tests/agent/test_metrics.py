@@ -187,3 +187,85 @@ class TestMetricsForagingEfficiency:
         metrics = tracker.calculate_metrics(total_runs=3)
 
         assert metrics.foraging_efficiency == pytest.approx(2 / 3)
+
+
+class TestPredatorMetrics:
+    """Test predator-related metrics calculation."""
+
+    def test_predator_metrics_non_predator_environment(self):
+        """Test that predator metrics are None for non-predator environments."""
+        tracker = MetricsTracker()
+
+        # Track episodes without predator encounters
+        tracker.track_episode_completion(success=True, steps=5, reward=10.0)
+        tracker.track_episode_completion(success=True, steps=6, reward=12.0)
+
+        metrics = tracker.calculate_metrics(total_runs=2, predators_enabled=False)
+
+        # Non-predator environment: metrics should be None
+        assert metrics.average_predator_encounters is None
+        assert metrics.average_successful_evasions is None
+
+    def test_predator_metrics_enabled_zero_encounters(self):
+        """Test that predator metrics are 0.0 for predator environments with zero encounters."""
+        tracker = MetricsTracker()
+
+        # Track episodes in predator environment but no encounters
+        tracker.track_episode_completion(success=True, steps=5, reward=10.0)
+        tracker.track_episode_completion(success=True, steps=6, reward=12.0)
+
+        metrics = tracker.calculate_metrics(total_runs=2, predators_enabled=True)
+
+        # Predator-enabled environment with zero encounters: metrics should be 0.0
+        assert metrics.average_predator_encounters == 0.0
+        assert metrics.average_successful_evasions == 0.0
+
+    def test_predator_metrics_enabled_with_encounters(self):
+        """Test predator metrics calculation with encounters."""
+        tracker = MetricsTracker()
+
+        # Track episodes with predator encounters
+        tracker.track_episode_completion(
+            success=True,
+            steps=10,
+            reward=5.0,
+            predator_encounters=3,
+            successful_evasions=2,
+        )
+        tracker.track_episode_completion(
+            success=True,
+            steps=8,
+            reward=8.0,
+            predator_encounters=1,
+            successful_evasions=1,
+        )
+
+        metrics = tracker.calculate_metrics(total_runs=2, predators_enabled=True)
+
+        # Average: (3+1)/2 = 2.0 encounters, (2+1)/2 = 1.5 evasions
+        assert metrics.average_predator_encounters == pytest.approx(2.0)
+        assert metrics.average_successful_evasions == pytest.approx(1.5)
+
+    def test_predator_metrics_distinction(self):
+        """Test that we can distinguish predator-enabled from non-predator environments."""
+        tracker1 = MetricsTracker()
+        tracker2 = MetricsTracker()
+
+        # Both track same episodes (no encounters)
+        for tracker in [tracker1, tracker2]:
+            tracker.track_episode_completion(success=True, steps=5, reward=10.0)
+
+        metrics_no_predators = tracker1.calculate_metrics(
+            total_runs=1,
+            predators_enabled=False,
+        )
+        metrics_with_predators = tracker2.calculate_metrics(
+            total_runs=1,
+            predators_enabled=True,
+        )
+
+        # Non-predator: None, Predator-enabled: 0.0
+        assert metrics_no_predators.average_predator_encounters is None
+        assert metrics_with_predators.average_predator_encounters == 0.0
+        assert metrics_no_predators.average_successful_evasions is None
+        assert metrics_with_predators.average_successful_evasions == 0.0
