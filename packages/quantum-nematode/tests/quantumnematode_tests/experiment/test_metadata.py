@@ -46,6 +46,54 @@ class TestEnvironmentMetadata:
         assert env_meta.satiety_decay_rate == 0.1
         assert env_meta.viewport_size == [5, 5]
 
+    def test_create_predator_environment(self):
+        """Test creating predator-enabled environment metadata."""
+        env_meta = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=20,
+            num_foods=5,
+            target_foods_to_collect=10,
+            initial_satiety=200.0,
+            satiety_decay_rate=1.0,
+            viewport_size=[11, 11],
+            predators_enabled=True,
+            num_predators=2,
+            predator_speed=1.0,
+            predator_detection_radius=8,
+            predator_kill_radius=1,
+            predator_gradient_decay=12.0,
+            predator_gradient_strength=1.0,
+            predator_proximity_penalty=-0.1,
+        )
+
+        assert env_meta.type == "dynamic"
+        assert env_meta.predators_enabled is True
+        assert env_meta.num_predators == 2
+        assert env_meta.predator_speed == 1.0
+        assert env_meta.predator_detection_radius == 8
+        assert env_meta.predator_kill_radius == 1
+        assert env_meta.predator_gradient_decay == 12.0
+        assert env_meta.predator_gradient_strength == 1.0
+        assert env_meta.predator_proximity_penalty == -0.1
+
+    def test_create_no_predator_environment(self):
+        """Test creating environment without predators has None for predator fields."""
+        env_meta = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=20,
+            num_foods=5,
+            predators_enabled=False,
+        )
+
+        assert env_meta.predators_enabled is False
+        assert env_meta.num_predators is None
+        assert env_meta.predator_speed is None
+        assert env_meta.predator_detection_radius is None
+        assert env_meta.predator_kill_radius is None
+        assert env_meta.predator_gradient_decay is None
+        assert env_meta.predator_gradient_strength is None
+        assert env_meta.predator_proximity_penalty is None
+
     def test_model_dump(self):
         """Test Pydantic model_dump."""
         env_meta = EnvironmentMetadata(type="dynamic", grid_size=30, num_foods=10)
@@ -54,6 +102,25 @@ class TestEnvironmentMetadata:
         assert isinstance(data, dict)
         assert data["type"] == "dynamic"
         assert data["grid_size"] == 30
+
+    def test_model_dump_with_predators(self):
+        """Test Pydantic model_dump with predator fields."""
+        env_meta = EnvironmentMetadata(
+            type="dynamic",
+            grid_size=20,
+            predators_enabled=True,
+            num_predators=3,
+            predator_gradient_decay=10.0,
+            predator_gradient_strength=1.5,
+            predator_proximity_penalty=-0.2,
+        )
+
+        data = env_meta.model_dump()
+        assert data["predators_enabled"] is True
+        assert data["num_predators"] == 3
+        assert data["predator_gradient_decay"] == 10.0
+        assert data["predator_gradient_strength"] == 1.5
+        assert data["predator_proximity_penalty"] == -0.2
 
 
 class TestBrainMetadata:
