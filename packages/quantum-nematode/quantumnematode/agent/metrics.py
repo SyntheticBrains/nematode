@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from quantumnematode.report.dtypes import PerformanceMetrics
+from quantumnematode.report.dtypes import PerformanceMetrics, TerminationReason
 
 
 class MetricsTracker:
@@ -50,7 +50,7 @@ class MetricsTracker:
         distance_efficiencies: list[float] | None = None,
         predator_encounters: int = 0,
         successful_evasions: int = 0,
-        termination_reason: str | None = None,
+        termination_reason: TerminationReason | None = None,
     ) -> None:
         """Track the completion of an episode.
 
@@ -71,7 +71,7 @@ class MetricsTracker:
             Number of predator encounters in this episode.
         successful_evasions : int, optional
             Number of successful evasions in this episode.
-        termination_reason : str | None, optional
+        termination_reason : TerminationReason | None, optional
             Reason the episode terminated.
         """
         if success:
@@ -88,13 +88,13 @@ class MetricsTracker:
 
         # Track termination reasons
         if termination_reason:
-            if termination_reason == "predator":
+            if termination_reason == TerminationReason.PREDATOR:
                 self.total_predator_deaths += 1
-            elif termination_reason == "starved":
+            elif termination_reason == TerminationReason.STARVED:
                 self.total_starved += 1
-            elif termination_reason == "max_steps":
+            elif termination_reason == TerminationReason.MAX_STEPS:
                 self.total_max_steps += 1
-            elif termination_reason == "interrupted":
+            elif termination_reason == TerminationReason.INTERRUPTED:
                 self.total_interrupted += 1
 
     def calculate_metrics(self, total_runs: int) -> PerformanceMetrics:
