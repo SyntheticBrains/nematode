@@ -609,10 +609,16 @@ def plot_foraging_efficiency_per_run(  # pragma: no cover
     steps : list[int]
         Number of steps taken in each run.
     """
+    if len(foods_collected) != len(steps):
+        logger.error(
+            "Length of foods_collected and steps must be the same "
+            "to calculate foraging efficiency.",
+        )
+        return
     # Calculate foods per step ratio
     foraging_efficiency = [
         foods / step if step > 0 else 0.0
-        for foods, step in zip(foods_collected, steps, strict=False)
+        for foods, step in zip(foods_collected, steps, strict=True)
     ]
 
     plt.figure(figsize=(12, 6))
@@ -1111,7 +1117,7 @@ def plot_evasion_success_rate_over_time(  # pragma: no cover
     # Calculate evasion success rate per run
     evasion_rates = [
         evasions / encounters if encounters > 0 else 0.0
-        for encounters, evasions in zip(predator_encounters, successful_evasions, strict=False)
+        for encounters, evasions in zip(predator_encounters, successful_evasions, strict=True)
     ]
 
     plt.figure(figsize=(12, 6))
@@ -1129,7 +1135,7 @@ def plot_evasion_success_rate_over_time(  # pragma: no cover
     # Calculate overall average (only for runs with encounters)
     valid_rates = [
         rate
-        for rate, encounters in zip(evasion_rates, predator_encounters, strict=False)
+        for rate, encounters in zip(evasion_rates, predator_encounters, strict=True)
         if encounters > 0
     ]
     if valid_rates:
@@ -1187,10 +1193,10 @@ def plot_survival_vs_food_collection(  # pragma: no cover
 
     # Separate data by survival status
     survived_foods = [
-        foods for foods, died in zip(foods_collected, deaths_by_predator, strict=False) if not died
+        foods for foods, died in zip(foods_collected, deaths_by_predator, strict=True) if not died
     ]
     died_foods = [
-        foods for foods, died in zip(foods_collected, deaths_by_predator, strict=False) if died
+        foods for foods, died in zip(foods_collected, deaths_by_predator, strict=True) if died
     ]
 
     plt.figure(figsize=(10, 8))
