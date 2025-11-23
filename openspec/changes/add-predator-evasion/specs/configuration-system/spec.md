@@ -29,9 +29,10 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 #### Scenario: Predator Penalty Configuration
 - **GIVEN** a configuration with predator reward penalties
 - **WHEN** the configuration is loaded
-- **THEN** the system SHALL accept:
-  - `proximity_penalty` (float, default -0.1) - reward penalty per step within detection radius
+- **THEN** the system SHALL accept under `reward`:
+  - `penalty_predator_proximity` (float, default 0.1) - reward penalty per step within detection radius
 - **AND** penalty value of 0.0 SHALL disable proximity penalties
+- **AND** the penalty SHALL use positive values that are subtracted from reward (consistent with other penalty values)
 
 
 #### Scenario: Minimal Predator Enablement
@@ -92,7 +93,9 @@ environment:
       kill_radius: 1
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
-      proximity_penalty: -0.1
+
+reward:
+  penalty_predator_proximity: 0.1
 ```
 
 ### Requirement: Backward Compatibility with Legacy Configuration

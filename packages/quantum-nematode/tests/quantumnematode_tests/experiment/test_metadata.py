@@ -64,7 +64,6 @@ class TestEnvironmentMetadata:
             predator_kill_radius=1,
             predator_gradient_decay=12.0,
             predator_gradient_strength=1.0,
-            predator_proximity_penalty=-0.1,
         )
 
         assert env_meta.type == "dynamic"
@@ -75,7 +74,6 @@ class TestEnvironmentMetadata:
         assert env_meta.predator_kill_radius == 1
         assert env_meta.predator_gradient_decay == 12.0
         assert env_meta.predator_gradient_strength == 1.0
-        assert env_meta.predator_proximity_penalty == -0.1
 
     def test_create_no_predator_environment(self):
         """Test creating environment without predators has None for predator fields."""
@@ -93,7 +91,6 @@ class TestEnvironmentMetadata:
         assert env_meta.predator_kill_radius is None
         assert env_meta.predator_gradient_decay is None
         assert env_meta.predator_gradient_strength is None
-        assert env_meta.predator_proximity_penalty is None
 
     def test_model_dump(self):
         """Test Pydantic model_dump."""
@@ -113,7 +110,6 @@ class TestEnvironmentMetadata:
             num_predators=3,
             predator_gradient_decay=10.0,
             predator_gradient_strength=1.5,
-            predator_proximity_penalty=-0.2,
         )
 
         data = env_meta.model_dump()
@@ -121,7 +117,6 @@ class TestEnvironmentMetadata:
         assert data["num_predators"] == 3
         assert data["predator_gradient_decay"] == 10.0
         assert data["predator_gradient_strength"] == 1.5
-        assert data["predator_proximity_penalty"] == -0.2
 
 
 class TestBrainMetadata:

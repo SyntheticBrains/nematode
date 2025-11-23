@@ -191,7 +191,6 @@ class BaseEnvironment(ABC):
         self,
         position: tuple[int, ...],
         *,
-        scaling_method: ScalingMethod = ScalingMethod.TANH,
         disable_log: bool = False,
     ) -> tuple[float, float]:
         """
@@ -201,8 +200,6 @@ class BaseEnvironment(ABC):
         ----------
         position : tuple[int, ...]
             Position to query gradient at.
-        scaling_method : ScalingMethod
-            Method to scale gradient strength.
         disable_log : bool
             Whether to disable debug logging.
 
@@ -711,7 +708,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         predator_kill_radius: int = 1,
         predator_gradient_decay: float = 12.0,
         predator_gradient_strength: float = 1.0,
-        predator_proximity_penalty: float = -0.1,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -743,7 +739,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.predator_kill_radius = predator_kill_radius
         self.predator_gradient_decay = predator_gradient_decay
         self.predator_gradient_strength = predator_gradient_strength
-        self.predator_proximity_penalty = predator_proximity_penalty
 
         # Initialize food sources using Poisson disk sampling
         self.foods: list[tuple[int, int]] = []
@@ -1190,7 +1185,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
             predator_kill_radius=self.predator_kill_radius,
             predator_gradient_decay=self.predator_gradient_decay,
             predator_gradient_strength=self.predator_gradient_strength,
-            predator_proximity_penalty=self.predator_proximity_penalty,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction

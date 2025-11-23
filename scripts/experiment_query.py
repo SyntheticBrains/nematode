@@ -110,8 +110,6 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:  # noqa: C90
             print(f"    Gradient Decay: {metadata.environment.predator_gradient_decay}")
         if metadata.environment.predator_gradient_strength:
             print(f"    Gradient Strength: {metadata.environment.predator_gradient_strength}")
-        if metadata.environment.predator_proximity_penalty:
-            print(f"    Proximity Penalty: {metadata.environment.predator_proximity_penalty}")
 
     print("\nBrain:")
     print(f"  Type: {metadata.brain.type}")

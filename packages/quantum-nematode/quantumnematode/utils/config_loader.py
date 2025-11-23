@@ -137,7 +137,6 @@ class PredatorConfig(BaseModel):
     kill_radius: int = 1
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
-    proximity_penalty: float = -0.1
 
     @field_validator("movement_pattern")
     @classmethod

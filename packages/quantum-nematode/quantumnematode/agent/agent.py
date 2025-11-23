@@ -35,6 +35,7 @@ DEFAULT_PENALTY_STEP = 0.05
 DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_PENALTY_STARVATION = 10.0
 DEFAULT_PENALTY_PREDATOR_DEATH = 10.0
+DEFAULT_PENALTY_PREDATOR_PROXIMITY = 0.1
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -78,6 +79,9 @@ class RewardConfig(BaseModel):
     penalty_starvation: float = DEFAULT_PENALTY_STARVATION  # Penalty when satiety reaches 0
     penalty_predator_death: float = (
         DEFAULT_PENALTY_PREDATOR_DEATH  # Penalty when caught by predator
+    )
+    penalty_predator_proximity: float = (
+        DEFAULT_PENALTY_PREDATOR_PROXIMITY  # Penalty per step within predator detection radius
     )
 
 
@@ -457,7 +461,6 @@ class QuantumNematodeAgent:
                 predator_kill_radius=self.env.predator_kill_radius,
                 predator_gradient_decay=self.env.predator_gradient_decay,
                 predator_gradient_strength=self.env.predator_gradient_strength,
-                predator_proximity_penalty=self.env.predator_proximity_penalty,
             )
         else:
             self.env = StaticEnvironment(

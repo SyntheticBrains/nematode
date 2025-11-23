@@ -844,9 +844,6 @@ class TestPredatorMechanics:
         # Agent should be in danger (within detection radius)
         assert predator_env.is_agent_in_danger() is True
 
-        # Verify proximity penalty value is configured and accessible
-        assert predator_env.predator_proximity_penalty == -0.1
-
         # Place predator outside detection radius
         predator_env.predators[0].position = (10, 20)  # 10 units away, outside detection_radius=8
 

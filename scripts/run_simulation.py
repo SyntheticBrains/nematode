@@ -363,15 +363,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_kill_radius=predator_config.kill_radius,
             predator_gradient_decay=predator_config.gradient_decay_constant,
             predator_gradient_strength=predator_config.gradient_strength,
-            predator_proximity_penalty=predator_config.proximity_penalty,
         )
         predator_info = ""
         if predator_config.enabled:
             predator_info = (
                 f", {predator_config.count} predators "
                 f"(detection_radius={predator_config.detection_radius}, "
-                f"kill_radius={predator_config.kill_radius}, "
-                f"proximity_penalty={predator_config.proximity_penalty})"
+                f"kill_radius={predator_config.kill_radius})"
             )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "

@@ -17,8 +17,8 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
   - `predator_kill_radius` (integer)
   - `predator_gradient_decay_constant` (float)
   - `predator_gradient_strength` (float)
-  - `predator_proximity_penalty` (float)
 - **AND** this SHALL be stored in experiment JSON metadata
+- **NOTE**: The proximity penalty is stored in the reward configuration, not environment metadata
 
 #### Scenario: Predator Metrics in Experiment Results
 - **GIVEN** an experiment with predators enabled
