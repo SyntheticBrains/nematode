@@ -1317,12 +1317,9 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
     ]
     if predator_results:
-        # Extract predator-specific data
+        # Extract predator-specific data for encounters plot
         predator_encounters_list = [
             r.predator_encounters for r in predator_results if r.predator_encounters is not None
-        ]
-        successful_evasions_list = [
-            r.successful_evasions for r in predator_results if r.successful_evasions is not None
         ]
         predator_runs = [r.run for r in predator_results]
 
@@ -1336,13 +1333,28 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
             )
 
         # Plot: Evasion Success Rate Over Time
-        if predator_encounters_list and successful_evasions_list:
+        # Build aligned lists in single loop to ensure index correspondence
+        predator_runs_evasion: list[int] = []
+        predator_encounters_evasion: list[int] = []
+        successful_evasions_evasion: list[int] = []
+
+        for r in predator_results:
+            if (
+                r.predator_encounters is not None
+                and r.predator_encounters > 0
+                and r.successful_evasions is not None
+            ):
+                predator_runs_evasion.append(r.run)
+                predator_encounters_evasion.append(r.predator_encounters)
+                successful_evasions_evasion.append(r.successful_evasions)
+
+        if predator_encounters_evasion and successful_evasions_evasion:
             plot_evasion_success_rate_over_time(
                 file_prefix,
-                predator_runs,
+                predator_runs_evasion,
                 plot_dir,
-                predator_encounters_list,
-                successful_evasions_list,
+                predator_encounters_evasion,
+                successful_evasions_evasion,
             )
 
         # Plot: Survival vs Food Collection (for predator environments that also track food)
