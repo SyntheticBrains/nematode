@@ -123,11 +123,11 @@
 ## 11. Documentation
 
 - [x] 11.1 Update README.md with predator evasion feature description (added to Features section and command-line examples)
-- [x] 11.2 Add predator configuration section to configuration documentation (not pursued)
+- [x] 11.2 Add predator configuration section to configuration documentation (not applicable - intentionally dropped)
 - [x] 11.3 Document predator metrics in metrics documentation (documented in README predator section)
 - [x] 11.4 Add example usage and training tips for predator-enabled simulations (added command-line examples in README)
-- [x] 11.5 Document configuration migration path from flat to nested structure (not pursued)
-- [x] 11.6 Add troubleshooting section for predator learning difficulties (not pursued)
+- [x] 11.5 Document configuration migration path from flat to nested structure (not applicable - intentionally dropped)
+- [x] 11.6 Add troubleshooting section for predator learning difficulties (not applicable - intentionally dropped)
 - [x] 11.7 Document future enhancements (health system, additional predator types, pursuit behavior) (added to Roadmap in README)
 - [x] 11.8 Update CHANGELOG.md with feature addition and breaking changes (none) (no CHANGELOG.md file exists in project)
 
