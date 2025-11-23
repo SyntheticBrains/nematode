@@ -16,7 +16,7 @@ The system SHALL support configurable predator entities in dynamic foraging envi
 - **GIVEN** a predator at position (10, 10) with `movement_pattern: "random"`
 - **WHEN** the predator updates its position
 - **THEN** the predator SHALL move one cell in a random direction (up, down, left, right)
-- **AND** the predator SHALL wrap around grid boundaries or stay within bounds based on environment settings
+- **AND** the predator SHALL stay within bounds of the environment
 - **AND** movement SHALL occur at rate specified by `speed` parameter (default 1.0)
 
 #### Scenario: Predator Speed Configuration
