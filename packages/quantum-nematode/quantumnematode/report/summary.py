@@ -35,6 +35,10 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     """
     total_runs_done = len(all_results)
 
+    if total_runs_done == 0:
+        logger.warning("No simulation results to summarize.")
+        return
+
     average_efficiency_score = None
     improvement_rate = None
 
