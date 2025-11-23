@@ -712,6 +712,27 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             config_path = Path(config_file) if config_file else Path("config.yml")
             exports_rel_path = f"exports/{timestamp}"
 
+            learning_rate_metadata = None
+            if isinstance(learning_rate, DynamicLearningRate):
+                learning_rate_metadata = {
+                    "method": "dynamic",
+                    "parameters": {
+                        "initial_learning_rate": learning_rate.initial_learning_rate,
+                        "decay_rate": learning_rate.decay_rate,
+                        "decay_type": learning_rate.decay_type,
+                        "decay_factor": learning_rate.decay_factor,
+                        "step_size": learning_rate.step_size,
+                        "max_steps": learning_rate.max_steps,
+                        "power": learning_rate.power,
+                        "min_lr": learning_rate.min_lr,
+                    },
+                }
+            else:
+                logger.warning(
+                    "Learning rate metadata capture not implemented for "
+                    f"{type(learning_rate).__name__}",
+                )
+
             experiment_metadata = capture_experiment_metadata(
                 config_path=config_path,
                 env=agent.env,
@@ -727,6 +748,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         if hasattr(learning_rate, "__dict__")
                         else {},
                     },
+                    "learning_rate": learning_rate_metadata,
                     "satiety": {
                         "initial": satiety_config.initial_satiety,
                         "decay_rate": satiety_config.satiety_decay_rate,

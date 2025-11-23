@@ -11,7 +11,10 @@ from quantumnematode.experiment.metadata import (
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
+    GradientMetadata,
+    LearningRateMetadata,
     ResultsMetadata,
+    RewardMetadata,
     SystemMetadata,
 )
 
@@ -57,6 +60,23 @@ def create_test_experiment(env: EnvironmentMetadata, brain: BrainMetadata) -> Ex
         config_hash="abc123",
         environment=env,
         brain=brain,
+        reward=RewardMetadata(
+            reward_goal=0.2,
+            reward_distance_scale=0.1,
+            reward_exploration=0.05,
+            penalty_step=0.01,
+            penalty_anti_dithering=0.05,
+            penalty_stuck_position=0.02,
+            stuck_position_threshold=2,
+            penalty_starvation=10.0,
+            penalty_predator_death=10.0,
+            penalty_predator_proximity=0.1,
+        ),
+        learning_rate=LearningRateMetadata(
+            method="static",
+            initial_learning_rate=0.01,
+        ),
+        gradient=GradientMetadata(method="raw"),
         results=ResultsMetadata(
             total_runs=20,
             success_rate=0.9,
