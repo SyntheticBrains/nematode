@@ -56,7 +56,7 @@ def basic_experiment():
         ),
         gradient=GradientMetadata(method="raw"),
         results=ResultsMetadata(
-            total_runs=50,  # Updated from 20 to 50 to match new default
+            total_runs=50,
             success_rate=0.9,
             avg_steps=40.0,
             avg_reward=120.0,

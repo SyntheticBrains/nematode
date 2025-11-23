@@ -224,7 +224,7 @@ For developers and researchers interested in the convergence detection algorithm
 
 The convergence detection algorithm uses an adaptive variance-based approach:
 
-1. **Minimum Runs**: Requires at least 20 runs before convergence can be declared
+1. **Minimum Runs**: Requires at least 50 runs before convergence can be declared
 2. **Variance Threshold**: Success rate variance must drop below 0.05 (5%)
 3. **Stability Window**: Low variance must be sustained for 10 consecutive runs
 4. **Detection Point**: The first run where a stable 10-run window begins

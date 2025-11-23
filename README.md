@@ -86,19 +86,19 @@ cp .env.template .env
 
 ```bash
 # Dynamic foraging with quantum modular brain (recommended)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
 
 # Dynamic foraging and predator evasion with quantum modular brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_dynamic_medium_predators.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_dynamic_medium_predators.yml --theme emoji
 
 # Dynamic foraging with classical MLP brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
 # Static maze with quantum modular brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_simple_medium.yml --theme emoji
 
 # Spiking neural network brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
 
 # Quantum hardware (IBM QPU) with dynamic foraging
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_dynamic_small.yml --theme emoji --device qpu
@@ -111,7 +111,7 @@ uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --
 
 ```bash
 # Run dynamic foraging with MLP brain and GPU acceleration
-docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
 # Interactive Docker shell for development
 docker-compose exec quantum-nematode bash

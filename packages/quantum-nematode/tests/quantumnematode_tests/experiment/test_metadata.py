@@ -404,13 +404,13 @@ class TestResultsMetadata:
     def test_create_basic_results(self):
         """Test creating basic results metadata."""
         results = ResultsMetadata(
-            total_runs=20,
+            total_runs=50,
             success_rate=0.85,
             avg_steps=45.5,
             avg_reward=100.5,
         )
 
-        assert results.total_runs == 20
+        assert results.total_runs == 50
         assert results.success_rate == 0.85
         assert results.avg_steps == 45.5
         assert results.avg_reward == 100.5
@@ -573,7 +573,7 @@ class TestExperimentMetadata:
             ),
             gradient=GradientMetadata(method="clip"),
             results=ResultsMetadata(
-                total_runs=20,
+                total_runs=50,
                 success_rate=0.9,
                 avg_steps=40.0,
                 avg_reward=120.0,

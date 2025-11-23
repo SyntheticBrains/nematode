@@ -78,7 +78,7 @@ def create_test_experiment(env: EnvironmentMetadata, brain: BrainMetadata) -> Ex
         ),
         gradient=GradientMetadata(method="raw"),
         results=ResultsMetadata(
-            total_runs=20,
+            total_runs=50,
             success_rate=0.9,
             avg_steps=40.0,
             avg_reward=120.0,

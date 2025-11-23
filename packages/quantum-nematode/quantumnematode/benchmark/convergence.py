@@ -58,6 +58,9 @@ def detect_convergence(
     Convergence is detected when the success rate variance falls below a threshold
     for a sustained number of runs, indicating the strategy has stabilized.
 
+    Note that the sum of min_runs and stability_runs must be less than the total number of results
+    and less than the minimum number of runs required for benchmark validation.
+
     Parameters
     ----------
     results : list[SimulationResult]
