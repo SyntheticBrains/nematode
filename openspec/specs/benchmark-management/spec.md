@@ -18,7 +18,7 @@ The system SHALL provide a curated benchmark submission workflow with validation
 - **AND** the category SHALL be determined automatically from environment and brain types
 
 #### Scenario: Benchmark Validation - Minimum Runs
-- **GIVEN** a user attempts to save a benchmark with fewer than 20 runs
+- **GIVEN** a user attempts to save a benchmark with fewer than 50 runs
 - **WHEN** validation is performed
 - **THEN** the benchmark submission SHALL be rejected
 - **AND** an error message SHALL inform the user of the minimum run requirement

@@ -134,7 +134,7 @@ uv run pytest
 uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_dynamic_small.yml --theme emoji
 
 # Full test with medium environment
-uv run ./scripts/run_simulation.py --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
 ```
 
 ##### Testing with Static Environment
@@ -155,7 +155,7 @@ Track any simulation run automatically with the `--track-experiment` flag:
 # Run with experiment tracking
 uv run ./scripts/run_simulation.py \
   --config configs/examples/modular_dynamic_medium.yml \
-  --runs 20 \
+  --runs 50 \
   --track-experiment
 ```
 
@@ -206,7 +206,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 # Run and submit as benchmark in one step
 uv run scripts/run_simulation.py \
   --config configs/examples/modular_dynamic_medium.yml \
-  --runs 20 \
+  --runs 50 \
   --save-benchmark \
   --benchmark-notes "Your optimization approach"
 ```
@@ -218,7 +218,7 @@ The CLI will interactively prompt for contributor information if not provided vi
 To ensure benchmark quality and reproducibility, submissions must meet these criteria:
 
 **Required**:
-- Minimum 20 simulation runs for statistical significance
+- Minimum 50 simulation runs for statistical significance
 - Clean git state (no uncommitted changes)
 - Complete contributor information
 - Valid configuration file
@@ -242,7 +242,7 @@ Example workflow:
 
 ```bash
 # 1. Run multiple experiments while developing
-uv run scripts/run_simulation.py --config configs/my_config.yml --runs 20 --track-experiment
+uv run scripts/run_simulation.py --config configs/my_config.yml --runs 50 --track-experiment
 
 # 2. Review your experiments
 uv run scripts/experiment_query.py list --limit 10
