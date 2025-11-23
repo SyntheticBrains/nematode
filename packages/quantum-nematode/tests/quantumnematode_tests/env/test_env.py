@@ -764,26 +764,25 @@ class TestPredatorMechanics:
         assert all(np.isfinite(val) for val in state)
 
     def test_collision_detection_kill_radius(self, predator_env):
-        """Test collision detection with kill_radius."""
-        # Place predator at agent position (distance = 0)
-        predator_env.predators[0].position = predator_env.agent_pos
-
-        # Check if agent is killed
-        is_killed = predator_env.check_predator_collision()
-        assert is_killed is True
-
-        # Place predator 1 unit away (at kill_radius boundary)
+        """Test collision detection with non-zero kill_radius using Manhattan distance."""
         predator_env.agent_pos = (10, 10)
+        predator_env.predator_kill_radius = 1
+
+        # Distance 0: same cell → kill
         predator_env.predators[0].position = (10, 10)
+        assert predator_env.check_predator_collision() is True
 
-        is_killed = predator_env.check_predator_collision()
-        assert is_killed is True  # kill_radius=0, so distance=1 should kill
+        # Distance 1 (cardinal neighbour) → kill
+        predator_env.predators[0].position = (11, 10)
+        assert predator_env.check_predator_collision() is True
 
-        # Place predator 2 units away (outside kill_radius)
-        predator_env.predators[0].position = (10, 11)
+        # Distance 2 → no kill
+        predator_env.predators[0].position = (12, 10)
+        assert predator_env.check_predator_collision() is False
 
-        is_killed = predator_env.check_predator_collision()
-        assert is_killed is False
+        # Distance 2 (diagonal) → no kill
+        predator_env.predators[0].position = (11, 11)
+        assert predator_env.check_predator_collision() is False
 
     def test_proximity_detection(self, predator_env):
         """Test proximity detection with detection_radius."""
