@@ -29,7 +29,7 @@ class TestPredatorPerformance:
             num_predators=5,
             predator_speed=1.0,
             predator_detection_radius=8,
-            predator_kill_radius=1,
+            predator_kill_radius=0,
             predator_gradient_decay=5.0,
             predator_gradient_strength=1.0,
         )
