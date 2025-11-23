@@ -240,31 +240,18 @@ class TestBrainMetadata:
 class TestRewardMetadata:
     """Test RewardMetadata model."""
 
-    def test_create_reward_metadata(self):
+    def test_create_reward_metadata(self, reward_metadata: RewardMetadata):
         """Test creating reward metadata."""
-        reward_meta = RewardMetadata(
-            reward_goal=2.0,
-            reward_distance_scale=0.5,
-            reward_exploration=0.05,
-            penalty_step=0.005,
-            penalty_anti_dithering=0.02,
-            penalty_stuck_position=0.1,
-            stuck_position_threshold=3,
-            penalty_starvation=10.0,
-            penalty_predator_death=10.0,
-            penalty_predator_proximity=0.1,
-        )
-
-        assert reward_meta.reward_goal == 2.0
-        assert reward_meta.reward_distance_scale == 0.5
-        assert reward_meta.reward_exploration == 0.05
-        assert reward_meta.penalty_step == 0.005
-        assert reward_meta.penalty_anti_dithering == 0.02
-        assert reward_meta.penalty_stuck_position == 0.1
-        assert reward_meta.stuck_position_threshold == 3
-        assert reward_meta.penalty_starvation == 10.0
-        assert reward_meta.penalty_predator_death == 10.0
-        assert reward_meta.penalty_predator_proximity == 0.1
+        assert reward_metadata.reward_goal == 2.0
+        assert reward_metadata.reward_distance_scale == 0.5
+        assert reward_metadata.reward_exploration == 0.05
+        assert reward_metadata.penalty_step == 0.005
+        assert reward_metadata.penalty_anti_dithering == 0.02
+        assert reward_metadata.penalty_stuck_position == 0.1
+        assert reward_metadata.stuck_position_threshold == 3
+        assert reward_metadata.penalty_starvation == 10.0
+        assert reward_metadata.penalty_predator_death == 10.0
+        assert reward_metadata.penalty_predator_proximity == 0.1
 
     def test_model_dump(self):
         """Test Pydantic model_dump."""

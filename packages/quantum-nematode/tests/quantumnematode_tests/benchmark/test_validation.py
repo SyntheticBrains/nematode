@@ -24,7 +24,7 @@ from quantumnematode.experiment.metadata import (
 
 
 @pytest.fixture
-def basic_experiment():
+def basic_experiment(reward_metadata: RewardMetadata) -> ExperimentMetadata:
     """Create a basic experiment metadata for testing."""
     from quantumnematode.experiment.metadata import BenchmarkMetadata
 
@@ -38,18 +38,7 @@ def basic_experiment():
         git_dirty=False,
         environment=EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20),
         brain=BrainMetadata(type="modular", qubits=4, learning_rate=0.01),
-        reward=RewardMetadata(
-            reward_goal=0.2,
-            reward_distance_scale=0.1,
-            reward_exploration=0.05,
-            penalty_step=0.01,
-            penalty_anti_dithering=0.05,
-            penalty_stuck_position=0.02,
-            stuck_position_threshold=2,
-            penalty_starvation=10.0,
-            penalty_predator_death=10.0,
-            penalty_predator_proximity=0.1,
-        ),
+        reward=reward_metadata,
         learning_rate=LearningRateMetadata(
             method="static",
             initial_learning_rate=0.01,
