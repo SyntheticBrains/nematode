@@ -705,7 +705,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         num_predators: int = 2,
         predator_speed: float = 1.0,
         predator_detection_radius: int = 8,
-        predator_kill_radius: int = 1,
+        predator_kill_radius: int = 0,
         predator_gradient_decay: float = 12.0,
         predator_gradient_strength: float = 1.0,
     ) -> None:

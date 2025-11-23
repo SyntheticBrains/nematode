@@ -14,7 +14,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
   - `speed` (float, default 1.0)
   - `movement_pattern` (string, default "random")
   - `detection_radius` (integer, default 8)
-  - `kill_radius` (integer, default 1)
+  - `kill_radius` (integer, default 0)
 - **AND** all parameters SHALL have sensible defaults allowing minimal configuration
 
 #### Scenario: Predator Gradient Configuration
@@ -90,7 +90,7 @@ environment:
       speed: 1.0
       movement_pattern: "random"
       detection_radius: 8
-      kill_radius: 1
+      kill_radius: 0
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
 

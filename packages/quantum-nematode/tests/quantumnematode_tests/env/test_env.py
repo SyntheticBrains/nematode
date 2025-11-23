@@ -895,7 +895,7 @@ class TestPredatorMechanics:
         assert env.predators_enabled is False
         assert len(env.predators) == 0
         assert env.predator_detection_radius == 8  # Default value
-        assert env.predator_kill_radius == 1  # Default value
+        assert env.predator_kill_radius == 0  # Default value
 
         # is_agent_in_danger should return False
         assert env.is_agent_in_danger() is False
