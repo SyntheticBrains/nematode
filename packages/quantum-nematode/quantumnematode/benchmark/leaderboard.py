@@ -150,6 +150,12 @@ def generate_readme_section() -> str:
         ("Dynamic Medium - Classical", "dynamic_medium_classical"),
         ("Dynamic Large - Quantum", "dynamic_large_quantum"),
         ("Dynamic Large - Classical", "dynamic_large_classical"),
+        ("Dynamic Predator Small - Quantum", "dynamic_predator_small_quantum"),
+        ("Dynamic Predator Small - Classical", "dynamic_predator_small_classical"),
+        ("Dynamic Predator Medium - Quantum", "dynamic_predator_medium_quantum"),
+        ("Dynamic Predator Medium - Classical", "dynamic_predator_medium_classical"),
+        ("Dynamic Predator Large - Quantum", "dynamic_predator_large_quantum"),
+        ("Dynamic Predator Large - Classical", "dynamic_predator_large_classical"),
     ]
 
     # Check if we have any benchmarks at all
@@ -188,6 +194,12 @@ def generate_leaderboards() -> dict[str, str]:
         "dynamic_medium_classical",
         "dynamic_large_quantum",
         "dynamic_large_classical",
+        "dynamic_predator_small_quantum",
+        "dynamic_predator_small_classical",
+        "dynamic_predator_medium_quantum",
+        "dynamic_predator_medium_classical",
+        "dynamic_predator_large_quantum",
+        "dynamic_predator_large_classical",
     ]
 
     leaderboards = {}
@@ -239,6 +251,27 @@ def generate_benchmarks_doc() -> str:
             [
                 ("#### Quantum Architectures", "dynamic_large_quantum"),
                 ("#### Classical Architectures", "dynamic_large_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Predator Small (≤20x20)",
+            [
+                ("#### Quantum Architectures", "dynamic_predator_small_quantum"),
+                ("#### Classical Architectures", "dynamic_predator_small_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Predator Medium (≤50x50)",
+            [
+                ("#### Quantum Architectures", "dynamic_predator_medium_quantum"),
+                ("#### Classical Architectures", "dynamic_predator_medium_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Predator Large (>50x50)",
+            [
+                ("#### Quantum Architectures", "dynamic_predator_large_quantum"),
+                ("#### Classical Architectures", "dynamic_predator_large_classical"),
             ],
         ),
     ]
