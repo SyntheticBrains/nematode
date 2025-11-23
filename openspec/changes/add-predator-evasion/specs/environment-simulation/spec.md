@@ -23,7 +23,7 @@ The system SHALL support configurable predator entities in dynamic foraging envi
 - **GIVEN** a predator configured with `speed: 0.5`
 - **WHEN** the simulation advances
 - **THEN** the predator SHALL move at half the rate of the agent
-- **AND** this SHALL be implemented via via accumulator-based movement (moves every 2 steps)
+- **AND** this SHALL be implemented via accumulator-based movement (moves every 2 steps)
 
 #### Scenario: Multiple Predators Independence
 - **GIVEN** 3 predators in the environment
