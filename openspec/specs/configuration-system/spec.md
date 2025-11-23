@@ -123,6 +123,7 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **THEN** `foods_on_grid` SHALL be positive and > 0
 - **AND** `target_foods_to_collect` SHALL be >= `foods_on_grid`
 - **AND** if `foods_on_grid` is too large for grid with `min_food_distance`, SHALL emit warning
+- **AND** if `agent_exclusion_radius` exceeds `min_food_distance`, SHALL warn that exclusion zones may prevent food placement
 
 #### Scenario: Grid Size Validation
 - **GIVEN** a dynamic environment configuration
