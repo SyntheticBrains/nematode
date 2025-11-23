@@ -66,12 +66,12 @@
 ## 7. Benchmark Categories
 
 - [x] 7.1 Add six new benchmark categories to `categorization.py`:
-  - `dynamic_predator_quantum_small`
-  - `dynamic_predator_quantum_medium`
-  - `dynamic_predator_quantum_large`
-  - `dynamic_predator_classical_small`
-  - `dynamic_predator_classical_medium`
-  - `dynamic_predator_classical_large`
+  - `dynamic_predator_small_quantum`
+  - `dynamic_predator_medium_quantum`
+  - `dynamic_predator_large_quantum`
+  - `dynamic_predator_small_classical`
+  - `dynamic_predator_medium_classical`
+  - `dynamic_predator_large_classical`
 - [x] 7.2 Update categorization logic to check `predators.enabled` flag
 - [x] 7.3 Use same grid size thresholds as non-predator benchmarks (≤20, ≤50, >50)
 - [x] 7.4 Ensure non-predator simulations still use existing categories (backward compatibility)
