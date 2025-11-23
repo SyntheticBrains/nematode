@@ -883,18 +883,18 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self,
         position: tuple[int, ...],
         *,
-        scaling_method: ScalingMethod = ScalingMethod.EXPONENTIAL,  # noqa: ARG002
         disable_log: bool = False,
     ) -> tuple[float, float]:
         """
         Get the current state with gradient superposition from food and predators.
 
+        Uses exponential decay for gradient calculations:
+        strength = base_strength * exp(-distance / decay_constant)
+
         Parameters
         ----------
         position : tuple[int, ...]
             Position to query gradient at.
-        scaling_method : ScalingMethod
-            Scaling method for gradient strength.
         disable_log : bool
             Whether to disable debug logging.
 
