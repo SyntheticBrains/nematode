@@ -76,8 +76,8 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **GIVEN** a configuration with `environment_type: "dynamic"`
 - **WHEN** the configuration is parsed
 - **THEN** the system SHALL parse `grid_size` as tuple (width, height)
-- **AND** SHALL parse `num_initial_foods` (integer, default: grid_area / 50)
-- **AND** SHALL parse `max_active_foods` (integer, default: num_initial_foods × 1.5)
+- **AND** SHALL parse `foods_on_grid` (integer, default: grid_area / 50)
+- **AND** SHALL parse `target_foods_to_collect` (integer, default: foods_on_grid × 1.5)
 - **AND** SHALL parse `min_food_distance` (integer, default: max(5, min(width, height) / 10))
 - **AND** SHALL parse `food_spawn_interval` (integer, default: 0 for immediate)
 - **AND** SHALL parse `viewport_size` as tuple (width, height, default: (11, 11))
@@ -120,9 +120,9 @@ The configuration system SHALL validate dynamic environment parameters for logic
 #### Scenario: Food Count Validation
 - **GIVEN** a dynamic environment configuration
 - **WHEN** validation is performed
-- **THEN** `num_initial_foods` SHALL be positive and > 0
-- **AND** `max_active_foods` SHALL be >= `num_initial_foods`
-- **AND** if `num_initial_foods` is too large for grid with `min_food_distance`, SHALL emit warning
+- **THEN** `foods_on_grid` SHALL be positive and > 0
+- **AND** `target_foods_to_collect` SHALL be >= `foods_on_grid`
+- **AND** if `foods_on_grid` is too large for grid with `min_food_distance`, SHALL emit warning
 
 #### Scenario: Grid Size Validation
 - **GIVEN** a dynamic environment configuration
