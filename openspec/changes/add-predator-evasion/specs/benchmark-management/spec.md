@@ -8,37 +8,37 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 #### Scenario: Dynamic Predator Quantum Small Category
 - **GIVEN** a simulation with quantum brain (ModularBrain or QModularBrain), dynamic environment with `predators.enabled: true`, and grid size ≤ 20×20
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_quantum_small`
+- **THEN** the category SHALL be `dynamic_predator_small_quantum`
 - **AND** this SHALL be distinct from `dynamic_small_quantum` (non-predator category)
 - **AND** benchmarks SHALL track predator-specific metrics
 
 #### Scenario: Dynamic Predator Quantum Medium Category
 - **GIVEN** a simulation with quantum brain, `predators.enabled: true`, and 20×20 < grid size ≤ 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_quantum_medium`
+- **THEN** the category SHALL be `dynamic_predator_medium_quantum`
 - **AND** this SHALL use same grid size threshold as non-predator medium benchmarks
 
 #### Scenario: Dynamic Predator Quantum Large Category
 - **GIVEN** a simulation with quantum brain, `predators.enabled: true`, and grid size > 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_quantum_large`
+- **THEN** the category SHALL be `dynamic_predator_large_quantum`
 - **AND** this SHALL represent the most challenging predator-enabled quantum scenarios
 
 #### Scenario: Dynamic Predator Classical Small Category
 - **GIVEN** a simulation with classical brain (MLPBrain, QMLPBrain, or SpikingBrain), `predators.enabled: true`, and grid size ≤ 20×20
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_classical_small`
+- **THEN** the category SHALL be `dynamic_predator_small_classical`
 - **AND** this SHALL enable comparison of classical vs quantum approaches on predator tasks
 
 #### Scenario: Dynamic Predator Classical Medium Category
 - **GIVEN** a simulation with classical brain, `predators.enabled: true`, and 20×20 < grid size ≤ 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_classical_medium`
+- **THEN** the category SHALL be `dynamic_predator_medium_classical`
 
 #### Scenario: Dynamic Predator Classical Large Category
 - **GIVEN** a simulation with classical brain, `predators.enabled: true`, and grid size > 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_classical_large`
+- **THEN** the category SHALL be `dynamic_predator_large_classical`
 
 #### Scenario: Predators Disabled Uses Non-Predator Categories
 - **GIVEN** a simulation with `predators.enabled: false` or predators not configured
@@ -51,7 +51,7 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 Benchmark submissions for predator-enabled categories SHALL include predator-specific metrics in addition to standard foraging metrics.
 
 #### Scenario: Predator Metrics in Benchmark Submission
-- **GIVEN** a benchmark submission for category `dynamic_predator_quantum_small`
+- **GIVEN** a benchmark submission for category `dynamic_predator_small_quantum`
 - **WHEN** the benchmark result is recorded
 - **THEN** the submission SHALL include standard metrics:
   - success_rate
@@ -66,7 +66,7 @@ Benchmark submissions for predator-enabled categories SHALL include predator-spe
   - average_survival_time (steps before predator death or success)
 
 #### Scenario: Benchmark Comparison with Predator Metrics
-- **GIVEN** multiple benchmark submissions in category `dynamic_predator_classical_medium`
+- **GIVEN** multiple benchmark submissions in category `dynamic_predator_medium_classical`
 - **WHEN** benchmarks are compared
 - **THEN** the system SHALL rank submissions by primary metric (success_rate or total reward)
 - **AND** SHALL display predator-specific metrics for detailed analysis
@@ -90,7 +90,7 @@ Benchmark categories SHALL follow consistent naming convention indicating enviro
   - feature: "predator" (indicates predator-enabled)
   - brain: "quantum" or "classical"
   - size: "small", "medium", or "large"
-- **AND** this SHALL produce categories like `dynamic_predator_quantum_small`
+- **AND** this SHALL produce categories like `dynamic_predator_small_quantum`
 
 #### Scenario: Category Name Consistency
 - **GIVEN** all benchmark categories in the system
