@@ -63,7 +63,7 @@ class ParameterInitializer(BaseModel):
     Attributes
     ----------
     type : str
-        Type of parameter initializer ("manual", "random_pi", "zero", etc.).
+        Type of parameter initializer ("manual", "random_pi", "random_small", "zero", etc.).
     manual_parameter_values : dict[str, float] | None
         Manual parameter initialization values (only when type is "manual").
     """
@@ -117,7 +117,7 @@ class LearningRateMetadata(BaseModel):
     Attributes
     ----------
     method : str
-        Learning rate method ("static", "dynamic", "adaptive").
+        Learning rate method ("adam", "dynamic", "performance_based").
     initial_learning_rate : float
         Initial learning rate value.
     decay_type : str | None
@@ -211,7 +211,7 @@ class ResultsMetadata(BaseModel):
     avg_foods_collected : float | None
         Average foods collected (dynamic environments only).
     avg_distance_efficiency : float | None
-        Average distance efficiency (dynamic environments only).
+        Average distance efficiency across all runs (dynamic environments only).
     completed_all_food : int
         Number of runs that collected all foods.
     starved : int
@@ -240,8 +240,9 @@ class ResultsMetadata(BaseModel):
         Average foods collected after convergence (dynamic environments only).
     post_convergence_variance : float | None
         Variance in success rate after convergence (measures stability).
-    distance_efficiency : float | None
-        Average distance efficiency in successful runs (dynamic environments only).
+    post_convergence_distance_efficiency : float | None
+        Average distance efficiency in successful runs
+        after convergence (dynamic environments only).
         Range: 0.0 to 1.0, where 1.0 means perfect optimal navigation.
     composite_benchmark_score : float | None
         Weighted composite score combining success, efficiency, speed, and stability.
@@ -268,7 +269,7 @@ class ResultsMetadata(BaseModel):
     post_convergence_avg_steps: float | None = None
     post_convergence_avg_foods: float | None = None
     post_convergence_variance: float | None = None
-    distance_efficiency: float | None = None
+    post_convergence_distance_efficiency: float | None = None
     composite_benchmark_score: float | None = None
 
 

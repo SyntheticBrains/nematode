@@ -341,7 +341,7 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         post_convergence_avg_steps=convergence_metrics.post_convergence_avg_steps,
         post_convergence_avg_foods=convergence_metrics.post_convergence_avg_foods,
         post_convergence_variance=convergence_metrics.post_convergence_variance,
-        distance_efficiency=convergence_metrics.distance_efficiency,
+        post_convergence_distance_efficiency=convergence_metrics.distance_efficiency,
         composite_benchmark_score=convergence_metrics.composite_score,
     )
 
