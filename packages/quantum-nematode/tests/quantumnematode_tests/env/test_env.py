@@ -717,7 +717,7 @@ class TestPredatorMechanics:
             num_predators=2,
             predator_speed=1.0,
             predator_detection_radius=8,
-            predator_kill_radius=1,
+            predator_kill_radius=0,
         )
 
     def test_predator_initialization(self, predator_env):
@@ -774,13 +774,13 @@ class TestPredatorMechanics:
 
         # Place predator 1 unit away (at kill_radius boundary)
         predator_env.agent_pos = (10, 10)
-        predator_env.predators[0].position = (10, 11)
+        predator_env.predators[0].position = (10, 10)
 
         is_killed = predator_env.check_predator_collision()
-        assert is_killed is True  # kill_radius=1, so distance=1 should kill
+        assert is_killed is True  # kill_radius=0, so distance=1 should kill
 
         # Place predator 2 units away (outside kill_radius)
-        predator_env.predators[0].position = (10, 12)
+        predator_env.predators[0].position = (10, 11)
 
         is_killed = predator_env.check_predator_collision()
         assert is_killed is False
