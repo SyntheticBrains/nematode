@@ -301,8 +301,8 @@ def export_convergence_metrics_to_csv(  # pragma: no cover
             {
                 "metric": "distance_efficiency",
                 "value": (
-                    f"{results.distance_efficiency:.4f}"
-                    if results.distance_efficiency is not None
+                    f"{results.post_convergence_distance_efficiency:.4f}"
+                    if results.post_convergence_distance_efficiency is not None
                     else "N/A"
                 ),
             },
