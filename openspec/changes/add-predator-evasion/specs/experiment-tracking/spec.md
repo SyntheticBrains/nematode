@@ -10,7 +10,7 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **WHEN** experiment metadata is recorded
 - **THEN** the following predator configuration SHALL be captured:
   - `predators_enabled` (boolean)
-  - `predator_count` (integer)
+  - `num_predators` (integer)
   - `predator_speed` (float)
   - `predator_movement_pattern` (string)
   - `predator_detection_radius` (integer)
@@ -26,7 +26,7 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **THEN** each episode SHALL include predator metrics:
   - `predator_encounters` (integer)
   - `successful_evasions` (integer)
-  - `deaths_by_predator` (boolean or integer)
+  - `predator_deaths` (boolean or integer)
   - `foods_collected_before_death` (integer, if applicable)
 - **AND** these SHALL be included in the episode performance data
 
@@ -50,8 +50,8 @@ The experiment tracking system SHALL support querying and filtering experiments 
 
 #### Scenario: Query by Predator Count
 - **GIVEN** experiments with varying predator counts (0, 2, 3, 5)
-- **WHEN** querying for experiments with specific predator_count
-- **THEN** the system SHALL filter experiments by exact predator_count value
+- **WHEN** querying for experiments with specific num_predators
+- **THEN** the system SHALL filter experiments by exact num_predators value
 - **AND** SHALL enable analysis of difficulty scaling with predator numbers
 
 #### Scenario: Query by Predator Death Rate
@@ -109,9 +109,9 @@ The experiment tracking system SHALL support visualization of predator-specific 
 The experiment tracking system SHALL enable systematic comparison of experiments with different predator configurations to identify optimal difficulty curves.
 
 #### Scenario: Compare Different Predator Counts
-- **GIVEN** experiments with predator_count ranging from 1 to 5
+- **GIVEN** experiments with num_predators ranging from 1 to 5
 - **WHEN** comparison is performed
-- **THEN** the system SHALL show how success rate changes with predator_count
+- **THEN** the system SHALL show how success rate changes with num_predators
 - **AND** SHALL identify the count at which learning becomes infeasible
 - **AND** SHALL support curriculum design (start with fewer predators, increase gradually)
 
@@ -142,7 +142,7 @@ The experiment tracking system SHALL include predator metrics in CSV exports and
 - **THEN** the CSV SHALL include columns:
   - `predator_encounters`
   - `successful_evasions`
-  - `died_by_predator` (boolean)
+  - `predator_deaths` (boolean)
   - `foods_collected` (existing, but crucial for predator context)
   - `termination_reason` (showing "predator" when applicable)
 - **AND** columns SHALL be empty/null when predators disabled (backward compatibility)

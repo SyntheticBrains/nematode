@@ -106,7 +106,7 @@ Benchmark submissions SHALL capture predator configuration parameters to enable 
 - **GIVEN** a benchmark submission for a predator-enabled category
 - **WHEN** the submission metadata is recorded
 - **THEN** the following predator configuration SHALL be captured:
-  - predator_count
+  - num_predators
   - predator_speed
   - detection_radius
   - kill_radius
@@ -123,6 +123,6 @@ Benchmark submissions SHALL capture predator configuration parameters to enable 
 #### Scenario: Benchmark Filtering by Predator Difficulty
 - **GIVEN** multiple benchmark submissions with varying predator counts (2, 3, 5)
 - **WHEN** benchmarks are filtered
-- **THEN** the system SHALL support filtering by predator_count
+- **THEN** the system SHALL support filtering by num_predators
 - **AND** SHALL enable comparison of agent performance across difficulty levels
 - **AND** SHALL show how additional predators affect success metrics
