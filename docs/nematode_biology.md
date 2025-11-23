@@ -582,10 +582,10 @@ Implementing these multi-objective pressures creates more biologically realistic
 
 ### Online Databases and Resources
 
-- **WormBase** (https://wormbase.org): Comprehensive genomic and biological database for C. elegans
-- **WormBook** (http://www.wormbook.org): Online review resource for C. elegans biology
-- **WormAtlas** (https://www.wormatlas.org): Detailed anatomical and neuronal maps
-- **OpenWorm** (https://openworm.org): Open-source project to create a virtual C. elegans
+- **WormBase** ([wormbase.org](https://wormbase.org)): Comprehensive genomic and biological database for C. elegans
+- **WormBook** ([wormbook.org](http://www.wormbook.org)): Online review resource for C. elegans biology
+- **WormAtlas** ([wormatlas.org](https://www.wormatlas.org)): Detailed anatomical and neuronal maps
+- **OpenWorm** ([openworm.org](https://openworm.org)): Open-source project to create a virtual C. elegans
 
 ### Key Review Articles
 
