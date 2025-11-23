@@ -32,7 +32,6 @@ class TestPredatorPerformance:
             predator_kill_radius=1,
             predator_gradient_decay=5.0,
             predator_gradient_strength=1.0,
-            predator_proximity_penalty=-0.1,
         )
 
     def test_step_time_with_predators(self, large_predator_env):

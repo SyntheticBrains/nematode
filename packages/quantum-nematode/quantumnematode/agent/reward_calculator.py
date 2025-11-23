@@ -106,7 +106,7 @@ class RewardCalculator:
             and env.predators_enabled
             and env.is_agent_in_danger()
         ):
-            proximity_penalty = abs(env.predator_proximity_penalty)
+            proximity_penalty = self.config.penalty_predator_proximity
             reward -= proximity_penalty
             logger.debug(
                 f"[Penalty] Predator proximity penalty applied: {-proximity_penalty}",

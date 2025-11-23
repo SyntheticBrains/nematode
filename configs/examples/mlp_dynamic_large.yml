@@ -30,7 +30,7 @@ learning_rate:
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
-  reward_exploration: 0.05  # Bonus for visiting new cells
+  reward_exploration: 0.05
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0.1
@@ -41,7 +41,7 @@ reward:
 satiety:
   initial_satiety: 800.0
   satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2  # Restore 20% of max satiety per food
+  satiety_gain_per_food: 0.2
 
 # Dynamic environment configuration
 environment:

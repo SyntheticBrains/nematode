@@ -78,9 +78,6 @@ def extract_environment_metadata(
             predator_gradient_strength=env.predator_gradient_strength
             if env.predators_enabled
             else None,
-            predator_proximity_penalty=env.predator_proximity_penalty
-            if env.predators_enabled
-            else None,
         )
     # Static environment
     return EnvironmentMetadata(
