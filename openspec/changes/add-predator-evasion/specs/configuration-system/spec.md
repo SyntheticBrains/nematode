@@ -39,7 +39,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **GIVEN** a configuration with only `predators.enabled: true`
 - **WHEN** the configuration is loaded
 - **THEN** all other predator parameters SHALL use default values
-- **AND** the simulation SHALL run with 2 predators at speed 1.0, detection radius 8, kill radius 1
+- **AND** the simulation SHALL run with 2 predators at speed 1.0, detection radius 8, kill radius 0
 
 ### Requirement: Restructured Dynamic Environment Configuration
 The system SHALL organize dynamic environment settings into logical subsections for foraging and predators to improve clarity and maintainability.
@@ -48,8 +48,8 @@ The system SHALL organize dynamic environment settings into logical subsections 
 - **GIVEN** a configuration using the new structure
 - **WHEN** foraging parameters are specified
 - **THEN** the system SHALL accept under `environment.dynamic.foraging`:
-  - `num_initial_foods` (integer)
-  - `max_active_foods` (integer)
+  - `foods_on_grid` (integer) (previously named `num_initial_foods`)
+  - `target_foods_to_collect` (integer) (previously named `max_active_foods`)
   - `min_food_distance` (integer)
   - `agent_exclusion_radius` (integer)
   - `gradient_decay_constant` (float)
@@ -77,8 +77,8 @@ environment:
     viewport_size: [11, 11]
 
     foraging:
-      num_initial_foods: 50
-      max_active_foods: 50
+      foods_on_grid: 50
+      target_foods_to_collect: 50
       min_food_distance: 10
       agent_exclusion_radius: 15
       gradient_decay_constant: 12.0
@@ -108,8 +108,8 @@ environment:
   type: dynamic
   dynamic:
     grid_size: 50
-    num_initial_foods: 20
-    max_active_foods: 30
+    foods_on_grid: 20
+    target_foods_to_collect: 30
     gradient_decay_constant: 12.0
 ```
 - **WHEN** the configuration is loaded
