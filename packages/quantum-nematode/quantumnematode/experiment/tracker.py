@@ -85,7 +85,7 @@ def extract_environment_metadata(
     # Static environment
     return EnvironmentMetadata(
         type="static",
-        grid_size=getattr(env, "grid_size", 10),
+        grid_size=env.grid_size,
     )
 
 
@@ -167,16 +167,16 @@ def extract_reward_metadata(config: dict) -> RewardMetadata:
     """
     reward_config = config.get("reward", {})
     return RewardMetadata(
-        reward_goal=reward_config.get("reward_goal", 0.2),
-        reward_distance_scale=reward_config.get("reward_distance_scale", 0.1),
-        reward_exploration=reward_config.get("reward_exploration", 0.05),
-        penalty_step=reward_config.get("penalty_step", 0.01),
-        penalty_anti_dithering=reward_config.get("penalty_anti_dithering", 0.05),
-        penalty_stuck_position=reward_config.get("penalty_stuck_position", 0.02),
-        stuck_position_threshold=reward_config.get("stuck_position_threshold", 2),
-        penalty_starvation=reward_config.get("penalty_starvation", 10.0),
-        penalty_predator_death=reward_config.get("penalty_predator_death", 10.0),
-        penalty_predator_proximity=reward_config.get("penalty_predator_proximity", 0.1),
+        reward_goal=reward_config.get("reward_goal"),
+        reward_distance_scale=reward_config.get("reward_distance_scale"),
+        reward_exploration=reward_config.get("reward_exploration"),
+        penalty_step=reward_config.get("penalty_step"),
+        penalty_anti_dithering=reward_config.get("penalty_anti_dithering"),
+        penalty_stuck_position=reward_config.get("penalty_stuck_position"),
+        stuck_position_threshold=reward_config.get("stuck_position_threshold"),
+        penalty_starvation=reward_config.get("penalty_starvation"),
+        penalty_predator_death=reward_config.get("penalty_predator_death"),
+        penalty_predator_proximity=reward_config.get("penalty_predator_proximity"),
     )
 
 
@@ -236,7 +236,7 @@ def extract_gradient_metadata(config: dict) -> GradientMetadata:
         Gradient calculation method metadata.
     """
     gradient_config = config.get("gradient", {})
-    method = gradient_config.get("method", "raw")
+    method = gradient_config.get("method", None)
     return GradientMetadata(method=method)
 
 
