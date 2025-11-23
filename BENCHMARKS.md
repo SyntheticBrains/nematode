@@ -154,33 +154,27 @@ This creates a benchmark file in `benchmarks/<category>/<experiment-id>.json`.
 
 #### Quantum Architectures
 
-| Brain | Success Rate | Avg Steps | Contributor | Date |
-|---|---|---|---|---|
-| qmodular | 100% | 42 | @chrisjz | 2025-11-09 |
-| modular | 100% | 35 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ modular | 0.960 | 100% | 32 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 #### Classical Architectures
 
-| Brain | Success Rate | Avg Steps | Contributor | Date |
-|---|---|---|---|---|
-| qmlp | 100% | 49 | @chrisjz | 2025-11-09 |
-| mlp | 100% | 66 | @chrisjz | 2025-11-09 |
-| spiking | 75% | 189 | @chrisjz | 2025-11-09 |
-| spiking | 65% | 173 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 ### Dynamic Small (≤20x20)
 
 #### Quantum Architectures
 
-| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
-|---|---|---|---|---|---|---|
-| modular | 30% | 430 | 7.8 | 0.27 | @chrisjz | 2025-11-09 |
+_No benchmarks submitted yet._
 
 #### Classical Architectures
 
-| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
-|---|---|---|---|---|---|---|
-| mlp | 60% | 351 | 8.0 | 0.25 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 ### Dynamic Medium (≤50x50)
 
@@ -190,11 +184,42 @@ _No benchmarks submitted yet._
 
 #### Classical Architectures
 
-| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
-|---|---|---|---|---|---|---|
-| mlp | 80% | 804 | 27.2 | 0.52 | @chrisjz | 2025-11-09 |
+_No benchmarks submitted yet._
 
 ### Dynamic Large (>50x50)
+
+#### Quantum Architectures
+
+_No benchmarks submitted yet._
+
+#### Classical Architectures
+
+_No benchmarks submitted yet._
+
+### Dynamic Predator Small (≤20x20)
+
+#### Quantum Architectures
+
+_No benchmarks submitted yet._
+
+#### Classical Architectures
+
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
+| ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
+
+### Dynamic Predator Medium (≤50x50)
+
+#### Quantum Architectures
+
+_No benchmarks submitted yet._
+
+#### Classical Architectures
+
+_No benchmarks submitted yet._
+
+### Dynamic Predator Large (>50x50)
 
 #### Quantum Architectures
 
