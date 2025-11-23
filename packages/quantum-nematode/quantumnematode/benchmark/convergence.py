@@ -116,7 +116,7 @@ def calculate_post_convergence_metrics(
     results : list[SimulationResult]
         Ordered list of simulation results from a session.
     convergence_run : int | None
-        Run number where convergence was detected (None triggers fallback).
+        Zero-based index of run where convergence was detected (None triggers fallback).
     fallback_window : int, optional
         Number of final runs to use if never converged (default: 10).
 

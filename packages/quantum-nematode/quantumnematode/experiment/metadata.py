@@ -229,7 +229,7 @@ class ResultsMetadata(BaseModel):
     converged : bool
         Whether the learning strategy converged within the session.
     convergence_run : int | None
-        Run number where convergence was detected (None if never converged).
+        Zero-based index of run where convergence was detected (None if never converged).
     runs_to_convergence : int | None
         Number of runs required to reach convergence (None if never converged).
     post_convergence_success_rate : float | None
