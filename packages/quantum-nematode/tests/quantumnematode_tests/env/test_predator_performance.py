@@ -66,11 +66,11 @@ class TestPredatorPerformance:
         p95_time = sorted(times)[int(len(times) * 0.95)]
 
         # Print performance stats for visibility
-        print("\nPerformance Test Results (100x100 grid, 5 predators):")  # noqa: T201
-        print(f"  Average step time: {avg_time:.2f}ms")  # noqa: T201
-        print(f"  Min step time:     {min_time:.2f}ms")  # noqa: T201
-        print(f"  Max step time:     {max_time:.2f}ms")  # noqa: T201
-        print(f"  95th percentile:   {p95_time:.2f}ms")  # noqa: T201
+        print("\nPerformance Test Results (100x100 grid, 5 predators):")
+        print(f"  Average step time: {avg_time:.2f}ms")
+        print(f"  Min step time:     {min_time:.2f}ms")
+        print(f"  Max step time:     {max_time:.2f}ms")
+        print(f"  95th percentile:   {p95_time:.2f}ms")
 
         # Assert performance requirement
         assert avg_time < 100, f"Average step time ({avg_time:.2f}ms) exceeds 100ms requirement"
