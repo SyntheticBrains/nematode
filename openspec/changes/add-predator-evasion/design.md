@@ -68,7 +68,7 @@ total_gradient = food_gradient_vector + predator_gradient_vector
 
 ### Decision 2: Instant Death on Collision
 
-**Choice:** Predator collision causes immediate episode termination with `TerminationReason.PREDATOR`.
+**Choice:** Predator collision causes immediate episode termination with `TerminationReason.PREDATOR`. Kill radius will default to zero.
 
 **Rationale:**
 - **Clear learning signal**: Binary outcome (survived/died) is easier for RL agents to learn from
@@ -229,7 +229,7 @@ If critical issues discovered:
 
 1. **Predator gradient strength:** Should predator repulsion gradient be same magnitude as food attraction (1.0) or stronger/weaker? Initial default is 1.0 (equal), but may need tuning.
 
-2. **Kill radius vs detection radius:** Currently kill_radius=1 (adjacent cells only) and detection_radius=8. Should kill radius be 0 (exact overlap only)? Update: we've decided to go with 0.
+2. **Kill radius vs detection radius:** Currently kill_radius=1 (adjacent cells only) and detection_radius=8. Should kill radius be 0 (exact overlap only)?
 
 3. **Proximity penalty stacking:** If multiple predators within detection radius, should penalty stack (-0.1 per predator) or cap at -0.1 total?
 
