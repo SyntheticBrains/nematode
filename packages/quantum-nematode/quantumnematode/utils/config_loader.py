@@ -134,7 +134,7 @@ class PredatorConfig(BaseModel):
     speed: float = 1.0
     movement_pattern: str = "random"
     detection_radius: int = 8
-    kill_radius: int = 1
+    kill_radius: int = 0
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
 
