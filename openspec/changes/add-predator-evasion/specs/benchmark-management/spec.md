@@ -85,7 +85,7 @@ Benchmark categories SHALL follow consistent naming convention indicating enviro
 #### Scenario: Category Naming Pattern
 - **GIVEN** the benchmark categorization system
 - **WHEN** a predator-enabled benchmark category is created
-- **THEN** the naming pattern SHALL be: `{environment}_{feature}_{brain}_{size}`
+- **THEN** the naming pattern SHALL be: `{environment}_{feature}_{size}_{brain}`
   - environment: "dynamic" (static not supported for predators)
   - feature: "predator" (indicates predator-enabled)
   - brain: "quantum" or "classical"
