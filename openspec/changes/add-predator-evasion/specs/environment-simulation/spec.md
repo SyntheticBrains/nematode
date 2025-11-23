@@ -157,7 +157,7 @@ The system SHALL track predator-related performance metrics including encounters
 #### Scenario: Death by Predator Tracking
 - **GIVEN** an episode terminated by predator collision
 - **WHEN** episode metrics are computed
-- **THEN** `deaths_by_predator` metric SHALL equal 1
+- **THEN** `predator_deaths` metric SHALL equal 1
 - **AND** termination reason SHALL be `TerminationReason.PREDATOR`
 - **AND** this SHALL be distinct from starvation or timeout terminations
 
@@ -173,7 +173,7 @@ The system SHALL track predator-related performance metrics including encounters
 - **WHEN** episode metrics are computed
 - **THEN** `predator_encounters` SHALL be None or 0
 - **AND** `successful_evasions` SHALL be None or 0
-- **AND** `deaths_by_predator` SHALL be None or 0
+- **AND** `predator_deaths` SHALL be None or 0
 - **AND** this SHALL maintain backward compatibility
 
 ### Requirement: Predator-Enabled Benchmark Categories

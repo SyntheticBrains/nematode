@@ -45,7 +45,7 @@
 - [x] 5.1 Add predator metrics fields to `PerformanceMetrics` dataclass:
   - `predator_encounters: int | None`
   - `successful_evasions: int | None`
-  - `deaths_by_predator: int | None`
+  - `predator_deaths: int | None`
   - `foods_collected_before_death: int | None`
 - [x] 5.2 Implement encounter tracking logic (count when entering detection radius)
 - [x] 5.3 Implement evasion tracking (increment when exiting detection radius without death)
