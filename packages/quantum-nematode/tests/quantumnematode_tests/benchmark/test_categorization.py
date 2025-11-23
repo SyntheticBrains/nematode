@@ -73,7 +73,7 @@ def create_test_experiment(env: EnvironmentMetadata, brain: BrainMetadata) -> Ex
             penalty_predator_proximity=0.1,
         ),
         learning_rate=LearningRateMetadata(
-            method="static",
+            method="dynamic",
             initial_learning_rate=0.01,
         ),
         gradient=GradientMetadata(method="raw"),
@@ -348,11 +348,9 @@ class TestGetCategoryDirectory:
         assert len(VALID_CATEGORIES) == 14
         for category in VALID_CATEGORIES:
             path = get_category_directory(category)
-            assert "/" in path
-            assert path.count("/") == 1
-            parts = path.split("/")
-            assert len(parts) == 2
-            assert parts[1] in ["quantum", "classical"]
+            env_category, brain_class = category.rsplit("_", 1)
+            assert path == f"{env_category}/{brain_class}"
+            assert brain_class in ["quantum", "classical"]
 
     def test_predator_category_directories(self):
         """Test directory paths for all 6 predator category combinations."""
