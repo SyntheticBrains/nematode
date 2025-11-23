@@ -107,11 +107,25 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     )
 
     if metrics.total_starved is not None:
-        output_lines.append(f"Failed runs - Starved: {metrics.total_starved} ")
+        output_lines.append(
+            f"Failed runs - Starved: {metrics.total_starved} "
+            f"({metrics.total_starved / total_runs_done * 100:.1f}%)",
+        )
+    if metrics.total_predator_deaths is not None:
+        output_lines.append(
+            f"Failed runs - Eaten by Predator: {metrics.total_predator_deaths} "
+            f"({metrics.total_predator_deaths / total_runs_done * 100:.1f}%)",
+        )
     if metrics.total_max_steps is not None:
-        output_lines.append(f"Failed runs - Max Steps: {metrics.total_max_steps} ")
+        output_lines.append(
+            f"Failed runs - Max Steps: {metrics.total_max_steps} "
+            f"({metrics.total_max_steps / total_runs_done * 100:.1f}%)",
+        )
     if metrics.total_interrupted > 0:
-        output_lines.append(f"Failed runs - Interrupted: {metrics.total_interrupted} ")
+        output_lines.append(
+            f"Failed runs - Interrupted: {metrics.total_interrupted} "
+            f"({metrics.total_interrupted / total_runs_done * 100:.1f}%)",
+        )
 
     if metrics.average_foods_collected is not None:
         output_lines.append(
