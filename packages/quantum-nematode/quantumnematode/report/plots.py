@@ -1230,11 +1230,12 @@ def plot_survival_vs_food_collection(  # pragma: no cover
     survival_rate = len(survived_foods) / total_runs if total_runs > 0 else 0.0
     avg_foods_survived = sum(survived_foods) / len(survived_foods) if survived_foods else 0.0
     avg_foods_died = sum(died_foods) / len(died_foods) if died_foods else 0.0
+    avg_foods_died_str = f"{avg_foods_died:.1f}" if died_foods else "N/A"
 
     stats_text = (
         f"Survival Rate: {survival_rate:.1%}\n"
         f"Avg Foods (Survived): {avg_foods_survived:.1f}\n"
-        f"Avg Foods (Died): {avg_foods_died:.1f}"
+        f"Avg Foods (Died): {avg_foods_died_str}"
     )
     plt.text(
         0.05,
