@@ -72,6 +72,93 @@ class ParameterInitializer(BaseModel):
     manual_parameter_values: dict[str, float] | None = None
 
 
+class RewardMetadata(BaseModel):
+    """Metadata about reward function configuration.
+
+    Attributes
+    ----------
+    reward_goal : float
+        Reward for reaching the goal.
+    reward_distance_scale : float
+        Scale factor for distance-based rewards.
+    reward_exploration : float
+        Bonus reward for visiting new cells.
+    penalty_step : float
+        Penalty applied per step.
+    penalty_anti_dithering : float
+        Penalty for oscillating back to previous position.
+    penalty_stuck_position : float
+        Penalty for staying in same position.
+    stuck_position_threshold : int
+        Number of steps before stuck penalty applies.
+    penalty_starvation : float
+        Penalty when satiety reaches zero (dynamic environments only).
+    penalty_predator_death : float
+        Penalty when caught by predator (predator environments only).
+    penalty_predator_proximity : float
+        Penalty per step within predator detection radius (predator environments only).
+    """
+
+    reward_goal: float
+    reward_distance_scale: float
+    reward_exploration: float
+    penalty_step: float
+    penalty_anti_dithering: float
+    penalty_stuck_position: float
+    stuck_position_threshold: int
+    penalty_starvation: float
+    penalty_predator_death: float
+    penalty_predator_proximity: float
+
+
+class LearningRateMetadata(BaseModel):
+    """Metadata about learning rate configuration.
+
+    Attributes
+    ----------
+    method : str
+        Learning rate method ("static", "dynamic", "adaptive").
+    initial_learning_rate : float
+        Initial learning rate value.
+    decay_type : str | None
+        Type of decay ("exponential", "step", etc.) for dynamic method.
+    decay_rate : float | None
+        Decay rate parameter for dynamic method.
+    decay_factor : float | None
+        Decay factor for step decay.
+    step_size : int | None
+        Step size for step decay.
+    min_lr : float | None
+        Minimum learning rate for dynamic method.
+    max_steps : int | None
+        Maximum number of steps for decay.
+    power : float | None
+        Power parameter for polynomial decay.
+    """
+
+    method: str
+    initial_learning_rate: float
+    decay_type: str | None = None
+    decay_rate: float | None = None
+    decay_factor: float | None = None
+    min_lr: float | None = None
+    step_size: int | None = None
+    max_steps: int | None = None
+    power: float | None = None
+
+
+class GradientMetadata(BaseModel):
+    """Metadata about gradient calculation method.
+
+    Attributes
+    ----------
+    method : str
+        Gradient calculation method ("raw", "clip", "normalize").
+    """
+
+    method: str
+
+
 class BrainMetadata(BaseModel):
     """Metadata about the brain architecture.
 
@@ -256,6 +343,12 @@ class ExperimentMetadata(BaseModel):
         Environment metadata.
     brain : BrainMetadata
         Brain architecture metadata.
+    reward : RewardMetadata
+        Reward function configuration.
+    learning_rate : LearningRateMetadata
+        Learning rate configuration.
+    gradient : GradientMetadata
+        Gradient calculation method.
     results : ResultsMetadata
         Aggregated simulation results.
     system : SystemMetadata
@@ -275,6 +368,9 @@ class ExperimentMetadata(BaseModel):
     git_dirty: bool = False
     environment: EnvironmentMetadata
     brain: BrainMetadata
+    reward: RewardMetadata
+    learning_rate: LearningRateMetadata
+    gradient: GradientMetadata
     results: ResultsMetadata
     system: SystemMetadata
     exports_path: str | None = None

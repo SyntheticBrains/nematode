@@ -9,8 +9,11 @@ from quantumnematode.experiment.metadata import (
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
+    GradientMetadata,
+    LearningRateMetadata,
     ParameterInitializer,
     ResultsMetadata,
+    RewardMetadata,
     SystemMetadata,
 )
 
@@ -234,6 +237,167 @@ class TestBrainMetadata:
         assert data["parameter_initializer"]["manual_parameter_values"]["θ_rx1_0"] == -2.4
 
 
+class TestRewardMetadata:
+    """Test RewardMetadata model."""
+
+    def test_create_reward_metadata(self):
+        """Test creating reward metadata."""
+        reward_meta = RewardMetadata(
+            reward_goal=2.0,
+            reward_distance_scale=0.5,
+            reward_exploration=0.05,
+            penalty_step=0.005,
+            penalty_anti_dithering=0.02,
+            penalty_stuck_position=0.1,
+            stuck_position_threshold=3,
+            penalty_starvation=10.0,
+            penalty_predator_death=10.0,
+            penalty_predator_proximity=0.1,
+        )
+
+        assert reward_meta.reward_goal == 2.0
+        assert reward_meta.reward_distance_scale == 0.5
+        assert reward_meta.reward_exploration == 0.05
+        assert reward_meta.penalty_step == 0.005
+        assert reward_meta.penalty_anti_dithering == 0.02
+        assert reward_meta.penalty_stuck_position == 0.1
+        assert reward_meta.stuck_position_threshold == 3
+        assert reward_meta.penalty_starvation == 10.0
+        assert reward_meta.penalty_predator_death == 10.0
+        assert reward_meta.penalty_predator_proximity == 0.1
+
+    def test_model_dump(self):
+        """Test Pydantic model_dump."""
+        reward_meta = RewardMetadata(
+            reward_goal=2.0,
+            reward_distance_scale=0.5,
+            reward_exploration=0.05,
+            penalty_step=0.005,
+            penalty_anti_dithering=0.02,
+            penalty_stuck_position=0.1,
+            stuck_position_threshold=3,
+            penalty_starvation=10.0,
+            penalty_predator_death=10.0,
+            penalty_predator_proximity=0.1,
+        )
+
+        data = reward_meta.model_dump()
+        assert isinstance(data, dict)
+        assert data["reward_goal"] == 2.0
+        assert data["penalty_predator_proximity"] == 0.1
+
+
+class TestLearningRateMetadata:
+    """Test LearningRateMetadata model."""
+
+    def test_create_static_learning_rate(self):
+        """Test creating static learning rate metadata."""
+        lr_meta = LearningRateMetadata(
+            method="static",
+            initial_learning_rate=0.01,
+        )
+
+        assert lr_meta.method == "static"
+        assert lr_meta.initial_learning_rate == 0.01
+        assert lr_meta.decay_type is None
+        assert lr_meta.decay_rate is None
+        assert lr_meta.min_lr is None
+
+    def test_create_dynamic_learning_rate(self):
+        """Test creating dynamic learning rate metadata."""
+        lr_meta = LearningRateMetadata(
+            method="dynamic",
+            initial_learning_rate=0.001,
+            decay_type="exponential",
+            decay_rate=0.9995,
+            min_lr=0.0003,
+        )
+
+        assert lr_meta.method == "dynamic"
+        assert lr_meta.initial_learning_rate == 0.001
+        assert lr_meta.decay_type == "exponential"
+        assert lr_meta.decay_rate == 0.9995
+        assert lr_meta.min_lr == 0.0003
+
+    def test_create_step_decay_learning_rate(self):
+        """Test creating learning rate metadata with step decay."""
+        lr_meta = LearningRateMetadata(
+            method="dynamic",
+            initial_learning_rate=0.01,
+            decay_type="step",
+            decay_rate=0.5,
+            decay_factor=0.5,
+            min_lr=0.0001,
+            step_size=100,
+        )
+
+        assert lr_meta.method == "dynamic"
+        assert lr_meta.initial_learning_rate == 0.01
+        assert lr_meta.decay_type == "step"
+        assert lr_meta.decay_rate == 0.5
+        assert lr_meta.decay_factor == 0.5
+        assert lr_meta.min_lr == 0.0001
+        assert lr_meta.step_size == 100
+
+    def test_create_polynomial_decay_learning_rate(self):
+        """Test creating learning rate metadata with polynomial decay."""
+        lr_meta = LearningRateMetadata(
+            method="dynamic",
+            initial_learning_rate=0.01,
+            decay_type="polynomial",
+            decay_rate=0.1,
+            power=2.0,
+            min_lr=0.0001,
+            max_steps=500,
+        )
+
+        assert lr_meta.method == "dynamic"
+        assert lr_meta.initial_learning_rate == 0.01
+        assert lr_meta.decay_type == "polynomial"
+        assert lr_meta.decay_rate == 0.1
+        assert lr_meta.power == 2.0
+        assert lr_meta.min_lr == 0.0001
+        assert lr_meta.max_steps == 500
+
+    def test_model_dump(self):
+        """Test Pydantic model_dump."""
+        lr_meta = LearningRateMetadata(
+            method="dynamic",
+            initial_learning_rate=0.001,
+            decay_type="exponential",
+            decay_rate=0.9995,
+        )
+
+        data = lr_meta.model_dump()
+        assert isinstance(data, dict)
+        assert data["method"] == "dynamic"
+        assert data["decay_type"] == "exponential"
+
+
+class TestGradientMetadata:
+    """Test GradientMetadata model."""
+
+    def test_create_gradient_metadata(self):
+        """Test creating gradient metadata."""
+        grad_meta = GradientMetadata(method="clip")
+
+        assert grad_meta.method == "clip"
+
+    def test_create_with_different_methods(self):
+        """Test creating gradient metadata with different methods."""
+        for method in ["raw", "clip", "normalize"]:
+            grad_meta = GradientMetadata(method=method)
+            assert grad_meta.method == method
+
+    def test_model_dump(self):
+        """Test Pydantic model_dump."""
+        grad_meta = GradientMetadata(method="clip")
+
+        data = grad_meta.model_dump()
+        assert isinstance(data, dict)
+        assert data["method"] == "clip"
+
+
 class TestResultsMetadata:
     """Test ResultsMetadata model."""
 
@@ -388,6 +552,26 @@ class TestExperimentMetadata:
             git_dirty=False,
             environment=EnvironmentMetadata(type="dynamic", grid_size=50),
             brain=BrainMetadata(type="modular", qubits=4, learning_rate=0.01),
+            reward=RewardMetadata(
+                reward_goal=2.0,
+                reward_distance_scale=0.5,
+                reward_exploration=0.05,
+                penalty_step=0.005,
+                penalty_anti_dithering=0.02,
+                penalty_stuck_position=0.1,
+                stuck_position_threshold=3,
+                penalty_starvation=10.0,
+                penalty_predator_death=10.0,
+                penalty_predator_proximity=0.1,
+            ),
+            learning_rate=LearningRateMetadata(
+                method="dynamic",
+                initial_learning_rate=0.001,
+                decay_type="exponential",
+                decay_rate=0.9995,
+                min_lr=0.0003,
+            ),
+            gradient=GradientMetadata(method="clip"),
             results=ResultsMetadata(
                 total_runs=20,
                 success_rate=0.9,
@@ -408,6 +592,11 @@ class TestExperimentMetadata:
         assert experiment.git_dirty is False
         assert experiment.environment.grid_size == 50
         assert experiment.brain.qubits == 4
+        assert experiment.reward.reward_goal == 2.0
+        assert experiment.reward.penalty_predator_proximity == 0.1
+        assert experiment.learning_rate.method == "dynamic"
+        assert experiment.learning_rate.decay_type == "exponential"
+        assert experiment.gradient.method == "clip"
         assert experiment.results.success_rate == 0.9
         assert experiment.system.python_version == "3.12.0"
 
@@ -421,6 +610,23 @@ class TestExperimentMetadata:
             config_hash="xyz789",
             environment=EnvironmentMetadata(type="static", grid_size=10),
             brain=BrainMetadata(type="mlp", learning_rate=0.001),
+            reward=RewardMetadata(
+                reward_goal=0.2,
+                reward_distance_scale=0.1,
+                reward_exploration=0.05,
+                penalty_step=0.01,
+                penalty_anti_dithering=0.05,
+                penalty_stuck_position=0.02,
+                stuck_position_threshold=2,
+                penalty_starvation=10.0,
+                penalty_predator_death=10.0,
+                penalty_predator_proximity=0.1,
+            ),
+            learning_rate=LearningRateMetadata(
+                method="static",
+                initial_learning_rate=0.001,
+            ),
+            gradient=GradientMetadata(method="raw"),
             results=ResultsMetadata(
                 total_runs=10,
                 success_rate=0.8,
@@ -464,6 +670,26 @@ class TestExperimentMetadata:
                 shots=2000,
                 learning_rate=0.02,
             ),
+            reward=RewardMetadata(
+                reward_goal=2.0,
+                reward_distance_scale=0.5,
+                reward_exploration=0.05,
+                penalty_step=0.005,
+                penalty_anti_dithering=0.02,
+                penalty_stuck_position=0.1,
+                stuck_position_threshold=3,
+                penalty_starvation=10.0,
+                penalty_predator_death=10.0,
+                penalty_predator_proximity=0.1,
+            ),
+            learning_rate=LearningRateMetadata(
+                method="dynamic",
+                initial_learning_rate=0.001,
+                decay_type="exponential",
+                decay_rate=0.9995,
+                min_lr=0.0003,
+            ),
+            gradient=GradientMetadata(method="clip"),
             results=ResultsMetadata(
                 total_runs=30,
                 success_rate=0.95,
@@ -486,6 +712,9 @@ class TestExperimentMetadata:
         assert data["experiment_id"] == "20250101_140000"
         assert data["environment"]["grid_size"] == 50
         assert data["brain"]["qubits"] == 6
+        assert data["reward"]["reward_goal"] == 2.0
+        assert data["learning_rate"]["method"] == "dynamic"
+        assert data["gradient"]["method"] == "clip"
         assert data["results"]["success_rate"] == 0.95
 
         # Test deserialization
@@ -493,6 +722,9 @@ class TestExperimentMetadata:
         assert restored.experiment_id == experiment.experiment_id
         assert restored.environment.grid_size == experiment.environment.grid_size
         assert restored.brain.qubits == experiment.brain.qubits
+        assert restored.reward.reward_goal == experiment.reward.reward_goal
+        assert restored.learning_rate.method == experiment.learning_rate.method
+        assert restored.gradient.method == experiment.gradient.method
         assert restored.results.total_runs == experiment.results.total_runs
         assert restored.system.python_version == experiment.system.python_version
         assert restored.exports_path == experiment.exports_path

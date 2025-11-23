@@ -14,8 +14,11 @@ from quantumnematode.experiment.metadata import (
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
+    GradientMetadata,
+    LearningRateMetadata,
     ParameterInitializer,
     ResultsMetadata,
+    RewardMetadata,
     SystemMetadata,
 )
 from quantumnematode.experiment.system_utils import capture_system_info
@@ -147,6 +150,94 @@ def extract_brain_metadata(
         modules=modules,
         parameter_initializer=parameter_initializer,
     )
+
+
+def extract_reward_metadata(config: dict) -> RewardMetadata:
+    """Extract reward configuration metadata.
+
+    Parameters
+    ----------
+    config : dict
+        Full configuration dictionary.
+
+    Returns
+    -------
+    RewardMetadata
+        Reward configuration metadata.
+    """
+    reward_config = config.get("reward", {})
+    return RewardMetadata(
+        reward_goal=reward_config.get("reward_goal", 0.2),
+        reward_distance_scale=reward_config.get("reward_distance_scale", 0.1),
+        reward_exploration=reward_config.get("reward_exploration", 0.05),
+        penalty_step=reward_config.get("penalty_step", 0.01),
+        penalty_anti_dithering=reward_config.get("penalty_anti_dithering", 0.05),
+        penalty_stuck_position=reward_config.get("penalty_stuck_position", 0.02),
+        stuck_position_threshold=reward_config.get("stuck_position_threshold", 2),
+        penalty_starvation=reward_config.get("penalty_starvation", 10.0),
+        penalty_predator_death=reward_config.get("penalty_predator_death", 10.0),
+        penalty_predator_proximity=reward_config.get("penalty_predator_proximity", 0.1),
+    )
+
+
+def extract_learning_rate_metadata(config: dict) -> LearningRateMetadata:
+    """Extract learning rate configuration metadata.
+
+    Parameters
+    ----------
+    config : dict
+        Full configuration dictionary.
+
+    Returns
+    -------
+    LearningRateMetadata
+        Learning rate configuration metadata.
+    """
+    lr_config = config.get("learning_rate", {})
+
+    # Get method (default to "static" if not specified)
+    method = lr_config.get("method", "static")
+
+    # Get parameters
+    params = lr_config.get("parameters", {})
+    initial_lr = params.get("initial_learning_rate")
+    decay_type = params.get("decay_type")
+    decay_rate = params.get("decay_rate")
+    decay_factor = params.get("decay_factor")
+    step_size = params.get("step_size")
+    max_steps = params.get("max_steps")
+    power = params.get("power")
+    min_lr = params.get("min_lr")
+
+    return LearningRateMetadata(
+        method=method,
+        initial_learning_rate=initial_lr,
+        decay_type=decay_type,
+        decay_rate=decay_rate,
+        decay_factor=decay_factor,
+        step_size=step_size,
+        min_lr=min_lr,
+        max_steps=max_steps,
+        power=power,
+    )
+
+
+def extract_gradient_metadata(config: dict) -> GradientMetadata:
+    """Extract gradient calculation method metadata.
+
+    Parameters
+    ----------
+    config : dict
+        Full configuration dictionary.
+
+    Returns
+    -------
+    GradientMetadata
+        Gradient calculation method metadata.
+    """
+    gradient_config = config.get("gradient", {})
+    method = gradient_config.get("method", "raw")
+    return GradientMetadata(method=method)
 
 
 def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:
@@ -313,6 +404,9 @@ def capture_experiment_metadata(
         config=config.get("brain", {}),
         parameter_initializer_config=config.get("parameter_initializer", {}),
     )
+    reward_metadata = extract_reward_metadata(config)
+    learning_rate_metadata = extract_learning_rate_metadata(config)
+    gradient_metadata = extract_gradient_metadata(config)
     results_metadata = aggregate_results_metadata(all_results)
     system_metadata_dict = capture_system_info(device_type, qpu_backend)
 
@@ -340,6 +434,9 @@ def capture_experiment_metadata(
         git_dirty=bool(git_dirty),
         environment=environment_metadata,
         brain=brain_metadata,
+        reward=reward_metadata,
+        learning_rate=learning_rate_metadata,
+        gradient=gradient_metadata,
         results=results_metadata,
         system=system_metadata,
         exports_path=exports_path,
