@@ -125,7 +125,7 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
             f"Failed runs - Max Steps: {metrics.total_max_steps} "
             f"({metrics.total_max_steps / total_runs_done * 100:.1f}%)",
         )
-    if metrics.total_interrupted > 0:
+    if metrics.total_interrupted is not None and metrics.total_interrupted > 0:
         output_lines.append(
             f"Failed runs - Interrupted: {metrics.total_interrupted} "
             f"({metrics.total_interrupted / total_runs_done * 100:.1f}%)",
