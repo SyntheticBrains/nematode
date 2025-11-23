@@ -748,6 +748,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         if hasattr(learning_rate, "__dict__")
                         else {},
                     },
+                    "gradient": {
+                        "method": gradient_method.value,
+                    },
                     "learning_rate": learning_rate_metadata,
                     "satiety": {
                         "initial": satiety_config.initial_satiety,
@@ -756,6 +759,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     "parameter_initializer": {
                         "type": parameter_initializer_config.type,
                         "manual_parameter_values": parameter_initializer_config.manual_parameter_values,
+                    },
+                    "reward": {
+                        "reward_goal": reward_config.reward_goal,
+                        "reward_distance_scale": reward_config.reward_distance_scale,
+                        "reward_exploration": reward_config.reward_exploration,
+                        "penalty_step": reward_config.penalty_step,
+                        "penalty_anti_dithering": reward_config.penalty_anti_dithering,
+                        "penalty_stuck_position": reward_config.penalty_stuck_position,
+                        "stuck_position_threshold": reward_config.stuck_position_threshold,
+                        "penalty_starvation": reward_config.penalty_starvation,
+                        "penalty_predator_death": reward_config.penalty_predator_death,
+                        "penalty_predator_proximity": reward_config.penalty_predator_proximity,
                     },
                 },
                 all_results=all_results,
