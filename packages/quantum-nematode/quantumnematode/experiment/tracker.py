@@ -6,6 +6,7 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+from quantumnematode.agent.agent import DEFAULT_MAZE_GRID_SIZE
 from quantumnematode.benchmark.convergence import analyze_convergence
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import DynamicForagingEnvironment
@@ -85,7 +86,7 @@ def extract_environment_metadata(
     # Static environment
     return EnvironmentMetadata(
         type="static",
-        grid_size=env.grid_size,
+        grid_size=getattr(env, "grid_size", DEFAULT_MAZE_GRID_SIZE),
     )
 
 
@@ -195,8 +196,8 @@ def extract_learning_rate_metadata(config: dict) -> LearningRateMetadata:
     """
     lr_config = config.get("learning_rate", {})
 
-    # Get method (default to "static" if not specified)
-    method = lr_config.get("method", "static")
+    # Get method
+    method = lr_config.get("method")
 
     # Get parameters
     params = lr_config.get("parameters", {})
