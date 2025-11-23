@@ -130,12 +130,15 @@ class PredatorConfig(BaseModel):
     """Configuration for predator mechanics in dynamic environment."""
 
     enabled: bool = False
-    count: int = 2
-    speed: float = 1.0
-    movement_pattern: str = "random"
+    count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
+    speed: float = 1.0  # Maps to DynamicForagingEnvironment.predator_speed
+    movement_pattern: str = "random"  # Only 'random' is currently supported
+    # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
-    kill_radius: int = 0
+    kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
+    # Maps to DynamicForagingEnvironment.predator_gradient_decay
     gradient_decay_constant: float = 12.0
+    # Maps to DynamicForagingEnvironment.predator_gradient_strength
     gradient_strength: float = 1.0
 
     @field_validator("movement_pattern")
