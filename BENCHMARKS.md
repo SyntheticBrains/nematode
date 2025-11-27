@@ -276,6 +276,8 @@ for each run i from min_runs to (total_runs - stability_window):
 return None  # Never converged
 ```
 
+> **Note**: While the algorithm can begin checking for convergence after 20 runs (plus the 10-run stability window), benchmark submissions require a minimum of 50 total runs to ensure adequate data collection across all learning phases.
+
 ### Composite Score Calculation
 
 The composite score combines four normalized components:
