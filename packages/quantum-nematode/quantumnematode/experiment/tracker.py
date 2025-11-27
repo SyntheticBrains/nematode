@@ -6,10 +6,10 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from quantumnematode.agent.agent import DEFAULT_MAZE_GRID_SIZE
 from quantumnematode.benchmark.convergence import analyze_convergence
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import DynamicForagingEnvironment
+from quantumnematode.env.env import StaticEnvironment
 from quantumnematode.experiment.git_utils import capture_git_context, get_relative_config_path
 from quantumnematode.experiment.metadata import (
     BrainMetadata,
@@ -45,14 +45,14 @@ def compute_config_hash(config_path: Path) -> str:
 
 
 def extract_environment_metadata(
-    env: DynamicForagingEnvironment | object,
+    env: DynamicForagingEnvironment | StaticEnvironment,
     satiety_config: dict,
 ) -> EnvironmentMetadata:
     """Extract environment metadata from environment instance.
 
     Parameters
     ----------
-    env : DynamicForagingEnvironment | object
+    env : DynamicForagingEnvironment | StaticEnvironment
         Environment instance.
     satiety_config : dict
         Satiety configuration dictionary.
@@ -86,7 +86,7 @@ def extract_environment_metadata(
     # Static environment
     return EnvironmentMetadata(
         type="static",
-        grid_size=getattr(env, "grid_size", DEFAULT_MAZE_GRID_SIZE),
+        grid_size=env.grid_size,
     )
 
 
@@ -350,7 +350,7 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
 
 def capture_experiment_metadata(
     config_path: Path,
-    env: object,
+    env: DynamicForagingEnvironment | StaticEnvironment,
     brain_type: str,
     config: dict,
     all_results: list[SimulationResult],
@@ -366,7 +366,7 @@ def capture_experiment_metadata(
     ----------
     config_path : Path
         Path to configuration file.
-    env : object
+    env : DynamicForagingEnvironment | StaticEnvironment
         Environment instance.
     brain_type : str
         Brain type string.
