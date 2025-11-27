@@ -215,6 +215,12 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 |---|---|---|---|---|---|---|---|
 | ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
+#### Dynamic Small - Quantum
+
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ modular | 0.503 | 64% | 370 | 43 | 0.231 | @chrisjz | 2025-11-27 |
+
 #### Dynamic Small - Classical
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
