@@ -225,6 +225,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 #### Dynamic Predator Small - Quantum
@@ -237,6 +238,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
 | ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
 
