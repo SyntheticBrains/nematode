@@ -113,7 +113,10 @@ class RewardCalculator:
             )
 
         # Stuck position penalty: penalize agent for staying in same position
-        if stuck_position_count > self.config.stuck_position_threshold:
+        if (
+            self.config.stuck_position_threshold > 0
+            and stuck_position_count > self.config.stuck_position_threshold
+        ):
             stuck_penalty = self.config.penalty_stuck_position * min(
                 stuck_position_count - self.config.stuck_position_threshold,
                 10,
