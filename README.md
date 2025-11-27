@@ -272,11 +272,11 @@ Success rate: 100.00%
 ```
 
 Where:
-- 🔼 = Nematode agent (🔼/🔽/◀️/▶️ with direction)
+- 🔼 = Agent's head (🔼/🔽/◀️/▶️ with direction)
 - 🔵 = Agent's trail/body
-- 🦠 = Food target
+- 🦠 = Food
 - 🕷️ = Predator
-- ⬜️ = Empty space
+- ⬜️ = Empty
 
 When predators are enabled, the status line shows "IN DANGER" when the agent is within a predator's detection radius.
 
