@@ -65,11 +65,26 @@ Benchmarks are organized into categories based on:
    - **Quantum**: Modular quantum brain architectures
    - **Classical**: MLP and other classical architectures
 
-This results in 8 total categories:
+This results in 14 total categories:
 - `static_maze_quantum`, `static_maze_classical`
 - `dynamic_small_quantum`, `dynamic_small_classical`
 - `dynamic_medium_quantum`, `dynamic_medium_classical`
 - `dynamic_large_quantum`, `dynamic_large_classical`
+- `dynamic_predator_small_quantum`, `dynamic_predator_small_classical`
+- `dynamic_predator_medium_quantum`, `dynamic_predator_medium_classical`
+- `dynamic_predator_large_quantum`, `dynamic_predator_large_classical`
+
+### Predator Environment Characteristics
+
+Predator-enabled environments exhibit significantly different convergence profiles compared to foraging-only environments:
+
+- **Slower Convergence**: Agents typically require 3-4x more runs to converge (e.g., ~70 runs vs ~20 runs) due to the added complexity of learning both foraging and threat avoidance behaviors simultaneously.
+
+- **Higher Variance**: Post-convergence stability variance is inherently higher (0.10-0.15 vs 0.00-0.05) because optimal strategies must balance exploration with risk avoidance, leading to more variable outcomes based on predator positioning.
+
+- **Lower Composite Scores**: Predator tasks typically yield lower benchmark scores (0.55-0.65 vs 0.75-0.80) due to the multi-objective nature of the task and increased episode termination from predator collisions.
+
+**These characteristics are expected and reflect the increased challenge of multi-objective learning.** A benchmark with Converge@Run of 70 and Stability of 0.12 in a predator environment represents successful learning, not poor performance.
 
 ## How to Submit
 
