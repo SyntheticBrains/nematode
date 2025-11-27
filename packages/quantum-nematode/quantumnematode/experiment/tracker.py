@@ -95,7 +95,7 @@ def extract_brain_metadata(
     config: dict,
     parameter_initializer_config: dict,
 ) -> BrainMetadata:
-    """Extract brain metadata from brain instance and configuration.
+    """Extract brain metadata from brain type and configuration.
 
     Parameters
     ----------
@@ -103,6 +103,8 @@ def extract_brain_metadata(
         Brain type string.
     config : dict
         Brain configuration dictionary.
+    parameter_initializer_config : dict
+        Parameter initializer configuration dictionary.
 
     Returns
     -------
