@@ -356,6 +356,7 @@ def capture_experiment_metadata(
     device_type: DeviceType,
     qpu_backend: str | None = None,
     exports_path: str | None = None,
+    session_id: str | None = None,
 ) -> ExperimentMetadata:
     """Capture complete experiment metadata.
 
@@ -379,15 +380,17 @@ def capture_experiment_metadata(
         QPU backend name if using quantum hardware.
     exports_path : str | None, optional
         Path to exports directory.
+    session_id : str | None, optional
+        Session ID to use as experiment ID. If not provided, generates new timestamp.
 
     Returns
     -------
     ExperimentMetadata
         Complete experiment metadata.
     """
-    # Generate experiment ID from timestamp
+    # Use session ID as experiment ID if provided, otherwise generate new timestamp
     timestamp = datetime.now(UTC)
-    experiment_id = timestamp.strftime("%Y%m%d_%H%M%S")
+    experiment_id = session_id if session_id is not None else timestamp.strftime("%Y%m%d_%H%M%S")
 
     # Capture git context
     git_context = capture_git_context()

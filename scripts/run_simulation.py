@@ -778,6 +778,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 device_type=device,
                 qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
+                session_id=timestamp,
             )
 
             # Export convergence metrics to CSV (includes composite score and all convergence analysis)
