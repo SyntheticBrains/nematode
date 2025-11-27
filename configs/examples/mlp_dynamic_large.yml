@@ -18,7 +18,6 @@ brain:
 
 body_length: 2
 
-# Reward configuration with exploration bonus
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
@@ -29,20 +28,17 @@ reward:
   penalty_starvation: 10.0
   stuck_position_threshold: 3
 
-# Satiety configuration
 satiety:
   initial_satiety: 800.0
   satiety_decay_rate: 1.0
   satiety_gain_per_food: 0.2
 
-# Dynamic environment configuration
 environment:
   type: dynamic
   dynamic:
     grid_size: 100
     viewport_size: [11, 11]
 
-    # Foraging configuration (food mechanics)
     foraging:
       foods_on_grid: 35
       target_foods_to_collect: 50
