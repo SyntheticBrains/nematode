@@ -8,10 +8,6 @@ This document contains the complete benchmark leaderboards for the Quantum Nemat
 - [Benchmark Categories](#benchmark-categories)
 - [How to Submit](#how-to-submit)
 - [Leaderboards](#leaderboards)
-  - [Static Maze](#static-maze)
-  - [Dynamic Small (≤20x20)](#dynamic-small-20x20)
-  - [Dynamic Medium (≤50x50)](#dynamic-medium-50x50)
-  - [Dynamic Large (>50x50)](#dynamic-large-50x50)
 
 ## About Benchmarks
 
