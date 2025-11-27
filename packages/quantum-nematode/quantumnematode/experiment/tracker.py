@@ -93,7 +93,7 @@ def extract_environment_metadata(
 def extract_brain_metadata(
     brain_type: str,
     config: dict,
-    parameter_initializer_config: dict,
+    parameter_initializer_config: dict | None = None,
 ) -> BrainMetadata:
     """Extract brain metadata from brain type and configuration.
 
