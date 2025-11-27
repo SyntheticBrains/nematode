@@ -211,7 +211,9 @@ _No benchmarks submitted yet._
 
 #### Quantum Architectures
 
-_No benchmarks submitted yet._
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ modular | 0.395 | 31% | 344 | 27 | 0.215 | @chrisjz | 2025-11-27 |
 
 #### Classical Architectures
 
