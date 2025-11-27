@@ -12,7 +12,7 @@ _is_testing = (
     "PYTEST_CURRENT_TEST" in os.environ
     or os.environ.get("TESTING") == "1"
     or "pytest" in sys.modules
-    or any("pytest" in arg for arg in sys.argv)
+    or (sys.argv and sys.argv[0].endswith("pytest"))
 )
 
 # Only create file handlers when not running tests
