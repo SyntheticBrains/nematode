@@ -229,7 +229,7 @@ If critical issues discovered:
 
 1. **Predator gradient strength:** Should predator repulsion gradient be same magnitude as food attraction (1.0) or stronger/weaker? Initial default is 1.0 (equal), but may need tuning.
 
-2. **Kill radius vs detection radius:** Currently kill_radius=1 (adjacent cells only) and detection_radius=8. Should kill radius be 0 (exact overlap only)? Answer: we've changed the kill radius to be 0.
+2. **Kill radius vs detection radius:** Kill radius defaults to 0 (exact overlap only) and detection_radius=8. This was chosen to require precise collision detection. Is this difficulty level appropriate, or should we consider kill_radius=1 (adjacent cells)?
 
 3. **Proximity penalty stacking:** If multiple predators within detection radius, should penalty stack (-0.1 per predator) or cap at -0.1 total?
 
