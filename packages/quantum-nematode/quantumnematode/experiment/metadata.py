@@ -152,11 +152,11 @@ class GradientMetadata(BaseModel):
 
     Attributes
     ----------
-    method : str
+    method : str | None
         Gradient calculation method ("raw", "clip", "normalize").
     """
 
-    method: str
+    method: str | None = None
 
 
 class BrainMetadata(BaseModel):
