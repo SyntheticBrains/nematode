@@ -54,7 +54,7 @@
     "decay_type": "inverse_time",
     "decay_rate": 0.0001,
     "decay_factor": 0.5,
-    "min_lr": 0.012,
+    "min_lr": 0.0,
     "step_size": 10,
     "max_steps": 1000,
     "power": 1.0
