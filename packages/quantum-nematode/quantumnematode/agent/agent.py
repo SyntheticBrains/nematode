@@ -66,7 +66,7 @@ class RewardConfig(BaseModel):
     )
     penalty_step: float = DEFAULT_PENALTY_STEP
     penalty_stuck_position: float = (
-        DEFAULT_PENALTY_STUCK_POSITION  # Penalty for staying in same position
+        DEFAULT_PENALTY_STUCK_POSITION  # Penalty for staying in same position, disabled if 0
     )
     stuck_position_threshold: int = (
         DEFAULT_STUCK_POSITION_THRESHOLD  # Steps before stuck penalty applies
