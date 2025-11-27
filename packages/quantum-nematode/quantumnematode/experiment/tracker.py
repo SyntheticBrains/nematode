@@ -408,7 +408,7 @@ def capture_experiment_metadata(
     brain_metadata = extract_brain_metadata(
         brain_type=brain_type,
         config=config.get("brain", {}),
-        parameter_initializer_config=config.get("parameter_initializer", {}),
+        parameter_initializer_config=config.get("parameter_initializer"),
     )
     reward_metadata = extract_reward_metadata(config)
     learning_rate_metadata = extract_learning_rate_metadata(config)
