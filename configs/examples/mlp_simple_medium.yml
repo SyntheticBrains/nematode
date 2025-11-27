@@ -19,13 +19,6 @@ brain:
 
 body_length: 2
 
-learning_rate:
-  method: dynamic
-  parameters:
-    initial_learning_rate: 0.001
-    decay_rate: 0.0001
-    decay_type: inverse_time
-
 # Reward configuration
 reward:
   reward_goal: 2.0
