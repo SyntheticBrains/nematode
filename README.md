@@ -219,6 +219,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ modular | 0.598 | 80% | 317 | 43 | 0.162 | @chrisjz | 2025-11-28 |
 | ✓ modular | 0.503 | 64% | 370 | 43 | 0.231 | @chrisjz | 2025-11-27 |
 
 #### Dynamic Small - Classical
