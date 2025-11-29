@@ -981,9 +981,11 @@ class ModularBrain(QuantumBrain):
             # Add exploration noise (scaled with learning rate for stability after convergence)
             rng = np.random.default_rng()
             # Noise decays proportionally with LR
-            effective_noise_std = self.config.noise_std * (
-                learning_rate / self.initial_learning_rate
-            )
+            effective_noise_std = 0.0
+            if self.initial_learning_rate > 0:
+                effective_noise_std = self.config.noise_std * (
+                    learning_rate / self.initial_learning_rate
+                )
             noise = rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
