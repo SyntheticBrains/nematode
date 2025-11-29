@@ -163,7 +163,7 @@ The predator evasion system adds a challenging multi-objective learning task whe
 **Predator Mechanics:**
 - Random movement patterns with configurable speed
 - Detection radius (default 8 units) creating danger zones
-- Kill radius (default 0 unit) for lethal collisions
+- Kill radius (default 0 units) for lethal collisions
 - Multiple predators with independent movement
 
 **Gradient-Based Perception:**
