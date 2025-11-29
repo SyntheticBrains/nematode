@@ -19,7 +19,6 @@ brain:
 
 body_length: 2
 
-# Reward configuration
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
@@ -28,7 +27,6 @@ reward:
   penalty_stuck_position: 0.1
   stuck_position_threshold: 3
 
-# Static environment configuration
 environment:
   type: static
   static:

@@ -31,7 +31,6 @@ learning_rate:
     decay_rate: 0.1
     min_lr: 0
 
-# Reward configuration
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
@@ -40,13 +39,11 @@ reward:
   penalty_stuck_position: 0.1
   stuck_position_threshold: 10
 
-# Static environment configuration
 environment:
   type: static
   static:
     grid_size: 10
 
-# Many-worlds mode configuration
 manyworlds_mode:
   max_superpositions: 32
   max_columns: 8
