@@ -137,6 +137,10 @@ class ModularBrainConfig(BrainConfig):
         DEFAULT_SIGNIFICANT_REWARD_THRESHOLD  # Threshold for significant rewards
     )
 
+    # Momentum configuration
+    momentum_decay: float = 0.99  # Decay factor for momentum updates
+    momentum_coefficient: float = 0.9  # Coefficient for momentum updates
+
     # Overfitting detector configuration
     overfit_detector_episode_log_interval: int = (
         OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL  # Interval for episode logging
@@ -955,8 +959,8 @@ class ModularBrain(QuantumBrain):
             self._momentum = dict.fromkeys(param_keys, 0.0)
 
         # Momentum coefficient and decay
-        momentum_coefficient = 0.9
-        momentum_decay = 0.99  # Prevents unbounded momentum accumulation
+        momentum_coefficient = self.config.momentum_coefficient
+        momentum_decay = self.config.momentum_decay  # Prevents unbounded momentum accumulation
 
         # Apply gradient processing (clip/normalize/raw) based on config
         if self.gradient_method is not None:
