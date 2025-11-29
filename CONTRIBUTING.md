@@ -137,6 +137,16 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_
 uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
 ```
 
+##### Testing with Predators in Dynamic Foraging Environment
+
+```bash
+# Quick test with small dynamic environment and predators
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_dynamic_small_predators.yml --theme emoji
+
+# Full test with medium environment and predators
+uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_dynamic_medium_predators.yml --theme emoji
+```
+
 ##### Testing with Static Environment
 
 ```bash
