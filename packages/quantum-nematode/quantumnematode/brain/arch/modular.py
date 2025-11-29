@@ -211,6 +211,9 @@ class ModularBrain(QuantumBrain):
         )
 
         self.gradient_method = gradient_method
+        logger.info(
+            f"Using gradient calculation method: {self.gradient_method}",
+        )
 
         self.action_set = action_set
         self.perf_mgmt = perf_mgmt
