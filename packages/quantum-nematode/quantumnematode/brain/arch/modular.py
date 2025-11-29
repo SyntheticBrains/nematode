@@ -987,6 +987,10 @@ class ModularBrain(QuantumBrain):
             noise = rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
+            # Note: momentum_decay and momentum_coefficient are combined to provide
+            # controlled momentum accumulation. The combined factor (0.99 * 0.9 = 0.891)
+            # ensures momentum doesn't accumulate unbounded in long training runs (200+ episodes)
+            # while still providing momentum benefits for gradient descent.
             self._momentum[k] = (
                 momentum_decay * momentum_coefficient * self._momentum[k]
                 + learning_rate * (gradients[i] - reg)  # L2 reg pushes parameters toward zero
