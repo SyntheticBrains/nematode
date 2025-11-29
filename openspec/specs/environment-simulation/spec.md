@@ -428,9 +428,9 @@ The system SHALL track predator-related performance metrics including encounters
 #### Scenario: Metrics When Predators Disabled
 - **GIVEN** a configuration with `predators.enabled: false`
 - **WHEN** episode metrics are computed
-- **THEN** `predator_encounters` SHALL be None or 0
-- **AND** `successful_evasions` SHALL be None or 0
-- **AND** `predator_deaths` SHALL be None or 0
+- **THEN** `predator_encounters` SHALL not be tracked
+- **AND** `successful_evasions` SHALL not be tracked
+- **AND** `predator_deaths` SHALL not be tracked
 - **AND** this SHALL maintain backward compatibility
 
 ### Requirement: Predator-Enabled Benchmark Categories

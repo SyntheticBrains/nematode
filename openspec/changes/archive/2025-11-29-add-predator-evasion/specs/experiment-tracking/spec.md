@@ -34,8 +34,8 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **GIVEN** an experiment with `predators.enabled: false` or predators not configured
 - **WHEN** experiment metadata is recorded
 - **THEN** `predators_enabled` SHALL be false
-- **AND** other predator configuration fields MAY be omitted or null
-- **AND** predator metrics SHALL be omitted or null in episode results
+- **AND** other predator configuration fields SHALL be null
+- **AND** predator metrics SHALL be null in episode results
 - **AND** this SHALL maintain backward compatibility with pre-predator experiments
 
 ### Requirement: Predator-Specific Experiment Queries
@@ -58,6 +58,7 @@ The experiment tracking system SHALL support querying and filtering experiments 
 - **GIVEN** completed experiments with predator performance data
 - **WHEN** querying for experiments with high predator death rate (e.g., >50%)
 - **THEN** the system SHALL calculate death_by_predator percentage across episodes
+- **AND** SHALL be calculated as: (predator_deaths / total_episodes) × 100
 - **AND** SHALL return experiments meeting the threshold
 - **AND** SHALL enable identification of challenging predator configurations
 
@@ -85,9 +86,15 @@ The experiment tracking system SHALL support visualization of predator-specific 
 #### Scenario: Evasion Success Rate Over Time
 - **GIVEN** an experiment tracking evasions across episodes
 - **WHEN** learning curve visualization is generated
-- **THEN** a plot SHALL show `successful_evasions / predator_encounters` ratio over time
+- **THEN** a plot SHALL show the evasion success rate over time where:
+  - Rate is calculated as `successful_evasions / predator_encounters`
+  - When `predator_encounters == 0`, the rate SHALL be treated as "N/A" (or null)
+  - N/A values SHALL be omitted from numeric plotting
+  - N/A values SHALL be excluded from rolling-window smoothing computations
+  - N/A values SHALL NOT affect adjacent smoothed values in the rolling window
+  - Visualizations SHALL render gaps or explicit "N/A" markers for these points
 - **AND** increasing ratio SHALL indicate improved escape skills
-- **AND** SHALL be smoothed over rolling window (e.g., 100 episodes)
+- **AND** SHALL be smoothed over rolling window (e.g., 100 episodes) with N/A points excluded from window computation
 
 #### Scenario: Survival Rate vs Foraging Trade-off
 - **GIVEN** an experiment with both predator and foraging metrics

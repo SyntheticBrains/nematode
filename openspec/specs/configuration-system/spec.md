@@ -176,6 +176,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept under `reward`:
   - `penalty_predator_proximity` (float, default 0.1) - reward penalty per step within detection radius
+- **AND** penalty value interpretation: a `penalty_predator_proximity: 0.1` configuration means -0.1 reward per step (positive value subtracted to create penalty)
 - **AND** penalty value of 0.0 SHALL disable proximity penalties
 - **AND** the penalty SHALL use positive values that are subtracted from reward (consistent with other penalty values)
 
