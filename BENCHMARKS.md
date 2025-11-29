@@ -167,6 +167,7 @@ This creates a benchmark file in `benchmarks/<category>/<experiment-id>.json`.
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ modular | 0.980 | 100% | 34 | 20 | 0.000 | @chrisjz | 2025-11-29 |
 | ✓ modular | 0.960 | 100% | 32 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 #### Classical Architectures
