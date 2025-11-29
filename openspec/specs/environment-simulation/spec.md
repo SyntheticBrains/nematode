@@ -513,4 +513,3 @@ The system SHALL use consistent, documented symbols for predators across all ren
   - Classical brains: `dynamic_predator_small_classical`, `dynamic_predator_medium_classical`, `dynamic_predator_large_classical`
 - **AND** the underscore separator SHALL be used (not hyphen or space)
 - **AND** category names SHALL match the implementation exactly to prevent doc-code drift
-

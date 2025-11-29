@@ -338,4 +338,3 @@ The system SHALL provide example configuration files demonstrating predator-enab
   - Valid value range
   - Recommended values for different difficulty levels
   - How parameter affects learning difficulty
-

@@ -322,4 +322,3 @@ The experiment tracking system SHALL include predator metrics in CSV exports and
 - **THEN** the export SHALL include only experiments with `predators_enabled: true`
 - **AND** SHALL include all predator-specific columns
 - **AND** SHALL enable focused analysis on survival-foraging scenarios
-
