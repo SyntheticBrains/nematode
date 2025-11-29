@@ -161,7 +161,7 @@ The spiking brain architecture provides biologically realistic neural computatio
 The predator evasion system adds a challenging multi-objective learning task where agents must balance food collection with survival:
 
 **Predator Mechanics:**
-- Random movement patterns with configurable speed
+- Random movement patterns with configurable speed (default 1 unit/step)
 - Detection radius (default 8 units) creating danger zones
 - Kill radius (default 0 units) for lethal collisions
 - Multiple predators with independent movement
