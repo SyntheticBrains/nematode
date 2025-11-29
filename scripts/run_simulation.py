@@ -882,7 +882,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     qubits: int,  # noqa: ARG001
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
-    gradient_method: GradientCalculationMethod,  # noqa: ARG001
+    gradient_method: GradientCalculationMethod,
     parameter_initializer_config: ParameterInitializerConfig,
     perf_mgmt: "RunnableQiskitFunction | None" = None,
 ) -> Brain:
@@ -937,6 +937,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             shots=shots,
             learning_rate=learning_rate,
             parameter_initializer=parameter_initializer,
+            gradient_method=gradient_method,
             perf_mgmt=perf_mgmt,
         )
     elif brain_type == BrainType.QMODULAR:
