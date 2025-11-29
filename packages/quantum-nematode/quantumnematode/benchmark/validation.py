@@ -22,13 +22,16 @@ class BenchmarkValidationRules:
         Whether to require config file in repository.
     require_contributor_name : bool
         Whether to require contributor name.
+    warn_if_not_converged : bool
+        Whether to warn if learning strategy did not converge.
     """
 
-    min_runs: int = 20
+    min_runs: int = 50
     min_success_rate: float | None = None
     require_clean_git: bool = True
     require_config_in_repo: bool = True
     require_contributor_name: bool = True
+    warn_if_not_converged: bool = True
 
 
 class BenchmarkValidationError(Exception):
@@ -146,6 +149,36 @@ def validate_contributor_info(
         raise BenchmarkValidationError(msg)
 
 
+def validate_convergence(
+    metadata: ExperimentMetadata,
+    rules: BenchmarkValidationRules,
+) -> None:
+    """Validate convergence status and warn if not converged.
+
+    Parameters
+    ----------
+    metadata : ExperimentMetadata
+        Experiment metadata to validate.
+    rules : BenchmarkValidationRules
+        Validation rules.
+
+    Notes
+    -----
+    This is a warning-level validation that does not fail the benchmark,
+    but alerts the user that their learning strategy may benefit from
+    additional tuning or more runs.
+    """
+    if not rules.warn_if_not_converged:
+        return
+
+    if not metadata.results.converged:
+        logger.warning(
+            "Learning strategy did not converge within the session. "
+            "Consider running more episodes or adjusting hyperparameters. "
+            "Benchmark score will be based on last 10 runs (fallback strategy).",
+        )
+
+
 def validate_benchmark(
     metadata: ExperimentMetadata,
     rules: BenchmarkValidationRules | None = None,
@@ -181,6 +214,7 @@ def validate_benchmark(
         validate_success_rate(metadata, rules)
         validate_git_state(metadata, rules)
         validate_config_file(metadata, rules)
+        validate_convergence(metadata, rules)
 
         logger.info("Benchmark validation passed")
         return True

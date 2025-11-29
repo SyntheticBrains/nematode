@@ -276,6 +276,12 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
         if all(val is None for val in last_values):
             logger.warning(f"No data available for {key} across runs. Skipping plot.")
             continue
+        # Handle last value is list or contains lists (e.g., satiety_history) - skip plotting
+        if any(isinstance(val, list) for val in last_values):
+            logger.warning(
+                f"Skipping plot for {key} - list data type not supported for session plots.",
+            )
+            continue
         # Handle last value is dict (e.g., parameter dicts)
         if isinstance(last_values[0], dict):
             param_keys = set()
@@ -603,10 +609,16 @@ def plot_foraging_efficiency_per_run(  # pragma: no cover
     steps : list[int]
         Number of steps taken in each run.
     """
+    if len(foods_collected) != len(steps):
+        logger.error(
+            "Length of foods_collected and steps must be the same "
+            "to calculate foraging efficiency.",
+        )
+        return
     # Calculate foods per step ratio
     foraging_efficiency = [
         foods / step if step > 0 else 0.0
-        for foods, step in zip(foods_collected, steps, strict=False)
+        for foods, step in zip(foods_collected, steps, strict=True)
     ]
 
     plt.figure(figsize=(12, 6))
@@ -829,24 +841,40 @@ def plot_foods_vs_reward_correlation(  # pragma: no cover
     plt.figure(figsize=(10, 8))
     plt.scatter(foods_collected, total_rewards, alpha=0.6, s=100, edgecolors="black")
 
-    # Add trend line
-    if len(foods_collected) > 1:
-        z = np.polyfit(foods_collected, total_rewards, 1)
-        p = np.poly1d(z)
-        x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
-        plt.plot(x_line, p(x_line), "r--", linewidth=2, label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}")
+    # Add trend line only if there's variation in the data
+    if (
+        len(foods_collected) > 1
+        and len(total_rewards) == len(foods_collected)
+        and len(set(foods_collected)) > 1
+        and len(set(total_rewards)) > 1
+    ):
+        try:
+            z = np.polyfit(foods_collected, total_rewards, 1)
+            p = np.poly1d(z)
+            x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
+            plt.plot(
+                x_line,
+                p(x_line),
+                "r--",
+                linewidth=2,
+                label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}",
+            )
 
-        # Calculate correlation
-        correlation = np.corrcoef(foods_collected, total_rewards)[0, 1]
-        plt.text(
-            0.05,
-            0.95,
-            f"Correlation: {correlation:.3f}",
-            transform=plt.gca().transAxes,
-            fontsize=12,
-            verticalalignment="top",
-            bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
-        )
+            # Calculate correlation
+            correlation = np.corrcoef(foods_collected, total_rewards)[0, 1]
+            plt.text(
+                0.05,
+                0.95,
+                f"Correlation: {correlation:.3f}",
+                transform=plt.gca().transAxes,
+                fontsize=12,
+                verticalalignment="top",
+                bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
+            )
+        except (np.linalg.LinAlgError, ValueError):
+            logger.warning(
+                "Insufficient variation for trend line calculation; skipping trend line.",
+            )
 
     plt.title("Foods Collected vs Total Reward")
     plt.xlabel("Foods Collected")
@@ -880,24 +908,40 @@ def plot_foods_vs_steps_correlation(  # pragma: no cover
     plt.figure(figsize=(10, 8))
     plt.scatter(foods_collected, steps, alpha=0.6, s=100, color="purple", edgecolors="black")
 
-    # Add trend line
-    if len(foods_collected) > 1:
-        z = np.polyfit(foods_collected, steps, 1)
-        p = np.poly1d(z)
-        x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
-        plt.plot(x_line, p(x_line), "r--", linewidth=2, label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}")
+    # Add trend line only if there's variation in the data
+    if (
+        len(foods_collected) > 1
+        and len(steps) == len(foods_collected)
+        and len(set(foods_collected)) > 1
+        and len(set(steps)) > 1
+    ):
+        try:
+            z = np.polyfit(foods_collected, steps, 1)
+            p = np.poly1d(z)
+            x_line = np.linspace(min(foods_collected), max(foods_collected), 100)
+            plt.plot(
+                x_line,
+                p(x_line),
+                "r--",
+                linewidth=2,
+                label=f"Trend: y={z[0]:.2f}x+{z[1]:.2f}",
+            )
 
-        # Calculate correlation
-        correlation = np.corrcoef(foods_collected, steps)[0, 1]
-        plt.text(
-            0.05,
-            0.95,
-            f"Correlation: {correlation:.3f}",
-            transform=plt.gca().transAxes,
-            fontsize=12,
-            verticalalignment="top",
-            bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
-        )
+            # Calculate correlation
+            correlation = np.corrcoef(foods_collected, steps)[0, 1]
+            plt.text(
+                0.05,
+                0.95,
+                f"Correlation: {correlation:.3f}",
+                transform=plt.gca().transAxes,
+                fontsize=12,
+                verticalalignment="top",
+                bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
+            )
+        except (np.linalg.LinAlgError, ValueError):
+            logger.warning(
+                "Insufficient variation for trend line calculation; skipping trend line.",
+            )
 
     plt.title("Foods Collected vs Steps Taken")
     plt.xlabel("Foods Collected")
@@ -969,4 +1013,246 @@ def plot_satiety_progression_single_run(  # pragma: no cover
     plt.grid(alpha=0.3)
     plt.tight_layout()
     plt.savefig(plot_dir / f"{file_prefix}satiety_progression_run_{run_number}.png")
+    plt.close()
+
+
+# Predator Evasion Environment Specific Plots
+
+
+def plot_predator_encounters_over_time(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    predator_encounters: list[int],
+) -> None:
+    """Plot predator encounters over time.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    predator_encounters : list[int]
+        Number of predator encounters in each run.
+    """
+    # Guard against empty inputs
+    if not runs or not predator_encounters:
+        logger.warning("No predator encounter data to plot")
+        return
+
+    # Validate input lengths match
+    if len(runs) != len(predator_encounters):
+        logger.warning(
+            f"Length mismatch: runs ({len(runs)}) vs predator_encounters "
+            f"({len(predator_encounters)}). Skipping plot.",
+        )
+        return
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(
+        runs,
+        predator_encounters,
+        alpha=0.7,
+        color="red",
+        edgecolor="black",
+        label="Encounters",
+    )
+    avg_encounters = sum(predator_encounters) / len(predator_encounters)
+    plt.axhline(
+        y=avg_encounters,
+        color="darkred",
+        linestyle="--",
+        linewidth=2,
+        label=f"Average ({avg_encounters:.1f})",
+    )
+    plt.title("Predator Encounters Per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Number of Encounters")
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}predator_encounters_over_time.png")
+    plt.close()
+
+
+def plot_evasion_success_rate_over_time(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    predator_encounters: list[int],
+    successful_evasions: list[int],
+) -> None:
+    """Plot evasion success rate over time.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    predator_encounters : list[int]
+        Number of predator encounters in each run.
+    successful_evasions : list[int]
+        Number of successful evasions in each run.
+    """
+    # Guard against empty inputs
+    if not runs or not predator_encounters or not successful_evasions:
+        logger.warning("No evasion data to plot")
+        return
+
+    # Validate input lengths match
+    if len(runs) != len(predator_encounters) or len(runs) != len(successful_evasions):
+        logger.warning(
+            f"Length mismatch: runs ({len(runs)}) vs predator_encounters "
+            f"({len(predator_encounters)}) vs successful_evasions "
+            f"({len(successful_evasions)}). Skipping plot.",
+        )
+        return
+
+    # Calculate evasion success rate per run
+    evasion_rates = [
+        evasions / encounters if encounters > 0 else 0.0
+        for encounters, evasions in zip(predator_encounters, successful_evasions, strict=True)
+    ]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(
+        runs,
+        evasion_rates,
+        marker="o",
+        linestyle="-",
+        linewidth=2,
+        markersize=6,
+        color="green",
+        label="Evasion Success Rate",
+    )
+
+    # Calculate overall average (only for runs with encounters)
+    valid_rates = [
+        rate
+        for rate, encounters in zip(evasion_rates, predator_encounters, strict=True)
+        if encounters > 0
+    ]
+    if valid_rates:
+        avg_rate = sum(valid_rates) / len(valid_rates)
+        plt.axhline(
+            y=avg_rate,
+            color="darkgreen",
+            linestyle="--",
+            linewidth=2,
+            label=f"Average ({avg_rate:.2%})",
+        )
+
+    plt.ylim(-0.05, 1.05)
+    plt.title("Evasion Success Rate Over Runs")
+    plt.xlabel("Run")
+    plt.ylabel("Success Rate (Evasions / Encounters)")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}evasion_success_rate_over_time.png")
+    plt.close()
+
+
+def plot_survival_vs_food_collection(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    foods_collected: list[int],
+    predator_deaths: list[bool],
+) -> None:
+    """Plot survival rate vs food collection scatter plot.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    foods_collected : list[int]
+        Number of foods collected in each run.
+    predator_deaths : list[bool]
+        Whether each run ended in predator death (True) or survival (False).
+    """
+    # Guard against empty inputs
+    if not foods_collected or not predator_deaths:
+        logger.warning("No survival/food collection data to plot")
+        return
+
+    # Validate input lengths match
+    if len(foods_collected) != len(predator_deaths):
+        logger.warning(
+            f"Length mismatch: foods_collected ({len(foods_collected)}) vs "
+            f"predator_deaths ({len(predator_deaths)}). Skipping plot.",
+        )
+        return
+
+    # Separate data by survival status
+    survived_foods = [
+        foods for foods, died in zip(foods_collected, predator_deaths, strict=True) if not died
+    ]
+    died_foods = [
+        foods for foods, died in zip(foods_collected, predator_deaths, strict=True) if died
+    ]
+
+    plt.figure(figsize=(10, 8))
+
+    # Plot survived runs
+    if survived_foods:
+        plt.scatter(
+            survived_foods,
+            [1] * len(survived_foods),
+            alpha=0.6,
+            s=100,
+            color="green",
+            edgecolors="black",
+            label=f"Survived ({len(survived_foods)} runs)",
+        )
+
+    # Plot died runs
+    if died_foods:
+        plt.scatter(
+            died_foods,
+            [0] * len(died_foods),
+            alpha=0.6,
+            s=100,
+            color="red",
+            edgecolors="black",
+            label=f"Killed by Predator ({len(died_foods)} runs)",
+        )
+
+    # Add statistics
+    total_runs = len(predator_deaths)
+    survival_rate = len(survived_foods) / total_runs if total_runs > 0 else 0.0
+    avg_foods_survived = sum(survived_foods) / len(survived_foods) if survived_foods else 0.0
+    avg_foods_died = sum(died_foods) / len(died_foods) if died_foods else 0.0
+    avg_foods_died_str = f"{avg_foods_died:.1f}" if died_foods else "N/A"
+
+    stats_text = (
+        f"Survival Rate: {survival_rate:.1%}\n"
+        f"Avg Foods (Survived): {avg_foods_survived:.1f}\n"
+        f"Avg Foods (Died): {avg_foods_died_str}"
+    )
+    plt.text(
+        0.05,
+        0.5,
+        stats_text,
+        transform=plt.gca().transAxes,
+        fontsize=11,
+        verticalalignment="center",
+        bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
+    )
+
+    plt.yticks([0, 1], ["Killed", "Survived"])
+    plt.title("Survival vs Food Collection")
+    plt.xlabel("Foods Collected")
+    plt.ylabel("Outcome")
+    plt.legend()
+    plt.grid(alpha=0.3, axis="x")
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}survival_vs_food_collection.png")
     plt.close()

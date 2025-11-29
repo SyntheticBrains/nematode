@@ -57,6 +57,90 @@ class ScalingMethod(Enum):
     TANH = "tanh"
 
 
+class Predator:
+    """
+    Represents a predator entity in the environment.
+
+    Attributes
+    ----------
+    position : tuple[int, int]
+        Current position of the predator.
+    speed : float
+        Movement speed relative to agent (1.0 = same speed).
+        Supports fractional speeds (< 1.0) and multi-step movement (> 1.0).
+        Capped at 10 steps per update for safety.
+    movement_accumulator : float
+        Accumulator for fractional movement (handles both speed < 1.0 and > 1.0).
+    """
+
+    def __init__(
+        self,
+        position: tuple[int, int],
+        speed: float = 1.0,
+        movement_accumulator: float = 0.0,
+    ) -> None:
+        """
+        Initialize a predator.
+
+        Parameters
+        ----------
+        position : tuple[int, int]
+            Starting position of the predator.
+        speed : float
+            Movement speed (default 1.0).
+        """
+        self.position = position
+        self.speed = speed
+        self.movement_accumulator = movement_accumulator
+
+    def update_position(self, grid_size: int) -> None:
+        """
+        Update predator position with random movement.
+
+        Supports speeds > 1.0 for multiple steps per update.
+        For safety, caps maximum steps per update at 10 to prevent
+        pathological behavior with very high speeds.
+
+        Parameters
+        ----------
+        grid_size : int
+            Size of the grid (for boundary checking).
+        """
+        # Handle fractional and multi-step movement
+        self.movement_accumulator += self.speed
+        if self.movement_accumulator < 1.0:
+            return  # Don't move yet
+
+        # Take multiple steps if speed > 1.0
+        # Cap at 10 steps per update for safety
+        max_steps_per_update = 10
+        steps_taken = 0
+
+        while self.movement_accumulator >= 1.0 and steps_taken < max_steps_per_update:
+            self.movement_accumulator -= 1.0
+            steps_taken += 1
+
+            # Random movement in one of four directions
+            up = 0
+            down = 1
+            left = 2
+            right = 3
+
+            direction_choice = secrets.randbelow(4)
+            x, y = self.position
+
+            if direction_choice == up:
+                y = max(0, y - 1)
+            elif direction_choice == down:
+                y = min(grid_size - 1, y + 1)
+            elif direction_choice == left:
+                x = max(0, x - 1)
+            elif direction_choice == right:
+                x = min(grid_size - 1, x + 1)
+
+            self.position = (x, y)
+
+
 class BaseEnvironment(ABC):
     """
     Abstract base class for nematode environments.
@@ -107,7 +191,6 @@ class BaseEnvironment(ABC):
         self,
         position: tuple[int, ...],
         *,
-        scaling_method: ScalingMethod = ScalingMethod.TANH,
         disable_log: bool = False,
     ) -> tuple[float, float]:
         """
@@ -117,8 +200,6 @@ class BaseEnvironment(ABC):
         ----------
         position : tuple[int, ...]
             Position to query gradient at.
-        scaling_method : ScalingMethod
-            Method to scale gradient strength.
         disable_log : bool
             Whether to disable debug logging.
 
@@ -607,8 +688,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self,
         grid_size: int = 50,
         start_pos: tuple[int, int] | None = None,
-        num_initial_foods: int = 10,
-        max_active_foods: int = 15,
+        foods_on_grid: int = 10,
+        target_foods_to_collect: int = 15,
         min_food_distance: int = 5,
         agent_exclusion_radius: int = 10,
         gradient_decay_constant: float = 10.0,
@@ -618,6 +699,15 @@ class DynamicForagingEnvironment(BaseEnvironment):
         theme: Theme = Theme.ASCII,
         action_set: list[Action] = DEFAULT_ACTIONS,
         rich_style_config: DarkColorRichStyleConfig | None = None,
+        # Predator parameters
+        *,
+        predators_enabled: bool = False,
+        num_predators: int = 2,
+        predator_speed: float = 1.0,
+        predator_detection_radius: int = 8,
+        predator_kill_radius: int = 0,
+        predator_gradient_decay: float = 12.0,
+        predator_gradient_strength: float = 1.0,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -632,17 +722,32 @@ class DynamicForagingEnvironment(BaseEnvironment):
             rich_style_config=rich_style_config,
         )
 
-        self.num_initial_foods = num_initial_foods
-        self.max_active_foods = max_active_foods
+        # Foraging configuration
+        self.foods_on_grid = foods_on_grid
+        self.target_foods_to_collect = target_foods_to_collect
         self.min_food_distance = min_food_distance
         self.agent_exclusion_radius = agent_exclusion_radius
         self.gradient_decay_constant = gradient_decay_constant
         self.gradient_strength_base = gradient_strength
         self.viewport_size = viewport_size
 
+        # Predator configuration
+        self.predators_enabled = predators_enabled
+        self.num_predators = num_predators
+        self.predator_speed = predator_speed
+        self.predator_detection_radius = predator_detection_radius
+        self.predator_kill_radius = predator_kill_radius
+        self.predator_gradient_decay = predator_gradient_decay
+        self.predator_gradient_strength = predator_gradient_strength
+
         # Initialize food sources using Poisson disk sampling
         self.foods: list[tuple[int, int]] = []
         self._initialize_foods()
+
+        # Initialize predators if enabled
+        self.predators: list[Predator] = []
+        if self.predators_enabled:
+            self._initialize_predators()
 
         # Track visited cells for exploration bonus
         self.visited_cells: set[tuple[int, int]] = {(self.agent_pos[0], self.agent_pos[1])}
@@ -651,9 +756,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Initialize food sources using Poisson disk sampling."""
         self.foods = []
         attempts = 0
-        max_total_attempts = MAX_POISSON_ATTEMPTS * self.num_initial_foods
+        max_total_attempts = MAX_POISSON_ATTEMPTS * self.foods_on_grid
 
-        while len(self.foods) < self.num_initial_foods and attempts < max_total_attempts:
+        while len(self.foods) < self.foods_on_grid and attempts < max_total_attempts:
             candidate = (
                 secrets.randbelow(self.grid_size),
                 secrets.randbelow(self.grid_size),
@@ -664,9 +769,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
             attempts += 1
 
-        if len(self.foods) < self.num_initial_foods:
+        if len(self.foods) < self.foods_on_grid:
             logger.warning(
-                f"Could only place {len(self.foods)}/{self.num_initial_foods} initial foods "
+                f"Could only place {len(self.foods)}/{self.foods_on_grid} initial foods "
                 f"after {attempts} attempts.",
             )
 
@@ -701,27 +806,58 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return True
 
-    def spawn_food(
-        self,
-        foods_collected: int = 0,
-    ) -> bool:
-        """
-        Spawn a new food source if under the maximum limit.
+    def _initialize_predators(self) -> None:
+        """Initialize predators at random positions outside detection radius of agent."""
+        self.predators = []
+        for _ in range(self.num_predators):
+            # Spawn predators outside detection radius to avoid immediate danger
+            candidate = (0, 0)  # Default position in case loop never runs
+            for _ in range(MAX_POISSON_ATTEMPTS):
+                candidate = (
+                    secrets.randbelow(self.grid_size),
+                    secrets.randbelow(self.grid_size),
+                )
+                # Calculate Manhattan distance to agent
+                distance_to_agent = abs(candidate[0] - self.agent_pos[0]) + abs(
+                    candidate[1] - self.agent_pos[1],
+                )
+                # Ensure predator spawns outside detection radius
+                if distance_to_agent > self.predator_detection_radius:
+                    predator = Predator(position=candidate, speed=self.predator_speed)
+                    self.predators.append(predator)
+                    logger.debug(
+                        f"Initialized predator at {candidate} "
+                        f"(distance to agent: {distance_to_agent})",
+                    )
+                    break
+            else:
+                # If we couldn't find a valid position after max attempts, log warning
+                # but still spawn the predator (edge case for very small grids)
+                logger.warning(
+                    "Could not find safe spawn position for predator "
+                    f"after {MAX_POISSON_ATTEMPTS} attempts. "
+                    f"Spawning at {candidate} anyway.",
+                )
+                predator = Predator(position=candidate, speed=self.predator_speed)
+                self.predators.append(predator)
 
-        Parameters
-        ----------
-        foods_collected : int
-            Number of foods collected so far.
+    def spawn_food(self) -> bool:
+        """
+        Spawn a new food source to maintain target count on grid.
+
+        Always attempts to maintain foods_on_grid count on the grid.
+        Food spawns immediately after collection to ensure constant supply.
 
         Returns
         -------
         bool
             True if food was spawned, False otherwise.
         """
-        spawns_remaining = self.max_active_foods - self.num_initial_foods
-        if foods_collected > spawns_remaining:
+        # Check if we're already at target grid capacity
+        if len(self.foods) >= self.foods_on_grid:
             return False
 
+        # Attempt to spawn food at valid location
         for _ in range(MAX_POISSON_ATTEMPTS):
             candidate = (
                 secrets.randbelow(self.grid_size),
@@ -730,40 +866,39 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
             if self._is_valid_food_position(candidate):
                 self.foods.append(candidate)
-                logger.debug(f"Spawned new food at {candidate}")
+                logger.debug(
+                    f"Spawned food at {candidate} ({len(self.foods)}/{self.foods_on_grid} on grid)",
+                )
                 return True
 
-        logger.warning("Failed to spawn new food after maximum attempts")
+        logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
     def get_state(
         self,
         position: tuple[int, ...],
         *,
-        scaling_method: ScalingMethod = ScalingMethod.EXPONENTIAL,  # noqa: ARG002
         disable_log: bool = False,
     ) -> tuple[float, float]:
         """
-        Get the current state with gradient superposition from all food sources.
+        Get the current state with gradient superposition from food and predators.
+
+        Uses exponential decay for gradient calculations:
+        strength = base_strength * exp(-distance / decay_constant)
 
         Parameters
         ----------
         position : tuple[int, ...]
             Position to query gradient at.
-        scaling_method : ScalingMethod
-            Scaling method for gradient strength.
         disable_log : bool
             Whether to disable debug logging.
 
         Returns
         -------
         tuple[float, float]
-            Total gradient strength and direction.
+            Total gradient strength and direction (food attraction + predator repulsion).
         """
-        if not self.foods:
-            return 0.0, 0.0
-
-        # Compute gradient from each food source
+        # Compute gradient from food sources (attractive)
         total_vector_x = 0.0
         total_vector_y = 0.0
 
@@ -775,18 +910,41 @@ class DynamicForagingEnvironment(BaseEnvironment):
             if distance == 0:
                 continue
 
-            # Exponential decay gradient
+            # Exponential decay gradient (positive/attractive)
             strength = self.gradient_strength_base * np.exp(
                 -distance / self.gradient_decay_constant,
             )
 
-            # Compute unit direction vector
+            # Compute direction vector
             direction = np.arctan2(dy, dx)
             vector_x = strength * np.cos(direction)
             vector_y = strength * np.sin(direction)
 
             total_vector_x += vector_x
             total_vector_y += vector_y
+
+        # Compute gradient from predators (repulsive)
+        if self.predators_enabled:
+            for predator in self.predators:
+                dx = predator.position[0] - position[0]
+                dy = predator.position[1] - position[1]
+                distance = np.sqrt(dx**2 + dy**2)
+
+                if distance == 0:
+                    continue
+
+                # Exponential decay gradient (negative/repulsive)
+                strength = -self.predator_gradient_strength * np.exp(
+                    -distance / self.predator_gradient_decay,
+                )
+
+                # Compute direction vector (pointing away from predator due to negative strength)
+                direction = np.arctan2(dy, dx)
+                vector_x = strength * np.cos(direction)
+                vector_y = strength * np.sin(direction)
+
+                total_vector_x += vector_x
+                total_vector_y += vector_y
 
         # Compute magnitude and direction of superposed gradient
         gradient_magnitude = np.sqrt(total_vector_x**2 + total_vector_y**2)
@@ -795,7 +953,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if not disable_log:
             logger.debug(
                 f"Gradient superposition: magnitude={gradient_magnitude}, "
-                f"direction={gradient_direction}, num_foods={len(self.foods)}",
+                f"direction={gradient_direction}, num_foods={len(self.foods)}, "
+                f"num_predators={len(self.predators) if self.predators_enabled else 0}",
             )
 
         return float(gradient_magnitude), float(gradient_direction)
@@ -811,17 +970,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         return tuple(self.agent_pos) in self.foods
 
-    def consume_food(
-        self,
-        foods_collected: int = 0,
-    ) -> tuple[int, int] | None:
+    def consume_food(self) -> tuple[int, int] | None:
         """
-        Consume food at the agent's current position.
+        Consume food at the agent's current position and respawn immediately.
 
-        Parameters
-        ----------
-        foods_collected : int
-            Number of foods collected so far.
+        Automatically respawns a new food to maintain constant foods_on_grid count.
 
         Returns
         -------
@@ -833,12 +986,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
             self.foods.remove(agent_tuple)
             logger.info(f"Food consumed at {agent_tuple}")
 
-            # Spawn new food
-            self.spawn_food(foods_collected=foods_collected + 1)
+            # Immediately spawn new food to maintain constant supply
+            self.spawn_food()
 
             return agent_tuple
 
         return None
+
+    def has_collected_target_foods(self, foods_collected: int) -> bool:
+        """
+        Check if agent has collected enough foods to win.
+
+        Parameters
+        ----------
+        foods_collected : int
+            Number of foods collected so far in this episode.
+
+        Returns
+        -------
+        bool
+            True if agent has collected target_foods_to_collect, False otherwise.
+        """
+        return foods_collected >= self.target_foods_to_collect
 
     def get_nearest_food_distance(self) -> int | None:
         """
@@ -857,6 +1026,60 @@ class DynamicForagingEnvironment(BaseEnvironment):
             for food in self.foods
         ]
         return min(distances)
+
+    def update_predators(self) -> None:
+        """Update all predator positions."""
+        if not self.predators_enabled:
+            return
+        for predator in self.predators:
+            predator.update_position(self.grid_size)
+
+    def check_predator_collision(self) -> bool:
+        """
+        Check if agent collided with any predator.
+
+        Returns
+        -------
+        bool
+            True if collision detected (within kill_radius), False otherwise.
+        """
+        if not self.predators_enabled:
+            return False
+
+        agent_pos = self.agent_pos
+        for predator in self.predators:
+            # Manhattan distance for kill radius
+            distance = abs(agent_pos[0] - predator.position[0]) + abs(
+                agent_pos[1] - predator.position[1],
+            )
+            if distance <= self.predator_kill_radius:
+                logger.info(
+                    f"Predator collision! Agent at {agent_pos}, Predator at {predator.position}",
+                )
+                return True
+        return False
+
+    def is_agent_in_danger(self) -> bool:
+        """
+        Check if agent is within detection radius of any predator.
+
+        Returns
+        -------
+        bool
+            True if within detection radius, False otherwise.
+        """
+        if not self.predators_enabled:
+            return False
+
+        agent_pos = self.agent_pos
+        for predator in self.predators:
+            # Manhattan distance for detection radius
+            distance = abs(agent_pos[0] - predator.position[0]) + abs(
+                agent_pos[1] - predator.position[1],
+            )
+            if distance <= self.predator_detection_radius:
+                return True
+        return False
 
     def _get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """
@@ -881,12 +1104,56 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Render the viewport centered on the agent."""
         viewport = self._get_viewport_bounds()
         grid = self._render_grid(self.foods, viewport=viewport)
+
+        # Add predators to grid if enabled
+        if self.predators_enabled:
+            self._render_predators(grid, viewport)
+
         return self._render_grid_to_strings(grid)
 
     def render_full(self) -> list[str]:
         """Render the entire environment (for logging/debugging)."""
         grid = self._render_grid(self.foods)
+
+        # Add predators to grid if enabled
+        if self.predators_enabled:
+            self._render_predators(grid, viewport=None)
+
         return self._render_grid_to_strings(grid)
+
+    def _render_predators(
+        self,
+        grid: list[list[str]],
+        viewport: tuple[int, int, int, int] | None = None,
+    ) -> None:
+        """
+        Add predators to the rendered grid.
+
+        Parameters
+        ----------
+        grid : list[list[str]]
+            The grid to render predators onto.
+        viewport : tuple[int, int, int, int] | None
+            Viewport bounds (min_x, min_y, max_x, max_y) or None for full grid.
+        """
+        symbols = THEME_SYMBOLS[self.theme]
+
+        for predator in self.predators:
+            if viewport:
+                min_x, min_y, max_x, max_y = viewport
+                # Only render predator if in viewport
+                if min_x <= predator.position[0] < max_x and min_y <= predator.position[1] < max_y:
+                    grid_y = predator.position[1] - min_y
+                    grid_x = predator.position[0] - min_x
+                    # Don't overwrite agent position
+                    agent_y = self.agent_pos[1] - min_y
+                    agent_x = self.agent_pos[0] - min_x
+                    if grid_y != agent_y or grid_x != agent_x:
+                        grid[grid_y][grid_x] = symbols.predator
+            # Full grid rendering
+            # Don't overwrite agent position
+            elif predator.position != tuple(self.agent_pos):
+                grid[predator.position[1]][predator.position[0]] = symbols.predator
 
     def copy(self) -> "DynamicForagingEnvironment":
         """
@@ -900,8 +1167,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,
             start_pos=(self.agent_pos[0], self.agent_pos[1]),
-            num_initial_foods=self.num_initial_foods,
-            max_active_foods=self.max_active_foods,
+            foods_on_grid=self.foods_on_grid,
+            target_foods_to_collect=self.target_foods_to_collect,
             min_food_distance=self.min_food_distance,
             agent_exclusion_radius=self.agent_exclusion_radius,
             gradient_decay_constant=self.gradient_decay_constant,
@@ -911,11 +1178,27 @@ class DynamicForagingEnvironment(BaseEnvironment):
             theme=self.theme,
             action_set=self.action_set,
             rich_style_config=self.rich_style_config,
+            predators_enabled=self.predators_enabled,
+            num_predators=self.num_predators,
+            predator_speed=self.predator_speed,
+            predator_detection_radius=self.predator_detection_radius,
+            predator_kill_radius=self.predator_kill_radius,
+            predator_gradient_decay=self.predator_gradient_decay,
+            predator_gradient_strength=self.predator_gradient_strength,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
         new_env.foods = self.foods.copy()
         new_env.visited_cells = self.visited_cells.copy()
+        if self.predators_enabled:
+            new_env.predators = [
+                Predator(
+                    position=p.position,
+                    speed=p.speed,
+                    movement_accumulator=p.movement_accumulator,
+                )
+                for p in self.predators
+            ]
         return new_env
 
 

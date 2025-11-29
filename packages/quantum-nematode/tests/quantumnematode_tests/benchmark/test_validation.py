@@ -15,13 +15,16 @@ from quantumnematode.experiment.metadata import (
     BrainMetadata,
     EnvironmentMetadata,
     ExperimentMetadata,
+    GradientMetadata,
+    LearningRateMetadata,
     ResultsMetadata,
+    RewardMetadata,
     SystemMetadata,
 )
 
 
 @pytest.fixture
-def basic_experiment():
+def basic_experiment(reward_metadata: RewardMetadata) -> ExperimentMetadata:
     """Create a basic experiment metadata for testing."""
     from quantumnematode.experiment.metadata import BenchmarkMetadata
 
@@ -35,8 +38,14 @@ def basic_experiment():
         git_dirty=False,
         environment=EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20),
         brain=BrainMetadata(type="modular", qubits=4, learning_rate=0.01),
+        reward=reward_metadata,
+        learning_rate=LearningRateMetadata(
+            method="static",
+            initial_learning_rate=0.01,
+        ),
+        gradient=GradientMetadata(method="raw"),
         results=ResultsMetadata(
-            total_runs=20,
+            total_runs=50,
             success_rate=0.9,
             avg_steps=40.0,
             avg_reward=120.0,
@@ -60,7 +69,7 @@ class TestBenchmarkValidationRules:
         """Test default validation rules."""
         rules = BenchmarkValidationRules()
 
-        assert rules.min_runs == 20
+        assert rules.min_runs == 50
         assert rules.require_clean_git is True
         assert rules.min_success_rate is None
 
@@ -185,7 +194,7 @@ class TestValidateBenchmark:
     def test_validate_benchmark_pass_all(self, basic_experiment):
         """Test validation passes all checks."""
         rules = BenchmarkValidationRules(
-            min_runs=20,
+            min_runs=50,
             require_clean_git=True,
             min_success_rate=0.8,
         )
@@ -214,7 +223,7 @@ class TestValidateBenchmark:
     def test_validate_benchmark_pass_with_warnings(self, basic_experiment):
         """Test validation passes but with warnings."""
         rules = BenchmarkValidationRules(
-            min_runs=20,
+            min_runs=50,
             require_clean_git=True,
             min_success_rate=0.95,  # Higher than actual
         )

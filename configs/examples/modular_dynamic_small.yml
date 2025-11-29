@@ -26,37 +26,36 @@ learning_rate:
     initial_learning_rate: 0.015
     decay_type: exponential
     decay_rate: 0.9995
-    min_lr: 0.003
+    min_lr: 0
 
-# Reward configuration with exploration bonus
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
-  reward_exploration: 0.05  # Bonus for visiting new cells
+  reward_exploration: 0.05
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0.1
-  penalty_starvation: 10.0
+  penalty_starvation: 2.0
   stuck_position_threshold: 3
 
-# Satiety configuration
 satiety:
   initial_satiety: 200.0
   satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2  # Restore 20% of max satiety per food
+  satiety_gain_per_food: 0.2
 
-# Dynamic environment configuration
 environment:
   type: dynamic
   dynamic:
     grid_size: 20
-    num_initial_foods: 5
-    max_active_foods: 10
-    min_food_distance: 3
-    agent_exclusion_radius: 5
-    gradient_decay_constant: 8.0
-    gradient_strength: 1.0
     viewport_size: [11, 11]
+
+    foraging:
+      foods_on_grid: 5
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0
 
 gradient:
   method: clip

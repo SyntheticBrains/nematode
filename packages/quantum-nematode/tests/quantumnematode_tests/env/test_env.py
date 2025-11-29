@@ -77,15 +77,15 @@ class TestDynamicForagingEnvironmentInit:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
 
         assert env.grid_size == 20
-        assert env.num_initial_foods == 5
-        assert env.max_active_foods == 10
+        assert env.foods_on_grid == 5
+        assert env.target_foods_to_collect == 10
         assert len(env.foods) == 5
         assert env.agent_pos == (10, 10)
         assert len(env.visited_cells) == 1
@@ -96,8 +96,8 @@ class TestDynamicForagingEnvironmentInit:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(5, 5),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -109,8 +109,8 @@ class TestDynamicForagingEnvironmentInit:
         """Test initialization with custom viewport size."""
         env = DynamicForagingEnvironment(
             grid_size=50,
-            num_initial_foods=10,
-            max_active_foods=15,
+            foods_on_grid=10,
+            target_foods_to_collect=15,
             viewport_size=(15, 15),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -128,8 +128,8 @@ class TestGradientSuperposition:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=0,  # Start with no food, we'll add manually
-            max_active_foods=10,
+            foods_on_grid=0,  # Start with no food, we'll add manually
+            target_foods_to_collect=10,
             gradient_decay_constant=5.0,
             gradient_strength=1.0,
             theme=Theme.ASCII,
@@ -240,8 +240,8 @@ class TestPoissonDiskSampling:
         """Test that correct number of foods are spawned initially."""
         env = DynamicForagingEnvironment(
             grid_size=50,
-            num_initial_foods=10,
-            max_active_foods=20,
+            foods_on_grid=10,
+            target_foods_to_collect=20,
             min_food_distance=3,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -255,8 +255,8 @@ class TestPoissonDiskSampling:
         env = DynamicForagingEnvironment(
             grid_size=80,
             start_pos=(40, 40),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=8,
             agent_exclusion_radius=15,
             theme=Theme.ASCII,
@@ -278,8 +278,8 @@ class TestPoissonDiskSampling:
         env = DynamicForagingEnvironment(
             grid_size=80,
             start_pos=start_pos,
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=8,
             agent_exclusion_radius=15,
             theme=Theme.ASCII,
@@ -298,8 +298,8 @@ class TestPoissonDiskSampling:
         """Test that all foods are within grid boundaries."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            num_initial_foods=20,
-            max_active_foods=30,
+            foods_on_grid=20,
+            target_foods_to_collect=30,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -313,8 +313,8 @@ class TestPoissonDiskSampling:
         env = DynamicForagingEnvironment(
             grid_size=50,
             start_pos=(25, 25),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             min_food_distance=5,
             agent_exclusion_radius=8,
             theme=Theme.ASCII,
@@ -351,8 +351,8 @@ class TestSatietySystem:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -395,23 +395,21 @@ class TestSatietySystem:
         # Original food should be gone
         assert (10, 10) not in env.foods
 
-    def test_max_active_foods_limit(self, env):
-        """Test that food count doesn't exceed max_active_foods."""
-        env.max_active_foods = 5
-        env.num_initial_foods = 3
+    def test_target_foods_to_collect_limit(self, env):
+        """Test that food count doesn't exceed foods_on_grid (constant supply)."""
+        env.target_foods_to_collect = 10  # Victory condition
+        env.foods_on_grid = 3  # Constant foods maintained on grid
 
-        # Manually set foods to max
-        env.foods = [(i, i) for i in range(5)]
+        # Manually set foods to foods_on_grid count
+        env.foods = [(i, i) for i in range(3)]
 
-        # Set food collected already
-        foods_collected = 3
-
-        # Try to spawn more
+        # Try to spawn more - should not exceed foods_on_grid
         for _ in range(10):
-            env.spawn_food(foods_collected=foods_collected)
+            env.spawn_food()
 
-        # Should not exceed max
-        assert len(env.foods) <= 5
+        # Should not exceed foods_on_grid (constant supply maintained)
+        assert len(env.foods) <= env.foods_on_grid
+        assert len(env.foods) == 3  # Maintains exactly foods_on_grid
 
 
 class TestViewportCalculations:
@@ -423,8 +421,8 @@ class TestViewportCalculations:
         return DynamicForagingEnvironment(
             grid_size=50,
             start_pos=(25, 25),
-            num_initial_foods=10,
-            max_active_foods=20,
+            foods_on_grid=10,
+            target_foods_to_collect=20,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -448,8 +446,8 @@ class TestViewportCalculations:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(2, 2),  # Near edge
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -471,8 +469,8 @@ class TestViewportCalculations:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),  # Corner
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -492,8 +490,8 @@ class TestViewportCalculations:
         env = DynamicForagingEnvironment(
             grid_size=10,
             start_pos=(5, 5),
-            num_initial_foods=3,
-            max_active_foods=5,
+            foods_on_grid=3,
+            target_foods_to_collect=5,
             viewport_size=(11, 11),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -516,8 +514,8 @@ class TestExplorationTracking:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -555,8 +553,8 @@ class TestEnvironmentCopy:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(5, 5),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -589,8 +587,8 @@ class TestEnvironmentIntegration:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=3,
-            max_active_foods=5,
+            foods_on_grid=3,
+            target_foods_to_collect=5,
             min_food_distance=3,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
@@ -617,8 +615,8 @@ class TestEnvironmentIntegration:
         env = DynamicForagingEnvironment(
             grid_size=30,
             start_pos=(15, 15),
-            num_initial_foods=5,
-            max_active_foods=10,
+            foods_on_grid=5,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -641,8 +639,8 @@ class TestEnvironmentIntegration:
         env = DynamicForagingEnvironment(
             grid_size=25,
             start_pos=(12, 12),
-            num_initial_foods=7,
-            max_active_foods=10,
+            foods_on_grid=7,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -658,7 +656,7 @@ class TestEnvironmentIntegration:
             env.consume_food()
 
             # Verify invariants
-            assert len(env.foods) <= env.max_active_foods
+            assert len(env.foods) <= env.foods_on_grid
             assert all(0 <= f[0] < env.grid_size and 0 <= f[1] < env.grid_size for f in env.foods)
 
 
@@ -670,8 +668,8 @@ class TestNearestFoodDistance:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=0,
-            max_active_foods=10,
+            foods_on_grid=0,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -690,8 +688,8 @@ class TestNearestFoodDistance:
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            num_initial_foods=0,
-            max_active_foods=10,
+            foods_on_grid=0,
+            target_foods_to_collect=10,
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
@@ -700,3 +698,376 @@ class TestNearestFoodDistance:
 
         nearest_dist = env.get_nearest_food_distance()
         assert nearest_dist is None
+
+
+class TestPredatorMechanics:
+    """Test cases for Predator class and predator mechanics."""
+
+    @pytest.fixture
+    def predator_env(self):
+        """Create a test environment with predators enabled."""
+        return DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foods_on_grid=5,
+            target_foods_to_collect=10,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            predators_enabled=True,
+            num_predators=2,
+            predator_speed=1.0,
+            predator_detection_radius=8,
+            predator_kill_radius=0,
+        )
+
+    def test_predator_initialization(self, predator_env):
+        """Test predator initialization."""
+        assert predator_env.predators_enabled is True
+        assert len(predator_env.predators) == 2
+
+        for predator in predator_env.predators:
+            # Check predator has valid position within grid
+            assert 0 <= predator.position[0] < predator_env.grid_size
+            assert 0 <= predator.position[1] < predator_env.grid_size
+
+            # Check predator has correct speed
+            assert predator.speed == 1.0
+
+    def test_predator_movement(self, predator_env):
+        """Test predator random movement."""
+        predator = predator_env.predators[0]
+
+        # Move predator multiple times
+        for _ in range(10):
+            predator.update_position(predator_env.grid_size)
+
+            # Check position is still valid
+            assert 0 <= predator.position[0] < predator_env.grid_size
+            assert 0 <= predator.position[1] < predator_env.grid_size
+
+        # Movement is random, just verify it doesn't crash
+        assert True
+
+    def test_gradient_with_predators(self, predator_env):
+        """Test that state includes gradient information with predators."""
+        # Place agent at known position
+        predator_env.agent_pos = (10, 10)
+
+        # Get state which includes gradients (pass agent position)
+        state = predator_env.get_state(predator_env.agent_pos)
+
+        # State should be a tuple with gradient information (x, y components)
+        assert isinstance(state, tuple)
+        assert len(state) == 2
+
+        # Verify all values are finite (no NaN or Inf)
+        assert all(np.isfinite(val) for val in state)
+
+    def test_collision_detection_kill_radius(self, predator_env):
+        """Test collision detection with non-zero kill_radius using Manhattan distance."""
+        predator_env.agent_pos = (10, 10)
+        predator_env.predator_kill_radius = 1
+
+        # Distance 0: same cell → kill
+        predator_env.predators[0].position = (10, 10)
+        assert predator_env.check_predator_collision() is True
+
+        # Distance 1 (cardinal neighbour) → kill
+        predator_env.predators[0].position = (11, 10)
+        assert predator_env.check_predator_collision() is True
+
+        # Distance 2 → no kill
+        predator_env.predators[0].position = (12, 10)
+        assert predator_env.check_predator_collision() is False
+
+        # Distance 2 (diagonal) → no kill
+        predator_env.predators[0].position = (11, 11)
+        assert predator_env.check_predator_collision() is False
+
+    def test_proximity_detection(self, predator_env):
+        """Test proximity detection with detection_radius."""
+        # Place agent at (10, 10)
+        predator_env.agent_pos = (10, 10)
+
+        # Place predator within detection radius (8 units)
+        predator_env.predators[0].position = (10, 17)  # 7 units away
+        predator_env.predators = [predator_env.predators[0]]  # Keep only one
+
+        in_danger = predator_env.is_agent_in_danger()
+        assert in_danger is True
+
+        # Place predator outside detection radius
+        predator_env.predators[0].position = (10, 19)  # 9 units away
+
+        in_danger = predator_env.is_agent_in_danger()
+        assert in_danger is False
+
+    def test_predators_disabled_by_default(self):
+        """Test that predators are disabled by default."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foods_on_grid=5,
+            target_foods_to_collect=10,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        assert env.predators_enabled is False
+        assert len(env.predators) == 0
+
+    def test_predator_update_positions(self, predator_env):
+        """Test that predator positions update each step."""
+        # Update predator positions
+        predator_env.update_predators()
+
+        # Verify the method runs without error and predators remain valid
+        assert len(predator_env.predators) == 2
+        for predator in predator_env.predators:
+            assert 0 <= predator.position[0] < predator_env.grid_size
+            assert 0 <= predator.position[1] < predator_env.grid_size
+
+    def test_predator_proximity_detection(self, predator_env):
+        """Test agent danger detection when within predator detection radius.
+
+        Note: The actual proximity penalty (-0.1) is applied by the reward calculator,
+        not the environment. This test validates the environment's danger detection helper.
+        """
+        # Place agent at (10, 10)
+        predator_env.agent_pos = (10, 10)
+
+        # Place predator within detection radius
+        predator_env.predators[0].position = (10, 15)  # 5 units away, within detection_radius=8
+        predator_env.predators = [predator_env.predators[0]]
+
+        # Agent should be in danger (within detection radius)
+        assert predator_env.is_agent_in_danger() is True
+
+        # Place predator outside detection radius
+        predator_env.predators[0].position = (10, 20)  # 10 units away, outside detection_radius=8
+
+        # Agent should not be in danger
+        assert predator_env.is_agent_in_danger() is False
+
+    def test_full_episode_with_predators(self, predator_env):
+        """Integration test: Verify predators work with environment operations."""
+        # Verify environment has predators
+        assert len(predator_env.predators) == 2
+        assert predator_env.predators_enabled is True
+
+        # Run a few update cycles
+        for _ in range(10):
+            # Get current state
+            state = predator_env.get_state(predator_env.agent_pos)
+            assert isinstance(state, tuple)
+            assert len(state) == 2
+
+            # Update predators
+            predator_env.update_predators()
+
+            # Verify all predator positions are valid
+            for predator in predator_env.predators:
+                assert 0 <= predator.position[0] < predator_env.grid_size
+                assert 0 <= predator.position[1] < predator_env.grid_size
+
+            # Check collision detection works
+            collision = predator_env.check_predator_collision()
+            assert isinstance(collision, bool)
+
+            # Check danger detection works
+            in_danger = predator_env.is_agent_in_danger()
+            assert isinstance(in_danger, bool)
+
+    def test_config_backward_compatibility(self):
+        """Test that predators are disabled by default for backward compatibility."""
+        # Create environment without predator config
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foods_on_grid=5,
+            target_foods_to_collect=10,
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # Predators should be disabled
+        assert env.predators_enabled is False
+        assert len(env.predators) == 0
+        assert env.predator_detection_radius == 8  # Default value
+        assert env.predator_kill_radius == 0  # Default value
+
+        # is_agent_in_danger should return False
+        assert env.is_agent_in_danger() is False
+
+        # check_predator_collision should return False
+        assert env.check_predator_collision() is False
+
+    def test_predators_spawn_outside_detection_radius(self, predator_env):
+        """Test that predators spawn outside detection radius of agent at initialization."""
+        agent_pos = predator_env.agent_pos
+        detection_radius = predator_env.predator_detection_radius
+
+        # Verify all predators spawn outside detection radius
+        for predator in predator_env.predators:
+            # Calculate Manhattan distance
+            distance = abs(predator.position[0] - agent_pos[0]) + abs(
+                predator.position[1] - agent_pos[1],
+            )
+            assert distance > detection_radius, (
+                f"Predator at {predator.position} spawned within detection radius "
+                f"({distance} <= {detection_radius}) of agent at {agent_pos}"
+            )
+
+        # Agent should not be in danger at initialization
+        assert predator_env.is_agent_in_danger() is False
+
+    def test_predator_fractional_speed(self):
+        """Test predator with fractional speed (< 1.0)."""
+        from quantumnematode.env.env import Predator
+
+        # Speed 0.5 should move every 2 updates
+        predator = Predator(position=(5, 5), speed=0.5)
+        initial_pos = predator.position
+
+        # First update: accumulator = 0.5, no movement
+        predator.update_position(grid_size=10)
+        assert predator.position == initial_pos
+        assert predator.movement_accumulator == 0.5
+
+        # Second update: accumulator = 1.0, movement occurs
+        predator.update_position(grid_size=10)
+        assert predator.position != initial_pos  # Should have moved
+        assert predator.movement_accumulator == 0.0
+
+    def test_predator_normal_speed(self):
+        """Test predator with normal speed (1.0)."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=1.0)
+        initial_pos = predator.position
+
+        # Each update should move exactly once
+        predator.update_position(grid_size=10)
+        first_pos = predator.position
+        assert first_pos != initial_pos  # Should have moved
+        assert predator.movement_accumulator == 0.0
+
+        # Second update should also move once
+        predator.update_position(grid_size=10)
+        assert predator.position != first_pos  # Should have moved again
+        assert predator.movement_accumulator == 0.0
+
+    def test_predator_double_speed(self):
+        """Test predator with double speed (2.0) takes two movement steps per update."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=2.0)
+
+        # Single update should take 2 steps (movement is random, check accumulator)
+        predator.update_position(grid_size=10)
+
+        # After speed 2.0, accumulator should be 0.0 (2 steps taken)
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after 2 steps (speed=2.0), "
+            f"got {predator.movement_accumulator}"
+        )
+
+    def test_predator_triple_speed(self):
+        """Test predator with triple speed (3.0) takes three movement steps per update."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=3.0)
+
+        # Single update should take 3 steps (movement is random, check accumulator)
+        predator.update_position(grid_size=10)
+
+        # After speed 3.0, accumulator should be 0.0 (3 steps taken)
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after 3 steps (speed=3.0), "
+            f"got {predator.movement_accumulator}"
+        )
+
+    def test_predator_fractional_multi_speed(self):
+        """Test predator with fractional multi-step speed (2.5)."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=2.5)
+
+        # First update: 2 steps, 0.5 remaining
+        # Note: Movement is random, but accumulator should be decremented correctly
+        predator.update_position(grid_size=10)
+        assert predator.movement_accumulator == 0.5, (
+            f"Expected accumulator 0.5 after speed 2.5 (2 steps taken), "
+            f"got {predator.movement_accumulator}"
+        )
+
+        # Second update: accumulator 0.5 + 2.5 = 3.0, so 3 steps
+        predator.update_position(grid_size=10)
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after 3 steps, got {predator.movement_accumulator}"
+        )
+
+    def test_predator_high_speed_capped(self):
+        """Test predator with very high speed is capped at 10 steps per update."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=15.0)
+
+        # Single update should be capped at 10 steps
+        # Movement is random, but accumulator should show capping occurred
+        predator.update_position(grid_size=20)
+
+        # Accumulator should have 5.0 remaining (15.0 - 10.0 cap)
+        assert predator.movement_accumulator == 5.0, (
+            f"Expected accumulator 5.0 after speed 15.0 capped at 10 steps, "
+            f"got {predator.movement_accumulator}"
+        )
+
+    def test_predator_speed_boundary_clamping(self):
+        """Test that high-speed predators respect grid boundaries."""
+        from quantumnematode.env.env import Predator
+
+        # Place predator near edge with high speed
+        predator = Predator(position=(1, 1), speed=5.0)
+
+        # Update position - should not go out of bounds
+        predator.update_position(grid_size=10)
+
+        # Verify position is still within grid
+        assert 0 <= predator.position[0] < 10
+        assert 0 <= predator.position[1] < 10
+
+    def test_predator_zero_speed(self):
+        """Test predator with zero speed never moves."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5), speed=0.0)
+        initial_pos = predator.position
+
+        # Multiple updates should never move
+        for _ in range(10):
+            predator.update_position(grid_size=10)
+            assert predator.position == initial_pos
+            assert predator.movement_accumulator == 0.0
+
+    def test_predator_very_slow_speed(self):
+        """Test predator with very slow speed (0.25)."""
+        from quantumnematode.env.env import Predator
+
+        # Use 0.25 to avoid floating point precision issues (4 * 0.25 = 1.0 exactly)
+        predator = Predator(position=(5, 5), speed=0.25)
+        initial_pos = predator.position
+
+        # Should not move for 3 updates (accumulator below 1.0)
+        for i in range(3):
+            predator.update_position(grid_size=10)
+            assert predator.position == initial_pos
+            expected_accumulator = (i + 1) * 0.25
+            assert abs(predator.movement_accumulator - expected_accumulator) < 0.001
+
+        # 4th update should trigger movement (accumulator reaches 1.0)
+        predator.update_position(grid_size=10)
+        # Movement is random, but accumulator should reset to 0.0
+        assert predator.movement_accumulator == 0.0, (
+            f"Expected accumulator 0.0 after reaching 1.0, got {predator.movement_accumulator}"
+        )

@@ -18,6 +18,8 @@ class TerminationReason(str, Enum):
         Agent collected all available food (DynamicForagingEnvironment - not yet implemented).
     STARVED : str
         Agent's satiety reached zero (DynamicForagingEnvironment).
+    PREDATOR : str
+        Agent was caught by a predator (DynamicForagingEnvironment with predators enabled).
     MAX_STEPS : str
         Agent reached maximum allowed steps.
     INTERRUPTED : str
@@ -27,6 +29,7 @@ class TerminationReason(str, Enum):
     GOAL_REACHED = "goal_reached"
     COMPLETED_ALL_FOOD = "completed_all_food"
     STARVED = "starved"
+    PREDATOR = "predator"
     MAX_STEPS = "max_steps"
     INTERRUPTED = "interrupted"
 
@@ -64,6 +67,12 @@ class SimulationResult(BaseModel):
         Average distance efficiency per food collected (DynamicForagingEnvironment only).
     satiety_history : list[float] | None
         Step-by-step satiety levels throughout the run (DynamicForagingEnvironment only).
+    predator_encounters : int | None
+        Number of predator encounters (predator environments only).
+    successful_evasions : int | None
+        Number of successful predator evasions (predator environments only).
+    died_to_predator : bool | None
+        Whether run ended due to predator death (predator environments only).
     """
 
     run: int
@@ -79,6 +88,9 @@ class SimulationResult(BaseModel):
     satiety_remaining: float | None = None
     average_distance_efficiency: float | None = None
     satiety_history: list[float] | None = None
+    predator_encounters: int | None = None
+    successful_evasions: int | None = None
+    died_to_predator: bool | None = None
 
 
 TrackingRunIndex = int
@@ -95,11 +107,20 @@ class EpisodeTrackingData(BaseModel):
         Number of foods collected in this episode.
     distance_efficiencies : list[float]
         Distance efficiency for each food collected.
+    predator_encounters : int
+        Number of times agent entered predator detection radius.
+    successful_evasions : int
+        Number of times agent successfully exited detection radius without death.
+    in_danger : bool
+        Whether agent is currently within any predator's detection radius.
     """
 
     satiety_history: list[float] = Field(default_factory=list)
     foods_collected: int = 0
     distance_efficiencies: list[float] = Field(default_factory=list)
+    predator_encounters: int = 0
+    successful_evasions: int = 0
+    in_danger: bool = False
 
 
 class TrackingData(BaseModel):
@@ -144,10 +165,20 @@ class PerformanceMetrics(BaseModel):
         Total number of successful runs.
     total_starved : int
         Total number of runs that ended due to starvation.
+    total_predator_encounters : int
+        Total number of predator encounters across all runs.
+    total_predator_deaths : int
+        Total number of runs that ended due to predator collision.
+    total_successful_evasions : int
+        Total number of successful predator evasions across all runs.
     total_max_steps : int
         Total number of runs that hit maximum steps.
     total_interrupted : int
         Total number of runs that were interrupted.
+    average_predator_encounters : float | None
+        Average number of predator encounters per run (predator environments only).
+    average_successful_evasions : float | None
+        Average number of successful evasions per run (predator environments only).
     """
 
     success_rate: float
@@ -158,5 +189,10 @@ class PerformanceMetrics(BaseModel):
     average_foods_collected: float | None = None
     total_successes: int = 0
     total_starved: int = 0
+    total_predator_encounters: int = 0
+    total_predator_deaths: int = 0
+    total_successful_evasions: int = 0
     total_max_steps: int = 0
     total_interrupted: int = 0
+    average_predator_encounters: float | None = None
+    average_successful_evasions: float | None = None

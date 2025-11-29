@@ -13,6 +13,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 ## 🧪 Features
 
 - ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
+- ✅ **Predator Evasion**: Multi-objective learning with random-moving predators and gradient-based danger perception
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
 - ✅ **Classical ML Alternatives**: MLP, Q-learning, and spiking neural network brain architectures
 - ✅ **Static Maze Environment**: Traditional 2D grid navigation with single-goal seeking
@@ -85,16 +86,19 @@ cp .env.template .env
 
 ```bash
 # Dynamic foraging with quantum modular brain (recommended)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
+
+# Dynamic foraging and predator evasion with quantum modular brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_dynamic_medium_predators.yml --theme emoji
 
 # Dynamic foraging with classical MLP brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
 # Static maze with quantum modular brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/modular_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_simple_medium.yml --theme emoji
 
 # Spiking neural network brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
 
 # Quantum hardware (IBM QPU) with dynamic foraging
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_dynamic_small.yml --theme emoji --device qpu
@@ -107,7 +111,7 @@ uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --
 
 ```bash
 # Run dynamic foraging with MLP brain and GPU acceleration
-docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 20 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
 # Interactive Docker shell for development
 docker-compose exec quantum-nematode bash
@@ -152,6 +156,28 @@ The spiking brain architecture provides biologically realistic neural computatio
 - Plasticity rules based on spike timing
 - Configurable neuron and synapse parameters
 
+### Predator Evasion
+
+The predator evasion system adds a challenging multi-objective learning task where agents must balance food collection with survival:
+
+**Predator Mechanics:**
+- Random movement patterns with configurable speed (default 1 unit/step)
+- Detection radius (default 8 units) creating danger zones
+- Kill radius (default 0 units) for lethal collisions
+- Multiple predators with independent movement
+
+**Gradient-Based Perception:**
+- **Food gradients**: Attractive exponential decay guiding agents toward food
+- **Predator gradients**: Repulsive exponential decay warning of danger
+- **Gradient superposition**: Combined vector field for multi-objective decision-making
+- Agent perceives both food and threat locations through unified gradient system
+
+**Learning Dynamics:**
+- **Proximity penalty**: Continuous negative reward when in danger zone (detection radius)
+- **Death penalty**: Large negative reward (default -10.0) on predator collision
+- **Multi-objective optimization**: Agents learn to collect food while avoiding threats
+- **Predator metrics**: Track encounters, successful evasions, and survival strategies
+
 ## 🏆 Top Benchmarks
 
 Track and compare performance across different brain architectures and optimization strategies. The benchmark system helps identify effective approaches and advances the state-of-the-art in quantum navigation.
@@ -179,36 +205,45 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 #### Static Maze - Quantum
 
-| Brain | Success Rate | Avg Steps | Contributor | Date |
-|---|---|---|---|---|
-| qmodular | 100% | 42 | @chrisjz | 2025-11-09 |
-| modular | 100% | 35 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ modular | 0.980 | 100% | 34 | 20 | 0.000 | @chrisjz | 2025-11-29 |
+| ✓ modular | 0.960 | 100% | 32 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 #### Static Maze - Classical
 
-| Brain | Success Rate | Avg Steps | Contributor | Date |
-|---|---|---|---|---|
-| qmlp | 100% | 49 | @chrisjz | 2025-11-09 |
-| mlp | 100% | 66 | @chrisjz | 2025-11-09 |
-| spiking | 75% | 189 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
 #### Dynamic Small - Quantum
 
-| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
-|---|---|---|---|---|---|---|
-| modular | 30% | 430 | 7.8 | 0.27 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ modular | 0.598 | 80% | 317 | 43 | 0.162 | @chrisjz | 2025-11-28 |
+| ✓ modular | 0.503 | 64% | 370 | 43 | 0.231 | @chrisjz | 2025-11-27 |
 
 #### Dynamic Small - Classical
 
-| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
-|---|---|---|---|---|---|---|
-| mlp | 60% | 351 | 8.0 | 0.25 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
+| ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 
-#### Dynamic Medium - Classical
+#### Dynamic Predator Small - Quantum
 
-| Brain | Success Rate | Avg Steps | Foods/Run | Dist Eff | Contributor | Date |
-|---|---|---|---|---|---|---|
-| mlp | 80% | 804 | 27.2 | 0.52 | @chrisjz | 2025-11-09 |
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ modular | 0.402 | 32% | 320 | 24 | 0.217 | @chrisjz | 2025-11-29 |
+| ✓ modular | 0.395 | 31% | 344 | 27 | 0.215 | @chrisjz | 2025-11-27 |
+
+#### Dynamic Predator Small - Classical
+
+| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
+|---|---|---|---|---|---|---|---|
+| ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
+| ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
+| ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
 
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
@@ -248,10 +283,13 @@ Success rate: 100.00%
 ```
 
 Where:
-- 🦠 = Nematode agent
-- 🔼 = Food target
+- 🔼 = Agent's head (🔼/🔽/◀️/▶️ with direction)
 - 🔵 = Agent's trail/body
-- ⬜️ = Empty space
+- 🦠 = Food
+- 🕷️ = Predator
+- ⬜️ = Empty
+
+When predators are enabled, the status line shows "IN DANGER" when the agent is within a predator's detection radius.
 
 ## 🧰 Built With
 
@@ -275,6 +313,7 @@ This project serves as a platform for exploring:
 ### Upcoming Features
 
 - **Enhanced Brain Architectures**: More sophisticated quantum learning algorithms
+- **Advanced Predator Behaviors**: Pursuit/chase patterns, patrol routes, and adaptive hunting strategies
 - **Extended Foraging Dynamics**: Temperature gradients, food quality variations, and social foraging
 - **Multi-Agent Scenarios**: Cooperative and competitive foraging behaviors
 - **Better Visualization**: Real-time learning analysis and 3D environment rendering

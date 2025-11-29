@@ -1,0 +1,112 @@
+{
+  "experiment_id": "20251127_085953",
+  "timestamp": "2025-11-27T10:29:05.926627+00:00",
+  "config_file": "configs/examples/modular_dynamic_small_predators.yml",
+  "config_hash": "5bf1820e30ee20dd5a7cd24aa28cdabdc1068c2e95c6dde635c2cfea2c15a117",
+  "git_commit": "834acbd0d8a1c5fc697f35459388d56ee91dd22e",
+  "git_branch": "predator",
+  "git_dirty": true,
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "num_foods": 5,
+    "target_foods_to_collect": 10,
+    "initial_satiety": 200.0,
+    "satiety_decay_rate": 1.0,
+    "viewport_size": [
+      11,
+      11
+    ],
+    "predators_enabled": true,
+    "num_predators": 2,
+    "predator_speed": 1.0,
+    "predator_detection_radius": 8,
+    "predator_kill_radius": 0,
+    "predator_gradient_decay": 12.0,
+    "predator_gradient_strength": 1.0
+  },
+  "brain": {
+    "type": "modular",
+    "qubits": 2,
+    "shots": 1500,
+    "num_layers": 2,
+    "hidden_dim": null,
+    "num_hidden_layers": null,
+    "learning_rate": 0.015,
+    "modules": {
+      "chemotaxis": [
+        0,
+        1
+      ]
+    },
+    "parameter_initializer": {
+      "type": "random_small",
+      "manual_parameter_values": null
+    }
+  },
+  "reward": {
+    "reward_goal": 2.0,
+    "reward_distance_scale": 0.5,
+    "reward_exploration": 0.05,
+    "penalty_step": 0.005,
+    "penalty_anti_dithering": 0.02,
+    "penalty_stuck_position": 0.1,
+    "stuck_position_threshold": 3,
+    "penalty_starvation": 10.0,
+    "penalty_predator_death": 10.0,
+    "penalty_predator_proximity": 0.1
+  },
+  "learning_rate": {
+    "method": "dynamic",
+    "initial_learning_rate": 0.015,
+    "decay_type": "exponential",
+    "decay_rate": 0.9995,
+    "decay_factor": 0.5,
+    "min_lr": 0.003,
+    "step_size": 10,
+    "max_steps": 1000,
+    "power": 1.0
+  },
+  "gradient": {
+    "method": "clip"
+  },
+  "results": {
+    "total_runs": 200,
+    "success_rate": 0.28,
+    "avg_steps": 257.32,
+    "avg_reward": -5.142199999999977,
+    "avg_foods_collected": 5.455,
+    "avg_distance_efficiency": 0.2795194404711952,
+    "completed_all_food": 56,
+    "starved": 35,
+    "max_steps_reached": 4,
+    "goal_reached": 0,
+    "predator_deaths": 105,
+    "avg_predator_encounters": 8.75,
+    "avg_successful_evasions": 8.075,
+    "converged": true,
+    "convergence_run": 27,
+    "runs_to_convergence": 27,
+    "post_convergence_success_rate": 0.31213872832369943,
+    "post_convergence_avg_steps": 343.9259259259259,
+    "post_convergence_avg_foods": 5.826589595375722,
+    "post_convergence_variance": 0.21470814260416324,
+    "post_convergence_distance_efficiency": 0.325046755102212,
+    "composite_benchmark_score": 0.3953695178601434
+  },
+  "system": {
+    "python_version": "3.12.10",
+    "qiskit_version": "1.4.5",
+    "torch_version": "2.9.0",
+    "device_type": "cpu",
+    "qpu_backend": null
+  },
+  "exports_path": "exports/20251127_085953",
+  "benchmark": {
+    "contributor": "Chris Zaharia",
+    "github_username": "chrisjz",
+    "category": "dynamic_predator_small_quantum",
+    "notes": null,
+    "verified": false
+  }
+}

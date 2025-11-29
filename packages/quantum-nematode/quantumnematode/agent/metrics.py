@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from quantumnematode.report.dtypes import PerformanceMetrics
+from quantumnematode.report.dtypes import PerformanceMetrics, TerminationReason
 
 
 class MetricsTracker:
@@ -33,14 +33,24 @@ class MetricsTracker:
         self.total_rewards = 0.0
         self.foods_collected = 0
         self.distance_efficiencies: list[float] = []
+        # Predator tracking
+        self.total_predator_encounters = 0
+        self.total_successful_evasions = 0
+        self.total_predator_deaths = 0
+        self.total_starved = 0
+        self.total_max_steps = 0
+        self.total_interrupted = 0
 
-    def track_episode_completion(
+    def track_episode_completion(  # noqa: PLR0913 - comprehensive episode tracking requires many parameters
         self,
         success: bool,  # noqa: FBT001 - simple boolean flag is clearest API
         steps: int,
         reward: float = 0.0,
         foods_collected: int = 0,
         distance_efficiencies: list[float] | None = None,
+        predator_encounters: int = 0,
+        successful_evasions: int = 0,
+        termination_reason: TerminationReason | None = None,
     ) -> None:
         """Track the completion of an episode.
 
@@ -57,6 +67,12 @@ class MetricsTracker:
         distance_efficiencies : list[float] | None, optional
             For dynamic environments, list of distance efficiencies for foods
             collected during the episode. None for static environments.
+        predator_encounters : int, optional
+            Number of predator encounters in this episode.
+        successful_evasions : int, optional
+            Number of successful evasions in this episode.
+        termination_reason : TerminationReason | None, optional
+            Reason the episode terminated.
         """
         if success:
             self.success_count += 1
@@ -66,13 +82,36 @@ class MetricsTracker:
         if distance_efficiencies is not None:
             self.distance_efficiencies.extend(distance_efficiencies)
 
-    def calculate_metrics(self, total_runs: int) -> PerformanceMetrics:
+        # Track predator-related metrics
+        self.total_predator_encounters += predator_encounters
+        self.total_successful_evasions += successful_evasions
+
+        # Track termination reasons
+        if termination_reason:
+            if termination_reason == TerminationReason.PREDATOR:
+                self.total_predator_deaths += 1
+            elif termination_reason == TerminationReason.STARVED:
+                self.total_starved += 1
+            elif termination_reason == TerminationReason.MAX_STEPS:
+                self.total_max_steps += 1
+            elif termination_reason == TerminationReason.INTERRUPTED:
+                self.total_interrupted += 1
+
+    def calculate_metrics(
+        self,
+        total_runs: int,
+        predators_enabled: bool = False,  # noqa: FBT001, FBT002 - flag needed to distinguish predator/non-predator envs
+    ) -> PerformanceMetrics:
         """Calculate final performance metrics.
 
         Parameters
         ----------
         total_runs : int
             Total number of episodes/runs executed.
+        predators_enabled : bool, optional
+            Whether predators are enabled in the environment (default: False).
+            When True, predator metrics will be 0.0 for zero encounters.
+            When False, predator metrics will be None (non-predator environment).
 
         Returns
         -------
@@ -100,6 +139,17 @@ class MetricsTracker:
         if self.foods_collected > 0 and total_runs > 0:
             average_foods_collected = self.foods_collected / total_runs
 
+        # Calculate predator metrics
+        # Distinguish between predator-enabled environments (0.0) and non-predator (None)
+        average_predator_encounters = None
+        average_successful_evasions = None
+        if predators_enabled and total_runs > 0:
+            # Predator-enabled environment: use 0.0 for zero encounters
+            average_predator_encounters = self.total_predator_encounters / total_runs
+            average_successful_evasions = self.total_successful_evasions / total_runs
+
+        # else: Non-predator environment: keep as None
+
         return PerformanceMetrics(
             success_rate=success_rate,
             average_steps=average_steps,
@@ -107,6 +157,15 @@ class MetricsTracker:
             foraging_efficiency=foraging_efficiency,
             average_distance_efficiency=average_distance_efficiency,
             average_foods_collected=average_foods_collected,
+            total_successes=self.success_count,
+            total_starved=self.total_starved,
+            total_predator_encounters=self.total_predator_encounters,
+            total_predator_deaths=self.total_predator_deaths,
+            total_successful_evasions=self.total_successful_evasions,
+            total_max_steps=self.total_max_steps,
+            total_interrupted=self.total_interrupted,
+            average_predator_encounters=average_predator_encounters,
+            average_successful_evasions=average_successful_evasions,
         )
 
     def reset(self) -> None:
@@ -115,3 +174,9 @@ class MetricsTracker:
         self.total_rewards = 0.0
         self.foods_collected = 0
         self.distance_efficiencies = []
+        self.total_predator_encounters = 0
+        self.total_successful_evasions = 0
+        self.total_predator_deaths = 0
+        self.total_starved = 0
+        self.total_max_steps = 0
+        self.total_interrupted = 0
