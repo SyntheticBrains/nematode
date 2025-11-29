@@ -217,6 +217,7 @@ _No benchmarks submitted yet._
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ modular | 0.402 | 32% | 320 | 24 | 0.217 | @chrisjz | 2025-11-29 |
 | ✓ modular | 0.395 | 31% | 344 | 27 | 0.215 | @chrisjz | 2025-11-27 |
 
 #### Classical Architectures
