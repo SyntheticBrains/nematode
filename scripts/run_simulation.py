@@ -1384,18 +1384,17 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         # Plot: Satiety Progression for Single Run (if requested via --track-per-run)
         # This is typically generated in the per-run tracking section, but we can add
         # a sample run here for predator environments
-        if predator_results and predator_results[0].satiety_history:
-            # Get the last run's satiety history as an example
-            last_run = predator_results[-1]
-            if last_run.satiety_history:
-                max_satiety_pred = max(last_run.satiety_history)
-                plot_satiety_progression_single_run(
-                    file_prefix,
-                    plot_dir,
-                    last_run.run,
-                    last_run.satiety_history,
-                    max_satiety_pred,
-                )
+        # Get the last run's satiety history as an example
+        last_run = predator_results[-1]
+        if last_run.satiety_history:
+            max_satiety_pred = max(last_run.satiety_history)
+            plot_satiety_progression_single_run(
+                file_prefix,
+                plot_dir,
+                last_run.run,
+                last_run.satiety_history,
+                max_satiety_pred,
+            )
 
 
 if __name__ == "__main__":
