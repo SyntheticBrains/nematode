@@ -203,7 +203,6 @@ class ModularBrain(QuantumBrain):
         self.shots: int = shots
         self.device: DeviceType = device
         self.learning_rate = learning_rate or DynamicLearningRate()
-        self.initial_learning_rate = self.learning_rate.initial_learning_rate
         logger.info(
             f"Using learning rate: {str(self.learning_rate).replace('θ', 'theta_')}",
         )
@@ -982,10 +981,9 @@ class ModularBrain(QuantumBrain):
             rng = np.random.default_rng()
             # Noise decays proportionally with LR
             effective_noise_std = 0.0
-            if self.initial_learning_rate > 0:
-                effective_noise_std = self.config.noise_std * (
-                    learning_rate / self.initial_learning_rate
-                )
+            init_lr = self.learning_rate.initial_learning_rate
+            if init_lr > 0:
+                effective_noise_std = self.config.noise_std * (learning_rate / init_lr)
             noise = rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
