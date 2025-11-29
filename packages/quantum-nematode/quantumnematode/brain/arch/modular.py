@@ -974,12 +974,12 @@ class ModularBrain(QuantumBrain):
                 DEFAULT_MAX_CLIP_GRADIENT,
             )
 
+        rng = np.random.default_rng()
         for i, k in enumerate(param_keys):
             # L2 regularization
             reg = self.config.l2_reg * self.parameter_values[k]
 
             # Add exploration noise (scaled with learning rate for stability after convergence)
-            rng = np.random.default_rng()
             # Noise decays proportionally with LR
             effective_noise_std = 0.0
             init_lr = self.learning_rate.initial_learning_rate

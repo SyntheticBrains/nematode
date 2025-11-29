@@ -359,4 +359,3 @@ Benchmark submissions SHALL capture predator configuration parameters to enable 
 - **THEN** the system SHALL support filtering by num_predators
 - **AND** SHALL enable comparison of agent performance across difficulty levels
 - **AND** SHALL show how additional predators affect success metrics
-
