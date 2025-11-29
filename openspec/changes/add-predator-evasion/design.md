@@ -91,6 +91,14 @@ total_gradient = food_gradient_vector + predator_gradient_vector
 
 **Structure:**
 ```yaml
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  penalty_step: 0.005
+  penalty_predator_death: 10.0      # Positive value, negated when applied
+  penalty_predator_proximity: 0.1   # Positive value, negated when applied
+  penalty_starvation: 10.0
+
 environment:
   type: dynamic
   dynamic:
@@ -114,10 +122,11 @@ environment:
       kill_radius: 0
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
-      proximity_penalty: -0.1
 ```
 
-**Migration:** Existing flat configurations will be automatically migrated by the config loader with deprecation warnings.
+**Note:** Predator-related penalties are configured in the `reward` section (not in predator config) for consistency with all other penalties. All penalty values are stored as positive numbers and negated when applied to rewards in the implementation.
+
+**Migration:** All example configurations have been migrated to the nested structure.
 
 ### Decision 4: Active Random Walker Predator
 
@@ -135,14 +144,20 @@ environment:
 
 ### Decision 5: Proximity Penalty
 
-**Choice:** Small negative reward (-0.1 default) applied per step when agent is within predator detection radius.
+**Choice:** Small penalty (0.1 default, stored as positive value, applied as negative) per step when agent is within predator detection radius.
 
 **Rationale:**
 - **Biological realism**: Mimics stress response when predator is nearby
 - **Learning signal**: Encourages proactive avoidance, not just reactive escape
 - **Configurable**: Can be tuned or disabled based on research needs
+- **Consistent pattern**: All penalties stored as positive values in config, negated when applied to reward
 
-**Implementation:** Applied in reward calculator when any predator is within `detection_radius` of agent.
+**Implementation:**
+- Configured in `reward.penalty_predator_proximity` (positive value, e.g., 0.1)
+- Applied in reward calculator as `-penalty_predator_proximity` when any predator is within `detection_radius`
+- Death penalty similarly configured as `reward.penalty_predator_death` (positive value, e.g., 10.0)
+- Applied in episode runner as `-reward_config.penalty_predator_death` upon collision
+- Both penalties cap at their configured values (do not stack per predator)
 
 ### Decision 6: Predator Type - Predatory Mite
 
@@ -225,16 +240,32 @@ If critical issues discovered:
 3. Revert configuration restructuring if migration fails
 4. Fall back to original flat configuration schema
 
-## Open Questions
+## Resolved Implementation Decisions
 
-1. **Predator gradient strength:** Should predator repulsion gradient be same magnitude as food attraction (1.0) or stronger/weaker? Initial default is 1.0 (equal), but may need tuning.
+The following questions were resolved during implementation and testing:
 
-2. **Kill radius vs detection radius:** Kill radius defaults to 0 (exact overlap only) and detection_radius=8. This was chosen to require precise collision detection. Is this difficulty level appropriate, or should we consider kill_radius=1 (adjacent cells)?
+1. **Predator gradient strength:**
+   - **Final choice:** Same magnitude as food attraction (1.0 default)
+   - **Rationale:** Biological realism - C. elegans integrates chemical cues with similar sensitivity. Allows balanced multi-objective learning where neither signal dominates.
+   - **Configurability:** Can be tuned per-environment via `predators.gradient_strength`
 
-3. **Proximity penalty stacking:** If multiple predators within detection radius, should penalty stack (-0.1 per predator) or cap at -0.1 total?
+2. **Kill radius vs detection radius:**
+   - **Final choice:** `kill_radius=0` (exact overlap required), `detection_radius=8`
+   - **Rationale:** Provides clear separation between danger detection (chemical gradient at distance) and actual collision. Prevents "near miss" kills that would confuse learning signal.
+   - **Observed behavior:** Works well in practice - agents learn to maintain distance from predators
 
-4. **Predator spawn exclusion:** Should predators spawn with exclusion radius from agent (like food)? Current design: no exclusion (predators can spawn near agent).
+3. **Proximity penalty stacking:**
+   - **Final choice:** Penalty caps at configured value (does not stack per predator)
+   - **Implementation:** `if any(distance <= detection_radius): penalty = -config.penalty_predator_proximity`
+   - **Rationale:** Simplifies learning signal - "danger present" vs "danger absent" binary state. Prevents overwhelming negative rewards when multiple predators cluster.
 
-5. **Viewport rendering priority:** If predator outside viewport but within detection radius, should viewport expand or show danger indicator?
+4. **Predator spawn exclusion:**
+   - **Final choice:** Predators spawn outside detection radius of agent (using Manhattan distance)
+   - **Implementation:** `_initialize_predators` attempts up to 100 tries to find positions where `distance_to_agent > detection_radius`
+   - **Rationale:** Prevents immediate danger at episode start, giving agent time to orient. Still more challenging than food's agent_exclusion_radius since predators are mobile.
+   - **Observed behavior:** Provides fair starting conditions while maintaining difficulty as predators move randomly toward agent
 
-**Resolution process:** These will be addressed during implementation based on empirical testing. Document final choices in archived spec.
+5. **Viewport rendering priority:**
+   - **Final choice:** Viewport remains fixed at configured size, predators outside viewport not shown visually
+   - **Implementation:** Gradient detection works regardless of viewport (agent observes via chemosensory input, not visual)
+   - **Rationale:** Matches biological reality - C. elegans detects chemical gradients beyond visual range
