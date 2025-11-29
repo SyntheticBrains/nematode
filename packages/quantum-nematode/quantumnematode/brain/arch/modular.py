@@ -769,8 +769,8 @@ class ModularBrain(QuantumBrain):
             device=self.device,
             learning_rate=deepcopy(self.learning_rate),
             parameter_initializer=deepcopy(self.parameter_initializer),
-            gradient_method=deepcopy(self.gradient_method),
-            action_set=deepcopy(self.action_set),
+            gradient_method=self.gradient_method,
+            action_set=self.action_set,
             perf_mgmt=self.perf_mgmt,
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
