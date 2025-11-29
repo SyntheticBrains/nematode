@@ -69,7 +69,7 @@ class TestBenchmarkValidationRules:
         """Test default validation rules."""
         rules = BenchmarkValidationRules()
 
-        assert rules.min_runs == 50  # Updated from 20 to 50 for convergence detection
+        assert rules.min_runs == 50
         assert rules.require_clean_git is True
         assert rules.min_success_rate is None
 
