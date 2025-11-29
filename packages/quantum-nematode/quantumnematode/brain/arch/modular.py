@@ -187,6 +187,7 @@ class ModularBrain(QuantumBrain):
             device: Device string for AerSimulator or real QPU backend.
             learning_rate: Learning rate strategy (default is dynamic).
             parameter_initializer : The initializer to use for parameter initialization.
+            gradient_method: Optional gradient processing method (raw/normalize/clip).
             action_set: List of available actions (default is DEFAULT_ACTIONS).
             perf_mgmt: Q-CTRL performance management function instance.
         """
