@@ -349,7 +349,6 @@ class StandardEpisodeRunner(EpisodeRunner):
                     )
 
                 # Satiety decay (after predator movement)
-                # Delegate to satiety manager
                 agent._satiety_manager.decay_satiety()
 
                 # Track satiety after decay
