@@ -34,6 +34,8 @@ DEFAULT_PENALTY_ANTI_DITHERING = 0.02
 DEFAULT_PENALTY_STEP = 0.05
 DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_PENALTY_STARVATION = 10.0
+DEFAULT_PENALTY_PREDATOR_DEATH = 10.0
+DEFAULT_PENALTY_PREDATOR_PROXIMITY = 0.1
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -64,7 +66,7 @@ class RewardConfig(BaseModel):
     )
     penalty_step: float = DEFAULT_PENALTY_STEP
     penalty_stuck_position: float = (
-        DEFAULT_PENALTY_STUCK_POSITION  # Penalty for staying in same position
+        DEFAULT_PENALTY_STUCK_POSITION  # Penalty for staying in same position, disabled if 0
     )
     stuck_position_threshold: int = (
         DEFAULT_STUCK_POSITION_THRESHOLD  # Steps before stuck penalty applies
@@ -75,6 +77,12 @@ class RewardConfig(BaseModel):
     reward_goal: float = DEFAULT_REWARD_GOAL
     reward_exploration: float = DEFAULT_REWARD_EXPLORATION  # Bonus for visiting new cells
     penalty_starvation: float = DEFAULT_PENALTY_STARVATION  # Penalty when satiety reaches 0
+    penalty_predator_death: float = (
+        DEFAULT_PENALTY_PREDATOR_DEATH  # Penalty when caught by predator
+    )
+    penalty_predator_proximity: float = (
+        DEFAULT_PENALTY_PREDATOR_PROXIMITY  # Penalty per step within predator detection radius
+    )
 
 
 class ManyworldsModeConfig(BaseModel):
@@ -387,11 +395,14 @@ class QuantumNematodeAgent:
             case StaticEnvironment():
                 pass
             case DynamicForagingEnvironment():
-                print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
                 print(  # noqa: T201
-                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.max_active_foods}",
+                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.target_foods_to_collect}",
                 )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
+                # Display danger status if predators are enabled
+                if self.env.predators_enabled:
+                    danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
+                    print(f"Status:\t\t{danger_status}")  # noqa: T201
 
     def calculate_reward(
         self,
@@ -432,8 +443,8 @@ class QuantumNematodeAgent:
         if isinstance(self.env, DynamicForagingEnvironment):
             self.env = DynamicForagingEnvironment(
                 grid_size=self.env.grid_size,
-                num_initial_foods=self.env.num_initial_foods,
-                max_active_foods=self.env.max_active_foods,
+                foods_on_grid=self.env.foods_on_grid,
+                target_foods_to_collect=self.env.target_foods_to_collect,
                 min_food_distance=self.env.min_food_distance,
                 agent_exclusion_radius=self.env.agent_exclusion_radius,
                 gradient_decay_constant=self.env.gradient_decay_constant,
@@ -442,6 +453,14 @@ class QuantumNematodeAgent:
                 max_body_length=self.max_body_length,
                 theme=self.env.theme,
                 rich_style_config=self.env.rich_style_config,
+                # Predator parameters (preserve from original env)
+                predators_enabled=self.env.predators_enabled,
+                num_predators=self.env.num_predators,
+                predator_speed=self.env.predator_speed,
+                predator_detection_radius=self.env.predator_detection_radius,
+                predator_kill_radius=self.env.predator_kill_radius,
+                predator_gradient_decay=self.env.predator_gradient_decay,
+                predator_gradient_strength=self.env.predator_gradient_strength,
             )
         else:
             self.env = StaticEnvironment(
@@ -496,7 +515,15 @@ class QuantumNematodeAgent:
         PerformanceMetrics
             An object containing success rate, average steps, average reward, and dynamic metrics.
         """
-        metrics = self._metrics_tracker.calculate_metrics(total_runs)
+        # Determine if predators are enabled for proper metrics calculation
+        predators_enabled = (
+            isinstance(self.env, DynamicForagingEnvironment) and self.env.predators_enabled
+        )
+
+        metrics = self._metrics_tracker.calculate_metrics(
+            total_runs=total_runs,
+            predators_enabled=predators_enabled,
+        )
 
         # For non-dynamic environments, set foraging metrics to None (agent's original behavior)
         if not isinstance(self.env, DynamicForagingEnvironment):
@@ -508,6 +535,15 @@ class QuantumNematodeAgent:
                 foraging_efficiency=None,
                 average_distance_efficiency=None,
                 average_foods_collected=None,
+                total_successes=metrics.total_successes,
+                total_starved=metrics.total_starved,
+                total_predator_encounters=metrics.total_predator_encounters,
+                total_predator_deaths=metrics.total_predator_deaths,
+                total_successful_evasions=metrics.total_successful_evasions,
+                total_max_steps=metrics.total_max_steps,
+                total_interrupted=metrics.total_interrupted,
+                average_predator_encounters=metrics.average_predator_encounters,
+                average_successful_evasions=metrics.average_successful_evasions,
             )
 
         # For dynamic environments, convert foraging_efficiency from foods/run to foods/step
@@ -524,4 +560,13 @@ class QuantumNematodeAgent:
             foraging_efficiency=foraging_efficiency_per_step,
             average_distance_efficiency=metrics.average_distance_efficiency,
             average_foods_collected=metrics.average_foods_collected,
+            total_successes=metrics.total_successes,
+            total_starved=metrics.total_starved,
+            total_predator_encounters=metrics.total_predator_encounters,
+            total_predator_deaths=metrics.total_predator_deaths,
+            total_successful_evasions=metrics.total_successful_evasions,
+            total_max_steps=metrics.total_max_steps,
+            total_interrupted=metrics.total_interrupted,
+            average_predator_encounters=metrics.average_predator_encounters,
+            average_successful_evasions=metrics.average_successful_evasions,
         )

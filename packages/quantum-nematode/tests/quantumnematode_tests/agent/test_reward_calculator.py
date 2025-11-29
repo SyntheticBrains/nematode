@@ -80,6 +80,7 @@ class TestDynamicForagingRewards:
         env.foods = [(5, 5), (1, 1)]
         env.get_nearest_food_distance = Mock(return_value=1)
         env.visited_cells = set()
+        env.predators_enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(3, 3), (2, 2)]  # Previous nearest was Manhattan=4, now=1
@@ -98,6 +99,7 @@ class TestDynamicForagingRewards:
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = set()
+        env.predators_enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -115,6 +117,7 @@ class TestDynamicForagingRewards:
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(1, 2)}
+        env.predators_enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -164,6 +167,101 @@ class TestAntiDitheringPenalty:
         # Distance reward: 0.1 * (6 - 4) = 0.2
         # Step penalty: -0.01
         assert reward == pytest.approx(0.19)
+
+
+class TestPredatorProximityPenalty:
+    """Test predator proximity penalty."""
+
+    def test_predator_proximity_penalty_applied(self):
+        """Test penalty when agent is within predator detection radius."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.1,
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [5, 5]
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.predators_enabled = True
+        env.is_agent_in_danger = Mock(return_value=True)  # Within detection radius
+
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Proximity penalty: -0.1, Step penalty: -0.01
+        assert reward == pytest.approx(-0.11)
+
+    def test_no_predator_proximity_penalty_when_safe(self):
+        """Test no penalty when agent is outside predator detection radius."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.1,
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [5, 5]
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.predators_enabled = True
+        env.is_agent_in_danger = Mock(return_value=False)  # Outside detection radius
+
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_no_predator_proximity_penalty_when_disabled(self):
+        """Test no penalty when predators are disabled."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.1,
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [5, 5]
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.predators_enabled = False  # Predators disabled
+
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_predator_proximity_penalty_zero_disabled(self):
+        """Test that zero proximity penalty effectively disables the feature."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.0,  # Disabled
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [5, 5]
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.predators_enabled = True
+        env.is_agent_in_danger = Mock(return_value=True)
+
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01 (no proximity penalty)
+        assert reward == pytest.approx(-0.01)
 
 
 class TestStuckPositionPenalty:

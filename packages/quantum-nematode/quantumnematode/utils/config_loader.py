@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -49,9 +49,6 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 
-DEFAULT_LEARNING_RATE_INITIAL = 0.1
-DEFAULT_LEARNING_RATE_METHOD = LearningRateMethod.DYNAMIC
-
 BrainConfigType = (
     ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig | SpikingBrainConfig
 )
@@ -67,7 +64,7 @@ class BrainContainerConfig(BaseModel):
 class LearningRateParameters(BaseModel):
     """Parameters for configuring the learning rate."""
 
-    initial_learning_rate: float = DEFAULT_LEARNING_RATE_INITIAL
+    initial_learning_rate: float = 0.1
     decay_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE
     decay_type: str = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
     decay_factor: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR
@@ -86,26 +83,20 @@ class LearningRateParameters(BaseModel):
 class LearningRateConfig(BaseModel):
     """Configuration for the learning rate method and its parameters."""
 
-    method: LearningRateMethod = DEFAULT_LEARNING_RATE_METHOD
+    method: LearningRateMethod = LearningRateMethod.DYNAMIC
     parameters: LearningRateParameters = LearningRateParameters()
-
-
-DEFAULT_GRADIENT_CALCULATION_METHOD = GradientCalculationMethod.RAW
 
 
 class GradientConfig(BaseModel):
     """Configuration for the gradient calculation method."""
 
-    method: GradientCalculationMethod = DEFAULT_GRADIENT_CALCULATION_METHOD
-
-
-DEFAULT_PARAMETER_INITIALIZER_TYPE = "random_small"
+    method: GradientCalculationMethod = GradientCalculationMethod.RAW
 
 
 class ParameterInitializerConfig(BaseModel):
     """Configuration for parameter initialization."""
 
-    type: str = DEFAULT_PARAMETER_INITIALIZER_TYPE
+    type: str = "random_small"
     manual_parameter_values: dict[str, float] | None = None
 
 
@@ -115,17 +106,64 @@ class StaticEnvironmentConfig(BaseModel):
     grid_size: int = 10
 
 
-class DynamicEnvironmentConfig(BaseModel):
-    """Configuration for dynamic foraging environment."""
+class ForagingConfig(BaseModel):
+    """Configuration for foraging mechanics in dynamic environment."""
 
-    grid_size: int = 50
-    num_initial_foods: int = 10
-    max_active_foods: int = 15
+    foods_on_grid: int = 10
+    target_foods_to_collect: int = 15
     min_food_distance: int = 5
     agent_exclusion_radius: int = 10
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
+
+
+class PredatorConfig(BaseModel):
+    """Configuration for predator mechanics in dynamic environment."""
+
+    enabled: bool = False
+    count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
+    speed: float = 1.0  # Maps to DynamicForagingEnvironment.predator_speed
+    movement_pattern: str = "random"  # Only 'random' is currently supported
+    # Maps to DynamicForagingEnvironment.predator_detection_radius
+    detection_radius: int = 8
+    kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
+    # Maps to DynamicForagingEnvironment.predator_gradient_decay
+    gradient_decay_constant: float = 12.0
+    # Maps to DynamicForagingEnvironment.predator_gradient_strength
+    gradient_strength: float = 1.0
+
+    @field_validator("movement_pattern")
+    @classmethod
+    def validate_movement_pattern(cls, v: str) -> str:
+        """Validate movement pattern is supported."""
+        valid_patterns = ["random"]
+        if v not in valid_patterns:
+            msg = (
+                f"Invalid movement_pattern: '{v}'. "
+                f"Currently only 'random' is supported. "
+                f"Future patterns (e.g., 'pursuit', 'patrol') are planned but not yet implemented."
+            )
+            raise ValueError(msg)
+        return v
+
+
+class DynamicEnvironmentConfig(BaseModel):
+    """Configuration for dynamic foraging environment."""
+
+    grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
+
+    # Nested configuration subsections
+    foraging: ForagingConfig | None = None
+    predators: PredatorConfig | None = None
+
+    def get_foraging_config(self) -> ForagingConfig:
+        """Get foraging configuration with defaults."""
+        return self.foraging or ForagingConfig()
+
+    def get_predator_config(self) -> PredatorConfig:
+        """Get predator configuration with defaults."""
+        return self.predators or PredatorConfig()
 
 
 class EnvironmentConfig(BaseModel):

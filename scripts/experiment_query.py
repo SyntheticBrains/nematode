@@ -71,7 +71,7 @@ def print_experiments_table(experiments: list[ExperimentMetadata]) -> None:
     print(f"\nTotal: {len(experiments)} experiments")
 
 
-def print_experiment_details(metadata: ExperimentMetadata) -> None:
+def print_experiment_details(metadata: ExperimentMetadata) -> None:  # noqa: C901, PLR0912, PLR0915
     """Print detailed experiment information.
 
     Parameters
@@ -97,9 +97,19 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:
     print(f"  Type: {metadata.environment.type}")
     print(f"  Grid Size: {metadata.environment.grid_size}")
     if metadata.environment.num_foods:
-        print(f"  Foods: {metadata.environment.num_foods}")
-        print(f"  Max Active: {metadata.environment.max_active_foods}")
+        print(f"  Foods Visible: {metadata.environment.num_foods}")
+        print(f"  Foods to Collect: {metadata.environment.target_foods_to_collect}")
         print(f"  Initial Satiety: {metadata.environment.initial_satiety}")
+    if metadata.environment.predators_enabled:
+        print("  Predators Enabled: Yes")
+        print(f"    Count: {metadata.environment.num_predators}")
+        print(f"    Speed: {metadata.environment.predator_speed}")
+        print(f"    Detection Radius: {metadata.environment.predator_detection_radius}")
+        print(f"    Kill Radius: {metadata.environment.predator_kill_radius}")
+        if metadata.environment.predator_gradient_decay:
+            print(f"    Gradient Decay: {metadata.environment.predator_gradient_decay}")
+        if metadata.environment.predator_gradient_strength:
+            print(f"    Gradient Strength: {metadata.environment.predator_gradient_strength}")
 
     print("\nBrain:")
     print(f"  Type: {metadata.brain.type}")
@@ -109,6 +119,11 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:
         print(f"  Shots: {metadata.brain.shots}")
     if metadata.brain.hidden_dim:
         print(f"  Hidden Dim: {metadata.brain.hidden_dim}")
+    if metadata.brain.parameter_initializer:
+        print(f"  Parameter Initializer: {metadata.brain.parameter_initializer.type}")
+        if metadata.brain.parameter_initializer.manual_parameter_values:
+            num_params = len(metadata.brain.parameter_initializer.manual_parameter_values)
+            print(f"    Manual Parameters: {num_params} values")
 
     print("\nResults:")
     print(f"  Total Runs: {metadata.results.total_runs}")
@@ -125,6 +140,14 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:
     print(f"  All Foods: {metadata.results.completed_all_food}")
     print(f"  Starved: {metadata.results.starved}")
     print(f"  Max Steps: {metadata.results.max_steps_reached}")
+    if metadata.results.predator_deaths > 0:
+        print(f"  Predator Deaths: {metadata.results.predator_deaths}")
+
+    if metadata.results.avg_predator_encounters is not None:
+        print("\nPredator Metrics:")
+        print(f"  Avg Encounters: {metadata.results.avg_predator_encounters:.2f}")
+        if metadata.results.avg_successful_evasions is not None:
+            print(f"  Avg Evasions: {metadata.results.avg_successful_evasions:.2f}")
 
     print("\nSystem:")
     print(f"  Python: {metadata.system.python_version}")

@@ -30,7 +30,7 @@ DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR = 0.5
 DEFAULT_DYNAMIC_LEARNING_RATE_STEP_SIZE = 10
 DEFAULT_DYNAMIC_LEARNING_RATE_MAX_STEPS = 1000
 DEFAULT_DYNAMIC_LEARNING_RATE_POWER = 1.0
-DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR = 0.012
+DEFAULT_DYNAMIC_LEARNING_RATE_MIN_LR = 0
 
 
 class DynamicLearningRate:
@@ -270,6 +270,7 @@ class PerformanceBasedLearningRate:
         max_learning_rate: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
         adjustment_factor: float = DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_ADJUSTMENT_FACTOR,
     ) -> None:
+        self.initial_learning_rate = initial_learning_rate
         self.learning_rate = initial_learning_rate
         self.min_learning_rate = min_learning_rate
         self.max_learning_rate = max_learning_rate

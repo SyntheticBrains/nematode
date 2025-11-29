@@ -38,6 +38,8 @@ class ThemeSymbolSet(BaseModel):
         Symbol for moving right.
     empty : str
         Symbol for an empty cell.
+    predator : str
+        Symbol representing a predator.
     """
 
     goal: str
@@ -47,10 +49,11 @@ class ThemeSymbolSet(BaseModel):
     left: str
     right: str
     empty: str
+    predator: str
 
 
 class DarkColorRichStyleConfig(BaseModel):
-    """Rich styling configuration for colored on dark backgroubd Rich theme.
+    """Rich styling configuration for colored on dark background Rich theme.
 
     Attributes
     ----------
@@ -82,6 +85,7 @@ THEME_SYMBOLS = {
         left="<",
         right=">",
         empty=".",
+        predator="#",
     ),
     Theme.EMOJI: ThemeSymbolSet(
         goal="🦠",
@@ -91,6 +95,7 @@ THEME_SYMBOLS = {
         left="◀️ ",
         right="▶️ ",
         empty="⬜️",
+        predator="🕷️ ",
     ),
     Theme.UNICODE: ThemeSymbolSet(
         goal="◆",
@@ -100,6 +105,7 @@ THEME_SYMBOLS = {
         left="←",
         right="→",
         empty="·",
+        predator="#",
     ),
     Theme.COLORED_ASCII: ThemeSymbolSet(
         goal="\033[91m*\033[0m",
@@ -109,6 +115,7 @@ THEME_SYMBOLS = {
         left="\033[92m<\033[0m",
         right="\033[92m>\033[0m",
         empty="\033[90m.\033[0m",
+        predator="\033[91m#\033[0m",
     ),
     Theme.RICH: ThemeSymbolSet(
         goal="⬢",
@@ -118,6 +125,7 @@ THEME_SYMBOLS = {
         left="◀",
         right="▶",
         empty="·",
+        predator="#",
     ),
     Theme.EMOJI_RICH: ThemeSymbolSet(
         goal=" 🦠",
@@ -127,5 +135,6 @@ THEME_SYMBOLS = {
         left="◀️",
         right="▶️",
         empty=" ",
+        predator=" 🕷️",
     ),
 }

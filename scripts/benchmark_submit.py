@@ -107,6 +107,12 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
             ("Dynamic Medium - Classical", "dynamic_medium_classical"),
             ("Dynamic Large - Quantum", "dynamic_large_quantum"),
             ("Dynamic Large - Classical", "dynamic_large_classical"),
+            ("Dynamic Predator Small - Quantum", "dynamic_predator_small_quantum"),
+            ("Dynamic Predator Small - Classical", "dynamic_predator_small_classical"),
+            ("Dynamic Predator Medium - Quantum", "dynamic_predator_medium_quantum"),
+            ("Dynamic Predator Medium - Classical", "dynamic_predator_medium_classical"),
+            ("Dynamic Predator Large - Quantum", "dynamic_predator_large_quantum"),
+            ("Dynamic Predator Large - Classical", "dynamic_predator_large_classical"),
         ]
 
         print("\n" + "=" * 80)

@@ -28,10 +28,27 @@ def format_benchmark_row(benchmark: ExperimentMetadata) -> dict[str, str]:
 
     date = benchmark.timestamp.strftime("%Y-%m-%d")
 
+    # Convergence indicator: ✓ if converged, ⚠ if not
+    conv_indicator = "✓" if benchmark.results.converged else "⚠"
+
     row = {
         "brain": benchmark.brain.type,
-        "success_rate": f"{benchmark.results.success_rate:.0%}",
-        "avg_steps": f"{benchmark.results.avg_steps:.0f}",
+        "score": f"{benchmark.results.composite_benchmark_score:.3f}"
+        if benchmark.results.composite_benchmark_score
+        else "N/A",
+        "success_rate": f"{benchmark.results.post_convergence_success_rate:.0%}"
+        if benchmark.results.post_convergence_success_rate is not None
+        else f"{benchmark.results.success_rate:.0%}",  # Fallback for legacy benchmarks
+        "avg_steps": f"{benchmark.results.post_convergence_avg_steps:.0f}"
+        if benchmark.results.post_convergence_avg_steps is not None
+        else f"{benchmark.results.avg_steps:.0f}",  # Fallback for legacy benchmarks
+        "converge_run": f"{benchmark.results.convergence_run}"
+        if benchmark.results.convergence_run
+        else "N/A",
+        "stability": f"{benchmark.results.post_convergence_variance:.3f}"
+        if benchmark.results.post_convergence_variance is not None
+        else "N/A",
+        "conv_indicator": conv_indicator,
         "contributor": contributor_display,
         "date": date,
     }
@@ -71,35 +88,40 @@ def generate_category_table(category: str, limit: int = 10) -> str:
     if is_foraging:
         headers = [
             "Brain",
-            "Success Rate",
-            "Avg Steps",
-            "Foods/Run",
-            "Dist Eff",
+            "Score",
+            "Success%",
+            "Steps",
+            "Converge@Run",
+            "Stability",
             "Contributor",
             "Date",
         ]
         header_line = "| " + " | ".join(headers) + " |"
         separator = "|" + "|".join(["---"] * len(headers)) + "|"
     else:
-        headers = ["Brain", "Success Rate", "Avg Steps", "Contributor", "Date"]
+        headers = [
+            "Brain",
+            "Score",
+            "Success%",
+            "Steps",
+            "Converge@Run",
+            "Stability",
+            "Contributor",
+            "Date",
+        ]
         header_line = "| " + " | ".join(headers) + " |"
         separator = "|" + "|".join(["---"] * len(headers)) + "|"
 
     rows = []
     for benchmark in benchmarks:
         row_data = format_benchmark_row(benchmark)
-        if is_foraging:
-            row = (
-                f"| {row_data['brain']} | {row_data['success_rate']} | "
-                f"{row_data['avg_steps']} | {row_data.get('foods_per_run', 'N/A')} | "
-                f"{row_data.get('dist_eff', 'N/A')} | {row_data['contributor']} | "
-                f"{row_data['date']} |"
-            )
-        else:
-            row = (
-                f"| {row_data['brain']} | {row_data['success_rate']} | "
-                f"{row_data['avg_steps']} | {row_data['contributor']} | {row_data['date']} |"
-            )
+        # Same format for both foraging and static (convergence metrics apply to both)
+        row = (
+            f"| {row_data['conv_indicator']} {row_data['brain']} | {row_data['score']} | "
+            f"{row_data['success_rate']} | {row_data['avg_steps']} | "
+            f"{row_data['converge_run']} | {row_data['stability']} | "
+            f"{row_data['contributor']} | {row_data['date']} |"
+        )
         rows.append(row)
 
     return "\n".join([header_line, separator, *rows]) + "\n"
@@ -128,6 +150,12 @@ def generate_readme_section() -> str:
         ("Dynamic Medium - Classical", "dynamic_medium_classical"),
         ("Dynamic Large - Quantum", "dynamic_large_quantum"),
         ("Dynamic Large - Classical", "dynamic_large_classical"),
+        ("Dynamic Predator Small - Quantum", "dynamic_predator_small_quantum"),
+        ("Dynamic Predator Small - Classical", "dynamic_predator_small_classical"),
+        ("Dynamic Predator Medium - Quantum", "dynamic_predator_medium_quantum"),
+        ("Dynamic Predator Medium - Classical", "dynamic_predator_medium_classical"),
+        ("Dynamic Predator Large - Quantum", "dynamic_predator_large_quantum"),
+        ("Dynamic Predator Large - Classical", "dynamic_predator_large_classical"),
     ]
 
     # Check if we have any benchmarks at all
@@ -166,6 +194,12 @@ def generate_leaderboards() -> dict[str, str]:
         "dynamic_medium_classical",
         "dynamic_large_quantum",
         "dynamic_large_classical",
+        "dynamic_predator_small_quantum",
+        "dynamic_predator_small_classical",
+        "dynamic_predator_medium_quantum",
+        "dynamic_predator_medium_classical",
+        "dynamic_predator_large_quantum",
+        "dynamic_predator_large_classical",
     ]
 
     leaderboards = {}
@@ -217,6 +251,27 @@ def generate_benchmarks_doc() -> str:
             [
                 ("#### Quantum Architectures", "dynamic_large_quantum"),
                 ("#### Classical Architectures", "dynamic_large_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Predator Small (≤20x20)",
+            [
+                ("#### Quantum Architectures", "dynamic_predator_small_quantum"),
+                ("#### Classical Architectures", "dynamic_predator_small_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Predator Medium (≤50x50)",
+            [
+                ("#### Quantum Architectures", "dynamic_predator_medium_quantum"),
+                ("#### Classical Architectures", "dynamic_predator_medium_classical"),
+            ],
+        ),
+        (
+            "### Dynamic Predator Large (>50x50)",
+            [
+                ("#### Quantum Architectures", "dynamic_predator_large_quantum"),
+                ("#### Classical Architectures", "dynamic_predator_large_classical"),
             ],
         ),
     ]
