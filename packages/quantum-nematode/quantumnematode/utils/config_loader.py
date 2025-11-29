@@ -49,9 +49,6 @@ from quantumnematode.optimizers.learning_rate import (
     PerformanceBasedLearningRate,
 )
 
-DEFAULT_LEARNING_RATE_INITIAL = 0.1
-DEFAULT_LEARNING_RATE_METHOD = LearningRateMethod.DYNAMIC
-
 BrainConfigType = (
     ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig | SpikingBrainConfig
 )
@@ -67,7 +64,7 @@ class BrainContainerConfig(BaseModel):
 class LearningRateParameters(BaseModel):
     """Parameters for configuring the learning rate."""
 
-    initial_learning_rate: float = DEFAULT_LEARNING_RATE_INITIAL
+    initial_learning_rate: float = 0.1
     decay_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE
     decay_type: str = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
     decay_factor: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR
@@ -86,26 +83,20 @@ class LearningRateParameters(BaseModel):
 class LearningRateConfig(BaseModel):
     """Configuration for the learning rate method and its parameters."""
 
-    method: LearningRateMethod = DEFAULT_LEARNING_RATE_METHOD
+    method: LearningRateMethod = LearningRateMethod.DYNAMIC
     parameters: LearningRateParameters = LearningRateParameters()
-
-
-DEFAULT_GRADIENT_CALCULATION_METHOD = GradientCalculationMethod.RAW
 
 
 class GradientConfig(BaseModel):
     """Configuration for the gradient calculation method."""
 
-    method: GradientCalculationMethod = DEFAULT_GRADIENT_CALCULATION_METHOD
-
-
-DEFAULT_PARAMETER_INITIALIZER_TYPE = "random_small"
+    method: GradientCalculationMethod = GradientCalculationMethod.RAW
 
 
 class ParameterInitializerConfig(BaseModel):
     """Configuration for parameter initialization."""
 
-    type: str = DEFAULT_PARAMETER_INITIALIZER_TYPE
+    type: str = "random_small"
     manual_parameter_values: dict[str, float] | None = None
 
 
