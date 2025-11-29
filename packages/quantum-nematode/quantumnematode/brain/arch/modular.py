@@ -79,6 +79,11 @@ from quantumnematode.initializers.random_initializer import (
 from quantumnematode.initializers.zero_initializer import ZeroInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
+from quantumnematode.optimizers.gradient_methods import (
+    DEFAULT_MAX_CLIP_GRADIENT,
+    GradientCalculationMethod,
+    compute_gradients,
+)
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 if TYPE_CHECKING:
@@ -165,6 +170,7 @@ class ModularBrain(QuantumBrain):
         | RandomSmallUniformInitializer
         | ManualParameterInitializer
         | None = None,
+        gradient_method: GradientCalculationMethod | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
         perf_mgmt: "RunnableQiskitFunction | None" = None,
     ) -> None:
@@ -193,6 +199,7 @@ class ModularBrain(QuantumBrain):
         self.shots: int = shots
         self.device: DeviceType = device
         self.learning_rate = learning_rate or DynamicLearningRate()
+        self.initial_learning_rate = self.learning_rate.initial_learning_rate
         logger.info(
             f"Using learning rate: {str(self.learning_rate).replace('θ', 'theta_')}",
         )
@@ -202,6 +209,8 @@ class ModularBrain(QuantumBrain):
             "Using parameter initializer: "
             f"{str(self.parameter_initializer).replace('θ', 'theta_')}",
         )
+
+        self.gradient_method = gradient_method
 
         self.action_set = action_set
         self.perf_mgmt = perf_mgmt
@@ -942,20 +951,34 @@ class ModularBrain(QuantumBrain):
         if len(self._momentum) == 0:
             self._momentum = dict.fromkeys(param_keys, 0.0)
 
-        # Momentum coefficient
+        # Momentum coefficient and decay
         momentum_coefficient = 0.9
+        momentum_decay = 0.99  # Prevents unbounded momentum accumulation
+
+        # Apply gradient processing (clip/normalize/raw) based on config
+        if self.gradient_method is not None:
+            gradients = compute_gradients(
+                gradients,
+                self.gradient_method,
+                DEFAULT_MAX_CLIP_GRADIENT,
+            )
 
         for i, k in enumerate(param_keys):
             # L2 regularization
             reg = self.config.l2_reg * self.parameter_values[k]
 
-            # Add exploration noise
+            # Add exploration noise (scaled with learning rate for stability after convergence)
             rng = np.random.default_rng()
-            noise = rng.normal(0, self.config.noise_std)
+            # Noise decays proportionally with LR
+            effective_noise_std = self.config.noise_std * (
+                learning_rate / self.initial_learning_rate
+            )
+            noise = rng.normal(0, effective_noise_std)
 
-            # Momentum update with adaptive learning rate
-            self._momentum[k] = momentum_coefficient * self._momentum[k] + learning_rate * (
-                gradients[i] + reg
+            # Momentum update with adaptive learning rate and decay
+            self._momentum[k] = (
+                momentum_decay * momentum_coefficient * self._momentum[k]
+                + learning_rate * (gradients[i] - reg)  # L2 reg pushes parameters toward zero
             )
 
             # Update parameter
