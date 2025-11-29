@@ -74,16 +74,16 @@ The system SHALL detect when the agent collides with a predator and terminate th
 - **AND** a death penalty reward SHALL be applied (configurable, default -10)
 
 #### Scenario: Kill Radius Configuration
-- **GIVEN** a configuration with `kill_radius: 1`
+- **GIVEN** a configuration with `kill_radius: 0`
 - **WHEN** collision detection runs
-- **THEN** collision SHALL be detected when agent is within 1 cell (Manhattan distance) of any predator
-- **AND** kill_radius of 1 SHALL include the 4 adjacent cells plus center
+- **THEN** collision SHALL be detected when agent is within 0 cells (Manhattan distance) of any predator
+- **AND** kill_radius of 0 SHALL include the center cell only
 - **AND** diagonal adjacency SHALL be excluded (Manhattan distance only)
 
 #### Scenario: No Collision Outside Kill Radius
-- **GIVEN** an agent at (10, 10) and predator at (12, 10) with `kill_radius: 1`
+- **GIVEN** an agent at (10, 10) and predator at (11, 10) with `kill_radius: 0`
 - **WHEN** positions are checked
-- **THEN** no collision SHALL be detected (distance = 2 > kill_radius)
+- **THEN** no collision SHALL be detected (distance = 1 > kill_radius)
 - **AND** the episode SHALL continue normally
 - **AND** agent SHALL still sense predator gradient if within detection radius
 
