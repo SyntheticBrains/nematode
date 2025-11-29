@@ -346,7 +346,7 @@ class ExperimentMetadata(BaseModel):
         Brain architecture metadata.
     reward : RewardMetadata
         Reward function configuration.
-    learning_rate : LearningRateMetadata
+    learning_rate : LearningRateMetadata | None
         Learning rate configuration.
     gradient : GradientMetadata
         Gradient calculation method.
@@ -370,7 +370,7 @@ class ExperimentMetadata(BaseModel):
     environment: EnvironmentMetadata
     brain: BrainMetadata
     reward: RewardMetadata
-    learning_rate: LearningRateMetadata
+    learning_rate: LearningRateMetadata | None = None
     gradient: GradientMetadata
     results: ResultsMetadata
     system: SystemMetadata

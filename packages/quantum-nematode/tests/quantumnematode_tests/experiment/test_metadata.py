@@ -581,6 +581,7 @@ class TestExperimentMetadata:
         assert experiment.brain.qubits == 4
         assert experiment.reward.reward_goal == 2.0
         assert experiment.reward.penalty_predator_proximity == 0.1
+        assert experiment.learning_rate is not None
         assert experiment.learning_rate.method == "dynamic"
         assert experiment.learning_rate.decay_type == "exponential"
         assert experiment.gradient.method == "clip"
@@ -710,6 +711,8 @@ class TestExperimentMetadata:
         assert restored.environment.grid_size == experiment.environment.grid_size
         assert restored.brain.qubits == experiment.brain.qubits
         assert restored.reward.reward_goal == experiment.reward.reward_goal
+        assert restored.learning_rate is not None
+        assert experiment.learning_rate is not None
         assert restored.learning_rate.method == experiment.learning_rate.method
         assert restored.gradient.method == experiment.gradient.method
         assert restored.results.total_runs == experiment.results.total_runs
