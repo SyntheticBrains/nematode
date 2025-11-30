@@ -439,6 +439,276 @@ class TestModularBrainIntegration:
             assert -np.pi <= value <= np.pi
 
 
+class TestTrajectoryLearning:
+    """Test cases for trajectory learning functionality."""
+
+    @pytest.fixture
+    def trajectory_config(self):
+        """Create a test configuration with trajectory learning enabled."""
+        return ModularBrainConfig(
+            num_layers=1,
+            modules={
+                ModuleName.CHEMOTAXIS: [0, 1],
+            },
+            use_trajectory_learning=True,
+            gamma=0.99,
+        )
+
+    @pytest.fixture
+    def trajectory_brain(self, trajectory_config):
+        """Create a test modular brain with trajectory learning."""
+        return ModularBrain(
+            config=trajectory_config,
+            shots=100,
+            device=DeviceType.CPU,
+        )
+
+    def test_trajectory_learning_config(self, trajectory_config):
+        """Test trajectory learning configuration."""
+        assert trajectory_config.use_trajectory_learning is True
+        assert trajectory_config.gamma == 0.99
+
+    def test_trajectory_brain_initialization(self, trajectory_brain):
+        """Test trajectory brain initialization."""
+        assert trajectory_brain.use_trajectory_learning is True
+        assert trajectory_brain.gamma == 0.99
+        assert trajectory_brain.episode_buffer is not None
+        assert len(trajectory_brain.episode_buffer) == 0
+
+    def test_episode_buffer_accumulation(self, trajectory_brain):
+        """Test episode buffer data accumulation."""
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+
+        # Run brain multiple times to accumulate data
+        for step in range(3):
+            trajectory_brain.run_brain(
+                params,
+                reward=None,
+                top_only=True,
+                top_randomize=False,
+            )
+            # Run again with reward to trigger buffering
+            trajectory_brain.run_brain(
+                params,
+                reward=0.5 * step,
+                top_only=True,
+                top_randomize=False,
+            )
+
+        # Buffer should have accumulated data
+        assert len(trajectory_brain.episode_buffer) == 3
+        assert len(trajectory_brain.episode_buffer.rewards) == 3
+        assert len(trajectory_brain.episode_buffer.actions) == 3
+        assert len(trajectory_brain.episode_buffer.params) == 3
+        assert len(trajectory_brain.episode_buffer.parameter_values) == 3
+
+    def test_discounted_returns_simple(self, trajectory_brain):
+        """Test discounted return computation with simple rewards."""
+        rewards = [1.0, 1.0, 1.0]
+        gamma = 0.9
+
+        returns = trajectory_brain.compute_discounted_returns(rewards, gamma)
+
+        # Expected: G_t = r_t + gamma * G_{t+1}
+        expected = [2.71, 1.9, 1.0]
+
+        assert len(returns) == 3
+        for i, (actual, expected_val) in enumerate(zip(returns, expected, strict=False)):
+            assert np.isclose(actual, expected_val, atol=0.01), f"Return at {i} mismatch"
+
+    def test_discounted_returns_terminal(self, trajectory_brain):
+        """Test discounted return computation with terminal state handling."""
+        rewards = [1.0, 2.0, -1.0]
+        gamma = 1.0  # No discounting
+
+        returns = trajectory_brain.compute_discounted_returns(rewards, gamma)
+
+        # With gamma=1, G_t = sum of all future rewards
+        expected = [2.0, 1.0, -1.0]
+
+        assert len(returns) == 3
+        for actual, expected_val in zip(returns, expected, strict=False):
+            assert np.isclose(actual, expected_val)
+
+    def test_discounted_returns_gamma_validation(self, trajectory_brain):
+        """Test gamma validation in discounted returns computation."""
+        rewards = [1.0, 2.0, 3.0]
+
+        # Invalid gamma values should raise ValueError
+        with pytest.raises(ValueError, match="Gamma must be in range"):
+            trajectory_brain.compute_discounted_returns(rewards, gamma=-0.1)
+
+        with pytest.raises(ValueError, match="Gamma must be in range"):
+            trajectory_brain.compute_discounted_returns(rewards, gamma=1.1)
+
+    def test_discounted_returns_empty_rewards(self, trajectory_brain):
+        """Test discounted returns with empty reward list."""
+        returns = trajectory_brain.compute_discounted_returns([], gamma=0.99)
+        assert returns == []
+
+    def test_backward_compatibility_single_step(self):
+        """Test backward compatibility when trajectory learning is disabled."""
+        config = ModularBrainConfig(
+            num_layers=1,
+            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            use_trajectory_learning=False,  # Disabled
+        )
+        brain = ModularBrain(config=config, shots=100, device=DeviceType.CPU)
+
+        assert brain.use_trajectory_learning is False
+        assert brain.episode_buffer is None
+
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+
+        # Run brain with reward - should use single-step learning
+        brain.run_brain(params, reward=None, top_only=True, top_randomize=False)
+        brain.run_brain(params, reward=0.5, top_only=True, top_randomize=False)
+
+        # Should have computed gradients immediately (not buffered)
+        assert brain.latest_data.computed_gradients is not None
+        assert brain.latest_data.updated_parameters is not None
+
+    def test_trajectory_learning_convergence(self, trajectory_brain):
+        """Test trajectory learning with a full episode."""
+        rng = np.random.default_rng(42)
+
+        # Simulate an episode
+        for step in range(5):
+            params = BrainParams(
+                gradient_strength=rng.random(),
+                gradient_direction=rng.random() * 2 * np.pi,
+                agent_position=(step, step),
+                agent_direction=Direction.UP,
+            )
+
+            # Run brain and provide reward
+            trajectory_brain.run_brain(params, reward=None, top_only=True, top_randomize=False)
+            reward = rng.random() - 0.5
+            trajectory_brain.run_brain(params, reward=reward, top_only=True, top_randomize=False)
+
+        # Buffer should have data
+        assert len(trajectory_brain.episode_buffer) == 5
+
+        # Post-process episode - this should trigger trajectory learning update
+        trajectory_brain.post_process_episode()
+
+        # Buffer should be cleared
+        assert len(trajectory_brain.episode_buffer) == 0
+
+        # Parameters should have been updated
+        # (At least some parameters should change, though with random data might be small changes)
+        # Just check that update didn't crash and parameters remain valid
+        assert all(np.isfinite(v) for v in trajectory_brain.parameter_values.values())
+
+    def test_episode_buffer_clearing(self, trajectory_brain):
+        """Test that episode buffer is cleared after processing."""
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+
+        # Accumulate some data
+        for _ in range(3):
+            trajectory_brain.run_brain(params, reward=None, top_only=True, top_randomize=False)
+            trajectory_brain.run_brain(params, reward=0.5, top_only=True, top_randomize=False)
+
+        assert len(trajectory_brain.episode_buffer) == 3
+
+        # Post-process should clear buffer
+        trajectory_brain.post_process_episode()
+        assert len(trajectory_brain.episode_buffer) == 0
+
+    def test_trajectory_gradient_with_varying_returns(self, trajectory_brain):
+        """Test trajectory gradients with varying return values."""
+        # Manually populate episode buffer
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+
+        # Run to get an action
+        actions = trajectory_brain.run_brain(
+            params,
+            reward=None,
+            top_only=True,
+            top_randomize=False,
+        )
+        action = actions[0]
+
+        # Manually create buffer data
+        from quantumnematode.brain.arch.modular import EpisodeBuffer
+
+        buffer = EpisodeBuffer()
+        for i in range(3):
+            buffer.append(
+                params=params,
+                action=action,
+                reward=float(i),
+                parameter_values=trajectory_brain.parameter_values.copy(),
+            )
+
+        # Create returns
+        returns = [3.0, 2.0, 1.0]
+
+        # Compute trajectory gradients
+        gradients = trajectory_brain.trajectory_parameter_shift_gradients(buffer, returns)
+
+        # Should return one gradient per parameter
+        assert len(gradients) == len(trajectory_brain.parameter_values)
+        assert all(np.isfinite(g) for g in gradients)
+
+    def test_trajectory_gradient_length_mismatch(self, trajectory_brain):
+        """Test error handling when returns length doesn't match buffer."""
+        from quantumnematode.brain.arch.modular import EpisodeBuffer
+
+        params = BrainParams(gradient_strength=0.6, gradient_direction=0.3)
+        actions = trajectory_brain.run_brain(
+            params,
+            reward=None,
+            top_only=True,
+            top_randomize=False,
+        )
+        action = actions[0]
+
+        buffer = EpisodeBuffer()
+        buffer.append(
+            params=params,
+            action=action,
+            reward=1.0,
+            parameter_values=trajectory_brain.parameter_values.copy(),
+        )
+
+        # Mismatched returns length
+        returns = [1.0, 2.0]  # Buffer has 1 entry, returns has 2
+
+        with pytest.raises(ValueError, match="must match episode buffer length"):
+            trajectory_brain.trajectory_parameter_shift_gradients(buffer, returns)
+
+    def test_trajectory_gradient_empty_buffer(self, trajectory_brain):
+        """Test error handling with empty episode buffer."""
+        from quantumnematode.brain.arch.modular import EpisodeBuffer
+
+        buffer = EpisodeBuffer()
+        returns = []
+
+        with pytest.raises(ValueError, match="empty episode buffer"):
+            trajectory_brain.trajectory_parameter_shift_gradients(buffer, returns)
+
+
 class TestModularBrainEdgeCases:
     """Test edge cases and error handling."""
 
