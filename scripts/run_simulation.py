@@ -752,6 +752,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     },
                     "gradient": {
                         "method": gradient_method.value,
+                        "max_norm": gradient_max_norm,
                     },
                     "learning_rate": learning_rate_metadata,
                     "satiety": {

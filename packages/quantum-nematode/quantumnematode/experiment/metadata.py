@@ -154,9 +154,12 @@ class GradientMetadata(BaseModel):
     ----------
     method : str | None
         Gradient calculation method ("raw", "clip", "normalize").
+    max_norm : float | None
+        Maximum norm for gradient clipping (only for "norm_clip" method).
     """
 
     method: str | None = None
+    max_norm: float | None = None
 
 
 class BrainMetadata(BaseModel):
