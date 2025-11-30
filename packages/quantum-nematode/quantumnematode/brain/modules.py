@@ -172,9 +172,12 @@ def appetitive_features(
     -------
         Dictionary with rx, ry, rz values for appetitive qubit(s).
     """
-    # Food gradient strength (0-1) -> [0, π/2] for positive encoding
+    # Normalize food gradient strength
+    # Raw gradient values can be >> 1, so we apply tanh normalization to get [0,1] range
     food_strength = params.food_gradient_strength or 0.0
-    food_strength_scaled = food_strength * np.pi / 2
+    food_strength_normalized = np.tanh(food_strength)  # Normalize to [0,1]
+    # Scale to [-π/2, π/2]
+    food_strength_scaled = food_strength_normalized * np.pi - np.pi / 2
 
     # Relative angle to food
     if params.food_gradient_direction is not None and params.agent_direction is not None:
@@ -188,17 +191,20 @@ def appetitive_features(
         relative_angle = (params.food_gradient_direction - agent_angle + np.pi) % (
             2 * np.pi
         ) - np.pi
-        relative_angle_scaled = (relative_angle / np.pi) * (np.pi / 2)  # [-π/2, π/2]
+        # Normalize and scale
+        relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
+        relative_angle_scaled = relative_angle_normalized * np.pi / 2  # [-π/2, π/2]
     else:
         relative_angle_scaled = 0.0
 
     # Satiety/hunger signal: low satiety = high hunger = high motivation
-    # Scale to [0, π] where π = max hunger
+    # Scale to [-π/2, π/2]
     satiety = params.satiety or 0.0
     # TODO: Get max satiety from config
     max_satiety = 200.0  # Default from config
     hunger = 1.0 - (satiety / max_satiety)  # 0 = full, 1 = starving
-    hunger_scaled = hunger * np.pi
+    # Scale hunger to [-π/2, π/2]
+    hunger_scaled = hunger * np.pi - np.pi / 2
 
     return {
         RotationAxis.RX: food_strength_scaled,
@@ -226,10 +232,12 @@ def aversive_features(
     -------
         Dictionary with rx, ry, rz values for aversive qubit(s).
     """
-    # Predator gradient magnitude -> [0, π/2]
-    # (Note: predator gradient is already negative/repulsive, we use magnitude)
+    # Normalize predator gradient strength
+    # Raw gradient values can be >> 1, so we apply tanh normalization to get [0,1] range
     predator_strength = params.predator_gradient_strength or 0.0
-    predator_strength_scaled = min(predator_strength, 1.0) * np.pi / 2
+    predator_strength_normalized = np.tanh(predator_strength)  # Normalize to [0,1]
+    # Scale to [-π/2, π/2]
+    predator_strength_scaled = predator_strength_normalized * np.pi - np.pi / 2
 
     # Relative angle of predator gradient (escape direction)
     if params.predator_gradient_direction is not None and params.agent_direction is not None:
@@ -243,7 +251,9 @@ def aversive_features(
         relative_angle = (params.predator_gradient_direction - agent_angle + np.pi) % (
             2 * np.pi
         ) - np.pi
-        escape_scaled = (relative_angle / np.pi) * np.pi  # [-π, π] for full range
+        # Normalize and scale
+        relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
+        escape_scaled = relative_angle_normalized * np.pi / 2  # [-π/2, π/2]
     else:
         escape_scaled = 0.0
 
@@ -253,7 +263,8 @@ def aversive_features(
     # TODO: Get max satiety from config
     max_satiety = 200.0
     satiety_factor = satiety / max_satiety  # 0 = starving, 1 = full
-    urgency_scaled = satiety_factor * np.pi / 2  # Full -> more cautious
+    # Scale to [-π/2, π/2]
+    urgency_scaled = satiety_factor * np.pi - np.pi / 2  # Full -> more cautious
 
     return {
         RotationAxis.RX: predator_strength_scaled,
