@@ -81,6 +81,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 from quantumnematode.optimizers.gradient_methods import (
     DEFAULT_MAX_CLIP_GRADIENT,
+    DEFAULT_MAX_GRADIENT_NORM,
     GradientCalculationMethod,
     compute_gradients,
 )
@@ -175,6 +176,7 @@ class ModularBrain(QuantumBrain):
         | ManualParameterInitializer
         | None = None,
         gradient_method: GradientCalculationMethod | None = None,
+        gradient_max_norm: float | None = None,
         action_set: list[Action] = DEFAULT_ACTIONS,
         perf_mgmt: "RunnableQiskitFunction | None" = None,
     ) -> None:
@@ -187,7 +189,8 @@ class ModularBrain(QuantumBrain):
             device: Device string for AerSimulator or real QPU backend.
             learning_rate: Learning rate strategy (default is dynamic).
             parameter_initializer : The initializer to use for parameter initialization.
-            gradient_method: Optional gradient processing method (raw/normalize/clip).
+            gradient_method: Optional gradient processing method (raw/normalize/clip/norm_clip).
+            gradient_max_norm: Maximum gradient norm for norm_clip method.
             action_set: List of available actions (default is DEFAULT_ACTIONS).
             perf_mgmt: Q-CTRL performance management function instance.
         """
@@ -215,8 +218,10 @@ class ModularBrain(QuantumBrain):
         )
 
         self.gradient_method = gradient_method
+        self.gradient_max_norm = gradient_max_norm or DEFAULT_MAX_GRADIENT_NORM
         logger.info(
-            f"Using gradient calculation method: {self.gradient_method}",
+            f"Using gradient calculation method: {self.gradient_method}, "
+            f"max_norm: {self.gradient_max_norm}",
         )
 
         self.action_set = action_set
@@ -770,6 +775,7 @@ class ModularBrain(QuantumBrain):
             learning_rate=deepcopy(self.learning_rate),
             parameter_initializer=deepcopy(self.parameter_initializer),
             gradient_method=self.gradient_method,
+            gradient_max_norm=self.gradient_max_norm,
             action_set=self.action_set,
             perf_mgmt=self.perf_mgmt,
         )
@@ -962,16 +968,29 @@ class ModularBrain(QuantumBrain):
         if len(self._momentum) == 0:
             self._momentum = dict.fromkeys(param_keys, 0.0)
 
-        # Momentum coefficient and decay
+        # Momentum coefficient and base decay
         momentum_coefficient = self.config.momentum_coefficient
-        momentum_decay = self.config.momentum_decay  # Prevents unbounded momentum accumulation
+        base_momentum_decay = self.config.momentum_decay  # Prevents unbounded momentum accumulation
 
-        # Apply gradient processing (clip/normalize/raw) based on config
+        # Adaptive momentum decay: reduce momentum retention when learning rate is low
+        # This prevents momentum-driven drift when gradient signal is weak
+        init_lr = self.learning_rate.initial_learning_rate
+        if init_lr > 0:
+            lr_ratio = learning_rate / init_lr
+            # When lr is high (ratio ~1.0) → decay ~0.99 (high momentum retention)
+            # When lr is low (ratio ~0.1) → decay ~0.82 (reduced momentum retention)
+            # This prevents residual momentum from dominating when LR decays
+            adaptive_momentum_decay = min(0.99, 0.80 + 0.19 * lr_ratio)
+        else:
+            adaptive_momentum_decay = base_momentum_decay
+
+        # Apply gradient processing (clip/normalize/raw/norm_clip) based on config
         if self.gradient_method is not None:
             gradients = compute_gradients(
                 gradients,
                 self.gradient_method,
                 DEFAULT_MAX_CLIP_GRADIENT,
+                self.gradient_max_norm,
             )
 
         rng = np.random.default_rng()
@@ -982,18 +1001,15 @@ class ModularBrain(QuantumBrain):
             # Add exploration noise (scaled with learning rate for stability after convergence)
             # Noise decays proportionally with LR
             effective_noise_std = 0.0
-            init_lr = self.learning_rate.initial_learning_rate
             if init_lr > 0:
                 effective_noise_std = self.config.noise_std * (learning_rate / init_lr)
             noise = rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
-            # Note: momentum_decay and momentum_coefficient are combined to provide
-            # controlled momentum accumulation. The combined factor (0.99 * 0.9 = 0.891)
-            # ensures momentum doesn't accumulate unbounded in long training runs (200+ episodes)
-            # while still providing momentum benefits for gradient descent.
+            # Note: Using adaptive momentum decay instead of fixed momentum_decay
+            # to prevent momentum drift when learning rate is low
             self._momentum[k] = (
-                momentum_decay * momentum_coefficient * self._momentum[k]
+                adaptive_momentum_decay * momentum_coefficient * self._momentum[k]
                 + learning_rate * (gradients[i] - reg)  # L2 reg pushes parameters toward zero
             )
 

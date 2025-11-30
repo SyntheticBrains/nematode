@@ -240,7 +240,8 @@ def extract_gradient_metadata(config: dict) -> GradientMetadata:
     """
     gradient_config = config.get("gradient", {})
     method = gradient_config.get("method")
-    return GradientMetadata(method=method)
+    max_norm = gradient_config.get("max_norm")
+    return GradientMetadata(method=method, max_norm=max_norm)
 
 
 def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:
