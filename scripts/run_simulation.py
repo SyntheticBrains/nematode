@@ -391,12 +391,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
 
     # Update the agent to use the selected brain architecture and environment
+    use_separated_gradients = False
+    if environment_config.type == "dynamic":
+        dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+        use_separated_gradients = dynamic_config.use_separated_gradients
+
     agent = QuantumNematodeAgent(
         brain=brain,
         env=env,
         max_body_length=body_length,
         theme=theme,
         satiety_config=satiety_config,
+        use_separated_gradients=use_separated_gradients,
     )
 
     # Set the plot and data directories
