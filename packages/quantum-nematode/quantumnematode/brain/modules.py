@@ -153,6 +153,115 @@ def vision_features(
     return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
+def appetitive_features(
+    params: BrainParams,
+) -> dict[RotationAxis, float]:
+    """
+    Extract appetitive (food-seeking) features for approach behavior.
+
+    This module encodes signals that drive the agent toward food sources,
+    inspired by C. elegans appetitive chemotaxis circuits (AWC neurons).
+
+    Uses LOCAL gradient information only - the agent senses the attractive chemical
+    gradient at its current position without knowing food locations.
+
+    Args:
+        params: BrainParams containing agent state.
+
+    Returns
+    -------
+        Dictionary with rx, ry, rz values for appetitive qubit(s).
+    """
+    # Food gradient strength (0-1) -> [0, π/2] for positive encoding
+    food_strength = params.food_gradient_strength or 0.0
+    food_strength_scaled = food_strength * np.pi / 2
+
+    # Relative angle to food
+    if params.food_gradient_direction is not None and params.agent_direction is not None:
+        direction_map = {
+            Direction.UP: np.pi / 2,
+            Direction.DOWN: -np.pi / 2,
+            Direction.LEFT: np.pi,
+            Direction.RIGHT: 0.0,
+        }
+        agent_angle = direction_map.get(params.agent_direction, np.pi / 2)
+        relative_angle = (params.food_gradient_direction - agent_angle + np.pi) % (
+            2 * np.pi
+        ) - np.pi
+        relative_angle_scaled = (relative_angle / np.pi) * (np.pi / 2)  # [-π/2, π/2]
+    else:
+        relative_angle_scaled = 0.0
+
+    # Satiety/hunger signal: low satiety = high hunger = high motivation
+    # Scale to [0, π] where π = max hunger
+    satiety = params.satiety or 0.0
+    # TODO: Get max satiety from config
+    max_satiety = 200.0  # Default from config
+    hunger = 1.0 - (satiety / max_satiety)  # 0 = full, 1 = starving
+    hunger_scaled = hunger * np.pi
+
+    return {
+        RotationAxis.RX: food_strength_scaled,
+        RotationAxis.RY: relative_angle_scaled,
+        RotationAxis.RZ: hunger_scaled,
+    }
+
+
+def aversive_features(
+    params: BrainParams,
+) -> dict[RotationAxis, float]:
+    """
+    Extract aversive (predator-avoidance) features for escape behavior.
+
+    This module encodes local predator gradient signals sensed through chemoreceptors,
+    inspired by C. elegans aversive response circuits (ASH neurons).
+
+    Uses LOCAL gradient information only - the agent senses the repulsive chemical
+    gradient at its current position without knowing predator locations.
+
+    Args:
+        params: BrainParams containing agent state.
+
+    Returns
+    -------
+        Dictionary with rx, ry, rz values for aversive qubit(s).
+    """
+    # Predator gradient magnitude -> [0, π/2]
+    # (Note: predator gradient is already negative/repulsive, we use magnitude)
+    predator_strength = params.predator_gradient_strength or 0.0
+    predator_strength_scaled = min(predator_strength, 1.0) * np.pi / 2
+
+    # Relative angle of predator gradient (escape direction)
+    if params.predator_gradient_direction is not None and params.agent_direction is not None:
+        direction_map = {
+            Direction.UP: np.pi / 2,
+            Direction.DOWN: -np.pi / 2,
+            Direction.LEFT: np.pi,
+            Direction.RIGHT: 0.0,
+        }
+        agent_angle = direction_map.get(params.agent_direction, np.pi / 2)
+        relative_angle = (params.predator_gradient_direction - agent_angle + np.pi) % (
+            2 * np.pi
+        ) - np.pi
+        escape_scaled = (relative_angle / np.pi) * np.pi  # [-π, π] for full range
+    else:
+        escape_scaled = 0.0
+
+    # Use satiety as urgency modulator: hungrier = more risk-taking
+    # Low satiety reduces aversive response (need to eat despite danger)
+    satiety = params.satiety or 0.0
+    # TODO: Get max satiety from config
+    max_satiety = 200.0
+    satiety_factor = satiety / max_satiety  # 0 = starving, 1 = full
+    urgency_scaled = satiety_factor * np.pi / 2  # Full -> more cautious
+
+    return {
+        RotationAxis.RX: predator_strength_scaled,
+        RotationAxis.RY: escape_scaled,
+        RotationAxis.RZ: urgency_scaled,
+    }
+
+
 def memory_action_features(
     params: BrainParams,
 ) -> dict[RotationAxis, float]:
@@ -189,6 +298,8 @@ class ModuleName(str, Enum):
     OXYGEN = "oxygen"
     VISION = "vision"
     ACTION = "action"
+    APPETITIVE = "appetitive"
+    AVERSIVE = "aversive"
 
 
 MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
@@ -198,6 +309,8 @@ MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
     ModuleName.OXYGEN: oxygen_features,
     ModuleName.VISION: vision_features,
     ModuleName.ACTION: memory_action_features,
+    ModuleName.APPETITIVE: appetitive_features,
+    ModuleName.AVERSIVE: aversive_features,
 }
 
 Modules = dict[ModuleName, list[int]]

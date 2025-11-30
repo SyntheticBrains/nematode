@@ -334,9 +334,9 @@ class QuantumNematodeAgent:
         Parameters
         ----------
         gradient_strength : float
-            Strength of the gradient (distance to goal/food).
+            Strength of the combined gradient (food + predator).
         gradient_direction : float
-            Direction of the gradient (angle in radians).
+            Direction of the combined gradient (angle in radians).
         action : ActionData | None, optional
             Previous action taken, by default None.
 
@@ -345,9 +345,27 @@ class QuantumNematodeAgent:
         BrainParams
             Brain parameters ready for execution.
         """
+        # Get separated gradients for appetitive/aversive modules
+        separated_grads = {}
+        # TODO: Add toggle for unified vs separated gradients
+        if isinstance(self.env, DynamicForagingEnvironment):
+            separated_grads = self.env.get_separated_gradients(
+                self.env.agent_pos,
+                disable_log=True,
+            )
+
         return BrainParams(
+            # Combined gradients (backward compatibility)
             gradient_strength=gradient_strength,
             gradient_direction=gradient_direction,
+            # Separated LOCAL gradients (egocentric sensing)
+            food_gradient_strength=separated_grads.get("food_gradient_strength"),
+            food_gradient_direction=separated_grads.get("food_gradient_direction"),
+            predator_gradient_strength=separated_grads.get("predator_gradient_strength"),
+            predator_gradient_direction=separated_grads.get("predator_gradient_direction"),
+            # Internal state (hunger)
+            satiety=self.current_satiety,
+            # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
             action=action,
