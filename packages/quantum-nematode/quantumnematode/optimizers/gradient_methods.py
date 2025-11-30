@@ -33,8 +33,9 @@ def compute_gradients(
     method : GradientCalculationMethod
         The method to use for processing gradients.
     max_clip_gradient : float | dict, optional
-        The maximum gradient value for clipping or normalization. If a dict is provided,
-        it should map parameter names to their respective maximum gradient values.
+        The maximum gradient value for clipping or normalization.
+        If a dict is provided, it should map parameter names to their respective
+        maximum gradient values (used with NORMALIZE and CLIP methods).
         Defaults to 1.0.
     max_gradient_norm : float, optional
         The maximum norm for gradient vector clipping (used with NORM_CLIP method).
