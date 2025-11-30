@@ -972,14 +972,14 @@ class ModularBrain(QuantumBrain):
         momentum_coefficient = self.config.momentum_coefficient
         base_momentum_decay = self.config.momentum_decay  # Prevents unbounded momentum accumulation
 
-        # Adaptive momentum decay: increase momentum retention when learning rate is low
-        # This helps maintain learning signal even when learning rate decays
+        # Adaptive momentum decay: reduce momentum retention when learning rate is low
+        # This prevents momentum-driven drift when gradient signal is weak
         init_lr = self.learning_rate.initial_learning_rate
         if init_lr > 0:
             lr_ratio = learning_rate / init_lr
-            # When lr is high (ratio ~1.0) → decay ~0.99
-            # When lr is low (ratio ~0.1) → decay ~0.82
-            # This preserves more momentum when learning rate is small
+            # When lr is high (ratio ~1.0) → decay ~0.99 (high momentum retention)
+            # When lr is low (ratio ~0.1) → decay ~0.82 (reduced momentum retention)
+            # This prevents residual momentum from dominating when LR decays
             adaptive_momentum_decay = min(0.99, 0.80 + 0.19 * lr_ratio)
         else:
             adaptive_momentum_decay = base_momentum_decay
@@ -1007,7 +1007,7 @@ class ModularBrain(QuantumBrain):
 
             # Momentum update with adaptive learning rate and decay
             # Note: Using adaptive momentum decay instead of fixed momentum_decay
-            # to preserve learning signal when learning rate is low
+            # to prevent momentum drift when learning rate is low
             self._momentum[k] = (
                 adaptive_momentum_decay * momentum_coefficient * self._momentum[k]
                 + learning_rate * (gradients[i] - reg)  # L2 reg pushes parameters toward zero
