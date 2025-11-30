@@ -41,20 +41,21 @@ The system SHALL provide an aversive module for predator-avoidance behavior usin
 **And** SHALL use aversive feature extraction for these qubits
 
 #### Scenario: Predator Gradient Feature Extraction
-**Given** environment state with predator proximity information
+**Given** environment state with predator gradient information
 **When** extracting aversive features
 **Then** it SHALL encode abs(predator_gradient_strength) on RX rotation
-**And** SHALL encode predator_proximity (normalized distance) on RY rotation
-**And** SHALL encode danger_flag (binary in-danger indicator) on RZ rotation
-**And** SHALL scale RX and RY to [-π/2, π/2], RZ to {0, π/2}
+**And** SHALL encode relative angle to predator on RY rotation
+**And** SHALL use RZ = 0.0 (reserved for future use)
+**And** SHALL scale RX and RY values to [-π/2, π/2]
+**And** SHALL use the same encoding pattern as appetitive features (biological symmetry)
 
 #### Scenario: Repulsive Gradient Behavior
 **Given** the aversive module is active
 **When** predators are present in the environment
-**Then** features SHALL encode negative repulsive gradients (as positive magnitude)
-**And** SHALL guide the agent away from predator sources
-**And** SHALL increase gradient strength with proximity
-**And** SHALL activate danger flag when within detection radius
+**Then** features SHALL encode repulsive chemical gradients (as positive magnitude)
+**And** SHALL encode direction to threat source (for avoidance)
+**And** SHALL increase gradient strength with proximity (exponential decay)
+**And** SHALL use ONLY sensory information available to the nematode (no external state)
 
 ### Requirement: Gradient Mode Configuration
 The environment SHALL support configurable gradient modes for unified vs split gradient computation.

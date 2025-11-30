@@ -109,22 +109,24 @@ RZ: 0.0 (unused)
 ```
 
 #### Aversive Features (Predator Avoidance)
-**Inputs**:
-- `predator_gradient_strength`: Magnitude of repulsive gradient (negative)
-- `predator_proximity`: Normalized distance to nearest predator
-- `danger_flag`: Binary in-danger indicator
+**Biological Principle**: C. elegans detects repulsive chemicals through the same chemosensory mechanism as attractive ones - amphid sensory neurons detecting concentration gradients. The aversive module mirrors appetitive chemotaxis but for repellent chemical signals (predator odors, toxins).
 
-**Encoding** (new):
+**Inputs** (biologically realistic sensory data only):
+- `predator_gradient_strength`: Magnitude of repulsive chemical gradient (negative)
+- `predator_gradient_direction`: Direction to repellent source
+
+**Encoding** (mirrors appetitive exactly):
 ```python
 RX: abs(predator_gradient_strength) scaled to [-π/2, π/2]
-RY: predator_proximity normalized to [-π/2, π/2]
-RZ: danger_flag (0 or π/2 for binary encoding)
+RY: relative_angle to predator (to know which way to turn away)
+RZ: 0.0 (unused, same as appetitive)
 ```
 
-**Why RZ for danger flag?**
-- Currently unused in chemotaxis/appetitive
-- Binary encoding fits well: 0 = safe, π/2 = in danger
-- Provides explicit danger signal beyond gradient magnitude
+**Why no "predator proximity" or "danger flag"?**
+- ❌ `predator_proximity`: This is environment knowledge, not sensed by the nematode
+- ❌ `danger_flag`: This would be external state, not biological sensing
+- ✅ The gradient strength already encodes proximity naturally (exponential decay with distance)
+- ✅ Stronger gradient = closer threat = more urgent to flee (biologically accurate)
 
 ### 4. Configuration Schema Extensions
 
@@ -152,6 +154,14 @@ brain:
 environment:
   gradient_mode: split  # NEW: "unified" (default) or "split"
 ```
+
+**BrainParams Extensions for Split Mode**:
+When `gradient_mode: split`, BrainParams will contain:
+- `food_gradient_strength` and `food_gradient_direction` (for appetitive module)
+- `predator_gradient_strength` and `predator_gradient_direction` (for aversive module)
+
+When `gradient_mode: unified` (default), BrainParams contains:
+- `gradient_strength` and `gradient_direction` (superposed, current behavior)
 
 ## Implementation Sequence
 
@@ -259,3 +269,12 @@ Could provide `scripts/migrate_configs.py` to auto-update:
 3. **Configurable**: Add `inter_module_entanglement: bool`
 
 **Recommendation**: Keep full entanglement (current behavior) unless benchmarks show degradation.
+
+### Biological Accuracy Constraint (RESOLVED)
+**Question**: Should aversive features include "predator proximity" or "danger flag"?
+
+**Resolution**: NO - both would be external environment state, not biologically realistic sensing.
+- C. elegans only senses chemical gradients (attractive and repulsive)
+- Aversive module mirrors appetitive: gradient strength + direction only
+- Proximity is already encoded in gradient strength (exponential decay)
+- No "danger flag" needed - gradient magnitude provides urgency signal
