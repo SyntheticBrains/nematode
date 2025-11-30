@@ -218,6 +218,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
+    gradient_max_norm = None
     parameter_initializer_config = ParameterInitializerConfig()
     reward_config = RewardConfig()
     satiety_config = SatietyConfig()
@@ -270,8 +271,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Load learning rate method and parameters if specified
         learning_rate = configure_learning_rate(config)
 
-        # Load gradient method if specified
-        gradient_method = configure_gradient_method(gradient_method, config)
+        # Load gradient method and max_norm if specified
+        gradient_method, gradient_max_norm = configure_gradient_method(gradient_method, config)
 
         # Load parameter initializer configuration if specified
         parameter_initializer_config = configure_parameter_initializer(config)
@@ -330,6 +331,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         device=device,
         learning_rate=learning_rate,
         gradient_method=gradient_method,
+        gradient_max_norm=gradient_max_norm,
         parameter_initializer_config=parameter_initializer_config,
         perf_mgmt=perf_mgmt,
     )
@@ -750,6 +752,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     },
                     "gradient": {
                         "method": gradient_method.value,
+                        "max_norm": gradient_max_norm,
                     },
                     "learning_rate": learning_rate_metadata,
                     "satiety": {
@@ -883,6 +886,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     device: DeviceType,
     learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,
+    gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
     perf_mgmt: "RunnableQiskitFunction | None" = None,
 ) -> Brain:
@@ -938,6 +942,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             learning_rate=learning_rate,
             parameter_initializer=parameter_initializer,
             gradient_method=gradient_method,
+            gradient_max_norm=gradient_max_norm,
             perf_mgmt=perf_mgmt,
         )
     elif brain_type == BrainType.QMODULAR:
