@@ -129,3 +129,52 @@ def test_norm_clip_method_large_gradient_vector():
     # Expected: scale = 0.5 / 10.0 = 0.05, so [0.3, 0.4]
     expected = [0.3, 0.4]
     assert np.allclose(result, expected)
+
+
+def test_norm_clip_method_with_negative_gradients():
+    """Test that the NORM_CLIP method handles negative gradients correctly."""
+    grads = [-3.0, -4.0]  # L2 norm = 5.0
+    max_norm = 2.5
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=max_norm,
+    )
+    # Expected: scale = 2.5 / 5.0 = 0.5, so [-1.5, -2.0]
+    expected = [-1.5, -2.0]
+    assert np.allclose(result, expected)
+
+
+def test_norm_clip_method_with_mixed_sign_gradients():
+    """Test that the NORM_CLIP method preserves direction with mixed signs."""
+    grads = [3.0, -4.0]  # L2 norm = 5.0
+    max_norm = 1.0
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=max_norm,
+    )
+    # Expected: scale = 1.0 / 5.0 = 0.2, so [0.6, -0.8]
+    expected = [0.6, -0.8]
+    assert np.allclose(result, expected)
+
+
+def test_norm_clip_method_preserves_gradient_direction():
+    """Test that the NORM_CLIP method preserves the direction of the gradient vector."""
+    grads = [1.0, -2.0, 3.0, -4.0]  # L2 norm = sqrt(30) ≈ 5.477
+    max_norm = 1.0
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=max_norm,
+    )
+
+    # Verify the result has the correct norm
+    result_norm = np.linalg.norm(result)
+    assert np.isclose(result_norm, max_norm)
+
+    # Verify direction is preserved (angle between original and result should be 0)
+    # Direction is preserved if result = scale * grads for some positive scale
+    scale = result_norm / np.linalg.norm(grads)
+    expected = [g * scale for g in grads]
+    assert np.allclose(result, expected)
