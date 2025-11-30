@@ -814,6 +814,40 @@ class ModularBrain(QuantumBrain):
 
         return returns
 
+    def _normalize_returns(self, returns: list[float]) -> list[float]:
+        """
+        Normalize returns to zero mean and unit variance.
+
+        This prevents gradient explosion when returns have large magnitudes
+        or vary significantly across episodes.
+
+        Args:
+            returns: List of discounted returns to normalize.
+
+        Returns
+        -------
+            List of normalized returns with mean ≈ 0 and std ≈ 1.
+        """
+        if not returns:
+            return []
+
+        mean_return = np.mean(returns)
+        std_return = np.std(returns)
+
+        # Avoid division by zero for constant returns
+        if std_return < 1e-8:  # noqa: PLR2004
+            logger.debug(
+                f"Returns have near-zero variance (std={std_return:.2e}), returning zero gradients",
+            )
+            return [0.0] * len(returns)
+
+        normalized = [float((r - mean_return) / std_return) for r in returns]
+        logger.debug(
+            f"Normalized returns: mean={mean_return:.3f}, std={std_return:.3f} -> "
+            f"normalized mean={np.mean(normalized):.3e}, std={np.std(normalized):.3f}",
+        )
+        return normalized
+
     def update_memory(self, reward: float | None) -> None:
         """
         Update internal memory based on reward.
@@ -841,6 +875,9 @@ class ModularBrain(QuantumBrain):
                 self.gamma,
             )
             logger.debug(f"Computed returns: min={min(returns):.4f}, max={max(returns):.4f}")
+
+            # 1b. Normalize returns to prevent gradient explosion
+            returns = self._normalize_returns(returns)
 
             # 2. Compute trajectory-level gradients
             gradients = self.trajectory_parameter_shift_gradients(
@@ -999,11 +1036,29 @@ class ModularBrain(QuantumBrain):
         accumulated_gradients = [0.0] * n_params
 
         # For each timestep, compute parameter-shift gradients weighted by G_t
+        import time
+
+        total_timesteps = len(episode_buffer)
+        logger.info(
+            f"Computing trajectory gradients for {total_timesteps} timesteps "
+            f"({n_params} parameters each, {total_timesteps * n_params * 2} circuit evaluations)",
+        )
+        start_time = time.time()
+
         for t in range(len(episode_buffer)):
             params_t = episode_buffer.params[t]
             action_t = episode_buffer.actions[t]
             param_values_t = episode_buffer.parameter_values[t]
             return_t = returns[t]
+
+            # Log progress every 10% of timesteps
+            if t % max(1, total_timesteps // 10) == 0:
+                elapsed = time.time() - start_time
+                progress_pct = (t / total_timesteps) * 100
+                logger.debug(
+                    f"Trajectory gradient progress: {progress_pct:.0f}% "
+                    f"({t}/{total_timesteps} timesteps, {elapsed:.1f}s elapsed)",
+                )
 
             # Prepare shifted parameter sets for this timestep
             param_sets = []
@@ -1096,7 +1151,21 @@ class ModularBrain(QuantumBrain):
                 grad_t = 0.5 * prob_diff * return_t
                 accumulated_gradients[i] += grad_t
 
-        return accumulated_gradients
+        elapsed_total = time.time() - start_time
+        logger.info(
+            f"Trajectory gradient computation complete: {total_timesteps} timesteps "
+            f"in {elapsed_total:.1f}s ({elapsed_total / total_timesteps:.2f}s/timestep)",
+        )
+
+        # Average gradients by episode length to prevent explosion with long episodes
+        averaged_gradients = [g / total_timesteps for g in accumulated_gradients]
+        logger.debug(
+            f"Averaged gradients by {total_timesteps} timesteps: "
+            f"sum_magnitude={np.linalg.norm(accumulated_gradients):.6f} -> "
+            f"avg_magnitude={np.linalg.norm(averaged_gradients):.6f}",
+        )
+
+        return averaged_gradients
 
     def parameter_shift_gradients(  # noqa: C901, PLR0912, PLR0915
         self,
