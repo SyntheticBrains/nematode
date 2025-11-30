@@ -73,11 +73,12 @@
 
 ### Task 2.2: Implement Aversive Feature Extraction
 - [ ] Create `aversive_features(params: BrainParams) -> dict[RotationAxis, float]`
-- [ ] Extract predator_gradient_strength for RX (scaled to [-π/2, π/2])
-- [ ] Extract predator_proximity for RY (normalized distance)
-- [ ] Extract danger_flag for RZ (binary: 0 or π/2)
+- [ ] Extract abs(predator_gradient_strength) for RX (scaled to [-π/2, π/2])
+- [ ] Compute relative angle to predator for RY (same logic as appetitive)
+- [ ] Use RZ = 0.0 (mirrors appetitive, reserved for future)
 - [ ] Register in feature extraction mapping
-- **Validation**: Unit tests for feature encoding, value ranges
+- [ ] Ensure biologically accurate: only use gradient data, no external state
+- **Validation**: Unit tests for feature encoding, value ranges, biological accuracy
 - **Files**: `packages/quantum-nematode/quantumnematode/brain/modules.py`
 
 ### Task 2.3: Gradient Mode Configuration
@@ -101,11 +102,11 @@
 - [ ] Add optional `food_gradient_direction: float | None`
 - [ ] Add optional `predator_gradient_strength: float | None`
 - [ ] Add optional `predator_gradient_direction: float | None`
-- [ ] Add optional `predator_proximity: float | None`
-- [ ] Add optional `danger_flag: bool | None`
 - [ ] Maintain backward compatibility with existing gradient fields
+- [ ] Ensure all new fields represent biologically realistic sensory data
 - **Validation**: Type checking passes, backward compatible with existing code
 - **Files**: `packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py` or similar
+- **Note**: Removed predator_proximity and danger_flag (not biologically realistic)
 
 ### Task 2.6: Config Migration for Existing Files
 - [ ] Update `configs/examples/modular_dynamic_small.yml` - rename chemotaxis → appetitive

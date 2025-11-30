@@ -3,6 +3,14 @@
 ## Summary
 Enable quantum ModularBrain to learn from complete episode trajectories with temporal credit assignment, and introduce appetitive/aversive modular architecture for specialized behavioral learning.
 
+## Why
+Quantum ModularBrain currently achieves 83% success in non-predator foraging but only 26.5% in predator environments, compared to classical MLP's 85% success. The performance gap is caused by two fundamental limitations:
+
+1. **No temporal credit assignment**: Single-step learning prevents the brain from connecting "died to predator at step 100" to "approached danger zone at steps 95-99"
+2. **Gradient cancellation**: Superposing food (attractive) and predator (repulsive) gradients causes them to cancel when both are nearby, confusing the navigation signal
+
+These changes bring quantum ModularBrain to architectural parity with classical MLP (which already has trajectory learning) and enable specialized behavioral circuits that mirror C. elegans biology.
+
 ## Motivation
 Current quantum ModularBrain uses single-step immediate reward learning, preventing temporal credit assignment critical for complex foraging tasks with predators. The brain cannot connect "died to predator at step 100" to "approached danger zone at steps 95-99". Additionally, using a single chemotaxis module for both food-seeking and predator-avoidance causes gradient cancellation when food and predators are nearby.
 
@@ -39,8 +47,13 @@ Rename existing `chemotaxis` module to `appetitive` (approach behavior) and add 
 - Separate gradient encoding (split vs unified mode)
 - 4-qubit architecture (2 qubits per module)
 - Config-toggleable gradient separation
+- **Biologically accurate sensing**: Both modules use only chemical gradient information (strength + direction)
 
-**Biological justification**: C. elegans exhibits both appetitive chemotaxis (toward food) and aversive responses (away from toxins/danger), mediated by distinct neural circuits.
+**Biological justification**:
+- C. elegans exhibits both appetitive chemotaxis (toward food odors like diacetyl) and aversive chemotaxis (away from repellents like octanol, CO2, pathogen signals)
+- Both behaviors use the same sensory mechanism: amphid chemosensory neurons detecting concentration gradients
+- The aversive module mirrors appetitive exactly, just for repulsive rather than attractive chemicals
+- No "proximity" or "danger flags" - only gradient strength (which naturally encodes proximity via exponential decay)
 
 ## Impact
 - **Expected improvement**: +30-50% success rate from trajectory learning alone
