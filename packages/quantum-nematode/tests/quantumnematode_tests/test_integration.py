@@ -128,9 +128,9 @@ class TestPresetConfigurations:
         ("config_file", "expected_shots"),
         [
             # Quantum modular architectures
-            ("modular_dynamic_small.yml", 1500),
-            ("modular_dynamic_medium.yml", 1500),
-            ("modular_dynamic_large.yml", 1500),
+            ("modular_dynamic_small.yml", 3000),
+            ("modular_dynamic_medium.yml", 3000),
+            ("modular_dynamic_large.yml", 3000),
             ("modular_simple_medium.yml", 1500),
             # Other quantum architectures
             ("qmodular_simple_medium.yml", 1000),
