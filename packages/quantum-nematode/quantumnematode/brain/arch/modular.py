@@ -968,11 +968,22 @@ class ModularBrain(QuantumBrain):
         if len(self._momentum) == 0:
             self._momentum = dict.fromkeys(param_keys, 0.0)
 
-        # Momentum coefficient and decay
+        # Momentum coefficient and base decay
         momentum_coefficient = self.config.momentum_coefficient
-        momentum_decay = self.config.momentum_decay  # Prevents unbounded momentum accumulation
+        base_momentum_decay = self.config.momentum_decay  # Prevents unbounded momentum accumulation
 
-        # Apply gradient processing (clip/normalize/raw) based on config
+        # Adaptive momentum decay: increase momentum retention when learning rate is low
+        # This helps maintain learning signal even when learning rate decays
+        init_lr = self.learning_rate.initial_learning_rate
+        if init_lr > 0:
+            lr_ratio = learning_rate / init_lr
+            # When lr is high (ratio ~1.0) → decay ~0.99
+            # When lr is low (ratio ~0.1) → decay ~0.82
+            # This preserves more momentum when learning rate is small
+            adaptive_momentum_decay = min(0.99, 0.80 + 0.19 * lr_ratio)
+        else:
+            adaptive_momentum_decay = base_momentum_decay
+
         # Apply gradient processing (clip/normalize/raw/norm_clip) based on config
         if self.gradient_method is not None:
             gradients = compute_gradients(
@@ -990,18 +1001,15 @@ class ModularBrain(QuantumBrain):
             # Add exploration noise (scaled with learning rate for stability after convergence)
             # Noise decays proportionally with LR
             effective_noise_std = 0.0
-            init_lr = self.learning_rate.initial_learning_rate
             if init_lr > 0:
                 effective_noise_std = self.config.noise_std * (learning_rate / init_lr)
             noise = rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
-            # Note: momentum_decay and momentum_coefficient are combined to provide
-            # controlled momentum accumulation. The combined factor (0.99 * 0.9 = 0.891)
-            # ensures momentum doesn't accumulate unbounded in long training runs (200+ episodes)
-            # while still providing momentum benefits for gradient descent.
+            # Note: Using adaptive momentum decay instead of fixed momentum_decay
+            # to preserve learning signal when learning rate is low
             self._momentum[k] = (
-                momentum_decay * momentum_coefficient * self._momentum[k]
+                adaptive_momentum_decay * momentum_coefficient * self._momentum[k]
                 + learning_rate * (gradients[i] - reg)  # L2 reg pushes parameters toward zero
             )
 
