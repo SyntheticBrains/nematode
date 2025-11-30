@@ -91,6 +91,7 @@ class GradientConfig(BaseModel):
     """Configuration for the gradient calculation method."""
 
     method: GradientCalculationMethod = GradientCalculationMethod.RAW
+    max_norm: float | None = None  # For norm_clip method
 
 
 class ParameterInitializerConfig(BaseModel):
@@ -404,7 +405,7 @@ def _resolve_decay_type(learning_rate_parameters: LearningRateParameters) -> Dec
 def configure_gradient_method(
     gradient_method: GradientCalculationMethod,
     config: SimulationConfig,
-) -> GradientCalculationMethod:
+) -> tuple[GradientCalculationMethod, float | None]:
     """
     Configure the gradient calculation method based on the provided configuration.
 
@@ -414,14 +415,17 @@ def configure_gradient_method(
 
     Returns
     -------
-        GradientCalculationMethod: The configured gradient calculation method.
+        tuple[GradientCalculationMethod, float | None]: The configured gradient calculation method
+            and optional max_norm parameter for norm_clip method.
 
     Raises
     ------
         ValueError: If an invalid gradient method is specified in the configuration.
     """
     grad_cfg = config.gradient or GradientConfig()
-    return grad_cfg.method or gradient_method
+    method = grad_cfg.method or gradient_method
+    max_norm = grad_cfg.max_norm
+    return method, max_norm
 
 
 def configure_parameter_initializer(
