@@ -1,3 +1,4 @@
+import numpy as np
 from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
     compute_gradients,
@@ -68,3 +69,63 @@ def test_clip_method_with_dict_forces_clip_to_1():
     result = compute_gradients(grads, GradientCalculationMethod.CLIP, max_clip_gradient)
     expected = [1.0, -1.0, 0.5]
     assert result == expected
+
+
+def test_norm_clip_method_clips_by_norm():
+    """Test that the NORM_CLIP method clips gradients by the L2 norm."""
+    grads = [3.0, 4.0]  # L2 norm = 5.0
+    max_norm = 2.5
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=max_norm,
+    )
+    # Expected: scale = 2.5 / 5.0 = 0.5, so [1.5, 2.0]
+    expected = [1.5, 2.0]
+    assert np.allclose(result, expected)
+
+
+def test_norm_clip_method_no_clipping_when_below_norm():
+    """Test that the NORM_CLIP method doesn't clip when norm is below threshold."""
+    grads = [0.3, 0.4]  # L2 norm = 0.5
+    max_norm = 1.0
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=max_norm,
+    )
+    # No clipping should occur
+    assert result == grads
+
+
+def test_norm_clip_method_with_default_norm():
+    """Test that the NORM_CLIP method uses the default max norm when not specified."""
+    grads = [0.3, 0.4]  # L2 norm = 0.5
+    result = compute_gradients(grads, GradientCalculationMethod.NORM_CLIP)
+    # Default max_norm = 0.5, so exactly at threshold (no clipping)
+    assert result == grads
+
+
+def test_norm_clip_method_with_zero_gradients():
+    """Test that the NORM_CLIP method handles zero gradients correctly."""
+    grads = [0.0, 0.0, 0.0]
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=0.5,
+    )
+    assert result == grads
+
+
+def test_norm_clip_method_large_gradient_vector():
+    """Test that the NORM_CLIP method scales large gradient vectors correctly."""
+    grads = [6.0, 8.0]  # L2 norm = 10.0
+    max_norm = 0.5
+    result = compute_gradients(
+        grads,
+        GradientCalculationMethod.NORM_CLIP,
+        max_gradient_norm=max_norm,
+    )
+    # Expected: scale = 0.5 / 10.0 = 0.05, so [0.3, 0.4]
+    expected = [0.3, 0.4]
+    assert np.allclose(result, expected)
