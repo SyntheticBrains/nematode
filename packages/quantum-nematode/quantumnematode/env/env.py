@@ -959,6 +959,106 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return float(gradient_magnitude), float(gradient_direction)
 
+    def get_separated_gradients(
+        self,
+        position: tuple[int, ...],
+        *,
+        disable_log: bool = False,
+    ) -> dict[str, float]:
+        """
+        Get separated local gradient vectors for appetitive/aversive modules.
+
+        Decomposes the superimposed gradient at the agent's current position into:
+        - Appetitive component: local chemical gradient from food sources (attractive)
+        - Aversive component: local chemical gradient from predators (repulsive)
+
+        This provides egocentric sensory information that a nematode could actually sense
+        through its chemoreceptors, without requiring global knowledge of object positions.
+
+        Parameters
+        ----------
+        position : tuple[int, ...]
+            Position to query local gradients at.
+        disable_log : bool
+            Whether to disable debug logging.
+
+        Returns
+        -------
+        dict[str, float]
+            Dictionary containing LOCAL sensory information:
+            - food_gradient_strength: Magnitude of local food gradient vector
+            - food_gradient_direction: Direction of local food gradient vector (radians)
+            - predator_gradient_strength: Magnitude of local predator gradient vector
+            - predator_gradient_direction: Direction of local predator gradient vector (radians)
+        """
+        # Compute LOCAL food gradient vector (superposition of all food sources)
+        food_vector_x = 0.0
+        food_vector_y = 0.0
+
+        for food in self.foods:
+            dx = food[0] - position[0]
+            dy = food[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                continue
+
+            # Exponential decay gradient (positive/attractive)
+            strength = self.gradient_strength_base * np.exp(
+                -distance / self.gradient_decay_constant,
+            )
+            direction = np.arctan2(dy, dx)
+
+            food_vector_x += strength * np.cos(direction)
+            food_vector_y += strength * np.sin(direction)
+
+        # Compute LOCAL predator gradient vector (superposition of all predators)
+        predator_vector_x = 0.0
+        predator_vector_y = 0.0
+
+        if self.predators_enabled:
+            for predator in self.predators:
+                dx = predator.position[0] - position[0]
+                dy = predator.position[1] - position[1]
+                distance = np.sqrt(dx**2 + dy**2)
+
+                if distance == 0:
+                    continue
+
+                # Exponential decay gradient (negative/repulsive)
+                strength = -self.predator_gradient_strength * np.exp(
+                    -distance / self.predator_gradient_decay,
+                )
+                direction = np.arctan2(dy, dx)
+
+                predator_vector_x += strength * np.cos(direction)
+                predator_vector_y += strength * np.sin(direction)
+
+        # Convert vectors to magnitude + direction (what sensors detect)
+        food_magnitude = np.sqrt(food_vector_x**2 + food_vector_y**2)
+        food_direction = np.arctan2(food_vector_y, food_vector_x) if food_magnitude > 0 else 0.0
+
+        predator_magnitude = np.sqrt(predator_vector_x**2 + predator_vector_y**2)
+        predator_direction = (
+            np.arctan2(predator_vector_y, predator_vector_x) if predator_magnitude > 0 else 0.0
+        )
+
+        # TODO: Convert to dataclass
+        result = {
+            "food_gradient_strength": float(food_magnitude),
+            "food_gradient_direction": float(food_direction),
+            "predator_gradient_strength": float(predator_magnitude),
+            "predator_gradient_direction": float(predator_direction),
+        }
+
+        if not disable_log:
+            logger.debug(
+                f"Local gradients: food_mag={food_magnitude:.3f}, "
+                f"predator_mag={predator_magnitude:.3f}",
+            )
+
+        return result
+
     def reached_goal(self) -> bool:
         """
         Check if the agent has reached any food source.

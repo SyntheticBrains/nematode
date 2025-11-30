@@ -1,0 +1,78 @@
+# Dynamic Foraging with Predators - Appetitive/Aversive Modules
+# Uses separate quantum modules for food-seeking (appetitive) and predator-avoidance (aversive)
+# Inspired by C. elegans neural circuits for approach/avoidance behaviors
+
+max_steps: 500
+brain:
+  name: modular
+  config:
+    modules:
+      appetitive: [0, 1]  # Food-seeking module (2 qubits)
+      aversive: [2, 3]    # Predator-avoidance module (2 qubits)
+    num_layers: 2
+    min_gradient_magnitude: 1e-4
+    l2_reg: 0.0005
+    noise_std: 0.003
+    param_clip: true
+    param_modulo: true
+    lr_boost: false
+
+    # Disable trajectory learning (use single-step updates)
+    use_trajectory_learning: false
+
+shots: 3000
+body_length: 2
+qubits: 4  # 2 qubits per module
+
+learning_rate:
+  method: dynamic
+  parameters:
+    initial_learning_rate: 0.015
+    decay_type: exponential
+    decay_rate: 0.001
+    min_lr: 0.001
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  penalty_starvation: 2.0
+  penalty_predator_death: 10.0  # Higher penalty for predator death
+  penalty_predator_proximity: 0.1
+  stuck_position_threshold: 3
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 20
+    viewport_size: [11, 11]
+
+    foraging:
+      foods_on_grid: 5
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0
+
+    predators:
+      enabled: true
+      count: 2
+      speed: 1.0
+      movement_pattern: random
+      detection_radius: 8
+      kill_radius: 0
+      gradient_decay_constant: 12.0
+      gradient_strength: 1.0
+
+gradient:
+  method: norm_clip
+  max_norm: 0.5
