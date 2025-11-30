@@ -125,6 +125,8 @@ class QuantumNematodeAgent:
         theme: Theme = DEFAULT_THEME,
         rich_style_config: DarkColorRichStyleConfig | None = None,
         satiety_config: SatietyConfig | None = None,
+        *,
+        use_separated_gradients: bool = False,
     ) -> None:
         """
         Initialize the nematode agent.
@@ -145,9 +147,13 @@ class QuantumNematodeAgent:
             Rich styling configuration.
         satiety_config : SatietyConfig | None, optional
             Satiety system configuration.
+        use_separated_gradients : bool, optional
+            Whether to use separated food/predator gradients for appetitive/aversive modules.
+            Only valid for dynamic environments. Default is False (unified gradients).
         """
         self.brain = brain
         self.satiety_config = satiety_config or SatietyConfig()
+        self.use_separated_gradients = use_separated_gradients
 
         if env is None:
             self.env = StaticEnvironment(
@@ -345,14 +351,21 @@ class QuantumNematodeAgent:
         BrainParams
             Brain parameters ready for execution.
         """
-        # Get separated gradients for appetitive/aversive modules
+        # Get separated gradients for appetitive/aversive modules if configured
         separated_grads = {}
-        # TODO: Add toggle for unified vs separated gradients
-        if isinstance(self.env, DynamicForagingEnvironment):
-            separated_grads = self.env.get_separated_gradients(
-                self.env.agent_pos,
-                disable_log=True,
-            )
+        if self.use_separated_gradients:
+            if isinstance(self.env, DynamicForagingEnvironment):
+                separated_grads = self.env.get_separated_gradients(
+                    self.env.agent_pos,
+                    disable_log=True,
+                )
+            else:
+                error_message = (
+                    "Separated gradients requested but "
+                    "environment is not DynamicForagingEnvironment."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
 
         return BrainParams(
             # Combined gradients (backward compatibility)

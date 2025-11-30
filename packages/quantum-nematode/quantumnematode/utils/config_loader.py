@@ -156,6 +156,7 @@ class DynamicEnvironmentConfig(BaseModel):
 
     grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
+    use_separated_gradients: bool = False  # Whether to use separated food/predator gradients
 
     # Nested configuration subsections
     foraging: ForagingConfig | None = None
