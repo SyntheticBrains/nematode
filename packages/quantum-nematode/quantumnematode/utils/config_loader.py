@@ -27,7 +27,10 @@ from quantumnematode.initializers import (
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod
+from quantumnematode.optimizers.gradient_methods import (
+    DEFAULT_MAX_GRADIENT_NORM,
+    GradientCalculationMethod,
+)
 from quantumnematode.optimizers.learning_rate import (
     DEFAULT_ADAM_LEARNING_RATE_BETA1,
     DEFAULT_ADAM_LEARNING_RATE_BETA2,
@@ -425,6 +428,11 @@ def configure_gradient_method(
     grad_cfg = config.gradient or GradientConfig()
     method = grad_cfg.method or gradient_method
     max_norm = grad_cfg.max_norm
+    if method == GradientCalculationMethod.NORM_CLIP and max_norm is None:
+        logger.info(
+            "norm_clip method configured without max_norm, "
+            f"using default: {DEFAULT_MAX_GRADIENT_NORM}",
+        )
     return method, max_norm
 
 
