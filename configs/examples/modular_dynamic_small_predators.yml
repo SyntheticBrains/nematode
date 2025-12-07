@@ -16,7 +16,7 @@ brain:
     param_modulo: true
     lr_boost: false
 
-shots: 3000
+shots: 1500
 body_length: 2
 qubits: 2
 
@@ -24,9 +24,9 @@ learning_rate:
   method: dynamic
   parameters:
     initial_learning_rate: 0.015
-    decay_type: exponential
-    decay_rate: 0.001
-    min_lr: 0.001
+    decay_type: inverse_time
+    decay_rate: 0.0001
+    min_lr: 0.003
 
 reward:
   reward_goal: 2.0
