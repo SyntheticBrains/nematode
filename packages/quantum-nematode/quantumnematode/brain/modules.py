@@ -162,8 +162,15 @@ def appetitive_features(
     This module encodes signals that drive the agent toward food sources,
     inspired by C. elegans appetitive chemotaxis circuits (AWC neurons).
 
-    Uses LOCAL gradient information only - the agent senses the attractive chemical
-    gradient at its current position without knowing food locations.
+    Uses SEPARATED food gradient to encode pure food-seeking behavior.
+    This is distinct from the chemotaxis module which uses the combined gradient.
+
+    Feature encoding:
+    - RX: Food gradient strength (how strongly food is sensed)
+    - RY: Relative direction to food (where to go)
+    - RZ: Hunger level (motivation to seek food)
+
+    All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
 
     Args:
         params: BrainParams containing agent state.
@@ -172,15 +179,16 @@ def appetitive_features(
     -------
         Dictionary with rx, ry, rz values for appetitive qubit(s).
     """
-    # Normalize food gradient strength
-    # Raw gradient values can be >> 1, so we apply tanh normalization to get [0,1] range
+    # Food gradient strength - use separated food gradient
     food_strength = params.food_gradient_strength or 0.0
-    food_strength_normalized = np.tanh(food_strength)  # Normalize to [0,1]
-    # Scale to [-π/2, π/2]
+    # Use tanh to normalize potentially unbounded gradient values to [0, 1]
+    food_strength_normalized = np.tanh(food_strength)
+    # Scale to [-π/2, π/2] for quantum gate stability
     food_strength_scaled = food_strength_normalized * np.pi - np.pi / 2
 
-    # Relative angle to food
-    if params.food_gradient_direction is not None and params.agent_direction is not None:
+    # Relative angle to food source
+    food_direction = params.food_gradient_direction
+    if food_direction is not None and params.agent_direction is not None:
         direction_map = {
             Direction.UP: np.pi / 2,
             Direction.DOWN: -np.pi / 2,
@@ -188,23 +196,19 @@ def appetitive_features(
             Direction.RIGHT: 0.0,
         }
         agent_angle = direction_map.get(params.agent_direction, np.pi / 2)
-        relative_angle = (params.food_gradient_direction - agent_angle + np.pi) % (
-            2 * np.pi
-        ) - np.pi
-        # Normalize and scale
+        # Compute relative angle to food ([-π, π])
+        relative_angle = (food_direction - agent_angle + np.pi) % (2 * np.pi) - np.pi
+        # Normalize and scale to [-π/2, π/2]
         relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
-        relative_angle_scaled = relative_angle_normalized * np.pi / 2  # [-π/2, π/2]
+        relative_angle_scaled = relative_angle_normalized * np.pi / 2
     else:
         relative_angle_scaled = 0.0
 
-    # Satiety/hunger signal: low satiety = high hunger = high motivation
-    # Scale to [-π/2, π/2]
+    # Hunger signal: low satiety = high hunger = high motivation to seek food
     satiety = params.satiety or 0.0
-    # TODO: Get max satiety from config
-    max_satiety = 200.0  # Default from config
+    max_satiety = 200.0
     hunger = 1.0 - (satiety / max_satiety)  # 0 = full, 1 = starving
-    # Scale hunger to [-π/2, π/2]
-    hunger_scaled = hunger * np.pi - np.pi / 2
+    hunger_scaled = hunger * np.pi  # [0, π] where π = max hunger
 
     return {
         RotationAxis.RX: food_strength_scaled,
@@ -219,11 +223,18 @@ def aversive_features(
     """
     Extract aversive (predator-avoidance) features for escape behavior.
 
-    This module encodes local predator gradient signals sensed through chemoreceptors,
+    This module encodes predator gradient signals for avoidance behavior,
     inspired by C. elegans aversive response circuits (ASH neurons).
 
-    Uses LOCAL gradient information only - the agent senses the repulsive chemical
-    gradient at its current position without knowing predator locations.
+    Uses SEPARATED predator gradient to encode pure escape behavior.
+    The predator_gradient_direction points AWAY from predators (escape direction).
+
+    Feature encoding:
+    - RX: Predator threat level (how strongly predator is sensed)
+    - RY: Escape direction relative to agent facing (where to flee)
+    - RZ: Risk tolerance (hunger-based: hungry = more willing to risk danger)
+
+    All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
 
     Args:
         params: BrainParams containing agent state.
@@ -232,15 +243,16 @@ def aversive_features(
     -------
         Dictionary with rx, ry, rz values for aversive qubit(s).
     """
-    # Normalize predator gradient strength
-    # Raw gradient values can be >> 1, so we apply tanh normalization to get [0,1] range
+    # Predator gradient strength - indicates threat level
     predator_strength = params.predator_gradient_strength or 0.0
-    predator_strength_normalized = np.tanh(predator_strength)  # Normalize to [0,1]
-    # Scale to [-π/2, π/2]
+    # Use tanh to normalize potentially unbounded gradient values to [0, 1]
+    predator_strength_normalized = np.tanh(predator_strength)
+    # Scale to [-π/2, π/2] for quantum gate stability
     predator_strength_scaled = predator_strength_normalized * np.pi - np.pi / 2
 
-    # Relative angle of predator gradient (escape direction)
-    if params.predator_gradient_direction is not None and params.agent_direction is not None:
+    # Relative angle to escape direction (predator_gradient_direction points away)
+    escape_direction = params.predator_gradient_direction
+    if escape_direction is not None and params.agent_direction is not None:
         direction_map = {
             Direction.UP: np.pi / 2,
             Direction.DOWN: -np.pi / 2,
@@ -248,28 +260,26 @@ def aversive_features(
             Direction.RIGHT: 0.0,
         }
         agent_angle = direction_map.get(params.agent_direction, np.pi / 2)
-        relative_angle = (params.predator_gradient_direction - agent_angle + np.pi) % (
-            2 * np.pi
-        ) - np.pi
-        # Normalize and scale
+        # Compute relative angle to escape direction ([-π, π])
+        relative_angle = (escape_direction - agent_angle + np.pi) % (2 * np.pi) - np.pi
+        # Normalize and scale to [-π/2, π/2]
         relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
-        escape_scaled = relative_angle_normalized * np.pi / 2  # [-π/2, π/2]
+        escape_scaled = relative_angle_normalized * np.pi / 2
     else:
         escape_scaled = 0.0
 
-    # Use satiety as urgency modulator: hungrier = more risk-taking
-    # Low satiety reduces aversive response (need to eat despite danger)
+    # Risk tolerance based on hunger: starving = more willing to risk danger for food
+    # This modulates how strongly the agent responds to threats
     satiety = params.satiety or 0.0
-    # TODO: Get max satiety from config
     max_satiety = 200.0
-    satiety_factor = satiety / max_satiety  # 0 = starving, 1 = full
-    # Scale to [-π/2, π/2]
-    urgency_scaled = satiety_factor * np.pi - np.pi / 2  # Full -> more cautious
+    hunger = 1.0 - (satiety / max_satiety)  # 0 = full, 1 = starving
+    # High hunger = high risk tolerance (willing to ignore danger for food)
+    risk_tolerance_scaled = hunger * np.pi  # [0, π] where π = max risk tolerance
 
     return {
         RotationAxis.RX: predator_strength_scaled,
         RotationAxis.RY: escape_scaled,
-        RotationAxis.RZ: urgency_scaled,
+        RotationAxis.RZ: risk_tolerance_scaled,
     }
 
 
