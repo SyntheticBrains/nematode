@@ -43,6 +43,7 @@ from quantumnematode.optimizers.gradient_methods import (
 )
 from quantumnematode.optimizers.learning_rate import (
     AdamLearningRate,
+    ConstantLearningRate,
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
@@ -735,11 +736,21 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         "min_lr": learning_rate.min_lr,
                     },
                 }
+            elif isinstance(learning_rate, ConstantLearningRate):
+                learning_rate_metadata = {
+                    "method": "constant",
+                    "parameters": {
+                        "initial_learning_rate": learning_rate.learning_rate,
+                        "learning_rate": learning_rate.learning_rate,
+                    },
+                }
             else:
                 logger.warning(
                     "Learning rate metadata capture not implemented for "
                     f"{type(learning_rate).__name__}",
                 )
+                # Provide empty dict to avoid None.get() errors
+                learning_rate_metadata = {"method": "unknown", "parameters": {}}
 
             experiment_metadata = capture_experiment_metadata(
                 config_path=config_path,
@@ -890,7 +901,10 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     shots: int,
     qubits: int,  # noqa: ARG001
     device: DeviceType,
-    learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
+    learning_rate: ConstantLearningRate
+    | DynamicLearningRate
+    | AdamLearningRate
+    | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,
     gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
@@ -928,9 +942,9 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             logger.error(error_message)
             raise ValueError(error_message)
 
-        if not isinstance(learning_rate, DynamicLearningRate):
+        if not isinstance(learning_rate, (DynamicLearningRate, ConstantLearningRate)):
             error_message = (
-                "The 'modular' brain architecture requires a DynamicLearningRate. "
+                "The 'modular' brain architecture requires a DynamicLearningRate or ConstantLearningRate. "
                 f"Provided learning rate type: {type(learning_rate)}."
             )
             logger.error(error_message)
