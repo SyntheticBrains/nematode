@@ -128,6 +128,7 @@ DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-4
 # Trajectory learning defaults
 DEFAULT_USE_TRAJECTORY_LEARNING = False
 DEFAULT_GAMMA = 0.99
+DEFAULT_LEARN_ONLY_FROM_SUCCESS = False  # Only learn from successful episodes
 
 # Overfitting detector defaults
 OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL = 25
@@ -222,6 +223,9 @@ class ModularBrainConfig(BrainConfig):
     # Trajectory learning configuration
     use_trajectory_learning: bool = DEFAULT_USE_TRAJECTORY_LEARNING  # Toggle trajectory learning
     gamma: float = DEFAULT_GAMMA  # Discount factor for trajectory learning
+    learn_only_from_success: bool = (
+        DEFAULT_LEARN_ONLY_FROM_SUCCESS  # Only learn from successful episodes
+    )
 
 
 class ModularBrain(QuantumBrain):
@@ -355,6 +359,9 @@ class ModularBrain(QuantumBrain):
         self.episode_buffer: EpisodeBuffer | None = (
             EpisodeBuffer() if config.use_trajectory_learning else None
         )
+
+        # Episode start parameters for learn_only_from_success rollback
+        self._episode_start_parameters: dict[str, float] | None = None
 
     def build_brain(
         self,
@@ -857,8 +864,57 @@ class ModularBrain(QuantumBrain):
         """
         # Reserved for future brain-internal memory mechanisms
 
-    def post_process_episode(self) -> None:
-        """Post-process the episode data."""
+    def prepare_episode(self) -> None:
+        """Prepare for a new episode.
+
+        If learn_only_from_success is enabled, saves current parameters
+        so they can be restored if the episode fails.
+        """
+        if self.config.learn_only_from_success:
+            # Save a copy of current parameters at episode start
+            self._episode_start_parameters = deepcopy(self.parameter_values)
+            logger.debug(
+                "Saved episode start parameters for potential rollback "
+                "(learn_only_from_success=True)",
+            )
+
+    def post_process_episode(self, *, episode_success: bool | None = None) -> None:
+        """Post-process the episode data.
+
+        Parameters
+        ----------
+        episode_success : bool | None
+            Whether the episode was successful (collected target foods).
+            If None, learning proceeds normally.
+            If False and learn_only_from_success is True, learning is skipped.
+        """
+        # Check if we should skip learning based on episode success
+        should_skip_learning = (
+            self.config.learn_only_from_success
+            and episode_success is not None
+            and not episode_success
+        )
+
+        if should_skip_learning:
+            # Rollback parameters to episode start (undo all step-by-step learning)
+            if self._episode_start_parameters is not None:
+                self.parameter_values = deepcopy(self._episode_start_parameters)
+                logger.info(
+                    "Rolled back parameters to episode start: episode was unsuccessful "
+                    "(learn_only_from_success=True)",
+                )
+            else:
+                logger.warning(
+                    "Cannot rollback parameters: no episode start parameters saved. "
+                    "Ensure prepare_episode() is called at episode start.",
+                )
+            # Clear the buffer but don't update parameters
+            if self.episode_buffer is not None:
+                self.episode_buffer.clear()
+            final_reward = self.history_data.rewards[-1] if self.history_data.rewards else 0.0
+            self._complete_episode_tracking(final_reward=final_reward)
+            return
+
         # Trajectory learning: compute returns and update parameters
         if (
             self.use_trajectory_learning
