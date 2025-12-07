@@ -107,7 +107,7 @@ from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
     compute_gradients,
 )
-from quantumnematode.optimizers.learning_rate import DynamicLearningRate
+from quantumnematode.optimizers.learning_rate import ConstantLearningRate, DynamicLearningRate
 
 if TYPE_CHECKING:
     from qiskit.primitives import PrimitiveResult
@@ -238,7 +238,7 @@ class ModularBrain(QuantumBrain):
         config: ModularBrainConfig,
         shots: int = DEFAULT_SHOTS,
         device: DeviceType = DeviceType.CPU,
-        learning_rate: DynamicLearningRate | None = None,
+        learning_rate: ConstantLearningRate | DynamicLearningRate | None = None,
         parameter_initializer: ZeroInitializer
         | RandomPiUniformInitializer
         | RandomSmallUniformInitializer
