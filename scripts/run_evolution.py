@@ -8,26 +8,31 @@ Example usage:
     python scripts/run_evolution.py --config configs/evolution.yml --algorithm ga --population 50
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import pickle
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
+from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
-from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import DynamicForagingEnvironment
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.evolutionary import (
     CMAESOptimizer,
-    EvolutionaryOptimizer,
     EvolutionResult,
     GeneticAlgorithmOptimizer,
 )
-from quantumnematode.utils.config_loader import load_simulation_config
+from quantumnematode.utils.config_loader import configure_brain, load_simulation_config
+
+if TYPE_CHECKING:
+    from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
 
 DEFAULT_GENERATIONS = 50
 DEFAULT_POPULATION_SIZE = 20
@@ -127,14 +132,13 @@ def create_brain_from_config(
     """
     config = load_simulation_config(config_path)
 
-    # Extract brain config
-    brain_config = ModularBrainConfig()
-    if config.brain and config.brain.config:
-        brain_dict = config.brain.config
-        if "modules" in brain_dict:
-            brain_config.modules = {ModuleName(k): v for k, v in brain_dict["modules"].items()}
-        if "num_layers" in brain_dict:
-            brain_config.num_layers = brain_dict["num_layers"]
+    # Use configure_brain to get the properly typed brain config
+    brain_config = configure_brain(config)
+
+    # Ensure we have a ModularBrainConfig
+    if not isinstance(brain_config, ModularBrainConfig):
+        msg = f"Evolution requires ModularBrain, got {type(brain_config).__name__}"
+        raise TypeError(msg)
 
     # Create brain with no learning (we're using evolution)
     brain = ModularBrain(
@@ -200,6 +204,84 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
     )
 
 
+def run_episode(
+    brain: ModularBrain,
+    env: DynamicForagingEnvironment,
+    max_steps: int,
+    initial_satiety: float = 200.0,
+    satiety_decay_rate: float = 1.0,
+) -> bool:
+    """Run a single episode and return whether it was successful.
+
+    Args:
+        brain: Brain instance to use for decisions.
+        env: Environment instance.
+        max_steps: Maximum steps per episode.
+        initial_satiety: Starting satiety level.
+        satiety_decay_rate: Satiety decay per step.
+
+    Returns
+    -------
+        True if episode was successful (collected target foods).
+    """
+    foods_collected = 0
+    satiety = initial_satiety
+
+    for _ in range(max_steps):
+        # Get state from environment
+        position = (env.agent_pos[0], env.agent_pos[1])
+        gradient_strength, gradient_direction = env.get_state(position, disable_log=True)
+
+        # Build BrainParams
+        params = BrainParams(
+            gradient_strength=gradient_strength,
+            gradient_direction=gradient_direction,
+            agent_direction=env.current_direction,
+            agent_position=(float(position[0]), float(position[1])),
+        )
+
+        # Get action from brain (no reward, no learning)
+        actions = brain.run_brain(params, reward=None)
+        if not actions:
+            break
+
+        action = actions[0].action
+
+        # Move agent
+        env.move_agent(action)
+
+        # Check for food collection
+        agent_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
+        if agent_pos_tuple in env.foods:
+            env.foods.remove(agent_pos_tuple)
+            foods_collected += 1
+            satiety = min(satiety + 50.0, initial_satiety)  # Food restores satiety
+            env.spawn_food()  # Spawn new food
+
+            # Check for success (collected target foods)
+            if foods_collected >= env.target_foods_to_collect:
+                return True
+
+        # Move predators and check for death
+        if env.predators_enabled:
+            for predator in env.predators:
+                predator.update_position(env.grid_size)
+                # Check kill radius
+                dist = np.sqrt(
+                    (predator.position[0] - env.agent_pos[0]) ** 2
+                    + (predator.position[1] - env.agent_pos[1]) ** 2,
+                )
+                if dist <= env.predator_kill_radius:
+                    return False  # Died to predator
+
+        # Decay satiety
+        satiety -= satiety_decay_rate
+        if satiety <= 0:
+            return False  # Starved
+
+    return False  # Max steps reached without success
+
+
 def evaluate_fitness(
     param_array: list[float],
     config_path: str,
@@ -220,42 +302,13 @@ def evaluate_fitness(
     -------
         Negative success rate (lower is better).
     """
-    from quantumnematode.brain.arch import BrainParams
-
     brain = create_brain_from_config(config_path, param_array)
     successes = 0
 
     for _ in range(episodes):
         env = create_env_from_config(config_path)
-        state = env.reset()
-
-        for _ in range(max_steps):
-            # Convert state to BrainParams
-            params = BrainParams(
-                gradient_strength=state.get("gradient_strength"),
-                gradient_direction=state.get("gradient_direction"),
-                agent_direction=state.get("agent_direction"),
-                agent_position=state.get("agent_position"),
-                food_gradient_strength=state.get("food_gradient_strength"),
-                food_gradient_direction=state.get("food_gradient_direction"),
-                predator_gradient_strength=state.get("predator_gradient_strength"),
-                predator_gradient_direction=state.get("predator_gradient_direction"),
-                satiety=state.get("satiety"),
-            )
-
-            # Get action (no reward, no learning)
-            actions = brain.run_brain(params, reward=None)
-            if not actions:
-                break
-
-            action = actions[0].action
-            state, _reward, done, info = env.step(action)
-
-            if done:
-                reason = info.get("termination_reason", "")
-                if reason == "target_reached" or info.get("success", False):
-                    successes += 1
-                break
+        if run_episode(brain, env, max_steps):
+            successes += 1
 
     success_rate = successes / episodes
     return -success_rate  # Negate for minimization
@@ -314,8 +367,8 @@ def run_evolution(  # noqa: PLR0913
         # Log progress
         gen_time = time.time() - gen_start
         best_fitness = min(fitnesses)
-        mean_fitness = np.mean(fitnesses)
-        std_fitness = np.std(fitnesses)
+        mean_fitness = float(np.mean(fitnesses))
+        std_fitness = float(np.std(fitnesses))
 
         # Convert to success rate for readability
         best_success = -best_fitness
@@ -373,7 +426,7 @@ def save_results(
     best_params_dict = dict(zip(param_keys, result.best_params, strict=False))
 
     results_file = output_dir / f"best_params_{timestamp}.json"
-    with Path.open(results_file, "w") as f:
+    with results_file.open("w") as f:
         json.dump(
             {
                 "best_params": best_params_dict,
@@ -388,7 +441,7 @@ def save_results(
 
     # Save history as CSV
     history_file = output_dir / f"history_{timestamp}.csv"
-    with Path.open(history_file, "w") as f:
+    with history_file.open("w") as f:
         f.write("generation,best_fitness,mean_fitness,std_fitness\n")
         f.writelines(
             f"{entry['generation']},"
@@ -409,7 +462,7 @@ def main() -> None:
 
     # Set random seed if provided
     if args.seed is not None:
-        np.random.seed(args.seed)
+        np.random.seed(args.seed)  # noqa: NPY002
 
     # Create output directory
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
@@ -429,6 +482,7 @@ def main() -> None:
     x0 = list(brain.parameter_values.values())
 
     # Create or load optimizer
+    optimizer: EvolutionaryOptimizer
     if args.resume:
         logger.info(f"Resuming from checkpoint: {args.resume}")
         optimizer = load_checkpoint(Path(args.resume))

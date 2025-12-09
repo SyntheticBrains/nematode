@@ -181,7 +181,7 @@ class TestGeneticAlgorithmOptimizer:
 
         # First generation
         solutions1 = optimizer.ask()
-        fitnesses1 = list(range(10))  # Best fitness is 0 for first individual
+        fitnesses1 = [float(i) for i in range(10)]  # Best fitness is 0 for first individual
         optimizer.tell(solutions1, fitnesses1)
 
         # Best individual should be preserved
@@ -189,7 +189,7 @@ class TestGeneticAlgorithmOptimizer:
 
         # Second generation
         solutions2 = optimizer.ask()
-        fitnesses2 = [f + 1 for f in fitnesses1]  # All worse
+        fitnesses2 = [f + 1.0 for f in fitnesses1]  # All worse
         optimizer.tell(solutions2, fitnesses2)
 
         # Best should still be the same
@@ -201,7 +201,8 @@ class TestGeneticAlgorithmOptimizer:
 
         for _ in range(10):
             solutions = optimizer.ask()
-            fitnesses = [np.random.random() for _ in solutions]
+            rng = np.random.default_rng(42)
+            fitnesses = [float(rng.random()) for _ in solutions]
             optimizer.tell(solutions, fitnesses)
             assert optimizer.stop() is False
 
@@ -259,15 +260,16 @@ class TestEvolutionaryOptimizerComparison:
 
     def test_both_find_minimum_on_sphere(self):
         """Test that both algorithms can minimize sphere function."""
-        for OptimizerClass in [CMAESOptimizer, GeneticAlgorithmOptimizer]:
-            if OptimizerClass == GeneticAlgorithmOptimizer:
-                optimizer = OptimizerClass(
+        optimizer_classes = [CMAESOptimizer, GeneticAlgorithmOptimizer]
+        for optimizer_class in optimizer_classes:
+            if optimizer_class == GeneticAlgorithmOptimizer:
+                optimizer = optimizer_class(
                     num_params=2,
                     population_size=20,
                     seed=42,
                 )
             else:
-                optimizer = OptimizerClass(
+                optimizer = optimizer_class(
                     num_params=2,
                     x0=[2.0, 2.0],
                     population_size=20,
@@ -280,18 +282,19 @@ class TestEvolutionaryOptimizerComparison:
 
             result = optimizer.result
             # Should find reasonably good solution
-            assert result.best_fitness < 1.0, f"{OptimizerClass.__name__} failed"
+            assert result.best_fitness < 1.0, f"{optimizer_class.__name__} failed"
 
     def test_both_improve_over_generations(self):
         """Test that both algorithms improve fitness over generations."""
-        for OptimizerClass in [CMAESOptimizer, GeneticAlgorithmOptimizer]:
-            if OptimizerClass == GeneticAlgorithmOptimizer:
-                optimizer = OptimizerClass(num_params=3, population_size=20, seed=42)
+        optimizer_classes = [CMAESOptimizer, GeneticAlgorithmOptimizer]
+        for optimizer_class in optimizer_classes:
+            if optimizer_class == GeneticAlgorithmOptimizer:
+                optimizer = optimizer_class(num_params=3, population_size=20, seed=42)
             else:
-                optimizer = OptimizerClass(num_params=3, population_size=20)
+                optimizer = optimizer_class(num_params=3, population_size=20)
 
-            first_best = None
-            last_best = None
+            first_best: float = float("inf")
+            last_best: float = float("inf")
 
             for gen in range(20):
                 solutions = optimizer.ask()
@@ -304,4 +307,4 @@ class TestEvolutionaryOptimizerComparison:
                 last_best = current_best
 
             # Should improve (lower fitness is better)
-            assert last_best <= first_best, f"{OptimizerClass.__name__} didn't improve"
+            assert last_best <= first_best, f"{optimizer_class.__name__} didn't improve"
