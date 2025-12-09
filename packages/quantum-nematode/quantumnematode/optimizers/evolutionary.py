@@ -24,6 +24,9 @@ import numpy as np
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+# Crossover probability for uniform crossover
+CROSSOVER_PROBABILITY = 0.5
+
 
 @dataclass
 class EvolutionResult:
@@ -316,7 +319,7 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
 
     def _crossover(self, parent1: list[float], parent2: list[float]) -> list[float]:
         """Uniform crossover between two parents."""
-        mask = self._rng.random(self.num_params) < 0.5
+        mask = self._rng.random(self.num_params) < CROSSOVER_PROBABILITY
         return [p1 if m else p2 for p1, p2, m in zip(parent1, parent2, mask, strict=False)]
 
     def _mutate(self, individual: list[float]) -> list[float]:
