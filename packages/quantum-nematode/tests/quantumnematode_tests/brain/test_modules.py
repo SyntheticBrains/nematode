@@ -495,7 +495,6 @@ class TestAppetitiveFeatures:
 
         # tanh(0) = 0, scaled to -π/2
         assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
-        assert features[RotationAxis.RZ] == pytest.approx(np.pi / 2)  # 50% hunger
 
     def test_strong_food_gradient(self):
         """Test appetitive features with strong food gradient."""
@@ -509,7 +508,6 @@ class TestAppetitiveFeatures:
 
         # tanh(2.0) ≈ 0.964, scaled to near π/2
         assert features[RotationAxis.RX] > 0
-        assert features[RotationAxis.RZ] == pytest.approx(np.pi)  # Max hunger
 
     def test_food_direction_aligned(self):
         """Test when food direction aligns with agent direction."""
@@ -549,19 +547,6 @@ class TestAppetitiveFeatures:
 
         # Full satiety = 0 hunger
         assert features[RotationAxis.RZ] == pytest.approx(0.0)
-
-    def test_hunger_starving(self):
-        """Test hunger signal when starving."""
-        params = BrainParams(
-            food_gradient_strength=0.5,
-            food_gradient_direction=0.0,
-            agent_direction=Direction.UP,
-            satiety=0.0,  # Starving
-        )
-        features = appetitive_features(params)
-
-        # Starving = max hunger = π
-        assert features[RotationAxis.RZ] == pytest.approx(np.pi)
 
     def test_none_food_gradient(self):
         """Test appetitive features when food gradient is None."""
@@ -607,8 +592,6 @@ class TestAversiveFeatures:
 
         # tanh(0) = 0, scaled to -π/2
         assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
-        # 50% hunger = 50% risk tolerance
-        assert features[RotationAxis.RZ] == pytest.approx(np.pi / 2)
 
     def test_strong_predator_gradient(self):
         """Test aversive features with strong predator threat."""
@@ -650,19 +633,6 @@ class TestAversiveFeatures:
 
         # Relative angle should be close to ±π/2
         assert abs(features[RotationAxis.RY]) == pytest.approx(np.pi / 2, rel=0.01)
-
-    def test_risk_tolerance_hungry(self):
-        """Test risk tolerance when hungry (willing to risk danger)."""
-        params = BrainParams(
-            predator_gradient_strength=1.0,
-            predator_gradient_direction=0.0,
-            agent_direction=Direction.UP,
-            satiety=0.0,  # Starving
-        )
-        features = aversive_features(params)
-
-        # Starving = max risk tolerance = π
-        assert features[RotationAxis.RZ] == pytest.approx(np.pi)
 
     def test_risk_tolerance_full(self):
         """Test risk tolerance when full (cautious)."""

@@ -168,7 +168,6 @@ def appetitive_features(
     Feature encoding:
     - RX: Food gradient strength (how strongly food is sensed)
     - RY: Relative direction to food (where to go)
-    - RZ: Hunger level (motivation to seek food)
 
     All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
 
@@ -204,16 +203,10 @@ def appetitive_features(
     else:
         relative_angle_scaled = 0.0
 
-    # Hunger signal: low satiety = high hunger = high motivation to seek food
-    satiety = params.satiety or 0.0
-    max_satiety = 200.0
-    hunger = 1.0 - (satiety / max_satiety)  # 0 = full, 1 = starving
-    hunger_scaled = hunger * np.pi  # [0, π] where π = max hunger
-
     return {
         RotationAxis.RX: food_strength_scaled,
         RotationAxis.RY: relative_angle_scaled,
-        RotationAxis.RZ: hunger_scaled,
+        RotationAxis.RZ: 0.0,
     }
 
 
@@ -232,7 +225,6 @@ def aversive_features(
     Feature encoding:
     - RX: Predator threat level (how strongly predator is sensed)
     - RY: Escape direction relative to agent facing (where to flee)
-    - RZ: Risk tolerance (hunger-based: hungry = more willing to risk danger)
 
     All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
 
@@ -268,18 +260,10 @@ def aversive_features(
     else:
         escape_scaled = 0.0
 
-    # Risk tolerance based on hunger: starving = more willing to risk danger for food
-    # This modulates how strongly the agent responds to threats
-    satiety = params.satiety or 0.0
-    max_satiety = 200.0
-    hunger = 1.0 - (satiety / max_satiety)  # 0 = full, 1 = starving
-    # High hunger = high risk tolerance (willing to ignore danger for food)
-    risk_tolerance_scaled = hunger * np.pi  # [0, π] where π = max risk tolerance
-
     return {
         RotationAxis.RX: predator_strength_scaled,
         RotationAxis.RY: escape_scaled,
-        RotationAxis.RZ: risk_tolerance_scaled,
+        RotationAxis.RZ: 0.0,
     }
 
 
