@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import pickle
 import time
 from datetime import UTC, datetime
@@ -255,6 +256,7 @@ def run_episode(
         if agent_pos_tuple in env.foods:
             env.foods.remove(agent_pos_tuple)
             foods_collected += 1
+            # TODO: Use satiety gain from config
             satiety = min(satiety + 50.0, initial_satiety)  # Food restores satiety
             env.spawn_food()  # Spawn new food
 
@@ -314,6 +316,20 @@ def evaluate_fitness(
     return -success_rate  # Negate for minimization
 
 
+def _init_worker(log_level: int) -> None:
+    """Initialize logging in worker processes.
+
+    Args:
+        log_level: Logging level to use in worker.
+    """
+    # Import logger in worker to configure it
+    from quantumnematode.logging_config import logger as worker_logger
+
+    worker_logger.setLevel(log_level)
+    for handler in worker_logger.handlers:
+        handler.setLevel(log_level)
+
+
 def run_evolution(  # noqa: PLR0913
     optimizer: EvolutionaryOptimizer,
     config_path: str,
@@ -321,6 +337,7 @@ def run_evolution(  # noqa: PLR0913
     episodes: int,
     output_dir: Path,
     parallel_workers: int = 1,
+    log_level: int = logging.WARNING,
 ) -> EvolutionResult:
     """Run evolutionary optimization loop.
 
@@ -331,6 +348,7 @@ def run_evolution(  # noqa: PLR0913
         episodes: Episodes per fitness evaluation.
         output_dir: Directory to save results.
         parallel_workers: Number of parallel workers.
+        log_level: Logging level for worker processes.
 
     Returns
     -------
@@ -356,7 +374,11 @@ def run_evolution(  # noqa: PLR0913
             from multiprocessing import Pool
 
             eval_args = [(sol, config_path, episodes) for sol in solutions]
-            with Pool(processes=parallel_workers) as pool:
+            with Pool(
+                processes=parallel_workers,
+                initializer=_init_worker,
+                initargs=(log_level,),
+            ) as pool:
                 fitnesses = pool.starmap(evaluate_fitness, eval_args)
         else:
             fitnesses = [evaluate_fitness(sol, config_path, episodes) for sol in solutions]
@@ -375,9 +397,9 @@ def run_evolution(  # noqa: PLR0913
         mean_success = -mean_fitness
 
         logger.info(
-            f"Gen {gen + 1}/{generations}: "
-            f"best={best_success:.1%}, mean={mean_success:.1%}, "
-            f"std={std_fitness:.3f}, time={gen_time:.1f}s",
+            f"Gen {gen + 1:3d}/{generations}: "
+            f"best={best_success:5.1%}, mean={mean_success:5.1%}, "
+            f"std={std_fitness:.3f}, time={gen_time:5.1f}s",
         )
 
         # Save checkpoint every 10 generations
@@ -387,7 +409,8 @@ def run_evolution(  # noqa: PLR0913
             logger.info(f"Saved checkpoint: {checkpoint_path}")
 
         # Check for convergence (CMA-ES only)
-        if optimizer.stop():
+        # Only stop early if we've run at least 10 generations and have non-zero fitness
+        if gen >= 10 and best_fitness < 0 and optimizer.stop():
             logger.info(f"Optimizer converged at generation {gen + 1}")
             break
 
@@ -457,8 +480,26 @@ def main() -> None:
     """Run evolutionary optimization."""
     args = parse_arguments()
 
-    # Configure logging
-    logger.setLevel(args.log_level)
+    # Configure logging with console output
+    log_level = getattr(logging, args.log_level)
+    logger.setLevel(log_level)
+
+    # Update existing file handlers to use the specified log level
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.setLevel(log_level)
+
+    # Add console handler if not already present
+    if not any(
+        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        for h in logger.handlers
+    ):
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(log_level)
+        console_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"),
+        )
+        logger.addHandler(console_handler)
 
     # Set random seed if provided
     if args.seed is not None:
@@ -511,6 +552,7 @@ def main() -> None:
         episodes=args.episodes,
         output_dir=output_dir,
         parallel_workers=args.parallel,
+        log_level=log_level,
     )
 
     # Save results

@@ -279,7 +279,7 @@ class BaseEnvironment(ABC):
             raise ValueError(error_message)
 
         if action == Action.STAY:
-            logger.info("Action is stay: staying in place.")
+            logger.debug("Action is stay: staying in place.")
             return
 
         # Define direction mappings
