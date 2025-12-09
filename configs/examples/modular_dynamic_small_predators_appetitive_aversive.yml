@@ -2,13 +2,18 @@
 # Uses separate quantum modules for food-seeking (appetitive) and predator-avoidance (aversive)
 # Inspired by C. elegans neural circuits for approach/avoidance behaviors
 
+# Next:
+# x 3 qubits per module with satiety on modules enabled
+# x 4 qubits per module (8 total)
+# ~ Try with unified gradients and either more qubits, trajectory
+
 max_steps: 500
 brain:
   name: modular
   config:
     modules:
-      appetitive: [0, 1]  # Food-seeking module (2 qubits)
-      aversive: [2, 3]    # Predator-avoidance module (2 qubits)
+      appetitive: [0, 1]
+      aversive: [2, 3]
     num_layers: 2
     min_gradient_magnitude: 1e-4
     l2_reg: 0.0005
@@ -16,20 +21,22 @@ brain:
     param_clip: true
     param_modulo: true
     lr_boost: false
-
-    # Disable trajectory learning (use single-step updates)
     use_trajectory_learning: false
+    learn_only_from_success: false
 
-shots: 3000
+shots: 1500
 body_length: 2
-qubits: 4  # 2 qubits per module
+qubits: 4
+
+parameter_initializer:
+  type: random_pi
 
 learning_rate:
   method: dynamic
   parameters:
     initial_learning_rate: 0.015
-    decay_type: exponential
-    decay_rate: 0.001
+    decay_type: inverse_time
+    decay_rate: 0.0001
     min_lr: 0.001
 
 reward:
