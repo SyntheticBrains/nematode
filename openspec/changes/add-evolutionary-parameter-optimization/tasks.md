@@ -2,40 +2,40 @@
 
 ## 1. Core Infrastructure
 
-- [ ] 1.1 Add `cma` dependency to pyproject.toml
-- [ ] 1.2 Create `quantumnematode/optimizers/evolutionary.py` module
-- [ ] 1.3 Implement `EvolutionaryOptimizer` base class with fitness evaluation interface
-- [ ] 1.4 Implement `CMAESOptimizer` wrapper for cma library
-- [ ] 1.5 Implement `GeneticAlgorithmOptimizer` for simple GA alternative
+- [x] 1.1 Add `cma` dependency to pyproject.toml
+- [x] 1.2 Create `quantumnematode/optimizers/evolutionary.py` module
+- [x] 1.3 Implement `EvolutionaryOptimizer` base class with fitness evaluation interface
+- [x] 1.4 Implement `CMAESOptimizer` wrapper for cma library
+- [x] 1.5 Implement `GeneticAlgorithmOptimizer` for simple GA alternative
 
 ## 2. Brain Integration
 
-- [ ] 2.1 Ensure `brain.parameter_values` property returns flat parameter dict
-- [ ] 2.2 Add `brain.set_parameters(param_array)` method for setting from flat array
-- [ ] 2.3 Add `brain.copy()` method for creating independent brain instances (verify existing)
-- [ ] 2.4 Verify brain state reset between fitness evaluations
+- [x] 2.1 Ensure `brain.parameter_values` property returns flat parameter dict
+- [x] 2.2 Add `brain.set_parameters(param_array)` method for setting from flat array
+- [x] 2.3 Add `brain.copy()` method for creating independent brain instances (verify existing)
+- [x] 2.4 Verify brain state reset between fitness evaluations
 
 ## 3. Fitness Evaluation
 
-- [ ] 3.1 Create `FitnessFunction` class with configurable episode count
-- [ ] 3.2 Implement episode runner that returns success rate
-- [ ] 3.3 Add support for parallel fitness evaluation (multiprocessing)
-- [ ] 3.4 Implement fitness aggregation (mean success rate, optional variance penalty)
+- [x] 3.1 Create `FitnessFunction` class with configurable episode count
+- [x] 3.2 Implement episode runner that returns success rate
+- [x] 3.3 Add support for parallel fitness evaluation (multiprocessing)
+- [x] 3.4 Implement fitness aggregation (mean success rate, optional variance penalty)
 
 ## 4. Evolution Script
 
-- [ ] 4.1 Create `scripts/run_evolution.py` main script
-- [ ] 4.2 Implement CLI arguments (config, population size, generations, etc.)
-- [ ] 4.3 Add logging for generation progress (best fitness, mean, std)
-- [ ] 4.4 Save best parameters to file after evolution
-- [ ] 4.5 Add checkpoint/resume capability for long runs
+- [x] 4.1 Create `scripts/run_evolution.py` main script
+- [x] 4.2 Implement CLI arguments (config, population size, generations, etc.)
+- [x] 4.3 Add logging for generation progress (best fitness, mean, std)
+- [x] 4.4 Save best parameters to file after evolution
+- [x] 4.5 Add checkpoint/resume capability for long runs
 
 ## 5. Configuration
 
-- [ ] 5.1 Extend YAML schema for evolution parameters
-- [ ] 5.2 Create example config `configs/examples/evolution_cmaes_2qubit.yml`
+- [x] 5.1 Extend YAML schema for evolution parameters
+- [x] 5.2 Create example config `configs/examples/evolution_cmaes_2qubit.yml`
 - [ ] 5.3 Create example config `configs/examples/evolution_ga_2qubit.yml`
-- [ ] 5.4 Document configuration options
+- [x] 5.4 Document configuration options
 
 ## 6. Classical Baseline
 
@@ -46,15 +46,15 @@
 
 ## 7. Testing
 
-- [ ] 7.1 Unit tests for EvolutionaryOptimizer base class
-- [ ] 7.2 Unit tests for CMAESOptimizer
-- [ ] 7.3 Unit tests for GeneticAlgorithmOptimizer
-- [ ] 7.4 Unit tests for FitnessFunction
+- [x] 7.1 Unit tests for EvolutionaryOptimizer base class
+- [x] 7.2 Unit tests for CMAESOptimizer
+- [x] 7.3 Unit tests for GeneticAlgorithmOptimizer
+- [x] 7.4 Unit tests for FitnessFunction
 - [ ] 7.5 Integration test with small evolution run
 
 ## 8. Documentation
 
-- [ ] 8.1 Add docstrings to all new classes and functions
+- [x] 8.1 Add docstrings to all new classes and functions
 - [ ] 8.2 Update documentation explaining how evolution workflow works and how to use
 
 ## 9. Validation

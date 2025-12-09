@@ -1,0 +1,73 @@
+# Evolutionary Optimization with CMA-ES for 2-Qubit Modular Brain
+# Uses population-based search instead of gradient-based learning
+# No learning rate or gradient config needed - evolution handles optimization
+
+max_steps: 200
+brain:
+  name: modular
+  config:
+    modules:
+      chemotaxis: [0, 1]
+    num_layers: 2
+    # No gradient-related config needed for evolution
+    param_clip: true
+    param_modulo: true
+
+shots: 1024
+body_length: 2
+qubits: 2
+
+# No learning_rate config - evolution doesn't use gradients
+# No gradient config - evolution doesn't compute gradients
+
+# Reward config still matters for episode success evaluation
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  penalty_starvation: 2.0
+  penalty_predator_death: 2.0
+  penalty_predator_proximity: 0.1
+  stuck_position_threshold: 3
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 20
+    viewport_size: [11, 11]
+
+    foraging:
+      foods_on_grid: 5
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0
+
+    predators:
+      enabled: true
+      count: 2
+      speed: 1.0
+      movement_pattern: random
+      detection_radius: 8
+      kill_radius: 0
+      gradient_decay_constant: 12.0
+      gradient_strength: 1.0
+
+# Evolution settings (used by run_evolution.py, not run_simulation.py)
+# These are passed via command-line args, but documented here for reference:
+#
+# --algorithm cmaes       # CMA-ES (recommended for quantum circuits)
+# --generations 50        # Number of generations
+# --population 20         # Population size
+# --episodes 15           # Episodes per fitness evaluation
+# --sigma 0.5             # Initial step size
+# --parallel 4            # Parallel workers for fitness evaluation
