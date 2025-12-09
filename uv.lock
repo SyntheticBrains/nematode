@@ -213,6 +213,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cma"
+version = "4.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/78/fdb21570c83a9638b1ed3533e3df042e33b2123523d1b24d61cc959d90e0/cma-4.4.1.tar.gz", hash = "sha256:bf0621d4f52cf3354be3d0a5cd439ffed52f24f429ab02c23cf0f8ca16d427d8", size = 298276, upload-time = "2025-11-29T21:27:54.75Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ac/89/77e2b9e7b9ff4b2427368496e9f70896ee1c18482923001d4c50a083d28c/cma-4.4.1-py3-none-any.whl", hash = "sha256:61177b54f12bfeeac307970f8caefd8210dfa1d43a2da34e9ef8b1416d930fd8", size = 309511, upload-time = "2025-11-29T21:27:50.543Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1881,6 +1893,7 @@ name = "quantum-nematode"
 version = "1.0.0"
 source = { editable = "packages/quantum-nematode" }
 dependencies = [
+    { name = "cma" },
     { name = "ipykernel" },
     { name = "matplotlib" },
     { name = "numpy" },
@@ -1907,6 +1920,7 @@ torch = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cma", specifier = ">=4.0.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "numpy", specifier = ">=2.2.4" },
