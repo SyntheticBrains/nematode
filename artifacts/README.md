@@ -45,10 +45,10 @@ artifacts/
 uv run python scripts/run_evolution.py --config configs/examples/evolution_foraging_only.yml ...
 
 # 2. Copy notable results to artifacts/
-cp -r evolution_results/20251209_205950 artifacts/evolution/
+cp -r evolution_results/20251209_205950 artifacts/evolutions/
 
 # 3. Reference in logbook
-# "Best parameters from artifacts/evolution/20251209_205950/"
+# "Best parameters from artifacts/evolutions/20251209_205950/"
 ```
 
 ### Preserving Experiment Snapshots
