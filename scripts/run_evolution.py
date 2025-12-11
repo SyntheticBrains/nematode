@@ -330,7 +330,33 @@ def _init_worker(log_level: int) -> None:
         handler.setLevel(log_level)
 
 
-def run_evolution(  # noqa: PLR0913
+def _prompt_interrupt() -> str:
+    """Prompt user for action after keyboard interrupt.
+
+    Returns
+    -------
+        User choice: 'y' (save & exit), 'n' (exit without saving), 'c' (continue).
+    """
+    print("\n" + "=" * 60)
+    print("INTERRUPTED - What would you like to do?")
+    print("  [y] Save checkpoint and exit (default)")
+    print("  [n] Exit without saving")
+    print("  [c] Continue running")
+    print("=" * 60)
+
+    try:
+        choice = input("Choice [y/n/c]: ").strip().lower()
+        if choice in ("y", "n", "c", ""):
+            return choice if choice else "y"
+        print(f"Invalid choice '{choice}', defaulting to save & exit")
+        return "y"  # noqa: TRY300
+    except (EOFError, KeyboardInterrupt):
+        # Second interrupt or EOF - force exit without saving
+        print("\nForce exit requested")
+        return "n"
+
+
+def run_evolution(  # noqa: C901, PLR0913, PLR0915
     optimizer: EvolutionaryOptimizer,
     config_path: str,
     generations: int,
@@ -338,7 +364,7 @@ def run_evolution(  # noqa: PLR0913
     output_dir: Path,
     parallel_workers: int = 1,
     log_level: int = logging.WARNING,
-) -> EvolutionResult:
+) -> tuple[EvolutionResult, bool]:
     """Run evolutionary optimization loop.
 
     Args:
@@ -352,7 +378,7 @@ def run_evolution(  # noqa: PLR0913
 
     Returns
     -------
-        EvolutionResult with best parameters.
+        Tuple of (EvolutionResult with best parameters, should_save flag).
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -362,33 +388,57 @@ def run_evolution(  # noqa: PLR0913
     logger.info(f"Parallel workers: {parallel_workers}")
 
     start_time = time.time()
+    should_save = True
+    interrupted = False
+    session_best_fitness = float("inf")  # Track best fitness across all generations
 
     for gen in range(generations):
         gen_start = time.time()
 
-        # Get candidate solutions
-        solutions = optimizer.ask()
+        try:
+            # Get candidate solutions
+            solutions = optimizer.ask()
 
-        # Evaluate fitness
-        if parallel_workers > 1:
-            from multiprocessing import Pool
+            # Evaluate fitness
+            if parallel_workers > 1:
+                from multiprocessing import Pool
 
-            eval_args = [(sol, config_path, episodes) for sol in solutions]
-            with Pool(
-                processes=parallel_workers,
-                initializer=_init_worker,
-                initargs=(log_level,),
-            ) as pool:
-                fitnesses = pool.starmap(evaluate_fitness, eval_args)
-        else:
-            fitnesses = [evaluate_fitness(sol, config_path, episodes) for sol in solutions]
+                eval_args = [(sol, config_path, episodes) for sol in solutions]
+                with Pool(
+                    processes=parallel_workers,
+                    initializer=_init_worker,
+                    initargs=(log_level,),
+                ) as pool:
+                    fitnesses = pool.starmap(evaluate_fitness, eval_args)
+            else:
+                fitnesses = [evaluate_fitness(sol, config_path, episodes) for sol in solutions]
 
-        # Report fitness to optimizer
-        optimizer.tell(solutions, fitnesses)
+            # Report fitness to optimizer
+            optimizer.tell(solutions, fitnesses)
+
+        except KeyboardInterrupt:
+            logger.warning(f"Interrupted during generation {gen + 1}")
+            choice = _prompt_interrupt()
+
+            if choice == "c":
+                logger.info("Continuing evolution...")
+                continue
+            if choice == "n":
+                should_save = False
+
+            interrupted = True
+            # Save checkpoint at interruption point
+            if should_save:
+                checkpoint_path = output_dir / f"checkpoint_gen{gen}_interrupted.pkl"
+                save_checkpoint(optimizer, checkpoint_path)
+                logger.info(f"Saved interrupt checkpoint: {checkpoint_path}")
+            break
 
         # Log progress
         gen_time = time.time() - gen_start
         best_fitness = min(fitnesses)
+        best_idx = fitnesses.index(best_fitness)
+        best_params_this_gen = solutions[best_idx]
         mean_fitness = float(np.mean(fitnesses))
         std_fitness = float(np.std(fitnesses))
 
@@ -401,6 +451,16 @@ def run_evolution(  # noqa: PLR0913
             f"best={best_success:5.1%}, mean={mean_success:5.1%}, "
             f"std={std_fitness:.3f}, time={gen_time:5.1f}s",
         )
+
+        # Log best parameters for this generation at debug level
+        logger.debug(f"Gen {gen + 1} best params: {best_params_this_gen}")
+
+        # Check if this is a new session best
+        if best_fitness < session_best_fitness:
+            session_best_fitness = best_fitness
+            logger.info(
+                f"New session best: {-session_best_fitness:.1%} - params: {best_params_this_gen}",
+            )
 
         # Save checkpoint every 10 generations
         if (gen + 1) % 10 == 0:
@@ -417,11 +477,15 @@ def run_evolution(  # noqa: PLR0913
     total_time = time.time() - start_time
     result = optimizer.result
 
-    logger.info(f"Evolution complete in {total_time:.1f}s")
+    if interrupted:
+        logger.info(f"Evolution interrupted after {total_time:.1f}s")
+    else:
+        logger.info(f"Evolution complete in {total_time:.1f}s")
+
     logger.info(f"Best success rate: {-result.best_fitness:.1%}")
     logger.info(f"Best parameters: {result.best_params}")
 
-    return result
+    return result, should_save
 
 
 def save_checkpoint(optimizer: EvolutionaryOptimizer, path: Path) -> None:
@@ -545,7 +609,7 @@ def main() -> None:
     logger.info(f"Using algorithm: {args.algorithm.upper()}")
 
     # Run evolution
-    result = run_evolution(
+    result, should_save = run_evolution(
         optimizer=optimizer,
         config_path=args.config,
         generations=args.generations,
@@ -555,16 +619,20 @@ def main() -> None:
         log_level=log_level,
     )
 
-    # Save results
-    save_results(result, args.config, output_dir, timestamp)
+    # Save results (unless user chose not to on interrupt)
+    if should_save:
+        save_results(result, args.config, output_dir, timestamp)
 
     # Print final summary
     print("\n" + "=" * 60)
-    print("EVOLUTION COMPLETE")
+    print("EVOLUTION COMPLETE" if should_save else "EVOLUTION ABORTED")
     print("=" * 60)
     print(f"Best success rate: {-result.best_fitness:.1%}")
     print(f"Generations: {result.generations}")
-    print(f"Results saved to: {output_dir}")
+    if should_save:
+        print(f"Results saved to: {output_dir}")
+    else:
+        print("Results NOT saved (user requested no save)")
     print("=" * 60)
 
 
