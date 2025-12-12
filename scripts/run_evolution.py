@@ -96,6 +96,11 @@ def parse_arguments() -> argparse.Namespace:
         help="Path to checkpoint file to resume from.",
     )
     parser.add_argument(
+        "--init-params",
+        type=str,
+        help="Path to JSON file with initial parameters (e.g., best_params_*.json).",
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default="evolution_results",
@@ -115,6 +120,44 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
+
+def load_init_params(init_params_path: str, config_path: str) -> list[float]:
+    """Load initial parameters from a JSON file.
+
+    Supports two formats:
+    1. best_params_*.json format: {"best_params": {"θ_rx1_0": 0.1, ...}, ...}
+    2. Simple dict format: {"θ_rx1_0": 0.1, ...}
+
+    Args:
+        init_params_path: Path to JSON file with parameters.
+        config_path: Path to YAML config (to get expected parameter order).
+
+    Returns
+    -------
+        List of parameter values in the correct order.
+    """
+    # Load the JSON file
+    with Path(init_params_path).open() as f:
+        data = json.load(f)
+
+    # Handle both formats
+    params_dict = data.get("best_params", data)
+
+    # Get expected parameter keys from a fresh brain
+    brain = create_brain_from_config(config_path)
+    param_keys = list(brain.parameter_values.keys())
+
+    # Map loaded params to the expected order
+    param_array = []
+    for key in param_keys:
+        if key in params_dict:
+            param_array.append(float(params_dict[key]))
+        else:
+            msg = f"Parameter '{key}' not found in {init_params_path}"
+            raise KeyError(msg)
+
+    return param_array
 
 
 def create_brain_from_config(
@@ -583,8 +626,14 @@ def main() -> None:
     num_params = len(brain.parameter_values)
     logger.info(f"Number of parameters: {num_params}")
 
-    # Get initial parameters (current values from brain)
-    x0 = list(brain.parameter_values.values())
+    # Get initial parameters
+    if args.init_params:
+        logger.info(f"Loading initial parameters from: {args.init_params}")
+        x0 = load_init_params(args.init_params, args.config)
+        logger.info(f"Initial parameters: {x0}")
+    else:
+        # Use current values from brain (typically random small init)
+        x0 = list(brain.parameter_values.values())
 
     # Create or load optimizer
     optimizer: EvolutionaryOptimizer
