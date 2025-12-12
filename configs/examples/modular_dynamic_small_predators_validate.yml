@@ -1,0 +1,87 @@
+# Dynamic Foraging with Predators - Small Validation Configuration
+# Curriculum level 1: Easy foraging with predator evasion for validation
+# Uses modular (quantum) brain architecture
+
+max_steps: 500
+brain:
+  name: modular
+  config:
+    modules:
+      chemotaxis: [0, 1]
+    num_layers: 2
+    min_gradient_magnitude: 1e-4
+    l2_reg: 0.0005
+    noise_std: 0.003
+    param_clip: true
+    param_modulo: true
+    lr_boost: false
+
+shots: 1500
+body_length: 2
+qubits: 2
+
+parameter_initializer:
+  type: manual
+  manual_parameter_values:
+    θ_rx1_0: -0.34580550299340596
+    θ_rx1_1: -2.643230849015154
+    θ_ry1_0: 0.6930816984064418
+    θ_ry1_1: -0.6057777706139342
+    θ_rz1_0: -3.0264467980718575
+    θ_rz1_1: 0.07502225131963769
+    θ_rx2_0: 2.473598469715917
+    θ_rx2_1: 2.2985174579721175
+    θ_ry2_0: 2.3685637335243257
+    θ_ry2_1: 0.9096672743654723
+    θ_rz2_0: 1.5122837707439931
+    θ_rz2_1: 1.895385393958552
+
+learning_rate:
+  method: constant
+  parameters:
+    learning_rate: 0
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  penalty_starvation: 2.0
+  penalty_predator_death: 2.0
+  penalty_predator_proximity: 0.1
+  stuck_position_threshold: 3
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 20
+    viewport_size: [11, 11]
+
+    foraging:
+      foods_on_grid: 5
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0
+
+    predators:
+      enabled: true
+      count: 2
+      speed: 1.0
+      movement_pattern: random
+      detection_radius: 8
+      kill_radius: 0
+      gradient_decay_constant: 12.0
+      gradient_strength: 1.0
+
+gradient:
+  method: norm_clip
+  max_norm: 0.5
