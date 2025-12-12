@@ -95,7 +95,7 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_dynamic_medium.yml --theme emoji
 
 # Static maze with quantum modular brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_simple_medium_finetune.yml --theme emoji
 
 # Spiking neural network brain
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spiking_simple_medium.yml --theme emoji
@@ -104,7 +104,7 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_dynamic_small.yml --theme emoji --device qpu
 
 # Many-worlds quantum simulation
-uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_simple_medium.yml --theme emoji --manyworlds
+uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_simple_medium_finetune.yml --theme emoji --manyworlds
 ```
 
 **Docker GPU Examples:**

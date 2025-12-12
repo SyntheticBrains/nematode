@@ -150,7 +150,7 @@ uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular
 ##### Testing with Static Environment
 
 ```bash
-uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_simple_medium_finetune.yml --theme emoji
 ```
 
 ### Experiment Tracking and Benchmarks
