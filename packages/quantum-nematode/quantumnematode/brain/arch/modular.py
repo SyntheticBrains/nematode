@@ -374,7 +374,7 @@ class ModularBrain(QuantumBrain):
         self._episode_start_momentum: dict[str, float] | None = None
         self._episode_start_lr_boost_active: bool | None = None
         self._episode_start_lr_boost_steps_remaining: int | None = None
-        self._episode_start_lr_steps: int | None = None
+        self._episode_start_learning_rate: ConstantLearningRate | DynamicLearningRate | None = None
 
     def build_brain(
         self,
@@ -892,7 +892,8 @@ class ModularBrain(QuantumBrain):
             self._episode_start_momentum = deepcopy(self._momentum)
             self._episode_start_lr_boost_active = self._lr_boost_active
             self._episode_start_lr_boost_steps_remaining = self._lr_boost_steps_remaining
-            self._episode_start_lr_steps = self.learning_rate.steps
+            # Deepcopy entire LR object to capture all internal state (e.g., Adam's m/v dicts)
+            self._episode_start_learning_rate = deepcopy(self.learning_rate)
             logger.debug(
                 "Saved episode start parameters and optimizer state for potential rollback "
                 "(learn_only_from_success=True)",
@@ -926,8 +927,9 @@ class ModularBrain(QuantumBrain):
                     self._lr_boost_active = self._episode_start_lr_boost_active
                 if self._episode_start_lr_boost_steps_remaining is not None:
                     self._lr_boost_steps_remaining = self._episode_start_lr_boost_steps_remaining
-                if self._episode_start_lr_steps is not None:
-                    self.learning_rate.steps = self._episode_start_lr_steps
+                # Restore entire LR object to capture all internal state (e.g., Adam's m/v dicts)
+                if self._episode_start_learning_rate is not None:
+                    self.learning_rate = deepcopy(self._episode_start_learning_rate)
                 logger.info(
                     "Rolled back parameters and optimizer state to episode start: "
                     "episode was unsuccessful (learn_only_from_success=True)",
