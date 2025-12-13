@@ -535,18 +535,19 @@ class TestAppetitiveFeatures:
         # Relative angle should be close to ±π/2
         assert abs(features[RotationAxis.RY]) == pytest.approx(np.pi / 2, rel=0.01)
 
-    def test_hunger_full(self):
-        """Test hunger signal when fully satiated."""
-        params = BrainParams(
-            food_gradient_strength=0.5,
-            food_gradient_direction=0.0,
-            agent_direction=Direction.UP,
-            satiety=200.0,  # Max satiety
-        )
-        features = appetitive_features(params)
-
-        # Full satiety = 0 hunger
-        assert features[RotationAxis.RZ] == pytest.approx(0.0)
+    def test_rz_always_zero(self):
+        """Test that RZ is always 0.0 (currently unused, reserved for future)."""
+        # RZ is currently unused per feature contract - always returns 0.0
+        # Could be used for satiety/hunger encoding in future
+        for satiety in [0.0, 100.0, 200.0]:
+            params = BrainParams(
+                food_gradient_strength=0.5,
+                food_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=satiety,
+            )
+            features = appetitive_features(params)
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
 
     def test_none_food_gradient(self):
         """Test appetitive features when food gradient is None."""
@@ -599,13 +600,12 @@ class TestAversiveFeatures:
             predator_gradient_strength=2.0,  # Strong threat
             predator_gradient_direction=0.0,
             agent_direction=Direction.UP,
-            satiety=200.0,  # Full - cautious
         )
         features = aversive_features(params)
 
         # tanh(2.0) ≈ 0.964, scaled to near π/2
         assert features[RotationAxis.RX] > 0
-        # Full satiety = 0 risk tolerance (very cautious)
+        # RZ is currently unused - always 0.0
         assert features[RotationAxis.RZ] == pytest.approx(0.0)
 
     def test_escape_direction_aligned(self):
@@ -634,18 +634,19 @@ class TestAversiveFeatures:
         # Relative angle should be close to ±π/2
         assert abs(features[RotationAxis.RY]) == pytest.approx(np.pi / 2, rel=0.01)
 
-    def test_risk_tolerance_full(self):
-        """Test risk tolerance when full (cautious)."""
-        params = BrainParams(
-            predator_gradient_strength=1.0,
-            predator_gradient_direction=0.0,
-            agent_direction=Direction.UP,
-            satiety=200.0,  # Full
-        )
-        features = aversive_features(params)
-
-        # Full = 0 risk tolerance (very cautious)
-        assert features[RotationAxis.RZ] == pytest.approx(0.0)
+    def test_rz_always_zero(self):
+        """Test that RZ is always 0.0 (currently unused, reserved for future)."""
+        # RZ is currently unused per feature contract - always returns 0.0
+        # Could be used for risk tolerance encoding in future
+        for satiety in [0.0, 100.0, 200.0]:
+            params = BrainParams(
+                predator_gradient_strength=1.0,
+                predator_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=satiety,
+            )
+            features = aversive_features(params)
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
 
     def test_none_predator_gradient(self):
         """Test aversive features when predator gradient is None."""
@@ -703,8 +704,9 @@ class TestAppetitiveAversiveValueRanges:
             features = appetitive_features(params)
             assert -np.pi / 2 <= features[RotationAxis.RY] <= np.pi / 2
 
-    def test_appetitive_rz_bounded(self):
-        """Test that appetitive RZ (hunger) stays within [0, π]."""
+    def test_appetitive_rz_always_zero(self):
+        """Test that appetitive RZ is always 0.0 (currently unused)."""
+        # RZ is reserved for future use (e.g., satiety/hunger encoding)
         for satiety in [0.0, 50.0, 100.0, 150.0, 200.0]:
             params = BrainParams(
                 food_gradient_strength=1.0,
@@ -713,7 +715,7 @@ class TestAppetitiveAversiveValueRanges:
                 satiety=satiety,
             )
             features = appetitive_features(params)
-            assert 0 <= features[RotationAxis.RZ] <= np.pi
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
 
     def test_aversive_rx_bounded(self):
         """Test that aversive RX stays within [-π/2, π/2]."""
@@ -739,8 +741,9 @@ class TestAppetitiveAversiveValueRanges:
             features = aversive_features(params)
             assert -np.pi / 2 <= features[RotationAxis.RY] <= np.pi / 2
 
-    def test_aversive_rz_bounded(self):
-        """Test that aversive RZ (risk tolerance) stays within [0, π]."""
+    def test_aversive_rz_always_zero(self):
+        """Test that aversive RZ is always 0.0 (currently unused)."""
+        # RZ is reserved for future use (e.g., risk tolerance encoding)
         for satiety in [0.0, 50.0, 100.0, 150.0, 200.0]:
             params = BrainParams(
                 predator_gradient_strength=1.0,
@@ -749,4 +752,4 @@ class TestAppetitiveAversiveValueRanges:
                 satiety=satiety,
             )
             features = aversive_features(params)
-            assert 0 <= features[RotationAxis.RZ] <= np.pi
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
