@@ -874,6 +874,90 @@ class DynamicForagingEnvironment(BaseEnvironment):
         logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
+    def _compute_food_gradient_vector(
+        self,
+        position: tuple[int, ...],
+    ) -> tuple[float, float]:
+        """
+        Compute the local food gradient vector (superposition of all food sources).
+
+        Parameters
+        ----------
+        position : tuple[int, ...]
+            Position to query gradient at.
+
+        Returns
+        -------
+        tuple[float, float]
+            Food gradient vector (x, y) components.
+        """
+        vector_x = 0.0
+        vector_y = 0.0
+
+        for food in self.foods:
+            dx = food[0] - position[0]
+            dy = food[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                continue
+
+            # Exponential decay gradient (positive/attractive)
+            strength = self.gradient_strength_base * np.exp(
+                -distance / self.gradient_decay_constant,
+            )
+
+            # Compute direction vector
+            direction = np.arctan2(dy, dx)
+            vector_x += strength * np.cos(direction)
+            vector_y += strength * np.sin(direction)
+
+        return vector_x, vector_y
+
+    def _compute_predator_gradient_vector(
+        self,
+        position: tuple[int, ...],
+    ) -> tuple[float, float]:
+        """
+        Compute the local predator gradient vector (superposition of all predators).
+
+        Parameters
+        ----------
+        position : tuple[int, ...]
+            Position to query gradient at.
+
+        Returns
+        -------
+        tuple[float, float]
+            Predator gradient vector (x, y) components.
+            Note: Values are negative (repulsive gradient).
+        """
+        vector_x = 0.0
+        vector_y = 0.0
+
+        if not self.predators_enabled:
+            return vector_x, vector_y
+
+        for predator in self.predators:
+            dx = predator.position[0] - position[0]
+            dy = predator.position[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                continue
+
+            # Exponential decay gradient (negative/repulsive)
+            strength = -self.predator_gradient_strength * np.exp(
+                -distance / self.predator_gradient_decay,
+            )
+
+            # Compute direction vector (pointing away from predator due to negative strength)
+            direction = np.arctan2(dy, dx)
+            vector_x += strength * np.cos(direction)
+            vector_y += strength * np.sin(direction)
+
+        return vector_x, vector_y
+
     def get_state(
         self,
         position: tuple[int, ...],
@@ -898,53 +982,13 @@ class DynamicForagingEnvironment(BaseEnvironment):
         tuple[float, float]
             Total gradient strength and direction (food attraction + predator repulsion).
         """
-        # Compute gradient from food sources (attractive)
-        total_vector_x = 0.0
-        total_vector_y = 0.0
+        # Compute gradient vectors using helper methods
+        food_x, food_y = self._compute_food_gradient_vector(position)
+        pred_x, pred_y = self._compute_predator_gradient_vector(position)
 
-        for food in self.foods:
-            dx = food[0] - position[0]
-            dy = food[1] - position[1]
-            distance = np.sqrt(dx**2 + dy**2)
-
-            if distance == 0:
-                continue
-
-            # Exponential decay gradient (positive/attractive)
-            strength = self.gradient_strength_base * np.exp(
-                -distance / self.gradient_decay_constant,
-            )
-
-            # Compute direction vector
-            direction = np.arctan2(dy, dx)
-            vector_x = strength * np.cos(direction)
-            vector_y = strength * np.sin(direction)
-
-            total_vector_x += vector_x
-            total_vector_y += vector_y
-
-        # Compute gradient from predators (repulsive)
-        if self.predators_enabled:
-            for predator in self.predators:
-                dx = predator.position[0] - position[0]
-                dy = predator.position[1] - position[1]
-                distance = np.sqrt(dx**2 + dy**2)
-
-                if distance == 0:
-                    continue
-
-                # Exponential decay gradient (negative/repulsive)
-                strength = -self.predator_gradient_strength * np.exp(
-                    -distance / self.predator_gradient_decay,
-                )
-
-                # Compute direction vector (pointing away from predator due to negative strength)
-                direction = np.arctan2(dy, dx)
-                vector_x = strength * np.cos(direction)
-                vector_y = strength * np.sin(direction)
-
-                total_vector_x += vector_x
-                total_vector_y += vector_y
+        # Superpose food (attractive) and predator (repulsive) gradients
+        total_vector_x = food_x + pred_x
+        total_vector_y = food_y + pred_y
 
         # Compute magnitude and direction of superposed gradient
         gradient_magnitude = np.sqrt(total_vector_x**2 + total_vector_y**2)
@@ -991,48 +1035,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             - predator_gradient_strength: Magnitude of local predator gradient vector
             - predator_gradient_direction: Direction of local predator gradient vector (radians)
         """
-        # Compute LOCAL food gradient vector (superposition of all food sources)
-        food_vector_x = 0.0
-        food_vector_y = 0.0
-
-        for food in self.foods:
-            dx = food[0] - position[0]
-            dy = food[1] - position[1]
-            distance = np.sqrt(dx**2 + dy**2)
-
-            if distance == 0:
-                continue
-
-            # Exponential decay gradient (positive/attractive)
-            strength = self.gradient_strength_base * np.exp(
-                -distance / self.gradient_decay_constant,
-            )
-            direction = np.arctan2(dy, dx)
-
-            food_vector_x += strength * np.cos(direction)
-            food_vector_y += strength * np.sin(direction)
-
-        # Compute LOCAL predator gradient vector (superposition of all predators)
-        predator_vector_x = 0.0
-        predator_vector_y = 0.0
-
-        if self.predators_enabled:
-            for predator in self.predators:
-                dx = predator.position[0] - position[0]
-                dy = predator.position[1] - position[1]
-                distance = np.sqrt(dx**2 + dy**2)
-
-                if distance == 0:
-                    continue
-
-                # Exponential decay gradient (negative/repulsive)
-                strength = -self.predator_gradient_strength * np.exp(
-                    -distance / self.predator_gradient_decay,
-                )
-                direction = np.arctan2(dy, dx)
-
-                predator_vector_x += strength * np.cos(direction)
-                predator_vector_y += strength * np.sin(direction)
+        # Compute gradient vectors using helper methods
+        food_vector_x, food_vector_y = self._compute_food_gradient_vector(position)
+        predator_vector_x, predator_vector_y = self._compute_predator_gradient_vector(position)
 
         # Convert vectors to magnitude + direction (what sensors detect)
         food_magnitude = np.sqrt(food_vector_x**2 + food_vector_y**2)
