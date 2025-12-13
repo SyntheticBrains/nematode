@@ -14,7 +14,7 @@ This directory stores **selectively preserved** experiment outputs that are:
 ```
 artifacts/
 ├── README.md           # This file
-├── evolutions/          # Evolution run results
+├── evolutions/         # Evolution run results
 │   └── <timestamp>/    # e.g., 20251209_205950
 │       ├── best_params.json
 │       ├── history.csv
