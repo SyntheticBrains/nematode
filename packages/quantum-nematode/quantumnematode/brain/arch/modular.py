@@ -817,13 +817,15 @@ class ModularBrain(QuantumBrain):
         if not rewards:
             return []
 
-        returns = []
+        # Pre-allocate list and use index assignment for O(n) instead of O(n²)
+        # (list.insert(0, ...) shifts all elements, making it O(n) per call)
+        returns = [0.0] * len(rewards)
         discounted_return = 0.0
 
         # Iterate backward from terminal state
-        for reward in reversed(rewards):
-            discounted_return = reward + gamma * discounted_return
-            returns.insert(0, discounted_return)
+        for i in range(len(rewards) - 1, -1, -1):
+            discounted_return = rewards[i] + gamma * discounted_return
+            returns[i] = discounted_return
 
         return returns
 
