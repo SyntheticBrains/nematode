@@ -224,8 +224,28 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
             mutation_rate: Probability of mutating each parameter.
             crossover_rate: Probability of crossover vs direct copy.
             seed: Random seed for reproducibility.
+
+        Raises
+        ------
+            ValueError: If population_size < 1 or hyperparameters outside [0.0, 1.0].
         """
+        # Validate population_size
+        if population_size < 1:
+            msg = f"population_size must be >= 1, got {population_size}"
+            raise ValueError(msg)
+
         super().__init__(num_params, population_size, sigma0)
+
+        # Validate hyperparameters are in [0.0, 1.0]
+        if not 0.0 <= elite_fraction <= 1.0:
+            msg = f"elite_fraction must be in [0.0, 1.0], got {elite_fraction}"
+            raise ValueError(msg)
+        if not 0.0 <= mutation_rate <= 1.0:
+            msg = f"mutation_rate must be in [0.0, 1.0], got {mutation_rate}"
+            raise ValueError(msg)
+        if not 0.0 <= crossover_rate <= 1.0:
+            msg = f"crossover_rate must be in [0.0, 1.0], got {crossover_rate}"
+            raise ValueError(msg)
 
         self.elite_fraction = elite_fraction
         self.mutation_rate = mutation_rate
@@ -271,8 +291,8 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
         sorted_indices = np.argsort(fitnesses)
         sorted_population = [solutions[i] for i in sorted_indices]
 
-        # Elite selection
-        n_elite = max(1, int(self.population_size * self.elite_fraction))
+        # Elite selection (ensure n_elite never exceeds population)
+        n_elite = min(self.population_size, max(1, int(self.population_size * self.elite_fraction)))
         elite = [ind.copy() for ind in sorted_population[:n_elite]]
 
         # Generate children
@@ -312,8 +332,16 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
         fitnesses: list[float],
         tournament_size: int = 3,
     ) -> list[float]:
-        """Select individual via tournament selection."""
-        indices = self._rng.choice(len(population), size=tournament_size, replace=False)
+        """Select individual via tournament selection.
+
+        Handles edge cases where tournament_size > population size by using
+        sampling with replacement when necessary.
+        """
+        pop_size = len(population)
+        effective_size = min(tournament_size, pop_size)
+        # Use replace=True when tournament_size exceeds population to avoid errors
+        replace = tournament_size > pop_size
+        indices = self._rng.choice(pop_size, size=effective_size, replace=replace)
         best_idx = indices[np.argmin([fitnesses[i] for i in indices])]
         return population[best_idx].copy()
 
