@@ -33,7 +33,11 @@ from quantumnematode.optimizers.evolutionary import (
     EvolutionResult,
     GeneticAlgorithmOptimizer,
 )
-from quantumnematode.utils.config_loader import configure_brain, load_simulation_config
+from quantumnematode.utils.config_loader import (
+    configure_brain,
+    configure_satiety,
+    load_simulation_config,
+)
 
 if TYPE_CHECKING:
     from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
@@ -252,12 +256,13 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
     )
 
 
-def run_episode(
+def run_episode(  # noqa: PLR0913
     brain: ModularBrain,
     env: DynamicForagingEnvironment,
     max_steps: int,
     initial_satiety: float = 200.0,
     satiety_decay_rate: float = 1.0,
+    satiety_gain_per_food: float = 0.2,
 ) -> bool:
     """Run a single episode and return whether it was successful.
 
@@ -267,6 +272,7 @@ def run_episode(
         max_steps: Maximum steps per episode.
         initial_satiety: Starting satiety level.
         satiety_decay_rate: Satiety decay per step.
+        satiety_gain_per_food: Fraction of initial_satiety restored per food.
 
     Returns
     -------
@@ -306,8 +312,8 @@ def run_episode(
             if agent_pos_tuple in env.foods:
                 env.foods.remove(agent_pos_tuple)
                 foods_collected += 1
-                # TODO: Use satiety gain from config
-                satiety = min(satiety + 50.0, initial_satiety)  # Food restores satiety
+                satiety_gain = initial_satiety * satiety_gain_per_food
+                satiety = min(satiety + satiety_gain, initial_satiety)
                 env.spawn_food()  # Spawn new food
 
                 # Check for success (collected target foods)
@@ -352,11 +358,20 @@ def evaluate_fitness(
         Negative success rate (lower is better).
     """
     brain = create_brain_from_config(config_path, param_array)
+    config = load_simulation_config(config_path)
+    satiety_config = configure_satiety(config)
     successes = 0
 
     for _ in range(episodes):
         env = create_env_from_config(config_path)
-        if run_episode(brain, env, max_steps):
+        if run_episode(
+            brain,
+            env,
+            max_steps,
+            initial_satiety=satiety_config.initial_satiety,
+            satiety_decay_rate=satiety_config.satiety_decay_rate,
+            satiety_gain_per_food=satiety_config.satiety_gain_per_food,
+        ):
             successes += 1
 
     success_rate = successes / episodes
