@@ -96,6 +96,6 @@ experiments/                     # Auto-generated (gitignored)
 └── ...
 
 benchmarks/                      # Curated results (git tracked)
-├── dynamic_small_quantum/
+├── dynamic_small/quantum/
 └── ...
 ```
