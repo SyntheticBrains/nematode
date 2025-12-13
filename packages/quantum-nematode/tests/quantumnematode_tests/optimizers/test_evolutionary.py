@@ -232,6 +232,45 @@ class TestGeneticAlgorithmOptimizer:
         for sol1, sol2 in zip(solutions1, solutions2, strict=False):
             assert sol1 == sol2
 
+    def test_ga_hyperparameter_validation(self):
+        """Test that invalid hyperparameters raise ValueError."""
+        import pytest
+
+        # Invalid elite_fraction
+        with pytest.raises(ValueError, match="elite_fraction must be in"):
+            GeneticAlgorithmOptimizer(num_params=5, elite_fraction=1.5, seed=42)
+        with pytest.raises(ValueError, match="elite_fraction must be in"):
+            GeneticAlgorithmOptimizer(num_params=5, elite_fraction=-0.1, seed=42)
+
+        # Invalid mutation_rate
+        with pytest.raises(ValueError, match="mutation_rate must be in"):
+            GeneticAlgorithmOptimizer(num_params=5, mutation_rate=2.0, seed=42)
+
+        # Invalid crossover_rate
+        with pytest.raises(ValueError, match="crossover_rate must be in"):
+            GeneticAlgorithmOptimizer(num_params=5, crossover_rate=-0.5, seed=42)
+
+        # Invalid population_size
+        with pytest.raises(ValueError, match="population_size must be >= 1"):
+            GeneticAlgorithmOptimizer(num_params=5, population_size=0, seed=42)
+
+    def test_ga_small_population_tournament(self):
+        """Test GA works with population smaller than tournament size."""
+        # Population of 2, default tournament size is 3
+        optimizer = GeneticAlgorithmOptimizer(
+            num_params=3,
+            population_size=2,
+            elite_fraction=0.5,
+            seed=42,
+        )
+        solutions = optimizer.ask()
+        assert len(solutions) == 2
+
+        # Run a generation - should not crash
+        fitnesses = [1.0, 2.0]
+        optimizer.tell(solutions, fitnesses)
+        assert optimizer.generation == 1
+
 
 class TestFitnessConfig:
     """Tests for FitnessConfig."""
