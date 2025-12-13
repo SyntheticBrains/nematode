@@ -921,8 +921,9 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for quantum brain architectures).
         device (str): The device to use for simulation ("CPU" or "GPU").
-        learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
-            The learning rate configuration for the brain.
+        learning_rate (ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
+            The learning rate configuration for the brain. Note: modular/qmodular brains
+            only support ConstantLearningRate and DynamicLearningRate.
         gradient_method: The gradient calculation method.
         parameter_initializer_config: Configuration for parameter initialization.
         perf_mgmt: Q-CTRL performance management function instance.
