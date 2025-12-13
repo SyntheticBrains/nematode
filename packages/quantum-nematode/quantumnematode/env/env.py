@@ -740,6 +740,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.predator_gradient_decay = predator_gradient_decay
         self.predator_gradient_strength = predator_gradient_strength
 
+        # Validate gradient parameters to prevent divide-by-zero in exp(-distance/decay)
+        if self.gradient_decay_constant <= 0:
+            msg = f"gradient_decay_constant must be > 0, got {self.gradient_decay_constant}"
+            raise ValueError(msg)
+        if self.predator_gradient_decay <= 0:
+            msg = f"predator_gradient_decay must be > 0, got {self.predator_gradient_decay}"
+            raise ValueError(msg)
+
         # Initialize food sources using Poisson disk sampling
         self.foods: list[tuple[int, int]] = []
         self._initialize_foods()
