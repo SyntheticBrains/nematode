@@ -409,7 +409,7 @@ def _prompt_interrupt() -> str:
         return "n"
 
 
-def run_evolution(  # noqa: C901, PLR0913, PLR0915
+def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
     optimizer: EvolutionaryOptimizer,
     config_path: str,
     generations: int,
