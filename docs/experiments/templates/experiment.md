@@ -58,4 +58,4 @@ What do the results tell us? Why did we see these outcomes?
 
 - Session IDs: `20251207_123456`, ...
 - Config files: `configs/examples/...`
-- Result files: `experiments/[session_id]/...`
+- Result files: `artifacts/experiments/[session_id]/...`
