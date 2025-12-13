@@ -118,6 +118,7 @@ class CMAESOptimizer(EvolutionaryOptimizer):
         x0: list[float] | None = None,
         population_size: int = 20,
         sigma0: float = 0.5,
+        seed: int | None = None,
     ) -> None:
         """Initialize CMA-ES optimizer.
 
@@ -126,16 +127,21 @@ class CMAESOptimizer(EvolutionaryOptimizer):
             x0: Initial parameter values. Defaults to zeros.
             population_size: Population size (lambda). Defaults to 20.
             sigma0: Initial step size. Defaults to 0.5.
+            seed: Random seed for reproducibility.
         """
         super().__init__(num_params, population_size, sigma0)
 
         if x0 is None:
             x0 = [0.0] * num_params
 
+        options: dict = {"popsize": population_size, "verbose": -9}
+        if seed is not None:
+            options["seed"] = seed
+
         self._es: cma.CMAEvolutionStrategy = cma.CMAEvolutionStrategy(
             x0,
             sigma0,
-            {"popsize": population_size, "verbose": -9},  # Suppress CMA-ES output
+            options,
         )
         self._history: list[dict] = []
         self._last_solutions: list[list[float]] = []

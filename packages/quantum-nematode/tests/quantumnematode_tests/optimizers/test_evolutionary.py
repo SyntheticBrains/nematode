@@ -104,6 +104,7 @@ class TestCMAESOptimizer:
             x0=[1.0, 1.0],
             population_size=10,
             sigma0=0.5,
+            seed=42,
         )
 
         # Run until convergence or max generations
@@ -117,6 +118,37 @@ class TestCMAESOptimizer:
         result = optimizer.result
         # Should find near-zero solution
         assert result.best_fitness < 0.1
+
+    def test_cmaes_deterministic_with_seed(self):
+        """Test that CMA-ES is deterministic with same seed.
+
+        Note: CMA-ES uses the global numpy.random state, so two instances
+        with the same seed must be run completely separately (not interleaved)
+        to produce identical results. This test runs one full optimization,
+        then runs it again with the same seed to verify reproducibility.
+        """
+        # Run optimizer 1 for several generations and record results
+        optimizer1 = CMAESOptimizer(num_params=3, population_size=10, seed=42)
+        results1 = []
+        for _ in range(3):
+            solutions = optimizer1.ask()
+            results1.append([sol.copy() for sol in solutions])
+            fitnesses = [np.sum(np.array(sol) ** 2) for sol in solutions]
+            optimizer1.tell(solutions, fitnesses)
+
+        # Run optimizer 2 with same seed - should produce identical sequence
+        optimizer2 = CMAESOptimizer(num_params=3, population_size=10, seed=42)
+        results2 = []
+        for _ in range(3):
+            solutions = optimizer2.ask()
+            results2.append([sol.copy() for sol in solutions])
+            fitnesses = [np.sum(np.array(sol) ** 2) for sol in solutions]
+            optimizer2.tell(solutions, fitnesses)
+
+        # Verify all generations match
+        for gen_idx, (gen1, gen2) in enumerate(zip(results1, results2, strict=False)):
+            for sol1, sol2 in zip(gen1, gen2, strict=False):
+                assert sol1 == sol2, f"Mismatch at generation {gen_idx}"
 
 
 class TestGeneticAlgorithmOptimizer:
@@ -312,6 +344,7 @@ class TestEvolutionaryOptimizerComparison:
                     num_params=2,
                     x0=[2.0, 2.0],
                     population_size=20,
+                    seed=42,
                 )
 
             for _ in range(30):
@@ -330,7 +363,7 @@ class TestEvolutionaryOptimizerComparison:
             if optimizer_class == GeneticAlgorithmOptimizer:
                 optimizer = optimizer_class(num_params=3, population_size=20, seed=42)
             else:
-                optimizer = optimizer_class(num_params=3, population_size=20)
+                optimizer = optimizer_class(num_params=3, population_size=20, seed=42)
 
             first_best: float = float("inf")
             last_best: float = float("inf")
