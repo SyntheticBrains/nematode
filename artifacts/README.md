@@ -11,7 +11,7 @@ This directory stores **selectively preserved** experiment outputs that are:
 
 ## Directory Structure
 
-```
+```markdown
 artifacts/
 ├── README.md           # This file
 ├── evolutions/         # Evolution run results

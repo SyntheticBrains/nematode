@@ -16,7 +16,7 @@ This project has complementary systems for tracking experiments:
 
 ### Workflow
 
-```
+```markdown
 1. Run simulations/evolution
    └── Auto-saved to experiments/*.json or evolution_results/
 
@@ -81,7 +81,7 @@ Reference specific experiments by session ID:
 
 ## Directory Structure
 
-```
+```markdown
 docs/experiments/
 ├── README.md                    # This file
 ├── templates/
