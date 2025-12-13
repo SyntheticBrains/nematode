@@ -50,6 +50,11 @@ When `use_trajectory_learning: true`, the brain uses episode-level REINFORCE:
 3. Computes trajectory-level gradients: grad_i = sum_t 0.5 * (P_+ - P_-) * G_t
 4. Updates parameters once per episode using accumulated gradients
 
+Note: In trajectory mode, learning rate "steps" become episode-based rather than
+step-based. The LR scheduler advances once per episode (at post_process_episode),
+not once per timestep. This is intentional - trajectory learning treats entire
+episodes as single learning events.
+
 Example Configuration:
 ```yaml
 brain:
