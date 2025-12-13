@@ -263,6 +263,8 @@ def run_episode(  # noqa: PLR0913
     initial_satiety: float = 200.0,
     satiety_decay_rate: float = 1.0,
     satiety_gain_per_food: float = 0.2,
+    *,
+    use_separated_gradients: bool = False,
 ) -> bool:
     """Run a single episode and return whether it was successful.
 
@@ -273,6 +275,7 @@ def run_episode(  # noqa: PLR0913
         initial_satiety: Starting satiety level.
         satiety_decay_rate: Satiety decay per step.
         satiety_gain_per_food: Fraction of initial_satiety restored per food.
+        use_separated_gradients: Whether to compute separated food/predator gradients.
 
     Returns
     -------
@@ -289,10 +292,28 @@ def run_episode(  # noqa: PLR0913
             position = (env.agent_pos[0], env.agent_pos[1])
             gradient_strength, gradient_direction = env.get_state(position, disable_log=True)
 
+            # Only compute separated gradients if needed (avoids duplicate gradient computation)
+            if use_separated_gradients:
+                separated_grads = env.get_separated_gradients(position, disable_log=True)
+                food_gradient_strength = separated_grads.get("food_gradient_strength")
+                food_gradient_direction = separated_grads.get("food_gradient_direction")
+                predator_gradient_strength = separated_grads.get("predator_gradient_strength")
+                predator_gradient_direction = separated_grads.get("predator_gradient_direction")
+            else:
+                food_gradient_strength = None
+                food_gradient_direction = None
+                predator_gradient_strength = None
+                predator_gradient_direction = None
+
             # Build BrainParams
             params = BrainParams(
                 gradient_strength=gradient_strength,
                 gradient_direction=gradient_direction,
+                food_gradient_strength=food_gradient_strength,
+                food_gradient_direction=food_gradient_direction,
+                predator_gradient_strength=predator_gradient_strength,
+                predator_gradient_direction=predator_gradient_direction,
+                satiety=satiety,
                 agent_direction=env.current_direction,
                 agent_position=(float(position[0]), float(position[1])),
             )
@@ -360,6 +381,12 @@ def evaluate_fitness(
     brain = create_brain_from_config(config_path, param_array)
     config = load_simulation_config(config_path)
     satiety_config = configure_satiety(config)
+
+    # Check if separated gradients are needed (for appetitive/aversive modules)
+    use_separated_gradients = False
+    if config.environment and config.environment.dynamic:
+        use_separated_gradients = config.environment.dynamic.use_separated_gradients
+
     successes = 0
 
     for _ in range(episodes):
@@ -371,6 +398,7 @@ def evaluate_fitness(
             initial_satiety=satiety_config.initial_satiety,
             satiety_decay_rate=satiety_config.satiety_decay_rate,
             satiety_gain_per_food=satiety_config.satiety_gain_per_food,
+            use_separated_gradients=use_separated_gradients,
         ):
             successes += 1
 
