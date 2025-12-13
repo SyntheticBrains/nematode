@@ -682,6 +682,7 @@ def main() -> None:
             x0=x0,
             population_size=args.population,
             sigma0=args.sigma,
+            seed=args.seed,
         )
     else:
         optimizer = GeneticAlgorithmOptimizer(
