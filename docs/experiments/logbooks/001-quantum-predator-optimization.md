@@ -45,7 +45,7 @@ We tested multiple hypotheses:
 | Standard gradient | Per-step parameter-shift updates |
 | Informed initialization | Start from known good parameters |
 | Zero learning | Use fixed parameters, no updates |
-| Low LR fine-tuning | Very small learning rate (0.001) |
+| Low LR fine-tuning | Small learning rate (0.001) |
 | Success-only learning | Rollback parameters on failed episodes |
 | Constant LR | No decay, fixed learning rate |
 
