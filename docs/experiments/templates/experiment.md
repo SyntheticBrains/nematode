@@ -23,21 +23,25 @@ What do we expect to happen and why?
 ## Method
 
 ### Configuration
+
 ```yaml
 # Key config settings
 ```
 
 ### Code Changes
+
 - File: change description
 
 ## Results
 
 ### Summary Table
+
 | Metric | Baseline | Result | Change |
 |--------|----------|--------|--------|
 | ... | ... | ... | ... |
 
 ### Detailed Findings
+
 ...
 
 ## Analysis
