@@ -213,6 +213,7 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
     def __init__(  # noqa: PLR0913
         self,
         num_params: int,
+        x0: list[float] | None = None,
         population_size: int = 50,
         sigma0: float = 0.5,
         elite_fraction: float = 0.2,
@@ -224,6 +225,8 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
 
         Args:
             num_params: Number of parameters to optimize.
+            x0: Initial parameter values. If provided, first individual uses these
+                values and rest are initialized around them with noise.
             population_size: Number of individuals in population.
             sigma0: Initial parameter range and mutation std.
             elite_fraction: Fraction of population to keep as elite.
@@ -258,10 +261,20 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
         self.crossover_rate = crossover_rate
         self._rng = np.random.default_rng(seed)
 
-        # Initialize population uniformly in [-pi, pi]
-        self._population = [
-            list(self._rng.uniform(-np.pi, np.pi, num_params)) for _ in range(population_size)
-        ]
+        # Initialize population
+        if x0 is not None:
+            # First individual is x0 exactly, rest are x0 + noise
+            self._population = [list(x0)]
+            for _ in range(population_size - 1):
+                noisy = [v + self._rng.normal(0, sigma0) for v in x0]
+                # Wrap to [-pi, pi]
+                noisy = [((v + np.pi) % (2 * np.pi)) - np.pi for v in noisy]
+                self._population.append(noisy)
+        else:
+            # No x0: initialize uniformly in [-pi, pi]
+            self._population = [
+                list(self._rng.uniform(-np.pi, np.pi, num_params)) for _ in range(population_size)
+            ]
         self._fitnesses: list[float] = [float("inf")] * population_size
         self._best_individual: list[float] = self._population[0].copy()
         self._best_fitness: float = float("inf")
