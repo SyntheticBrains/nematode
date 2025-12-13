@@ -86,7 +86,43 @@ environment:
 
 | Algorithm | Best Success | Final Mean | Generations | Runtime |
 |-----------|-------------|------------|-------------|---------|
-| **GA** | **73.3%** | 25-30% | 150 (50+100) | ~21 hours |
+| **CMA-ES** | **80.0%** | 35-42% | 75 (20+55) | ~19 hours |
+| GA | 73.3% | 25-30% | 150 (50+100) | ~21 hours |
+
+#### CMA-ES Predator Run Details (Best Result)
+Sessions: `20251211_211745` (gen 1-23), `20251212_030538` (gen 21-75, resumed from gen 20)
+
+| Phase | Generations | Best | Mean | Notes |
+|-------|-------------|------|------|-------|
+| Cold start | 1-16 | 0-20% | 0-3% | Slow exploration |
+| Breakthrough | 17-22 | 35-40% | 7-13% | First viable solutions |
+| Climbing | 23-30 | 65-70% | 35-42% | Rapid improvement |
+| Peak | 31, 39 | **80%** | 38-40% | Best achieved |
+| Stable | 40-55 | 55-70% | 36-42% | Mean stabilized higher than GA |
+
+Best parameters (80% evolution, validated 80-88%):
+```json
+{
+  "θ_rx1_0": -0.300, "θ_rx1_1": 0.350,
+  "θ_ry1_0": 1.031, "θ_ry1_1": -0.792,
+  "θ_rz1_0": -0.305, "θ_rz1_1": 0.181,
+  "θ_rx2_0": -0.822, "θ_rx2_1": 2.173,
+  "θ_ry2_0": -1.124, "θ_ry2_1": 1.287,
+  "θ_rz2_0": -0.456, "θ_rz2_1": 1.327
+}
+```
+
+#### Validation Results (CMA-ES Best Params, 50 runs each, LR=0)
+
+| Benchmark ID | Success Rate | Post-Convergence | Predator Deaths | Composite Score |
+|--------------|-------------|------------------|-----------------|-----------------|
+| 20251213_021816 | **88%** | **95.2%** | 6 | **0.675** |
+| 20251213_020626 | 86% | 92.0% | 7 | 0.671 |
+| 20251213_021838 | 86% | 82.8% | 7 | 0.616 |
+| 20251213_015320 | 82% | 79.3% | 9 | 0.589 |
+| 20251212_230413 | 80% | 83.3% | 10 | 0.625 |
+
+**Key insight**: The 80% evolution params validate to **80-88%** over 50-run benchmarks, with post-convergence reaching **92-95%**. This confirms the parameters are robust, not overfit to the evolution's 20-episode evaluations.
 
 #### GA Predator Run Details
 Sessions: `20251210_072400` (gen 1-50), `20251210_210057` (gen 51-150)
@@ -99,7 +135,7 @@ Sessions: `20251210_072400` (gen 1-50), `20251210_210057` (gen 51-150)
 | Peak | 63, 69 | **73.3%** | 26% | Best achieved |
 | Stable | 70-150 | 46-67% | 25-33% | High variance persists |
 
-Best parameters (73.3% success):
+GA Best parameters (73.3% success):
 ```json
 {
   "θ_rx1_0": -0.346, "θ_rx1_1": -2.643,
@@ -175,15 +211,21 @@ Best parameters found:
 
 ### Predator Environment Analysis
 
-**Key finding**: GA achieved **73.3%** on predators vs **22.5%** for gradient methods (3x improvement).
+**Key finding**: CMA-ES achieved **80%** during evolution, validated to **80-88%** over 50-run benchmarks - a **3.5-4x improvement** over gradient methods (22.5%).
 
-Observations from the 150-generation run:
+Observations from the CMA-ES 75-generation run:
+1. **Faster breakthrough than GA**: First viable solutions at gen 17 (vs gen 38 for GA)
+2. **Higher peak**: Achieved 80% vs GA's 73.3%
+3. **Higher mean fitness**: Population mean stabilized at 35-42% (vs 25-30% for GA)
+4. **Robust validation**: 80% evolution params achieve 80-88% over 50 benchmarks
+
+Observations from the GA 150-generation run:
 1. **Long warmup required**: 37 generations of near-zero success before breakthrough
 2. **High variance**: Best fitness fluctuated 40-73% even in later generations
 3. **Mean lags best**: Population mean (~25-30%) well below best individual
 4. **Plateau around 60-70%**: Multiple peaks at 73.3% but couldn't consolidate higher
 
-Possible causes of variance:
+Possible causes of GA variance:
 - 15 episodes/eval may be insufficient to reliably distinguish solutions
 - Predator movement randomness creates noisy fitness signal
 - GA crossover may be disrupting good parameter combinations
@@ -193,34 +235,32 @@ Possible causes of variance:
 | Environment | Evolution Best | Gradient Best | Improvement |
 |-------------|---------------|---------------|-------------|
 | Foraging-only | 80% (CMA-ES) | 83% | Similar |
-| **With predators** | **73.3%** (GA) | **22.5%** | **3.3x** |
+| **With predators** | **80-88%** (CMA-ES) | **22.5%** | **3.5-4x** |
 
-**Key insight**: Evolution matches gradient performance on foraging-only (~80%), but dramatically outperforms on predator environments where gradient noise causes catastrophic drift.
+**Key insight**: Evolution matches gradient performance on foraging-only (~80%), but dramatically outperforms on predator environments where gradient noise causes catastrophic drift. CMA-ES outperforms GA on predators (80% vs 73.3%) due to its adaptive covariance matrix.
 
 ## Conclusions
 
 1. **Evolution matches gradients on foraging-only**: Both achieve ~80% success rate
-2. **Evolution dramatically outperforms on predators**: 73.3% vs 22.5% (3.3x improvement)
-3. **GA more reliable**: Stable convergence, preserves best solutions
-4. **CMA-ES finds higher peaks**: But can drift away from them
-5. **Long warmup for predators**: ~37 generations before breakthrough, patience required
+2. **Evolution dramatically outperforms on predators**: 80-88% vs 22.5% (3.5-4x improvement)
+3. **CMA-ES is best for predators**: Higher peak (80% vs 73.3%), faster breakthrough, higher mean
+4. **Validation confirms robustness**: 80% evolution params validate to 80-88% over 50-run benchmarks
+5. **Post-convergence excellence**: Best runs achieve 92-95% success after initial convergence
+6. **Long warmup for predators**: ~17-37 generations before breakthrough (CMA-ES faster)
 
 ## Next Steps
 
-### Immediate
+### Completed
 - [x] ~~Longer GA run (50-100 generations) to see if 80%+ achievable~~ Done: 150 gen, peaked at 73.3%
-- [ ] Validate best predator params over 100+ episodes
-- [ ] Try CMA-ES on predators (may find higher peaks like it did for foraging)
+- [x] ~~Try CMA-ES on predators~~ Done: 75 gen, achieved 80%, validated 80-88%
+- [x] ~~Validate best predator params~~ Done: 5x 50-run benchmarks confirm 80-88% success
+- [x] ~~Increase episodes per evaluation (20)~~ Done: Reduced variance in CMA-ES run
 
-### Reducing Variance
-- [ ] Increase episodes per evaluation (20-25) to reduce fitness noise
-- [ ] Larger population (40-50) for better coverage
-- [ ] Seed from best known params instead of random init
-
-### Algorithm Experiments
-- [ ] CMA-ES with predators - compare peak finding vs GA
-- [ ] Hybrid: CMA-ES for exploration, then GA for refinement
-- [ ] Different sigma values for predator environment
+### Future Experiments
+- [ ] Seed evolution from best CMA-ES params to fine-tune further
+- [ ] Try larger environments (30x30, 50x50) with more predators
+- [ ] Test parameters on different predator configurations (speed, count)
+- [ ] Hybrid: Use CMA-ES params as starting point for gradient fine-tuning
 
 ## Data References
 
@@ -231,13 +271,29 @@ Possible causes of variance:
   - Best: 70%, Config: `evolution_foraging_only.yml`
 
 ### With Predators (2 predators, small environment)
+
+#### CMA-ES (Best Results)
+- **CMA-ES Session 1**: `20251211_211745` (gen 1-23)
+  - Best: 40%, Config: `evolution_small_predators.yml`
+- **CMA-ES Session 2**: `20251212_030538` (gen 21-75, resumed from gen 20)
+  - Best: **80%**, Config: `evolution_small_predators.yml`
+  - Best params saved in artifacts
+
+#### GA
 - **GA Session 1**: `20251210_072400` (gen 1-50)
   - Best: 53.3%, Config: `evolution_small_predators.yml`
 - **GA Session 2**: `20251210_210057` (gen 51-150, resumed)
   - Best: 73.3%, Config: `evolution_small_predators.yml`
-  - Best params: `best_params_20251210_210057.json`
+
+### Validation Benchmarks (CMA-ES Best Params)
+- `20251213_021816` - 88% success, 95.2% post-convergence (best)
+- `20251213_020626` - 86% success, 92.0% post-convergence
+- `20251213_021838` - 86% success, 82.8% post-convergence
+- `20251213_015320` - 82% success, 79.3% post-convergence
+- `20251212_230413` - 80% success, 83.3% post-convergence
 
 ### Scripts and Configs
 - Evolution script: `scripts/run_evolution.py`
 - Foraging config: `configs/examples/evolution_foraging_only.yml`
 - Predator config: `configs/examples/evolution_small_predators.yml`
+- Validation config: `configs/examples/modular_dynamic_small_predators_validate.yml`
