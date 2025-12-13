@@ -369,8 +369,12 @@ class ModularBrain(QuantumBrain):
             EpisodeBuffer() if config.use_trajectory_learning else None
         )
 
-        # Episode start parameters for learn_only_from_success rollback
+        # Episode start state for learn_only_from_success rollback
         self._episode_start_parameters: dict[str, float] | None = None
+        self._episode_start_momentum: dict[str, float] | None = None
+        self._episode_start_lr_boost_active: bool | None = None
+        self._episode_start_lr_boost_steps_remaining: int | None = None
+        self._episode_start_lr_steps: int | None = None
 
     def build_brain(
         self,
@@ -879,13 +883,18 @@ class ModularBrain(QuantumBrain):
         """Prepare for a new episode.
 
         If learn_only_from_success is enabled, saves current parameters
-        so they can be restored if the episode fails.
+        and optimizer state so they can be restored if the episode fails.
         """
         if self.config.learn_only_from_success:
             # Save a copy of current parameters at episode start
             self._episode_start_parameters = deepcopy(self.parameter_values)
+            # Save optimizer state for complete rollback
+            self._episode_start_momentum = deepcopy(self._momentum)
+            self._episode_start_lr_boost_active = self._lr_boost_active
+            self._episode_start_lr_boost_steps_remaining = self._lr_boost_steps_remaining
+            self._episode_start_lr_steps = self.learning_rate.steps
             logger.debug(
-                "Saved episode start parameters for potential rollback "
+                "Saved episode start parameters and optimizer state for potential rollback "
                 "(learn_only_from_success=True)",
             )
 
@@ -907,16 +916,25 @@ class ModularBrain(QuantumBrain):
         )
 
         if should_skip_learning:
-            # Rollback parameters to episode start (undo all step-by-step learning)
+            # Rollback parameters and optimizer state to episode start
             if self._episode_start_parameters is not None:
                 self.parameter_values = deepcopy(self._episode_start_parameters)
+                # Restore optimizer state to prevent drift from failed episodes
+                if self._episode_start_momentum is not None:
+                    self._momentum = deepcopy(self._episode_start_momentum)
+                if self._episode_start_lr_boost_active is not None:
+                    self._lr_boost_active = self._episode_start_lr_boost_active
+                if self._episode_start_lr_boost_steps_remaining is not None:
+                    self._lr_boost_steps_remaining = self._episode_start_lr_boost_steps_remaining
+                if self._episode_start_lr_steps is not None:
+                    self.learning_rate.steps = self._episode_start_lr_steps
                 logger.info(
-                    "Rolled back parameters to episode start: episode was unsuccessful "
-                    "(learn_only_from_success=True)",
+                    "Rolled back parameters and optimizer state to episode start: "
+                    "episode was unsuccessful (learn_only_from_success=True)",
                 )
             else:
                 logger.warning(
-                    "Cannot rollback parameters: no episode start parameters saved. "
+                    "Cannot rollback parameters: no episode start state saved. "
                     "Ensure prepare_episode() is called at episode start.",
                 )
             # Clear the buffer but don't update parameters
