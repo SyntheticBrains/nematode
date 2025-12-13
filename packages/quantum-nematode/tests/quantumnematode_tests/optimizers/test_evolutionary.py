@@ -78,8 +78,8 @@ class TestCMAESOptimizer:
         optimizer.tell(solutions, fitnesses)
 
         assert optimizer.generation == 1
-        assert len(optimizer._history) == 1
-        assert "best_fitness" in optimizer._history[0]
+        assert len(optimizer.result.history) == 1
+        assert "best_fitness" in optimizer.result.history[0]
 
     def test_cmaes_result(self):
         """Test getting result after evolution."""
@@ -200,7 +200,7 @@ class TestGeneticAlgorithmOptimizer:
         optimizer.tell(solutions, fitnesses)
 
         assert optimizer.generation == 1
-        assert len(optimizer._history) == 1
+        assert len(optimizer.result.history) == 1
 
     def test_ga_elite_preservation(self):
         """Test that elites are preserved across generations."""
@@ -217,7 +217,7 @@ class TestGeneticAlgorithmOptimizer:
         optimizer.tell(solutions1, fitnesses1)
 
         # Best individual should be preserved
-        best_before = optimizer._best_individual.copy()
+        best_before = optimizer.result.best_params.copy()
 
         # Second generation
         solutions2 = optimizer.ask()
@@ -225,7 +225,7 @@ class TestGeneticAlgorithmOptimizer:
         optimizer.tell(solutions2, fitnesses2)
 
         # Best should still be the same
-        assert optimizer._best_individual == best_before
+        assert optimizer.result.best_params == best_before
 
     def test_ga_stop_always_false(self):
         """Test that GA stop() always returns False."""
