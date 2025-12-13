@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from multiprocessing import Pool
 from typing import TYPE_CHECKING
 
+import cma
 import numpy as np
 
 if TYPE_CHECKING:
@@ -127,8 +128,6 @@ class CMAESOptimizer(EvolutionaryOptimizer):
             sigma0: Initial step size. Defaults to 0.5.
         """
         super().__init__(num_params, population_size, sigma0)
-
-        import cma
 
         if x0 is None:
             x0 = [0.0] * num_params
