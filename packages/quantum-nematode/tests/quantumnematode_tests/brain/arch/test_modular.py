@@ -630,6 +630,12 @@ class TestTrajectoryLearning:
         trajectory_brain.post_process_episode()
         assert len(trajectory_brain.episode_buffer) == 0
 
+    def test_post_process_episode_accepts_episode_success_kw(self, trajectory_brain):
+        """Test that post_process_episode accepts episode_success as keyword argument."""
+        # This test locks in the keyword-only API to prevent regressions
+        trajectory_brain.post_process_episode(episode_success=True)
+        trajectory_brain.post_process_episode(episode_success=False)
+
     def test_trajectory_gradient_with_varying_returns(self, trajectory_brain):
         """Test trajectory gradients with varying return values."""
         # Manually populate episode buffer
