@@ -179,6 +179,24 @@ class TestGeneticAlgorithmOptimizer:
         assert optimizer.mutation_rate == 0.2
         assert optimizer.crossover_rate == 0.9
 
+    def test_ga_initialization_with_x0(self):
+        """Test GA initialization with initial parameters (x0)."""
+        x0 = [0.1, 0.2, 0.3]
+        optimizer = GeneticAlgorithmOptimizer(
+            num_params=3,
+            x0=x0,
+            population_size=5,
+            sigma0=0.3,
+            seed=42,
+        )
+        solutions = optimizer.ask()
+
+        # First individual should be exactly x0
+        assert solutions[0] == x0
+        # Other individuals should be different (initialized with noise around x0)
+        for sol in solutions[1:]:
+            assert sol != x0
+
     def test_ga_ask(self):
         """Test asking for candidate solutions."""
         optimizer = GeneticAlgorithmOptimizer(num_params=5, population_size=20, seed=42)

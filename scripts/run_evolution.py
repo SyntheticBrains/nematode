@@ -737,6 +737,7 @@ def main() -> None:
     else:
         optimizer = GeneticAlgorithmOptimizer(
             num_params=num_params,
+            x0=x0,
             population_size=args.population,
             sigma0=args.sigma,
             seed=args.seed,
