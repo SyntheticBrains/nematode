@@ -436,10 +436,10 @@ class FitnessFunction:
         -------
             Negative success rate (lower is better).
         """
-        brain = self.brain_factory(param_array)
         successes = 0
 
         for _ in range(self.config.episodes_per_evaluation):
+            brain = self.brain_factory(param_array)
             env = self.env_factory()
             success = self._run_episode(brain, env)
             if success:
