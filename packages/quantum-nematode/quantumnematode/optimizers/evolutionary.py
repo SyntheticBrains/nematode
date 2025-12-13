@@ -17,6 +17,7 @@ Key advantages over gradient-based learning:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from multiprocessing import Pool
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -488,8 +489,6 @@ class FitnessFunction:
         -------
             List of fitness values.
         """
-        from multiprocessing import Pool
-
         with Pool(processes=self.config.parallel_workers) as pool:
             fitnesses = pool.map(self, population)
         return list(fitnesses)
