@@ -1133,10 +1133,11 @@ class ModularBrain(QuantumBrain):
             # Batch circuits for this timestep
             circuits = []
             if self.device == DeviceType.QPU and self.perf_mgmt is not None:
-                cached_circuit = self._get_cached_circuit()
+                # Build untranspiled circuit with timestep features (Q-CTRL recommends untranspiled)
+                qc = self.build_brain(input_params)
                 for plus, minus in param_sets:
-                    circuits.append(cached_circuit.assign_parameters(plus, inplace=False))
-                    circuits.append(cached_circuit.assign_parameters(minus, inplace=False))
+                    circuits.append(qc.assign_parameters(plus, inplace=False))
+                    circuits.append(qc.assign_parameters(minus, inplace=False))
             else:
                 # Build circuit with input features for this timestep
                 qc = self.build_brain(input_params)
