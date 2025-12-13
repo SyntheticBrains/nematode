@@ -271,63 +271,69 @@ def run_episode(
     -------
         True if episode was successful (collected target foods).
     """
+    brain.prepare_episode()
+    success = False
     foods_collected = 0
     satiety = initial_satiety
 
-    for _ in range(max_steps):
-        # Get state from environment
-        position = (env.agent_pos[0], env.agent_pos[1])
-        gradient_strength, gradient_direction = env.get_state(position, disable_log=True)
+    try:
+        for _ in range(max_steps):
+            # Get state from environment
+            position = (env.agent_pos[0], env.agent_pos[1])
+            gradient_strength, gradient_direction = env.get_state(position, disable_log=True)
 
-        # Build BrainParams
-        params = BrainParams(
-            gradient_strength=gradient_strength,
-            gradient_direction=gradient_direction,
-            agent_direction=env.current_direction,
-            agent_position=(float(position[0]), float(position[1])),
-        )
+            # Build BrainParams
+            params = BrainParams(
+                gradient_strength=gradient_strength,
+                gradient_direction=gradient_direction,
+                agent_direction=env.current_direction,
+                agent_position=(float(position[0]), float(position[1])),
+            )
 
-        # Get action from brain (no reward, no learning)
-        actions = brain.run_brain(params, reward=None)
-        if not actions:
-            break
+            # Get action from brain (no reward, no learning)
+            actions = brain.run_brain(params, reward=None)
+            if not actions:
+                break
 
-        action = actions[0].action
+            action = actions[0].action
 
-        # Move agent
-        env.move_agent(action)
+            # Move agent
+            env.move_agent(action)
 
-        # Check for food collection
-        agent_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
-        if agent_pos_tuple in env.foods:
-            env.foods.remove(agent_pos_tuple)
-            foods_collected += 1
-            # TODO: Use satiety gain from config
-            satiety = min(satiety + 50.0, initial_satiety)  # Food restores satiety
-            env.spawn_food()  # Spawn new food
+            # Check for food collection
+            agent_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
+            if agent_pos_tuple in env.foods:
+                env.foods.remove(agent_pos_tuple)
+                foods_collected += 1
+                # TODO: Use satiety gain from config
+                satiety = min(satiety + 50.0, initial_satiety)  # Food restores satiety
+                env.spawn_food()  # Spawn new food
 
-            # Check for success (collected target foods)
-            if foods_collected >= env.target_foods_to_collect:
-                return True
+                # Check for success (collected target foods)
+                if foods_collected >= env.target_foods_to_collect:
+                    success = True
+                    return True
 
-        # Move predators and check for death
-        if env.predators_enabled:
-            for predator in env.predators:
-                predator.update_position(env.grid_size)
-                # Check kill radius
-                dist = np.sqrt(
-                    (predator.position[0] - env.agent_pos[0]) ** 2
-                    + (predator.position[1] - env.agent_pos[1]) ** 2,
-                )
-                if dist <= env.predator_kill_radius:
-                    return False  # Died to predator
+            # Move predators and check for death
+            if env.predators_enabled:
+                for predator in env.predators:
+                    predator.update_position(env.grid_size)
+                    # Check kill radius
+                    dist = np.sqrt(
+                        (predator.position[0] - env.agent_pos[0]) ** 2
+                        + (predator.position[1] - env.agent_pos[1]) ** 2,
+                    )
+                    if dist <= env.predator_kill_radius:
+                        return False  # Died to predator
 
-        # Decay satiety
-        satiety -= satiety_decay_rate
-        if satiety <= 0:
-            return False  # Starved
+            # Decay satiety
+            satiety -= satiety_decay_rate
+            if satiety <= 0:
+                return False  # Starved
 
-    return False  # Max steps reached without success
+        return False  # Max steps reached without success
+    finally:
+        brain.post_process_episode(episode_success=success)
 
 
 def evaluate_fitness(
