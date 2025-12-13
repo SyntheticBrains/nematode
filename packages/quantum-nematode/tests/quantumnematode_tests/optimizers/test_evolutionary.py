@@ -198,10 +198,10 @@ class TestGeneticAlgorithmOptimizer:
     def test_ga_stop_always_false(self):
         """Test that GA stop() always returns False."""
         optimizer = GeneticAlgorithmOptimizer(num_params=5, seed=42)
+        rng = np.random.default_rng(42)
 
         for _ in range(10):
             solutions = optimizer.ask()
-            rng = np.random.default_rng(42)
             fitnesses = [float(rng.random()) for _ in solutions]
             optimizer.tell(solutions, fitnesses)
             assert optimizer.stop() is False
