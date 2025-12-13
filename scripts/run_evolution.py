@@ -42,10 +42,14 @@ from quantumnematode.utils.config_loader import (
 if TYPE_CHECKING:
     from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
 
+import math
+
 DEFAULT_GENERATIONS = 50
 DEFAULT_POPULATION_SIZE = 20
 DEFAULT_EPISODES_PER_EVAL = 15
-DEFAULT_SIGMA0 = 0.5
+# Default sigma covers [-π, π] range for quantum circuit parameters
+# π/2 ≈ 1.57 means ~95% of initial samples fall within [-π, π]
+DEFAULT_SIGMA0 = math.pi / 2
 DEFAULT_PARALLEL_WORKERS = 1
 
 
@@ -89,7 +93,8 @@ def parse_arguments() -> argparse.Namespace:
         "--sigma",
         type=float,
         default=DEFAULT_SIGMA0,
-        help=f"Initial step size / mutation std (default: {DEFAULT_SIGMA0}).",
+        help=f"Initial step size / mutation std (default: π/2 ≈ {DEFAULT_SIGMA0:.2f}, "
+        "covers [-π, π] range for quantum params).",
     )
     parser.add_argument(
         "--parallel",
