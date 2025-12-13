@@ -120,7 +120,7 @@
     "contributor": "Chris Zaharia",
     "github_username": "chrisjz",
     "category": "dynamic_predator_small_quantum",
-    "notes": null,
+    "notes": "Validated performance from best parameters found in evolution run therefore no parameter updates were made during this benchmark.",
     "verified": false
   }
 }
