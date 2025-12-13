@@ -317,15 +317,9 @@ def run_episode(
 
             # Move predators and check for death
             if env.predators_enabled:
-                for predator in env.predators:
-                    predator.update_position(env.grid_size)
-                    # Check kill radius
-                    dist = np.sqrt(
-                        (predator.position[0] - env.agent_pos[0]) ** 2
-                        + (predator.position[1] - env.agent_pos[1]) ** 2,
-                    )
-                    if dist <= env.predator_kill_radius:
-                        return False  # Died to predator
+                env.update_predators()
+                if env.check_predator_collision():
+                    return False  # Died to predator
 
             # Decay satiety
             satiety -= satiety_decay_rate
