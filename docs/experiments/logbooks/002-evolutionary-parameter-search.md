@@ -1,6 +1,6 @@
 # 002: Evolutionary Parameter Search
 
-**Status**: `active`
+**Status**: `completed`
 
 **Branch**: `feature/14-improve-quantum-predators-performance`
 
