@@ -40,7 +40,7 @@ Add episode buffering and discounted return computation to quantum ModularBrain,
 - Multi-step: `grad = 0.5 * (P_+ - P_-) * G_t` where `G_t = sum(gamma^k * r_{t+k})`
 
 ### Part 2: Appetitive/Aversive Modular Architecture
-Rename existing `chemotaxis` module to `appetitive` (approach behavior) and add `aversive` module (avoidance behavior) with dedicated qubits and separate gradient processing.
+Add new `appetitive` (approach behavior) and `aversive` (avoidance behavior) modules with dedicated qubits and separate gradient processing. The existing `chemotaxis` module is retained for backward compatibility (uses combined gradient).
 
 **Key capabilities**:
 - Biologically-inspired module naming (appetitive/aversive)

@@ -54,13 +54,16 @@ else:
 ### 2. Appetitive/Aversive Module Architecture
 
 #### Module Naming Choice
-**Decision**: Use `appetitive` and `aversive` instead of `chemotaxis` and `predator_avoidance`.
+**Decision**: Add `appetitive` and `aversive` as new modules alongside the existing `chemotaxis` module.
 
 **Rationale**:
-- **Biological accuracy**: Both are chemotaxis behaviors (attractive vs repulsive)
+- **Backward compatibility**: Existing configs using `chemotaxis` continue to work unchanged
+- **Biological accuracy**: Both appetitive and aversive are chemotaxis behaviors (attractive vs repulsive)
 - **Neuroscience terminology**: Widely used in C. elegans and behavioral literature
-- **Future-proof**: Can extend to non-chemotactic behaviors (e.g., thermotaxis, mechanosensation)
-- **Concise**: Shorter than `chemotaxis_attractive` / `chemotaxis_repulsive`
+- **Distinct use cases**:
+  - `chemotaxis`: Uses combined/superposed gradient (food - predator), simpler 2-qubit setup
+  - `appetitive`: Uses separated food-only gradient for approach behavior
+  - `aversive`: Uses separated predator-only gradient for avoidance behavior
 
 **References**:
 - C. elegans appetitive learning: food-seeking, olfactory attraction
@@ -147,9 +150,10 @@ brain:
   name: modular
   config:
     modules:
-      appetitive: [0, 1]  # RENAMED from chemotaxis
-      aversive: [2, 3]    # NEW module
-  qubits: 4  # INCREASED from 2
+      appetitive: [0, 1]  # NEW module (food-only gradient)
+      aversive: [2, 3]    # NEW module (predator-only gradient)
+      # chemotaxis: [0, 1]  # RETAINED for backward compat (combined gradient)
+  qubits: 4  # INCREASED from 2 (when using appetitive+aversive)
 
 environment:
   gradient_mode: split  # NEW: "unified" (default) or "split"
@@ -177,16 +181,16 @@ When `gradient_mode: unified` (default), BrainParams contains:
 **Files**: modular.py (~200 lines), dtypes.py (~10 lines), runners.py (~20 lines)
 
 ### Phase 2: Appetitive/Aversive Modules (After evaluation)
-1. Rename `ModuleName.CHEMOTAXIS` → `APPETITIVE`
+1. Add `ModuleName.APPETITIVE` (keep `CHEMOTAXIS` for backward compatibility)
 2. Add `ModuleName.AVERSIVE`
-3. Implement `aversive_features()` extraction
-4. Update environment to track food/predator gradients separately
-5. Add `gradient_mode` config and conditional gradient computation
-6. Update all existing configs (rename chemotaxis → appetitive)
+3. Implement `appetitive_features()` extraction (uses food-only gradient)
+4. Implement `aversive_features()` extraction (uses predator-only gradient)
+5. Update environment to track food/predator gradients separately
+6. Add `use_separated_gradients` config and conditional gradient computation
 7. Write tests for gradient separation and feature extraction
 
 **Estimated effort**: 1-2 days
-**Files**: modules.py (~60 lines), env.py (~50 lines), configs (10+ files)
+**Files**: modules.py (~100 lines), agent.py (~30 lines), config_loader.py (~5 lines)
 
 ## Testing Strategy
 
@@ -228,15 +232,12 @@ When `gradient_mode: unified` (default), BrainParams contains:
 ## Migration Path
 
 ### For Existing Users
-1. **No action required**: Default configs use single-step learning, unified gradients
+1. **No action required**: Default configs use single-step learning, unified gradients, chemotaxis module
 2. **Opt-in trajectory learning**: Set `use_trajectory_learning: true` in config
-3. **Opt-in modular architecture**: Rename `chemotaxis` → `appetitive`, add `aversive`
+3. **Opt-in modular architecture**: Replace `chemotaxis` with `appetitive` + `aversive`, set `use_separated_gradients: true`
 
-### Config Migration Script (Future)
-Could provide `scripts/migrate_configs.py` to auto-update:
-- Rename `modules.chemotaxis` → `modules.appetitive`
-- Add `gradient_mode: unified` to preserve behavior
-- Add comment explaining new features
+### Config Migration
+No migration script needed - existing configs using `chemotaxis` module continue to work unchanged. Users can optionally switch to appetitive+aversive for new experiments.
 
 ## Open Questions
 
