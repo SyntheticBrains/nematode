@@ -67,7 +67,7 @@ else:
 - C. elegans aversive learning: pathogen avoidance, toxin repulsion
 
 #### Gradient Separation Strategy
-**Decision**: Config-toggleable gradient mode: `unified` (default) vs `split`.
+**Decision**: The system SHALL support config-toggleable gradient mode: `unified` (default) or `split`.
 
 **Rationale**:
 - **Unified mode**: Current behavior, food+predator gradients superpose
