@@ -162,14 +162,15 @@ The environment's get_state() method SHALL compute gradients based on configured
 
 ## REMOVED Requirements
 
-### Requirement: Chemotaxis Module Naming
-The "chemotaxis" module name is being replaced with "appetitive" for biological accuracy.
+None. The existing `chemotaxis` module was retained for backward compatibility.
 
-#### Scenario: Deprecation Notice
-**Given** a config uses `modules: { chemotaxis: [0, 1] }`
-**When** the configuration is loaded
-**Then** it SHALL emit a deprecation warning
-**And** SHALL automatically treat "chemotaxis" as "appetitive"
-**And** SHALL recommend updating config to use "appetitive" naming
+## Implementation Notes
 
-**Note**: Actual removal of "chemotaxis" support will occur in a future version after migration period.
+### Chemotaxis vs Appetitive/Aversive
+The original proposal planned to rename `chemotaxis` to `appetitive`. During implementation, we decided to keep all three as separate modules with distinct purposes:
+
+- **chemotaxis**: Uses combined/superposed gradient (food - predator). Suitable for simpler 2-qubit configurations.
+- **appetitive**: Uses separated food-only gradient. Requires `use_separated_gradients: true`.
+- **aversive**: Uses separated predator-only gradient. Requires `use_separated_gradients: true`.
+
+This approach provides full backward compatibility while enabling new experiments with specialized modules.
