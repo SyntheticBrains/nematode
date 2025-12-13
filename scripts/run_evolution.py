@@ -96,7 +96,8 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--resume",
         type=str,
-        help="Path to checkpoint file to resume from.",
+        help="Path to checkpoint file to resume from. WARNING: Only use trusted files "
+        "(uses pickle which can execute arbitrary code).",
     )
     parser.add_argument(
         "--init-params",
@@ -545,7 +546,16 @@ def save_checkpoint(optimizer: EvolutionaryOptimizer, path: Path) -> None:
 
 
 def load_checkpoint(path: Path) -> EvolutionaryOptimizer:
-    """Load optimizer state from checkpoint file."""
+    """Load optimizer state from checkpoint file.
+
+    SECURITY WARNING: This uses pickle.load which can execute arbitrary code.
+    Only load checkpoint files that you created yourself or from trusted sources.
+    Do not load checkpoints from untrusted or unknown origins.
+    """
+    logger.warning(
+        f"Loading checkpoint from {path} using pickle. "
+        "Only load checkpoints from trusted sources (pickle can execute arbitrary code).",
+    )
     with path.open("rb") as f:
         return pickle.load(f)  # noqa: S301
 
