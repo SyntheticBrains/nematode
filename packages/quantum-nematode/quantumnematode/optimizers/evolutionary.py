@@ -391,7 +391,16 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
 
 @dataclass
 class FitnessConfig:
-    """Configuration for fitness evaluation."""
+    """Configuration for fitness evaluation.
+
+    Attributes
+    ----------
+        episodes_per_evaluation: Number of episodes to run per fitness evaluation.
+        parallel_workers: Number of parallel workers for population evaluation.
+            When > 1, uses multiprocessing which requires picklable factories.
+            Defaults to 1 (sequential evaluation).
+        episode_max_steps: Maximum steps per episode before timeout.
+    """
 
     episodes_per_evaluation: int = 15
     parallel_workers: int = 1
@@ -405,6 +414,13 @@ class FitnessFunction:
     fitness = -successes / episodes_per_evaluation
 
     Lower fitness is better (CMA-ES minimizes).
+
+    Note on parallel evaluation:
+        When using parallel_workers > 1, the brain_factory and env_factory
+        callables must be picklable (required by multiprocessing). This means
+        lambdas and closures will fail on spawn-based platforms (Windows,
+        macOS with Python 3.8+). Use module-level functions or functools.partial
+        with picklable arguments instead.
     """
 
     def __init__(
@@ -417,7 +433,9 @@ class FitnessFunction:
 
         Args:
             brain_factory: Callable that takes param_array and returns a brain instance.
+                Must be picklable if using parallel_workers > 1.
             env_factory: Callable that returns a fresh environment instance.
+                Must be picklable if using parallel_workers > 1.
             config: Fitness evaluation configuration.
         """
         self.brain_factory = brain_factory
@@ -514,6 +532,11 @@ class FitnessFunction:
 
     def _evaluate_parallel(self, population: list[list[float]]) -> list[float]:
         """Evaluate population in parallel using multiprocessing.
+
+        Note:
+            Requires brain_factory and env_factory to be picklable.
+            Will fail on spawn-based platforms (Windows, macOS) if factories
+            are lambdas or closures. Use module-level functions instead.
 
         Args:
             population: List of parameter arrays.
