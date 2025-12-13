@@ -321,7 +321,7 @@ class BaseEnvironment(ABC):
         elif new_direction == Direction.LEFT and self.agent_pos[0] > 0:
             new_pos[0] -= 1
         else:
-            logger.warning(
+            logger.debug(
                 f"Collision against boundary with action: {action.value}, staying in place.",
             )
             self.current_direction = previous_direction
@@ -329,7 +329,7 @@ class BaseEnvironment(ABC):
 
         # Check for collision with the body
         if tuple(new_pos) in self.body:
-            logger.warning(f"Collision detected at {new_pos}, staying in place.")
+            logger.debug(f"Collision detected at {new_pos}, staying in place.")
             self.current_direction = previous_direction
             return
 
@@ -1158,7 +1158,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 agent_pos[1] - predator.position[1],
             )
             if distance <= self.predator_kill_radius:
-                logger.info(
+                logger.debug(
                     f"Predator collision! Agent at {agent_pos}, Predator at {predator.position}",
                 )
                 return True
