@@ -171,9 +171,12 @@ class EpisodeBuffer:
         reward: float,
         parameter_values: dict[str, float],
     ) -> None:
-        """Append a timestep's data to the buffer."""
-        self.params.append(params)
-        self.actions.append(action)
+        """Append a timestep's data to the buffer.
+
+        Stores copies of params and action to ensure immutable snapshots.
+        """
+        self.params.append(params.model_copy())
+        self.actions.append(action.model_copy())
         self.rewards.append(reward)
         self.parameter_values.append(parameter_values.copy())
 
