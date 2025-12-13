@@ -56,9 +56,11 @@ Add new `appetitive` (approach behavior) and `aversive` (avoidance behavior) mod
 - No "proximity" or "danger flags" - only gradient strength (which naturally encodes proximity via exponential decay)
 
 ## Impact
-- **Expected improvement**: +30-50% success rate from trajectory learning alone
-- **Combined improvement**: 60-80% success rate target with both features
+- **Expected improvement**: Goal of +30-50% success rate from trajectory learning alone (non-normative estimate based on classical MLP trajectory learning gains)
+- **Combined improvement**: Goal of 60-80% success rate with both features (non-normative target; see `docs/experiments/logbooks/` for actual results)
 - **Backward compatibility**: Config flags enable/disable both features independently
+
+**Note**: Actual benchmarks showed no measurable improvement from these features in the tested environment configurations. The implementation was completed but kept dormant (defaults off). See logbook 002 for evolutionary optimization results that achieved 88% success rate through a different approach.
 
 ## Dependencies
 - Builds on recent ModularBrain optimizations (norm clipping, adaptive momentum)
