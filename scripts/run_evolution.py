@@ -407,11 +407,20 @@ def evaluate_fitness(
 
 
 def _init_worker(log_level: int) -> None:
-    """Initialize logging in worker processes.
+    """Initialize logging in worker processes and ignore SIGINT.
+
+    Workers ignore SIGINT so the parent process handles Ctrl+C gracefully.
+    This prevents worker processes from crashing with KeyboardInterrupt
+    and spewing stack traces when the user interrupts.
 
     Args:
         log_level: Logging level to use in worker.
     """
+    import signal
+
+    # Ignore SIGINT in workers - parent will handle it and terminate pool
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     # Import logger in worker to configure it
     from quantumnematode.logging_config import logger as worker_logger
 
@@ -510,10 +519,23 @@ def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 optimizer.tell(solutions, fitnesses)
 
             except KeyboardInterrupt:
+                # Terminate pool immediately to stop workers
+                if pool is not None:
+                    pool.terminate()
+                    pool.join()
+                    pool = None  # Mark as terminated so finally block doesn't try again
+
                 logger.warning(f"Interrupted during generation {gen + 1}")
                 choice = _prompt_interrupt()
 
                 if choice == "c":
+                    # Recreate pool for continuing
+                    if parallel_workers > 1:
+                        pool = Pool(
+                            processes=parallel_workers,
+                            initializer=_init_worker,
+                            initargs=(log_level,),
+                        )
                     logger.info("Continuing evolution...")
                     continue
                 if choice == "n":
@@ -567,7 +589,7 @@ def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 logger.info(f"Optimizer converged at generation {gen + 1}")
                 break
     finally:
-        # Ensure pool is properly closed
+        # Ensure pool is properly closed (if not already terminated by interrupt handler)
         if pool is not None:
             pool.close()
             pool.join()
