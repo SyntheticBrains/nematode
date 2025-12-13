@@ -445,85 +445,95 @@ def run_evolution(  # noqa: C901, PLR0913, PLR0915
     interrupted = False
     session_best_fitness = float("inf")  # Track best fitness across all generations
 
-    for gen in range(generations):
-        gen_start = time.time()
-
-        try:
-            # Get candidate solutions
-            solutions = optimizer.ask()
-
-            # Evaluate fitness
-            if parallel_workers > 1:
-                eval_args = [(sol, config_path, episodes) for sol in solutions]
-                with Pool(
-                    processes=parallel_workers,
-                    initializer=_init_worker,
-                    initargs=(log_level,),
-                ) as pool:
-                    fitnesses = pool.starmap(evaluate_fitness, eval_args)
-            else:
-                fitnesses = [evaluate_fitness(sol, config_path, episodes) for sol in solutions]
-
-            # Report fitness to optimizer
-            optimizer.tell(solutions, fitnesses)
-
-        except KeyboardInterrupt:
-            logger.warning(f"Interrupted during generation {gen + 1}")
-            choice = _prompt_interrupt()
-
-            if choice == "c":
-                logger.info("Continuing evolution...")
-                continue
-            if choice == "n":
-                should_save = False
-
-            interrupted = True
-            # Save checkpoint at interruption point
-            if should_save:
-                checkpoint_path = output_dir / f"checkpoint_gen{gen}_interrupted.pkl"
-                save_checkpoint(optimizer, checkpoint_path)
-                logger.info(f"Saved interrupt checkpoint: {checkpoint_path}")
-            break
-
-        # Log progress
-        gen_time = time.time() - gen_start
-        best_fitness = min(fitnesses)
-        best_idx = fitnesses.index(best_fitness)
-        best_params_this_gen = solutions[best_idx]
-        mean_fitness = float(np.mean(fitnesses))
-        std_fitness = float(np.std(fitnesses))
-
-        # Convert to success rate for readability
-        best_success = -best_fitness
-        mean_success = -mean_fitness
-
-        logger.info(
-            f"Gen {gen + 1:3d}/{generations}: "
-            f"best={best_success:5.1%}, mean={mean_success:5.1%}, "
-            f"std={std_fitness:.3f}, time={gen_time:5.1f}s",
+    # Create pool once outside the loop to avoid process spawn overhead per generation
+    pool = None
+    if parallel_workers > 1:
+        pool = Pool(
+            processes=parallel_workers,
+            initializer=_init_worker,
+            initargs=(log_level,),
         )
 
-        # Log best parameters for this generation at debug level
-        logger.debug(f"Gen {gen + 1} best params: {best_params_this_gen}")
+    try:
+        for gen in range(generations):
+            gen_start = time.time()
 
-        # Check if this is a new session best
-        if best_fitness < session_best_fitness:
-            session_best_fitness = best_fitness
+            try:
+                # Get candidate solutions
+                solutions = optimizer.ask()
+
+                # Evaluate fitness
+                if pool is not None:
+                    eval_args = [(sol, config_path, episodes) for sol in solutions]
+                    fitnesses = pool.starmap(evaluate_fitness, eval_args)
+                else:
+                    fitnesses = [evaluate_fitness(sol, config_path, episodes) for sol in solutions]
+
+                # Report fitness to optimizer
+                optimizer.tell(solutions, fitnesses)
+
+            except KeyboardInterrupt:
+                logger.warning(f"Interrupted during generation {gen + 1}")
+                choice = _prompt_interrupt()
+
+                if choice == "c":
+                    logger.info("Continuing evolution...")
+                    continue
+                if choice == "n":
+                    should_save = False
+
+                interrupted = True
+                # Save checkpoint at interruption point
+                if should_save:
+                    checkpoint_path = output_dir / f"checkpoint_gen{gen}_interrupted.pkl"
+                    save_checkpoint(optimizer, checkpoint_path)
+                    logger.info(f"Saved interrupt checkpoint: {checkpoint_path}")
+                break
+
+            # Log progress
+            gen_time = time.time() - gen_start
+            best_fitness = min(fitnesses)
+            best_idx = fitnesses.index(best_fitness)
+            best_params_this_gen = solutions[best_idx]
+            mean_fitness = float(np.mean(fitnesses))
+            std_fitness = float(np.std(fitnesses))
+
+            # Convert to success rate for readability
+            best_success = -best_fitness
+            mean_success = -mean_fitness
+
             logger.info(
-                f"New session best: {-session_best_fitness:.1%} - params: {best_params_this_gen}",
+                f"Gen {gen + 1:3d}/{generations}: "
+                f"best={best_success:5.1%}, mean={mean_success:5.1%}, "
+                f"std={std_fitness:.3f}, time={gen_time:5.1f}s",
             )
 
-        # Save checkpoint every 10 generations
-        if (gen + 1) % 10 == 0:
-            checkpoint_path = output_dir / f"checkpoint_gen{gen + 1}.pkl"
-            save_checkpoint(optimizer, checkpoint_path)
-            logger.info(f"Saved checkpoint: {checkpoint_path}")
+            # Log best parameters for this generation at debug level
+            logger.debug(f"Gen {gen + 1} best params: {best_params_this_gen}")
 
-        # Check for convergence (CMA-ES only)
-        # Only stop early if we've run at least 10 generations and have non-zero fitness
-        if gen >= 10 and best_fitness < 0 and optimizer.stop():
-            logger.info(f"Optimizer converged at generation {gen + 1}")
-            break
+            # Check if this is a new session best
+            if best_fitness < session_best_fitness:
+                session_best_fitness = best_fitness
+                logger.info(
+                    f"New session best: {-session_best_fitness:.1%} - params: {best_params_this_gen}",
+                )
+
+            # Save checkpoint every 10 generations
+            if (gen + 1) % 10 == 0:
+                checkpoint_path = output_dir / f"checkpoint_gen{gen + 1}.pkl"
+                save_checkpoint(optimizer, checkpoint_path)
+                logger.info(f"Saved checkpoint: {checkpoint_path}")
+
+            # Check for convergence (CMA-ES only)
+            # Only stop early if we've run at least 10 generations and have non-zero fitness
+            if gen >= 10 and best_fitness < 0 and optimizer.stop():
+                logger.info(f"Optimizer converged at generation {gen + 1}")
+                break
+    finally:
+        # Ensure pool is properly closed
+        if pool is not None:
+            pool.close()
+            pool.join()
 
     total_time = time.time() - start_time
     result = optimizer.result
