@@ -16,6 +16,7 @@ import argparse
 import json
 import logging
 import pickle
+import signal
 import time
 from datetime import UTC, datetime
 from multiprocessing import Pool
@@ -421,8 +422,6 @@ def _init_worker(log_level: int) -> None:
     Args:
         log_level: Logging level to use in worker.
     """
-    import signal
-
     # Ignore SIGINT in workers - parent will handle it and terminate pool
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
