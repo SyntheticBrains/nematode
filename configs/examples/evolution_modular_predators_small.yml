@@ -1,6 +1,6 @@
-# Evolutionary Optimization - Foraging Only (No Predators)
-# Simpler environment to verify evolution works before adding predators
-# Based on modular_dynamic_small.yml
+# Evolutionary Optimization - Small Environment with Predators
+# Based on modular_predators_small.yml
+# Tests evolution on predator avoidance where gradient methods struggle
 
 max_steps: 500
 brain:
@@ -24,6 +24,8 @@ reward:
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0.1
   penalty_starvation: 2.0
+  penalty_predator_death: 2.0
+  penalty_predator_proximity: 0.1
   stuck_position_threshold: 3
 
 satiety:
@@ -45,6 +47,12 @@ environment:
       gradient_decay_constant: 8.0
       gradient_strength: 1.0
 
-    # Predators disabled for simpler baseline
     predators:
-      enabled: false
+      enabled: true
+      count: 2
+      speed: 1.0
+      movement_pattern: random
+      detection_radius: 8
+      kill_radius: 0
+      gradient_decay_constant: 12.0
+      gradient_strength: 1.0

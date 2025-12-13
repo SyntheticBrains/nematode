@@ -42,7 +42,7 @@ artifacts/
 
 ```bash
 # 1. Run evolution (outputs to evolution_results/)
-uv run python scripts/run_evolution.py --config configs/examples/evolution_foraging_only.yml ...
+uv run python scripts/run_evolution.py --config configs/examples/evolution_modular_foraging_small.yml ...
 
 # 2. Copy notable results to artifacts/
 cp -r evolution_results/20251209_205950 artifacts/evolutions/

@@ -24,15 +24,15 @@ class TestPresetConfigurations:
         ("config_file", "expected_brain", "expected_env_type"),
         [
             # Dynamic foraging configs
-            ("modular_dynamic_small.yml", "modular", "dynamic"),
-            ("modular_dynamic_medium.yml", "modular", "dynamic"),
-            ("modular_dynamic_large.yml", "modular", "dynamic"),
+            ("modular_foraging_small.yml", "modular", "dynamic"),
+            ("modular_foraging_medium.yml", "modular", "dynamic"),
+            ("modular_foraging_large.yml", "modular", "dynamic"),
             # Static maze configs
-            ("modular_simple_medium.yml", "modular", "static"),
-            ("qmodular_simple_medium.yml", "qmodular", "static"),
-            ("mlp_simple_medium.yml", "mlp", "static"),
-            ("qmlp_simple_medium.yml", "qmlp", "static"),
-            ("spiking_simple_medium.yml", "spiking", "static"),
+            ("modular_static_medium.yml", "modular", "static"),
+            ("qmodular_static_medium.yml", "qmodular", "static"),
+            ("mlp_static_medium.yml", "mlp", "static"),
+            ("qmlp_static_medium.yml", "qmlp", "static"),
+            ("spiking_static_medium.yml", "spiking", "static"),
         ],
     )
     def test_config_loads_correctly(
@@ -128,12 +128,12 @@ class TestPresetConfigurations:
         ("config_file", "expected_shots"),
         [
             # Quantum modular architectures
-            ("modular_dynamic_small.yml", 3000),
-            ("modular_dynamic_medium.yml", 3000),
-            ("modular_dynamic_large.yml", 3000),
-            ("modular_simple_medium.yml", 1500),
+            ("modular_foraging_small.yml", 3000),
+            ("modular_foraging_medium.yml", 3000),
+            ("modular_foraging_large.yml", 3000),
+            ("modular_static_medium.yml", 1500),
             # Other quantum architectures
-            ("qmodular_simple_medium.yml", 1000),
+            ("qmodular_static_medium.yml", 1000),
             # Note: qmlp is Q-learning MLP, not quantum - it doesn't use shots
         ],
     )
@@ -156,7 +156,7 @@ class TestPresetConfigurations:
     @pytest.mark.parametrize(
         "config_file",
         [
-            "spiking_simple_medium.yml",
+            "spiking_static_medium.yml",
         ],
     )
     def test_classical_configs_structure(self, config_dir, config_file):
