@@ -368,7 +368,7 @@ class QuantumNematodeAgent:
                 raise ValueError(error_message)
 
         return BrainParams(
-            # Combined gradients (backward compatibility)
+            # Combined gradients
             gradient_strength=gradient_strength,
             gradient_direction=gradient_direction,
             # Separated LOCAL gradients (egocentric sensing)
