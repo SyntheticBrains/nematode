@@ -16,6 +16,7 @@ import logging
 import pickle
 import time
 from datetime import UTC, datetime
+from multiprocessing import Pool
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -444,8 +445,6 @@ def run_evolution(  # noqa: C901, PLR0913, PLR0915
 
             # Evaluate fitness
             if parallel_workers > 1:
-                from multiprocessing import Pool
-
                 eval_args = [(sol, config_path, episodes) for sol in solutions]
                 with Pool(
                     processes=parallel_workers,
