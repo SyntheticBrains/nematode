@@ -394,10 +394,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
 
     # Update the agent to use the selected brain architecture and environment
-    use_separated_gradients = False
+    # Check env capability directly to avoid config/env drift
+    use_separated_gradients = hasattr(env, "get_separated_gradients") and callable(
+        env.get_separated_gradients,
+    )
     if environment_config.type == "dynamic":
         dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
-        use_separated_gradients = dynamic_config.use_separated_gradients
+        use_separated_gradients = use_separated_gradients and dynamic_config.use_separated_gradients
 
     agent = QuantumNematodeAgent(
         brain=brain,
