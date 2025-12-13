@@ -178,6 +178,6 @@ The capacity gap is ~300x. More qubits didn't help because the learning problem 
 |-----------|---------------|----------------|
 | shots | 1500 | 3000 (too many) |
 | initial_lr | 0.015 | 0.5 (too high) |
-| decay_rate | 0.9995 (exp) | 0.001 (too fast) |
+| decay_rate | 0.9995 (exponential) | 0.001 (too fast) |
 | min_lr | 0.003 | 0 or 0.001 |
 | gradient_method | norm_clip | clip |
