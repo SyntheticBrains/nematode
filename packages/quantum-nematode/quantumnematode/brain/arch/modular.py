@@ -69,6 +69,7 @@ for scalable quantum machine learning applications.
 """
 
 import os
+import time
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -1092,8 +1093,6 @@ class ModularBrain(QuantumBrain):
         accumulated_gradients = [0.0] * n_params
 
         # For each timestep, compute parameter-shift gradients weighted by G_t
-        import time
-
         total_timesteps = len(episode_buffer)
         logger.info(
             f"Computing trajectory gradients for {total_timesteps} timesteps "
