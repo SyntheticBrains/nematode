@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Run the Quantum Nematode simulation."""
 
 import argparse

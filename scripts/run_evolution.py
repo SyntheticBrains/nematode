@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Run evolutionary optimization for quantum brain parameters.
 
 This script uses population-based search (CMA-ES or GA) to find optimal
