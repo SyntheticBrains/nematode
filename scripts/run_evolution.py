@@ -669,7 +669,7 @@ def save_results(
     logger.info(f"Saved history: {history_file}")
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915
     """Run evolutionary optimization."""
     args = parse_arguments()
 
@@ -706,6 +706,15 @@ def main() -> None:
     logger.info(f"Session ID: {timestamp}")
     logger.info(f"Config file: {args.config}")
     logger.info(f"Output directory: {output_dir}")
+
+    # Log all run arguments for reproducibility
+    logger.info(f"Algorithm: {args.algorithm.upper()}")
+    logger.info(f"Generations: {args.generations}")
+    logger.info(f"Population size: {args.population}")
+    logger.info(f"Episodes per eval: {args.episodes}")
+    logger.info(f"Sigma (step size): {args.sigma}")
+    logger.info(f"Parallel workers: {args.parallel}")
+    logger.info(f"Random seed: {args.seed}")
 
     # Get number of parameters from brain
     brain = create_brain_from_config(args.config)
