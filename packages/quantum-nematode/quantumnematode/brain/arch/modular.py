@@ -1232,7 +1232,7 @@ class ModularBrain(QuantumBrain):
 
     def parameter_shift_gradients(  # noqa: C901, PLR0912, PLR0915
         self,
-        params: BrainParams,  # noqa: ARG002
+        params: BrainParams,
         action: ActionData,
         reward: float,
         shift: float = np.pi / 4,
@@ -1267,11 +1267,15 @@ class ModularBrain(QuantumBrain):
         circuits = []
 
         if self.device == DeviceType.QPU and self.perf_mgmt is not None:
-            # For Q-CTRL, use untranspiled circuit
-            cached_circuit = self._get_cached_circuit()
+            # For Q-CTRL, build circuit with actual features from params
+            # (Q-CTRL recommends untranspiled circuits)
+            input_params = {
+                module.value: extract_features_for_module(module, params) for module in self.modules
+            }
+            qc = self.build_brain(input_params)
             for plus, minus in param_sets:
-                circuits.append(cached_circuit.assign_parameters(plus, inplace=False))
-                circuits.append(cached_circuit.assign_parameters(minus, inplace=False))
+                circuits.append(qc.assign_parameters(plus, inplace=False))
+                circuits.append(qc.assign_parameters(minus, inplace=False))
         else:
             # For standard execution, use transpiled circuit
             transpiled = self._get_transpiled()
