@@ -281,6 +281,8 @@ class TestModuleName:
         assert ModuleName.OXYGEN.value == "oxygen"
         assert ModuleName.VISION.value == "vision"
         assert ModuleName.ACTION.value == "action"
+        assert ModuleName.APPETITIVE.value == "appetitive"
+        assert ModuleName.AVERSIVE.value == "aversive"
 
     def test_all_modules_have_extractors(self):
         """Test that all module names have corresponding feature extractors."""
