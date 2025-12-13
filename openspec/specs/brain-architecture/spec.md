@@ -234,4 +234,3 @@ The system SHALL provide a classical brain with matched parameter count for quan
 - **WHEN** comparing to classical baseline
 - **THEN** the classical brain SHALL have exactly N parameters
 - **AND** SHALL use the same evolution process for fair comparison
-
