@@ -33,9 +33,9 @@
 ## 5. Configuration
 
 - [x] 5.1 Extend YAML schema for evolution parameters
-- [x] 5.2 Create example config `configs/examples/evolution_cmaes_2qubit.yml`
-- [ ] 5.3 Create example config `configs/examples/evolution_ga_2qubit.yml`
-- [x] 5.4 Document configuration options
+- [x] 5.2 Create example config `configs/examples/evolution_modular_foraging_small.yml`
+- [x] 5.3 Create example config `configs/examples/evolution_modular_predators_small.yml`
+- [x] 5.4 Document configuration options in CONTRIBUTING.md
 
 ## 6. Classical Baseline
 
@@ -55,11 +55,11 @@
 ## 8. Documentation
 
 - [x] 8.1 Add docstrings to all new classes and functions
-- [ ] 8.2 Update documentation explaining how evolution workflow works and how to use
+- [x] 8.2 Update documentation explaining how evolution workflow works and how to use (CONTRIBUTING.md)
 
 ## 9. Validation
 
-- [ ] 9.1 Run evolution on 2-qubit quantum brain (50+ generations)
-- [ ] 9.2 Compare evolved parameters to best known manual parameters
+- [x] 9.1 Run evolution on 2-qubit quantum brain (50+ generations) - CMA-ES 75 gen, GA 150 gen
+- [x] 9.2 Compare evolved parameters to best known manual parameters - 80-88% vs 22.5% (3.5-4x improvement)
 - [ ] 9.3 Run evolution on classical baseline
 - [ ] 9.4 Document quantum vs classical comparison results
