@@ -852,7 +852,7 @@ class ModularBrain(QuantumBrain):
         # Avoid division by zero for constant returns
         if std_return < 1e-8:  # noqa: PLR2004
             logger.debug(
-                f"Returns have near-zero variance (std={std_return:.2e}), returning zero gradients",
+                f"Returns have near-zero variance (std={std_return:.2e}), returning zero returns",
             )
             return [0.0] * len(returns)
 
