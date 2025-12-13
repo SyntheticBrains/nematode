@@ -1,5 +1,7 @@
 # Tasks: Add Evolutionary Parameter Optimization
 
+> **Metrics Note**: Performance figures in this document (e.g., 88% evolved quantum, 92% MLP baseline) were observed during PR #15 development runs on 2025-12-13. See `docs/experiments/logbooks/002-evolutionary-optimization.md` for detailed benchmark results and methodology.
+
 ## 1. Core Infrastructure
 
 - [x] 1.1 Add `cma` dependency to pyproject.toml
