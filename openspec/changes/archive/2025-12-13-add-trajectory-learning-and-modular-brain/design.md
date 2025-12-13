@@ -271,11 +271,4 @@ No migration script needed - existing configs using `chemotaxis` module continue
 
 **Recommendation**: Keep full entanglement (current behavior) unless benchmarks show degradation.
 
-### Biological Accuracy Constraint (RESOLVED)
-**Question**: Should aversive features include "predator proximity" or "danger flag"?
-
-**Resolution**: NO - both would be external environment state, not biologically realistic sensing.
-- C. elegans only senses chemical gradients (attractive and repulsive)
-- Aversive module mirrors appetitive: gradient strength + direction only
-- Proximity is already encoded in gradient strength (exponential decay)
-- No "danger flag" needed - gradient magnitude provides urgency signal
+Note: The biological accuracy constraint (whether aversive features should include "predator proximity" or "danger flag") was resolved during design - see Section 3 "Aversive Features" for the rationale. The decision was to use only biologically realistic sensory inputs (gradient strength and direction).
