@@ -411,7 +411,6 @@ def evaluate_fitness(  # noqa: PLR0913
     param_array: list[float],
     config_path: str,
     episodes: int,
-    *,
     base_seed: int | None = None,
     gen: int = 0,
     candidate_idx: int = 0,
