@@ -136,6 +136,33 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _validate_args(args: argparse.Namespace) -> None:
+    """Validate CLI arguments for sensible values.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Raises
+    ------
+        ValueError: If any argument has an invalid value.
+    """
+    if args.episodes <= 0:
+        msg = "--episodes must be > 0"
+        raise ValueError(msg)
+    if args.generations <= 0:
+        msg = "--generations must be > 0"
+        raise ValueError(msg)
+    if args.population <= 0:
+        msg = "--population must be > 0"
+        raise ValueError(msg)
+    if args.parallel <= 0:
+        msg = "--parallel must be > 0"
+        raise ValueError(msg)
+    if args.sigma <= 0:
+        msg = "--sigma must be > 0"
+        raise ValueError(msg)
+
+
 def load_init_params(init_params_path: str, param_keys: list[str]) -> list[float]:
     """Load initial parameters from a JSON file.
 
@@ -676,6 +703,7 @@ def save_results(
 def main() -> None:  # noqa: PLR0915
     """Run evolutionary optimization."""
     args = parse_arguments()
+    _validate_args(args)
 
     # Configure logging with console output
     log_level = getattr(logging, args.log_level)
