@@ -16,6 +16,7 @@ import argparse
 import json
 import logging
 import pickle
+import random
 import signal
 import time
 from datetime import UTC, datetime
@@ -451,10 +452,11 @@ def evaluate_fitness(  # noqa: PLR0913
     successes = 0
 
     for ep in range(episodes):
-        # Seed RNG for reproducibility when base_seed is provided
+        # Seed RNGs for reproducibility when base_seed is provided
         if base_seed is not None:
             episode_seed = _derive_episode_seed(base_seed, gen, candidate_idx, ep)
             np.random.seed(episode_seed)  # noqa: NPY002
+            random.seed(episode_seed)
 
         env = create_env_from_config(config_path)
         if run_episode(
