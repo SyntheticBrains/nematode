@@ -386,7 +386,7 @@ def evaluate_fitness(
     config = load_simulation_config(config_path)
     satiety_config = configure_satiety(config)
 
-    # Get max_steps from config (important! default was 200 but configs may have 500+)
+    # Get max_steps from config
     max_steps = config.max_steps or 500
 
     # Check if separated gradients are needed (for appetitive/aversive modules)
@@ -641,6 +641,9 @@ def save_results(
     timestamp: str,
 ) -> None:
     """Save evolution results to files."""
+    # Ensure output directory exists (defensive - should already exist from main/run_evolution)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Save best parameters as JSON
     brain = create_brain_from_config(config_path)
     param_keys = list(brain.parameter_values.keys())
