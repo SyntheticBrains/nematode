@@ -13,6 +13,7 @@ Example usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import pickle
@@ -391,8 +392,12 @@ def run_episode(  # noqa: PLR0913
 def _derive_episode_seed(base_seed: int, gen: int, candidate_idx: int, episode: int) -> int:
     """Derive a deterministic seed for a specific episode.
 
-    Uses a hash of (base_seed, gen, candidate_idx, episode) to produce
+    Uses BLAKE2b hash of (base_seed, gen, candidate_idx, episode) to produce
     independent, reproducible seeds for each episode evaluation.
+
+    Note: We use hashlib.blake2b instead of Python's hash() because hash()
+    is salted (randomized per process since Python 3.3), which would break
+    reproducibility across multiprocessing workers and separate runs.
 
     Args:
         base_seed: Base seed from --seed argument.
@@ -404,8 +409,10 @@ def _derive_episode_seed(base_seed: int, gen: int, candidate_idx: int, episode: 
     -------
         Deterministic seed in valid range for numpy.
     """
-    # Use tuple hash, mask to 32-bit for numpy compatibility
-    return hash((base_seed, gen, candidate_idx, episode)) & 0xFFFF_FFFF
+    # Stable hash independent of PYTHONHASHSEED and process
+    payload = f"{base_seed}:{gen}:{candidate_idx}:{episode}".encode()
+    digest = hashlib.blake2b(payload, digest_size=8).digest()
+    return int.from_bytes(digest, byteorder="little") & 0xFFFF_FFFF
 
 
 def evaluate_fitness(  # noqa: PLR0913
