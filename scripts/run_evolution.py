@@ -731,13 +731,16 @@ def save_results(
     # Save best parameters as JSON
     brain = create_brain_from_config(config_path)
     param_keys = list(brain.parameter_values.keys())
-    best_params_dict = dict(zip(param_keys, result.best_params, strict=False))
+    # Cast to float to ensure JSON serialization (handles numpy.float64)
+    best_params_list = [float(x) for x in result.best_params]
+    best_params_dict = dict(zip(param_keys, best_params_list, strict=False))
 
     results_file = output_dir / f"best_params_{timestamp}.json"
     with results_file.open("w") as f:
         json.dump(
             {
                 "best_params": best_params_dict,
+                "param_keys": param_keys,  # Preserve key order for self-describing artifact
                 "best_success_rate": -result.best_fitness,
                 "generations": result.generations,
                 "timestamp": timestamp,
