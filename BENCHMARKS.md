@@ -182,6 +182,7 @@ This creates a benchmark file in `benchmarks/<category>/<experiment-id>.json`.
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ modular | 0.762 | 100% | 207 | 20 | 0.000 | @chrisjz | 2025-12-14 |
 | ✓ modular | 0.633 | 84% | 350 | 27 | 0.136 | @chrisjz | 2025-11-30 |
 | ✓ modular | 0.600 | 81% | 380 | 38 | 0.151 | @chrisjz | 2025-11-30 |
 | ✓ modular | 0.598 | 80% | 317 | 43 | 0.162 | @chrisjz | 2025-11-28 |
