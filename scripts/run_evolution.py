@@ -136,7 +136,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_init_params(init_params_path: str, config_path: str) -> list[float]:
+def load_init_params(init_params_path: str, param_keys: list[str]) -> list[float]:
     """Load initial parameters from a JSON file.
 
     Supports two formats:
@@ -145,7 +145,7 @@ def load_init_params(init_params_path: str, config_path: str) -> list[float]:
 
     Args:
         init_params_path: Path to JSON file with parameters.
-        config_path: Path to YAML config (to get expected parameter order).
+        param_keys: Expected parameter names in order (from brain.parameter_values.keys()).
 
     Returns
     -------
@@ -157,10 +157,6 @@ def load_init_params(init_params_path: str, config_path: str) -> list[float]:
 
     # Handle both formats
     params_dict = data.get("best_params", data)
-
-    # Get expected parameter keys from a fresh brain
-    brain = create_brain_from_config(config_path)
-    param_keys = list(brain.parameter_values.keys())
 
     # Map loaded params to the expected order
     param_array = []
@@ -726,13 +722,14 @@ def main() -> None:  # noqa: PLR0915
 
     # Get number of parameters from brain
     brain = create_brain_from_config(args.config)
-    num_params = len(brain.parameter_values)
+    param_keys = list(brain.parameter_values.keys())
+    num_params = len(param_keys)
     logger.info(f"Number of parameters: {num_params}")
 
     # Get initial parameters
     if args.init_params:
         logger.info(f"Loading initial parameters from: {args.init_params}")
-        x0 = load_init_params(args.init_params, args.config)
+        x0 = load_init_params(args.init_params, param_keys)
         logger.info(f"Initial parameters: {x0}")
     else:
         # Use current values from brain (typically random small init)
