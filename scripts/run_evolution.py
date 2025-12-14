@@ -387,10 +387,34 @@ def run_episode(  # noqa: PLR0913
         brain.post_process_episode(episode_success=success)
 
 
-def evaluate_fitness(
+def _derive_episode_seed(base_seed: int, gen: int, candidate_idx: int, episode: int) -> int:
+    """Derive a deterministic seed for a specific episode.
+
+    Uses a hash of (base_seed, gen, candidate_idx, episode) to produce
+    independent, reproducible seeds for each episode evaluation.
+
+    Args:
+        base_seed: Base seed from --seed argument.
+        gen: Generation number.
+        candidate_idx: Index of candidate in population.
+        episode: Episode number within evaluation.
+
+    Returns
+    -------
+        Deterministic seed in valid range for numpy.
+    """
+    # Use tuple hash, mask to 32-bit for numpy compatibility
+    return hash((base_seed, gen, candidate_idx, episode)) & 0xFFFF_FFFF
+
+
+def evaluate_fitness(  # noqa: PLR0913
     param_array: list[float],
     config_path: str,
     episodes: int,
+    *,
+    base_seed: int | None = None,
+    gen: int = 0,
+    candidate_idx: int = 0,
 ) -> float:
     """Evaluate fitness of a parameter set.
 
@@ -400,6 +424,14 @@ def evaluate_fitness(
         param_array: Flat array of parameter values.
         config_path: Path to YAML config file.
         episodes: Number of episodes to run.
+        base_seed: Optional base seed for reproducibility. When provided,
+            each episode gets a deterministic seed derived from
+            (base_seed, gen, candidate_idx, episode). This seeds numpy RNG
+            to ensure independent randomness across parallel workers. Note:
+            environment uses secrets module for food/predator placement,
+            which is not seedable by design.
+        gen: Generation number (used for seed derivation).
+        candidate_idx: Index of candidate in population (used for seed derivation).
 
     Returns
     -------
@@ -419,7 +451,12 @@ def evaluate_fitness(
 
     successes = 0
 
-    for _ in range(episodes):
+    for ep in range(episodes):
+        # Seed RNG for reproducibility when base_seed is provided
+        if base_seed is not None:
+            episode_seed = _derive_episode_seed(base_seed, gen, candidate_idx, ep)
+            np.random.seed(episode_seed)  # noqa: NPY002
+
         env = create_env_from_config(config_path)
         if run_episode(
             brain,
@@ -491,6 +528,7 @@ def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
     output_dir: Path,
     parallel_workers: int = 1,
     log_level: int = logging.WARNING,
+    base_seed: int | None = None,
 ) -> tuple[EvolutionResult, bool]:
     """Run evolutionary optimization loop.
 
@@ -502,6 +540,8 @@ def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
         output_dir: Directory to save results.
         parallel_workers: Number of parallel workers.
         log_level: Logging level for worker processes.
+        base_seed: Optional base seed for reproducible episode evaluation.
+            When provided, each episode gets a deterministic seed.
 
     Returns
     -------
@@ -538,10 +578,23 @@ def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
                 # Evaluate fitness
                 if pool is not None:
-                    eval_args = [(sol, config_path, episodes) for sol in solutions]
+                    eval_args = [
+                        (sol, config_path, episodes, base_seed, gen, idx)
+                        for idx, sol in enumerate(solutions)
+                    ]
                     fitnesses = pool.starmap(evaluate_fitness, eval_args)
                 else:
-                    fitnesses = [evaluate_fitness(sol, config_path, episodes) for sol in solutions]
+                    fitnesses = [
+                        evaluate_fitness(
+                            sol,
+                            config_path,
+                            episodes,
+                            base_seed=base_seed,
+                            gen=gen,
+                            candidate_idx=idx,
+                        )
+                        for idx, sol in enumerate(solutions)
+                    ]
 
                 # Report fitness to optimizer
                 optimizer.tell(solutions, fitnesses)
@@ -796,6 +849,7 @@ def main() -> None:  # noqa: PLR0915
         output_dir=output_dir,
         parallel_workers=args.parallel,
         log_level=log_level,
+        base_seed=args.seed,
     )
 
     # Save results (unless user chose not to on interrupt)
