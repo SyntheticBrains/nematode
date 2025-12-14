@@ -12,7 +12,7 @@ from quantumnematode.env.theme import Theme
 
 
 class TestStaticEnvironment:
-    """Test cases for StaticEnvironment (backward compatibility)."""
+    """Test cases for StaticEnvironment."""
 
     @pytest.fixture
     def maze_env(self):

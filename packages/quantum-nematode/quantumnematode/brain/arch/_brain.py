@@ -128,11 +128,31 @@ class BrainParams(BaseModel):
 
     gradient_strength: float | None = Field(
         default=None,
-        description="Strength of the chemical gradient.",
+        description="Strength of the chemical gradient (combined food + predator).",
     )
     gradient_direction: float | None = Field(
         default=None,
-        description="Direction of the chemical gradient.",
+        description="Direction of the chemical gradient (combined food + predator).",
+    )
+    food_gradient_strength: float | None = Field(
+        default=None,
+        description="LOCAL food gradient magnitude sensed at agent's position.",
+    )
+    food_gradient_direction: float | None = Field(
+        default=None,
+        description="LOCAL food gradient direction sensed at agent's position (radians).",
+    )
+    predator_gradient_strength: float | None = Field(
+        default=None,
+        description="LOCAL predator gradient magnitude sensed at agent's position.",
+    )
+    predator_gradient_direction: float | None = Field(
+        default=None,
+        description="LOCAL predator gradient direction sensed at agent's position (radians).",
+    )
+    satiety: float | None = Field(
+        default=None,
+        description="Current satiety level of the agent (hunger state).",
     )
     agent_position: tuple[float, float] | None = Field(
         default=None,
@@ -165,7 +185,11 @@ class Brain(Protocol):
 
     def update_memory(self, reward: float | None) -> None: ...
 
-    def post_process_episode(self) -> None: ...
+    def prepare_episode(self) -> None:
+        """Prepare for a new episode (called at episode start)."""
+        ...
+
+    def post_process_episode(self, *, episode_success: bool | None = None) -> None: ...
 
     def copy(self) -> "Brain": ...
 

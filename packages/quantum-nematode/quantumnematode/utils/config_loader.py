@@ -35,6 +35,7 @@ from quantumnematode.optimizers.learning_rate import (
     DEFAULT_ADAM_LEARNING_RATE_BETA1,
     DEFAULT_ADAM_LEARNING_RATE_BETA2,
     DEFAULT_ADAM_LEARNING_RATE_EPSILON,
+    DEFAULT_CONSTANT_LEARNING_RATE,
     DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_FACTOR,
     DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE,
     DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE,
@@ -46,6 +47,7 @@ from quantumnematode.optimizers.learning_rate import (
     DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MAX,
     DEFAULT_PERFORMANCE_BASED_LEARNING_RATE_MIN,
     AdamLearningRate,
+    ConstantLearningRate,
     DecayType,
     DynamicLearningRate,
     LearningRateMethod,
@@ -67,6 +69,9 @@ class BrainContainerConfig(BaseModel):
 class LearningRateParameters(BaseModel):
     """Parameters for configuring the learning rate."""
 
+    # For constant learning rate
+    learning_rate: float = DEFAULT_CONSTANT_LEARNING_RATE
+    # For dynamic/adam/performance-based learning rates
     initial_learning_rate: float = 0.1
     decay_rate: float = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_RATE
     decay_type: str = DEFAULT_DYNAMIC_LEARNING_RATE_DECAY_TYPE.value
@@ -156,6 +161,7 @@ class DynamicEnvironmentConfig(BaseModel):
 
     grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
+    use_separated_gradients: bool = False  # Whether to use separated food/predator gradients
 
     # Nested configuration subsections
     foraging: ForagingConfig | None = None
@@ -332,7 +338,7 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
 def configure_learning_rate(
     config: SimulationConfig,
-) -> DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
+) -> ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
     """
     Configure the learning rate based on the provided configuration.
 
@@ -341,7 +347,8 @@ def configure_learning_rate(
 
     Returns
     -------
-        DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
+        ConstantLearningRate | DynamicLearningRate |
+                AdamLearningRate | PerformanceBasedLearningRate:
             Configured learning rate object.
     """
     lr_cfg = config.learning_rate
@@ -353,6 +360,10 @@ def configure_learning_rate(
 
     method = lr_cfg.method
     params = lr_cfg.parameters or LearningRateParameters()
+    if method == LearningRateMethod.CONSTANT:
+        return ConstantLearningRate(
+            learning_rate=params.learning_rate,
+        )
     if method == LearningRateMethod.DYNAMIC:
         decay_type = _resolve_decay_type(params)
         return DynamicLearningRate(

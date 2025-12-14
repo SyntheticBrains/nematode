@@ -279,7 +279,7 @@ class BaseEnvironment(ABC):
             raise ValueError(error_message)
 
         if action == Action.STAY:
-            logger.info("Action is stay: staying in place.")
+            logger.debug("Action is stay: staying in place.")
             return
 
         # Define direction mappings
@@ -321,7 +321,7 @@ class BaseEnvironment(ABC):
         elif new_direction == Direction.LEFT and self.agent_pos[0] > 0:
             new_pos[0] -= 1
         else:
-            logger.warning(
+            logger.debug(
                 f"Collision against boundary with action: {action.value}, staying in place.",
             )
             self.current_direction = previous_direction
@@ -329,7 +329,7 @@ class BaseEnvironment(ABC):
 
         # Check for collision with the body
         if tuple(new_pos) in self.body:
-            logger.warning(f"Collision detected at {new_pos}, staying in place.")
+            logger.debug(f"Collision detected at {new_pos}, staying in place.")
             self.current_direction = previous_direction
             return
 
@@ -740,6 +740,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.predator_gradient_decay = predator_gradient_decay
         self.predator_gradient_strength = predator_gradient_strength
 
+        # Validate gradient parameters to prevent divide-by-zero in exp(-distance/decay)
+        if self.gradient_decay_constant <= 0:
+            msg = f"gradient_decay_constant must be > 0, got {self.gradient_decay_constant}"
+            raise ValueError(msg)
+        if self.predator_gradient_decay <= 0:
+            msg = f"predator_gradient_decay must be > 0, got {self.predator_gradient_decay}"
+            raise ValueError(msg)
+
         # Initialize food sources using Poisson disk sampling
         self.foods: list[tuple[int, int]] = []
         self._initialize_foods()
@@ -874,6 +882,90 @@ class DynamicForagingEnvironment(BaseEnvironment):
         logger.warning(f"Failed to spawn food after {MAX_POISSON_ATTEMPTS} attempts")
         return False
 
+    def _compute_food_gradient_vector(
+        self,
+        position: tuple[int, ...],
+    ) -> tuple[float, float]:
+        """
+        Compute the local food gradient vector (superposition of all food sources).
+
+        Parameters
+        ----------
+        position : tuple[int, ...]
+            Position to query gradient at.
+
+        Returns
+        -------
+        tuple[float, float]
+            Food gradient vector (x, y) components.
+        """
+        vector_x = 0.0
+        vector_y = 0.0
+
+        for food in self.foods:
+            dx = food[0] - position[0]
+            dy = food[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                continue
+
+            # Exponential decay gradient (positive/attractive)
+            strength = self.gradient_strength_base * np.exp(
+                -distance / self.gradient_decay_constant,
+            )
+
+            # Compute direction vector
+            direction = np.arctan2(dy, dx)
+            vector_x += strength * np.cos(direction)
+            vector_y += strength * np.sin(direction)
+
+        return vector_x, vector_y
+
+    def _compute_predator_gradient_vector(
+        self,
+        position: tuple[int, ...],
+    ) -> tuple[float, float]:
+        """
+        Compute the local predator gradient vector (superposition of all predators).
+
+        Parameters
+        ----------
+        position : tuple[int, ...]
+            Position to query gradient at.
+
+        Returns
+        -------
+        tuple[float, float]
+            Predator gradient vector (x, y) components.
+            Note: Values are negative (repulsive gradient).
+        """
+        vector_x = 0.0
+        vector_y = 0.0
+
+        if not self.predators_enabled:
+            return vector_x, vector_y
+
+        for predator in self.predators:
+            dx = predator.position[0] - position[0]
+            dy = predator.position[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                continue
+
+            # Exponential decay gradient (negative/repulsive)
+            strength = -self.predator_gradient_strength * np.exp(
+                -distance / self.predator_gradient_decay,
+            )
+
+            # Compute direction vector (pointing away from predator due to negative strength)
+            direction = np.arctan2(dy, dx)
+            vector_x += strength * np.cos(direction)
+            vector_y += strength * np.sin(direction)
+
+        return vector_x, vector_y
+
     def get_state(
         self,
         position: tuple[int, ...],
@@ -898,53 +990,13 @@ class DynamicForagingEnvironment(BaseEnvironment):
         tuple[float, float]
             Total gradient strength and direction (food attraction + predator repulsion).
         """
-        # Compute gradient from food sources (attractive)
-        total_vector_x = 0.0
-        total_vector_y = 0.0
+        # Compute gradient vectors using helper methods
+        food_x, food_y = self._compute_food_gradient_vector(position)
+        pred_x, pred_y = self._compute_predator_gradient_vector(position)
 
-        for food in self.foods:
-            dx = food[0] - position[0]
-            dy = food[1] - position[1]
-            distance = np.sqrt(dx**2 + dy**2)
-
-            if distance == 0:
-                continue
-
-            # Exponential decay gradient (positive/attractive)
-            strength = self.gradient_strength_base * np.exp(
-                -distance / self.gradient_decay_constant,
-            )
-
-            # Compute direction vector
-            direction = np.arctan2(dy, dx)
-            vector_x = strength * np.cos(direction)
-            vector_y = strength * np.sin(direction)
-
-            total_vector_x += vector_x
-            total_vector_y += vector_y
-
-        # Compute gradient from predators (repulsive)
-        if self.predators_enabled:
-            for predator in self.predators:
-                dx = predator.position[0] - position[0]
-                dy = predator.position[1] - position[1]
-                distance = np.sqrt(dx**2 + dy**2)
-
-                if distance == 0:
-                    continue
-
-                # Exponential decay gradient (negative/repulsive)
-                strength = -self.predator_gradient_strength * np.exp(
-                    -distance / self.predator_gradient_decay,
-                )
-
-                # Compute direction vector (pointing away from predator due to negative strength)
-                direction = np.arctan2(dy, dx)
-                vector_x = strength * np.cos(direction)
-                vector_y = strength * np.sin(direction)
-
-                total_vector_x += vector_x
-                total_vector_y += vector_y
+        # Superpose food (attractive) and predator (repulsive) gradients
+        total_vector_x = food_x + pred_x
+        total_vector_y = food_y + pred_y
 
         # Compute magnitude and direction of superposed gradient
         gradient_magnitude = np.sqrt(total_vector_x**2 + total_vector_y**2)
@@ -958,6 +1010,67 @@ class DynamicForagingEnvironment(BaseEnvironment):
             )
 
         return float(gradient_magnitude), float(gradient_direction)
+
+    def get_separated_gradients(
+        self,
+        position: tuple[int, ...],
+        *,
+        disable_log: bool = False,
+    ) -> dict[str, float]:
+        """
+        Get separated local gradient vectors for appetitive/aversive modules.
+
+        Decomposes the superimposed gradient at the agent's current position into:
+        - Appetitive component: local chemical gradient from food sources (attractive)
+        - Aversive component: local chemical gradient from predators (repulsive)
+
+        This provides egocentric sensory information that a nematode could actually sense
+        through its chemoreceptors, without requiring global knowledge of object positions.
+
+        Parameters
+        ----------
+        position : tuple[int, ...]
+            Position to query local gradients at.
+        disable_log : bool
+            Whether to disable debug logging.
+
+        Returns
+        -------
+        dict[str, float]
+            Dictionary containing LOCAL sensory information:
+            - food_gradient_strength: Magnitude of local food gradient vector
+            - food_gradient_direction: Direction of local food gradient vector (radians)
+            - predator_gradient_strength: Magnitude of local predator gradient vector
+            - predator_gradient_direction: Direction of local predator gradient vector (radians)
+        """
+        # Compute gradient vectors using helper methods
+        food_vector_x, food_vector_y = self._compute_food_gradient_vector(position)
+        predator_vector_x, predator_vector_y = self._compute_predator_gradient_vector(position)
+
+        # Convert vectors to magnitude + direction (what sensors detect)
+        food_magnitude = np.sqrt(food_vector_x**2 + food_vector_y**2)
+        food_direction = np.arctan2(food_vector_y, food_vector_x) if food_magnitude > 0 else 0.0
+
+        predator_magnitude = np.sqrt(predator_vector_x**2 + predator_vector_y**2)
+        predator_direction = (
+            np.arctan2(predator_vector_y, predator_vector_x) if predator_magnitude > 0 else 0.0
+        )
+
+        # TODO: Convert to dataclass
+        result = {
+            "food_gradient_strength": float(food_magnitude),
+            "food_gradient_direction": float(food_direction),
+            "predator_gradient_strength": float(predator_magnitude),
+            "predator_gradient_direction": float(predator_direction),
+        }
+
+        if not disable_log:
+            logger.debug(
+                f"Local gradients: food_mag={food_magnitude:.3f}, "
+                f"predator_mag={predator_magnitude:.3f}",
+            )
+
+        return result
 
     def reached_goal(self) -> bool:
         """
@@ -1053,7 +1166,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 agent_pos[1] - predator.position[1],
             )
             if distance <= self.predator_kill_radius:
-                logger.info(
+                logger.debug(
                     f"Predator collision! Agent at {agent_pos}, Predator at {predator.position}",
                 )
                 return True

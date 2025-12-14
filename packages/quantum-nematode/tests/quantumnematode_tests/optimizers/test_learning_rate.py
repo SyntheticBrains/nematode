@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from quantumnematode.optimizers.learning_rate import (
     AdamLearningRate,
+    ConstantLearningRate,
     DecayType,
     DynamicLearningRate,
     PerformanceBasedLearningRate,
@@ -139,3 +140,42 @@ def test_performance_based_learning_rate_str():
     perf = PerformanceBasedLearningRate()
     s = str(perf)
     assert "PerformanceBasedLearningRate(" in s
+
+
+def test_constant_learning_rate_basic():
+    """Test constant learning rate returns same value."""
+    lr = ConstantLearningRate(learning_rate=0.05)
+    rates = [lr.get_learning_rate() for _ in range(5)]
+    assert all(r == 0.05 for r in rates)
+
+
+def test_constant_learning_rate_default():
+    """Test constant learning rate default value."""
+    lr = ConstantLearningRate()
+    assert lr.get_learning_rate() == 0.02  # DEFAULT_CONSTANT_LEARNING_RATE
+
+
+def test_constant_learning_rate_with_reward_magnitude():
+    """Test constant learning rate scales with reward magnitude."""
+    lr = ConstantLearningRate(learning_rate=0.1)
+    assert lr.get_learning_rate(reward_magnitude=2.0) == 0.2
+    assert lr.get_learning_rate(reward_magnitude=0.5) == 0.05
+
+
+def test_constant_learning_rate_steps_counter():
+    """Test that steps counter increments correctly."""
+    lr = ConstantLearningRate(learning_rate=0.1)
+    assert lr.steps == 0
+    lr.get_learning_rate()
+    assert lr.steps == 1
+    lr.get_learning_rate()
+    lr.get_learning_rate()
+    assert lr.steps == 3
+
+
+def test_constant_learning_rate_str():
+    """Test string representation of ConstantLearningRate."""
+    lr = ConstantLearningRate(learning_rate=0.05)
+    s = str(lr)
+    assert "ConstantLearningRate(" in s
+    assert "learning_rate=0.05" in s

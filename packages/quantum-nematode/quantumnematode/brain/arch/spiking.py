@@ -622,7 +622,10 @@ class SpikingBrain(ClassicalBrain):
             self.latest_data.reward = reward
             self.history_data.rewards.append(reward)
 
-    def post_process_episode(self) -> None:
+    def prepare_episode(self) -> None:
+        """Prepare for a new episode (no-op for SpikingBrain)."""
+
+    def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
         """Perform post-episode processing and cleanup."""
         # Update overfitting detector
         if (

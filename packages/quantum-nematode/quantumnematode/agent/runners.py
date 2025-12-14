@@ -163,6 +163,9 @@ class StandardEpisodeRunner(EpisodeRunner):
         # Initialize the agent's direction
         agent.env.current_direction = Direction.UP
 
+        # Prepare brain for new episode (e.g., save parameters for potential rollback)
+        agent.brain.prepare_episode()
+
         # Initialize distance tracking for dynamic environments
         if isinstance(agent.env, DynamicForagingEnvironment):
             # Reset food handler tracking for new episode
@@ -258,7 +261,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                             "Successfully completed episode: collected target of "
                             f"{agent.env.target_foods_to_collect} food!",
                         )
-                        agent.brain.post_process_episode()
+                        agent.brain.post_process_episode(episode_success=True)
                         agent._metrics_tracker.track_episode_completion(
                             success=True,
                             steps=agent._episode_tracker.steps,
@@ -287,7 +290,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
                     agent.brain.update_memory(reward)
-                    agent.brain.post_process_episode()
+                    agent.brain.post_process_episode(episode_success=False)
                     agent._metrics_tracker.track_episode_completion(
                         success=False,
                         steps=agent._episode_tracker.steps,
@@ -332,7 +335,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
                     agent.brain.update_memory(reward)
-                    agent.brain.post_process_episode()
+                    agent.brain.post_process_episode(episode_success=False)
                     agent._metrics_tracker.track_episode_completion(
                         success=False,
                         steps=agent._episode_tracker.steps,
@@ -366,7 +369,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
                     agent.brain.update_memory(reward)
-                    agent.brain.post_process_episode()
+                    agent.brain.post_process_episode(episode_success=False)
                     agent._metrics_tracker.track_episode_completion(
                         success=False,
                         steps=agent._episode_tracker.steps,
@@ -439,7 +442,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 )
 
                 agent.brain.update_memory(reward)
-                agent.brain.post_process_episode()
+                agent.brain.post_process_episode(episode_success=True)
 
                 logger.info(
                     f"Step {agent._episode_tracker.steps}: "
@@ -484,7 +487,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Handle max steps reached
             if agent._episode_tracker.steps >= max_steps:
                 logger.warning("Failed to complete episode: max steps reached.")
-                agent.brain.post_process_episode()
+                agent.brain.post_process_episode(episode_success=False)
                 agent._metrics_tracker.track_episode_completion(
                     success=False,
                     steps=agent._episode_tracker.steps,
@@ -509,7 +512,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     "Successfully completed episode: collected target of "
                     f"{agent.env.target_foods_to_collect} food.",
                 )
-                agent.brain.post_process_episode()
+                agent.brain.post_process_episode(episode_success=True)
                 agent._metrics_tracker.track_episode_completion(
                     success=True,
                     steps=agent._episode_tracker.steps,
@@ -527,6 +530,7 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         # Episode ended normally (loop completed without specific termination)
         logger.warning("Failed to complete episode: max steps reached.")
+        agent.brain.post_process_episode(episode_success=False)
         agent._metrics_tracker.track_episode_completion(
             success=False,
             steps=agent._episode_tracker.steps,

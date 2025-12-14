@@ -7,6 +7,8 @@ from quantumnematode.brain.modules import (
     MODULE_FEATURE_EXTRACTORS,
     ModuleName,
     RotationAxis,
+    appetitive_features,
+    aversive_features,
     chemotaxis_features,
     count_total_qubits,
     extract_features_for_module,
@@ -279,6 +281,8 @@ class TestModuleName:
         assert ModuleName.OXYGEN.value == "oxygen"
         assert ModuleName.VISION.value == "vision"
         assert ModuleName.ACTION.value == "action"
+        assert ModuleName.APPETITIVE.value == "appetitive"
+        assert ModuleName.AVERSIVE.value == "aversive"
 
     def test_all_modules_have_extractors(self):
         """Test that all module names have corresponding feature extractors."""
@@ -476,3 +480,278 @@ class TestFeatureConsistency:
         features2 = extract_features_for_module(ModuleName.CHEMOTAXIS, params)
 
         assert features1 == features2
+
+
+class TestAppetitiveFeatures:
+    """Test appetitive (food-seeking) feature extraction."""
+
+    def test_zero_food_gradient(self):
+        """Test appetitive features with zero food gradient strength."""
+        params = BrainParams(
+            food_gradient_strength=0.0,
+            food_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+            satiety=100.0,
+        )
+        features = appetitive_features(params)
+
+        # tanh(0) = 0, scaled to -π/2
+        assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
+
+    def test_strong_food_gradient(self):
+        """Test appetitive features with strong food gradient."""
+        params = BrainParams(
+            food_gradient_strength=2.0,  # Strong signal
+            food_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+            satiety=0.0,  # Starving
+        )
+        features = appetitive_features(params)
+
+        # tanh(2.0) ≈ 0.964, scaled to near π/2
+        assert features[RotationAxis.RX] > 0
+
+    def test_food_direction_aligned(self):
+        """Test when food direction aligns with agent direction."""
+        params = BrainParams(
+            food_gradient_strength=1.0,
+            food_gradient_direction=0.0,  # Food to the right
+            agent_direction=Direction.RIGHT,
+            satiety=100.0,
+        )
+        features = appetitive_features(params)
+
+        # Relative angle should be 0 (aligned)
+        assert features[RotationAxis.RY] == pytest.approx(0.0, abs=1e-6)
+
+    def test_food_direction_opposite(self):
+        """Test when food direction is opposite to agent direction."""
+        params = BrainParams(
+            food_gradient_strength=1.0,
+            food_gradient_direction=np.pi,  # Food behind
+            agent_direction=Direction.RIGHT,
+            satiety=100.0,
+        )
+        features = appetitive_features(params)
+
+        # Relative angle should be close to ±π/2
+        assert abs(features[RotationAxis.RY]) == pytest.approx(np.pi / 2, rel=0.01)
+
+    def test_rz_always_zero(self):
+        """Test that RZ is always 0.0 (currently unused, reserved for future)."""
+        # RZ is currently unused per feature contract - always returns 0.0
+        # Could be used for satiety/hunger encoding in future
+        for satiety in [0.0, 100.0, 200.0]:
+            params = BrainParams(
+                food_gradient_strength=0.5,
+                food_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=satiety,
+            )
+            features = appetitive_features(params)
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
+
+    def test_none_food_gradient(self):
+        """Test appetitive features when food gradient is None."""
+        params = BrainParams(
+            food_gradient_strength=None,
+            food_gradient_direction=None,
+            agent_direction=Direction.UP,
+            satiety=100.0,
+        )
+        features = appetitive_features(params)
+
+        # Should default to 0 strength, scaled to -π/2
+        assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
+        # Direction None should give 0.0
+        assert features[RotationAxis.RY] == pytest.approx(0.0)
+
+    def test_appetitive_deterministic(self):
+        """Test that appetitive features are deterministic."""
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=np.pi / 4,
+            agent_direction=Direction.UP,
+            satiety=75.0,
+        )
+        features1 = appetitive_features(params)
+        features2 = appetitive_features(params)
+
+        assert features1 == features2
+
+
+class TestAversiveFeatures:
+    """Test aversive (predator-avoidance) feature extraction."""
+
+    def test_zero_predator_gradient(self):
+        """Test aversive features with zero predator gradient (no threat)."""
+        params = BrainParams(
+            predator_gradient_strength=0.0,
+            predator_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+            satiety=100.0,
+        )
+        features = aversive_features(params)
+
+        # tanh(0) = 0, scaled to -π/2
+        assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
+
+    def test_strong_predator_gradient(self):
+        """Test aversive features with strong predator threat."""
+        params = BrainParams(
+            predator_gradient_strength=2.0,  # Strong threat
+            predator_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = aversive_features(params)
+
+        # tanh(2.0) ≈ 0.964, scaled to near π/2
+        assert features[RotationAxis.RX] > 0
+        # RZ is currently unused - always 0.0
+        assert features[RotationAxis.RZ] == pytest.approx(0.0)
+
+    def test_escape_direction_aligned(self):
+        """Test when escape direction aligns with agent direction."""
+        params = BrainParams(
+            predator_gradient_strength=1.0,
+            predator_gradient_direction=0.0,  # Escape to the right
+            agent_direction=Direction.RIGHT,
+            satiety=100.0,
+        )
+        features = aversive_features(params)
+
+        # Relative angle should be 0 (already facing escape direction)
+        assert features[RotationAxis.RY] == pytest.approx(0.0, abs=1e-6)
+
+    def test_escape_direction_opposite(self):
+        """Test when escape direction is behind agent."""
+        params = BrainParams(
+            predator_gradient_strength=1.0,
+            predator_gradient_direction=np.pi,  # Escape is behind
+            agent_direction=Direction.RIGHT,
+            satiety=100.0,
+        )
+        features = aversive_features(params)
+
+        # Relative angle should be close to ±π/2
+        assert abs(features[RotationAxis.RY]) == pytest.approx(np.pi / 2, rel=0.01)
+
+    def test_rz_always_zero(self):
+        """Test that RZ is always 0.0 (currently unused, reserved for future)."""
+        # RZ is currently unused per feature contract - always returns 0.0
+        # Could be used for risk tolerance encoding in future
+        for satiety in [0.0, 100.0, 200.0]:
+            params = BrainParams(
+                predator_gradient_strength=1.0,
+                predator_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=satiety,
+            )
+            features = aversive_features(params)
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
+
+    def test_none_predator_gradient(self):
+        """Test aversive features when predator gradient is None."""
+        params = BrainParams(
+            predator_gradient_strength=None,
+            predator_gradient_direction=None,
+            agent_direction=Direction.UP,
+            satiety=100.0,
+        )
+        features = aversive_features(params)
+
+        # Should default to 0 strength, scaled to -π/2
+        assert features[RotationAxis.RX] == pytest.approx(-np.pi / 2)
+        # Direction None should give 0.0
+        assert features[RotationAxis.RY] == pytest.approx(0.0)
+
+    def test_aversive_deterministic(self):
+        """Test that aversive features are deterministic."""
+        params = BrainParams(
+            predator_gradient_strength=0.5,
+            predator_gradient_direction=np.pi / 4,
+            agent_direction=Direction.UP,
+            satiety=75.0,
+        )
+        features1 = aversive_features(params)
+        features2 = aversive_features(params)
+
+        assert features1 == features2
+
+
+class TestAppetitiveAversiveValueRanges:
+    """Test that appetitive and aversive feature values stay within bounds."""
+
+    def test_appetitive_rx_bounded(self):
+        """Test that appetitive RX stays within [-π/2, π/2]."""
+        for strength in [0.0, 0.5, 1.0, 2.0, 5.0]:
+            params = BrainParams(
+                food_gradient_strength=strength,
+                food_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=100.0,
+            )
+            features = appetitive_features(params)
+            assert -np.pi / 2 <= features[RotationAxis.RX] <= np.pi / 2
+
+    def test_appetitive_ry_bounded(self):
+        """Test that appetitive RY stays within [-π/2, π/2]."""
+        for direction in np.linspace(-np.pi, np.pi, 8):
+            params = BrainParams(
+                food_gradient_strength=1.0,
+                food_gradient_direction=float(direction),
+                agent_direction=Direction.UP,
+                satiety=100.0,
+            )
+            features = appetitive_features(params)
+            assert -np.pi / 2 <= features[RotationAxis.RY] <= np.pi / 2
+
+    def test_appetitive_rz_always_zero(self):
+        """Test that appetitive RZ is always 0.0 (currently unused)."""
+        # RZ is reserved for future use (e.g., satiety/hunger encoding)
+        for satiety in [0.0, 50.0, 100.0, 150.0, 200.0]:
+            params = BrainParams(
+                food_gradient_strength=1.0,
+                food_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=satiety,
+            )
+            features = appetitive_features(params)
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)
+
+    def test_aversive_rx_bounded(self):
+        """Test that aversive RX stays within [-π/2, π/2]."""
+        for strength in [0.0, 0.5, 1.0, 2.0, 5.0]:
+            params = BrainParams(
+                predator_gradient_strength=strength,
+                predator_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=100.0,
+            )
+            features = aversive_features(params)
+            assert -np.pi / 2 <= features[RotationAxis.RX] <= np.pi / 2
+
+    def test_aversive_ry_bounded(self):
+        """Test that aversive RY stays within [-π/2, π/2]."""
+        for direction in np.linspace(-np.pi, np.pi, 8):
+            params = BrainParams(
+                predator_gradient_strength=1.0,
+                predator_gradient_direction=float(direction),
+                agent_direction=Direction.UP,
+                satiety=100.0,
+            )
+            features = aversive_features(params)
+            assert -np.pi / 2 <= features[RotationAxis.RY] <= np.pi / 2
+
+    def test_aversive_rz_always_zero(self):
+        """Test that aversive RZ is always 0.0 (currently unused)."""
+        # RZ is reserved for future use (e.g., risk tolerance encoding)
+        for satiety in [0.0, 50.0, 100.0, 150.0, 200.0]:
+            params = BrainParams(
+                predator_gradient_strength=1.0,
+                predator_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+                satiety=satiety,
+            )
+            features = aversive_features(params)
+            assert features[RotationAxis.RZ] == pytest.approx(0.0)

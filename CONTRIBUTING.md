@@ -131,26 +131,26 @@ uv run pytest
 
 ```bash
 # Quick test with small dynamic environment
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_dynamic_small.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_foraging_small.yml --theme emoji
 
 # Full test with medium environment
-uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_dynamic_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_foraging_medium.yml --theme emoji
 ```
 
 ##### Testing with Predators in Dynamic Foraging Environment
 
 ```bash
 # Quick test with small dynamic environment and predators
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_dynamic_small_predators.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_predators_small.yml --theme emoji
 
 # Full test with medium environment and predators
-uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_dynamic_medium_predators.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_predators_medium.yml --theme emoji
 ```
 
 ##### Testing with Static Environment
 
 ```bash
-uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_simple_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_static_medium_finetune.yml --theme emoji
 ```
 
 ### Experiment Tracking and Benchmarks
@@ -164,7 +164,7 @@ Track any simulation run automatically with the `--track-experiment` flag:
 ```bash
 # Run with experiment tracking
 uv run ./scripts/run_simulation.py \
-  --config configs/examples/modular_dynamic_medium.yml \
+  --config configs/examples/modular_foraging_medium.yml \
   --runs 50 \
   --track-experiment
 ```
@@ -215,7 +215,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 ```bash
 # Run and submit as benchmark in one step
 uv run scripts/run_simulation.py \
-  --config configs/examples/modular_dynamic_medium.yml \
+  --config configs/examples/modular_foraging_medium.yml \
   --runs 50 \
   --save-benchmark \
   --benchmark-notes "Your optimization approach"
@@ -288,6 +288,72 @@ uv run scripts/benchmark_submit.py regenerate
 ```
 
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and detailed submission guidelines.
+
+#### Experiment Logbooks
+
+For documenting analysis and insights from experiment series, use the logbook system in `docs/experiments/`:
+
+```
+docs/experiments/
+├── README.md                    # Index and workflow guide
+├── templates/
+│   └── experiment.md            # Template for new logbooks
+└── logbooks/
+    ├── 001-quantum-predator-optimization.md
+    └── 002-evolutionary-parameter-search.md
+```
+
+**Key distinction from auto-tracking:**
+| System | Location | Git Tracked | Purpose |
+|--------|----------|-------------|---------|
+| Auto-tracking | `experiments/*.json` | No | Raw metadata from every run |
+| Evolution results | `evolution_results/` | No | All evolution run outputs |
+| Artifacts | `artifacts/` | Yes | Curated outputs referenced in logbooks |
+| Logbooks | `docs/experiments/logbooks/` | Yes | Human analysis and narrative |
+| Benchmarks | `benchmarks/` | Yes | Top-performing submissions |
+
+To create a new logbook:
+1. Copy `docs/experiments/templates/experiment.md` to `docs/experiments/logbooks/NNN-name.md`
+2. Use the next sequential number
+3. Update the index in `docs/experiments/README.md`
+4. Reference session IDs from `artifacts/experiments/` or `artifacts/evolutions/` for reproducibility
+
+### Evolutionary Optimization
+
+For parameter optimization without gradient-based learning, use the evolution script:
+
+```bash
+# CMA-ES optimization (recommended for quantum circuits)
+uv run python scripts/run_evolution.py \
+  --config configs/examples/evolution_modular_foraging_small.yml \
+  --algorithm cmaes \
+  --generations 50 \
+  --population 20 \
+  --episodes 15 \
+  --parallel 4
+
+# Genetic Algorithm (more stable convergence)
+uv run python scripts/run_evolution.py \
+  --config configs/examples/evolution_modular_foraging_small.yml \
+  --algorithm ga \
+  --generations 50 \
+  --population 30 \
+  --episodes 15 \
+  --parallel 4
+```
+
+Results are saved to `evolution_results/<timestamp>/`:
+- `best_params_<timestamp>.json` - Best parameters found
+- `history_<timestamp>.csv` - Fitness history per generation
+- `checkpoint_gen<N>.pkl` - Checkpoints every 10 generations
+
+Resume from checkpoint:
+```bash
+uv run python scripts/run_evolution.py \
+  --config configs/examples/evolution_modular_foraging_small.yml \
+  --resume evolution_results/20251209_123456/checkpoint_gen20.pkl \
+  --generations 50
+```
 
 ### Adding New Features
 

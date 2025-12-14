@@ -11,6 +11,8 @@ Key Features:
   memory, etc.) are mapped to specific qubits for specialized processing
 - **Parameter-Shift Gradient Descent**: Uses quantum parameter-shift rule for gradient
   computation and parameter optimization
+- **Trajectory Learning (Optional)**: Episode-level REINFORCE with discounted returns for
+  temporal credit assignment (enabled via `use_trajectory_learning: true`)
 - **Multi-Layer Quantum Circuits**: Configurable circuit depth with feature encoding
   and entanglement layers
 - **Quantum Feature Encoding**: Environmental features encoded as RX/RY/RZ rotations
@@ -41,6 +43,30 @@ The modular brain learns by:
 5. Updating quantum parameters using momentum-based gradient descent with regularization
 6. Adapting learning rate based on performance and gradient characteristics
 
+Trajectory Learning:
+When `use_trajectory_learning: true`, the brain uses episode-level REINFORCE:
+1. Buffers (params, actions, rewards) for each timestep during an episode
+2. At episode end, computes discounted returns: G_t = r_t + gamma * G_{t+1}
+3. Computes trajectory-level gradients: grad_i = sum_t 0.5 * (P_+ - P_-) * G_t
+4. Updates parameters once per episode using accumulated gradients
+
+Note: In trajectory mode, learning rate "steps" become episode-based rather than
+step-based. The LR scheduler advances once per episode (at post_process_episode),
+not once per timestep. This is intentional - trajectory learning treats entire
+episodes as single learning events.
+
+Example Configuration:
+```yaml
+brain:
+  name: modular
+  config:
+    use_trajectory_learning: true  # Enable trajectory learning (default: false)
+    gamma: 0.99  # Discount factor for returns (default: 0.99)
+    num_layers: 2
+    modules:
+      chemotaxis: [0, 1]
+```
+
 This architecture provides quantum advantages through superposition and entanglement
 while maintaining interpretable modular structure for different sensory modalities.
 Supports both noisy intermediate-scale quantum (NISQ) devices and classical simulation
@@ -48,7 +74,9 @@ for scalable quantum machine learning applications.
 """
 
 import os
+import time
 from copy import deepcopy
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -85,7 +113,7 @@ from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
     compute_gradients,
 )
-from quantumnematode.optimizers.learning_rate import DynamicLearningRate
+from quantumnematode.optimizers.learning_rate import ConstantLearningRate, DynamicLearningRate
 
 if TYPE_CHECKING:
     from qiskit.primitives import PrimitiveResult
@@ -103,6 +131,11 @@ DEFAULT_PARAM_MODULO = True
 DEFAULT_SIGNIFICANT_REWARD_THRESHOLD = 0.1
 DEFAULT_SMALL_GRADIENT_THRESHOLD = 1e-4
 
+# Trajectory learning defaults
+DEFAULT_USE_TRAJECTORY_LEARNING = False
+DEFAULT_GAMMA = 0.99
+DEFAULT_LEARN_ONLY_FROM_SUCCESS = False  # Only learn from successful episodes
+
 # Overfitting detector defaults
 OVERFIT_DETECTOR_EPISODE_LOG_INTERVAL = 25
 
@@ -115,6 +148,48 @@ DEFAULT_LOW_REWARD_WINDOW = 15
 
 if TYPE_CHECKING:
     from qiskit_serverless.core.function import RunnableQiskitFunction
+
+
+@dataclass
+class EpisodeBuffer:
+    """
+    Buffer for storing episode trajectory data for trajectory learning.
+
+    Stores parameters, actions, and rewards for each timestep in an episode,
+    enabling discounted return computation and trajectory-level gradient updates.
+    """
+
+    params: list[BrainParams] = field(default_factory=list)
+    actions: list[ActionData] = field(default_factory=list)
+    rewards: list[float] = field(default_factory=list)
+    parameter_values: list[dict[str, float]] = field(default_factory=list)
+
+    def append(
+        self,
+        params: BrainParams,
+        action: ActionData,
+        reward: float,
+        parameter_values: dict[str, float],
+    ) -> None:
+        """Append a timestep's data to the buffer.
+
+        Stores copies of params and action to ensure immutable snapshots.
+        """
+        self.params.append(params.model_copy())
+        self.actions.append(action.model_copy())
+        self.rewards.append(reward)
+        self.parameter_values.append(parameter_values.copy())
+
+    def clear(self) -> None:
+        """Clear all buffered data."""
+        self.params.clear()
+        self.actions.clear()
+        self.rewards.clear()
+        self.parameter_values.clear()
+
+    def __len__(self) -> int:
+        """Return the number of timesteps in the buffer."""
+        return len(self.rewards)
 
 
 class ModularBrainConfig(BrainConfig):
@@ -154,6 +229,13 @@ class ModularBrainConfig(BrainConfig):
     low_reward_threshold: float = DEFAULT_LOW_REWARD_THRESHOLD  # Threshold for low rewards
     low_reward_window: int = DEFAULT_LOW_REWARD_WINDOW  # Window for low reward tracking
 
+    # Trajectory learning configuration
+    use_trajectory_learning: bool = DEFAULT_USE_TRAJECTORY_LEARNING  # Toggle trajectory learning
+    gamma: float = DEFAULT_GAMMA  # Discount factor for trajectory learning
+    learn_only_from_success: bool = (
+        DEFAULT_LEARN_ONLY_FROM_SUCCESS  # Only learn from successful episodes
+    )
+
 
 class ModularBrain(QuantumBrain):
     """
@@ -164,12 +246,12 @@ class ModularBrain(QuantumBrain):
     Entanglement can be added within and between modules.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         config: ModularBrainConfig,
         shots: int = DEFAULT_SHOTS,
         device: DeviceType = DeviceType.CPU,
-        learning_rate: DynamicLearningRate | None = None,
+        learning_rate: ConstantLearningRate | DynamicLearningRate | None = None,
         parameter_initializer: ZeroInitializer
         | RandomPiUniformInitializer
         | RandomSmallUniformInitializer
@@ -280,6 +362,20 @@ class ModularBrain(QuantumBrain):
         self.overfit_detector_current_episode_rewards = []
         self.overfit_detector_episode_log_interval = config.overfit_detector_episode_log_interval
 
+        # Trajectory learning
+        self.use_trajectory_learning = config.use_trajectory_learning
+        self.gamma = config.gamma
+        self.episode_buffer: EpisodeBuffer | None = (
+            EpisodeBuffer() if config.use_trajectory_learning else None
+        )
+
+        # Episode start state for learn_only_from_success rollback
+        self._episode_start_parameters: dict[str, float] | None = None
+        self._episode_start_momentum: dict[str, float] | None = None
+        self._episode_start_lr_boost_active: bool | None = None
+        self._episode_start_lr_boost_steps_remaining: int | None = None
+        self._episode_start_learning_rate: ConstantLearningRate | DynamicLearningRate | None = None
+
     def build_brain(
         self,
         input_params: dict[str, dict[str, float]] | None,
@@ -386,7 +482,7 @@ class ModularBrain(QuantumBrain):
         # For simulators, use the device type
         return f"aer_simulator_{self.device.value}"
 
-    def run_brain(  # noqa: PLR0915
+    def run_brain(  # noqa: C901, PLR0912, PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,
@@ -507,13 +603,23 @@ class ModularBrain(QuantumBrain):
 
         # --- Reward-based learning: compute gradients and update parameters ---
         if reward is not None and self.latest_data.action is not None:
-            # Learning rate boost logic
-            if self.config.lr_boost:
-                lr = self._handle_learning_rate_boost()
+            if self.use_trajectory_learning and self.episode_buffer is not None:
+                # Trajectory learning mode: buffer data for episode-level update
+                self.episode_buffer.append(
+                    params=params,
+                    action=self.latest_data.action,
+                    reward=reward,
+                    parameter_values=self.parameter_values,
+                )
             else:
-                lr = self.learning_rate.get_learning_rate()
-            gradients = self.parameter_shift_gradients(params, self.latest_data.action, reward)
-            self.update_parameters(gradients, reward=reward, learning_rate=lr)
+                # Single-step learning mode: immediate gradient update
+                # Learning rate boost logic
+                if self.config.lr_boost:
+                    lr = self._handle_learning_rate_boost()
+                else:
+                    lr = self.learning_rate.get_learning_rate()
+                gradients = self.parameter_shift_gradients(params, self.latest_data.action, reward)
+                self.update_parameters(gradients, reward=reward, learning_rate=lr)
 
         # Track for overfitting detection
         if actions:
@@ -691,6 +797,79 @@ class ModularBrain(QuantumBrain):
 
         return sorted_actions
 
+    def compute_discounted_returns(self, rewards: list[float], gamma: float) -> list[float]:
+        """
+        Compute discounted returns backward through time.
+
+        Implements the equation: G_t = r_t + gamma * G_{t+1}
+        where G_T = r_T for the terminal state.
+
+        Args:
+            rewards: List of immediate rewards for each timestep [r_0, r_1, ..., r_T].
+            gamma: Discount factor in range [0, 1].
+
+        Returns
+        -------
+            List of discounted returns [G_0, G_1, ..., G_T].
+
+        Raises
+        ------
+            ValueError: If gamma is not in range [0, 1].
+        """
+        if not 0 <= gamma <= 1:
+            error_message = f"Gamma must be in range [0, 1], got {gamma}"
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        if not rewards:
+            return []
+
+        # Pre-allocate list and use index assignment for O(n) instead of O(n²)
+        # (list.insert(0, ...) shifts all elements, making it O(n) per call)
+        returns = [0.0] * len(rewards)
+        discounted_return = 0.0
+
+        # Iterate backward from terminal state
+        for i in range(len(rewards) - 1, -1, -1):
+            discounted_return = rewards[i] + gamma * discounted_return
+            returns[i] = discounted_return
+
+        return returns
+
+    def _normalize_returns(self, returns: list[float]) -> list[float]:
+        """
+        Normalize returns to zero mean and unit variance.
+
+        This prevents gradient explosion when returns have large magnitudes
+        or vary significantly across episodes.
+
+        Args:
+            returns: List of discounted returns to normalize.
+
+        Returns
+        -------
+            List of normalized returns with mean ≈ 0 and std ≈ 1.
+        """
+        if not returns:
+            return []
+
+        mean_return = np.mean(returns)
+        std_return = np.std(returns)
+
+        # Avoid division by zero for constant returns
+        if std_return < 1e-8:  # noqa: PLR2004
+            logger.debug(
+                f"Returns have near-zero variance (std={std_return:.2e}), returning zero returns",
+            )
+            return [0.0] * len(returns)
+
+        normalized = [float((r - mean_return) / std_return) for r in returns]
+        logger.debug(
+            f"Normalized returns: mean={mean_return:.3f}, std={std_return:.3f} -> "
+            f"normalized mean={np.mean(normalized):.3e}, std={np.std(normalized):.3f}",
+        )
+        return normalized
+
     def update_memory(self, reward: float | None) -> None:
         """
         Update internal memory based on reward.
@@ -700,8 +879,123 @@ class ModularBrain(QuantumBrain):
         """
         # Reserved for future brain-internal memory mechanisms
 
-    def post_process_episode(self) -> None:
-        """Post-process the episode data."""
+    def prepare_episode(self) -> None:
+        """Prepare for a new episode.
+
+        If learn_only_from_success is enabled, saves current parameters
+        and optimizer state so they can be restored if the episode fails.
+        """
+        if self.config.learn_only_from_success:
+            # Save a copy of current parameters at episode start
+            self._episode_start_parameters = deepcopy(self.parameter_values)
+            # Save optimizer state for complete rollback
+            self._episode_start_momentum = deepcopy(self._momentum)
+            self._episode_start_lr_boost_active = self._lr_boost_active
+            self._episode_start_lr_boost_steps_remaining = self._lr_boost_steps_remaining
+            # Deepcopy entire LR object to capture all internal state (e.g., Adam's m/v dicts)
+            self._episode_start_learning_rate = deepcopy(self.learning_rate)
+            logger.debug(
+                "Saved episode start parameters and optimizer state for potential rollback "
+                "(learn_only_from_success=True)",
+            )
+
+    def post_process_episode(self, *, episode_success: bool | None = None) -> None:
+        """Post-process the episode data.
+
+        Parameters
+        ----------
+        episode_success : bool | None
+            Whether the episode was successful (collected target foods).
+            If None, learning proceeds normally.
+            If False and learn_only_from_success is True, learning is skipped.
+        """
+        # Check if we should skip learning based on episode success
+        should_skip_learning = (
+            self.config.learn_only_from_success
+            and episode_success is not None
+            and not episode_success
+        )
+
+        if should_skip_learning:
+            # Rollback parameters and optimizer state to episode start
+            if self._episode_start_parameters is not None:
+                self.parameter_values = deepcopy(self._episode_start_parameters)
+                # Restore optimizer state to prevent drift from failed episodes
+                if self._episode_start_momentum is not None:
+                    self._momentum = deepcopy(self._episode_start_momentum)
+                if self._episode_start_lr_boost_active is not None:
+                    self._lr_boost_active = self._episode_start_lr_boost_active
+                if self._episode_start_lr_boost_steps_remaining is not None:
+                    self._lr_boost_steps_remaining = self._episode_start_lr_boost_steps_remaining
+                # Restore entire LR object to capture all internal state (e.g., Adam's m/v dicts)
+                if self._episode_start_learning_rate is not None:
+                    self.learning_rate = deepcopy(self._episode_start_learning_rate)
+                logger.info(
+                    "Rolled back parameters and optimizer state to episode start: "
+                    "episode was unsuccessful (learn_only_from_success=True)",
+                )
+            else:
+                logger.warning(
+                    "Cannot rollback parameters: no episode start state saved. "
+                    "Ensure prepare_episode() is called at episode start.",
+                )
+            # Clear the buffer but don't update parameters
+            if self.episode_buffer is not None:
+                self.episode_buffer.clear()
+            final_reward = self.history_data.rewards[-1] if self.history_data.rewards else 0.0
+            self._complete_episode_tracking(final_reward=final_reward)
+            return
+
+        # Trajectory learning: compute returns and update parameters
+        if (
+            self.use_trajectory_learning
+            and self.episode_buffer is not None
+            and len(self.episode_buffer) > 0
+        ):
+            logger.info(
+                f"Trajectory learning: processing {len(self.episode_buffer)} timesteps",
+            )
+
+            # 1. Compute discounted returns from buffered rewards
+            returns = self.compute_discounted_returns(
+                self.episode_buffer.rewards,
+                self.gamma,
+            )
+            logger.debug(f"Computed returns: min={min(returns):.4f}, max={max(returns):.4f}")
+
+            # 1b. Normalize returns to prevent gradient explosion
+            returns = self._normalize_returns(returns)
+
+            # 2. Compute trajectory-level gradients
+            gradients = self.trajectory_parameter_shift_gradients(
+                self.episode_buffer,
+                returns,
+            )
+            logger.debug(
+                f"Computed gradients: "
+                f"min={min(gradients):.6f}, max={max(gradients):.6f}, "
+                f"mean={np.mean(gradients):.6f}",
+            )
+
+            # 3. Update parameters using accumulated gradients
+            # Get learning rate (with boost logic if enabled)
+            if self.config.lr_boost:
+                lr = self._handle_learning_rate_boost()
+            else:
+                lr = self.learning_rate.get_learning_rate()
+
+            # Use total episode reward for update
+            total_reward = sum(self.episode_buffer.rewards)
+            self.update_parameters(gradients, reward=total_reward, learning_rate=lr)
+
+            logger.info(
+                f"Trajectory learning update complete: "
+                f"lr={lr:.6f}, total_reward={total_reward:.4f}",
+            )
+
+            # Clear buffer for next episode
+            self.episode_buffer.clear()
+
         final_reward = self.history_data.rewards[-1] if self.history_data.rewards else 0.0
         self._complete_episode_tracking(final_reward=final_reward)
 
@@ -786,9 +1080,182 @@ class ModularBrain(QuantumBrain):
 
         return new_brain
 
+    def trajectory_parameter_shift_gradients(  # noqa: C901, PLR0912, PLR0915
+        self,
+        episode_buffer: EpisodeBuffer,
+        returns: list[float],
+        shift: float = np.pi / 4,
+    ) -> list[float]:
+        """
+        Compute trajectory-level parameter-shift gradients using discounted returns.
+
+        Instead of using immediate rewards, this method accumulates gradients across
+        all timesteps in an episode, weighted by discounted returns G_t.
+
+        Implements: grad_i = sum_t 0.5 * (P_+(a_t) - P_-(a_t)) * G_t
+
+        Args:
+            episode_buffer: Buffer containing params, actions,
+                and parameter values for each timestep.
+            returns: List of discounted returns [G_0, G_1, ..., G_T] for each timestep.
+            shift: The parameter shift value.
+
+        Returns
+        -------
+            List of accumulated gradients, one per parameter.
+        """
+        if len(episode_buffer) == 0:
+            error_message = "Cannot compute gradients from empty episode buffer"
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        if len(returns) != len(episode_buffer):
+            error_message = (
+                f"Returns length ({len(returns)}) must match episode buffer length "
+                f"({len(episode_buffer)})"
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        # Initialize accumulated gradients
+        param_keys = list(episode_buffer.parameter_values[0].keys())
+        n_params = len(param_keys)
+        accumulated_gradients = [0.0] * n_params
+
+        # For each timestep, compute parameter-shift gradients weighted by G_t
+        total_timesteps = len(episode_buffer)
+        logger.info(
+            f"Computing trajectory gradients for {total_timesteps} timesteps "
+            f"({n_params} parameters each, {total_timesteps * n_params * 2} circuit evaluations)",
+        )
+        start_time = time.time()
+
+        for t in range(len(episode_buffer)):
+            params_t = episode_buffer.params[t]
+            action_t = episode_buffer.actions[t]
+            param_values_t = episode_buffer.parameter_values[t]
+            return_t = returns[t]
+
+            # Log progress every 10% of timesteps
+            if t % max(1, total_timesteps // 10) == 0:
+                elapsed = time.time() - start_time
+                progress_pct = (t / total_timesteps) * 100
+                logger.debug(
+                    f"Trajectory gradient progress: {progress_pct:.0f}% "
+                    f"({t}/{total_timesteps} timesteps, {elapsed:.1f}s elapsed)",
+                )
+
+            # Prepare shifted parameter sets for this timestep
+            param_sets = []
+            for k in param_keys:
+                plus = param_values_t.copy()
+                minus = param_values_t.copy()
+                plus[k] += shift
+                minus[k] -= shift
+                param_sets.append((plus, minus))
+
+            # Build input features for this timestep
+            input_params = {
+                module.value: extract_features_for_module(module, params_t)
+                for module in self.modules
+            }
+
+            # Batch circuits for this timestep
+            circuits = []
+            if self.device == DeviceType.QPU and self.perf_mgmt is not None:
+                # Build untranspiled circuit with timestep features (Q-CTRL recommends untranspiled)
+                qc = self.build_brain(input_params)
+                for plus, minus in param_sets:
+                    circuits.append(qc.assign_parameters(plus, inplace=False))
+                    circuits.append(qc.assign_parameters(minus, inplace=False))
+            else:
+                # Build circuit with input features for this timestep
+                qc = self.build_brain(input_params)
+                backend = self._get_backend()
+                transpiled_template = transpile(qc, backend)
+                for plus, minus in param_sets:
+                    circuits.append(transpiled_template.assign_parameters(plus, inplace=False))
+                    circuits.append(transpiled_template.assign_parameters(minus, inplace=False))
+
+            # Run all circuits for this timestep
+            if self.device == DeviceType.QPU:
+                if self.perf_mgmt is not None:
+                    sampler_pubs = [(circuit, None, self.shots) for circuit in circuits]
+                    qctrl_result = self._execute_qctrl_sampler_job(sampler_pubs)
+
+                    def get_counts_qctrl(
+                        idx: int,
+                        res: "PrimitiveResult" = qctrl_result,
+                    ) -> dict[str, int]:
+                        return res[idx].data.c.get_counts()
+
+                    get_counts = get_counts_qctrl
+                else:
+                    try:
+                        from qiskit_ibm_runtime import Sampler
+                    except ImportError as err:
+                        error_message = ERROR_MISSING_IMPORT_QISKIT_IBM_RUNTIME
+                        logger.error(error_message)
+                        raise ImportError(error_message) from err
+
+                    backend = self._get_backend()
+                    sampler = Sampler(mode=backend)
+                    job = sampler.run(circuits, shots=self.shots)
+                    qpu_result = job.result()
+
+                    def get_counts_qpu(
+                        idx: int,
+                        res: "PrimitiveResult" = qpu_result,
+                    ) -> dict[str, int]:
+                        return res[idx].data.c.get_counts()
+
+                    get_counts = get_counts_qpu
+            else:
+                backend = self._get_backend()
+                job = backend.run(circuits, shots=self.shots)
+                if job is None:
+                    error_message = "Backend run did not return a valid job object."
+                    logger.error(error_message)
+                    raise RuntimeError(error_message)
+                sim_results = job.result()
+
+                def get_counts_sim(idx: int, res: object = sim_results) -> dict[str, int]:
+                    return res.get_counts(idx)  # type: ignore[attr-defined]
+
+                get_counts = get_counts_sim
+
+            # Accumulate gradients for each parameter
+            for i in range(n_params):
+                counts_plus = get_counts(i * 2)
+                counts_minus = get_counts(i * 2 + 1)
+                prob_plus = self._get_action_probability(counts_plus, action_t.state)
+                prob_minus = self._get_action_probability(counts_minus, action_t.state)
+
+                prob_diff = prob_plus - prob_minus
+
+                # Gradient contribution for this timestep weighted by return
+                grad_t = 0.5 * prob_diff * return_t
+                accumulated_gradients[i] += grad_t
+
+        elapsed_total = time.time() - start_time
+        logger.info(
+            f"Trajectory gradient computation complete: {total_timesteps} timesteps "
+            f"in {elapsed_total:.1f}s ({elapsed_total / total_timesteps:.2f}s/timestep)",
+        )
+
+        # Average gradients by episode length to prevent explosion with long episodes
+        averaged_gradients = [g / total_timesteps for g in accumulated_gradients]
+        logger.debug(
+            f"Averaged gradients by {total_timesteps} timesteps: "
+            f"sum_magnitude={np.linalg.norm(accumulated_gradients):.6f} -> "
+            f"avg_magnitude={np.linalg.norm(averaged_gradients):.6f}",
+        )
+
+        return averaged_gradients
+
     def parameter_shift_gradients(  # noqa: C901, PLR0912, PLR0915
         self,
-        params: BrainParams,  # noqa: ARG002
+        params: BrainParams,
         action: ActionData,
         reward: float,
         shift: float = np.pi / 4,
@@ -823,11 +1290,15 @@ class ModularBrain(QuantumBrain):
         circuits = []
 
         if self.device == DeviceType.QPU and self.perf_mgmt is not None:
-            # For Q-CTRL, use untranspiled circuit
-            cached_circuit = self._get_cached_circuit()
+            # For Q-CTRL, build circuit with actual features from params
+            # (Q-CTRL recommends untranspiled circuits)
+            input_params = {
+                module.value: extract_features_for_module(module, params) for module in self.modules
+            }
+            qc = self.build_brain(input_params)
             for plus, minus in param_sets:
-                circuits.append(cached_circuit.assign_parameters(plus, inplace=False))
-                circuits.append(cached_circuit.assign_parameters(minus, inplace=False))
+                circuits.append(qc.assign_parameters(plus, inplace=False))
+                circuits.append(qc.assign_parameters(minus, inplace=False))
         else:
             # For standard execution, use transpiled circuit
             transpiled = self._get_transpiled()
