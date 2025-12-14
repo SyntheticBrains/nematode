@@ -19,6 +19,9 @@ experiments/*
 # Benchmarks are tracked in git
 !benchmarks/
 
+# Evolution results
+evolution_results/*
+
 # Configuration files
 configs/*.yml
 !configs/examples/*.yml

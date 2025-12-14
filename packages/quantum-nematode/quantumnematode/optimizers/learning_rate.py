@@ -8,6 +8,7 @@ import numpy as np
 class LearningRateMethod(Enum):
     """Different learning rate adjustment methods."""
 
+    CONSTANT = "constant"
     DYNAMIC = "dynamic"
     ADAM = "adam"
     PERFORMANCE_BASED = "performance_based"
@@ -130,6 +131,52 @@ class DynamicLearningRate:
             f"min_lr={self.min_lr}, "
             f"steps={self.steps})"
         )
+
+
+DEFAULT_CONSTANT_LEARNING_RATE = 0.02
+
+
+class ConstantLearningRate:
+    """
+    Implements a constant learning rate strategy with no decay.
+
+    This is useful when you want to maintain a stable learning rate throughout
+    training without any decay or adaptation.
+    """
+
+    def __init__(
+        self,
+        learning_rate: float = DEFAULT_CONSTANT_LEARNING_RATE,
+    ) -> None:
+        self.learning_rate = learning_rate
+        self.initial_learning_rate = learning_rate
+        self.steps = 0
+
+    def get_learning_rate(self, reward_magnitude: float = 1.0) -> float:
+        """
+        Return the constant learning rate scaled by reward magnitude.
+
+        Parameters
+        ----------
+        reward_magnitude : float, optional
+            The magnitude of the reward signal to scale the learning rate, by default 1.0.
+
+        Returns
+        -------
+            float: The constant learning rate.
+        """
+        self.steps += 1
+        return self.learning_rate * reward_magnitude
+
+    def __str__(self) -> str:
+        """
+        Return a string representation of the ConstantLearningRate object.
+
+        Returns
+        -------
+            str: A string representation of the object.
+        """
+        return f"ConstantLearningRate(learning_rate={self.learning_rate}, steps={self.steps})"
 
 
 DEFAULT_ADAM_LEARNING_RATE_INITIAL = 0.1

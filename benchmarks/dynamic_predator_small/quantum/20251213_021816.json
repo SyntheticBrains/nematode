@@ -1,0 +1,126 @@
+{
+  "experiment_id": "20251213_021816",
+  "timestamp": "2025-12-13T02:31:46.011541+00:00",
+  "config_file": "configs/examples/modular_dynamic_small_predators_validate.yml",
+  "config_hash": "5dab0567f330582a913d751ecf826cd6332efc971a98dc91c2b74250f2b551c8",
+  "git_commit": "14ad69769cd8ba4a8d85446b85923d17348cf110",
+  "git_branch": "feature/14-improve-quantum-predators-performance",
+  "git_dirty": true,
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "num_foods": 5,
+    "target_foods_to_collect": 10,
+    "initial_satiety": 200.0,
+    "satiety_decay_rate": 1.0,
+    "viewport_size": [
+      11,
+      11
+    ],
+    "predators_enabled": true,
+    "num_predators": 2,
+    "predator_speed": 1.0,
+    "predator_detection_radius": 8,
+    "predator_kill_radius": 0,
+    "predator_gradient_decay": 12.0,
+    "predator_gradient_strength": 1.0
+  },
+  "brain": {
+    "type": "modular",
+    "qubits": 2,
+    "shots": 1500,
+    "num_layers": 2,
+    "hidden_dim": null,
+    "num_hidden_layers": null,
+    "learning_rate": 0.0,
+    "modules": {
+      "chemotaxis": [
+        0,
+        1
+      ]
+    },
+    "parameter_initializer": {
+      "type": "manual",
+      "manual_parameter_values": {
+        "\u03b8_rx1_0": -0.2996333431759911,
+        "\u03b8_rx1_1": 0.3502389737367387,
+        "\u03b8_ry1_0": 1.0310953674619783,
+        "\u03b8_ry1_1": -0.7922684294611363,
+        "\u03b8_rz1_0": -0.3050634148713627,
+        "\u03b8_rz1_1": 0.18123404976591906,
+        "\u03b8_rx2_0": -0.8215880134388935,
+        "\u03b8_rx2_1": 2.1729571071088647,
+        "\u03b8_ry2_0": -1.123929129079831,
+        "\u03b8_ry2_1": 1.2866772983805883,
+        "\u03b8_rz2_0": -0.45616181575993003,
+        "\u03b8_rz2_1": 1.3265817081838749
+      }
+    }
+  },
+  "reward": {
+    "reward_goal": 2.0,
+    "reward_distance_scale": 0.5,
+    "reward_exploration": 0.05,
+    "penalty_step": 0.005,
+    "penalty_anti_dithering": 0.02,
+    "penalty_stuck_position": 0.1,
+    "stuck_position_threshold": 3,
+    "penalty_starvation": 2.0,
+    "penalty_predator_death": 2.0,
+    "penalty_predator_proximity": 0.1
+  },
+  "learning_rate": {
+    "method": "constant",
+    "initial_learning_rate": 0.0,
+    "decay_type": null,
+    "decay_rate": null,
+    "decay_factor": null,
+    "min_lr": null,
+    "step_size": null,
+    "max_steps": null,
+    "power": null
+  },
+  "gradient": {
+    "method": "norm_clip",
+    "max_norm": 0.5
+  },
+  "results": {
+    "total_runs": 50,
+    "success_rate": 0.88,
+    "avg_steps": 209.9,
+    "avg_reward": 27.296500000000073,
+    "avg_foods_collected": 9.46,
+    "avg_distance_efficiency": 0.45178278765719687,
+    "completed_all_food": 44,
+    "starved": 0,
+    "max_steps_reached": 0,
+    "goal_reached": 0,
+    "predator_deaths": 6,
+    "avg_predator_encounters": 7.9,
+    "avg_successful_evasions": 7.52,
+    "converged": true,
+    "convergence_run": 29,
+    "runs_to_convergence": 29,
+    "post_convergence_success_rate": 0.9523809523809523,
+    "post_convergence_avg_steps": 224.45,
+    "post_convergence_avg_foods": 9.952380952380953,
+    "post_convergence_variance": 0.04535147392290251,
+    "post_convergence_distance_efficiency": 0.443530311228162,
+    "composite_benchmark_score": 0.6753357373593784
+  },
+  "system": {
+    "python_version": "3.12.10",
+    "qiskit_version": "1.4.5",
+    "torch_version": "2.9.0",
+    "device_type": "cpu",
+    "qpu_backend": null
+  },
+  "exports_path": "exports/20251213_021816",
+  "benchmark": {
+    "contributor": "Chris Zaharia",
+    "github_username": "chrisjz",
+    "category": "dynamic_predator_small_quantum",
+    "notes": "Validated performance from best parameters found in evolution run therefore no parameter updates were made during this benchmark.",
+    "verified": false
+  }
+}

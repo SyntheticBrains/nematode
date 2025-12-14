@@ -1,5 +1,5 @@
 # Static Maze Environment - Medium Configuration
-# Legacy single-goal navigation with manual parameter initialization
+# Legacy single-goal navigation with random parameter initialization
 # Uses modular (quantum) brain architecture
 
 max_steps: 300
@@ -22,20 +22,7 @@ body_length: 2
 qubits: 2
 
 parameter_initializer:
-  type: manual
-  manual_parameter_values:
-    θ_rx1_0: -2.4
-    θ_rx1_1: -2.7
-    θ_rx2_0: -1.3
-    θ_rx2_1: -2.4
-    θ_ry1_0: 2.9
-    θ_ry1_1: -2.4
-    θ_ry2_0: 2.7
-    θ_ry2_1: 1.3
-    θ_rz1_0: 0
-    θ_rz1_1: 0
-    θ_rz2_0: 0
-    θ_rz2_1: 0
+  type: random_pi
 
 learning_rate:
   method: dynamic
@@ -59,8 +46,8 @@ environment:
     grid_size: 10
 
 manyworlds_mode:
-  max_superpositions: 16
-  max_columns: 4
+  max_superpositions: 32
+  max_columns: 8
   render_sleep_seconds: 0.5
   top_n_actions: 2
   top_n_randomize: true

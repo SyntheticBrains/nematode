@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Run the Quantum Nematode simulation."""
 
 import argparse
@@ -43,6 +45,7 @@ from quantumnematode.optimizers.gradient_methods import (
 )
 from quantumnematode.optimizers.learning_rate import (
     AdamLearningRate,
+    ConstantLearningRate,
     DynamicLearningRate,
     PerformanceBasedLearningRate,
 )
@@ -391,12 +394,19 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
 
     # Update the agent to use the selected brain architecture and environment
+    # Check env capability directly to avoid config/env drift
+    use_separated_gradients = False
+    if isinstance(env, DynamicForagingEnvironment):
+        dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+        use_separated_gradients = dynamic_config.use_separated_gradients
+
     agent = QuantumNematodeAgent(
         brain=brain,
         env=env,
         max_body_length=body_length,
         theme=theme,
         satiety_config=satiety_config,
+        use_separated_gradients=use_separated_gradients,
     )
 
     # Set the plot and data directories
@@ -729,11 +739,21 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                         "min_lr": learning_rate.min_lr,
                     },
                 }
+            elif isinstance(learning_rate, ConstantLearningRate):
+                learning_rate_metadata = {
+                    "method": "constant",
+                    "parameters": {
+                        "initial_learning_rate": learning_rate.learning_rate,
+                        "learning_rate": learning_rate.learning_rate,
+                    },
+                }
             else:
                 logger.warning(
                     "Learning rate metadata capture not implemented for "
                     f"{type(learning_rate).__name__}",
                 )
+                # Provide empty dict to avoid None.get() errors
+                learning_rate_metadata = {"method": "unknown", "parameters": {}}
 
             experiment_metadata = capture_experiment_metadata(
                 config_path=config_path,
@@ -884,7 +904,10 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     shots: int,
     qubits: int,  # noqa: ARG001
     device: DeviceType,
-    learning_rate: DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
+    learning_rate: ConstantLearningRate
+    | DynamicLearningRate
+    | AdamLearningRate
+    | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,
     gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
@@ -899,8 +922,9 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
         shots (int): The number of shots for quantum circuit execution.
         qubits (int): The number of qubits to use (only applicable for quantum brain architectures).
         device (str): The device to use for simulation ("CPU" or "GPU").
-        learning_rate (DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
-            The learning rate configuration for the brain.
+        learning_rate (ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
+            The learning rate configuration for the brain. Note: modular/qmodular brains
+            only support ConstantLearningRate and DynamicLearningRate.
         gradient_method: The gradient calculation method.
         parameter_initializer_config: Configuration for parameter initialization.
         perf_mgmt: Q-CTRL performance management function instance.
@@ -922,9 +946,9 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             logger.error(error_message)
             raise ValueError(error_message)
 
-        if not isinstance(learning_rate, DynamicLearningRate):
+        if not isinstance(learning_rate, (DynamicLearningRate, ConstantLearningRate)):
             error_message = (
-                "The 'modular' brain architecture requires a DynamicLearningRate. "
+                "The 'modular' brain architecture requires a DynamicLearningRate or ConstantLearningRate. "
                 f"Provided learning rate type: {type(learning_rate)}."
             )
             logger.error(error_message)

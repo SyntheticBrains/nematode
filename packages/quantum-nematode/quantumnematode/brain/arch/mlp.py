@@ -497,7 +497,10 @@ class MLPBrain(ClassicalBrain):
         """No-op for MLPBrain."""
         return
 
-    def post_process_episode(self) -> None:
+    def prepare_episode(self) -> None:
+        """Prepare for a new episode (no-op for MLPBrain)."""
+
+    def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
         """Post-process the brain's state after each episode."""
         # Update overfitting detector with episode data
         self._complete_episode_tracking()

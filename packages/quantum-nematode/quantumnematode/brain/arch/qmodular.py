@@ -276,7 +276,7 @@ class QModularBrain:
 
     def build_quantum_circuit(
         self,
-        input_params: dict[str, dict[str, float]] | None = None,
+        input_params: dict[ModuleName, dict[str, float]] | None = None,
     ) -> QuantumCircuit:
         """Build the quantum circuit for feature extraction."""
         qc = QuantumCircuit(self.num_qubits, self.num_qubits)
@@ -356,17 +356,20 @@ class QModularBrain:
 
         return quantum_features
 
-    def _prepare_input_params(self, brain_params: BrainParams) -> dict[str, dict[str, float]]:
+    def _prepare_input_params(
+        self,
+        brain_params: BrainParams,
+    ) -> dict[ModuleName, dict[str, float]]:
         """Prepare input parameters for quantum circuit."""
         # Extract relevant features from brain_params
-        input_params = {}
+        input_params: dict[ModuleName, dict[str, float]] = {}
 
         for module in self.modules:
             features = extract_features_for_module(
                 module,
                 brain_params,
             )
-            input_params[module.value] = features
+            input_params[module] = features
 
         return input_params
 
@@ -741,7 +744,10 @@ class QModularBrain:
         """
         # Reserved for future brain-internal memory mechanisms
 
-    def post_process_episode(self) -> None:
+    def prepare_episode(self) -> None:
+        """Prepare for a new episode (no-op for QModularBrain)."""
+
+    def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
         """Post-process the brain's state after each episode."""
         # Not implemented
         return
@@ -749,9 +755,7 @@ class QModularBrain:
     def inspect_circuit(self) -> QuantumCircuit:
         """Inspect the quantum circuit structure."""
         # Build a circuit with default input params for inspection
-        default_params = {
-            module.value: {"rx": 0.0, "ry": 0.0, "rz": 0.0} for module in self.modules
-        }
+        default_params = {module: {"rx": 0.0, "ry": 0.0, "rz": 0.0} for module in self.modules}
         return self.build_quantum_circuit(default_params)
 
     def copy(self) -> QModularBrain:

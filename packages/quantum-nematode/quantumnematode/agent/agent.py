@@ -125,6 +125,8 @@ class QuantumNematodeAgent:
         theme: Theme = DEFAULT_THEME,
         rich_style_config: DarkColorRichStyleConfig | None = None,
         satiety_config: SatietyConfig | None = None,
+        *,
+        use_separated_gradients: bool = False,
     ) -> None:
         """
         Initialize the nematode agent.
@@ -145,9 +147,13 @@ class QuantumNematodeAgent:
             Rich styling configuration.
         satiety_config : SatietyConfig | None, optional
             Satiety system configuration.
+        use_separated_gradients : bool, optional
+            Whether to use separated food/predator gradients for appetitive/aversive modules.
+            Only valid for dynamic environments. Default is False (unified gradients).
         """
         self.brain = brain
         self.satiety_config = satiety_config or SatietyConfig()
+        self.use_separated_gradients = use_separated_gradients
 
         if env is None:
             self.env = StaticEnvironment(
@@ -334,9 +340,9 @@ class QuantumNematodeAgent:
         Parameters
         ----------
         gradient_strength : float
-            Strength of the gradient (distance to goal/food).
+            Strength of the combined gradient (food + predator).
         gradient_direction : float
-            Direction of the gradient (angle in radians).
+            Direction of the combined gradient (angle in radians).
         action : ActionData | None, optional
             Previous action taken, by default None.
 
@@ -345,9 +351,34 @@ class QuantumNematodeAgent:
         BrainParams
             Brain parameters ready for execution.
         """
+        # Get separated gradients for appetitive/aversive modules if configured
+        separated_grads = {}
+        if self.use_separated_gradients:
+            if isinstance(self.env, DynamicForagingEnvironment):
+                separated_grads = self.env.get_separated_gradients(
+                    self.env.agent_pos,
+                    disable_log=True,
+                )
+            else:
+                error_message = (
+                    "Separated gradients requested but "
+                    "environment is not DynamicForagingEnvironment."
+                )
+                logger.error(error_message)
+                raise ValueError(error_message)
+
         return BrainParams(
+            # Combined gradients
             gradient_strength=gradient_strength,
             gradient_direction=gradient_direction,
+            # Separated LOCAL gradients (egocentric sensing)
+            food_gradient_strength=separated_grads.get("food_gradient_strength"),
+            food_gradient_direction=separated_grads.get("food_gradient_direction"),
+            predator_gradient_strength=separated_grads.get("predator_gradient_strength"),
+            predator_gradient_direction=separated_grads.get("predator_gradient_direction"),
+            # Internal state (hunger)
+            satiety=self.current_satiety,
+            # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
             action=action,

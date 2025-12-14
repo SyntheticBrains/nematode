@@ -153,6 +153,120 @@ def vision_features(
     return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
+def appetitive_features(
+    params: BrainParams,
+) -> dict[RotationAxis, float]:
+    """
+    Extract appetitive (food-seeking) features for approach behavior.
+
+    This module encodes signals that drive the agent toward food sources,
+    inspired by C. elegans appetitive chemotaxis circuits (AWC neurons).
+
+    Uses SEPARATED food gradient to encode pure food-seeking behavior.
+    This is distinct from the chemotaxis module which uses the combined gradient.
+
+    Feature encoding:
+    - RX: Food gradient strength (how strongly food is sensed)
+    - RY: Relative direction to food (where to go)
+
+    All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
+
+    Args:
+        params: BrainParams containing agent state.
+
+    Returns
+    -------
+        Dictionary with rx, ry, rz values for appetitive qubit(s).
+    """
+    # Food gradient strength - use separated food gradient
+    food_strength = params.food_gradient_strength or 0.0
+    # Use tanh to normalize potentially unbounded gradient values to [0, 1]
+    food_strength_normalized = np.tanh(food_strength)
+    # Scale to [-π/2, π/2] for quantum gate stability
+    food_strength_scaled = food_strength_normalized * np.pi - np.pi / 2
+
+    # Relative angle to food source
+    food_direction = params.food_gradient_direction
+    if food_direction is not None and params.agent_direction is not None:
+        direction_map = {
+            Direction.UP: np.pi / 2,
+            Direction.DOWN: -np.pi / 2,
+            Direction.LEFT: np.pi,
+            Direction.RIGHT: 0.0,
+        }
+        agent_angle = direction_map.get(params.agent_direction, np.pi / 2)
+        # Compute relative angle to food ([-π, π])
+        relative_angle = (food_direction - agent_angle + np.pi) % (2 * np.pi) - np.pi
+        # Normalize and scale to [-π/2, π/2]
+        relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
+        relative_angle_scaled = relative_angle_normalized * np.pi / 2
+    else:
+        relative_angle_scaled = 0.0
+
+    return {
+        RotationAxis.RX: food_strength_scaled,
+        RotationAxis.RY: relative_angle_scaled,
+        RotationAxis.RZ: 0.0,
+    }
+
+
+def aversive_features(
+    params: BrainParams,
+) -> dict[RotationAxis, float]:
+    """
+    Extract aversive (predator-avoidance) features for escape behavior.
+
+    This module encodes predator gradient signals for avoidance behavior,
+    inspired by C. elegans aversive response circuits (ASH neurons).
+
+    Uses SEPARATED predator gradient to encode pure escape behavior.
+    The predator_gradient_direction points AWAY from predators (escape direction).
+
+    Feature encoding:
+    - RX: Predator threat level (how strongly predator is sensed)
+    - RY: Escape direction relative to agent facing (where to flee)
+
+    All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
+
+    Args:
+        params: BrainParams containing agent state.
+
+    Returns
+    -------
+        Dictionary with rx, ry, rz values for aversive qubit(s).
+    """
+    # Predator gradient strength - indicates threat level
+    predator_strength = params.predator_gradient_strength or 0.0
+    # Use tanh to normalize potentially unbounded gradient values to [0, 1]
+    predator_strength_normalized = np.tanh(predator_strength)
+    # Scale to [-π/2, π/2] for quantum gate stability
+    predator_strength_scaled = predator_strength_normalized * np.pi - np.pi / 2
+
+    # Relative angle to escape direction (predator_gradient_direction points away)
+    escape_direction = params.predator_gradient_direction
+    if escape_direction is not None and params.agent_direction is not None:
+        direction_map = {
+            Direction.UP: np.pi / 2,
+            Direction.DOWN: -np.pi / 2,
+            Direction.LEFT: np.pi,
+            Direction.RIGHT: 0.0,
+        }
+        agent_angle = direction_map.get(params.agent_direction, np.pi / 2)
+        # Compute relative angle to escape direction ([-π, π])
+        relative_angle = (escape_direction - agent_angle + np.pi) % (2 * np.pi) - np.pi
+        # Normalize and scale to [-π/2, π/2]
+        relative_angle_normalized = relative_angle / np.pi  # [-1, 1]
+        escape_scaled = relative_angle_normalized * np.pi / 2
+    else:
+        escape_scaled = 0.0
+
+    return {
+        RotationAxis.RX: predator_strength_scaled,
+        RotationAxis.RY: escape_scaled,
+        RotationAxis.RZ: 0.0,
+    }
+
+
 def memory_action_features(
     params: BrainParams,
 ) -> dict[RotationAxis, float]:
@@ -189,6 +303,8 @@ class ModuleName(str, Enum):
     OXYGEN = "oxygen"
     VISION = "vision"
     ACTION = "action"
+    APPETITIVE = "appetitive"
+    AVERSIVE = "aversive"
 
 
 MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
@@ -198,6 +314,8 @@ MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
     ModuleName.OXYGEN: oxygen_features,
     ModuleName.VISION: vision_features,
     ModuleName.ACTION: memory_action_features,
+    ModuleName.APPETITIVE: appetitive_features,
+    ModuleName.AVERSIVE: aversive_features,
 }
 
 Modules = dict[ModuleName, list[int]]
