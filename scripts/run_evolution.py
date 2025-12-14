@@ -368,7 +368,6 @@ def evaluate_fitness(
     param_array: list[float],
     config_path: str,
     episodes: int,
-    max_steps: int = 200,
 ) -> float:
     """Evaluate fitness of a parameter set.
 
@@ -378,7 +377,6 @@ def evaluate_fitness(
         param_array: Flat array of parameter values.
         config_path: Path to YAML config file.
         episodes: Number of episodes to run.
-        max_steps: Maximum steps per episode.
 
     Returns
     -------
@@ -387,6 +385,9 @@ def evaluate_fitness(
     brain = create_brain_from_config(config_path, param_array)
     config = load_simulation_config(config_path)
     satiety_config = configure_satiety(config)
+
+    # Get max_steps from config (important! default was 200 but configs may have 500+)
+    max_steps = config.max_steps or 500
 
     # Check if separated gradients are needed (for appetitive/aversive modules)
     use_separated_gradients = False
