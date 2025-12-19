@@ -290,7 +290,7 @@ class TestSpikingBrain:
         # Episode buffers should be populated
         assert len(brain.episode_states) == 1
         assert len(brain.episode_actions) == 1
-        assert len(brain.episode_log_probs) == 1
+        assert len(brain.episode_action_probs) == 1
 
     def test_learn_policy_gradient(self, brain):
         """Test learning with policy gradients."""
@@ -323,7 +323,7 @@ class TestSpikingBrain:
         # Episode buffers should be cleared after episode_done
         assert len(brain.episode_states) == 0
         assert len(brain.episode_actions) == 0
-        assert len(brain.episode_log_probs) == 0
+        assert len(brain.episode_action_probs) == 0
         assert len(brain.episode_rewards) == 0
 
     def test_baseline_update(self, brain):

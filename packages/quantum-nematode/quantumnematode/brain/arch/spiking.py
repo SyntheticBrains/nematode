@@ -132,8 +132,8 @@ class SpikingBrain(ClassicalBrain):
         State observations collected during current episode
     episode_actions : list
         Actions taken during current episode
-    episode_log_probs : list
-        Log probabilities of actions for policy gradient
+    episode_action_probs : list
+        Detached action probabilities for entropy calculation
     episode_rewards : list
         Rewards received during current episode
     baseline : float
@@ -188,10 +188,11 @@ class SpikingBrain(ClassicalBrain):
         )
 
         # Episode buffers for policy gradient learning
+        # Note: We store states and actions, then recompute log_probs during learn()
+        # to avoid memory leaks from storing computation graphs
         self.episode_states: list[np.ndarray] = []
         self.episode_actions: list[int] = []
-        self.episode_log_probs: list[torch.Tensor] = []
-        self.episode_action_probs: list[torch.Tensor] = []  # For entropy calculation
+        self.episode_action_probs: list[torch.Tensor] = []  # Detached, for entropy only
         self.episode_rewards: list[float] = []
 
         # Baseline for variance reduction (running average of returns)
@@ -330,14 +331,15 @@ class SpikingBrain(ClassicalBrain):
         # Sample action from categorical distribution
         action_dist = torch.distributions.Categorical(action_probs)
         action_idx = action_dist.sample()
-        log_prob = action_dist.log_prob(action_idx)
 
         # Store for policy gradient learning
+        # Store states and actions only - we'll recompute log_probs during learn()
+        # This prevents memory leak from computation graph retention
         self.episode_states.append(state)
         action_idx_int = int(action_idx.item())
         self.episode_actions.append(action_idx_int)
-        self.episode_log_probs.append(log_prob)
-        self.episode_action_probs.append(action_probs.squeeze(0))  # Store for entropy
+        # Store detached action probs for entropy calculation (doesn't need gradients)
+        self.episode_action_probs.append(action_probs.squeeze(0).detach())
 
         # Get selected action and probability
         selected_action = self.action_set[action_idx_int]
@@ -372,7 +374,7 @@ class SpikingBrain(ClassicalBrain):
 
         return [action_data]
 
-    def learn(
+    def learn(  # noqa: PLR0915
         self,
         params: BrainParams,  # noqa: ARG002
         reward: float,
@@ -433,8 +435,23 @@ class SpikingBrain(ClassicalBrain):
             # subtracted from normalized returns
             advantages = returns_tensor
 
+            # Recompute log_probs with fresh forward passes to enable gradient flow
+            # This is more memory efficient than storing computation graphs
+            log_probs_list = []
+            for state, action_idx in zip(self.episode_states, self.episode_actions, strict=False):
+                state_tensor = torch.tensor(
+                    state,
+                    dtype=torch.float32,
+                    device=self.device,
+                ).unsqueeze(0)
+                action_logits = self.policy(state_tensor)
+                action_probs = torch.softmax(action_logits, dim=-1)
+                action_dist = torch.distributions.Categorical(action_probs)
+                log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
+                log_probs_list.append(log_prob)
+
             # Compute policy loss: -Σ log_prob(a_t) * advantage_t
-            log_probs = torch.stack(self.episode_log_probs)
+            log_probs = torch.stack(log_probs_list)
             policy_loss = -(log_probs * advantages).sum()
 
             # Apply entropy decay schedule
@@ -503,7 +520,6 @@ class SpikingBrain(ClassicalBrain):
             # Clear episode buffers
             self.episode_states.clear()
             self.episode_actions.clear()
-            self.episode_log_probs.clear()
             self.episode_action_probs.clear()
             self.episode_rewards.clear()
 
