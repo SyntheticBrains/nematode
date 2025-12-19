@@ -22,10 +22,10 @@ brain:
     learning_rate: 0.0005
     gamma: 0.99
     baseline_alpha: 0.05
-    entropy_beta: 0.01
+    entropy_beta: 0.05
 
     # Surrogate gradient parameters
-    surrogate_alpha: 10.0
+    surrogate_alpha: 1.0
 
 body_length: 2
 

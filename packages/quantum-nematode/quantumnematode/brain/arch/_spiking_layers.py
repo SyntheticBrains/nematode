@@ -18,6 +18,8 @@ References
 - SpikingJelly: https://github.com/fangwei123456/spikingjelly
 """
 
+from typing import Any
+
 import torch
 from torch import nn
 
@@ -41,14 +43,19 @@ class SurrogateGradientSpike(torch.autograd.Function):
     Notes
     -----
     The surrogate gradient is:
-        ∂spike/∂v ≈ α·σ(α(v - v_th))·(1 - σ(α(v - v_th)))
+        d_spike/d_v ≈ alpha * sigmoid(alpha * (v - v_th)) * (1 - sigmoid(alpha * (v - v_th)))
 
-    where σ is the sigmoid function. This approximation is only used during
+    where sigmoid is the sigmoid function. This approximation is only used during
     backward pass; forward pass uses true Heaviside step function.
     """
 
     @staticmethod
-    def forward(ctx, v: torch.Tensor, v_threshold: float, alpha: float = 10.0) -> torch.Tensor:
+    def forward(  # type: ignore[override]
+        ctx: Any,  # noqa: ANN401
+        v: torch.Tensor,
+        v_threshold: float,
+        alpha: float = 10.0,
+    ) -> torch.Tensor:
         """
         Generate spikes when membrane potential exceeds threshold.
 
@@ -70,11 +77,18 @@ class SurrogateGradientSpike(torch.autograd.Function):
             1.0 where v >= v_threshold, 0.0 otherwise
         """
         spike = (v >= v_threshold).float()
-        ctx.save_for_backward(v, torch.tensor(v_threshold, device=v.device), torch.tensor(alpha, device=v.device))
+        ctx.save_for_backward(
+            v,
+            torch.tensor(v_threshold, device=v.device),
+            torch.tensor(alpha, device=v.device),
+        )
         return spike
 
     @staticmethod
-    def backward(ctx, grad_output: torch.Tensor, *args) -> tuple[torch.Tensor, None, None]:  # type: ignore[override]
+    def backward(  # type: ignore[override]
+        ctx: Any,  # noqa: ANN401
+        grad_output: torch.Tensor,
+    ) -> tuple[torch.Tensor, None, None]:
         """
         Compute surrogate gradient for backpropagation.
 
@@ -92,8 +106,7 @@ class SurrogateGradientSpike(torch.autograd.Function):
         """
         v, v_threshold, alpha = ctx.saved_tensors
 
-        # Sigmoid surrogate gradient: α·σ(α(v - v_th))·(1 - σ(α(v - v_th)))
-        # This is equivalent to the derivative of the sigmoid function
+        # Sigmoid surrogate gradient (derivative of sigmoid function)
         shifted = alpha * (v - v_threshold)
         sigma = torch.sigmoid(shifted)
         grad_surrogate = alpha * sigma * (1 - sigma)
@@ -142,7 +155,7 @@ class LIFLayer(nn.Module):
     When v >= v_threshold, neuron spikes and v → v_reset.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         input_dim: int,
         output_dim: int,
@@ -151,7 +164,7 @@ class LIFLayer(nn.Module):
         v_reset: float = 0.0,
         v_rest: float = 0.0,
         surrogate_alpha: float = 10.0,
-    ):
+    ) -> None:
         super().__init__()
         self.fc = nn.Linear(input_dim, output_dim)
         self.tau_m: float = tau_m
@@ -163,7 +176,9 @@ class LIFLayer(nn.Module):
         self.spike_fn: type[SurrogateGradientSpike] = SurrogateGradientSpike
 
     def forward(
-        self, x: torch.Tensor, state: tuple[torch.Tensor, torch.Tensor] | None = None,
+        self,
+        x: torch.Tensor,
+        state: tuple[torch.Tensor, torch.Tensor] | None = None,
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass for one simulation timestep.
@@ -205,7 +220,7 @@ class LIFLayer(nn.Module):
 
         # Generate spikes with surrogate gradient
         spikes = self.spike_fn.apply(v_membrane, self.v_threshold, self.surrogate_alpha)
-        assert isinstance(spikes, torch.Tensor)  # Type hint for pyright
+        assert isinstance(spikes, torch.Tensor)  # noqa: S101 - Type hint for pyright
 
         # Reset membrane potential for neurons that spiked
         v_membrane = v_membrane * (1 - spikes) + self.v_reset * spikes
@@ -260,7 +275,7 @@ class SpikingPolicyNetwork(nn.Module):
                             Linear → action logits
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         input_dim: int,
         hidden_dim: int,
@@ -272,7 +287,7 @@ class SpikingPolicyNetwork(nn.Module):
         v_reset: float = 0.0,
         v_rest: float = 0.0,
         surrogate_alpha: float = 10.0,
-    ):
+    ) -> None:
         super().__init__()
         self.num_timesteps = num_timesteps
         self.hidden_dim = hidden_dim
@@ -337,7 +352,8 @@ class SpikingPolicyNetwork(nn.Module):
             # Accumulate spikes over time
             spike_accumulator += h
 
-        # Convert total spike counts to action logits
-        action_logits = self.output_layer(spike_accumulator)
+        # Store spike rate statistics for monitoring (accessible via last_spike_rates)
+        self.last_spike_rates = spike_accumulator / self.num_timesteps
 
-        return action_logits
+        # Convert total spike counts to action logits
+        return self.output_layer(spike_accumulator)
