@@ -1,136 +1,155 @@
-"""Unit tests for the spiking neural network brain architecture."""
+"""Unit tests for the spiking neural network brain architecture with surrogate gradients."""
 
 import numpy as np
 import pytest
 import torch
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
+from quantumnematode.brain.arch._spiking_layers import (
+    LIFLayer,
+    SpikingPolicyNetwork,
+    SurrogateGradientSpike,
+)
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.spiking import LIFNeuron, SpikingBrain, SpikingBrainConfig, STDPRule
+from quantumnematode.brain.arch.spiking import SpikingBrain, SpikingBrainConfig
 from quantumnematode.env import Direction
 
 
-class TestLIFNeuron:
-    """Test cases for the Leaky Integrate-and-Fire neuron model."""
+class TestSurrogateGradientSpike:
+    """Test cases for the surrogate gradient spike function."""
 
-    def test_lif_neuron_initialization(self):
-        """Test LIF neuron initialization with default parameters."""
-        neuron = LIFNeuron()
-        assert neuron.tau_m == 20.0
-        assert neuron.v_threshold == 1.0
-        assert neuron.v_reset == 0.0
-        assert neuron.v_rest == 0.0
-        assert neuron.v_membrane == 0.0
+    def test_forward_pass(self):
+        """Test forward pass produces binary spikes."""
+        v = torch.tensor([[0.5, 1.2, 0.8, 1.5]])
+        v_threshold = 1.0
+        alpha = 10.0
 
-    def test_lif_neuron_custom_parameters(self):
-        """Test LIF neuron initialization with custom parameters."""
-        neuron = LIFNeuron(tau_m=10.0, v_threshold=0.8, v_reset=-0.1, v_rest=-0.05)
-        assert neuron.tau_m == 10.0
-        assert neuron.v_threshold == 0.8
-        assert neuron.v_reset == -0.1
-        assert neuron.v_rest == -0.05
-        assert neuron.v_membrane == -0.05
+        spikes = SurrogateGradientSpike.apply(v, v_threshold, alpha)
+        assert isinstance(spikes, torch.Tensor)  # Type hint for pyright
 
-    def test_lif_neuron_step_no_spike(self):
-        """Test LIF neuron dynamics without spiking."""
-        neuron = LIFNeuron(tau_m=20.0, v_threshold=1.0, v_reset=0.0, v_rest=0.0)
+        # Check that spikes are binary
+        assert torch.all((spikes == 0) | (spikes == 1))
+        # Check correct spike pattern
+        assert spikes[0, 0] == 0  # 0.5 < 1.0
+        assert spikes[0, 1] == 1  # 1.2 >= 1.0
+        assert spikes[0, 2] == 0  # 0.8 < 1.0
+        assert spikes[0, 3] == 1  # 1.5 >= 1.0
 
-        # Small input current that shouldn't cause spiking
-        spike = neuron.step(input_current=0.1, dt=1.0)
-        assert not spike
-        assert neuron.v_membrane > 0.0  # Membrane potential should increase
-        assert neuron.v_membrane < 1.0  # But not reach threshold
+    def test_gradient_flow(self):
+        """Test that gradients flow through the surrogate function."""
+        v = torch.tensor([[0.5, 1.2]], requires_grad=True)
+        v_threshold = 1.0
+        alpha = 10.0
 
-    def test_lif_neuron_step_with_spike(self):
-        """Test LIF neuron spiking when threshold is exceeded."""
-        neuron = LIFNeuron(tau_m=20.0, v_threshold=1.0, v_reset=0.0, v_rest=0.0)
+        spikes = SurrogateGradientSpike.apply(v, v_threshold, alpha)
+        assert isinstance(spikes, torch.Tensor)  # Type hint for pyright
+        loss = spikes.sum()
+        loss.backward()
 
-        # Large input current that should cause spiking
-        spike = neuron.step(input_current=50.0, dt=1.0)
-        assert spike
-        assert neuron.v_membrane == 0.0  # Should reset to v_reset
-
-    def test_lif_neuron_membrane_dynamics(self):
-        """Test that membrane potential evolves correctly over time."""
-        neuron = LIFNeuron(tau_m=20.0, v_threshold=1.0, v_reset=0.0, v_rest=0.0)
-
-        # Apply small input current that won't cause spiking
-        input_current = 0.5
-        dt = 1.0
-        prev_v = neuron.v_membrane
-
-        for _ in range(5):
-            spike = neuron.step(input_current, dt)
-            # If no spike, membrane potential should increase
-            if not spike:
-                assert neuron.v_membrane > prev_v
-            prev_v = neuron.v_membrane
-
-    def test_lif_neuron_reset(self):
-        """Test neuron reset functionality."""
-        neuron = LIFNeuron(v_rest=-0.5)
-        neuron.v_membrane = 0.8
-        neuron.last_spike_time = 10.0
-
-        neuron.reset()
-        assert neuron.v_membrane == -0.5
-        assert neuron.last_spike_time == -np.inf
+        # Gradients should exist and be non-zero
+        assert v.grad is not None
+        assert torch.any(v.grad != 0)
 
 
-class TestSTDPRule:
-    """Test cases for the Spike-Timing Dependent Plasticity learning rule."""
+class TestLIFLayer:
+    """Test cases for the LIF neuron layer."""
 
-    def test_stdp_initialization(self):
-        """Test STDP rule initialization."""
-        stdp = STDPRule()
-        assert stdp.tau_plus == 20.0
-        assert stdp.tau_minus == 20.0
-        assert stdp.a_plus == 0.01
-        assert stdp.a_minus == 0.01
+    def test_initialization(self):
+        """Test LIF layer initialization."""
+        layer = LIFLayer(input_dim=2, output_dim=4, tau_m=20.0, v_threshold=1.0)
 
-    def test_stdp_potentiation(self):
-        """Test STDP potentiation (post after pre)."""
-        stdp = STDPRule(tau_plus=20.0, a_plus=0.01)
+        assert layer.tau_m == 20.0
+        assert layer.v_threshold == 1.0
+        assert layer.v_reset == 0.0
+        assert layer.v_rest == 0.0
 
-        # Post spike after pre spike should cause potentiation
-        delta_t = 5.0  # post - pre = positive
-        reward_signal = 1.0
+    def test_forward_single_timestep(self):
+        """Test forward pass for single timestep."""
+        layer = LIFLayer(input_dim=2, output_dim=4)
+        x = torch.randn(1, 2)
 
-        weight_change = stdp.compute_weight_change(delta_t, reward_signal)
-        assert weight_change > 0  # Should be positive (potentiation)
+        spikes, state = layer(x, state=None)
 
-    def test_stdp_depression(self):
-        """Test STDP depression (pre after post)."""
-        stdp = STDPRule(tau_minus=20.0, a_minus=0.01)
+        # Check output shapes
+        assert spikes.shape == (1, 4)
+        assert isinstance(state, tuple)
+        assert len(state) == 2
+        v_membrane, _ = state
+        assert v_membrane.shape == (1, 4)
 
-        # Pre spike after post spike should cause depression
-        delta_t = -5.0  # post - pre = negative
-        reward_signal = 1.0
+        # Spikes should be binary
+        assert torch.all((spikes == 0) | (spikes == 1))
 
-        weight_change = stdp.compute_weight_change(delta_t, reward_signal)
-        assert weight_change < 0  # Should be negative (depression)
+    def test_stateful_dynamics(self):
+        """Test that membrane state persists across timesteps."""
+        layer = LIFLayer(input_dim=2, output_dim=4, tau_m=20.0)
+        x = torch.ones(1, 2) * 0.1  # Small constant input
 
-    def test_stdp_reward_modulation(self):
-        """Test reward modulation of STDP."""
-        stdp = STDPRule()
-        delta_t = 5.0
+        # First timestep
+        spikes1, state1 = layer(x, state=None)
+        v_membrane1, _ = state1
 
-        # Higher reward should increase weight change magnitude
-        weight_change_low = stdp.compute_weight_change(delta_t, 0.5)
-        weight_change_high = stdp.compute_weight_change(delta_t, 2.0)
+        # Second timestep with previous state
+        spikes2, state2 = layer(x, state=state1)
+        v_membrane2, _ = state2
 
-        assert abs(weight_change_high) > abs(weight_change_low)
+        # Membrane potential should change
+        assert not torch.allclose(v_membrane1, v_membrane2)
 
-    def test_stdp_time_decay(self):
-        """Test that STDP effect decays with time difference."""
-        stdp = STDPRule()
-        reward_signal = 1.0
 
-        # Closer spikes should have larger effect
-        weight_change_close = stdp.compute_weight_change(1.0, reward_signal)
-        weight_change_far = stdp.compute_weight_change(10.0, reward_signal)
+class TestSpikingPolicyNetwork:
+    """Test cases for the spiking policy network."""
 
-        assert abs(weight_change_close) > abs(weight_change_far)
+    def test_initialization(self):
+        """Test network initialization."""
+        net = SpikingPolicyNetwork(
+            input_dim=2,
+            hidden_dim=8,
+            output_dim=4,
+            num_timesteps=10,
+            num_hidden_layers=2,
+        )
+
+        # Check architecture
+        assert len(net.hidden_layers) == 2
+        assert net.num_timesteps == 10
+
+    def test_forward_pass(self):
+        """Test forward pass through the network."""
+        net = SpikingPolicyNetwork(
+            input_dim=2,
+            hidden_dim=8,
+            output_dim=4,
+            num_timesteps=10,
+            num_hidden_layers=2,
+        )
+        x = torch.randn(1, 2)
+
+        action_logits = net(x)
+
+        # Check output shape
+        assert action_logits.shape == (1, 4)
+        # Logits should be real-valued
+        assert torch.all(torch.isfinite(action_logits))
+
+    def test_gradient_flow(self):
+        """Test that gradients flow through the network."""
+        net = SpikingPolicyNetwork(
+            input_dim=2,
+            hidden_dim=8,
+            output_dim=4,
+            num_timesteps=10,
+            num_hidden_layers=2,
+        )
+        x = torch.randn(1, 2, requires_grad=True)
+
+        action_logits = net(x)
+        loss = action_logits.sum()
+        loss.backward()
+
+        # Check that gradients exist for network parameters
+        for param in net.parameters():
+            assert param.grad is not None
 
 
 class TestSpikingBrainConfig:
@@ -141,11 +160,9 @@ class TestSpikingBrainConfig:
         config = SpikingBrainConfig()
 
         # Network topology
-        assert config.hidden_size == 32
-
-        # Simulation parameters
-        assert config.simulation_duration == 100.0
-        assert config.time_step == 1.0
+        assert config.hidden_size == 128
+        assert config.num_hidden_layers == 2
+        assert config.num_timesteps == 50
 
         # LIF neuron parameters
         assert config.tau_m == 20.0
@@ -153,29 +170,26 @@ class TestSpikingBrainConfig:
         assert config.v_reset == 0.0
         assert config.v_rest == 0.0
 
-        # Encoding parameters
-        assert config.max_rate == 100.0
-        assert config.min_rate == 0.0
-
-        # STDP parameters
-        assert config.tau_plus == 20.0
-        assert config.tau_minus == 20.0
-        assert config.a_plus == 0.01
-        assert config.a_minus == 0.01
+        # Learning parameters
         assert config.learning_rate == 0.001
-        assert config.reward_scaling == 1.0
+        assert config.gamma == 0.99
+        assert config.baseline_alpha == 0.05
+        assert config.entropy_beta == 0.01
+
+        # Surrogate gradient
+        assert config.surrogate_alpha == 10.0
 
     def test_custom_config(self):
         """Test custom configuration values."""
         config = SpikingBrainConfig(
             hidden_size=64,
-            simulation_duration=200.0,
+            num_timesteps=30,
             tau_m=10.0,
             learning_rate=0.01,
         )
 
         assert config.hidden_size == 64
-        assert config.simulation_duration == 200.0
+        assert config.num_timesteps == 30
         assert config.tau_m == 10.0
         assert config.learning_rate == 0.01
 
@@ -187,9 +201,9 @@ class TestSpikingBrain:
     def config(self):
         """Create a test configuration."""
         return SpikingBrainConfig(
-            hidden_size=4,
-            simulation_duration=50.0,
-            time_step=1.0,
+            hidden_size=8,
+            num_timesteps=10,
+            num_hidden_layers=2,
             learning_rate=0.01,
         )
 
@@ -208,21 +222,16 @@ class TestSpikingBrain:
         assert brain.config == config
         assert brain.input_dim == 2
         assert brain.num_actions == 4
-        assert brain.hidden_size == 4
-        assert brain.total_neurons == 10  # 2 + 4 + 4
 
-        # Check neuron populations
-        assert len(brain.input_neurons) == 2
-        assert len(brain.hidden_neurons) == 4
-        assert len(brain.output_neurons) == 4
+        # Check policy network exists
+        assert brain.policy is not None
+        assert isinstance(brain.policy, SpikingPolicyNetwork)
 
-        # Check weight matrices
-        assert brain.weights_input_hidden.shape == (2, 4)
-        assert brain.weights_hidden_output.shape == (4, 4)
-        assert brain.weights_hidden_hidden.shape == (4, 4)
+        # Check optimizer exists
+        assert brain.optimizer is not None
 
     def test_preprocess(self, brain):
-        """Test state preprocessing."""
+        """Test state preprocessing with relative angles."""
         params = BrainParams(
             gradient_strength=0.8,
             gradient_direction=1.5,
@@ -233,7 +242,23 @@ class TestSpikingBrain:
         state = brain.preprocess(params)
         assert len(state) == 2
         assert 0.0 <= state[0] <= 1.0  # gradient_strength normalized
-        assert 0.0 <= state[1] <= 1.0  # gradient_direction normalized
+        assert -1.0 <= state[1] <= 1.0  # relative angle normalized
+
+    def test_preprocess_relative_angle(self, brain):
+        """Test that preprocessing computes relative angles correctly."""
+        # Agent facing UP (0.5π), gradient pointing RIGHT (0.0)
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=0.0,  # RIGHT
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,  # UP
+        )
+
+        state = brain.preprocess(params)
+        # Relative angle should be (0.0 - 0.5π) = -0.5π
+        # Normalized: -0.5π / π = -0.5
+        expected_rel_angle = -0.5
+        assert np.isclose(state[1], expected_rel_angle, atol=0.01)
 
     def test_preprocess_none_values(self, brain):
         """Test preprocessing with None values."""
@@ -243,49 +268,6 @@ class TestSpikingBrain:
         assert len(state) == 2
         assert state[0] == 0.0
         assert state[1] == 0.0
-
-    def test_encode_state_to_spikes(self, brain):
-        """Test encoding continuous state to spike trains."""
-        state = [0.5, 0.8]
-        spike_trains = brain._encode_state_to_spikes(state)
-
-        assert len(spike_trains) == 2
-        # Higher values should tend to generate more spikes
-        # (stochastic, so we'll just check structure)
-        for spike_times in spike_trains:
-            assert isinstance(spike_times, list)
-            for spike_time in spike_times:
-                assert 0 <= spike_time < brain.config.simulation_duration
-
-    def test_simulate_network(self, brain):
-        """Test network simulation."""
-        # Create simple spike trains
-        input_spike_trains = [[10.0, 20.0], [15.0, 25.0]]
-
-        output_spike_counts, spike_history = brain._simulate_network(input_spike_trains)
-
-        assert len(output_spike_counts) == 4  # 4 output neurons
-        assert "input" in spike_history
-        assert "hidden" in spike_history
-        assert "output" in spike_history
-        assert "duration" in spike_history
-
-        # Check spike history structure
-        assert len(spike_history["input"]) == 2
-        assert len(spike_history["hidden"]) == 4
-        assert len(spike_history["output"]) == 4
-
-    def test_decode_action_probabilities(self, brain):
-        """Test decoding spike counts to action probabilities."""
-        spike_counts = [5, 3, 1, 0]
-        probabilities = brain._decode_action_probabilities(spike_counts)
-
-        assert len(probabilities) == 4
-        assert np.isclose(np.sum(probabilities), 1.0)  # Should sum to 1
-        assert np.all(probabilities >= 0)  # All probabilities non-negative
-
-        # Higher spike count should tend to have higher probability
-        assert probabilities[0] > probabilities[3]
 
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
@@ -305,20 +287,59 @@ class TestSpikingBrain:
         assert 0.0 <= action_data.probability <= 1.0
         assert action_data.state is not None
 
-    def test_learn(self, brain):
-        """Test learning with STDP."""
+        # Episode buffers should be populated
+        assert len(brain.episode_states) == 1
+        assert len(brain.episode_actions) == 1
+        assert len(brain.episode_log_probs) == 1
+
+    def test_learn_policy_gradient(self, brain):
+        """Test learning with policy gradients."""
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+
+        # Run brain a few times to collect experience
+        for _ in range(3):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+
+        # Get initial parameters
+        initial_params = [p.clone() for p in brain.policy.parameters()]
+
+        # Learn with positive rewards (episode done)
+        for i in range(3):
+            brain.learn(params, reward=1.0, episode_done=(i == 2))
+
+        # Parameters should have changed after learning
+        final_params = list(brain.policy.parameters())
+        params_changed = any(
+            not torch.allclose(init, final)
+            for init, final in zip(initial_params, final_params, strict=False)
+        )
+        assert params_changed
+
+        # Episode buffers should be cleared after episode_done
+        assert len(brain.episode_states) == 0
+        assert len(brain.episode_actions) == 0
+        assert len(brain.episode_log_probs) == 0
+        assert len(brain.episode_rewards) == 0
+
+    def test_baseline_update(self, brain):
+        """Test baseline update mechanism."""
+        initial_baseline = brain.baseline
+
+        # Simulate an episode with positive rewards
         params = BrainParams()
+        for _ in range(3):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=5.0, episode_done=False)
 
-        # Run brain to generate spike patterns
-        brain.run_brain(params, top_only=False, top_randomize=False)
+        brain.learn(params, reward=5.0, episode_done=True)
 
-        # Test learning
-        brain.learn(params, reward=1.0, episode_done=True)
-
-        # Weights might change (depending on spike patterns and randomness)
-        # Just check that learning doesn't crash and weights remain finite
-        assert torch.all(torch.isfinite(brain.weights_input_hidden))
-        assert torch.all(torch.isfinite(brain.weights_hidden_output))
+        # Baseline should have updated
+        assert brain.baseline != initial_baseline
 
     def test_update_memory(self, brain):
         """Test memory update functionality."""
@@ -332,7 +353,7 @@ class TestSpikingBrain:
         """Test episode post-processing."""
         # Add some episode data
         brain.overfit_detector_current_episode_actions = [Action.FORWARD, Action.LEFT]
-        brain.overfit_detector_current_episode_positions = [(1, 1), (2, 1)]
+        brain.overfit_detector_current_episode_positions = [(1.0, 1.0), (2.0, 1.0)]
         brain.overfit_detector_current_episode_rewards = [0.1, 0.2]
 
         brain.post_process_episode()
@@ -344,8 +365,8 @@ class TestSpikingBrain:
 
     def test_copy(self, brain):
         """Test brain copying functionality."""
-        # Modify original brain state
-        brain.weights_input_hidden[0, 0] = 0.5
+        # Get initial policy state
+        initial_state = brain.policy.state_dict()
 
         copied_brain = brain.copy()
 
@@ -354,12 +375,22 @@ class TestSpikingBrain:
         assert copied_brain.input_dim == brain.input_dim
         assert copied_brain.num_actions == brain.num_actions
 
-        # Check that weights are copied
-        assert torch.allclose(copied_brain.weights_input_hidden, brain.weights_input_hidden)
+        # Check that policy parameters are copied
+        for key in initial_state:
+            assert torch.allclose(
+                copied_brain.policy.state_dict()[key],
+                initial_state[key],
+            )
 
         # Check that modifying copy doesn't affect original
-        copied_brain.weights_input_hidden[0, 0] = 1.0
-        assert not torch.allclose(copied_brain.weights_input_hidden, brain.weights_input_hidden)
+        for param in copied_brain.policy.parameters():
+            param.data.fill_(0.5)
+
+        original_params_unchanged = any(
+            not torch.allclose(param.data, torch.full_like(param.data, 0.5))
+            for param in brain.policy.parameters()
+        )
+        assert original_params_unchanged
 
     def test_action_set_property(self, brain):
         """Test action_set property."""
@@ -370,39 +401,24 @@ class TestSpikingBrain:
         assert Action.RIGHT in action_set
         assert Action.STAY in action_set
 
-    def test_weight_clipping(self, brain):
-        """Test weight clipping functionality."""
-        # Set weights to extreme values
-        brain.weights_input_hidden[0, 0] = 10.0
-        brain.weights_hidden_output[0, 0] = -10.0
-
-        brain._clip_weights()
-
-        # Weights should be clipped
-        assert torch.all(brain.weights_input_hidden <= brain.config.weight_clip)
-        assert torch.all(brain.weights_input_hidden >= -brain.config.weight_clip)
-        assert torch.all(brain.weights_hidden_output <= brain.config.weight_clip)
-        assert torch.all(brain.weights_hidden_output >= -brain.config.weight_clip)
-
 
 class TestSpikingBrainIntegration:
     """Integration tests for spiking brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = SpikingBrainConfig(hidden_size=8, simulation_duration=20.0)
+        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10)
         brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         # Simulate multiple steps in an episode
         episode_rewards = []
-        params = None  # Initialize params variable
         rng = np.random.default_rng(42)
 
         for step in range(5):
             params = BrainParams(
                 gradient_strength=rng.random(),
                 gradient_direction=rng.random() * 2 * np.pi,
-                agent_position=(step, step),
+                agent_position=(float(step), float(step)),
                 agent_direction=Direction.UP,
             )
 
@@ -415,34 +431,57 @@ class TestSpikingBrainIntegration:
             brain.update_memory(reward)
             episode_rewards.append(reward)
 
-            # Learn (except on last step)
-            if step < 4:
-                brain.learn(params, reward, episode_done=False)
+            # Learn
+            is_done = step == 4
+            brain.learn(params, reward, episode_done=is_done)
 
         # End episode
-        if params is not None:
-            brain.learn(params, episode_rewards[-1], episode_done=True)
         brain.post_process_episode()
 
         # Check that episode completed successfully
         assert len(brain.history_data.rewards) == 5
 
+    def test_gradient_updates_with_positive_rewards(self):
+        """Test that network learns from positive rewards."""
+        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10, learning_rate=0.1)
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        # Get initial parameters
+        initial_params = [p.clone() for p in brain.policy.parameters()]
+
+        # Run multiple episodes with positive rewards
+        for _ in range(3):
+            for step in range(5):
+                params = BrainParams(
+                    gradient_strength=0.5,
+                    gradient_direction=1.0,
+                    agent_position=(1.0, 1.0),
+                    agent_direction=Direction.UP,
+                )
+                brain.run_brain(params, top_only=False, top_randomize=False)
+                brain.learn(params, reward=1.0, episode_done=(step == 4))
+
+            brain.post_process_episode()
+
+        # Parameters should have changed
+        final_params = list(brain.policy.parameters())
+        params_changed = any(
+            not torch.allclose(init, final, atol=1e-6)
+            for init, final in zip(initial_params, final_params, strict=False)
+        )
+        assert params_changed
+
     def test_deterministic_behavior_with_seed(self):
         """Test that brain behavior is deterministic when using fixed random seed."""
-        config = SpikingBrainConfig(hidden_size=4, simulation_duration=10.0)
+        config = SpikingBrainConfig(hidden_size=4, num_timesteps=10)
 
-        # Create two identical brains
+        # Create two identical brains with same seed
         torch.manual_seed(42)
-        # Set global seed for torch.normal calls in SpikingBrain
-        torch.random.manual_seed(42)
         brain1 = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         torch.manual_seed(42)
-        torch.random.manual_seed(42)
         brain2 = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        # Should have identical weights
-        assert torch.allclose(brain1.weights_input_hidden, brain2.weights_input_hidden)
-
-        # But due to stochastic spike generation, behavior might still differ
-        # This is expected for spiking networks
+        # Should have identical initial parameters
+        for p1, p2 in zip(brain1.policy.parameters(), brain2.policy.parameters(), strict=False):
+            assert torch.allclose(p1, p2)
