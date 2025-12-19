@@ -216,7 +216,6 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 |---|---|---|---|---|---|---|---|
 | ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 | ✓ spiking | 0.896 | 100% | 79 | 52 | 0.000 | @chrisjz | 2025-12-19 |
-| ✓ spiking | 0.778 | 84% | 116 | 20 | 0.136 | @chrisjz | 2025-12-19 |
 
 #### Dynamic Small - Quantum
 
