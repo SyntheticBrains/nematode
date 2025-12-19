@@ -10,7 +10,7 @@ brain:
     # Network architecture
     hidden_size: 256
     num_hidden_layers: 2
-    num_timesteps: 75
+    num_timesteps: 100
 
     # LIF neuron parameters
     tau_m: 20.0
@@ -22,10 +22,10 @@ brain:
     learning_rate: 0.0008
     gamma: 0.99
     baseline_alpha: 0.05
-    entropy_beta: 0.01
+    entropy_beta: 0.05
 
     # Surrogate gradient parameters
-    surrogate_alpha: 10.0
+    surrogate_alpha: 1.0
 
 body_length: 2
 

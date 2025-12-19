@@ -178,9 +178,10 @@ class SpikingBrain(ClassicalBrain):
         self.episode_states: list[np.ndarray] = []
         self.episode_actions: list[int] = []
         self.episode_log_probs: list[torch.Tensor] = []
+        self.episode_action_probs: list[torch.Tensor] = []  # For entropy calculation
         self.episode_rewards: list[float] = []
 
-        # Baseline for variance reduction
+        # Baseline for variance reduction (running average of returns)
         self.baseline = 0.0
 
         # Overfitting detection
@@ -294,6 +295,20 @@ class SpikingBrain(ClassicalBrain):
             action_logits = self.policy(state_tensor)
             action_probs = torch.softmax(action_logits, dim=-1)
 
+            # Monitor spike rates for debugging (only occasionally to avoid spam)
+            # 10% sampling rate for diagnostics
+            spike_rate_sample_prob = 0.10
+            if (
+                hasattr(self.policy, "last_spike_rates")
+                and torch.rand(1).item() < spike_rate_sample_prob
+            ):
+                spike_rates = self.policy.last_spike_rates
+                logger.debug(
+                    f"Spike rates - min: {spike_rates.min():.3f}, "
+                    f"max: {spike_rates.max():.3f}, mean: {spike_rates.mean():.3f}, "
+                    f"std: {spike_rates.std():.3f}",
+                )
+
         # Sample action from categorical distribution
         action_dist = torch.distributions.Categorical(action_probs)
         action_idx = action_dist.sample()
@@ -304,10 +319,19 @@ class SpikingBrain(ClassicalBrain):
         action_idx_int = int(action_idx.item())
         self.episode_actions.append(action_idx_int)
         self.episode_log_probs.append(log_prob)
+        self.episode_action_probs.append(action_probs.squeeze(0))  # Store for entropy
 
         # Get selected action and probability
         selected_action = self.action_set[action_idx_int]
         probability = action_probs[0, action_idx_int].item()
+
+        # Log action probabilities to diagnose policy collapse
+        probs_list = action_probs.squeeze(0).tolist()
+        action_entropy = -(action_probs * torch.log(action_probs + 1e-8)).sum().item()
+        logger.debug(
+            f"Action probs: {[f'{p:.3f}' for p in probs_list]}, "
+            f"Selected: {selected_action}, Entropy: {action_entropy:.4f}",
+        )
 
         # Store data for tracking
         state_str = f"grad_str:{state[0]:.3f},rel_angle:{state[1]:.3f}"
@@ -368,51 +392,78 @@ class SpikingBrain(ClassicalBrain):
 
             # Normalize returns for variance reduction
             if len(returns) > 1:
-                returns_tensor = (returns_tensor - returns_tensor.mean()) / (
-                    returns_tensor.std() + 1e-8
-                )
+                returns_mean = returns_tensor.mean()
+                returns_std = returns_tensor.std()
+                returns_tensor = (returns_tensor - returns_mean) / (returns_std + 1e-8)
+            else:
+                returns_mean = returns_tensor.item()
+                returns_std = 0.0
 
-            # Update baseline (running average of episode returns)
-            episode_return = sum(self.episode_rewards)
+            # Update baseline (running average of mean episode return)
             self.baseline = (
-                self.config.baseline_alpha * episode_return
+                self.config.baseline_alpha * returns_mean
                 + (1 - self.config.baseline_alpha) * self.baseline
             )
 
-            # Compute advantages (returns - baseline)
-            advantages = returns_tensor - self.baseline
+            # Compute advantages
+            # After normalization, returns already have mean≈0, so we use them directly
+            # as advantages The baseline is tracked separately for monitoring but not
+            # subtracted from normalized returns
+            advantages = returns_tensor
 
             # Compute policy loss: -Σ log_prob(a_t) * advantage_t
             log_probs = torch.stack(self.episode_log_probs)
             policy_loss = -(log_probs * advantages).sum()
 
-            # Optional: Add entropy regularization for exploration
+            # Add entropy regularization for exploration
+            entropy = torch.tensor(0.0, device=self.device)
             if self.config.entropy_beta > 0:
-                # Entropy bonus encourages exploration
-                # Note: Would need to save action_probs during forward pass
-                # For now, entropy is implicitly handled by stochastic sampling
-                pass
+                # Entropy: -Σ p(a) * log(p(a)) for each timestep, averaged
+                action_probs = torch.stack(self.episode_action_probs)
+                entropy = -(action_probs * torch.log(action_probs + 1e-8)).sum(dim=-1).mean()
+
+                # Log entropy for diagnostics
+                logger.debug(
+                    f"Episode entropy: {entropy.item():.4f}, "
+                    f"entropy_beta: {self.config.entropy_beta}, "
+                    f"entropy contribution: {self.config.entropy_beta * entropy.item():.4f}",
+                )
+
+                # Subtract entropy to maximize it (entropy bonus)
+                policy_loss = policy_loss - self.config.entropy_beta * entropy
 
             # Backpropagation
             self.optimizer.zero_grad()
             policy_loss.backward()
 
-            # Gradient clipping to prevent explosion
-            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+            # Clip individual gradient values first to prevent explosion
+            # This prevents inf gradients from surrogate gradient backward pass
+            for param in self.policy.parameters():
+                if param.grad is not None:
+                    param.grad.clamp_(-1.0, 1.0)
+
+            # Then clip gradient norm for overall stability
+            grad_norm = torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
+
+            # Log gradient norm for diagnostics
+            logger.debug(f"Gradient norm: {grad_norm.item():.6f}")
 
             # Update parameters
             self.optimizer.step()
 
             # Log learning statistics
+            episode_return = sum(self.episode_rewards)
             logger.debug(
                 f"Policy gradient update: loss={policy_loss.item():.4f}, "
-                f"episode_return={episode_return:.2f}, baseline={self.baseline:.2f}",
+                f"episode_return={episode_return:.2f}, baseline={self.baseline:.2f}, "
+                f"entropy={entropy.item():.4f}, returns_std={returns_std:.4f}",
             )
 
             # Clear episode buffers
             self.episode_states.clear()
             self.episode_actions.clear()
             self.episode_log_probs.clear()
+            self.episode_action_probs.clear()
             self.episode_rewards.clear()
 
     def update_memory(self, reward: float | None) -> None:
