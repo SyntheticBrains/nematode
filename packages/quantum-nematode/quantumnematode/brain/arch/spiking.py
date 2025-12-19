@@ -1,63 +1,68 @@
 """
-Spiking Neural Network (SNN) Brain Architecture.
+Spiking Neural Network (SNN) Brain Architecture with Surrogate Gradient Descent.
 
 This architecture implements a biologically plausible spiking neural network using
-Leaky Integrate-and-Fire (LIF) neurons with Spike-Timing Dependent Plasticity (STDP)
-learning for navigation tasks.
+Leaky Integrate-and-Fire (LIF) neurons with surrogate gradient descent for learning.
+The approach combines biological realism with effective gradient-based optimization.
 
-Key Features:
-- **Temporal Dynamics**: Information encoded in spike timing and patterns
-- **LIF Neurons**: Biologically realistic neuron model with membrane potential dynamics
-- **STDP Learning**: Reward-modulated spike-timing dependent plasticity
-- **Rate Coding**: Input encoding via Poisson spike trains
-- **Sparse Computation**: Event-driven neural dynamics
+Key Features
+------------
+- **Temporal Dynamics**: LIF neurons with membrane potential integration
+- **Surrogate Gradients**: Differentiable spike approximation enables backpropagation
+- **Policy Gradient Learning**: REINFORCE algorithm with baseline subtraction
+- **Relative Angle Encoding**: Proper directional features for navigation
+- **Dense Learning Signals**: Every timestep contributes to gradient updates
 
-Architecture:
-- Input: 2 neurons encoding state features (gradient strength, relative direction)
-- Hidden: Configurable fully-connected layer with LIF neurons
-- Output: 4 neurons for action selection (forward, left, right, stay)
+Architecture
+------------
+- Input: 2 features (gradient strength, relative angle to goal)
+- Hidden: Multiple LIF layers with recurrent membrane dynamics
+- Output: 4 action neurons (forward, left, right, stay)
 
 The SNN brain learns by:
-1. Encoding continuous state values as Poisson spike trains
-2. Simulating LIF neural dynamics for a fixed time window
-3. Recording spike times and computing action probabilities from output rates
-4. Updating synaptic weights using reward-modulated STDP
-5. Maintaining homeostatic weight normalization for stability
+1. Encoding state features as constant input currents
+2. Simulating LIF neural dynamics for a fixed number of timesteps
+3. Accumulating spikes across time to compute action probabilities
+4. Updating network parameters using policy gradients (REINFORCE)
+5. Maintaining baseline for variance reduction
 
-This approach provides biological realism while maintaining compatibility with the
-existing reinforcement learning framework.
+This approach provides biological plausibility while enabling effective learning
+through standard reinforcement learning algorithms.
+
+References
+----------
+- Neftci et al. (2019). "Surrogate Gradient Learning in Spiking Neural Networks"
+- Williams (1992). "Simple Statistical Gradient-Following Algorithms for
+  Connectionist Reinforcement Learning" (REINFORCE)
+- SpikingJelly: https://github.com/fangwei123456/spikingjelly
 """
 
 import numpy as np
-import torch  # pyright: ignore[reportMissingImports]
+import torch
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._spiking_layers import SpikingPolicyNetwork
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 
 # Default configuration parameters
-DEFAULT_HIDDEN_SIZE = 32
-DEFAULT_SIMULATION_DURATION = 100.0  # ms
-DEFAULT_TIME_STEP = 1.0  # ms
-DEFAULT_TAU_M = 20.0  # membrane time constant (ms)
-DEFAULT_V_THRESHOLD = 1.0  # spike threshold
-DEFAULT_V_RESET = 0.0  # reset potential
-DEFAULT_V_REST = 0.0  # resting potential
-DEFAULT_MAX_RATE = 100.0  # max input spike rate (Hz)
-DEFAULT_MIN_RATE = 0.0  # min input spike rate (Hz)
-DEFAULT_TAU_PLUS = 20.0  # STDP time constant (ms)
-DEFAULT_TAU_MINUS = 20.0  # STDP time constant (ms)
-DEFAULT_A_PLUS = 0.01  # STDP strength
-DEFAULT_A_MINUS = 0.01  # STDP strength
+DEFAULT_HIDDEN_SIZE = 128
+DEFAULT_NUM_TIMESTEPS = 50
+DEFAULT_NUM_HIDDEN_LAYERS = 2
+DEFAULT_TAU_M = 20.0
+DEFAULT_V_THRESHOLD = 1.0
+DEFAULT_V_RESET = 0.0
+DEFAULT_V_REST = 0.0
 DEFAULT_LEARNING_RATE = 0.001
-DEFAULT_REWARD_SCALING = 1.0
-DEFAULT_WEIGHT_MEAN = 0.1
-DEFAULT_WEIGHT_STD = 0.05
-DEFAULT_WEIGHT_CLIP = 1.0
+DEFAULT_GAMMA = 0.99
+DEFAULT_BASELINE_ALPHA = 0.05
+DEFAULT_ENTROPY_BETA = 0.01
+DEFAULT_SURROGATE_ALPHA = 10.0
 
 
 class SpikingBrainConfig(BrainConfig):
@@ -65,10 +70,8 @@ class SpikingBrainConfig(BrainConfig):
 
     # Network topology
     hidden_size: int = DEFAULT_HIDDEN_SIZE
-
-    # Simulation parameters
-    simulation_duration: float = DEFAULT_SIMULATION_DURATION
-    time_step: float = DEFAULT_TIME_STEP
+    num_hidden_layers: int = DEFAULT_NUM_HIDDEN_LAYERS
+    num_timesteps: int = DEFAULT_NUM_TIMESTEPS
 
     # LIF neuron parameters
     tau_m: float = DEFAULT_TAU_M
@@ -76,113 +79,55 @@ class SpikingBrainConfig(BrainConfig):
     v_reset: float = DEFAULT_V_RESET
     v_rest: float = DEFAULT_V_REST
 
-    # Encoding parameters
-    max_rate: float = DEFAULT_MAX_RATE
-    min_rate: float = DEFAULT_MIN_RATE
-
-    # STDP parameters
-    tau_plus: float = DEFAULT_TAU_PLUS
-    tau_minus: float = DEFAULT_TAU_MINUS
-    a_plus: float = DEFAULT_A_PLUS
-    a_minus: float = DEFAULT_A_MINUS
+    # Learning parameters
     learning_rate: float = DEFAULT_LEARNING_RATE
-    reward_scaling: float = DEFAULT_REWARD_SCALING
+    gamma: float = DEFAULT_GAMMA
+    baseline_alpha: float = DEFAULT_BASELINE_ALPHA
+    entropy_beta: float = DEFAULT_ENTROPY_BETA
 
-    # Weight initialization
-    weight_mean: float = DEFAULT_WEIGHT_MEAN
-    weight_std: float = DEFAULT_WEIGHT_STD
-    weight_clip: float = DEFAULT_WEIGHT_CLIP
-
-
-class LIFNeuron:
-    """Leaky Integrate-and-Fire neuron model."""
-
-    def __init__(
-        self,
-        tau_m: float = DEFAULT_TAU_M,
-        v_threshold: float = DEFAULT_V_THRESHOLD,
-        v_reset: float = DEFAULT_V_RESET,
-        v_rest: float = DEFAULT_V_REST,
-    ) -> None:
-        self.tau_m = tau_m
-        self.v_threshold = v_threshold
-        self.v_reset = v_reset
-        self.v_rest = v_rest
-        self.v_membrane = v_rest
-        self.last_spike_time = -np.inf
-
-    def step(self, input_current: float, dt: float) -> bool:
-        """
-        Update neuron state and check for spike.
-
-        Args:
-            input_current: Input current for this time step
-            dt: Time step duration (ms)
-
-        Returns
-        -------
-            True if neuron spikes, False otherwise
-        """
-        # Update membrane potential using Euler integration
-        dv_dt = (self.v_rest - self.v_membrane + input_current) / self.tau_m
-        self.v_membrane += dv_dt * dt
-
-        # Check for spike
-        if self.v_membrane >= self.v_threshold:
-            self.v_membrane = self.v_reset
-            return True
-        return False
-
-    def reset(self) -> None:
-        """Reset neuron to resting state."""
-        self.v_membrane = self.v_rest
-        self.last_spike_time = -np.inf
-
-
-class STDPRule:
-    """Spike-Timing Dependent Plasticity learning rule."""
-
-    def __init__(
-        self,
-        tau_plus: float = DEFAULT_TAU_PLUS,
-        tau_minus: float = DEFAULT_TAU_MINUS,
-        a_plus: float = DEFAULT_A_PLUS,
-        a_minus: float = DEFAULT_A_MINUS,
-    ) -> None:
-        self.tau_plus = tau_plus
-        self.tau_minus = tau_minus
-        self.a_plus = a_plus
-        self.a_minus = a_minus
-
-    def compute_weight_change(self, delta_t: float, reward_signal: float) -> float:
-        """
-        Compute weight change based on spike timing difference.
-
-        Args:
-            delta_t: Time difference between pre and post spikes (post - pre)
-            reward_signal: Reward modulation signal
-
-        Returns
-        -------
-            Weight change amount
-        """
-        if delta_t > 0:
-            # Post after pre -> potentiation
-            dw = self.a_plus * np.exp(-delta_t / self.tau_plus)
-        else:
-            # Pre after post -> depression
-            dw = -self.a_minus * np.exp(delta_t / self.tau_minus)
-
-        # Modulate by reward signal
-        return dw * reward_signal
+    # Surrogate gradient parameters
+    surrogate_alpha: float = DEFAULT_SURROGATE_ALPHA
 
 
 class SpikingBrain(ClassicalBrain):
     """
-    Spiking neural network brain architecture using LIF neurons and STDP learning.
+    Spiking neural network brain with surrogate gradient descent.
 
-    Implements biologically plausible neural dynamics with temporal spike patterns
-    for decision-making in navigation tasks.
+    Implements biologically plausible LIF neuron dynamics with gradient-based
+    learning through surrogate gradient approximation. Uses REINFORCE policy
+    gradient algorithm for reinforcement learning tasks.
+
+    Parameters
+    ----------
+    config : SpikingBrainConfig
+        Configuration for network architecture and learning
+    input_dim : int
+        Dimension of input features (typically 2: gradient strength, relative angle)
+    num_actions : int
+        Number of possible actions (typically 4: forward, left, right, stay)
+    device : DeviceType
+        Computing device (CPU or GPU)
+    action_set : list[Action]
+        Available actions for the agent
+    parameter_initializer : ParameterInitializer | None
+        Optional custom parameter initialization (not used with PyTorch auto-init)
+
+    Attributes
+    ----------
+    policy : SpikingPolicyNetwork
+        Spiking neural network for computing action probabilities
+    optimizer : torch.optim.Adam
+        Adam optimizer for gradient descent
+    episode_states : list
+        State observations collected during current episode
+    episode_actions : list
+        Actions taken during current episode
+    episode_log_probs : list
+        Log probabilities of actions for policy gradient
+    episode_rewards : list
+        Rewards received during current episode
+    baseline : float
+        Running average of returns for variance reduction
     """
 
     def __init__(  # noqa: PLR0913
@@ -197,7 +142,7 @@ class SpikingBrain(ClassicalBrain):
     ) -> None:
         super().__init__()
 
-        logger.info(f"Initializing SpikingBrain with config: {config}")
+        logger.info(f"Initializing SpikingBrain with surrogate gradients: {config}")
 
         self.config = config
         self.input_dim = input_dim
@@ -209,254 +154,101 @@ class SpikingBrain(ClassicalBrain):
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
 
-        # Network dimensions
-        self.hidden_size = config.hidden_size
-        self.total_neurons = input_dim + config.hidden_size + num_actions
+        # Create spiking policy network
+        self.policy = SpikingPolicyNetwork(
+            input_dim=input_dim,
+            hidden_dim=config.hidden_size,
+            output_dim=num_actions,
+            num_timesteps=config.num_timesteps,
+            num_hidden_layers=config.num_hidden_layers,
+            tau_m=config.tau_m,
+            v_threshold=config.v_threshold,
+            v_reset=config.v_reset,
+            v_rest=config.v_rest,
+            surrogate_alpha=config.surrogate_alpha,
+        ).to(self.device)
 
-        # Create neuron populations
-        self.input_neurons = [
-            LIFNeuron(config.tau_m, config.v_threshold, config.v_reset, config.v_rest)
-            for _ in range(input_dim)
-        ]
-        self.hidden_neurons = [
-            LIFNeuron(config.tau_m, config.v_threshold, config.v_reset, config.v_rest)
-            for _ in range(config.hidden_size)
-        ]
-        self.output_neurons = [
-            LIFNeuron(config.tau_m, config.v_threshold, config.v_reset, config.v_rest)
-            for _ in range(num_actions)
-        ]
+        # Optimizer (Adam for stable convergence)
+        self.optimizer = torch.optim.Adam(
+            self.policy.parameters(),
+            lr=config.learning_rate,
+        )
 
-        # Initialize synaptic weights
-        self._initialize_weights(parameter_initializer)
+        # Episode buffers for policy gradient learning
+        self.episode_states: list[np.ndarray] = []
+        self.episode_actions: list[int] = []
+        self.episode_log_probs: list[torch.Tensor] = []
+        self.episode_rewards: list[float] = []
 
-        # STDP learning rule
-        self.stdp_rule = STDPRule(config.tau_plus, config.tau_minus, config.a_plus, config.a_minus)
-
-        # Spike history tracking
-        self.spike_times = {
-            "input": [[] for _ in range(input_dim)],
-            "hidden": [[] for _ in range(config.hidden_size)],
-            "output": [[] for _ in range(num_actions)],
-        }
-
-        # Episode tracking
-        self.episode_spike_patterns = []
-        self.episode_rewards = []
+        # Baseline for variance reduction
+        self.baseline = 0.0
 
         # Overfitting detection
         self.overfitting_detector = create_overfitting_detector_for_brain("spiking")
         self.overfit_detector_episode_count = 0
-        self.overfit_detector_current_episode_actions = []
-        self.overfit_detector_current_episode_positions = []
-        self.overfit_detector_current_episode_rewards = []
+        self.overfit_detector_current_episode_actions: list[Action] = []
+        self.overfit_detector_current_episode_positions: list[tuple[float, float]] = []
+        self.overfit_detector_current_episode_rewards: list[float] = []
 
-        logger.info(f"SpikingBrain initialized with {self.total_neurons} total neurons")
+        # Log parameter count
+        total_params = sum(p.numel() for p in self.policy.parameters() if p.requires_grad)
+        logger.info(f"SpikingBrain initialized with {total_params:,} trainable parameters")
 
-    def _initialize_weights(self, parameter_initializer: ParameterInitializer | None) -> None:
-        """Initialize synaptic weight matrices."""
-        # Input to hidden weights
-        self.weights_input_hidden = torch.normal(
-            self.config.weight_mean,
-            self.config.weight_std,
-            (self.input_dim, self.config.hidden_size),
-            device=self.device,
-        )
-
-        # Hidden to output weights
-        self.weights_hidden_output = torch.normal(
-            self.config.weight_mean,
-            self.config.weight_std,
-            (self.config.hidden_size, self.num_actions),
-            device=self.device,
-        )
-
-        # Optional recurrent connections within hidden layer
-        self.weights_hidden_hidden = torch.normal(
-            self.config.weight_mean * 0.5,  # Smaller recurrent weights
-            self.config.weight_std * 0.5,
-            (self.config.hidden_size, self.config.hidden_size),
-            device=self.device,
-        )
-
-        # Clip weights to prevent instability
-        self._clip_weights()
-
-        total_params = (
-            self.weights_input_hidden.numel()
-            + self.weights_hidden_output.numel()
-            + self.weights_hidden_hidden.numel()
-        )
-
-        logger.info(f"Initialized {total_params:,} synaptic weights")
         if parameter_initializer is not None:
             logger.info(
-                "Custom parameter initializer provided but using standard normal initialization",
+                "Custom parameter initializer provided but using PyTorch default initialization",
             )
-
-    def _clip_weights(self) -> None:
-        """Clip weights to maintain stability."""
-        with torch.no_grad():
-            self.weights_input_hidden.clamp_(-self.config.weight_clip, self.config.weight_clip)
-            self.weights_hidden_output.clamp_(-self.config.weight_clip, self.config.weight_clip)
-            self.weights_hidden_hidden.clamp_(-self.config.weight_clip, self.config.weight_clip)
-
-    def _encode_state_to_spikes(self, state: list[float]) -> list[list[float]]:
-        """
-        Encode continuous state values to Poisson spike trains.
-
-        Args:
-            state: List of continuous state values
-
-        Returns
-        -------
-            List of spike times for each input neuron
-        """
-        spike_trains = []
-        dt = self.config.time_step
-        duration = self.config.simulation_duration
-        num_steps = int(duration / dt)
-        rng = np.random.default_rng()
-
-        for value in state:
-            # Convert continuous value to firing rate
-            rate = self.config.min_rate + (self.config.max_rate - self.config.min_rate) * max(
-                0,
-                min(1, value),
-            )
-
-            # Generate Poisson spike train
-            spike_times = []
-            for step in range(num_steps):
-                prob = rate * dt / 1000.0  # Convert to probability per time step
-                if rng.random() < prob:
-                    spike_times.append(step * dt)
-
-            spike_trains.append(spike_times)
-
-        return spike_trains
-
-    def _simulate_network(self, input_spike_trains: list[list[float]]) -> tuple[list[int], dict]:
-        """
-        Simulate the spiking neural network for one decision period.
-
-        Args:
-            input_spike_trains: Spike times for each input neuron
-
-        Returns
-        -------
-            Tuple of (output spike counts, detailed spike history)
-        """
-        dt = self.config.time_step
-        duration = self.config.simulation_duration
-        num_steps = int(duration / dt)
-
-        # Reset all neurons
-        for neuron in self.input_neurons + self.hidden_neurons + self.output_neurons:
-            neuron.reset()
-
-        # Track spikes
-        input_spikes = [[] for _ in range(self.input_dim)]
-        hidden_spikes = [[] for _ in range(self.config.hidden_size)]
-        output_spikes = [[] for _ in range(self.num_actions)]
-
-        # Simulate time steps
-        for step in range(num_steps):
-            current_time = step * dt
-
-            # Process input spikes
-            input_currents_hidden = torch.zeros(self.config.hidden_size, device=self.device)
-            for i, spike_times in enumerate(input_spike_trains):
-                if any(abs(t - current_time) < dt / 2 for t in spike_times):
-                    input_spikes[i].append(current_time)
-                    # Add current to connected hidden neurons
-                    input_currents_hidden += self.weights_input_hidden[i, :]
-
-            # Update hidden neurons
-            hidden_currents_output = torch.zeros(self.num_actions, device=self.device)
-            hidden_currents_recurrent = torch.zeros(self.config.hidden_size, device=self.device)
-
-            for i, neuron in enumerate(self.hidden_neurons):
-                total_current = input_currents_hidden[i] + hidden_currents_recurrent[i]
-                if neuron.step(total_current.item(), dt):
-                    hidden_spikes[i].append(current_time)
-                    # Add current to output neurons
-                    hidden_currents_output += self.weights_hidden_output[i, :]
-                    # Add recurrent current to other hidden neurons
-                    hidden_currents_recurrent += self.weights_hidden_hidden[i, :]
-
-            # Update output neurons
-            for i, neuron in enumerate(self.output_neurons):
-                if neuron.step(hidden_currents_output[i].item(), dt):
-                    output_spikes[i].append(current_time)
-
-        # Count output spikes
-        output_spike_counts = [len(spikes) for spikes in output_spikes]
-
-        # Store spike history
-        spike_history = {
-            "input": input_spikes,
-            "hidden": hidden_spikes,
-            "output": output_spikes,
-            "duration": duration,
-        }
-
-        return output_spike_counts, spike_history
-
-    def _decode_action_probabilities(self, spike_counts: list[int]) -> np.ndarray:
-        """
-        Convert output spike counts to action probabilities.
-
-        Args:
-            spike_counts: Number of spikes from each output neuron
-
-        Returns
-        -------
-            Normalized action probabilities
-        """
-        # Convert counts to rates (spikes per second)
-        rates = np.array(spike_counts) / (self.config.simulation_duration / 1000.0)
-
-        # Add small epsilon to prevent zero probabilities
-        rates = rates + 1e-8
-
-        # Apply softmax to get probabilities
-        exp_rates = np.exp(rates - np.max(rates))
-        return exp_rates / np.sum(exp_rates)
 
     @property
     def action_set(self) -> list[Action]:
         """Return the set of available actions."""
         return self._action_set
 
-    def preprocess(self, params: BrainParams) -> list[float]:
+    def preprocess(self, params: BrainParams) -> np.ndarray:
         """
-        Preprocess brain parameters into state vector for encoding.
+        Preprocess brain parameters into state vector.
 
-        Args:
-            params: Brain parameters containing environmental state
+        Computes relative angle between agent orientation and goal direction,
+        matching the preprocessing used by MLPBrain for fair comparison.
+
+        Parameters
+        ----------
+        params : BrainParams
+            Brain parameters containing environmental state
 
         Returns
         -------
-            Preprocessed state vector
+        np.ndarray
+            Preprocessed state vector [gradient_strength, relative_angle_normalized]
+            where relative_angle_normalized is in [-1, 1]
         """
-        state = []
+        # Feature 1: Gradient strength [0, 1]
+        grad_strength = float(params.gradient_strength or 0.0)
+        grad_strength = max(0.0, min(1.0, grad_strength))
 
-        # Add gradient strength (normalized to [0, 1])
-        if params.gradient_strength is not None:
-            state.append(max(0, min(1, params.gradient_strength)))
+        # Feature 2: Relative angle to goal [-1, 1]
+        if params.gradient_direction is not None and params.agent_direction is not None:
+            # Map agent direction to angle (radians)
+            direction_map = {
+                Direction.UP: 0.5 * np.pi,
+                Direction.RIGHT: 0.0,
+                Direction.DOWN: 1.5 * np.pi,
+                Direction.LEFT: np.pi,
+            }
+            agent_facing_angle = direction_map[params.agent_direction]
+
+            # Compute relative angle: goal direction - agent facing direction
+            # Normalize to [-π, π]
+            relative_angle = (params.gradient_direction - agent_facing_angle + np.pi) % (
+                2 * np.pi
+            ) - np.pi
+
+            # Normalize to [-1, 1] for network input
+            rel_angle_normalized = relative_angle / np.pi
         else:
-            state.append(0.0)
+            rel_angle_normalized = 0.0
 
-        # Add gradient direction (normalized to [0, 1])
-        if params.gradient_direction is not None:
-            # Normalize angle to [0, 1]
-            normalized_direction = (params.gradient_direction % (2 * np.pi)) / (2 * np.pi)
-            state.append(normalized_direction)
-        else:
-            state.append(0.0)
-
-        return state
+        return np.array([grad_strength, rel_angle_normalized], dtype=np.float32)
 
     def run_brain(
         self,
@@ -470,46 +262,62 @@ class SpikingBrain(ClassicalBrain):
         """
         Run the spiking neural network and select an action.
 
-        Args:
-            params: Brain parameters containing environmental state
-            reward: Optional reward signal (not used in forward pass)
-            input_data: Optional input data (not used)
-            top_only: Whether to return only top action (not used)
-            top_randomize: Whether to randomize top actions (not used)
+        Forward pass through the spiking network, simulating LIF dynamics for
+        num_timesteps to accumulate spikes and compute action probabilities.
+
+        Parameters
+        ----------
+        params : BrainParams
+            Brain parameters containing environmental state
+        reward : float | None
+            Optional reward signal (not used in forward pass)
+        input_data : list[float] | None
+            Optional input data (not used)
+        top_only : bool
+            Whether to return only top action (not used, always samples)
+        top_randomize : bool
+            Whether to randomize top actions (not used)
 
         Returns
         -------
-            List of selected actions with probabilities
+        list[ActionData]
+            List containing single selected action with probability
         """
         # Preprocess state
         state = self.preprocess(params)
 
-        # Encode state to spike trains
-        input_spike_trains = self._encode_state_to_spikes(state)
+        # Convert to tensor
+        state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
 
-        # Simulate network
-        output_spike_counts, spike_history = self._simulate_network(input_spike_trains)
+        # Forward pass through spiking network
+        with torch.no_grad() if not self.policy.training else torch.enable_grad():
+            action_logits = self.policy(state_tensor)
+            action_probs = torch.softmax(action_logits, dim=-1)
 
-        # Decode action probabilities
-        probabilities = self._decode_action_probabilities(output_spike_counts)
+        # Sample action from categorical distribution
+        action_dist = torch.distributions.Categorical(action_probs)
+        action_idx = action_dist.sample()
+        log_prob = action_dist.log_prob(action_idx)
 
-        # Select action based on probabilities
-        rng = np.random.default_rng()
-        action_idx = rng.choice(len(probabilities), p=probabilities)
-        selected_action = self.action_set[action_idx]
-        selected_probability = probabilities[action_idx]
+        # Store for policy gradient learning
+        self.episode_states.append(state)
+        action_idx_int = int(action_idx.item())
+        self.episode_actions.append(action_idx_int)
+        self.episode_log_probs.append(log_prob)
 
-        # Store data for learning
-        state_str = f"grad_str:{state[0]:.3f},grad_dir:{state[1]:.3f}"
-        self.latest_data.action = ActionData(
+        # Get selected action and probability
+        selected_action = self.action_set[action_idx_int]
+        probability = action_probs[0, action_idx_int].item()
+
+        # Store data for tracking
+        state_str = f"grad_str:{state[0]:.3f},rel_angle:{state[1]:.3f}"
+        action_data = ActionData(
             state=state_str,
             action=selected_action,
-            probability=selected_probability,
+            probability=probability,
         )
-        self.latest_data.probability = selected_probability
-
-        # Store spike history for STDP learning
-        self.episode_spike_patterns.append(spike_history)
+        self.latest_data.action = action_data
+        self.latest_data.probability = probability
 
         # Update overfitting detector
         if params.agent_position is not None:
@@ -517,14 +325,10 @@ class SpikingBrain(ClassicalBrain):
         self.overfit_detector_current_episode_actions.append(selected_action)
 
         logger.debug(
-            f"SpikingBrain selected action {selected_action} "
-            f"with probability {selected_probability:.3f}",
+            f"SpikingBrain selected action {selected_action} with probability {probability:.3f}",
         )
-        logger.debug(f"Output spike counts: {output_spike_counts}")
 
-        return [
-            ActionData(state=state_str, action=selected_action, probability=selected_probability),
-        ]
+        return [action_data]
 
     def learn(
         self,
@@ -534,89 +338,91 @@ class SpikingBrain(ClassicalBrain):
         episode_done: bool,
     ) -> None:
         """
-        Update synaptic weights using reward-modulated STDP.
+        Update network parameters using policy gradient (REINFORCE).
 
-        Args:
-            params: Brain parameters
-            reward: Reward signal for learning
-            episode_done: Whether the episode is complete
+        Computes discounted returns, normalizes for variance reduction, and
+        updates policy network using policy gradient with baseline subtraction.
+
+        Parameters
+        ----------
+        params : BrainParams
+            Brain parameters (not used in learning)
+        reward : float
+            Reward signal for current timestep
+        episode_done : bool
+            Whether the episode is complete
         """
         self.episode_rewards.append(reward)
         self.overfit_detector_current_episode_rewards.append(reward)
 
-        if episode_done:
-            self._update_weights_stdp()
-            self._clip_weights()
+        if episode_done and self.episode_rewards:
+            # Compute discounted returns backward through episode
+            returns: list[float] = []
+            g_value = 0.0
+            for r in reversed(self.episode_rewards):
+                g_value = r + self.config.gamma * g_value
+                returns.insert(0, g_value)
 
-            # Clear episode data
-            self.episode_spike_patterns.clear()
+            # Convert to tensor
+            returns_tensor = torch.tensor(returns, dtype=torch.float32, device=self.device)
+
+            # Normalize returns for variance reduction
+            if len(returns) > 1:
+                returns_tensor = (returns_tensor - returns_tensor.mean()) / (
+                    returns_tensor.std() + 1e-8
+                )
+
+            # Update baseline (running average of episode returns)
+            episode_return = sum(self.episode_rewards)
+            self.baseline = (
+                self.config.baseline_alpha * episode_return
+                + (1 - self.config.baseline_alpha) * self.baseline
+            )
+
+            # Compute advantages (returns - baseline)
+            advantages = returns_tensor - self.baseline
+
+            # Compute policy loss: -Σ log_prob(a_t) * advantage_t
+            log_probs = torch.stack(self.episode_log_probs)
+            policy_loss = -(log_probs * advantages).sum()
+
+            # Optional: Add entropy regularization for exploration
+            if self.config.entropy_beta > 0:
+                # Entropy bonus encourages exploration
+                # Note: Would need to save action_probs during forward pass
+                # For now, entropy is implicitly handled by stochastic sampling
+                pass
+
+            # Backpropagation
+            self.optimizer.zero_grad()
+            policy_loss.backward()
+
+            # Gradient clipping to prevent explosion
+            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+
+            # Update parameters
+            self.optimizer.step()
+
+            # Log learning statistics
+            logger.debug(
+                f"Policy gradient update: loss={policy_loss.item():.4f}, "
+                f"episode_return={episode_return:.2f}, baseline={self.baseline:.2f}",
+            )
+
+            # Clear episode buffers
+            self.episode_states.clear()
+            self.episode_actions.clear()
+            self.episode_log_probs.clear()
             self.episode_rewards.clear()
-
-    def _update_weights_stdp(self) -> None:  # noqa: C901, PLR0912
-        """Update synaptic weights using STDP rule with reward modulation."""
-        if not self.episode_spike_patterns or not self.episode_rewards:
-            return
-
-        # Use average reward as modulation signal
-        avg_reward = float(np.mean(self.episode_rewards)) * self.config.reward_scaling
-
-        with torch.no_grad():
-            total_weight_change = 0.0
-
-            # Update input-to-hidden weights
-            for pattern in self.episode_spike_patterns:
-                for i, input_spikes in enumerate(pattern["input"]):
-                    for j, hidden_spikes in enumerate(pattern["hidden"]):
-                        # Compute weight changes for all spike pairs
-                        weight_change = 0.0
-                        for t_pre in input_spikes:
-                            for t_post in hidden_spikes:
-                                delta_t = t_post - t_pre
-                                if (
-                                    abs(delta_t)
-                                    < max(self.config.tau_plus, self.config.tau_minus) * 3
-                                ):
-                                    weight_change += self.stdp_rule.compute_weight_change(
-                                        delta_t,
-                                        avg_reward,
-                                    )
-
-                        self.weights_input_hidden[i, j] += self.config.learning_rate * weight_change
-                        total_weight_change += abs(weight_change)
-
-            # Update hidden-to-output weights
-            for pattern in self.episode_spike_patterns:
-                for i, hidden_spikes in enumerate(pattern["hidden"]):
-                    for j, output_spikes in enumerate(pattern["output"]):
-                        weight_change = 0.0
-                        for t_pre in hidden_spikes:
-                            for t_post in output_spikes:
-                                delta_t = t_post - t_pre
-                                if (
-                                    abs(delta_t)
-                                    < max(self.config.tau_plus, self.config.tau_minus) * 3
-                                ):
-                                    weight_change += self.stdp_rule.compute_weight_change(
-                                        delta_t,
-                                        avg_reward,
-                                    )
-
-                        self.weights_hidden_output[i, j] += (
-                            self.config.learning_rate * weight_change
-                        )
-                        total_weight_change += abs(weight_change)
-
-        logger.debug(
-            f"STDP weight update: total change = {total_weight_change:.6f}, "
-            f"avg_reward = {avg_reward:.3f}",
-        )
 
     def update_memory(self, reward: float | None) -> None:
         """
         Update memory with reward information.
 
-        Args:
-            reward: Reward signal to store
+        Parameters
+        ----------
+        reward : float | None
+            Reward signal to store
         """
         if reward is not None:
             self.latest_data.reward = reward
@@ -626,7 +432,14 @@ class SpikingBrain(ClassicalBrain):
         """Prepare for a new episode (no-op for SpikingBrain)."""
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
-        """Perform post-episode processing and cleanup."""
+        """
+        Perform post-episode processing and cleanup.
+
+        Parameters
+        ----------
+        episode_success : bool | None
+            Whether the episode was successful (not used)
+        """
         # Update overfitting detector
         if (
             self.overfit_detector_current_episode_actions
@@ -652,10 +465,15 @@ class SpikingBrain(ClassicalBrain):
                     and self.overfit_detector_current_episode_positions
                 ):
                     start_pos = self.overfit_detector_current_episode_positions[0]
+                    # Convert float positions to int for behavioral metrics
+                    int_positions = [
+                        (int(x), int(y)) for x, y in self.overfit_detector_current_episode_positions
+                    ]
+                    int_start_pos = (int(start_pos[0]), int(start_pos[1]))
                     self.overfitting_detector.update_behavioral_metrics(
                         action_sequence,
-                        self.overfit_detector_current_episode_positions,
-                        start_pos,
+                        int_positions,
+                        int_start_pos,
                     )
 
             except (AttributeError, ValueError, TypeError) as e:
@@ -675,7 +493,8 @@ class SpikingBrain(ClassicalBrain):
 
         Returns
         -------
-            New SpikingBrain instance with copied weights
+        SpikingBrain
+            New SpikingBrain instance with copied network parameters
         """
         new_brain = SpikingBrain(
             config=self.config,
@@ -685,9 +504,13 @@ class SpikingBrain(ClassicalBrain):
             action_set=self._action_set.copy(),
         )
 
-        # Copy weights
-        new_brain.weights_input_hidden = self.weights_input_hidden.clone()
-        new_brain.weights_hidden_output = self.weights_hidden_output.clone()
-        new_brain.weights_hidden_hidden = self.weights_hidden_hidden.clone()
+        # Copy network parameters
+        new_brain.policy.load_state_dict(self.policy.state_dict())
+
+        # Copy optimizer state
+        new_brain.optimizer.load_state_dict(self.optimizer.state_dict())
+
+        # Copy baseline
+        new_brain.baseline = self.baseline
 
         return new_brain
