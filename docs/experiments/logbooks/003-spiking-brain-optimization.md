@@ -180,6 +180,103 @@ if self.latest_data.learning_rate is not None:
     self.history_data.learning_rates.append(self.latest_data.learning_rate)
 ```
 
+#### Phase 5: Kaiming Initialization (Attempts 14-22)
+**Problem**: 60-point variance (18%-78%) with default PyTorch initialization
+
+**Initial Attempt - Kaiming without output scaling**:
+Sessions: `20251219_112425-112435` (pre-Kaiming baseline)
+- Range: 18-78% (60-point spread)
+- 1 catastrophic failure at 18%
+- Initialization lottery: some random seeds excellent, others terrible
+
+**First Kaiming Implementation**:
+```python
+weight_init: kaiming  # Added to config
+torch.nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
+```
+
+**Problem Discovered**: Complete policy collapse
+```
+Action probabilities: [1.000, 0.000, 0.000, 0.000]  # 100% FORWARD
+Then later:          [0.000, 0.000, 0.000, 1.000]  # 100% STAY
+Agent stuck in place, no learning visible
+```
+
+**Root Cause**: Kaiming initialization created extreme logits
+- Kaiming scale: `sqrt(2/fan_in)` for ReLU → larger weights than default
+- Output layer with Kaiming weights → logits like [20.0, 0.01, 0.01, 0.01]
+- After softmax → [1.000, 0.000, 0.000, 0.000] (deterministic from start)
+- No gradient flow from deterministic policy → stuck forever
+
+**Fix - Output Layer Scaling**:
+```python
+def _initialize_weights(self, method: str):
+    # Find output layer (last linear layer)
+    linear_layers = [m for m in self.policy.modules() if isinstance(m, torch.nn.Linear)]
+    output_layer = linear_layers[-1] if linear_layers else None
+
+    for module in self.policy.named_modules():
+        if isinstance(module, torch.nn.Linear):
+            if method == "kaiming":
+                torch.nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
+
+                # Scale down output layer to prevent extreme logits
+                if module is output_layer:
+                    with torch.no_grad():
+                        module.weight.mul_(0.01)  # Scale by 100x
+```
+
+**Result**: Agent moving and learning again!
+- Initial test: 66.7% success (3 runs)
+- Policy no longer collapsed
+
+**Entropy Tuning for Kaiming**:
+Sessions: `20251219_120330-120340` (Kaiming + low entropy)
+```yaml
+entropy_beta: 0.05  # Original value
+```
+- Range: 50-76% (26-point spread)
+- Still seeing catastrophic failures (50%)
+- Kaiming + scaled output still more deterministic than default init
+
+**Solution - Higher Initial Entropy**:
+Sessions: `20251219_121946-121955` (Kaiming + high entropy)
+```yaml
+entropy_beta: 0.15          # Tripled from 0.05
+entropy_beta_final: 0.01    # Keep same
+entropy_decay_episodes: 50  # Gradual decay
+```
+
+**Results - Variance Reduced 62%**:
+- Range: 58-68% (10-point spread) ✓
+- Minimum raised from 50% → 58% ✓
+- Convergence: 3/4 sessions ✓
+- Best session: 68% overall, 88.9% post-convergence
+
+**Comparison**:
+| Configuration | Range | Variance | Min | Max | Converge |
+|--------------|-------|----------|-----|-----|----------|
+| Default init | 18-78% | 60 pts | 18% | 78% | 1/4 |
+| Kaiming + entropy=0.05 | 50-76% | 26 pts | 50% | 76% | 1/4 |
+| **Kaiming + entropy=0.15** | **58-68%** | **10 pts** | **58%** | **68%** | **3/4** |
+
+**Learning Rate Experiments**:
+Attempted faster convergence with `lr=0.0015` + `entropy_decay=30`:
+Sessions: `20251219_124240-124249`
+- **FAILED**: Range 27-55% (worse than before)
+- Higher LR caused premature convergence to bad policies
+- Faster entropy decay prevented sufficient exploration
+- Reverted to `lr=0.001` + `entropy_decay=50`
+
+**Final Configuration**:
+```yaml
+learning_rate: 0.001
+entropy_beta: 0.15              # Higher than default to compensate for Kaiming
+entropy_decay_episodes: 50      # Slow decay for thorough exploration
+weight_init: kaiming            # With 0.01 output layer scaling
+reward_exploration: 0.10        # Bonus for visiting new cells
+```
+
 ## Results
 
 ### Phase 4 Results (With All Fixes)
@@ -271,37 +368,40 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 
 ### Learning Dynamics
 
-**Successful sessions show three phases**:
+**Successful sessions show three phases** (with Kaiming + entropy=0.15):
 
 1. **Exploration (episodes 1-25)**:
    - LR: 0.001 (high)
-   - Entropy: 0.05 (high)
+   - Entropy: 0.15→0.10 (high, decaying)
    - Success: 40-50%
    - **Goal**: Find promising behaviors
 
 2. **Refinement (episodes 25-50)**:
    - LR: 0.0007-0.0003 (medium, decaying)
-   - Entropy: 0.05→0.01 (decaying)
+   - Entropy: 0.10→0.01 (decaying)
    - Success: 60-70%
    - **Goal**: Converge to good policy
 
 3. **Exploitation (episodes 50-100)**:
    - LR: 0.0003-0.0002 (low)
    - Entropy: 0.01 (low)
-   - Success: 90-100%
+   - Success: 70-90%
    - **Goal**: Stable performance
 
 **Step efficiency**: 227 steps early → 87 steps late (61% improvement)
 
 ## Conclusions
 
-1. **Spiking brains are viable**: 78% success rate competitive with classical approaches
+1. **Spiking brains are viable**: 78% peak success (Phase 4), 60-68% consistent (Phase 5 with Kaiming)
 2. **Gradient explosion was the blocker**: Proper clipping essential for stability
 3. **Decay schedules critical**: LR and entropy decay enable convergence without regression
-4. **Best session rivals quantum evolution**: 100% post-convergence matches best quantum results
-5. **Initialization variance remains**: 25-point spread (38-78%) suggests room for improvement
-6. **Temporal processing helps**: 100 timesteps better than 50
-7. **Online learning succeeds**: Unlike quantum, spiking learns during execution
+4. **Kaiming initialization reduces variance**: 60-point spread → 10-point spread with proper tuning
+5. **Output layer scaling essential**: Kaiming needs 0.01 scaling to prevent policy collapse
+6. **Higher entropy needed with Kaiming**: 0.15 vs 0.05 to compensate for stronger initialization
+7. **Faster learning harmful**: Higher LR (0.0015) caused premature convergence to bad policies
+8. **Best session rivals quantum evolution**: 100% post-convergence (Phase 4) matches best quantum results
+9. **Temporal processing helps**: 100 timesteps better than 50
+10. **Online learning succeeds**: Unlike quantum, spiking learns during execution
 
 ### Performance Summary
 
@@ -375,13 +475,17 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 | v_reset | 0.0 | Post-spike reset |
 | surrogate_alpha | 1.0 | **Critical** (10.0 explodes) |
 | **Learning** | | |
-| learning_rate | 0.001 | Initial value |
+| learning_rate | 0.001 | Initial value (0.0015 caused premature convergence) |
 | lr_decay_rate | 0.015 | 1.5% per episode |
 | gamma | 0.99 | Discount factor |
 | baseline_alpha | 0.05 | Baseline EMA |
-| entropy_beta | 0.05 | Initial exploration |
+| entropy_beta | **0.15** | **Higher with Kaiming** (was 0.05 with default init) |
 | entropy_beta_final | 0.01 | Final exploitation |
-| entropy_decay_episodes | 50 | First half of training |
+| entropy_decay_episodes | 50 | First half of training (30 too fast) |
+| reward_exploration | 0.10 | Bonus for new cells (helps Kaiming) |
+| **Initialization** | | |
+| weight_init | kaiming | Reduces variance vs default |
+| output_layer_scale | 0.01 | **Critical for Kaiming** (prevents policy collapse) |
 | **Gradient Control** | | |
 | value_clip | 1.0 | Clamp individual gradients |
 | norm_clip | 1.0 | Clip total gradient norm |
@@ -392,10 +496,14 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 |---------|-------------|-----|
 | surrogate_alpha=10.0 | Gradient explosion → policy collapse | Use 1.0 |
 | No value clipping | inf/NaN gradients corrupt network | Clamp to [-1, 1] |
-| Fixed entropy | Can't exploit after exploration | Decay 0.05→0.01 |
+| Fixed entropy | Can't exploit after exploration | Decay 0.15→0.01 (with Kaiming) |
 | Fixed LR | Can't fine-tune, may regress | Decay 0.001→0.0002 |
 | num_timesteps=50 | Insufficient temporal integration | Use 100 |
 | No gradient norm clip | Complements value clip | Use max_norm=1.0 |
+| Kaiming without output scaling | Policy collapse (100% one action) | Scale output by 0.01 |
+| Low entropy with Kaiming | Early collapse, 50% minimum SR | Use entropy_beta=0.15 |
+| High LR (0.0015) | Premature bad convergence | Keep at 0.001 |
+| Fast entropy decay (30 eps) | Insufficient exploration | Use 50 episodes |
 
 ## Lessons Learned
 

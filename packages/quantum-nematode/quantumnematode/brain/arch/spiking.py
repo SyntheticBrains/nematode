@@ -66,6 +66,7 @@ DEFAULT_ENTROPY_BETA = 0.01
 DEFAULT_ENTROPY_BETA_FINAL = 0.01
 DEFAULT_ENTROPY_DECAY_EPISODES = 0
 DEFAULT_SURROGATE_ALPHA = 10.0
+DEFAULT_WEIGHT_INIT = "kaiming"  # kaiming, xavier, or default
 
 
 class SpikingBrainConfig(BrainConfig):
@@ -93,6 +94,9 @@ class SpikingBrainConfig(BrainConfig):
 
     # Surrogate gradient parameters
     surrogate_alpha: float = DEFAULT_SURROGATE_ALPHA
+
+    # Weight initialization method
+    weight_init: str = DEFAULT_WEIGHT_INIT
 
 
 class SpikingBrain(ClassicalBrain):
@@ -173,6 +177,9 @@ class SpikingBrain(ClassicalBrain):
             v_rest=config.v_rest,
             surrogate_alpha=config.surrogate_alpha,
         ).to(self.device)
+
+        # Apply weight initialization
+        self._initialize_weights(config.weight_init)
 
         # Optimizer (Adam for stable convergence)
         self.optimizer = torch.optim.Adam(
@@ -391,6 +398,10 @@ class SpikingBrain(ClassicalBrain):
         self.overfit_detector_current_episode_rewards.append(reward)
 
         if episode_done and self.episode_rewards:
+            logger.info(
+                f"Episode complete - performing policy gradient update with "
+                f"{len(self.episode_rewards)} timesteps",
+            )
             # Compute discounted returns backward through episode
             returns: list[float] = []
             g_value = 0.0
@@ -598,6 +609,66 @@ class SpikingBrain(ClassicalBrain):
             # Update optimizer learning rate
             for param_group in self.optimizer.param_groups:
                 param_group["lr"] = new_lr
+
+    def _initialize_weights(self, method: str) -> None:
+        """
+        Initialize network weights using specified method.
+
+        Parameters
+        ----------
+        method : str
+            Initialization method: "kaiming", "xavier", or "default"
+            - kaiming: Variance-preserving for ReLU-like activations (recommended for spiking)
+            - xavier: Variance-preserving for tanh/sigmoid activations
+            - default: PyTorch default (uniform based on fan-in)
+        """
+        if method == "default":
+            # PyTorch already initialized, nothing to do
+            logger.info("Using PyTorch default weight initialization")
+            return
+
+        logger.info(f"Initializing weights with {method} method")
+
+        # Find output layer (last linear layer)
+        linear_layers = [
+            module for module in self.policy.modules() if isinstance(module, torch.nn.Linear)
+        ]
+        output_layer = linear_layers[-1] if linear_layers else None
+
+        for _name, module in self.policy.named_modules():
+            if isinstance(module, torch.nn.Linear):
+                if method == "kaiming":
+                    # Kaiming/He initialization for ReLU-like activations
+                    # Good for spiking neurons which have piecewise activation
+                    torch.nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
+                    if module.bias is not None:
+                        torch.nn.init.zeros_(module.bias)
+
+                    # Scale down output layer to prevent extreme logits
+                    # Output layer needs smaller weights for balanced softmax probabilities
+                    if module is output_layer:
+                        with torch.no_grad():
+                            module.weight.mul_(0.01)  # Scale down by 100x
+                        logger.info(
+                            "Scaled down output layer weights by 0.01 for balanced probabilities",
+                        )
+
+                elif method == "xavier":
+                    # Xavier/Glorot initialization for tanh/sigmoid
+                    torch.nn.init.xavier_uniform_(module.weight)
+                    if module.bias is not None:
+                        torch.nn.init.zeros_(module.bias)
+
+                    # Scale down output layer for balanced probabilities
+                    if module is output_layer:
+                        with torch.no_grad():
+                            module.weight.mul_(0.1)  # Scale down by 10x
+                        logger.info(
+                            "Scaled down output layer weights by 0.1 for balanced probabilities",
+                        )
+
+                else:
+                    logger.warning(f"Unknown initialization method: {method}, using default")
 
     def copy(self) -> "SpikingBrain":
         """

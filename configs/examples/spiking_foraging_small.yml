@@ -23,19 +23,22 @@ brain:
     lr_decay_rate: 0.015
     gamma: 0.99
     baseline_alpha: 0.05
-    entropy_beta: 0.05
+    entropy_beta: 0.15
     entropy_beta_final: 0.01
     entropy_decay_episodes: 50
 
     # Surrogate gradient parameters
     surrogate_alpha: 1.0
 
+    # Weight initialization
+    weight_init: kaiming
+
 body_length: 2
 
 reward:
   reward_goal: 2.0
   reward_distance_scale: 0.5
-  reward_exploration: 0.05
+  reward_exploration: 0.10
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0.1
