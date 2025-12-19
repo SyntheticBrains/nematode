@@ -116,9 +116,17 @@ def extract_brain_metadata(
     # Extract common parameters
     qubits = config.get("qubits")
     shots = config.get("shots")
+
+    # Learning rate: prioritize brain-specific LR over global LR config
+    # Some brains (spiking, mlp) have their own internal optimizer with LR in brain config
+    brain_learning_rate = brain_config.get("learning_rate")
     learning_rate_config = config.get("learning_rate")
     learning_rate = None
-    if isinstance(learning_rate_config, dict):
+    if brain_learning_rate is not None:
+        # Use brain-specific learning rate (for spiking, mlp, etc.)
+        learning_rate = brain_learning_rate
+    elif isinstance(learning_rate_config, dict):
+        # Fall back to global learning rate config (for modular, quantum brains)
         learning_rate = learning_rate_config.get("initial_learning_rate", None)
 
     # Extract architecture-specific parameters
