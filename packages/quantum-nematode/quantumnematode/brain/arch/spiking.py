@@ -59,9 +59,12 @@ DEFAULT_V_THRESHOLD = 1.0
 DEFAULT_V_RESET = 0.0
 DEFAULT_V_REST = 0.0
 DEFAULT_LEARNING_RATE = 0.001
+DEFAULT_LR_DECAY_RATE = 0.0
 DEFAULT_GAMMA = 0.99
 DEFAULT_BASELINE_ALPHA = 0.05
 DEFAULT_ENTROPY_BETA = 0.01
+DEFAULT_ENTROPY_BETA_FINAL = 0.01
+DEFAULT_ENTROPY_DECAY_EPISODES = 0
 DEFAULT_SURROGATE_ALPHA = 10.0
 
 
@@ -81,9 +84,12 @@ class SpikingBrainConfig(BrainConfig):
 
     # Learning parameters
     learning_rate: float = DEFAULT_LEARNING_RATE
+    lr_decay_rate: float = DEFAULT_LR_DECAY_RATE
     gamma: float = DEFAULT_GAMMA
     baseline_alpha: float = DEFAULT_BASELINE_ALPHA
     entropy_beta: float = DEFAULT_ENTROPY_BETA
+    entropy_beta_final: float = DEFAULT_ENTROPY_BETA_FINAL
+    entropy_decay_episodes: int = DEFAULT_ENTROPY_DECAY_EPISODES
 
     # Surrogate gradient parameters
     surrogate_alpha: float = DEFAULT_SURROGATE_ALPHA
@@ -183,6 +189,11 @@ class SpikingBrain(ClassicalBrain):
 
         # Baseline for variance reduction (running average of returns)
         self.baseline = 0.0
+
+        # Episode counter for decay schedules
+        self.episode_count = 0
+        self.initial_learning_rate = config.learning_rate
+        self.initial_entropy_beta = config.entropy_beta
 
         # Overfitting detection
         self.overfitting_detector = create_overfitting_detector_for_brain("spiking")
@@ -415,9 +426,12 @@ class SpikingBrain(ClassicalBrain):
             log_probs = torch.stack(self.episode_log_probs)
             policy_loss = -(log_probs * advantages).sum()
 
+            # Apply entropy decay schedule
+            current_entropy_beta = self._get_current_entropy_beta()
+
             # Add entropy regularization for exploration
             entropy = torch.tensor(0.0, device=self.device)
-            if self.config.entropy_beta > 0:
+            if current_entropy_beta > 0:
                 # Entropy: -Σ p(a) * log(p(a)) for each timestep, averaged
                 action_probs = torch.stack(self.episode_action_probs)
                 entropy = -(action_probs * torch.log(action_probs + 1e-8)).sum(dim=-1).mean()
@@ -425,12 +439,12 @@ class SpikingBrain(ClassicalBrain):
                 # Log entropy for diagnostics
                 logger.debug(
                     f"Episode entropy: {entropy.item():.4f}, "
-                    f"entropy_beta: {self.config.entropy_beta}, "
-                    f"entropy contribution: {self.config.entropy_beta * entropy.item():.4f}",
+                    f"entropy_beta: {current_entropy_beta:.4f}, "
+                    f"entropy contribution: {current_entropy_beta * entropy.item():.4f}",
                 )
 
                 # Subtract entropy to maximize it (entropy bonus)
-                policy_loss = policy_loss - self.config.entropy_beta * entropy
+                policy_loss = policy_loss - current_entropy_beta * entropy
 
             # Backpropagation
             self.optimizer.zero_grad()
@@ -451,6 +465,19 @@ class SpikingBrain(ClassicalBrain):
             # Update parameters
             self.optimizer.step()
 
+            # Apply learning rate decay schedule
+            self._apply_lr_decay()
+
+            # Track learning data for export
+            self.latest_data.loss = policy_loss.item()
+            self.latest_data.learning_rate = self.optimizer.param_groups[0]["lr"]
+
+            # Append to history for CSV export
+            if self.latest_data.loss is not None:
+                self.history_data.losses.append(self.latest_data.loss)
+            if self.latest_data.learning_rate is not None:
+                self.history_data.learning_rates.append(self.latest_data.learning_rate)
+
             # Log learning statistics
             episode_return = sum(self.episode_rewards)
             logger.debug(
@@ -458,6 +485,9 @@ class SpikingBrain(ClassicalBrain):
                 f"episode_return={episode_return:.2f}, baseline={self.baseline:.2f}, "
                 f"entropy={entropy.item():.4f}, returns_std={returns_std:.4f}",
             )
+
+            # Increment episode counter
+            self.episode_count += 1
 
             # Clear episode buffers
             self.episode_states.clear()
@@ -538,6 +568,37 @@ class SpikingBrain(ClassicalBrain):
 
         logger.debug("Episode post-processing complete")
 
+    def _get_current_entropy_beta(self) -> float:
+        """
+        Get current entropy beta value based on decay schedule.
+
+        Returns
+        -------
+        float
+            Current entropy regularization coefficient
+        """
+        if self.config.entropy_decay_episodes <= 0:
+            # No decay, return initial value
+            return self.initial_entropy_beta
+
+        # Linear decay from initial to final over specified episodes
+        progress = min(self.episode_count / self.config.entropy_decay_episodes, 1.0)
+        return (
+            self.initial_entropy_beta
+            - (self.initial_entropy_beta - self.config.entropy_beta_final) * progress
+        )
+
+    def _apply_lr_decay(self) -> None:
+        """Apply exponential learning rate decay if configured."""
+        if self.config.lr_decay_rate > 0:
+            # Exponential decay: lr_t = lr_0 * (1 - decay_rate)^t
+            decay_factor = (1.0 - self.config.lr_decay_rate) ** self.episode_count
+            new_lr = self.initial_learning_rate * decay_factor
+
+            # Update optimizer learning rate
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = new_lr
+
     def copy(self) -> "SpikingBrain":
         """
         Create a copy of the brain.
@@ -561,7 +622,8 @@ class SpikingBrain(ClassicalBrain):
         # Copy optimizer state
         new_brain.optimizer.load_state_dict(self.optimizer.state_dict())
 
-        # Copy baseline
+        # Copy baseline and episode counter for decay schedules
         new_brain.baseline = self.baseline
+        new_brain.episode_count = self.episode_count
 
         return new_brain
