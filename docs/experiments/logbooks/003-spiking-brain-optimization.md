@@ -357,7 +357,7 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 ### Comparison to Other Approaches
 
 **vs MLP (Classical)**:
-- MLP: Higher parameter count (~hundreds vs 12), faster convergence
+- MLP: Similar parameter count (~34k each with same hidden dims), faster convergence
 - Spiking: Competitive final performance (78% vs 85-92%), biological realism
 - Gap narrowed from ~60% to ~10%
 
