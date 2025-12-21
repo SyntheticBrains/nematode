@@ -696,6 +696,165 @@ Raw 4-input concatenation fails because:
 
 Next step: Implement dual-stream architecture with explicit gating.
 
+## Phase 9: Dual-Stream Architecture Experiment
+
+Based on the hypothesis that raw 4-input concatenation failed because the network had to learn multi-objective integration (a hard problem), we implemented a biologically-inspired dual-stream architecture with explicit gating.
+
+### Architecture Design
+
+```
+food_grad ──► [Appetitive Stream (LIF)] ──► approach_logits ─┐
+                                                              ├──► [Blend] ──► action
+pred_grad ──► [Aversive Stream (LIF)]  ──► avoid_logits ────┘
+              [Gating Network (MLP)]   ──► gate_weight (0-1)
+```
+
+**Key design principles**:
+1. **Separation of concerns**: Each stream learns ONE objective (simpler learning)
+2. **Learned gating**: Small MLP learns when to prioritize each stream
+3. **Biological plausibility**: Mirrors appetitive/aversive circuits in real brains
+4. **Satiety modulation**: Gate receives satiety input (hungry → food, full → avoid)
+
+### Implementation Details
+
+Files created:
+- `_dual_stream_spiking.py`: Core network with GatingNetwork and DualStreamSpikingNetwork
+- `dual_spiking.py`: Brain wrapper with DualStreamSpikingBrainConfig
+
+**Gating Network**:
+- Input: 5 features (food_strength, food_angle, pred_strength, pred_angle, satiety)
+- Hidden: 16 neurons
+- Output: gate_weight ∈ [0, 1]
+- Initialization bias: -0.85 → sigmoid ≈ 0.3 (slightly favor food-seeking)
+
+**Each Stream**:
+- Input: 2 features (strength, relative_angle)
+- Optional population coding (8 neurons per feature)
+- 1 LIF hidden layer (64 neurons)
+- Output: 4 action logits
+
+### Experiment 1: Learned Gating
+
+**Results (8 sessions)**:
+
+| Session | Success | Foods | Pred Deaths | Starved | Evasion | Composite |
+|---------|---------|-------|-------------|---------|---------|-----------|
+| 110248 | 0% | 0.78 | 60% | 40% | 89% | 0.26 |
+| 110250 | 0% | 0.96 | 72% | 28% | 85% | 0.26 |
+| 110253 | 0% | 0.01 | 45% | 55% | 92% | 0.26 |
+| 110256 | 0% | 0.83 | 64% | 36% | 86% | 0.26 |
+| 104803 | 0% | 1.06 | 72% | 28% | 85% | 0.26 |
+| 104805 | 0% | 1.11 | 72% | 28% | 84% | 0.26 |
+| 104809 | 0% | 0.06 | 50% | 50% | 90% | 0.26 |
+| 104812 | 0% | 0.03 | 50% | 50% | 89% | 0.26 |
+
+**Observation**: High variance (0.01 to 1.11 foods) with no successes. The gating network wasn't learning - random initialization dominated behavior.
+
+### Experiment 2: Satiety-Modulated Gating
+
+Added satiety as input to gating network with hypothesis: "When hungry, prioritize food. When full, prioritize avoidance."
+
+**Changes**:
+- Gating network input: 4 → 5 features (added normalized satiety)
+- Bias initialization: favor food-seeking when hungry
+- Increased food rewards: reward_goal 2.0 → 3.0, reward_distance_scale 0.5 → 1.0
+- Reduced predator penalty: 10.0 → 2.0
+
+**Results**: Still 0% success. High variance persisted - random initialization still dominated.
+
+### Experiment 3: Fixed Gating Diagnostic
+
+To determine if the architecture was sound but learning was broken, or if the dual-stream approach itself was flawed, we implemented a **fixed gating diagnostic**:
+
+```python
+if self.use_fixed_gating:
+    # Bypass learned gating entirely
+    gate_weight = satiety  # hungry (low) → 0 (food), full (high) → 1 (avoid)
+else:
+    gate_weight = self.gate(context)  # learned
+```
+
+**Hypothesis**: If fixed gating works, the architecture is sound and learning is the bottleneck. If it still fails, the dual-stream separation itself is the problem.
+
+**Results (8 sessions)**:
+
+| Session | Success | Foods | Pred Deaths | Starved | Evasion | Composite |
+|---------|---------|-------|-------------|---------|---------|-----------|
+| 114421 | 0% | 0.32 | 48% | 52% | 90% | 0.26 |
+| 114423 | 0% | 0.27 | 35% | 65% | 94% | 0.26 |
+| 114426 | 0% | 0.84 | 63% | 37% | 86% | 0.26 |
+| 114430 | 0% | 0.29 | 51% | 49% | 91% | 0.26 |
+| 115555 | 0% | 0.46 | 59% | 41% | 90% | 0.26 |
+| 115558 | 0% | 0.57 | 40% | 60% | 89% | 0.26 |
+| 115601 | 0% | 0.50 | 47% | 53% | 89% | 0.26 |
+| 115604 | 0% | 0.13 | 43% | 57% | 92% | 0.26 |
+
+**Averages**: 0% success, 0.42 foods, 48.3 pred deaths, 51.8 starved, 90% evasion
+
+### Diagnostic Conclusion
+
+**The dual-stream architecture itself is fundamentally broken**, not just the learning.
+
+Even with perfect gating (verified to work correctly: hungry→food, full→avoid), the architecture produces 0% success.
+
+### Root Cause Analysis
+
+The problem is that **each stream only sees its own gradient** (2 features each) which is insufficient context:
+
+| Stream | Inputs | What it can learn | What it can't learn |
+|--------|--------|-------------------|---------------------|
+| Appetitive | [food_strength, food_angle] | "Move toward food" | "When to back off for predators" |
+| Aversive | [pred_strength, pred_angle] | "Move away from predators" | "When to risk approach for food" |
+
+**Compare to working approaches**:
+- **Combined-gradient spiking (28%)**: Sees pre-computed optimal direction
+- **MLP (85%)**: Sees all 4 inputs simultaneously, can learn internal integration
+
+**The fundamental issue**: Separated inputs mean each stream makes decisions in isolation. Even with perfect gating:
+1. The appetitive stream can't factor in predator proximity when seeking food
+2. The aversive stream can't factor in food urgency when fleeing
+3. Each stream makes locally-optimal but globally-poor decisions
+
+### Why Dual-Stream Worked in Biology but Not Here
+
+In biological brains, appetitive/aversive circuits have:
+1. **Lateral connections**: Streams share information, not completely isolated
+2. **Neuromodulation**: Dopamine/serotonin provide global context signals
+3. **Hierarchical override**: Amygdala can completely suppress appetitive behavior in danger
+4. **Rich sensory input**: Each circuit gets full sensory context, not partial
+
+Our implementation had:
+1. **Complete isolation**: No cross-stream connections
+2. **Simple gating**: Linear blend, no override capability
+3. **Partial inputs**: Each stream sees only 2 of 4 features
+
+### Lessons Learned
+
+1. **Architectural separation requires information sharing**: Isolated streams can't make coordinated decisions
+2. **Gating alone is insufficient**: Need cross-stream communication or hierarchical override
+3. **Combined gradient is a feature, not a bug**: The environment's pre-integration is computationally valuable
+4. **100 episodes insufficient for complex architectures**: Even if architecture were sound, learning the gating policy is hard
+
+### Comparison Summary
+
+| Approach | Architecture | Success Rate | Key Insight |
+|----------|-------------|--------------|-------------|
+| Combined gradient (baseline) | Single stream, 2 inputs | **28%** | Environment pre-computes direction |
+| Separated gradients | Single stream, 4 inputs | 0% | Too hard to learn integration |
+| Dual-stream learned gating | 2 streams, learned gate | 0% | Learning fails in 100 episodes |
+| Dual-stream fixed gating | 2 streams, fixed gate | 0% | **Architecture itself broken** |
+| MLP | Single network, 4 inputs | 85% | Sufficient capacity for integration |
+
+### Recommendation
+
+**Abandon the dual-stream architecture**. The separation of inputs is fundamentally problematic.
+
+Instead, focus on improving the combined-gradient spiking brain (28% success) through:
+1. Hyperparameter tuning (push toward MLP's 85%)
+2. Larger networks or deeper architectures
+3. Longer training (more than 100 episodes)
+4. Curriculum learning (predator-free → with predators)
+
 ### Data References
 
 **Best Sessions**:
