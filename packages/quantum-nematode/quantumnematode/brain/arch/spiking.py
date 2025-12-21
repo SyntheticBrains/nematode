@@ -164,6 +164,12 @@ class SpikingBrainConfig(BrainConfig):
     # 0 = disabled (update only at episode end), recommended: 5 (like MLP brain)
     update_frequency: int = 0
 
+    # Separated gradients - use separate food and predator gradient inputs
+    # instead of the combined gradient. Enables the network to learn distinct
+    # responses to appetitive (food) vs aversive (predator) signals.
+    # When enabled, input_dim becomes 4: [food_strength, food_angle, pred_strength, pred_angle]
+    use_separated_gradients: bool = False
+
 
 class SpikingBrain(ClassicalBrain):
     """
@@ -316,6 +322,9 @@ class SpikingBrain(ClassicalBrain):
         Computes relative angle between agent orientation and goal direction,
         matching the preprocessing used by MLPBrain for fair comparison.
 
+        When use_separated_gradients is enabled, returns 4 features:
+        [food_strength, food_rel_angle, predator_strength, predator_rel_angle]
+
         Parameters
         ----------
         params : BrainParams
@@ -324,34 +333,53 @@ class SpikingBrain(ClassicalBrain):
         Returns
         -------
         np.ndarray
-            Preprocessed state vector [gradient_strength, relative_angle_normalized]
-            where relative_angle_normalized is in [-1, 1]
+            Preprocessed state vector. Either:
+            - 2 features: [gradient_strength, relative_angle_normalized] (combined)
+            - 4 features: [food_strength, food_angle, pred_strength, pred_angle] (separated)
+            All angles normalized to [-1, 1]
         """
-        # Feature 1: Gradient strength [0, 1]
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_strength = max(0.0, min(1.0, grad_strength))
+        # Map agent direction to angle (radians)
+        direction_map = {
+            Direction.UP: 0.5 * np.pi,
+            Direction.RIGHT: 0.0,
+            Direction.DOWN: 1.5 * np.pi,
+            Direction.LEFT: np.pi,
+        }
+        agent_facing_angle = (
+            direction_map[params.agent_direction] if params.agent_direction is not None else 0.0
+        )
 
-        # Feature 2: Relative angle to goal [-1, 1]
-        if params.gradient_direction is not None and params.agent_direction is not None:
-            # Map agent direction to angle (radians)
-            direction_map = {
-                Direction.UP: 0.5 * np.pi,
-                Direction.RIGHT: 0.0,
-                Direction.DOWN: 1.5 * np.pi,
-                Direction.LEFT: np.pi,
-            }
-            agent_facing_angle = direction_map[params.agent_direction]
-
+        def compute_relative_angle(direction: float | None) -> float:
+            """Compute relative angle normalized to [-1, 1]."""
+            if direction is None:
+                return 0.0
             # Compute relative angle: goal direction - agent facing direction
             # Normalize to [-π, π]
-            relative_angle = (params.gradient_direction - agent_facing_angle + np.pi) % (
-                2 * np.pi
-            ) - np.pi
-
+            relative_angle = (direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
             # Normalize to [-1, 1] for network input
-            rel_angle_normalized = relative_angle / np.pi
-        else:
-            rel_angle_normalized = 0.0
+            return relative_angle / np.pi
+
+        # Use separated gradients if configured and available
+        if self.config.use_separated_gradients:
+            # Food gradient features
+            food_strength = float(params.food_gradient_strength or 0.0)
+            food_strength = max(0.0, min(1.0, food_strength))
+            food_rel_angle = compute_relative_angle(params.food_gradient_direction)
+
+            # Predator gradient features
+            pred_strength = float(params.predator_gradient_strength or 0.0)
+            pred_strength = max(0.0, min(1.0, pred_strength))
+            pred_rel_angle = compute_relative_angle(params.predator_gradient_direction)
+
+            return np.array(
+                [food_strength, food_rel_angle, pred_strength, pred_rel_angle],
+                dtype=np.float32,
+            )
+
+        # Default: use combined gradient (2 features)
+        grad_strength = float(params.gradient_strength or 0.0)
+        grad_strength = max(0.0, min(1.0, grad_strength))
+        rel_angle_normalized = compute_relative_angle(params.gradient_direction)
 
         return np.array([grad_strength, rel_angle_normalized], dtype=np.float32)
 

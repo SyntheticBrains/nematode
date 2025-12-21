@@ -395,10 +395,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Update the agent to use the selected brain architecture and environment
     # Check env capability directly to avoid config/env drift
+    # Separated gradients can be enabled via environment config OR brain config (for spiking)
     use_separated_gradients = False
     if isinstance(env, DynamicForagingEnvironment):
         dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
         use_separated_gradients = dynamic_config.use_separated_gradients
+
+        # For spiking brain, also check brain config for use_separated_gradients
+        if isinstance(brain_config, SpikingBrainConfig) and brain_config.use_separated_gradients:
+            use_separated_gradients = True
 
     agent = QuantumNematodeAgent(
         brain=brain,
@@ -1056,9 +1061,13 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Create parameter initializer instance from config
         parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
 
+        # Determine input dimension based on separated gradients config
+        # 2 features for combined gradient, 4 features for separated food/predator gradients
+        input_dim = 4 if brain_config.use_separated_gradients else 2
+
         brain = SpikingBrain(
             config=brain_config,
-            input_dim=2,
+            input_dim=input_dim,
             num_actions=4,
             device=device,
             parameter_initializer=parameter_initializer,

@@ -728,3 +728,110 @@ class TestPopulationCodingIntegration:
         actions = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(actions) == 1
         assert actions[0].action in [Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY]
+
+
+class TestSeparatedGradients:
+    """Test cases for separated food/predator gradient inputs."""
+
+    def test_separated_gradients_preprocessing(self):
+        """Test that separated gradients produces 4-feature output."""
+        config = SpikingBrainConfig(
+            hidden_size=16,
+            num_timesteps=10,
+            use_separated_gradients=True,
+        )
+        # Input dim should be 4 for separated gradients
+        brain = SpikingBrain(config=config, input_dim=4, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.5,  # Combined (unused when separated)
+            gradient_direction=1.0,
+            food_gradient_strength=0.8,
+            food_gradient_direction=0.5,
+            predator_gradient_strength=0.3,
+            predator_gradient_direction=-1.5,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        # Preprocess should return 4 features
+        state = brain.preprocess(params)
+        assert state.shape == (4,)
+        # First two should be food gradient features
+        assert 0.0 <= state[0] <= 1.0  # food_strength clamped
+        assert -1.0 <= state[1] <= 1.0  # food_rel_angle normalized
+        # Last two should be predator gradient features
+        assert 0.0 <= state[2] <= 1.0  # pred_strength clamped
+        assert -1.0 <= state[3] <= 1.0  # pred_rel_angle normalized
+
+    def test_separated_gradients_run_brain(self):
+        """Test that brain with separated gradients can run and produce actions."""
+        config = SpikingBrainConfig(
+            hidden_size=16,
+            num_timesteps=10,
+            use_separated_gradients=True,
+        )
+        brain = SpikingBrain(config=config, input_dim=4, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            food_gradient_strength=0.8,
+            food_gradient_direction=0.5,
+            predator_gradient_strength=0.3,
+            predator_gradient_direction=-1.5,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        actions = brain.run_brain(params, top_only=False, top_randomize=False)
+        assert len(actions) == 1
+        assert actions[0].action in [Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY]
+
+    def test_combined_gradients_still_works(self):
+        """Test that combined gradient mode (default) still works."""
+        config = SpikingBrainConfig(
+            hidden_size=16,
+            num_timesteps=10,
+            use_separated_gradients=False,  # Default
+        )
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        # Preprocess should return 2 features
+        state = brain.preprocess(params)
+        assert state.shape == (2,)
+
+        actions = brain.run_brain(params, top_only=False, top_randomize=False)
+        assert len(actions) == 1
+
+    def test_separated_gradients_handles_none_values(self):
+        """Test that separated gradients handles None values gracefully."""
+        config = SpikingBrainConfig(
+            hidden_size=16,
+            num_timesteps=10,
+            use_separated_gradients=True,
+        )
+        brain = SpikingBrain(config=config, input_dim=4, num_actions=4, device=DeviceType.CPU)
+
+        # All gradient values None
+        params = BrainParams(
+            food_gradient_strength=None,
+            food_gradient_direction=None,
+            predator_gradient_strength=None,
+            predator_gradient_direction=None,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        state = brain.preprocess(params)
+        assert state.shape == (4,)
+        # All should be 0.0 when None
+        assert state[0] == 0.0  # food_strength
+        assert state[1] == 0.0  # food_rel_angle
+        assert state[2] == 0.0  # pred_strength
+        assert state[3] == 0.0  # pred_rel_angle
