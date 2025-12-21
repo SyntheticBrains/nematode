@@ -37,13 +37,15 @@ References
 - SpikingJelly: https://github.com/fangwei123456/spikingjelly
 """
 
+from typing import Literal
+
 import numpy as np
 import torch
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch._spiking_layers import SpikingPolicyNetwork
+from quantumnematode.brain.arch._spiking_layers import OutputMode, SpikingPolicyNetwork
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
@@ -66,7 +68,20 @@ DEFAULT_ENTROPY_BETA = 0.01
 DEFAULT_ENTROPY_BETA_FINAL = 0.01
 DEFAULT_ENTROPY_DECAY_EPISODES = 0
 DEFAULT_SURROGATE_ALPHA = 10.0
-DEFAULT_WEIGHT_INIT = "kaiming"  # kaiming, xavier, or default
+# Weight initialization method options
+WeightInitMethod = Literal["orthogonal", "kaiming", "xavier", "default", "orthogonal_kaiming_input"]
+DEFAULT_WEIGHT_INIT: WeightInitMethod = "orthogonal"
+
+DEFAULT_BATCH_SIZE = 1  # Number of episodes to accumulate before gradient update
+
+# Adaptive exploration parameters - decay from exploration to exploitation
+DEFAULT_EXPLORATION_LOGIT_CLAMP = 2.0  # Initial logit clamp (tighter = more exploration)
+DEFAULT_EXPLORATION_LOGIT_CLAMP_FINAL = 5.0  # Final logit clamp (looser = more exploitation)
+DEFAULT_EXPLORATION_NOISE_STD = 0.3  # Initial noise standard deviation
+DEFAULT_EXPLORATION_NOISE_STD_FINAL = 0.05  # Final noise (small but non-zero)
+DEFAULT_EXPLORATION_TEMPERATURE = 1.5  # Initial temperature
+DEFAULT_EXPLORATION_TEMPERATURE_FINAL = 1.0  # Final temperature
+DEFAULT_EXPLORATION_DECAY_EPISODES = 30  # Episodes over which to decay exploration
 
 
 class SpikingBrainConfig(BrainConfig):
@@ -96,7 +111,58 @@ class SpikingBrainConfig(BrainConfig):
     surrogate_alpha: float = DEFAULT_SURROGATE_ALPHA
 
     # Weight initialization method
-    weight_init: str = DEFAULT_WEIGHT_INIT
+    weight_init: WeightInitMethod = DEFAULT_WEIGHT_INIT
+
+    # Batch learning (accumulate multiple episodes before gradient update)
+    batch_size: int = DEFAULT_BATCH_SIZE
+
+    # Warmup episodes - skip gradient updates for first N episodes
+    # Allows random policy to explore before learning corrupts it
+    warmup_episodes: int = 0
+
+    # Adaptive exploration - decay from high exploration to exploitation
+    exploration_logit_clamp: float = DEFAULT_EXPLORATION_LOGIT_CLAMP
+    exploration_logit_clamp_final: float = DEFAULT_EXPLORATION_LOGIT_CLAMP_FINAL
+    exploration_noise_std: float = DEFAULT_EXPLORATION_NOISE_STD
+    exploration_noise_std_final: float = DEFAULT_EXPLORATION_NOISE_STD_FINAL
+    exploration_temperature: float = DEFAULT_EXPLORATION_TEMPERATURE
+    exploration_temperature_final: float = DEFAULT_EXPLORATION_TEMPERATURE_FINAL
+    exploration_decay_episodes: int = DEFAULT_EXPLORATION_DECAY_EPISODES
+
+    # Output mode for temporal spike aggregation
+    # - "accumulator": Sum spikes over all timesteps (default, original behavior)
+    # - "final": Use only final timestep's spike pattern (less smoothing)
+    # - "membrane": Use final membrane potentials (continuous, most variation)
+    output_mode: OutputMode = "accumulator"
+
+    # Temporal modulation - prevents LIF neurons from reaching steady state
+    # by varying input current over timesteps with sinusoidal pattern
+    temporal_modulation: bool = False
+    modulation_amplitude: float = 0.3  # Fraction of input to modulate
+    modulation_period: int = 20  # Period in timesteps (~5 cycles over 100 timesteps)
+
+    # Population coding - encode inputs using Gaussian tuning curves
+    # Creates distinct activation patterns for different input values
+    population_coding: bool = False
+    neurons_per_feature: int = 8  # Number of encoding neurons per input feature
+    population_sigma: float = 0.25  # Width of Gaussian tuning curves
+
+    # Advantage clipping - prevents catastrophic gradient updates from large negative returns
+    # Clips normalized advantages to [-clip, +clip] range
+    advantage_clip: float = 0.0  # 0 = disabled, recommended: 2.0-3.0
+
+    # Action probability floor - prevents entropy collapse by ensuring minimum probability
+    # for all actions. Clamps probabilities to [min_action_prob, 1-min_action_prob*(n-1)]
+    min_action_prob: float = 0.0  # 0 = disabled, recommended: 0.01-0.05
+
+    # Return clipping - clips total episode return to [-clip, +clip] range
+    # This limits the magnitude of gradient updates from extreme episodes
+    return_clip: float = 0.0  # 0 = disabled, recommended: 50.0
+
+    # Intra-episode update frequency - perform gradient updates every N steps
+    # instead of only at episode end. This provides denser learning signals.
+    # 0 = disabled (update only at episode end), recommended: 5 (like MLP brain)
+    update_frequency: int = 0
 
 
 class SpikingBrain(ClassicalBrain):
@@ -176,6 +242,13 @@ class SpikingBrain(ClassicalBrain):
             v_reset=config.v_reset,
             v_rest=config.v_rest,
             surrogate_alpha=config.surrogate_alpha,
+            output_mode=config.output_mode,
+            temporal_modulation=config.temporal_modulation,
+            modulation_amplitude=config.modulation_amplitude,
+            modulation_period=config.modulation_period,
+            population_coding=config.population_coding,
+            neurons_per_feature=config.neurons_per_feature,
+            population_sigma=config.population_sigma,
         ).to(self.device)
 
         # Apply weight initialization
@@ -195,8 +268,20 @@ class SpikingBrain(ClassicalBrain):
         self.episode_action_probs: list[torch.Tensor] = []  # Detached, for entropy only
         self.episode_rewards: list[float] = []
 
+        # Batch learning buffers - accumulate multiple episodes before gradient update
+        # Each element is a complete episode's data
+        self.batch_episodes_states: list[list[np.ndarray]] = []
+        self.batch_episodes_actions: list[list[int]] = []
+        self.batch_episodes_action_probs: list[list[torch.Tensor]] = []
+        self.batch_episodes_rewards: list[list[float]] = []
+        self.batch_episode_count = 0  # Track episodes in current batch
+        self.total_episodes_seen = 0  # Track total episodes for warmup
+
         # Baseline for variance reduction (running average of returns)
         self.baseline = 0.0
+
+        # Intra-episode update tracking (for update_frequency feature)
+        self.steps_since_update = 0
 
         # Episode counter for decay schedules
         self.episode_count = 0
@@ -312,7 +397,57 @@ class SpikingBrain(ClassicalBrain):
         # Forward pass through spiking network
         with torch.no_grad() if not self.policy.training else torch.enable_grad():
             action_logits = self.policy(state_tensor)
-            action_probs = torch.softmax(action_logits, dim=-1)
+
+            # Adaptive exploration: decay from high exploration to exploitation over episodes
+            # This allows early random exploration while enabling confident exploitation later
+            if self.config.exploration_decay_episodes > 0:
+                decay_progress = min(
+                    1.0,
+                    self.total_episodes_seen / self.config.exploration_decay_episodes,
+                )
+            else:
+                decay_progress = 1.0  # No decay, use final values
+
+            # Interpolate exploration parameters
+            current_clamp = self.config.exploration_logit_clamp + decay_progress * (
+                self.config.exploration_logit_clamp_final - self.config.exploration_logit_clamp
+            )
+            current_noise_std = self.config.exploration_noise_std + decay_progress * (
+                self.config.exploration_noise_std_final - self.config.exploration_noise_std
+            )
+            current_temperature = self.config.exploration_temperature + decay_progress * (
+                self.config.exploration_temperature_final - self.config.exploration_temperature
+            )
+
+            # 1. Clamp logits - tight early (force exploration), loose later (allow confidence)
+            action_logits = torch.clamp(
+                action_logits,
+                min=-current_clamp,
+                max=current_clamp,
+            )
+
+            # 2. Add noise during training - high early, low later
+            if self.policy.training and current_noise_std > 0:
+                noise = torch.normal(
+                    0,
+                    current_noise_std,
+                    size=action_logits.shape,
+                    device=self.device,
+                )
+                action_logits = action_logits + noise
+
+            # 3. Temperature sampling - high early (random), low later (greedy)
+            temperature = current_temperature if self.policy.training else 1.0
+            action_probs = torch.softmax(action_logits / temperature, dim=-1)
+
+            # 4. Action probability floor - prevent entropy collapse
+            if self.config.min_action_prob > 0:
+                num_actions = action_probs.shape[-1]
+                min_prob = self.config.min_action_prob
+                max_prob = 1.0 - min_prob * (num_actions - 1)
+                action_probs = torch.clamp(action_probs, min=min_prob, max=max_prob)
+                # Renormalize to ensure sum = 1
+                action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
 
             # Monitor spike rates for debugging (only occasionally to avoid spam)
             # 10% sampling rate for diagnostics
@@ -374,7 +509,7 @@ class SpikingBrain(ClassicalBrain):
 
         return [action_data]
 
-    def learn(  # noqa: PLR0915
+    def learn(
         self,
         params: BrainParams,  # noqa: ARG002
         reward: float,
@@ -382,10 +517,14 @@ class SpikingBrain(ClassicalBrain):
         episode_done: bool,
     ) -> None:
         """
-        Update network parameters using policy gradient (REINFORCE).
+        Update network parameters using policy gradient (REINFORCE) with batch learning.
 
-        Computes discounted returns, normalizes for variance reduction, and
-        updates policy network using policy gradient with baseline subtraction.
+        When batch_size > 1, accumulates experiences across multiple episodes before
+        performing a gradient update. This prevents single bad episodes from corrupting
+        the policy and allows mixing of successful and failed experiences.
+
+        When update_frequency > 0, performs intra-episode updates every N steps,
+        providing denser learning signals similar to MLP brain.
 
         Parameters
         ----------
@@ -398,130 +537,339 @@ class SpikingBrain(ClassicalBrain):
         """
         self.episode_rewards.append(reward)
         self.overfit_detector_current_episode_rewards.append(reward)
+        self.steps_since_update += 1
+
+        # Intra-episode updates: perform gradient update every N steps (like MLP brain)
+        if (
+            self.config.update_frequency > 0
+            and self.steps_since_update >= self.config.update_frequency
+            and len(self.episode_states) >= self.config.update_frequency
+        ):
+            self._perform_intra_episode_update()
+            self.steps_since_update = 0
 
         if episode_done and self.episode_rewards:
-            logger.info(
-                f"Episode complete - performing policy gradient update with "
-                f"{len(self.episode_rewards)} timesteps",
-            )
-            # Compute discounted returns backward through episode
-            returns: list[float] = []
-            g_value = 0.0
-            for r in reversed(self.episode_rewards):
-                g_value = r + self.config.gamma * g_value
-                returns.insert(0, g_value)
+            self.total_episodes_seen += 1
 
-            # Convert to tensor
-            returns_tensor = torch.tensor(returns, dtype=torch.float32, device=self.device)
-
-            # Normalize returns for variance reduction
-            if len(returns) > 1:
-                returns_mean = returns_tensor.mean()
-                returns_std = returns_tensor.std()
-                returns_tensor = (returns_tensor - returns_mean) / (returns_std + 1e-8)
-            else:
-                returns_mean = returns_tensor.item()
-                returns_std = 0.0
-
-            # Update baseline (running average of mean episode return)
-            self.baseline = (
-                self.config.baseline_alpha * returns_mean
-                + (1 - self.config.baseline_alpha) * self.baseline
-            )
-
-            # Compute advantages
-            # After normalization, returns already have mean≈0, so we use them directly
-            # as advantages The baseline is tracked separately for monitoring but not
-            # subtracted from normalized returns
-            advantages = returns_tensor
-
-            # Recompute log_probs with fresh forward passes to enable gradient flow
-            # This is more memory efficient than storing computation graphs
-            log_probs_list = []
-            for state, action_idx in zip(self.episode_states, self.episode_actions, strict=False):
-                state_tensor = torch.tensor(
-                    state,
-                    dtype=torch.float32,
-                    device=self.device,
-                ).unsqueeze(0)
-                action_logits = self.policy(state_tensor)
-                action_probs = torch.softmax(action_logits, dim=-1)
-                action_dist = torch.distributions.Categorical(action_probs)
-                log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
-                log_probs_list.append(log_prob)
-
-            # Compute policy loss: -Σ log_prob(a_t) * advantage_t
-            log_probs = torch.stack(log_probs_list)
-            policy_loss = -(log_probs * advantages).sum()
-
-            # Apply entropy decay schedule
-            current_entropy_beta = self._get_current_entropy_beta()
-
-            # Add entropy regularization for exploration
-            entropy = torch.tensor(0.0, device=self.device)
-            if current_entropy_beta > 0:
-                # Entropy: -Σ p(a) * log(p(a)) for each timestep, averaged
-                action_probs = torch.stack(self.episode_action_probs)
-                entropy = -(action_probs * torch.log(action_probs + 1e-8)).sum(dim=-1).mean()
-
-                # Log entropy for diagnostics
+            # During warmup, just clear buffers without learning
+            if self.total_episodes_seen <= self.config.warmup_episodes:
                 logger.debug(
-                    f"Episode entropy: {entropy.item():.4f}, "
-                    f"entropy_beta: {current_entropy_beta:.4f}, "
-                    f"entropy contribution: {current_entropy_beta * entropy.item():.4f}",
+                    f"Warmup period - skipping learning "
+                    f"({self.total_episodes_seen}/{self.config.warmup_episodes})",
                 )
+                self.episode_states.clear()
+                self.episode_actions.clear()
+                self.episode_action_probs.clear()
+                self.episode_rewards.clear()
+                return
 
-                # Subtract entropy to maximize it (entropy bonus)
-                policy_loss = policy_loss - current_entropy_beta * entropy
+            # Store completed episode in batch buffers
+            self.batch_episodes_states.append(list(self.episode_states))
+            self.batch_episodes_actions.append(list(self.episode_actions))
+            self.batch_episodes_action_probs.append(list(self.episode_action_probs))
+            self.batch_episodes_rewards.append(list(self.episode_rewards))
+            self.batch_episode_count += 1
 
-            # Backpropagation
-            self.optimizer.zero_grad()
-            policy_loss.backward()
-
-            # Clip individual gradient values first to prevent explosion
-            # This prevents inf gradients from surrogate gradient backward pass
-            for param in self.policy.parameters():
-                if param.grad is not None:
-                    param.grad.clamp_(-1.0, 1.0)
-
-            # Then clip gradient norm for overall stability
-            grad_norm = torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
-
-            # Log gradient norm for diagnostics
-            logger.debug(f"Gradient norm: {grad_norm.item():.6f}")
-
-            # Update parameters
-            self.optimizer.step()
-
-            # Apply learning rate decay schedule
-            self._apply_lr_decay()
-
-            # Track learning data for export
-            self.latest_data.loss = policy_loss.item()
-            self.latest_data.learning_rate = self.optimizer.param_groups[0]["lr"]
-
-            # Append to history for CSV export
-            if self.latest_data.loss is not None:
-                self.history_data.losses.append(self.latest_data.loss)
-            if self.latest_data.learning_rate is not None:
-                self.history_data.learning_rates.append(self.latest_data.learning_rate)
-
-            # Log learning statistics
-            episode_return = sum(self.episode_rewards)
-            logger.debug(
-                f"Policy gradient update: loss={policy_loss.item():.4f}, "
-                f"episode_return={episode_return:.2f}, baseline={self.baseline:.2f}, "
-                f"entropy={entropy.item():.4f}, returns_std={returns_std:.4f}",
-            )
-
-            # Increment episode counter
-            self.episode_count += 1
-
-            # Clear episode buffers
+            # Clear current episode buffers
             self.episode_states.clear()
             self.episode_actions.clear()
             self.episode_action_probs.clear()
             self.episode_rewards.clear()
+
+            logger.debug(
+                "Episode complete - added to batch "
+                f"({self.batch_episode_count}/{self.config.batch_size})",
+            )
+
+            # Only perform gradient update when batch is full
+            if self.batch_episode_count >= self.config.batch_size:
+                self._perform_batch_gradient_update()
+
+    def _perform_intra_episode_update(self) -> None:  # noqa: C901, PLR0915
+        """
+        Perform gradient update using recent steps within the current episode.
+
+        This provides denser learning signals by updating every N steps instead of
+        waiting until episode end. Similar to MLP brain's update_frequency=5 approach.
+        Uses the last update_frequency steps of data for the update.
+        """
+        n_steps = self.config.update_frequency
+
+        # Get the last n_steps of data
+        recent_states = self.episode_states[-n_steps:]
+        recent_actions = self.episode_actions[-n_steps:]
+        recent_action_probs = self.episode_action_probs[-n_steps:]
+        recent_rewards = self.episode_rewards[-n_steps:]
+
+        if len(recent_states) < n_steps:
+            return  # Not enough data yet
+
+        # Compute discounted returns for recent steps
+        returns: list[float] = []
+        g_value = 0.0
+        for r in reversed(recent_rewards):
+            g_value = r + self.config.gamma * g_value
+            returns.insert(0, g_value)
+
+        # Apply return clipping
+        if self.config.return_clip > 0:
+            clip_val = self.config.return_clip
+            returns = [max(-clip_val, min(clip_val, r)) for r in returns]
+
+        returns_tensor = torch.tensor(returns, dtype=torch.float32, device=self.device)
+
+        # Normalize returns for variance reduction
+        if len(returns) > 1:
+            returns_mean = returns_tensor.mean()
+            returns_std = returns_tensor.std()
+            returns_tensor = (returns_tensor - returns_mean) / (returns_std + 1e-8)
+
+            # Update baseline
+            self.baseline = (
+                self.config.baseline_alpha * returns_mean.item()
+                + (1 - self.config.baseline_alpha) * self.baseline
+            )
+
+        advantages = returns_tensor
+
+        # Apply advantage clipping
+        if self.config.advantage_clip > 0:
+            advantages = torch.clamp(
+                advantages,
+                -self.config.advantage_clip,
+                self.config.advantage_clip,
+            )
+
+        # Recompute log_probs with fresh forward passes
+        log_probs_list = []
+        for state, action_idx in zip(recent_states, recent_actions, strict=False):
+            state_tensor = torch.tensor(
+                state,
+                dtype=torch.float32,
+                device=self.device,
+            ).unsqueeze(0)
+            action_logits = self.policy(state_tensor)
+            action_probs = torch.softmax(action_logits, dim=-1)
+
+            # Apply action probability floor
+            if self.config.min_action_prob > 0:
+                num_actions = action_probs.shape[-1]
+                min_prob = self.config.min_action_prob
+                max_prob = 1.0 - min_prob * (num_actions - 1)
+                action_probs = torch.clamp(action_probs, min=min_prob, max=max_prob)
+                action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
+
+            action_dist = torch.distributions.Categorical(action_probs)
+            log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
+            log_probs_list.append(log_prob)
+
+        # Compute policy loss
+        log_probs = torch.stack(log_probs_list)
+        policy_loss = -(log_probs * advantages).mean()
+
+        # Add entropy regularization
+        current_entropy_beta = self._get_current_entropy_beta()
+        entropy = torch.tensor(0.0, device=self.device)
+        if current_entropy_beta > 0 and recent_action_probs:
+            action_probs_stacked = torch.stack(recent_action_probs)
+            entropy = (
+                -(action_probs_stacked * torch.log(action_probs_stacked + 1e-8)).sum(dim=-1).mean()
+            )
+            policy_loss = policy_loss - current_entropy_beta * entropy
+
+        # Clip loss
+        policy_loss = torch.clamp(policy_loss, -10.0, 10.0)
+
+        # Backpropagation
+        self.optimizer.zero_grad()
+        policy_loss.backward()
+
+        # Clip gradients
+        for param in self.policy.parameters():
+            if param.grad is not None:
+                param.grad.clamp_(-1.0, 1.0)
+        torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+
+        # Update parameters
+        self.optimizer.step()
+
+        logger.debug(
+            f"Intra-episode update: loss={policy_loss.item():.4f}, "
+            f"steps={n_steps}, entropy={entropy.item():.4f}",
+        )
+
+    def _perform_batch_gradient_update(self) -> None:  # noqa: C901, PLR0915
+        """
+        Perform gradient update using accumulated batch of episodes.
+
+        Computes gradients across all episodes in the batch, averaging the loss
+        to prevent any single episode from dominating the update.
+        """
+        total_timesteps = sum(len(ep) for ep in self.batch_episodes_rewards)
+        logger.info(
+            f"Batch complete - performing policy gradient update with "
+            f"{self.batch_episode_count} episodes, {total_timesteps} total timesteps",
+        )
+
+        # Compute returns and advantages for each episode
+        all_returns: list[torch.Tensor] = []
+        all_states: list[np.ndarray] = []
+        all_actions: list[int] = []
+        all_action_probs: list[torch.Tensor] = []
+
+        for ep_idx in range(self.batch_episode_count):
+            ep_rewards = self.batch_episodes_rewards[ep_idx]
+            ep_states = self.batch_episodes_states[ep_idx]
+            ep_actions = self.batch_episodes_actions[ep_idx]
+            ep_action_probs = self.batch_episodes_action_probs[ep_idx]
+
+            # Compute discounted returns backward through episode
+            returns: list[float] = []
+            g_value = 0.0
+            for r in reversed(ep_rewards):
+                g_value = r + self.config.gamma * g_value
+                returns.insert(0, g_value)
+
+            # Apply return clipping to limit extreme episode returns
+            if self.config.return_clip > 0:
+                clip_val = self.config.return_clip
+                returns = [max(-clip_val, min(clip_val, r)) for r in returns]
+
+            returns_tensor = torch.tensor(returns, dtype=torch.float32, device=self.device)
+
+            # Normalize returns within episode for variance reduction
+            if len(returns) > 1:
+                returns_mean = returns_tensor.mean()
+                returns_std = returns_tensor.std()
+                returns_tensor = (returns_tensor - returns_mean) / (returns_std + 1e-8)
+
+                # Update baseline (running average of mean episode return)
+                self.baseline = (
+                    self.config.baseline_alpha * returns_mean.item()
+                    + (1 - self.config.baseline_alpha) * self.baseline
+                )
+
+            all_returns.append(returns_tensor)
+            all_states.extend(ep_states)
+            all_actions.extend(ep_actions)
+            all_action_probs.extend(ep_action_probs)
+
+        # Concatenate all returns (advantages)
+        advantages = torch.cat(all_returns)
+
+        # Apply advantage clipping to prevent catastrophic gradient updates
+        if self.config.advantage_clip > 0:
+            advantages = torch.clamp(
+                advantages,
+                -self.config.advantage_clip,
+                self.config.advantage_clip,
+            )
+
+        # Recompute log_probs with fresh forward passes to enable gradient flow
+        log_probs_list = []
+        for state, action_idx in zip(all_states, all_actions, strict=False):
+            state_tensor = torch.tensor(
+                state,
+                dtype=torch.float32,
+                device=self.device,
+            ).unsqueeze(0)
+            action_logits = self.policy(state_tensor)
+            action_probs = torch.softmax(action_logits, dim=-1)
+
+            # Apply action probability floor to prevent entropy collapse during learning
+            if self.config.min_action_prob > 0:
+                num_actions = action_probs.shape[-1]
+                min_prob = self.config.min_action_prob
+                max_prob = 1.0 - min_prob * (num_actions - 1)
+                action_probs = torch.clamp(action_probs, min=min_prob, max=max_prob)
+                # Renormalize to ensure sum = 1
+                action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
+
+            action_dist = torch.distributions.Categorical(action_probs)
+            log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
+            log_probs_list.append(log_prob)
+
+        # Compute policy loss: -Σ log_prob(a_t) * advantage_t
+        # Average over batch to normalize gradient magnitude
+        log_probs = torch.stack(log_probs_list)
+        policy_loss = -(
+            log_probs * advantages
+        ).mean()  # mean instead of sum for batch normalization
+
+        # Apply entropy decay schedule
+        current_entropy_beta = self._get_current_entropy_beta()
+
+        # Add entropy regularization for exploration
+        entropy = torch.tensor(0.0, device=self.device)
+        if current_entropy_beta > 0 and all_action_probs:
+            # Entropy: -Σ p(a) * log(p(a)) for each timestep, averaged
+            action_probs_stacked = torch.stack(all_action_probs)
+            entropy = (
+                -(action_probs_stacked * torch.log(action_probs_stacked + 1e-8)).sum(dim=-1).mean()
+            )
+
+            # Log entropy for diagnostics
+            logger.debug(
+                f"Batch entropy: {entropy.item():.4f}, "
+                f"entropy_beta: {current_entropy_beta:.4f}, "
+                f"entropy contribution: {current_entropy_beta * entropy.item():.4f}",
+            )
+
+            # Subtract entropy to maximize it (entropy bonus)
+            policy_loss = policy_loss - current_entropy_beta * entropy
+
+        # Clip loss to prevent extreme updates (matching MLP brain)
+        policy_loss = torch.clamp(policy_loss, -10.0, 10.0)
+
+        # Backpropagation
+        self.optimizer.zero_grad()
+        policy_loss.backward()
+
+        # Clip individual gradient values first to prevent explosion
+        for param in self.policy.parameters():
+            if param.grad is not None:
+                param.grad.clamp_(-1.0, 1.0)
+
+        # Then clip gradient norm for overall stability (0.5 matches MLP brain)
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+
+        # Log gradient norm for diagnostics
+        logger.debug(f"Gradient norm: {grad_norm.item():.6f}")
+
+        # Update parameters
+        self.optimizer.step()
+
+        # Apply learning rate decay schedule (once per batch, not per episode)
+        self._apply_lr_decay()
+
+        # Track learning data for export
+        self.latest_data.loss = policy_loss.item()
+        self.latest_data.learning_rate = self.optimizer.param_groups[0]["lr"]
+
+        # Append to history for CSV export
+        if self.latest_data.loss is not None:
+            self.history_data.losses.append(self.latest_data.loss)
+        if self.latest_data.learning_rate is not None:
+            self.history_data.learning_rates.append(self.latest_data.learning_rate)
+
+        # Log learning statistics
+        total_return = sum(sum(ep) for ep in self.batch_episodes_rewards)
+        avg_return = total_return / self.batch_episode_count
+        logger.debug(
+            f"Batch gradient update: loss={policy_loss.item():.4f}, "
+            f"avg_episode_return={avg_return:.2f}, baseline={self.baseline:.2f}, "
+            f"entropy={entropy.item():.4f}, episodes={self.batch_episode_count}",
+        )
+
+        # Increment episode counter by batch size (for decay schedules)
+        self.episode_count += self.batch_episode_count
+
+        # Clear batch buffers
+        self.batch_episodes_states.clear()
+        self.batch_episodes_actions.clear()
+        self.batch_episodes_action_probs.clear()
+        self.batch_episodes_rewards.clear()
+        self.batch_episode_count = 0
 
     def update_memory(self, reward: float | None) -> None:
         """
@@ -626,17 +974,20 @@ class SpikingBrain(ClassicalBrain):
             for param_group in self.optimizer.param_groups:
                 param_group["lr"] = new_lr
 
-    def _initialize_weights(self, method: str) -> None:
+    def _initialize_weights(self, method: WeightInitMethod) -> None:  # noqa: C901
         """
         Initialize network weights using specified method.
 
         Parameters
         ----------
-        method : str
-            Initialization method: "kaiming", "xavier", or "default"
-            - kaiming: Variance-preserving for ReLU-like activations (recommended for spiking)
-            - xavier: Variance-preserving for tanh/sigmoid activations
-            - default: PyTorch default (uniform based on fan-in)
+        method : WeightInitMethod
+            Initialization method:
+            - "orthogonal": Preserves gradient norms through layers (best for deep SNNs)
+            - "kaiming": Variance-preserving for ReLU-like activations
+            - "xavier": Variance-preserving for tanh/sigmoid activations
+            - "default": PyTorch default (uniform based on fan-in)
+            - "orthogonal_kaiming_input": Kaiming for input layer (good for population
+              coded inputs), orthogonal for hidden layers
         """
         if method == "default":
             # PyTorch already initialized, nothing to do
@@ -645,29 +996,27 @@ class SpikingBrain(ClassicalBrain):
 
         logger.info(f"Initializing weights with {method} method")
 
-        # Find output layer (last linear layer)
-        linear_layers = [
-            module for module in self.policy.modules() if isinstance(module, torch.nn.Linear)
-        ]
-        output_layer = linear_layers[-1] if linear_layers else None
+        # Special case: hybrid initialization for population coding
+        if method == "orthogonal_kaiming_input":
+            self._initialize_hybrid_weights()
+            return
 
         for _name, module in self.policy.named_modules():
             if isinstance(module, torch.nn.Linear):
-                if method == "kaiming":
+                if method == "orthogonal":
+                    # Orthogonal initialization - preserves gradient norms through layers
+                    # Excellent for deep networks and recurrent-like architectures (SNNs)
+                    # Gain of 1.0 preserves input variance
+                    torch.nn.init.orthogonal_(module.weight, gain=1.0)
+                    if module.bias is not None:
+                        torch.nn.init.zeros_(module.bias)
+
+                elif method == "kaiming":
                     # Kaiming/He initialization for ReLU-like activations
                     # Good for spiking neurons which have piecewise activation
                     torch.nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
                     if module.bias is not None:
                         torch.nn.init.zeros_(module.bias)
-
-                    # Scale down output layer to prevent extreme logits
-                    # Output layer needs smaller weights for balanced softmax probabilities
-                    if module is output_layer:
-                        with torch.no_grad():
-                            module.weight.mul_(0.01)  # Scale down by 100x
-                        logger.info(
-                            "Scaled down output layer weights by 0.01 for balanced probabilities",
-                        )
 
                 elif method == "xavier":
                     # Xavier/Glorot initialization for tanh/sigmoid
@@ -675,16 +1024,51 @@ class SpikingBrain(ClassicalBrain):
                     if module.bias is not None:
                         torch.nn.init.zeros_(module.bias)
 
-                    # Scale down output layer for balanced probabilities
-                    if module is output_layer:
-                        with torch.no_grad():
-                            module.weight.mul_(0.1)  # Scale down by 10x
-                        logger.info(
-                            "Scaled down output layer weights by 0.1 for balanced probabilities",
-                        )
+        # Scale down output layer weights for kaiming init
+        # This produces reasonable initial logit magnitudes from spike accumulators
+        if method == "kaiming" and hasattr(self.policy, "output_layer"):
+            self.policy.output_layer.weight.data *= 0.01
+            logger.info("Scaled down output layer weights by 0.01 for balanced probabilities")
 
-                else:
-                    logger.warning(f"Unknown initialization method: {method}, using default")
+    def _initialize_hybrid_weights(self) -> None:
+        """
+        Hybrid initialization: Kaiming for input layer, orthogonal for hidden layers.
+
+        This is optimized for population-coded inputs:
+        - Input layer uses Kaiming initialization which is well-suited for the
+          Gaussian-shaped population-coded features (similar to ReLU activations)
+        - Hidden layers use orthogonal initialization which preserves gradient norms
+          through the LIF spiking dynamics
+        - Output layer uses orthogonal with small scale for balanced initial probabilities
+        """
+        logger.info("Using hybrid initialization: Kaiming for input, orthogonal for hidden")
+
+        # Input layer: Kaiming initialization (good for population-coded Gaussian features)
+        if hasattr(self.policy, "input_layer"):
+            torch.nn.init.kaiming_uniform_(
+                self.policy.input_layer.weight,
+                nonlinearity="relu",
+            )
+            if self.policy.input_layer.bias is not None:
+                torch.nn.init.zeros_(self.policy.input_layer.bias)
+            logger.info("Input layer: Kaiming initialization")
+
+        # Hidden layers: Orthogonal initialization (preserves gradient norms in LIF dynamics)
+        if hasattr(self.policy, "hidden_layers"):
+            for i, layer in enumerate(self.policy.hidden_layers):
+                # LIFLayer contains a Linear layer internally
+                if hasattr(layer, "fc") and isinstance(layer.fc, torch.nn.Linear):
+                    torch.nn.init.orthogonal_(layer.fc.weight, gain=1.0)
+                    if layer.fc.bias is not None:
+                        torch.nn.init.zeros_(layer.fc.bias)
+                    logger.info(f"Hidden layer {i}: Orthogonal initialization")
+
+        # Output layer: Orthogonal with smaller gain for balanced initial action probabilities
+        if hasattr(self.policy, "output_layer"):
+            torch.nn.init.orthogonal_(self.policy.output_layer.weight, gain=0.5)
+            if self.policy.output_layer.bias is not None:
+                torch.nn.init.zeros_(self.policy.output_layer.bias)
+            logger.info("Output layer: Orthogonal initialization (gain=0.5)")
 
     def copy(self) -> "SpikingBrain":
         """

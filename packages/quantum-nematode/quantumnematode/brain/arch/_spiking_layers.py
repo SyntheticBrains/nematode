@@ -18,10 +18,99 @@ References
 - SpikingJelly: https://github.com/fangwei123456/spikingjelly
 """
 
-from typing import Any
+from typing import Any, Literal
 
 import torch
 from torch import nn
+
+# Output mode for temporal spike aggregation
+OutputMode = Literal["accumulator", "final", "membrane"]
+
+
+class PopulationEncoder(nn.Module):
+    """
+    Population coding encoder for scalar inputs.
+
+    Encodes each scalar input value across multiple neurons using Gaussian
+    tuning curves with different preferred values. This creates distinct
+    activation patterns for different input values, enabling better
+    discrimination by downstream spiking layers.
+
+    Parameters
+    ----------
+    input_dim : int
+        Number of input features to encode
+    neurons_per_feature : int
+        Number of encoding neurons per input feature (default: 8)
+    sigma : float
+        Width of Gaussian tuning curves (default: 0.2)
+    min_val : float
+        Minimum expected input value (default: -1.0)
+    max_val : float
+        Maximum expected input value (default: 1.0)
+
+    Example
+    -------
+    For input_dim=2 and neurons_per_feature=8:
+    - Input: [0.5, -0.3] (2 values)
+    - Output: [g1_1, g1_2, ..., g1_8, g2_1, g2_2, ..., g2_8] (16 values)
+    where g_i_j is the Gaussian response for feature i at preferred value j
+    """
+
+    # Type annotation for buffer
+    preferred_values: torch.Tensor
+
+    def __init__(
+        self,
+        input_dim: int,
+        neurons_per_feature: int = 8,
+        sigma: float = 0.2,
+        min_val: float = -1.0,
+        max_val: float = 1.0,
+    ) -> None:
+        super().__init__()
+        self.input_dim = input_dim
+        self.neurons_per_feature = neurons_per_feature
+        self.sigma = sigma
+        self.output_dim = input_dim * neurons_per_feature
+
+        # Create preferred values (centers of Gaussian tuning curves)
+        # Evenly spaced across the input range
+        preferred_values = torch.linspace(min_val, max_val, neurons_per_feature)
+        # Expand to all input features: [input_dim, neurons_per_feature]
+        self.register_buffer(
+            "preferred_values",
+            preferred_values.unsqueeze(0).expand(input_dim, -1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Encode inputs using population coding.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor [batch_size, input_dim]
+
+        Returns
+        -------
+        torch.Tensor
+            Population-coded tensor [batch_size, input_dim * neurons_per_feature]
+        """
+        batch_size = x.shape[0]
+
+        # Expand input for broadcasting: [batch_size, input_dim, 1]
+        x_expanded = x.unsqueeze(-1)
+
+        # Compute Gaussian responses for each input feature by broadcasting
+        # x_expanded against preferred_values to get difference tensor
+        diff = x_expanded - self.preferred_values.unsqueeze(0)
+
+        # Gaussian tuning curve: exp(-diff^2 / (2 * sigma^2))
+        responses = torch.exp(-(diff**2) / (2 * self.sigma**2))
+
+        # Flatten to [batch_size, input_dim * neurons_per_feature]
+        return responses.view(batch_size, -1)
 
 
 class SurrogateGradientSpike(torch.autograd.Function):
@@ -234,8 +323,8 @@ class SpikingPolicyNetwork(nn.Module):
     Multi-layer spiking neural network for policy learning.
 
     Implements a deep spiking network with constant current input encoding,
-    multiple LIF hidden layers with temporal dynamics, and spike accumulation
-    for action selection. Designed for reinforcement learning tasks.
+    multiple LIF hidden layers with temporal dynamics, and configurable output
+    modes for action selection. Designed for reinforcement learning tasks.
 
     Parameters
     ----------
@@ -259,10 +348,36 @@ class SpikingPolicyNetwork(nn.Module):
         Resting potential (default: 0.0)
     surrogate_alpha : float
         Surrogate gradient smoothness (default: 10.0)
+    output_mode : OutputMode
+        How to compute output from temporal spike dynamics:
+        - "accumulator": Sum spikes over all timesteps (default, original behavior)
+        - "final": Use only the final timestep's spike pattern (preserves temporal
+          dynamics without accumulator smoothing)
+        - "membrane": Use final membrane potentials instead of spikes (continuous
+          values preserve more input-dependent variation)
+    temporal_modulation : bool
+        If True, apply sinusoidal modulation to input current over timesteps.
+        This prevents LIF neurons from reaching steady state, creating richer
+        temporal dynamics that vary with input magnitude (default: False).
+    modulation_amplitude : float
+        Amplitude of sinusoidal modulation as fraction of input (default: 0.3).
+        Input is scaled by (1 + amplitude * sin(phase)).
+    modulation_period : int
+        Period of sinusoidal modulation in timesteps (default: 20).
+        With 100 timesteps, this creates ~5 oscillation cycles.
+    population_coding : bool
+        If True, encode inputs using population coding with Gaussian tuning
+        curves before the input layer. This creates distinct activation patterns
+        for different input values (default: False).
+    neurons_per_feature : int
+        Number of encoding neurons per input feature when population_coding
+        is enabled (default: 8).
+    population_sigma : float
+        Width of Gaussian tuning curves for population coding (default: 0.25).
 
     Architecture
     ------------
-    Input features → Linear → constant current
+    Input features → [PopulationEncoder] → Linear → constant current
                               ↓ (repeated num_timesteps)
                             LIF Layer 1
                               ↓
@@ -270,7 +385,7 @@ class SpikingPolicyNetwork(nn.Module):
                               ↓
                             ... (num_hidden_layers)
                               ↓
-                            Sum spikes over time
+                            [output_mode determines aggregation]
                               ↓
                             Linear → action logits
     """
@@ -287,13 +402,41 @@ class SpikingPolicyNetwork(nn.Module):
         v_reset: float = 0.0,
         v_rest: float = 0.0,
         surrogate_alpha: float = 10.0,
+        output_mode: OutputMode = "accumulator",
+        modulation_amplitude: float = 0.3,
+        modulation_period: int = 20,
+        neurons_per_feature: int = 8,
+        population_sigma: float = 0.25,
+        *,
+        population_coding: bool = False,
+        temporal_modulation: bool = False,
     ) -> None:
         super().__init__()
         self.num_timesteps = num_timesteps
         self.hidden_dim = hidden_dim
+        self.output_mode = output_mode
+        self.temporal_modulation = temporal_modulation
+        self.modulation_amplitude = modulation_amplitude
+        self.modulation_period = modulation_period
+        self.population_coding = population_coding
 
-        # Input encoding: maps state features to constant input currents
-        self.input_layer = nn.Linear(input_dim, hidden_dim)
+        # Population coding encoder (optional)
+        # Expands input_dim to input_dim * neurons_per_feature
+        if population_coding:
+            self.population_encoder = PopulationEncoder(
+                input_dim=input_dim,
+                neurons_per_feature=neurons_per_feature,
+                sigma=population_sigma,
+                min_val=-1.0,  # Inputs normalized to [-1, 1]
+                max_val=1.0,
+            )
+            effective_input_dim = input_dim * neurons_per_feature
+        else:
+            self.population_encoder = None
+            effective_input_dim = input_dim
+
+        # Input encoding: maps (population-coded) features to constant input currents
+        self.input_layer = nn.Linear(effective_input_dim, hidden_dim)
 
         # Spiking hidden layers with recurrent dynamics
         self.hidden_layers = nn.ModuleList(
@@ -311,15 +454,15 @@ class SpikingPolicyNetwork(nn.Module):
             ],
         )
 
-        # Output layer: maps accumulated spikes to action logits
+        # Output layer: maps spikes/membrane to action logits
         self.output_layer = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass through spiking network.
 
-        Simulates the network for num_timesteps, accumulating spikes across
-        time to produce action logits.
+        Simulates the network for num_timesteps and produces action logits
+        using the configured output_mode.
 
         Parameters
         ----------
@@ -333,27 +476,79 @@ class SpikingPolicyNetwork(nn.Module):
         """
         batch_size = x.shape[0]
 
+        # Apply population coding if enabled
+        if self.population_coding and self.population_encoder is not None:
+            x = self.population_encoder(x)
+
         # Encode input as constant current (applied at each timestep)
         input_current = self.input_layer(x)  # [batch_size, hidden_dim]
 
         # Initialize hidden states for each layer
-        hidden_states = [None] * len(self.hidden_layers)
+        hidden_states: list[tuple[torch.Tensor, torch.Tensor] | None] = [None] * len(
+            self.hidden_layers,
+        )
 
         # Simulate for num_timesteps
-        spike_accumulator = torch.zeros(batch_size, self.hidden_dim, device=x.device, dtype=x.dtype)
+        spike_accumulator = torch.zeros(
+            batch_size,
+            self.hidden_dim,
+            device=x.device,
+            dtype=x.dtype,
+        )
+        final_spikes = torch.zeros(
+            batch_size,
+            self.hidden_dim,
+            device=x.device,
+            dtype=x.dtype,
+        )
 
-        for _ in range(self.num_timesteps):
-            h = input_current  # Feed same input at each timestep
+        for t in range(self.num_timesteps):
+            # Apply temporal modulation if enabled
+            # This prevents LIF neurons from reaching steady state by varying input over time
+            if self.temporal_modulation:
+                # Sinusoidal modulation: input * (1 + amplitude * sin(2π * t / period))
+                import math
+
+                phase = 2.0 * math.pi * t / self.modulation_period
+                modulation_factor = 1.0 + self.modulation_amplitude * math.sin(phase)
+                h = input_current * modulation_factor
+            else:
+                h = input_current  # Feed same input at each timestep
 
             # Pass through spiking hidden layers
             for i, layer in enumerate(self.hidden_layers):
                 h, hidden_states[i] = layer(h, hidden_states[i])
 
-            # Accumulate spikes over time
+            # Accumulate spikes over time (for accumulator mode)
             spike_accumulator += h
 
-        # Store spike rate statistics for monitoring (accessible via last_spike_rates)
-        self.last_spike_rates = spike_accumulator / self.num_timesteps
+            # Store final timestep spikes (for final mode)
+            if t == self.num_timesteps - 1:
+                final_spikes = h
 
-        # Convert total spike counts to action logits
-        return self.output_layer(spike_accumulator)
+        # Store spike rate statistics for monitoring (accessible via last_spike_rates)
+        # Detach to prevent memory leak from computation graph retention
+        self.last_spike_rates = (spike_accumulator / self.num_timesteps).detach()
+
+        # Select output based on configured mode
+        if self.output_mode == "final":
+            # Use only final timestep's spike pattern
+            # This preserves temporal dynamics without accumulator smoothing
+            # Scale up to compensate for single timestep (vs accumulated counts)
+            output_features = final_spikes * self.num_timesteps
+        elif self.output_mode == "membrane":
+            # Use final membrane potentials (continuous values)
+            # This preserves more input-dependent variation than binary spikes
+            # Get membrane potentials from last hidden layer's state
+            if hidden_states[-1] is not None:
+                final_membrane, _ = hidden_states[-1]
+                output_features = final_membrane
+            else:
+                output_features = spike_accumulator  # Fallback
+        else:  # "accumulator" (default)
+            # Sum spikes over all timesteps (original behavior)
+            # Spike counts range from 0 to num_timesteps (e.g., 0-100)
+            output_features = spike_accumulator
+
+        # Convert to action logits
+        return self.output_layer(output_features)
