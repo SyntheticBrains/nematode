@@ -43,7 +43,7 @@ A spiking brain using:
 - Timesteps: 100 (temporal integration)
 
 **LIF Neuron Dynamics**:
-```
+```text
 v[t+1] = v[t] + (1/τ_m) * (v_rest - v[t]) + I[t]
 spike[t] = 1 if v[t] > v_threshold else 0
 v[t] = v_reset if spike[t] else v[t]
@@ -84,7 +84,7 @@ d_spike/d_v ≈ alpha * sigmoid(alpha * (v - v_th)) * (1 - sigmoid(alpha * (v - 
 **Problem**: Agent stuck selecting STAY action 99.8% of the time
 
 **Diagnosis**:
-```
+```text
 Gradient norms: 9 trillion → infinity (catastrophic)
 Policy collapse: STAY selected 3,860/3,868 times (99.8%)
 Entropy: 0.15-0.50 (should be 1.38 for uniform)
@@ -196,7 +196,7 @@ torch.nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
 ```
 
 **Problem Discovered**: Complete policy collapse
-```
+```text
 Action probabilities: [1.000, 0.000, 0.000, 0.000]  # 100% FORWARD
 Then later:          [0.000, 0.000, 0.000, 1.000]  # 100% STAY
 Agent stuck in place, no learning visible
@@ -291,7 +291,7 @@ Sessions: `20251219_105228`, `20251219_105232`, `20251219_105235`, `20251219_105
 | 105239 | 60% | Yes | 40 | 61.7% | 0.236 | 0.552 | Moderate performance |
 
 **Best Session Analysis** (105232):
-```
+```text
 Early (1-20):    10/20 (50%)   - Avg steps: 227
 Mid (21-50):     20/30 (67%)   - Learning phase
 Late (51-100):   48/50 (96%)   - Avg steps: 87 (61% faster!)
@@ -567,7 +567,7 @@ Analysis of MLP brain revealed a critical difference: MLP performs gradient upda
 **Results**: 0% success - gradient death
 
 **Root Cause Analysis**:
-```
+```text
 Action probs: ['0.020', '0.020', '0.020', '0.940']  # Locked to STAY
 Gradient norm: 0.000000  # DEAD - no gradient signal
 ```
@@ -590,7 +590,7 @@ The `min_action_prob: 0.02` floor was the culprit:
 **Results**: Best session achieved **14% success** with 7 consecutive wins (runs 3-10), then collapsed
 
 **Analysis**:
-```
+```text
 Runs 3-10:  SUCCESS streak - entropy 0.4-0.8
 Run 11+:    Entropy collapsed to 0.001, no more successes
 ```
@@ -674,7 +674,7 @@ brain:
 
 ### Architecture Diagram
 
-```markdown
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        SPIKING NEURAL NETWORK                               │
 │                     (Dynamic Foraging Configuration)                        │
@@ -815,7 +815,7 @@ brain:
 
 ### Plausibility Spectrum
 
-```
+```text
 BIOLOGICAL REALISM SPECTRUM
 ════════════════════════════════════════════════════════════════════
 
