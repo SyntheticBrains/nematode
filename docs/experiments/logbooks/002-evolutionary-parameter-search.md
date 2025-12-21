@@ -33,6 +33,48 @@ Evolutionary optimization will find parameters achieving higher success rates th
 
 ## Method
 
+### Evolution Process Overview
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      EVOLUTIONARY PARAMETER OPTIMIZATION                    │
+│                    (CMA-ES / Genetic Algorithm Comparison)                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────┐     ┌─────────────────────────────────────────────┐    │
+│  │  POPULATION     │     │  FITNESS EVALUATION                         │    │
+│  │  (15-30 param   │────▶│  For each individual:                       │    │
+│  │   vectors)      │     │  1. Load params into quantum circuit        │    │
+│  └─────────────────┘     │  2. Run 10-20 episodes                      │    │
+│          │               │  3. fitness = success_rate                  │    │
+│          │               └─────────────────────────────────────────────┘    │
+│          │                              │                                   │
+│          │                              ▼                                   │
+│          │               ┌─────────────────────────────────────────────┐    │
+│          │               │  SELECTION                                  │    │
+│          │               │  CMA-ES: Rank by fitness, update covariance │    │
+│          │               │  GA: Tournament selection + elitism         │    │
+│          │               └─────────────────────────────────────────────┘    │
+│          │                              │                                   │
+│          │                              ▼                                   │
+│          │               ┌─────────────────────────────────────────────┐    │
+│          │               │  REPRODUCTION                               │    │
+│          │               │  CMA-ES: Sample from adapted distribution   │    │
+│          │               │  GA: Crossover + Gaussian mutation          │    │
+│          │               └─────────────────────────────────────────────┘    │
+│          │                              │                                   │
+│          └──────────────────────────────┘                                   │
+│                     (repeat for 30-150 generations)                         │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  WHY EVOLUTION BEATS GRADIENT LEARNING:                                     │
+│  • Fitness averaged over episodes → reduces environment noise               │
+│  • Population maintains diversity → no catastrophic forgetting              │
+│  • No per-step gradient noise from parameter-shift rule                     │
+│  • Elitism preserves best solutions across generations                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### Implementation
 Created `scripts/run_evolution.py` and `quantumnematode/optimizers/evolutionary.py` with:
 - **CMA-ES**: Covariance Matrix Adaptation Evolution Strategy (via `cma` library)
@@ -209,6 +251,43 @@ Best parameters found:
 - No per-step gradient noise from parameter-shift rule
 - Population explores multiple solutions in parallel
 
+### CMA-ES vs GA: Algorithm Comparison
+
+```text
+EVOLUTION PROGRESS: CMA-ES vs GA (Predator Environment, 75+ generations)
+═══════════════════════════════════════════════════════════════════════════
+
+Best Fitness Over Generations
+100% ┤
+ 90% ┤
+ 80% ┤                              ●────●───────────── CMA-ES Peak (80%)
+ 70% ┤                         ●───●    ●    ○────○─── GA Peak (73.3%)
+ 60% ┤                    ●───●              ○    ○
+ 50% ┤               ●───●              ○───○
+ 40% ┤          ●───●              ○───○
+ 30% ┤     ●───●              ○───○
+ 20% ┤●───●              ○───○
+ 10% ┤●              ○───○
+  0% ┼────●────────○──────────────────────────────────────────────────────
+     0   10   20   30   40   50   60   70   80   90  100  110  120  130  150
+                              Generations
+     ● CMA-ES    ○ GA
+
+────────────────────────────────────────────────────────────────────────────
+                          CMA-ES                    GA
+────────────────────────────────────────────────────────────────────────────
+Peak Success:             80%                      73.3%
+Breakthrough Gen:         17                       38
+Final Mean Fitness:       35-42%                   25-30%
+Generations to Peak:      31                       63
+Runtime:                  ~19 hours                ~21 hours
+────────────────────────────────────────────────────────────────────────────
+
+CMA-ES ADVANTAGE: Adaptive covariance matrix learns promising search
+                  directions, enabling faster breakthrough and higher peak.
+═══════════════════════════════════════════════════════════════════════════
+```
+
 ### Predator Environment Analysis
 
 **Key finding**: CMA-ES achieved **80%** during evolution, validated to **80-88%** over 50-run benchmarks - a **3.5-4x improvement** over gradient methods (22.5%).
@@ -245,6 +324,35 @@ Possible causes of GA variance:
 |-------|-------------|------------------|-----------------|-------|
 | **Quantum (evolved)** | 88% | 95.2% | 0.675 | CMA-ES best params, LR=0 |
 | **MLP (gradient)** | 92% | ~92% | 0.740 | Standard gradient training |
+
+```text
+QUANTUM VS CLASSICAL: THE GAP CLOSES
+═══════════════════════════════════════════════════════════════════════════
+
+                        SUCCESS RATE (Predator Environment)
+────────────────────────────────────────────────────────────────────────────
+
+BEFORE EVOLUTION (Exp 001):
+Quantum (gradient)      ███████░░░░░░░░░░░░░░░░░░░░░░░  22.5%
+MLP (gradient)          ███████████████████████████░░░  92%
+                        └──────────── 70% GAP ─────────┘
+
+AFTER EVOLUTION (Exp 002):
+Quantum (CMA-ES)        ██████████████████████████░░░░  88%
+MLP (gradient)          ███████████████████████████░░░  92%
+                        └─ 4% GAP ─┘
+
+────────────────────────────────────────────────────────────────────────────
+                        POST-CONVERGENCE SUCCESS
+────────────────────────────────────────────────────────────────────────────
+Quantum (evolved)       ████████████████████████████░░  95.2%  ← EXCEEDS MLP!
+MLP (gradient)          ███████████████████████████░░░  ~92%
+
+═══════════════════════════════════════════════════════════════════════════
+IMPROVEMENT: 3.5-4x better (22.5% → 88%) with same 12 parameters
+             Evolution unlocked quantum potential that gradients couldn't
+═══════════════════════════════════════════════════════════════════════════
+```
 
 **Key observations**:
 1. Evolved quantum now competitive with MLP (88% vs 92%) - gap reduced from 70% to 4%
