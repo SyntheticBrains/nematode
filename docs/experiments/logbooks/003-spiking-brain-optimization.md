@@ -592,6 +592,110 @@ pretrained_weights = load_from("best_foraging_session.pth")
 3. **If #1 works**: Try curriculum learning (#4) to further stabilize
 4. **Research**: Dual-network architecture (#3) if single-network plateaus
 
+## Phase 8: Separated Gradient Experiment
+
+Based on the hypothesis that the combined gradient was ambiguous (food NORTH + predator NORTH = unclear signal), we implemented separated gradient inputs.
+
+### Implementation
+
+Added `use_separated_gradients: bool` config option to `SpikingBrainConfig`:
+- When enabled, input changes from 2 features to 4 features:
+  - `[food_strength, food_rel_angle, pred_strength, pred_rel_angle]`
+- Each angle normalized relative to agent facing direction [-1, 1]
+- Network input_dim automatically set to 4 when enabled
+
+Files modified:
+- `spiking.py`: Added config option, updated `preprocess()` for 4-feature output
+- `run_simulation.py`: Dynamic input_dim based on config
+- `spiking_predators_*.yml`: All three configs updated with `use_separated_gradients: true`
+
+### Results: FAILURE
+
+| Session | Success | Foods | Pred Deaths | Starved | Evasion | Composite |
+|---------|---------|-------|-------------|---------|---------|-----------|
+| 090405 | **0%** | 0.65 | 48% | 52% | 89% | 0.26 |
+| 090408 | **0%** | 0.10 | 45% | 55% | 92% | 0.26 |
+| 090412 | **0%** | 0.03 | 58% | 42% | 90% | 0.26 |
+| 090415 | **0%** | 0.18 | 40% | 60% | 92% | 0.26 |
+
+### Comparison: Separated vs Combined Gradients
+
+| Metric | Combined (Best) | Separated (Best) | Change |
+|--------|-----------------|------------------|--------|
+| Success rate | 28% | 0% | **-28%** |
+| Avg foods | 4.17 | 0.65 | **-85%** |
+| Predator deaths | 40% | 40-58% | Similar |
+| Evasion rate | 94% | 89-92% | Similar |
+| Composite | 0.390 | 0.26 | **-33%** |
+
+**Verdict**: Separated gradients made performance WORSE, not better.
+
+### Why This Failed
+
+1. **Doubled input complexity without architectural support**: Going from 2→4 inputs doubled the parameter space, but the network converged to a passive policy (0% success)
+
+2. **Early convergence to bad policy**: All 4 sessions locked into doing nothing useful very early
+
+3. **Predator avoidance maintained, food-seeking lost**: 89-92% evasion rate preserved, but food collection dropped from 4.17 to <1 avg. The network learned "don't die" but forgot "find food"
+
+4. **The hypothesis was wrong**: The combined gradient actually HELPS because:
+   - Environment pre-computes optimal direction (food attraction + predator repulsion)
+   - Brain just learns "follow this direction" (simple)
+   - With separated gradients, brain must learn to INTEGRATE signals (harder)
+
+### Key Insight
+
+This mirrors the quantum experiment 001 finding:
+> "The environment's signal does the heavy lifting, not the brain"
+
+The combined gradient is a **feature**, not a bug. It offloads the hard multi-objective optimization to the environment, leaving the brain with a simpler single-objective task.
+
+### Why Raw Concatenation Fails
+
+Simply concatenating `[food_grad, pred_grad]` gives the network MORE information but a HARDER learning problem:
+
+```
+Combined gradient (works):
+  Environment: "go NORTH" (pre-integrated signal)
+  Brain learns: "follow the gradient" (simple)
+
+Separated gradients (fails):
+  Environment: "food is NORTH, predator is EAST"
+  Brain must learn: "when pred_strength > X, weight pred_angle more..."
+  This is a multi-objective optimization problem WITH sparse rewards
+```
+
+### Architectural Requirements for Separated Gradients
+
+For separated gradients to work, the architecture needs explicit support for signal integration:
+
+#### Option 1: Dual-Stream with Learned Gating (Recommended)
+```
+food_grad ──► [Appetitive Stream] ──► approach_logits ─┐
+                                                        ├──► [Gate] ──► action
+pred_grad ──► [Aversive Stream]  ──► avoid_logits ────┘
+              [Context Network]  ──► gate_weight (0-1)
+```
+
+Each stream learns ONE objective (simple), gating network learns WHEN to use which.
+
+#### Option 2: Attention-Based Integration
+Let the network learn to attend to food vs predator based on context.
+
+#### Option 3: Hierarchical Priority (Bio-inspired)
+Predator signal can OVERRIDE appetitive behavior (like amygdala fear response).
+
+### Conclusion
+
+**Separated gradients require architectural changes, not just input changes.**
+
+Raw 4-input concatenation fails because:
+- The learning problem becomes harder, not easier
+- No mechanism to integrate conflicting objectives
+- Network defaults to passive behavior to minimize penalties
+
+Next step: Implement dual-stream architecture with explicit gating.
+
 ### Data References
 
 **Best Sessions**:
@@ -611,10 +715,10 @@ pretrained_weights = load_from("best_foraging_session.pth")
 - [x] Test on predator environments (avoidance + foraging) - **28% SUCCESS (high variance)**
 
 ### Predator Environment Improvements (Priority Order)
-- [ ] **Separate gradient inputs**: Add food/predator as 4 separate inputs (+30-40% expected)
+- [x] **Separate gradient inputs**: Add food/predator as 4 separate inputs - **FAILED: 0% success (worse than combined)**
+- [ ] **Dual-stream architecture**: Separate appetitive/aversive streams with gating (next to try)
 - [ ] **Rebalance rewards**: Equal death/starvation penalties (+10-15% expected)
 - [ ] **Curriculum learning**: Train foraging first, then add predators (+10-20% expected)
-- [ ] **Dual-network architecture**: Separate appetitive/aversive modules (+15-25% expected)
 - [ ] **Transfer learning**: Initialize from successful foraging weights (+5-10% expected)
 
 ### Optimization
