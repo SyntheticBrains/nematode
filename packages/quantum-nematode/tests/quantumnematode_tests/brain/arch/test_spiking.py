@@ -7,6 +7,7 @@ from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch._spiking_layers import (
     LIFLayer,
+    PopulationEncoder,
     SpikingPolicyNetwork,
     SurrogateGradientSpike,
 )
@@ -97,6 +98,51 @@ class TestLIFLayer:
         assert not torch.allclose(v_membrane1, v_membrane2)
 
 
+class TestPopulationEncoder:
+    """Test cases for population coding encoder."""
+
+    def test_output_shape(self):
+        """Test that population encoder expands input correctly."""
+        encoder = PopulationEncoder(input_dim=2, neurons_per_feature=8)
+        x = torch.randn(1, 2)
+
+        output = encoder(x)
+
+        # Should expand: 2 features * 8 neurons = 16
+        assert output.shape == (1, 16)
+
+    def test_gaussian_responses(self):
+        """Test that encoder produces Gaussian-shaped responses."""
+        encoder = PopulationEncoder(
+            input_dim=1,
+            neurons_per_feature=5,
+            sigma=0.25,
+            min_val=-1.0,
+            max_val=1.0,
+        )
+        # Input at center of range (0.0)
+        x = torch.tensor([[0.0]])
+
+        output = encoder(x)
+
+        # Center neuron (index 2) should have highest activation
+        assert output[0, 2] > output[0, 0]  # Center > left edge
+        assert output[0, 2] > output[0, 4]  # Center > right edge
+
+    def test_different_inputs_different_patterns(self):
+        """Test that different inputs produce distinguishable patterns."""
+        encoder = PopulationEncoder(input_dim=1, neurons_per_feature=8, sigma=0.25)
+
+        x1 = torch.tensor([[0.0]])
+        x2 = torch.tensor([[0.5]])
+
+        out1 = encoder(x1)
+        out2 = encoder(x2)
+
+        # Outputs should be different
+        assert not torch.allclose(out1, out2)
+
+
 class TestSpikingPolicyNetwork:
     """Test cases for the spiking policy network."""
 
@@ -150,6 +196,25 @@ class TestSpikingPolicyNetwork:
         # Check that gradients exist for network parameters
         for param in net.parameters():
             assert param.grad is not None
+
+    def test_population_coding_enabled(self):
+        """Test network with population coding enabled."""
+        net = SpikingPolicyNetwork(
+            input_dim=2,
+            hidden_dim=8,
+            output_dim=4,
+            num_timesteps=10,
+            population_coding=True,
+            neurons_per_feature=8,
+        )
+        x = torch.randn(1, 2)
+
+        action_logits = net(x)
+
+        # Should still produce correct output shape
+        assert action_logits.shape == (1, 4)
+        # Population encoder should exist
+        assert net.population_encoder is not None
 
 
 class TestSpikingBrainConfig:
@@ -485,3 +550,181 @@ class TestSpikingBrainIntegration:
         # Should have identical initial parameters
         for p1, p2 in zip(brain1.policy.parameters(), brain2.policy.parameters(), strict=False):
             assert torch.allclose(p1, p2)
+
+
+class TestWeightInitialization:
+    """Test cases for weight initialization methods."""
+
+    def test_orthogonal_initialization(self):
+        """Test orthogonal weight initialization."""
+        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10, weight_init="orthogonal")
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        # Check that weights (not biases) are initialized to non-zero values
+        for name, param in brain.policy.named_parameters():
+            if "weight" in name:
+                assert torch.any(param != 0), f"Weight {name} should be non-zero"
+
+    def test_kaiming_initialization(self):
+        """Test Kaiming weight initialization."""
+        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10, weight_init="kaiming")
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        # Check that weights (not biases) are initialized to non-zero values
+        for name, param in brain.policy.named_parameters():
+            if "weight" in name:
+                assert torch.any(param != 0), f"Weight {name} should be non-zero"
+
+
+class TestIntraEpisodeUpdates:
+    """Test cases for intra-episode gradient updates."""
+
+    def test_update_frequency_triggers_updates(self):
+        """Test that update_frequency triggers gradient updates during episode."""
+        config = SpikingBrainConfig(
+            hidden_size=8,
+            num_timesteps=10,
+            update_frequency=3,  # Update every 3 steps
+            learning_rate=0.01,
+        )
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        # Get initial parameters
+        initial_params = [p.clone() for p in brain.policy.parameters()]
+
+        # Run for enough steps to trigger intra-episode update
+        for _step in range(4):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=False)
+
+        # Parameters should have changed due to intra-episode update
+        final_params = list(brain.policy.parameters())
+        params_changed = any(
+            not torch.allclose(init, final, atol=1e-6)
+            for init, final in zip(initial_params, final_params, strict=False)
+        )
+        assert params_changed
+
+    def test_no_update_frequency_waits_for_episode_end(self):
+        """Test that without update_frequency, updates only happen at episode end."""
+        config = SpikingBrainConfig(
+            hidden_size=8,
+            num_timesteps=10,
+            update_frequency=0,  # Disabled - episode-end only
+            learning_rate=0.01,
+        )
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        # Get initial parameters
+        initial_params = [p.clone() for p in brain.policy.parameters()]
+
+        # Run steps without episode_done
+        for _ in range(5):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=False)
+
+        # Parameters should NOT have changed yet
+        mid_params = list(brain.policy.parameters())
+        params_unchanged = all(
+            torch.allclose(init, mid, atol=1e-6)
+            for init, mid in zip(initial_params, mid_params, strict=False)
+        )
+        assert params_unchanged
+
+        # Now end the episode
+        brain.learn(params, reward=1.0, episode_done=True)
+
+        # Now parameters should have changed
+        final_params = list(brain.policy.parameters())
+        params_changed = any(
+            not torch.allclose(init, final, atol=1e-6)
+            for init, final in zip(initial_params, final_params, strict=False)
+        )
+        assert params_changed
+
+
+class TestMinActionProb:
+    """Test cases for min_action_prob floor."""
+
+    def test_min_action_prob_enforces_floor(self):
+        """Test that min_action_prob prevents action probabilities from going below floor."""
+        config = SpikingBrainConfig(
+            hidden_size=8,
+            num_timesteps=10,
+            min_action_prob=0.01,
+        )
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        # Run brain multiple times and check probabilities
+        for _ in range(10):
+            _actions = brain.run_brain(params, top_only=False, top_randomize=False)
+            # All probabilities should be >= min_action_prob
+            probs = brain.episode_action_probs[-1]
+            assert all(p >= config.min_action_prob - 1e-6 for p in probs)
+
+    def test_min_action_prob_zero_allows_any_probability(self):
+        """Test that min_action_prob=0 allows probabilities to be any value."""
+        config = SpikingBrainConfig(
+            hidden_size=8,
+            num_timesteps=10,
+            min_action_prob=0.0,
+        )
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        # Brain should work without errors
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+        actions = brain.run_brain(params, top_only=False, top_randomize=False)
+        assert len(actions) == 1
+
+
+class TestPopulationCodingIntegration:
+    """Test population coding in full brain context."""
+
+    def test_brain_with_population_coding(self):
+        """Test spiking brain with population coding enabled."""
+        config = SpikingBrainConfig(
+            hidden_size=16,
+            num_timesteps=10,
+            population_coding=True,
+            neurons_per_feature=8,
+            population_sigma=0.25,
+        )
+        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_position=(1.0, 1.0),
+            agent_direction=Direction.UP,
+        )
+
+        # Should work correctly with population coding
+        actions = brain.run_brain(params, top_only=False, top_randomize=False)
+        assert len(actions) == 1
+        assert actions[0].action in [Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY]
