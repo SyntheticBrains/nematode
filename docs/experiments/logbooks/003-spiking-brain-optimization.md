@@ -410,15 +410,215 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 - **Compared to MLP**: ~5% gap (83% vs 85-92%) - nearly closed!
 - **Compared to quantum**: Competitive (83% vs 88%), but spiking learns online
 
+## Phase 7: Predator Environment Testing
+
+After achieving 82% on dynamic foraging, we tested the spiking brain on the significantly harder **predator avoidance + foraging task** - a multi-objective challenge requiring both food seeking and threat avoidance.
+
+### The Predator Challenge
+
+Unlike pure foraging, predator environments require:
+- Collecting 10 food items while avoiding 2 randomly-moving predators
+- Balancing conflicting objectives: approach food vs flee from predators
+- Rapid context switching between appetitive and aversive behaviors
+- Higher variance outcomes due to random predator movements
+
+### Experiment Setup
+
+Created three new configs: `spiking_predators_small.yml`, `spiking_predators_medium.yml`, `spiking_predators_large.yml`
+
+**Config (small)**: 20x20 grid, 2 predators, 5 foods on grid, 10 to collect, 500 max steps
+
+### Results Summary
+
+| Session | Success | Foods | Predator Deaths | Starved | Evasion Rate | Composite |
+|---------|---------|-------|-----------------|---------|--------------|-----------|
+| **20251221_065658** | **28%** | 4.17 | 40% | 30% | 94% | **0.390** |
+| 20251221_072148 | 19% | 2.97 | 39% | 42% | 93% | 0.372 |
+| 20251221_062455 | 2% | 1.18 | 35% | 61% | 93% | 0.338 |
+| 20251221_073925 | 0% | 0.10 | 77% | 23% | 82% | 0.260 |
+
+### Comparison to Other Brain Types
+
+| Brain Type | Success Rate | Predator Deaths | Foods Avg | Composite | Notes |
+|------------|-------------|-----------------|-----------|-----------|-------|
+| **MLP** | **85%** | 10.5% | 9.2 | **0.740** | Baseline - best performance |
+| **Quantum (evolved)** | 88% | 12% | 9.5 | 0.675 | Fixed params, no learning |
+| **Spiking (best)** | 28% | 40% | 4.17 | 0.390 | High variance |
+| **Spiking (worst)** | 0% | 77% | 0.10 | 0.260 | Catastrophic |
+
+**Gap**: Spiking achieves ~33% of MLP's success rate (28%/85%)
+
+### Detailed Analysis of Best Session (20251221_065658)
+
+**Learning Curve**:
+```text
+Runs 1-16:  Mostly failing (starving or eaten), scattered food collection
+Runs 17-18: BREAKTHROUGH - 10/10 foods collected twice in a row
+Runs 19-34: Mixed results, learning predator avoidance
+Runs 35-66: SUSTAINED SUCCESS - 20/32 runs with 10 foods (62.5%)
+Runs 67-100: REGRESSION - Success dropped, only scattered wins
+```
+
+**Key Observations**:
+1. **Evasion is learned quickly**: 94% evasion rate (8.17/8.68 encounters) - spiking CAN avoid predators
+2. **Food seeking degrades with predator learning**: Early runs show more food, later runs show less
+3. **Conflicting gradients**: When predator nearby, food gradient gets overridden
+4. **Post-convergence regression**: Unlike static/foraging, performance didn't stabilize
+
+**Death Pattern Analysis**:
+```text
+Predator deaths: 40/100 runs (40%)
+Starvation: 30/100 runs (30%)
+Success: 28/100 runs (28%)
+Max steps: 2/100 runs (2%)
+```
+
+The 30% starvation rate indicates the brain often avoids predators but fails to find food - the opposite problem to early runs.
+
+### Root Cause Analysis
+
+#### Problem 1: Single Combined Gradient Signal
+
+The spiking brain receives only 2 inputs:
+- `gradient_strength`: Combined food + predator signal magnitude
+- `gradient_direction`: Direction of combined vector
+
+**Issue**: When food is NORTH and predator is SOUTH, the combined gradient points NORTH (correct). But when food is NORTH and predator is NORTH, the combined gradient is ambiguous - the brain can't distinguish "go north for food" from "flee south from predator".
+
+**Evidence from quantum logbook 001**: Same issue caused quantum circuits to plateau at ~30% - the combined gradient does heavy lifting, not the brain.
+
+#### Problem 2: Conflicting Reward Signals
+
+The reward structure creates competing objectives:
+```yaml
+reward_distance_scale: 0.5    # Approach food
+penalty_predator_proximity: 0.1  # Avoid predator
+penalty_predator_death: 10.0   # Strong death penalty
+penalty_starvation: 2.0        # Moderate starvation penalty
+```
+
+**Issue**: The predator death penalty (10.0) is 5x stronger than starvation (2.0), causing the network to become overly cautious - avoiding predators at the cost of finding food.
+
+#### Problem 3: High Initialization Variance
+
+| Session | Success | Pattern |
+|---------|---------|---------|
+| 065658 | 28% | Good initialization, learned both objectives |
+| 072148 | 19% | Moderate initialization |
+| 062455 | 2% | Poor initialization, never learned foraging |
+| 073925 | 0% | Catastrophic, locked to single action |
+
+**Issue**: 28x difference between best and worst sessions with identical config - initialization lottery problem magnified by multi-objective difficulty.
+
+#### Problem 4: No Separate Appetitive/Aversive Modules
+
+MLP and quantum both use a single network, but:
+- **MLP** has 4,600 parameters - enough capacity to learn both objectives internally
+- **Quantum** only uses combined gradient - the environment does the work
+- **Spiking** has 136,000 parameters but treats the problem as single-objective
+
+### High-Impact Improvement Candidates
+
+Based on the analysis, here are potential improvements ranked by expected impact:
+
+#### 1. **Separate Predator Gradient Input** (HIGH IMPACT - Estimated +30-40%)
+
+Add separate predator gradient to input:
+```python
+# Current: 2 inputs
+[combined_gradient_strength, combined_gradient_direction]
+
+# Proposed: 4 inputs (or 6 with separate magnitudes)
+[food_gradient_strength, food_gradient_direction,
+ predator_gradient_strength, predator_gradient_direction]
+```
+
+**Rationale**: Allows brain to learn separate responses to food vs predator signals. Quantum experiment 001 showed separated gradients failed, but that was with 12-24 parameters. With 136,000 parameters, spiking may handle the higher-dimensional input.
+
+**Risk**: Increased input dimension may require more training time.
+
+#### 2. **Rebalance Reward Penalties** (MEDIUM IMPACT - Estimated +10-15%)
+
+```yaml
+# Current (death-averse)
+penalty_predator_death: 10.0
+penalty_starvation: 2.0
+
+# Proposed (balanced)
+penalty_predator_death: 5.0
+penalty_starvation: 5.0
+```
+
+**Rationale**: Equal penalties force the network to balance objectives rather than prioritize predator avoidance.
+
+#### 3. **Dual-Network Architecture** (MEDIUM-HIGH IMPACT - Estimated +15-25%)
+
+Separate spiking networks for appetitive and aversive behaviors:
+```python
+class DualSpikingBrain:
+    def __init__(self):
+        self.food_network = SpikingPolicyNetwork(...)  # Approach food
+        self.predator_network = SpikingPolicyNetwork(...)  # Avoid predators
+        self.gating_network = nn.Linear(4, 2)  # Learn when to use which
+```
+
+**Rationale**: Biological brains have separate circuits for approach vs avoidance behaviors. The gating mechanism learns context-dependent switching.
+
+**Risk**: Quantum dual-circuit failed at 0.25% success, but that had only 24 parameters total. With proper capacity, this may work.
+
+#### 4. **Curriculum Learning** (MEDIUM IMPACT - Estimated +10-20%)
+
+Train progressively:
+1. First 30 runs: Predators disabled (pure foraging)
+2. Runs 31-60: 1 slow predator
+3. Runs 61-100: 2 normal predators
+
+**Rationale**: Establish food-seeking behavior before introducing predator avoidance. Prevents early predator deaths from corrupting learning.
+
+#### 5. **Better Weight Initialization** (LOW-MEDIUM IMPACT - Estimated +5-10%)
+
+Use informed initialization from successful static/foraging runs:
+```python
+# Transfer learned food-seeking weights, randomly initialize predator response
+pretrained_weights = load_from("best_foraging_session.pth")
+```
+
+**Rationale**: Reduce initialization variance and start with known-good food-seeking behavior.
+
+### Recommended Next Steps
+
+1. **Immediate**: Implement separate gradient inputs (#1) - highest expected impact
+2. **Quick win**: Rebalance rewards (#2) - easy config change
+3. **If #1 works**: Try curriculum learning (#4) to further stabilize
+4. **Research**: Dual-network architecture (#3) if single-network plateaus
+
+### Data References
+
+**Best Sessions**:
+- **20251221_065658**: 28% success, 94% evasion, 4.17 avg foods, composite 0.390
+  - Config: `spiking_predators_small.yml`
+  - Pattern: Learning visible runs 17-66, then regression
+
+**Comparison Baselines**:
+- **MLP 20251127_140342**: 85% success, 10.5% predator deaths, composite 0.740
+- **Quantum 20251213_021816**: 88% success (evolved params), 12% predator deaths, composite 0.675
+
 ## Next Steps
 
 ### Immediate
 - [x] Fix tracking data export (append to history_data)
 - [x] Test on foraging environments (dynamic goals) - **ACHIEVED 82% SUCCESS**
-- [ ] Test on predator environments (avoidance + foraging)
+- [x] Test on predator environments (avoidance + foraging) - **28% SUCCESS (high variance)**
+
+### Predator Environment Improvements (Priority Order)
+- [ ] **Separate gradient inputs**: Add food/predator as 4 separate inputs (+30-40% expected)
+- [ ] **Rebalance rewards**: Equal death/starvation penalties (+10-15% expected)
+- [ ] **Curriculum learning**: Train foraging first, then add predators (+10-20% expected)
+- [ ] **Dual-network architecture**: Separate appetitive/aversive modules (+15-25% expected)
+- [ ] **Transfer learning**: Initialize from successful foraging weights (+5-10% expected)
 
 ### Optimization
-- [ ] **Initialize weights better**: Try Xavier/Kaiming initialization
+- [x] **Initialize weights better**: Kaiming initialization implemented
 - [ ] **Tune decay rates**: May be able to achieve 80-85% consistently
 - [ ] **Add fixed seed option**: For reproducible experiments
 - [ ] **Try different surrogate functions**: Fast sigmoid, rectangular, etc.
