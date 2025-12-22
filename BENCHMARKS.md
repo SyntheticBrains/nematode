@@ -235,6 +235,7 @@ _No benchmarks submitted yet._
 | ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
 | ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
+| ✓ spiking | 0.556 | 63% | 247 | 20 | 0.234 | @chrisjz | 2025-12-22 |
 | ✓ spiking | 0.390 | 32% | 326 | 20 | 0.219 | @chrisjz | 2025-12-21 |
 
 ### Dynamic Predator Medium (≤50x50)
