@@ -1058,9 +1058,6 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             logger.error(error_message)
             raise ValueError(error_message)
 
-        # Create parameter initializer instance from config
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
         # Determine input dimension based on separated gradients config
         # 2 features for combined gradient, 4 features for separated food/predator gradients
         input_dim = 4 if brain_config.use_separated_gradients else 2
@@ -1070,7 +1067,6 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             input_dim=input_dim,
             num_actions=4,
             device=device,
-            parameter_initializer=parameter_initializer,
         )
     else:
         error_message = f"Unknown brain type: {brain_type}"
