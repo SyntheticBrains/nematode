@@ -32,7 +32,7 @@ brain:
 
     # Learning parameters
     learning_rate: 0.0001
-    lr_decay_rate: 0.01
+    lr_decay_rate: 0.005
     gamma: 0.99
     baseline_alpha: 0.05
     entropy_beta: 0.3
