@@ -127,8 +127,8 @@ action_logits [4]
 ```
 
 **Parameters**:
-- `num_timesteps=50`: Simulation steps per decision (50ms at 1ms resolution)
-- `hidden_dim=128`: Balance capacity and efficiency
+- `num_timesteps=100`: Simulation steps per decision (100 needed for temporal integration)
+- `hidden_size=256`: Balance capacity and efficiency
 - `num_hidden_layers=2`: Sufficient depth for learning
 
 **Alternatives Considered**:
@@ -145,18 +145,26 @@ action_logits [4]
 - `reward_scaling` → handled by baseline
 
 **Add** (Policy gradient):
-- `num_timesteps: int = 50` - Simulation duration
+- `num_timesteps: int = 100` - Simulation duration (100 needed for temporal integration)
+- `hidden_size: int = 256` - Hidden layer size
 - `num_hidden_layers: int = 2` - Network depth
 - `gamma: float = 0.99` - Discount factor
 - `baseline_alpha: float = 0.05` - Baseline update rate
-- `entropy_beta: float = 0.01` - Exploration bonus (optional)
-- `surrogate_alpha: float = 10.0` - Gradient smoothness
+- `entropy_beta: float = 0.3` - Exploration bonus
+- `entropy_beta_final: float = 0.3` - Final entropy after decay
+- `entropy_decay_episodes: int = 50` - Episodes over which to decay entropy
+- `surrogate_alpha: float = 1.0` - Gradient smoothness (10.0 caused explosion)
+- `lr_decay_rate: float = 0.005` - Learning rate decay per episode
+- `update_frequency: int = 10` - Intra-episode update frequency (0 = end of episode only)
+- `weight_init: str = "orthogonal"` - Weight initialization method
+- `population_coding: bool = true` - Use population coding for inputs
+- `neurons_per_feature: int = 8` - Neurons per input feature for population coding
 
 **Keep** (LIF neuron):
 - `tau_m: float = 20.0` - Membrane time constant
 - `v_threshold: float = 1.0` - Spike threshold
 - `v_reset: float = 0.0` - Reset potential
-- `learning_rate: float = 0.001` - Optimizer LR
+- `learning_rate: float = 0.0001` - Optimizer LR (lower than MLP due to more parameters)
 
 ## Risks / Trade-offs
 
@@ -167,11 +175,11 @@ action_logits [4]
 - Adjust `hidden_dim` and `num_hidden_layers` if underfitting
 - Use learning rate scheduling if needed
 
-### Risk 2: Gradient Vanishing Through Long Spike Sequences
+### Risk 2: Gradient Explosion Through Long Spike Sequences
 **Mitigation**:
-- Gradient clipping (`max_norm=0.5`)
-- Shorter `num_timesteps` initially (50 → 30 if issues)
-- Layer normalization if gradients vanish
+- Gradient clipping (`max_norm=1.0` combined with value clipping at 1.0)
+- Use `surrogate_alpha=1.0` (10.0 causes gradient explosion)
+- Layer normalization in output layer
 - Monitor gradient norms during training
 
 ### Risk 3: Hyperparameter Sensitivity
