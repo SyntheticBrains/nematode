@@ -18,6 +18,7 @@ References
 - SpikingJelly: https://github.com/fangwei123456/spikingjelly
 """
 
+import math
 from typing import Any, Literal
 
 import torch
@@ -507,8 +508,6 @@ class SpikingPolicyNetwork(nn.Module):
             # This prevents LIF neurons from reaching steady state by varying input over time
             if self.temporal_modulation:
                 # Sinusoidal modulation: input * (1 + amplitude * sin(2π * t / period))
-                import math
-
                 phase = 2.0 * math.pi * t / self.modulation_period
                 modulation_factor = 1.0 + self.modulation_amplitude * math.sin(phase)
                 h = input_current * modulation_factor
