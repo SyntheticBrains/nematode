@@ -48,7 +48,6 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._spiking_layers import OutputMode, SpikingPolicyNetwork
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
-from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 
@@ -212,15 +211,13 @@ class SpikingBrain(ClassicalBrain):
         Running average of returns for variance reduction
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         config: SpikingBrainConfig,
         input_dim: int,
         num_actions: int,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
-        *,
-        parameter_initializer: ParameterInitializer | None = None,
     ) -> None:
         super().__init__()
 
@@ -304,11 +301,6 @@ class SpikingBrain(ClassicalBrain):
         # Log parameter count
         total_params = sum(p.numel() for p in self.policy.parameters() if p.requires_grad)
         logger.info(f"SpikingBrain initialized with {total_params:,} trainable parameters")
-
-        if parameter_initializer is not None:
-            logger.info(
-                "Custom parameter initializer provided but using PyTorch default initialization",
-            )
 
     @property
     def action_set(self) -> list[Action]:
