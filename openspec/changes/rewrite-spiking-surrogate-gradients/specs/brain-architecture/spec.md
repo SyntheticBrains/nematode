@@ -60,14 +60,16 @@ The SpikingBrain SHALL implement policy gradient learning with discounted return
 **When** updating network parameters
 **Then** the system SHALL compute policy loss: `L = -Σ log_prob(a_t) · A_t`
 **And** SHALL backpropagate gradients through the spiking network
-**And** SHALL clip gradients to max norm 0.5
+**And** SHALL clip individual gradient values to [-1, 1]
+**And** SHALL clip gradient norm to max_norm=1.0
 **And** SHALL update parameters using Adam optimizer
 **And** SHALL clear episode buffers after update
 
 #### Scenario: Gradient Clipping
 **Given** policy gradients have been computed
 **When** gradients exceed the maximum norm threshold
-**Then** the system SHALL scale gradients to max_norm=0.5
+**Then** the system SHALL clip individual values to [-1, 1] first
+**And** SHALL scale gradients to max_norm=1.0
 **And** SHALL prevent gradient explosion through long spike sequences
 
 ### Requirement: Input/Output Encoding with Relative Angles
@@ -85,10 +87,18 @@ The SpikingBrain SHALL encode continuous environmental states as constant curren
 #### Scenario: Current-Based Input Encoding
 **Given** preprocessed state features [grad_strength, rel_angle]
 **When** encoding to neural input
-**Then** the system SHALL pass features through a linear layer to produce input currents
+**Then** the system SHALL optionally apply population coding (multiple neurons per feature with Gaussian tuning)
+**And** SHALL pass features through a linear layer to produce input currents
 **And** SHALL apply the same input current at each simulation timestep (constant input)
 **And** SHALL NOT use stochastic Poisson spike generation
 **And** SHALL enable deterministic forward passes for reduced variance
+
+#### Scenario: Population Coding (Optional)
+**Given** population_coding is enabled in configuration
+**When** encoding input features
+**Then** the system SHALL expand each feature to neurons_per_feature neurons (default 8)
+**And** SHALL use Gaussian tuning curves with population_sigma width (default 0.25)
+**And** SHALL improve input discrimination for gradient-based inputs
 
 #### Scenario: Spike-Based Action Selection
 **Given** output layer spike counts accumulated over simulation period
@@ -106,14 +116,15 @@ The configuration system SHALL support surrogate gradient parameters for control
 **Given** a spiking brain configuration
 **When** the surrogate_alpha parameter is specified
 **Then** the system SHALL use this value to control gradient smoothness
-**And** SHALL default to 10.0 if not specified
+**And** SHALL default to 1.0 if not specified (10.0 causes gradient explosion)
 **And** SHALL validate that surrogate_alpha > 0
 
 #### Scenario: Network Architecture Parameters
 **Given** a spiking brain configuration
 **When** num_timesteps and num_hidden_layers are specified
-**Then** the system SHALL simulate the network for num_timesteps steps per decision
-**And** SHALL create num_hidden_layers LIF layers in the network
+**Then** the system SHALL simulate the network for num_timesteps steps per decision (default 100)
+**And** SHALL create num_hidden_layers LIF layers in the network (default 2)
+**And** SHALL use hidden_size neurons per layer (default 256)
 **And** SHALL validate num_timesteps >= 10 and num_hidden_layers >= 1
 
 ### Requirement: Protocol Compatibility with Policy Gradient Semantics
@@ -126,15 +137,17 @@ The SpikingBrain SHALL implement the ClassicalBrain protocol while using policy 
 **And** SHALL return compatible data structures (ActionData, BrainData)
 **And** SHALL integrate with existing simulation infrastructure
 **And** SHALL use episode buffers for state/action/reward sequences
-**And** SHALL update weights only when episode_done=True
+**And** SHALL support intra-episode updates via update_frequency parameter (0 = end of episode only)
 
 #### Scenario: Configuration Schema for Policy Gradients
 **Given** a YAML configuration for spiking brain
 **When** parsing configuration parameters
-**Then** the system SHALL accept policy gradient parameters: gamma, baseline_alpha, entropy_beta
-**And** SHALL accept network architecture parameters: num_timesteps, num_hidden_layers
+**Then** the system SHALL accept policy gradient parameters: gamma, baseline_alpha, entropy_beta, entropy_beta_final, entropy_decay_episodes
+**And** SHALL accept network architecture parameters: num_timesteps, num_hidden_layers, hidden_size
 **And** SHALL accept LIF neuron parameters: tau_m, v_threshold, v_reset
-**And** SHALL accept learning parameters: learning_rate, surrogate_alpha
+**And** SHALL accept learning parameters: learning_rate, lr_decay_rate, surrogate_alpha, update_frequency
+**And** SHALL accept input encoding parameters: population_coding, neurons_per_feature, population_sigma
+**And** SHALL accept initialization parameters: weight_init (orthogonal, kaiming, default)
 **And** SHALL reject STDP-specific parameters with meaningful error messages
 
 ## REMOVED Requirements
@@ -165,10 +178,11 @@ The system SHALL provide testing utilities to verify gradient flow through spiki
 The system SHALL validate that the spiking brain learns successfully on standard tasks.
 
 #### Scenario: Foraging Task Learning
-**Given** a spiking brain with surrogate gradients on foraging_small environment
-**When** trained for 100 episodes
+**Given** a spiking brain with surrogate gradients on foraging environments
+**When** trained for 100-200 episodes
 **Then** the average reward SHALL show a positive trend
-**And** the success rate SHALL reach >50% by episode 100
+**And** the success rate SHALL reach 100% on static and dynamic foraging (matching MLP)
+**And** the success rate SHALL reach >60% on predator environments (vs 92% MLP)
 **And** the learning curve SHALL be comparable to MLPBrain within 2x episode count
 
 #### Scenario: Loss Decrease Over Episodes
