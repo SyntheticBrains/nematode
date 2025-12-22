@@ -20,7 +20,7 @@ The system SHALL support a spiking neural network brain architecture using surro
 **And** SHALL require network architecture parameters (num_timesteps, num_hidden_layers, hidden_size)
 **And** SHALL initialize the spiking brain with surrogate gradient learning enabled
 
-### Requirement: Biological Neural Dynamics with Gradient Flow
+### Requirement: Biological Neural Dynamics
 The SpikingBrain SHALL implement biologically plausible LIF neuron dynamics while maintaining differentiability for gradient-based learning through surrogate gradients.
 
 #### Scenario: LIF Neuron Forward Pass
@@ -44,35 +44,7 @@ The SpikingBrain SHALL implement biologically plausible LIF neuron dynamics whil
 **And** SHALL accumulate spikes over the simulation period
 **And** SHALL convert total spike counts to action logits
 
-### Requirement: Policy Gradient Learning (REINFORCE)
-The SpikingBrain SHALL implement policy gradient learning with discounted returns, matching the proven algorithm used by MLPBrain.
-
-#### Scenario: Episode-Level Learning
-**Given** an episode has completed with a sequence of (state, action, reward) tuples
-**When** the learning phase begins
-**Then** the system SHALL compute discounted returns backward through the episode: `G_t = r_t + γ·G_{t+1}`
-**And** SHALL normalize returns for variance reduction: `G' = (G - mean(G)) / std(G)`
-**And** SHALL compute advantages using baseline: `A_t = G'_t - baseline`
-**And** SHALL update baseline with running average: `baseline ← α·episode_return + (1-α)·baseline`
-
-#### Scenario: Policy Gradient Update
-**Given** computed advantages for each timestep
-**When** updating network parameters
-**Then** the system SHALL compute policy loss: `L = -Σ log_prob(a_t) · A_t`
-**And** SHALL backpropagate gradients through the spiking network
-**And** SHALL clip individual gradient values to [-1, 1]
-**And** SHALL clip gradient norm to max_norm=1.0
-**And** SHALL update parameters using Adam optimizer
-**And** SHALL clear episode buffers after update
-
-#### Scenario: Gradient Clipping
-**Given** policy gradients have been computed
-**When** gradients exceed the maximum norm threshold
-**Then** the system SHALL clip individual values to [-1, 1] first
-**And** SHALL scale gradients to max_norm=1.0
-**And** SHALL prevent gradient explosion through long spike sequences
-
-### Requirement: Input/Output Encoding with Relative Angles
+### Requirement: Input/Output Encoding
 The SpikingBrain SHALL encode continuous environmental states as constant currents and decode spike patterns to action probabilities, using relative angles between agent orientation and goal direction.
 
 #### Scenario: State Preprocessing with Relative Angles
@@ -109,25 +81,7 @@ The SpikingBrain SHALL encode continuous environmental states as constant curren
 **And** SHALL sample action from categorical distribution
 **And** SHALL store log probability for policy gradient learning
 
-### Requirement: Surrogate Gradient Configuration
-The configuration system SHALL support surrogate gradient parameters for controlling the differentiable spike approximation.
-
-#### Scenario: Surrogate Alpha Parameter
-**Given** a spiking brain configuration
-**When** the surrogate_alpha parameter is specified
-**Then** the system SHALL use this value to control gradient smoothness
-**And** SHALL default to 1.0 if not specified (10.0 causes gradient explosion)
-**And** SHALL validate that surrogate_alpha > 0
-
-#### Scenario: Network Architecture Parameters
-**Given** a spiking brain configuration
-**When** num_timesteps and num_hidden_layers are specified
-**Then** the system SHALL simulate the network for num_timesteps steps per decision (default 100)
-**And** SHALL create num_hidden_layers LIF layers in the network (default 2)
-**And** SHALL use hidden_size neurons per layer (default 256)
-**And** SHALL validate num_timesteps >= 10 and num_hidden_layers >= 1
-
-### Requirement: Protocol Compatibility with Policy Gradient Semantics
+### Requirement: Protocol Compatibility
 The SpikingBrain SHALL implement the ClassicalBrain protocol while using policy gradient learning instead of STDP.
 
 #### Scenario: Brain Interface Compliance
@@ -157,12 +111,53 @@ The SpikingBrain SHALL implement the ClassicalBrain protocol while using policy 
 
 **Migration**: Replace STDP with policy gradient learning (REINFORCE). Users must update configuration files to remove `tau_plus`, `tau_minus`, `a_plus`, `a_minus`, `reward_scaling` parameters and add policy gradient parameters (`gamma`, `baseline_alpha`, `learning_rate`).
 
-### Requirement: Rate Coding Input with Poisson Encoding
-**Reason**: Poisson spike encoding adds stochastic noise and reduces learning signal quality. Deterministic current-based encoding provides clearer gradient signals while maintaining biological plausibility.
-
-**Migration**: Remove `max_rate`, `min_rate`, `simulation_duration`, `time_step` parameters from configuration. Replace with `num_timesteps` parameter that controls simulation steps per decision.
-
 ## ADDED Requirements
+
+### Requirement: Policy Gradient Learning (REINFORCE)
+The SpikingBrain SHALL implement policy gradient learning with discounted returns, matching the proven algorithm used by MLPBrain.
+
+#### Scenario: Episode-Level Learning
+**Given** an episode has completed with a sequence of (state, action, reward) tuples
+**When** the learning phase begins
+**Then** the system SHALL compute discounted returns backward through the episode: `G_t = r_t + γ·G_{t+1}`
+**And** SHALL normalize returns for variance reduction: `G' = (G - mean(G)) / std(G)`
+**And** SHALL compute advantages using baseline: `A_t = G'_t - baseline`
+**And** SHALL update baseline with running average: `baseline ← α·episode_return + (1-α)·baseline`
+
+#### Scenario: Policy Gradient Update
+**Given** computed advantages for each timestep
+**When** updating network parameters
+**Then** the system SHALL compute policy loss: `L = -Σ log_prob(a_t) · A_t`
+**And** SHALL backpropagate gradients through the spiking network
+**And** SHALL clip individual gradient values to [-1, 1]
+**And** SHALL clip gradient norm to max_norm=1.0
+**And** SHALL update parameters using Adam optimizer
+**And** SHALL clear episode buffers after update
+
+#### Scenario: Gradient Clipping
+**Given** policy gradients have been computed
+**When** gradients exceed the maximum norm threshold
+**Then** the system SHALL clip individual values to [-1, 1] first
+**And** SHALL scale gradients to max_norm=1.0
+**And** SHALL prevent gradient explosion through long spike sequences
+
+### Requirement: Surrogate Gradient Configuration
+The configuration system SHALL support surrogate gradient parameters for controlling the differentiable spike approximation.
+
+#### Scenario: Surrogate Alpha Parameter
+**Given** a spiking brain configuration
+**When** the surrogate_alpha parameter is specified
+**Then** the system SHALL use this value to control gradient smoothness
+**And** SHALL default to 1.0 if not specified (10.0 causes gradient explosion)
+**And** SHALL validate that surrogate_alpha > 0
+
+#### Scenario: Network Architecture Parameters
+**Given** a spiking brain configuration
+**When** num_timesteps and num_hidden_layers are specified
+**Then** the system SHALL simulate the network for num_timesteps steps per decision (default 100)
+**And** SHALL create num_hidden_layers LIF layers in the network (default 2)
+**And** SHALL use hidden_size neurons per layer (default 256)
+**And** SHALL validate num_timesteps >= 10 and num_hidden_layers >= 1
 
 ### Requirement: Gradient Flow Testing
 The system SHALL provide testing utilities to verify gradient flow through spiking layers.
