@@ -605,7 +605,7 @@ class SpikingBrain(ClassicalBrain):
             if self.batch_episode_count >= self.config.batch_size:
                 self._perform_batch_gradient_update()
 
-    def _perform_intra_episode_update(self) -> None:  # noqa: C901, PLR0915
+    def _perform_intra_episode_update(self) -> None:
         """
         Perform gradient update using recent steps within the current episode.
 
@@ -670,14 +670,7 @@ class SpikingBrain(ClassicalBrain):
             ).unsqueeze(0)
             action_logits = self.policy(state_tensor)
             action_probs = torch.softmax(action_logits, dim=-1)
-
-            # Apply action probability floor
-            if self.config.min_action_prob > 0:
-                num_actions = action_probs.shape[-1]
-                min_prob = self.config.min_action_prob
-                max_prob = 1.0 - min_prob * (num_actions - 1)
-                action_probs = torch.clamp(action_probs, min=min_prob, max=max_prob)
-                action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
+            action_probs = self._apply_probability_floor(action_probs)
 
             action_dist = torch.distributions.Categorical(action_probs)
             log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
@@ -795,15 +788,7 @@ class SpikingBrain(ClassicalBrain):
             ).unsqueeze(0)
             action_logits = self.policy(state_tensor)
             action_probs = torch.softmax(action_logits, dim=-1)
-
-            # Apply action probability floor to prevent entropy collapse during learning
-            if self.config.min_action_prob > 0:
-                num_actions = action_probs.shape[-1]
-                min_prob = self.config.min_action_prob
-                max_prob = 1.0 - min_prob * (num_actions - 1)
-                action_probs = torch.clamp(action_probs, min=min_prob, max=max_prob)
-                # Renormalize to ensure sum = 1
-                action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
+            action_probs = self._apply_probability_floor(action_probs)
 
             action_dist = torch.distributions.Categorical(action_probs)
             log_prob = action_dist.log_prob(torch.tensor(action_idx, device=self.device))
@@ -993,6 +978,32 @@ class SpikingBrain(ClassicalBrain):
             # Update optimizer learning rate
             for param_group in self.optimizer.param_groups:
                 param_group["lr"] = new_lr
+
+    def _apply_probability_floor(self, action_probs: torch.Tensor) -> torch.Tensor:
+        """
+        Apply probability floor to prevent entropy collapse.
+
+        Clamps action probabilities to ensure no action has probability below
+        min_action_prob, then renormalizes to sum to 1.
+
+        Parameters
+        ----------
+        action_probs : torch.Tensor
+            Raw action probabilities from softmax
+
+        Returns
+        -------
+        torch.Tensor
+            Clamped and renormalized action probabilities
+        """
+        if self.config.min_action_prob <= 0:
+            return action_probs
+
+        num_actions = action_probs.shape[-1]
+        min_prob = self.config.min_action_prob
+        max_prob = 1.0 - min_prob * (num_actions - 1)
+        action_probs = torch.clamp(action_probs, min=min_prob, max=max_prob)
+        return action_probs / action_probs.sum(dim=-1, keepdim=True)
 
     def _initialize_weights(self, method: WeightInitMethod) -> None:  # noqa: C901
         """
