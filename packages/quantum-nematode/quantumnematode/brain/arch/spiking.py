@@ -415,7 +415,7 @@ class SpikingBrain(ClassicalBrain):
         state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
 
         # Forward pass through spiking network
-        with torch.no_grad() if not self.policy.training else torch.enable_grad():
+        with torch.no_grad():
             action_logits = self.policy(state_tensor)
 
             # Adaptive exploration: decay from high exploration to exploitation over episodes
