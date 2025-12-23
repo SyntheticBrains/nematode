@@ -63,3 +63,18 @@ class TestLearningRateExtraction:
 
         metadata = extract_brain_metadata("spiking", config)
         assert metadata.learning_rate is None
+
+    def test_zero_learning_rate_is_valid(self):
+        """Zero learning rate should be used when explicitly set (not fall back to global)."""
+        config = {
+            "config": {
+                "hidden_size": 128,
+                "learning_rate": 0.0,  # Explicitly zero
+            },
+            "learning_rate": {
+                "initial_learning_rate": 0.1,  # Should be ignored
+            },
+        }
+
+        metadata = extract_brain_metadata("spiking", config)
+        assert metadata.learning_rate == 0.0
