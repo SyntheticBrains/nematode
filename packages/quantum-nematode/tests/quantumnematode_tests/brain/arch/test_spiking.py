@@ -228,7 +228,7 @@ class TestSpikingBrainConfig:
         # Network topology
         assert config.hidden_size == 128
         assert config.num_hidden_layers == 2
-        assert config.num_timesteps == 50
+        assert config.num_timesteps == 100
 
         # LIF neuron parameters
         assert config.tau_m == 20.0
@@ -243,7 +243,7 @@ class TestSpikingBrainConfig:
         assert config.entropy_beta == 0.01
 
         # Surrogate gradient
-        assert config.surrogate_alpha == 10.0
+        assert config.surrogate_alpha == 1.0
 
     def test_custom_config(self):
         """Test custom configuration values."""
