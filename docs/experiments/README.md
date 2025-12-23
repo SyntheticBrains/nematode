@@ -43,7 +43,7 @@ This project has complementary systems for tracking experiments:
 |---|-------|--------|---------|
 | 001 | [Quantum Predator Optimization](logbooks/001-quantum-predator-optimization.md) | completed | Gradient-based learning approaches |
 | 002 | [Evolutionary Parameter Search](logbooks/002-evolutionary-parameter-search.md) | completed | CMA-ES and GA optimization |
-| 003 | [Spiking Brain Optimization](logbooks/003-spiking-brain-optimization.md) | active | Surrogate gradients, LIF neurons, decay schedules |
+| 003 | [Spiking Brain Optimization](logbooks/003-spiking-brain-optimization.md) | completed | Surrogate gradients, LIF neurons, decay schedules |
 
 ## How to Use Logbooks
 
