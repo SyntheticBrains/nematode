@@ -1,7 +1,8 @@
 # brain-architecture Specification
 
 ## Purpose
-TBD - created by archiving change add-spiking-neural-network-brain. Update Purpose after archive.
+Define the requirements for brain architectures that control agent decision-making in simulation environments. This specification covers multiple brain types (MLP, Spiking, Quantum Modular, QMLP) with their learning algorithms, configuration schemas, and integration with the simulation infrastructure.
+
 ## Requirements
 ### Requirement: Spiking Neural Network Architecture Support
 The system SHALL support a spiking neural network brain architecture using surrogate gradient descent for learning, enabling biologically-plausible neural dynamics with effective gradient-based optimization.
