@@ -53,7 +53,7 @@ from quantumnematode.monitoring.overfitting_detector import create_overfitting_d
 
 # Default configuration parameters
 DEFAULT_HIDDEN_SIZE = 128
-DEFAULT_NUM_TIMESTEPS = 50
+DEFAULT_NUM_TIMESTEPS = 100
 DEFAULT_NUM_HIDDEN_LAYERS = 2
 DEFAULT_TAU_M = 20.0
 DEFAULT_V_THRESHOLD = 1.0
