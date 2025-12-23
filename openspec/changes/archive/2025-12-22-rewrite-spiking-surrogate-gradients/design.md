@@ -36,7 +36,7 @@ The current SpikingBrain implementation uses STDP (Spike-Timing Dependent Plasti
 ### Decision 1: Surrogate Gradient Method - Sigmoid Derivative
 
 **Choice**: Use sigmoid-based surrogate gradient:
-```
+```text
 forward: spike = H(v - v_th)  where H is Heaviside step function
 backward: ∂spike/∂v ≈ α·σ(α(v - v_th))·(1 - σ(α(v - v_th)))
 ```
@@ -86,7 +86,7 @@ backward: ∂spike/∂v ≈ α·σ(α(v - v_th))·(1 - σ(α(v - v_th)))
 - **Gradient flow**: Differentiable through current computation
 
 **Implementation**:
-```
+```text
 1. Preprocess state → [grad_strength, rel_angle] (same as MLP)
 2. Pass through linear layer → input_current [batch, hidden_dim]
 3. For each timestep: feed same input_current to LIF layers
@@ -112,7 +112,7 @@ backward: ∂spike/∂v ≈ α·σ(α(v - v_th))·(1 - σ(α(v - v_th)))
 - **Modularity**: PyTorch modules enable easy modification
 
 **Architecture Flow**:
-```
+```text
 state [2]
   ↓ Linear
 input_current [hidden_dim]
