@@ -66,7 +66,7 @@ DEFAULT_BASELINE_ALPHA = 0.05
 DEFAULT_ENTROPY_BETA = 0.01
 DEFAULT_ENTROPY_BETA_FINAL = 0.01
 DEFAULT_ENTROPY_DECAY_EPISODES = 0
-DEFAULT_SURROGATE_ALPHA = 10.0
+DEFAULT_SURROGATE_ALPHA = 1.0
 # Weight initialization method options
 WeightInitMethod = Literal["orthogonal", "kaiming", "xavier", "default", "orthogonal_kaiming_input"]
 DEFAULT_WEIGHT_INIT: WeightInitMethod = "orthogonal"
