@@ -430,11 +430,11 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 
 The predator environment remains the hardest challenge, but spiking achieved competitive results with proper LR tuning.
 
-## Phase 7: Predator Environment Testing
+### Phase 7: Predator Environment Testing
 
 After achieving 82% on dynamic foraging, we tested the spiking brain on the significantly harder **predator avoidance + foraging task** - a multi-objective challenge requiring both food seeking and threat avoidance.
 
-### The Predator Challenge
+#### The Predator Challenge
 
 Unlike pure foraging, predator environments require:
 - Collecting 10 food items while avoiding 2 randomly-moving predators
@@ -442,13 +442,13 @@ Unlike pure foraging, predator environments require:
 - Rapid context switching between appetitive and aversive behaviors
 - Higher variance outcomes due to random predator movements
 
-### Experiment Setup
+#### Experiment Setup
 
 Created three new configs: `spiking_predators_small.yml`, `spiking_predators_medium.yml`, `spiking_predators_large.yml`
 
 **Config (small)**: 20x20 grid, 2 predators, 5 foods on grid, 10 to collect, 500 max steps
 
-### Results Summary
+#### Results Summary
 
 | Session | Success | Foods | Predator Deaths | Starved | Evasion Rate | Composite |
 |---------|---------|-------|-----------------|---------|--------------|-----------|
@@ -457,7 +457,7 @@ Created three new configs: `spiking_predators_small.yml`, `spiking_predators_med
 | 20251221_062455 | 2% | 1.18 | 35% | 61% | 93% | 0.338 |
 | 20251221_073925 | 0% | 0.10 | 77% | 23% | 82% | 0.260 |
 
-### Comparison to Other Brain Types
+#### Comparison to Other Brain Types
 
 | Brain Type | Success Rate | Predator Deaths | Foods Avg | Composite | Notes |
 |------------|-------------|-----------------|-----------|-----------|-------|
@@ -468,7 +468,7 @@ Created three new configs: `spiking_predators_small.yml`, `spiking_predators_med
 
 **Gap**: Spiking achieves ~33% of MLP's success rate (28%/85%)
 
-### Detailed Analysis of Best Session (20251221_065658)
+#### Detailed Analysis of Best Session (20251221_065658)
 
 **Learning Curve**:
 ```text
@@ -495,9 +495,9 @@ Max steps: 2/100 runs (2%)
 
 The 30% starvation rate indicates the brain often avoids predators but fails to find food - the opposite problem to early runs.
 
-### Root Cause Analysis
+#### Root Cause Analysis
 
-#### Problem 1: Single Combined Gradient Signal
+##### Problem 1: Single Combined Gradient Signal
 
 The spiking brain receives only 2 inputs:
 - `gradient_strength`: Combined food + predator signal magnitude
@@ -507,7 +507,7 @@ The spiking brain receives only 2 inputs:
 
 **Evidence from quantum logbook 001**: Same issue caused quantum circuits to plateau at ~30% - the combined gradient does heavy lifting, not the brain.
 
-#### Problem 2: Conflicting Reward Signals
+##### Problem 2: Conflicting Reward Signals
 
 The reward structure creates competing objectives:
 ```yaml
@@ -519,7 +519,7 @@ penalty_starvation: 2.0        # Moderate starvation penalty
 
 **Issue**: The predator death penalty (10.0) is 5x stronger than starvation (2.0), causing the network to become overly cautious - avoiding predators at the cost of finding food.
 
-#### Problem 3: High Initialization Variance
+##### Problem 3: High Initialization Variance
 
 | Session | Success | Pattern |
 |---------|---------|---------|
@@ -530,18 +530,18 @@ penalty_starvation: 2.0        # Moderate starvation penalty
 
 **Issue**: 28x difference between best and worst sessions with identical config - initialization lottery problem magnified by multi-objective difficulty.
 
-#### Problem 4: No Separate Appetitive/Aversive Modules
+##### Problem 4: No Separate Appetitive/Aversive Modules
 
 MLP and quantum both use a single network, but:
 - **MLP** has 4,600 parameters - enough capacity to learn both objectives internally
 - **Quantum** only uses combined gradient - the environment does the work
 - **Spiking** has 136,000 parameters but treats the problem as single-objective
 
-### High-Impact Improvement Candidates
+#### High-Impact Improvement Candidates
 
 Based on the analysis, here are potential improvements ranked by expected impact:
 
-#### 1. **Separate Predator Gradient Input** (HIGH IMPACT - Estimated +30-40%)
+##### 1. Separate Predator Gradient Input (HIGH IMPACT - Estimated +30-40%)
 
 Add separate predator gradient to input:
 ```python
@@ -557,7 +557,7 @@ Add separate predator gradient to input:
 
 **Risk**: Increased input dimension may require more training time.
 
-#### 2. **Rebalance Reward Penalties** (MEDIUM IMPACT - Estimated +10-15%)
+##### 2. Rebalance Reward Penalties (MEDIUM IMPACT - Estimated +10-15%)
 
 ```yaml
 # Current (death-averse)
@@ -571,7 +571,7 @@ penalty_starvation: 5.0
 
 **Rationale**: Equal penalties force the network to balance objectives rather than prioritize predator avoidance.
 
-#### 3. **Dual-Network Architecture** (MEDIUM-HIGH IMPACT - Estimated +15-25%)
+##### 3. Dual-Network Architecture (MEDIUM-HIGH IMPACT - Estimated +15-25%)
 
 Separate spiking networks for appetitive and aversive behaviors:
 ```python
@@ -586,7 +586,7 @@ class DualSpikingBrain:
 
 **Risk**: Quantum dual-circuit failed at 0.25% success, but that had only 24 parameters total. With proper capacity, this may work.
 
-#### 4. **Curriculum Learning** (MEDIUM IMPACT - Estimated +10-20%)
+##### 4. Curriculum Learning (MEDIUM IMPACT - Estimated +10-20%)
 
 Train progressively:
 1. First 30 runs: Predators disabled (pure foraging)
@@ -595,7 +595,7 @@ Train progressively:
 
 **Rationale**: Establish food-seeking behavior before introducing predator avoidance. Prevents early predator deaths from corrupting learning.
 
-#### 5. **Better Weight Initialization** (LOW-MEDIUM IMPACT - Estimated +5-10%)
+##### 5. Better Weight Initialization (LOW-MEDIUM IMPACT - Estimated +5-10%)
 
 Use informed initialization from successful static/foraging runs:
 ```python
@@ -605,18 +605,18 @@ pretrained_weights = load_from("best_foraging_session.pth")
 
 **Rationale**: Reduce initialization variance and start with known-good food-seeking behavior.
 
-### Recommended Next Steps
+#### Recommended Next Steps
 
 1. **Immediate**: Implement separate gradient inputs (#1) - highest expected impact
 2. **Quick win**: Rebalance rewards (#2) - easy config change
 3. **If #1 works**: Try curriculum learning (#4) to further stabilize
 4. **Research**: Dual-network architecture (#3) if single-network plateaus
 
-## Phase 8: Separated Gradient Experiment
+### Phase 8: Separated Gradient Experiment
 
 Based on the hypothesis that the combined gradient was ambiguous (food NORTH + predator NORTH = unclear signal), we implemented separated gradient inputs.
 
-### Implementation
+#### Implementation
 
 Added `use_separated_gradients: bool` config option to `SpikingBrainConfig`:
 - When enabled, input changes from 2 features to 4 features:
@@ -629,7 +629,7 @@ Files modified:
 - `run_simulation.py`: Dynamic input_dim based on config
 - `spiking_predators_*.yml`: All three configs updated with `use_separated_gradients: true`
 
-### Results: FAILURE
+#### Results: FAILURE
 
 | Session | Success | Foods | Pred Deaths | Starved | Evasion | Composite |
 |---------|---------|-------|-------------|---------|---------|-----------|
@@ -638,7 +638,7 @@ Files modified:
 | 090412 | **0%** | 0.03 | 58% | 42% | 90% | 0.26 |
 | 090415 | **0%** | 0.18 | 40% | 60% | 92% | 0.26 |
 
-### Comparison: Separated vs Combined Gradients
+#### Comparison: Separated vs Combined Gradients
 
 | Metric | Combined (Best) | Separated (Best) | Change |
 |--------|-----------------|------------------|--------|
@@ -650,7 +650,7 @@ Files modified:
 
 **Verdict**: Separated gradients made performance WORSE, not better.
 
-### Why This Failed
+#### Why This Failed
 
 1. **Doubled input complexity without architectural support**: Going from 2→4 inputs doubled the parameter space, but the network converged to a passive policy (0% success)
 
@@ -663,14 +663,14 @@ Files modified:
    - Brain just learns "follow this direction" (simple)
    - With separated gradients, brain must learn to INTEGRATE signals (harder)
 
-### Key Insight
+#### Key Insight
 
 This mirrors the quantum experiment 001 finding:
 > "The environment's signal does the heavy lifting, not the brain"
 
 The combined gradient is a **feature**, not a bug. It offloads the hard multi-objective optimization to the environment, leaving the brain with a simpler single-objective task.
 
-### Why Raw Concatenation Fails
+#### Why Raw Concatenation Fails
 
 Simply concatenating `[food_grad, pred_grad]` gives the network MORE information but a HARDER learning problem:
 
@@ -685,11 +685,11 @@ Separated gradients (fails):
   This is a multi-objective optimization problem WITH sparse rewards
 ```
 
-### Architectural Requirements for Separated Gradients
+#### Architectural Requirements for Separated Gradients
 
 For separated gradients to work, the architecture needs explicit support for signal integration:
 
-#### Option 1: Dual-Stream with Learned Gating (Recommended)
+##### Option 1: Dual-Stream with Learned Gating (Recommended)
 ```text
 food_grad ──► [Appetitive Stream] ──► approach_logits ─┐
                                                         ├──► [Gate] ──► action
@@ -699,13 +699,13 @@ pred_grad ──► [Aversive Stream]  ──► avoid_logits ────┘
 
 Each stream learns ONE objective (simple), gating network learns WHEN to use which.
 
-#### Option 2: Attention-Based Integration
+##### Option 2: Attention-Based Integration
 Let the network learn to attend to food vs predator based on context.
 
-#### Option 3: Hierarchical Priority (Bio-inspired)
+##### Option 3: Hierarchical Priority (Bio-inspired)
 Predator signal can OVERRIDE appetitive behavior (like amygdala fear response).
 
-### Conclusion
+#### Conclusion
 
 **Separated gradients require architectural changes, not just input changes.**
 
@@ -716,11 +716,11 @@ Raw 4-input concatenation fails because:
 
 Next step: Implement dual-stream architecture with explicit gating.
 
-## Phase 9: Dual-Stream Architecture Experiment
+### Phase 9: Dual-Stream Architecture Experiment
 
 Based on the hypothesis that raw 4-input concatenation failed because the network had to learn multi-objective integration (a hard problem), we implemented a biologically-inspired dual-stream architecture with explicit gating.
 
-### Architecture Design
+#### Architecture Design
 
 ```text
 food_grad ──► [Appetitive Stream (LIF)] ──► approach_logits ─┐
@@ -735,7 +735,7 @@ pred_grad ──► [Aversive Stream (LIF)]  ──► avoid_logits ────
 3. **Biological plausibility**: Mirrors appetitive/aversive circuits in real brains
 4. **Satiety modulation**: Gate receives satiety input (hungry → food, full → avoid)
 
-### Implementation Details
+#### Implementation Details
 
 Files created:
 - `_dual_stream_spiking.py`: Core network with GatingNetwork and DualStreamSpikingNetwork
@@ -753,7 +753,7 @@ Files created:
 - 1 LIF hidden layer (64 neurons)
 - Output: 4 action logits
 
-### Experiment 1: Learned Gating
+#### Experiment 1: Learned Gating
 
 **Results (8 sessions)**:
 
@@ -770,7 +770,7 @@ Files created:
 
 **Observation**: High variance (0.01 to 1.11 foods) with no successes. The gating network wasn't learning - random initialization dominated behavior.
 
-### Experiment 2: Satiety-Modulated Gating
+#### Experiment 2: Satiety-Modulated Gating
 
 Added satiety as input to gating network with hypothesis: "When hungry, prioritize food. When full, prioritize avoidance."
 
@@ -782,7 +782,7 @@ Added satiety as input to gating network with hypothesis: "When hungry, prioriti
 
 **Results**: Still 0% success. High variance persisted - random initialization still dominated.
 
-### Experiment 3: Fixed Gating Diagnostic
+#### Experiment 3: Fixed Gating Diagnostic
 
 To determine if the architecture was sound but learning was broken, or if the dual-stream approach itself was flawed, we implemented a **fixed gating diagnostic**:
 
@@ -811,13 +811,13 @@ else:
 
 **Averages**: 0% success, 0.42 foods, 48.3 pred deaths, 51.8 starved, 90% evasion
 
-### Diagnostic Conclusion
+#### Diagnostic Conclusion
 
 **The dual-stream architecture itself is fundamentally broken**, not just the learning.
 
 Even with perfect gating (verified to work correctly: hungry→food, full→avoid), the architecture produces 0% success.
 
-### Root Cause Analysis
+#### Root Cause Analysis
 
 The problem is that **each stream only sees its own gradient** (2 features each) which is insufficient context:
 
@@ -835,7 +835,7 @@ The problem is that **each stream only sees its own gradient** (2 features each)
 2. The aversive stream can't factor in food urgency when fleeing
 3. Each stream makes locally-optimal but globally-poor decisions
 
-### Why Dual-Stream Worked in Biology but Not Here
+#### Why Dual-Stream Worked in Biology but Not Here
 
 In biological brains, appetitive/aversive circuits have:
 1. **Lateral connections**: Streams share information, not completely isolated
@@ -848,14 +848,14 @@ Our implementation had:
 2. **Simple gating**: Linear blend, no override capability
 3. **Partial inputs**: Each stream sees only 2 of 4 features
 
-### Lessons Learned
+#### Lessons Learned
 
 1. **Architectural separation requires information sharing**: Isolated streams can't make coordinated decisions
 2. **Gating alone is insufficient**: Need cross-stream communication or hierarchical override
 3. **Combined gradient is a feature, not a bug**: The environment's pre-integration is computationally valuable
 4. **100 episodes insufficient for complex architectures**: Even if architecture were sound, learning the gating policy is hard
 
-### Comparison Summary
+#### Comparison Summary
 
 | Approach | Architecture | Success Rate | Key Insight |
 |----------|-------------|--------------|-------------|
@@ -865,7 +865,7 @@ Our implementation had:
 | Dual-stream fixed gating | 2 streams, fixed gate | 0% | **Architecture itself broken** |
 | MLP | Single network, 4 inputs | 85% | Sufficient capacity for integration |
 
-### Recommendation
+#### Recommendation
 
 **Abandon the dual-stream architecture**. The separation of inputs is fundamentally problematic.
 
@@ -875,7 +875,7 @@ Instead, focus on improving the combined-gradient spiking brain (28% success) th
 3. Longer training (more than 100 episodes)
 4. Curriculum learning (predator-free → with predators)
 
-### Data References
+#### Data References
 
 **Best Sessions**:
 - **20251221_065658**: 28% success, 94% evasion, 4.17 avg foods, composite 0.390
@@ -886,11 +886,11 @@ Instead, focus on improving the combined-gradient spiking brain (28% success) th
 - **MLP 20251127_140342**: 85% success, 10.5% predator deaths, composite 0.740
 - **Quantum 20251213_021816**: 88% success (evolved params), 12% predator deaths, composite 0.675
 
-## Phase 10: Hyperparameter Tuning Breakthrough
+### Phase 10: Hyperparameter Tuning Breakthrough
 
 After abandoning the dual-stream architecture, we systematically tuned the combined-gradient spiking brain through a series of experiments.
 
-### Experiment 1: Balanced Penalties
+#### Experiment 1: Balanced Penalties
 
 **Hypothesis**: The 10:2 predator:starvation penalty ratio may be too aggressive.
 
@@ -901,7 +901,7 @@ After abandoning the dual-stream architecture, we systematically tuned the combi
 
 **Results**: 0-3% success - **WORSE** than baseline. High predator penalty is beneficial.
 
-### Experiment 2: 200-Episode Training
+#### Experiment 2: 200-Episode Training
 
 **Hypothesis**: 100 episodes insufficient for stable convergence.
 
@@ -911,7 +911,7 @@ After abandoning the dual-stream architecture, we systematically tuned the combi
 
 **Key Insight**: Post-convergence regression is the problem, not insufficient episodes.
 
-### Experiment 3: Constant Entropy
+#### Experiment 3: Constant Entropy
 
 **Hypothesis**: Entropy decay causes late-stage collapse. Keep constant to prevent regression.
 
@@ -919,7 +919,7 @@ After abandoning the dual-stream architecture, we systematically tuned the combi
 
 **Results (5 sessions)**: 0-2% success - **WORSE**. Policy stayed too stochastic, never committed.
 
-### Experiment 4: Higher Entropy + No Intra-Episode Updates
+#### Experiment 4: Higher Entropy + No Intra-Episode Updates
 
 **Hypothesis**: Higher initial entropy with slow decay + batch gradient averaging.
 
@@ -927,7 +927,7 @@ After abandoning the dual-stream architecture, we systematically tuned the combi
 
 **Results (8 sessions)**: 0-3% success - **WORSE**. Disabling intra-episode updates hurt learning.
 
-### Experiment 5: Higher Entropy Schedule Only
+#### Experiment 5: Higher Entropy Schedule Only
 
 **Hypothesis**: Keep intra-episode updates, just change entropy schedule.
 
@@ -935,7 +935,7 @@ After abandoning the dual-stream architecture, we systematically tuned the combi
 
 **Results (4 sessions)**: 0% success - **WORSE**. Original entropy settings were reasonable.
 
-### Experiment 6: Slower LR Decay ⭐ BREAKTHROUGH
+#### Experiment 6: Slower LR Decay ⭐ BREAKTHROUGH
 
 **Hypothesis**: Learning rate decays too fast, network doesn't have time to learn.
 
@@ -957,7 +957,7 @@ Post-convergence metrics:
 - Avg foods: 7.46
 - Distance efficiency: 41.6%
 
-### Root Cause Analysis
+##### Root Cause Analysis
 
 **Why slower LR decay worked**:
 
@@ -969,13 +969,13 @@ The faster decay (0.01) caused the learning rate to drop too low before the netw
 - Network has time to refine behavior
 - Good patterns get reinforced before LR bottoms out
 
-### Remaining Challenge: Initialization Variance
+##### Remaining Challenge: Initialization Variance
 
 The variance is still extreme (1 of 4 sessions succeeded). This confirms that **initialization variance dominates** - some seeds find good solutions, most don't.
 
 This is a known challenge with spiking networks and REINFORCE training.
 
-### Experiment 7: Even Slower LR Decay (0.003)
+#### Experiment 7: Even Slower LR Decay (0.003)
 
 Tested whether even slower decay would improve further.
 
@@ -989,7 +989,7 @@ Tested whether even slower decay would improve further.
 
 This confirms **0.005 is the sweet spot** for this task.
 
-### Phase 10 Summary
+#### Summary
 
 | Experiment | Key Change | Best Result | Conclusion |
 |------------|-----------|-------------|------------|
@@ -1001,7 +1001,7 @@ This confirms **0.005 is the sweet spot** for this task.
 | **Slower LR decay** | **0.01→0.005** | **61%** | **BREAKTHROUGH** |
 | Even slower LR decay | 0.003 | 21.5% | Too slow - confirms 0.005 optimal |
 
-### Data References
+#### Data References
 
 **New Best Session**:
 - **20251222_054653**: 61% success, 7.36 avg foods, composite 0.556
@@ -1103,7 +1103,7 @@ This confirms **0.005 is the sweet spot** for this task.
 | value_clip | 1.0 | Clamp individual gradients |
 | norm_clip | 1.0 | Clip total gradient norm |
 
-### Common Mistakes to Avoid
+#### Common Mistakes to Avoid
 
 | Mistake | Consequence | Fix |
 |---------|-------------|-----|
@@ -1118,7 +1118,7 @@ This confirms **0.005 is the sweet spot** for this task.
 | High LR (0.0015) | Premature bad convergence | Keep at 0.001 |
 | Fast entropy decay (30 eps) | Insufficient exploration | Use 50 episodes |
 
-## Lessons Learned
+### Lessons Learned
 
 1. **Gradient explosion is subtle**: Norm clipping alone insufficient, need value clipping
 2. **Decay schedules matter more than fixed hyperparams**: Exploration→exploitation transition is critical
@@ -1129,11 +1129,11 @@ This confirms **0.005 is the sweet spot** for this task.
 
 ---
 
-## Phase 6: Dynamic Foraging & Intra-Episode Updates
+#### Phase 6: Dynamic Foraging & Intra-Episode Updates
 
 After achieving 60-68% success on static navigation, we transitioned to the **dynamic foraging task** - a significantly harder challenge with multiple food items spawning at random locations.
 
-### The Dynamic Foraging Challenge
+##### The Dynamic Foraging Challenge
 
 Unlike static navigation (go to fixed goal), dynamic foraging requires:
 - Collecting 10 food items spawned at random positions
@@ -1143,14 +1143,14 @@ Unlike static navigation (go to fixed goal), dynamic foraging requires:
 
 **Initial Results**: 0% success with end-of-episode updates only. The sparse reward signal (only at episode end) was insufficient for the spiking network to learn.
 
-### Key Insight: MLP Uses Intra-Episode Updates
+##### Key Insight: MLP Uses Intra-Episode Updates
 
 Analysis of MLP brain revealed a critical difference: MLP performs gradient updates **every 5 steps** during an episode, not just at episode end. This provides:
 1. Dense learning signal (100 updates/episode vs 1)
 2. Immediate feedback on good/bad actions
 3. Lower variance in return estimates (5-step windows vs 500-step episodes)
 
-### Experiment 1: First Intra-Episode Update Attempt
+##### Experiment 1: First Intra-Episode Update Attempt
 
 **Changes**:
 - Added `update_frequency: 5` parameter (gradient update every 5 steps)
@@ -1163,7 +1163,7 @@ Analysis of MLP brain revealed a critical difference: MLP performs gradient upda
 2. Cumulative effect of 100 small updates still pushed toward determinism
 3. Policy locked faster than with end-of-episode updates
 
-### Experiment 2: MLP-Like Settings
+##### Experiment 2: MLP-Like Settings
 
 **Changes**:
 - `learning_rate: 0.001` (MLP's value)
@@ -1183,7 +1183,7 @@ The `min_action_prob: 0.02` floor was the culprit:
 - Gradients ≈ 0 at saturation points
 - Network cannot recover once it hits the floor
 
-### Experiment 3: Lower LR + Disable Floor
+##### Experiment 3: Lower LR + Disable Floor
 
 **Key Insight**: Spiking network has ~30x more parameters than MLP (136k vs 4.6k). Same learning rate means ~30x more effective gradient magnitude.
 
@@ -1203,7 +1203,7 @@ Run 11+:    Entropy collapsed to 0.001, no more successes
 
 Without the floor, entropy could collapse to near-zero. Once deterministic, no recovery.
 
-### Experiment 4: Low Floor (0.005)
+##### Experiment 4: Low Floor (0.005)
 
 **Changes**:
 - `min_action_prob: 0.005` (low floor, not zero)
@@ -1213,7 +1213,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 **Improvement**: Floor at 0.005 prevented total collapse (minimum entropy ~0.10 vs 0.001).
 **Remaining Issue**: After ~20 runs, entropy stabilized at floor - enough for occasional success but not consistent learning.
 
-### Experiment 5: Optimal Floor (0.01) - BREAKTHROUGH
+##### Experiment 5: Optimal Floor (0.01) - BREAKTHROUGH
 
 **Changes**:
 - `min_action_prob: 0.01` (slightly higher floor)
@@ -1239,7 +1239,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 
 **Spiking matches MLP success rate!** Lower composite score due to more steps, but proves spiking neural networks CAN learn dynamic foraging effectively.
 
-### Why min_action_prob Sweet Spot is 0.01
+##### Why min_action_prob Sweet Spot is 0.01
 
 | Floor | Minimum Entropy | Max Probability | Result |
 |-------|-----------------|-----------------|--------|
@@ -1248,7 +1248,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 | 0.005 | ~0.10           | 0.985           | Too confident, regression after success |
 | 0.0   | ~0.001          | 0.999           | Total collapse possible |
 
-### Final Dynamic Foraging Configuration
+##### Final Dynamic Foraging Configuration
 
 ```yaml
 brain:
@@ -1278,7 +1278,7 @@ brain:
     return_clip: 50.0            # Balance success/failure signals
 ```
 
-### Architecture Diagram
+##### Architecture Diagram
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -1361,7 +1361,7 @@ brain:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Discoveries from Dynamic Foraging
+##### Key Discoveries from Dynamic Foraging
 
 1. **Intra-episode updates are essential**: Dense learning signals (every 10 steps) vs episode-end only. This is the single most important change for matching MLP performance.
 
@@ -1375,9 +1375,9 @@ brain:
 
 6. **Initialization variability remains**: ~1 in 3 sessions succeed with identical config. This is inherent to the spiking network's sensitivity to initial weights.
 
-## Biological Plausibility Assessment
+### Biological Plausibility Assessment
 
-### What We Got Right
+#### What We Got Right
 
 | Aspect | Our Implementation | Biological Neurons | Plausibility |
 |--------|-------------------|-------------------|--------------|
@@ -1392,7 +1392,7 @@ brain:
 
 **Overall: ~40% biologically plausible**
 
-### Biologically Realistic Elements
+#### Biologically Realistic Elements
 
 1. **Leaky Integrate-and-Fire Dynamics**: Our LIF neurons capture essential dynamics:
    - Membrane potential decay (τ_m = 20.0) - real neurons: 10-100ms
@@ -1405,7 +1405,7 @@ brain:
 
 4. **Population Coding**: Gaussian tuning curves mirror biological sensory neurons (visual cortex orientation tuning, motor cortex directional tuning)
 
-### Simplified/Artificial Elements
+#### Simplified/Artificial Elements
 
 1. **Surrogate Gradients** (major departure): Real neurons don't backpropagate. Biology uses STDP, neuromodulation, Hebbian learning
 
@@ -1419,7 +1419,7 @@ brain:
 
 6. **Fully Connected Layers**: Real brains have sparse, structured connectivity with lateral inhibition
 
-### Plausibility Spectrum
+#### Plausibility Spectrum
 
 ```text
 BIOLOGICAL REALISM SPECTRUM
@@ -1440,7 +1440,7 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
 • STDP achieves worse task performance but is deployable on neuromorphic hardware
 ```
 
-## Lessons Learned
+### Lessons Learned
 
 1. **Gradient explosion is subtle**: Norm clipping alone insufficient, need value clipping
 2. **Decay schedules matter more than fixed hyperparams**: Exploration→exploitation transition is critical
@@ -1452,19 +1452,19 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
 8. **Network size affects optimal learning rate**: 10x lower LR for 30x more parameters
 9. **Action probability floors have narrow sweet spots**: Too high = gradient death; too low = collapse
 
-## Future Directions
+### Future Directions
 
-### Short-term (1-2 weeks)
+#### Short-term (1-2 weeks)
 - Validate consistency with 10 more runs
 - Test on foraging environments
 - Implement better initialization
 
-### Medium-term (1-2 months)
+#### Medium-term (1-2 months)
 - Explore 3-4 layer networks
 - Try recurrent spiking networks
 - Compare energy efficiency to MLPs
 
-### Long-term (Research)
+#### Long-term (Research)
 - Neuromorphic hardware deployment
 - Online continual learning
 - Meta-learning for initialization
