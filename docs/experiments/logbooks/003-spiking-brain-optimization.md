@@ -674,7 +674,7 @@ The combined gradient is a **feature**, not a bug. It offloads the hard multi-ob
 
 Simply concatenating `[food_grad, pred_grad]` gives the network MORE information but a HARDER learning problem:
 
-```
+```text
 Combined gradient (works):
   Environment: "go NORTH" (pre-integrated signal)
   Brain learns: "follow the gradient" (simple)
@@ -690,7 +690,7 @@ Separated gradients (fails):
 For separated gradients to work, the architecture needs explicit support for signal integration:
 
 #### Option 1: Dual-Stream with Learned Gating (Recommended)
-```
+```text
 food_grad ──► [Appetitive Stream] ──► approach_logits ─┐
                                                         ├──► [Gate] ──► action
 pred_grad ──► [Aversive Stream]  ──► avoid_logits ────┘
@@ -722,7 +722,7 @@ Based on the hypothesis that raw 4-input concatenation failed because the networ
 
 ### Architecture Design
 
-```
+```text
 food_grad ──► [Appetitive Stream (LIF)] ──► approach_logits ─┐
                                                               ├──► [Blend] ──► action
 pred_grad ──► [Aversive Stream (LIF)]  ──► avoid_logits ────┘
