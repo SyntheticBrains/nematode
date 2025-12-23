@@ -1,9 +1,7 @@
-# brain-architecture Specification
+# brain-architecture Spec Delta
 
-## Purpose
-Define the requirements for brain architectures that control agent decision-making in simulation environments. This specification covers multiple brain types (MLP, Spiking, Quantum Modular, QMLP) with their learning algorithms, configuration schemas, and integration with the simulation infrastructure.
+## MODIFIED Requirements
 
-## Requirements
 ### Requirement: Spiking Neural Network Architecture Support
 The system SHALL support a spiking neural network brain architecture using surrogate gradient descent for learning, enabling biologically-plausible neural dynamics with effective gradient-based optimization.
 
@@ -106,141 +104,14 @@ The SpikingBrain SHALL implement the ClassicalBrain protocol while using policy 
 **And** SHALL accept initialization parameters: weight_init (orthogonal, kaiming, default)
 **And** SHALL reject STDP-specific parameters with meaningful error messages
 
-### Requirement: Brain Factory Extension
-The brain factory method SHALL support spiking neural network instantiation.
+## REMOVED Requirements
 
-#### Scenario: Brain Type Resolution
-**Given** a configuration specifies brain type as "spiking"
-**When** the brain factory creates a brain instance
-**Then** it SHALL return a SpikingBrain object
-**And** SHALL pass through all spiking-specific configuration parameters
+### Requirement: Spike-Timing Dependent Plasticity Learning
+**Reason**: STDP has fundamental limitations for reinforcement learning tasks - local learning rules cannot implement global credit assignment needed for sparse reward navigation. Experimental results showed zero learning over 400 episodes.
 
-### Requirement: CLI Argument Extension
-The command-line interface SHALL accept "spiking" as a valid brain type option.
+**Migration**: Replace STDP with policy gradient learning (REINFORCE). Users must update configuration files to remove `tau_plus`, `tau_minus`, `a_plus`, `a_minus`, `reward_scaling` parameters and add policy gradient parameters (`gamma`, `baseline_alpha`, `learning_rate`).
 
-#### Scenario: Argument Validation
-**Given** a user specifies `--brain spiking`
-**When** command-line arguments are parsed
-**Then** the system SHALL recognize "spiking" as a valid brain type
-**And** SHALL pass the selection to the brain factory
-
-### Requirement: Evolutionary Parameter Optimization
-
-The system SHALL support evolutionary optimization of brain parameters as an alternative to gradient-based learning.
-
-#### Scenario: CMA-ES Optimization
-
-- **GIVEN** a quantum brain with N trainable parameters
-- **WHEN** the user runs evolution with CMA-ES algorithm
-- **THEN** the system SHALL create a population of candidate parameter sets
-- **AND** SHALL evaluate fitness by running multiple episodes per candidate
-- **AND** SHALL update the search distribution based on fitness rankings
-- **AND** SHALL return the best-performing parameters after convergence
-
-#### Scenario: Genetic Algorithm Optimization
-
-- **GIVEN** a quantum brain with N trainable parameters
-- **WHEN** the user runs evolution with genetic algorithm
-- **THEN** the system SHALL maintain a population of parameter sets
-- **AND** SHALL select elite performers for reproduction
-- **AND** SHALL apply crossover and mutation to generate offspring
-- **AND** SHALL return the best-performing parameters after generations complete
-
-#### Scenario: Parallel Fitness Evaluation
-
-- **GIVEN** a population of candidate parameter sets
-- **WHEN** fitness evaluation is requested with parallel workers > 1
-- **THEN** the system SHALL evaluate candidates concurrently using multiprocessing
-- **AND** SHALL aggregate episode results into per-candidate fitness scores
-
-### Requirement: Fitness Function Interface
-
-The system SHALL provide a configurable fitness function for evolutionary optimization.
-
-#### Scenario: Success Rate Fitness
-
-- **GIVEN** a candidate parameter set
-- **WHEN** fitness is evaluated with episodes_per_evaluation = N
-- **THEN** the system SHALL run N episodes with those parameters
-- **AND** SHALL compute fitness as negative success rate (for minimization)
-- **AND** SHALL reset the environment between episodes
-
-#### Scenario: Fitness Aggregation
-
-- **GIVEN** multiple episode results for a candidate
-- **WHEN** aggregating to a single fitness value
-- **THEN** the system SHALL compute mean success rate across episodes
-- **AND** MAY optionally penalize high variance
-
-### Requirement: Brain Parameter Interface
-
-Brain implementations SHALL expose a uniform interface for parameter manipulation required by evolutionary optimization.
-
-#### Scenario: Parameter Export
-
-- **GIVEN** a brain instance with trainable parameters
-- **WHEN** `brain.get_parameter_array()` is called
-- **THEN** the system SHALL return a flat numpy array of all trainable parameters
-- **AND** SHALL maintain consistent ordering across calls
-
-#### Scenario: Parameter Import
-
-- **GIVEN** a brain instance and a parameter array
-- **WHEN** `brain.set_parameter_array(params)` is called
-- **THEN** the system SHALL update all trainable parameters from the array
-- **AND** SHALL validate array length matches expected parameter count
-
-#### Scenario: Brain Copying
-
-- **GIVEN** a brain instance
-- **WHEN** `brain.copy()` is called
-- **THEN** the system SHALL return an independent copy of the brain
-- **AND** modifications to the copy SHALL NOT affect the original
-
-### Requirement: Evolution Configuration
-
-The configuration system SHALL support evolutionary optimization parameters.
-
-#### Scenario: CMA-ES Configuration
-
-- **GIVEN** a YAML configuration with evolution settings
-- **WHEN** algorithm is set to "cmaes"
-- **THEN** the system SHALL accept population_size, generations, sigma0 parameters
-- **AND** SHALL validate parameter ranges
-
-#### Scenario: GA Configuration
-
-- **GIVEN** a YAML configuration with evolution settings
-- **WHEN** algorithm is set to "ga"
-- **THEN** the system SHALL accept elite_fraction, mutation_rate, crossover_rate parameters
-- **AND** SHALL validate parameter ranges
-
-#### Scenario: Parallel Workers Configuration
-
-- **GIVEN** a YAML configuration with evolution settings
-- **WHEN** parallel_workers is specified
-- **THEN** the system SHALL use that many processes for fitness evaluation
-- **AND** SHALL default to 1 (sequential) if not specified
-
-### Requirement: Evolution Script Interface
-
-The system SHALL provide a command-line script for running evolutionary optimization.
-
-#### Scenario: Basic Evolution Run
-
-- **GIVEN** a user wants to optimize brain parameters
-- **WHEN** they execute `python scripts/run_evolution.py --config evolution.yml`
-- **THEN** the system SHALL load the configuration
-- **AND** SHALL run evolutionary optimization
-- **AND** SHALL log generation progress (best fitness, mean, std)
-- **AND** SHALL save best parameters on completion
-
-#### Scenario: Evolution Checkpoint Resume
-
-- **GIVEN** an interrupted evolution run with checkpoint file
-- **WHEN** the user runs with `--resume checkpoint.pkl`
-- **THEN** the system SHALL load the optimizer state from checkpoint
-- **AND** SHALL continue evolution from the saved generation
+## ADDED Requirements
 
 ### Requirement: Policy Gradient Learning (REINFORCE)
 The SpikingBrain SHALL implement policy gradient learning with discounted returns, matching the proven algorithm used by MLPBrain.

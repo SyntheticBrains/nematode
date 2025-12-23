@@ -31,7 +31,7 @@ Choose from multiple brain architectures for your nematode:
 - **QModularBrain**: Hybrid quantum-classical Q-learning with experience replay
 - **MLPBrain**: Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **QMLPBrain**: Classical MLP with Deep Q-Network (DQN) learning
-- **SpikingBrain**: Biologically realistic spiking neural network with LIF neurons and STDP learning
+- **SpikingBrain**: Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
 
 Select the brain architecture when running simulations:
 
@@ -143,18 +143,18 @@ For quantum brains, the learning process uses:
 
 ### Spiking Neural Network
 
-The spiking brain architecture provides biologically realistic neural computation:
+The spiking brain architecture provides biologically realistic neural computation with modern gradient-based learning:
 
 - **Leaky Integrate-and-Fire (LIF) Neurons**: Membrane potential dynamics with spike generation
-- **Spike-Timing-Dependent Plasticity (STDP)**: Temporal Hebbian learning rule
-- **Rate Coding**: Environmental input encoding as spike frequency patterns
-- **Reward Modulation**: STDP learning strength modulated by environmental rewards
+- **Surrogate Gradient Descent**: Differentiable spike approximation enabling backpropagation
+- **Policy Gradient Learning (REINFORCE)**: Same proven algorithm as MLPBrain
+- **Population Coding**: Gaussian tuning curves for improved input discrimination
 
 **Key Features:**
-- Biologically realistic temporal dynamics
-- Event-driven sparse computation
-- Plasticity rules based on spike timing
-- Configurable neuron and synapse parameters
+- Biologically plausible temporal dynamics with LIF neurons
+- Effective gradient-based learning through surrogate gradients
+- Configurable network architecture (timesteps, hidden layers, hidden size)
+- Achieves 100% success on foraging tasks, 63% on predator evasion
 
 ### Predator Evasion
 
@@ -215,6 +215,8 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
 | ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
+| ✓ spiking | 0.932 | 100% | 67 | 34 | 0.000 | @chrisjz | 2025-12-21 |
+| ✓ spiking | 0.896 | 100% | 79 | 52 | 0.000 | @chrisjz | 2025-12-19 |
 
 #### Dynamic Small - Quantum
 
@@ -230,6 +232,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 |---|---|---|---|---|---|---|---|
 | ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
+| ✓ spiking | 0.733 | 100% | 267 | 22 | 0.000 | @chrisjz | 2025-12-21 |
 
 #### Dynamic Predator Small - Quantum
 

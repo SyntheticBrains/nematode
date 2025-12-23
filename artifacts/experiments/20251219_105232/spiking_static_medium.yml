@@ -11,7 +11,6 @@ brain:
     hidden_size: 128
     num_hidden_layers: 2
     num_timesteps: 100
-    output_mode: accumulator
 
     # LIF neuron parameters
     tau_m: 20.0
@@ -20,27 +19,16 @@ brain:
     v_rest: 0.0
 
     # Learning parameters
-    learning_rate: 0.0001
+    learning_rate: 0.001
+    lr_decay_rate: 0.015
     gamma: 0.99
     baseline_alpha: 0.05
-    entropy_beta: 0.2
-    entropy_beta_final: 0.2
-    min_action_prob: 0.01
-    advantage_clip: 2.0
-    return_clip: 20.0
+    entropy_beta: 0.05
+    entropy_beta_final: 0.01
+    entropy_decay_episodes: 50
 
     # Surrogate gradient parameters
     surrogate_alpha: 1.0
-
-    # Weight initialization
-    weight_init: kaiming
-
-    # Batch learning
-    batch_size: 3
-    warmup_episodes: 0
-
-    # Exploration settings
-    exploration_decay_episodes: 0
 
 body_length: 2
 
