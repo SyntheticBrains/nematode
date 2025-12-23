@@ -244,6 +244,6 @@ If surrogate gradients don't work after reasonable tuning:
    - Useful if agent gets stuck in local minima
 
 4. **How many timesteps per decision?**
-   - **Decision**: `num_timesteps=50` as default
+   - **Decision**: `num_timesteps=100` as default
    - Trade-off: More steps = richer dynamics but slower
    - Can tune per environment: small=30, medium=50, large=100
