@@ -15,8 +15,6 @@ brain:
 
     # Temporal modulation
     temporal_modulation: false
-    modulation_amplitude: 0.3
-    modulation_period: 20
 
     # Population coding
     population_coding: true
