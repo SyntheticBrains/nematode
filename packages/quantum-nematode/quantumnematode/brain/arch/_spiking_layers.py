@@ -310,7 +310,7 @@ class LIFLayer(nn.Module):
 
         # Generate spikes with surrogate gradient
         spikes = self.spike_fn.apply(v_membrane, self.v_threshold, self.surrogate_alpha)
-        assert isinstance(spikes, torch.Tensor)  # noqa: S101 - Type hint for pyright
+        assert isinstance(spikes, torch.Tensor)  # noqa: S101
 
         # Reset membrane potential for neurons that spiked
         v_membrane = v_membrane * (1 - spikes) + self.v_reset * spikes
