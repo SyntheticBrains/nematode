@@ -261,6 +261,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                             "Successfully completed episode: collected target of "
                             f"{agent.env.target_foods_to_collect} food!",
                         )
+
+                        if isinstance(agent.brain, ClassicalBrain):
+                            agent.brain.learn(params=params, reward=reward, episode_done=True)
+
                         agent.brain.post_process_episode(episode_success=True)
                         agent._metrics_tracker.track_episode_completion(
                             success=True,
@@ -289,6 +293,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                     penalty = -reward_config.penalty_predator_death
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
+
+                    if isinstance(agent.brain, ClassicalBrain):
+                        agent.brain.learn(params=params, reward=reward, episode_done=True)
+
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode(episode_success=False)
                     agent._metrics_tracker.track_episode_completion(
@@ -334,6 +342,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                     penalty = -reward_config.penalty_predator_death
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
+
+                    if isinstance(agent.brain, ClassicalBrain):
+                        agent.brain.learn(params=params, reward=reward, episode_done=True)
+
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode(episode_success=False)
                     agent._metrics_tracker.track_episode_completion(
@@ -368,6 +380,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                     penalty = -reward_config.penalty_starvation
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
+
+                    if isinstance(agent.brain, ClassicalBrain):
+                        agent.brain.learn(params=params, reward=reward, episode_done=True)
+
                     agent.brain.update_memory(reward)
                     agent.brain.post_process_episode(episode_success=False)
                     agent._metrics_tracker.track_episode_completion(
@@ -441,6 +457,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                     top_randomize=True,
                 )
 
+                # Trigger learning for the final state (critical for policy gradient methods)
+                if isinstance(agent.brain, ClassicalBrain):
+                    agent.brain.learn(params=params, reward=reward, episode_done=True)
+
                 agent.brain.update_memory(reward)
                 agent.brain.post_process_episode(episode_success=True)
 
@@ -512,6 +532,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                     "Successfully completed episode: collected target of "
                     f"{agent.env.target_foods_to_collect} food.",
                 )
+
+                if isinstance(agent.brain, ClassicalBrain):
+                    agent.brain.learn(params=params, reward=reward, episode_done=True)
+
                 agent.brain.post_process_episode(episode_success=True)
                 agent._metrics_tracker.track_episode_completion(
                     success=True,
@@ -528,23 +552,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                     termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
                 )
 
-        # Episode ended normally (loop completed without specific termination)
-        logger.warning("Failed to complete episode: max steps reached.")
-        agent.brain.post_process_episode(episode_success=False)
-        agent._metrics_tracker.track_episode_completion(
-            success=False,
-            steps=agent._episode_tracker.steps,
-            reward=agent._episode_tracker.rewards,
-            foods_collected=agent._episode_tracker.foods_collected,
-            distance_efficiencies=agent._episode_tracker.distance_efficiencies,
-            predator_encounters=agent._episode_tracker.predator_encounters,
-            successful_evasions=agent._episode_tracker.successful_evasions,
-            termination_reason=TerminationReason.MAX_STEPS,
-        )
-        return EpisodeResult(
-            agent_path=agent.path,
-            termination_reason=TerminationReason.MAX_STEPS,
-        )
+        # This point is unreachable - the loop always exits via one of the return
+        # statements above (max_steps check catches the final iteration)
+        msg = "Unreachable code: episode loop exited without termination"
+        raise RuntimeError(msg)
 
 
 class ManyworldsEpisodeRunner(EpisodeRunner):

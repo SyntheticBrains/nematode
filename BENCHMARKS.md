@@ -175,6 +175,8 @@ This creates a benchmark file in `benchmarks/<category>/<experiment-id>.json`.
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
 | ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
+| ✓ spiking | 0.932 | 100% | 67 | 34 | 0.000 | @chrisjz | 2025-12-21 |
+| ✓ spiking | 0.896 | 100% | 79 | 52 | 0.000 | @chrisjz | 2025-12-19 |
 
 ### Dynamic Small (≤20x20)
 
@@ -194,6 +196,7 @@ This creates a benchmark file in `benchmarks/<category>/<experiment-id>.json`.
 |---|---|---|---|---|---|---|---|
 | ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
+| ✓ spiking | 0.733 | 100% | 267 | 22 | 0.000 | @chrisjz | 2025-12-21 |
 
 ### Dynamic Medium (≤50x50)
 
@@ -232,6 +235,8 @@ _No benchmarks submitted yet._
 | ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
 | ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
+| ✓ spiking | 0.556 | 63% | 247 | 20 | 0.234 | @chrisjz | 2025-12-22 |
+| ✓ spiking | 0.390 | 32% | 326 | 20 | 0.219 | @chrisjz | 2025-12-21 |
 
 ### Dynamic Predator Medium (≤50x50)
 

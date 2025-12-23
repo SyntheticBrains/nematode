@@ -38,6 +38,48 @@ We tested multiple hypotheses:
 | Appetitive/Aversive 2q | 2 | 12 | 1 qubit per module |
 | Dual-Circuit | 4 | 24 | Two separate circuits with gating |
 
+### 2-Qubit Chemotaxis Circuit (Baseline)
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     2-QUBIT VARIATIONAL QUANTUM CIRCUIT                     │
+│                         (Chemotaxis Module - 12 params)                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  INPUTS                        ENCODING                                     │
+│  ┌───────────────────┐          ┌─────────────────────────────────────────┐ │
+│  │ gradient_strength │─────────▶│  Angle encoding: θ = π × input          │ │
+│  │ [0.0 - 1.0]       │          │                                         │ │
+│  ├───────────────────┤          │  q0: ─Ry(θ₀)─                           │ │
+│  │ gradient_direction│─────────▶│  q1: ─Ry(θ₁)─                           │ │
+│  │ [-π, +π]          │          └─────────────────────────────────────────┘ │
+│  └───────────────────┘                                                      │
+│                                                                             │
+│  VARIATIONAL LAYERS (×2)                                                    │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                       │  │
+│  │  q0: ─Rx(θ₁)──Ry(θ₂)──Rz(θ₃)──●───────                                │  │
+│  │                               │                                       │  │
+│  │  q1: ─Rx(θ₄)──Ry(θ₅)──Rz(θ₆)──X───────  (CNOT entanglement)           │  │
+│  │                                                                       │  │
+│  │  6 parameters per layer × 2 layers = 12 trainable parameters          │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  MEASUREMENT                                                                │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  q0: ─┤M├─┐                                                           │  │
+│  │           ├──▶ 4 basis states: |00⟩, |01⟩, |10⟩, |11⟩                 │  │
+│  │  q1: ─┤M├─┘                                                           │  │
+│  │                                                                       │  │
+│  │  Action mapping: state mod 4 → {FORWARD, LEFT, RIGHT, STAY}           │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  LEARNING: Parameter-shift rule gradient estimation                         │
+│  • Shots: 1500, LR: 0.015, Decay: 0.9995                                    │
+│  • Problem: Noisy gradients destroy good initializations                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### Learning Strategies Tested
 
 | Strategy | Description |
@@ -130,6 +172,27 @@ The combined gradient from `get_state()`:
 | Quantum (4-qubit) | 24 | 0-5% |
 
 The capacity gap is ~300x. More qubits didn't help because the learning problem became harder without proportional signal improvement.
+
+### Learning Strategy Comparison
+
+```text
+SUCCESS RATE BY LEARNING STRATEGY (Quantum 2-Qubit)
+═══════════════════════════════════════════════════════════════════════════
+
+Strategy                    Success Rate
+────────────────────────────────────────────────────────────────────────────
+Standard gradient           ████████░░░░░░░░░░░░░░░░░░░░░░  6-20%  ❌ High variance
+Informed init + learning    ███████░░░░░░░░░░░░░░░░░░░░░░░  14.9%  ❌ Learning destroys params
+Low LR fine-tuning          █████████░░░░░░░░░░░░░░░░░░░░░  18.75% ❌ Still drifts
+Zero learning (informed)    ███████████░░░░░░░░░░░░░░░░░░░  22.5%  ✓ Best stable result
+Success-only (short)        ██████████████░░░░░░░░░░░░░░░░  28.75% ✓ Best overall
+Success-only (long)         ███████░░░░░░░░░░░░░░░░░░░░░░░  14.9%  ❌ Degrades over time
+────────────────────────────────────────────────────────────────────────────
+MLP (classical baseline)    ███████████████████████████░░░  85-92% ✓ Reference
+
+KEY INSIGHT: Learning actively harms quantum circuits with sparse rewards.
+             Best quantum result (28.75%) still 3x worse than MLP (85-92%).
+```
 
 ## Conclusions
 
