@@ -21,6 +21,7 @@ from quantumnematode.brain.arch import (
     Brain,
     MLPBrainConfig,
     ModularBrainConfig,
+    PPOBrainConfig,
     QMLPBrainConfig,
     QModularBrainConfig,
     QuantumBrain,
@@ -236,6 +237,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             brain_config = ModularBrainConfig()
         case BrainType.MLP:
             brain_config = MLPBrainConfig()
+        case BrainType.PPO:
+            brain_config = PPOBrainConfig()
         case BrainType.QMLP:
             brain_config = QMLPBrainConfig()
         case BrainType.QMODULAR:
@@ -903,6 +906,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     brain_type: BrainType,
     brain_config: ModularBrainConfig
     | MLPBrainConfig
+    | PPOBrainConfig
     | QMLPBrainConfig
     | QModularBrainConfig
     | SpikingBrainConfig,
@@ -1023,6 +1027,27 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             input_dim=2,
             num_actions=4,
             lr_scheduler=True,
+            device=device,
+            parameter_initializer=parameter_initializer,
+        )
+    elif brain_type == BrainType.PPO:
+        from quantumnematode.brain.arch.ppo import PPOBrain
+
+        if not isinstance(brain_config, PPOBrainConfig):
+            error_message = (
+                "The 'ppo' brain architecture requires a PPOBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        # Create parameter initializer instance from config
+        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
+
+        brain = PPOBrain(
+            config=brain_config,
+            input_dim=2,
+            num_actions=4,
             device=device,
             parameter_initializer=parameter_initializer,
         )
