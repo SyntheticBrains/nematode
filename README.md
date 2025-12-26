@@ -230,9 +230,9 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ ppo | 0.832 | 100% | 178 | 20 | 0.000 | @chrisjz | 2025-12-26 |
 | ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
-| ✓ spiking | 0.733 | 100% | 267 | 22 | 0.000 | @chrisjz | 2025-12-21 |
 
 #### Dynamic Predator Small - Quantum
 
