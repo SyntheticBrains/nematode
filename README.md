@@ -315,7 +315,7 @@ This project serves as a platform for exploring:
 
 ## 🗺️ Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap covering 8 strategic phases through 2027, success metrics, and world-class impact objectives.
+See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 

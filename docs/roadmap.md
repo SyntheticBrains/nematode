@@ -2,7 +2,7 @@
 
 **Vision**: Map all behaviors of *Caenorhabditis elegans* through comparative architecture analysis, with focus on quantum computational approaches, to discover fundamental principles of biological intelligence and demonstrate quantum advantages in cognitively-relevant tasks.
 
-**Version**: 1.6
+**Version**: 1.0
 
 **Last Updated**: December 2025
 
