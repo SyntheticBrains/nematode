@@ -510,7 +510,7 @@ class PPOBrain(ClassicalBrain):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 # Get new action probabilities and values
                 logits = self.actor(batch["states"])
-                values = self.critic(batch["states"]).squeeze()
+                values = self.critic(batch["states"]).squeeze(-1)  # Keep batch dim
 
                 probs = torch.softmax(logits, dim=-1)
                 dist = torch.distributions.Categorical(probs)
