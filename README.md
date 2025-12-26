@@ -315,24 +315,30 @@ This project serves as a platform for exploring:
 
 ## 🗺️ Roadmap
 
+See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
+
 ### Upcoming Features
 
-- **Enhanced Brain Architectures**: More sophisticated quantum learning algorithms
-- **Advanced Predator Behaviors**: Pursuit/chase patterns, patrol routes, and adaptive hunting strategies
-- **Extended Foraging Dynamics**: Temperature gradients, food quality variations, and social foraging
-- **Multi-Agent Scenarios**: Cooperative and competitive foraging behaviors
-- **Better Visualization**: Real-time learning analysis and 3D environment rendering
-- **Hardware Optimization**: Circuit compilation and quantum error mitigation
-- **Research Tools**: Advanced analysis and experimentation capabilities
+- **SOTA RL Baselines**: Modern algorithms (PPO, SAC, TD3) for credible classical comparison
+- **Enhanced Sensory Systems**: Thermotaxis, oxygen sensing, mechanosensation (touch response), and health/damage systems
+- **Advanced Predator Behaviors**: Stationary traps, pursuit patterns, patrol routes, and group hunting strategies
+- **Architecture Analysis**: Ablation studies, interpretability tools, and systematic feature importance ranking
+- **Learning & Memory**: Associative learning systems (STAM, ITAM, LTAM) with biological timescales
+- **Evolution & Breeding**: Genetic algorithms, Baldwin effect, co-evolution of predators and prey
+- **Multi-Agent Scenarios**: Cooperative and competitive foraging with pheromone communication and emergent behaviors
+- **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
+- **Real-World Validation**: WormBot deployment, C. elegans lab collaborations, cross-organism transfer (Drosophila, zebrafish)
 
 ### Research Applications
 
 This platform enables research in:
-- Quantum advantages in reinforcement learning and foraging tasks
-- Bio-inspired quantum algorithms for decision-making
-- Hybrid quantum-classical computation in realistic environments
-- Near-term quantum device applications (NISQ algorithms)
-- Comparative analysis of quantum vs classical learning in complex environments
+- Quantum advantages in reinforcement learning and biologically-relevant navigation tasks
+- Bio-inspired quantum algorithms for multi-objective decision-making
+- Comparative analysis of quantum, classical, and spiking neural architectures
+- Hybrid quantum-classical computation in ecologically-valid environments
+- Near-term quantum device applications (NISQ algorithms with error mitigation)
+- Theoretical foundations linking quantum mechanics to biological neural computation
+- Universal computational principles transferable across organisms (C. elegans → Drosophila → zebrafish) and domains (foraging → robotics)
 
 ## 🤝 Contributing
 
