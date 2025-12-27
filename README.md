@@ -15,7 +15,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
 - ✅ **Predator Evasion**: Multi-objective learning with random-moving predators and gradient-based danger perception
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
-- ✅ **Classical ML Alternatives**: MLP, Q-learning, and spiking neural network brain architectures
+- ✅ **Classical ML Alternatives**: MLP, PPO, Q-learning, and spiking neural network brain architectures
 - ✅ **Static Maze Environment**: Traditional 2D grid navigation with single-goal seeking
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
@@ -30,6 +30,7 @@ Choose from multiple brain architectures for your nematode:
 - **ModularBrain**: Quantum variational circuit with modular sensory processing
 - **QModularBrain**: Hybrid quantum-classical Q-learning with experience replay
 - **MLPBrain**: Classical multi-layer perceptron with policy gradients (REINFORCE)
+- **PPOBrain**: Classical actor-critic with Proximal Policy Optimization (clipped objective, GAE)
 - **QMLPBrain**: Classical MLP with Deep Q-Network (DQN) learning
 - **SpikingBrain**: Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
 
@@ -39,6 +40,7 @@ Select the brain architecture when running simulations:
 python scripts/run_simulation.py --brain modular    # Quantum (default)
 python scripts/run_simulation.py --brain qmodular  # Hybrid quantum-classical
 python scripts/run_simulation.py --brain mlp       # Classical policy gradient
+python scripts/run_simulation.py --brain ppo       # Classical actor-critic (PPO)
 python scripts/run_simulation.py --brain qmlp      # Classical Q-learning
 python scripts/run_simulation.py --brain spiking   # Biologically realistic
 ```
@@ -319,7 +321,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 
-- **SOTA RL Baselines**: Modern algorithms (PPO, SAC, TD3) for credible classical comparison
+- **SOTA RL Baselines**: Modern algorithms (SAC, TD3) for credible classical comparison
 - **Enhanced Sensory Systems**: Thermotaxis, oxygen sensing, mechanosensation (touch response), and health/damage systems
 - **Advanced Predator Behaviors**: Stationary traps, pursuit patterns, patrol routes, and group hunting strategies
 - **Architecture Analysis**: Ablation studies, interpretability tools, and systematic feature importance ranking
