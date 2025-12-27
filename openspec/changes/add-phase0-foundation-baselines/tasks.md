@@ -86,16 +86,16 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 **Validation**: Validation returns expected results for test cases
 
 ### 2.5 Integrate with Experiment Tracking
-- [ ] Add `chemotaxis_index` field to `ResultsMetadata` in `experiment/metadata.py`
-- [ ] Calculate CI during experiment tracking
-- [ ] Include CI in experiment JSON output
+- [x] Add `chemotaxis_index` field to `ResultsMetadata` in `experiment/metadata.py`
+- [x] Calculate CI during experiment tracking
+- [x] Include CI in experiment JSON output
 
 **Validation**: Experiment JSON includes chemotaxis_index
 
 ### 2.6 Add CLI Integration
-- [ ] Add `--validate-chemotaxis` flag to `scripts/run_simulation.py`
-- [ ] Output CI comparison to literature when flag is set
-- [ ] Display validation result (matches/does not match biology)
+- [x] Add `--validate-chemotaxis` flag to `scripts/run_simulation.py`
+- [x] Output CI comparison to literature when flag is set
+- [x] Display validation result (matches/does not match biology)
 
 **Validation**: End-to-end test with flag produces expected output
 
