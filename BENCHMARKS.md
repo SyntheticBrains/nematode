@@ -233,6 +233,7 @@ _No benchmarks submitted yet._
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ ppo | 0.781 | 93% | 176 | 24 | 0.064 | @chrisjz | 2025-12-27 |
 | ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
 | ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
