@@ -10,7 +10,7 @@ This directory contains published C. elegans chemotaxis data for validating simu
 
 The chemotaxis index is the standard metric in C. elegans research for quantifying attraction/avoidance behavior:
 
-```
+```text
 CI = (N_attractant - N_control) / N_total
 ```
 
