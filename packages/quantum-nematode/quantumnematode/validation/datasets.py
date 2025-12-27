@@ -86,6 +86,9 @@ class ChemotaxisDataset:
             if source:
                 return source
         # Fall back to first source
+        if not self.sources:
+            error_msg = "ChemotaxisDataset has no sources"
+            raise ValueError(error_msg)
         return self.sources[0]
 
 
