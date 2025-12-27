@@ -220,6 +220,11 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [ ] Fix any validation errors
 - [ ] Verify all requirements have scenarios
 
+### 6.3 Re-run Legacy Benchmarks
+- [ ] Archive existing benchmarks in `benchmarks/` directory
+- [ ] Re-run benchmarks with new tracking system
+- [ ] Verify new benchmarks include per-run seeds and enhanced metrics
+
 ---
 
 ## Dependencies
