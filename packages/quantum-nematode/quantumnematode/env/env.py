@@ -9,7 +9,6 @@ The environment provides methods to get the current state, move the agent,
     check if the goal is reached, and render the maze.
 """
 
-import secrets
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -22,6 +21,7 @@ from rich.text import Text as RichText
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
 from quantumnematode.env.theme import THEME_SYMBOLS, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
+from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 # Validation
 MIN_GRID_SIZE = 5
@@ -93,7 +93,7 @@ class Predator:
         self.speed = speed
         self.movement_accumulator = movement_accumulator
 
-    def update_position(self, grid_size: int) -> None:
+    def update_position(self, grid_size: int, rng: np.random.Generator) -> None:
         """
         Update predator position with random movement.
 
@@ -105,6 +105,8 @@ class Predator:
         ----------
         grid_size : int
             Size of the grid (for boundary checking).
+        rng : np.random.Generator
+            Random number generator for reproducible movement.
         """
         # Handle fractional and multi-step movement
         self.movement_accumulator += self.speed
@@ -126,7 +128,7 @@ class Predator:
             left = 2
             right = 3
 
-            direction_choice = secrets.randbelow(4)
+            direction_choice = rng.integers(4)
             x, y = self.position
 
             if direction_choice == up:
@@ -159,6 +161,10 @@ class BaseEnvironment(ABC):
         Current facing direction of the agent.
     theme : Theme
         Visual theme for rendering.
+    seed : int
+        Random seed for reproducibility.
+    rng : np.random.Generator
+        Seeded random number generator for all random operations.
     """
 
     def __init__(  # noqa: PLR0913
@@ -169,6 +175,7 @@ class BaseEnvironment(ABC):
         theme: Theme,
         action_set: list[Action],
         rich_style_config: DarkColorRichStyleConfig | None,
+        seed: int | None = None,
     ) -> None:
         """Initialize the base environment."""
         if grid_size < MIN_GRID_SIZE:
@@ -177,6 +184,10 @@ class BaseEnvironment(ABC):
             )
             logger.error(error_message)
             raise ValueError(error_message)
+
+        # Initialize seeding first as it may be used for random positions
+        self.seed = ensure_seed(seed)
+        self.rng = get_rng(self.seed)
 
         self.grid_size = grid_size
         self.agent_pos = start_pos if start_pos else (1, 1)
@@ -530,7 +541,20 @@ class StaticEnvironment(BaseEnvironment):
         theme: Theme = Theme.ASCII,
         action_set: list[Action] = DEFAULT_ACTIONS,
         rich_style_config: DarkColorRichStyleConfig | None = None,
+        seed: int | None = None,
     ) -> None:
+        # Initialize base class first to get seeded RNG
+        # We need to handle random position selection after base init
+        super().__init__(
+            grid_size=grid_size,
+            start_pos=start_pos if start_pos else (1, 1),  # Temporary, will update
+            max_body_length=max_body_length,
+            theme=theme,
+            action_set=action_set,
+            rich_style_config=rich_style_config,
+            seed=seed,
+        )
+
         # Randomize agent and goal positions to all 4 corners
         corners = [
             (1, 1),
@@ -548,8 +572,12 @@ class StaticEnvironment(BaseEnvironment):
 
         agent_chosen_corner = None
         if start_pos is None:
-            agent_chosen_corner = secrets.choice(list(Corner))
+            corner_list = list(Corner)
+            agent_chosen_corner = corner_list[self.rng.integers(len(corner_list))]
             start_pos = corners_map[agent_chosen_corner]
+            # Update agent position after random selection
+            self.agent_pos = start_pos
+            self.body = [tuple(self.agent_pos)] if max_body_length > 0 else []
 
         if food_pos is None:
             if agent_chosen_corner is not None:
@@ -562,18 +590,9 @@ class StaticEnvironment(BaseEnvironment):
                 elif agent_chosen_corner == Corner.BOTTOM_RIGHT:
                     food_pos = corners_map[Corner.TOP_LEFT]
                 else:
-                    food_pos = secrets.choice(corners)
+                    food_pos = corners[self.rng.integers(len(corners))]
             else:
-                food_pos = secrets.choice(corners)
-
-        super().__init__(
-            grid_size=grid_size,
-            start_pos=start_pos,
-            max_body_length=max_body_length,
-            theme=theme,
-            action_set=action_set,
-            rich_style_config=rich_style_config,
-        )
+                food_pos = corners[self.rng.integers(len(corners))]
 
         self.goal = food_pos
 
@@ -654,9 +673,12 @@ class StaticEnvironment(BaseEnvironment):
             food_pos=self.goal,
             max_body_length=len(self.body),
             theme=self.theme,
+            seed=self.seed,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
+        # Copy RNG state for reproducibility
+        new_env.rng = get_rng(self.seed)
         return new_env
 
 
@@ -699,6 +721,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         theme: Theme = Theme.ASCII,
         action_set: list[Action] = DEFAULT_ACTIONS,
         rich_style_config: DarkColorRichStyleConfig | None = None,
+        seed: int | None = None,
         # Predator parameters
         *,
         predators_enabled: bool = False,
@@ -720,6 +743,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             theme=theme,
             action_set=action_set,
             rich_style_config=rich_style_config,
+            seed=seed,
         )
 
         # Foraging configuration
@@ -768,8 +792,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         while len(self.foods) < self.foods_on_grid and attempts < max_total_attempts:
             candidate = (
-                secrets.randbelow(self.grid_size),
-                secrets.randbelow(self.grid_size),
+                int(self.rng.integers(self.grid_size)),
+                int(self.rng.integers(self.grid_size)),
             )
 
             if self._is_valid_food_position(candidate):
@@ -822,8 +846,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             candidate = (0, 0)  # Default position in case loop never runs
             for _ in range(MAX_POISSON_ATTEMPTS):
                 candidate = (
-                    secrets.randbelow(self.grid_size),
-                    secrets.randbelow(self.grid_size),
+                    int(self.rng.integers(self.grid_size)),
+                    int(self.rng.integers(self.grid_size)),
                 )
                 # Calculate Manhattan distance to agent
                 distance_to_agent = abs(candidate[0] - self.agent_pos[0]) + abs(
@@ -868,8 +892,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Attempt to spawn food at valid location
         for _ in range(MAX_POISSON_ATTEMPTS):
             candidate = (
-                secrets.randbelow(self.grid_size),
-                secrets.randbelow(self.grid_size),
+                int(self.rng.integers(self.grid_size)),
+                int(self.rng.integers(self.grid_size)),
             )
 
             if self._is_valid_food_position(candidate):
@@ -1145,7 +1169,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if not self.predators_enabled:
             return
         for predator in self.predators:
-            predator.update_position(self.grid_size)
+            predator.update_position(self.grid_size, self.rng)
 
     def check_predator_collision(self) -> bool:
         """
@@ -1291,6 +1315,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             theme=self.theme,
             action_set=self.action_set,
             rich_style_config=self.rich_style_config,
+            seed=self.seed,
             predators_enabled=self.predators_enabled,
             num_predators=self.num_predators,
             predator_speed=self.predator_speed,
@@ -1303,6 +1328,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env.current_direction = self.current_direction
         new_env.foods = self.foods.copy()
         new_env.visited_cells = self.visited_cells.copy()
+        # Copy RNG state for reproducibility
+        new_env.rng = get_rng(self.seed)
         if self.predators_enabled:
             new_env.predators = [
                 Predator(
