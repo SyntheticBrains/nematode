@@ -90,6 +90,20 @@ print(f"Validation level: {result.validation_level.value}")
 | Target | >= 0.6 | Good biological match |
 | Excellent | >= 0.75 | Wild-type level performance |
 
+## Future Work: Improving Biological Fidelity
+
+Current RL agents (PPO, MLP) achieve high task success rates (>90%) but stabilize around CI 0.43-0.47, below the biological range (0.50-0.85). This is expected since agents optimize for task completion, not biological fidelity. Real C. elegans have evolved chemotaxis circuits that maximize time near food gradients without a discrete "goal" concept.
+
+Potential approaches to improve biological fidelity:
+
+1. **Reward shaping**: Add explicit reward for time spent in attractant zones to encourage gradient-following behavior
+2. **Curriculum learning**: Pre-train on gradient-following tasks before foraging to establish biologically-plausible navigation primitives
+3. **Architecture changes**: Add sensory processing layers that mimic C. elegans neural circuits (e.g., AWC/AWA sensory neuron topology)
+4. **Biased random walk**: Implement the pirouette-based navigation strategy described in Pierce-Shimomura et al. (1999)
+5. **Alternative metrics**: Explore whether path curvature or run-length distributions better capture agent navigation strategies
+
+These approaches could be explored in future phases focusing on biological plausibility rather than task performance alone.
+
 ## Contributing
 
 To add new literature sources:
