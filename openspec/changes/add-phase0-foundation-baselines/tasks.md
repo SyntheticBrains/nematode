@@ -210,12 +210,12 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 ## Finalization
 
-### 5.1 Update OpenSpec Specs
+### 6.1 Update OpenSpec Specs
 - [x] Finalize `specs/brain-architecture/spec.md` with PPO requirements
 - [x] Finalize `specs/validation-system/spec.md` with chemotaxis requirements
-- [ ] Finalize `specs/benchmark-management/spec.md` with NematodeBench requirements
+- [x] Finalize `specs/benchmark-management/spec.md` with NematodeBench requirements
 
-### 5.2 Validate Proposal
+### 6.2 Validate Proposal
 - [ ] Run `openspec validate add-phase0-foundation-baselines --strict`
 - [ ] Fix any validation errors
 - [ ] Verify all requirements have scenarios
