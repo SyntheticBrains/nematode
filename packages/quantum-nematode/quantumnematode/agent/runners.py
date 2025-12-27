@@ -11,6 +11,11 @@ from typing import TYPE_CHECKING, Any, Protocol
 import numpy as np
 
 from quantumnematode.brain.arch import ClassicalBrain
+from quantumnematode.dtypes import (  # noqa: TC001 - used at runtime
+    AgentPath,
+    FoodHistory,
+    GridPosition,
+)
 from quantumnematode.env import Direction, DynamicForagingEnvironment, StaticEnvironment
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import TerminationReason
@@ -59,17 +64,17 @@ class EpisodeResult:
 
     Attributes
     ----------
-    agent_path : list[tuple]
+    agent_path : AgentPath
         The path taken by the agent in the episode.
     termination_reason : TerminationReason
         The reason for episode termination, if applicable.
-    food_history : list[list[tuple[int, int]]] | None
+    food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
     """
 
-    agent_path: list[tuple]
+    agent_path: AgentPath
     termination_reason: TerminationReason
-    food_history: list[list[tuple[int, int]]] | None = None
+    food_history: FoodHistory | None = None
 
 
 class EpisodeRunner(Protocol):
@@ -425,7 +430,8 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             agent.brain.update_memory(reward)
 
-            agent.path.append(tuple(agent.env.agent_pos))
+            pos: GridPosition = (agent.env.agent_pos[0], agent.env.agent_pos[1])
+            agent.path.append(pos)
             # Track food positions for chemotaxis validation
             if isinstance(agent.env, DynamicForagingEnvironment):
                 agent.food_history.append(list(agent.env.foods))
@@ -711,7 +717,8 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                         new_env.move_agent(runner_up_action)
                         agent._episode_tracker.track_step()
                         new_brain.update_memory(reward)
-                        new_path.append(new_env.agent_pos)
+                        new_pos: GridPosition = (new_env.agent_pos[0], new_env.agent_pos[1])
+                        new_path.append(new_pos)
                         superpositions.append((new_brain, new_env, new_path))
 
                 if env_copy.reached_goal():
@@ -721,7 +728,8 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                     env_copy.move_agent(top_actions[0])
                     agent._episode_tracker.track_step()
                     brain_copy.update_memory(reward)
-                    path_copy.append(env_copy.agent_pos)
+                    copy_pos: GridPosition = (env_copy.agent_pos[0], env_copy.agent_pos[1])
+                    path_copy.append(copy_pos)
 
                 i += 1
                 if i >= total_superpositions:

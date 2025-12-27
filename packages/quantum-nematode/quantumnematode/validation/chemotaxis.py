@@ -19,6 +19,8 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 
+from quantumnematode.dtypes import Position, PositionFoodHistory, PositionPath
+
 # Validation thresholds for biological plausibility
 CI_THRESHOLD_MINIMUM = 0.4
 CI_THRESHOLD_TARGET = 0.6
@@ -91,8 +93,8 @@ class ValidationResult:
 
 
 def calculate_chemotaxis_index(
-    positions: list[tuple[float, float]],
-    food_positions: list[tuple[float, float]],
+    positions: PositionPath,
+    food_positions: list[Position],
     attractant_zone_radius: float = 5.0,
 ) -> tuple[float, int, int]:
     """Calculate chemotaxis index from a trajectory.
@@ -136,8 +138,8 @@ def calculate_chemotaxis_index(
 
 
 def _calculate_approach_frequency(
-    positions: list[tuple[float, float]],
-    food_positions: list[tuple[float, float]],
+    positions: PositionPath,
+    food_positions: list[Position],
 ) -> float:
     """Calculate fraction of steps moving toward food.
 
@@ -175,8 +177,8 @@ def _calculate_approach_frequency(
 
 
 def _calculate_path_efficiency(
-    positions: list[tuple[float, float]],
-    food_positions: list[tuple[float, float]],
+    positions: PositionPath,
+    food_positions: list[Position],
 ) -> float:
     """Calculate path efficiency (optimal / actual distance).
 
@@ -213,8 +215,8 @@ def _calculate_path_efficiency(
 
 
 def calculate_chemotaxis_metrics(
-    positions: list[tuple[float, float]],
-    food_positions: list[tuple[float, float]],
+    positions: PositionPath,
+    food_positions: list[Position],
     attractant_zone_radius: float = 5.0,
     minimum_reliable_steps: int = 10,
 ) -> ChemotaxisMetrics:
@@ -289,8 +291,8 @@ def get_validation_level(ci: float) -> ValidationLevel:
 
 
 def calculate_chemotaxis_index_stepwise(
-    positions: list[tuple[float, float]],
-    food_history: list[list[tuple[float, float]]],
+    positions: PositionPath,
+    food_history: PositionFoodHistory,
     attractant_zone_radius: float = 5.0,
 ) -> tuple[float, int, int]:
     """Calculate chemotaxis index using step-by-step food positions.
@@ -349,8 +351,8 @@ def calculate_chemotaxis_index_stepwise(
 
 
 def calculate_chemotaxis_metrics_stepwise(
-    positions: list[tuple[float, float]],
-    food_history: list[list[tuple[float, float]]],
+    positions: PositionPath,
+    food_history: PositionFoodHistory,
     attractant_zone_radius: float = 5.0,
     minimum_reliable_steps: int = 10,
 ) -> ChemotaxisMetrics:
@@ -393,7 +395,7 @@ def calculate_chemotaxis_metrics_stepwise(
 
     # For approach frequency and path efficiency, we use all unique food positions
     # as these metrics measure overall navigation behavior rather than moment-by-moment
-    all_food_positions: set[tuple[float, float]] = set()
+    all_food_positions: set[Position] = set()
     for step_foods in food_history:
         all_food_positions.update(step_foods)
     food_positions_list = list(all_food_positions)
