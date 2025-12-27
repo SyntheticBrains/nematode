@@ -63,9 +63,9 @@ PPO with properly tuned hyperparameters should:
 │                              ├──────────────────────────┤  ├──────────────────────────┤  │
 │                              │  Input: 2                │  │  Input: 2                │  │
 │                              │    ↓                     │  │    ↓                     │  │
-│                              │  Linear(2→64) + Tanh     │  │  Linear(2→64) + Tanh     │  │
+│                              │  Linear(2→64) + ReLU     │  │  Linear(2→64) + ReLU     │  │
 │                              │    ↓                     │  │    ↓                     │  │
-│                              │  Linear(64→64) + Tanh    │  │  Linear(64→64) + Tanh    │  │
+│                              │  Linear(64→64) + ReLU    │  │  Linear(64→64) + ReLU    │  │
 │                              │    ↓                     │  │    ↓                     │  │
 │                              │  Linear(64→4)            │  │  Linear(64→1)            │  │
 │                              │    ↓                     │  │    ↓                     │  │
