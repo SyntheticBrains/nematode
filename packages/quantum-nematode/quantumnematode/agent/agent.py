@@ -166,6 +166,10 @@ class QuantumNematodeAgent:
             self.env = env
 
         self.path = [tuple(self.env.agent_pos)]
+        # Track food positions at each step for chemotaxis validation
+        self.food_history: list[list[tuple[int, int]]] = []
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self.food_history = [list(self.env.foods)]
         self.max_body_length = min(
             self.env.grid_size - 1,
             max_body_length,
@@ -501,6 +505,10 @@ class QuantumNematodeAgent:
                 rich_style_config=self.env.rich_style_config,
             )
         self.path = [tuple(self.env.agent_pos)]
+        # Track food positions at each step for chemotaxis validation
+        self.food_history = []
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self.food_history = [list(self.env.foods)]
 
         # Update component references to new environment instance
         self._food_handler.env = self.env

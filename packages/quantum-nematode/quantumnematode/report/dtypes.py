@@ -73,6 +73,8 @@ class SimulationResult(BaseModel):
         Number of successful predator evasions (predator environments only).
     died_to_predator : bool | None
         Whether run ended due to predator death (predator environments only).
+    food_history : list[list[tuple[int, int]]] | None
+        Food positions at each step (DynamicForagingEnvironment only).
     """
 
     run: int
@@ -91,6 +93,7 @@ class SimulationResult(BaseModel):
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_predator: bool | None = None
+    food_history: list[list[tuple[int, int]]] | None = None
 
 
 TrackingRunIndex = int
