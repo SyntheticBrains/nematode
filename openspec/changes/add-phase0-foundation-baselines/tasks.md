@@ -9,39 +9,43 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 ## Work Stream 1: PPO Brain Implementation
 
 ### 1.1 Create PPO Brain Architecture
-- [ ] Create `packages/quantum-nematode/quantumnematode/brain/arch/ppo.py`
-- [ ] Implement `PPOBrainConfig` dataclass with hyperparameters
-- [ ] Implement `RolloutBuffer` class for experience collection
-- [ ] Implement GAE advantage computation
-- [ ] Implement `PPOBrain` class following ClassicalBrain protocol
-- [ ] Implement actor network (policy)
-- [ ] Implement critic network (value function)
-- [ ] Implement clipped surrogate objective
-- [ ] Implement combined loss with entropy bonus
-- [ ] Add gradient clipping and optimizer
+- [x] Create `packages/quantum-nematode/quantumnematode/brain/arch/ppo.py`
+- [x] Implement `PPOBrainConfig` dataclass with hyperparameters
+- [x] Implement `RolloutBuffer` class for experience collection
+- [x] Implement GAE advantage computation
+- [x] Implement `PPOBrain` class following ClassicalBrain protocol
+- [x] Implement actor network (policy)
+- [x] Implement critic network (value function)
+- [x] Implement clipped surrogate objective
+- [x] Implement combined loss with entropy bonus
+- [x] Add gradient clipping and optimizer
 
 **Validation**: Unit tests for buffer, GAE, clipped objective
 
 ### 1.2 Integrate PPO with Brain Factory
-- [ ] Add `PPOBrain`, `PPOBrainConfig` to `brain/arch/__init__.py`
-- [ ] Verify brain factory resolves "ppo" brain type
-- [ ] Verify benchmark categorization maps "ppo" to classical
+- [x] Add `PPOBrain`, `PPOBrainConfig` to `brain/arch/__init__.py`
+- [x] Add `BrainType.PPO` to `brain/arch/dtypes.py`
+- [x] Add PPO case to `config_loader.py`
+- [x] Verify benchmark categorization maps "ppo" to classical
 
 **Validation**: Integration test for config loading and instantiation
 
 ### 1.3 Create PPO Configuration Files
-- [ ] Create `configs/examples/ppo_foraging_small.yml`
-- [ ] Create `configs/examples/ppo_foraging_medium.yml`
-- [ ] Create `configs/examples/ppo_predators_small.yml`
+- [x] Create `configs/examples/ppo_foraging_small.yml`
+- [x] Create `configs/examples/ppo_foraging_medium.yml`
+- [x] Create `configs/examples/ppo_foraging_large.yml`
+- [x] Create `configs/examples/ppo_predators_small.yml`
+- [x] Create `configs/examples/ppo_predators_medium.yml`
+- [x] Create `configs/examples/ppo_predators_large.yml`
 
 **Validation**: Configs load without errors
 
 ### 1.4 Benchmark PPO Performance
-- [ ] Run 100 episodes on `dynamic_small` environment
-- [ ] Tune hyperparameters if success rate < 85%
-- [ ] Run 100 episodes on `dynamic_predator_small` environment
-- [ ] Document final performance metrics
-- [ ] Compare learning curves to MLPBrain baseline
+- [x] Run 100 episodes on `dynamic_small` environment
+- [x] Tune hyperparameters if success rate < 85%
+- [x] Run 100 episodes on `dynamic_predator_small` environment
+- [x] Document final performance metrics
+- [x] Compare learning curves to MLPBrain baseline - deferred
 
 **Validation**: PPO achieves >85% success on foraging (Phase 0 exit criterion)
 
