@@ -13,6 +13,7 @@ from quantumnematode.agent import (
 from quantumnematode.brain.arch import (
     MLPBrainConfig,
     ModularBrainConfig,
+    PPOBrainConfig,
     QMLPBrainConfig,
     QModularBrainConfig,
     SpikingBrainConfig,
@@ -55,7 +56,12 @@ from quantumnematode.optimizers.learning_rate import (
 )
 
 BrainConfigType = (
-    ModularBrainConfig | MLPBrainConfig | QMLPBrainConfig | QModularBrainConfig | SpikingBrainConfig
+    ModularBrainConfig
+    | MLPBrainConfig
+    | PPOBrainConfig
+    | QMLPBrainConfig
+    | QModularBrainConfig
+    | SpikingBrainConfig
 )
 
 
@@ -291,6 +297,24 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
             error_message = (
                 "Invalid brain configuration for 'mlp' brain type. "
                 f"Expected MLPBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case "ppo":
+            if config.brain.config is None:
+                return PPOBrainConfig()
+            if isinstance(config.brain.config, PPOBrainConfig):
+                return config.brain.config
+            # Handle case where YAML parsed as wrong type - reconstruct as PPOBrainConfig
+            if hasattr(config.brain.config, "__dict__"):
+                config_dict = {}
+                for field_name in PPOBrainConfig.model_fields:
+                    if hasattr(config.brain.config, field_name):
+                        config_dict[field_name] = getattr(config.brain.config, field_name)
+                return PPOBrainConfig(**config_dict)
+            error_message = (
+                "Invalid brain configuration for 'ppo' brain type. "
+                f"Expected PPOBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)

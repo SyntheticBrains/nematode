@@ -194,6 +194,7 @@ This creates a benchmark file in `benchmarks/<category>/<experiment-id>.json`.
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ ppo | 0.832 | 100% | 178 | 20 | 0.000 | @chrisjz | 2025-12-26 |
 | ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 | ✓ spiking | 0.733 | 100% | 267 | 22 | 0.000 | @chrisjz | 2025-12-21 |
@@ -232,6 +233,7 @@ _No benchmarks submitted yet._
 
 | Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
 |---|---|---|---|---|---|---|---|
+| ✓ ppo | 0.781 | 93% | 176 | 24 | 0.064 | @chrisjz | 2025-12-27 |
 | ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
 | ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
 | ✓ mlp | 0.587 | 87% | 192 | 70 | 0.116 | @chrisjz | 2025-11-23 |
