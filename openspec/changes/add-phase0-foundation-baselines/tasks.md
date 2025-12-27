@@ -231,13 +231,16 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 ```text
 Work Stream 1 (PPO)          ──┐
-Work Stream 2 (Chemotaxis)   ──┼──► Work Stream 3 (NematodeBench)
-Work Stream 4 (Optimization) ──┘         │
-                                         ▼
-                              Finalization (5.1, 5.2)
+Work Stream 2 (Chemotaxis)   ──┼──► Work Stream 3 (NematodeBench) ──┐
+Work Stream 4 (Optimization) ──┘                                    │
+                                                                    ▼
+                                           Work Stream 5 (Reproducibility)
+                                                                    │
+                                                                    ▼
+                                                   Finalization (6.1, 6.2, 6.3)
 ```
 
-Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Finalization requires all work streams complete.
+Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Work Stream 5 enhances Work Stream 3. Finalization requires all work streams complete.
 
 ---
 
@@ -248,3 +251,5 @@ Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Fin
 | PPO >85% success on foraging | 1.4 | Complete |
 | Optimization method documentation | 4.1, 4.2, 4.3 | Complete |
 | 1 C. elegans dataset integrated | 2.3, 2.4, 2.5, 2.6 | Complete |
+| Reproducible benchmarks with seeding | 5.1, 5.2, 5.3 | Pending |
+| Unified NematodeBench format | 5.5 | Pending |
