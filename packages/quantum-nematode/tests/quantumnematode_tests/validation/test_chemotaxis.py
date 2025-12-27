@@ -8,7 +8,9 @@ from quantumnematode.validation.chemotaxis import (
     ValidationLevel,
     ValidationResult,
     calculate_chemotaxis_index,
+    calculate_chemotaxis_index_stepwise,
     calculate_chemotaxis_metrics,
+    calculate_chemotaxis_metrics_stepwise,
     get_validation_level,
 )
 
@@ -388,3 +390,210 @@ class TestValidationResultDataclass:
         assert result.validation_level == ValidationLevel.TARGET
         assert result.literature_source == "Bargmann et al. (1993)"
         assert result.agent_metrics == metrics
+
+
+class TestCalculateChemotaxisIndexStepwise:
+    """Test the step-by-step chemotaxis index calculation."""
+
+    def test_empty_positions_returns_zero(self):
+        """Test that empty trajectory returns neutral CI."""
+        ci, n_attract, n_control = calculate_chemotaxis_index_stepwise(
+            positions=[],
+            food_history=[[(10.0, 10.0)]],
+        )
+        assert ci == 0.0
+        assert n_attract == 0
+        assert n_control == 0
+
+    def test_empty_food_history_returns_zero(self):
+        """Test that empty food history returns neutral CI."""
+        ci, n_attract, n_control = calculate_chemotaxis_index_stepwise(
+            positions=[(0.0, 0.0), (1.0, 1.0)],
+            food_history=[],
+        )
+        assert ci == 0.0
+        assert n_attract == 0
+        assert n_control == 0
+
+    def test_static_food_matches_regular_calculation(self):
+        """Test that stepwise with static food matches regular calculation."""
+        positions = [(10.0, 10.0), (11.0, 11.0), (50.0, 50.0), (51.0, 51.0)]
+        food_positions = [(10.0, 10.0)]
+        # Same food at each step
+        food_history = [food_positions, food_positions, food_positions, food_positions]
+
+        ci_stepwise, n_attract_stepwise, n_control_stepwise = calculate_chemotaxis_index_stepwise(
+            positions,
+            food_history,
+            attractant_zone_radius=5.0,
+        )
+        ci_regular, n_attract_regular, n_control_regular = calculate_chemotaxis_index(
+            positions,
+            food_positions,
+            attractant_zone_radius=5.0,
+        )
+
+        assert ci_stepwise == ci_regular
+        assert n_attract_stepwise == n_attract_regular
+        assert n_control_stepwise == n_control_regular
+
+    def test_dynamic_food_respawn(self):
+        """Test that respawning food is handled correctly step-by-step."""
+        # Agent at (10, 10), food moves from (10, 10) to (50, 50) after step 1
+        positions = [
+            (10.0, 10.0),  # step 0: near food at (10, 10)
+            (10.0, 10.0),  # step 1: food moved to (50, 50), now far
+            (10.0, 10.0),  # step 2: still far from food at (50, 50)
+            (50.0, 50.0),  # step 3: now near food at (50, 50)
+        ]
+        food_history = [
+            [(10.0, 10.0)],  # step 0
+            [(50.0, 50.0)],  # step 1
+            [(50.0, 50.0)],  # step 2
+            [(50.0, 50.0)],  # step 3
+        ]
+
+        ci, n_attract, n_control = calculate_chemotaxis_index_stepwise(
+            positions,
+            food_history,
+            attractant_zone_radius=5.0,
+        )
+
+        # 2 near (steps 0 and 3), 2 far (steps 1 and 2)
+        assert n_attract == 2
+        assert n_control == 2
+        assert ci == 0.0
+
+    def test_step_with_no_food_counts_as_control(self):
+        """Test that a step with no food counts as control zone."""
+        positions = [(10.0, 10.0), (10.0, 10.0), (10.0, 10.0)]
+        food_history = [
+            [(10.0, 10.0)],  # step 0: food nearby
+            [],  # step 1: no food
+            [(10.0, 10.0)],  # step 2: food back
+        ]
+
+        ci, n_attract, n_control = calculate_chemotaxis_index_stepwise(
+            positions,
+            food_history,
+            attractant_zone_radius=5.0,
+        )
+
+        # 2 near (steps 0 and 2), 1 far (step 1 - no food)
+        assert n_attract == 2
+        assert n_control == 1
+        # CI = (2 - 1) / 3 = 0.333...
+        assert abs(ci - (1 / 3)) < 0.001
+
+    def test_food_history_shorter_than_path(self):
+        """Test that last food positions are used when history is shorter."""
+        positions = [(10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0)]
+        food_history = [
+            [(10.0, 10.0)],  # step 0
+            [(10.0, 10.0)],  # steps 1, 2, 3 use this
+        ]
+
+        ci, n_attract, n_control = calculate_chemotaxis_index_stepwise(
+            positions,
+            food_history,
+            attractant_zone_radius=5.0,
+        )
+
+        # All 4 positions near food
+        assert n_attract == 4
+        assert n_control == 0
+        assert ci == 1.0
+
+
+class TestCalculateChemotaxisMetricsStepwise:
+    """Test comprehensive stepwise chemotaxis metrics calculation."""
+
+    def test_empty_trajectory_returns_unreliable_metrics(self):
+        """Test that empty trajectory returns unreliable metrics."""
+        metrics = calculate_chemotaxis_metrics_stepwise(
+            positions=[],
+            food_history=[[(10.0, 10.0)]],
+        )
+
+        assert metrics.chemotaxis_index == 0.0
+        assert metrics.time_in_attractant == 0.0
+        assert metrics.approach_frequency == 0.0
+        assert metrics.path_efficiency == 1.0
+        assert metrics.total_steps == 0
+        assert metrics.reliable is False
+
+    def test_empty_food_history_returns_unreliable_metrics(self):
+        """Test that empty food history returns unreliable metrics."""
+        metrics = calculate_chemotaxis_metrics_stepwise(
+            positions=[(0.0, 0.0), (1.0, 1.0)],
+            food_history=[],
+        )
+
+        assert metrics.chemotaxis_index == 0.0
+        assert metrics.reliable is False
+
+    def test_static_food_returns_correct_metrics(self):
+        """Test metrics with static food positions."""
+        positions = [(float(i), 0.0) for i in range(15)]  # 15 steps toward (20, 0)
+        food_positions = [(20.0, 0.0)]
+        food_history = [food_positions] * 15
+
+        metrics = calculate_chemotaxis_metrics_stepwise(
+            positions=positions,
+            food_history=food_history,
+            attractant_zone_radius=5.0,
+            minimum_reliable_steps=10,
+        )
+
+        assert metrics.total_steps == 15
+        assert metrics.reliable is True
+        assert metrics.approach_frequency == 1.0  # Always approaching
+        # Some steps should be in attractant zone (positions 15-20 are within 5 of 20)
+
+    def test_dynamic_food_ci_differs_from_static(self):
+        """Test that dynamic food gives different CI than using all positions."""
+        # Agent stays at (0, 0) while food moves around
+        positions = [(0.0, 0.0)] * 10
+
+        # Food is near for first 3 steps, far for rest
+        food_history = [
+            [(2.0, 0.0)],  # near
+            [(2.0, 0.0)],  # near
+            [(2.0, 0.0)],  # near
+            [(50.0, 50.0)],  # far
+            [(50.0, 50.0)],
+            [(50.0, 50.0)],
+            [(50.0, 50.0)],
+            [(50.0, 50.0)],
+            [(50.0, 50.0)],
+            [(50.0, 50.0)],
+        ]
+
+        metrics = calculate_chemotaxis_metrics_stepwise(
+            positions=positions,
+            food_history=food_history,
+            attractant_zone_radius=5.0,
+        )
+
+        # 3 near, 7 far => CI = (3-7)/10 = -0.4
+        assert metrics.steps_in_attractant == 3
+        assert metrics.steps_in_control == 7
+        assert abs(metrics.chemotaxis_index - (-0.4)) < 0.001
+
+    def test_time_in_attractant_with_dynamic_food(self):
+        """Test time in attractant calculation with moving food."""
+        positions = [(10.0, 10.0)] * 4
+        food_history = [
+            [(10.0, 10.0)],  # near
+            [(50.0, 50.0)],  # far
+            [(10.0, 10.0)],  # near
+            [(50.0, 50.0)],  # far
+        ]
+
+        metrics = calculate_chemotaxis_metrics_stepwise(
+            positions=positions,
+            food_history=food_history,
+            attractant_zone_radius=5.0,
+        )
+
+        assert metrics.time_in_attractant == 0.5  # 2/4

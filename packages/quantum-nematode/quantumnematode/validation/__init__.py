@@ -5,7 +5,9 @@ from .chemotaxis import (
     ValidationLevel,
     ValidationResult,
     calculate_chemotaxis_index,
+    calculate_chemotaxis_index_stepwise,
     calculate_chemotaxis_metrics,
+    calculate_chemotaxis_metrics_stepwise,
 )
 from .datasets import (
     ChemotaxisDataset,
@@ -22,6 +24,8 @@ __all__ = [
     "ValidationLevel",
     "ValidationResult",
     "calculate_chemotaxis_index",
+    "calculate_chemotaxis_index_stepwise",
     "calculate_chemotaxis_metrics",
+    "calculate_chemotaxis_metrics_stepwise",
     "load_chemotaxis_dataset",
 ]
