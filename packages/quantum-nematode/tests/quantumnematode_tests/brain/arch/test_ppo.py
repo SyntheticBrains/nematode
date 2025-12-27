@@ -253,6 +253,7 @@ class TestPPOBrain:
 
         assert len(features) == 2
         assert features[0] == 0.0  # gradient_strength defaults to 0
+        assert -1.0 <= features[1] <= 1.0  # relative angle still in valid range
 
     def test_get_action_and_value(self, brain):
         """Test getting action, log_prob, entropy, and value."""
@@ -549,8 +550,8 @@ class TestPPOBrainIntegration:
         # Actions should be the same
         assert actions1[0].action == actions2[0].action
 
-    def test_value_estimates_improve_with_learning(self):
-        """Test that value estimates become more accurate with training."""
+    def test_value_estimates_remain_finite_with_learning(self):
+        """Test that value estimates remain finite during training."""
         config = PPOBrainConfig(
             actor_hidden_dim=32,
             critic_hidden_dim=32,
