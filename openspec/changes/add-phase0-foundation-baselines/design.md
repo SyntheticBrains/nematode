@@ -16,7 +16,7 @@ PPO is chosen over SAC or TD3 because:
 
 ### Architecture
 
-```
+```text
 PPOBrain (ClassicalBrain)
 ├── Actor Network (policy)
 │   ├── Input: 2D state [gradient_strength, relative_angle]
@@ -75,7 +75,7 @@ Chemotaxis index (CI) is the standard metric in C. elegans research for quantify
 
 ### Architecture
 
-```
+```text
 quantumnematode/validation/
 ├── __init__.py
 ├── chemotaxis.py      # CI calculation and metrics
@@ -88,7 +88,7 @@ data/chemotaxis/
 
 ### Chemotaxis Index Formula
 
-```
+```text
 CI = (N_attractant - N_control) / N_total
 
 Where:
@@ -154,7 +154,7 @@ class ChemotaxisValidationBenchmark:
 
 ### Directory Structure
 
-```
+```text
 docs/nematodebench/
 ├── README.md              # Overview and purpose
 ├── SUBMISSION_GUIDE.md    # Step-by-step process
@@ -176,7 +176,8 @@ scripts/
 ### Evaluation Methodology
 
 Composite score formula (already implemented):
-```
+
+```text
 score = 0.40 * success_rate +
         0.30 * distance_efficiency +
         0.20 * learning_speed +
@@ -226,7 +227,7 @@ def evaluate_submission(benchmark_path: Path, reproduce: bool = False) -> Evalua
 
 ## Dependencies Between Deliverables
 
-```
+```text
                     ┌─────────────────┐
                     │   PPO Brain     │
                     │  (independent)  │
