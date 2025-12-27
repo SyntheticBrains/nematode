@@ -1,12 +1,12 @@
 # 004: PPO Brain Implementation
 
-**Status**: `active`
+**Status**: `completed`
 
 **Branch**: `feature/21-add-sota-rl-baselines`
 
 **Date Started**: 2025-12-26
 
-**Date Completed**: (pending)
+**Date Completed**: 2025-12-27
 
 ## Objective
 
@@ -401,8 +401,12 @@ PPO's clipped objective provides built-in learning rate adaptivity. Adding an LR
 - [x] Match MLP convergence speed (both at run 20)
 - [x] Update all PPO configs with optimized hyperparameters
 - [x] Benchmark on predator environment (achieved 93% post-conv, exceeds MLP's 92%)
-- [ ] Compare learning curves (PPO vs MLP vs Spiking)
-- [ ] Test on medium/large environments
+
+**Deferred to future work:**
+- Compare learning curves (PPO vs MLP vs Spiking)[^1]
+- Test on medium/large environments
+
+[^1]: Learning curve comparison requires per-episode logging (success, reward, steps per run) which isn't currently persisted. Would need to add `run_history` array to experiment JSON output.
 
 ## Data References
 
