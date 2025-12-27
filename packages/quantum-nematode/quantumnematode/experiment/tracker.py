@@ -258,7 +258,7 @@ def extract_gradient_metadata(config: dict) -> GradientMetadata:
     return GradientMetadata(method=method, max_norm=max_norm)
 
 
-def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:  # noqa: PLR0915
+def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:  # noqa: PLR0915, C901
     """Aggregate simulation results into metadata.
 
     Parameters
@@ -341,39 +341,43 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
     avg_time_in_attractant = None
     avg_approach_frequency = None
     avg_path_efficiency = None
+    post_convergence_chemotaxis_index = None
+    post_convergence_time_in_attractant = None
+    post_convergence_approach_frequency = None
+    post_convergence_path_efficiency = None
     chemotaxis_validation_level = None
     biological_ci_range = None
     biological_ci_typical = None
     matches_biology = None
     literature_source = None
 
-    # Calculate chemotaxis metrics for runs with food history
+    # Helper function to calculate chemotaxis metrics for a result
+    def _calculate_result_metrics(result: SimulationResult) -> ChemotaxisMetrics | None:
+        if not result.food_history:
+            return None
+        positions = [(float(x), float(y)) for x, y in result.path]
+        food_history_float = [
+            [(float(x), float(y)) for x, y in step_foods] for step_foods in result.food_history
+        ]
+        if not food_history_float:
+            return None
+        return calculate_chemotaxis_metrics_stepwise(
+            positions=positions,
+            food_history=food_history_float,
+            attractant_zone_radius=5.0,
+        )
+
+    # Calculate chemotaxis metrics for all runs with food history
     runs_with_food_history = [r for r in all_results if r.food_history]
     if runs_with_food_history:
         all_metrics: list[ChemotaxisMetrics] = []
-
         for result in runs_with_food_history:
-            # Convert path to float tuples for chemotaxis calculation
-            positions = [(float(x), float(y)) for x, y in result.path]
-
-            # Convert food history to float tuples for step-by-step calculation
-            # This is more accurate than using union of all positions
-            if result.food_history:  # Guard for pyright
-                food_history = [
-                    [(float(x), float(y)) for x, y in step_foods]
-                    for step_foods in result.food_history
-                ]
-
-                if food_history:
-                    metrics = calculate_chemotaxis_metrics_stepwise(
-                        positions=positions,
-                        food_history=food_history,
-                        attractant_zone_radius=5.0,
-                    )
-                    all_metrics.append(metrics)
+            metrics = _calculate_result_metrics(result)
+            if metrics:
+                all_metrics.append(metrics)
 
         if all_metrics:
-            # Calculate averages
+            # Calculate all-run averages
             avg_chemotaxis_index = sum(m.chemotaxis_index for m in all_metrics) / len(all_metrics)
             avg_time_in_attractant = sum(m.time_in_attractant for m in all_metrics) / len(
                 all_metrics,
@@ -382,20 +386,56 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
                 all_metrics,
             )
             avg_path_efficiency = sum(m.path_efficiency for m in all_metrics) / len(all_metrics)
-            chemotaxis_validation_level = get_validation_level(avg_chemotaxis_index).value
+
+        # Calculate post-convergence metrics (used for biological validation)
+        convergence_run = convergence_metrics.convergence_run
+        if convergence_run is not None:
+            # Filter to post-convergence runs with food history
+            post_conv_runs = [r for r in all_results if r.run > convergence_run and r.food_history]
+        else:
+            # If not converged, use all runs with food history
+            post_conv_runs = runs_with_food_history
+
+        post_conv_metrics: list[ChemotaxisMetrics] = []
+        for result in post_conv_runs:
+            metrics = _calculate_result_metrics(result)
+            if metrics:
+                post_conv_metrics.append(metrics)
+
+        if post_conv_metrics:
+            # Calculate post-convergence averages
+            post_convergence_chemotaxis_index = sum(
+                m.chemotaxis_index for m in post_conv_metrics
+            ) / len(post_conv_metrics)
+            post_convergence_time_in_attractant = sum(
+                m.time_in_attractant for m in post_conv_metrics
+            ) / len(post_conv_metrics)
+            post_convergence_approach_frequency = sum(
+                m.approach_frequency for m in post_conv_metrics
+            ) / len(post_conv_metrics)
+            post_convergence_path_efficiency = sum(
+                m.path_efficiency for m in post_conv_metrics
+            ) / len(post_conv_metrics)
+
+            # Validation level based on post-convergence CI (trained behavior)
+            chemotaxis_validation_level = get_validation_level(
+                post_convergence_chemotaxis_index,
+            ).value
 
             # Use benchmark to compare against biological literature
             benchmark = ChemotaxisValidationBenchmark()
-            validation_stats = benchmark.validate_multiple_runs(all_metrics)
+            validation_stats = benchmark.validate_multiple_runs(post_conv_metrics)
             if validation_stats["num_runs"] > 0:
                 # Get source information from a single validation
-                sample_result = benchmark.validate_agent(all_metrics[0])
+                sample_result = benchmark.validate_agent(post_conv_metrics[0])
                 biological_ci_range = sample_result.biological_ci_range
                 biological_ci_typical = sample_result.biological_ci_typical
                 literature_source = sample_result.literature_source
-                # Check if mean CI falls within biological range
+                # Check if post-convergence CI falls within biological range
                 matches_biology = (
-                    biological_ci_range[0] <= avg_chemotaxis_index <= biological_ci_range[1]
+                    biological_ci_range[0]
+                    <= post_convergence_chemotaxis_index
+                    <= biological_ci_range[1]
                 )
 
     return ResultsMetadata(
@@ -427,6 +467,10 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         avg_time_in_attractant=avg_time_in_attractant,
         avg_approach_frequency=avg_approach_frequency,
         avg_path_efficiency=avg_path_efficiency,
+        post_convergence_chemotaxis_index=post_convergence_chemotaxis_index,
+        post_convergence_time_in_attractant=post_convergence_time_in_attractant,
+        post_convergence_approach_frequency=post_convergence_approach_frequency,
+        post_convergence_path_efficiency=post_convergence_path_efficiency,
         chemotaxis_validation_level=chemotaxis_validation_level,
         biological_ci_range=biological_ci_range,
         biological_ci_typical=biological_ci_typical,
