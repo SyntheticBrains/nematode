@@ -118,17 +118,26 @@ def load_chemotaxis_dataset(
     with dataset_path.open() as f:
         data = json.load(f)
 
-    # Parse sources
+    # Parse sources with validation
     sources = []
-    for source_data in data.get("sources", []):
-        source = LiteratureSource(
-            citation=source_data["citation"],
-            attractant=source_data["attractant"],
-            ci_wild_type=source_data["ci_wild_type"],
-            ci_range=tuple(source_data["ci_range"]),
-            conditions=source_data["conditions"],
-        )
-        sources.append(source)
+    for i, source_data in enumerate(data.get("sources", [])):
+        try:
+            ci_range = source_data["ci_range"]
+            if not isinstance(ci_range, list) or len(ci_range) != 2:  # noqa: PLR2004
+                msg = f"Source {i}: ci_range must be a 2-element list, got: {ci_range}"
+                raise ValueError(msg)
+
+            source = LiteratureSource(
+                citation=source_data["citation"],
+                attractant=source_data["attractant"],
+                ci_wild_type=source_data["ci_wild_type"],
+                ci_range=(ci_range[0], ci_range[1]),
+                conditions=source_data["conditions"],
+            )
+            sources.append(source)
+        except KeyError as e:
+            msg = f"Source {i}: missing required field {e}"
+            raise ValueError(msg) from e
 
     # Parse thresholds
     threshold_data = data.get("validation_thresholds", {})
