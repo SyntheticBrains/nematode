@@ -1,0 +1,55 @@
+# Dynamic Foraging Environment - Large Configuration
+# Curriculum level 3: Challenging large-scale foraging scenario
+# Uses PPO (Proximal Policy Optimization) brain architecture
+
+max_steps: 2000
+brain:
+  name: ppo
+  config:
+    actor_hidden_dim: 256
+    critic_hidden_dim: 256
+    num_hidden_layers: 4
+
+    # Core PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 1024
+    num_epochs: 10
+    num_minibatches: 4
+    max_grad_norm: 0.5
+    normalize_advantages: true
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+
+satiety:
+  initial_satiety: 800.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 100
+    viewport_size: [11, 11]
+
+    foraging:
+      foods_on_grid: 35
+      target_foods_to_collect: 50
+      min_food_distance: 10
+      agent_exclusion_radius: 15
+      gradient_decay_constant: 12.0
+      gradient_strength: 1.0
