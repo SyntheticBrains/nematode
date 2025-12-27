@@ -110,8 +110,10 @@ The project supports multiple brain architectures:
 
 1. **ModularBrain**: Quantum variational circuit with modular design
 2. **QModularBrain**: Hybrid quantum-classical Q-learning
-3. **MLPBrain**: Classical MLP with policy gradients
-4. **QMLPBrain**: Classical MLP with Q-learning
+3. **MLPBrain**: Classical MLP with policy gradients (REINFORCE)
+4. **PPOBrain**: Classical actor-critic with Proximal Policy Optimization
+5. **QMLPBrain**: Classical MLP with Q-learning
+6. **SpikingBrain**: Biologically realistic spiking neural network
 
 Each brain architecture follows a common interface defined in `quantumnematode.brain.arch`.
 

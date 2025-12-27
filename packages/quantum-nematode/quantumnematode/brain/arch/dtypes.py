@@ -13,6 +13,7 @@ class BrainType(Enum):
     QMODULAR = "qmodular"
     MLP = "mlp"
     QMLP = "qmlp"
+    PPO = "ppo"
     SPIKING = "spiking"
 
 
@@ -42,12 +43,14 @@ BRAIN_TYPES = Literal[
     BrainType.QMODULAR,
     BrainType.MLP,
     BrainType.QMLP,
+    BrainType.PPO,
     BrainType.SPIKING,
 ]
 QUANTUM_BRAIN_TYPES: set[BrainType] = {BrainType.MODULAR, BrainType.QMODULAR}
 CLASSICAL_BRAIN_TYPES: set[BrainType] = {
     BrainType.MLP,
     BrainType.QMLP,
+    BrainType.PPO,
     BrainType.SPIKING,
 }
 
