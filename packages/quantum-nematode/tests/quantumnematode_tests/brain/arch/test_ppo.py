@@ -273,7 +273,7 @@ class TestPPOBrain:
         state = np.array([0.5, 0.3], dtype=np.float32)
         specific_action = 2
 
-        action, log_prob, entropy, value = brain.get_action_and_value(
+        action, log_prob, _entropy, _value = brain.get_action_and_value(
             state,
             action=specific_action,
         )
