@@ -566,13 +566,6 @@ class TestPPOBrainIntegration:
             device=DeviceType.CPU,
         )
 
-        # State that always gives positive reward
-        good_state = np.array([1.0, 0.0], dtype=np.float32)
-
-        # Get initial value estimate
-        x = torch.tensor(good_state, dtype=torch.float32, device=brain.device)
-        _initial_value = brain.forward_critic(x).item()
-
         # Train on experiences where this state leads to positive reward
         params = BrainParams(gradient_strength=1.0, gradient_direction=0.0)
 
@@ -581,8 +574,9 @@ class TestPPOBrainIntegration:
                 brain.run_brain(params, top_only=True, top_randomize=False)
                 brain.learn(params, reward=1.0, episode_done=(step == 24))
 
-        # Get final value estimate
-        final_value = brain.forward_critic(x).item()
+        # Get final value estimate for a state that always gives positive reward
+        state = torch.tensor([1.0, 0.0], dtype=torch.float32, device=brain.device)
+        final_value = brain.forward_critic(state).item()
 
         # Value should have increased for consistently rewarded state
         # (This is a soft check - learning dynamics can vary)
