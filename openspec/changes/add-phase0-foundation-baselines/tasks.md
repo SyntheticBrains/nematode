@@ -198,4 +198,3 @@ Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Fin
 | PPO >85% success on foraging | 1.4 | Complete |
 | Optimization method documentation | 4.1, 4.2, 4.3 | Complete |
 | 1 C. elegans dataset integrated | 2.3, 2.4, 2.5, 2.6 | Complete |
-
