@@ -249,6 +249,24 @@ class ResultsMetadata(BaseModel):
         Range: 0.0 to 1.0, where 1.0 means perfect optimal navigation.
     composite_benchmark_score : float | None
         Weighted composite score combining success, efficiency, speed, and stability.
+    avg_chemotaxis_index : float | None
+        Average chemotaxis index across all runs (dynamic environments only).
+    avg_time_in_attractant : float | None
+        Average fraction of time spent near food (dynamic environments only).
+    avg_approach_frequency : float | None
+        Average fraction of steps moving toward food (dynamic environments only).
+    avg_path_efficiency : float | None
+        Average path efficiency (optimal/actual distance) (dynamic environments only).
+    chemotaxis_validation_level : str | None
+        Biological validation level: none/minimum/target/excellent.
+    biological_ci_range : tuple[float, float] | None
+        Expected CI range from C. elegans literature (min, max).
+    biological_ci_typical : float | None
+        Typical/median CI value from C. elegans literature.
+    matches_biology : bool | None
+        Whether agent CI falls within biological range.
+    literature_source : str | None
+        Citation for the biological data used for comparison.
     """
 
     total_runs: int
@@ -274,6 +292,16 @@ class ResultsMetadata(BaseModel):
     post_convergence_variance: float | None = None
     post_convergence_distance_efficiency: float | None = None
     composite_benchmark_score: float | None = None
+    # Chemotaxis validation metrics (added for biological validation)
+    avg_chemotaxis_index: float | None = None
+    avg_time_in_attractant: float | None = None
+    avg_approach_frequency: float | None = None
+    avg_path_efficiency: float | None = None
+    chemotaxis_validation_level: str | None = None
+    biological_ci_range: tuple[float, float] | None = None
+    biological_ci_typical: float | None = None
+    matches_biology: bool | None = None
+    literature_source: str | None = None
 
 
 class SystemMetadata(BaseModel):

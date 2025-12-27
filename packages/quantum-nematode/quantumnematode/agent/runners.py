@@ -63,10 +63,13 @@ class EpisodeResult:
         The path taken by the agent in the episode.
     termination_reason : TerminationReason
         The reason for episode termination, if applicable.
+    food_history : list[list[tuple[int, int]]] | None
+        Food positions at each step (DynamicForagingEnvironment only).
     """
 
     agent_path: list[tuple]
     termination_reason: TerminationReason
+    food_history: list[list[tuple[int, int]]] | None = None
 
 
 class EpisodeRunner(Protocol):
@@ -279,6 +282,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         return EpisodeResult(
                             agent_path=agent.path,
                             termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                            food_history=agent.food_history,
                         )
 
             # Update predators and check for collision (dynamic environment only)
@@ -312,6 +316,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.PREDATOR,
+                        food_history=agent.food_history,
                     )
 
                 # Move predators after agent moves
@@ -361,6 +366,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.PREDATOR,
+                        food_history=agent.food_history,
                     )
 
                 # Satiety decay (after predator movement)
@@ -399,6 +405,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.STARVED,
+                        food_history=agent.food_history,
                     )
 
             # Classical brain learning step
@@ -419,6 +426,9 @@ class StandardEpisodeRunner(EpisodeRunner):
             agent.brain.update_memory(reward)
 
             agent.path.append(tuple(agent.env.agent_pos))
+            # Track food positions for chemotaxis validation
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                agent.food_history.append(list(agent.env.foods))
 
             # Track step for food distance efficiency calculation
             if isinstance(agent.env, DynamicForagingEnvironment):
@@ -484,6 +494,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.GOAL_REACHED,
+                    food_history=agent.food_history if agent.food_history else None,
                 )
 
             # Log distance to the goal (only for StaticEnvironment)
@@ -521,6 +532,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.MAX_STEPS,
+                    food_history=agent.food_history if agent.food_history else None,
                 )
 
             # Handle all food collected (for dynamic environments)
@@ -550,6 +562,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                    food_history=agent.food_history,
                 )
 
         # This point is unreachable - the loop always exits via one of the return
