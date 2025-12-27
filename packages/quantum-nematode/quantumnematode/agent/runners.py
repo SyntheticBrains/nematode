@@ -780,6 +780,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=superpositions[0][2],
                     termination_reason=TerminationReason.GOAL_REACHED,
+                    food_history=None,
                 )
         msg = (
             "Failed to complete episode: "
@@ -791,4 +792,5 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
         return EpisodeResult(
             agent_path=superpositions[0][2],
             termination_reason=TerminationReason.MAX_STEPS,
+            food_history=None,
         )
