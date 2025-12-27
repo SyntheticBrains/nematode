@@ -11,6 +11,11 @@ from typing import TYPE_CHECKING, Any, Protocol
 import numpy as np
 
 from quantumnematode.brain.arch import ClassicalBrain
+from quantumnematode.dtypes import (  # noqa: TC001 - used at runtime
+    AgentPath,
+    FoodHistory,
+    GridPosition,
+)
 from quantumnematode.env import Direction, DynamicForagingEnvironment, StaticEnvironment
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import TerminationReason
@@ -59,14 +64,17 @@ class EpisodeResult:
 
     Attributes
     ----------
-    agent_path : list[tuple]
+    agent_path : AgentPath
         The path taken by the agent in the episode.
     termination_reason : TerminationReason
         The reason for episode termination, if applicable.
+    food_history : FoodHistory | None
+        Food positions at each step (DynamicForagingEnvironment only).
     """
 
-    agent_path: list[tuple]
+    agent_path: AgentPath
     termination_reason: TerminationReason
+    food_history: FoodHistory | None = None
 
 
 class EpisodeRunner(Protocol):
@@ -279,6 +287,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         return EpisodeResult(
                             agent_path=agent.path,
                             termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                            food_history=agent.food_history,
                         )
 
             # Update predators and check for collision (dynamic environment only)
@@ -312,6 +321,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.PREDATOR,
+                        food_history=agent.food_history,
                     )
 
                 # Move predators after agent moves
@@ -361,6 +371,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.PREDATOR,
+                        food_history=agent.food_history,
                     )
 
                 # Satiety decay (after predator movement)
@@ -399,6 +410,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return EpisodeResult(
                         agent_path=agent.path,
                         termination_reason=TerminationReason.STARVED,
+                        food_history=agent.food_history,
                     )
 
             # Classical brain learning step
@@ -418,7 +430,11 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             agent.brain.update_memory(reward)
 
-            agent.path.append(tuple(agent.env.agent_pos))
+            pos: GridPosition = (agent.env.agent_pos[0], agent.env.agent_pos[1])
+            agent.path.append(pos)
+            # Track food positions for chemotaxis validation
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                agent.food_history.append(list(agent.env.foods))
 
             # Track step for food distance efficiency calculation
             if isinstance(agent.env, DynamicForagingEnvironment):
@@ -484,6 +500,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.GOAL_REACHED,
+                    food_history=agent.food_history if agent.food_history else None,
                 )
 
             # Log distance to the goal (only for StaticEnvironment)
@@ -521,6 +538,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.MAX_STEPS,
+                    food_history=agent.food_history if agent.food_history else None,
                 )
 
             # Handle all food collected (for dynamic environments)
@@ -550,6 +568,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=agent.path,
                     termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
+                    food_history=agent.food_history,
                 )
 
         # This point is unreachable - the loop always exits via one of the return
@@ -698,7 +717,8 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                         new_env.move_agent(runner_up_action)
                         agent._episode_tracker.track_step()
                         new_brain.update_memory(reward)
-                        new_path.append(new_env.agent_pos)
+                        new_pos: GridPosition = (new_env.agent_pos[0], new_env.agent_pos[1])
+                        new_path.append(new_pos)
                         superpositions.append((new_brain, new_env, new_path))
 
                 if env_copy.reached_goal():
@@ -708,7 +728,8 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                     env_copy.move_agent(top_actions[0])
                     agent._episode_tracker.track_step()
                     brain_copy.update_memory(reward)
-                    path_copy.append(env_copy.agent_pos)
+                    copy_pos: GridPosition = (env_copy.agent_pos[0], env_copy.agent_pos[1])
+                    path_copy.append(copy_pos)
 
                 i += 1
                 if i >= total_superpositions:
@@ -759,6 +780,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                 return EpisodeResult(
                     agent_path=superpositions[0][2],
                     termination_reason=TerminationReason.GOAL_REACHED,
+                    food_history=None,
                 )
         msg = (
             "Failed to complete episode: "
@@ -770,4 +792,5 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
         return EpisodeResult(
             agent_path=superpositions[0][2],
             termination_reason=TerminationReason.MAX_STEPS,
+            food_history=None,
         )

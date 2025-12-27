@@ -201,6 +201,11 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         help="Optional notes about optimization approach (requires --save-benchmark).",
     )
+    parser.add_argument(
+        "--validate-chemotaxis",
+        action="store_true",
+        help="Display chemotaxis validation against C. elegans literature data.",
+    )
 
     return parser.parse_args()
 
@@ -592,6 +597,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
                 died_to_predator=died_to_predator_this_run,
+                food_history=step_result.food_history,
             )
             all_results.append(result)
 
@@ -831,6 +837,58 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             print(
                 f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
             )
+
+            # Display chemotaxis validation if requested
+            if (
+                args.validate_chemotaxis
+                and experiment_metadata.results.post_convergence_chemotaxis_index is not None
+            ):
+                results = experiment_metadata.results
+                print("\n" + "=" * 60)
+                print("Chemotaxis Validation (C. elegans Literature Comparison)")
+                print("=" * 60)
+                # Show post-convergence metrics (trained behavior, used for validation)
+                print("  Post-Convergence (Trained Behavior):")
+                print(
+                    f"    Chemotaxis Index (CI):  {results.post_convergence_chemotaxis_index:.3f}",
+                )
+                print(
+                    f"    Time in Attractant:     {results.post_convergence_time_in_attractant:.1%}",
+                )
+                print(
+                    f"    Approach Frequency:     {results.post_convergence_approach_frequency:.1%}",
+                )
+                print(
+                    f"    Path Efficiency:        {results.post_convergence_path_efficiency:.3f}",
+                )
+                print(
+                    f"  Validation Level:         {results.chemotaxis_validation_level}",
+                )
+                # Show all-run metrics for comparison (smaller font/indented)
+                if results.avg_chemotaxis_index is not None:
+                    print(f"  (All-run CI:              {results.avg_chemotaxis_index:.3f})")
+                print("-" * 60)
+                # Use dynamic literature source from benchmark
+                if results.literature_source:
+                    print(f"  Literature Reference: {results.literature_source}")
+                if results.biological_ci_range:
+                    ci_min, ci_max = results.biological_ci_range
+                    print(f"  Biological CI Range:  {ci_min:.2f} - {ci_max:.2f}")
+                if results.biological_ci_typical:
+                    print(f"  Typical Wild-Type CI: {results.biological_ci_typical:.2f}")
+                # Show match status
+                if results.matches_biology is True:
+                    print("  Status: MATCHES biological range")
+                elif results.matches_biology is False:
+                    level = results.chemotaxis_validation_level
+                    if level in ("minimum", "target"):
+                        print("  Status: ~ Approaching biological range")
+                    else:
+                        print("  Status: Below biological range")
+            elif args.validate_chemotaxis:
+                print(
+                    "\n[Chemotaxis validation not available - requires dynamic foraging environment]",
+                )
 
             if args.save_benchmark:
                 # Interactive benchmark submission

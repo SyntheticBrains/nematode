@@ -249,6 +249,32 @@ class ResultsMetadata(BaseModel):
         Range: 0.0 to 1.0, where 1.0 means perfect optimal navigation.
     composite_benchmark_score : float | None
         Weighted composite score combining success, efficiency, speed, and stability.
+    avg_chemotaxis_index : float | None
+        Average chemotaxis index across all runs (dynamic environments only).
+    avg_time_in_attractant : float | None
+        Average fraction of time spent near food (dynamic environments only).
+    avg_approach_frequency : float | None
+        Average fraction of steps moving toward food (dynamic environments only).
+    avg_path_efficiency : float | None
+        Average path efficiency (optimal/actual distance) (dynamic environments only).
+    post_convergence_chemotaxis_index : float | None
+        Chemotaxis index for post-convergence runs only (trained behavior).
+    post_convergence_time_in_attractant : float | None
+        Fraction of time near food for post-convergence runs.
+    post_convergence_approach_frequency : float | None
+        Fraction of steps toward food for post-convergence runs.
+    post_convergence_path_efficiency : float | None
+        Path efficiency for post-convergence runs.
+    chemotaxis_validation_level : str | None
+        Biological validation level based on post-convergence CI: none/minimum/target/excellent.
+    biological_ci_range : tuple[float, float] | None
+        Expected CI range from C. elegans literature (min, max).
+    biological_ci_typical : float | None
+        Typical/median CI value from C. elegans literature.
+    matches_biology : bool | None
+        Whether post-convergence CI falls within biological range.
+    literature_source : str | None
+        Citation for the biological data used for comparison.
     """
 
     total_runs: int
@@ -274,6 +300,23 @@ class ResultsMetadata(BaseModel):
     post_convergence_variance: float | None = None
     post_convergence_distance_efficiency: float | None = None
     composite_benchmark_score: float | None = None
+    # Chemotaxis validation metrics (added for biological validation)
+    # All-run chemotaxis metrics (includes learning phase)
+    avg_chemotaxis_index: float | None = None
+    avg_time_in_attractant: float | None = None
+    avg_approach_frequency: float | None = None
+    avg_path_efficiency: float | None = None
+    # Post-convergence chemotaxis metrics (trained behavior, used for biological validation)
+    post_convergence_chemotaxis_index: float | None = None
+    post_convergence_time_in_attractant: float | None = None
+    post_convergence_approach_frequency: float | None = None
+    post_convergence_path_efficiency: float | None = None
+    # Validation against biological literature (uses post-convergence metrics)
+    chemotaxis_validation_level: str | None = None
+    biological_ci_range: tuple[float, float] | None = None
+    biological_ci_typical: float | None = None
+    matches_biology: bool | None = None
+    literature_source: str | None = None
 
 
 class SystemMetadata(BaseModel):

@@ -11,6 +11,7 @@ from quantumnematode.agent.tracker import EpisodeTracker
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.dtypes import FoodHistory, GridPosition  # noqa: TC001 - used at runtime
 from quantumnematode.env import (
     BaseEnvironment,
     DynamicForagingEnvironment,
@@ -165,7 +166,11 @@ class QuantumNematodeAgent:
         else:
             self.env = env
 
-        self.path = [tuple(self.env.agent_pos)]
+        self.path: list[GridPosition] = [(self.env.agent_pos[0], self.env.agent_pos[1])]
+        # Track food positions at each step for chemotaxis validation
+        self.food_history: FoodHistory = []
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self.food_history = [list(self.env.foods)]
         self.max_body_length = min(
             self.env.grid_size - 1,
             max_body_length,
@@ -500,7 +505,11 @@ class QuantumNematodeAgent:
                 theme=self.env.theme,
                 rich_style_config=self.env.rich_style_config,
             )
-        self.path = [tuple(self.env.agent_pos)]
+        self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
+        # Track food positions at each step for chemotaxis validation
+        self.food_history = []
+        if isinstance(self.env, DynamicForagingEnvironment):
+            self.food_history = [list(self.env.foods)]
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
