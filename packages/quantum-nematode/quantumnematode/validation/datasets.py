@@ -15,6 +15,10 @@ from .chemotaxis import (
     get_validation_level,
 )
 
+# Project root and default dataset path for clearer path resolution
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+_DEFAULT_DATASET_PATH = _PROJECT_ROOT / "data" / "chemotaxis" / "literature_ci_values.json"
+
 
 @dataclass
 class LiteratureSource:
@@ -102,12 +106,7 @@ def load_chemotaxis_dataset(
         FileNotFoundError: If dataset file doesn't exist
         ValueError: If dataset format is invalid
     """
-    if dataset_path is None:
-        # Default location relative to package
-        package_dir = Path(__file__).parent.parent.parent.parent.parent
-        dataset_path = package_dir / "data" / "chemotaxis" / "literature_ci_values.json"
-
-    dataset_path = Path(dataset_path)
+    dataset_path = _DEFAULT_DATASET_PATH if dataset_path is None else Path(dataset_path)
 
     if not dataset_path.exists():
         # Return a default dataset if file doesn't exist yet
