@@ -163,6 +163,51 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 ---
 
+## Work Stream 5: Reproducibility & Metrics Enhancement
+
+### 5.1 Create Seeding Infrastructure
+- [ ] Create `packages/quantum-nematode/quantumnematode/utils/seeding.py`
+- [ ] Implement `generate_seed()` using `secrets.randbelow(2**32)`
+- [ ] Implement `set_global_seed(seed: int)` for numpy/torch
+- [ ] Implement `get_rng(seed: int | None)` for seeded RNG creation
+- [ ] Implement `ensure_seed(seed: int | None)` for auto-generation
+
+**Validation**: Unit tests for seed generation and RNG creation
+
+### 5.2 Fix Environment Seeding
+- [ ] Replace `secrets` module usage in `env/env.py` with seeded numpy RNG
+- [ ] Add `seed` parameter to environment config
+- [ ] Ensure food spawning, predator movement, initial positions are deterministic
+
+**Validation**: Same seed produces identical episode results
+
+### 5.3 Add Brain Seed Support
+- [ ] Add `seed` config parameter to `PPOBrainConfig`
+- [ ] Add `seed` config parameter to `MLPBrainConfig`
+- [ ] Add `seed` config parameter to `ModularBrainConfig`
+- [ ] Update config loader to pass seed through
+- [ ] Ensure weight initialization and action selection are reproducible
+
+**Validation**: Same seed produces identical brain behavior
+
+### 5.4 Add Enhanced Metrics
+- [ ] Implement `learning_speed_episodes` calculation in convergence.py
+- [ ] Implement `stability` metric calculation
+- [ ] Add per-run statistics aggregation (mean/std/min/max)
+- [ ] Add `seed` field to `SimulationResult`
+
+**Validation**: Metrics computed correctly for test cases
+
+### 5.5 Migrate to NematodeBench Format
+- [ ] Update `experiment/metadata.py` to use StatValue objects
+- [ ] Update `benchmark_submit.py` to output NematodeBench format
+- [ ] Update `evaluate_submission.py` to validate NematodeBench schema
+- [ ] Update documentation for unified format
+
+**Validation**: Submissions validate against NematodeBench schema
+
+---
+
 ## Finalization
 
 ### 5.1 Update OpenSpec Specs
