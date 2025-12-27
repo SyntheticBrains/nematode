@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.dtypes import AgentPath, FoodHistory
 
 
 class TerminationReason(str, Enum):
@@ -44,7 +45,7 @@ class SimulationResult(BaseModel):
         The run number of the simulation.
     steps : int
         The number of steps taken in the simulation.
-    path : list[tuple[int, int]]
+    path : AgentPath
         The path taken by the agent during the simulation.
     total_reward : float
         The total reward received during the simulation.
@@ -73,13 +74,13 @@ class SimulationResult(BaseModel):
         Number of successful predator evasions (predator environments only).
     died_to_predator : bool | None
         Whether run ended due to predator death (predator environments only).
-    food_history : list[list[tuple[int, int]]] | None
+    food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
     """
 
     run: int
     steps: int
-    path: list[tuple[int, int]]
+    path: AgentPath
     total_reward: float
     last_total_reward: float
     termination_reason: TerminationReason
@@ -93,7 +94,7 @@ class SimulationResult(BaseModel):
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_predator: bool | None = None
-    food_history: list[list[tuple[int, int]]] | None = None
+    food_history: FoodHistory | None = None
 
 
 TrackingRunIndex = int

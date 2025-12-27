@@ -1,5 +1,11 @@
 """Validation module for comparing agent behavior against biological data."""
 
+from quantumnematode.dtypes import (
+    Position,
+    PositionFoodHistory,
+    PositionPath,
+)
+
 from .chemotaxis import (
     ChemotaxisMetrics,
     ValidationLevel,
@@ -21,6 +27,9 @@ __all__ = [
     "ChemotaxisMetrics",
     "ChemotaxisValidationBenchmark",
     "LiteratureSource",
+    "Position",
+    "PositionFoodHistory",
+    "PositionPath",
     "ValidationLevel",
     "ValidationResult",
     "calculate_chemotaxis_index",
