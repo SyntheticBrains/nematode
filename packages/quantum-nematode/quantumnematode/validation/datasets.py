@@ -260,10 +260,10 @@ class ChemotaxisValidationBenchmark:
                 "validation_levels": {},
             }
 
-        # Calculate statistics
+        # Calculate statistics (using sample variance with Bessel's correction)
         cis = [m.chemotaxis_index for m in all_metrics]
         mean_ci = sum(cis) / len(cis)
-        variance = sum((ci - mean_ci) ** 2 for ci in cis) / len(cis)
+        variance = sum((ci - mean_ci) ** 2 for ci in cis) / (len(cis) - 1) if len(cis) > 1 else 0.0
         std_ci = variance**0.5
 
         # Validate each run
