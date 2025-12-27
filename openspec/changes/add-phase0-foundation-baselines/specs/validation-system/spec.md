@@ -96,13 +96,39 @@ The system SHALL compare agent behavior to biological data and produce validatio
 - **AND** SHALL output validation_level (minimum/target/excellent/none)
 - **AND** SHALL output the literature source used
 
+### Requirement: Post-Convergence Chemotaxis Metrics
+The system SHALL compute chemotaxis metrics separately for post-convergence runs to measure trained agent behavior.
+
+#### Scenario: Post-Convergence Calculation
+- **WHEN** chemotaxis metrics are aggregated across a training session
+- **THEN** the system SHALL compute all-run metrics (including learning phase)
+- **AND** SHALL compute post-convergence metrics (trained behavior only)
+- **AND** post-convergence metrics SHALL only include runs after convergence is detected
+- **AND** if convergence is not detected, post-convergence metrics SHALL use all runs
+
+#### Scenario: Biological Validation Uses Post-Convergence
+- **WHEN** comparing agent behavior against biological literature
+- **THEN** the system SHALL use post-convergence CI for validation (trained behavior)
+- **AND** SHALL report all-run CI separately for reference
+- **AND** biological_matches SHALL be based on post-convergence CI within biological range
+
+#### Scenario: Post-Convergence Metrics Fields
+- **WHEN** experiment results include chemotaxis validation
+- **THEN** the metadata SHALL include post_convergence_chemotaxis_index
+- **AND** SHALL include post_convergence_time_in_attractant
+- **AND** SHALL include post_convergence_approach_frequency
+- **AND** SHALL include post_convergence_path_efficiency
+- **AND** SHALL include avg_chemotaxis_index (all-run average for reference)
+
 ### Requirement: Experiment Tracking Integration
 The system SHALL integrate chemotaxis validation with existing experiment tracking.
 
 #### Scenario: Metadata Extension
 - **WHEN** experiment metadata is saved for an experiment with chemotaxis calculation enabled
-- **THEN** the metadata SHALL include chemotaxis_index field
+- **THEN** the metadata SHALL include avg_chemotaxis_index (all-run average)
+- **AND** SHALL include post_convergence_chemotaxis_index (trained behavior)
 - **AND** SHALL include additional metrics (time_in_attractant, approach_frequency, path_efficiency)
+- **AND** SHALL include post-convergence versions of additional metrics
 - **AND** SHALL include validation_result if validation was performed
 
 #### Scenario: CLI Integration
