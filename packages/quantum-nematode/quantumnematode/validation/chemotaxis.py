@@ -286,3 +286,130 @@ def get_validation_level(ci: float) -> ValidationLevel:
     if ci >= CI_THRESHOLD_MINIMUM:
         return ValidationLevel.MINIMUM
     return ValidationLevel.NONE
+
+
+def calculate_chemotaxis_index_stepwise(
+    positions: list[tuple[float, float]],
+    food_history: list[list[tuple[float, float]]],
+    attractant_zone_radius: float = 5.0,
+) -> tuple[float, int, int]:
+    """Calculate chemotaxis index using step-by-step food positions.
+
+    This is more accurate for dynamic environments where food respawns,
+    as it compares each agent position against the food positions that
+    existed at that specific step, rather than using a union of all
+    food positions across the episode.
+
+    Uses the standard formula: CI = (N_attractant - N_control) / N_total
+
+    Args:
+        positions: List of (x, y) agent positions for each step
+        food_history: List of food position lists, one per step (same length as positions)
+        attractant_zone_radius: Distance threshold for attractant zone
+
+    Returns
+    -------
+        Tuple of (chemotaxis_index, steps_in_attractant, steps_in_control)
+        Returns (0.0, 0, 0) for empty trajectories.
+    """
+    if not positions or not food_history:
+        return 0.0, 0, 0
+
+    n_total = len(positions)
+    n_attractant = 0
+    n_control = 0
+
+    for i, pos in enumerate(positions):
+        # Get food positions at this specific step
+        # Use last available food positions if history is shorter than path
+        food_idx = min(i, len(food_history) - 1)
+        food_positions = food_history[food_idx]
+
+        if not food_positions:
+            # No food at this step counts as control zone
+            n_control += 1
+            continue
+
+        in_attractant = False
+        for food_pos in food_positions:
+            distance = math.sqrt(
+                (pos[0] - food_pos[0]) ** 2 + (pos[1] - food_pos[1]) ** 2,
+            )
+            if distance <= attractant_zone_radius:
+                in_attractant = True
+                break
+
+        if in_attractant:
+            n_attractant += 1
+        else:
+            n_control += 1
+
+    ci = (n_attractant - n_control) / n_total
+    return ci, n_attractant, n_control
+
+
+def calculate_chemotaxis_metrics_stepwise(
+    positions: list[tuple[float, float]],
+    food_history: list[list[tuple[float, float]]],
+    attractant_zone_radius: float = 5.0,
+    minimum_reliable_steps: int = 10,
+) -> ChemotaxisMetrics:
+    """Calculate comprehensive chemotaxis metrics using step-by-step food positions.
+
+    This version is more accurate for dynamic environments where food respawns,
+    as it uses the food positions that existed at each specific step.
+
+    Args:
+        positions: List of (x, y) agent positions for each step
+        food_history: List of food position lists, one per step
+        attractant_zone_radius: Distance threshold for attractant zone
+        minimum_reliable_steps: Minimum steps for reliable statistics
+
+    Returns
+    -------
+        ChemotaxisMetrics with all computed values
+    """
+    total_steps = len(positions)
+
+    # Handle empty trajectory
+    if total_steps == 0 or not food_history:
+        return ChemotaxisMetrics(
+            chemotaxis_index=0.0,
+            time_in_attractant=0.0,
+            approach_frequency=0.0,
+            path_efficiency=1.0,
+            total_steps=0,
+            steps_in_attractant=0,
+            steps_in_control=0,
+            reliable=False,
+        )
+
+    # Calculate core CI using step-by-step food positions
+    ci, n_attractant, n_control = calculate_chemotaxis_index_stepwise(
+        positions,
+        food_history,
+        attractant_zone_radius,
+    )
+
+    # For approach frequency and path efficiency, we use all unique food positions
+    # as these metrics measure overall navigation behavior rather than moment-by-moment
+    all_food_positions: set[tuple[float, float]] = set()
+    for step_foods in food_history:
+        all_food_positions.update(step_foods)
+    food_positions_list = list(all_food_positions)
+
+    # Calculate additional metrics
+    time_in_attractant = n_attractant / total_steps if total_steps > 0 else 0.0
+    approach_frequency = _calculate_approach_frequency(positions, food_positions_list)
+    path_efficiency = _calculate_path_efficiency(positions, food_positions_list)
+
+    return ChemotaxisMetrics(
+        chemotaxis_index=ci,
+        time_in_attractant=time_in_attractant,
+        approach_frequency=approach_frequency,
+        path_efficiency=path_efficiency,
+        total_steps=total_steps,
+        steps_in_attractant=n_attractant,
+        steps_in_control=n_control,
+        reliable=total_steps >= minimum_reliable_steps,
+    )
