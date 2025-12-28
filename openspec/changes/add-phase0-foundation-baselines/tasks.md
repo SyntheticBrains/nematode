@@ -144,11 +144,11 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 ## Work Stream 4: Optimization Method Documentation
 
 ### 4.1 Create Documentation File
-- [ ] Create `docs/OPTIMIZATION_METHODS.md`
-- [ ] Write summary table (Architecture → Method mapping)
-- [ ] Document quantum findings (CMA-ES 88% vs gradients 22%)
-- [ ] Document classical findings (REINFORCE, PPO)
-- [ ] Document spiking findings (surrogate gradients)
+- [x] Create `docs/OPTIMIZATION_METHODS.md`
+- [x] Write summary table (Architecture → Method mapping)
+- [x] Document quantum findings (CMA-ES 88% vs gradients 22%)
+- [x] Document classical findings (REINFORCE, PPO)
+- [x] Document spiking findings (surrogate gradients)
 
 ### 4.2 Add Configuration Examples
 - [ ] Add CMA-ES config example for ModularBrain
