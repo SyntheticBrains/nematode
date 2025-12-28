@@ -14,33 +14,28 @@ from quantumnematode.logging_config import logger
 EXPERIMENTS_DIR = Path.cwd() / "experiments"
 
 
-def ensure_experiments_dir() -> Path:
-    """Ensure experiments directory exists.
-
-    Returns
-    -------
-    Path
-        Path to experiments directory.
-    """
-    EXPERIMENTS_DIR.mkdir(parents=True, exist_ok=True)
-    return EXPERIMENTS_DIR
-
-
-def save_experiment(metadata: ExperimentMetadata) -> Path:
+def save_experiment(
+    metadata: ExperimentMetadata,
+    base_dir: Path,
+) -> Path:
     """Save experiment metadata to JSON file.
 
     Parameters
     ----------
     metadata : ExperimentMetadata
         Experiment metadata to save.
+    base_dir : Path
+        Directory to save the experiment. The directory will be created if it
+        doesn't exist. The JSON file is saved as <experiment_id>.json within
+        this directory.
 
     Returns
     -------
     Path
         Path to saved JSON file.
     """
-    experiments_dir = ensure_experiments_dir()
-    filepath = experiments_dir / f"{metadata.experiment_id}.json"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    filepath = base_dir / f"{metadata.experiment_id}.json"
 
     # Write atomically using temporary file
     temp_filepath = filepath.with_suffix(".tmp")

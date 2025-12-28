@@ -876,7 +876,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Save experiment to experiments/<id>/ folder structure
             # This creates a self-contained experiment folder for potential benchmark submission
             experiment_dir = Path.cwd() / "experiments" / experiment_metadata.experiment_id
-            experiment_dir.mkdir(parents=True, exist_ok=True)
 
             # Save experiment metadata JSON
             experiment_path = save_experiment(
