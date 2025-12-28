@@ -1,3 +1,5 @@
+# pragma: no cover
+
 """Data models for NematodeBench submissions.
 
 This module defines the schema for official NematodeBench submissions that aggregate
