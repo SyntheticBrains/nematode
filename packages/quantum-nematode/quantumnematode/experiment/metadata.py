@@ -621,6 +621,7 @@ class ExperimentMetadata(BaseModel):
                 predators_enabled=summary.get("predators_enabled", False),
             )
             data["brain"] = BrainMetadata(type=summary["brain_type"])
+            # Placeholder values for lean format; full reward config is in the YAML file
             data["reward"] = RewardMetadata(
                 reward_goal=0.0,
                 reward_distance_scale=0.0,
@@ -633,6 +634,6 @@ class ExperimentMetadata(BaseModel):
                 penalty_predator_death=0.0,
                 penalty_predator_proximity=0.0,
             )
-            data["gradient"] = GradientMetadata()
+            data["gradient"] = GradientMetadata()  # Placeholder for lean format
 
         return cls(**data)
