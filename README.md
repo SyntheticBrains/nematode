@@ -205,7 +205,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 ### Current Leaders
 
-*No benchmarks submitted yet. Be the first to set a benchmark!*
+*No NematodeBench submissions yet. Be the first to submit!*
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
 ## 📊 Example Output
