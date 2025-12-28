@@ -111,6 +111,7 @@ from quantumnematode.utils.config_loader import (
     create_parameter_initializer_instance,
     load_simulation_config,
 )
+from quantumnematode.utils.seeding import ensure_seed
 
 DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
@@ -206,6 +207,12 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="Display chemotaxis validation against C. elegans literature data.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility. If not provided, a random seed is auto-generated.",
+    )
 
     return parser.parse_args()
 
@@ -219,6 +226,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     max_steps = DEFAULT_MAX_STEPS
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
+
+    # Initialize seed for reproducibility (auto-generate if not provided)
+    simulation_seed = ensure_seed(args.seed)
+    logger.info(f"Using simulation seed: {simulation_seed}")
     shots = DEFAULT_SHOTS
     body_length = DEFAULT_AGENT_BODY_LENGTH
     qubits = DEFAULT_QUBITS
@@ -239,17 +250,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     match brain_type:
         case BrainType.MODULAR:
-            brain_config = ModularBrainConfig()
+            brain_config = ModularBrainConfig(seed=simulation_seed)
         case BrainType.MLP:
-            brain_config = MLPBrainConfig()
+            brain_config = MLPBrainConfig(seed=simulation_seed)
         case BrainType.PPO:
-            brain_config = PPOBrainConfig()
+            brain_config = PPOBrainConfig(seed=simulation_seed)
         case BrainType.QMLP:
-            brain_config = QMLPBrainConfig()
+            brain_config = QMLPBrainConfig(seed=simulation_seed)
         case BrainType.QMODULAR:
-            brain_config = QModularBrainConfig()
+            brain_config = QModularBrainConfig(seed=simulation_seed)
         case BrainType.SPIKING:
-            brain_config = SpikingBrainConfig()
+            brain_config = SpikingBrainConfig(seed=simulation_seed)
 
     # Authenticate and setup Q-CTRL if needed
     perf_mgmt = None
@@ -269,6 +280,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         config = load_simulation_config(config_file)
 
         brain_config = configure_brain(config)
+        # Ensure CLI seed takes precedence, otherwise use config seed or auto-generated
+        if brain_config.seed is None or args.seed is not None:
+            brain_config = brain_config.model_copy(update={"seed": simulation_seed})
+        else:
+            simulation_seed = brain_config.seed
+            logger.info(f"Using seed from config file: {simulation_seed}")
+
         brain_type = (
             BrainType(config.brain.name)
             if config.brain is not None and isinstance(config.brain, BrainContainerConfig)
@@ -332,6 +350,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
     logger.info(f"Shots: {shots}")
+    logger.info(f"Seed: {simulation_seed}")
 
     # Select the brain architecture
     brain = setup_brain_model(
@@ -368,6 +387,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             viewport_size=dynamic_config.viewport_size,
             max_body_length=body_length,
             theme=theme,
+            seed=simulation_seed,
             # Predator parameters
             predators_enabled=predator_config.enabled,
             num_predators=predator_config.count,
@@ -396,6 +416,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             grid_size=static_config.grid_size,
             max_body_length=body_length,
             theme=theme,
+            seed=simulation_seed,
         )
         logger.info(
             f"Static maze environment: {static_config.grid_size}x{static_config.grid_size} grid",
