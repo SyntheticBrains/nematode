@@ -43,6 +43,7 @@ from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
+from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 # Default hyperparameters
 DEFAULT_ACTOR_HIDDEN_DIM = 64
@@ -90,9 +91,15 @@ class PPOBrainConfig(BrainConfig):
 class RolloutBuffer:
     """Buffer for storing rollout experience for PPO updates."""
 
-    def __init__(self, buffer_size: int, device: torch.device) -> None:
+    def __init__(
+        self,
+        buffer_size: int,
+        device: torch.device,
+        rng: np.random.Generator | None = None,
+    ) -> None:
         self.buffer_size = buffer_size
         self.device = device
+        self.rng = rng if rng is not None else np.random.default_rng()
         self.reset()
 
     def reset(self) -> None:
@@ -193,8 +200,9 @@ class RolloutBuffer:
         # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-        # Generate random indices
-        indices = torch.randperm(batch_size, device=self.device)
+        # Generate random indices using seeded RNG for reproducibility
+        indices_np = self.rng.permutation(batch_size)
+        indices = torch.tensor(indices_np, device=self.device)
 
         for start in range(0, batch_size, minibatch_size):
             end = start + minibatch_size
@@ -230,6 +238,12 @@ class PPOBrain(ClassicalBrain):
         super().__init__()
 
         logger.info(f"Initializing PPOBrain with config: {config}")
+
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        set_global_seed(self.seed)  # Set global numpy/torch seeds
+        logger.info(f"PPOBrain using seed: {self.seed}")
 
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -271,8 +285,8 @@ class PPOBrain(ClassicalBrain):
             lr=config.learning_rate,
         )
 
-        # Rollout buffer
-        self.buffer = RolloutBuffer(config.rollout_buffer_size, self.device)
+        # Rollout buffer (pass RNG for reproducible minibatch shuffling)
+        self.buffer = RolloutBuffer(config.rollout_buffer_size, self.device, rng=self.rng)
 
         # State tracking
         self.training = True

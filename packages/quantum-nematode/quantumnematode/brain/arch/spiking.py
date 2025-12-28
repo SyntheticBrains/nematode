@@ -50,6 +50,7 @@ from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
+from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 # Default configuration parameters
 DEFAULT_HIDDEN_SIZE = 128
@@ -222,6 +223,12 @@ class SpikingBrain(ClassicalBrain):
         super().__init__()
 
         logger.info(f"Initializing SpikingBrain with surrogate gradients: {config}")
+
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        set_global_seed(self.seed)  # Set global numpy/torch seeds
+        logger.info(f"SpikingBrain using seed: {self.seed}")
 
         self.config = config
         self.input_dim = input_dim

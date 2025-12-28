@@ -114,6 +114,7 @@ from quantumnematode.optimizers.gradient_methods import (
     compute_gradients,
 )
 from quantumnematode.optimizers.learning_rate import ConstantLearningRate, DynamicLearningRate
+from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 if TYPE_CHECKING:
     from qiskit.primitives import PrimitiveResult
@@ -283,6 +284,11 @@ class ModularBrain(QuantumBrain):
         logger.info(
             f"Using configuration: {config}",
         )
+
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        logger.info(f"ModularBrain using seed: {self.seed}")
 
         self.num_qubits: int = num_qubits
         self.modules: dict[ModuleName, list[int]] = config.modules or deepcopy(DEFAULT_MODULES)
@@ -779,8 +785,7 @@ class ModularBrain(QuantumBrain):
             if top_randomize:
                 actions = [a.state for a in sorted_actions]
                 probs = [a.probability for a in sorted_actions]
-                rng = np.random.default_rng()
-                chosen_state = rng.choice(actions, p=probs)
+                chosen_state = self.rng.choice(actions, p=probs)
                 chosen_action = next(a for a in sorted_actions if a.state == chosen_state)
                 self.latest_data.action = chosen_action
                 self.history_data.actions.append(chosen_action)
@@ -1464,7 +1469,6 @@ class ModularBrain(QuantumBrain):
                 self.gradient_max_norm,
             )
 
-        rng = np.random.default_rng()
         for i, k in enumerate(param_keys):
             # L2 regularization
             reg = self.config.l2_reg * self.parameter_values[k]
@@ -1474,7 +1478,7 @@ class ModularBrain(QuantumBrain):
             effective_noise_std = 0.0
             if init_lr > 0:
                 effective_noise_std = self.config.noise_std * (learning_rate / init_lr)
-            noise = rng.normal(0, effective_noise_std)
+            noise = self.rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
             # Note: Using adaptive momentum decay instead of fixed momentum_decay
