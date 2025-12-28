@@ -684,7 +684,8 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                 )
 
                 if config.top_n_randomize:
-                    rng = np.random.default_rng()
+                    # Use seeded RNG from environment for reproducibility
+                    rng = env_copy.rng
                     probs = np.array([a.probability for a in actions], dtype=float)
                     probs_sum = probs.sum()
                     if probs_sum > 0:
