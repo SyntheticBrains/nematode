@@ -311,7 +311,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     session_refs: list[SessionReference] = []
-    for exp, src_path in zip(experiments, experiment_paths, strict=False):
+    for exp, src_path in zip(experiments, experiment_paths, strict=True):
         dest_path = artifacts_dir / exp.experiment_id
         if dest_path.exists():
             print(f"  ! {exp.experiment_id} already exists in artifacts, skipping copy")
