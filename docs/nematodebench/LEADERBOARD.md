@@ -17,7 +17,7 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-### Dynamic Small (≤20x20)
+### Foraging Small (≤20x20)
 
 #### Quantum Architectures
 
@@ -27,7 +27,7 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-### Dynamic Medium (≤50x50)
+### Foraging Medium (≤50x50)
 
 #### Quantum Architectures
 
@@ -37,7 +37,7 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-### Dynamic Large (>50x50)
+### Foraging Large (>50x50)
 
 #### Quantum Architectures
 
@@ -47,7 +47,7 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-### Dynamic Predator Small (≤20x20)
+### Predator Small (≤20x20)
 
 #### Quantum Architectures
 
@@ -57,7 +57,7 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-### Dynamic Predator Medium (≤50x50)
+### Predator Medium (≤50x50)
 
 #### Quantum Architectures
 
@@ -67,7 +67,7 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-### Dynamic Predator Large (>50x50)
+### Predator Large (>50x50)
 
 #### Quantum Architectures
 
