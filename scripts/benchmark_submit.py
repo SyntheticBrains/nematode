@@ -328,6 +328,11 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         session_seed = 0
         if exp.results.per_run_results and len(exp.results.per_run_results) > 0:
             session_seed = exp.results.per_run_results[0].seed
+        else:
+            print(
+                f"  Warning: No per_run_results for {exp.experiment_id}, using seed=0",
+                file=sys.stderr,
+            )
 
         session_refs.append(
             SessionReference(
