@@ -196,10 +196,14 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 **Validation**: Same seed produces identical brain behavior
 
 ### 5.4 Add Enhanced Metrics
-- [ ] Implement `learning_speed_episodes` calculation in convergence.py
-- [ ] Implement `stability` metric calculation
-- [ ] Add per-run statistics aggregation (mean/std/min/max)
-- [ ] Add `seed` field to `SimulationResult`
+- [x] Implement `learning_speed_episodes` calculation in convergence.py
+- [x] Implement `learning_speed` normalized metric (0-1)
+- [x] Implement `stability` metric calculation (coefficient of variation based)
+- [x] Add learning_speed, learning_speed_episodes, stability to ConvergenceMetrics
+- [x] Export new functions from benchmark module
+- [x] Add per-run statistics aggregation (mean/std/min/max) via StatValue class
+- [x] Add `seed` field to `SimulationResult`
+- [x] Add learning_speed, learning_speed_episodes, stability, per_run_results to ResultsMetadata
 
 **Validation**: Metrics computed correctly for test cases
 
