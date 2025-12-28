@@ -279,13 +279,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if config_file:
         config = load_simulation_config(config_file)
 
-        brain_config = configure_brain(config)
-        # Ensure CLI seed takes precedence, otherwise use config seed or auto-generated
-        if brain_config.seed is None or args.seed is not None:
-            brain_config = brain_config.model_copy(update={"seed": simulation_seed})
-        else:
-            simulation_seed = brain_config.seed
+        # Handle seed precedence: CLI > config file > auto-generated
+        if args.seed is not None:
+            # CLI seed takes highest precedence (already set in simulation_seed)
+            pass
+        elif config.seed is not None:
+            # Use seed from config file root level
+            simulation_seed = config.seed
             logger.info(f"Using seed from config file: {simulation_seed}")
+
+        brain_config = configure_brain(config)
+        # Always update brain config with the resolved simulation seed
+        brain_config = brain_config.model_copy(update={"seed": simulation_seed})
 
         brain_type = (
             BrainType(config.brain.name)
