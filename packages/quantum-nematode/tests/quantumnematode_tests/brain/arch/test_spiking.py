@@ -539,13 +539,10 @@ class TestSpikingBrainIntegration:
 
     def test_deterministic_behavior_with_seed(self):
         """Test that brain behavior is deterministic when using fixed random seed."""
-        config = SpikingBrainConfig(hidden_size=4, num_timesteps=10)
+        # Create two identical brains with same seed via config
+        config = SpikingBrainConfig(hidden_size=4, num_timesteps=10, seed=42)
 
-        # Create two identical brains with same seed
-        torch.manual_seed(42)
         brain1 = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
-
-        torch.manual_seed(42)
         brain2 = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         # Should have identical initial parameters

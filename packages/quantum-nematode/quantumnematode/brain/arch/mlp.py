@@ -39,6 +39,7 @@ from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
+from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 DEFAULT_HIDDEN_DIM = 64
 DEFAULT_NUM_HIDDEN_LAYERS = 2
@@ -92,6 +93,12 @@ class MLPBrain(ClassicalBrain):
         logger.info(
             f"Using configuration: {config}",
         )
+
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        set_global_seed(self.seed)  # Set global numpy/torch seeds
+        logger.info(f"MLPBrain using seed: {self.seed}")
 
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -286,8 +293,7 @@ class MLPBrain(ClassicalBrain):
         probs_temp = torch.softmax(logits / temperature, dim=-1)
         probs_temp_np = probs_temp.detach().cpu().numpy()
 
-        rng = np.random.default_rng()
-        action_idx = rng.choice(self.num_actions, p=probs_temp_np)
+        action_idx = self.rng.choice(self.num_actions, p=probs_temp_np)
         action_name = self.action_set[action_idx]
 
         # Store log probability for learning (using original probs, not temperature)

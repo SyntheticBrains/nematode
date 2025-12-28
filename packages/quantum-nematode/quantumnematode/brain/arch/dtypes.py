@@ -37,6 +37,8 @@ class DeviceType(Enum):
 class BrainConfig(BaseModel):
     """Configuration for the brain architecture."""
 
+    seed: int | None = None  # Random seed for reproducibility
+
 
 BRAIN_TYPES = Literal[
     BrainType.MODULAR,
