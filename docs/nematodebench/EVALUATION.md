@@ -88,10 +88,10 @@ Capped at [0, 1].
 
 ## Statistical Requirements
 
-### Minimum Runs
+### Minimum Sessions and Runs
 
-- **Required:** 50 independent training runs
-- **Recommended:** 100 runs for tight confidence intervals
+- **Required:** 10 sessions × 50 runs per session (500 total runs minimum)
+- **Recommended:** Additional sessions for tighter confidence intervals
 
 ### Confidence Intervals
 
