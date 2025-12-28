@@ -427,7 +427,7 @@ def generate_leaderboard_md() -> str:
             "",
             "---",
             "",
-            "*Last updated: Auto-generated from benchmark submissions.*",
+            "_Last updated: Auto-generated from benchmark submissions._",
             "",
         ],
     )
