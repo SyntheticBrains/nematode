@@ -159,6 +159,24 @@ def determine_category(experiment: ExperimentMetadata) -> str:
     return f"{env_category}/{brain_category}"
 
 
+def _stat_value_or_zero(values: list[float]) -> StatValue:
+    """Create StatValue from values, or return all-zeros if empty.
+
+    Parameters
+    ----------
+    values : list[float]
+        List of values to aggregate.
+
+    Returns
+    -------
+    StatValue
+        Aggregated statistics, or zeros if input is empty.
+    """
+    if values:
+        return StatValue.from_values(values)
+    return StatValue(mean=0.0, std=0.0, min=0.0, max=0.0)
+
+
 def aggregate_metrics(experiments: list[ExperimentMetadata]) -> AggregateMetrics:
     """Aggregate metrics across multiple experiments using StatValue.
 
@@ -197,49 +215,14 @@ def aggregate_metrics(experiments: list[ExperimentMetadata]) -> AggregateMetrics
     ]
 
     return AggregateMetrics(
-        success_rate=StatValue.from_values(success_rates)
-        if success_rates
-        else StatValue(
-            mean=0.0,
-            std=0.0,
-            min=0.0,
-            max=0.0,
-        ),
-        composite_score=StatValue.from_values(composite_scores)
-        if composite_scores
-        else StatValue(
-            mean=0.0,
-            std=0.0,
-            min=0.0,
-            max=0.0,
-        ),
+        success_rate=_stat_value_or_zero(success_rates),
+        composite_score=_stat_value_or_zero(composite_scores),
         distance_efficiency=StatValue.from_values(distance_efficiencies)
         if distance_efficiencies
         else None,
-        learning_speed=StatValue.from_values(learning_speeds)
-        if learning_speeds
-        else StatValue(
-            mean=0.0,
-            std=0.0,
-            min=0.0,
-            max=0.0,
-        ),
-        learning_speed_episodes=StatValue.from_values(learning_speed_episodes)
-        if learning_speed_episodes
-        else StatValue(
-            mean=0.0,
-            std=0.0,
-            min=0.0,
-            max=0.0,
-        ),
-        stability=StatValue.from_values(stabilities)
-        if stabilities
-        else StatValue(
-            mean=0.0,
-            std=0.0,
-            min=0.0,
-            max=0.0,
-        ),
+        learning_speed=_stat_value_or_zero(learning_speeds),
+        learning_speed_episodes=_stat_value_or_zero(learning_speed_episodes),
+        stability=_stat_value_or_zero(stabilities),
     )
 
 
