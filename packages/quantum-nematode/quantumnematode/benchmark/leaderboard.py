@@ -403,6 +403,8 @@ def generate_leaderboard_md() -> str:
         "",
         "For submission guidelines, see [SUBMISSION_GUIDE.md](SUBMISSION_GUIDE.md).",
         "",
+        "## Categories",
+        "",
     ]
 
     # Add all category tables
