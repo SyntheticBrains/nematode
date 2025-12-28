@@ -197,7 +197,14 @@ def aggregate_metrics(experiments: list[ExperimentMetadata]) -> AggregateMetrics
     ]
 
     return AggregateMetrics(
-        success_rate=StatValue.from_values(success_rates),
+        success_rate=StatValue.from_values(success_rates)
+        if success_rates
+        else StatValue(
+            mean=0.0,
+            std=0.0,
+            min=0.0,
+            max=0.0,
+        ),
         composite_score=StatValue.from_values(composite_scores)
         if composite_scores
         else StatValue(
