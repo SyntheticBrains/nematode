@@ -47,7 +47,7 @@ from quantumnematode.brain.modules import (
 )
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
-from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
+from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 # Defaults for Q-learning specific parameters
 DEFAULT_BUFFER_SIZE = 1800
@@ -179,7 +179,6 @@ class QModularBrain:
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
-        set_global_seed(self.seed)  # Set global numpy/torch seeds
         self.quantum_seed = self.seed  # Preserve for quantum parameter initialization
         logger.info(f"QModularBrain using seed: {self.seed}")
 
