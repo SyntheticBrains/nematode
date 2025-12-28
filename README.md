@@ -187,20 +187,19 @@ Track and compare performance across different brain architectures and optimizat
 ### Quick Start with Benchmarks
 
 ```bash
-# Run a simulation with experiment tracking
-uv run scripts/run_simulation.py \
-  --config configs/your_config.yml \
-  --track-experiment
+# Run 10+ independent training sessions
+for session in {1..10}; do
+    uv run scripts/run_simulation.py \
+        --config configs/your_config.yml \
+        --track-experiment \
+        --runs 50
+done
 
-# View your results
-uv run scripts/experiment_query.py list
-uv run scripts/experiment_query.py show <experiment-id>
-
-# Submit as a benchmark
-uv run scripts/benchmark_submit.py submit <experiment-id> \
-  --contributor "Your Name" \
-  --github "your-username" \
-  --notes "Your optimization approach"
+# Submit all sessions together
+uv run scripts/benchmark_submit.py \
+    --experiments experiments/* \
+    --category foraging_small/classical \
+    --contributor "Your Name"
 ```
 
 ### Current Leaders
