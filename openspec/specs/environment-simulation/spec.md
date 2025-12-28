@@ -439,20 +439,20 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 #### Scenario: Predator Quantum Benchmarks
 - **GIVEN** a simulation with quantum brain and `predators.enabled: true`
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_small_quantum`, `dynamic_predator_medium_quantum`, or `dynamic_predator_large_quantum`
+- **THEN** the category SHALL be `predator_small/quantum`, `predator_medium/quantum`, or `predator_large/quantum`
 - **AND** this SHALL be based on grid size using same thresholds as non-predator benchmarks
 - **AND** small ≤ 20×20, medium ≤ 50×50, large > 50×50
 
 #### Scenario: Predator Classical Benchmarks
 - **GIVEN** a simulation with classical brain (MLP or Spiking) and `predators.enabled: true`
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_small_classical`, `dynamic_predator_medium_classical`, or `dynamic_predator_large_classical`
+- **THEN** the category SHALL be `predator_small/classical`, `predator_medium/classical`, or `predator_large/classical`
 - **AND** this SHALL enable separate tracking of classical vs quantum performance on predator tasks
 
 #### Scenario: Non-Predator Benchmark Unchanged
 - **GIVEN** a simulation with `predators.enabled: false` or predators not configured
 - **WHEN** benchmark category is determined
-- **THEN** existing categories SHALL be used (`dynamic_small_quantum`, etc.)
+- **THEN** foraging categories SHALL be used (`foraging_small/quantum`, etc.)
 - **AND** backward compatibility with existing benchmarks SHALL be maintained
 
 ### Requirement: Step Execution Order with Predators
@@ -509,7 +509,7 @@ The system SHALL use consistent, documented symbols for predators across all ren
 - **GIVEN** a predator-enabled simulation for benchmarking
 - **WHEN** the benchmark category is determined
 - **THEN** category names SHALL exactly match the documented format:
-  - Quantum brains: `dynamic_predator_small_quantum`, `dynamic_predator_medium_quantum`, `dynamic_predator_large_quantum`
-  - Classical brains: `dynamic_predator_small_classical`, `dynamic_predator_medium_classical`, `dynamic_predator_large_classical`
-- **AND** the underscore separator SHALL be used (not hyphen or space)
+  - Quantum brains: `predator_small/quantum`, `predator_medium/quantum`, `predator_large/quantum`
+  - Classical brains: `predator_small/classical`, `predator_medium/classical`, `predator_large/classical`
+- **AND** the forward slash separator SHALL be used between environment type and brain class
 - **AND** category names SHALL match the implementation exactly to prevent doc-code drift

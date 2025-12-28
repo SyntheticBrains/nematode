@@ -24,30 +24,30 @@ VALID_CATEGORIES = [
     # Static maze categories
     "static_maze_quantum",
     "static_maze_classical",
-    # Dynamic foraging categories
-    "dynamic_small_quantum",
-    "dynamic_small_classical",
-    "dynamic_medium_quantum",
-    "dynamic_medium_classical",
-    "dynamic_large_quantum",
-    "dynamic_large_classical",
-    # Predator-enabled dynamic categories
-    "dynamic_predator_small_quantum",
-    "dynamic_predator_small_classical",
-    "dynamic_predator_medium_quantum",
-    "dynamic_predator_medium_classical",
-    "dynamic_predator_large_quantum",
-    "dynamic_predator_large_classical",
+    # Foraging categories (dynamic without predators)
+    "foraging_small_quantum",
+    "foraging_small_classical",
+    "foraging_medium_quantum",
+    "foraging_medium_classical",
+    "foraging_large_quantum",
+    "foraging_large_classical",
+    # Predator evasion categories (dynamic with predators)
+    "predator_small_quantum",
+    "predator_small_classical",
+    "predator_medium_quantum",
+    "predator_medium_classical",
+    "predator_large_quantum",
+    "predator_large_classical",
 ]
 
 # Expected directory mappings for predator categories
 PREDATOR_CATEGORY_DIRECTORIES = {
-    "dynamic_predator_small_quantum": "dynamic_predator_small/quantum",
-    "dynamic_predator_small_classical": "dynamic_predator_small/classical",
-    "dynamic_predator_medium_quantum": "dynamic_predator_medium/quantum",
-    "dynamic_predator_medium_classical": "dynamic_predator_medium/classical",
-    "dynamic_predator_large_quantum": "dynamic_predator_large/quantum",
-    "dynamic_predator_large_classical": "dynamic_predator_large/classical",
+    "predator_small_quantum": "predator_small/quantum",
+    "predator_small_classical": "predator_small/classical",
+    "predator_medium_quantum": "predator_medium/quantum",
+    "predator_medium_classical": "predator_medium/classical",
+    "predator_large_quantum": "predator_large/quantum",
+    "predator_large_classical": "predator_large/classical",
 }
 
 
@@ -112,59 +112,59 @@ class TestDetermineBenchmarkCategory:
         category = determine_benchmark_category(experiment)
         assert category == "static_maze_classical"
 
-    def test_dynamic_small_quantum(self):
-        """Test categorizing small dynamic environment with quantum brain."""
+    def test_foraging_small_quantum(self):
+        """Test categorizing small foraging environment with quantum brain."""
         env = EnvironmentMetadata(type="dynamic", grid_size=15, num_foods=10)
         brain = BrainMetadata(type="qmodular", qubits=6, learning_rate=0.02)
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_small_quantum"
+        assert category == "foraging_small_quantum"
 
-    def test_dynamic_small_classical(self):
-        """Test categorizing small dynamic environment with classical brain."""
+    def test_foraging_small_classical(self):
+        """Test categorizing small foraging environment with classical brain."""
         env = EnvironmentMetadata(type="dynamic", grid_size=20, num_foods=15)
         brain = BrainMetadata(type="qmlp", learning_rate=0.001)
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_small_classical"
+        assert category == "foraging_small_classical"
 
-    def test_dynamic_medium_quantum(self):
-        """Test categorizing medium dynamic environment with quantum brain."""
+    def test_foraging_medium_quantum(self):
+        """Test categorizing medium foraging environment with quantum brain."""
         env = EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20)
         brain = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_medium_quantum"
+        assert category == "foraging_medium_quantum"
 
-    def test_dynamic_medium_classical(self):
-        """Test categorizing medium dynamic environment with classical brain."""
+    def test_foraging_medium_classical(self):
+        """Test categorizing medium foraging environment with classical brain."""
         env = EnvironmentMetadata(type="dynamic", grid_size=40, num_foods=18)
         brain = BrainMetadata(type="mlp", learning_rate=0.001)
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_medium_classical"
+        assert category == "foraging_medium_classical"
 
-    def test_dynamic_large_quantum(self):
-        """Test categorizing large dynamic environment with quantum brain."""
+    def test_foraging_large_quantum(self):
+        """Test categorizing large foraging environment with quantum brain."""
         env = EnvironmentMetadata(type="dynamic", grid_size=100, num_foods=50)
         brain = BrainMetadata(type="modular", qubits=8, learning_rate=0.005)
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_large_quantum"
+        assert category == "foraging_large_quantum"
 
-    def test_dynamic_large_classical(self):
-        """Test categorizing large dynamic environment with classical brain."""
+    def test_foraging_large_classical(self):
+        """Test categorizing large foraging environment with classical brain."""
         env = EnvironmentMetadata(type="dynamic", grid_size=75, num_foods=30)
         brain = BrainMetadata(type="qmlp", learning_rate=0.0005)
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_large_classical"
+        assert category == "foraging_large_classical"
 
     def test_boundary_case_small_medium(self):
         """Test boundary between small and medium (grid_size=20)."""
@@ -173,7 +173,7 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_small_quantum"
+        assert category == "foraging_small_quantum"
 
     def test_boundary_case_medium_large(self):
         """Test boundary between medium and large (grid_size=50)."""
@@ -182,7 +182,7 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_medium_classical"
+        assert category == "foraging_medium_classical"
 
     def test_quantum_brain_types(self):
         """Test all quantum brain types categorize correctly."""
@@ -204,8 +204,8 @@ class TestDetermineBenchmarkCategory:
             category = determine_benchmark_category(experiment)
             assert category.endswith("_classical")
 
-    def test_dynamic_predator_small_quantum(self):
-        """Test categorizing small dynamic environment with predators and quantum brain."""
+    def test_predator_small_quantum(self):
+        """Test categorizing small predator environment with quantum brain."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=20,
@@ -217,10 +217,10 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_predator_small_quantum"
+        assert category == "predator_small_quantum"
 
-    def test_dynamic_predator_small_classical(self):
-        """Test categorizing small dynamic environment with predators and classical brain."""
+    def test_predator_small_classical(self):
+        """Test categorizing small predator environment with classical brain."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=15,
@@ -232,10 +232,10 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_predator_small_classical"
+        assert category == "predator_small_classical"
 
-    def test_dynamic_predator_medium_quantum(self):
-        """Test categorizing medium dynamic environment with predators and quantum brain."""
+    def test_predator_medium_quantum(self):
+        """Test categorizing medium predator environment with quantum brain."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=50,
@@ -247,10 +247,10 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_predator_medium_quantum"
+        assert category == "predator_medium_quantum"
 
-    def test_dynamic_predator_medium_classical(self):
-        """Test categorizing medium dynamic environment with predators and classical brain."""
+    def test_predator_medium_classical(self):
+        """Test categorizing medium predator environment with classical brain."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=40,
@@ -262,10 +262,10 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_predator_medium_classical"
+        assert category == "predator_medium_classical"
 
-    def test_dynamic_predator_large_quantum(self):
-        """Test categorizing large dynamic environment with predators and quantum brain."""
+    def test_predator_large_quantum(self):
+        """Test categorizing large predator environment with quantum brain."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=100,
@@ -277,10 +277,10 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_predator_large_quantum"
+        assert category == "predator_large_quantum"
 
-    def test_dynamic_predator_large_classical(self):
-        """Test categorizing large dynamic environment with predators and classical brain."""
+    def test_predator_large_classical(self):
+        """Test categorizing large predator environment with classical brain."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=75,
@@ -292,10 +292,10 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_predator_large_classical"
+        assert category == "predator_large_classical"
 
-    def test_predators_disabled_uses_regular_category(self):
-        """Test that predators_enabled=False uses regular (non-predator) categories."""
+    def test_predators_disabled_uses_foraging_category(self):
+        """Test that predators_enabled=False uses foraging (non-predator) categories."""
         env = EnvironmentMetadata(
             type="dynamic",
             grid_size=30,
@@ -306,7 +306,7 @@ class TestDetermineBenchmarkCategory:
         experiment = create_test_experiment(env, brain)
 
         category = determine_benchmark_category(experiment)
-        assert category == "dynamic_medium_quantum"
+        assert category == "foraging_medium_quantum"
         assert "predator" not in category
 
 
@@ -323,20 +323,20 @@ class TestGetCategoryDirectory:
         path = get_category_directory("static_maze_classical")
         assert path == "static_maze/classical"
 
-    def test_dynamic_small_quantum_dir(self):
-        """Test dynamic small quantum directory path."""
-        path = get_category_directory("dynamic_small_quantum")
-        assert path == "dynamic_small/quantum"
+    def test_foraging_small_quantum_dir(self):
+        """Test foraging small quantum directory path."""
+        path = get_category_directory("foraging_small_quantum")
+        assert path == "foraging_small/quantum"
 
-    def test_dynamic_medium_classical_dir(self):
-        """Test dynamic medium classical directory path."""
-        path = get_category_directory("dynamic_medium_classical")
-        assert path == "dynamic_medium/classical"
+    def test_foraging_medium_classical_dir(self):
+        """Test foraging medium classical directory path."""
+        path = get_category_directory("foraging_medium_classical")
+        assert path == "foraging_medium/classical"
 
-    def test_dynamic_large_quantum_dir(self):
-        """Test dynamic large quantum directory path."""
-        path = get_category_directory("dynamic_large_quantum")
-        assert path == "dynamic_large/quantum"
+    def test_foraging_large_quantum_dir(self):
+        """Test foraging large quantum directory path."""
+        path = get_category_directory("foraging_large_quantum")
+        assert path == "foraging_large/quantum"
 
     def test_invalid_category_format(self):
         """Test handling invalid category format."""

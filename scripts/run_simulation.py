@@ -4,6 +4,7 @@
 
 import argparse
 import logging
+import shutil
 import sys
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -16,7 +17,6 @@ from quantumnematode.agent import (
     QuantumNematodeAgent,
     SatietyConfig,
 )
-from quantumnematode.benchmark import save_benchmark
 from quantumnematode.brain.arch import (
     Brain,
     MLPBrainConfig,
@@ -191,16 +191,6 @@ def parse_arguments() -> argparse.Namespace:
         "--track-experiment",
         action="store_true",
         help="Save experiment metadata for reproducibility and comparison.",
-    )
-    parser.add_argument(
-        "--save-benchmark",
-        action="store_true",
-        help="Save experiment as a benchmark submission (implies --track-experiment).",
-    )
-    parser.add_argument(
-        "--benchmark-notes",
-        type=str,
-        help="Optional notes about optimization approach (requires --save-benchmark).",
     )
     parser.add_argument(
         "--validate-chemotaxis",
@@ -615,6 +605,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             result = SimulationResult(
                 run=run_num,
+                seed=run_seed,
                 steps=steps_taken,
                 path=step_result.agent_path,
                 total_reward=total_reward,
@@ -772,7 +763,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     )
 
     # Experiment tracking (opt-in)
-    track_experiment = args.track_experiment or args.save_benchmark
+    track_experiment = args.track_experiment
     if track_experiment:
         try:
             # Capture experiment metadata
@@ -871,12 +862,34 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     "information to the experiment metadata. Example: `ibm_strasbourg`.",
                 )
 
-            # Save experiment
-            experiment_path = save_experiment(experiment_metadata)
-            print(f"\n✓ Experiment metadata saved: {experiment_path}")
+            # Save experiment to experiments/<id>/ folder structure
+            # This creates a self-contained experiment folder for potential benchmark submission
+            experiment_dir = Path.cwd() / "experiments" / experiment_metadata.experiment_id
+
+            # Save experiment metadata JSON
+            experiment_path = save_experiment(
+                experiment_metadata,
+                base_dir=experiment_dir,
+            )
+
+            # Copy config file to experiment folder for reproducibility
+            if config_file:
+                config_source = Path(config_file)
+                if config_source.exists():
+                    config_dest = experiment_dir / config_source.name
+                    shutil.copy2(config_source, config_dest)
+                    logger.info(f"Config file copied to: {config_dest}")
+
+            print(f"\n✓ Experiment saved: {experiment_dir}")
             print(f"  Experiment ID: {experiment_metadata.experiment_id}")
+            print(f"  Metadata: {experiment_path}")
+            if config_file:
+                print(f"  Config: {experiment_dir / Path(config_file).name}")
             print(
                 f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
+            )
+            print(
+                f"\n  To submit as benchmark: uv run scripts/benchmark_submit.py --experiments {experiment_dir}",
             )
 
             # Display chemotaxis validation if requested
@@ -930,37 +943,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 print(
                     "\n[Chemotaxis validation not available - requires dynamic foraging environment]",
                 )
-
-            if args.save_benchmark:
-                # Interactive benchmark submission
-                print("\n" + "=" * 80)
-                print("Benchmark Submission")
-                print("=" * 80)
-
-                contributor = input("\nContributor name (required): ").strip()
-                if not contributor:
-                    logger.error("Contributor name is required for benchmark submission")
-                else:
-                    github_username = input(
-                        "GitHub username (optional, press Enter to skip): ",
-                    ).strip()
-                    github_username = github_username if github_username else None
-
-                    notes = args.benchmark_notes
-                    if not notes:
-                        notes = input(
-                            "Optimization notes (optional, press Enter to skip): ",
-                        ).strip()
-                        notes = notes if notes else None
-
-                    # Save benchmark
-                    benchmark_path = save_benchmark(
-                        metadata=experiment_metadata,
-                        contributor=contributor,
-                        github_username=github_username,
-                        notes=notes,
-                    )
-                    print(f"\n✓ Benchmark saved: {benchmark_path}")
 
         except Exception as e:
             logger.error(f"Failed to save experiment metadata: {e}")

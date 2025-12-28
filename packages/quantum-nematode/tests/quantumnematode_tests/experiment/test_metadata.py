@@ -694,8 +694,8 @@ class TestExperimentMetadata:
             exports_path="exports/20250101_140000",
         )
 
-        # Test serialization
-        data = experiment.to_dict()
+        # Test full serialization (with exclude_config_details=False for backward compat)
+        data = experiment.to_dict(exclude_config_details=False)
         assert isinstance(data, dict)
         assert data["experiment_id"] == "20250101_140000"
         assert data["environment"]["grid_size"] == 50
@@ -705,7 +705,7 @@ class TestExperimentMetadata:
         assert data["gradient"]["method"] == "clip"
         assert data["results"]["success_rate"] == 0.95
 
-        # Test deserialization
+        # Test full deserialization roundtrip
         restored = ExperimentMetadata.from_dict(data)
         assert restored.experiment_id == experiment.experiment_id
         assert restored.environment.grid_size == experiment.environment.grid_size
@@ -718,6 +718,86 @@ class TestExperimentMetadata:
         assert restored.results.total_runs == experiment.results.total_runs
         assert restored.system.python_version == experiment.system.python_version
         assert restored.exports_path == experiment.exports_path
+
+    def test_serialization_lean_format(self):
+        """Test lean serialization format (excludes duplicate config data)."""
+        now = datetime.now(UTC)
+        experiment = ExperimentMetadata(
+            experiment_id="20250101_140000",
+            timestamp=now,
+            config_file="configs/benchmark.yml",
+            config_hash="hash123",
+            environment=EnvironmentMetadata(
+                type="dynamic",
+                grid_size=50,
+                predators_enabled=True,
+            ),
+            brain=BrainMetadata(type="ppo", hidden_dim=128),
+            reward=RewardMetadata(
+                reward_goal=2.0,
+                reward_distance_scale=0.5,
+                reward_exploration=0.05,
+                penalty_step=0.005,
+                penalty_anti_dithering=0.02,
+                penalty_stuck_position=0.1,
+                stuck_position_threshold=3,
+                penalty_starvation=10.0,
+                penalty_predator_death=10.0,
+                penalty_predator_proximity=0.1,
+            ),
+            gradient=GradientMetadata(method="clip"),
+            results=ResultsMetadata(
+                total_runs=30,
+                success_rate=0.95,
+                avg_steps=35.5,
+                avg_reward=140.0,
+            ),
+            system=SystemMetadata(
+                python_version="3.12.1",
+                qiskit_version="1.1.0",
+                device_type="cpu",
+            ),
+        )
+
+        # Test lean serialization (default behavior)
+        data = experiment.to_dict()  # exclude_config_details=True by default
+        assert isinstance(data, dict)
+        assert data["experiment_id"] == "20250101_140000"
+
+        # Config sections should be excluded
+        assert "environment" not in data
+        assert "brain" not in data
+        assert "reward" not in data
+        assert "gradient" not in data
+
+        # config_summary should be present with essential fields
+        assert "config_summary" in data
+        assert data["config_summary"]["brain_type"] == "ppo"
+        assert data["config_summary"]["environment_type"] == "dynamic"
+        assert data["config_summary"]["grid_size"] == 50
+        assert data["config_summary"]["predators_enabled"] is True
+
+        # Results and system should still be present
+        assert data["results"]["success_rate"] == 0.95
+        assert data["system"]["python_version"] == "3.12.1"
+
+        # Verify config_summary comes before results in the dict
+        keys = list(data.keys())
+        config_summary_idx = keys.index("config_summary")
+        results_idx = keys.index("results")
+        assert config_summary_idx < results_idx, "config_summary should appear before results"
+
+        # Test deserialization from lean format
+        restored = ExperimentMetadata.from_dict(data)
+        assert restored.experiment_id == experiment.experiment_id
+        # Essential fields are restored from config_summary
+        assert restored.environment.type == "dynamic"
+        assert restored.environment.grid_size == 50
+        assert restored.environment.predators_enabled is True
+        assert restored.brain.type == "ppo"
+        # Results are fully restored
+        assert restored.results.success_rate == experiment.results.success_rate
+        assert restored.system.python_version == experiment.system.python_version
 
     def test_validation_required_fields(self):
         """Test that required fields are validated."""

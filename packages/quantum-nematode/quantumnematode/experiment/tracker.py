@@ -18,11 +18,13 @@ from quantumnematode.experiment.metadata import (
     GradientMetadata,
     LearningRateMetadata,
     ParameterInitializer,
+    PerRunResult,
     ResultsMetadata,
     RewardMetadata,
     SystemMetadata,
 )
 from quantumnematode.experiment.system_utils import capture_system_info
+from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TerminationReason
 from quantumnematode.validation.chemotaxis import (
     ChemotaxisMetrics,
@@ -258,7 +260,7 @@ def extract_gradient_metadata(config: dict) -> GradientMetadata:
     return GradientMetadata(method=method, max_norm=max_norm)
 
 
-def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:  # noqa: PLR0915, C901
+def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:  # noqa: PLR0912, PLR0915, C901
     """Aggregate simulation results into metadata.
 
     Parameters
@@ -332,6 +334,29 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         if successful_evasions_list
         else None
     )
+
+    # BUILD PER-RUN RESULTS for full transparency
+    per_run_results = []
+    for r in all_results:
+        seed = r.seed
+        if seed is None:
+            logger.warning(
+                f"Run {r.run} missing seed - reproducibility compromised. "
+                "Using negative run number as fallback.",
+            )
+            seed = -r.run  # Negative to distinguish from valid seeds, unique per run
+        per_run_results.append(
+            PerRunResult(
+                run=r.run,  # Already 1-indexed from run_simulation.py
+                seed=seed,
+                success=r.success,
+                steps=r.steps,
+                total_reward=r.total_reward,
+                termination_reason=r.termination_reason.value,
+                foods_collected=r.foods_collected,
+                distance_efficiency=r.average_distance_efficiency,
+            ),
+        )
 
     # CONVERGENCE ANALYSIS
     convergence_metrics = analyze_convergence(all_results, total_runs)
@@ -462,6 +487,11 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         post_convergence_variance=convergence_metrics.post_convergence_variance,
         post_convergence_distance_efficiency=convergence_metrics.distance_efficiency,
         composite_benchmark_score=convergence_metrics.composite_score,
+        # Learning metrics (added for NematodeBench format)
+        learning_speed=convergence_metrics.learning_speed,
+        learning_speed_episodes=convergence_metrics.learning_speed_episodes,
+        stability=convergence_metrics.stability,
+        per_run_results=per_run_results if per_run_results else None,
         # Chemotaxis validation metrics
         avg_chemotaxis_index=avg_chemotaxis_index,
         avg_time_in_attractant=avg_time_in_attractant,

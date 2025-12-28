@@ -108,10 +108,10 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 
 #### Scenario: Configuration File Examples
 - **GIVEN** example configuration files in `configs/examples/`
-- **WHEN** users need preset dynamic environments
-- **THEN** `dynamic_small.yml` SHALL provide small curriculum configuration
-- **AND** `dynamic_medium.yml` SHALL provide medium curriculum configuration
-- **AND** `dynamic_large.yml` SHALL provide large curriculum configuration
+- **WHEN** users need preset foraging environments
+- **THEN** `<brain>_foraging_small.yml` SHALL provide small foraging configuration
+- **AND** `<brain>_foraging_medium.yml` SHALL provide medium foraging configuration
+- **AND** `<brain>_foraging_large.yml` SHALL provide large foraging configuration
 - **AND** each SHALL include commented parameter explanations
 
 ### Requirement: Configuration Validation for Dynamic Environments

@@ -243,34 +243,41 @@ To ensure benchmark quality and reproducibility, submissions must meet these cri
 
 #### Benchmark Workflow
 
+NematodeBench requires multiple independent training sessions for scientific rigor:
+
 1. **Develop and Test**: Experiment with different configurations, learning rates, and brain architectures
-2. **Track Experiments**: Use `--track-experiment` to save metadata for promising runs
-3. **Review Results**: Query and compare experiments to identify best performers
-4. **Submit Benchmark**: Use `benchmark_submit.py` to create benchmark submission
-5. **Create PR**: Add the generated benchmark JSON file to git and create a pull request
-6. **Verification**: Maintainers will verify reproducibility and merge
+2. **Run Multiple Sessions**: Run 10+ independent training sessions with `--track-experiment`
+3. **Submit Benchmark**: Use `benchmark_submit.py` to aggregate sessions into a benchmark
+4. **Create PR**: Add the generated benchmark JSON and artifacts to git
+5. **Verification**: Maintainers will verify reproducibility and merge
 
 Example workflow:
 
 ```bash
-# 1. Run multiple experiments while developing
-uv run scripts/run_simulation.py --config configs/my_config.yml --runs 50 --track-experiment
+# 1. Run 10+ independent training sessions
+for session in {1..10}; do
+    uv run scripts/run_simulation.py \
+        --config configs/my_config.yml \
+        --runs 50 \
+        --track-experiment
+done
 
-# 2. Review your experiments
-uv run scripts/experiment_query.py list --limit 10
+# 2. Submit all sessions together
+uv run scripts/benchmark_submit.py \
+    --experiments experiments/* \
+    --category foraging_medium/quantum \
+    --contributor "Jane Doe" \
+    --github "janedoe" \
+    --notes "Tuned learning rate schedule with adaptive exploration"
 
-# 3. Compare top performers
-uv run scripts/experiment_query.py compare exp_001 exp_002
+# 3. Regenerate leaderboards
+uv run scripts/benchmark_submit.py regenerate
 
-# 4. Submit your best result
-uv run scripts/benchmark_submit.py submit exp_001 \
-  --contributor "Jane Doe" \
-  --github "janedoe" \
-  --notes "Tuned learning rate schedule with adaptive exploration"
-
-# 5. Create PR
-git add benchmarks/dynamic_medium/quantum/exp_001.json
-git commit -m "Add benchmark: Adaptive exploration for dynamic medium"
+# 4. Create PR
+git add benchmarks/foraging_medium/quantum/*.json
+git add artifacts/experiments/
+git add README.md docs/nematodebench/LEADERBOARD.md
+git commit -m "Add benchmark: Adaptive exploration for foraging medium"
 git push origin feature/my-benchmark
 ```
 
@@ -283,7 +290,7 @@ Check current benchmark standings:
 uv run scripts/benchmark_submit.py leaderboard
 
 # View specific category
-uv run scripts/benchmark_submit.py leaderboard --category dynamic_medium_quantum
+uv run scripts/benchmark_submit.py leaderboard --category foraging_medium/quantum
 
 # Regenerate leaderboard documentation
 uv run scripts/benchmark_submit.py regenerate
