@@ -341,9 +341,10 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         seed = r.seed
         if seed is None:
             logger.warning(
-                f"Run {r.run} missing seed - reproducibility compromised. Defaulting to 0.",
+                f"Run {r.run} missing seed - reproducibility compromised. "
+                "Using negative run number as fallback.",
             )
-            seed = 0
+            seed = -r.run  # Negative to distinguish from valid seeds, unique per run
         per_run_results.append(
             PerRunResult(
                 run=r.run,  # Already 1-indexed from run_simulation.py
