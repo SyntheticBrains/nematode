@@ -217,6 +217,7 @@ def aggregate_metrics(experiments: list[ExperimentMetadata]) -> AggregateMetrics
     return AggregateMetrics(
         success_rate=_stat_value_or_zero(success_rates),
         composite_score=_stat_value_or_zero(composite_scores),
+        # distance_efficiency is optional (only for dynamic envs) - None if not applicable
         distance_efficiency=StatValue.from_values(distance_efficiencies)
         if distance_efficiencies
         else None,
