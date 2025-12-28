@@ -164,6 +164,7 @@ class NematodeBenchSubmission(BaseModel):
         NematodeBenchSubmission
             Parsed submission object.
         """
+        data = data.copy()  # Avoid mutating input
         if isinstance(data["timestamp"], str):
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)
