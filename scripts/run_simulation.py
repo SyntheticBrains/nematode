@@ -615,6 +615,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             result = SimulationResult(
                 run=run_num,
+                seed=run_seed,
                 steps=steps_taken,
                 path=step_result.agent_path,
                 total_reward=total_reward,
