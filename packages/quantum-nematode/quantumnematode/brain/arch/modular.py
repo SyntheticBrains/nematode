@@ -1194,7 +1194,7 @@ class ModularBrain(QuantumBrain):
                 # Build circuit with input features for this timestep
                 qc = self.build_brain(input_params)
                 backend = self._get_backend()
-                transpiled_template = transpile(qc, backend)
+                transpiled_template = transpile(qc, backend, seed_transpiler=self.seed)
                 for plus, minus in param_sets:
                     circuits.append(transpiled_template.assign_parameters(plus, inplace=False))
                     circuits.append(transpiled_template.assign_parameters(minus, inplace=False))
