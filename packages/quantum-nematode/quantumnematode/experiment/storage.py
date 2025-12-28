@@ -14,33 +14,28 @@ from quantumnematode.logging_config import logger
 EXPERIMENTS_DIR = Path.cwd() / "experiments"
 
 
-def ensure_experiments_dir() -> Path:
-    """Ensure experiments directory exists.
-
-    Returns
-    -------
-    Path
-        Path to experiments directory.
-    """
-    EXPERIMENTS_DIR.mkdir(parents=True, exist_ok=True)
-    return EXPERIMENTS_DIR
-
-
-def save_experiment(metadata: ExperimentMetadata) -> Path:
+def save_experiment(
+    metadata: ExperimentMetadata,
+    base_dir: Path,
+) -> Path:
     """Save experiment metadata to JSON file.
 
     Parameters
     ----------
     metadata : ExperimentMetadata
         Experiment metadata to save.
+    base_dir : Path
+        Directory to save the experiment. The directory will be created if it
+        doesn't exist. The JSON file is saved as <experiment_id>.json within
+        this directory.
 
     Returns
     -------
     Path
         Path to saved JSON file.
     """
-    experiments_dir = ensure_experiments_dir()
-    filepath = experiments_dir / f"{metadata.experiment_id}.json"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    filepath = base_dir / f"{metadata.experiment_id}.json"
 
     # Write atomically using temporary file
     temp_filepath = filepath.with_suffix(".tmp")
@@ -75,7 +70,7 @@ def load_experiment(experiment_id: str) -> ExperimentMetadata:
     FileNotFoundError
         If experiment file doesn't exist.
     """
-    filepath = EXPERIMENTS_DIR / f"{experiment_id}.json"
+    filepath = EXPERIMENTS_DIR / experiment_id / f"{experiment_id}.json"
     if not filepath.exists():
         msg = f"Experiment {experiment_id} not found"
         raise FileNotFoundError(msg)
@@ -84,6 +79,27 @@ def load_experiment(experiment_id: str) -> ExperimentMetadata:
         data = json.load(f)
 
     return ExperimentMetadata.from_dict(data)
+
+
+def _find_experiment_ids() -> list[str]:
+    """Find all experiment IDs in the experiments directory.
+
+    Returns
+    -------
+    list[str]
+        List of experiment IDs found.
+    """
+    if not EXPERIMENTS_DIR.exists():
+        return []
+
+    experiment_ids = []
+    for subdir in EXPERIMENTS_DIR.iterdir():
+        if subdir.is_dir():
+            json_file = subdir / f"{subdir.name}.json"
+            if json_file.exists():
+                experiment_ids.append(subdir.name)
+
+    return experiment_ids
 
 
 def list_experiments(
@@ -113,13 +129,10 @@ def list_experiments(
     list[ExperimentMetadata]
         List of matching experiments, sorted by timestamp (newest first).
     """
-    if not EXPERIMENTS_DIR.exists():
-        return []
-
     experiments = []
-    for filepath in EXPERIMENTS_DIR.glob("*.json"):
+    for experiment_id in _find_experiment_ids():
         try:
-            metadata = load_experiment(filepath.stem)
+            metadata = load_experiment(experiment_id)
 
             # Apply filters
             if environment_type and metadata.environment.type != environment_type:
@@ -133,7 +146,7 @@ def list_experiments(
 
             experiments.append(metadata)
         except Exception as e:
-            logger.warning(f"Failed to load experiment {filepath.stem}: {e}")
+            logger.warning(f"Failed to load experiment {experiment_id}: {e}")
 
     # Sort by timestamp (newest first)
     experiments.sort(key=lambda x: x.timestamp, reverse=True)

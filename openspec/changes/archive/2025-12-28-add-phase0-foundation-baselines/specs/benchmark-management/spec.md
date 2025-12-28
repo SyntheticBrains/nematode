@@ -127,36 +127,70 @@ The system SHALL compute additional metrics required for comprehensive benchmark
 - **AND** SHALL store these as StatValue objects in NematodeBench format
 - **AND** metrics requiring aggregation: success_rate, composite_score, distance_efficiency, learning_speed, stability
 
-### Requirement: Unified NematodeBench Format
-The system SHALL use NematodeBench format as the single benchmark submission schema.
+### Requirement: NematodeBench Benchmark Architecture
+The system SHALL implement a multi-session benchmark system for official NematodeBench submissions.
 
-#### Scenario: Submission Schema
+#### Scenario: Session Experiments (Development)
+- **WHEN** a developer runs `scripts/run_simulation.py --track-experiment`
+- **THEN** experiment results SHALL be saved to `experiments/<experiment_id>/`
+- **AND** the experiment JSON SHALL conform to ExperimentMetadata schema
+- **AND** the original config file SHALL be automatically copied to the experiment folder
+- **AND** the experiments/ directory SHALL be gitignored (temporary local storage)
+
+#### Scenario: NematodeBench Submissions (Official Benchmarks)
+- **WHEN** `scripts/benchmark_submit.py --experiments` is run with 10+ experiment folders
+- **THEN** experiment folders SHALL be moved from `experiments/` to `artifacts/experiments/`
+- **AND** metrics SHALL be aggregated using StatValue across sessions
+- **AND** a fresh submission timestamp SHALL be generated
+- **AND** the submission JSON SHALL be saved to `benchmarks/<category>/<timestamp>.json`
+- **AND** the submission SHALL appear on the leaderboard
+
+#### Scenario: NematodeBench Submission Schema
 - **WHEN** a benchmark submission is created
-- **THEN** the JSON SHALL use NematodeBench schema with StatValue objects
-- **AND** StatValue SHALL contain: mean, std, min, max
-- **AND** SHALL include individual_runs array with per-run data
-- **AND** each individual run SHALL include: seed, success, steps, reward
+- **THEN** the JSON SHALL use NematodeBenchSubmission schema
+- **AND** SHALL include submission_id, brain_type, brain_config, environment, category
+- **AND** SHALL include sessions array with SessionReference objects (experiment_id, file_path, session_seed, num_runs)
+- **AND** SHALL include total_sessions (minimum 10), total_runs
+- **AND** SHALL include AggregateMetrics with StatValue objects (success_rate, composite_score, learning_speed, stability)
+- **AND** SHALL include all_seeds_unique validation flag
+- **AND** SHALL include contributor attribution
 
-#### Scenario: Experiment Metadata Migration
-- **WHEN** experiment tracking saves results
-- **THEN** the output SHALL conform to NematodeBench schema directly
-- **AND** SHALL NOT require post-processing conversion
-- **AND** legacy internal format SHALL be deprecated
+#### Scenario: Seed Uniqueness Validation
+- **WHEN** multiple experiments are aggregated for NematodeBench submission
+- **THEN** the system SHALL validate that ALL seeds are unique across ALL runs in ALL sessions
+- **AND** duplicate seeds SHALL cause submission rejection with specific error messages
+- **AND** all_seeds_unique flag SHALL be false if any duplicates exist
 
-#### Scenario: Benchmark Storage
-- **WHEN** a benchmark is submitted to the benchmarks/ directory
-- **THEN** the JSON SHALL be in NematodeBench format
-- **AND** evaluate_submission.py SHALL validate against NematodeBench schema
-- **AND** all new benchmarks SHALL include per-run seeds
+#### Scenario: Minimum Session Requirements
+- **WHEN** a NematodeBench submission is validated
+- **THEN** the system SHALL require minimum 10 independent sessions
+- **AND** each session SHALL require minimum 50 runs (MIN_RUNS_PER_SESSION)
+- **AND** sessions with fewer runs SHALL generate warnings
 
-## MODIFIED Requirements
+#### Scenario: Configuration Consistency Validation
+- **WHEN** multiple experiments are aggregated for NematodeBench submission
+- **THEN** the system SHALL validate brain_type consistency across all sessions
+- **AND** SHALL validate environment_type consistency
+- **AND** SHALL validate grid_size consistency
+- **AND** minor config differences (like seeds) SHALL be allowed
 
-### Requirement: Documentation Integration (MODIFIED)
-The system SHALL integrate benchmark leaderboards into project documentation with clear reproduction instructions AND public submission guidance.
+### Requirement: Experiment Storage and Tracking
+The system SHALL persist experiment data in a structured folder hierarchy with automatic config preservation.
 
-#### Scenario: BENCHMARKS.md External Submissions Section
-- **WHEN** BENCHMARKS.md is updated
-- **THEN** the file SHALL include an "External Submissions" section
-- **AND** SHALL link to docs/nematodebench/ documentation
-- **AND** SHALL explain how external researchers can contribute
-- **AND** SHALL highlight successfully verified external submissions
+#### Scenario: Experiment Folder Structure
+- **WHEN** an experiment is tracked
+- **THEN** results SHALL be saved to `experiments/<experiment_id>/<experiment_id>.json`
+- **AND** the config file used SHALL be copied to `experiments/<experiment_id>/<config_name>.yml`
+- **AND** the folder SHALL be self-contained for reproducibility
+
+#### Scenario: Artifact Storage for Submissions
+- **WHEN** experiments are submitted as a NematodeBench benchmark
+- **THEN** experiment folders SHALL be moved to `artifacts/experiments/`
+- **AND** the artifacts/ directory SHALL be committed to the repository
+- **AND** session references in submissions SHALL point to artifacts/experiments/ paths
+
+#### Scenario: Benchmark Submission Output
+- **WHEN** a benchmark submission is created
+- **THEN** the JSON SHALL be saved to `benchmarks/<category>/<submission_timestamp>.json`
+- **AND** the submission timestamp SHALL be generated at submission time (not from experiments)
+- **AND** the benchmarks/ directory SHALL be committed to the repository

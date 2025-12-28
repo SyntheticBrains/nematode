@@ -40,19 +40,19 @@ def get_environment_category(
     Returns
     -------
     str
-        Environment category (e.g., "static_maze", "dynamic_small",
-        "dynamic_predator_small").
+        Environment category (e.g., "static_maze", "foraging_small",
+        "predator_small").
     """
     if env_type == "static":
         return "static_maze"
 
-    # Dynamic foraging categories based on grid size
+    # Size category based on grid size
     size_category = "small" if grid_size <= 20 else "medium" if grid_size <= 50 else "large"
 
-    # Add predator prefix if enabled
+    # Predator evasion vs foraging
     if predators_enabled:
-        return f"dynamic_predator_{size_category}"
-    return f"dynamic_{size_category}"
+        return f"predator_{size_category}"
+    return f"foraging_{size_category}"
 
 
 def determine_benchmark_category(metadata: ExperimentMetadata) -> str:
@@ -66,8 +66,8 @@ def determine_benchmark_category(metadata: ExperimentMetadata) -> str:
     Returns
     -------
     str
-        Benchmark category string (e.g., "dynamic_medium_quantum",
-        "dynamic_predator_small_quantum").
+        Benchmark category string (e.g., "foraging_medium_quantum",
+        "predator_small_quantum").
     """
     env_category = get_environment_category(
         metadata.environment.type,
@@ -91,7 +91,7 @@ def get_category_directory(category: str) -> str:
     Returns
     -------
     str
-        Relative directory path (e.g., "dynamic_medium/quantum").
+        Relative directory path (e.g., "foraging_medium/quantum").
     """
     # Split category into environment and brain class
     parts = category.rsplit("_", 1)

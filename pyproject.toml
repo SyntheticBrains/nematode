@@ -99,10 +99,6 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
 "packages/quantum-nematode/quantumnematode/benchmark/categorization.py" = [
   "PLR2004",  # Grid size thresholds are domain-specific magic values
 ]
-"packages/quantum-nematode/quantumnematode/benchmark/submission.py" = [
-  "BLE001",  # Need to catch broad exceptions when loading benchmark files
-  "C901",  # list_benchmarks complexity is acceptable for file loading logic
-]
 "packages/quantum-nematode/quantumnematode/experiment/git_utils.py" = [
   "S607",  # Git commands are safe subprocess calls
   "TRY300",  # Git utility functions have acceptable control flow

@@ -6,6 +6,93 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class StatValue(BaseModel):
+    """Statistical summary for a metric across multiple runs.
+
+    Attributes
+    ----------
+    mean : float
+        Mean value across runs.
+    std : float
+        Standard deviation across runs.
+    min : float
+        Minimum value across runs.
+    max : float
+        Maximum value across runs.
+    """
+
+    mean: float
+    std: float
+    min: float
+    max: float
+
+    @classmethod
+    def from_values(cls, values: list[float]) -> "StatValue":
+        """Create a StatValue from a list of values.
+
+        Parameters
+        ----------
+        values : list[float]
+            List of values to compute statistics from.
+
+        Returns
+        -------
+        StatValue
+            Statistical summary of the values.
+        """
+        import numpy as np
+
+        if not values:
+            return cls(mean=0.0, std=0.0, min=0.0, max=0.0)
+        arr = np.array(values)
+        return cls(
+            mean=float(np.mean(arr)),
+            std=float(np.std(arr)),
+            min=float(np.min(arr)),
+            max=float(np.max(arr)),
+        )
+
+
+class PerRunResult(BaseModel):
+    """Per-run result data for scientific reproducibility and analysis.
+
+    This lightweight model captures essential per-run metrics without
+    heavy data like paths or food histories. It enables:
+    - Reproducibility verification (comparing individual run outcomes)
+    - Learning curve analysis (plotting performance over time)
+    - Custom statistical analysis by researchers
+    - Debugging (identifying problematic runs)
+
+    Attributes
+    ----------
+    run : int
+        1-indexed run number.
+    seed : int
+        Random seed used for this run.
+    success : bool
+        Whether the run was successful.
+    steps : int
+        Number of steps taken.
+    total_reward : float
+        Total reward achieved.
+    termination_reason : str
+        How the run ended (e.g., "completed_all_food", "starved", "max_steps").
+    foods_collected : int | None
+        Foods collected (dynamic environments only).
+    distance_efficiency : float | None
+        Navigation efficiency for this run (dynamic environments only).
+    """
+
+    run: int
+    seed: int
+    success: bool
+    steps: int
+    total_reward: float
+    termination_reason: str
+    foods_collected: int | None = None
+    distance_efficiency: float | None = None
+
+
 class EnvironmentMetadata(BaseModel):
     """Metadata about the simulation environment.
 
@@ -249,6 +336,18 @@ class ResultsMetadata(BaseModel):
         Range: 0.0 to 1.0, where 1.0 means perfect optimal navigation.
     composite_benchmark_score : float | None
         Weighted composite score combining success, efficiency, speed, and stability.
+    learning_speed : float | None
+        Normalized learning speed (0.0 to 1.0, higher = faster learning).
+        Calculated as 1.0 - (episodes_to_80_success / max_episodes).
+    learning_speed_episodes : int | None
+        Number of episodes to reach 80% rolling success rate.
+        None if 80% success was never achieved.
+    stability : float | None
+        Normalized stability metric (0.0 to 1.0, higher = more consistent).
+        Calculated as 1.0 - coefficient_of_variation, clamped to [0, 1].
+    per_run_results : list[PerRunResult] | None
+        Per-run result data for full transparency and reproducibility verification.
+        Contains essential metrics for each run including seeds.
     avg_chemotaxis_index : float | None
         Average chemotaxis index across all runs (dynamic environments only).
     avg_time_in_attractant : float | None
@@ -300,6 +399,11 @@ class ResultsMetadata(BaseModel):
     post_convergence_variance: float | None = None
     post_convergence_distance_efficiency: float | None = None
     composite_benchmark_score: float | None = None
+    # Learning metrics (added for NematodeBench format)
+    learning_speed: float | None = None
+    learning_speed_episodes: int | None = None
+    stability: float | None = None
+    per_run_results: list[PerRunResult] | None = None
     # Chemotaxis validation metrics (added for biological validation)
     # All-run chemotaxis metrics (includes learning phase)
     avg_chemotaxis_index: float | None = None
@@ -367,8 +471,38 @@ class BenchmarkMetadata(BaseModel):
     verified: bool = False
 
 
+class ConfigSummary(BaseModel):
+    """Minimal config summary for filtering/categorization without loading full config.
+
+    This is stored in the experiment JSON to enable quick filtering without
+    duplicating the entire config (which is saved as a separate YAML file).
+
+    Attributes
+    ----------
+    brain_type : str
+        Brain architecture type ("modular", "mlp", "ppo", "spiking", etc.).
+    environment_type : str
+        Environment type ("static" or "dynamic").
+    grid_size : int
+        Size of the grid environment.
+    predators_enabled : bool
+        Whether predators are enabled.
+    """
+
+    brain_type: str
+    environment_type: str
+    grid_size: int
+    predators_enabled: bool = False
+
+
 class ExperimentMetadata(BaseModel):
     """Complete metadata for a simulation experiment.
+
+    Note
+    ----
+    When loaded from lean format (with config_summary), the reward and gradient
+    metadata contain placeholder zeros and should not be used for calculations.
+    Full configuration is available in the YAML file stored alongside the JSON.
 
     Attributes
     ----------
@@ -423,21 +557,56 @@ class ExperimentMetadata(BaseModel):
     exports_path: str | None = None
     benchmark: BenchmarkMetadata | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self, *, exclude_config_details: bool = True) -> dict[str, Any]:
         """Convert metadata to dictionary for JSON serialization.
+
+        Parameters
+        ----------
+        exclude_config_details : bool, optional
+            If True (default), excludes detailed config sections (environment,
+            brain, reward, learning_rate, gradient) since they're duplicated
+            in the config YAML file. A minimal config_summary is included for
+            filtering/categorization.
 
         Returns
         -------
         dict[str, Any]
             Dictionary representation with ISO format timestamp.
         """
-        data = self.model_dump()
+        if exclude_config_details:
+            # Exclude detailed config sections - they're in the YAML file
+            raw_data = self.model_dump(
+                exclude={"environment", "brain", "reward", "learning_rate", "gradient"},
+            )
+            # Build ordered dict with config_summary before results
+            config_summary = ConfigSummary(
+                brain_type=self.brain.type,
+                environment_type=self.environment.type,
+                grid_size=self.environment.grid_size,
+                predators_enabled=self.environment.predators_enabled,
+            ).model_dump()
+            # Insert config_summary before results for cleaner output ordering
+            results = raw_data.pop("results", None)
+            data: dict[str, Any] = {**raw_data, "config_summary": config_summary}
+            if results is not None:
+                data["results"] = results
+        else:
+            # Include everything (for backward compatibility or special cases)
+            data = self.model_dump()
         data["timestamp"] = self.timestamp.isoformat()
         return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExperimentMetadata":
         """Create metadata from dictionary.
+
+        Handles both old format (full config details) and new lean format
+        (with config_summary). For lean format, creates minimal stub metadata
+        objects from the config_summary.
+
+        Note: Lean format uses placeholder values (zeros) for reward and
+        gradient metadata. These are suitable for filtering/categorization
+        but not for reward calculations. Full config is in the YAML file.
 
         Parameters
         ----------
@@ -451,4 +620,30 @@ class ExperimentMetadata(BaseModel):
         """
         if isinstance(data["timestamp"], str):
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
+
+        # Check if this is the new lean format (has config_summary, missing full config)
+        if "config_summary" in data and "environment" not in data:
+            summary = data.pop("config_summary")
+            # Create minimal stub metadata from config_summary
+            data["environment"] = EnvironmentMetadata(
+                type=summary["environment_type"],
+                grid_size=summary["grid_size"],
+                predators_enabled=summary.get("predators_enabled", False),
+            )
+            data["brain"] = BrainMetadata(type=summary["brain_type"])
+            # Placeholder values for lean format; full reward config is in the YAML file
+            data["reward"] = RewardMetadata(
+                reward_goal=0.0,
+                reward_distance_scale=0.0,
+                reward_exploration=0.0,
+                penalty_step=0.0,
+                penalty_anti_dithering=0.0,
+                penalty_stuck_position=0.0,
+                stuck_position_threshold=0,
+                penalty_starvation=0.0,
+                penalty_predator_death=0.0,
+                penalty_predator_proximity=0.0,
+            )
+            data["gradient"] = GradientMetadata()  # Placeholder for lean format
+
         return cls(**data)
