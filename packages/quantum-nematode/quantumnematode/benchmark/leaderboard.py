@@ -104,7 +104,7 @@ def format_stat_value(
     fmt : str
         Format string for numbers.
     is_percent : bool
-        If True, format as percentage.
+        If True, format as percentage (expects values in 0.0-1.0 range).
 
     Returns
     -------
