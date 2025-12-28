@@ -127,18 +127,17 @@ The system SHALL compute additional metrics required for comprehensive benchmark
 - **AND** SHALL store these as StatValue objects in NematodeBench format
 - **AND** metrics requiring aggregation: success_rate, composite_score, distance_efficiency, learning_speed, stability
 
-### Requirement: Two-Tier Benchmark Architecture
-The system SHALL implement a two-tier benchmark system separating development experiments from official NematodeBench submissions.
+### Requirement: NematodeBench Benchmark Architecture
+The system SHALL implement a multi-session benchmark system for official NematodeBench submissions.
 
-#### Scenario: Tier 1 Session Experiments (Development)
+#### Scenario: Session Experiments (Development)
 - **WHEN** a developer runs `scripts/run_simulation.py --track-experiment`
 - **THEN** experiment results SHALL be saved to `experiments/<experiment_id>/`
 - **AND** the experiment JSON SHALL conform to ExperimentMetadata schema
 - **AND** the original config file SHALL be automatically copied to the experiment folder
 - **AND** the experiments/ directory SHALL be gitignored (temporary local storage)
-- **AND** Tier 1 experiments SHALL NOT appear on the leaderboard
 
-#### Scenario: Tier 2 NematodeBench Submissions (Official Benchmarks)
+#### Scenario: NematodeBench Submissions (Official Benchmarks)
 - **WHEN** `scripts/benchmark_submit.py --experiments` is run with 10+ experiment folders
 - **THEN** experiment folders SHALL be moved from `experiments/` to `artifacts/experiments/`
 - **AND** metrics SHALL be aggregated using StatValue across sessions
@@ -147,7 +146,7 @@ The system SHALL implement a two-tier benchmark system separating development ex
 - **AND** the submission SHALL appear on the leaderboard
 
 #### Scenario: NematodeBench Submission Schema
-- **WHEN** a Tier 2 benchmark submission is created
+- **WHEN** a benchmark submission is created
 - **THEN** the JSON SHALL use NematodeBenchSubmission schema
 - **AND** SHALL include submission_id, brain_type, brain_config, environment, category
 - **AND** SHALL include sessions array with SessionReference objects (experiment_id, file_path, session_seed, num_runs)
