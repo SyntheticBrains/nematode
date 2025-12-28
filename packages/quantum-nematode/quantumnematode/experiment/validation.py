@@ -197,19 +197,19 @@ def validate_submission(
     all_errors: list[str] = []
 
     # Check minimum sessions
-    _is_valid, errors = _validate_minimum_sessions(experiments)
+    _, errors = _validate_minimum_sessions(experiments)
     all_errors.extend(errors)
 
     # Check minimum runs per session
-    _is_valid, errors = _validate_minimum_runs_per_session(experiments)
+    _, errors = _validate_minimum_runs_per_session(experiments)
     all_errors.extend(errors)
 
     # Check config consistency
-    _is_valid, errors = _validate_config_consistency(experiments)
+    _, errors = _validate_config_consistency(experiments)
     all_errors.extend(errors)
 
     # Check seed uniqueness (most important for reproducibility)
-    _is_valid, errors = _validate_seed_uniqueness(experiments)
+    _, errors = _validate_seed_uniqueness(experiments)
     all_errors.extend(errors)
 
     return len(all_errors) == 0, all_errors
