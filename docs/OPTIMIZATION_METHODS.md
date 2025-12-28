@@ -17,7 +17,7 @@ This document provides guidance on which optimization methods work best for each
 
 ### Quantum Architectures (ModularBrain, QModularBrain)
 
-**Recommended: CMA-ES (Covariance Matrix Adaptation Evolution Strategy)**
+#### Recommended: CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
 
 The December 2025 experiments demonstrated that evolutionary optimization significantly outperforms gradient-based methods for quantum circuits:
 
@@ -26,7 +26,7 @@ The December 2025 experiments demonstrated that evolutionary optimization signif
 | CMA-ES | 88% | Low |
 | Parameter-shift gradients | 22% | High |
 
-**Why CMA-ES works better:**
+#### Why CMA-ES works better
 
 1. **Shot noise resilience** - Quantum measurements have inherent stochasticity. CMA-ES uses population-based sampling that naturally averages over this noise.
 
@@ -34,7 +34,7 @@ The December 2025 experiments demonstrated that evolutionary optimization signif
 
 3. **Hyperparameter robustness** - CMA-ES self-adapts its covariance matrix, requiring less tuning than learning rates for gradient methods.
 
-**Configuration:**
+#### Configuration
 
 ```yaml
 brain:
@@ -51,7 +51,7 @@ optimization:
 
 ### Classical Neural Networks (MLPBrain)
 
-**Recommended: REINFORCE with baseline**
+#### Recommended: REINFORCE with baseline
 
 The standard REINFORCE algorithm with a learned baseline works well for classical networks:
 
@@ -61,13 +61,13 @@ The standard REINFORCE algorithm with a learned baseline works well for classica
 | REINFORCE + baseline | 92% |
 | Raw REINFORCE | 78% |
 
-**Why REINFORCE works:**
+#### Why REINFORCE works
 
 1. **Simplicity** - Fewer hyperparameters than actor-critic methods
 2. **Stability** - The baseline reduces variance effectively
 3. **Efficiency** - Single network, no value function needed
 
-**Configuration:**
+#### Configuration
 
 ```yaml
 brain:
@@ -87,18 +87,18 @@ gradient:
 
 ### PPO Brain (PPOBrain)
 
-**Recommended: Clipped surrogate objective**
+#### Recommended: Clipped surrogate objective
 
 PPO uses the clipped surrogate objective with GAE for advantage estimation. December 2025 benchmarks achieved **97.1% ± 1.2% success rate** on foraging small (20x20) with fast convergence (~14 episodes to 80% success).
 
-**Why PPO excels:**
+#### Why PPO excels
 
 1. **Stable updates** - Clipped objective prevents destructive policy updates
 2. **Sample efficiency** - Multiple epochs per rollout improve data utilization
 3. **Variance reduction** - GAE provides low-variance advantage estimates
 4. **Fast convergence** - Learns effective policies in ~14 episodes
 
-**Configuration:**
+#### Configuration
 
 ```yaml
 brain:
@@ -119,7 +119,7 @@ brain:
 
 ### Spiking Neural Networks (SpikingBrain)
 
-**Recommended: Surrogate gradients + REINFORCE**
+#### Recommended: Surrogate gradients + REINFORCE
 
 Spiking networks require special handling due to non-differentiable spike functions:
 
@@ -128,7 +128,7 @@ Spiking networks require special handling due to non-differentiable spike functi
 | Foraging | Surrogate + REINFORCE | 78% |
 | Predator evasion | Surrogate + REINFORCE | 63% |
 
-**Configuration:**
+#### Configuration
 
 ```yaml
 brain:
