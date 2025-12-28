@@ -166,27 +166,32 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 ## Work Stream 5: Reproducibility & Metrics Enhancement
 
 ### 5.1 Create Seeding Infrastructure
-- [ ] Create `packages/quantum-nematode/quantumnematode/utils/seeding.py`
-- [ ] Implement `generate_seed()` using `secrets.randbelow(2**32)`
-- [ ] Implement `set_global_seed(seed: int)` for numpy/torch
-- [ ] Implement `get_rng(seed: int | None)` for seeded RNG creation
-- [ ] Implement `ensure_seed(seed: int | None)` for auto-generation
+- [x] Create `packages/quantum-nematode/quantumnematode/utils/seeding.py`
+- [x] Implement `generate_seed()` using `secrets.randbelow(2**32)`
+- [x] Implement `set_global_seed(seed: int)` for numpy/torch
+- [x] Implement `get_rng(seed: int | None)` for seeded RNG creation
+- [x] Implement `ensure_seed(seed: int | None)` for auto-generation
 
 **Validation**: Unit tests for seed generation and RNG creation
 
 ### 5.2 Fix Environment Seeding
-- [ ] Replace `secrets` module usage in `env/env.py` with seeded numpy RNG
-- [ ] Add `seed` parameter to environment config
-- [ ] Ensure food spawning, predator movement, initial positions are deterministic
+- [x] Replace `secrets` module usage in `env/env.py` with seeded numpy RNG
+- [x] Add `seed` parameter to environment config
+- [x] Ensure food spawning, predator movement, initial positions are deterministic
 
 **Validation**: Same seed produces identical episode results
 
 ### 5.3 Add Brain Seed Support
-- [ ] Add `seed` config parameter to `PPOBrainConfig`
-- [ ] Add `seed` config parameter to `MLPBrainConfig`
-- [ ] Add `seed` config parameter to `ModularBrainConfig`
-- [ ] Update config loader to pass seed through
-- [ ] Ensure weight initialization and action selection are reproducible
+- [x] Add `seed` config parameter to `BrainConfig` base class (inherited by all brains)
+- [x] Update `PPOBrain` to use seeded RNG for action selection and buffer shuffling
+- [x] Update `MLPBrain` to use seeded RNG for action selection
+- [x] Update `ModularBrain` to use seeded RNG for action selection and noise
+- [x] Update `QMLPBrain` to use seeded RNG for epsilon-greedy and experience sampling
+- [x] Update `QModularBrain` to use seeding infrastructure
+- [x] Update `SpikingBrain` to use seeded RNG and global seeds
+- [x] Set global numpy/torch seeds for reproducible weight initialization
+- [x] Add `--seed` CLI argument to `run_simulation.py`
+- [x] Pass seed to environment and brain from CLI/config
 
 **Validation**: Same seed produces identical brain behavior
 
