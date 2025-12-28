@@ -13,8 +13,9 @@ from quantumnematode.experiment.metadata import StatValue
 from quantumnematode.experiment.submission import NematodeBenchSubmission
 from quantumnematode.logging_config import logger
 
-# Default benchmarks storage directory
-BENCHMARKS_DIR = Path.cwd() / "benchmarks"
+# Default benchmarks storage directory (relative to package root)
+# Note: Callers can override by passing explicit paths to functions
+BENCHMARKS_DIR = Path(__file__).parent.parent.parent.parent.parent / "benchmarks"
 
 
 def load_submission(filepath: Path) -> NematodeBenchSubmission | None:
@@ -63,9 +64,9 @@ def list_benchmarks(category: str | None = None) -> list[NematodeBenchSubmission
     if not BENCHMARKS_DIR.exists():
         return submissions
 
-    # Skip legacy folder
+    # Skip files in the dedicated legacy folder
     for json_file in BENCHMARKS_DIR.rglob("*.json"):
-        if "legacy" in str(json_file):
+        if any(part == "legacy" for part in json_file.relative_to(BENCHMARKS_DIR).parts):
             continue
 
         submission = load_submission(json_file)
@@ -88,13 +89,18 @@ def list_benchmarks(category: str | None = None) -> list[NematodeBenchSubmission
     return submissions
 
 
-def format_stat_value(stat: StatValue | dict, fmt: str = ".2f", *, is_percent: bool = False) -> str:
+def format_stat_value(
+    stat: StatValue | dict | None,
+    fmt: str = ".2f",
+    *,
+    is_percent: bool = False,
+) -> str:
     """Format a StatValue as 'mean ± std'.
 
     Parameters
     ----------
-    stat : StatValue | dict
-        The statistical value to format.
+    stat : StatValue | dict | None
+        The statistical value to format (returns "N/A" if None).
     fmt : str
         Format string for numbers.
     is_percent : bool
@@ -234,19 +240,19 @@ def generate_readme_section() -> str:
         ("Predator Small - Quantum", "predator_small_quantum"),
     ]
 
-    # Collect all submissions to check if any exist
-    all_submissions = []
-    for _, category_id in categories:
-        all_submissions.extend(list_benchmarks(category_id))
+    # Load submissions once per category to avoid redundant file reads
+    category_submissions_map = {
+        category_id: list_benchmarks(category_id) for _, category_id in categories
+    }
 
-    if not all_submissions:
+    if not any(category_submissions_map.values()):
         sections.append(
             "*No NematodeBench submissions yet. Be the first to submit!*",
         )
     else:
         # Show top 3 performers from categories with submissions
         for display_name, category_id in categories:
-            category_submissions = list_benchmarks(category_id)
+            category_submissions = category_submissions_map[category_id]
             if category_submissions:
                 sections.append(f"#### {display_name}\n")
                 table = generate_category_table(category_id, limit=3)
@@ -380,6 +386,12 @@ def update_readme(readme_path: Path | str) -> None:
     replacement = f"\\1{new_section}\n\\3"
 
     updated_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+    if updated_content == content and new_section.strip():
+        logger.warning(
+            "README.md update pattern not found. "
+            "Expected '### Current Leaders' section followed by 'See [BENCHMARKS.md]'",
+        )
 
     # Write back
     readme_path.write_text(updated_content)
