@@ -24,6 +24,7 @@ from quantumnematode.experiment.metadata import (
     SystemMetadata,
 )
 from quantumnematode.experiment.system_utils import capture_system_info
+from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TerminationReason
 from quantumnematode.validation.chemotaxis import (
     ChemotaxisMetrics,
@@ -259,7 +260,7 @@ def extract_gradient_metadata(config: dict) -> GradientMetadata:
     return GradientMetadata(method=method, max_norm=max_norm)
 
 
-def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:  # noqa: PLR0915, C901
+def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMetadata:  # noqa: PLR0912, PLR0915, C901
     """Aggregate simulation results into metadata.
 
     Parameters
@@ -335,19 +336,26 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
     )
 
     # BUILD PER-RUN RESULTS for full transparency
-    per_run_results = [
-        PerRunResult(
-            run=r.run,  # Already 1-indexed from run_simulation.py
-            seed=r.seed if r.seed is not None else 0,
-            success=r.success,
-            steps=r.steps,
-            total_reward=r.total_reward,
-            termination_reason=r.termination_reason.value,
-            foods_collected=r.foods_collected,
-            distance_efficiency=r.average_distance_efficiency,
+    per_run_results = []
+    for r in all_results:
+        seed = r.seed
+        if seed is None:
+            logger.warning(
+                f"Run {r.run} missing seed - reproducibility compromised. Defaulting to 0.",
+            )
+            seed = 0
+        per_run_results.append(
+            PerRunResult(
+                run=r.run,  # Already 1-indexed from run_simulation.py
+                seed=seed,
+                success=r.success,
+                steps=r.steps,
+                total_reward=r.total_reward,
+                termination_reason=r.termination_reason.value,
+                foods_collected=r.foods_collected,
+                distance_efficiency=r.average_distance_efficiency,
+            ),
         )
-        for r in all_results
-    ]
 
     # CONVERGENCE ANALYSIS
     convergence_metrics = analyze_convergence(all_results, total_runs)
