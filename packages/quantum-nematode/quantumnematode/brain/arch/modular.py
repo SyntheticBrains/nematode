@@ -114,6 +114,7 @@ from quantumnematode.optimizers.gradient_methods import (
     compute_gradients,
 )
 from quantumnematode.optimizers.learning_rate import ConstantLearningRate, DynamicLearningRate
+from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 if TYPE_CHECKING:
     from qiskit.primitives import PrimitiveResult
@@ -284,6 +285,11 @@ class ModularBrain(QuantumBrain):
             f"Using configuration: {config}",
         )
 
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        logger.info(f"ModularBrain using seed: {self.seed}")
+
         self.num_qubits: int = num_qubits
         self.modules: dict[ModuleName, list[int]] = config.modules or deepcopy(DEFAULT_MODULES)
         self.shots: int = shots
@@ -338,7 +344,11 @@ class ModularBrain(QuantumBrain):
             for axis in ["rx", "ry", "rz"]:
                 param_names.extend([f"θ_{axis}{layer + 1}_{i}" for i in range(self.num_qubits)])
 
-        self.parameter_values = self.parameter_initializer.initialize(self.num_qubits, param_names)
+        self.parameter_values = self.parameter_initializer.initialize(
+            self.num_qubits,
+            param_names,
+            seed=self.seed,
+        )
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
@@ -449,7 +459,10 @@ class ModularBrain(QuantumBrain):
                     logger.error(error_message)
                     raise ImportError(error_message) from err
 
-                self._backend = AerSimulator(device=self.device.value.upper())
+                self._backend = AerSimulator(
+                    device=self.device.value.upper(),
+                    seed_simulator=self.seed,
+                )
         return self._backend
 
     def _get_cached_circuit(self) -> QuantumCircuit:
@@ -466,7 +479,7 @@ class ModularBrain(QuantumBrain):
         if self._transpiled_cache is None:
             qc = self._get_cached_circuit()
             backend = self._get_backend()
-            self._transpiled_cache = transpile(qc, backend)
+            self._transpiled_cache = transpile(qc, backend, seed_transpiler=self.seed)
 
         return self._transpiled_cache
 
@@ -566,7 +579,10 @@ class ModularBrain(QuantumBrain):
                 backend = self._get_backend()
 
                 # Transpile and bind parameters
-                bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
+                bound_qc = transpile(qc, backend, seed_transpiler=self.seed).assign_parameters(
+                    param_values,
+                    inplace=False,
+                )
 
                 # Create sampler
                 sampler = Sampler(mode=backend)
@@ -582,7 +598,10 @@ class ModularBrain(QuantumBrain):
         else:
             # Use AerSimulator
             backend = self._get_backend()
-            bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
+            bound_qc = transpile(qc, backend, seed_transpiler=self.seed).assign_parameters(
+                param_values,
+                inplace=False,
+            )
             job = backend.run(bound_qc, shots=self.shots)
             if job is None:
                 error_message = "Backend run did not return a valid job object."
@@ -779,8 +798,7 @@ class ModularBrain(QuantumBrain):
             if top_randomize:
                 actions = [a.state for a in sorted_actions]
                 probs = [a.probability for a in sorted_actions]
-                rng = np.random.default_rng()
-                chosen_state = rng.choice(actions, p=probs)
+                chosen_state = self.rng.choice(actions, p=probs)
                 chosen_action = next(a for a in sorted_actions if a.state == chosen_state)
                 self.latest_data.action = chosen_action
                 self.history_data.actions.append(chosen_action)
@@ -1062,8 +1080,12 @@ class ModularBrain(QuantumBrain):
         -------
             ModularBrain: A new instance with the same state.
         """
+        # Create a config copy with the resolved seed to ensure reproducibility
+        config_with_seed = ModularBrainConfig(
+            **{**self.config.model_dump(), "seed": self.seed},
+        )
         new_brain = ModularBrain(
-            config=self.config,
+            config=config_with_seed,
             shots=self.shots,
             device=self.device,
             learning_rate=deepcopy(self.learning_rate),
@@ -1172,7 +1194,7 @@ class ModularBrain(QuantumBrain):
                 # Build circuit with input features for this timestep
                 qc = self.build_brain(input_params)
                 backend = self._get_backend()
-                transpiled_template = transpile(qc, backend)
+                transpiled_template = transpile(qc, backend, seed_transpiler=self.seed)
                 for plus, minus in param_sets:
                     circuits.append(transpiled_template.assign_parameters(plus, inplace=False))
                     circuits.append(transpiled_template.assign_parameters(minus, inplace=False))
@@ -1464,7 +1486,6 @@ class ModularBrain(QuantumBrain):
                 self.gradient_max_norm,
             )
 
-        rng = np.random.default_rng()
         for i, k in enumerate(param_keys):
             # L2 regularization
             reg = self.config.l2_reg * self.parameter_values[k]
@@ -1474,7 +1495,7 @@ class ModularBrain(QuantumBrain):
             effective_noise_std = 0.0
             if init_lr > 0:
                 effective_noise_std = self.config.noise_std * (learning_rate / init_lr)
-            noise = rng.normal(0, effective_noise_std)
+            noise = self.rng.normal(0, effective_noise_std)
 
             # Momentum update with adaptive learning rate and decay
             # Note: Using adaptive momentum decay instead of fixed momentum_decay

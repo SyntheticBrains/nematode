@@ -28,7 +28,6 @@ This approach provides more stable and sample-efficient learning compared
 to policy gradient methods for discrete action spaces like grid navigation.
 """
 
-import random
 from collections import deque
 
 import numpy as np
@@ -42,6 +41,7 @@ from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
+from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 
 class QMLPBrainConfig(BrainConfig):
@@ -78,6 +78,12 @@ class QMLPBrain(ClassicalBrain):
         super().__init__()
 
         logger.info(f"Using Q-MLP configuration: {config}")
+
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        set_global_seed(self.seed)  # Set global numpy/torch seeds
+        logger.info(f"QMLPBrain using seed: {self.seed}")
 
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -205,10 +211,9 @@ class QMLPBrain(ClassicalBrain):
         state = self.preprocess(params)
         q_values = self.forward(state)
 
-        # Epsilon-greedy action selection
-        rng = np.random.default_rng()
-        if self.training and rng.random() < self.epsilon:
-            action_idx = rng.integers(0, self.num_actions)
+        # Epsilon-greedy action selection (using seeded RNG for reproducibility)
+        if self.training and self.rng.random() < self.epsilon:
+            action_idx = self.rng.integers(0, self.num_actions)
         else:
             action_idx = torch.argmax(q_values).item()
 
@@ -273,8 +278,9 @@ class QMLPBrain(ClassicalBrain):
         if len(self.experience_buffer) < self.batch_size:
             return
 
-        # Sample batch from experience buffer
-        batch = random.sample(self.experience_buffer, self.batch_size)
+        # Sample batch from experience buffer (using seeded RNG for reproducibility)
+        indices = self.rng.choice(len(self.experience_buffer), size=self.batch_size, replace=False)
+        batch = [self.experience_buffer[i] for i in indices]
         states = torch.tensor(
             np.array([exp[0] for exp in batch]),
             dtype=torch.float32,

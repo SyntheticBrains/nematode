@@ -193,6 +193,7 @@ class EnvironmentConfig(BaseModel):
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
+    seed: int | None = None
     brain: BrainContainerConfig | None = None
     max_steps: int | None = None
     shots: int | None = None

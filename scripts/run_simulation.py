@@ -111,6 +111,7 @@ from quantumnematode.utils.config_loader import (
     create_parameter_initializer_instance,
     load_simulation_config,
 )
+from quantumnematode.utils.seeding import derive_run_seed, ensure_seed, get_rng, set_global_seed
 
 DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
@@ -206,6 +207,12 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="Display chemotaxis validation against C. elegans literature data.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility. If not provided, a random seed is auto-generated.",
+    )
 
     return parser.parse_args()
 
@@ -219,6 +226,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     max_steps = DEFAULT_MAX_STEPS
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
+
+    # Initialize seed for reproducibility (auto-generate if not provided)
+    simulation_seed = ensure_seed(args.seed)
+    logger.info(f"Using simulation seed: {simulation_seed}")
     shots = DEFAULT_SHOTS
     body_length = DEFAULT_AGENT_BODY_LENGTH
     qubits = DEFAULT_QUBITS
@@ -239,17 +250,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     match brain_type:
         case BrainType.MODULAR:
-            brain_config = ModularBrainConfig()
+            brain_config = ModularBrainConfig(seed=simulation_seed)
         case BrainType.MLP:
-            brain_config = MLPBrainConfig()
+            brain_config = MLPBrainConfig(seed=simulation_seed)
         case BrainType.PPO:
-            brain_config = PPOBrainConfig()
+            brain_config = PPOBrainConfig(seed=simulation_seed)
         case BrainType.QMLP:
-            brain_config = QMLPBrainConfig()
+            brain_config = QMLPBrainConfig(seed=simulation_seed)
         case BrainType.QMODULAR:
-            brain_config = QModularBrainConfig()
+            brain_config = QModularBrainConfig(seed=simulation_seed)
         case BrainType.SPIKING:
-            brain_config = SpikingBrainConfig()
+            brain_config = SpikingBrainConfig(seed=simulation_seed)
 
     # Authenticate and setup Q-CTRL if needed
     perf_mgmt = None
@@ -268,7 +279,19 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if config_file:
         config = load_simulation_config(config_file)
 
+        # Handle seed precedence: CLI > config file > auto-generated
+        if args.seed is not None:
+            # CLI seed takes highest precedence (already set in simulation_seed)
+            pass
+        elif config.seed is not None:
+            # Use seed from config file root level
+            simulation_seed = config.seed
+            logger.info(f"Using seed from config file: {simulation_seed}")
+
         brain_config = configure_brain(config)
+        # Always update brain config with the resolved simulation seed
+        brain_config = brain_config.model_copy(update={"seed": simulation_seed})
+
         brain_type = (
             BrainType(config.brain.name)
             if config.brain is not None and isinstance(config.brain, BrainContainerConfig)
@@ -332,6 +355,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
     logger.info(f"Shots: {shots}")
+    logger.info(f"Seed: {simulation_seed}")
 
     # Select the brain architecture
     brain = setup_brain_model(
@@ -368,6 +392,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             viewport_size=dynamic_config.viewport_size,
             max_body_length=body_length,
             theme=theme,
+            seed=simulation_seed,
             # Predator parameters
             predators_enabled=predator_config.enabled,
             num_predators=predator_config.count,
@@ -396,6 +421,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             grid_size=static_config.grid_size,
             max_body_length=body_length,
             theme=theme,
+            seed=simulation_seed,
         )
         logger.info(
             f"Static maze environment: {static_config.grid_size}x{static_config.grid_size} grid",
@@ -456,6 +482,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     try:
         for run in range(total_runs_done, runs):
             run_num = run + 1
+
+            # Reset global RNG with per-run derived seed for reproducibility
+            # This ensures each run starts with a deterministic state
+            run_seed = derive_run_seed(simulation_seed, run)
+            set_global_seed(run_seed)
+            logger.debug(f"Run {run_num} using derived seed: {run_seed}")
+
             logger.info(f"Starting run {run_num} of {runs}")
 
             # Log full initial environment state
@@ -642,6 +675,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
 
             if run_num < runs:
+                # Derive seed for next run and update environment before reset
+                # This ensures each run has unique but reproducible food/predator placements
+                next_run_seed = derive_run_seed(
+                    simulation_seed,
+                    run_num,
+                )  # run_num is 1-indexed, so this gives seed for next run
+                agent.env.seed = next_run_seed
+                agent.env.rng = get_rng(next_run_seed)
                 agent.reset_environment()
                 agent.reset_brain()
 
