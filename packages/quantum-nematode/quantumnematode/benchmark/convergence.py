@@ -19,12 +19,12 @@ class ConvergenceMetrics(BaseModel):
     """Whether the learning strategy converged within the session."""
 
     convergence_run: int | None
-    """Zero-based index into results where convergence was detected (None if never converged)."""
+    """1-indexed run number where convergence was detected (None if never converged)."""
 
     runs_to_convergence: int | None
     """
     Number of runs before converged region starts
-    (equal to convergence_run, None if never converged).
+    (equal to convergence_run - 1, None if never converged).
     """
 
     post_convergence_success_rate: float | None
@@ -50,16 +50,19 @@ def detect_convergence(
     results: list[SimulationResult],
     variance_threshold: float = 0.05,
     stability_runs: int = 10,
-    min_runs: int = 20,
+    min_total_runs: int = 30,
+    min_success_rate: float = 0.5,
 ) -> int | None:
     """
     Detect when learning strategy converges using adaptive algorithm.
 
     Convergence is detected when the success rate variance falls below a threshold
-    for a sustained number of runs, indicating the strategy has stabilized.
+    for a sustained number of runs AND the mean success rate in that window is
+    above a minimum threshold, indicating the strategy has learned and stabilized.
 
-    Note that the sum of min_runs and stability_runs must be less than the total number of results
-    and less than the minimum number of runs required for benchmark validation.
+    The algorithm searches from the beginning to find the earliest point where
+    a stable, successful window begins. This allows detecting early convergence
+    (e.g., at run 4) while still requiring enough total data for reliable detection.
 
     Parameters
     ----------
@@ -69,8 +72,14 @@ def detect_convergence(
         Maximum variance to consider converged (default: 0.05 = 5%).
     stability_runs : int, optional
         Number of consecutive low-variance runs required (default: 10).
-    min_runs : int, optional
-        Minimum runs before convergence can be declared (default: 20).
+    min_total_runs : int, optional
+        Minimum total runs required before convergence detection is attempted
+        (default: 30). This ensures we have enough data to distinguish true
+        convergence from temporary plateaus.
+    min_success_rate : float, optional
+        Minimum mean success rate required in the stability window for
+        convergence to be declared (default: 0.5 = 50%). This prevents
+        detecting "convergence" when the agent is stably failing.
 
     Returns
     -------
@@ -80,24 +89,32 @@ def detect_convergence(
     Notes
     -----
     The algorithm checks if success rate variance in a sliding window of
-    `stability_runs` remains below the threshold. This prevents declaring
-    convergence during temporary plateaus and ensures genuine stabilization.
+    `stability_runs` remains below the threshold AND the mean success rate
+    is above the minimum. It searches from the start to find the earliest
+    convergence point.
+
+    For example, if an agent achieves 100% success from run 5 onward with a
+    stability window of 10, convergence will be reported at run 5 (since the
+    window from run 5-14 is stable and successful). Returns 1-indexed values
+    so run 5 means the 5th run.
     """
-    if len(results) < min_runs + stability_runs:
+    if len(results) < min_total_runs:
         return None
 
     # Extract binary success indicators (1.0 for success, 0.0 for failure)
     successes = [1.0 if r.success else 0.0 for r in results]
 
-    # Search for convergence point starting after minimum runs
-    for i in range(min_runs, len(successes) - stability_runs + 1):
-        # Check variance in stability window
+    # Search for convergence point from the beginning
+    # The earliest possible convergence is at index 0 (window covers runs 0-9)
+    for i in range(len(successes) - stability_runs + 1):
+        # Check variance and success rate in stability window
         window = successes[i : i + stability_runs]
         variance = float(np.var(window))
 
-        if variance < variance_threshold:
-            # Found stable region - convergence detected
-            return i
+        if variance < variance_threshold and mean_success >= min_success_rate:
+            # Found stable, successful region - convergence detected at start of window
+            # Return 1-indexed (add 1 to convert from 0-indexed)
+            return i + 1
 
     # Never converged within the session
     return None
@@ -116,7 +133,7 @@ def calculate_post_convergence_metrics(
     results : list[SimulationResult]
         Ordered list of simulation results from a session.
     convergence_run : int | None
-        Zero-based index of run where convergence was detected (None triggers fallback).
+        1-indexed run number where convergence was detected (None triggers fallback).
     fallback_window : int, optional
         Number of final runs to use if never converged (default: 10).
 
@@ -132,7 +149,9 @@ def calculate_post_convergence_metrics(
     """
     # Determine which runs to analyze
     if convergence_run is not None:
-        analysis_runs = results[convergence_run:]
+        # Convert 1-indexed convergence_run to 0-indexed for slicing
+        start_idx = convergence_run - 1
+        analysis_runs = results[start_idx:]
     else:
         # Fallback: use last N runs
         analysis_runs = results[-fallback_window:] if len(results) >= fallback_window else results
@@ -303,7 +322,9 @@ def analyze_convergence(
     convergence_run = detect_convergence(results)
 
     converged = convergence_run is not None
-    runs_to_convergence = convergence_run if converged else None
+    # runs_to_convergence = number of runs before convergence (convergence_run - 1)
+    # e.g., if convergence_run=5 (1-indexed), there were 4 runs before convergence
+    runs_to_convergence = (convergence_run - 1) if converged else None
 
     # Step 2: Calculate post-convergence metrics
     post_metrics = calculate_post_convergence_metrics(results, convergence_run)
