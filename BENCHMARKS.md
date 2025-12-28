@@ -50,6 +50,9 @@ uv run scripts/benchmark_submit.py \
     --experiments experiments/* \
     --category foraging_small/classical \
     --contributor "Your Name"
+
+# Regenerate leaderboards
+uv run scripts/benchmark_submit.py regenerate
 ```
 
 See the [Submission Guide](docs/nematodebench/SUBMISSION_GUIDE.md) for detailed instructions.

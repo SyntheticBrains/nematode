@@ -200,6 +200,9 @@ uv run scripts/benchmark_submit.py \
     --experiments experiments/* \
     --category foraging_small/classical \
     --contributor "Your Name"
+
+# Regenerate leaderboards
+uv run scripts/benchmark_submit.py regenerate
 ```
 
 ### Current Leaders

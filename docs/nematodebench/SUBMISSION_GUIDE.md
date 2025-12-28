@@ -97,7 +97,19 @@ This will:
 5. Generate a fresh submission timestamp
 6. Save the benchmark to `benchmarks/<category>/<timestamp>.json`
 
-## Step 5: Validate Your Submission
+## Step 5: Regenerate Leaderboards
+
+After submitting, regenerate the leaderboard documentation:
+
+```bash
+uv run scripts/benchmark_submit.py regenerate
+```
+
+This automatically updates:
+- `docs/nematodebench/LEADERBOARD.md` - Full leaderboard tables
+- `README.md` - Current Leaders section
+
+## Step 6: Validate Your Submission
 
 Validate before creating a pull request:
 
@@ -121,13 +133,14 @@ Summary:
   all_seeds_unique: True
 ```
 
-## Step 6: Submit Pull Request
+## Step 7: Submit Pull Request
 
 1. Fork the main repository (if not already done)
-2. Stage the benchmark and artifact files:
+2. Stage the benchmark, leaderboard, and artifact files:
    ```bash
    git add benchmarks/<category>/<timestamp>.json
    git add artifacts/experiments/
+   git add README.md docs/nematodebench/LEADERBOARD.md
    ```
 3. Create a pull request with:
    - Title: `[NematodeBench] <Brain> on <Task> - <Score>`
@@ -157,10 +170,13 @@ Brief description of your approach, hyperparameter choices, and any novel techni
 - [ ] All seeds unique across all runs
 - [ ] evaluate_submission.py passes
 - [ ] Config files in artifacts/experiments/
+- [ ] Leaderboards regenerated
 
 ### Files Changed
 - `benchmarks/<category>/<timestamp>.json`
 - `artifacts/experiments/<session_id>/` (10+ session folders)
+- `README.md` (Current Leaders section updated)
+- `docs/nematodebench/LEADERBOARD.md` (Full leaderboard updated)
 ```
 
 ## Submission JSON Format
