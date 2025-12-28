@@ -205,53 +205,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 
 ### Current Leaders
 
-#### Static Maze - Quantum
-
-| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
-|---|---|---|---|---|---|---|---|
-| ✓ modular | 0.980 | 100% | 34 | 20 | 0.000 | @chrisjz | 2025-11-29 |
-| ✓ modular | 0.960 | 100% | 32 | 20 | 0.000 | @chrisjz | 2025-11-23 |
-
-#### Static Maze - Classical
-
-| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
-|---|---|---|---|---|---|---|---|
-| ✓ mlp | 0.960 | 100% | 24 | 20 | 0.000 | @chrisjz | 2025-11-23 |
-| ✓ spiking | 0.932 | 100% | 67 | 34 | 0.000 | @chrisjz | 2025-12-21 |
-| ✓ spiking | 0.896 | 100% | 79 | 52 | 0.000 | @chrisjz | 2025-12-19 |
-
-#### Dynamic Small - Quantum
-
-| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
-|---|---|---|---|---|---|---|---|
-| ✓ modular | 0.762 | 100% | 207 | 20 | 0.000 | @chrisjz | 2025-12-14 |
-| ✓ modular | 0.633 | 84% | 350 | 27 | 0.136 | @chrisjz | 2025-11-30 |
-| ✓ modular | 0.600 | 81% | 380 | 38 | 0.151 | @chrisjz | 2025-11-30 |
-
-#### Dynamic Small - Classical
-
-| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
-|---|---|---|---|---|---|---|---|
-| ✓ ppo | 0.832 | 100% | 178 | 20 | 0.000 | @chrisjz | 2025-12-26 |
-| ✓ mlp | 0.822 | 100% | 181 | 20 | 0.000 | @chrisjz | 2025-11-27 |
-| ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
-
-#### Dynamic Predator Small - Quantum
-
-| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
-|---|---|---|---|---|---|---|---|
-| ✓ modular | 0.675 | 95% | 224 | 29 | 0.045 | @chrisjz | 2025-12-13 |
-| ✓ modular | 0.402 | 32% | 320 | 24 | 0.217 | @chrisjz | 2025-11-29 |
-| ✓ modular | 0.395 | 31% | 344 | 27 | 0.215 | @chrisjz | 2025-11-27 |
-
-#### Dynamic Predator Small - Classical
-
-| Brain | Score | Success% | Steps | Converge@Run | Stability | Contributor | Date |
-|---|---|---|---|---|---|---|---|
-| ✓ ppo | 0.781 | 93% | 176 | 24 | 0.064 | @chrisjz | 2025-12-27 |
-| ✓ mlp | 0.740 | 92% | 199 | 30 | 0.076 | @chrisjz | 2025-11-27 |
-| ✓ mlp | 0.618 | 82% | 195 | 78 | 0.148 | @chrisjz | 2025-11-23 |
-
+*No benchmarks submitted yet. Be the first to set a benchmark!*
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
 ## 📊 Example Output
