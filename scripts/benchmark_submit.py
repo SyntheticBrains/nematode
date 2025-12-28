@@ -345,12 +345,8 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
     submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     total_runs = sum(exp.results.total_runs for exp in experiments)
 
-    # Check all seeds unique across all runs in all sessions
-    all_seeds: list[int] = []
-    for exp in experiments:
-        if exp.results.per_run_results:
-            all_seeds.extend(r.seed for r in exp.results.per_run_results)
-    all_seeds_unique = len(all_seeds) == len(set(all_seeds))
+    # validate_submission already verified seed uniqueness, so this is True if we got here
+    all_seeds_unique = True
 
     submission = NematodeBenchSubmission(
         submission_id=submission_id,
