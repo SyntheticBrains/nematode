@@ -1117,8 +1117,12 @@ class SpikingBrain(ClassicalBrain):
         SpikingBrain
             New SpikingBrain instance with copied network parameters
         """
+        # Create a config copy with the resolved seed to ensure reproducibility
+        config_with_seed = SpikingBrainConfig(
+            **{**self.config.model_dump(), "seed": self.seed},
+        )
         new_brain = SpikingBrain(
-            config=self.config,
+            config=config_with_seed,
             input_dim=self.input_dim,
             num_actions=self.num_actions,
             device=DeviceType(self.device.type),
