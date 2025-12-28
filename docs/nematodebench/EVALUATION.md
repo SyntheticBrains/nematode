@@ -6,7 +6,7 @@ This document describes the scoring methodology used in NematodeBench.
 
 The benchmark uses a weighted composite score to evaluate brain architectures:
 
-```
+```text
 score = 0.40 × success_rate +
         0.30 × distance_efficiency +
         0.20 × learning_speed +

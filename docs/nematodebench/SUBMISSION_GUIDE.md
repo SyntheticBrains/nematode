@@ -119,7 +119,7 @@ uv run scripts/evaluate_submission.py \
 ```
 
 Expected output:
-```
+```text
 ✓ Submission is VALID.
 
 Summary:
