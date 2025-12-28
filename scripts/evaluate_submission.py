@@ -51,7 +51,7 @@ REQUIRED_METRIC_FIELDS = [
     "stability",
 ]
 
-VALID_BRAIN_TYPES = ["mlp", "ppo", "modular", "qmodular", "qmlp", "spiking"]
+VALID_BRAIN_TYPES = frozenset({"mlp", "ppo", "modular", "qmodular", "qmlp", "spiking"})
 
 
 def _validate_required_fields(data: dict) -> list[str]:
@@ -159,16 +159,14 @@ def validate_session_references(data: dict, base_path: Path) -> tuple[list[str],
             full_path = base_path / file_path
             if not full_path.exists():
                 errors.append(f"Session reference not found: {file_path}")
-            else:
-                # Check for experiment JSON
-                json_files = list(full_path.glob("*.json")) if full_path.is_dir() else []
-                if full_path.is_dir() and not json_files:
-                    errors.append(f"No JSON file in session folder: {file_path}")
+            # Check for experiment JSON
+            elif full_path.is_dir() and not any(full_path.glob("*.json")):
+                errors.append(f"No JSON file in session folder: {file_path}")
 
     return errors, warnings
 
 
-RATE_METRICS = {"success_rate", "stability", "distance_efficiency", "learning_speed"}
+RATE_METRICS = frozenset({"success_rate", "stability", "distance_efficiency", "learning_speed"})
 
 
 def _validate_metric_mean(metric_name: str, mean: object) -> list[str]:
@@ -361,13 +359,13 @@ Examples:
     parser.add_argument(
         "--reproduce",
         action="store_true",
-        help="Attempt to reproduce a subset of runs",
+        help="Attempt to reproduce a subset of runs (not yet implemented)",
     )
     parser.add_argument(
         "--reproduce-runs",
         type=int,
         default=5,
-        help="Number of runs to reproduce (default: 5)",
+        help="Number of runs to reproduce when --reproduce is implemented (default: 5)",
     )
     parser.add_argument(
         "--json",
