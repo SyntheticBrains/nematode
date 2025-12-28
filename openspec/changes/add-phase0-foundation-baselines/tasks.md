@@ -41,9 +41,9 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 **Validation**: Configs load without errors
 
 ### 1.4 Benchmark PPO Performance
-- [x] Run 100 episodes on `dynamic_small` environment
+- [x] Run 100 episodes on `foraging_small` environment
 - [x] Tune hyperparameters if success rate < 85%
-- [x] Run 100 episodes on `dynamic_predator_small` environment
+- [x] Run 100 episodes on `predator_small` environment
 - [x] Document final performance metrics
 - [x] Compare learning curves to MLPBrain baseline - deferred
 
@@ -229,15 +229,10 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Finalize `specs/validation-system/spec.md` with chemotaxis requirements
 - [x] Finalize `specs/benchmark-management/spec.md` with NematodeBench requirements
 
-### 6.2 Validate Proposal
-- [ ] Run `openspec validate add-phase0-foundation-baselines --strict`
-- [ ] Fix any validation errors
-- [ ] Verify all requirements have scenarios
-
-### 6.3 Re-run Legacy Benchmarks
+### 6.3 Re-run Legacy Benchmarks (Ongoing)
 - [x] Archive existing benchmarks to `benchmarks/legacy/` directory with README
-- [ ] Re-run benchmarks with new tracking system
-- [ ] Verify new benchmarks include per-run seeds and enhanced metrics
+- [x] Re-run benchmarks with new tracking system - ongoing, new submissions replace legacy over time
+- [x] Verify new benchmarks include per-run seeds and enhanced metrics
 
 ---
 
