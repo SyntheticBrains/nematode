@@ -15,7 +15,7 @@ class TestConvergenceDetection:
 
     def test_detect_convergence_stable_success(self):
         """Test convergence detection with stable 100% success rate."""
-        # 30 runs with 100% success after warmup
+        # 50 runs with 100% success after warmup (need min 30 for detection)
         results = [
             SimulationResult(
                 run=i,
@@ -27,15 +27,16 @@ class TestConvergenceDetection:
                 success=i >= 10,  # First 10 fails, then succeeds
                 efficiency_score=1.0,
             )
-            for i in range(30)
+            for i in range(50)
         ]
 
         convergence_run = detect_convergence(results)
 
-        # Should detect convergence after stable performance begins
+        # Should detect convergence at the first stable window (run 11, 1-indexed)
+        # Window covers runs 11-20 (1-indexed), which are indices 10-19 (0-indexed)
         assert convergence_run is not None
-        assert convergence_run >= 10  # After warmup period
-        assert convergence_run < 30  # Before end
+        assert convergence_run == 11  # First run where 10-run window is stable (1-indexed)
+        assert convergence_run < 50  # Before end
 
     def test_detect_convergence_never_converges(self):
         """Test that oscillating performance doesn't converge."""
@@ -72,12 +73,12 @@ class TestConvergenceDetection:
                 success=True,
                 efficiency_score=1.0,
             )
-            for i in range(15)  # Less than min_runs (20)
+            for i in range(25)  # Less than min_total_runs (30)
         ]
 
-        convergence_run = detect_convergence(results, min_runs=20)
+        convergence_run = detect_convergence(results, min_total_runs=30)
 
-        # Should return None due to insufficient runs
+        # Should return None due to insufficient total runs
         assert convergence_run is None
 
     def test_detect_convergence_gradual_improvement(self):
@@ -101,10 +102,35 @@ class TestConvergenceDetection:
 
         convergence_run = detect_convergence(results)
 
-        # Should detect convergence around when it stabilizes
+        # Should detect convergence at run 26
+        # (1-indexed, first run where window 26-35 is 100% stable)
         assert convergence_run is not None
-        assert convergence_run >= 20  # After min_runs
-        assert convergence_run <= 35  # Not too late
+        assert convergence_run == 26  # First stable window (1-indexed)
+        assert convergence_run <= 36  # Not too late
+
+    def test_detect_convergence_early_success(self):
+        """Test that convergence is detected at the earliest stable successful window."""
+        # 50 runs with 100% success from index 4 onward (i.e., run 5, 1-indexed)
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0,
+                last_total_reward=10.0,
+                termination_reason=TerminationReason.GOAL_REACHED,
+                success=i >= 4,  # First 4 fails (indices 0-3), then succeeds
+                efficiency_score=1.0,
+            )
+            for i in range(50)
+        ]
+
+        convergence_run = detect_convergence(results)
+
+        # Should detect convergence at run 5 (1-indexed, first stable successful window)
+        # Window from runs 5-14 (1-indexed) = indices 4-13 (0-indexed) has 100% success
+        assert convergence_run is not None
+        assert convergence_run == 5  # Early detection at actual convergence point (1-indexed)
 
 
 class TestPostConvergenceMetrics:
@@ -127,10 +153,11 @@ class TestPostConvergenceMetrics:
             for i in range(50)
         ]
 
-        metrics = calculate_post_convergence_metrics(results, convergence_run=20)
+        # convergence_run=21 (1-indexed) means starting from index 20 (0-indexed)
+        metrics = calculate_post_convergence_metrics(results, convergence_run=21)
 
-        # Should only consider runs after convergence
-        assert metrics["success_rate"] == 1.0  # 100% after run 20
+        # Should only consider runs from run 21 onward (index 20+)
+        assert metrics["success_rate"] == 1.0  # 100% after run 21
         assert metrics["avg_steps"] == 50.0  # Faster after convergence
         assert metrics["avg_foods"] == 5.0  # More food after convergence
         assert metrics["variance"] == 0.0  # Perfect stability
@@ -180,7 +207,8 @@ class TestPostConvergenceMetrics:
             for i in range(30)
         ]
 
-        metrics = calculate_post_convergence_metrics(results, convergence_run=20)
+        # convergence_run=21 (1-indexed) means starting from index 20 (0-indexed)
+        metrics = calculate_post_convergence_metrics(results, convergence_run=21)
 
         # Distance efficiency = average of post-convergence runs
         assert metrics["distance_efficiency"] is not None
@@ -279,7 +307,8 @@ class TestAnalyzeConvergence:
         # Verify convergence detected
         assert metrics.converged is True
         assert metrics.convergence_run is not None
-        assert metrics.convergence_run >= 15  # After poor performance ends
+        # Convergence at run 16 (1-indexed, first stable window with 100% success from 16-25)
+        assert metrics.convergence_run == 16
 
         # Verify post-convergence metrics are strong
         assert metrics.post_convergence_success_rate == 1.0
