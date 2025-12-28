@@ -111,7 +111,7 @@ from quantumnematode.utils.config_loader import (
     create_parameter_initializer_instance,
     load_simulation_config,
 )
-from quantumnematode.utils.seeding import ensure_seed
+from quantumnematode.utils.seeding import derive_run_seed, ensure_seed, get_rng, set_global_seed
 
 DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
@@ -477,6 +477,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     try:
         for run in range(total_runs_done, runs):
             run_num = run + 1
+
+            # Reset global RNG with per-run derived seed for reproducibility
+            # This ensures each run starts with a deterministic state
+            run_seed = derive_run_seed(simulation_seed, run)
+            set_global_seed(run_seed)
+            logger.debug(f"Run {run_num} using derived seed: {run_seed}")
+
             logger.info(f"Starting run {run_num} of {runs}")
 
             # Log full initial environment state
@@ -663,6 +670,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
 
             if run_num < runs:
+                # Derive seed for next run and update environment before reset
+                # This ensures each run has unique but reproducible food/predator placements
+                next_run_seed = derive_run_seed(
+                    simulation_seed,
+                    run_num,
+                )  # run_num is 1-indexed, so this gives seed for next run
+                agent.env.seed = next_run_seed
+                agent.env.rng = get_rng(next_run_seed)
                 agent.reset_environment()
                 agent.reset_brain()
 
