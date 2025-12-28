@@ -1,0 +1,55 @@
+# Dynamic Foraging Environment - Small Configuration
+# Curriculum level 1: Easy foraging scenario for initial training
+# Uses PPO (Proximal Policy Optimization) brain architecture
+
+max_steps: 500
+brain:
+  name: ppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    # Core PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    num_epochs: 10
+    num_minibatches: 2
+    rollout_buffer_size: 256
+    max_grad_norm: 0.5
+    normalize_advantages: true
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 20
+    viewport_size: [11, 11]
+
+    foraging:
+      foods_on_grid: 5
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0

@@ -207,7 +207,12 @@ uv run scripts/benchmark_submit.py regenerate
 
 ### Current Leaders
 
-*No NematodeBench submissions yet. Be the first to submit!*
+#### Foraging Small - Classical
+
+| Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
+|---|---|---|---|---|---|---|---|---|
+| ppo | 0.835 ± 0.007 | 96.7% ± 1.3% | 0.93 ± 0.01 | 0.95 ± 0.05 | 0.47 ± 0.02 | 12 | @chrisjz | 2025-12-28 |
+
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
 ## 📊 Example Output

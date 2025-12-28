@@ -1,0 +1,132 @@
+{
+  "submission_id": "20251228_151306",
+  "timestamp": "2025-12-28T15:13:06.861880+00:00",
+  "brain_type": "ppo",
+  "brain_config": {
+    "type": "ppo"
+  },
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "predators_enabled": false
+  },
+  "category": "foraging_small/classical",
+  "sessions": [
+    {
+      "experiment_id": "20251228_143946",
+      "file_path": "artifacts/experiments/20251228_143946",
+      "session_seed": 1225510920,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_143949",
+      "file_path": "artifacts/experiments/20251228_143949",
+      "session_seed": 1486134797,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_143952",
+      "file_path": "artifacts/experiments/20251228_143952",
+      "session_seed": 2562596148,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_143956",
+      "file_path": "artifacts/experiments/20251228_143956",
+      "session_seed": 331187814,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_145108",
+      "file_path": "artifacts/experiments/20251228_145108",
+      "session_seed": 1487638370,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_145110",
+      "file_path": "artifacts/experiments/20251228_145110",
+      "session_seed": 3706654201,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_145113",
+      "file_path": "artifacts/experiments/20251228_145113",
+      "session_seed": 2597787287,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_145116",
+      "file_path": "artifacts/experiments/20251228_145116",
+      "session_seed": 3498833840,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_150150",
+      "file_path": "artifacts/experiments/20251228_150150",
+      "session_seed": 3687387663,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_150152",
+      "file_path": "artifacts/experiments/20251228_150152",
+      "session_seed": 3930779698,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_150154",
+      "file_path": "artifacts/experiments/20251228_150154",
+      "session_seed": 168993764,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_150157",
+      "file_path": "artifacts/experiments/20251228_150157",
+      "session_seed": 1237649802,
+      "num_runs": 200
+    }
+  ],
+  "total_sessions": 12,
+  "total_runs": 2400,
+  "metrics": {
+    "success_rate": {
+      "mean": 0.9670833333333334,
+      "std": 0.013300741416260317,
+      "min": 0.94,
+      "max": 0.985
+    },
+    "composite_score": {
+      "mean": 0.8346489618873845,
+      "std": 0.007030064573438643,
+      "min": 0.8233120001523402,
+      "max": 0.844664194024391
+    },
+    "distance_efficiency": {
+      "mean": 0.4745271003508294,
+      "std": 0.01951743930575027,
+      "min": 0.44677639508804357,
+      "max": 0.5120975412469129
+    },
+    "learning_speed": {
+      "mean": 0.9320833333333333,
+      "std": 0.011078946500256908,
+      "min": 0.91,
+      "max": 0.945
+    },
+    "learning_speed_episodes": {
+      "mean": 13.583333333333334,
+      "std": 2.215789300051388,
+      "min": 11.0,
+      "max": 18.0
+    },
+    "stability": {
+      "mean": 0.945899762026488,
+      "std": 0.04801275791732964,
+      "min": 0.8753242547614926,
+      "max": 1.0
+    }
+  },
+  "all_seeds_unique": true,
+  "contributor": "Chris Zaharia",
+  "github_username": "chrisjz",
+  "notes": "Using Proximal Policy Optimization (PPO) model"
+}
