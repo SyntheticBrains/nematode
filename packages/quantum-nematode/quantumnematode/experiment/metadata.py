@@ -498,6 +498,12 @@ class ConfigSummary(BaseModel):
 class ExperimentMetadata(BaseModel):
     """Complete metadata for a simulation experiment.
 
+    Note
+    ----
+    When loaded from lean format (with config_summary), the reward and gradient
+    metadata contain placeholder zeros and should not be used for calculations.
+    Full configuration is available in the YAML file stored alongside the JSON.
+
     Attributes
     ----------
     experiment_id : str
