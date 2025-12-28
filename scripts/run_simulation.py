@@ -4,6 +4,7 @@
 
 import argparse
 import logging
+import shutil
 import sys
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -872,12 +873,35 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     "information to the experiment metadata. Example: `ibm_strasbourg`.",
                 )
 
-            # Save experiment
-            experiment_path = save_experiment(experiment_metadata)
-            print(f"\n✓ Experiment metadata saved: {experiment_path}")
+            # Save experiment to experiments/<id>/ folder structure
+            # This creates a self-contained experiment folder for potential benchmark submission
+            experiment_dir = Path.cwd() / "experiments" / experiment_metadata.experiment_id
+            experiment_dir.mkdir(parents=True, exist_ok=True)
+
+            # Save experiment metadata JSON
+            experiment_path = save_experiment(
+                experiment_metadata,
+                base_dir=experiment_dir,
+            )
+
+            # Copy config file to experiment folder for reproducibility
+            if config_file:
+                config_source = Path(config_file)
+                if config_source.exists():
+                    config_dest = experiment_dir / config_source.name
+                    shutil.copy2(config_source, config_dest)
+                    logger.info(f"Config file copied to: {config_dest}")
+
+            print(f"\n✓ Experiment saved: {experiment_dir}")
             print(f"  Experiment ID: {experiment_metadata.experiment_id}")
+            print(f"  Metadata: {experiment_path}")
+            if config_file:
+                print(f"  Config: {experiment_dir / Path(config_file).name}")
             print(
                 f"  Query with: uv run scripts/experiment_query.py show {experiment_metadata.experiment_id}",
+            )
+            print(
+                f"\n  To submit as benchmark: uv run scripts/benchmark_submit.py --experiments {experiment_dir}",
             )
 
             # Display chemotaxis validation if requested
