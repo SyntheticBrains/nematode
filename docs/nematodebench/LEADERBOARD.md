@@ -27,7 +27,9 @@ _No NematodeBench submissions yet._
 
 #### Classical Architectures
 
-_No NematodeBench submissions yet._
+| Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
+|---|---|---|---|---|---|---|---|---|
+| ppo | 0.835 ± 0.007 | 96.7% ± 1.3% | 0.93 ± 0.01 | 0.95 ± 0.05 | 0.47 ± 0.02 | 12 | @chrisjz | 2025-12-28 |
 
 ### Foraging Medium (≤50x50)
 
