@@ -229,7 +229,7 @@ class TestValidateMinimumSessions:
         assert is_valid is True
         assert errors == []
 
-    def test_no_sessions(self, base_experiment):
+    def test_no_sessions(self):
         """Test validation fails with no sessions."""
         experiments: list[ExperimentMetadata] = []
 
