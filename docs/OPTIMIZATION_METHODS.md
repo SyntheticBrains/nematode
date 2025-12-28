@@ -148,7 +148,7 @@ brain:
 
 Use this decision tree to choose an optimization method:
 
-```
+```text
 Is the brain quantum-based (ModularBrain, QModularBrain)?
 ├── YES → Use CMA-ES
 │         - Evolution handles shot noise naturally
