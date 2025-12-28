@@ -114,11 +114,11 @@ def _validate_sessions_list(data: dict) -> tuple[list[str], list[str]]:
         if "file_path" not in session:
             errors.append(f"Session {i}: missing file_path")
         if "num_runs" not in session:
-            warnings.append(f"Session {i}: missing num_runs")
+            errors.append(f"Session {i}: missing num_runs")
         elif session["num_runs"] < MIN_RUNS_PER_SESSION:
-            warnings.append(
+            errors.append(
                 f"Session {i}: only {session['num_runs']} runs, "
-                f"recommended minimum: {MIN_RUNS_PER_SESSION}",
+                f"required minimum: {MIN_RUNS_PER_SESSION}",
             )
 
     return errors, warnings
