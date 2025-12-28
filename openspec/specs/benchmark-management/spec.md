@@ -40,23 +40,23 @@ The system SHALL provide a curated benchmark submission workflow with validation
 ### Requirement: Benchmark Categorization
 The system SHALL automatically categorize benchmarks hierarchically by environment type (static/dynamic size) and brain architecture (quantum/classical).
 
-#### Scenario: Dynamic Medium Quantum Category
-- **GIVEN** a benchmark using modular brain (quantum) with dynamic medium environment
+#### Scenario: Foraging Medium Quantum Category
+- **GIVEN** a benchmark using modular brain (quantum) with foraging medium environment
 - **WHEN** the benchmark is saved
-- **THEN** the category SHALL be "dynamic_medium_quantum"
-- **AND** the file SHALL be stored in `benchmarks/dynamic_medium/quantum/{timestamp}.json`
+- **THEN** the category SHALL be "foraging_medium/quantum"
+- **AND** the file SHALL be stored in `benchmarks/foraging_medium/quantum/{timestamp}.json`
 
 #### Scenario: Static Maze Classical Category
 - **GIVEN** a benchmark using MLP brain (classical) with static maze environment
 - **WHEN** the benchmark is saved
-- **THEN** the category SHALL be "static_maze_classical"
+- **THEN** the category SHALL be "static_maze/classical"
 - **AND** the file SHALL be stored in `benchmarks/static_maze/classical/{timestamp}.json`
 
-#### Scenario: Dynamic Large Quantum Category
-- **GIVEN** a benchmark using quantum brain with dynamic large environment (100×100)
+#### Scenario: Foraging Large Quantum Category
+- **GIVEN** a benchmark using quantum brain with foraging large environment (100×100)
 - **WHEN** the benchmark is saved
-- **THEN** the category SHALL be "dynamic_large_quantum"
-- **AND** the file SHALL be stored in `benchmarks/dynamic_large/quantum/{timestamp}.json`
+- **THEN** the category SHALL be "foraging_large/quantum"
+- **AND** the file SHALL be stored in `benchmarks/foraging_large/quantum/{timestamp}.json`
 
 ### Requirement: Benchmark Leaderboard Generation
 The system SHALL generate formatted leaderboards for README.md and BENCHMARKS.md from stored benchmark data.
@@ -114,8 +114,8 @@ The system SHALL define and validate quality criteria for benchmark submissions 
 The system SHALL provide tools for comparing benchmark submissions and identifying best performers.
 
 #### Scenario: Category Leaderboard Query
-- **GIVEN** multiple benchmarks in the "dynamic_medium_quantum" category
-- **WHEN** a user runs `scripts/benchmark_submit.py leaderboard dynamic_medium_quantum`
+- **GIVEN** multiple benchmarks in the "foraging_medium/quantum" category
+- **WHEN** a user runs `scripts/benchmark_submit.py leaderboard foraging_medium/quantum`
 - **THEN** benchmarks SHALL be displayed in ranked order
 - **AND** rankings SHALL be based on composite scoring (success rate primary, efficiency secondary)
 - **AND** the table SHALL show relative performance vs. top performer
@@ -238,53 +238,53 @@ The system SHALL properly attribute benchmark submissions to contributors and su
 ### Requirement: Predator-Enabled Benchmark Categories
 The system SHALL provide separate benchmark categories for predator-enabled simulations to enable tracking learning performance on survival-foraging multi-objective tasks.
 
-#### Scenario: Dynamic Predator Quantum Small Category
+#### Scenario: Predator Quantum Small Category
 - **GIVEN** a simulation with quantum brain (ModularBrain or QModularBrain), dynamic environment with `predators.enabled: true`, and grid size ≤ 20×20
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_small_quantum`
-- **AND** this SHALL be distinct from `dynamic_small_quantum` (non-predator category)
+- **THEN** the category SHALL be `predator_small/quantum`
+- **AND** this SHALL be distinct from `foraging_small/quantum` (non-predator category)
 - **AND** benchmarks SHALL track predator-specific metrics
 
-#### Scenario: Dynamic Predator Quantum Medium Category
+#### Scenario: Predator Quantum Medium Category
 - **GIVEN** a simulation with quantum brain, `predators.enabled: true`, and 20×20 < grid size ≤ 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_medium_quantum`
+- **THEN** the category SHALL be `predator_medium/quantum`
 - **AND** this SHALL use same grid size threshold as non-predator medium benchmarks
 
-#### Scenario: Dynamic Predator Quantum Large Category
+#### Scenario: Predator Quantum Large Category
 - **GIVEN** a simulation with quantum brain, `predators.enabled: true`, and grid size > 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_large_quantum`
+- **THEN** the category SHALL be `predator_large/quantum`
 - **AND** this SHALL represent the most challenging predator-enabled quantum scenarios
 
-#### Scenario: Dynamic Predator Classical Small Category
+#### Scenario: Predator Classical Small Category
 - **GIVEN** a simulation with classical brain (MLPBrain, QMLPBrain, or SpikingBrain), `predators.enabled: true`, and grid size ≤ 20×20
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_small_classical`
+- **THEN** the category SHALL be `predator_small/classical`
 - **AND** this SHALL enable comparison of classical vs quantum approaches on predator tasks
 
-#### Scenario: Dynamic Predator Classical Medium Category
+#### Scenario: Predator Classical Medium Category
 - **GIVEN** a simulation with classical brain, `predators.enabled: true`, and 20×20 < grid size ≤ 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_medium_classical`
+- **THEN** the category SHALL be `predator_medium/classical`
 
-#### Scenario: Dynamic Predator Classical Large Category
+#### Scenario: Predator Classical Large Category
 - **GIVEN** a simulation with classical brain, `predators.enabled: true`, and grid size > 50×50
 - **WHEN** benchmark category is determined
-- **THEN** the category SHALL be `dynamic_predator_large_classical`
+- **THEN** the category SHALL be `predator_large/classical`
 
-#### Scenario: Predators Disabled Uses Non-Predator Categories
+#### Scenario: Predators Disabled Uses Foraging Categories
 - **GIVEN** a simulation with `predators.enabled: false` or predators not configured
 - **WHEN** benchmark category is determined
-- **THEN** existing non-predator categories SHALL be used
-- **AND** categories SHALL be `dynamic_small_quantum`, `dynamic_medium_classical`, etc.
+- **THEN** existing foraging categories SHALL be used
+- **AND** categories SHALL be `foraging_small/quantum`, `foraging_medium/classical`, etc.
 - **AND** backward compatibility SHALL be maintained
 
 ### Requirement: Predator Benchmark Metrics Tracking
 Benchmark submissions for predator-enabled categories SHALL include predator-specific metrics in addition to standard foraging metrics.
 
 #### Scenario: Predator Metrics in Benchmark Submission
-- **GIVEN** a benchmark submission for category `dynamic_predator_small_quantum`
+- **GIVEN** a benchmark submission for category `predator_small/quantum`
 - **WHEN** the benchmark result is recorded
 - **THEN** the submission SHALL include standard metrics:
   - success_rate
@@ -299,7 +299,7 @@ Benchmark submissions for predator-enabled categories SHALL include predator-spe
   - average_survival_time (steps before predator death or success)
 
 #### Scenario: Benchmark Comparison with Predator Metrics
-- **GIVEN** multiple benchmark submissions in category `dynamic_predator_medium_classical`
+- **GIVEN** multiple benchmark submissions in category `predator_medium/classical`
 - **WHEN** benchmarks are compared
 - **THEN** the system SHALL rank submissions by primary metric (success_rate or total reward)
 - **AND** SHALL display predator-specific metrics for detailed analysis
