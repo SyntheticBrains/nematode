@@ -45,6 +45,26 @@ class ConvergenceMetrics(BaseModel):
     composite_score: float
     """Weighted composite benchmark score (0.0 to 1.0)."""
 
+    learning_speed: float
+    """
+    Normalized learning speed (0.0 to 1.0, higher = faster learning).
+    Calculated as 1.0 - (episodes_to_80_success / max_episodes).
+    A value of 0.0 means 80% success was never reached.
+    """
+
+    learning_speed_episodes: int | None
+    """
+    Number of episodes required to reach 80% rolling success rate.
+    None if 80% success was never achieved.
+    """
+
+    stability: float
+    """
+    Normalized stability metric (0.0 to 1.0, higher = more consistent).
+    Calculated as 1.0 - coefficient_of_variation, clamped to [0, 1].
+    Measures consistency of success rates across runs.
+    """
+
 
 def detect_convergence(
     results: list[SimulationResult],
@@ -84,7 +104,8 @@ def detect_convergence(
     Returns
     -------
     int | None
-        Zero-based index into results where convergence was detected, or None if never converged.
+        1-indexed run number where the stable region begins,
+        or None if never converged.
 
     Notes
     -----
@@ -110,6 +131,7 @@ def detect_convergence(
         # Check variance and success rate in stability window
         window = successes[i : i + stability_runs]
         variance = float(np.var(window))
+        mean_success = float(np.mean(window))
 
         if variance < variance_threshold and mean_success >= min_success_rate:
             # Found stable, successful region - convergence detected at start of window
@@ -118,6 +140,150 @@ def detect_convergence(
 
     # Never converged within the session
     return None
+
+
+def calculate_learning_speed_episodes(
+    results: list[SimulationResult],
+    target_success_rate: float = 0.80,
+    window_size: int = 10,
+) -> int | None:
+    """
+    Calculate the number of episodes to reach a target rolling success rate.
+
+    Parameters
+    ----------
+    results : list[SimulationResult]
+        Ordered list of simulation results from a session.
+    target_success_rate : float, optional
+        Target success rate to reach (default: 0.80 = 80%).
+    window_size : int, optional
+        Size of rolling window for success rate calculation (default: 10).
+
+    Returns
+    -------
+    int | None
+        Number of episodes to reach target success rate, or None if never reached.
+
+    Examples
+    --------
+    >>> results = [...]  # List of SimulationResult objects
+    >>> episodes = calculate_learning_speed_episodes(results)
+    >>> if episodes:
+    ...     print(f"Reached 80% success after {episodes} episodes")
+    """
+    if len(results) < window_size:
+        return None
+
+    # Extract binary success indicators
+    successes = [1.0 if r.success else 0.0 for r in results]
+
+    # Check rolling success rate at each window position
+    for i in range(window_size, len(successes) + 1):
+        window = successes[i - window_size : i]
+        rolling_rate = float(np.mean(window))
+
+        if rolling_rate >= target_success_rate:
+            # Reached target - return the episode index (end of window)
+            return i
+
+    # Never reached target success rate
+    return None
+
+
+def calculate_learning_speed(
+    learning_speed_episodes: int | None,
+    max_episodes: int,
+) -> float:
+    """
+    Calculate normalized learning speed from episodes to target.
+
+    Parameters
+    ----------
+    learning_speed_episodes : int | None
+        Number of episodes to reach 80% success, or None if never reached.
+    max_episodes : int
+        Total number of episodes in the session.
+
+    Returns
+    -------
+    float
+        Normalized learning speed in range [0, 1] where 1.0 = instant learning.
+        Returns 0.0 if target was never reached.
+
+    Examples
+    --------
+    >>> speed = calculate_learning_speed(20, 100)
+    >>> print(f"Learning speed: {speed:.2f}")  # 0.80
+    """
+    if learning_speed_episodes is None or max_episodes <= 0:
+        return 0.0
+
+    # Normalize: fewer episodes = higher speed
+    # If it takes 0 episodes, speed = 1.0
+    # If it takes all episodes, speed = 0.0
+    return max(0.0, 1.0 - (learning_speed_episodes / max_episodes))
+
+
+def calculate_stability(
+    results: list[SimulationResult],
+    convergence_run: int | None = None,
+    fallback_window: int = 10,
+) -> float:
+    """
+    Calculate stability metric from coefficient of variation.
+
+    Stability measures how consistent the success rate is across runs.
+    Uses coefficient of variation (CV = std/mean) inverted and clamped.
+
+    Parameters
+    ----------
+    results : list[SimulationResult]
+        Ordered list of simulation results from a session.
+    convergence_run : int | None, optional
+        If provided (1-indexed), calculate stability only for post-convergence runs.
+    fallback_window : int, optional
+        Number of final runs to use if never converged (default: 10).
+
+    Returns
+    -------
+    float
+        Stability metric in range [0, 1] where 1.0 = perfectly consistent.
+
+    Examples
+    --------
+    >>> results = [...]  # List of SimulationResult objects
+    >>> stability = calculate_stability(results)
+    >>> print(f"Stability: {stability:.2f}")
+    """
+    # Determine which runs to analyze
+    if convergence_run is not None:
+        # Convert 1-indexed convergence_run to 0-indexed for slicing
+        start_idx = convergence_run - 1
+        analysis_runs = results[start_idx:]
+    else:
+        # Fallback: use last N runs
+        analysis_runs = results[-fallback_window:] if len(results) >= fallback_window else results
+
+    if len(analysis_runs) < 2:  # noqa: PLR2004
+        # Not enough runs to calculate variance - assume stable
+        return 1.0
+
+    # Extract binary success indicators
+    successes = [1.0 if r.success else 0.0 for r in analysis_runs]
+    mean_success = float(np.mean(successes))
+    std_success = float(np.std(successes))
+
+    # Handle edge case: zero mean (all failures)
+    if mean_success == 0.0:
+        # All failures = unstable (CV would be undefined)
+        return 0.0
+
+    # Coefficient of variation (CV = std / mean)
+    cv = std_success / mean_success
+
+    # Stability = 1 - CV, clamped to [0, 1]
+    # Low CV = high stability
+    return max(0.0, min(1.0, 1.0 - cv))
 
 
 def calculate_post_convergence_metrics(
@@ -329,7 +495,14 @@ def analyze_convergence(
     # Step 2: Calculate post-convergence metrics
     post_metrics = calculate_post_convergence_metrics(results, convergence_run)
 
-    # Step 3: Calculate composite score
+    # Step 3: Calculate learning speed metrics
+    learning_speed_episodes = calculate_learning_speed_episodes(results)
+    learning_speed = calculate_learning_speed(learning_speed_episodes, total_runs)
+
+    # Step 4: Calculate stability metric
+    stability = calculate_stability(results, convergence_run)
+
+    # Step 5: Calculate composite score
     # Use defaults for None values (but keep distance_efficiency as None for static environments)
     composite_score = calculate_composite_score(
         success_rate=post_metrics["success_rate"]
@@ -343,7 +516,7 @@ def analyze_convergence(
         total_runs=total_runs,
     )
 
-    # Step 4: Build convergence metrics object
+    # Step 6: Build convergence metrics object
     return ConvergenceMetrics(
         converged=converged,
         convergence_run=convergence_run,
@@ -354,4 +527,7 @@ def analyze_convergence(
         post_convergence_variance=post_metrics["variance"],
         distance_efficiency=post_metrics["distance_efficiency"],
         composite_score=composite_score,
+        learning_speed=learning_speed,
+        learning_speed_episodes=learning_speed_episodes,
+        stability=stability,
     )
