@@ -154,7 +154,10 @@ def format_benchmark_row(submission: NematodeBenchSubmission) -> dict[str, str]:
 
     # Add distance efficiency if available
     if submission.metrics.distance_efficiency:
-        row["distance_efficiency"] = format_stat_value(submission.metrics.distance_efficiency, ".2f")
+        row["distance_efficiency"] = format_stat_value(
+            submission.metrics.distance_efficiency,
+            ".2f",
+        )
 
     return row
 
