@@ -6,6 +6,53 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class StatValue(BaseModel):
+    """Statistical summary for a metric across multiple runs.
+
+    Attributes
+    ----------
+    mean : float
+        Mean value across runs.
+    std : float
+        Standard deviation across runs.
+    min : float
+        Minimum value across runs.
+    max : float
+        Maximum value across runs.
+    """
+
+    mean: float
+    std: float
+    min: float
+    max: float
+
+    @classmethod
+    def from_values(cls, values: list[float]) -> "StatValue":
+        """Create a StatValue from a list of values.
+
+        Parameters
+        ----------
+        values : list[float]
+            List of values to compute statistics from.
+
+        Returns
+        -------
+        StatValue
+            Statistical summary of the values.
+        """
+        import numpy as np
+
+        if not values:
+            return cls(mean=0.0, std=0.0, min=0.0, max=0.0)
+        arr = np.array(values)
+        return cls(
+            mean=float(np.mean(arr)),
+            std=float(np.std(arr)),
+            min=float(np.min(arr)),
+            max=float(np.max(arr)),
+        )
+
+
 class PerRunResult(BaseModel):
     """Per-run result data for scientific reproducibility and analysis.
 
