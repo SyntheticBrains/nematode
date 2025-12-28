@@ -228,8 +228,8 @@ def generate_summary(data: dict) -> dict:
         "category": data.get("category", "unknown"),
         "total_sessions": data.get("total_sessions", 0),
         "total_runs": data.get("total_runs", 0),
-        "success_rate": f"{success_rate.get('mean', 0) * 100:.1f}% ± {success_rate.get('std', 0) * 100:.1f}%",
-        "composite_score": f"{composite.get('mean', 0):.3f} ± {composite.get('std', 0):.3f}",
+        "success_rate": f"{(success_rate.get('mean') or 0) * 100:.1f}% ± {(success_rate.get('std') or 0) * 100:.1f}%",
+        "composite_score": f"{(composite.get('mean') or 0):.3f} ± {(composite.get('std') or 0):.3f}",
         "contributor": data.get("contributor", "unknown"),
         "all_seeds_unique": data.get("all_seeds_unique", False),
     }
