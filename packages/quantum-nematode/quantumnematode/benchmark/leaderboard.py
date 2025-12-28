@@ -388,10 +388,11 @@ def update_readme(readme_path: Path | str) -> None:
     updated_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
 
     if updated_content == content and new_section.strip():
-        logger.warning(
+        msg = (
             "README.md update pattern not found. "
-            "Expected '### Current Leaders' section followed by 'See [BENCHMARKS.md]'",
+            "Expected '### Current Leaders' section followed by 'See [BENCHMARKS.md]'"
         )
+        raise ValueError(msg)
 
     # Write back
     readme_path.write_text(updated_content)
