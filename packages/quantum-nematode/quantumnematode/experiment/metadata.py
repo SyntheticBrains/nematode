@@ -598,6 +598,10 @@ class ExperimentMetadata(BaseModel):
         (with config_summary). For lean format, creates minimal stub metadata
         objects from the config_summary.
 
+        Note: Lean format uses placeholder values (zeros) for reward and
+        gradient metadata. These are suitable for filtering/categorization
+        but not for reward calculations. Full config is in the YAML file.
+
         Parameters
         ----------
         data : dict[str, Any]
