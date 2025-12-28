@@ -82,4 +82,4 @@ _No NematodeBench submissions yet._
 
 ---
 
-*Last updated: Auto-generated from benchmark submissions.*
+_Last updated: Auto-generated from benchmark submissions._
