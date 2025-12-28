@@ -20,6 +20,7 @@ from quantumnematode.benchmark import (
     update_leaderboard,
     update_readme,
 )
+from quantumnematode.brain.arch.dtypes import QUANTUM_BRAIN_TYPES, BrainType
 from quantumnematode.experiment import (
     MIN_SESSIONS_REQUIRED,
     AggregateMetrics,
@@ -141,8 +142,14 @@ def determine_category(experiment: ExperimentMetadata) -> str:
     else:
         env_category = "foraging_large"
 
-    # Determine brain category
-    brain_category = "quantum" if brain.type.startswith("q") else "classical"
+    # Determine brain category using explicit mapping
+    try:
+        brain_type_enum = BrainType(brain.type)
+        brain_category = "quantum" if brain_type_enum in QUANTUM_BRAIN_TYPES else "classical"
+    except ValueError:
+        # Unknown brain type - default to classical with warning
+        print(f"Warning: Unknown brain type '{brain.type}', defaulting to classical category")
+        brain_category = "classical"
 
     return f"{env_category}/{brain_category}"
 
