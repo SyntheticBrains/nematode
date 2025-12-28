@@ -7,6 +7,8 @@ Auto-generated leaderboard for NematodeBench benchmark submissions.
 
 For submission guidelines, see [SUBMISSION_GUIDE.md](SUBMISSION_GUIDE.md).
 
+## Categories
+
 ### Static Maze
 
 #### Quantum Architectures
