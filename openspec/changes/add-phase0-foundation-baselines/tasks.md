@@ -104,14 +104,14 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 ## Work Stream 3: NematodeBench Documentation
 
 ### 3.1 Create Documentation Structure
-- [ ] Create `docs/nematodebench/` directory
-- [ ] Create `docs/nematodebench/README.md` with overview
+- [x] Create `docs/nematodebench/` directory
+- [x] Create `docs/nematodebench/README.md` with overview
 
 ### 3.2 Write Submission Guide
-- [ ] Create `docs/nematodebench/SUBMISSION_GUIDE.md`
-- [ ] Document prerequisites (50+ runs, clean git, config in repo)
-- [ ] Document step-by-step submission process
-- [ ] Document PR workflow and verification
+- [x] Create `docs/nematodebench/SUBMISSION_GUIDE.md`
+- [x] Document prerequisites (50+ runs, clean git, config in repo)
+- [x] Document step-by-step submission process
+- [x] Document PR workflow and verification
 
 ### 3.3 Write Evaluation Methodology
 - [ ] Create `docs/nematodebench/EVALUATION.md`
@@ -120,10 +120,10 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [ ] Document ranking criteria
 
 ### 3.4 Write Reproducibility Requirements
-- [ ] Create `docs/nematodebench/REPRODUCIBILITY.md`
-- [ ] Document config file requirements
-- [ ] Document git state requirements
-- [ ] Document version tracking requirements
+- [x] Create `docs/nematodebench/REPRODUCIBILITY.md`
+- [x] Document config file requirements
+- [x] Document git state requirements
+- [x] Document version tracking requirements
 
 ### 3.5 Create Evaluation Script
 - [ ] Create `scripts/evaluate_submission.py`
@@ -135,9 +135,9 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 **Validation**: Script correctly validates existing benchmarks
 
 ### 3.6 Update BENCHMARKS.md
-- [ ] Add "External Submissions" section
-- [ ] Add links to nematodebench documentation
-- [ ] Add call-to-action for external researchers
+- [x] Add "External Submissions" section
+- [x] Add links to nematodebench documentation
+- [x] Add call-to-action for external researchers
 
 ---
 
@@ -151,15 +151,15 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Document spiking findings (surrogate gradients)
 
 ### 4.2 Add Configuration Examples
-- [ ] Add CMA-ES config example for ModularBrain
-- [ ] Add REINFORCE config example for MLPBrain
-- [ ] Add PPO config example (reference new configs)
-- [ ] Add surrogate gradient config example for SpikingBrain
+- [x] Add CMA-ES config example for ModularBrain
+- [x] Add REINFORCE config example for MLPBrain
+- [x] Add PPO config example (reference new configs)
+- [x] Add surrogate gradient config example for SpikingBrain
 
 ### 4.3 Add Selection Guidance
-- [ ] Document when to use evolutionary vs gradient methods
-- [ ] Document architecture-specific recommendations
-- [ ] Add decision flow for new users
+- [x] Document when to use evolutionary vs gradient methods
+- [x] Document architecture-specific recommendations
+- [x] Add decision flow for new users
 
 ---
 
@@ -230,7 +230,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [ ] Verify all requirements have scenarios
 
 ### 6.3 Re-run Legacy Benchmarks
-- [ ] Archive existing benchmarks in `benchmarks/` directory
+- [x] Archive existing benchmarks to `benchmarks/legacy/` directory with README
 - [ ] Re-run benchmarks with new tracking system
 - [ ] Verify new benchmarks include per-run seeds and enhanced metrics
 
@@ -260,5 +260,5 @@ Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Wor
 | PPO >85% success on foraging | 1.4 | Complete |
 | Optimization method documentation | 4.1, 4.2, 4.3 | Complete |
 | 1 C. elegans dataset integrated | 2.3, 2.4, 2.5, 2.6 | Complete |
-| Reproducible benchmarks with seeding | 5.1, 5.2, 5.3 | Pending |
-| Unified NematodeBench format | 5.5 | Pending |
+| Reproducible benchmarks with seeding | 5.1, 5.2, 5.3, 5.4 | Complete |
+| Unified NematodeBench format | 5.5 | Complete |
