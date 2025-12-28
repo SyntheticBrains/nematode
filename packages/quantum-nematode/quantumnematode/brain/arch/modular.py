@@ -344,7 +344,11 @@ class ModularBrain(QuantumBrain):
             for axis in ["rx", "ry", "rz"]:
                 param_names.extend([f"θ_{axis}{layer + 1}_{i}" for i in range(self.num_qubits)])
 
-        self.parameter_values = self.parameter_initializer.initialize(self.num_qubits, param_names)
+        self.parameter_values = self.parameter_initializer.initialize(
+            self.num_qubits,
+            param_names,
+            seed=self.seed,
+        )
 
         self._circuit_cache: QuantumCircuit | None = None
         self._transpiled_cache: Any = None
@@ -455,7 +459,10 @@ class ModularBrain(QuantumBrain):
                     logger.error(error_message)
                     raise ImportError(error_message) from err
 
-                self._backend = AerSimulator(device=self.device.value.upper())
+                self._backend = AerSimulator(
+                    device=self.device.value.upper(),
+                    seed_simulator=self.seed,
+                )
         return self._backend
 
     def _get_cached_circuit(self) -> QuantumCircuit:
@@ -472,7 +479,7 @@ class ModularBrain(QuantumBrain):
         if self._transpiled_cache is None:
             qc = self._get_cached_circuit()
             backend = self._get_backend()
-            self._transpiled_cache = transpile(qc, backend)
+            self._transpiled_cache = transpile(qc, backend, seed_transpiler=self.seed)
 
         return self._transpiled_cache
 
@@ -572,7 +579,10 @@ class ModularBrain(QuantumBrain):
                 backend = self._get_backend()
 
                 # Transpile and bind parameters
-                bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
+                bound_qc = transpile(qc, backend, seed_transpiler=self.seed).assign_parameters(
+                    param_values,
+                    inplace=False,
+                )
 
                 # Create sampler
                 sampler = Sampler(mode=backend)
@@ -588,7 +598,10 @@ class ModularBrain(QuantumBrain):
         else:
             # Use AerSimulator
             backend = self._get_backend()
-            bound_qc = transpile(qc, backend).assign_parameters(param_values, inplace=False)
+            bound_qc = transpile(qc, backend, seed_transpiler=self.seed).assign_parameters(
+                param_values,
+                inplace=False,
+            )
             job = backend.run(bound_qc, shots=self.shots)
             if job is None:
                 error_message = "Backend run did not return a valid job object."
