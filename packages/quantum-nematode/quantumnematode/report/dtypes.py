@@ -43,6 +43,8 @@ class SimulationResult(BaseModel):
     ----------
     run : int
         The run number of the simulation.
+    seed : int | None
+        Random seed used for this run (for reproducibility).
     steps : int
         The number of steps taken in the simulation.
     path : AgentPath
@@ -79,6 +81,7 @@ class SimulationResult(BaseModel):
     """
 
     run: int
+    seed: int | None = None
     steps: int
     path: AgentPath
     total_reward: float
