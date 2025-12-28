@@ -114,10 +114,10 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Document PR workflow and verification
 
 ### 3.3 Write Evaluation Methodology
-- [ ] Create `docs/nematodebench/EVALUATION.md`
-- [ ] Document composite score formula and weights
-- [ ] Document convergence detection algorithm
-- [ ] Document ranking criteria
+- [x] Create `docs/nematodebench/EVALUATION.md`
+- [x] Document composite score formula and weights
+- [x] Document convergence detection algorithm
+- [x] Document ranking criteria
 
 ### 3.4 Write Reproducibility Requirements
 - [x] Create `docs/nematodebench/REPRODUCIBILITY.md`
@@ -126,11 +126,11 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Document version tracking requirements
 
 ### 3.5 Create Evaluation Script
-- [ ] Create `scripts/evaluate_submission.py`
-- [ ] Implement JSON structure validation
-- [ ] Implement minimum runs check
-- [ ] Implement optional reproduction verification
-- [ ] Implement pass/fail reporting with details
+- [x] Create `scripts/evaluate_submission.py`
+- [x] Implement JSON structure validation
+- [x] Implement minimum runs check
+- [x] Implement optional reproduction verification - deferred
+- [x] Implement pass/fail reporting with details
 
 **Validation**: Script correctly validates existing benchmarks
 
@@ -208,10 +208,15 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 **Validation**: Metrics computed correctly for test cases
 
 ### 5.5 Migrate to NematodeBench Format
-- [ ] Update `experiment/metadata.py` to use StatValue objects
-- [ ] Update `benchmark_submit.py` to output NematodeBench format
-- [ ] Update `evaluate_submission.py` to validate NematodeBench schema
-- [ ] Update documentation for unified format
+- [x] Update `experiment/metadata.py` to use StatValue objects
+- [x] Create `experiment/submission.py` with NematodeBenchSubmission, SessionReference, AggregateMetrics models
+- [x] Create `experiment/validation.py` with seed uniqueness and submission validation functions
+- [x] Update `run_simulation.py` to save experiments to `experiments/<id>/` with config copy
+- [x] Update `benchmark_submit.py` to output NematodeBench format with multi-experiment aggregation
+- [x] Update `evaluate_submission.py` to validate NematodeBench schema
+- [x] Archive legacy benchmarks to `benchmarks/legacy/` with README
+- [x] Update OpenSpec benchmark-management spec with NematodeBench requirements
+- [x] Update documentation for unified format (SUBMISSION_GUIDE.md, REPRODUCIBILITY.md, BENCHMARKS.md)
 
 **Validation**: Submissions validate against NematodeBench schema
 
