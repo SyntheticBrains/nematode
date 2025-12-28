@@ -56,7 +56,12 @@ def load_experiment_from_folder(experiment_dir: Path) -> ExperimentMetadata:
         msg = f"No JSON file found in {experiment_dir}"
         raise FileNotFoundError(msg)
 
-    # Use the first JSON file (should only be one)
+    if len(json_files) > 1:
+        print(
+            f"Warning: Multiple JSON files in {experiment_dir}, using {json_files[0].name}",
+            file=sys.stderr,
+        )
+
     json_path = json_files[0]
     with json_path.open() as f:
         data = json.load(f)
