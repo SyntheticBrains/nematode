@@ -47,6 +47,7 @@ from quantumnematode.brain.modules import (
 )
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
+from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 # Defaults for Q-learning specific parameters
 DEFAULT_BUFFER_SIZE = 1800
@@ -175,10 +176,11 @@ class QModularBrain:
         self._circuit_cache = None
         self._backend = None
 
-        self.quantum_seed = config.seed
-
-        # Create random number generator for reproducible quantum parameter initialization
-        self.rng = np.random.Generator(np.random.PCG64(self.quantum_seed))
+        # Initialize seeding for reproducibility
+        self.seed = ensure_seed(config.seed)
+        self.rng = get_rng(self.seed)
+        self.quantum_seed = self.seed  # Preserve for quantum parameter initialization
+        logger.info(f"QModularBrain using seed: {self.seed}")
 
         # Initialize quantum parameters and Q-networks
         self._initialize_quantum_parameters()
@@ -313,7 +315,7 @@ class QModularBrain:
     def get_backend(self) -> AerSimulator:
         """Get or create the quantum backend."""
         if self._backend is None:
-            self._backend = AerSimulator()
+            self._backend = AerSimulator(seed_simulator=self.seed)
         return self._backend
 
     def extract_quantum_features(self, brain_params: BrainParams) -> np.ndarray:
@@ -341,7 +343,7 @@ class QModularBrain:
 
         # Execute circuit
         backend = self.get_backend()
-        transpiled_qc = transpile(bound_circuit, backend)
+        transpiled_qc = transpile(bound_circuit, backend, seed_transpiler=self.seed)
         job = backend.run(transpiled_qc, shots=self.shots)
         result = job.result()
         counts = result.get_counts(0)
@@ -422,7 +424,7 @@ class QModularBrain:
         # Bind parameters and run circuit
         bound_circuit = qc.assign_parameters(param_dict)
         backend = self.get_backend()
-        transpiled_qc = transpile(bound_circuit, backend)
+        transpiled_qc = transpile(bound_circuit, backend, seed_transpiler=self.seed)
         job = backend.run(transpiled_qc, shots=self.shots)
         result = job.result()
         counts = result.get_counts(0)
@@ -761,8 +763,12 @@ class QModularBrain:
     def copy(self) -> QModularBrain:
         """Create a copy of the brain."""
         # TODO: Copy entire state
+        # Create a config copy with the resolved seed to ensure reproducibility
+        config_with_seed = QModularBrainConfig(
+            **{**self.config.model_dump(), "seed": self.seed},
+        )
         new_brain = QModularBrain(
-            config=self.config,
+            config=config_with_seed,
             shots=self.shots,
             device=self.device,
             action_set=self.action_set,

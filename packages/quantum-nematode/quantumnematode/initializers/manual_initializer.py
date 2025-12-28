@@ -22,7 +22,12 @@ class ManualParameterInitializer(ParameterInitializer):
         param_count = len(self.parameter_values)
         return f"ManualParameterInitializer({param_count} parameters manually specified)"
 
-    def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
+    def initialize(
+        self,
+        num_qubits: int,
+        parameters: list[str] | None,
+        seed: int | None = None,  # noqa: ARG002 - unused but required for interface
+    ) -> dict[str, float]:
         """
         Initialize parameters with manually specified values.
 
@@ -32,6 +37,8 @@ class ManualParameterInitializer(ParameterInitializer):
             Number of qubits in the quantum circuit.
         parameters : list[str] | None
             List of parameter names to initialize. If None, all parameters will be initialized.
+        seed : int | None
+            Unused for manual initializer, but required for interface compatibility.
 
         Returns
         -------

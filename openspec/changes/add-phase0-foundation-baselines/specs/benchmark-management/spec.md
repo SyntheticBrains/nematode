@@ -70,6 +70,85 @@ The system SHALL provide an automated script for validating benchmark submission
 - **AND** SHALL show category assignment
 - **AND** SHALL provide actionable feedback for failures
 
+### Requirement: Reproducibility Through Seeding
+The system SHALL ensure all experiments are reproducible by automatically generating and tracking random seeds.
+
+#### Scenario: Automatic Seed Generation
+- **WHEN** an experiment is started without a seed parameter
+- **THEN** the system SHALL generate a cryptographically random seed using `secrets.randbelow(2**32)`
+- **AND** SHALL store the generated seed for the experiment
+- **AND** SHALL use this seed consistently for all random number generation
+- **AND** the seed SHALL be included in the experiment output
+
+#### Scenario: Explicit Seed Configuration
+- **WHEN** an experiment is started with a seed parameter in the config
+- **THEN** the system SHALL use the provided seed
+- **AND** SHALL NOT generate a new random seed
+- **AND** SHALL record the provided seed in experiment output
+
+#### Scenario: Environment Reproducibility
+- **WHEN** an environment is initialized with a seed
+- **THEN** all random operations (food spawning, predator movement, initial positions) SHALL be deterministic
+- **AND** running the same seed twice SHALL produce identical episode results
+- **AND** the system SHALL NOT use `secrets` module for seeded operations (only for seed generation)
+
+#### Scenario: Brain Reproducibility
+- **WHEN** a brain is initialized with a seed
+- **THEN** weight initialization SHALL be deterministic
+- **AND** action selection (for stochastic policies) SHALL be reproducible
+- **AND** PyTorch and NumPy random states SHALL be seeded consistently
+
+#### Scenario: Per-Run Seed Tracking
+- **WHEN** multiple runs are executed in an experiment
+- **THEN** each run SHALL have its own seed derived from the base seed
+- **AND** per-run seeds SHALL be recorded in the submission JSON
+- **AND** any individual run SHALL be reproducible using its recorded seed
+
+### Requirement: Enhanced Metrics for Benchmarks
+The system SHALL compute additional metrics required for comprehensive benchmark evaluation.
+
+#### Scenario: Learning Speed Calculation
+- **WHEN** convergence analysis is performed on experiment results
+- **THEN** the system SHALL calculate episodes to reach 80% rolling success rate
+- **AND** SHALL compute learning_speed = 1.0 - (episodes_to_80 / max_episodes)
+- **AND** learning_speed SHALL be in range [0, 1] where 1 = instant learning
+- **AND** SHALL handle cases where 80% is never reached (learning_speed = 0)
+
+#### Scenario: Stability Metric Calculation
+- **WHEN** metrics are aggregated across multiple runs
+- **THEN** the system SHALL compute stability from coefficient of variation
+- **AND** stability = 1.0 - (std / mean) for success rates, clamped to [0, 1]
+- **AND** higher stability indicates more consistent results
+- **AND** SHALL handle edge cases (zero mean, single run)
+
+#### Scenario: Statistical Aggregation
+- **WHEN** per-run metrics are collected
+- **THEN** the system SHALL compute mean, std, min, max for each metric
+- **AND** SHALL store these as StatValue objects in NematodeBench format
+- **AND** metrics requiring aggregation: success_rate, composite_score, distance_efficiency, learning_speed, stability
+
+### Requirement: Unified NematodeBench Format
+The system SHALL use NematodeBench format as the single benchmark submission schema.
+
+#### Scenario: Submission Schema
+- **WHEN** a benchmark submission is created
+- **THEN** the JSON SHALL use NematodeBench schema with StatValue objects
+- **AND** StatValue SHALL contain: mean, std, min, max
+- **AND** SHALL include individual_runs array with per-run data
+- **AND** each individual run SHALL include: seed, success, steps, reward
+
+#### Scenario: Experiment Metadata Migration
+- **WHEN** experiment tracking saves results
+- **THEN** the output SHALL conform to NematodeBench schema directly
+- **AND** SHALL NOT require post-processing conversion
+- **AND** legacy internal format SHALL be deprecated
+
+#### Scenario: Benchmark Storage
+- **WHEN** a benchmark is submitted to the benchmarks/ directory
+- **THEN** the JSON SHALL be in NematodeBench format
+- **AND** evaluate_submission.py SHALL validate against NematodeBench schema
+- **AND** all new benchmarks SHALL include per-run seeds
+
 ## MODIFIED Requirements
 
 ### Requirement: Documentation Integration (MODIFIED)

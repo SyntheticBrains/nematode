@@ -497,6 +497,8 @@ class QuantumNematodeAgent:
                 predator_kill_radius=self.env.predator_kill_radius,
                 predator_gradient_decay=self.env.predator_gradient_decay,
                 predator_gradient_strength=self.env.predator_gradient_strength,
+                # Reproducibility: preserve seed from original environment
+                seed=self.env.seed,
             )
         else:
             self.env = StaticEnvironment(
@@ -504,6 +506,8 @@ class QuantumNematodeAgent:
                 max_body_length=self.max_body_length,
                 theme=self.env.theme,
                 rich_style_config=self.env.rich_style_config,
+                # Reproducibility: preserve seed from original environment
+                seed=self.env.seed,
             )
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation

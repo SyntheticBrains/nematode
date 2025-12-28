@@ -10,7 +10,12 @@ class ZeroInitializer(ParameterInitializer):
         """Return a string representation of the initializer."""
         return "ZeroInitializer(all parameters set to 0.0)"
 
-    def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
+    def initialize(
+        self,
+        num_qubits: int,
+        parameters: list[str] | None,
+        seed: int | None = None,  # noqa: ARG002 - unused but required for interface
+    ) -> dict[str, float]:
         """
         Initialize parameters to zero.
 
@@ -20,6 +25,8 @@ class ZeroInitializer(ParameterInitializer):
             Number of qubits in the quantum circuit.
         parameters : list[str] | None
             List of parameter names to initialize. If None, all parameters will be initialized.
+        seed : int | None
+            Unused for zero initializer, but required for interface compatibility.
 
         Returns
         -------

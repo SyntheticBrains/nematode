@@ -163,17 +163,72 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 ---
 
+## Work Stream 5: Reproducibility & Metrics Enhancement
+
+### 5.1 Create Seeding Infrastructure
+- [x] Create `packages/quantum-nematode/quantumnematode/utils/seeding.py`
+- [x] Implement `generate_seed()` using `secrets.randbelow(2**32)`
+- [x] Implement `set_global_seed(seed: int)` for numpy/torch
+- [x] Implement `get_rng(seed: int | None)` for seeded RNG creation
+- [x] Implement `ensure_seed(seed: int | None)` for auto-generation
+
+**Validation**: Unit tests for seed generation and RNG creation
+
+### 5.2 Fix Environment Seeding
+- [x] Replace `secrets` module usage in `env/env.py` with seeded numpy RNG
+- [x] Add `seed` parameter to environment config
+- [x] Ensure food spawning, predator movement, initial positions are deterministic
+
+**Validation**: Same seed produces identical episode results
+
+### 5.3 Add Brain Seed Support
+- [x] Add `seed` config parameter to `BrainConfig` base class (inherited by all brains)
+- [x] Update `PPOBrain` to use seeded RNG for action selection and buffer shuffling
+- [x] Update `MLPBrain` to use seeded RNG for action selection
+- [x] Update `ModularBrain` to use seeded RNG for action selection and noise
+- [x] Update `QMLPBrain` to use seeded RNG for epsilon-greedy and experience sampling
+- [x] Update `QModularBrain` to use seeding infrastructure
+- [x] Update `SpikingBrain` to use seeded RNG and global seeds
+- [x] Set global numpy/torch seeds for reproducible weight initialization
+- [x] Add `--seed` CLI argument to `run_simulation.py`
+- [x] Pass seed to environment and brain from CLI/config
+
+**Validation**: Same seed produces identical brain behavior
+
+### 5.4 Add Enhanced Metrics
+- [ ] Implement `learning_speed_episodes` calculation in convergence.py
+- [ ] Implement `stability` metric calculation
+- [ ] Add per-run statistics aggregation (mean/std/min/max)
+- [ ] Add `seed` field to `SimulationResult`
+
+**Validation**: Metrics computed correctly for test cases
+
+### 5.5 Migrate to NematodeBench Format
+- [ ] Update `experiment/metadata.py` to use StatValue objects
+- [ ] Update `benchmark_submit.py` to output NematodeBench format
+- [ ] Update `evaluate_submission.py` to validate NematodeBench schema
+- [ ] Update documentation for unified format
+
+**Validation**: Submissions validate against NematodeBench schema
+
+---
+
 ## Finalization
 
-### 5.1 Update OpenSpec Specs
+### 6.1 Update OpenSpec Specs
 - [x] Finalize `specs/brain-architecture/spec.md` with PPO requirements
 - [x] Finalize `specs/validation-system/spec.md` with chemotaxis requirements
-- [ ] Finalize `specs/benchmark-management/spec.md` with NematodeBench requirements
+- [x] Finalize `specs/benchmark-management/spec.md` with NematodeBench requirements
 
-### 5.2 Validate Proposal
+### 6.2 Validate Proposal
 - [ ] Run `openspec validate add-phase0-foundation-baselines --strict`
 - [ ] Fix any validation errors
 - [ ] Verify all requirements have scenarios
+
+### 6.3 Re-run Legacy Benchmarks
+- [ ] Archive existing benchmarks in `benchmarks/` directory
+- [ ] Re-run benchmarks with new tracking system
+- [ ] Verify new benchmarks include per-run seeds and enhanced metrics
 
 ---
 
@@ -181,13 +236,16 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 ```text
 Work Stream 1 (PPO)          ──┐
-Work Stream 2 (Chemotaxis)   ──┼──► Work Stream 3 (NematodeBench)
-Work Stream 4 (Optimization) ──┘         │
-                                         ▼
-                              Finalization (5.1, 5.2)
+Work Stream 2 (Chemotaxis)   ──┼──► Work Stream 3 (NematodeBench) ──┐
+Work Stream 4 (Optimization) ──┘                                    │
+                                                                    ▼
+                                           Work Stream 5 (Reproducibility)
+                                                                    │
+                                                                    ▼
+                                                   Finalization (6.1, 6.2, 6.3)
 ```
 
-Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Finalization requires all work streams complete.
+Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Work Stream 5 enhances Work Stream 3. Finalization requires all work streams complete.
 
 ---
 
@@ -198,3 +256,5 @@ Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Fin
 | PPO >85% success on foraging | 1.4 | Complete |
 | Optimization method documentation | 4.1, 4.2, 4.3 | Complete |
 | 1 C. elegans dataset integrated | 2.3, 2.4, 2.5, 2.6 | Complete |
+| Reproducible benchmarks with seeding | 5.1, 5.2, 5.3 | Pending |
+| Unified NematodeBench format | 5.5 | Pending |

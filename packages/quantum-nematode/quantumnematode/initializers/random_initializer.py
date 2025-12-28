@@ -3,6 +3,7 @@
 import numpy as np
 
 from quantumnematode.initializers._initializer import ParameterInitializer
+from quantumnematode.utils.seeding import get_rng
 
 
 class RandomUniformInitializer(ParameterInitializer):
@@ -16,7 +17,12 @@ class RandomUniformInitializer(ParameterInitializer):
         """Return string representation of the initializer."""
         return f"RandomUniformInitializer(range=[{self.low}, {self.high}])"
 
-    def initialize(self, num_qubits: int, parameters: list[str] | None) -> dict[str, float]:
+    def initialize(
+        self,
+        num_qubits: int,
+        parameters: list[str] | None,
+        seed: int | None = None,
+    ) -> dict[str, float]:
         """
         Initialize parameters uniformly in the configured range.
 
@@ -26,13 +32,15 @@ class RandomUniformInitializer(ParameterInitializer):
             Number of qubits in the quantum circuit.
         parameters : list[str] | None
             List of parameter names to initialize. If None, all parameters will be initialized.
+        seed : int | None
+            Random seed for reproducibility. If None, uses unseeded RNG.
 
         Returns
         -------
         dict[str, float]
             A dictionary mapping parameter names to their initial values.
         """
-        rng = np.random.default_rng()
+        rng = get_rng(seed)
         if parameters is not None:
             initialized_parameters = {}
             for param in parameters:
