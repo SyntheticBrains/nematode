@@ -316,7 +316,7 @@ class QModularBrain:
     def get_backend(self) -> AerSimulator:
         """Get or create the quantum backend."""
         if self._backend is None:
-            self._backend = AerSimulator()
+            self._backend = AerSimulator(seed_simulator=self.seed)
         return self._backend
 
     def extract_quantum_features(self, brain_params: BrainParams) -> np.ndarray:
@@ -344,7 +344,7 @@ class QModularBrain:
 
         # Execute circuit
         backend = self.get_backend()
-        transpiled_qc = transpile(bound_circuit, backend)
+        transpiled_qc = transpile(bound_circuit, backend, seed_transpiler=self.seed)
         job = backend.run(transpiled_qc, shots=self.shots)
         result = job.result()
         counts = result.get_counts(0)
@@ -425,7 +425,7 @@ class QModularBrain:
         # Bind parameters and run circuit
         bound_circuit = qc.assign_parameters(param_dict)
         backend = self.get_backend()
-        transpiled_qc = transpile(bound_circuit, backend)
+        transpiled_qc = transpile(bound_circuit, backend, seed_transpiler=self.seed)
         job = backend.run(transpiled_qc, shots=self.shots)
         result = job.result()
         counts = result.get_counts(0)
