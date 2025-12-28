@@ -579,16 +579,11 @@ class ExperimentMetadata(BaseModel):
                 grid_size=self.environment.grid_size,
                 predators_enabled=self.environment.predators_enabled,
             ).model_dump()
-            # Reorder: put config_summary before results
-            data: dict[str, Any] = {}
-            for key, value in raw_data.items():
-                if key == "results":
-                    # Insert config_summary just before results
-                    data["config_summary"] = config_summary
-                data[key] = value
-            # If results wasn't in raw_data, add config_summary at end
-            if "config_summary" not in data:
-                data["config_summary"] = config_summary
+            # Insert config_summary before results for cleaner output ordering
+            results = raw_data.pop("results", None)
+            data: dict[str, Any] = {**raw_data, "config_summary": config_summary}
+            if results is not None:
+                data["results"] = results
         else:
             # Include everything (for backward compatibility or special cases)
             data = self.model_dump()
