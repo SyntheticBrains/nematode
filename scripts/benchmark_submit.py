@@ -266,7 +266,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
                 f"  ✓ {exp.experiment_id}: {exp.results.success_rate:.1%} success, "
                 f"{exp.results.total_runs} runs",
             )
-        except Exception as e:
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as e:
             print(f"  ✗ Failed to load {path}: {e}", file=sys.stderr)
             sys.exit(1)
 
@@ -508,7 +508,7 @@ def cmd_regenerate(args: argparse.Namespace) -> None:  # noqa: ARG001
         print("  3. Run: git commit -m 'Update benchmark leaderboards'")
         print("  4. Push changes")
 
-    except Exception as e:
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as e:
         print(f"Error regenerating documentation: {e}", file=sys.stderr)
         sys.exit(1)
 
