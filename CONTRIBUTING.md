@@ -270,9 +270,13 @@ uv run scripts/benchmark_submit.py \
     --github "janedoe" \
     --notes "Tuned learning rate schedule with adaptive exploration"
 
-# 3. Create PR
+# 3. Regenerate leaderboards
+uv run scripts/benchmark_submit.py regenerate
+
+# 4. Create PR
 git add benchmarks/foraging_medium/quantum/*.json
 git add artifacts/experiments/
+git add README.md docs/nematodebench/LEADERBOARD.md
 git commit -m "Add benchmark: Adaptive exploration for foraging medium"
 git push origin feature/my-benchmark
 ```
