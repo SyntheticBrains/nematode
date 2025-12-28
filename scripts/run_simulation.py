@@ -17,7 +17,6 @@ from quantumnematode.agent import (
     QuantumNematodeAgent,
     SatietyConfig,
 )
-from quantumnematode.benchmark import save_benchmark
 from quantumnematode.brain.arch import (
     Brain,
     MLPBrainConfig,
@@ -192,16 +191,6 @@ def parse_arguments() -> argparse.Namespace:
         "--track-experiment",
         action="store_true",
         help="Save experiment metadata for reproducibility and comparison.",
-    )
-    parser.add_argument(
-        "--save-benchmark",
-        action="store_true",
-        help="Save experiment as a benchmark submission (implies --track-experiment).",
-    )
-    parser.add_argument(
-        "--benchmark-notes",
-        type=str,
-        help="Optional notes about optimization approach (requires --save-benchmark).",
     )
     parser.add_argument(
         "--validate-chemotaxis",
@@ -774,7 +763,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     )
 
     # Experiment tracking (opt-in)
-    track_experiment = args.track_experiment or args.save_benchmark
+    track_experiment = args.track_experiment
     if track_experiment:
         try:
             # Capture experiment metadata
@@ -954,37 +943,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 print(
                     "\n[Chemotaxis validation not available - requires dynamic foraging environment]",
                 )
-
-            if args.save_benchmark:
-                # Interactive benchmark submission
-                print("\n" + "=" * 80)
-                print("Benchmark Submission")
-                print("=" * 80)
-
-                contributor = input("\nContributor name (required): ").strip()
-                if not contributor:
-                    logger.error("Contributor name is required for benchmark submission")
-                else:
-                    github_username = input(
-                        "GitHub username (optional, press Enter to skip): ",
-                    ).strip()
-                    github_username = github_username if github_username else None
-
-                    notes = args.benchmark_notes
-                    if not notes:
-                        notes = input(
-                            "Optimization notes (optional, press Enter to skip): ",
-                        ).strip()
-                        notes = notes if notes else None
-
-                    # Save benchmark
-                    benchmark_path = save_benchmark(
-                        metadata=experiment_metadata,
-                        contributor=contributor,
-                        github_username=github_username,
-                        notes=notes,
-                    )
-                    print(f"\n✓ Benchmark saved: {benchmark_path}")
 
         except Exception as e:
             logger.error(f"Failed to save experiment metadata: {e}")
