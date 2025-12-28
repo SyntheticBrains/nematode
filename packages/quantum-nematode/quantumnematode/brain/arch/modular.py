@@ -1080,8 +1080,12 @@ class ModularBrain(QuantumBrain):
         -------
             ModularBrain: A new instance with the same state.
         """
+        # Create a config copy with the resolved seed to ensure reproducibility
+        config_with_seed = ModularBrainConfig(
+            **{**self.config.model_dump(), "seed": self.seed},
+        )
         new_brain = ModularBrain(
-            config=self.config,
+            config=config_with_seed,
             shots=self.shots,
             device=self.device,
             learning_rate=deepcopy(self.learning_rate),

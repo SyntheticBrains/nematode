@@ -764,8 +764,12 @@ class QModularBrain:
     def copy(self) -> QModularBrain:
         """Create a copy of the brain."""
         # TODO: Copy entire state
+        # Create a config copy with the resolved seed to ensure reproducibility
+        config_with_seed = QModularBrainConfig(
+            **{**self.config.model_dump(), "seed": self.seed},
+        )
         new_brain = QModularBrain(
-            config=self.config,
+            config=config_with_seed,
             shots=self.shots,
             device=self.device,
             action_set=self.action_set,
