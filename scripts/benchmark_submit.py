@@ -311,15 +311,17 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
 
     # Copy experiment JSONs and build session references
     session_refs: list[SessionReference] = []
+    missing_json_experiments: list[str] = []
     for i, (exp, src_path) in enumerate(zip(experiments, experiment_paths, strict=True)):
         # Copy experiment JSON (keep original experiment_id as filename)
         json_files = list(src_path.glob("*.json"))
-        if json_files:
-            dest_json = benchmark_artifacts_dir / f"{exp.experiment_id}.json"
-            shutil.copy(json_files[0], dest_json)
-            print(f"  ✓ Copied {exp.experiment_id}.json")
-        else:
-            print(f"  ✗ No JSON file found in {src_path}", file=sys.stderr)
+        if not json_files:
+            missing_json_experiments.append(f"{exp.experiment_id} ({src_path})")
+            continue
+
+        dest_json = benchmark_artifacts_dir / f"{exp.experiment_id}.json"
+        shutil.copy(json_files[0], dest_json)
+        print(f"  ✓ Copied {exp.experiment_id}.json")
 
         # Copy config from first session only
         if i == 0:
@@ -349,6 +351,15 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
                 num_runs=exp.results.total_runs,
             ),
         )
+
+    # Fail if any experiments are missing JSON files
+    if missing_json_experiments:
+        # Clean up the partially created artifacts directory
+        shutil.rmtree(benchmark_artifacts_dir, ignore_errors=True)
+        print("\n✗ Submission failed: Missing JSON files for experiments:", file=sys.stderr)
+        for exp_info in missing_json_experiments:
+            print(f"    - {exp_info}", file=sys.stderr)
+        sys.exit(1)
 
     # Aggregate metrics
     print("\nAggregating metrics across sessions...")
