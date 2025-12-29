@@ -446,14 +446,27 @@ def generate_leaderboard_md() -> str:
     return "\n".join(lines)
 
 
-def update_leaderboard(leaderboard_path: Path | str) -> None:
+def update_leaderboard(leaderboard_path: Path | str) -> bool:
     """Update or create LEADERBOARD.md with latest benchmark data.
 
     Parameters
     ----------
     leaderboard_path : Path | str
         Path to LEADERBOARD.md file.
+
+    Returns
+    -------
+    bool
+        True if the file was updated, False if already up-to-date.
     """
     leaderboard_path = Path(leaderboard_path)
     content = generate_leaderboard_md()
+
+    # Check if content changed before writing
+    if leaderboard_path.exists():
+        current_content = leaderboard_path.read_text()
+        if current_content == content:
+            return False
+
     leaderboard_path.write_text(content)
+    return True
