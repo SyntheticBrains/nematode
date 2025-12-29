@@ -449,8 +449,15 @@ The system SHALL persist experiment data in a structured folder hierarchy with a
 - **AND** the config file used SHALL be copied to `experiments/<experiment_id>/<config_name>.yml`
 - **AND** the folder SHALL be self-contained for reproducibility
 
-#### Scenario: Artifact Storage for Submissions
+#### Scenario: Benchmark Artifact Storage
 - **WHEN** experiments are submitted as a NematodeBench benchmark
-- **THEN** experiment folders SHALL be moved to `artifacts/experiments/`
-- **AND** the artifacts/ directory SHALL be committed to the repository
-- **AND** session references in submissions SHALL point to artifacts/experiments/ paths
+- **THEN** experiment JSONs SHALL be copied to `artifacts/benchmarks/<submission_id>/`
+- **AND** each experiment JSON SHALL keep its original experiment_id as filename
+- **AND** a single config.yml SHALL be copied from the first session
+- **AND** the artifacts/benchmarks/ directory SHALL be committed to the repository
+- **AND** session references in submissions SHALL point to individual JSON files
+
+#### Scenario: Ad-hoc Experiment Storage
+- **WHEN** experiments are referenced in logbooks or other documentation
+- **THEN** experiment folders MAY be stored in `artifacts/experiments/`
+- **AND** this storage is separate from official benchmark submissions
