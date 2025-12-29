@@ -300,20 +300,38 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         notes_input = input("Optimization notes (optional, press Enter to skip): ").strip()
         notes = notes_input if notes_input else None
 
-    # Copy experiments to artifacts/experiments/
-    print("\nCopying experiments to artifacts/experiments/...")
-    repo_root = Path(__file__).parent.parent
-    artifacts_dir = repo_root / "artifacts" / "experiments"
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    # Generate submission ID early (needed for artifacts directory)
+    submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
+    # Create consolidated benchmark artifacts folder
+    repo_root = Path(__file__).parent.parent
+    benchmark_artifacts_dir = repo_root / "artifacts" / "benchmarks" / submission_id
+    print(f"\nCreating benchmark artifacts: {benchmark_artifacts_dir}")
+    benchmark_artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy experiment JSONs and build session references
     session_refs: list[SessionReference] = []
-    for exp, src_path in zip(experiments, experiment_paths, strict=True):
-        dest_path = artifacts_dir / exp.experiment_id
-        if dest_path.exists():
-            print(f"  ! {exp.experiment_id} already exists in artifacts, skipping copy")
-        else:
-            shutil.copytree(str(src_path), str(dest_path))
-            print(f"  ✓ Copied {exp.experiment_id}")
+    missing_json_experiments: list[str] = []
+    for i, (exp, src_path) in enumerate(zip(experiments, experiment_paths, strict=True)):
+        # Copy experiment JSON (keep original experiment_id as filename)
+        json_files = list(src_path.glob("*.json"))
+        if not json_files:
+            missing_json_experiments.append(f"{exp.experiment_id} ({src_path})")
+            continue
+
+        dest_json = benchmark_artifacts_dir / f"{exp.experiment_id}.json"
+        shutil.copy(json_files[0], dest_json)
+        print(f"  ✓ Copied {exp.experiment_id}.json")
+
+        # Copy config from first session only
+        if i == 0:
+            # Note: All sessions must use identical configs (verified during validation),
+            # except for explicitly mentioned seeds.
+            # We store only one config.yml to avoid duplication.
+            config_files = list(src_path.glob("*.yml")) + list(src_path.glob("*.yaml"))
+            if config_files:
+                shutil.copy(config_files[0], benchmark_artifacts_dir / "config.yml")
+                print(f"  ✓ Copied config.yml (from {config_files[0].name})")
 
         # Get master seed for session (first run's seed)
         session_seed = 0
@@ -328,11 +346,20 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         session_refs.append(
             SessionReference(
                 experiment_id=exp.experiment_id,
-                file_path=f"artifacts/experiments/{exp.experiment_id}",
+                file_path=f"artifacts/benchmarks/{submission_id}/{exp.experiment_id}.json",
                 session_seed=session_seed,
                 num_runs=exp.results.total_runs,
             ),
         )
+
+    # Fail if any experiments are missing JSON files
+    if missing_json_experiments:
+        # Clean up the partially created artifacts directory
+        shutil.rmtree(benchmark_artifacts_dir, ignore_errors=True)
+        print("\n✗ Submission failed: Missing JSON files for experiments:", file=sys.stderr)
+        for exp_info in missing_json_experiments:
+            print(f"    - {exp_info}", file=sys.stderr)
+        sys.exit(1)
 
     # Aggregate metrics
     print("\nAggregating metrics across sessions...")
@@ -343,7 +370,6 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
     )
 
     # Create submission
-    submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     total_runs = sum(exp.results.total_runs for exp in experiments)
 
     # validate_submission already verified seed uniqueness, so this is True if we got here
@@ -382,7 +408,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
 
     print("\nNext steps:")
     print("  1. Review the submission file")
-    print(f"  2. Run: git add {submission_path} artifacts/experiments/")
+    print(f"  2. Run: git add {submission_path} {benchmark_artifacts_dir}")
     print("  3. Run: git commit -m 'Add NematodeBench submission for [description]'")
     print("  4. Create a pull request")
 
@@ -477,14 +503,18 @@ def cmd_regenerate(args: argparse.Namespace) -> None:  # noqa: ARG001
     try:
         # Update README.md
         if readme_path.exists():
-            update_readme(readme_path)
-            print(f"✓ Updated {readme_path}")
+            if update_readme(readme_path):
+                print(f"✓ Updated {readme_path}")
+            else:
+                print("  README.md already up-to-date")
         else:
             print(f"Warning: README.md not found at {readme_path}", file=sys.stderr)
 
         # Update/create LEADERBOARD.md
-        update_leaderboard(leaderboard_path)
-        print(f"✓ Updated {leaderboard_path}")
+        if update_leaderboard(leaderboard_path):
+            print(f"✓ Updated {leaderboard_path}")
+        else:
+            print("  LEADERBOARD.md already up-to-date")
 
         # Generate preview of README section
         readme_section = generate_readme_section()

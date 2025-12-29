@@ -26,7 +26,8 @@ class SessionReference(BaseModel):
     experiment_id : str
         Unique identifier for the experiment session (timestamp-based).
     file_path : str
-        Relative path to the experiment folder in artifacts/experiments/.
+        Relative path to the experiment JSON file in artifacts/benchmarks/<benchmark_id>/.
+        Example: "artifacts/benchmarks/20251229_143022/20251228_A.json"
     session_seed : int
         Master seed used for this session (derived from config or auto-generated).
     num_runs : int
