@@ -500,8 +500,10 @@ def cmd_regenerate(args: argparse.Namespace) -> None:  # noqa: ARG001
             print(f"Warning: README.md not found at {readme_path}", file=sys.stderr)
 
         # Update/create LEADERBOARD.md
-        update_leaderboard(leaderboard_path)
-        print(f"✓ Updated {leaderboard_path}")
+        if update_leaderboard(leaderboard_path):
+            print(f"✓ Updated {leaderboard_path}")
+        else:
+            print("  LEADERBOARD.md already up-to-date")
 
         # Generate preview of README section
         readme_section = generate_readme_section()
