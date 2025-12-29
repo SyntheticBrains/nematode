@@ -323,6 +323,9 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
 
         # Copy config from first session only
         if i == 0:
+            # Note: All sessions must use identical configs (verified during validation),
+            # except for explicitly mentioned seeds.
+            # We store only one config.yml to avoid duplication.
             config_files = list(src_path.glob("*.yml")) + list(src_path.glob("*.yaml"))
             if config_files:
                 shutil.copy(config_files[0], benchmark_artifacts_dir / "config.yml")
