@@ -1,0 +1,132 @@
+{
+  "submission_id": "20251229_054115",
+  "timestamp": "2025-12-29T05:41:15.608198+00:00",
+  "brain_type": "modular",
+  "brain_config": {
+    "type": "modular"
+  },
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "predators_enabled": true
+  },
+  "category": "predator_small/quantum",
+  "sessions": [
+    {
+      "experiment_id": "20251229_024738",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_024738.json",
+      "session_seed": 4224734967,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_024741",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_024741.json",
+      "session_seed": 1565386777,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_024745",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_024745.json",
+      "session_seed": 684322377,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_024748",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_024748.json",
+      "session_seed": 1086187914,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_034038",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_034038.json",
+      "session_seed": 2116568515,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_034041",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_034041.json",
+      "session_seed": 1718162774,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_034043",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_034043.json",
+      "session_seed": 1011840245,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_034046",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_034046.json",
+      "session_seed": 1907454476,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_043140",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_043140.json",
+      "session_seed": 378202710,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_043142",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_043142.json",
+      "session_seed": 937882243,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_043144",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_043144.json",
+      "session_seed": 2753891175,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_043147",
+      "file_path": "artifacts/benchmarks/20251229_054115/20251229_043147.json",
+      "session_seed": 1739137652,
+      "num_runs": 200
+    }
+  ],
+  "total_sessions": 12,
+  "total_runs": 2400,
+  "metrics": {
+    "success_rate": {
+      "mean": 0.76125,
+      "std": 0.020829166249916663,
+      "min": 0.715,
+      "max": 0.795
+    },
+    "composite_score": {
+      "mean": 0.6111221740772306,
+      "std": 0.05419164722669216,
+      "min": 0.4703257270027249,
+      "max": 0.6688142655334993
+    },
+    "distance_efficiency": {
+      "mean": 0.4545539221921973,
+      "std": 0.006923553109222003,
+      "min": 0.44252810329403375,
+      "max": 0.469605270607407
+    },
+    "learning_speed": {
+      "mean": 0.9295833333333331,
+      "std": 0.036937917134324476,
+      "min": 0.815,
+      "max": 0.95
+    },
+    "learning_speed_episodes": {
+      "mean": 14.083333333333334,
+      "std": 7.387583426864895,
+      "min": 10.0,
+      "max": 37.0
+    },
+    "stability": {
+      "mean": 0.46811285032078903,
+      "std": 0.039528885781546855,
+      "min": 0.3893598801812943,
+      "max": 0.5474303621447482
+    }
+  },
+  "all_seeds_unique": true,
+  "contributor": "Chris Zaharia",
+  "github_username": "chrisjz",
+  "notes": "Quantum Modular model validated from CMA-ES training"
+}

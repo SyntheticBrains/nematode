@@ -1,0 +1,2069 @@
+{
+  "experiment_id": "20251229_043147",
+  "timestamp": "2025-12-29T05:19:36.094560+00:00",
+  "config_file": "configs/examples/modular_predators_small_validate.yml",
+  "config_hash": "5dab0567f330582a913d751ecf826cd6332efc971a98dc91c2b74250f2b551c8",
+  "git_commit": "43e8e92b153e97a141b4633b53e2540e1f8e4d31",
+  "git_branch": "main",
+  "git_dirty": false,
+  "system": {
+    "python_version": "3.12.10",
+    "qiskit_version": "1.4.5",
+    "torch_version": "2.9.0",
+    "device_type": "cpu",
+    "qpu_backend": null
+  },
+  "exports_path": "exports/20251229_043147",
+  "benchmark": null,
+  "config_summary": {
+    "brain_type": "modular",
+    "environment_type": "dynamic",
+    "grid_size": 20,
+    "predators_enabled": true
+  },
+  "results": {
+    "total_runs": 200,
+    "success_rate": 0.775,
+    "avg_steps": 191.74,
+    "avg_reward": 27.67065000000007,
+    "avg_foods_collected": 8.83,
+    "avg_distance_efficiency": 0.45189694136373537,
+    "completed_all_food": 155,
+    "starved": 0,
+    "max_steps_reached": 0,
+    "goal_reached": 0,
+    "predator_deaths": 45,
+    "avg_predator_encounters": 7.385,
+    "avg_successful_evasions": 6.825,
+    "converged": true,
+    "convergence_run": 2,
+    "runs_to_convergence": 1,
+    "post_convergence_success_rate": 0.7788944723618091,
+    "post_convergence_avg_steps": 212.50967741935483,
+    "post_convergence_avg_foods": 8.839195979899497,
+    "post_convergence_variance": 0.17221787328602814,
+    "post_convergence_distance_efficiency": 0.45744359560379955,
+    "composite_benchmark_score": 0.6616819309828494,
+    "learning_speed": 0.95,
+    "learning_speed_episodes": 10,
+    "stability": 0.46720457233386903,
+    "per_run_results": [
+      {
+        "run": 1,
+        "seed": 1739137652,
+        "success": false,
+        "steps": 108,
+        "total_reward": 25.320000000000032,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.6260803523961418
+      },
+      {
+        "run": 2,
+        "seed": 1739137653,
+        "success": true,
+        "steps": 207,
+        "total_reward": 25.085000000000043,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4726365546218488
+      },
+      {
+        "run": 3,
+        "seed": 1739137654,
+        "success": true,
+        "steps": 198,
+        "total_reward": 31.130000000000095,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.48377674956622324
+      },
+      {
+        "run": 4,
+        "seed": 1739137655,
+        "success": true,
+        "steps": 189,
+        "total_reward": 40.785000000000046,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5759555640437993
+      },
+      {
+        "run": 5,
+        "seed": 1739137656,
+        "success": true,
+        "steps": 306,
+        "total_reward": 28.170000000000105,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3682157670760612
+      },
+      {
+        "run": 6,
+        "seed": 1739137657,
+        "success": true,
+        "steps": 146,
+        "total_reward": 29.14000000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5498889051071214
+      },
+      {
+        "run": 7,
+        "seed": 1739137658,
+        "success": true,
+        "steps": 252,
+        "total_reward": 29.910000000000046,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3905949466798069
+      },
+      {
+        "run": 8,
+        "seed": 1739137659,
+        "success": true,
+        "steps": 174,
+        "total_reward": 30.990000000000066,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.449463326416483
+      },
+      {
+        "run": 9,
+        "seed": 1739137660,
+        "success": true,
+        "steps": 224,
+        "total_reward": 30.970000000000137,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42266533552962915
+      },
+      {
+        "run": 10,
+        "seed": 1739137661,
+        "success": true,
+        "steps": 213,
+        "total_reward": 39.845000000000084,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.43083619179681804
+      },
+      {
+        "run": 11,
+        "seed": 1739137662,
+        "success": true,
+        "steps": 193,
+        "total_reward": 28.365000000000094,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4455431443264543
+      },
+      {
+        "run": 12,
+        "seed": 1739137663,
+        "success": true,
+        "steps": 219,
+        "total_reward": 22.385000000000026,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.45495653825273663
+      },
+      {
+        "run": 13,
+        "seed": 1739137664,
+        "success": true,
+        "steps": 193,
+        "total_reward": 27.85500000000006,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.40035457591492074
+      },
+      {
+        "run": 14,
+        "seed": 1739137665,
+        "success": false,
+        "steps": 266,
+        "total_reward": 33.92000000000007,
+        "termination_reason": "predator",
+        "foods_collected": 9,
+        "distance_efficiency": 0.4960130718954248
+      },
+      {
+        "run": 15,
+        "seed": 1739137666,
+        "success": true,
+        "steps": 163,
+        "total_reward": 36.18500000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5292435294590467
+      },
+      {
+        "run": 16,
+        "seed": 1739137667,
+        "success": true,
+        "steps": 176,
+        "total_reward": 27.260000000000076,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4914025974025974
+      },
+      {
+        "run": 17,
+        "seed": 1739137668,
+        "success": true,
+        "steps": 243,
+        "total_reward": 28.815000000000115,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.33173414150909436
+      },
+      {
+        "run": 18,
+        "seed": 1739137669,
+        "success": true,
+        "steps": 272,
+        "total_reward": 31.04000000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.41237105778166044
+      },
+      {
+        "run": 19,
+        "seed": 1739137670,
+        "success": true,
+        "steps": 210,
+        "total_reward": 28.580000000000076,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.33424291668693945
+      },
+      {
+        "run": 20,
+        "seed": 1739137671,
+        "success": false,
+        "steps": 95,
+        "total_reward": 8.405000000000005,
+        "termination_reason": "predator",
+        "foods_collected": 3,
+        "distance_efficiency": 0.4557498057498057
+      },
+      {
+        "run": 21,
+        "seed": 1739137672,
+        "success": true,
+        "steps": 231,
+        "total_reward": 25.445000000000064,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.31803697554290533
+      },
+      {
+        "run": 22,
+        "seed": 1739137673,
+        "success": false,
+        "steps": 85,
+        "total_reward": 11.024999999999997,
+        "termination_reason": "predator",
+        "foods_collected": 4,
+        "distance_efficiency": 0.4296636937941286
+      },
+      {
+        "run": 23,
+        "seed": 1739137674,
+        "success": true,
+        "steps": 266,
+        "total_reward": 36.44000000000017,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.40772299951681684
+      },
+      {
+        "run": 24,
+        "seed": 1739137675,
+        "success": true,
+        "steps": 297,
+        "total_reward": 34.03500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3986972667855021
+      },
+      {
+        "run": 25,
+        "seed": 1739137676,
+        "success": false,
+        "steps": 72,
+        "total_reward": 18.100000000000005,
+        "termination_reason": "predator",
+        "foods_collected": 3,
+        "distance_efficiency": 0.6532634032634033
+      },
+      {
+        "run": 26,
+        "seed": 1739137677,
+        "success": true,
+        "steps": 226,
+        "total_reward": 27.2,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4583146939270465
+      },
+      {
+        "run": 27,
+        "seed": 1739137678,
+        "success": true,
+        "steps": 190,
+        "total_reward": 26.960000000000115,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4325477960585564
+      },
+      {
+        "run": 28,
+        "seed": 1739137679,
+        "success": true,
+        "steps": 185,
+        "total_reward": 42.9050000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.518690729348624
+      },
+      {
+        "run": 29,
+        "seed": 1739137680,
+        "success": true,
+        "steps": 177,
+        "total_reward": 26.16500000000009,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5112749330207939
+      },
+      {
+        "run": 30,
+        "seed": 1739137681,
+        "success": true,
+        "steps": 172,
+        "total_reward": 24.860000000000042,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.552248445998446
+      },
+      {
+        "run": 31,
+        "seed": 1739137682,
+        "success": false,
+        "steps": 136,
+        "total_reward": 16.270000000000024,
+        "termination_reason": "predator",
+        "foods_collected": 5,
+        "distance_efficiency": 0.5471861471861471
+      },
+      {
+        "run": 32,
+        "seed": 1739137683,
+        "success": true,
+        "steps": 208,
+        "total_reward": 39.14000000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4527248626241203
+      },
+      {
+        "run": 33,
+        "seed": 1739137684,
+        "success": true,
+        "steps": 174,
+        "total_reward": 26.17000000000006,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4419380619380619
+      },
+      {
+        "run": 34,
+        "seed": 1739137685,
+        "success": false,
+        "steps": 64,
+        "total_reward": 10.56,
+        "termination_reason": "predator",
+        "foods_collected": 3,
+        "distance_efficiency": 0.4127859477124183
+      },
+      {
+        "run": 35,
+        "seed": 1739137686,
+        "success": true,
+        "steps": 198,
+        "total_reward": 35.370000000000125,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4961999862882216
+      },
+      {
+        "run": 36,
+        "seed": 1739137687,
+        "success": true,
+        "steps": 148,
+        "total_reward": 27.56000000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5900551598938696
+      },
+      {
+        "run": 37,
+        "seed": 1739137688,
+        "success": true,
+        "steps": 160,
+        "total_reward": 31.710000000000075,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5414809970731024
+      },
+      {
+        "run": 38,
+        "seed": 1739137689,
+        "success": true,
+        "steps": 206,
+        "total_reward": 31.040000000000056,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4953499278499279
+      },
+      {
+        "run": 39,
+        "seed": 1739137690,
+        "success": true,
+        "steps": 194,
+        "total_reward": 27.460000000000022,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.430795308744492
+      },
+      {
+        "run": 40,
+        "seed": 1739137691,
+        "success": true,
+        "steps": 153,
+        "total_reward": 34.445000000000086,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5891165207341678
+      },
+      {
+        "run": 41,
+        "seed": 1739137692,
+        "success": true,
+        "steps": 163,
+        "total_reward": 23.505000000000024,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.44838696327826766
+      },
+      {
+        "run": 42,
+        "seed": 1739137693,
+        "success": true,
+        "steps": 175,
+        "total_reward": 31.615000000000098,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.6372335322335323
+      },
+      {
+        "run": 43,
+        "seed": 1739137694,
+        "success": true,
+        "steps": 209,
+        "total_reward": 38.23500000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4826755105372399
+      },
+      {
+        "run": 44,
+        "seed": 1739137695,
+        "success": true,
+        "steps": 158,
+        "total_reward": 29.360000000000067,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5204887986409725
+      },
+      {
+        "run": 45,
+        "seed": 1739137696,
+        "success": true,
+        "steps": 218,
+        "total_reward": 23.86000000000002,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.37299312921080596
+      },
+      {
+        "run": 46,
+        "seed": 1739137697,
+        "success": true,
+        "steps": 230,
+        "total_reward": 34.7600000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.43746480643539465
+      },
+      {
+        "run": 47,
+        "seed": 1739137698,
+        "success": true,
+        "steps": 212,
+        "total_reward": 40.67000000000002,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.48871433285164184
+      },
+      {
+        "run": 48,
+        "seed": 1739137699,
+        "success": true,
+        "steps": 241,
+        "total_reward": 39.14500000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4134759626668596
+      },
+      {
+        "run": 49,
+        "seed": 1739137700,
+        "success": true,
+        "steps": 151,
+        "total_reward": 32.02500000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5416524484287641
+      },
+      {
+        "run": 50,
+        "seed": 1739137701,
+        "success": true,
+        "steps": 243,
+        "total_reward": 29.435000000000038,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3606175823894596
+      },
+      {
+        "run": 51,
+        "seed": 1739137702,
+        "success": true,
+        "steps": 198,
+        "total_reward": 35.51000000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4757374183787227
+      },
+      {
+        "run": 52,
+        "seed": 1739137703,
+        "success": true,
+        "steps": 177,
+        "total_reward": 34.06500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5066057744937055
+      },
+      {
+        "run": 53,
+        "seed": 1739137704,
+        "success": true,
+        "steps": 191,
+        "total_reward": 22.925000000000022,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5112028462530614
+      },
+      {
+        "run": 54,
+        "seed": 1739137705,
+        "success": true,
+        "steps": 197,
+        "total_reward": 34.055000000000106,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.49076741664407697
+      },
+      {
+        "run": 55,
+        "seed": 1739137706,
+        "success": true,
+        "steps": 202,
+        "total_reward": 30.180000000000046,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5798840048840048
+      },
+      {
+        "run": 56,
+        "seed": 1739137707,
+        "success": false,
+        "steps": 165,
+        "total_reward": 25.745000000000037,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.45215552887821797
+      },
+      {
+        "run": 57,
+        "seed": 1739137708,
+        "success": true,
+        "steps": 217,
+        "total_reward": 27.57500000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.451645130454341
+      },
+      {
+        "run": 58,
+        "seed": 1739137709,
+        "success": true,
+        "steps": 239,
+        "total_reward": 33.1850000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4563068914434461
+      },
+      {
+        "run": 59,
+        "seed": 1739137710,
+        "success": true,
+        "steps": 190,
+        "total_reward": 39.99000000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5702199520540482
+      },
+      {
+        "run": 60,
+        "seed": 1739137711,
+        "success": true,
+        "steps": 234,
+        "total_reward": 28.15000000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.414414761483727
+      },
+      {
+        "run": 61,
+        "seed": 1739137712,
+        "success": true,
+        "steps": 268,
+        "total_reward": 38.540000000000155,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3742918156705477
+      },
+      {
+        "run": 62,
+        "seed": 1739137713,
+        "success": true,
+        "steps": 244,
+        "total_reward": 30.940000000000072,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3718995551232393
+      },
+      {
+        "run": 63,
+        "seed": 1739137714,
+        "success": true,
+        "steps": 183,
+        "total_reward": 30.975000000000055,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4525597369619109
+      },
+      {
+        "run": 64,
+        "seed": 1739137715,
+        "success": true,
+        "steps": 240,
+        "total_reward": 48.91000000000013,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4840934630098717
+      },
+      {
+        "run": 65,
+        "seed": 1739137716,
+        "success": true,
+        "steps": 215,
+        "total_reward": 38.84500000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4653200108434662
+      },
+      {
+        "run": 66,
+        "seed": 1739137717,
+        "success": true,
+        "steps": 292,
+        "total_reward": 39.40000000000006,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3895048089031214
+      },
+      {
+        "run": 67,
+        "seed": 1739137718,
+        "success": true,
+        "steps": 264,
+        "total_reward": 29.46000000000013,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42622897652987274
+      },
+      {
+        "run": 68,
+        "seed": 1739137719,
+        "success": true,
+        "steps": 206,
+        "total_reward": 27.770000000000056,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4309418987720875
+      },
+      {
+        "run": 69,
+        "seed": 1739137720,
+        "success": true,
+        "steps": 283,
+        "total_reward": 34.63500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3092492318488594
+      },
+      {
+        "run": 70,
+        "seed": 1739137721,
+        "success": true,
+        "steps": 172,
+        "total_reward": 44.06000000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5597445880572816
+      },
+      {
+        "run": 71,
+        "seed": 1739137722,
+        "success": false,
+        "steps": 226,
+        "total_reward": -5.5499999999999865,
+        "termination_reason": "predator",
+        "foods_collected": 8,
+        "distance_efficiency": 0.42198960479822123
+      },
+      {
+        "run": 72,
+        "seed": 1739137723,
+        "success": true,
+        "steps": 241,
+        "total_reward": 28.575000000000145,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.34268928783634667
+      },
+      {
+        "run": 73,
+        "seed": 1739137724,
+        "success": true,
+        "steps": 236,
+        "total_reward": 28.4600000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.39690773115773115
+      },
+      {
+        "run": 74,
+        "seed": 1739137725,
+        "success": true,
+        "steps": 238,
+        "total_reward": 33.52000000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4350537852240638
+      },
+      {
+        "run": 75,
+        "seed": 1739137726,
+        "success": true,
+        "steps": 197,
+        "total_reward": 28.045000000000048,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4966435185185185
+      },
+      {
+        "run": 76,
+        "seed": 1739137727,
+        "success": true,
+        "steps": 179,
+        "total_reward": 38.96500000000007,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5314047619047619
+      },
+      {
+        "run": 77,
+        "seed": 1739137728,
+        "success": true,
+        "steps": 196,
+        "total_reward": 40.710000000000086,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4523059739650129
+      },
+      {
+        "run": 78,
+        "seed": 1739137729,
+        "success": false,
+        "steps": 104,
+        "total_reward": 2.3,
+        "termination_reason": "predator",
+        "foods_collected": 2,
+        "distance_efficiency": 0.14838709677419354
+      },
+      {
+        "run": 79,
+        "seed": 1739137730,
+        "success": true,
+        "steps": 151,
+        "total_reward": 25.985000000000053,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4486138861138861
+      },
+      {
+        "run": 80,
+        "seed": 1739137731,
+        "success": true,
+        "steps": 124,
+        "total_reward": 28.760000000000073,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.6096717171717172
+      },
+      {
+        "run": 81,
+        "seed": 1739137732,
+        "success": false,
+        "steps": 41,
+        "total_reward": -2.705000000000002,
+        "termination_reason": "predator",
+        "foods_collected": 1,
+        "distance_efficiency": 0.4375
+      },
+      {
+        "run": 82,
+        "seed": 1739137733,
+        "success": true,
+        "steps": 187,
+        "total_reward": 29.21500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.39646464646464646
+      },
+      {
+        "run": 83,
+        "seed": 1739137734,
+        "success": false,
+        "steps": 122,
+        "total_reward": 11.739999999999997,
+        "termination_reason": "predator",
+        "foods_collected": 4,
+        "distance_efficiency": 0.4447076106083459
+      },
+      {
+        "run": 84,
+        "seed": 1739137735,
+        "success": false,
+        "steps": 88,
+        "total_reward": 12.28000000000001,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.5082956308520218
+      },
+      {
+        "run": 85,
+        "seed": 1739137736,
+        "success": true,
+        "steps": 233,
+        "total_reward": 34.50500000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4620977170210807
+      },
+      {
+        "run": 86,
+        "seed": 1739137737,
+        "success": true,
+        "steps": 208,
+        "total_reward": 39.24000000000002,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4750229267086887
+      },
+      {
+        "run": 87,
+        "seed": 1739137738,
+        "success": false,
+        "steps": 39,
+        "total_reward": 7.335000000000001,
+        "termination_reason": "predator",
+        "foods_collected": 2,
+        "distance_efficiency": 0.5227272727272727
+      },
+      {
+        "run": 88,
+        "seed": 1739137739,
+        "success": true,
+        "steps": 192,
+        "total_reward": 44.270000000000145,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5894781559468933
+      },
+      {
+        "run": 89,
+        "seed": 1739137740,
+        "success": false,
+        "steps": 95,
+        "total_reward": 12.324999999999996,
+        "termination_reason": "predator",
+        "foods_collected": 4,
+        "distance_efficiency": 0.6259191176470588
+      },
+      {
+        "run": 90,
+        "seed": 1739137741,
+        "success": true,
+        "steps": 308,
+        "total_reward": 27.670000000000115,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.2953490475042199
+      },
+      {
+        "run": 91,
+        "seed": 1739137742,
+        "success": true,
+        "steps": 239,
+        "total_reward": 27.615000000000087,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.33489256384519916
+      },
+      {
+        "run": 92,
+        "seed": 1739137743,
+        "success": true,
+        "steps": 225,
+        "total_reward": 20.71499999999999,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4269469696969697
+      },
+      {
+        "run": 93,
+        "seed": 1739137744,
+        "success": true,
+        "steps": 200,
+        "total_reward": 35.980000000000146,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5006377011971641
+      },
+      {
+        "run": 94,
+        "seed": 1739137745,
+        "success": false,
+        "steps": 78,
+        "total_reward": 10.700000000000001,
+        "termination_reason": "predator",
+        "foods_collected": 5,
+        "distance_efficiency": 0.5739202368512714
+      },
+      {
+        "run": 95,
+        "seed": 1739137746,
+        "success": false,
+        "steps": 220,
+        "total_reward": 25.95000000000008,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.3764731866772683
+      },
+      {
+        "run": 96,
+        "seed": 1739137747,
+        "success": true,
+        "steps": 190,
+        "total_reward": 31.200000000000074,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.49493001641339235
+      },
+      {
+        "run": 97,
+        "seed": 1739137748,
+        "success": true,
+        "steps": 226,
+        "total_reward": 37.9700000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42846742952500144
+      },
+      {
+        "run": 98,
+        "seed": 1739137749,
+        "success": true,
+        "steps": 214,
+        "total_reward": 19.74000000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4726092045209692
+      },
+      {
+        "run": 99,
+        "seed": 1739137750,
+        "success": true,
+        "steps": 246,
+        "total_reward": 35.150000000000155,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4150189023001533
+      },
+      {
+        "run": 100,
+        "seed": 1739137751,
+        "success": false,
+        "steps": 145,
+        "total_reward": 26.925000000000036,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.6107500053312861
+      },
+      {
+        "run": 101,
+        "seed": 1739137752,
+        "success": true,
+        "steps": 165,
+        "total_reward": 34.405000000000086,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.546186914936915
+      },
+      {
+        "run": 102,
+        "seed": 1739137753,
+        "success": true,
+        "steps": 270,
+        "total_reward": 33.16000000000009,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4083836377679476
+      },
+      {
+        "run": 103,
+        "seed": 1739137754,
+        "success": true,
+        "steps": 226,
+        "total_reward": 41.90000000000017,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.41728899127111185
+      },
+      {
+        "run": 104,
+        "seed": 1739137755,
+        "success": true,
+        "steps": 216,
+        "total_reward": 28.630000000000035,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3666915102441418
+      },
+      {
+        "run": 105,
+        "seed": 1739137756,
+        "success": true,
+        "steps": 171,
+        "total_reward": 22.765000000000025,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.46291141899036636
+      },
+      {
+        "run": 106,
+        "seed": 1739137757,
+        "success": false,
+        "steps": 77,
+        "total_reward": 9.345,
+        "termination_reason": "predator",
+        "foods_collected": 3,
+        "distance_efficiency": 0.44489633173843696
+      },
+      {
+        "run": 107,
+        "seed": 1739137758,
+        "success": false,
+        "steps": 38,
+        "total_reward": -2.9399999999999995,
+        "termination_reason": "predator",
+        "foods_collected": 0,
+        "distance_efficiency": 0.0
+      },
+      {
+        "run": 108,
+        "seed": 1739137759,
+        "success": true,
+        "steps": 269,
+        "total_reward": 50.56500000000004,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.47138700219101926
+      },
+      {
+        "run": 109,
+        "seed": 1739137760,
+        "success": true,
+        "steps": 205,
+        "total_reward": 26.635000000000048,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.41674741924741926
+      },
+      {
+        "run": 110,
+        "seed": 1739137761,
+        "success": false,
+        "steps": 151,
+        "total_reward": 16.17500000000005,
+        "termination_reason": "predator",
+        "foods_collected": 5,
+        "distance_efficiency": 0.4961585782638414
+      },
+      {
+        "run": 111,
+        "seed": 1739137762,
+        "success": false,
+        "steps": 127,
+        "total_reward": 20.414999999999996,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.5261801690373119
+      },
+      {
+        "run": 112,
+        "seed": 1739137763,
+        "success": true,
+        "steps": 286,
+        "total_reward": 45.2100000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42018068849763646
+      },
+      {
+        "run": 113,
+        "seed": 1739137764,
+        "success": true,
+        "steps": 236,
+        "total_reward": 36.77000000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.36367500895551386
+      },
+      {
+        "run": 114,
+        "seed": 1739137765,
+        "success": true,
+        "steps": 213,
+        "total_reward": 22.385000000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3633687584345479
+      },
+      {
+        "run": 115,
+        "seed": 1739137766,
+        "success": true,
+        "steps": 221,
+        "total_reward": 33.7750000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42202038436205214
+      },
+      {
+        "run": 116,
+        "seed": 1739137767,
+        "success": false,
+        "steps": 66,
+        "total_reward": 4.320000000000004,
+        "termination_reason": "predator",
+        "foods_collected": 1,
+        "distance_efficiency": 0.2727272727272727
+      },
+      {
+        "run": 117,
+        "seed": 1739137768,
+        "success": false,
+        "steps": 17,
+        "total_reward": -0.8850000000000011,
+        "termination_reason": "predator",
+        "foods_collected": 0,
+        "distance_efficiency": 0.0
+      },
+      {
+        "run": 118,
+        "seed": 1739137769,
+        "success": true,
+        "steps": 240,
+        "total_reward": 32.530000000000115,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4947175583535657
+      },
+      {
+        "run": 119,
+        "seed": 1739137770,
+        "success": false,
+        "steps": 205,
+        "total_reward": 35.125000000000064,
+        "termination_reason": "predator",
+        "foods_collected": 9,
+        "distance_efficiency": 0.5048883565158803
+      },
+      {
+        "run": 120,
+        "seed": 1739137771,
+        "success": true,
+        "steps": 249,
+        "total_reward": 36.44500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.41134663865546217
+      },
+      {
+        "run": 121,
+        "seed": 1739137772,
+        "success": true,
+        "steps": 176,
+        "total_reward": 29.570000000000075,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5512838282575124
+      },
+      {
+        "run": 122,
+        "seed": 1739137773,
+        "success": false,
+        "steps": 186,
+        "total_reward": 22.920000000000076,
+        "termination_reason": "predator",
+        "foods_collected": 9,
+        "distance_efficiency": 0.4795795254128587
+      },
+      {
+        "run": 123,
+        "seed": 1739137774,
+        "success": true,
+        "steps": 238,
+        "total_reward": 24.500000000000096,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3891993430518348
+      },
+      {
+        "run": 124,
+        "seed": 1739137775,
+        "success": true,
+        "steps": 169,
+        "total_reward": 37.68500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5599747474747475
+      },
+      {
+        "run": 125,
+        "seed": 1739137776,
+        "success": true,
+        "steps": 197,
+        "total_reward": 34.87500000000006,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5338453270107598
+      },
+      {
+        "run": 126,
+        "seed": 1739137777,
+        "success": true,
+        "steps": 239,
+        "total_reward": 22.08500000000003,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4202723582186498
+      },
+      {
+        "run": 127,
+        "seed": 1739137778,
+        "success": true,
+        "steps": 228,
+        "total_reward": 28.37000000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.36722509166445094
+      },
+      {
+        "run": 128,
+        "seed": 1739137779,
+        "success": true,
+        "steps": 184,
+        "total_reward": 35.49000000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.46988035113035115
+      },
+      {
+        "run": 129,
+        "seed": 1739137780,
+        "success": true,
+        "steps": 203,
+        "total_reward": 38.72500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4428957105696236
+      },
+      {
+        "run": 130,
+        "seed": 1739137781,
+        "success": false,
+        "steps": 53,
+        "total_reward": 10.664999999999994,
+        "termination_reason": "predator",
+        "foods_collected": 3,
+        "distance_efficiency": 0.7354497354497355
+      },
+      {
+        "run": 131,
+        "seed": 1739137782,
+        "success": false,
+        "steps": 213,
+        "total_reward": 19.55500000000001,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.3665069057926201
+      },
+      {
+        "run": 132,
+        "seed": 1739137783,
+        "success": true,
+        "steps": 166,
+        "total_reward": 36.82000000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5499016290726817
+      },
+      {
+        "run": 133,
+        "seed": 1739137784,
+        "success": true,
+        "steps": 154,
+        "total_reward": 34.34000000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5684034094560411
+      },
+      {
+        "run": 134,
+        "seed": 1739137785,
+        "success": true,
+        "steps": 163,
+        "total_reward": 26.785000000000018,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4560710343223131
+      },
+      {
+        "run": 135,
+        "seed": 1739137786,
+        "success": true,
+        "steps": 202,
+        "total_reward": 44.680000000000135,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5028920202604413
+      },
+      {
+        "run": 136,
+        "seed": 1739137787,
+        "success": false,
+        "steps": 174,
+        "total_reward": 14.889999999999993,
+        "termination_reason": "predator",
+        "foods_collected": 6,
+        "distance_efficiency": 0.27214120135172765
+      },
+      {
+        "run": 137,
+        "seed": 1739137788,
+        "success": false,
+        "steps": 116,
+        "total_reward": 12.90000000000001,
+        "termination_reason": "predator",
+        "foods_collected": 6,
+        "distance_efficiency": 0.4842425806048097
+      },
+      {
+        "run": 138,
+        "seed": 1739137789,
+        "success": true,
+        "steps": 307,
+        "total_reward": 30.445000000000142,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.2784941320229167
+      },
+      {
+        "run": 139,
+        "seed": 1739137790,
+        "success": true,
+        "steps": 278,
+        "total_reward": 26.730000000000036,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.38065531417792786
+      },
+      {
+        "run": 140,
+        "seed": 1739137791,
+        "success": true,
+        "steps": 170,
+        "total_reward": 31.410000000000068,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5899358974358975
+      },
+      {
+        "run": 141,
+        "seed": 1739137792,
+        "success": false,
+        "steps": 77,
+        "total_reward": 14.244999999999997,
+        "termination_reason": "predator",
+        "foods_collected": 2,
+        "distance_efficiency": 0.39814814814814814
+      },
+      {
+        "run": 142,
+        "seed": 1739137793,
+        "success": true,
+        "steps": 175,
+        "total_reward": 25.94500000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5452952602952603
+      },
+      {
+        "run": 143,
+        "seed": 1739137794,
+        "success": true,
+        "steps": 271,
+        "total_reward": 33.955000000000126,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.43392126813984433
+      },
+      {
+        "run": 144,
+        "seed": 1739137795,
+        "success": true,
+        "steps": 204,
+        "total_reward": 27.050000000000075,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.45489409141583054
+      },
+      {
+        "run": 145,
+        "seed": 1739137796,
+        "success": true,
+        "steps": 173,
+        "total_reward": 28.35500000000007,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.43056273791567906
+      },
+      {
+        "run": 146,
+        "seed": 1739137797,
+        "success": false,
+        "steps": 139,
+        "total_reward": 26.935000000000038,
+        "termination_reason": "predator",
+        "foods_collected": 8,
+        "distance_efficiency": 0.5281815171720862
+      },
+      {
+        "run": 147,
+        "seed": 1739137798,
+        "success": true,
+        "steps": 214,
+        "total_reward": 33.730000000000096,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42539237694672477
+      },
+      {
+        "run": 148,
+        "seed": 1739137799,
+        "success": true,
+        "steps": 181,
+        "total_reward": 29.855000000000082,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.49762921835077245
+      },
+      {
+        "run": 149,
+        "seed": 1739137800,
+        "success": true,
+        "steps": 226,
+        "total_reward": 28.240000000000073,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4353347919880178
+      },
+      {
+        "run": 150,
+        "seed": 1739137801,
+        "success": true,
+        "steps": 247,
+        "total_reward": 39.91500000000006,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.42181115984405454
+      },
+      {
+        "run": 151,
+        "seed": 1739137802,
+        "success": true,
+        "steps": 245,
+        "total_reward": 33.1950000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5458547528245691
+      },
+      {
+        "run": 152,
+        "seed": 1739137803,
+        "success": true,
+        "steps": 208,
+        "total_reward": 29.850000000000097,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3613114973262032
+      },
+      {
+        "run": 153,
+        "seed": 1739137804,
+        "success": true,
+        "steps": 170,
+        "total_reward": 33.950000000000095,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5375350140056022
+      },
+      {
+        "run": 154,
+        "seed": 1739137805,
+        "success": true,
+        "steps": 194,
+        "total_reward": 29.160000000000075,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4652981632433083
+      },
+      {
+        "run": 155,
+        "seed": 1739137806,
+        "success": false,
+        "steps": 173,
+        "total_reward": 23.655000000000026,
+        "termination_reason": "predator",
+        "foods_collected": 9,
+        "distance_efficiency": 0.5274952982756975
+      },
+      {
+        "run": 156,
+        "seed": 1739137807,
+        "success": false,
+        "steps": 131,
+        "total_reward": 9.814999999999992,
+        "termination_reason": "predator",
+        "foods_collected": 6,
+        "distance_efficiency": 0.3624427819908451
+      },
+      {
+        "run": 157,
+        "seed": 1739137808,
+        "success": true,
+        "steps": 152,
+        "total_reward": 35.4800000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5255307182161402
+      },
+      {
+        "run": 158,
+        "seed": 1739137809,
+        "success": true,
+        "steps": 195,
+        "total_reward": 32.3750000000001,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4898619301521778
+      },
+      {
+        "run": 159,
+        "seed": 1739137810,
+        "success": false,
+        "steps": 64,
+        "total_reward": 9.98,
+        "termination_reason": "predator",
+        "foods_collected": 2,
+        "distance_efficiency": 0.5181818181818182
+      },
+      {
+        "run": 160,
+        "seed": 1739137811,
+        "success": true,
+        "steps": 210,
+        "total_reward": 30.95000000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.47861489132836377
+      },
+      {
+        "run": 161,
+        "seed": 1739137812,
+        "success": true,
+        "steps": 199,
+        "total_reward": 35.37500000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4875233865751107
+      },
+      {
+        "run": 162,
+        "seed": 1739137813,
+        "success": true,
+        "steps": 183,
+        "total_reward": 36.80500000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.6167352255587549
+      },
+      {
+        "run": 163,
+        "seed": 1739137814,
+        "success": true,
+        "steps": 181,
+        "total_reward": 31.855000000000096,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.45210526315789473
+      },
+      {
+        "run": 164,
+        "seed": 1739137815,
+        "success": true,
+        "steps": 193,
+        "total_reward": 35.34500000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5411131336245752
+      },
+      {
+        "run": 165,
+        "seed": 1739137816,
+        "success": true,
+        "steps": 190,
+        "total_reward": 29.880000000000035,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.47749072908515633
+      },
+      {
+        "run": 166,
+        "seed": 1739137817,
+        "success": true,
+        "steps": 180,
+        "total_reward": 29.46000000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4537538123448071
+      },
+      {
+        "run": 167,
+        "seed": 1739137818,
+        "success": true,
+        "steps": 244,
+        "total_reward": 35.64000000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.464941647499787
+      },
+      {
+        "run": 168,
+        "seed": 1739137819,
+        "success": true,
+        "steps": 180,
+        "total_reward": 35.850000000000115,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5392648042673158
+      },
+      {
+        "run": 169,
+        "seed": 1739137820,
+        "success": true,
+        "steps": 251,
+        "total_reward": 25.885000000000066,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3751644762656999
+      },
+      {
+        "run": 170,
+        "seed": 1739137821,
+        "success": true,
+        "steps": 202,
+        "total_reward": 28.710000000000075,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.41816787744419326
+      },
+      {
+        "run": 171,
+        "seed": 1739137822,
+        "success": false,
+        "steps": 93,
+        "total_reward": 18.635000000000055,
+        "termination_reason": "predator",
+        "foods_collected": 5,
+        "distance_efficiency": 0.662903762903763
+      },
+      {
+        "run": 172,
+        "seed": 1739137823,
+        "success": true,
+        "steps": 295,
+        "total_reward": 28.295000000000083,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.36225495818962244
+      },
+      {
+        "run": 173,
+        "seed": 1739137824,
+        "success": true,
+        "steps": 229,
+        "total_reward": 38.175000000000175,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4603117986366497
+      },
+      {
+        "run": 174,
+        "seed": 1739137825,
+        "success": true,
+        "steps": 218,
+        "total_reward": 32.94000000000011,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.39552024185745177
+      },
+      {
+        "run": 175,
+        "seed": 1739137826,
+        "success": false,
+        "steps": 25,
+        "total_reward": -2.0249999999999995,
+        "termination_reason": "predator",
+        "foods_collected": 0,
+        "distance_efficiency": 0.0
+      },
+      {
+        "run": 176,
+        "seed": 1739137827,
+        "success": false,
+        "steps": 129,
+        "total_reward": 20.294999999999998,
+        "termination_reason": "predator",
+        "foods_collected": 5,
+        "distance_efficiency": 0.41784746418892754
+      },
+      {
+        "run": 177,
+        "seed": 1739137828,
+        "success": true,
+        "steps": 190,
+        "total_reward": 42.69000000000007,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5017372624350845
+      },
+      {
+        "run": 178,
+        "seed": 1739137829,
+        "success": true,
+        "steps": 182,
+        "total_reward": 41.12000000000007,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.6446172944702356
+      },
+      {
+        "run": 179,
+        "seed": 1739137830,
+        "success": false,
+        "steps": 167,
+        "total_reward": 25.395000000000064,
+        "termination_reason": "predator",
+        "foods_collected": 7,
+        "distance_efficiency": 0.5241527393701306
+      },
+      {
+        "run": 180,
+        "seed": 1739137831,
+        "success": false,
+        "steps": 159,
+        "total_reward": 25.15500000000005,
+        "termination_reason": "predator",
+        "foods_collected": 6,
+        "distance_efficiency": 0.4520382395382396
+      },
+      {
+        "run": 181,
+        "seed": 1739137832,
+        "success": true,
+        "steps": 238,
+        "total_reward": 29.340000000000103,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.378163477512217
+      },
+      {
+        "run": 182,
+        "seed": 1739137833,
+        "success": true,
+        "steps": 185,
+        "total_reward": 28.955000000000087,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.45990464872817816
+      },
+      {
+        "run": 183,
+        "seed": 1739137834,
+        "success": true,
+        "steps": 216,
+        "total_reward": 35.120000000000104,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.43159870843694376
+      },
+      {
+        "run": 184,
+        "seed": 1739137835,
+        "success": true,
+        "steps": 242,
+        "total_reward": 39.270000000000174,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4629395604395604
+      },
+      {
+        "run": 185,
+        "seed": 1739137836,
+        "success": true,
+        "steps": 170,
+        "total_reward": 34.14000000000005,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5594816616555747
+      },
+      {
+        "run": 186,
+        "seed": 1739137837,
+        "success": true,
+        "steps": 213,
+        "total_reward": 26.635000000000037,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.40227347365278404
+      },
+      {
+        "run": 187,
+        "seed": 1739137838,
+        "success": false,
+        "steps": 36,
+        "total_reward": 3.1700000000000026,
+        "termination_reason": "predator",
+        "foods_collected": 1,
+        "distance_efficiency": 0.28
+      },
+      {
+        "run": 188,
+        "seed": 1739137839,
+        "success": true,
+        "steps": 410,
+        "total_reward": -28.66999999999994,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3375411836206439
+      },
+      {
+        "run": 189,
+        "seed": 1739137840,
+        "success": true,
+        "steps": 330,
+        "total_reward": -13.7399999999999,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.3224144021576981
+      },
+      {
+        "run": 190,
+        "seed": 1739137841,
+        "success": false,
+        "steps": 91,
+        "total_reward": 4.704999999999995,
+        "termination_reason": "predator",
+        "foods_collected": 2,
+        "distance_efficiency": 0.1736111111111111
+      },
+      {
+        "run": 191,
+        "seed": 1739137842,
+        "success": true,
+        "steps": 193,
+        "total_reward": 22.485000000000024,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4468854890320408
+      },
+      {
+        "run": 192,
+        "seed": 1739137843,
+        "success": true,
+        "steps": 214,
+        "total_reward": 23.35000000000004,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.38389909076271683
+      },
+      {
+        "run": 193,
+        "seed": 1739137844,
+        "success": true,
+        "steps": 200,
+        "total_reward": 25.53000000000008,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.38348601055694875
+      },
+      {
+        "run": 194,
+        "seed": 1739137845,
+        "success": true,
+        "steps": 238,
+        "total_reward": 25.39000000000013,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4412570363073459
+      },
+      {
+        "run": 195,
+        "seed": 1739137846,
+        "success": false,
+        "steps": 197,
+        "total_reward": 19.205000000000013,
+        "termination_reason": "predator",
+        "foods_collected": 5,
+        "distance_efficiency": 0.3250813422642992
+      },
+      {
+        "run": 196,
+        "seed": 1739137847,
+        "success": false,
+        "steps": 153,
+        "total_reward": 17.355000000000043,
+        "termination_reason": "predator",
+        "foods_collected": 6,
+        "distance_efficiency": 0.5172619047619048
+      },
+      {
+        "run": 197,
+        "seed": 1739137848,
+        "success": false,
+        "steps": 203,
+        "total_reward": 23.03500000000007,
+        "termination_reason": "predator",
+        "foods_collected": 8,
+        "distance_efficiency": 0.4619464562140646
+      },
+      {
+        "run": 198,
+        "seed": 1739137849,
+        "success": true,
+        "steps": 182,
+        "total_reward": 37.39000000000012,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.5676696288710018
+      },
+      {
+        "run": 199,
+        "seed": 1739137850,
+        "success": true,
+        "steps": 248,
+        "total_reward": 40.43000000000013,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.4485048951919032
+      },
+      {
+        "run": 200,
+        "seed": 1739137851,
+        "success": true,
+        "steps": 232,
+        "total_reward": 26.620000000000033,
+        "termination_reason": "completed_all_food",
+        "foods_collected": 10,
+        "distance_efficiency": 0.40374834318999075
+      }
+    ],
+    "avg_chemotaxis_index": 0.33524512340113083,
+    "avg_time_in_attractant": 0.6676225617005654,
+    "avg_approach_frequency": 0.43122859843919487,
+    "avg_path_efficiency": 0.046103784023596904,
+    "post_convergence_chemotaxis_index": 0.3363217060005892,
+    "post_convergence_time_in_attractant": 0.6681608530002946,
+    "post_convergence_approach_frequency": 0.43101969549394376,
+    "post_convergence_path_efficiency": 0.04639483421337203,
+    "chemotaxis_validation_level": "none",
+    "biological_ci_range": [
+      0.5,
+      0.85
+    ],
+    "biological_ci_typical": 0.7,
+    "matches_biology": false,
+    "literature_source": "Bargmann et al. (1993). Cell 74(3):515-527"
+  }
+}
