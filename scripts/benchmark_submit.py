@@ -300,20 +300,33 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         notes_input = input("Optimization notes (optional, press Enter to skip): ").strip()
         notes = notes_input if notes_input else None
 
-    # Copy experiments to artifacts/experiments/
-    print("\nCopying experiments to artifacts/experiments/...")
-    repo_root = Path(__file__).parent.parent
-    artifacts_dir = repo_root / "artifacts" / "experiments"
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    # Generate submission ID early (needed for artifacts directory)
+    submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
+    # Create consolidated benchmark artifacts folder
+    repo_root = Path(__file__).parent.parent
+    benchmark_artifacts_dir = repo_root / "artifacts" / "benchmarks" / submission_id
+    print(f"\nCreating benchmark artifacts: {benchmark_artifacts_dir}")
+    benchmark_artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy experiment JSONs and build session references
     session_refs: list[SessionReference] = []
-    for exp, src_path in zip(experiments, experiment_paths, strict=True):
-        dest_path = artifacts_dir / exp.experiment_id
-        if dest_path.exists():
-            print(f"  ! {exp.experiment_id} already exists in artifacts, skipping copy")
+    for i, (exp, src_path) in enumerate(zip(experiments, experiment_paths, strict=True)):
+        # Copy experiment JSON (keep original experiment_id as filename)
+        json_files = list(src_path.glob("*.json"))
+        if json_files:
+            dest_json = benchmark_artifacts_dir / f"{exp.experiment_id}.json"
+            shutil.copy(json_files[0], dest_json)
+            print(f"  ✓ Copied {exp.experiment_id}.json")
         else:
-            shutil.copytree(str(src_path), str(dest_path))
-            print(f"  ✓ Copied {exp.experiment_id}")
+            print(f"  ✗ No JSON file found in {src_path}", file=sys.stderr)
+
+        # Copy config from first session only
+        if i == 0:
+            config_files = list(src_path.glob("*.yml")) + list(src_path.glob("*.yaml"))
+            if config_files:
+                shutil.copy(config_files[0], benchmark_artifacts_dir / "config.yml")
+                print(f"  ✓ Copied config.yml (from {config_files[0].name})")
 
         # Get master seed for session (first run's seed)
         session_seed = 0
@@ -328,7 +341,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         session_refs.append(
             SessionReference(
                 experiment_id=exp.experiment_id,
-                file_path=f"artifacts/experiments/{exp.experiment_id}",
+                file_path=f"artifacts/benchmarks/{submission_id}/{exp.experiment_id}.json",
                 session_seed=session_seed,
                 num_runs=exp.results.total_runs,
             ),
@@ -343,7 +356,6 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
     )
 
     # Create submission
-    submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     total_runs = sum(exp.results.total_runs for exp in experiments)
 
     # validate_submission already verified seed uniqueness, so this is True if we got here
@@ -382,7 +394,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
 
     print("\nNext steps:")
     print("  1. Review the submission file")
-    print(f"  2. Run: git add {submission_path} artifacts/experiments/")
+    print(f"  2. Run: git add {submission_path} {benchmark_artifacts_dir}")
     print("  3. Run: git commit -m 'Add NematodeBench submission for [description]'")
     print("  4. Create a pull request")
 
