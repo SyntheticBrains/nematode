@@ -489,8 +489,10 @@ def cmd_regenerate(args: argparse.Namespace) -> None:  # noqa: ARG001
     try:
         # Update README.md
         if readme_path.exists():
-            update_readme(readme_path)
-            print(f"✓ Updated {readme_path}")
+            if update_readme(readme_path):
+                print(f"✓ Updated {readme_path}")
+            else:
+                print("  README.md already up-to-date")
         else:
             print(f"Warning: README.md not found at {readme_path}", file=sys.stderr)
 
