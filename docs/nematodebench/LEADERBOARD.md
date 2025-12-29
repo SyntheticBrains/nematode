@@ -57,7 +57,9 @@ _No NematodeBench submissions yet._
 
 #### Quantum Architectures
 
-_No NematodeBench submissions yet._
+| Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
+|---|---|---|---|---|---|---|---|---|
+| modular | 0.611 ± 0.054 | 76.1% ± 2.1% | 0.93 ± 0.04 | 0.47 ± 0.04 | 0.45 ± 0.01 | 12 | @chrisjz | 2025-12-29 |
 
 #### Classical Architectures
 
