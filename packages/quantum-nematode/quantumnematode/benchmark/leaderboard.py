@@ -367,13 +367,18 @@ def generate_benchmarks_doc() -> str:
     return "\n".join(sections)
 
 
-def update_readme(readme_path: Path | str) -> None:
+def update_readme(readme_path: Path | str) -> bool:
     """Update README.md with latest benchmark leaderboard.
 
     Parameters
     ----------
     readme_path : Path | str
         Path to README.md file.
+
+    Returns
+    -------
+    bool
+        True if the file was updated, False if already up-to-date.
     """
     readme_path = Path(readme_path)
     content = readme_path.read_text()
@@ -385,17 +390,22 @@ def update_readme(readme_path: Path | str) -> None:
     pattern = r"(### Current Leaders\n\n)(.*?)(See \[BENCHMARKS\.md\])"
     replacement = f"\\1{new_section}\n\\3"
 
-    updated_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-
-    if updated_content == content and new_section.strip():
+    # Check if the pattern exists before attempting replacement
+    if not re.search(pattern, content, flags=re.DOTALL):
         msg = (
             "README.md update pattern not found. "
             "Expected '### Current Leaders' section followed by 'See [BENCHMARKS.md]'"
         )
         raise ValueError(msg)
 
+    updated_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+    if updated_content == content:
+        return False
+
     # Write back
     readme_path.write_text(updated_content)
+    return True
 
 
 def generate_leaderboard_md() -> str:
