@@ -1,0 +1,132 @@
+{
+  "submission_id": "20251229_110151",
+  "timestamp": "2025-12-29T11:01:51.594022+00:00",
+  "brain_type": "mlp",
+  "brain_config": {
+    "type": "mlp"
+  },
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "predators_enabled": true
+  },
+  "category": "predator_small/classical",
+  "sessions": [
+    {
+      "experiment_id": "20251229_100737",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_100737.json",
+      "session_seed": 3476363261,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_100739",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_100739.json",
+      "session_seed": 1622328474,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_100742",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_100742.json",
+      "session_seed": 3491961207,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_100745",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_100745.json",
+      "session_seed": 2040640726,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_101742",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_101742.json",
+      "session_seed": 3489526730,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_101745",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_101745.json",
+      "session_seed": 1070406003,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_101747",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_101747.json",
+      "session_seed": 1150672159,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_101750",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_101750.json",
+      "session_seed": 642802586,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_103141",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_103141.json",
+      "session_seed": 827597606,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_103144",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_103144.json",
+      "session_seed": 3089410929,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_103146",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_103146.json",
+      "session_seed": 1670133920,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_103149",
+      "file_path": "artifacts/benchmarks/20251229_110151/20251229_103149.json",
+      "session_seed": 1173014599,
+      "num_runs": 200
+    }
+  ],
+  "total_sessions": 12,
+  "total_runs": 2400,
+  "metrics": {
+    "success_rate": {
+      "mean": 0.7341666666666667,
+      "std": 0.10948427081346232,
+      "min": 0.495,
+      "max": 0.835
+    },
+    "composite_score": {
+      "mean": 0.6242451915810817,
+      "std": 0.1226453534821249,
+      "min": 0.28593554502019536,
+      "max": 0.7246736326575645
+    },
+    "distance_efficiency": {
+      "mean": 0.3920073517436431,
+      "std": 0.06516264376223198,
+      "min": 0.26532042411946904,
+      "max": 0.4749385289440613
+    },
+    "learning_speed": {
+      "mean": 0.8379166666666666,
+      "std": 0.08984844492563886,
+      "min": 0.575,
+      "max": 0.915
+    },
+    "learning_speed_episodes": {
+      "mean": 32.416666666666664,
+      "std": 17.969688985127767,
+      "min": 17.0,
+      "max": 85.0
+    },
+    "stability": {
+      "mean": 0.5161516316767072,
+      "std": 0.1858521563179021,
+      "min": 0.0,
+      "max": 0.6860070871886204
+    }
+  },
+  "all_seeds_unique": true,
+  "contributor": "Chris Zaharia",
+  "github_username": "chrisjz",
+  "notes": "REINFORCE policy gradient MLP"
+}
