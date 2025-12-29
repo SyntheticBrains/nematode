@@ -159,6 +159,8 @@ def validate_session_references(data: dict, base_path: Path) -> tuple[list[str],
             full_path = base_path / file_path
             if not full_path.exists():
                 errors.append(f"Session reference not found: {file_path}")
+            elif full_path.suffix == ".json" and not full_path.is_file():
+                errors.append(f"JSON reference is not a file: {file_path}")
             elif (
                 full_path.suffix != ".json"
                 and full_path.is_dir()
