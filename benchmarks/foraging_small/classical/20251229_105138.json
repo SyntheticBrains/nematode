@@ -1,0 +1,132 @@
+{
+  "submission_id": "20251229_105138",
+  "timestamp": "2025-12-29T10:51:38.705762+00:00",
+  "brain_type": "mlp",
+  "brain_config": {
+    "type": "mlp"
+  },
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "predators_enabled": false
+  },
+  "category": "foraging_small/classical",
+  "sessions": [
+    {
+      "experiment_id": "20251229_092236",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_092236.json",
+      "session_seed": 3480737277,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_092239",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_092239.json",
+      "session_seed": 1153438571,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_092242",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_092242.json",
+      "session_seed": 3873361179,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_092245",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_092245.json",
+      "session_seed": 3044572106,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_093722",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_093722.json",
+      "session_seed": 2639263735,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_093725",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_093725.json",
+      "session_seed": 3823494742,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_093727",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_093727.json",
+      "session_seed": 48887489,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_093730",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_093730.json",
+      "session_seed": 765322463,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_095326",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_095326.json",
+      "session_seed": 4255614831,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_095329",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_095329.json",
+      "session_seed": 3429436109,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_095331",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_095331.json",
+      "session_seed": 3896509289,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251229_095334",
+      "file_path": "artifacts/benchmarks/20251229_105138/20251229_095334.json",
+      "session_seed": 2065198659,
+      "num_runs": 200
+    }
+  ],
+  "total_sessions": 12,
+  "total_runs": 2400,
+  "metrics": {
+    "success_rate": {
+      "mean": 0.9508333333333333,
+      "std": 0.019346977943739806,
+      "min": 0.91,
+      "max": 0.98
+    },
+    "composite_score": {
+      "mean": 0.8095906548376773,
+      "std": 0.013877377920320615,
+      "min": 0.7770409243555142,
+      "max": 0.8293494134861493
+    },
+    "distance_efficiency": {
+      "mean": 0.39122816972724106,
+      "std": 0.03805115397243159,
+      "min": 0.3052288586955186,
+      "max": 0.45369966988002797
+    },
+    "learning_speed": {
+      "mean": 0.9108333333333333,
+      "std": 0.021098314835286926,
+      "min": 0.865,
+      "max": 0.94
+    },
+    "learning_speed_episodes": {
+      "mean": 17.833333333333332,
+      "std": 4.2196629670573875,
+      "min": 12.0,
+      "max": 27.0
+    },
+    "stability": {
+      "mean": 0.9879558999928442,
+      "std": 0.026931674204066,
+      "min": 0.9274523749889988,
+      "max": 1.0
+    }
+  },
+  "all_seeds_unique": true,
+  "contributor": "Chris Zaharia",
+  "github_username": "chrisjz",
+  "notes": "REINFORCE policy gradient MLP"
+}
