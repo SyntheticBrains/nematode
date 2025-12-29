@@ -59,7 +59,9 @@ _No NematodeBench submissions yet._
 
 #### Classical Architectures
 
-_No NematodeBench submissions yet._
+| Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
+|---|---|---|---|---|---|---|---|---|
+| ppo | 0.728 ± 0.029 | 83.3% ± 2.9% | 0.92 ± 0.02 | 0.62 ± 0.05 | 0.51 ± 0.02 | 12 | @chrisjz | 2025-12-29 |
 
 ### Predator Medium (≤50x50)
 

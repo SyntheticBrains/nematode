@@ -1,0 +1,132 @@
+{
+  "submission_id": "20251229_011343",
+  "timestamp": "2025-12-29T01:13:43.979359+00:00",
+  "brain_type": "ppo",
+  "brain_config": {
+    "type": "ppo"
+  },
+  "environment": {
+    "type": "dynamic",
+    "grid_size": 20,
+    "predators_enabled": true
+  },
+  "category": "predator_small/classical",
+  "sessions": [
+    {
+      "experiment_id": "20251228_152719",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_152719.json",
+      "session_seed": 4086354673,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_152723",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_152723.json",
+      "session_seed": 3331361658,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_152726",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_152726.json",
+      "session_seed": 456279712,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_152728",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_152728.json",
+      "session_seed": 4028175004,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_153557",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_153557.json",
+      "session_seed": 3062331389,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_153600",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_153600.json",
+      "session_seed": 2939392631,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_153603",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_153603.json",
+      "session_seed": 3762143638,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_153610",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_153610.json",
+      "session_seed": 1549847747,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_155215",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_155215.json",
+      "session_seed": 4016562632,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_155218",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_155218.json",
+      "session_seed": 1438253635,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_155221",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_155221.json",
+      "session_seed": 2153784826,
+      "num_runs": 200
+    },
+    {
+      "experiment_id": "20251228_155225",
+      "file_path": "artifacts/benchmarks/20251229_011343/20251228_155225.json",
+      "session_seed": 1499892608,
+      "num_runs": 200
+    }
+  ],
+  "total_sessions": 12,
+  "total_runs": 2400,
+  "metrics": {
+    "success_rate": {
+      "mean": 0.8333333333333331,
+      "std": 0.02903541898364056,
+      "min": 0.77,
+      "max": 0.87
+    },
+    "composite_score": {
+      "mean": 0.7276332567136752,
+      "std": 0.028699501158510724,
+      "min": 0.6614034109216257,
+      "max": 0.7701931260964087
+    },
+    "distance_efficiency": {
+      "mean": 0.5087023480353575,
+      "std": 0.019284179437672147,
+      "min": 0.4803026256810232,
+      "max": 0.5334661038742491
+    },
+    "learning_speed": {
+      "mean": 0.9204166666666667,
+      "std": 0.018423075807861778,
+      "min": 0.875,
+      "max": 0.94
+    },
+    "learning_speed_episodes": {
+      "mean": 15.916666666666666,
+      "std": 3.6846151615723572,
+      "min": 12.0,
+      "max": 25.0
+    },
+    "stability": {
+      "mean": 0.6154719268734242,
+      "std": 0.04853781765793913,
+      "min": 0.5527864045000421,
+      "max": 0.7391797345213496
+    }
+  },
+  "all_seeds_unique": true,
+  "contributor": "Chris Zaharia",
+  "github_username": "chrisjz",
+  "notes": "Using Proximal Policy Optimization (PPO) model"
+}
