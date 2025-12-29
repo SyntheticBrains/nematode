@@ -17,9 +17,9 @@ brain:
     value_loss_coef: 0.5
     entropy_coef: 0.02
     learning_rate: 0.001
+    rollout_buffer_size: 256
     num_epochs: 10
     num_minibatches: 2
-    rollout_buffer_size: 256
     max_grad_norm: 0.5
     normalize_advantages: true
 

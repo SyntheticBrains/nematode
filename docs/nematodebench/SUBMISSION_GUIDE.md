@@ -92,10 +92,10 @@ uv run scripts/benchmark_submit.py \
 This will:
 1. Validate all experiments meet requirements
 2. Check seed uniqueness across all runs in all sessions
-3. Move experiments from `experiments/` to `artifacts/experiments/`
-4. Aggregate metrics using StatValue (mean/std/min/max across sessions)
-5. Generate a fresh submission timestamp
-6. Save the benchmark to `benchmarks/<category>/<timestamp>.json`
+3. Copy experiment JSONs to `artifacts/benchmarks/<submission_id>/`
+4. Copy a single config.yml from the first session
+5. Aggregate metrics using StatValue (mean/std/min/max across sessions)
+6. Save the benchmark metadata to `benchmarks/<category>/<submission_id>.json`
 
 ## Step 5: Regenerate Leaderboards
 
@@ -138,8 +138,8 @@ Summary:
 1. Fork the main repository (if not already done)
 2. Stage the benchmark, leaderboard, and artifact files:
    ```bash
-   git add benchmarks/<category>/<timestamp>.json
-   git add artifacts/experiments/
+   git add benchmarks/<category>/<submission_id>.json
+   git add artifacts/benchmarks/<submission_id>/
    git add README.md docs/nematodebench/LEADERBOARD.md
    ```
 3. Create a pull request with:
@@ -169,12 +169,12 @@ Brief description of your approach, hyperparameter choices, and any novel techni
 - [ ] 50+ runs per session
 - [ ] All seeds unique across all runs
 - [ ] evaluate_submission.py passes
-- [ ] Config files in artifacts/experiments/
+- [ ] Artifacts in artifacts/benchmarks/<submission_id>/
 - [ ] Leaderboards regenerated
 
 ### Files Changed
-- `benchmarks/<category>/<timestamp>.json`
-- `artifacts/experiments/<session_id>/` (10+ session folders)
+- `benchmarks/<category>/<submission_id>.json`
+- `artifacts/benchmarks/<submission_id>/` (all session JSONs + config.yml)
 - `README.md` (Current Leaders section updated)
 - `docs/nematodebench/LEADERBOARD.md` (Full leaderboard updated)
 ```
@@ -199,7 +199,7 @@ Brief description of your approach, hyperparameter choices, and any novel techni
   "sessions": [
     {
       "experiment_id": "20251228_A",
-      "file_path": "artifacts/experiments/20251228_A",
+      "file_path": "artifacts/benchmarks/20251228_123456/20251228_A.json",
       "session_seed": 12345,
       "num_runs": 50
     }
@@ -238,9 +238,9 @@ All sessions must use the same brain type, environment type, and grid size.
 Minor differences (like seeds) are allowed.
 
 ### "Session reference not found"
-The experiment folders must exist. Check that:
-- Experiments haven't been moved or deleted
-- Paths are relative to repository root
+The experiment JSON files must exist. Check that:
+- Artifacts haven't been moved or deleted
+- Paths point to `artifacts/benchmarks/<submission_id>/<experiment_id>.json`
 
 ### "Invalid JSON structure"
 Check your submission against the schema above. Common issues:
