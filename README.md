@@ -213,6 +213,12 @@ uv run scripts/benchmark_submit.py regenerate
 |---|---|---|---|---|---|---|---|---|
 | ppo | 0.835 ± 0.007 | 96.7% ± 1.3% | 0.93 ± 0.01 | 0.95 ± 0.05 | 0.47 ± 0.02 | 12 | @chrisjz | 2025-12-28 |
 
+#### Predator Small - Classical
+
+| Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
+|---|---|---|---|---|---|---|---|---|
+| ppo | 0.728 ± 0.029 | 83.3% ± 2.9% | 0.92 ± 0.02 | 0.62 ± 0.05 | 0.51 ± 0.02 | 12 | @chrisjz | 2025-12-29 |
+
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
 ## 📊 Example Output
