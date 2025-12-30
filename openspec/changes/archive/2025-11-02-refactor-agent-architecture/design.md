@@ -53,7 +53,7 @@ Duplicated code patterns between `run_episode` and `run_manyworlds_mode`:
 
 ```text
 QuantumNematodeAgent (Facade/Orchestrator)
-├── StepProcessor (Single step execution)
+├── StepProcessor (Single-step execution)
 │   ├── prepare_brain_params()
 │   ├── execute_action()
 │   └── process_step_result()

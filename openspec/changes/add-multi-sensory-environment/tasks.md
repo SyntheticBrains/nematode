@@ -95,7 +95,7 @@ ______________________________________________________________________
       count: 1
   ```
 
-- [ ] Implement mixed type spawning
+- [ ] Implement mixed-type spawning
 
 - [ ] Update gradient computation for different predator types
 

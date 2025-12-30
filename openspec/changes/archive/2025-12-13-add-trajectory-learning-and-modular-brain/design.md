@@ -82,7 +82,7 @@ else:
 
 #### Gradient Separation Strategy
 
-**Decision**: The system SHALL support config-toggleable gradient mode: `unified` (default) or `split`.
+**Decision**: Support config-toggleable gradient mode: `unified` (default) or `split`.
 
 **Rationale**:
 
