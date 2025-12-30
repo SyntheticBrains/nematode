@@ -163,3 +163,31 @@ The system SHALL support additional termination reasons for Phase 1 mechanics in
 - **WHEN** agent HP reaches 0 due to temperature damage
 - **THEN** termination reason SHALL be `TerminationReason.HEALTH_DEPLETED`
 - **AND** temperature as cause SHALL be logged in metrics
+
+### Requirement: Hierarchical Benchmark Categories
+The system SHALL support hierarchical benchmark category naming to organize benchmarks by task complexity and sensory modalities.
+
+#### Scenario: Basic Foraging Category
+- **GIVEN** a simulation with food collection only (no predators, no thermotaxis)
+- **WHEN** benchmark category is determined
+- **THEN** category SHALL be `basic/foraging_small/quantum` or `basic/foraging_small/classical`
+- **AND** this replaces the flat `foraging_small` category
+
+#### Scenario: Survival Category with Predators
+- **GIVEN** a simulation with food collection and predators enabled
+- **WHEN** benchmark category is determined
+- **THEN** category SHALL be `survival/predator_small/quantum` or `survival/predator_small/classical`
+- **AND** this replaces the flat `predator_small` category
+
+#### Scenario: Backward Compatibility for Flat Categories
+- **GIVEN** existing benchmark results using flat category names (e.g., `foraging_small`)
+- **WHEN** benchmark system processes these results
+- **THEN** flat names SHALL be accepted and mapped to hierarchical equivalents
+- **AND** no existing benchmark data SHALL be invalidated
+
+#### Scenario: Category Path Structure
+- **GIVEN** any benchmark category
+- **WHEN** the category path is constructed
+- **THEN** path SHALL follow pattern: `{category}/{task}_{size}/{brain_type}`
+- **AND** category SHALL be one of: `basic`, `survival`, `thermotaxis`, `multisensory`, `ablation`
+- **AND** brain_type SHALL be one of: `quantum`, `classical`

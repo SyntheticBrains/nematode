@@ -164,7 +164,36 @@ predators:
 
 **Rollback**: All features are opt-in; disable via config if issues arise.
 
-### Decision 8: HP and Satiety Coexistence
+### Decision 8: Hierarchical Benchmark Naming
+
+**What**: Organize benchmarks into hierarchical categories that scale with increasing modality combinations.
+
+**Why**:
+- Flat naming becomes unwieldy: `thermotaxis_predator_oxygen_small` vs `multisensory/full_survival_small`
+- Clear progression: basic → survival → thermotaxis → multisensory
+- Research-friendly: ablation studies get first-class category
+- Grouped comparisons: easy to compare within a category
+
+**Category Structure**:
+```
+basic/              # Single objective (foraging only)
+survival/           # Food + predators
+thermotaxis/        # Temperature-aware tasks
+multisensory/       # Multiple modalities combined
+ablation/           # Controlled studies
+```
+
+**Path Pattern**: `{category}/{task}_{size}/{brain_type}`
+
+**Examples**:
+- `basic/foraging_small/quantum`
+- `survival/predator_small/classical`
+- `thermotaxis/foraging_predator_small/quantum`
+- `multisensory/full_survival_small/classical`
+
+**Migration**: Existing flat names mapped to hierarchical equivalents for backward compatibility.
+
+### Decision 9: HP and Satiety Coexistence
 
 **What**: HP (health points) and satiety are independent systems that coexist. Food restores both.
 

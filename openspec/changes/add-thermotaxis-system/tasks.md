@@ -113,10 +113,23 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
   - Pure thermotaxis task (no food collection goal)
   - Success: stay >80% in comfort zone for episode duration
 
-### 4.2 Benchmark Categories
-- [ ] Add benchmark categories for thermotaxis tasks
-- [ ] Define category names: `thermotaxis_small/quantum`, `thermotaxis_small/classical`
-- [ ] Update benchmark categorization logic
+### 4.2 Benchmark Categories (Hierarchical Naming)
+
+Adopt hierarchical benchmark naming convention for scalability:
+```
+thermotaxis/                    # Temperature-aware tasks
+├── isothermal_small/           # Pure temp comfort (no food goal)
+│   ├── quantum/
+│   └── classical/
+├── foraging_small/             # Food + temp constraint
+├── foraging_predator_small/    # Food + temp + predators
+└── foraging_medium/
+```
+
+- [ ] Add `thermotaxis/` top-level benchmark category
+- [ ] Define category paths: `thermotaxis/isothermal_small`, `thermotaxis/foraging_small`
+- [ ] Update benchmark categorization logic to support hierarchical paths
+- [ ] Ensure backward compatibility with existing `basic/` and `survival/` categories
 
 ### 4.3 Biological Validation
 - [ ] Research C. elegans thermotaxis literature for validation targets
