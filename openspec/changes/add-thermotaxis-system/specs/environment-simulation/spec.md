@@ -101,16 +101,22 @@ The system SHALL track thermotaxis-specific success metrics for benchmark evalua
   - Thermotaxis threshold met (>60% time in comfort zone)
 
 ### Requirement: Thermotaxis Benchmark Categories
-The system SHALL provide benchmark categories for thermotaxis-enabled simulations.
+The system SHALL provide hierarchical benchmark categories for thermotaxis-enabled simulations.
 
 #### Scenario: Thermotaxis Foraging Benchmark
 - **GIVEN** a simulation with thermotaxis enabled and food collection goal
 - **WHEN** benchmark category is determined
-- **THEN** category SHALL be `thermotaxis_foraging_small/quantum` or `thermotaxis_foraging_small/classical`
-- **AND** this SHALL be distinct from pure foraging benchmarks
+- **THEN** category SHALL follow hierarchical pattern: `thermotaxis/foraging_small/quantum` or `thermotaxis/foraging_small/classical`
+- **AND** this SHALL be distinct from basic foraging benchmarks (`basic/foraging_small/`)
 
 #### Scenario: Pure Thermotaxis Benchmark
 - **GIVEN** a simulation with thermotaxis enabled and no food collection goal
 - **WHEN** benchmark category is determined
-- **THEN** category SHALL be `thermotaxis_isothermal_small/quantum` or `thermotaxis_isothermal_small/classical`
+- **THEN** category SHALL be `thermotaxis/isothermal_small/quantum` or `thermotaxis/isothermal_small/classical`
 - **AND** success SHALL be based solely on temperature comfort score
+
+#### Scenario: Thermotaxis with Predators Benchmark
+- **GIVEN** a simulation with thermotaxis and predators enabled
+- **WHEN** benchmark category is determined
+- **THEN** category SHALL be `thermotaxis/foraging_predator_small/quantum` or `thermotaxis/foraging_predator_small/classical`
+- **AND** this combines temperature, food, and threat avoidance objectives

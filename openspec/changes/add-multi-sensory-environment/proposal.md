@@ -80,7 +80,31 @@ Extend `RewardConfig` with configurable weights for:
 - Add optional per-objective scores to `SimulationResult`
 - Extend composite score calculation for multi-objective tasks
 
-### 8. Food Spawning in Safe Zones
+### 8. Hierarchical Benchmark Naming
+
+Introduce hierarchical benchmark categories to scale with increasing modality combinations:
+
+```
+basic/              # Single objective (foraging only)
+├── foraging_small/
+├── foraging_medium/
+└── foraging_large/
+
+survival/           # Food + predators
+├── predator_small/
+├── predator_pursuit_small/
+└── predator_mixed_small/
+
+thermotaxis/        # Temperature-aware tasks (added by add-thermotaxis-system)
+multisensory/       # Multiple modalities combined (future)
+ablation/           # Controlled studies (added by add-ablation-toolkit)
+```
+
+- Migrate existing benchmarks to `basic/` and `survival/` categories
+- Support hierarchical paths in benchmark categorization logic
+- Maintain backward compatibility with flat category names during transition
+
+### 9. Food Spawning in Safe Zones
 
 When thermotaxis is enabled, bias food spawning toward safe temperature zones:
 - 80% of food in safe zones (comfort + discomfort temperature)

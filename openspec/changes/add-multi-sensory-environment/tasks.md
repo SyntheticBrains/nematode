@@ -219,18 +219,48 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 ---
 
-## 10. Configuration and Documentation
+## 10. Hierarchical Benchmark Naming
 
-### 10.1 Example Configs
+### 10.1 Category Infrastructure
+- [ ] Define benchmark category hierarchy:
+  ```
+  basic/          # Single objective (foraging only)
+  survival/       # Food + predators
+  thermotaxis/    # Temperature-aware (reserved for add-thermotaxis-system)
+  multisensory/   # Multiple modalities (future)
+  ablation/       # Controlled studies (reserved for add-ablation-toolkit)
+  ```
+- [ ] Update benchmark categorization logic to support hierarchical paths
+- [ ] Implement path pattern: `{category}/{task}_{size}/{brain_type}`
+
+### 10.2 Migration
+- [ ] Migrate `foraging_small` → `basic/foraging_small`
+- [ ] Migrate `foraging_medium` → `basic/foraging_medium`
+- [ ] Migrate `predator_small` → `survival/predator_small`
+- [ ] Add backward compatibility mapping for flat category names
+- [ ] Update leaderboard to display hierarchical categories
+
+### 10.3 Validation
+- [ ] Ensure existing benchmark results remain valid after migration
+- [ ] Test category detection for new benchmark runs
+
+**Validation**: New benchmarks use hierarchical paths, old results still accessible
+
+---
+
+## 11. Configuration and Documentation
+
+### 11.1 Example Configs
 - [ ] Create `configs/examples/thermotaxis_foraging_small.yml`
 - [ ] Create `configs/examples/health_system_demo.yml`
 - [ ] Create `configs/examples/pursuit_predators.yml`
 
-### 10.2 Documentation
+### 11.2 Documentation
 - [ ] Update environment documentation with new features
 - [ ] Document health system configuration
 - [ ] Document predator type configuration
 - [ ] Document multi-objective reward configuration
+- [ ] Document hierarchical benchmark category structure
 
 ---
 
@@ -248,7 +278,10 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
                             └──► 7. Evaluation Extensions
                                         │
                                         v
-                            8. Food Spawning + 9. Visualization + 10. Config
+                            8. Food Spawning + 9. Visualization
+                                        │
+                                        v
+                            10. Hierarchical Benchmarks + 11. Config/Docs
 ```
 
-Work streams 1-4 can proceed in parallel. Work stream 5 depends on 4. Work streams 6-7 depend on 1-4. Work streams 8-10 depend on all above.
+Work streams 1-4 can proceed in parallel. Work stream 5 depends on 4. Work streams 6-7 depend on 1-4. Work streams 8-9 depend on all above. Work stream 10 can proceed independently but should be done before 11.
