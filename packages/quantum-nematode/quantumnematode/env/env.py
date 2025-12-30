@@ -10,6 +10,7 @@ The environment provides methods to get the current state, move the agent,
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 
 import numpy as np
@@ -55,6 +56,38 @@ class ScalingMethod(Enum):
 
     EXPONENTIAL = "exponential"
     TANH = "tanh"
+
+
+# Health system defaults
+DEFAULT_MAX_HP = 100.0
+DEFAULT_PREDATOR_DAMAGE = 10.0
+DEFAULT_FOOD_HEALING = 5.0
+
+
+@dataclass
+class HealthSystemConfig:
+    """Configuration for the HP-based health system.
+
+    The health system provides an alternative to instant-death predator encounters,
+    allowing agents to survive multiple contacts and heal by consuming food.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether the health system is active. When False, predator contact
+        causes instant death (backward compatible behavior).
+    max_hp : float
+        Maximum health points the agent can have.
+    predator_damage : float
+        HP lost per predator contact event.
+    food_healing : float
+        HP restored per food consumed.
+    """
+
+    enabled: bool = False
+    max_hp: float = DEFAULT_MAX_HP
+    predator_damage: float = DEFAULT_PREDATOR_DAMAGE
+    food_healing: float = DEFAULT_FOOD_HEALING
 
 
 class Predator:
@@ -731,6 +764,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         predator_kill_radius: int = 0,
         predator_gradient_decay: float = 12.0,
         predator_gradient_strength: float = 1.0,
+        # Health system parameters
+        health_system_config: HealthSystemConfig | None = None,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -763,6 +798,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.predator_kill_radius = predator_kill_radius
         self.predator_gradient_decay = predator_gradient_decay
         self.predator_gradient_strength = predator_gradient_strength
+
+        # Health system configuration
+        self.health_config = health_system_config or HealthSystemConfig()
+        self.agent_hp: float = self.health_config.max_hp if self.health_config.enabled else 0.0
+        self.max_hp: float = self.health_config.max_hp
 
         # Validate gradient parameters to prevent divide-by-zero in exp(-distance/decay)
         if self.gradient_decay_constant <= 0:
@@ -1218,6 +1258,69 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 return True
         return False
 
+    # --- Health system methods ---
+
+    @property
+    def health_system_enabled(self) -> bool:
+        """Check if the health system is enabled."""
+        return self.health_config.enabled
+
+    def apply_predator_damage(self) -> float:
+        """
+        Apply damage from predator contact.
+
+        Returns
+        -------
+        float
+            Amount of damage applied (0 if health system disabled).
+        """
+        if not self.health_config.enabled:
+            return 0.0
+
+        damage = self.health_config.predator_damage
+        self.agent_hp = max(0.0, self.agent_hp - damage)
+        logger.debug(
+            f"Predator damage applied: {damage} HP. Current HP: {self.agent_hp}/{self.max_hp}",
+        )
+        return damage
+
+    def apply_food_healing(self) -> float:
+        """
+        Apply healing from food consumption.
+
+        Returns
+        -------
+        float
+            Amount of HP restored (0 if health system disabled).
+        """
+        if not self.health_config.enabled:
+            return 0.0
+
+        healing = self.health_config.food_healing
+        old_hp = self.agent_hp
+        self.agent_hp = min(self.max_hp, self.agent_hp + healing)
+        actual_healing = self.agent_hp - old_hp
+        logger.debug(
+            f"Food healing applied: {actual_healing} HP. Current HP: {self.agent_hp}/{self.max_hp}",
+        )
+        return actual_healing
+
+    def is_health_depleted(self) -> bool:
+        """
+        Check if agent's HP has reached zero.
+
+        Returns
+        -------
+        bool
+            True if HP <= 0 and health system is enabled, False otherwise.
+        """
+        return self.health_config.enabled and self.agent_hp <= 0.0
+
+    def reset_health(self) -> None:
+        """Reset agent HP to maximum (called at episode start)."""
+        if self.health_config.enabled:
+            self.agent_hp = self.max_hp
+
     def _get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """
         Calculate viewport bounds centered on the agent.
@@ -1323,6 +1426,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             predator_kill_radius=self.predator_kill_radius,
             predator_gradient_decay=self.predator_gradient_decay,
             predator_gradient_strength=self.predator_gradient_strength,
+            health_system_config=self.health_config,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
@@ -1330,6 +1434,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env.visited_cells = self.visited_cells.copy()
         # Copy RNG state for reproducibility
         new_env.rng = get_rng(self.seed)
+        # Copy health state
+        new_env.agent_hp = self.agent_hp
         if self.predators_enabled:
             new_env.predators = [
                 Predator(
