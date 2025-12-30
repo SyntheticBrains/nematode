@@ -25,12 +25,19 @@ All fields are Optional with None defaults for backward compatibility.
 
 ### 2. Health System (Opt-in)
 
-Replace instant-death predator encounters with HP-based damage model:
+Add HP-based damage tracking as an alternative to instant-death predator encounters:
 - Configurable `max_hp` (default 100)
 - Predator contact deals damage (configurable `predator_damage`)
+- Temperature extremes deal damage (configurable `hp_damage_temperature_*`)
 - Food provides healing (configurable `food_healing`)
 - Episode terminates when HP reaches 0 (`TerminationReason.HEALTH_DEPLETED`)
 - Enabled via `health_system.enabled: true` in config
+
+**Relationship with Satiety System**: HP and satiety are independent systems that coexist:
+- **Satiety**: Time-based hunger pressure (decays constantly, starvation terminates episode)
+- **HP**: Threat-based damage tracking (only decreases from damage events like predator contact or temperature)
+- **Food**: Restores BOTH satiety AND HP when consumed
+- Both can be enabled simultaneously for complex multi-objective survival scenarios
 
 ### 3. Enhanced Predator Behaviors
 

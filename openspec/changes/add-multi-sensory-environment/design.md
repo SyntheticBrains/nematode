@@ -164,6 +164,37 @@ predators:
 
 **Rollback**: All features are opt-in; disable via config if issues arise.
 
+### Decision 8: HP and Satiety Coexistence
+
+**What**: HP (health points) and satiety are independent systems that coexist. Food restores both.
+
+**Why**:
+- **Satiety** models time-based hunger pressure (metabolic needs)
+- **HP** models threat-based damage (injury from predators, temperature extremes)
+- These are biologically distinct: C. elegans can be both hungry AND injured
+- Enables rich multi-objective scenarios (manage hunger, avoid damage, seek food)
+
+**Behavior**:
+| System | Decreases From | Increases From | Termination |
+|--------|---------------|----------------|-------------|
+| Satiety | Time decay (every step) | Eating food | STARVATION |
+| HP | Predator contact, temperature extremes | Eating food, configurable healing | HEALTH_DEPLETED |
+
+**Configuration Example**:
+```yaml
+# Both systems enabled
+satiety:
+  enabled: true
+  decay_rate: 0.5
+  starvation_threshold: 0.0
+
+health_system:
+  enabled: true
+  max_hp: 100
+  predator_damage: 10
+  food_healing: 5
+```
+
 ## Open Questions
 
 1. Should health regenerate over time (without food)?
