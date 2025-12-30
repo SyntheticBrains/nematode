@@ -74,7 +74,7 @@ The brain type validation SHALL include "spiking" as a valid option.
 **Given** configuration specifies brain type
 **When** validation occurs
 **Then** "spiking" SHALL be accepted as valid
-**Along with** existing "modular", "qmodular", "mlp", "qmlp" types
+**And** existing "modular", "qmodular", "mlp", "qmlp" types are also valid
 
 ### Requirement: Dynamic Environment Configuration Schema
 
