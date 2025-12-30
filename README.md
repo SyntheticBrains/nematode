@@ -138,6 +138,7 @@ The traditional single-goal navigation follows a simpler loop without satiety ma
 ### Quantum Learning Process
 
 For quantum brains, the learning process uses:
+
 - **Quantum Feature Encoding**: Environmental data encoded as qubit rotations
 - **Parameterized Quantum Circuits**: Trainable quantum gates for decision-making
 - **Parameter-Shift Rule**: Quantum gradient computation for optimization
@@ -153,6 +154,7 @@ The spiking brain architecture provides biologically realistic neural computatio
 - **Population Coding**: Gaussian tuning curves for improved input discrimination
 
 **Key Features:**
+
 - Biologically plausible temporal dynamics with LIF neurons
 - Effective gradient-based learning through surrogate gradients
 - Configurable network architecture (timesteps, hidden layers, hidden size)
@@ -163,18 +165,21 @@ The spiking brain architecture provides biologically realistic neural computatio
 The predator evasion system adds a challenging multi-objective learning task where agents must balance food collection with survival:
 
 **Predator Mechanics:**
+
 - Random movement patterns with configurable speed (default 1 unit/step)
 - Detection radius (default 8 units) creating danger zones
 - Kill radius (default 0 units) for lethal collisions
 - Multiple predators with independent movement
 
 **Gradient-Based Perception:**
+
 - **Food gradients**: Attractive exponential decay guiding agents toward food
 - **Predator gradients**: Repulsive exponential decay warning of danger
 - **Gradient superposition**: Combined vector field for multi-objective decision-making
 - Agent perceives both food and threat locations through unified gradient system
 
 **Learning Dynamics:**
+
 - **Proximity penalty**: Continuous negative reward when in danger zone (detection radius)
 - **Death penalty**: Large negative reward (default -10.0) on predator collision
 - **Multi-objective optimization**: Agents learn to collect food while avoiding threats
@@ -239,7 +244,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guid
 
 The simulation provides real-time visualization of the nematode's navigation:
 
-```
+```text
 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
 ⬜️ 🦠 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
 ⬜️ 🔼 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
@@ -271,6 +276,7 @@ Success rate: 100.00%
 ```
 
 Where:
+
 - 🔼 = Agent's head (🔼/🔽/◀️/▶️ with direction)
 - 🔵 = Agent's trail/body
 - 🦠 = Food
@@ -315,6 +321,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 ### Research Applications
 
 This platform enables research in:
+
 - Quantum advantages in reinforcement learning and biologically-relevant navigation tasks
 - Bio-inspired quantum algorithms for multi-objective decision-making
 - Comparative analysis of quantum, classical, and spiking neural architectures

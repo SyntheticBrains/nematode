@@ -147,15 +147,15 @@ Step efficiency improves dramatically: 227 steps early → 87 steps late (61% im
 
 ### Key Findings
 
-1. **Spiking brains are viable**: 100% on static/foraging, 63% on predators
-2. **Gradient explosion was the blocker**: Proper clipping (value + norm) essential
-3. **Decay schedules critical**: LR and entropy decay enable convergence without regression
-4. **Kaiming initialization reduces variance**: 60-point spread → 10-point spread with proper tuning
-5. **Temporal integration is powerful**: 100 timesteps better than 50
-6. **Online learning succeeds**: Unlike quantum, spiking learns during execution
-7. **Slower LR decay was key for predators**: 0.01 → 0.005 unlocked 63% success
-8. **Combined gradient is a feature**: Environment's pre-integration helps the network
-9. **Dual-stream architecture failed**: Isolated streams can't coordinate decisions
+01. **Spiking brains are viable**: 100% on static/foraging, 63% on predators
+02. **Gradient explosion was the blocker**: Proper clipping (value + norm) essential
+03. **Decay schedules critical**: LR and entropy decay enable convergence without regression
+04. **Kaiming initialization reduces variance**: 60-point spread → 10-point spread with proper tuning
+05. **Temporal integration is powerful**: 100 timesteps better than 50
+06. **Online learning succeeds**: Unlike quantum, spiking learns during execution
+07. **Slower LR decay was key for predators**: 0.01 → 0.005 unlocked 63% success
+08. **Combined gradient is a feature**: Environment's pre-integration helps the network
+09. **Dual-stream architecture failed**: Isolated streams can't coordinate decisions
 10. **Intra-episode updates essential**: Episode-end updates too sparse for complex tasks
 
 ### Lessons Learned

@@ -138,6 +138,7 @@ uv run scripts/evaluate_submission.py \
 ```
 
 This will:
+
 1. Re-run 5 experiments with recorded seeds
 2. Compare results to submission
 3. Flag significant discrepancies
@@ -165,6 +166,7 @@ These may cause larger variance:
 ### Acceptable Variance
 
 Submissions are considered reproducible if:
+
 - Re-run results fall within reported confidence intervals
 - No systematic bias (all re-runs consistently higher/lower)
 - Variance matches reported standard deviation
@@ -226,6 +228,7 @@ If results can't be exactly reproduced:
 ## Questions?
 
 For reproducibility issues, open a GitHub issue with:
+
 - Submission ID
 - Specific run that failed to reproduce
 - Error logs or discrepancy details

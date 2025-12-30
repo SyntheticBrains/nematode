@@ -1,6 +1,7 @@
 # Implementation Tasks
 
 ## 1. Core Data Models and Storage
+
 - [x] 1.1 Create `quantumnematode/experiment/` module directory
 - [x] 1.2 Implement `ExperimentMetadata` Pydantic model with all required fields
 - [x] 1.3 Implement `EnvironmentMetadata`, `BrainMetadata`, `ResultsMetadata`, `SystemMetadata` models
@@ -13,6 +14,7 @@
 - [x] 1.10 Add validation for metadata completeness
 
 ## 2. Git Context Capture
+
 - [x] 2.1 Implement git repository detection
 - [x] 2.2 Implement current commit hash extraction
 - [x] 2.3 Implement current branch name extraction
@@ -21,6 +23,7 @@
 - [x] 2.6 Add warning logging for suboptimal git states
 
 ## 3. System Information Capture
+
 - [x] 3.1 Implement Python version detection
 - [x] 3.2 Implement Qiskit version detection
 - [x] 3.3 Implement PyTorch version detection (if installed)
@@ -29,6 +32,7 @@
 - [x] 3.6 Add system metadata to experiment data model
 
 ## 4. Experiment Metadata Capture
+
 - [x] 4.1 Create `tracker.py` module for experiment tracking logic
 - [x] 4.2 Implement environment metadata extraction from config
 - [x] 4.3 Implement brain metadata extraction from config
@@ -41,6 +45,7 @@
 - [x] 4.10 Test metadata capture with all environment types
 
 ## 5. Experiment Storage and Retrieval
+
 - [x] 5.1 Create `storage.py` module for file I/O operations
 - [x] 5.2 Implement `save_experiment()` function
 - [x] 5.3 Implement `load_experiment()` function
@@ -53,6 +58,7 @@
 - [x] 5.10 Implement experiment query by date range
 
 ## 6. Experiment Comparison
+
 - [x] 6.1 Implement `compare_experiments()` function
 - [x] 6.2 Generate configuration diff structure
 - [x] 6.3 Generate results comparison structure
@@ -61,6 +67,7 @@
 - [x] 6.6 Add statistical significance indicators
 
 ## 7. Benchmark Categorization
+
 - [x] 7.1 Create `quantumnematode/benchmark/` module directory
 - [x] 7.2 Implement category detection logic
 - [x] 7.3 Map environment types to categories (static, dynamic_small, dynamic_medium, dynamic_large)
@@ -69,6 +76,7 @@
 - [x] 7.6 Test categorization with all combinations
 
 ## 8. Benchmark Validation
+
 - [x] 8.1 Create `validation.py` module for benchmark validation
 - [x] 8.2 Implement minimum runs validation (20+ runs)
 - [x] 8.3 Implement git clean state validation
@@ -80,6 +88,7 @@
 - [x] 8.9 Allow validation bypass with user confirmation
 
 ## 9. Benchmark Submission Workflow
+
 - [x] 9.1 Create `submission.py` module for benchmark submission
 - [x] 9.2 Implement interactive contributor name prompt
 - [x] 9.3 Implement interactive GitHub username prompt
@@ -92,6 +101,7 @@
 - [x] 9.10 Test submission workflow end-to-end
 
 ## 10. Leaderboard Generation
+
 - [x] 10.1 Create `leaderboard.py` module for leaderboard generation
 - [x] 10.2 Implement benchmark ranking logic (composite score)
 - [x] 10.3 Implement README.md summary table generation (top 3 per category)
@@ -104,6 +114,7 @@
 - [x] 10.10 Implement leaderboard regeneration command
 
 ## 11. Experiment Query CLI
+
 - [x] 11.1 Create `scripts/experiment_query.py` CLI tool
 - [x] 11.2 Implement `list` command with filtering options
 - [x] 11.3 Implement `show` command for detailed view
@@ -116,6 +127,7 @@
 - [x] 11.10 Test CLI with various filter combinations
 
 ## 12. Benchmark Management CLI
+
 - [x] 12.1 Create `scripts/benchmark_submit.py` CLI tool
 - [x] 12.2 Implement `submit` command for promoting experiments to benchmarks
 - [x] 12.3 Implement `leaderboard` command for viewing rankings
@@ -128,6 +140,7 @@
 - [x] 12.10 Test CLI with real benchmark submissions
 
 ## 13. Integration with run_simulation.py
+
 - [x] 13.1 Add `--track-experiment` CLI flag
 - [x] 13.2 Add `--save-benchmark` CLI flag
 - [x] 13.3 Add `--benchmark-notes` CLI flag
@@ -140,6 +153,7 @@
 - [x] 13.10 Test integration with all brain and environment types
 
 ## 14. Documentation Updates
+
 - [x] 14.1 Create initial `BENCHMARKS.md` with structure and submission guidelines
 - [x] 14.2 Add "🏆 Top Benchmarks" section to README.md
 - [x] 14.3 Add benchmark submission guidelines to CONTRIBUTING.md
@@ -152,6 +166,7 @@
 - [x] 14.10 Update README with link to experiment tracking features
 
 ## 15. Testing
+
 - [x] 15.1 Unit tests for ExperimentMetadata serialization
 - [x] 15.2 Unit tests for BenchmarkMetadata serialization
 - [x] 15.3 Unit tests for git context capture
@@ -172,6 +187,7 @@
 - [x] 15.18 Test backward compatibility (experiments disabled)
 
 ## 16. Validation and Quality Assurance
+
 - [x] 16.1 Run full test suite and ensure all tests pass
 - [x] 16.2 Test experiment tracking with real simulations
 - [x] 16.3 Test benchmark submission with real experiments

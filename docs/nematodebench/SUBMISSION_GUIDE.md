@@ -73,6 +73,7 @@ done
 ```
 
 Each session will be saved to `experiments/<timestamp>/` with:
+
 - The experiment JSON with per-run seeds
 - A copy of the configuration file
 
@@ -90,6 +91,7 @@ uv run scripts/benchmark_submit.py \
 ```
 
 This will:
+
 1. Validate all experiments meet requirements
 2. Check seed uniqueness across all runs in all sessions
 3. Copy experiment JSONs to `artifacts/benchmarks/<submission_id>/`
@@ -106,6 +108,7 @@ uv run scripts/benchmark_submit.py regenerate
 ```
 
 This automatically updates:
+
 - `docs/nematodebench/LEADERBOARD.md` - Full leaderboard tables
 - `README.md` - Current Leaders section
 
@@ -119,6 +122,7 @@ uv run scripts/evaluate_submission.py \
 ```
 
 Expected output:
+
 ```text
 ✓ Submission is VALID.
 
@@ -136,13 +140,17 @@ Summary:
 ## Step 7: Submit Pull Request
 
 1. Fork the main repository (if not already done)
+
 2. Stage the benchmark, leaderboard, and artifact files:
+
    ```bash
    git add benchmarks/<category>/<submission_id>.json
    git add artifacts/benchmarks/<submission_id>/
    git add README.md docs/nematodebench/LEADERBOARD.md
    ```
+
 3. Create a pull request with:
+
    - Title: `[NematodeBench] <Brain> on <Task> - <Score>`
    - Description including your approach and findings
 
@@ -222,28 +230,37 @@ Brief description of your approach, hyperparameter choices, and any novel techni
 ## Troubleshooting
 
 ### "Insufficient sessions"
+
 NematodeBench requires minimum 10 independent sessions. Run more training sessions.
 
 ### "Insufficient runs"
+
 Each session requires minimum 50 runs. Increase the `--runs` parameter.
 
 ### "Duplicate seeds found"
+
 All seeds must be unique across ALL runs in ALL sessions. This typically indicates:
+
 - Reusing the same experiment in multiple submissions
 - Setting explicit seeds that overlap across sessions
 - Let the system auto-generate seeds for each run
 
 ### "Config consistency error"
+
 All sessions must use the same brain type, environment type, and grid size.
 Minor differences (like seeds) are allowed.
 
 ### "Session reference not found"
+
 The experiment JSON files must exist. Check that:
+
 - Artifacts haven't been moved or deleted
 - Paths point to `artifacts/benchmarks/<submission_id>/<experiment_id>.json`
 
 ### "Invalid JSON structure"
+
 Check your submission against the schema above. Common issues:
+
 - Missing required fields
 - Incorrect data types
 - NaN or Inf values

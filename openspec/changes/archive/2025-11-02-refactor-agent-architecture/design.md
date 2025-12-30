@@ -1,11 +1,13 @@
 # Design: Refactor Agent Architecture
 
 ## Overview
+
 This design document outlines the decomposition of the monolithic `QuantumNematodeAgent` class into a set of focused, testable components following SOLID principles.
 
 ## Current Architecture Problems
 
 ### Code Metrics
+
 - **Total lines**: 842 (one of the largest files in the codebase)
 - **`run_episode` method**: 268 lines (violates cyclomatic complexity limits)
 - **`run_manyworlds_mode` method**: 192 lines (violates cyclomatic complexity limits)
@@ -13,9 +15,11 @@ This design document outlines the decomposition of the monolithic `QuantumNemato
 - **Noqa directives**: Multiple `C901, PLR0912, PLR0915` (complexity warnings suppressed)
 
 ### Duplication Analysis
+
 Duplicated code patterns between `run_episode` and `run_manyworlds_mode`:
 
 1. **Brain parameter construction** (3 instances):
+
    ```python
    params = BrainParams(
        gradient_strength=gradient_strength,
@@ -26,17 +30,20 @@ Duplicated code patterns between `run_episode` and `run_manyworlds_mode`:
    ```
 
 2. **Food consumption logic** (2 instances in each method):
+
    - Distance tracking for dynamic environments
    - Satiety restoration
    - Reward calculation
    - Metrics updates
 
 3. **Rendering logic** (2 instances):
+
    - Clear screen conditionals
    - Grid rendering
    - Frame display
 
 4. **Environment-specific conditionals** (scattered throughout):
+
    - `isinstance(self.env, DynamicForagingEnvironment)` checks
    - Dynamic vs static reward calculations
 
@@ -44,9 +51,9 @@ Duplicated code patterns between `run_episode` and `run_manyworlds_mode`:
 
 ### Component Hierarchy
 
-```
+```text
 QuantumNematodeAgent (Facade/Orchestrator)
-├── StepProcessor (Single step execution)
+├── StepProcessor (Single-step execution)
 │   ├── prepare_brain_params()
 │   ├── execute_action()
 │   └── process_step_result()
@@ -74,9 +81,11 @@ QuantumNematodeAgent (Facade/Orchestrator)
 ### Design Patterns Applied
 
 #### 1. Strategy Pattern (Episode Runners)
+
 **Problem**: Different episode execution modes with duplicated orchestration logic
 
 **Solution**: Abstract episode execution into strategy classes
+
 ```python
 class EpisodeRunner(Protocol):
     def run(
@@ -96,6 +105,7 @@ class ManyworldsEpisodeRunner:
 ```
 
 **Benefits**:
+
 - Easy to add new episode modes (e.g., multi-agent, hierarchical)
 - Testable in isolation
 - No code duplication between modes
@@ -103,8 +113,11 @@ class ManyworldsEpisodeRunner:
 #### 2. Single Responsibility Principle (Component Extraction)
 
 **StepProcessor**
+
 - **Responsibility**: Execute a single simulation step
+
 - **Public API**:
+
   ```python
   def process_step(
       self,
@@ -114,42 +127,58 @@ class ManyworldsEpisodeRunner:
       previous_reward: float,
   ) -> StepResult
   ```
+
 - **Benefits**: Testable without full episode, reusable across episode modes
 
 **FoodConsumptionHandler**
+
 - **Responsibility**: Handle all food-related logic
+
 - **Public API**:
+
   ```python
   def check_and_consume_food(
       self,
       agent_pos: tuple[int, int],
   ) -> FoodConsumptionResult
   ```
+
 - **Benefits**: Encapsulates environment-specific food logic
 
 **SatietyManager**
+
 - **Responsibility**: Manage hunger/satiety system
+
 - **Public API**:
+
   ```python
   def decay(self, amount: float) -> float
   def restore(self, amount: float) -> float
   def is_starved(self) -> bool
   ```
+
 - **Benefits**: Testable state machine, clear hunger mechanics
 
 **MetricsTracker**
+
 - **Responsibility**: Track and calculate episode metrics
+
 - **Public API**:
+
   ```python
   def track_step(self, step_data: StepData) -> None
   def track_food_collection(self, efficiency: float) -> None
   def calculate_metrics(self, total_runs: int) -> PerformanceMetrics
   ```
+
 - **Benefits**: Clean separation of business logic from metrics
 
 **EpisodeRenderer**
+
 - **Responsibility**: Handle all visualization logic
+
 - **Public API**:
+
   ```python
   def render_if_needed(
       self,
@@ -159,12 +188,15 @@ class ManyworldsEpisodeRunner:
       show_last_frame_only: bool,
   ) -> None
   ```
+
 - **Benefits**: Rendering logic doesn't pollute episode execution
 
 #### 3. Dependency Injection
+
 **Problem**: Hard to test components that directly access environment
 
 **Solution**: Inject dependencies through constructors
+
 ```python
 class StepProcessor:
     def __init__(
@@ -263,38 +295,45 @@ class EpisodeResult:
 ## Testing Strategy
 
 ### Unit Tests (New)
+
 Each component will have comprehensive unit tests:
 
 1. **StepProcessor Tests** (~15 tests)
+
    - Brain parameter construction
    - Action execution
    - State updates
    - Edge cases (stuck agent, invalid actions)
 
 2. **FoodConsumptionHandler Tests** (~10 tests)
+
    - Food detection
    - Satiety restoration
    - Distance efficiency calculation (dynamic env)
    - Static vs dynamic environment behavior
 
 3. **SatietyManager Tests** (~8 tests)
+
    - Decay mechanics
    - Restoration mechanics
    - Starvation detection
    - Boundary conditions (min/max satiety)
 
 4. **MetricsTracker Tests** (~12 tests)
+
    - Step tracking
    - Food collection tracking
    - Metrics calculation
    - Efficiency calculations
 
 5. **EpisodeRenderer Tests** (~6 tests)
+
    - Render timing logic
    - Last frame only mode
    - Screen clearing logic
 
 6. **EpisodeRunner Tests** (~20 tests)
+
    - Standard episode execution
    - Many-worlds episode execution
    - Episode termination conditions
@@ -303,32 +342,38 @@ Each component will have comprehensive unit tests:
 **Total**: ~71 new unit tests (expected coverage >70%)
 
 ### Integration Tests (Existing)
+
 - Keep all existing integration tests unchanged
 - Add regression tests to ensure refactored behavior matches original
 
 ### Performance Tests
+
 - Benchmark episode execution before/after
 - Ensure no >5% performance regression
 
 ## Migration Path
 
 ### Phase 1: Extract Pure Functions
+
 - Extract brain parameter construction
 - Extract food consumption logic
 - Extract satiety calculations
 - **No breaking changes**, just internal refactoring
 
 ### Phase 2: Create Component Classes
+
 - Create StepProcessor, FoodConsumptionHandler, etc.
 - Keep existing methods as wrappers
 - Add unit tests for new components
 
 ### Phase 3: Create Episode Runners
+
 - Implement StandardEpisodeRunner
 - Implement ManyworldsEpisodeRunner
 - Update run_episode/run_manyworlds_mode to delegate
 
 ### Phase 4: Cleanup and Documentation
+
 - Remove old code once delegation is confirmed working
 - Update docstrings
 - Add architecture documentation
@@ -336,16 +381,19 @@ Each component will have comprehensive unit tests:
 ## Alternative Approaches Considered
 
 ### Alternative 1: Keep Monolithic Class
+
 **Pros**: No refactoring effort, no risk of behavior change
 **Cons**: Impossible to test, unmaintainable, blocks future development
 **Decision**: Rejected - technical debt is too high
 
 ### Alternative 2: Full Rewrite
+
 **Pros**: Clean slate, modern design from scratch
 **Cons**: High risk, long timeline, likely to introduce bugs
 **Decision**: Rejected - incremental refactoring is safer
 
 ### Alternative 3: Only Extract Helper Functions
+
 **Pros**: Minimal changes, low risk
 **Cons**: Doesn't solve testability or extensibility issues
 **Decision**: Rejected - insufficient improvement
@@ -353,20 +401,24 @@ Each component will have comprehensive unit tests:
 ## Open Questions
 
 1. **Should we support custom episode runners?**
+
    - Leaning yes - enables research experiments
    - Would require stable StepProcessor API
 
 2. **Should metrics be streamed or batch calculated?**
+
    - Current: Batch (calculate at end)
    - Alternative: Streaming (update incrementally)
    - Leaning batch for simplicity
 
 3. **How to handle environment-specific logic long-term?**
+
    - Current proposal: FoodConsumptionHandler abstracts it
    - Alternative: Environment protocol methods
    - Needs discussion with team
 
 ## References
+
 - Current implementation: `packages/quantum-nematode/quantumnematode/agent.py`
 - Related specs: `brain-architecture`, `configuration-system`
 - Test coverage report: Currently ~0% for agent module

@@ -7,12 +7,14 @@
 The system implements two distinct but related workflows:
 
 1. **Experiment Tracking** (Lightweight, Auto-tracking)
+
    - Captures metadata for every simulation run when `--track-experiment` flag is used
    - Stores in `experiments/{timestamp}.json`
    - Focused on reproducibility and historical comparison
    - Low overhead, minimal user interaction
 
 2. **Benchmark Management** (Curated, Quality-controlled)
+
    - Subset of experiments explicitly marked as benchmarks
    - Requires `--save-benchmark` flag and additional metadata (contributor name)
    - Stores in `benchmarks/{category}/{timestamp}.json`
@@ -22,6 +24,7 @@ The system implements two distinct but related workflows:
 ### Data Model
 
 #### ExperimentMetadata Structure
+
 ```python
 @dataclass
 class ExperimentMetadata:
@@ -53,6 +56,7 @@ class ExperimentMetadata:
 ```
 
 #### Metadata Components
+
 ```python
 @dataclass
 class EnvironmentMetadata:
@@ -107,7 +111,8 @@ class BenchmarkMetadata:
 ### Storage Strategy
 
 #### File Organization
-```
+
+```text
 nematode/
 ├── experiments/               # Auto-tracked experiments (gitignored)
 │   └── {timestamp}.json       # One file per experiment
@@ -137,6 +142,7 @@ nematode/
 ```
 
 #### JSON Format Example
+
 ```json
 {
   "experiment_id": "20251109_143022",
@@ -201,6 +207,7 @@ nematode/
 ### Query System Design
 
 #### Query Operations
+
 ```python
 # List experiments with filters
 experiments = query_experiments(
@@ -224,6 +231,7 @@ benchmarks = list_benchmarks(category="dynamic_medium")
 ```
 
 #### Query CLI Examples
+
 ```bash
 # List all tracked experiments
 uv run scripts/experiment_query.py list
@@ -241,6 +249,7 @@ uv run scripts/experiment_query.py leaderboard --category dynamic_medium
 ### Benchmark Submission Workflow
 
 #### Submission Process
+
 1. User runs simulation with `--save-benchmark` flag
 2. System performs pre-submission validation:
    - Minimum 20 runs completed
@@ -257,6 +266,7 @@ uv run scripts/experiment_query.py leaderboard --category dynamic_medium
 7. Merge updates BENCHMARKS.md and README.md via CI/automation
 
 #### Validation Rules
+
 ```python
 @dataclass
 class BenchmarkValidationRules:
@@ -270,6 +280,7 @@ class BenchmarkValidationRules:
 ### Leaderboard Generation
 
 #### README.md Format
+
 ```markdown
 ## 🏆 Top Benchmarks
 
@@ -290,6 +301,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) for detailed results and reproduction instruc
 ```
 
 #### BENCHMARKS.md Format
+
 - Full table for each category
 - Reproduction instructions
 - Notes from contributors
@@ -299,6 +311,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) for detailed results and reproduction instruc
 ### Integration Points
 
 #### run_simulation.py Integration
+
 ```python
 # Add CLI flags
 parser.add_argument("--track-experiment", action="store_true")
@@ -323,19 +336,22 @@ if args.track_experiment or args.save_benchmark:
 ### Technical Decisions
 
 #### Why JSON over Database?
+
 - **Simplicity**: No external dependencies, works everywhere
 - **Git-friendly**: Easy to diff, review in PRs
 - **Portable**: Easy to share, archive, analyze with any tool
-- **Sufficient scale**: Expect <1000 experiments, <100 benchmarks
+- **Sufficient scale**: Expect \<1000 experiments, \<100 benchmarks
 - **Transparent**: Users can inspect/edit files directly
 
 #### Why Two-Tier System?
+
 - **Flexibility**: Users choose level of formality
 - **Low friction**: Auto-tracking doesn't require user input
 - **Quality control**: Benchmarks maintain high standards
 - **Clear separation**: Experiments vs. curated results
 
 #### Why Hierarchical Categories?
+
 - **Natural organization**: Environment type is primary differentiator
 - **Fair comparison**: Quantum vs classical within same task
 - **Scalability**: Easy to add new categories as project grows

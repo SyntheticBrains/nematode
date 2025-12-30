@@ -3,9 +3,11 @@
 ## ADDED Requirements
 
 ### Requirement: Chemotaxis Index Calculation
+
 The system SHALL calculate chemotaxis index (CI) from agent trajectories using the standard formula from C. elegans literature.
 
 #### Scenario: Standard CI Calculation
+
 - **WHEN** chemotaxis index is calculated from an episode trajectory with agent positions and food positions
 - **THEN** the system SHALL compute CI = (N_attractant - N_control) / N_total
 - **AND** N_attractant SHALL be steps within attractant_zone_radius of any food (default 5.0)
@@ -14,43 +16,51 @@ The system SHALL calculate chemotaxis index (CI) from agent trajectories using t
 - **AND** CI SHALL be in range [-1, 1] where 1 = perfect attraction, -1 = perfect avoidance
 
 #### Scenario: Multi-Food Environment CI
+
 - **WHEN** determining if a position is in the attractant zone in an environment with multiple food sources
 - **THEN** the system SHALL check distance to ALL food sources
 - **AND** SHALL count as attractant if within radius of ANY food
 - **AND** SHALL handle dynamic food spawning correctly
 
 #### Scenario: Empty Episode Handling
+
 - **WHEN** chemotaxis index is calculated for an episode with zero steps (immediate termination)
 - **THEN** the system SHALL return CI = 0.0 (neutral)
 - **AND** SHALL NOT divide by zero
 - **AND** SHALL flag the result as potentially unreliable
 
 ### Requirement: Additional Chemotaxis Metrics
+
 The system SHALL compute supplementary metrics that provide deeper insight into agent navigation behavior.
 
 #### Scenario: Time in Attractant Zone
+
 - **WHEN** chemotaxis metrics are calculated from an episode trajectory
 - **THEN** the system SHALL compute time_in_attractant = N_attractant / N_total
 - **AND** SHALL be in range [0, 1]
 - **AND** SHALL indicate fraction of episode spent near food
 
 #### Scenario: Approach Frequency
+
 - **WHEN** chemotaxis metrics are calculated from an episode trajectory with gradient information
 - **THEN** the system SHALL compute how often agent moves toward the gradient
 - **AND** approach_frequency = (steps moving toward food) / N_total
 - **AND** SHALL use gradient direction to determine "toward food"
 
 #### Scenario: Path Efficiency
+
 - **WHEN** chemotaxis metrics are calculated from an episode trajectory from start to first food collection
 - **THEN** the system SHALL compute path_efficiency = optimal_distance / actual_distance
 - **AND** optimal_distance SHALL be Euclidean distance from start to nearest food
 - **AND** actual_distance SHALL be sum of step distances
-- **AND** SHALL be in range (0, 1] where 1 = optimal path
+- **AND** SHALL be in range (0, 1\] where 1 = optimal path
 
 ### Requirement: Literature Dataset Integration
+
 The system SHALL load and manage published C. elegans chemotaxis data from peer-reviewed literature.
 
 #### Scenario: Dataset Loading
+
 - **WHEN** the validation system is initialized with a JSON file at `data/chemotaxis/literature_ci_values.json`
 - **THEN** the system SHALL load published CI values
 - **AND** SHALL parse citation information
@@ -58,6 +68,7 @@ The system SHALL load and manage published C. elegans chemotaxis data from peer-
 - **AND** SHALL parse CI ranges (min, typical, max)
 
 #### Scenario: Dataset Structure
+
 - **WHEN** data is accessed from the literature dataset
 - **THEN** each entry SHALL include citation (author, year, journal)
 - **AND** SHALL include attractant type (e.g., diacetyl, bacteria)
@@ -66,15 +77,18 @@ The system SHALL load and manage published C. elegans chemotaxis data from peer-
 - **AND** SHALL include experimental conditions
 
 #### Scenario: Multiple Sources
+
 - **WHEN** validation is performed with multiple literature sources having different CI values
 - **THEN** the system SHALL support selecting which source to compare against
 - **AND** SHALL default to the most relevant source (food chemotaxis)
 - **AND** SHALL document source selection in validation output
 
 ### Requirement: Biological Validation Benchmark
+
 The system SHALL compare agent behavior to biological data and produce validation results.
 
 #### Scenario: Validation Against Literature
+
 - **WHEN** validation is requested with calculated agent chemotaxis metrics
 - **THEN** the system SHALL compare agent CI to biological CI range
 - **AND** SHALL return whether agent falls within biological range
@@ -82,6 +96,7 @@ The system SHALL compare agent behavior to biological data and produce validatio
 - **AND** SHALL indicate validation level (minimum, target, excellent)
 
 #### Scenario: Validation Thresholds
+
 - **WHEN** interpreting validation results
 - **THEN** minimum threshold SHALL be CI >= 0.4
 - **AND** target threshold SHALL be CI >= 0.6
@@ -89,6 +104,7 @@ The system SHALL compare agent behavior to biological data and produce validatio
 - **AND** thresholds SHALL be configurable via dataset
 
 #### Scenario: Validation Result Output
+
 - **WHEN** validation results are reported
 - **THEN** the system SHALL output agent_ci value
 - **AND** SHALL output biological_ci_range (min, max)
@@ -97,9 +113,11 @@ The system SHALL compare agent behavior to biological data and produce validatio
 - **AND** SHALL output the literature source used
 
 ### Requirement: Post-Convergence Chemotaxis Metrics
+
 The system SHALL compute chemotaxis metrics separately for post-convergence runs to measure trained agent behavior.
 
 #### Scenario: Post-Convergence Calculation
+
 - **WHEN** chemotaxis metrics are aggregated across a training session
 - **THEN** the system SHALL compute all-run metrics (including learning phase)
 - **AND** SHALL compute post-convergence metrics (trained behavior only)
@@ -107,12 +125,14 @@ The system SHALL compute chemotaxis metrics separately for post-convergence runs
 - **AND** if convergence is not detected, post-convergence metrics SHALL use all runs
 
 #### Scenario: Biological Validation Uses Post-Convergence
+
 - **WHEN** comparing agent behavior against biological literature
 - **THEN** the system SHALL use post-convergence CI for validation (trained behavior)
 - **AND** SHALL report all-run CI separately for reference
 - **AND** biological_matches SHALL be based on post-convergence CI within biological range
 
 #### Scenario: Post-Convergence Metrics Fields
+
 - **WHEN** experiment results include chemotaxis validation
 - **THEN** the metadata SHALL include post_convergence_chemotaxis_index
 - **AND** SHALL include post_convergence_time_in_attractant
@@ -121,9 +141,11 @@ The system SHALL compute chemotaxis metrics separately for post-convergence runs
 - **AND** SHALL include avg_chemotaxis_index (all-run average for reference)
 
 ### Requirement: Experiment Tracking Integration
+
 The system SHALL integrate chemotaxis validation with existing experiment tracking.
 
 #### Scenario: Metadata Extension
+
 - **WHEN** experiment metadata is saved for an experiment with chemotaxis calculation enabled
 - **THEN** the metadata SHALL include avg_chemotaxis_index (all-run average)
 - **AND** SHALL include post_convergence_chemotaxis_index (trained behavior)
@@ -132,6 +154,7 @@ The system SHALL integrate chemotaxis validation with existing experiment tracki
 - **AND** SHALL include validation_result if validation was performed
 
 #### Scenario: CLI Integration
+
 - **WHEN** a simulation completes with `--validate-chemotaxis` flag
 - **THEN** the system SHALL calculate chemotaxis metrics
 - **AND** SHALL compare against literature data
@@ -139,6 +162,7 @@ The system SHALL integrate chemotaxis validation with existing experiment tracki
 - **AND** SHALL include validation in experiment metadata
 
 #### Scenario: Backward Compatibility
+
 - **WHEN** experiment metadata is saved for an experiment run without chemotaxis validation
 - **THEN** chemotaxis fields SHALL be null or absent
 - **AND** existing experiment query tools SHALL continue to work

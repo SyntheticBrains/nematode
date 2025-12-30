@@ -1,71 +1,87 @@
 # configuration-system Specification
 
 ## Purpose
-TBD - created by archiving change add-spiking-neural-network-brain. Update Purpose after archive.
+
+This specification defines the YAML-based configuration system for the Quantum Nematode simulation platform. It governs how brain architectures (modular, qmodular, mlp, qmlp, ppo, spiking), environment parameters, and learning hyperparameters are specified, validated, and loaded. The configuration system ensures all parameters fall within valid ranges, applies sensible defaults for optional settings, and provides example configurations for common use cases. This spec is intended for developers extending the platform with new brain types or environment features.
+
 ## Requirements
+
 ### Requirement: Spiking Brain Configuration Schema
+
 The configuration system SHALL support a complete schema for spiking neural network parameters.
 
 #### Scenario: YAML Configuration Parsing
-**Given** a YAML configuration file with spiking brain section  
-**When** the configuration is loaded  
-**Then** the system SHALL parse neuron model parameters  
-**And** SHALL parse plasticity rule parameters  
-**And** SHALL parse network topology parameters  
-**And** SHALL validate all parameter ranges and constraints  
+
+- **GIVEN** a YAML configuration file with spiking brain section
+- **WHEN** the configuration is loaded
+- **THEN** the system SHALL parse neuron model parameters
+- **AND** SHALL parse plasticity rule parameters
+- **AND** SHALL parse network topology parameters
+- **AND** SHALL validate all parameter ranges and constraints
 
 #### Scenario: Default Parameter Application
-**Given** a spiking brain configuration with missing optional parameters  
-**When** the configuration is processed  
-**Then** the system SHALL apply sensible defaults  
-**And** SHALL ensure all required parameters are present  
-**And** SHALL log applied defaults for user awareness
+
+- **GIVEN** a spiking brain configuration with missing optional parameters
+- **WHEN** the configuration is processed
+- **THEN** the system SHALL apply sensible defaults
+- **AND** SHALL ensure all required parameters are present
+- **AND** SHALL log applied defaults for user awareness
 
 ### Requirement: Parameter Validation
+
 The configuration system SHALL validate spiking neural network parameters for biological and computational feasibility.
 
 #### Scenario: Neuron Parameter Validation
-**Given** LIF neuron parameters in configuration  
-**When** validation is performed  
-**Then** tau_m SHALL be positive (> 0)  
-**And** v_threshold SHALL be greater than v_reset  
-**And** simulation time_step SHALL be appropriate for tau_m  
+
+- **GIVEN** LIF neuron parameters in configuration
+- **WHEN** validation is performed
+- **THEN** tau_m SHALL be positive (> 0)
+- **AND** v_threshold SHALL be greater than v_reset
+- **AND** simulation time_step SHALL be appropriate for tau_m
 
 #### Scenario: STDP Parameter Validation
-**Given** STDP plasticity parameters in configuration  
-**When** validation is performed  
-**Then** tau_plus and tau_minus SHALL be positive  
-**And** learning_rate SHALL be in reasonable range (0.0001 - 0.1)  
-**And** A_plus and A_minus SHALL be positive
+
+- **GIVEN** STDP plasticity parameters in configuration
+- **WHEN** validation is performed
+- **THEN** tau_plus and tau_minus SHALL be positive
+- **AND** learning_rate SHALL be in reasonable range (0.0001 - 0.1)
+- **AND** A_plus and A_minus SHALL be positive
 
 ### Requirement: Configuration Examples
+
 The system SHALL provide example configurations for common spiking brain use cases.
 
 #### Scenario: Small Network Configuration
-**Given** a need for basic spiking brain testing  
-**When** loading spiking_small.yml configuration  
-**Then** the system SHALL configure a minimal viable spiking network  
-**And** SHALL use parameters suitable for fast convergence  
+
+- **GIVEN** a need for basic spiking brain testing
+- **WHEN** loading spiking_small.yml configuration
+- **THEN** the system SHALL configure a minimal viable spiking network
+- **AND** SHALL use parameters suitable for fast convergence
 
 #### Scenario: Medium Network Configuration
-**Given** a need for standard experimental setup  
-**When** loading spiking_static_medium.yml configuration  
-**Then** the system SHALL configure a balanced network  
-**And** SHALL use parameters suitable for robust learning
+
+- **GIVEN** a need for standard experimental setup
+- **WHEN** loading spiking_static_medium.yml configuration
+- **THEN** the system SHALL configure a balanced network
+- **AND** SHALL use parameters suitable for robust learning
 
 ### Requirement: Brain Type Enumeration Extension
+
 The brain type validation SHALL include "spiking" as a valid option.
 
 #### Scenario: Brain Type Validation
-**Given** configuration specifies brain type
-**When** validation occurs
-**Then** "spiking" SHALL be accepted as valid
-**Along with** existing "modular", "qmodular", "mlp", "qmlp" types
+
+- **GIVEN** configuration specifies brain type
+- **WHEN** validation occurs
+- **THEN** "spiking" SHALL be accepted as valid
+- **AND** existing "modular", "qmodular", "mlp", "qmlp" types are also valid
 
 ### Requirement: Dynamic Environment Configuration Schema
+
 The configuration system SHALL support a complete schema for dynamic foraging environment parameters.
 
 #### Scenario: Environment Type Selection
+
 - **GIVEN** a YAML configuration file with environment section
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL parse `environment_type` field
@@ -73,6 +89,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL select appropriate environment class based on type
 
 #### Scenario: Dynamic Environment Parameters
+
 - **GIVEN** a configuration with `environment_type: "dynamic"`
 - **WHEN** the configuration is parsed
 - **THEN** the system SHALL parse `grid_size` as tuple (width, height)
@@ -84,6 +101,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL parse `agent_exclusion_radius` (integer, default: 10)
 
 #### Scenario: Satiety Configuration Schema
+
 - **GIVEN** a configuration with dynamic environment
 - **WHEN** satiety parameters are specified
 - **THEN** the system SHALL parse `initial_satiety` (float, default: 200.0)
@@ -93,6 +111,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL validate satiety_gain_per_food between 0.0 and 1.0
 
 #### Scenario: Gradient Configuration
+
 - **GIVEN** a configuration with environment gradient settings
 - **WHEN** the configuration is parsed
 - **THEN** the system SHALL parse `gradient_decay_constant` (float, default: 10.0)
@@ -100,6 +119,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL parse `gradient_scaling` (enum: "exponential" or "tanh", default: "exponential")
 
 #### Scenario: Exploration Bonus Configuration
+
 - **GIVEN** a configuration with reward settings
 - **WHEN** exploration parameters are specified
 - **THEN** the system SHALL parse `exploration_bonus` (float, default: 0.05)
@@ -107,6 +127,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL validate exploration_bonus >= 0.0
 
 #### Scenario: Configuration File Examples
+
 - **GIVEN** example configuration files in `configs/examples/`
 - **WHEN** users need preset foraging environments
 - **THEN** `<brain>_foraging_small.yml` SHALL provide small foraging configuration
@@ -115,9 +136,11 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** each SHALL include commented parameter explanations
 
 ### Requirement: Configuration Validation for Dynamic Environments
+
 The configuration system SHALL validate dynamic environment parameters for logical consistency and computational feasibility.
 
 #### Scenario: Food Count Validation
+
 - **GIVEN** a dynamic environment configuration
 - **WHEN** validation is performed
 - **THEN** `foods_on_grid` SHALL be positive and > 0
@@ -126,13 +149,15 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **AND** if `agent_exclusion_radius` exceeds `min_food_distance`, SHALL warn that exclusion zones may prevent food placement
 
 #### Scenario: Grid Size Validation
+
 - **GIVEN** a dynamic environment configuration
 - **WHEN** grid size is validated
 - **THEN** both width and height SHALL be >= 10
-- **AND** both SHALL be <= 200 (performance limit)
+- **AND** both SHALL be \<= 200 (performance limit)
 - **AND** if grid size > 100×100, SHALL log performance warning
 
 #### Scenario: Satiety Balance Validation
+
 - **GIVEN** a dynamic environment configuration
 - **WHEN** satiety parameters are validated
 - **THEN** the system SHALL check that `initial_satiety / satiety_decay_rate` provides reasonable episode length
@@ -140,6 +165,7 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **AND** SHALL warn if food consumption cannot sustain foraging (gain < expected consumption rate)
 
 #### Scenario: Viewport Size Validation
+
 - **GIVEN** a dynamic environment configuration with viewport
 - **WHEN** validation occurs
 - **THEN** viewport width and height SHALL be odd numbers (for centered agent)
@@ -148,9 +174,11 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **AND** if even number provided, SHALL auto-adjust to next odd number and warn
 
 ### Requirement: Predator Configuration Schema
+
 The system SHALL support comprehensive configuration of predator behavior, appearance, and mechanics within dynamic environments.
 
 #### Scenario: Basic Predator Configuration
+
 - **GIVEN** a YAML configuration file with predator settings
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept the following predator parameters under `environment.dynamic.predators`:
@@ -163,6 +191,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** all parameters SHALL have sensible defaults allowing minimal configuration
 
 #### Scenario: Predator Gradient Configuration
+
 - **GIVEN** a configuration specifying predator gradient parameters
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept under `environment.dynamic.predators`:
@@ -172,6 +201,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** SHALL be used to compute predator repulsion gradients
 
 #### Scenario: Predator Penalty Configuration
+
 - **GIVEN** a configuration with predator reward penalties
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept under `reward`:
@@ -181,15 +211,18 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** the penalty SHALL use positive values that are subtracted from reward (consistent with other penalty values)
 
 #### Scenario: Minimal Predator Enablement
+
 - **GIVEN** a configuration with only `predators.enabled: true`
 - **WHEN** the configuration is loaded
 - **THEN** all other predator parameters SHALL use default values
 - **AND** the simulation SHALL run with 2 predators at speed 1.0, detection radius 8, kill radius 0
 
 ### Requirement: Restructured Dynamic Environment Configuration
+
 The system SHALL organize dynamic environment settings into logical subsections for foraging and predators to improve clarity and maintainability.
 
 #### Scenario: Foraging Subsection Configuration
+
 - **GIVEN** a configuration using the new structure
 - **WHEN** foraging parameters are specified
 - **THEN** the system SHALL accept under `environment.dynamic.foraging`:
@@ -202,6 +235,7 @@ The system SHALL organize dynamic environment settings into logical subsections 
 - **AND** these SHALL be nested under `foraging` subsection, not at `dynamic` root level
 
 #### Scenario: Grid and Viewport at Dynamic Root
+
 - **GIVEN** a configuration using the new structure
 - **WHEN** environment structure is specified
 - **THEN** the following SHALL remain at `environment.dynamic` root level:
@@ -211,9 +245,11 @@ The system SHALL organize dynamic environment settings into logical subsections 
 - **AND** they SHALL apply to the entire environment regardless of feature enablement
 
 #### Scenario: Complete Restructured Configuration Example
+
 - **GIVEN** a full dynamic environment configuration
 - **WHEN** all sections are specified
 - **THEN** the structure SHALL be:
+
 ```yaml
 environment:
   type: dynamic
@@ -244,10 +280,13 @@ reward:
 ```
 
 ### Requirement: Backward Compatibility with Legacy Configuration
+
 The system SHALL automatically migrate legacy flat configuration structure to new nested structure with deprecation warnings.
 
 #### Scenario: Legacy Flat Configuration Migration
+
 - **GIVEN** an existing configuration with flat structure:
+
 ```yaml
 environment:
   type: dynamic
@@ -257,6 +296,7 @@ environment:
     target_foods_to_collect: 30
     gradient_decay_constant: 12.0
 ```
+
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL automatically migrate to nested structure
 - **AND** food-related parameters SHALL be moved under `foraging` subsection
@@ -264,6 +304,7 @@ environment:
 - **AND** the simulation SHALL run correctly with migrated configuration
 
 #### Scenario: Migration Warning Message
+
 - **GIVEN** a legacy flat configuration is loaded
 - **WHEN** migration is performed
 - **THEN** a warning message SHALL be logged stating:
@@ -273,6 +314,7 @@ environment:
 - **AND** the warning SHALL include example of new structure
 
 #### Scenario: New Configuration No Migration
+
 - **GIVEN** a configuration already using nested `foraging` subsection
 - **WHEN** the configuration is loaded
 - **THEN** no migration SHALL be performed
@@ -280,6 +322,7 @@ environment:
 - **AND** configuration SHALL be used as-is
 
 #### Scenario: Mixed Configuration Handling
+
 - **GIVEN** a configuration with some parameters in `foraging` subsection and some at root level
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL prioritize `foraging` subsection values
@@ -287,15 +330,18 @@ environment:
 - **AND** a warning SHALL be logged about the inconsistent structure
 
 ### Requirement: Predator Movement Pattern Validation
+
 The system SHALL validate predator movement pattern configuration and provide clear errors for invalid values.
 
 #### Scenario: Valid Movement Pattern
+
 - **GIVEN** a configuration with `movement_pattern: "random"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL pass
 - **AND** the predator SHALL use random movement behavior
 
 #### Scenario: Invalid Movement Pattern
+
 - **GIVEN** a configuration with `movement_pattern: "invalid_pattern"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL fail with clear error message
@@ -303,6 +349,7 @@ The system SHALL validate predator movement pattern configuration and provide cl
 - **AND** error SHALL indicate future options (commented): "patrol", "pursue"
 
 #### Scenario: Future Movement Pattern Placeholder
+
 - **GIVEN** a configuration with `movement_pattern: "pursue"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL fail
@@ -310,9 +357,11 @@ The system SHALL validate predator movement pattern configuration and provide cl
 - **AND** error SHALL suggest using "random" for current version
 
 ### Requirement: Configuration Examples and Templates
+
 The system SHALL provide example configuration files demonstrating predator-enabled setups for different difficulty levels.
 
 #### Scenario: Predator-Enabled Small Environment Example
+
 - **GIVEN** an example configuration file `configs/examples/mlp_predators_small.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
@@ -323,6 +372,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 - **AND** the configuration SHALL be immediately runnable
 
 #### Scenario: Predator-Enabled Large Environment Example
+
 - **GIVEN** an example configuration file `configs/examples/modular_predators_large.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
@@ -332,6 +382,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
   - Both foraging and predator subsections fully configured
 
 #### Scenario: Configuration Documentation
+
 - **GIVEN** the example configuration files
 - **WHEN** a user reads the files
 - **THEN** each predator parameter SHALL have inline comment explaining:

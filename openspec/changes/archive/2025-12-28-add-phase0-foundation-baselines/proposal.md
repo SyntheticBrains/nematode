@@ -54,13 +54,16 @@ Document validated optimization approaches for each architecture:
 ## Impact
 
 **Affected Specs:**
+
 - `brain-architecture`: ADDED - PPO brain requirements (6 requirements)
 - `benchmark-management`: MODIFIED - NematodeBench public documentation requirements (2 requirements)
 
 **New Specs:**
+
 - `validation-system`: NEW capability for biological validation (4 requirements)
 
 **Affected Code:**
+
 - `packages/quantum-nematode/quantumnematode/brain/arch/ppo.py` (new, ~400 lines)
 - `packages/quantum-nematode/quantumnematode/brain/arch/__init__.py` (add export)
 - `packages/quantum-nematode/quantumnematode/validation/` (new module)
@@ -71,17 +74,21 @@ Document validated optimization approaches for each architecture:
 - `configs/examples/ppo_*.yml` (new configs)
 
 **Breaking Changes:**
+
 - None. All changes are additive.
 
 **Benefits:**
+
 - Credible classical baseline for quantum advantage claims
 - Biological validation of agent behavior
 - Clear guidance for architecture/optimization selection
 - Lower barrier for external researchers to contribute
 
 **Risks:**
+
 - PPO may not reach 85% success target (mitigation: tune hyperparameters, accept if within 5% of MLPBrain)
 - Literature CI interpretation (mitigation: use conservative ranges, document assumptions)
 
 **Migration:**
+
 - No migration required. Existing code unchanged.
