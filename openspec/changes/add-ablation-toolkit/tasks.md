@@ -204,7 +204,7 @@ python scripts/run_ablation.py \
 
 ## Dependencies
 
-```
+```text
 1. Ablation Framework (core classes)
          │
          ├──► 2. ModularBrain Ablation

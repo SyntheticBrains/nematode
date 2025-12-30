@@ -84,7 +84,7 @@ Extend `RewardConfig` with configurable weights for:
 
 Introduce hierarchical benchmark categories to scale with increasing modality combinations:
 
-```
+```text
 basic/                              # Single objective (foraging only)
 ├── foraging_small/
 ├── foraging_medium/

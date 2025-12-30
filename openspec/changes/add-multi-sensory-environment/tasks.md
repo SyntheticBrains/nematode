@@ -223,7 +223,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 ### 10.1 Category Infrastructure
 - [ ] Define benchmark category hierarchy:
-  ```
+  ```text
   basic/          # Single objective (foraging only)
   survival/       # Food + predators
   thermotaxis/    # Temperature-aware (reserved for add-thermotaxis-system)
@@ -273,7 +273,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 ## Dependencies
 
-```
+```text
 1. BrainParams Extensions ──┐
                             │
 2. Health System ───────────┼──► 6. Multi-Objective Rewards

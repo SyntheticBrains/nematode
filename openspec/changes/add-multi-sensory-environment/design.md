@@ -65,7 +65,7 @@ thermotaxis:
 - Simplifies adding new sensory modalities
 
 **Architecture**:
-```
+```text
 BrainParams
      │
      v
@@ -175,7 +175,7 @@ predators:
 - Grouped comparisons: easy to compare within a category
 
 **Category Structure**:
-```
+```text
 basic/              # Single objective (foraging only)
 survival/           # Food + predators
 thermotaxis/        # Temperature-aware tasks
