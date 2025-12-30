@@ -69,7 +69,7 @@ Episode runners SHALL use the provided StepProcessor for executing individual st
 
 The QuantumNematodeAgent class SHALL maintain its existing public API by delegating run_episode() and run_manyworlds_mode() to the appropriate episode runners.
 
-#### Scenario: Backward compatible run_episode
+#### Scenario: Backward-compatible run_episode
 
 **GIVEN** a QuantumNematodeAgent instance
 **WHEN** run_episode(reward_config, max_steps) is called
@@ -78,7 +78,7 @@ The QuantumNematodeAgent class SHALL maintain its existing public API by delegat
 **AND** return list[tuple] path format (same as before refactoring)
 **AND** all existing tests SHALL pass without modification
 
-#### Scenario: Backward compatible run_manyworlds_mode
+#### Scenario: Backward-compatible run_manyworlds_mode
 
 **GIVEN** a QuantumNematodeAgent instance
 **WHEN** run_manyworlds_mode(reward_config, manyworlds_config, max_steps) is called
