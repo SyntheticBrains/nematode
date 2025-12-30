@@ -3,6 +3,7 @@
 ## Phase 1: Foundation - Data Transfer Objects and Protocols ✅ COMPLETE
 
 ### Task 1.1: Create DTOs for component interfaces ✅ COMPLETE (EpisodeResult REMOVED)
+
 - [x] Create `StepResult` dataclass in `quantumnematode/agent.py`
 - [x] Create `FoodConsumptionResult` dataclass in `quantumnematode/agent.py`
 - [x] ~~Create `EpisodeResult` dataclass~~ (created then removed - not needed)
@@ -15,6 +16,7 @@
 **Status**: COMPLETE - StepResult and FoodConsumptionResult actively used. EpisodeResult was removed after architecture decision to return list[tuple] for backward compatibility.
 
 ### Task 1.2: Create EpisodeRunner protocol ✅
+
 - [x] Define `EpisodeRunner` Protocol class with `run()` method signature
 - [x] Add comprehensive docstring explaining the protocol
 - [x] Validate with pyright for protocol compliance
@@ -26,6 +28,7 @@
 ## Phase 2: Component Extraction - Independent Classes ✅ COMPLETE
 
 ### Task 2.1: Implement SatietyManager ✅
+
 - [x] Create `SatietyManager` class in new file `quantumnematode/satiety.py`
 - [x] Implement `**init**` with SatietyConfig
 - [x] Implement `decay_satiety()` method with clamping at 0.0
@@ -40,6 +43,7 @@
 **Parallelizable**: Can be done in parallel with Tasks 2.2, 2.3, 2.4
 
 ### Task 2.2: Implement MetricsTracker ✅
+
 - [x] Create `MetricsTracker` class in new file `quantumnematode/metrics.py`
 - [x] Implement `**init**` with counter initialization
 - [x] Implement `track_episode_completion(success, steps, total_reward)` method
@@ -54,6 +58,7 @@
 **Parallelizable**: Can be done in parallel with Tasks 2.1, 2.3, 2.4
 
 ### Task 2.3: Implement EpisodeRenderer [NOT IMPLEMENTED - RENDERING INLINE]
+
 - [ ] Create `EpisodeRenderer` class in new file `quantumnematode/rendering.py`
 - [ ] Implement `**init**` with rendering configuration
 - [ ] Implement `render_frame(env, step, max_steps, text)` method
@@ -69,6 +74,7 @@
 **Status**: NOT IMPLEMENTED - Rendering kept inline within runners. EpisodeRenderer class exists but is not used. Future refactoring could extract rendering if needed.
 
 ### Task 2.4: Implement FoodConsumptionHandler ✅ COMPLETE (DIFFERENT INTERFACE)
+
 - [x] Create `FoodConsumptionHandler` class in new file `quantumnematode/food_handler.py`
 - [x] Implement `**init**(env, satiety_manager)` with dependency injection
 - [x] Implement `check_and_consume_food(agent_pos)` returning FoodConsumptionResult
@@ -87,6 +93,7 @@
 ## Phase 3: Step Processing and Episode Runners ✅ COMPLETE
 
 ### Task 3.0: Create RewardCalculator ✅
+
 - [x] Extract reward calculation logic to break circular dependency
 - [x] Create `RewardCalculator` class in `quantumnematode/reward_calculator.py`
 - [x] Implement reward calculation for maze and foraging environments
@@ -98,6 +105,7 @@
 **Parallelizable**: Yes
 
 ### Task 3.1: Implement StepProcessor ✅ COMPLETE (NOT INTEGRATED)
+
 - [x] Create `StepProcessor` class in new file `quantumnematode/step_processor.py`
 - [x] Implement `**init**(brain, env, reward_calculator, food_handler, satiety_manager)` with DI
 - [x] Implement `prepare_brain_params(gradient_strength, gradient_direction, previous_action)` method
@@ -113,6 +121,7 @@
 **Status**: COMPLETE but NOT INTEGRATED - StepProcessor class implemented and tested, but runners directly call agent methods instead. Integration deferred (see Task 4.2, 4.3).
 
 ### Task 3.2: Implement StandardEpisodeRunner ✅ COMPLETE (SIMPLIFIED INTERFACE)
+
 - [x] Create `StandardEpisodeRunner` class in new file `quantumnematode/runners.py`
 - [x] Implement `**init**()` with no-argument constructor (simplified from planned DI)
 - [x] Implement `run(agent, reward_config, max_steps, **kwargs)` returning list[tuple] (changed from EpisodeResult)
@@ -130,6 +139,7 @@
 **Status**: COMPLETE - Runner implemented with simplified interface. Directly accesses agent components (FoodConsumptionHandler, SatietyManager) and helper methods instead of using StepProcessor.
 
 ### Task 3.3: Implement ManyworldsEpisodeRunner ✅ COMPLETE (SIMPLIFIED INTERFACE)
+
 - [x] Create `ManyworldsEpisodeRunner` class in `quantumnematode/runners.py`
 - [x] Implement `**init**()` with no-argument constructor (simplified from planned DI)
 - [x] Implement `run(agent, reward_config, manyworlds_config, max_steps, **kwargs)` returning list[tuple] (changed from EpisodeResult)
@@ -148,6 +158,7 @@
 ## Phase 4: Integration - Refactor QuantumNematodeAgent ✅ COMPLETE
 
 ### Task 4.1: Refactor QuantumNematodeAgent.**init** ✅ COMPLETE (SIMPLIFIED)
+
 - [x] Update `**init**` to instantiate component classes
 - [x] Create SatietyManager with satiety_config
 - [x] Create MetricsTracker
@@ -165,6 +176,7 @@
 **Status**: COMPLETE - Agent refactored to use runners and actively-used components (SatietyManager, FoodConsumptionHandler, RewardCalculator, MetricsTracker). Removed unused components (StepProcessor, EpisodeRenderer) after pragmatic architecture decision.
 
 ### Task 4.2: Refactor QuantumNematodeAgent.run_episode ✅ COMPLETE
+
 - [x] Replace 268-line implementation with delegation to StandardEpisodeRunner
 - [x] Call runner.run() with agent parameter
 - [x] Reduce method to ~8 lines (simple delegation)
@@ -176,6 +188,7 @@
 **Status**: COMPLETE - run_episode now simply delegates to StandardEpisodeRunner.run(). Runner directly accesses agent components and updates agent state.
 
 ### Task 4.3: Refactor QuantumNematodeAgent.run_manyworlds_mode ✅ COMPLETE
+
 - [x] Replace 192-line implementation with delegation to ManyworldsEpisodeRunner
 - [x] Call runner.run() with agent and manyworlds_config parameters
 - [x] Reduce method to ~4 lines (simple delegation)
@@ -187,6 +200,7 @@
 **Status**: COMPLETE - run_manyworlds_mode now simply delegates to ManyworldsEpisodeRunner.run(). Runner directly accesses agent components and updates agent state.
 
 ### Task 4.4: Refactor helper methods to use components ✅ COMPLETE
+
 - [x] Update `calculate_reward` to delegate to RewardCalculator
 - [x] Update `reset_environment` to reset FoodConsumptionHandler.env
 - [x] Update `calculate_metrics` to delegate to MetricsTracker
@@ -200,6 +214,7 @@
 ## Phase 5: Testing and Documentation [PARTIALLY COMPLETE]
 
 ### Task 5.1: Integration testing ✅ COMPLETE (PRAGMATIC SCOPE)
+
 - [x] Run full test suite and ensure all existing tests pass (409 tests passing)
 - [x] Add new integration tests for runner behavior (11 tests in test_runners.py)
 - [x] Test both standard and manyworlds episode scenarios end-to-end
@@ -212,6 +227,7 @@
 **Status**: COMPLETE - Integration testing focused on pragmatic scope. Tested runner delegation and episode execution. Did not create exhaustive component interaction tests as components are tested through integration tests.
 
 ### Task 5.2: Performance validation [NOT STARTED - NOT REQUIRED]
+
 - [ ] Benchmark run_episode before and after refactoring
 - [ ] Benchmark run_manyworlds_mode before and after refactoring
 - [ ] Ensure no >5% performance regression
@@ -223,6 +239,7 @@
 **Status**: NOT STARTED - Manual testing showed no noticeable performance degradation. Formal benchmarking deferred as not critical for current refactoring scope.
 
 ### Task 5.3: Update documentation [PARTIALLY COMPLETE]
+
 - [x] Update QuantumNematodeAgent class docstring to reflect new architecture
 - [x] Document component responsibilities in code docstrings
 - [ ] Add architecture diagram showing component relationships
@@ -237,6 +254,7 @@
 ## Phase 6: Cleanup ✅ COMPLETE
 
 ### Task 6.1: Remove old code and noqa directives ✅ COMPLETE
+
 - [x] Remove old code that has been replaced by components (episode logic now in runners)
 - [x] Remove unused component instantiations (StepProcessor, EpisodeRenderer)
 - [x] Verify pyright and ruff pass without warnings (0 errors)
@@ -248,6 +266,7 @@
 **Status**: COMPLETE - Removed unused future-refactoring code (StepProcessor, EpisodeRenderer, EpisodeResult). Episode logic successfully moved to runners. All static analysis clean.
 
 ### Task 6.2: Final review and validation ✅ COMPLETE
+
 - [x] Run `openspec validate refactor-agent-architecture --strict`
 - [x] Review all code changes for quality and consistency
 - [x] Ensure all spec requirements are implemented (pragmatic scope achieved)
@@ -271,6 +290,7 @@
 **LOC Reduction**: ~450 lines (run_episode: 268→8 lines, run_manyworlds_mode: 192→4 lines)
 
 **Pragmatic Architecture Decisions**:
+
 - ✅ Episode execution delegated to StandardEpisodeRunner and ManyworldsEpisodeRunner
 - ✅ Active components: SatietyManager, FoodConsumptionHandler, RewardCalculator, MetricsTracker
 - ✅ Simplified runner interface: No-arg constructors, direct agent component access
@@ -279,6 +299,7 @@
 - ❌ EpisodeResult: Removed as unnecessary (runners return list[tuple] for compatibility)
 
 **Key Benefits Achieved**:
+
 1. Clean separation of concerns (agent manages state, runners orchestrate episodes)
 2. Reduced complexity in main agent class (run_episode and run_manyworlds_mode drastically simplified)
 3. Improved testability (integration tests with real components)

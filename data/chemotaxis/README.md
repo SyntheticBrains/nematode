@@ -15,6 +15,7 @@ CI = (N_attractant - N_control) / N_total
 ```
 
 Where:
+
 - **N_attractant** = steps/time spent in the attractant zone (near food/chemical)
 - **N_control** = steps/time spent in the control zone (away from attractant)
 - **N_total** = total episode steps/time
@@ -35,17 +36,21 @@ Where:
 ### Primary References
 
 1. **Bargmann & Horvitz (1991)** - Cell 65(5):837-847
+
    - Established standard chemotaxis assay paradigm
    - Diacetyl chemotaxis: CI = 0.75 (range: 0.6-0.9)
 
 2. **Bargmann et al. (1993)** - Cell 74(3):515-527
+
    - Bacterial (food) chemotaxis: CI = 0.7 (range: 0.5-0.85)
    - Most relevant to our foraging simulation
 
 3. **Saeki et al. (2001)** - Neuron 32(2):249-259
+
    - Salt (NaCl) chemotaxis: CI = 0.6 (range: 0.4-0.8)
 
 4. **Pierce-Shimomura et al. (1999)** - J Neuroscience 19(21):9557-9569
+
    - Describes biased random walk navigation strategy
 
 ## Usage

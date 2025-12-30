@@ -27,21 +27,25 @@ cd nematode
 Choose the appropriate installation based on your development needs:
 
 #### For Quantum Hardware Development (QPU)
+
 ```bash
 uv sync --extra qpu
 ```
 
 #### For CPU-only Development
+
 ```bash
 uv sync --extra cpu
 ```
 
 #### For GPU Development
+
 ```bash
 uv sync --extra gpu
 ```
 
 #### For Classical ML Brain Development
+
 ```bash
 uv sync [OTHER_EXTRAS] --extra torch
 ```
@@ -172,6 +176,7 @@ uv run ./scripts/run_simulation.py \
 ```
 
 This saves complete metadata to `experiments/<experiment-id>.json` including:
+
 - Configuration file and hash
 - Git commit, branch, and dirty state
 - System information and dependency versions
@@ -205,6 +210,7 @@ uv run scripts/experiment_query.py show <experiment-id> --format json > results.
 When you achieve noteworthy results, submit them as benchmarks:
 
 **Method 1: From existing experiment**
+
 ```bash
 # Submit a tracked experiment as benchmark
 uv run scripts/benchmark_submit.py submit <experiment-id> \
@@ -214,6 +220,7 @@ uv run scripts/benchmark_submit.py submit <experiment-id> \
 ```
 
 **Method 2: Direct from simulation**
+
 ```bash
 # Run and submit as benchmark in one step
 uv run scripts/run_simulation.py \
@@ -230,12 +237,14 @@ The CLI will interactively prompt for contributor information if not provided vi
 To ensure benchmark quality and reproducibility, submissions must meet these criteria:
 
 **Required**:
+
 - Minimum 50 simulation runs for statistical significance
 - Clean git state (no uncommitted changes)
 - Complete contributor information
 - Valid configuration file
 
 **Recommended**:
+
 - High success rate (category-dependent)
 - Meaningful optimization notes explaining your approach
 - Standard environment configurations
@@ -322,6 +331,7 @@ docs/experiments/
 | Benchmarks | `benchmarks/` | Yes | Top-performing submissions |
 
 To create a new logbook:
+
 1. Copy `docs/experiments/templates/experiment.md` to `docs/experiments/logbooks/NNN-name.md`
 2. Use the next sequential number
 3. Update the index in `docs/experiments/README.md`
@@ -352,11 +362,13 @@ uv run python scripts/run_evolution.py \
 ```
 
 Results are saved to `evolution_results/<timestamp>/`:
+
 - `best_params_<timestamp>.json` - Best parameters found
 - `history_<timestamp>.csv` - Fitness history per generation
 - `checkpoint_gen<N>.pkl` - Checkpoints every 10 generations
 
 Resume from checkpoint:
+
 ```bash
 uv run python scripts/run_evolution.py \
   --config configs/examples/evolution_modular_foraging_small.yml \
@@ -376,6 +388,7 @@ uv run python scripts/run_evolution.py \
    - `update_parameters()`: Low-level parameter updates
 
 Example structure:
+
 ```python
 from quantumnematode.brain.arch import QuantumBrain
 
@@ -390,6 +403,7 @@ class MyNewBrain(QuantumBrain):
 ```
 
 4. Add configuration class:
+
 ```python
 from quantumnematode.brain.arch.dtypes import BrainConfig
 
@@ -418,6 +432,7 @@ class MyNewBrainConfig(BrainConfig):
 6. Create corresponding plots and CSV exports
 
 Example for adding a new foraging feature:
+
 ```python
 # In quantumnematode/env/dynamic_foraging.py
 class ExtendedForagingEnvironment(DynamicForagingEnvironment):
@@ -435,12 +450,14 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 ### Code Style Guidelines
 
 1. **Type Hints**: Use comprehensive type hints
+
    ```python
    def my_function(param: int, optional: str | None = None) -> list[float]:
        return [1.0, 2.0]
    ```
 
 2. **Docstrings**: Use NumPy-style docstrings
+
    ```python
    def compute_gradient(params: dict[str, float]) -> list[float]:
        """
@@ -459,6 +476,7 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
    ```
 
 3. **Error Handling**: Use descriptive error messages
+
    ```python
    if not isinstance(params, dict):
        error_message = f"Expected dict for params, got {type(params)}"
@@ -467,9 +485,10 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
    ```
 
 4. **Logging**: Use structured logging
+
    ```python
    from quantumnematode.logging_config import logger
-   
+
    logger.info(f"Training episode {episode} completed with reward {reward}")
    ```
 
@@ -498,22 +517,26 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 ### High Priority
 
 1. **Dynamic Foraging Enhancements**
+
    - Temperature gradient integration
    - Food quality variations and preferences
    - Social foraging behaviors (multi-agent)
    - Realistic chemotaxis modeling
 
 2. **Quantum Hardware Integration**
+
    - Add support for new quantum backends
    - Implement noise-aware training for foraging tasks
    - Add hardware-specific optimizations
 
 3. **Advanced Learning Algorithms**
+
    - Quantum natural gradients for foraging
    - Meta-learning across environment variations
    - Transfer learning from simple to complex foraging
 
 4. **Visualization and Analysis**
+
    - Real-time foraging trajectory visualization
    - Satiety and efficiency heatmaps
    - Comparative analysis tools (quantum vs classical)
@@ -521,12 +544,14 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 ### Medium Priority
 
 1. **Environment Extensions**
+
    - Multi-agent cooperative foraging
    - Competitive foraging scenarios
    - Predator-prey dynamics
    - Continuous action spaces
 
 2. **Monitoring and Logging**
+
    - Advanced foraging strategy detection
    - Performance metrics tracking per food type
    - Experiment management and reproducibility
@@ -534,11 +559,13 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 ### Documentation
 
 1. **API Documentation**
+
    - Complete docstring coverage
    - Usage examples
    - Best practices guides
 
 2. **Tutorials**
+
    - Getting started tutorials
    - Advanced usage patterns
    - Research applications
@@ -546,21 +573,25 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 ## 📝 Pull Request Process
 
 1. **Fork and Branch**
+
    ```bash
    git checkout -b feature/my-new-feature
    ```
 
 2. **Develop and Test**
+
    - Write tests for new functionality
    - Ensure all tests pass
    - Run pre-commit checks
 
 3. **Documentation**
+
    - Update docstrings
    - Add usage examples
    - Update README if needed
 
 4. **Submit PR**
+
    - Clear description of changes
    - Link to related issues
    - Include testing instructions

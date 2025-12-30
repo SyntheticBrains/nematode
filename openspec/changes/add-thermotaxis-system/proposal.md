@@ -17,6 +17,7 @@ This is a critical Phase 1 deliverable that tests whether our architectures can 
 ### 1. TemperatureField Class
 
 Create a new class to define spatial temperature distributions:
+
 - Linear temperature gradients (configurable direction and strength)
 - Hot spots and cold spots (localized temperature perturbations)
 - On-demand temperature computation at any position (O(1) storage)
@@ -25,6 +26,7 @@ Create a new class to define spatial temperature distributions:
 ### 2. Environment Integration
 
 Integrate temperature sensing into DynamicForagingEnvironment:
+
 - Add `thermotaxis_enabled` feature flag
 - Add `temperature_field: TemperatureField` when enabled
 - Compute temperature at agent position each step
@@ -35,6 +37,7 @@ Integrate temperature sensing into DynamicForagingEnvironment:
 ### 3. Thermotaxis Feature Extraction
 
 Implement real `thermotaxis_features()` in modules.py:
+
 - RX: Deviation from cultivation temperature (Tc)
 - RY: Direction to move toward preferred temperature (spatial gradient)
 - RZ: Temperature gradient strength
@@ -46,6 +49,7 @@ Implement real `thermotaxis_features()` in modules.py:
 ### 4. Thermotaxis Benchmarks
 
 Create benchmark configurations and validation:
+
 - Foraging + thermotaxis constraint benchmarks (primary)
 - Pure isothermal tracking benchmarks (for ablation studies)
 - Success criteria: >60% time in comfort zone AND survival
@@ -54,22 +58,27 @@ Create benchmark configurations and validation:
 ## Impact
 
 **Affected Specs:**
+
 - `environment-simulation`: ADDED - TemperatureField, temperature zone mechanics
 - `brain-architecture`: MODIFIED - thermotaxis_features() implementation
 
 **Affected Code:**
+
 - `packages/quantum-nematode/quantumnematode/env/temperature.py` - NEW: TemperatureField class
 - `packages/quantum-nematode/quantumnematode/env/env.py` - Temperature field integration
 - `packages/quantum-nematode/quantumnematode/brain/modules.py` - thermotaxis_features()
 - `configs/examples/thermotaxis_*.yml` - NEW: Thermotaxis benchmark configs
 
 **Dependencies:**
+
 - **REQUIRES** `add-multi-sensory-environment` to be implemented first
 - Specifically requires: BrainParams temperature fields, health system, reward extensions
 
 **Breaking Changes:**
+
 - None. Thermotaxis is opt-in via `thermotaxis.enabled: true`
 
 **Backward Compatibility:**
+
 - Existing configs work unchanged (thermotaxis disabled by default)
 - Existing brains receive None for temperature fields when disabled

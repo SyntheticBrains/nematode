@@ -1,9 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Dynamic Environment Configuration Schema
+
 The configuration system SHALL support a complete schema for dynamic foraging environment parameters.
 
 #### Scenario: Environment Type Selection
+
 - **GIVEN** a YAML configuration file with environment section
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL parse `environment_type` field
@@ -11,6 +13,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL select appropriate environment class based on type
 
 #### Scenario: Dynamic Environment Parameters
+
 - **GIVEN** a configuration with `environment_type: "dynamic"`
 - **WHEN** the configuration is parsed
 - **THEN** the system SHALL parse `grid_size` as tuple (width, height)
@@ -22,6 +25,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL parse `agent_exclusion_radius` (integer, default: 10)
 
 #### Scenario: Satiety Configuration Schema
+
 - **GIVEN** a configuration with dynamic environment
 - **WHEN** satiety parameters are specified
 - **THEN** the system SHALL parse `initial_satiety` (float, default: 200.0)
@@ -31,6 +35,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL validate satiety_gain_per_food between 0.0 and 1.0
 
 #### Scenario: Gradient Configuration
+
 - **GIVEN** a configuration with environment gradient settings
 - **WHEN** the configuration is parsed
 - **THEN** the system SHALL parse `gradient_decay_constant` (float, default: 10.0)
@@ -38,6 +43,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL parse `gradient_scaling` (enum: "exponential" or "tanh", default: "exponential")
 
 #### Scenario: Exploration Bonus Configuration
+
 - **GIVEN** a configuration with reward settings
 - **WHEN** exploration parameters are specified
 - **THEN** the system SHALL parse `exploration_bonus` (float, default: 0.05)
@@ -45,6 +51,7 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** SHALL validate exploration_bonus >= 0.0
 
 #### Scenario: Configuration File Examples
+
 - **GIVEN** example configuration files in `configs/examples/`
 - **WHEN** users need preset dynamic environments
 - **THEN** `dynamic_small.yml` SHALL provide small curriculum configuration
@@ -53,9 +60,11 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **AND** each SHALL include commented parameter explanations
 
 ### Requirement: Configuration Validation for Dynamic Environments
+
 The configuration system SHALL validate dynamic environment parameters for logical consistency and computational feasibility.
 
 #### Scenario: Food Count Validation
+
 - **GIVEN** a dynamic environment configuration
 - **WHEN** validation is performed
 - **THEN** `num_initial_foods` SHALL be positive and > 0
@@ -63,6 +72,7 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **AND** if `num_initial_foods` is too large for grid with `min_food_distance`, SHALL emit warning
 
 #### Scenario: Grid Size Validation
+
 - **GIVEN** a dynamic environment configuration
 - **WHEN** grid size is validated
 - **THEN** both width and height SHALL be >= 10
@@ -70,6 +80,7 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **AND** if grid size > 100×100, SHALL log performance warning
 
 #### Scenario: Satiety Balance Validation
+
 - **GIVEN** a dynamic environment configuration
 - **WHEN** satiety parameters are validated
 - **THEN** the system SHALL check that `initial_satiety / satiety_decay_rate` provides reasonable episode length
@@ -77,6 +88,7 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **AND** SHALL warn if food consumption cannot sustain foraging (gain < expected consumption rate)
 
 #### Scenario: Viewport Size Validation
+
 - **GIVEN** a dynamic environment configuration with viewport
 - **WHEN** validation occurs
 - **THEN** viewport width and height SHALL be odd numbers (for centered agent)

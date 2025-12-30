@@ -3,6 +3,7 @@
 ## Core Implementation
 
 ### 1. Spiking Neural Network Brain Class
+
 - [ ] Create `packages/quantum-nematode/quantumnematode/brain/arch/spiking.py`
 - [ ] Implement `SpikingBrain` class inheriting from `ClassicalBrain` protocol
 - [ ] Define spiking neuron models (Leaky Integrate-and-Fire)
@@ -10,6 +11,7 @@
 - [ ] Add synaptic weight initialization and management
 
 ### 2. Neural Dynamics
+
 - [ ] Implement discrete-time neural dynamics simulation
 - [ ] Add spike generation and propagation mechanisms
 - [ ] Create input encoding for environmental state (rate coding)
@@ -17,6 +19,7 @@
 - [ ] Add membrane potential and spike timing tracking
 
 ### 3. Learning Algorithm
+
 - [ ] Implement Spike-Timing Dependent Plasticity (STDP) learning rule
 - [ ] Add reward-modulated STDP for reinforcement learning
 - [ ] Create gradient computation for policy optimization
@@ -24,6 +27,7 @@
 - [ ] Add baseline estimation for variance reduction
 
 ### 4. Configuration and Integration
+
 - [ ] Update `quantumnematode/brain/__init__.py` to export `SpikingBrain`
 - [ ] Add spiking brain configuration schema to support YAML configs
 - [ ] Create example configuration files for spiking neural networks
@@ -33,6 +37,7 @@
 ## Testing and Validation
 
 ### 5. Unit Tests
+
 - [ ] Create test file `packages/quantum-nematode/tests/brain/arch/test_spiking.py`
 - [ ] Test neuron model dynamics and spike generation
 - [ ] Test synaptic plasticity and weight updates
@@ -40,6 +45,7 @@
 - [ ] Test integration with BrainParams and BrainData structures
 
 ### 6. Integration Tests
+
 - [ ] Test full simulation runs with spiking brain
 - [ ] Validate configuration loading and parameter setting
 - [ ] Test compatibility with existing environment and reward systems
@@ -47,6 +53,7 @@
 - [ ] Test episode completion and learning convergence
 
 ### 7. Performance Validation
+
 - [ ] Benchmark learning performance against MLPBrain baseline
 - [ ] Validate navigation task completion rates
 - [ ] Test computational efficiency and memory usage
@@ -56,6 +63,7 @@
 ## Documentation and Examples
 
 ### 8. Documentation
+
 - [ ] Add comprehensive docstrings to all spiking brain classes
 - [ ] Update README.md to include spiking brain architecture description
 - [ ] Add usage examples for spiking neural network configuration
@@ -63,6 +71,7 @@
 - [ ] Create troubleshooting guide for common issues
 
 ### 9. Configuration Examples
+
 - [ ] Create `configs/examples/spiking_small.yml` for basic testing
 - [ ] Create `configs/examples/spiking_simple_medium.yml` for standard experiments
 - [ ] Add configuration comments explaining spiking-specific parameters
@@ -72,6 +81,7 @@
 ## Optional Enhancements
 
 ### 10. Advanced Features (Future)
+
 - [ ] Support for different neuron models (Izhikevich, AdEx)
 - [ ] Implement homeostatic plasticity mechanisms
 - [ ] Add spike pattern visualization tools
@@ -79,6 +89,7 @@
 - [ ] Network topology optimization and pruning
 
 ### 11. Research Tools
+
 - [ ] Add metrics for spike timing analysis
 - [ ] Implement network activity visualization
 - [ ] Create comparative analysis tools across brain types

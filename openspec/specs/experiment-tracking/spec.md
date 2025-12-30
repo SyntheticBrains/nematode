@@ -1,12 +1,17 @@
 # experiment-tracking Specification
 
 ## Purpose
+
 This specification defines the experiment metadata capture, storage, and query system. It enables reproducible research by automatically tracking configuration, git state, system information, and results for simulation runs.
+
 ## Requirements
+
 ### Requirement: Experiment Metadata Capture
+
 The system SHALL automatically capture comprehensive metadata for simulation runs including configuration, git state, system information, and results when experiment tracking is enabled.
 
 #### Scenario: Basic Metadata Capture
+
 - **GIVEN** a user runs a simulation with `--track-experiment` flag
 - **WHEN** the simulation completes
 - **THEN** an experiment metadata JSON file SHALL be created in `experiments/{timestamp}.json`
@@ -18,6 +23,7 @@ The system SHALL automatically capture comprehensive metadata for simulation run
 - **AND** the file SHALL contain system information (Python version, Qiskit version, device type)
 
 #### Scenario: Metadata Capture Without Git Repository
+
 - **GIVEN** the simulation is run outside a git repository
 - **WHEN** experiment tracking captures metadata
 - **THEN** git-related fields SHALL be set to null
@@ -25,6 +31,7 @@ The system SHALL automatically capture comprehensive metadata for simulation run
 - **AND** a warning SHALL be logged about missing git context
 
 #### Scenario: Config File Hash Generation
+
 - **GIVEN** an experiment uses a configuration file
 - **WHEN** metadata is captured
 - **THEN** a SHA256 hash of the configuration file content SHALL be computed
@@ -32,9 +39,11 @@ The system SHALL automatically capture comprehensive metadata for simulation run
 - **AND** the hash SHALL enable detection of config changes even with same filename
 
 ### Requirement: Experiment Storage and Retrieval
+
 The system SHALL store experiment metadata as JSON files and provide query capabilities for filtering, searching, and comparing experiments.
 
 #### Scenario: Experiment Storage
+
 - **GIVEN** experiment metadata has been captured
 - **WHEN** the metadata is saved
 - **THEN** a JSON file SHALL be written to `experiments/{experiment_id}.json`
@@ -43,22 +52,26 @@ The system SHALL store experiment metadata as JSON files and provide query capab
 - **AND** the experiments directory SHALL be created if it doesn't exist
 
 #### Scenario: Query Experiments by Environment Type
+
 - **GIVEN** multiple experiments are stored with different environment types
 - **WHEN** a user queries for experiments with `environment_type="dynamic"`
 - **THEN** only experiments using dynamic foraging environments SHALL be returned
 - **AND** experiments SHALL be sorted by timestamp (most recent first)
 
 #### Scenario: Query Experiments by Brain Type
+
 - **GIVEN** multiple experiments are stored with different brain architectures
 - **WHEN** a user queries for experiments with `brain_type="modular"`
 - **THEN** only experiments using modular quantum brain SHALL be returned
 
 #### Scenario: Query Experiments by Success Rate Threshold
+
 - **GIVEN** multiple experiments with varying success rates
 - **WHEN** a user queries for experiments with `min_success_rate=0.8`
 - **THEN** only experiments with success rate >= 80% SHALL be returned
 
 #### Scenario: Compare Two Experiments
+
 - **GIVEN** two experiment IDs
 - **WHEN** a comparison is requested
 - **THEN** a structured diff SHALL be generated showing:
@@ -68,15 +81,18 @@ The system SHALL store experiment metadata as JSON files and provide query capab
 - **AND** the comparison SHALL highlight which experiment performed better on each metric
 
 ### Requirement: Automatic Tracking Integration
+
 The system SHALL integrate experiment tracking seamlessly with the existing simulation workflow without disrupting normal operation.
 
 #### Scenario: Opt-in Experiment Tracking
+
 - **GIVEN** a user runs a simulation without `--track-experiment` flag
 - **WHEN** the simulation completes
 - **THEN** no experiment metadata SHALL be saved
 - **AND** simulation SHALL run exactly as before (backward compatible)
 
 #### Scenario: Tracking with Per-Run Data
+
 - **GIVEN** a user runs a simulation with both `--track-experiment` and `--track-per-run` flags
 - **WHEN** the simulation completes
 - **THEN** experiment metadata SHALL reference the exports directory path
@@ -84,6 +100,7 @@ The system SHALL integrate experiment tracking seamlessly with the existing simu
 - **AND** both tracking mechanisms SHALL work together without interference
 
 #### Scenario: Tracking Overhead
+
 - **GIVEN** a simulation with experiment tracking enabled
 - **WHEN** metadata capture and storage occurs
 - **THEN** the overhead SHALL be less than 100ms
@@ -91,9 +108,11 @@ The system SHALL integrate experiment tracking seamlessly with the existing simu
 - **AND** file I/O SHALL be performed after simulation completes
 
 ### Requirement: Git Context Capture
+
 The system SHALL capture git repository state to enable reproducibility and verification of experimental results.
 
 #### Scenario: Clean Git State
+
 - **GIVEN** a git repository with no uncommitted changes
 - **WHEN** experiment metadata is captured
 - **THEN** git_commit SHALL contain the current commit hash
@@ -101,6 +120,7 @@ The system SHALL capture git repository state to enable reproducibility and veri
 - **AND** git_dirty SHALL be false
 
 #### Scenario: Dirty Git State
+
 - **GIVEN** a git repository with uncommitted changes
 - **WHEN** experiment metadata is captured
 - **THEN** git_commit SHALL contain the current commit hash
@@ -109,6 +129,7 @@ The system SHALL capture git repository state to enable reproducibility and veri
 - **AND** a warning SHALL be logged recommending committing changes for reproducibility
 
 #### Scenario: Detached HEAD State
+
 - **GIVEN** a git repository in detached HEAD state
 - **WHEN** experiment metadata is captured
 - **THEN** git_commit SHALL contain the current commit hash
@@ -116,9 +137,11 @@ The system SHALL capture git repository state to enable reproducibility and veri
 - **AND** a warning SHALL be logged about detached HEAD state
 
 ### Requirement: System Information Capture
+
 The system SHALL capture relevant system and dependency version information to support reproducibility across different environments.
 
 #### Scenario: Python and Package Versions
+
 - **GIVEN** an experiment is being tracked
 - **WHEN** system metadata is captured
 - **THEN** Python version SHALL be recorded (e.g., "3.12.0")
@@ -127,6 +150,7 @@ The system SHALL capture relevant system and dependency version information to s
 - **AND** version information SHALL be obtained from installed packages
 
 #### Scenario: Device Type Detection
+
 - **GIVEN** an experiment is being tracked
 - **WHEN** system metadata is captured
 - **THEN** device_type SHALL be "cpu" for CPU-only simulations
@@ -135,9 +159,11 @@ The system SHALL capture relevant system and dependency version information to s
 - **AND** qpu_backend SHALL be recorded for QPU executions (e.g., "ibm_brisbane")
 
 ### Requirement: Experiment Query CLI
+
 The system SHALL provide a command-line interface for querying, comparing, and analyzing stored experiments.
 
 #### Scenario: List All Experiments
+
 - **GIVEN** multiple experiments are stored
 - **WHEN** a user runs `scripts/experiment_query.py list`
 - **THEN** a table SHALL be displayed with experiment ID, config, success rate, and timestamp
@@ -145,12 +171,14 @@ The system SHALL provide a command-line interface for querying, comparing, and a
 - **AND** the table SHALL be formatted for terminal display
 
 #### Scenario: Filter Experiments
+
 - **GIVEN** multiple experiments are stored
 - **WHEN** a user runs `scripts/experiment_query.py list --env-type dynamic --brain-type modular`
 - **THEN** only matching experiments SHALL be displayed
 - **AND** the filter criteria SHALL be shown in the output
 
 #### Scenario: View Experiment Details
+
 - **GIVEN** an experiment ID
 - **WHEN** a user runs `scripts/experiment_query.py show {experiment_id}`
 - **THEN** full experiment metadata SHALL be displayed in a readable format
@@ -158,6 +186,7 @@ The system SHALL provide a command-line interface for querying, comparing, and a
 - **AND** results SHALL be highlighted with formatting
 
 #### Scenario: Compare Experiments
+
 - **GIVEN** two experiment IDs
 - **WHEN** a user runs `scripts/experiment_query.py compare {id1} {id2}`
 - **THEN** a side-by-side comparison SHALL be displayed
@@ -165,9 +194,11 @@ The system SHALL provide a command-line interface for querying, comparing, and a
 - **AND** performance improvements/regressions SHALL be clearly indicated
 
 ### Requirement: Predator Experiment Metadata Capture
+
 The experiment tracking system SHALL capture comprehensive predator configuration and performance data to enable analysis of multi-objective learning dynamics.
 
 #### Scenario: Predator Configuration in Experiment Metadata
+
 - **GIVEN** an experiment run with `predators.enabled: true`
 - **WHEN** experiment metadata is recorded
 - **THEN** the following predator configuration SHALL be captured:
@@ -183,6 +214,7 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **NOTE**: The proximity penalty is stored in the reward configuration, not environment metadata
 
 #### Scenario: Predator Metrics in Experiment Results
+
 - **GIVEN** an experiment with predators enabled
 - **WHEN** per-episode results are recorded
 - **THEN** each episode SHALL include predator metrics:
@@ -193,6 +225,7 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **AND** these SHALL be included in the episode performance data
 
 #### Scenario: Experiment Metadata When Predators Disabled
+
 - **GIVEN** an experiment with `predators.enabled: false` or predators not configured
 - **WHEN** experiment metadata is recorded
 - **THEN** `predators_enabled` SHALL be false
@@ -201,9 +234,11 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **AND** this SHALL maintain backward compatibility with pre-predator experiments
 
 ### Requirement: Predator-Specific Experiment Queries
+
 The experiment tracking system SHALL support querying and filtering experiments by predator configuration and performance metrics.
 
 #### Scenario: Query Experiments with Predators Enabled
+
 - **GIVEN** a set of historical experiments, some with predators enabled
 - **WHEN** querying for predator-enabled experiments
 - **THEN** the system SHALL filter by `predators_enabled: true`
@@ -211,12 +246,14 @@ The experiment tracking system SHALL support querying and filtering experiments 
 - **AND** SHALL include all predator configuration in results
 
 #### Scenario: Query by Predator Count
+
 - **GIVEN** experiments with varying predator counts (0, 2, 3, 5)
 - **WHEN** querying for experiments with specific num_predators
 - **THEN** the system SHALL filter experiments by exact num_predators value
 - **AND** SHALL enable analysis of difficulty scaling with predator numbers
 
 #### Scenario: Query by Predator Death Rate
+
 - **GIVEN** completed experiments with predator performance data
 - **WHEN** querying for experiments with high predator death rate (e.g., >50%)
 - **THEN** the system SHALL calculate death_by_predator percentage across episodes
@@ -224,6 +261,7 @@ The experiment tracking system SHALL support querying and filtering experiments 
 - **AND** SHALL enable identification of challenging predator configurations
 
 #### Scenario: Compare Predator vs Non-Predator Experiments
+
 - **GIVEN** experiments with same brain and environment but varying predator_enabled
 - **WHEN** comparing experiments
 - **THEN** the system SHALL support side-by-side comparison
@@ -235,9 +273,11 @@ The experiment tracking system SHALL support querying and filtering experiments 
 - **AND** SHALL highlight performance degradation or adaptation patterns
 
 ### Requirement: Predator Learning Curve Visualization
+
 The experiment tracking system SHALL support visualization of predator-specific learning curves showing adaptation over training.
 
 #### Scenario: Predator Encounter Rate Over Time
+
 - **GIVEN** an experiment with predators enabled and training over 1000 episodes
 - **WHEN** learning curve visualization is generated
 - **THEN** a plot SHALL show `predator_encounters` per episode over time
@@ -245,6 +285,7 @@ The experiment tracking system SHALL support visualization of predator-specific 
 - **AND** decreasing encounters SHALL indicate improved avoidance behavior
 
 #### Scenario: Evasion Success Rate Over Time
+
 - **GIVEN** an experiment tracking evasions across episodes
 - **WHEN** learning curve visualization is generated
 - **THEN** a plot SHALL show `successful_evasions / predator_encounters` ratio over time
@@ -252,6 +293,7 @@ The experiment tracking system SHALL support visualization of predator-specific 
 - **AND** SHALL be smoothed over rolling window (e.g., 100 episodes)
 
 #### Scenario: Survival Rate vs Foraging Trade-off
+
 - **GIVEN** an experiment with both predator and foraging metrics
 - **WHEN** trade-off visualization is generated
 - **THEN** a plot SHALL show:
@@ -261,6 +303,7 @@ The experiment tracking system SHALL support visualization of predator-specific 
 - **AND** SHALL indicate whether agent learns balanced strategy or specializes
 
 #### Scenario: Predator Death Rate Over Training
+
 - **GIVEN** an experiment with episode-level predator death tracking
 - **WHEN** learning curve visualization is generated
 - **THEN** a plot SHALL show percentage of episodes ending in predator death over time
@@ -268,9 +311,11 @@ The experiment tracking system SHALL support visualization of predator-specific 
 - **AND** SHALL be compared against starvation rate to show termination cause shifts
 
 ### Requirement: Predator Experiment Comparison and Benchmarking
+
 The experiment tracking system SHALL enable systematic comparison of experiments with different predator configurations to identify optimal difficulty curves.
 
 #### Scenario: Compare Different Predator Counts
+
 - **GIVEN** experiments with num_predators ranging from 1 to 5
 - **WHEN** comparison is performed
 - **THEN** the system SHALL show how success rate changes with num_predators
@@ -278,6 +323,7 @@ The experiment tracking system SHALL enable systematic comparison of experiments
 - **AND** SHALL support curriculum design (start with fewer predators, increase gradually)
 
 #### Scenario: Compare Detection Radius Impact
+
 - **GIVEN** experiments with detection_radius values of 5, 8, and 12
 - **WHEN** comparison is performed
 - **THEN** the system SHALL show how detection radius affects:
@@ -287,6 +333,7 @@ The experiment tracking system SHALL enable systematic comparison of experiments
 - **AND** SHALL identify optimal radius for learning signal (not too easy, not impossible)
 
 #### Scenario: Compare Proximity Penalty Effectiveness
+
 - **GIVEN** experiments with proximity_penalty of 0.0, -0.05, -0.1, and -0.2
 - **WHEN** comparison is performed
 - **THEN** the system SHALL analyze whether proximity penalty improves:
@@ -296,9 +343,11 @@ The experiment tracking system SHALL enable systematic comparison of experiments
 - **AND** SHALL identify whether penalty is necessary or redundant with gradient signal
 
 ### Requirement: Experiment Export with Predator Data
+
 The experiment tracking system SHALL include predator metrics in CSV exports and data dumps for external analysis.
 
 #### Scenario: CSV Export with Predator Columns
+
 - **GIVEN** an experiment with predators enabled
 - **WHEN** CSV export is generated
 - **THEN** the CSV SHALL include columns:
@@ -310,6 +359,7 @@ The experiment tracking system SHALL include predator metrics in CSV exports and
 - **AND** columns SHALL be empty/null when predators disabled (backward compatibility)
 
 #### Scenario: JSON Export with Full Predator Configuration
+
 - **GIVEN** an experiment with predators enabled
 - **WHEN** JSON export is generated
 - **THEN** the JSON SHALL include full `predator_config` object with all parameters
@@ -317,6 +367,7 @@ The experiment tracking system SHALL include predator metrics in CSV exports and
 - **AND** SHALL be machine-readable for automated analysis pipelines
 
 #### Scenario: Export Filtering by Predator Status
+
 - **GIVEN** a dataset containing both predator and non-predator experiments
 - **WHEN** export is filtered to predator-only experiments
 - **THEN** the export SHALL include only experiments with `predators_enabled: true`

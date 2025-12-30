@@ -5,6 +5,7 @@
 Phase 1 introduces multiple sensory modalities and architectural components. To understand which features are critical for performance, we need systematic ablation studies - removing components one at a time and measuring performance degradation.
 
 This toolkit enables:
+
 1. Identifying which sensory modules are most important for each task
 2. Understanding differences between quantum and classical architectures
 3. Finding minimal sufficient architectures for each behavior
@@ -16,6 +17,7 @@ This toolkit enables:
 ### 1. Ablation Framework
 
 Create a systematic ablation study framework:
+
 - Define ablation configurations (which modules/layers to remove)
 - Run baseline (all components) and ablated variants
 - Compute performance degradation metrics
@@ -24,6 +26,7 @@ Create a systematic ablation study framework:
 ### 2. ModularBrain Ablation
 
 Support module removal for quantum ModularBrain:
+
 - Zero out specific module qubits (set rotation angles to 0)
 - Remove entanglement layers
 - Reduce circuit depth (fewer layers)
@@ -32,6 +35,7 @@ Support module removal for quantum ModularBrain:
 ### 3. PPOBrain Ablation
 
 Support component removal for classical PPOBrain:
+
 - Bypass hidden layers (direct input-to-output)
 - Remove critic network (policy-only)
 - Reduce hidden layer size
@@ -40,6 +44,7 @@ Support component removal for classical PPOBrain:
 ### 4. Feature Importance Analysis
 
 Compute feature importance from ablation results:
+
 - `importance = (baseline_score - ablated_score) / baseline_score`
 - Rank modules by importance
 - Identify critical vs redundant components
@@ -48,6 +53,7 @@ Compute feature importance from ablation results:
 ### 5. Automated Reporting
 
 Generate markdown reports:
+
 - Performance comparison tables
 - Feature importance rankings
 - Architecture-specific insights
@@ -56,17 +62,21 @@ Generate markdown reports:
 ## Impact
 
 **New Specs:**
+
 - `ablation-analysis`: NEW capability for systematic architecture analysis
 
 **Affected Code:**
+
 - `packages/quantum-nematode/quantumnematode/analysis/ablation.py` - NEW: Ablation framework
 - `packages/quantum-nematode/quantumnematode/analysis/__init__.py` - NEW: Analysis module
 - `scripts/run_ablation.py` - NEW: CLI for ablation studies
 
 **Dependencies:**
+
 - Can be developed **in parallel** with other Phase 1 proposals
 - Uses existing brain architectures (no modifications required)
 - Benefits from but doesn't require multi-sensory environment
 
 **Breaking Changes:**
+
 - None. This is a new analysis capability.

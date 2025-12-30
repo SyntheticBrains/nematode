@@ -3,9 +3,11 @@
 ## ADDED Requirements
 
 ### Requirement: Predator Configuration Schema
+
 The system SHALL support comprehensive configuration of predator behavior, appearance, and mechanics within dynamic environments.
 
 #### Scenario: Basic Predator Configuration
+
 - **GIVEN** a YAML configuration file with predator settings
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept the following predator parameters under `environment.dynamic.predators`:
@@ -18,6 +20,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** all parameters SHALL have sensible defaults allowing minimal configuration
 
 #### Scenario: Predator Gradient Configuration
+
 - **GIVEN** a configuration specifying predator gradient parameters
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept under `environment.dynamic.predators`:
@@ -27,6 +30,7 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** SHALL be used to compute predator repulsion gradients
 
 #### Scenario: Predator Penalty Configuration
+
 - **GIVEN** a configuration with predator reward penalties
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL accept under `reward`:
@@ -35,15 +39,18 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** the penalty SHALL use positive values that are subtracted from reward (consistent with other penalty values)
 
 #### Scenario: Minimal Predator Enablement
+
 - **GIVEN** a configuration with only `predators.enabled: true`
 - **WHEN** the configuration is loaded
 - **THEN** all other predator parameters SHALL use default values
 - **AND** the simulation SHALL run with 2 predators at speed 1.0, detection radius 8, kill radius 0
 
 ### Requirement: Restructured Dynamic Environment Configuration
+
 The system SHALL organize dynamic environment settings into logical subsections for foraging and predators to improve clarity and maintainability.
 
 #### Scenario: Foraging Subsection Configuration
+
 - **GIVEN** a configuration using the new structure
 - **WHEN** foraging parameters are specified
 - **THEN** the system SHALL accept under `environment.dynamic.foraging`:
@@ -56,6 +63,7 @@ The system SHALL organize dynamic environment settings into logical subsections 
 - **AND** these SHALL be nested under `foraging` subsection, not at `dynamic` root level
 
 #### Scenario: Grid and Viewport at Dynamic Root
+
 - **GIVEN** a configuration using the new structure
 - **WHEN** environment structure is specified
 - **THEN** the following SHALL remain at `environment.dynamic` root level:
@@ -65,9 +73,11 @@ The system SHALL organize dynamic environment settings into logical subsections 
 - **AND** they SHALL apply to the entire environment regardless of feature enablement
 
 #### Scenario: Complete Restructured Configuration Example
+
 - **GIVEN** a full dynamic environment configuration
 - **WHEN** all sections are specified
 - **THEN** the structure SHALL be:
+
 ```yaml
 environment:
   type: dynamic
@@ -98,10 +108,13 @@ reward:
 ```
 
 ### Requirement: Backward Compatibility with Legacy Configuration
+
 The system SHALL automatically migrate legacy flat configuration structure to new nested structure with deprecation warnings.
 
 #### Scenario: Legacy Flat Configuration Migration
+
 - **GIVEN** an existing configuration with flat structure:
+
 ```yaml
 environment:
   type: dynamic
@@ -111,6 +124,7 @@ environment:
     target_foods_to_collect: 30
     gradient_decay_constant: 12.0
 ```
+
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL automatically migrate to nested structure
 - **AND** food-related parameters SHALL be moved under `foraging` subsection
@@ -118,6 +132,7 @@ environment:
 - **AND** the simulation SHALL run correctly with migrated configuration
 
 #### Scenario: Migration Warning Message
+
 - **GIVEN** a legacy flat configuration is loaded
 - **WHEN** migration is performed
 - **THEN** a warning message SHALL be logged stating:
@@ -127,6 +142,7 @@ environment:
 - **AND** the warning SHALL include example of new structure
 
 #### Scenario: New Configuration No Migration
+
 - **GIVEN** a configuration already using nested `foraging` subsection
 - **WHEN** the configuration is loaded
 - **THEN** no migration SHALL be performed
@@ -134,6 +150,7 @@ environment:
 - **AND** configuration SHALL be used as-is
 
 #### Scenario: Mixed Configuration Handling
+
 - **GIVEN** a configuration with some parameters in `foraging` subsection and some at root level
 - **WHEN** the configuration is loaded
 - **THEN** the system SHALL prioritize `foraging` subsection values
@@ -141,15 +158,18 @@ environment:
 - **AND** a warning SHALL be logged about the inconsistent structure
 
 ### Requirement: Predator Movement Pattern Validation
+
 The system SHALL validate predator movement pattern configuration and provide clear errors for invalid values.
 
 #### Scenario: Valid Movement Pattern
+
 - **GIVEN** a configuration with `movement_pattern: "random"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL pass
 - **AND** the predator SHALL use random movement behavior
 
 #### Scenario: Invalid Movement Pattern
+
 - **GIVEN** a configuration with `movement_pattern: "invalid_pattern"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL fail with clear error message
@@ -157,6 +177,7 @@ The system SHALL validate predator movement pattern configuration and provide cl
 - **AND** error SHALL indicate future options (commented): "patrol", "pursue"
 
 #### Scenario: Future Movement Pattern Placeholder
+
 - **GIVEN** a configuration with `movement_pattern: "pursue"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL fail
@@ -164,9 +185,11 @@ The system SHALL validate predator movement pattern configuration and provide cl
 - **AND** error SHALL suggest using "random" for current version
 
 ### Requirement: Configuration Examples and Templates
+
 The system SHALL provide example configuration files demonstrating predator-enabled setups for different difficulty levels.
 
 #### Scenario: Predator-Enabled Small Environment Example
+
 - **GIVEN** an example configuration file `configs/examples/mlp_dynamic_small_predators.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
@@ -177,6 +200,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 - **AND** the configuration SHALL be immediately runnable
 
 #### Scenario: Predator-Enabled Large Environment Example
+
 - **GIVEN** an example configuration file `configs/examples/modular_dynamic_large_predators.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
@@ -186,6 +210,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
   - Both foraging and predator subsections fully configured
 
 #### Scenario: Configuration Documentation
+
 - **GIVEN** the example configuration files
 - **WHEN** a user reads the files
 - **THEN** each predator parameter SHALL have inline comment explaining:

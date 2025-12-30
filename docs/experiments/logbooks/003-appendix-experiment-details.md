@@ -32,6 +32,7 @@ Spike rates: Normal at 2-3% (not the issue)
 ```
 
 **Root Causes**:
+
 1. Surrogate gradient with `alpha=10.0` produced enormous gradients (scales with alpha²)
 2. Only gradient norm clipping (not value clipping) allowed inf to persist
 3. Entropy regularization too weak (beta=0.01, contribution ~0.001)
@@ -72,6 +73,7 @@ entropy_beta: 0.01 → 0.05        # 5x stronger exploration
 | 101842 | 64% | Converged at 42, maintained 67.2% |
 
 **Root Causes**:
+
 1. **Fixed learning rate** (0.001) → Can't fine-tune after initial learning
 2. **Fixed entropy** (0.05) → Prevents deterministic exploitation late
 3. **Random initialization variance** → Some starts better than others
@@ -94,6 +96,7 @@ entropy_decay_episodes: 50      # Decay over first 50 runs
 **Problem**: 60-point variance (18%-78%) with default PyTorch initialization
 
 **Sessions**: `20251219_112425-112435` (pre-Kaiming baseline)
+
 - Range: 18-78% (60-point spread)
 - 1 catastrophic failure at 18%
 - Initialization lottery: some random seeds excellent, others terrible
@@ -114,6 +117,7 @@ Agent stuck in place, no learning visible
 ```
 
 **Root Cause**: Kaiming initialization created extreme logits
+
 - Kaiming scale: `sqrt(2/fan_in)` for ReLU → larger weights than default
 - Output layer with Kaiming weights → logits like [20.0, 0.01, 0.01, 0.01]
 - After softmax → [1.000, 0.000, 0.000, 0.000] (deterministic from start)
@@ -172,6 +176,7 @@ entropy_decay_episodes: 50  # Gradual decay
 
 Attempted faster convergence with `lr=0.0015` + `entropy_decay=30`:
 Sessions: `20251219_124240-124249`
+
 - **FAILED**: Range 27-55% (worse than before)
 - Higher LR caused premature convergence to bad policies
 - Faster entropy decay prevented sufficient exploration
@@ -207,6 +212,7 @@ Composite score: 0.896 (approaching MLP's ~0.92)
 ### The Dynamic Foraging Challenge
 
 Unlike static navigation (go to fixed goal), dynamic foraging requires:
+
 - Collecting 10 food items spawned at random positions
 - Adapting to changing food locations as items are consumed
 - Managing satiety (starvation penalty if satiety depletes)
@@ -217,6 +223,7 @@ Unlike static navigation (go to fixed goal), dynamic foraging requires:
 ### Key Insight: MLP Uses Intra-Episode Updates
 
 Analysis of MLP brain revealed a critical difference: MLP performs gradient updates **every 5 steps** during an episode, not just at episode end. This provides:
+
 1. Dense learning signal (100 updates/episode vs 1)
 2. Immediate feedback on good/bad actions
 3. Lower variance in return estimates (5-step windows vs 500-step episodes)
@@ -224,12 +231,14 @@ Analysis of MLP brain revealed a critical difference: MLP performs gradient upda
 ### Experiment 1: First Intra-Episode Update Attempt
 
 **Changes**:
+
 - Added `update_frequency: 5` parameter (gradient update every 5 steps)
 - Lowered learning rate to 0.0003 (from 0.001)
 
 **Results**: 0% success - policy locked to single action within first episode
 
 **Root Cause**: Combination of:
+
 1. High entropy_beta (0.5) fighting policy gradient at every update
 2. Cumulative effect of 100 small updates still pushed toward determinism
 3. Policy locked faster than with end-of-episode updates
@@ -237,6 +246,7 @@ Analysis of MLP brain revealed a critical difference: MLP performs gradient upda
 ### Experiment 2: MLP-Like Settings
 
 **Changes**:
+
 - `learning_rate: 0.001` (MLP's value)
 - `entropy_beta: 0.1` (lower, like MLP)
 - `min_action_prob: 0.02` (prevent full determinism)
@@ -251,6 +261,7 @@ Gradient norm: 0.000000  # DEAD - no gradient signal
 ```
 
 The `min_action_prob: 0.02` floor was the culprit:
+
 - Softmax saturates at 0.02/0.94 extremes
 - Gradients ≈ 0 at saturation points
 - Network cannot recover once it hits the floor
@@ -260,6 +271,7 @@ The `min_action_prob: 0.02` floor was the culprit:
 **Key Insight**: Spiking network has ~30x more parameters than MLP (136k vs 4.6k). Same learning rate means ~30x more effective gradient magnitude.
 
 **Changes**:
+
 - `learning_rate: 0.0001` (10x lower than MLP)
 - `min_action_prob: 0.0` (disabled - was causing gradient death)
 - `entropy_beta: 0.3` (moderate)
@@ -279,6 +291,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 ### Experiment 4: Low Floor (0.005)
 
 **Changes**:
+
 - `min_action_prob: 0.005` (low floor, not zero)
 
 **Results**: Best session achieved **24% success** with 9 consecutive wins (runs 10-19)
@@ -289,6 +302,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 ### Experiment 5: Optimal Floor (0.01) - BREAKTHROUGH
 
 **Changes**:
+
 - `min_action_prob: 0.01` (slightly higher floor)
 - Minimum entropy ~0.16 instead of ~0.10
 
@@ -301,6 +315,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 | Worst | 0% | Collapsed early |
 
 **Best Session Analysis**:
+
 - Runs 1-22: Warmup/learning phase with scattered successes
 - Runs 23-50: **SUSTAINED SUCCESS** - 27/28 wins!
 - Converged at run 22, stability 0.000, composite score 0.733
@@ -381,6 +396,7 @@ The 30% starvation rate indicates the brain often avoids predators but fails to 
 #### Problem 1: Single Combined Gradient Signal
 
 The spiking brain receives only 2 inputs:
+
 - `gradient_strength`: Combined food + predator signal magnitude
 - `gradient_direction`: Direction of combined vector
 
@@ -419,6 +435,7 @@ penalty_starvation: 2.0        # Moderate starvation penalty
 **Hypothesis**: The 10:2 predator:starvation penalty ratio may be too aggressive.
 
 **Changes**:
+
 - `penalty_predator_death`: 10.0 → 5.0
 - `penalty_starvation`: 2.0 → 5.0
 - `batch_size`: 1 → 3
@@ -430,6 +447,7 @@ penalty_starvation: 2.0        # Moderate starvation penalty
 **Hypothesis**: 100 episodes insufficient for stable convergence.
 
 **Results**:
+
 - **Session 134319**: 10.5% success with 21 wins in runs 1-76, then **post-convergence collapse** to 0%
 - The network learned good behavior, then entropy/LR decay killed it
 
@@ -477,6 +495,7 @@ penalty_starvation: 2.0        # Moderate starvation penalty
 **Session 054653 achieved 61% success** - more than **DOUBLE** the previous best (28%)!
 
 Post-convergence metrics:
+
 - Success rate: 62.8%
 - Avg foods: 7.46
 - Distance efficiency: 41.6%
@@ -487,6 +506,7 @@ Post-convergence metrics:
 2. **New**: `lr_decay_rate: 0.005` → LR drops to ~61% after 100 episodes
 
 The faster decay (0.01) caused the learning rate to drop too low before the network could fully learn the task. With slower decay:
+
 - More gradient updates with meaningful LR
 - Network has time to refine behavior
 - Good patterns get reinforced before LR bottoms out
@@ -528,12 +548,14 @@ Based on the hypothesis that the combined gradient was ambiguous (food NORTH + p
 **Implementation**:
 
 Added `use_separated_gradients: bool` config option to `SpikingBrainConfig`:
+
 - When enabled, input changes from 2 features to 4 features:
   - `[food_strength, food_rel_angle, pred_strength, pred_rel_angle]`
 - Each angle normalized relative to agent facing direction [-1, 1]
 - Network input_dim automatically set to 4 when enabled
 
 Files modified:
+
 - `spiking.py`: Added config option, updated `preprocess()` for 4-feature output
 - `run_simulation.py`: Dynamic input_dim based on config
 - `spiking_predators_*.yml`: All three configs updated with `use_separated_gradients: true`
@@ -568,6 +590,7 @@ Files modified:
 3. **Predator avoidance maintained, food-seeking lost**: 89-92% evasion rate preserved, but food collection dropped from 4.17 to <1 avg. The network learned "don't die" but forgot "find food"
 
 4. **The hypothesis was wrong**: The combined gradient actually HELPS because:
+
    - Environment pre-computes optimal direction (food attraction + predator repulsion)
    - Brain just learns "follow this direction" (simple)
    - With separated gradients, brain must learn to INTEGRATE signals (harder)
@@ -575,6 +598,7 @@ Files modified:
 **Key Insight**:
 
 This mirrors the quantum experiment 001 finding:
+
 > "The environment's signal does the heavy lifting, not the brain"
 
 The combined gradient is a **feature**, not a bug. It offloads the hard multi-objective optimization to the environment, leaving the brain with a simpler single-objective task.
@@ -593,6 +617,7 @@ pred_grad ──► [Aversive Stream (LIF)]  ──► avoid_logits ────
 ```
 
 **Key design principles**:
+
 1. **Separation of concerns**: Each stream learns ONE objective (simpler learning)
 2. **Learned gating**: Small MLP learns when to prioritize each stream
 3. **Biological plausibility**: Mirrors appetitive/aversive circuits in real brains
@@ -601,16 +626,19 @@ pred_grad ──► [Aversive Stream (LIF)]  ──► avoid_logits ────
 **Implementation Details**:
 
 Files created:
+
 - `_dual_stream_spiking.py`: Core network with GatingNetwork and DualStreamSpikingNetwork
 - `dual_spiking.py`: Brain wrapper with DualStreamSpikingBrainConfig
 
 **Gating Network**:
+
 - Input: 5 features (food_strength, food_angle, pred_strength, pred_angle, satiety)
 - Hidden: 16 neurons
 - Output: 1 value (gate weight 0-1)
 - Initialization bias: -0.85 → sigmoid ≈ 0.3 (slightly favor food-seeking)
 
 **Each Stream**:
+
 - Input: 2 features (strength, relative_angle)
 - Optional population coding (8 neurons per feature)
 - 1 LIF hidden layer (64 neurons)
@@ -638,6 +666,7 @@ Files created:
 Added satiety as input to gating network with hypothesis: "When hungry, prioritize food. When full, prioritize avoidance."
 
 **Changes**:
+
 - Gating network input: 4 → 5 features (added normalized satiety)
 - Bias initialization: favor food-seeking when hungry
 - Increased food rewards: reward_goal 2.0 → 3.0, reward_distance_scale 0.5 → 1.0
@@ -690,10 +719,12 @@ The problem is that **each stream only sees its own gradient** (2 features each)
 | Aversive | [pred_strength, pred_angle] | "Move away from predators" | "When to risk approach for food" |
 
 **Compare to working approaches**:
+
 - **Combined-gradient spiking (28%)**: Sees pre-computed optimal direction
 - **MLP (85%)**: Sees all 4 inputs simultaneously, can learn internal integration
 
 **The fundamental issue**: Separated inputs mean each stream makes decisions in isolation. Even with perfect gating:
+
 1. The appetitive stream can't factor in predator proximity when seeking food
 2. The aversive stream can't factor in food urgency when fleeing
 3. Each stream makes locally-optimal but globally-poor decisions
@@ -701,12 +732,14 @@ The problem is that **each stream only sees its own gradient** (2 features each)
 **Why Dual-Stream Worked in Biology but Not Here**:
 
 In biological brains, appetitive/aversive circuits have:
+
 1. **Lateral connections**: Streams share information, not completely isolated
 2. **Neuromodulation**: Dopamine/serotonin provide global context signals
 3. **Hierarchical override**: Amygdala can completely suppress appetitive behavior in danger
 4. **Rich sensory input**: Each circuit gets full sensory context, not partial
 
 Our implementation had:
+
 1. **Complete isolation**: No cross-stream connections
 2. **Simple gating**: Linear blend, no override capability
 3. **Partial inputs**: Each stream sees only 2 of 4 features
@@ -888,6 +921,7 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
 ### Best Sessions by Environment
 
 **Static Navigation**:
+
 - **20251219_052425**: 83% success, 100% post-convergence, 0.932 composite
   - Config: `spiking_static_medium.yml` (with batch_size: 3, entropy_beta: 0.2, LR: 0.0001)
   - Runs: 100
@@ -895,11 +929,13 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
   - Pattern: After convergence, perfect 66/66 runs
 
 **Dynamic Foraging**:
+
 - Best session: 82% success, 100% post-convergence, 0.733 composite
   - Config: `spiking_foraging_small.yml`
   - Key: `min_action_prob: 0.01`, `update_frequency: 10`
 
 **Predator + Foraging**:
+
 - **20251222_054653**: 61% success, 7.36 avg foods, 0.556 composite
   - Config: `spiking_predators_small.yml` with `lr_decay_rate: 0.005`
   - Submitted to benchmarks leaderboard
@@ -908,11 +944,13 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
 ### Comparison Baselines
 
 **MLP**:
+
 - Static: 100% success, 0.960 composite
 - Foraging: 100% success, 0.822 composite
 - Predators: 85% success, 10.5% predator deaths, 0.740 composite
 
 **Quantum (Evolved)**:
+
 - Static: 100% success, 0.980 composite
 - Foraging: 100% success, 0.762 composite
 - Predators: 88% success (evolved params), 12% predator deaths, 0.675 composite

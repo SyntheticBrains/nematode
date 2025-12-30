@@ -9,6 +9,7 @@ This design document covers the technical approach for four Phase 0 deliverables
 ### Design Rationale
 
 PPO is chosen over SAC or TD3 because:
+
 - Most widely used modern RL algorithm
 - Stable training with clipped surrogate objective
 - Works well with discrete action spaces (our 4 actions: forward, left, right, stay)
@@ -35,10 +36,12 @@ PPOBrain (ClassicalBrain)
 ### Key Implementation Details
 
 **Preprocessing**: Match MLPBrain exactly
+
 - `gradient_strength`: Normalized to [0, 1]
 - `relative_angle`: Computed as `(gradient_direction - agent_facing_angle + π) mod 2π - π`, normalized to [-1, 1]
 
 **Training Loop**:
+
 1. Collect rollout_buffer_size steps
 2. Compute GAE advantages
 3. For num_epochs:
@@ -51,6 +54,7 @@ PPOBrain (ClassicalBrain)
      - Combined gradient update
 
 **Hyperparameters** (defaults):
+
 - `clip_epsilon`: 0.2
 - `gamma`: 0.99
 - `gae_lambda`: 0.95
@@ -254,16 +258,19 @@ PPO, Chemotaxis, and Optimization Docs can be implemented in parallel. NematodeB
 ## Testing Strategy
 
 ### PPO Tests
+
 1. Unit: Rollout buffer, GAE computation, clipped loss
 2. Integration: Config loading, brain factory
 3. Benchmark: 100 runs on dynamic_small targeting >85%
 
 ### Chemotaxis Tests
+
 1. Unit: CI calculation, zone detection
 2. Integration: Episode data extraction
 3. Validation: Compare against known CI values
 
 ### Documentation Tests
+
 1. Manual review of submission guide flow
 2. Test evaluate_submission.py on existing benchmarks
 3. Verify all code examples work
