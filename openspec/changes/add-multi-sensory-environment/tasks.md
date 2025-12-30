@@ -25,15 +25,19 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 ## 2. Health System
 
+> **Note**: HP and satiety are independent systems that coexist. HP tracks threat-based damage (predators, temperature), while satiety tracks time-based hunger. Food restores BOTH.
+
 ### 2.1 Environment Health Tracking
 - [ ] Add `health_system_enabled: bool` to DynamicForagingEnvironment
 - [ ] Add `agent_hp: float` and `max_hp: float` to environment state
 - [ ] Add `HealthSystemConfig` dataclass for configuration
 - [ ] Implement HP initialization on episode reset
+- [ ] Ensure HP system operates independently from existing satiety system
 
 ### 2.2 Damage and Healing
 - [ ] Implement predator damage on contact (configurable `predator_damage`)
 - [ ] Implement food healing (configurable `food_healing`)
+- [ ] Ensure food consumption restores both HP AND satiety when both systems enabled
 - [ ] Add temperature damage (for thermotaxis integration)
 - [ ] Cap HP at max_hp, floor at 0
 
@@ -41,13 +45,15 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 - [ ] Add `TerminationReason.HEALTH_DEPLETED` enum value
 - [ ] Implement HP depletion check in step function
 - [ ] Return appropriate termination when HP reaches 0
+- [ ] Document distinction from STARVATION termination (satiety system)
 
 ### 2.4 Configuration
 - [ ] Add `health_system` section to environment YAML schema
 - [ ] Add config loader support for health system
 - [ ] Create example config with health system enabled
+- [ ] Create example config with BOTH health system and satiety enabled
 
-**Validation**: Agent can survive predator contact, die from accumulated damage
+**Validation**: Agent can survive predator contact, die from accumulated damage. Food restores both HP and satiety.
 
 ---
 

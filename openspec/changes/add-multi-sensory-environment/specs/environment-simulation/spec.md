@@ -21,7 +21,16 @@ The system SHALL provide an optional HP-based health system as an alternative to
 - **WHEN** the agent consumes food
 - **THEN** the agent SHALL gain 5 HP
 - **AND** HP SHALL be capped at max_hp
-- **AND** healing SHALL occur in addition to satiety restoration
+- **AND** healing SHALL occur in addition to satiety restoration (both systems benefit from food)
+
+#### Scenario: HP and Satiety Coexistence
+- **GIVEN** both health system and satiety system enabled
+- **WHEN** the agent consumes food
+- **THEN** satiety SHALL be restored (existing behavior)
+- **AND** HP SHALL be restored by `food_healing` amount
+- **AND** the two systems SHALL operate independently otherwise
+- **AND** satiety SHALL decay each step (time-based hunger)
+- **AND** HP SHALL only decrease from damage events (threat-based)
 
 #### Scenario: Health Depletion Termination
 - **GIVEN** an agent with HP approaching 0
