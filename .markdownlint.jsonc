@@ -7,6 +7,9 @@
     "siblings_only": true
   },
 
+  // Trailing punctuation in headings - prompt files use periods in description headings
+  "MD026": false,
+
   // Ordered list prefix style (1/1/1 vs 1/2/3) - existing docs use mixed styles
   "MD029": false,
 
