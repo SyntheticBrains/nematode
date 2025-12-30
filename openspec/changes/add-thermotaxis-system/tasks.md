@@ -116,7 +116,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 ### 4.2 Benchmark Categories (Hierarchical Naming)
 
 Adopt hierarchical benchmark naming convention for scalability:
-```
+```text
 thermotaxis/                    # Temperature-aware tasks
 ├── isothermal_small/           # Pure temp comfort (no food goal)
 │   ├── quantum/
@@ -172,7 +172,7 @@ thermotaxis/                    # Temperature-aware tasks
 
 ## Dependencies
 
-```
+```text
 add-multi-sensory-environment (MUST be complete)
          │
          v
