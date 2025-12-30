@@ -34,7 +34,6 @@ The system SHALL support comprehensive configuration of predator behavior, appea
 - **AND** penalty value of 0.0 SHALL disable proximity penalties
 - **AND** the penalty SHALL use positive values that are subtracted from reward (consistent with other penalty values)
 
-
 #### Scenario: Minimal Predator Enablement
 - **GIVEN** a configuration with only `predators.enabled: true`
 - **WHEN** the configuration is loaded

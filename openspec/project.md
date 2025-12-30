@@ -22,7 +22,7 @@ Quantum Nematode is a research platform that simulates a simplified nematode (C.
 - **Line Length**: 100 characters maximum
 - **Docstring Style**: NumPy convention for documentation
 - **Python Version**: Strict 3.12+ requirement for modern language features
-- **Import Organization**: Explicit __all__ exports in modules
+- **Import Organization**: Explicit **all** exports in modules
 
 ### Architecture Patterns
 - **Modular Brain Architecture**: Pluggable brain implementations (ModularBrain, QModularBrain, MLPBrain, QMLPBrain, SpikingBrain)

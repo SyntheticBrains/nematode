@@ -107,7 +107,7 @@ class BenchmarkMetadata:
 ### Storage Strategy
 
 #### File Organization
-```
+```text
 nematode/
 ├── experiments/               # Auto-tracked experiments (gitignored)
 │   └── {timestamp}.json       # One file per experiment

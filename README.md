@@ -239,7 +239,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guid
 
 The simulation provides real-time visualization of the nematode's navigation:
 
-```
+```text
 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
 ⬜️ 🦠 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
 ⬜️ 🔼 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️

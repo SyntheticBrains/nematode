@@ -27,7 +27,7 @@
 
 ### Task 2.1: Implement SatietyManager ✅
 - [x] Create `SatietyManager` class in new file `quantumnematode/satiety.py`
-- [x] Implement `__init__` with SatietyConfig
+- [x] Implement `**init**` with SatietyConfig
 - [x] Implement `decay_satiety()` method with clamping at 0.0
 - [x] Implement `restore_satiety(amount)` method with clamping at 1.0
 - [x] Implement `is_starved()` method
@@ -41,7 +41,7 @@
 
 ### Task 2.2: Implement MetricsTracker ✅
 - [x] Create `MetricsTracker` class in new file `quantumnematode/metrics.py`
-- [x] Implement `__init__` with counter initialization
+- [x] Implement `**init**` with counter initialization
 - [x] Implement `track_episode_completion(success, steps, total_reward)` method
 - [x] Implement `track_food_collection(distance_efficiency)` method
 - [x] Implement `track_step(reward)` method
@@ -55,7 +55,7 @@
 
 ### Task 2.3: Implement EpisodeRenderer [NOT IMPLEMENTED - RENDERING INLINE]
 - [ ] Create `EpisodeRenderer` class in new file `quantumnematode/rendering.py`
-- [ ] Implement `__init__` with rendering configuration
+- [ ] Implement `**init**` with rendering configuration
 - [ ] Implement `render_frame(env, step, max_steps, text)` method
 - [ ] Implement `render_if_needed(env, step, max_steps, show_last_frame_only)` method
 - [ ] Implement `clear_screen()` method
@@ -70,7 +70,7 @@
 
 ### Task 2.4: Implement FoodConsumptionHandler ✅ COMPLETE (DIFFERENT INTERFACE)
 - [x] Create `FoodConsumptionHandler` class in new file `quantumnematode/food_handler.py`
-- [x] Implement `__init__(env, satiety_manager)` with dependency injection
+- [x] Implement `**init**(env, satiety_manager)` with dependency injection
 - [x] Implement `check_and_consume_food(agent_pos)` returning FoodConsumptionResult
 - [x] Add logic to detect environment type (static vs dynamic)
 - [x] Implement distance efficiency calculation for dynamic environments
@@ -99,7 +99,7 @@
 
 ### Task 3.1: Implement StepProcessor ✅ COMPLETE (NOT INTEGRATED)
 - [x] Create `StepProcessor` class in new file `quantumnematode/step_processor.py`
-- [x] Implement `__init__(brain, env, reward_calculator, food_handler, satiety_manager)` with DI
+- [x] Implement `**init**(brain, env, reward_calculator, food_handler, satiety_manager)` with DI
 - [x] Implement `prepare_brain_params(gradient_strength, gradient_direction, previous_action)` method
 - [x] Implement `process_step(gradient_strength, gradient_direction, previous_action, previous_reward)` returning StepResult
 - [x] Ensure stateless design (no episode state retained)
@@ -114,7 +114,7 @@
 
 ### Task 3.2: Implement StandardEpisodeRunner ✅ COMPLETE (SIMPLIFIED INTERFACE)
 - [x] Create `StandardEpisodeRunner` class in new file `quantumnematode/runners.py`
-- [x] Implement `__init__()` with no-argument constructor (simplified from planned DI)
+- [x] Implement `**init**()` with no-argument constructor (simplified from planned DI)
 - [x] Implement `run(agent, reward_config, max_steps, **kwargs)` returning list[tuple] (changed from EpisodeResult)
 - [x] Implement episode loop with direct agent method delegation
 - [x] Implement termination logic (goal reached, max steps, starvation)
@@ -131,7 +131,7 @@
 
 ### Task 3.3: Implement ManyworldsEpisodeRunner ✅ COMPLETE (SIMPLIFIED INTERFACE)
 - [x] Create `ManyworldsEpisodeRunner` class in `quantumnematode/runners.py`
-- [x] Implement `__init__()` with no-argument constructor (simplified from planned DI)
+- [x] Implement `**init**()` with no-argument constructor (simplified from planned DI)
 - [x] Implement `run(agent, reward_config, manyworlds_config, max_steps, **kwargs)` returning list[tuple] (changed from EpisodeResult)
 - [x] Implement branching logic with probability-weighted trajectories
 - [x] Implement trajectory selection (highest reward)
@@ -147,8 +147,8 @@
 
 ## Phase 4: Integration - Refactor QuantumNematodeAgent ✅ COMPLETE
 
-### Task 4.1: Refactor QuantumNematodeAgent.__init__ ✅ COMPLETE (SIMPLIFIED)
-- [x] Update `__init__` to instantiate component classes
+### Task 4.1: Refactor QuantumNematodeAgent.**init** ✅ COMPLETE (SIMPLIFIED)
+- [x] Update `**init**` to instantiate component classes
 - [x] Create SatietyManager with satiety_config
 - [x] Create MetricsTracker
 - [x] Create FoodConsumptionHandler with env and satiety_manager

@@ -80,7 +80,7 @@ The QuantumNematodeAgent class SHALL maintain its existing public API by delegat
 The QuantumNematodeAgent class SHALL transition from implementing episode logic directly to coordinating injected components.
 
 **Before**: Agent implements run_episode with 268 lines of complex logic
-**After**: Agent creates components in __init__ and delegates run_episode to StandardEpisodeRunner in ~20 lines
+**After**: Agent creates components in **init** and delegates run_episode to StandardEpisodeRunner in ~20 lines
 
 #### Scenario: Agent initialization creates components
 **GIVEN** a QuantumNematodeAgent constructor called with brain, env, and config

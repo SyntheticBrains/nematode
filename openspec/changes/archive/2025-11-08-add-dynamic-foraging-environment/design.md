@@ -184,7 +184,7 @@ view_max_x = min(grid_width, agent_x + half_width + 1)
 
 ## Architecture Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    SimulationConfig                         │
 │  - brain: BrainConfig                                        │
@@ -242,7 +242,7 @@ view_max_x = min(grid_width, agent_x + half_width + 1)
 
 ## Data Flow: Gradient Superposition
 
-```
+```text
 Step 1: Environment has 3 active foods at (10,10), (20,20), (30,15)
 Step 2: Agent at (15,12) requests state
 

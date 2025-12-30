@@ -89,7 +89,6 @@ _No NematodeBench submissions yet._
 
 _No NematodeBench submissions yet._
 
-
 ---
 
 _Last updated: Auto-generated from benchmark submissions._
