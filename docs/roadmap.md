@@ -8,15 +8,15 @@
 
 **Horizon**: 2025-2028 (8 phases + future directions, ~3.5 years)
 
----
+______________________________________________________________________
 
 > **Disclaimer**: This roadmap describes a research program with hypotheses to be tested, not established results. Many claims about quantum advantages, biological insights, and scaling properties are research questions requiring empirical validation. Outcomes may differ significantly from projections as evidence accumulates. The adaptive decision gates throughout this document reflect our commitment to evidence-driven pivots when hypotheses are not supported by experimental results.
 
----
+______________________________________________________________________
 
 **Note**: This roadmap aims for world-class scientific impact through rigorous methodology, external validation, and transformative discoveries at the intersection of quantum computing, neuroscience, and artificial intelligence.
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
@@ -42,7 +42,7 @@
 11. [Technical Debt & Maintenance](#technical-debt--maintenance)
 12. [Conclusion](#conclusion)
 
----
+______________________________________________________________________
 
 ## Timeline Overview
 
@@ -58,7 +58,7 @@
 | **7** | Q3 - Q4 2027 | Scaling & Real-World | Large environments, neuromorphic, WormBot |
 | **8** | Q4 2027 - Q2 2028 | Universality & Impact | Cross-organism transfer, unified theory |
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -82,7 +82,7 @@ The Quantum Nematode project aims to achieve breakthrough discoveries at the int
 
 **North Star Objective**: Demonstrate that quantum computational approaches can (1) match or exceed classical methods on biologically-relevant decision tasks, (2) reveal new insights into biological neural computation, and (3) establish theoretical foundations for quantum computational neuroscience as a new interdisciplinary field, achieving world-class scientific impact.
 
----
+______________________________________________________________________
 
 ## Current State (Baseline)
 
@@ -229,7 +229,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 
 **Implication for Roadmap**: SpikingBrain is now a viable architecture for comparative analysis. Gradient-based methods (with surrogate gradients) work for spiking networks, complementing the evolution-first approach for quantum architectures.
 
----
+______________________________________________________________________
 
 ## Phase Roadmap
 
@@ -316,7 +316,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: Quantum shows no promise → Focus Phase 1+ on classical vs. spiking comparison only, document "why quantum didn't work" for publication.
 **STOP if**: No architecture generalizes to basic tasks → Re-evaluate fundamental approach.
 
----
+______________________________________________________________________
 
 ### Phase 1: Sensory & Threat Complexity (Q1-Q2 2026)
 
@@ -354,7 +354,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 4. **Oxygen Sensing System** [Conditional on thermotaxis success]
 
    - Oxygen concentration gradient fields (5-12% optimal range)
-   - Hypoxia avoidance (<5% O2) and hyperoxia avoidance (>12% O2)
+   - Hypoxia avoidance (\<5% O2) and hyperoxia avoidance (>12% O2)
    - URX/AQR/PQR neuron simulation (detect high O2)
    - BAG neuron simulation (detect low O2)
    - Multi-objective: balance food quality vs. oxygen comfort
@@ -397,7 +397,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: No architecture generalizes → Focus on hybrid approaches combining architecture strengths, or specialize architectures for specific tasks.
 **STOP if**: Sensory complexity breaks all architectures → Simplify task suite or re-examine architecture fundamentals.
 
----
+______________________________________________________________________
 
 ### Phase 2: Architecture Analysis (Q2-Q3 2026)
 
@@ -467,7 +467,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: No quantum advantage found → Reframe as "architecture comparison study" focusing on classical vs. spiking. Publish "Why Quantum Didn't Work: Lessons from Biological Navigation" as valuable negative result.
 **STOP if**: Unable to explain why any architecture works → Need better interpretability tools or simpler tasks.
 
----
+______________________________________________________________________
 
 ### Phase 3: Learning & Memory (Q3-Q4 2026)
 
@@ -549,7 +549,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: Learning doesn't improve performance → Focus on innate behavior repertoire mapping. Document "why learning didn't help" as interesting negative result.
 **STOP if**: Memory systems are too complex to implement reliably → Simplify to single timescale or remove temporal dynamics.
 
----
+______________________________________________________________________
 
 ### Phase 4: Evolution & Adaptation (Q4 2026 - Q1 2027)
 
@@ -635,7 +635,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: Evolution plateaus quickly → Focus on hand-designed architectures and learning algorithms. Document evolutionary limitations.
 **STOP if**: Evolutionary algorithms fail to converge or produce unstable results → Revisit fitness functions or population parameters.
 
----
+______________________________________________________________________
 
 ### Phase 5: Social Complexity (Q1-Q2 2027)
 
@@ -708,7 +708,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: Multi-agent complexity too high or unstable → Continue with single-agent complexity (deeper sensory integration, longer-horizon planning).
 **STOP if**: Infrastructure can't handle ≥3 agents → Re-architect for scalability before proceeding.
 
----
+______________________________________________________________________
 
 ### Phase 6: Quantum Frontiers (Q2-Q3 2027)
 
@@ -781,7 +781,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: Hardware too noisy for useful computation → Focus on quantum-inspired classical algorithms (variational methods, evolution strategies applied to classical nets).
 **STOP if**: No theoretical or empirical quantum advantage after extensive testing → Conclude quantum not suitable for this domain, publish comprehensive negative result.
 
----
+______________________________________________________________________
 
 ### Phase 7: Scaling & Real-World (Q3-Q4 2027)
 
@@ -857,7 +857,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PIVOT if**: Sim-to-real transfer fails → Focus on simulation-only insights, theoretical contributions. Still valuable without embodiment.
 **STOP if**: Scalability analysis shows fundamental barriers to larger systems → Document limits, focus on C. elegans-scale insights only.
 
----
+______________________________________________________________________
 
 ### Phase 8: Universality & Impact (Q4 2027 - Q2 2028)
 
@@ -936,7 +936,7 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **PARTIAL SUCCESS if**: Transfer works but principles are domain-specific → Still valuable contribution to computational neuroscience and quantum ML.
 **REFRAME if**: Universality doesn't hold → Focus on C. elegans-specific insights as deep case study. Publish comprehensive analysis of "when quantum works and why."
 
----
+______________________________________________________________________
 
 ## Adaptive Roadmap Philosophy
 
@@ -983,7 +983,7 @@ Several critical deliverables depend on external partners. Fallback strategies:
 
 This adaptive approach maximizes the probability of **publishable, impactful outcomes** regardless of whether quantum provides advantages, while maintaining the ambitious north star goal of mapping C. elegans behaviors and extracting universal principles of biological intelligence.
 
----
+______________________________________________________________________
 
 ## Ongoing Validation Milestones
 
@@ -1028,7 +1028,7 @@ Throughout all phases, the following validation activities occur continuously:
 
 **Partnerships**: WormBot project, swarm robotics labs, soft robotics groups
 
----
+______________________________________________________________________
 
 ## Success Metrics Framework
 
@@ -1136,7 +1136,7 @@ The project tracks success across 6 primary dimensions:
 - **Phase 3**: Memory mechanisms interpretable and matched to biological substrates
 - **Phase 8**: Universal principles extractable from interpretability analysis
 
----
+______________________________________________________________________
 
 ## Success Levels
 
@@ -1169,7 +1169,7 @@ The project defines three levels of success, each representing valuable scientif
 - Sim-to-real transfer successful on embodied platform
 - External research groups actively building on project tools and benchmarks
 
----
+______________________________________________________________________
 
 ## Relationship to External Projects
 
@@ -1248,7 +1248,7 @@ The project defines three levels of success, each representing valuable scientif
 - Novel analysis tools (interpretability, mechanism discovery)
 - High-impact co-authored publications
 
----
+______________________________________________________________________
 
 ## Future Directions
 
@@ -1284,7 +1284,7 @@ Beyond Phase 8 (2027+), potential research directions include:
 - Theoretical foundations: When does quantum help? (BQP vs. P for AI tasks)
 - Hardware roadmap: What quantum devices enable practical AI applications?
 
----
+______________________________________________________________________
 
 ## Technical Debt & Maintenance
 
@@ -1343,7 +1343,7 @@ The following items are tracked as ongoing maintenance, not blocking new phases:
    - Experiment templates for common tasks
    - Configuration validation improvements
 
----
+______________________________________________________________________
 
 ## Conclusion
 

@@ -319,7 +319,7 @@ Step 2: Agent at (15,12) requests state
 
 ### Scalability Limits
 
-- **Tested**: 100×100 grid, 50 foods → <1ms per step
+- **Tested**: 100×100 grid, 50 foods → \<1ms per step
 - **Maximum reasonable**: 200×200 grid, 100 foods → ~5ms per step (still interactive)
 - **Bottleneck**: Gradient superposition is O(n_foods) per state query
 

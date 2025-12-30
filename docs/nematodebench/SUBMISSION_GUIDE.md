@@ -140,6 +140,7 @@ Summary:
 ## Step 7: Submit Pull Request
 
 1. Fork the main repository (if not already done)
+
 2. Stage the benchmark, leaderboard, and artifact files:
 
    ```bash
@@ -149,6 +150,7 @@ Summary:
    ```
 
 3. Create a pull request with:
+
    - Title: `[NematodeBench] <Brain> on <Task> - <Score>`
    - Description including your approach and findings
 

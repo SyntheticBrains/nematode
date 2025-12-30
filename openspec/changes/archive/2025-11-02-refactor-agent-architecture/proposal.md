@@ -33,7 +33,7 @@ The current `QuantumNematodeAgent` implementation has become a maintenance burde
 
 - All existing tests pass without modification
 - Test coverage for agent module increases from ~0% to >70%
-- `run_episode` and `run_manyworlds_mode` methods reduced to <50 lines each (orchestration only)
+- `run_episode` and `run_manyworlds_mode` methods reduced to \<50 lines each (orchestration only)
 - No duplicated logic between episode execution modes
 - Pyright and ruff compliance maintained
 

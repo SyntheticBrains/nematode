@@ -340,7 +340,7 @@ if args.track_experiment or args.save_benchmark:
 - **Simplicity**: No external dependencies, works everywhere
 - **Git-friendly**: Easy to diff, review in PRs
 - **Portable**: Easy to share, archive, analyze with any tool
-- **Sufficient scale**: Expect <1000 experiments, <100 benchmarks
+- **Sufficient scale**: Expect \<1000 experiments, \<100 benchmarks
 - **Transparent**: Users can inspect/edit files directly
 
 #### Why Two-Tier System?

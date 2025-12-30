@@ -112,7 +112,7 @@ Benchmark categories SHALL follow consistent naming convention indicating enviro
 - **WHEN** category names are reviewed
 - **THEN** predator categories SHALL clearly indicate the "predator" feature
 - **AND** SHALL be easily distinguishable from non-predator equivalents
-- **AND** SHALL sort logically in alphabetical listings (dynamic_predator_* grouped together)
+- **AND** SHALL sort logically in alphabetical listings (dynamic_predator\_\* grouped together)
 
 ### Requirement: Benchmark Metadata for Predator Configuration
 

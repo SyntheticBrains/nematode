@@ -408,7 +408,7 @@ PPO's clipped objective provides built-in learning rate adaptivity. Adding an LR
 - Compare learning curves (PPO vs MLP vs Spiking)[^1]
 - Test on medium/large environments
 
-[^1]: Learning curve comparison requires per-episode logging (success, reward, steps per run) which isn't currently persisted. Would need to add `run_history` array to experiment JSON output.
+\[^1\]: Learning curve comparison requires per-episode logging (success, reward, steps per run) which isn't currently persisted. Would need to add `run_history` array to experiment JSON output.
 
 ## Data References
 

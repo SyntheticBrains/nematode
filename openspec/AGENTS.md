@@ -407,7 +407,7 @@ notifications/spec.md
 
 ### Simplicity First
 
-- Default to <100 lines of new code
+- Default to \<100 lines of new code
 - Single-file implementations until proven insufficient
 - Avoid frameworks without clear justification
 - Choose boring, proven patterns

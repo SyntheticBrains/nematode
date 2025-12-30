@@ -76,7 +76,7 @@ The configuration system SHALL validate dynamic environment parameters for logic
 - **GIVEN** a dynamic environment configuration
 - **WHEN** grid size is validated
 - **THEN** both width and height SHALL be >= 10
-- **AND** both SHALL be <= 200 (performance limit)
+- **AND** both SHALL be \<= 200 (performance limit)
 - **AND** if grid size > 100×100, SHALL log performance warning
 
 #### Scenario: Satiety Balance Validation

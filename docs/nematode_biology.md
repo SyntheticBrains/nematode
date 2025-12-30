@@ -2,7 +2,7 @@
 
 This document provides a comprehensive overview of *Caenorhabditis elegans* (C. elegans) sensory systems, navigation strategies, and survival behaviors that inform our computational simulation. All statements are backed by peer-reviewed scientific research.
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
@@ -23,7 +23,7 @@ This document provides a comprehensive overview of *Caenorhabditis elegans* (C. 
 11. [Implications for Simulation](#implications-for-simulation)
 12. [References](#references)
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -31,7 +31,7 @@ This document provides a comprehensive overview of *Caenorhabditis elegans* (C. 
 
 C. elegans lacks visual systems entirely and relies on chemical, thermal, mechanical, and oxygen sensing to navigate its environment and locate food (primarily bacteria) while avoiding predators and unfavorable conditions [2].
 
----
+______________________________________________________________________
 
 ## Sensory Systems
 
@@ -71,7 +71,7 @@ Recent research (2024) demonstrates that:
 - [6] Suryawinata L, et al. (2024). *Scientific Reports* 14(1):3046
 - [7] Saeki S, et al. (2020). *iScience* 23(1):100787
 
----
+______________________________________________________________________
 
 ### Mechanosensation
 
@@ -103,7 +103,7 @@ Touch sensitivity allows C. elegans to:
 - [10] Chatzigeorgiou M, et al. (2010). *Nature Communications* 1:308
 - [11] Maguire SM, et al. (2011). *Current Biology* 21(17):1445-1455
 
----
+______________________________________________________________________
 
 ### Thermotaxis
 
@@ -136,7 +136,7 @@ C. elegans exhibits remarkable thermosensory abilities, navigating thermal gradi
 - [16] Wasserman SM, et al. (2011). *Journal of Neuroscience* 31(8):2841-2851
 - [17] Biron D, et al. (2006). *Neuron* 49(6):833-844
 
----
+______________________________________________________________________
 
 ### Oxygen Sensing
 
@@ -145,7 +145,7 @@ C. elegans displays sophisticated oxygen-sensing behaviors, preferring moderate 
 #### Oxygen-Sensing Neurons
 
 - **URX, AQR, PQR**: Primary O2-sensing neurons that detect hyperoxia (>12% O2) [18]
-- **BAG neurons**: Detect hypoxia (<5% O2) and mediate avoidance of low oxygen [19]
+- **BAG neurons**: Detect hypoxia (\<5% O2) and mediate avoidance of low oxygen [19]
 
 #### Molecular Mechanism
 
@@ -166,7 +166,7 @@ C. elegans displays sophisticated oxygen-sensing behaviors, preferring moderate 
 - [21] Couto A, et al. (2013). *Current Biology* 23(6):R233-R234
 - [22] Busch KE, et al. (2012). *Current Biology* 22(21):1981-1989
 
----
+______________________________________________________________________
 
 ## Foraging Strategies
 
@@ -215,7 +215,7 @@ C. elegans foraging is near-optimal in terms of information gain, with animals a
 - [27] McDiarmid TA, et al. (2023). *eLife* 12:RP104972
 - [28] Calhoun AJ, et al. (2014). *eLife* 3:e04220
 
----
+______________________________________________________________________
 
 ## Predator Detection and Avoidance
 
@@ -294,7 +294,7 @@ C. elegans detects multiple predator-related chemical signals:
 
 #### 3. Predation-Induced Quiescence
 
-- **A. oligospora predation** induces rapid quiescence in C. elegans [41]:
+- **A. oligospora predation** induces rapid quiescence in C. elegans \[41\]:
   - Cessation of pharyngeal pumping (feeding stops)
   - Cessation of locomotion
   - Regulated by sleep-promoting neurons ALA and RIS
@@ -340,7 +340,7 @@ Predator avoidance competes with foraging drives, requiring the worm to balance:
 - [42] Ha HI, et al. (2010). *Science* 330(6004):1012-1015
 - [43] Churgin MA, et al. (2020). *Genetics* 214(3):729-737
 
----
+______________________________________________________________________
 
 ## Learning and Memory
 
@@ -404,7 +404,7 @@ Despite having only 302 neurons, C. elegans exhibits multiple forms of learning 
 
 #### Protein Synthesis Requirements
 
-Two distinct roles of protein translation in memory [51]:
+Two distinct roles of protein translation in memory \[51\]:
 
 1. **During training**: Required to extend memory beyond 30 minutes
 2. **After training**: Required for proper memory decay (forgetting) - ensures memories fade appropriately
@@ -438,7 +438,7 @@ Learning and memory allow C. elegans to:
 - [51] Yin JCP, et al. (1994). *Cell* 79(1):49-58
 - [52] Posner R, et al. (2023). *Nature Communications* 14:4232
 
----
+______________________________________________________________________
 
 ## Social Behaviors and Communication
 
@@ -504,7 +504,7 @@ While C. elegans does not exhibit complex cooperation like eusocial insects, som
 - [57] Golden JW, Riddle DL. (1984). The *Caenorhabditis elegans* dauer larva: developmental effects of pheromone, food, and temperature. *Developmental Biology* 102(2):368-378
 - [58] Leighton DH, et al. (2014). Experience with sex shapes the response to sex. *Current Biology* 24(7):R296-R297
 
----
+______________________________________________________________________
 
 ## Reproduction and Development
 
@@ -568,7 +568,7 @@ C. elegans exists as two sexes: **hermaphrodites** (self-fertilizing, XX) and **
 - [63] Kenyon C, et al. (1993). A *C. elegans* mutant that lives twice as long as wild type. *Nature* 366(6454):461-464
 - [64] Denver DR, et al. (2009). A genome-wide view of *Caenorhabditis elegans* base-substitution mutation processes. *Proceedings of the National Academy of Sciences* 106(38):16310-16314
 
----
+______________________________________________________________________
 
 ## Evolution and Adaptation
 
@@ -628,7 +628,7 @@ Quantitative trait locus (QTL) mapping reveals genetic basis of behavioral varia
 - [69] Morran LT, et al. (2011). Running with the Red Queen: host-parasite coevolution selects for biparental sex. *Science* 333(6039):216-218
 - [70] Volkers RJ, et al. (2013). Gene-environment and protein-degradation signatures characterize genomic and phenotypic diversity in wild *Caenorhabditis elegans* populations. *BMC Biology* 11:93
 
----
+______________________________________________________________________
 
 ## Cellular-Level Considerations
 
@@ -653,7 +653,7 @@ The complete synaptic connectivity of C. elegans' 302 neurons has been mapped at
 
 ### Neurotransmitter Systems
 
-C. elegans uses classical neurotransmitters and neuropeptides [71]:
+C. elegans uses classical neurotransmitters and neuropeptides \[71\]:
 
 - **Glutamate**: Excitatory neurotransmission (e.g., sensory → interneuron)
 - **GABA**: Inhibitory neurotransmission (motor coordination)
@@ -709,7 +709,7 @@ A future direction could combine:
 - [71] Chase DL, Koelle MR. (2007). Biogenic amine neurotransmitters in *C. elegans*. *WormBook*. doi:10.1895/wormbook.1.132.1
 - [72] Goodman MB, et al. (1998). Active currents regulate sensitivity and dynamic range in *C. elegans* neurons. *Neuron* 20(4):763-772
 
----
+______________________________________________________________________
 
 ## Integration with External Projects
 
@@ -775,7 +775,7 @@ Understanding how Quantum Nematode relates to other C. elegans modeling efforts 
 - **Data Sharing**: Labs provide behavioral datasets; Quantum Nematode provides analysis tools
 - **Iterative Refinement**: Experimental results → model updates → new predictions
 
----
+______________________________________________________________________
 
 ## Implications for Simulation
 
@@ -804,7 +804,7 @@ To accurately simulate C. elegans brain function and behavior, our computational
 
 - **Oxygen fields**: Spatial oxygen concentration gradients
 - **Preference range**: Optimal zone at 5-12% O2
-- **Avoidance zones**: Hypoxic (<5%) and hyperoxic (>12%) regions
+- **Avoidance zones**: Hypoxic (\<5%) and hyperoxic (>12%) regions
 
 ### 5. Foraging Strategies
 
@@ -847,7 +847,7 @@ Real C. elegans must balance multiple, sometimes conflicting goals:
 
 Implementing these multi-objective pressures creates more biologically realistic behavior and challenges the learning system appropriately.
 
----
+______________________________________________________________________
 
 ## References
 
@@ -957,7 +957,7 @@ Implementing these multi-objective pressures creates more biologically realistic
 
 52. Posner R, et al. (2023). Inheritance of associative memories and acquired cellular changes in *C. elegans*. *Nature Communications* 14:4232.
 
----
+______________________________________________________________________
 
 ## Additional Resources
 
@@ -978,7 +978,7 @@ Implementing these multi-objective pressures creates more biologically realistic
 
 - Schulenburg H, Félix MA. (2017). The natural biotic environment of *Caenorhabditis elegans*. *Genetics* 206(1):55-86.
 
----
+______________________________________________________________________
 
 **Document Version:** 3.0
 **Last Updated:** December 2025

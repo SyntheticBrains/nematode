@@ -118,7 +118,7 @@
 - [x] 10.10 Tests for backward compatibility (predators disabled by default)
 - [x] 10.11 Tests for predator metrics tracking (encounters, evasions, deaths)
 - [x] 10.12 Tests for benchmark categorization with predators
-- [x] 10.13 Performance tests ensuring <100ms step time with predators enabled (avg 0.14ms on 100x100 grid with 5 predators)
+- [x] 10.13 Performance tests ensuring \<100ms step time with predators enabled (avg 0.14ms on 100x100 grid with 5 predators)
 
 ## 11. Documentation
 
@@ -139,7 +139,7 @@
 - [x] 12.4 Verify backward compatibility: run existing configs unchanged (mlp_dynamic_small.yml verified)
 - [x] 12.5 Verify predator-enabled configs run successfully (mlp_dynamic_small_predators.yml verified)
 - [x] 12.6 Validate OpenSpec change with `openspec validate add-predator-evasion --strict`
-- [x] 12.7 Performance benchmark: confirm <100ms step time on 100×100 grid with 5 predators (avg 0.14ms - 700x faster than required)
+- [x] 12.7 Performance benchmark: confirm \<100ms step time on 100×100 grid with 5 predators (avg 0.14ms - 700x faster than required)
 - [x] 12.8 End-to-end test: train agent with predators for 100 episodes, verify metrics tracking
 - [x] 12.9 Visual inspection: verify predator rendering in both emoji and ASCII themes (verified spider emoji and # symbol)
 - [x] 12.10 Configuration validation: test invalid movement patterns produce clear errors (Pydantic validation added)

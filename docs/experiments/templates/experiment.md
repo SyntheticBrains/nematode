@@ -1,4 +1,4 @@
-# [EXPERIMENT_NUMBER]: [Title]
+# \[EXPERIMENT_NUMBER\]: [Title]
 
 **Status**: `active` | `completed` | `abandoned`
 

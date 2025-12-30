@@ -112,8 +112,8 @@ ModularBrain                              PPOBrain
 |------|-------------|---------------|---------------|
 | Comfort | 15-25°C | Small reward | None |
 | Discomfort | 10-15°C, 25-30°C | Penalty | None |
-| Danger | <10°C, >30°C | Larger penalty | HP damage |
-| Lethal | <5°C, >35°C | Largest penalty | Rapid HP drain |
+| Danger | \<10°C, >30°C | Larger penalty | HP damage |
+| Lethal | \<5°C, >35°C | Largest penalty | Rapid HP drain |
 
 **Why**:
 

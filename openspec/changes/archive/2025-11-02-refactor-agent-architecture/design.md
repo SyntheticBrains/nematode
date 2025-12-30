@@ -115,6 +115,7 @@ class ManyworldsEpisodeRunner:
 **StepProcessor**
 
 - **Responsibility**: Execute a single simulation step
+
 - **Public API**:
 
   ```python
@@ -132,6 +133,7 @@ class ManyworldsEpisodeRunner:
 **FoodConsumptionHandler**
 
 - **Responsibility**: Handle all food-related logic
+
 - **Public API**:
 
   ```python
@@ -146,6 +148,7 @@ class ManyworldsEpisodeRunner:
 **SatietyManager**
 
 - **Responsibility**: Manage hunger/satiety system
+
 - **Public API**:
 
   ```python
@@ -159,6 +162,7 @@ class ManyworldsEpisodeRunner:
 **MetricsTracker**
 
 - **Responsibility**: Track and calculate episode metrics
+
 - **Public API**:
 
   ```python
@@ -172,6 +176,7 @@ class ManyworldsEpisodeRunner:
 **EpisodeRenderer**
 
 - **Responsibility**: Handle all visualization logic
+
 - **Public API**:
 
   ```python

@@ -9,7 +9,7 @@ The system SHALL provide a TemperatureField class that defines spatial temperatu
 - **GIVEN** a TemperatureField with `base_temperature: 20.0`, `gradient_direction: 0.0`, `gradient_strength: 0.5`
 - **WHEN** temperature is queried at position (10, 5) in a 20x20 grid
 - **THEN** temperature SHALL be computed as: `base + x * strength * cos(direction) + y * strength * sin(direction)`
-- **AND** position (10, 5) SHALL have temperature approximately 25.0°C (20 + 10*0.5)
+- **AND** position (10, 5) SHALL have temperature approximately 25.0°C (20 + 10\*0.5)
 
 #### Scenario: Temperature Hot Spot
 
@@ -80,14 +80,14 @@ The system SHALL apply rewards, penalties, and health effects based on temperatu
 
 #### Scenario: Danger Zone Damage
 
-- **GIVEN** thermotaxis and health system enabled with danger zones <10°C and >30°C
+- **GIVEN** thermotaxis and health system enabled with danger zones \<10°C and >30°C
 - **WHEN** agent is at a position with temperature 8°C
 - **THEN** a danger penalty SHALL be applied (configurable, default -0.3)
 - **AND** HP damage SHALL be applied (configurable, default -2 HP per step)
 
 #### Scenario: Lethal Zone Rapid Damage
 
-- **GIVEN** thermotaxis and health system enabled with lethal zones <5°C and >35°C
+- **GIVEN** thermotaxis and health system enabled with lethal zones \<5°C and >35°C
 - **WHEN** agent is at a position with temperature 3°C
 - **THEN** rapid HP damage SHALL be applied (configurable, default -10 HP per step)
 - **AND** this SHALL likely cause HP depletion within a few steps

@@ -87,8 +87,11 @@ The system SHALL support multiple predator behavior types including stationary t
   ```
 
 - **WHEN** the environment initializes
+
 - **THEN** exactly 2 stationary predators SHALL be spawned
+
 - **AND** exactly 1 pursuit predator SHALL be spawned
+
 - **AND** each predator SHALL behave according to its type
 
 #### Scenario: Predator Type Gradient Contribution
@@ -153,7 +156,7 @@ The system SHALL render temperature zones using background colors in themes that
 - **GIVEN** thermotaxis enabled and Rich theme selected
 - **WHEN** the environment is rendered
 - **THEN** cells SHALL have background colors based on temperature:
-  - Lethal cold (<5°C): blue background
+  - Lethal cold (\<5°C): blue background
   - Danger cold (5-10°C): cyan background
   - Discomfort cold (10-15°C): light cyan background
   - Comfort (15-25°C): white background (default)

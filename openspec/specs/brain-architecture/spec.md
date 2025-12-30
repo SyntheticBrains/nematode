@@ -65,7 +65,7 @@ The SpikingBrain SHALL encode continuous environmental states as constant curren
 **When** preprocessing the state
 **Then** the system SHALL compute gradient strength normalized to [0, 1]
 **And** SHALL compute relative angle: `(gradient_direction - agent_facing_angle + π) mod 2π - π`
-**And** SHALL normalize relative angle to [-1, 1]: `rel_angle / π`
+**And** SHALL normalize relative angle to \[-1, 1\]: `rel_angle / π`
 **And** SHALL produce feature vector: `[grad_strength, rel_angle_normalized]`
 **And** SHALL match MLPBrain preprocessing exactly
 

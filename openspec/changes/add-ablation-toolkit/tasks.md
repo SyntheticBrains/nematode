@@ -4,7 +4,7 @@
 
 Implementation tasks for systematic ablation analysis framework. This can be developed in parallel with other Phase 1 proposals.
 
----
+______________________________________________________________________
 
 ## 1. Ablation Framework
 
@@ -43,7 +43,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 
 **Validation**: Framework can enumerate and run ablation conditions
 
----
+______________________________________________________________________
 
 ## 2. ModularBrain Ablation
 
@@ -68,7 +68,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 
 **Validation**: Ablated ModularBrain runs without errors, produces different behavior
 
----
+______________________________________________________________________
 
 ## 3. PPOBrain Ablation
 
@@ -92,7 +92,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 
 **Validation**: Ablated PPOBrain runs without errors, produces different behavior
 
----
+______________________________________________________________________
 
 ## 4. Feature Importance Analysis
 
@@ -125,7 +125,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 
 **Validation**: Importance scores computed correctly for test cases
 
----
+______________________________________________________________________
 
 ## 5. Automated Reporting
 
@@ -177,7 +177,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 
 **Validation**: Report generates correctly with all sections
 
----
+______________________________________________________________________
 
 ## 6. CLI Integration
 
@@ -206,7 +206,7 @@ python scripts/run_ablation.py \
 
 **Validation**: CLI runs ablation study end-to-end
 
----
+______________________________________________________________________
 
 ## 7. Documentation
 
@@ -222,7 +222,7 @@ python scripts/run_ablation.py \
 - [ ] Guidance for publication-ready ablation studies
 - [ ] Recommendations for statistical significance
 
----
+______________________________________________________________________
 
 ## Dependencies
 
@@ -244,7 +244,7 @@ python scripts/run_ablation.py \
 
 Work streams 2 and 3 can proceed in parallel after framework is complete.
 
----
+______________________________________________________________________
 
 ## Success Criteria
 

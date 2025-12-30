@@ -6,7 +6,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 
 **Prerequisites:** Complete `add-multi-sensory-environment` first (BrainParams extensions, health system, reward config).
 
----
+______________________________________________________________________
 
 ## 1. TemperatureField Class
 
@@ -39,7 +39,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 
 **Validation**: Unit tests for temperature calculation and zone classification
 
----
+______________________________________________________________________
 
 ## 2. Environment Integration
 
@@ -73,7 +73,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 
 **Validation**: Integration test with agent navigating temperature gradient
 
----
+______________________________________________________________________
 
 ## 3. Feature Extraction
 
@@ -107,7 +107,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 
 **Validation**: Unit tests for feature extraction with various temperature values
 
----
+______________________________________________________________________
 
 ## 4. Benchmarks and Validation
 
@@ -150,7 +150,7 @@ thermotaxis/                    # Temperature-aware tasks
 
 **Validation**: Run benchmarks with PPO and ModularBrain
 
----
+______________________________________________________________________
 
 ## 5. Visualization
 
@@ -168,7 +168,7 @@ thermotaxis/                    # Temperature-aware tasks
 
 **Validation**: Visual inspection of temperature rendering in Rich theme
 
----
+______________________________________________________________________
 
 ## 6. Documentation
 
@@ -184,7 +184,7 @@ thermotaxis/                    # Temperature-aware tasks
 - [ ] Document AFD neuron modeling approach
 - [ ] Add to optimization methods documentation
 
----
+______________________________________________________________________
 
 ## Dependencies
 
@@ -206,7 +206,7 @@ add-multi-sensory-environment (MUST be complete)
 
 All tasks in this proposal depend on `add-multi-sensory-environment` being complete first.
 
----
+______________________________________________________________________
 
 ## Success Criteria
 

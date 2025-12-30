@@ -221,7 +221,7 @@ environment:
 - Reuse existing gradient infrastructure (already optimized)
 - Predator gradients calculated same way as food gradients
 - Limit predator count in initial configurations (≤5)
-- Performance target: <100ms per step maintained for 100×100 grids
+- Performance target: \<100ms per step maintained for 100×100 grids
 
 **Monitoring:** Add timing instrumentation to gradient calculation; fail build if step time exceeds threshold.
 
@@ -240,7 +240,7 @@ environment:
 1. Unit tests for predator mechanics
 2. Integration tests for gradient superposition
 3. Backward compatibility tests (existing configs)
-4. Performance benchmarks (ensure <100ms step time)
+4. Performance benchmarks (ensure \<100ms step time)
 
 ### Phase 3: Configuration & Examples (Week 3)
 
