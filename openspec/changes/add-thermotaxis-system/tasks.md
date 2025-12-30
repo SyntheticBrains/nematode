@@ -71,16 +71,20 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 ## 3. Feature Extraction
 
 ### 3.1 Thermotaxis Features Implementation
+
+> **Note**: Uses spatial gradient sensing (matches chemotaxis pattern). Temporal sensing (biologically accurate) to be added when memory systems are implemented per roadmap.
+
 - [ ] Implement `thermotaxis_features(params: BrainParams) -> dict[RotationAxis, float]`
 - [ ] RX: Temperature deviation from cultivation temperature
   - `temp_deviation = (current_temp - cultivation_temp) / 15.0` (normalized)
   - Scale to [-π/2, π/2]
-- [ ] RY: Relative angle to temperature gradient
+- [ ] RY: Relative angle to temperature gradient (spatial)
   - Egocentric (relative to agent facing direction)
   - Scale to [-π/2, π/2]
 - [ ] RZ: Temperature gradient strength
   - `tanh(gradient_magnitude) * π/2`
 - [ ] Handle None values gracefully (return zeros)
+- [ ] Add docstring note documenting spatial vs temporal sensing trade-off
 
 ### 3.2 Module Registration
 - [ ] Add `ModuleName.THERMOTAXIS` to enum (if not already present)

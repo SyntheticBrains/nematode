@@ -36,10 +36,12 @@ Integrate temperature sensing into DynamicForagingEnvironment:
 
 Implement real `thermotaxis_features()` in modules.py:
 - RX: Deviation from cultivation temperature (Tc)
-- RY: Direction to move toward preferred temperature
+- RY: Direction to move toward preferred temperature (spatial gradient)
 - RZ: Temperature gradient strength
 - AFD neuron-inspired computation
 - Scale to quantum gate ranges [-π/2, π/2]
+
+**Note on Biological Accuracy**: Real C. elegans thermotaxis uses temporal comparison (sensing temperature change over time as the worm moves) rather than direct spatial gradient sensing. The spatial gradient approach used here is computationally equivalent for stateless brains and matches the existing chemotaxis pattern. When memory systems are added to the architecture (roadmap item), temporal sensing features should be implemented as a more biologically accurate alternative.
 
 ### 4. Thermotaxis Benchmarks
 
