@@ -12,17 +12,17 @@ The CLI argument parser SHALL accept "spiking" as a valid brain type option.
 
 #### Scenario: Spiking Brain Selection
 
-**Given** a user wants to run simulation with spiking neural network\
-**When** they execute `python scripts/run_simulation.py --brain spiking`\
-**Then** the CLI SHALL parse "spiking" as a valid brain type\
-**And** SHALL pass the selection to the brain factory\
+**Given** a user wants to run simulation with spiking neural network
+**When** they execute `python scripts/run_simulation.py --brain spiking`
+**Then** the CLI SHALL parse "spiking" as a valid brain type
+**And** SHALL pass the selection to the brain factory
 **And** SHALL not raise validation errors
 
 #### Scenario: Brain Type Help Text
 
-**Given** a user requests help for brain type options\
-**When** they execute `python scripts/run_simulation.py --help`\
-**Then** the help text SHALL list "spiking" among valid brain types\
+**Given** a user requests help for brain type options
+**When** they execute `python scripts/run_simulation.py --help`
+**Then** the help text SHALL list "spiking" among valid brain types
 **And** SHALL provide brief description of spiking neural network approach
 
 ### Requirement: Configuration Compatibility
@@ -31,17 +31,17 @@ The CLI SHALL support loading spiking brain configurations through existing conf
 
 #### Scenario: Spiking Configuration Loading
 
-**Given** a YAML configuration file with spiking brain parameters\
-**When** loaded via `--config spiking_static_medium.yml`\
-**Then** the CLI SHALL parse the configuration\
-**And** SHALL validate spiking-specific parameters\
+**Given** a YAML configuration file with spiking brain parameters
+**When** loaded via `--config spiking_static_medium.yml`
+**Then** the CLI SHALL parse the configuration
+**And** SHALL validate spiking-specific parameters
 **And** SHALL initialize the spiking brain with specified parameters
 
 #### Scenario: Brain Type Override
 
-**Given** a configuration file specifies a different brain type\
-**When** user provides `--brain spiking` CLI argument\
-**Then** the CLI argument SHALL override the configuration file\
+**Given** a configuration file specifies a different brain type
+**When** user provides `--brain spiking` CLI argument
+**Then** the CLI argument SHALL override the configuration file
 **And** SHALL use spiking brain regardless of config file brain type
 
 ### Requirement: Error Handling

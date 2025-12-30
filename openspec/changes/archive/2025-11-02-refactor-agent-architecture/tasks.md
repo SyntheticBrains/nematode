@@ -157,7 +157,7 @@
 
 ## Phase 4: Integration - Refactor QuantumNematodeAgent ✅ COMPLETE
 
-### Task 4.1: Refactor QuantumNematodeAgent.__init__ ✅ COMPLETE (SIMPLIFIED)
+### Task 4.1: Refactor QuantumNematodeAgent.`__init__` ✅ COMPLETE (SIMPLIFIED)
 
 - [x] Update `__init__` to instantiate component classes
 - [x] Create SatietyManager with satiety_config
