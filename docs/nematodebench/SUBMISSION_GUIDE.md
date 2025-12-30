@@ -141,11 +141,13 @@ Summary:
 
 1. Fork the main repository (if not already done)
 2. Stage the benchmark, leaderboard, and artifact files:
+
    ```bash
    git add benchmarks/<category>/<submission_id>.json
    git add artifacts/benchmarks/<submission_id>/
    git add README.md docs/nematodebench/LEADERBOARD.md
    ```
+
 3. Create a pull request with:
    - Title: `[NematodeBench] <Brain> on <Task> - <Score>`
    - Description including your approach and findings

@@ -116,6 +116,7 @@ class ManyworldsEpisodeRunner:
 
 - **Responsibility**: Execute a single simulation step
 - **Public API**:
+
   ```python
   def process_step(
       self,
@@ -125,46 +126,54 @@ class ManyworldsEpisodeRunner:
       previous_reward: float,
   ) -> StepResult
   ```
+
 - **Benefits**: Testable without full episode, reusable across episode modes
 
 **FoodConsumptionHandler**
 
 - **Responsibility**: Handle all food-related logic
 - **Public API**:
+
   ```python
   def check_and_consume_food(
       self,
       agent_pos: tuple[int, int],
   ) -> FoodConsumptionResult
   ```
+
 - **Benefits**: Encapsulates environment-specific food logic
 
 **SatietyManager**
 
 - **Responsibility**: Manage hunger/satiety system
 - **Public API**:
+
   ```python
   def decay(self, amount: float) -> float
   def restore(self, amount: float) -> float
   def is_starved(self) -> bool
   ```
+
 - **Benefits**: Testable state machine, clear hunger mechanics
 
 **MetricsTracker**
 
 - **Responsibility**: Track and calculate episode metrics
 - **Public API**:
+
   ```python
   def track_step(self, step_data: StepData) -> None
   def track_food_collection(self, efficiency: float) -> None
   def calculate_metrics(self, total_runs: int) -> PerformanceMetrics
   ```
+
 - **Benefits**: Clean separation of business logic from metrics
 
 **EpisodeRenderer**
 
 - **Responsibility**: Handle all visualization logic
 - **Public API**:
+
   ```python
   def render_if_needed(
       self,
@@ -174,6 +183,7 @@ class ManyworldsEpisodeRunner:
       show_last_frame_only: bool,
   ) -> None
   ```
+
 - **Benefits**: Rendering logic doesn't pollute episode execution
 
 #### 3. Dependency Injection

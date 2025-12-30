@@ -95,6 +95,7 @@ ModularBrain                              PPOBrain
 - Documents which neural circuits are being modeled
 
 **Mapping**:
+
 | Current | New | Neurons |
 |---------|-----|---------|
 | appetitive_features | food_chemotaxis_features | AWC, AWA |
@@ -229,6 +230,7 @@ ablation/           # Controlled studies
 - Enables rich multi-objective scenarios (manage hunger, avoid damage, seek food)
 
 **Behavior**:
+
 | System | Decreases From | Increases From | Termination |
 |--------|---------------|----------------|-------------|
 | Satiety | Time decay (every step) | Eating food | STARVATION |
