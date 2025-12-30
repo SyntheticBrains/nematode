@@ -21,6 +21,8 @@ class TerminationReason(str, Enum):
         Agent's satiety reached zero (DynamicForagingEnvironment).
     PREDATOR : str
         Agent was caught by a predator (DynamicForagingEnvironment with predators enabled).
+    HEALTH_DEPLETED : str
+        Agent's HP reached zero from accumulated damage (health system enabled).
     MAX_STEPS : str
         Agent reached maximum allowed steps.
     INTERRUPTED : str
@@ -31,6 +33,7 @@ class TerminationReason(str, Enum):
     COMPLETED_ALL_FOOD = "completed_all_food"
     STARVED = "starved"
     PREDATOR = "predator"
+    HEALTH_DEPLETED = "health_depleted"
     MAX_STEPS = "max_steps"
     INTERRUPTED = "interrupted"
 
@@ -176,6 +179,8 @@ class PerformanceMetrics(BaseModel):
         Total number of predator encounters across all runs.
     total_predator_deaths : int
         Total number of runs that ended due to predator collision.
+    total_health_depleted : int
+        Total number of runs that ended due to HP reaching zero (health system).
     total_successful_evasions : int
         Total number of successful predator evasions across all runs.
     total_max_steps : int
@@ -198,6 +203,7 @@ class PerformanceMetrics(BaseModel):
     total_starved: int = 0
     total_predator_encounters: int = 0
     total_predator_deaths: int = 0
+    total_health_depleted: int = 0
     total_successful_evasions: int = 0
     total_max_steps: int = 0
     total_interrupted: int = 0
