@@ -1,0 +1,39 @@
+{
+  // Line length - disabled as many docs exceed 80 chars
+  "MD013": false,
+
+  // Blank lines around headings - too many violations (1297)
+  "MD022": false,
+
+  // Duplicate headings - allowed if not siblings (e.g., same heading in different sections)
+  "MD024": {
+    "siblings_only": true
+  },
+
+  // Ordered list prefix style (1/1/1 vs 1/2/3) - existing docs use mixed styles
+  "MD029": false,
+
+  // Blank lines around fenced code blocks
+  "MD031": false,
+
+  // Blank lines around lists - too many violations (1146)
+  "MD032": false,
+
+  // Inline HTML - some docs use HTML intentionally
+  "MD033": false,
+
+  // Emphasis used instead of heading - intentional style in some docs
+  "MD036": false,
+
+  // Spaces inside emphasis markers - false positives from math operators (e.g., 0.5 * sum)
+  "MD037": false,
+
+  // First line should be top-level heading - spec files start with "## ADDED"
+  "MD041": false,
+
+  // Blank lines around tables
+  "MD058": false,
+
+  // Table column style/alignment - too strict for existing tables
+  "MD060": false
+}
