@@ -49,7 +49,9 @@ This project has complementary systems for tracking experiments:
 ## How to Use Logbooks
 
 ### Reading
+
 Each logbook follows a consistent structure:
+
 - **Objective**: What we're trying to achieve
 - **Hypothesis**: What we expected
 - **Results**: What actually happened
@@ -57,13 +59,16 @@ Each logbook follows a consistent structure:
 - **Next Steps**: Where to go from here
 
 ### Creating New Logbooks
+
 1. Copy `templates/experiment.md` to `logbooks/NNN-descriptive-name.md`
 2. Use the next sequential number
 3. Update the index table above
 4. Reference session IDs from `experiments/*.json` for reproducibility
 
 ### Linking to Auto-Tracked Data
+
 Reference specific experiments by session ID:
+
 ```markdown
 - Session: `20251209_205950` (80% success with CMA-ES)
 - Query: `python scripts/experiment_query.py show 20251209_205950`
@@ -72,11 +77,13 @@ Reference specific experiments by session ID:
 ## Key Findings Summary
 
 ### Experiment 001: Quantum Circuit Limitations
+
 - 2-qubit circuits max ~31% success with gradient learning
 - Learning actively degrades good initializations
 - Combined gradient (chemotaxis) works; separated gradients fail
 
 ### Experiment 002: Evolutionary Approach
+
 - CMA-ES achieved 80% success on foraging-only
 - GA achieved 70% with more stable convergence
 - Evolution bypasses gradient noise problem

@@ -15,6 +15,7 @@ Close the performance gap between quantum circuits (~31% success) and classical 
 ## Background
 
 The quantum nematode uses a variational quantum circuit for decision-making. Initial benchmarks showed:
+
 - **Classical MLP**: 85-92% success rate
 - **Quantum (2-qubit chemotaxis)**: 20-31% success rate
 
@@ -23,6 +24,7 @@ The 300x parameter gap (12 vs ~4,000) suggested limited capacity, but we explore
 ## Hypothesis
 
 We tested multiple hypotheses:
+
 1. Separate modules for appetitive/aversive behaviors would allow specialized learning
 2. Dual quantum circuits with gating could handle conflicting signals
 3. Better hyperparameters or learning strategies could improve convergence
@@ -116,24 +118,29 @@ We tested multiple hypotheses:
 ### Key Experiment Results
 
 #### Attempt 10: 200-Run Baseline
+
 Two sessions with identical config, wildly different outcomes:
+
 - Session A: 20.5% success, 91% evasion rate
 - Session B: 6% success, worse in every metric
 - **Finding**: Random initialization variance is severe
 
 #### Attempt 12: Zero Learning
+
 - Started from parameters of best benchmark (29% success)
 - Ran with learning_rate = 0
 - Result: **22.5% average** across 4 sessions
 - **Finding**: The informed parameters encode useful behavior
 
 #### Attempt 14: Success-Only Learning
+
 - Only keep parameter updates from successful episodes
 - Short runs (20 episodes): **28.75%** average, one hit **45%**
 - Long runs (200 episodes): Degraded to 14.9%
 - **Finding**: Even sparse learning adds noise over time
 
 #### Attempt 15: Dual-Circuit with Informed Init
+
 - Two separate circuits for appetitive/aversive
 - Gating mechanism to blend outputs
 - Result: **0.25% success** (catastrophic)
@@ -142,29 +149,35 @@ Two sessions with identical config, wildly different outcomes:
 ## Analysis
 
 ### Why Chemotaxis Works (Partially)
+
 The combined gradient from `get_state()`:
+
 1. Vectorially sums food attraction + predator repulsion
 2. Produces single "optimal direction" signal
 3. Circuit just learns to follow this pre-computed signal
 4. **The environment does the hard work, not the brain**
 
 ### Why Separated Gradients Failed
+
 - Appetitive and aversive give conflicting directions
 - No natural mechanism to integrate in entangled circuit
 - Action mapping (16 states → 4 via modulo) destroys semantics
 
 ### Why Dual-Circuit Failed
+
 - Gating interfered with food-seeking
 - Mirrored parameters have no principled basis
 - 24 parameters still far below MLP's 4,000
 
 ### Why Learning Degrades Performance
+
 - Parameter-shift gradients are noisy (statistical estimation)
 - Sparse rewards (success every 5-10 episodes) = weak signal
 - Step-by-step updates destroy good initializations
 - No baseline subtraction or variance reduction
 
 ### The Fundamental Problem: Capacity
+
 | Architecture | Parameters | Success Rate |
 |--------------|-----------|--------------|
 | MLP (classical) | ~4,000 | 85-92% |
@@ -205,16 +218,19 @@ KEY INSIGHT: Learning actively harms quantum circuits with sparse rewards.
 ## Recommended Paths Forward
 
 ### Option A: Accept Limitations (Implemented in Exp 002)
+
 - Use evolution instead of gradient learning
 - Find optimal static parameters
 - Accept 30-35% as quantum ceiling
 
 ### Option B: Hybrid Classical-Quantum
+
 - Use MLP for decisions
 - Quantum circuit for feature extraction only
 - Classical learning (PyTorch autograd)
 
 ### Option C: More Qubits + Better Architecture (Research)
+
 - 6-8 qubits for more capacity
 - Better gradient estimation (SPSA, adjoint)
 - Proper RL infrastructure (replay buffer, target networks)
@@ -222,15 +238,18 @@ KEY INSIGHT: Learning actively harms quantum circuits with sparse rewards.
 ## Data References
 
 ### Best Sessions
+
 - Chemotaxis baseline: `20251207_035803` (20.5% success)
 - Success-only short: `20251207_100041` (45% success in 20 runs)
 
 ### Config Files
+
 - `modular_dynamic_small_predators.yml`
 - `dual_circuit_optimized_50runs.yml`
 - `modular_appetitive_aversive_predators.yml`
 
 ### Code Files Modified
+
 - `quantumnematode/brain/modules.py`
 - `quantumnematode/brain/arch/dual_circuit.py`
 - `quantumnematode/brain/arch/modular.py`

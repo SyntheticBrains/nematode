@@ -4,15 +4,17 @@
 
 Implementation tasks for systematic ablation analysis framework. This can be developed in parallel with other Phase 1 proposals.
 
----
+______________________________________________________________________
 
 ## 1. Ablation Framework
 
 ### 1.1 Create Analysis Module
+
 - [ ] Create `packages/quantum-nematode/quantumnematode/analysis/__init__.py`
 - [ ] Create `packages/quantum-nematode/quantumnematode/analysis/ablation.py`
 
 ### 1.2 Define Ablation Configuration
+
 - [ ] Create `AblationConfig` dataclass:
   - `base_config_path: str` - Path to baseline brain config
   - `modules_to_ablate: list[ModuleName]` - Modules to test removing
@@ -21,6 +23,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
   - `output_dir: str` - Where to save results
 
 ### 1.3 Define Ablation Study Class
+
 - [ ] Create `AblationStudy` class with methods:
   - `__init__(config: AblationConfig)`
   - `run_baseline() -> ConvergenceMetrics`
@@ -30,6 +33,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
   - `generate_report() -> str`
 
 ### 1.4 Define Ablation Types
+
 - [ ] Create `AblationType` enum or union:
   - `ModuleAblation(module: ModuleName)`
   - `LayerAblation(layer_index: int)`
@@ -39,55 +43,63 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 
 **Validation**: Framework can enumerate and run ablation conditions
 
----
+______________________________________________________________________
 
 ## 2. ModularBrain Ablation
 
 ### 2.1 Module Zeroing
+
 - [ ] Add `ablated_modules: list[ModuleName]` parameter to ModularBrain
 - [ ] When module is ablated, set its rotation angles to 0
 - [ ] Ablated modules still exist in circuit but contribute no signal
 - [ ] Track which modules are ablated in experiment metadata
 
 ### 2.2 Entanglement Ablation
+
 - [ ] Add `ablate_entanglement: bool` parameter
 - [ ] When True, skip CZ gate application between qubits
 - [ ] Qubits operate independently (no quantum correlation)
 
 ### 2.3 Layer Ablation
+
 - [ ] Add `ablated_layers: list[int]` parameter
 - [ ] Skip specified layer indices during circuit construction
 - [ ] Reduces effective circuit depth
 
 **Validation**: Ablated ModularBrain runs without errors, produces different behavior
 
----
+______________________________________________________________________
 
 ## 3. PPOBrain Ablation
 
 ### 3.1 Hidden Layer Bypass
+
 - [ ] Add `bypass_hidden: bool` parameter to PPOBrain
 - [ ] When True, use direct linear projection from input to output
 - [ ] Tests whether hidden layers are necessary
 
 ### 3.2 Critic Ablation
+
 - [ ] Add `ablate_critic: bool` parameter
 - [ ] When True, use fixed baseline instead of learned value function
 - [ ] Tests value function importance for PPO
 
 ### 3.3 Input Feature Masking
+
 - [ ] Add `masked_features: list[str]` parameter
 - [ ] Zero out specified feature groups in input vector
 - [ ] Enables testing individual sensory modality importance
 
 **Validation**: Ablated PPOBrain runs without errors, produces different behavior
 
----
+______________________________________________________________________
 
 ## 4. Feature Importance Analysis
 
 ### 4.1 Importance Calculation
+
 - [ ] Implement `compute_feature_importance()`:
+
   ```python
   def compute_feature_importance(self) -> dict[str, float]:
       baseline = self.results["baseline"].composite_score
@@ -100,22 +112,25 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
   ```
 
 ### 4.2 Importance Ranking
+
 - [ ] Sort modules/components by importance score
 - [ ] Identify critical components (importance > 0.1)
 - [ ] Identify redundant components (importance < 0.01)
 
 ### 4.3 Cross-Architecture Comparison
+
 - [ ] Compare module importance between quantum and classical
 - [ ] Identify architecture-specific critical components
 - [ ] Flag modules that are critical for one but not the other
 
 **Validation**: Importance scores computed correctly for test cases
 
----
+______________________________________________________________________
 
 ## 5. Automated Reporting
 
 ### 5.1 Markdown Report Generation
+
 - [ ] Implement `generate_report() -> str`:
   - Summary table of all ablation conditions
   - Performance metrics for each condition
@@ -123,6 +138,7 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
   - Key findings bullet points
 
 ### 5.2 Report Template
+
 ```markdown
 # Ablation Study Report
 
@@ -154,23 +170,26 @@ Implementation tasks for systematic ablation analysis framework. This can be dev
 ```
 
 ### 5.3 Optional Visualization
+
 - [ ] If matplotlib available, generate bar charts of importance
 - [ ] Performance degradation curves
 - [ ] Architecture comparison plots
 
 **Validation**: Report generates correctly with all sections
 
----
+______________________________________________________________________
 
 ## 6. CLI Integration
 
 ### 6.1 Ablation CLI Script
+
 - [ ] Create `scripts/run_ablation.py`
 - [ ] Accept config path and ablation parameters
 - [ ] Run ablation study and generate report
 - [ ] Save results to specified output directory
 
 ### 6.2 CLI Arguments
+
 ```bash
 python scripts/run_ablation.py \
   --config configs/examples/modular_foraging_small.yml \
@@ -181,26 +200,29 @@ python scripts/run_ablation.py \
 ```
 
 ### 6.3 Integration with Existing CLI
+
 - [ ] Add `--ablation` mode to run_simulation.py (optional)
 - [ ] Or keep as separate script for clarity
 
 **Validation**: CLI runs ablation study end-to-end
 
----
+______________________________________________________________________
 
 ## 7. Documentation
 
 ### 7.1 Usage Documentation
+
 - [ ] Document ablation framework usage
 - [ ] Provide example ablation configurations
 - [ ] Explain importance calculation methodology
 
 ### 7.2 Research Documentation
+
 - [ ] Document how to interpret ablation results
 - [ ] Guidance for publication-ready ablation studies
 - [ ] Recommendations for statistical significance
 
----
+______________________________________________________________________
 
 ## Dependencies
 
@@ -222,7 +244,7 @@ python scripts/run_ablation.py \
 
 Work streams 2 and 3 can proceed in parallel after framework is complete.
 
----
+______________________________________________________________________
 
 ## Success Criteria
 

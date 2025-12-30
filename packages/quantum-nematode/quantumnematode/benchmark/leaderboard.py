@@ -430,8 +430,8 @@ def generate_leaderboard_md() -> str:
         "",
     ]
 
-    # Add all category tables
-    lines.append(generate_benchmarks_doc())
+    # Add all category tables (strip trailing newline to avoid double-spacing)
+    lines.append(generate_benchmarks_doc().rstrip("\n"))
 
     lines.extend(
         [

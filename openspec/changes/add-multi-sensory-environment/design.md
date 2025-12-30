@@ -10,6 +10,7 @@ Phase 1 of the Quantum Nematode roadmap introduces multi-modal sensory capabilit
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Establish extensible infrastructure for multi-sensory simulation
 - Enable HP-based survival mechanics as alternative to instant death
 - Support diverse predator behaviors for richer ecological complexity
@@ -17,6 +18,7 @@ Phase 1 of the Quantum Nematode roadmap introduces multi-modal sensory capabilit
 - Maintain full backward compatibility
 
 **Non-Goals:**
+
 - Implement specific sensory modalities (thermotaxis is separate proposal)
 - Change existing benchmark results
 - Optimize for performance (simplicity first)
@@ -28,12 +30,14 @@ Phase 1 of the Quantum Nematode roadmap introduces multi-modal sensory capabilit
 **What**: Compute sensory gradients on-demand at agent's position rather than pre-computing and storing NxN grids.
 
 **Why**:
+
 - Memory efficient: O(1) storage vs O(N²) per modality
 - Consistent with existing food/predator gradient pattern
 - Scales to larger grids without memory issues
 - Easy to add new modalities
 
 **Alternatives Considered**:
+
 - Pre-computed grids: Faster lookup but O(N²×M) memory for M modalities
 - Caching: Added complexity without significant benefit for current grid sizes
 
@@ -42,11 +46,13 @@ Phase 1 of the Quantum Nematode roadmap introduces multi-modal sensory capabilit
 **What**: All new capabilities (health system, predator types, thermotaxis) are disabled by default and enabled via explicit config flags.
 
 **Why**:
+
 - Backward compatibility: existing configs work unchanged
 - Gradual adoption: can enable features incrementally
 - Clear testing: can isolate feature effects
 
 **Implementation**:
+
 ```yaml
 health_system:
   enabled: false  # Opt-in
@@ -59,12 +65,14 @@ thermotaxis:
 **What**: Create `brain/features.py` with shared feature extraction used by both quantum (ModularBrain) and classical (PPOBrain) architectures.
 
 **Why**:
+
 - Ensures both architectures receive identical sensory information
 - Enables fair comparison between quantum and classical approaches
 - Reduces code duplication
 - Simplifies adding new sensory modalities
 
 **Architecture**:
+
 ```text
 BrainParams
      │
@@ -81,11 +89,13 @@ ModularBrain                              PPOBrain
 **What**: Rename feature extraction functions to scientific names (chemotaxis, thermotaxis, nociception, etc.) with C. elegans neuron references in docstrings.
 
 **Why**:
+
 - Aligns with biological literature
 - Makes research publications clearer
 - Documents which neural circuits are being modeled
 
 **Mapping**:
+
 | Current | New | Neurons |
 |---------|-----|---------|
 | appetitive_features | food_chemotaxis_features | AWC, AWA |
@@ -102,10 +112,11 @@ ModularBrain                              PPOBrain
 |------|-------------|---------------|---------------|
 | Comfort | 15-25°C | Small reward | None |
 | Discomfort | 10-15°C, 25-30°C | Penalty | None |
-| Danger | <10°C, >30°C | Larger penalty | HP damage |
-| Lethal | <5°C, >35°C | Largest penalty | Rapid HP drain |
+| Danger | \<10°C, >30°C | Larger penalty | HP damage |
+| Lethal | \<5°C, >35°C | Largest penalty | Rapid HP drain |
 
 **Why**:
+
 - Biologically grounded: extreme temperatures are harmful to C. elegans
 - Creates meaningful trade-offs: risky paths may have better food access
 - Health system unifies all survival threats (predators, temperature, oxygen)
@@ -115,11 +126,13 @@ ModularBrain                              PPOBrain
 **What**: Support multiple predator types in same environment (e.g., 2 stationary + 1 pursuit).
 
 **Why**:
+
 - More realistic ecological complexity
 - Richer learning challenges
 - Enables studying different avoidance strategies
 
 **Configuration**:
+
 ```yaml
 predators:
   enabled: true
@@ -138,6 +151,7 @@ predators:
 **What**: When thermotaxis enabled, 80% of food spawns in safe temperature zones, 20% anywhere.
 
 **Why**:
+
 - Ensures learnable tasks (food accessible without extreme risk)
 - Creates risk/reward trade-offs (some food in dangerous zones)
 - Configurable for different task difficulties
@@ -169,12 +183,14 @@ predators:
 **What**: Organize benchmarks into hierarchical categories that scale with increasing modality combinations.
 
 **Why**:
+
 - Flat naming becomes unwieldy: `thermotaxis_predator_oxygen_small` vs `multisensory/full_survival_small`
 - Clear progression: basic → survival → thermotaxis → multisensory
 - Research-friendly: ablation studies get first-class category
 - Grouped comparisons: easy to compare within a category
 
 **Category Structure**:
+
 ```text
 basic/              # Single objective (foraging only)
 survival/           # Food + predators
@@ -186,12 +202,14 @@ ablation/           # Controlled studies
 **Path Pattern**: `{category}/{task}_{size}/{brain_type}`
 
 **Naming Convention**: Task names are always explicit about what's included:
+
 - `foraging` = food collection goal
 - `predator` = predators enabled
 - `thermo` = thermotaxis enabled (short form in combinations)
 - Modifiers follow the base: `foraging_predator_small`, not `predator_small`
 
 **Examples**:
+
 - `basic/foraging_small/quantum` - food only
 - `survival/foraging_predator_small/classical` - food + predators
 - `thermotaxis/foraging_small/quantum` - food + temperature
@@ -205,18 +223,21 @@ ablation/           # Controlled studies
 **What**: HP (health points) and satiety are independent systems that coexist. Food restores both.
 
 **Why**:
+
 - **Satiety** models time-based hunger pressure (metabolic needs)
 - **HP** models threat-based damage (injury from predators, temperature extremes)
 - These are biologically distinct: C. elegans can be both hungry AND injured
 - Enables rich multi-objective scenarios (manage hunger, avoid damage, seek food)
 
 **Behavior**:
+
 | System | Decreases From | Increases From | Termination |
 |--------|---------------|----------------|-------------|
 | Satiety | Time decay (every step) | Eating food | STARVATION |
 | HP | Predator contact, temperature extremes | Eating food, configurable healing | HEALTH_DEPLETED |
 
 **Configuration Example**:
+
 ```yaml
 # Both systems enabled
 satiety:
@@ -234,9 +255,11 @@ health_system:
 ## Open Questions
 
 1. Should health regenerate over time (without food)?
+
    - Current decision: No, only food heals
    - Can revisit based on gameplay testing
 
 2. Should pursuit predators have stamina/cooldown?
+
    - Current decision: No, always pursue when in range
    - Can add if learning becomes too difficult

@@ -20,39 +20,48 @@ The current simulation environment supports only single-food-source navigation i
 ## Impact
 
 ### Affected Specs
+
 - **NEW**: `environment-simulation` - Creating new specification for environment system requirements
 - **MODIFIED**: `configuration-system` - Adding environment configuration schema for dynamic foraging parameters
 
 ### Affected Code
+
 - **Core Implementation**:
+
   - [`quantumnematode/env.py`](../../../packages/quantum-nematode/quantumnematode/env.py) - New `DynamicForagingEnvironment` class and `BaseEnvironment` refactoring
   - [`quantumnematode/agent.py`](../../../packages/quantum-nematode/quantumnematode/agent.py) - Extended reward calculation for multi-food scenarios and exploration bonus
   - [`quantumnematode/utils/config_loader.py`](../../../packages/quantum-nematode/quantumnematode/utils/config_loader.py) - New `DynamicEnvironmentConfig` and `SatietyConfig` classes
 
 - **Supporting Systems**:
+
   - [`quantumnematode/report/dtypes.py`](../../../packages/quantum-nematode/quantumnematode/report/dtypes.py) - New metrics for foraging efficiency and distance efficiency
   - [`configs/examples/`](../../../configs/examples/) - Three new preset configuration files (dynamic_small.yml, dynamic_medium.yml, dynamic_large.yml)
   - [`scripts/run_simulation.py`](../../../scripts/run_simulation.py) - Environment initialization logic for dynamic vs static mode
 
 - **Rendering**:
+
   - [`quantumnematode/env.py`](../../../packages/quantum-nematode/quantumnematode/env.py) - Viewport rendering methods with agent-centered camera
 
 ### Migration Path
+
 - Existing configurations continue to work unchanged with `MazeEnvironment`
 - Users opt into dynamic environments via new `environment_type: "dynamic"` config field
 - All existing brain architectures compatible without modification
 - Default behavior remains single-goal navigation
 
 ### Breaking Changes
+
 None - fully backward compatible with existing simulations.
 
 ### Performance Considerations
+
 - Gradient field computation scales with O(num_foods × grid_size) per step
 - Large environments (100×100) with many foods (50+) may have ~10-20% performance overhead
 - Viewport rendering reduces visual rendering cost for large grids
 - Poisson disk sampling occurs only at food spawn time (minimal impact)
 
 ### Testing Strategy
+
 - Unit tests for gradient superposition and distance calculations
 - Integration tests with preset configurations (small, medium, large)
 - Validation that existing configurations still work unchanged

@@ -5,6 +5,7 @@ Curated experiment outputs referenced in logbooks and documentation.
 ## Purpose
 
 This directory stores **selectively preserved** experiment outputs that are:
+
 - Referenced in experiment logbooks (`docs/experiments/logbooks/`)
 - Important for reproducibility of documented findings
 - Worth keeping for future reference or comparison
@@ -67,12 +68,14 @@ cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metada
 ## What to Store Here
 
 **Do store:**
+
 - Results explicitly referenced in logbooks
 - Parameters that achieved notable performance
 - Checkpoints needed to reproduce documented experiments
 - Model weights for significant milestones (future)
 
 **Don't store:**
+
 - Every experiment run (use `experiments/` for that)
 - Large checkpoint files unless specifically needed
 - Duplicate data already in `benchmarks/`

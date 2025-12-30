@@ -11,6 +11,7 @@ After 15+ experiments with gradient-based learning on quantum brains, we have es
 Evolutionary/genetic approaches (CMA-ES, genetic algorithms) sidestep gradient estimation entirely, using population-based search with episode-level fitness. This removes the fundamental bottleneck preventing quantum brain optimization.
 
 Additionally, this serves as a **stepping stone to quantum advantage research**:
+
 - First, establish the true capacity ceiling of quantum circuits (currently unknown due to learning noise)
 - Then, compare against equivalent-parameter classical baselines (12 params each)
 - If quantum outperforms classical at same parameter count, that's evidence of quantum advantage
