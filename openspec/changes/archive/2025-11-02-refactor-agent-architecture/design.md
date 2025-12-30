@@ -44,7 +44,7 @@ Duplicated code patterns between `run_episode` and `run_manyworlds_mode`:
 
 ### Component Hierarchy
 
-```
+```text
 QuantumNematodeAgent (Facade/Orchestrator)
 ├── StepProcessor (Single step execution)
 │   ├── prepare_brain_params()

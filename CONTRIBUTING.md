@@ -302,7 +302,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and detailed submis
 
 For documenting analysis and insights from experiment series, use the logbook system in `docs/experiments/`:
 
-```
+```text
 docs/experiments/
 ├── README.md                    # Index and workflow guide
 ├── templates/

@@ -22,7 +22,7 @@ class LIFNeuron:
 - `v_rest`: Resting potential (default 0.0)
 
 **Dynamics:**
-```
+```text
 dV/dt = (v_rest - V + R*I) / tau_m
 ```
 
