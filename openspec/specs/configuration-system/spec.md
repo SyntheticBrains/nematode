@@ -12,20 +12,20 @@ The configuration system SHALL support a complete schema for spiking neural netw
 
 #### Scenario: YAML Configuration Parsing
 
-**Given** a YAML configuration file with spiking brain section
-**When** the configuration is loaded
-**Then** the system SHALL parse neuron model parameters
-**And** SHALL parse plasticity rule parameters
-**And** SHALL parse network topology parameters
-**And** SHALL validate all parameter ranges and constraints
+- **GIVEN** a YAML configuration file with spiking brain section
+- **WHEN** the configuration is loaded
+- **THEN** the system SHALL parse neuron model parameters
+- **AND** SHALL parse plasticity rule parameters
+- **AND** SHALL parse network topology parameters
+- **AND** SHALL validate all parameter ranges and constraints
 
 #### Scenario: Default Parameter Application
 
-**Given** a spiking brain configuration with missing optional parameters
-**When** the configuration is processed
-**Then** the system SHALL apply sensible defaults
-**And** SHALL ensure all required parameters are present
-**And** SHALL log applied defaults for user awareness
+- **GIVEN** a spiking brain configuration with missing optional parameters
+- **WHEN** the configuration is processed
+- **THEN** the system SHALL apply sensible defaults
+- **AND** SHALL ensure all required parameters are present
+- **AND** SHALL log applied defaults for user awareness
 
 ### Requirement: Parameter Validation
 
@@ -33,19 +33,19 @@ The configuration system SHALL validate spiking neural network parameters for bi
 
 #### Scenario: Neuron Parameter Validation
 
-**Given** LIF neuron parameters in configuration
-**When** validation is performed
-**Then** tau_m SHALL be positive (> 0)
-**And** v_threshold SHALL be greater than v_reset
-**And** simulation time_step SHALL be appropriate for tau_m
+- **GIVEN** LIF neuron parameters in configuration
+- **WHEN** validation is performed
+- **THEN** tau_m SHALL be positive (> 0)
+- **AND** v_threshold SHALL be greater than v_reset
+- **AND** simulation time_step SHALL be appropriate for tau_m
 
 #### Scenario: STDP Parameter Validation
 
-**Given** STDP plasticity parameters in configuration
-**When** validation is performed
-**Then** tau_plus and tau_minus SHALL be positive
-**And** learning_rate SHALL be in reasonable range (0.0001 - 0.1)
-**And** A_plus and A_minus SHALL be positive
+- **GIVEN** STDP plasticity parameters in configuration
+- **WHEN** validation is performed
+- **THEN** tau_plus and tau_minus SHALL be positive
+- **AND** learning_rate SHALL be in reasonable range (0.0001 - 0.1)
+- **AND** A_plus and A_minus SHALL be positive
 
 ### Requirement: Configuration Examples
 
@@ -53,17 +53,17 @@ The system SHALL provide example configurations for common spiking brain use cas
 
 #### Scenario: Small Network Configuration
 
-**Given** a need for basic spiking brain testing
-**When** loading spiking_small.yml configuration
-**Then** the system SHALL configure a minimal viable spiking network
-**And** SHALL use parameters suitable for fast convergence
+- **GIVEN** a need for basic spiking brain testing
+- **WHEN** loading spiking_small.yml configuration
+- **THEN** the system SHALL configure a minimal viable spiking network
+- **AND** SHALL use parameters suitable for fast convergence
 
 #### Scenario: Medium Network Configuration
 
-**Given** a need for standard experimental setup
-**When** loading spiking_static_medium.yml configuration
-**Then** the system SHALL configure a balanced network
-**And** SHALL use parameters suitable for robust learning
+- **GIVEN** a need for standard experimental setup
+- **WHEN** loading spiking_static_medium.yml configuration
+- **THEN** the system SHALL configure a balanced network
+- **AND** SHALL use parameters suitable for robust learning
 
 ### Requirement: Brain Type Enumeration Extension
 
@@ -71,10 +71,10 @@ The brain type validation SHALL include "spiking" as a valid option.
 
 #### Scenario: Brain Type Validation
 
-**Given** configuration specifies brain type
-**When** validation occurs
-**Then** "spiking" SHALL be accepted as valid
-**And** existing "modular", "qmodular", "mlp", "qmlp" types are also valid
+- **GIVEN** configuration specifies brain type
+- **WHEN** validation occurs
+- **THEN** "spiking" SHALL be accepted as valid
+- **AND** existing "modular", "qmodular", "mlp", "qmlp" types are also valid
 
 ### Requirement: Dynamic Environment Configuration Schema
 
