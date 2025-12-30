@@ -233,14 +233,21 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 - [ ] Update benchmark categorization logic to support hierarchical paths
 - [ ] Implement path pattern: `{category}/{task}_{size}/{brain_type}`
 
-### 10.2 Migration
+### 10.2 Naming Convention
+- [ ] Document naming convention: task names always explicit about what's included
+  - `foraging` = food collection goal
+  - `predator` = predators enabled
+  - `thermo` = thermotaxis enabled (short form)
+  - Modifiers follow the base: `foraging_predator_small`, not `predator_small`
+
+### 10.3 Migration
 - [ ] Migrate `foraging_small` → `basic/foraging_small`
 - [ ] Migrate `foraging_medium` → `basic/foraging_medium`
-- [ ] Migrate `predator_small` → `survival/predator_small`
+- [ ] Migrate `predator_small` → `survival/foraging_predator_small`
 - [ ] Add backward compatibility mapping for flat category names
 - [ ] Update leaderboard to display hierarchical categories
 
-### 10.3 Validation
+### 10.4 Validation
 - [ ] Ensure existing benchmark results remain valid after migration
 - [ ] Test category detection for new benchmark runs
 

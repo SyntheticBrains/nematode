@@ -176,8 +176,9 @@ The system SHALL support hierarchical benchmark category naming to organize benc
 #### Scenario: Survival Category with Predators
 - **GIVEN** a simulation with food collection and predators enabled
 - **WHEN** benchmark category is determined
-- **THEN** category SHALL be `survival/predator_small/quantum` or `survival/predator_small/classical`
+- **THEN** category SHALL be `survival/foraging_predator_small/quantum` or `survival/foraging_predator_small/classical`
 - **AND** this replaces the flat `predator_small` category
+- **AND** task name SHALL be explicit: `foraging_predator` indicates both food and predators
 
 #### Scenario: Backward Compatibility for Flat Categories
 - **GIVEN** existing benchmark results using flat category names (e.g., `foraging_small`)
@@ -191,3 +192,13 @@ The system SHALL support hierarchical benchmark category naming to organize benc
 - **THEN** path SHALL follow pattern: `{category}/{task}_{size}/{brain_type}`
 - **AND** category SHALL be one of: `basic`, `survival`, `thermotaxis`, `multisensory`, `ablation`
 - **AND** brain_type SHALL be one of: `quantum`, `classical`
+
+#### Scenario: Explicit Task Naming Convention
+- **GIVEN** a benchmark task name
+- **WHEN** the task name is constructed
+- **THEN** name SHALL be explicit about all included elements:
+  - `foraging` indicates food collection goal
+  - `predator` indicates predators enabled
+  - `thermo` indicates thermotaxis enabled (short form in combinations)
+- **AND** modifiers SHALL follow the base: `foraging_predator_small` not `predator_small`
+- **AND** special tasks without foraging SHALL use descriptive names: `isothermal_small`

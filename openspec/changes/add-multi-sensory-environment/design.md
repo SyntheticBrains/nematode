@@ -185,11 +185,18 @@ ablation/           # Controlled studies
 
 **Path Pattern**: `{category}/{task}_{size}/{brain_type}`
 
+**Naming Convention**: Task names are always explicit about what's included:
+- `foraging` = food collection goal
+- `predator` = predators enabled
+- `thermo` = thermotaxis enabled (short form in combinations)
+- Modifiers follow the base: `foraging_predator_small`, not `predator_small`
+
 **Examples**:
-- `basic/foraging_small/quantum`
-- `survival/predator_small/classical`
-- `thermotaxis/foraging_predator_small/quantum`
-- `multisensory/full_survival_small/classical`
+- `basic/foraging_small/quantum` - food only
+- `survival/foraging_predator_small/classical` - food + predators
+- `thermotaxis/foraging_small/quantum` - food + temperature
+- `thermotaxis/foraging_predator_small/classical` - food + temperature + predators
+- `thermotaxis/isothermal_small/quantum` - temperature only (no food goal)
 
 **Migration**: Existing flat names mapped to hierarchical equivalents for backward compatibility.
 

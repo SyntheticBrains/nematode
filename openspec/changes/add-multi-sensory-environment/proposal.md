@@ -85,20 +85,26 @@ Extend `RewardConfig` with configurable weights for:
 Introduce hierarchical benchmark categories to scale with increasing modality combinations:
 
 ```
-basic/              # Single objective (foraging only)
+basic/                              # Single objective (foraging only)
 ├── foraging_small/
 ├── foraging_medium/
 └── foraging_large/
 
-survival/           # Food + predators
-├── predator_small/
-├── predator_pursuit_small/
-└── predator_mixed_small/
+survival/                           # Food + predators
+├── foraging_predator_small/        # food + random predators
+├── foraging_predator_pursuit_small/# food + pursuit predators
+└── foraging_predator_mixed_small/  # food + mixed predator types
 
-thermotaxis/        # Temperature-aware tasks (added by add-thermotaxis-system)
-multisensory/       # Multiple modalities combined (future)
-ablation/           # Controlled studies (added by add-ablation-toolkit)
+thermotaxis/                        # Temperature-aware tasks (added by add-thermotaxis-system)
+multisensory/                       # Multiple modalities combined (future)
+ablation/                           # Controlled studies (added by add-ablation-toolkit)
 ```
+
+**Naming Convention**: Task names are always explicit about what's included:
+- `foraging` = food collection goal
+- `predator` = predators enabled
+- `thermo` = thermotaxis enabled (short form in combinations)
+- Modifiers follow the base: `foraging_predator_small`, not `predator_small`
 
 - Migrate existing benchmarks to `basic/` and `survival/` categories
 - Support hierarchical paths in benchmark categorization logic
