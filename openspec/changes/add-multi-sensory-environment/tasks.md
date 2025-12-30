@@ -4,7 +4,7 @@
 
 Implementation tasks for Phase 1 foundational infrastructure, organized by component.
 
----
+______________________________________________________________________
 
 ## 1. BrainParams Extensions
 
@@ -22,7 +22,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Existing tests pass, new fields default to None
 
----
+______________________________________________________________________
 
 ## 2. Health System
 
@@ -60,7 +60,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Agent can survive predator contact, die from accumulated damage. Food restores both HP and satiety.
 
----
+______________________________________________________________________
 
 ## 3. Enhanced Predator Behaviors
 
@@ -96,11 +96,12 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
   ```
 
 - [ ] Implement mixed type spawning
+
 - [ ] Update gradient computation for different predator types
 
 **Validation**: Pursuit predators track agent, stationary predators don't move
 
----
+______________________________________________________________________
 
 ## 4. Mechanosensation
 
@@ -125,7 +126,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: BrainParams correctly reports contact states
 
----
+______________________________________________________________________
 
 ## 5. Unified Feature Extraction
 
@@ -157,7 +158,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Both brain types can consume new sensory features
 
----
+______________________________________________________________________
 
 ## 6. Multi-Objective Rewards
 
@@ -181,7 +182,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Rewards correctly computed for multi-objective scenarios
 
----
+______________________________________________________________________
 
 ## 7. Evaluation Extensions
 
@@ -204,7 +205,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Multi-objective scores computed and tracked correctly
 
----
+______________________________________________________________________
 
 ## 8. Food Spawning in Safe Zones
 
@@ -217,7 +218,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Food distribution biased toward safe zones
 
----
+______________________________________________________________________
 
 ## 9. Visualization
 
@@ -225,7 +226,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 - [ ] Extend Rich theme to support background colors
 - [ ] Implement temperature zone color mapping:
-  - Lethal cold (<5°C): blue
+  - Lethal cold (\<5°C): blue
   - Danger cold (5-10°C): cyan
   - Discomfort cold (10-15°C): light cyan
   - Comfort (15-25°C): white (default)
@@ -242,7 +243,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: Temperature zones visible in Rich theme output
 
----
+______________________________________________________________________
 
 ## 10. Hierarchical Benchmark Naming
 
@@ -259,6 +260,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
   ```
 
 - [ ] Update benchmark categorization logic to support hierarchical paths
+
 - [ ] Implement path pattern: `{category}/{task}_{size}/{brain_type}`
 
 ### 10.2 Naming Convention
@@ -284,7 +286,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 
 **Validation**: New benchmarks use hierarchical paths, old results still accessible
 
----
+______________________________________________________________________
 
 ## 11. Configuration and Documentation
 
@@ -302,7 +304,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 - [ ] Document multi-objective reward configuration
 - [ ] Document hierarchical benchmark category structure
 
----
+______________________________________________________________________
 
 ## Dependencies
 

@@ -53,7 +53,7 @@ The system SHALL compute supplementary metrics that provide deeper insight into 
 - **THEN** the system SHALL compute path_efficiency = optimal_distance / actual_distance
 - **AND** optimal_distance SHALL be Euclidean distance from start to nearest food
 - **AND** actual_distance SHALL be sum of step distances
-- **AND** SHALL be in range (0, 1] where 1 = optimal path
+- **AND** SHALL be in range (0, 1\] where 1 = optimal path
 
 ### Requirement: Literature Dataset Integration
 

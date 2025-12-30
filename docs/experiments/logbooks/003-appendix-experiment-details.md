@@ -2,7 +2,7 @@
 
 This appendix contains detailed experiment data, session tables, failed approaches, and implementation specifics for the spiking brain optimization experiment. For the main findings and conclusions, see [003-spiking-brain-optimization.md](003-spiking-brain-optimization.md).
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ This appendix contains detailed experiment data, session tables, failed approach
 6. [Hyperparameter Reference](#hyperparameter-reference)
 7. [Session Data References](#session-data-references)
 
----
+______________________________________________________________________
 
 ## Static Navigation Experiments
 
@@ -205,7 +205,7 @@ Last 30 runs: 30/30 (100%) ✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓�
 Composite score: 0.896 (approaching MLP's ~0.92)
 ```
 
----
+______________________________________________________________________
 
 ## Dynamic Foraging Experiments
 
@@ -338,7 +338,7 @@ Without the floor, entropy could collapse to near-zero. Once deterministic, no r
 | 0.005 | ~0.10 | 0.985 | Too confident, regression after success |
 | 0.0 | ~0.001 | 0.999 | Total collapse possible |
 
----
+______________________________________________________________________
 
 ## Predator Environment Experiments
 
@@ -537,7 +537,7 @@ This confirms **0.005 is the sweet spot** for this task.
 | **Slower LR decay** | **0.01→0.005** | **61%** | **BREAKTHROUGH** |
 | Even slower LR decay | 0.003 | 21.5% | Too slow - confirms 0.005 optimal |
 
----
+______________________________________________________________________
 
 ## Failed Approaches
 
@@ -587,7 +587,7 @@ Files modified:
 
 2. **Early convergence to bad policy**: All 4 sessions locked into doing nothing useful very early
 
-3. **Predator avoidance maintained, food-seeking lost**: 89-92% evasion rate preserved, but food collection dropped from 4.17 to <1 avg. The network learned "don't die" but forgot "find food"
+3. **Predator avoidance maintained, food-seeking lost**: 89-92% evasion rate preserved, but food collection dropped from 4.17 to \<1 avg. The network learned "don't die" but forgot "find food"
 
 4. **The hypothesis was wrong**: The combined gradient actually HELPS because:
 
@@ -754,7 +754,7 @@ Our implementation had:
 | Dual-stream fixed gating | 2 streams, fixed gate | 0% | **Architecture itself broken** |
 | MLP | Single network, 4 inputs | 85% | Sufficient capacity for integration |
 
----
+______________________________________________________________________
 
 ## Architecture Diagrams
 
@@ -862,7 +862,7 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
 • STDP achieves worse task performance but is deployable on neuromorphic hardware
 ```
 
----
+______________________________________________________________________
 
 ## Hyperparameter Reference
 
@@ -914,7 +914,7 @@ Pure Biology          Our SNN              Rate-coded ANN        Standard MLP
 | min_action_prob=0.02 | Gradient death | Use 0.01 |
 | min_action_prob=0.0 | Entropy collapse | Use 0.01 |
 
----
+______________________________________________________________________
 
 ## Session Data References
 

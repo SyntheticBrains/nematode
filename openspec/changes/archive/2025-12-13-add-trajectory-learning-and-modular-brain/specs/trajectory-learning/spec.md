@@ -44,7 +44,7 @@ The ModularBrain SHALL compute discounted returns backward through episode traje
 **Given** an episode with rewards [r_0, r_1, r_2, ..., r_T]
 **When** computing discounted returns
 **Then** it SHALL iterate backward from r_T to r_0
-**And** SHALL compute G_t = r_t + gamma * G_{t+1} for each timestep
+**And** SHALL compute G_t = r_t + gamma * G\_{t+1} for each timestep
 **And** SHALL return the list [G_0, G_1, ..., G_T]
 
 #### Scenario: Discount Factor Configuration
@@ -52,7 +52,7 @@ The ModularBrain SHALL compute discounted returns backward through episode traje
 **Given** a config specifies `gamma: 0.99`
 **When** the brain is initialized
 **Then** it SHALL use gamma=0.99 for return computation
-**And** SHALL validate that 0 <= gamma <= 1
+**And** SHALL validate that 0 \<= gamma \<= 1
 **And** SHALL use gamma=0.99 as default if not specified
 
 #### Scenario: Terminal State Handling
@@ -71,7 +71,7 @@ The ModularBrain SHALL compute parameter-shift gradients using discounted return
 **Given** an episode with discounted returns [G_0, G_1, ..., G_T]
 **When** computing gradients for parameter theta_i
 **Then** it SHALL evaluate shifted circuits at theta_i + shift and theta_i - shift
-**And** SHALL compute grad_i = 0.5 * sum_t (P_+(action_t) - P_-(action_t)) * G_t
+**And** SHALL compute grad_i = 0.5 * sum_t (P\_+(action_t) - P\_-(action_t)) * G_t
 **And** SHALL accumulate contributions across all timesteps
 
 #### Scenario: Action Probability Recomputation
@@ -105,7 +105,7 @@ The system SHALL extend the ModularBrain configuration schema to support traject
 
 **Given** trajectory learning is enabled
 **When** specifying `gamma: float` in config
-**Then** it SHALL validate that 0.0 <= gamma <= 1.0
+**Then** it SHALL validate that 0.0 \<= gamma \<= 1.0
 **And** SHALL use gamma=0.99 as default if not specified
 **And** SHALL apply this gamma value in return computation
 

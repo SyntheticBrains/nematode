@@ -46,7 +46,7 @@ The PPOBrain SHALL implement separate actor (policy) and critic (value) networks
 - **WHEN** preprocessing environmental state with gradient strength and direction
 - **THEN** the system SHALL match MLPBrain preprocessing exactly
 - **AND** SHALL compute relative angle: `(gradient_direction - agent_facing_angle + pi) mod 2pi - pi`
-- **AND** SHALL normalize relative angle to [-1, 1]: `rel_angle / pi`
+- **AND** SHALL normalize relative angle to \[-1, 1\]: `rel_angle / pi`
 - **AND** SHALL produce feature vector: `[grad_strength, rel_angle_normalized]`
 
 ### Requirement: Rollout Buffer and Experience Collection

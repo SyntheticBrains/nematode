@@ -186,7 +186,7 @@ Is the brain quantum-based (ModularBrain, QModularBrain)?
 
 | Parameter | Recommended | Notes |
 |-----------|-------------|-------|
-| Population size | 20 | 4 + 3*log(n_params) |
+| Population size | 20 | 4 + 3\*log(n_params) |
 | Initial sigma | 0.5 | Start exploring broadly |
 | Max generations | 500 | Increase for complex tasks |
 

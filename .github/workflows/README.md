@@ -19,7 +19,7 @@ Runs all pre-commit hooks on every push and pull request to `main` and `develop`
 
 **Note:** Skips the `pytest` hook as tests run in a separate workflow.
 
----
+______________________________________________________________________
 
 ### `tests.yml`
 
@@ -32,7 +32,7 @@ Runs the full test suite on Python 3.11 and 3.12.
 - ✅ Runs with verbose output and colored results
 - ✅ Uses fail-fast: false to see all Python version results
 
----
+______________________________________________________________________
 
 ## Running Locally
 

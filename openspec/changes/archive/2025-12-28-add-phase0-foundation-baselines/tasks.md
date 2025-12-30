@@ -4,7 +4,7 @@
 
 Implementation tasks for Phase 0 deliverables, organized by work stream with dependencies noted.
 
----
+______________________________________________________________________
 
 ## Work Stream 1: PPO Brain Implementation
 
@@ -53,7 +53,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 **Validation**: PPO achieves >85% success on foraging (Phase 0 exit criterion)
 
----
+______________________________________________________________________
 
 ## Work Stream 2: Chemotaxis Validation System
 
@@ -109,7 +109,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 **Validation**: End-to-end test with flag produces expected output
 
----
+______________________________________________________________________
 
 ## Work Stream 3: NematodeBench Documentation
 
@@ -155,7 +155,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Add links to nematodebench documentation
 - [x] Add call-to-action for external researchers
 
----
+______________________________________________________________________
 
 ## Work Stream 4: Optimization Method Documentation
 
@@ -180,7 +180,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Document architecture-specific recommendations
 - [x] Add decision flow for new users
 
----
+______________________________________________________________________
 
 ## Work Stream 5: Reproducibility & Metrics Enhancement
 
@@ -244,7 +244,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 
 **Validation**: Submissions validate against NematodeBench schema
 
----
+______________________________________________________________________
 
 ## Finalization
 
@@ -260,7 +260,7 @@ Implementation tasks for Phase 0 deliverables, organized by work stream with dep
 - [x] Re-run benchmarks with new tracking system - ongoing, new submissions replace legacy over time
 - [x] Verify new benchmarks include per-run seeds and enhanced metrics
 
----
+______________________________________________________________________
 
 ## Dependencies
 
@@ -277,7 +277,7 @@ Work Stream 4 (Optimization) ──┘                                    │
 
 Work Streams 1, 2, 4 can proceed in parallel. Work Stream 3 references them. Work Stream 5 enhances Work Stream 3. Finalization requires all work streams complete.
 
----
+______________________________________________________________________
 
 ## Exit Criteria Mapping
 

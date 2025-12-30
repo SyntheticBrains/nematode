@@ -12,7 +12,7 @@
 
 **Decision**: Keep implementation dormant (flags default to false) for future research.
 
----
+______________________________________________________________________
 
 ## Phase 1: Trajectory Learning (Priority - 1-2 days)
 
@@ -206,7 +206,7 @@
 4. **post_process_episode()** - Integration with trajectory learning path
 5. **appetitive_features()** - Food-seeking feature extraction
 6. **aversive_features()** - Predator-avoidance feature extraction
-7. **Separated gradients** - food_gradient_* and predator_gradient_* in BrainParams
+7. **Separated gradients** - food_gradient\_\* and predator_gradient\_\* in BrainParams
 8. **Test coverage** - All trajectory and appetitive/aversive tests passing
 
 ### Config Options (defaults off)

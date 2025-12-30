@@ -77,8 +77,8 @@ None - all new functionality is opt-in and backward compatible.
 ### Performance Considerations
 
 - Experiment metadata capture adds ~10-50ms overhead per simulation run (negligible)
-- JSON file writes are fast (<5ms) and non-blocking
-- Query operations read from disk but with reasonable index sizes (<1000 experiments)
+- JSON file writes are fast (\<5ms) and non-blocking
+- Query operations read from disk but with reasonable index sizes (\<1000 experiments)
 - No impact on simulation performance itself
 
 ### Testing Strategy

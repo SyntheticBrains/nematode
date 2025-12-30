@@ -645,6 +645,6 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
----
+______________________________________________________________________
 
 Thank you for contributing to the Quantum Nematode Simulation project! Your contributions help advance the field of quantum machine learning and computational biology.
