@@ -9,6 +9,7 @@ The SpikingBrain implementation follows the existing ClassicalBrain protocol whi
 ### 1. Neuron Models
 
 #### Leaky Integrate-and-Fire (LIF) Neuron
+
 ```python
 class LIFNeuron:
     def __init__(self, tau_m: float = 20.0, v_threshold: float = 1.0, v_reset: float = 0.0)
@@ -16,12 +17,14 @@ class LIFNeuron:
 ```
 
 **Parameters:**
+
 - `tau_m`: Membrane time constant (ms)
 - `v_threshold`: Spike threshold voltage
 - `v_reset`: Reset voltage after spike
 - `v_rest`: Resting potential (default 0.0)
 
 **Dynamics:**
+
 ```text
 dV/dt = (v_rest - V + R*I) / tau_m
 ```
@@ -29,11 +32,13 @@ dV/dt = (v_rest - V + R*I) / tau_m
 ### 2. Network Architecture
 
 #### Topology
+
 - **Input Layer**: 2 neurons (gradient_strength, gradient_direction)
 - **Hidden Layer**: Configurable size (default 32 neurons)
 - **Output Layer**: 4 neurons (forward, left, right, stay actions)
 
 #### Connectivity
+
 - Fully connected between layers
 - Recurrent connections within hidden layer (optional)
 - Excitatory and inhibitory synapses
@@ -41,6 +46,7 @@ dV/dt = (v_rest - V + R*I) / tau_m
 ### 3. Encoding and Decoding
 
 #### Input Encoding (Rate Coding)
+
 ```python
 def encode_state(self, state: List[float], duration: float) -> List[List[float]]:
     # Convert continuous state values to spike rates
@@ -48,6 +54,7 @@ def encode_state(self, state: List[float], duration: float) -> List[List[float]]
 ```
 
 #### Output Decoding
+
 ```python
 def decode_actions(self, spike_counts: List[int], duration: float) -> List[ActionData]:
     # Convert output spike counts to action probabilities
@@ -57,6 +64,7 @@ def decode_actions(self, spike_counts: List[int], duration: float) -> List[Actio
 ### 4. Learning Algorithm
 
 #### Spike-Timing Dependent Plasticity (STDP)
+
 ```python
 class STDPRule:
     def __init__(self, tau_plus: float = 20.0, tau_minus: float = 20.0, 
@@ -65,11 +73,13 @@ class STDPRule:
 ```
 
 **STDP Window:**
+
 - Pre-before-post: Potentiation (strengthen synapse)
 - Post-before-pre: Depression (weaken synapse)
 - Reward modulation: Scale updates by reward signal
 
 #### Learning Process
+
 1. **Forward Pass**: Simulate network for episode duration
 2. **Spike Collection**: Record all spike times and neuron activities
 3. **Reward Assignment**: Apply reward signal to recent spike patterns

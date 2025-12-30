@@ -3,9 +3,11 @@
 ## ADDED Requirements
 
 ### Requirement: Predator-Enabled Benchmark Categories
+
 The system SHALL provide separate benchmark categories for predator-enabled simulations to enable tracking learning performance on survival-foraging multi-objective tasks.
 
 #### Scenario: Dynamic Predator Quantum Small Category
+
 - **GIVEN** a simulation with quantum brain (ModularBrain or QModularBrain), dynamic environment with `predators.enabled: true`, and grid size ≤ 20×20
 - **WHEN** benchmark category is determined
 - **THEN** the category SHALL be `dynamic_predator_small_quantum`
@@ -13,34 +15,40 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 - **AND** benchmarks SHALL track predator-specific metrics
 
 #### Scenario: Dynamic Predator Quantum Medium Category
+
 - **GIVEN** a simulation with quantum brain, `predators.enabled: true`, and 20×20 < grid size ≤ 50×50
 - **WHEN** benchmark category is determined
 - **THEN** the category SHALL be `dynamic_predator_medium_quantum`
 - **AND** this SHALL use same grid size threshold as non-predator medium benchmarks
 
 #### Scenario: Dynamic Predator Quantum Large Category
+
 - **GIVEN** a simulation with quantum brain, `predators.enabled: true`, and grid size > 50×50
 - **WHEN** benchmark category is determined
 - **THEN** the category SHALL be `dynamic_predator_large_quantum`
 - **AND** this SHALL represent the most challenging predator-enabled quantum scenarios
 
 #### Scenario: Dynamic Predator Classical Small Category
+
 - **GIVEN** a simulation with classical brain (MLPBrain, QMLPBrain, or SpikingBrain), `predators.enabled: true`, and grid size ≤ 20×20
 - **WHEN** benchmark category is determined
 - **THEN** the category SHALL be `dynamic_predator_small_classical`
 - **AND** this SHALL enable comparison of classical vs quantum approaches on predator tasks
 
 #### Scenario: Dynamic Predator Classical Medium Category
+
 - **GIVEN** a simulation with classical brain, `predators.enabled: true`, and 20×20 < grid size ≤ 50×50
 - **WHEN** benchmark category is determined
 - **THEN** the category SHALL be `dynamic_predator_medium_classical`
 
 #### Scenario: Dynamic Predator Classical Large Category
+
 - **GIVEN** a simulation with classical brain, `predators.enabled: true`, and grid size > 50×50
 - **WHEN** benchmark category is determined
 - **THEN** the category SHALL be `dynamic_predator_large_classical`
 
 #### Scenario: Predators Disabled Uses Non-Predator Categories
+
 - **GIVEN** a simulation with `predators.enabled: false` or predators not configured
 - **WHEN** benchmark category is determined
 - **THEN** existing non-predator categories SHALL be used
@@ -48,9 +56,11 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 - **AND** backward compatibility SHALL be maintained
 
 ### Requirement: Predator Benchmark Metrics Tracking
+
 Benchmark submissions for predator-enabled categories SHALL include predator-specific metrics in addition to standard foraging metrics.
 
 #### Scenario: Predator Metrics in Benchmark Submission
+
 - **GIVEN** a benchmark submission for category `dynamic_predator_small_quantum`
 - **WHEN** the benchmark result is recorded
 - **THEN** the submission SHALL include standard metrics:
@@ -66,6 +76,7 @@ Benchmark submissions for predator-enabled categories SHALL include predator-spe
   - average_survival_time (steps before predator death or success)
 
 #### Scenario: Benchmark Comparison with Predator Metrics
+
 - **GIVEN** multiple benchmark submissions in category `dynamic_predator_medium_classical`
 - **WHEN** benchmarks are compared
 - **THEN** the system SHALL rank submissions by primary metric (success_rate or total reward)
@@ -73,6 +84,7 @@ Benchmark submissions for predator-enabled categories SHALL include predator-spe
 - **AND** SHALL enable filtering by predator death rate or evasion success
 
 #### Scenario: Non-Predator Benchmark Metrics Unchanged
+
 - **GIVEN** a benchmark submission for non-predator category
 - **WHEN** the benchmark result is recorded
 - **THEN** predator metrics SHALL be absent or null
@@ -80,9 +92,11 @@ Benchmark submissions for predator-enabled categories SHALL include predator-spe
 - **AND** backward compatibility with existing benchmarks SHALL be maintained
 
 ### Requirement: Predator Benchmark Category Naming Convention
+
 Benchmark categories SHALL follow consistent naming convention indicating environment type, feature set, brain type, and size.
 
 #### Scenario: Category Naming Pattern
+
 - **GIVEN** the benchmark categorization system
 - **WHEN** a predator-enabled benchmark category is created
 - **THEN** the naming pattern SHALL be: `{environment}_{feature}_{size}_{brain}`
@@ -93,6 +107,7 @@ Benchmark categories SHALL follow consistent naming convention indicating enviro
 - **AND** this SHALL produce categories like `dynamic_predator_small_quantum`
 
 #### Scenario: Category Name Consistency
+
 - **GIVEN** all benchmark categories in the system
 - **WHEN** category names are reviewed
 - **THEN** predator categories SHALL clearly indicate the "predator" feature
@@ -100,9 +115,11 @@ Benchmark categories SHALL follow consistent naming convention indicating enviro
 - **AND** SHALL sort logically in alphabetical listings (dynamic_predator_* grouped together)
 
 ### Requirement: Benchmark Metadata for Predator Configuration
+
 Benchmark submissions SHALL capture predator configuration parameters to enable reproducibility and analysis of difficulty variations.
 
 #### Scenario: Predator Configuration in Benchmark Metadata
+
 - **GIVEN** a benchmark submission for a predator-enabled category
 - **WHEN** the submission metadata is recorded
 - **THEN** the following predator configuration SHALL be captured:
@@ -114,6 +131,7 @@ Benchmark submissions SHALL capture predator configuration parameters to enable 
 - **AND** this SHALL enable analysis of performance across different predator difficulties
 
 #### Scenario: Benchmark Reproducibility with Predator Settings
+
 - **GIVEN** a historical benchmark submission with recorded predator configuration
 - **WHEN** attempting to reproduce the benchmark
 - **THEN** the exact predator parameters SHALL be available
@@ -121,6 +139,7 @@ Benchmark submissions SHALL capture predator configuration parameters to enable 
 - **AND** SHALL support analysis of how parameter changes affect learning
 
 #### Scenario: Benchmark Filtering by Predator Difficulty
+
 - **GIVEN** multiple benchmark submissions with varying predator counts (2, 3, 5)
 - **WHEN** benchmarks are filtered
 - **THEN** the system SHALL support filtering by num_predators

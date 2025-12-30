@@ -26,6 +26,7 @@ success_rate = num_successful_episodes / total_episodes
 ```
 
 An episode is successful if:
+
 - Agent collects `target_foods_to_collect` items, OR
 - Agent is still alive at `max_steps` with food collected
 
@@ -40,6 +41,7 @@ efficiency = optimal_distance / actual_distance_traveled
 ```
 
 Where:
+
 - `optimal_distance` = straight-line distance from start to first food
 - `actual_distance_traveled` = sum of step distances
 
@@ -56,6 +58,7 @@ learning_speed = 1.0 - (episodes_to_80_success / max_episodes)
 ```
 
 Where:
+
 - `episodes_to_80_success` = first episode where rolling success rate ≥ 80%
 - `max_episodes` = maximum training episodes (typically 500)
 
@@ -137,11 +140,13 @@ score = 0.867 ± 0.023
 ## Leaderboard Updates
 
 The leaderboard is updated when:
+
 1. A new submission passes validation
 2. The submission's mean score exceeds existing entries for that brain/task combination
 3. OR the submission's lower CI bound exceeds the existing entry's upper CI bound (significant improvement)
 
 Equal scores are ordered by:
+
 1. Lower variance (more reliable)
 2. Better biological validation
 3. Earlier submission date

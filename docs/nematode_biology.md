@@ -6,19 +6,19 @@ This document provides a comprehensive overview of *Caenorhabditis elegans* (C. 
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Sensory Systems](#sensory-systems)
-   - [Chemotaxis](#chemotaxis)
-   - [Mechanosensation](#mechanosensation)
-   - [Thermotaxis](#thermotaxis)
-   - [Oxygen Sensing](#oxygen-sensing)
-3. [Foraging Strategies](#foraging-strategies)
-4. [Predator Detection and Avoidance](#predator-detection-and-avoidance)
-5. [Learning and Memory](#learning-and-memory)
-6. [Social Behaviors and Communication](#social-behaviors-and-communication)
-7. [Reproduction and Development](#reproduction-and-development)
-8. [Evolution and Adaptation](#evolution-and-adaptation)
-9. [Cellular-Level Considerations](#cellular-level-considerations)
+01. [Overview](#overview)
+02. [Sensory Systems](#sensory-systems)
+    - [Chemotaxis](#chemotaxis)
+    - [Mechanosensation](#mechanosensation)
+    - [Thermotaxis](#thermotaxis)
+    - [Oxygen Sensing](#oxygen-sensing)
+03. [Foraging Strategies](#foraging-strategies)
+04. [Predator Detection and Avoidance](#predator-detection-and-avoidance)
+05. [Learning and Memory](#learning-and-memory)
+06. [Social Behaviors and Communication](#social-behaviors-and-communication)
+07. [Reproduction and Development](#reproduction-and-development)
+08. [Evolution and Adaptation](#evolution-and-adaptation)
+09. [Cellular-Level Considerations](#cellular-level-considerations)
 10. [Integration with External Projects](#integration-with-external-projects)
 11. [Implications for Simulation](#implications-for-simulation)
 12. [References](#references)
@@ -59,10 +59,12 @@ Chemotaxis involves G-protein coupled receptors (GPCRs), cyclic nucleotide signa
 #### Environmental Modulation
 
 Recent research (2024) demonstrates that:
+
 - **Diet affects chemotaxis**: E. coli feeding promotes age-dependent decline in chemotaxis ability, while alternative diets (e.g., Lactobacillus reuteri) or food deprivation can maintain chemotactic performance [6]
 - **Food deprivation** enhances chemotaxis sensitivity, allowing starved worms to detect and navigate toward food more effectively [7]
 
 **References:**
+
 - [3] Bargmann CI, Horvitz HR. (1991). *Cell* 65(5):837-847
 - [4] Bargmann CI. (2006). *WormBook*. doi:10.1895/wormbook.1.123.1
 - [5] Ferkey DM, Sengupta P. (2011). *Genetics* 188(4):903-914
@@ -89,11 +91,13 @@ C. elegans possesses highly sensitive mechanosensory neurons that detect physica
 #### Functional Significance
 
 Touch sensitivity allows C. elegans to:
+
 - Detect and escape from predatory fungi that trap nematodes [11]
 - Navigate around physical obstacles
 - Respond to environmental texture changes
 
 **References:**
+
 - [8] Chalfie M, et al. (1985). *Journal of Neuroscience* 5(4):956-964
 - [9] O'Hagan R, et al. (2005). *Neuron* 47(1):15-26
 - [10] Chatzigeorgiou M, et al. (2010). *Nature Communications* 1:308
@@ -124,6 +128,7 @@ C. elegans exhibits remarkable thermosensory abilities, navigating thermal gradi
 - **Negative thermotaxis**: Movement toward cooler temperatures when above Tc
 
 **References:**
+
 - [12] Mori I, Ohshima Y. (1995). *Nature* 376(6538):344-348
 - [13] Kimura KD, et al. (2004). *Nature* 430(6996):317-322
 - [14] Clark DA, et al. (2006). *Nature* 440(7081):215-219
@@ -154,6 +159,7 @@ C. elegans displays sophisticated oxygen-sensing behaviors, preferring moderate 
 - **Metabolic optimization**: Moderate oxygen balances aerobic metabolism needs against oxidative stress
 
 **References:**
+
 - [18] Cheung BH, et al. (2005). *Cell* 123(1):157-171
 - [19] Zimmer M, et al. (2009). *Neuron* 61(6):865-879
 - [20] Gray JM, et al. (2004). *Nature* 430(6997):317-322
@@ -179,11 +185,13 @@ A foundational foraging behavior observed across nearly all animal species, incl
 #### Detailed Mechanism
 
 1. **Food encounter** triggers local search with:
+
    - Increased turning frequency (sharp turns, reversals)
    - Reduced forward velocity
    - Area restriction maximizes time in resource-rich zones
 
 2. **Extended absence of food** (>15 min) triggers global search with:
+
    - Decreased turning frequency
    - Increased forward velocity and path straightness
    - Extended search radius to locate new food patches
@@ -199,6 +207,7 @@ A foundational foraging behavior observed across nearly all animal species, incl
 C. elegans foraging is near-optimal in terms of information gain, with animals adjusting their search strategies to maximize resource encounter probability given environmental statistics [28].
 
 **References:**
+
 - [23] Dorfman A, et al. (2022). *Biological Reviews* 97(6):2076-2101
 - [24] Hills TT, et al. (2004). *Science* 304(5668):114-116
 - [25] Hills TT, et al. (2004). *Nature* 432(7014):47-52
@@ -239,16 +248,19 @@ The most well-studied predators of C. elegans:
 C. elegans detects multiple predator-related chemical signals:
 
 1. **Predator-secreted sulfolipids** (from P. pacificus):
+
    - Detected by four pairs of amphid sensory neurons (ASI, ASJ, ASK, ADL) acting redundantly [34]
    - Recruit cyclic nucleotide-gated (CNG) and transient receptor potential (TRP) channels
    - Trigger both escape behavior and reduced egg-laying
 
 2. **Alarm pheromones**:
+
    - Internal fluid from injured worms elicits repulsive behavior in nearby individuals [36]
    - Detected by ASI and ASK chemosensory neurons
    - Mediates kin recognition and danger signaling
 
 3. **Fungal attractants** (olfactory mimicry):
+
    - Nematophagous fungi produce compounds that mimic food and sex pheromones [31]
    - A. oligospora mimics bacterial odors and nematode pheromones to lure prey into traps
    - Detection leads to inappropriate attraction until physical contact triggers escape
@@ -264,11 +276,13 @@ C. elegans detects multiple predator-related chemical signals:
 #### 1. Escape Responses
 
 **Neural circuit**: Complete sensory-motor circuit for escape is well-characterized [38]
+
 - **Anterior touch** → backward movement (reversal)
 - **Posterior touch** → forward acceleration
 - **Omega turns**: Deep ventral bends that reorient the animal 180°
 
 **Motor control**:
+
 - Turning-associated neurons (SAA, RIV, SMB) provide inhibitory feedback that gates mechanosensory processing during turns [39]
 - Flexible escape strategy integrates feedforward and feedback circuits
 
@@ -303,11 +317,13 @@ C. elegans detects multiple predator-related chemical signals:
 #### Integration with Foraging
 
 Predator avoidance competes with foraging drives, requiring the worm to balance:
+
 - **Nutritional needs** (approach food)
 - **Survival imperatives** (avoid predators)
 - **Reproductive success** (select safe egg-laying sites)
 
 **References:**
+
 - [29] Jansson HB, et al. (1985). *Microbial Ecology* 11(3):237-248
 - [30] Liu XZ, Chen SY. (2000). *Mycologia* 92(6):1073-1079
 - [31] Hsueh YP, et al. (2017). *eLife* 6:e20023
@@ -333,32 +349,38 @@ Despite having only 302 neurons, C. elegans exhibits multiple forms of learning 
 ### Types of Learning
 
 #### 1. Habituation
+
 - **Simple form**: Non-associative learning where repeated benign stimuli lead to decreased response
 - **Tap habituation**: Repeated mechanical taps produce diminishing escape responses
 - **Recovery**: Spontaneous recovery occurs after rest periods
 
 #### 2. Associative Learning
+
 - **Classical conditioning**: Pairing of conditioned stimulus (e.g., odor) with unconditioned stimulus (e.g., food or danger)
 - **Operant conditioning**: Learning from consequences of actions
 - **Paradigms**: Both appetitive (food-based) and aversive (pathogen-based) associative learning have been demonstrated [44, 45]
 
 #### 3. Context Learning
+
 - **Temperature-food associations**: Worms associate specific temperatures with food availability and navigate accordingly [46]
 - **Chemical context**: Association of chemical cues with food or danger
 
 ### Memory Timescales
 
 #### Short-Term Associative Memory (STAM)
+
 - **Duration**: Minutes to 30 minutes
 - **Molecular requirements**: cAMP and calcium signaling pathways [47]
 - **Protein synthesis**: Not required for STAM formation
 
 #### Intermediate-Term Associative Memory (ITAM)
+
 - **Duration**: 30 minutes to several hours
 - **Molecular requirements**: Both cAMP and CaMKII (calcium/calmodulin-dependent kinase II) signaling [47]
 - **Protein synthesis**: Required to extend memory beyond 30 minutes
 
 #### Long-Term Associative Memory (LTAM)
+
 - **Duration**: Hours to days
 - **Training paradigm**: Requires spaced training (multiple training sessions with intervals) rather than massed training [48]
 - **Molecular requirements**:
@@ -369,23 +391,28 @@ Despite having only 302 neurons, C. elegans exhibits multiple forms of learning 
 ### Neural Circuits and Molecular Mechanisms
 
 #### Key Signaling Pathways
+
 - **cAMP pathway**: Essential for multiple memory phases
 - **Calcium signaling**: CaMKII activity required for memory consolidation
 - **Glutamate receptors**: GLR-1 (non-NMDA type) required for context conditioning long-term memory [50]
 - **NMDA receptors**: NMR-1 required for both short- and long-term olfactory context conditioning [50]
 
 #### Critical Interneurons
+
 - **RIM interneurons**: Integrate chemosensory and mechanosensory information for associative learning [50]
 - **Rescue experiments**: Restoring NMR-1 function specifically in RIM neurons rescues conditioning defects
 
 #### Protein Synthesis Requirements
+
 Two distinct roles of protein translation in memory [51]:
+
 1. **During training**: Required to extend memory beyond 30 minutes
 2. **After training**: Required for proper memory decay (forgetting) - ensures memories fade appropriately
 
 ### Transgenerational Memory
 
 Recent research (2023) demonstrates that:
+
 - **Associative memories can be inherited** across generations in C. elegans [52]
 - **Cellular changes** acquired during learning persist and transfer to offspring
 - **Epigenetic mechanisms**: Likely involve small RNAs and chromatin modifications
@@ -393,12 +420,14 @@ Recent research (2023) demonstrates that:
 ### Ecological Significance
 
 Learning and memory allow C. elegans to:
+
 - **Optimize foraging**: Remember productive food locations and conditions
 - **Avoid dangers**: Learn which bacteria are pathogenic, which areas have predators
 - **Adapt to microenvironments**: Adjust behavior based on local conditions (temperature, oxygen, chemical cues)
 - **Balance trade-offs**: Integrate multiple environmental signals to make optimal survival and reproduction decisions
 
 **References:**
+
 - [44] Morrison GE, et al. (1999). *Learning & Memory* 6(5):504-518
 - [45] Zhang Y, et al. (2005). *Science* 309(5735):633-636
 - [46] Mohri A, et al. (2005). *Nature* 433(7027):741-744
@@ -467,6 +496,7 @@ While C. elegans does not exhibit complex cooperation like eusocial insects, som
 - **Sperm competition**: Hermaphrodites can mate with multiple males; sperm from different males compete for fertilization success
 
 **References:**
+
 - [53] de Bono M, Bargmann CI. (1998). Natural variation in a neuropeptide Y receptor homolog modifies social behavior and food response in *C. elegans*. *Cell* 94(5):679-689
 - [54] Raizen DM, et al. (2008). Lethargus is a *Caenorhabditis elegans* sleep-like state. *Nature* 451(7178):569-572
 - [55] Srinivasan J, et al. (2008). A blend of small molecules regulates both mating and development in *Caenorhabditis elegans*. *Nature* 454(7208):1115-1118
@@ -530,6 +560,7 @@ C. elegans exists as two sexes: **hermaphrodites** (self-fertilizing, XX) and **
 - **Rapid adaptation**: Laboratory evolution experiments show behavioral adaptations within 10-50 generations
 
 **References:**
+
 - [59] Byerly L, et al. (1976). The life cycle of the nematode *Caenorhabditis elegans*: I. Wild-type growth and reproduction. *Developmental Biology* 51(1):23-33
 - [60] Cassada RC, Russell RL. (1975). The dauer larva, a post-embryonic developmental variant of the nematode *Caenorhabditis elegans*. *Developmental Biology* 46(2):326-342
 - [61] Waggoner LE, et al. (1998). The *C. elegans* unc-8 gene encodes a DEG/ENaC channel involved in locomotion. *Genetics* 148(2):703-718
@@ -589,6 +620,7 @@ Quantitative trait locus (QTL) mapping reveals genetic basis of behavioral varia
 - **Survival trade-offs**: Foraging intensity vs. predator risk
 
 **References:**
+
 - [65] Andersen EC, et al. (2012). Chromosome-scale selective sweeps shape *Caenorhabditis elegans* genomic diversity. *Nature Genetics* 44(3):285-290
 - [66] Bendesky A, et al. (2011). *Nature* 472(7343):313-318
 - [67] Schulenburg H, Félix MA. (2017). The natural biotic environment of *Caenorhabditis elegans*. *Genetics* 206(1):55-86
@@ -667,11 +699,13 @@ C. elegans uses classical neurotransmitters and neuropeptides [71]:
 #### Hybrid Approach
 
 A future direction could combine:
+
 - **Behavioral abstraction** (current approach) for overall foraging strategy
 - **Selective cellular models** for specific circuits where mechanism matters (e.g., AFD thermosensory neurons, ASH nociceptors)
 - **Quantum-inspired algorithms**: Apply quantum variational circuits (from Quantum Nematode) to optimize parameters in cellular models
 
 **References:**
+
 - [71] Chase DL, Koelle MR. (2007). Biogenic amine neurotransmitters in *C. elegans*. *WormBook*. doi:10.1895/wormbook.1.132.1
 - [72] Goodman MB, et al. (1998). Active currents regulate sensitivity and dynamic range in *C. elegans* neurons. *Neuron* 20(4):763-772
 
@@ -686,12 +720,14 @@ Understanding how Quantum Nematode relates to other C. elegans modeling efforts 
 **Project Goal**: Build a complete virtual C. elegans at cellular level (neurons, muscles, body physics)
 
 **Approach**:
+
 - **Connectome-based neural simulation**: Implement all 302 neurons and 7,000 synapses with biophysical models
 - **Muscle dynamics**: 95 muscle cells with contractile physics
 - **3D body simulation**: Soft-body physics for realistic locomotion in fluid environment
 - **Tool**: Geppetto platform for multi-scale simulation
 
 **Relationship to Quantum Nematode**:
+
 - **Complementary**: OpenWorm focuses on "how biology works" (bottom-up from cells); Quantum Nematode focuses on "how to optimize behavior" (top-down from algorithms)
 - **Integration Opportunity**: Export optimized policies from Quantum Nematode → control OpenWorm's simulated muscles
 - **Validation**: Compare behavioral outputs from both approaches (do they match?)
@@ -702,18 +738,21 @@ Understanding how Quantum Nematode relates to other C. elegans modeling efforts 
 **Project Goal**: Build physical nematode-inspired robots with real-world sensors and actuators
 
 **Approach**:
+
 - **Hardware platform**: Soft robotic body or wheeled platforms
 - **Sensors**: Chemical sensors (e.g., gas sensors for odor detection), contact sensors, IMUs
 - **Actuators**: Motors for locomotion, controllable movement
 - **Control**: Need control policies (this is where Quantum Nematode contributes)
 
 **Relationship to Quantum Nematode**:
+
 - **Deployment Platform**: WormBot serves as embodied validation testbed for Quantum Nematode policies
 - **Sim-to-Real Transfer**: Test whether simulation-trained brains work on physical robots
 - **Real-World Benchmarks**: Physical foraging tasks, obstacle navigation, multi-robot coordination
 - **Hardware Constraints**: Quantum Nematode policies must run on WormBot's onboard computers (CPU, microcontroller)
 
 **Integration Workflow**:
+
 1. Train brain in Quantum Nematode simulation
 2. Export policy (neural network weights, quantum circuit parameters)
 3. Load onto WormBot controller
@@ -723,12 +762,14 @@ Understanding how Quantum Nematode relates to other C. elegans modeling efforts 
 ### Neuroscience Experimental Labs
 
 **Key Labs**:
+
 - **Bargmann Lab (Rockefeller)**: Chemotaxis, neural circuits, behavior genetics
 - **Sengupta Lab (Brandeis)**: Sensory processing, thermotaxis, oxygen sensing
 - **Horvitz Lab (MIT)**: Apoptosis, cell lineage, behavior
 - **Lockery Lab (Oregon)**: Quantitative behavior, foraging, computational modeling
 
 **Relationship to Quantum Nematode**:
+
 - **Hypothesis Generation**: Quantum Nematode models generate testable biological predictions
 - **Experimental Validation**: Labs design and execute experiments to test predictions
 - **Data Sharing**: Labs provide behavioral datasets; Quantum Nematode provides analysis tools
@@ -741,27 +782,32 @@ Understanding how Quantum Nematode relates to other C. elegans modeling efforts 
 To accurately simulate C. elegans brain function and behavior, our computational model should incorporate:
 
 ### 1. Chemotaxis System
+
 - **Gradient detection**: Implement chemical gradient fields for food (attractants) and predators (repellents)
 - **Gradient computation**: Exponential decay functions modeling diffusion: `concentration = strength × exp(-distance / decay_constant)`
 - **Unified gradient field**: Superposition of positive (food) and negative (predator) gradients
 - **Sensory adaptation**: Dynamic sensitivity adjustment based on recent stimulus history
 
 ### 2. Mechanosensation
+
 - **Obstacle detection**: Responses to physical boundaries and barriers
 - **Collision handling**: Gentle touch triggers local exploration; harsh touch triggers escape
 - **Grid boundaries**: Implement appropriate behavioral responses (wrapping, bouncing, or avoidance)
 
 ### 3. Thermotaxis (Optional Enhancement)
+
 - **Temperature fields**: Spatial temperature gradients if implementing thermal navigation
 - **Temperature memory**: Association of specific temperatures with food availability
 - **Isothermal tracking**: Movement along preferred temperature contours
 
 ### 4. Oxygen Sensing (Optional Enhancement)
+
 - **Oxygen fields**: Spatial oxygen concentration gradients
 - **Preference range**: Optimal zone at 5-12% O2
 - **Avoidance zones**: Hypoxic (<5%) and hyperoxic (>12%) regions
 
 ### 5. Foraging Strategies
+
 - **Area-restricted search**: Implement state-dependent turning frequency
   - High turning rate in food-rich areas (local search)
   - Low turning rate after extended absence of food (global search)
@@ -769,6 +815,7 @@ To accurately simulate C. elegans brain function and behavior, our computational
 - **Dopamine modulation**: Internal state variables representing satiety and motivation
 
 ### 6. Predator Avoidance
+
 - **Predator entities**: Independent mobile agents in dynamic environments
 - **Predator gradients**: Negative (repulsive) chemical fields emanating from predators
 - **Detection radius**: Zone where predator proximity triggers heightened escape probability
@@ -777,18 +824,22 @@ To accurately simulate C. elegans brain function and behavior, our computational
 - **Proximity penalties**: Negative rewards for entering predator detection zones
 
 ### 7. Learning Mechanisms
+
 - **Reward-based learning**: Reinforcement learning algorithms to allow behavioral adaptation
 - **Memory traces**: Short-term and long-term memory representations
 - **Associative learning**: Ability to associate environmental cues (gradients, locations) with outcomes (food, danger)
 - **Exploration-exploitation balance**: Trade-off between trying new strategies and exploiting learned successful behaviors
 
 ### 8. Avoid Visual Inputs
+
 - **No vision**: C. elegans lacks eyes and photoreceptors (except for UV avoidance via ASJ neurons)
 - **Sensory modalities**: Limit simulation to chemical, thermal, mechanical, and oxygen sensing
 - **Gradient-based navigation**: All spatial navigation occurs via gradient following, not direct "seeing" of targets
 
 ### 9. Multi-Objective Optimization
+
 Real C. elegans must balance multiple, sometimes conflicting goals:
+
 - **Foraging vs. Safety**: Approach food while avoiding predators
 - **Exploration vs. Exploitation**: Search new areas vs. revisit known food sources
 - **Energy conservation**: Minimize unnecessary movement while maintaining search efficiency
@@ -802,23 +853,23 @@ Implementing these multi-objective pressures creates more biologically realistic
 
 ### Complete Reference List
 
-1. White JG, et al. (1986). The structure of the nervous system of the nematode *Caenorhabditis elegans*. *Philosophical Transactions of the Royal Society of London B* 314(1165):1-340.
+01. White JG, et al. (1986). The structure of the nervous system of the nematode *Caenorhabditis elegans*. *Philosophical Transactions of the Royal Society of London B* 314(1165):1-340.
 
-2. Hobert O. (2013). The neuronal genome of *Caenorhabditis elegans*. *WormBook*. doi:10.1895/wormbook.1.161.1
+02. Hobert O. (2013). The neuronal genome of *Caenorhabditis elegans*. *WormBook*. doi:10.1895/wormbook.1.161.1
 
-3. Bargmann CI, Horvitz HR. (1991). Chemosensory neurons with overlapping functions direct chemotaxis to multiple chemicals in *C. elegans*. *Cell* 65(5):837-847.
+03. Bargmann CI, Horvitz HR. (1991). Chemosensory neurons with overlapping functions direct chemotaxis to multiple chemicals in *C. elegans*. *Cell* 65(5):837-847.
 
-4. Bargmann CI. (2006). Chemosensation in *C. elegans*. *WormBook*. doi:10.1895/wormbook.1.123.1
+04. Bargmann CI. (2006). Chemosensation in *C. elegans*. *WormBook*. doi:10.1895/wormbook.1.123.1
 
-5. Ferkey DM, Sengupta P. (2011). *C. elegans* chemosensory cilia are ciliopathy-relevant models to study ciliated neurons. *Genetics* 188(4):903-914.
+05. Ferkey DM, Sengupta P. (2011). *C. elegans* chemosensory cilia are ciliopathy-relevant models to study ciliated neurons. *Genetics* 188(4):903-914.
 
-6. Suryawinata L, et al. (2024). Dietary E. coli promotes age-dependent chemotaxis decline in *C. elegans*. *Scientific Reports* 14(1):3046.
+06. Suryawinata L, et al. (2024). Dietary E. coli promotes age-dependent chemotaxis decline in *C. elegans*. *Scientific Reports* 14(1):3046.
 
-7. Saeki S, et al. (2020). Food deprivation changes chemotaxis behavior in *Caenorhabditis elegans*. *iScience* 23(1):100787.
+07. Saeki S, et al. (2020). Food deprivation changes chemotaxis behavior in *Caenorhabditis elegans*. *iScience* 23(1):100787.
 
-8. Chalfie M, et al. (1985). The neural circuit for touch sensitivity in *Caenorhabditis elegans*. *Journal of Neuroscience* 5(4):956-964.
+08. Chalfie M, et al. (1985). The neural circuit for touch sensitivity in *Caenorhabditis elegans*. *Journal of Neuroscience* 5(4):956-964.
 
-9. O'Hagan R, et al. (2005). The MEC-4 DEG/ENaC channel of *Caenorhabditis elegans* touch receptor neurons transduces mechanical signals. *Neuron* 47(1):15-26.
+09. O'Hagan R, et al. (2005). The MEC-4 DEG/ENaC channel of *Caenorhabditis elegans* touch receptor neurons transduces mechanical signals. *Neuron* 47(1):15-26.
 
 10. Chatzigeorgiou M, et al. (2010). Specific roles for DEG/ENaC and TRP channels in touch and thermosensation in *C. elegans* nociceptors. *Nature Communications* 1:308.
 

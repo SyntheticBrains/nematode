@@ -11,6 +11,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 ## 1. TemperatureField Class
 
 ### 1.1 Create Temperature Module
+
 - [ ] Create `packages/quantum-nematode/quantumnematode/env/temperature.py`
 - [ ] Define `TemperatureField` dataclass with fields:
   - `grid_size: int`
@@ -21,6 +22,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
   - `cold_spots: list[tuple[int, int, float]]` (x, y, intensity)
 
 ### 1.2 Temperature Computation
+
 - [ ] Implement `get_temperature(position: tuple[int, int]) -> float`
   - Linear gradient component based on direction and strength
   - Add hot spot contributions (exponential falloff)
@@ -30,6 +32,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
   - Return (dx, dy) gradient vector
 
 ### 1.3 Temperature Zone Classification
+
 - [ ] Implement `get_zone(temperature: float) -> TemperatureZone`
 - [ ] Define `TemperatureZone` enum: LETHAL_COLD, DANGER_COLD, DISCOMFORT_COLD, COMFORT, DISCOMFORT_HOT, DANGER_HOT, LETHAL_HOT
 - [ ] Use configurable thresholds from environment config
@@ -41,12 +44,14 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 ## 2. Environment Integration
 
 ### 2.1 Temperature Field in Environment
+
 - [ ] Add `thermotaxis_enabled: bool` to DynamicForagingEnvironment
 - [ ] Add `temperature_field: TemperatureField | None` attribute
 - [ ] Initialize temperature field from config when enabled
 - [ ] Add `ThermotaxisConfig` dataclass for YAML configuration
 
 ### 2.2 Temperature in Step Execution
+
 - [ ] Compute temperature at agent position each step
 - [ ] Populate `BrainParams.temperature` with current temperature
 - [ ] Populate `BrainParams.temperature_gradient_strength`
@@ -54,6 +59,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 - [ ] Populate `BrainParams.cultivation_temperature`
 
 ### 2.3 Temperature Zone Effects
+
 - [ ] Apply comfort reward when in comfort zone
 - [ ] Apply discomfort penalty when in discomfort zone
 - [ ] Apply danger penalty + HP damage when in danger zone
@@ -61,6 +67,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 - [ ] Track temperature_comfort_score (time in comfort / total time)
 
 ### 2.4 Temperature Termination
+
 - [ ] Check for HP depletion from temperature damage
 - [ ] Log temperature as cause when terminating from temperature damage
 
@@ -87,11 +94,13 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 - [ ] Add docstring note documenting spatial vs temporal sensing trade-off
 
 ### 3.2 Module Registration
+
 - [ ] Add `ModuleName.THERMOTAXIS` to enum (if not already present)
 - [ ] Register `thermotaxis_features` in `MODULE_FEATURE_EXTRACTORS`
 - [ ] Add AFD neuron reference to docstring
 
 ### 3.3 Unified Feature Extraction Integration
+
 - [ ] Add thermotaxis to `extract_sensory_features()` in features.py
 - [ ] Ensure PPOBrain receives thermotaxis features in input vector
 - [ ] Ensure ModularBrain can map thermotaxis module to qubits
@@ -103,6 +112,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 ## 4. Benchmarks and Validation
 
 ### 4.1 Thermotaxis Benchmark Configs
+
 - [ ] Create `configs/examples/thermotaxis_foraging_small.yml`
   - 20x20 grid, food collection goal
   - Thermotaxis enabled with linear gradient
@@ -116,6 +126,7 @@ Implementation tasks for thermotaxis sensory system, building on the foundation 
 ### 4.2 Benchmark Categories (Hierarchical Naming)
 
 Adopt hierarchical benchmark naming convention for scalability:
+
 ```text
 thermotaxis/                    # Temperature-aware tasks
 ├── isothermal_small/           # Pure temp comfort (no food goal)
@@ -132,6 +143,7 @@ thermotaxis/                    # Temperature-aware tasks
 - [ ] Ensure backward compatibility with existing `basic/` and `survival/` categories
 
 ### 4.3 Biological Validation
+
 - [ ] Research C. elegans thermotaxis literature for validation targets
 - [ ] Document expected isothermal tracking behavior
 - [ ] Create validation metrics comparing agent to biological data
@@ -143,11 +155,13 @@ thermotaxis/                    # Temperature-aware tasks
 ## 5. Visualization
 
 ### 5.1 Temperature Background Colors
+
 - [ ] Extend Rich theme renderer to query temperature at each cell
 - [ ] Apply background color based on temperature zone
 - [ ] Ensure entity rendering (agent, food, predator) takes priority over background
 
 ### 5.2 Debug Logging
+
 - [ ] Log temperature field parameters at episode start
 - [ ] Log temperature samples at corners and center
 - [ ] Log agent's current temperature in step output
@@ -159,11 +173,13 @@ thermotaxis/                    # Temperature-aware tasks
 ## 6. Documentation
 
 ### 6.1 Configuration Documentation
+
 - [ ] Document thermotaxis configuration options
 - [ ] Provide example configurations with explanations
 - [ ] Document temperature zone thresholds
 
 ### 6.2 Architecture Documentation
+
 - [ ] Document thermotaxis_features() computation
 - [ ] Document AFD neuron modeling approach
 - [ ] Add to optimization methods documentation

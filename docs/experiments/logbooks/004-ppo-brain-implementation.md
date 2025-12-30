@@ -272,6 +272,7 @@ Session `20251226_143130` with continued tuning - **new best**:
 4. **Lower variance**: PPO shows more stable post-convergence behavior
 
 **Top PPO predator sessions:**
+
 - `20251227_011611`: Best composite (0.781), 93.2% post-conv success, converge@24
 - `20251227_022229`: Fastest convergence (run 20), 90% post-conv success
 
@@ -403,6 +404,7 @@ PPO's clipped objective provides built-in learning rate adaptivity. Adding an LR
 - [x] Benchmark on predator environment (achieved 93% post-conv, exceeds MLP's 92%)
 
 **Deferred to future work:**
+
 - Compare learning curves (PPO vs MLP vs Spiking)[^1]
 - Test on medium/large environments
 
@@ -413,6 +415,7 @@ PPO's clipped objective provides built-in learning rate adaptivity. Adding an LR
 ### Key Sessions
 
 **Foraging (Small):**
+
 - **Initial PPO (50 runs)**: `20251226_132348` - 80% success, convergence run 34
 - **Optimized PPO (50 runs)**: `20251226_133645` - 94% success, convergence run 20
 - **Full Benchmark (200 runs)**: `20251226_140324` - 98% success, composite 0.823
@@ -420,6 +423,7 @@ PPO's clipped objective provides built-in learning rate adaptivity. Adding an LR
 - **MLP Foraging Baseline (200 runs)**: `20251127_205353` - 96.5% success, composite 0.822
 
 **Predator (Small):**
+
 - **Best PPO Predator (200 runs)**: `20251227_011611` - **93.2% post-conv**, composite **0.781** ★
 - **Fast Convergence PPO (200 runs)**: `20251227_022229` - 90% post-conv, converge@20
 - **MLP Predator Baseline (200 runs)**: `20251127_140342` - 91.8% post-conv, composite 0.740
@@ -427,11 +431,13 @@ PPO's clipped objective provides built-in learning rate adaptivity. Adding an LR
 ### Config Files
 
 **Foraging environments:**
+
 - Small (20x20): `configs/examples/ppo_foraging_small.yml`
 - Medium (50x50): `configs/examples/ppo_foraging_medium.yml`
 - Large (100x100): `configs/examples/ppo_foraging_large.yml`
 
 **Predator environments:**
+
 - Small (20x20, 2 predators): `configs/examples/ppo_predators_small.yml`
 - Medium (50x50, 3 predators): `configs/examples/ppo_predators_medium.yml`
 - Large (100x100, 5 predators): `configs/examples/ppo_predators_large.yml`

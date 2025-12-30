@@ -7,6 +7,7 @@ Quantum variational circuits face a fundamental challenge: gradient estimation v
 Evolutionary optimization sidesteps gradients entirely, using population-based search with episode-level fitness aggregation. This is a well-established approach for quantum circuit optimization (see Variational Quantum Eigensolver literature).
 
 ### Stakeholders
+
 - Researchers seeking optimal quantum parameters
 - Quantum advantage investigation (requires clean comparison)
 - Future work on hybrid classical-quantum architectures
@@ -14,12 +15,14 @@ Evolutionary optimization sidesteps gradients entirely, using population-based s
 ## Goals / Non-Goals
 
 ### Goals
+
 - Find optimal or near-optimal quantum circuit parameters without gradient noise
 - Establish true capacity ceiling of quantum circuits (currently unknown)
 - Enable apples-to-apples comparison with classical baselines
 - Provide stable, reproducible optimization results
 
 ### Non-Goals
+
 - Replace gradient-based learning (it remains available)
 - Prove quantum advantage (this enables investigation, not proof)
 - Optimize for speed (research clarity over performance)
@@ -32,6 +35,7 @@ Evolutionary optimization sidesteps gradients entirely, using population-based s
 **Choice**: Use CMA-ES (Covariance Matrix Adaptation Evolution Strategy) as the primary evolutionary algorithm.
 
 **Rationale**:
+
 - Works exceptionally well in 10-50 parameter range (we have 12-24)
 - Self-adapts search distribution without manual tuning
 - Handles noisy fitness evaluations gracefully
@@ -39,6 +43,7 @@ Evolutionary optimization sidesteps gradients entirely, using population-based s
 - Standard in quantum variational circuit optimization literature
 
 **Alternatives Considered**:
+
 - Simple Genetic Algorithm: More interpretable, but requires tuning mutation rates
 - Particle Swarm: Good for continuous spaces, but less robust to noise
 - Random Search: Baseline comparison only, not for production use
@@ -48,12 +53,14 @@ Evolutionary optimization sidesteps gradients entirely, using population-based s
 **Choice**: Fitness is negative of success rate averaged over N episodes (N=10-20).
 
 **Rationale**:
+
 - CMA-ES minimizes, so use negative success rate
 - N=10-20 balances noise reduction vs evaluation cost
 - Success rate is the metric we care about (not reward magnitude)
 - Simple, interpretable, directly comparable to baseline
 
 **Alternative Considered**:
+
 - Weighted combination of success + foods collected: More complex, unclear benefit
 - Single-episode fitness: Too noisy, would require more generations
 
@@ -62,12 +69,14 @@ Evolutionary optimization sidesteps gradients entirely, using population-based s
 **Choice**: Use Python `multiprocessing` for parallel fitness evaluation.
 
 **Rationale**:
+
 - Each population member is independent
 - Easy 4-8x speedup on modern machines
 - No external dependencies (Ray, Dask)
 - Brain instances are picklable
 
 **Implementation**:
+
 ```python
 from multiprocessing import Pool
 
@@ -80,12 +89,14 @@ with Pool(processes=8) as pool:
 **Choice**: Create `LinearClassicalBrain` with exactly 12 parameters.
 
 **Rationale**:
+
 - Fair comparison requires matched parameter count
 - Linear model: 4 actions × 3 inputs = 12 weights (no bias)
 - Or small MLP: 3→4 with 12 weights distributed
 - Same evolution process, only brain differs
 
 **Comparison Protocol**:
+
 1. Evolve quantum brain (12 params) → fitness_q
 2. Evolve classical brain (12 params) → fitness_c
 3. If fitness_q > fitness_c: Evidence of quantum advantage
@@ -161,16 +172,19 @@ evolution:
 ## Risks / Trade-offs
 
 ### Risk 1: Computational Cost
+
 - **Issue**: 20 population × 15 episodes × 50 generations = 15,000 episodes
 - **Mitigation**: Parallel evaluation, resume from checkpoint
 - **Trade-off**: Accept longer runtime for cleaner results
 
 ### Risk 2: Local Optima
+
 - **Issue**: Evolution may converge to local optimum
 - **Mitigation**: CMA-ES adapts search distribution; run multiple seeds
 - **Trade-off**: More generations/larger population if needed
 
 ### Risk 3: Quantum Advantage May Not Exist
+
 - **Issue**: Comparison may show classical wins at 12 parameters
 - **Mitigation**: This is a valid research result, not a failure
 - **Trade-off**: Understanding limits is valuable
