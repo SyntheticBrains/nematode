@@ -534,7 +534,7 @@ The system SHALL provide separate benchmark categories for predator-enabled simu
 
 The system SHALL execute each simulation step in a deterministic order to ensure consistent collision detection and predator movement behavior.
 
-#### Scenario: Single Step Execution Sequence
+#### Scenario: Single-Step Execution Sequence
 
 - **GIVEN** a simulation step with predators enabled
 - **WHEN** the step is executed

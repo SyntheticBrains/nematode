@@ -90,7 +90,7 @@ with Pool(processes=8) as pool:
 
 **Rationale**:
 
-- Fair comparison requires matched parameter count
+- Fair comparison requires parameters to be matched in count
 - Linear model: 4 actions × 3 inputs = 12 weights (no bias)
 - Or small MLP: 3→4 with 12 weights distributed
 - Same evolution process, only brain differs

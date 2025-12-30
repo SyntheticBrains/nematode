@@ -180,7 +180,7 @@ The system SHALL render temperature zones using background colors in themes that
 
 The system SHALL support additional termination reasons for Phase 1 mechanics including health depletion and environmental hazards.
 
-#### Scenario: Health Depleted Termination
+#### Scenario: Health-Depleted Termination
 
 - **GIVEN** health system enabled and agent HP reaches 0
 - **WHEN** the episode terminates
