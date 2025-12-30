@@ -528,6 +528,18 @@ ______________________________________________________________________
    - Dopaminergic neurons: Reward signaling, motivation
    - Serotonergic neurons: Modulate learning intensity
 
+8. **Biological Accuracy Revisit: Temporal Sensory Systems**
+
+   > **Note**: Once memory systems are operational, revisit the biological accuracy of sensory modalities implemented in Phase 1 and earlier. Current implementations use spatial gradient sensing (computationally equivalent for stateless brains), but real C. elegans uses temporal sensing for several modalities:
+   >
+   > - **Thermotaxis**: AFD neurons use temporal derivative (dT/dt) to detect temperature changes over time, not instantaneous spatial gradients
+   > - **Chemotaxis**: ASE neurons perform temporal concentration comparisons during head sweeps
+   > - **Oxygen sensing**: URX/BAG neurons integrate oxygen changes over time
+   >
+   > With STAM/ITAM memory systems available, implement biologically-accurate temporal sensing that compares current vs. recent sensory values. This would require memory buffers and temporal derivative computation, making it a natural extension of Phase 3 memory infrastructure.
+   >
+   > **Deliverable**: Temporal sensing module for thermotaxis (and optionally chemotaxis, aerotaxis) that uses memory to compute dT/dt, dC/dt gradients instead of spatial approximations.
+
 #### Metrics Focus
 
 - **Memory timescales**: Match biological STAM (minutes), ITAM (hours), LTAM (days)
