@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-spiking-neural-network-brain. Update Purpose after archive.
+This specification defines the YAML-based configuration system for the Quantum Nematode simulation platform. It governs how brain architectures (modular, qmodular, mlp, qmlp, ppo, spiking), environment parameters, and learning hyperparameters are specified, validated, and loaded. The configuration system ensures all parameters fall within valid ranges, applies sensible defaults for optional settings, and provides example configurations for common use cases. This spec is intended for developers extending the platform with new brain types or environment features.
 
 ## Requirements
 
