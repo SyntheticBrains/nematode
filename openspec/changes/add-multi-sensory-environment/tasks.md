@@ -86,6 +86,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 ### 3.4 Mixed Types Configuration
 
 - [ ] Update predator config schema to support type list:
+
   ```yaml
   types:
     - type: stationary
@@ -93,6 +94,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
     - type: pursuit
       count: 1
   ```
+
 - [ ] Implement mixed type spawning
 - [ ] Update gradient computation for different predator types
 
@@ -247,6 +249,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
 ### 10.1 Category Infrastructure
 
 - [ ] Define benchmark category hierarchy:
+
   ```text
   basic/          # Single objective (foraging only)
   survival/       # Food + predators
@@ -254,6 +257,7 @@ Implementation tasks for Phase 1 foundational infrastructure, organized by compo
   multisensory/   # Multiple modalities (future)
   ablation/       # Controlled studies (reserved for add-ablation-toolkit)
   ```
+
 - [ ] Update benchmark categorization logic to support hierarchical paths
 - [ ] Implement path pattern: `{category}/{task}_{size}/{brain_type}`
 

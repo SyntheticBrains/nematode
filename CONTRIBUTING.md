@@ -322,6 +322,7 @@ docs/experiments/
 ```
 
 **Key distinction from auto-tracking:**
+
 | System | Location | Git Tracked | Purpose |
 |--------|----------|-------------|---------|
 | Auto-tracking | `experiments/*.json` | No | Raw metadata from every run |

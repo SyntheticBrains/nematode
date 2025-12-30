@@ -76,6 +76,7 @@ The system SHALL support multiple predator behavior types including stationary t
 #### Scenario: Mixed Predator Types Configuration
 
 - **GIVEN** a configuration with multiple predator types:
+
   ```yaml
   predators:
     types:
@@ -84,6 +85,7 @@ The system SHALL support multiple predator behavior types including stationary t
       - type: pursuit
         count: 1
   ```
+
 - **WHEN** the environment initializes
 - **THEN** exactly 2 stationary predators SHALL be spawned
 - **AND** exactly 1 pursuit predator SHALL be spawned
