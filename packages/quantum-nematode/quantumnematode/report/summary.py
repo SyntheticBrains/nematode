@@ -74,7 +74,7 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Add environment specific data
         additional_info = " "
         if result.satiety_remaining is not None:
-            additional_info += f"Satiety: {result.satiety_remaining:<6} "
+            additional_info += f"Satiety: {result.satiety_remaining:<6.1f} "
         if result.health_history:
             final_health = result.health_history[-1]
             additional_info += f"Health: {final_health:<6.1f} "
