@@ -278,7 +278,7 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
     )
 
 
-def run_episode(  # noqa: PLR0913
+def run_episode(  # noqa: C901, PLR0912, PLR0913
     brain: ModularBrain,
     env: DynamicForagingEnvironment,
     max_steps: int,
@@ -359,6 +359,10 @@ def run_episode(  # noqa: PLR0913
                 satiety = min(satiety + satiety_gain, initial_satiety)
                 env.spawn_food()  # Spawn new food
 
+                # Apply food healing if health system enabled
+                if env.health.enabled:
+                    env.apply_food_healing()
+
                 # Check for success (collected target foods)
                 if foods_collected >= env.foraging.target_foods_to_collect:
                     success = True
@@ -368,7 +372,14 @@ def run_episode(  # noqa: PLR0913
             if env.predator.enabled:
                 env.update_predators()
                 if env.check_predator_collision():
-                    return False  # Died to predator
+                    if env.health.enabled:
+                        # HP-based damage: apply damage and check for death
+                        env.apply_predator_damage()
+                        if env.is_health_depleted():
+                            return False  # Died from HP depletion
+                    else:
+                        # Instant death (original behavior)
+                        return False  # Died to predator
 
             # Decay satiety
             satiety -= satiety_decay_rate
