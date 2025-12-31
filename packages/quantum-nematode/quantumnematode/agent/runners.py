@@ -251,16 +251,21 @@ class StandardEpisodeRunner(EpisodeRunner):
                         distance_efficiency=food_result.distance_efficiency,
                     )
 
-                    # Log food collection with distance efficiency
+                    # Log food collection with distance efficiency and health restoration
                     dist_eff_msg = ""
                     if food_result.distance_efficiency is not None:
                         dist_eff = food_result.distance_efficiency
                         dist_eff_msg = f" (Distance efficiency: {dist_eff:.2f})"
 
+                    health_msg = ""
+                    if food_result.health_restored > 0:
+                        health_msg = f", HP +{food_result.health_restored:.1f} "
+                        f"to {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}"
+
                     logger.info(
                         f"Food #{agent._episode_tracker.foods_collected} collected! "
                         f"Satiety restored by {food_result.satiety_restored:.1f} to "
-                        f"{agent.current_satiety:.1f}/{agent.max_satiety}{dist_eff_msg}",
+                        f"{agent.current_satiety:.1f}/{agent.max_satiety}{health_msg}{dist_eff_msg}",
                     )
 
                     # Check for victory condition (collected target number of foods)
@@ -297,32 +302,72 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Check for predator collision BEFORE predators move
                 if agent.env.check_predator_collision():
-                    logger.warning("Failed to complete episode: agent caught by predator!")
-                    # Apply death penalty to both brain reward and episode tracker
-                    penalty = -reward_config.penalty_predator_death
-                    reward += penalty
-                    agent._episode_tracker.track_reward(penalty)
+                    # Health system: apply damage instead of instant death
+                    if agent.env.health_system_enabled:
+                        damage = agent.env.apply_predator_damage()
+                        logger.info(
+                            f"Predator contact! Took {damage:.1f} damage. "
+                            f"HP: {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}",
+                        )
 
-                    if isinstance(agent.brain, ClassicalBrain):
-                        agent.brain.learn(params=params, reward=reward, episode_done=True)
+                        # Check if health depleted
+                        if agent.env.is_health_depleted():
+                            logger.warning(
+                                "Failed to complete episode: health depleted from predator damage!",
+                            )
+                            # Apply death penalty
+                            penalty = -reward_config.penalty_predator_death
+                            reward += penalty
+                            agent._episode_tracker.track_reward(penalty)
 
-                    agent.brain.update_memory(reward)
-                    agent.brain.post_process_episode(episode_success=False)
-                    agent._metrics_tracker.track_episode_completion(
-                        success=False,
-                        steps=agent._episode_tracker.steps,
-                        reward=agent._episode_tracker.rewards,
-                        foods_collected=agent._episode_tracker.foods_collected,
-                        distance_efficiencies=agent._episode_tracker.distance_efficiencies,
-                        predator_encounters=agent._episode_tracker.predator_encounters,
-                        successful_evasions=agent._episode_tracker.successful_evasions,
-                        termination_reason=TerminationReason.PREDATOR,
-                    )
-                    return EpisodeResult(
-                        agent_path=agent.path,
-                        termination_reason=TerminationReason.PREDATOR,
-                        food_history=agent.food_history,
-                    )
+                            if isinstance(agent.brain, ClassicalBrain):
+                                agent.brain.learn(params=params, reward=reward, episode_done=True)
+
+                            agent.brain.update_memory(reward)
+                            agent.brain.post_process_episode(episode_success=False)
+                            agent._metrics_tracker.track_episode_completion(
+                                success=False,
+                                steps=agent._episode_tracker.steps,
+                                reward=agent._episode_tracker.rewards,
+                                foods_collected=agent._episode_tracker.foods_collected,
+                                distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                                predator_encounters=agent._episode_tracker.predator_encounters,
+                                successful_evasions=agent._episode_tracker.successful_evasions,
+                                termination_reason=TerminationReason.HEALTH_DEPLETED,
+                            )
+                            return EpisodeResult(
+                                agent_path=agent.path,
+                                termination_reason=TerminationReason.HEALTH_DEPLETED,
+                                food_history=agent.food_history,
+                            )
+                    else:
+                        # Instant death (original behavior when health system disabled)
+                        logger.warning("Failed to complete episode: agent caught by predator!")
+                        # Apply death penalty to both brain reward and episode tracker
+                        penalty = -reward_config.penalty_predator_death
+                        reward += penalty
+                        agent._episode_tracker.track_reward(penalty)
+
+                        if isinstance(agent.brain, ClassicalBrain):
+                            agent.brain.learn(params=params, reward=reward, episode_done=True)
+
+                        agent.brain.update_memory(reward)
+                        agent.brain.post_process_episode(episode_success=False)
+                        agent._metrics_tracker.track_episode_completion(
+                            success=False,
+                            steps=agent._episode_tracker.steps,
+                            reward=agent._episode_tracker.rewards,
+                            foods_collected=agent._episode_tracker.foods_collected,
+                            distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                            predator_encounters=agent._episode_tracker.predator_encounters,
+                            successful_evasions=agent._episode_tracker.successful_evasions,
+                            termination_reason=TerminationReason.PREDATOR,
+                        )
+                        return EpisodeResult(
+                            agent_path=agent.path,
+                            termination_reason=TerminationReason.PREDATOR,
+                            food_history=agent.food_history,
+                        )
 
                 # Move predators after agent moves
                 agent.env.update_predators()
@@ -343,36 +388,76 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Check for predator collision AFTER predators move
                 # (predator may step onto agent's position)
                 if agent.env.check_predator_collision():
-                    warning_message = (
-                        "Failed to complete episode: agent caught by predator "
-                        "(after predator movement)!"
-                    )
-                    logger.warning(warning_message)
-                    # Apply death penalty to both brain reward and episode tracker
-                    penalty = -reward_config.penalty_predator_death
-                    reward += penalty
-                    agent._episode_tracker.track_reward(penalty)
+                    # Health system: apply damage instead of instant death
+                    if agent.env.health_system_enabled:
+                        damage = agent.env.apply_predator_damage()
+                        logger.info(
+                            f"Predator stepped on agent! Took {damage:.1f} damage. "
+                            f"HP: {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}",
+                        )
 
-                    if isinstance(agent.brain, ClassicalBrain):
-                        agent.brain.learn(params=params, reward=reward, episode_done=True)
+                        # Check if health depleted
+                        if agent.env.is_health_depleted():
+                            logger.warning(
+                                "Failed to complete episode: health depleted from predator damage!",
+                            )
+                            # Apply death penalty
+                            penalty = -reward_config.penalty_predator_death
+                            reward += penalty
+                            agent._episode_tracker.track_reward(penalty)
 
-                    agent.brain.update_memory(reward)
-                    agent.brain.post_process_episode(episode_success=False)
-                    agent._metrics_tracker.track_episode_completion(
-                        success=False,
-                        steps=agent._episode_tracker.steps,
-                        reward=agent._episode_tracker.rewards,
-                        foods_collected=agent._episode_tracker.foods_collected,
-                        distance_efficiencies=agent._episode_tracker.distance_efficiencies,
-                        predator_encounters=agent._episode_tracker.predator_encounters,
-                        successful_evasions=agent._episode_tracker.successful_evasions,
-                        termination_reason=TerminationReason.PREDATOR,
-                    )
-                    return EpisodeResult(
-                        agent_path=agent.path,
-                        termination_reason=TerminationReason.PREDATOR,
-                        food_history=agent.food_history,
-                    )
+                            if isinstance(agent.brain, ClassicalBrain):
+                                agent.brain.learn(params=params, reward=reward, episode_done=True)
+
+                            agent.brain.update_memory(reward)
+                            agent.brain.post_process_episode(episode_success=False)
+                            agent._metrics_tracker.track_episode_completion(
+                                success=False,
+                                steps=agent._episode_tracker.steps,
+                                reward=agent._episode_tracker.rewards,
+                                foods_collected=agent._episode_tracker.foods_collected,
+                                distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                                predator_encounters=agent._episode_tracker.predator_encounters,
+                                successful_evasions=agent._episode_tracker.successful_evasions,
+                                termination_reason=TerminationReason.HEALTH_DEPLETED,
+                            )
+                            return EpisodeResult(
+                                agent_path=agent.path,
+                                termination_reason=TerminationReason.HEALTH_DEPLETED,
+                                food_history=agent.food_history,
+                            )
+                    else:
+                        # Instant death (original behavior when health system disabled)
+                        warning_message = (
+                            "Failed to complete episode: agent caught by predator "
+                            "(after predator movement)!"
+                        )
+                        logger.warning(warning_message)
+                        # Apply death penalty to both brain reward and episode tracker
+                        penalty = -reward_config.penalty_predator_death
+                        reward += penalty
+                        agent._episode_tracker.track_reward(penalty)
+
+                        if isinstance(agent.brain, ClassicalBrain):
+                            agent.brain.learn(params=params, reward=reward, episode_done=True)
+
+                        agent.brain.update_memory(reward)
+                        agent.brain.post_process_episode(episode_success=False)
+                        agent._metrics_tracker.track_episode_completion(
+                            success=False,
+                            steps=agent._episode_tracker.steps,
+                            reward=agent._episode_tracker.rewards,
+                            foods_collected=agent._episode_tracker.foods_collected,
+                            distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                            predator_encounters=agent._episode_tracker.predator_encounters,
+                            successful_evasions=agent._episode_tracker.successful_evasions,
+                            termination_reason=TerminationReason.PREDATOR,
+                        )
+                        return EpisodeResult(
+                            agent_path=agent.path,
+                            termination_reason=TerminationReason.PREDATOR,
+                            food_history=agent.food_history,
+                        )
 
                 # Satiety decay (after predator movement)
                 agent._satiety_manager.decay_satiety()

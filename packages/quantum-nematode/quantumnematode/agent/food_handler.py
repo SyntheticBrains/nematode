@@ -27,12 +27,15 @@ class FoodConsumptionResult:
     distance_efficiency : float | None
         For dynamic environments, the ratio of optimal distance to actual distance traveled.
         None for static environments or when no food was consumed.
+    health_restored : float
+        Amount of HP restored by food (0.0 if no food consumed or health system disabled).
     """
 
     food_consumed: bool
     satiety_restored: float
     reward: float
     distance_efficiency: float | None = None
+    health_restored: float = 0.0
 
 
 class FoodConsumptionHandler:
@@ -101,11 +104,13 @@ class FoodConsumptionHandler:
     def check_and_consume_food(self) -> FoodConsumptionResult:
         """Check if food is at current position and consume if present.
 
+        When both health system and satiety system are enabled, food restores BOTH.
+
         Returns
         -------
         FoodConsumptionResult
             Result indicating whether food was consumed, satiety restored,
-            reward, and distance efficiency (for dynamic environments).
+            health restored, reward, and distance efficiency (for dynamic environments).
         """
         if not self.env.reached_goal():
             return FoodConsumptionResult(
@@ -113,10 +118,12 @@ class FoodConsumptionHandler:
                 satiety_restored=0.0,
                 reward=0.0,
                 distance_efficiency=None,
+                health_restored=0.0,
             )
 
         # Food is present - consume it
         distance_efficiency = None
+        health_restored = 0.0
 
         # For dynamic environments, calculate distance efficiency and update tracking
         if isinstance(self.env, DynamicForagingEnvironment):
@@ -127,6 +134,7 @@ class FoodConsumptionHandler:
                     satiety_restored=0.0,
                     reward=0.0,
                     distance_efficiency=None,
+                    health_restored=0.0,
                 )
 
             # Calculate distance efficiency
@@ -141,6 +149,9 @@ class FoodConsumptionHandler:
             self._initial_distance = self.env.get_nearest_food_distance()
             self._steps_since_last_food = 0
 
+            # Apply health healing if health system is enabled
+            health_restored = self.env.apply_food_healing()
+
         # Restore satiety
         satiety_gain = self.satiety_manager.max_satiety * self.satiety_gain_fraction
         self.satiety_manager.restore_satiety(satiety_gain)
@@ -150,6 +161,7 @@ class FoodConsumptionHandler:
             satiety_restored=satiety_gain,
             reward=0.0,  # Reward is calculated separately by reward system
             distance_efficiency=distance_efficiency,
+            health_restored=health_restored,
         )
 
     def reset(self) -> None:

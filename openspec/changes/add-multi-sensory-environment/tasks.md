@@ -40,7 +40,7 @@ ______________________________________________________________________
 
 - [x] Implement predator damage on contact (configurable `predator_damage`)
 - [x] Implement food healing (configurable `food_healing`)
-- [ ] Ensure food consumption restores both HP AND satiety when both systems enabled
+- [x] Ensure food consumption restores both HP AND satiety when both systems enabled
 - [ ] Add temperature damage (for thermotaxis integration)
 - [x] Cap HP at max_hp, floor at 0
 
@@ -48,7 +48,7 @@ ______________________________________________________________________
 
 - [x] Add `TerminationReason.HEALTH_DEPLETED` enum value
 - [x] Implement HP depletion check in step function
-- [ ] Return appropriate termination when HP reaches 0
+- [x] Return appropriate termination when HP reaches 0
 - [x] Document distinction from STARVATION termination (satiety system)
 
 ### 2.4 Configuration
