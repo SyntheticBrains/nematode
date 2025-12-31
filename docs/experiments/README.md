@@ -45,7 +45,7 @@ This project has complementary systems for tracking experiments:
 | 002 | [Evolutionary Parameter Search](logbooks/002-evolutionary-parameter-search.md) | completed | CMA-ES and GA optimization |
 | 003 | [Spiking Brain Optimization](logbooks/003-spiking-brain-optimization.md) | completed | Surrogate gradients, LIF neurons, decay schedules |
 | 004 | [PPO Brain Implementation](logbooks/004-ppo-brain-implementation.md) | completed | SOTA RL baseline, actor-critic, 98.5% foraging, 93% predators |
-| 005 | [Health System Predator Scaling](logbooks/005-health-system-predator-scaling.md) | active | Health system validation, predator density scaling study |
+| 005 | [Health System Predator Scaling](logbooks/005-health-system-predator-scaling.md) | completed | Health system enables better evasion learning via survival + richer rewards |
 
 ## How to Use Logbooks
 
