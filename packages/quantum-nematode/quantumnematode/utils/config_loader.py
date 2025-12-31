@@ -1,9 +1,10 @@
 """Load and configure simulation settings from a YAML file."""
 
 from pathlib import Path
+from typing import Literal
 
 import yaml
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -69,6 +70,9 @@ BrainConfigType = (
     | QModularBrainConfig
     | SpikingBrainConfig
 )
+
+# Type alias for predator movement patterns
+MovementPattern = Literal["random", "stationary", "pursuit"]
 
 
 class BrainContainerConfig(BaseModel):
@@ -155,7 +159,7 @@ class PredatorConfig(BaseModel):
     enabled: bool = False
     count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
     speed: float = 1.0  # Maps to DynamicForagingEnvironment.predator_speed
-    movement_pattern: str = "random"  # Supported: 'random', 'stationary', 'pursuit'
+    movement_pattern: MovementPattern = "random"
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
     kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
@@ -163,16 +167,6 @@ class PredatorConfig(BaseModel):
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
     gradient_strength: float = 1.0
-
-    @field_validator("movement_pattern")
-    @classmethod
-    def validate_movement_pattern(cls, v: str) -> str:
-        """Validate movement pattern is supported."""
-        valid_patterns = ["random", "stationary", "pursuit"]
-        if v not in valid_patterns:
-            msg = f"Invalid movement_pattern: '{v}'. Supported patterns: {valid_patterns}."
-            raise ValueError(msg)
-        return v
 
     def to_params(self) -> PredatorParams:
         """Convert to PredatorParams for environment initialization."""
