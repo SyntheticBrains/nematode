@@ -53,10 +53,10 @@ ______________________________________________________________________
 
 ### 2.4 Configuration
 
-- [ ] Create example config with health system enabled
-- [ ] Create example config with BOTH health system and satiety enabled
 - [x] Add `health` section to environment YAML schema
 - [x] Add config loader support for health system
+- [x] Create example config with health system enabled
+- [x] Create example config with BOTH health system and satiety enabled
 
 **Validation**: Agent can survive predator contact, die from accumulated damage. Food restores both HP and satiety.
 
