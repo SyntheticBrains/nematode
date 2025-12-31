@@ -19,7 +19,12 @@ from quantumnematode.brain.arch import (
     SpikingBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
-from quantumnematode.env.env import ForagingParams, HealthParams, PredatorParams
+from quantumnematode.env.env import (
+    ForagingParams,
+    HealthParams,
+    PredatorParams,
+    PredatorType,
+)
 from quantumnematode.initializers import (
     ManualParameterInitializer,
     RandomPiUniformInitializer,
@@ -150,7 +155,7 @@ class PredatorConfig(BaseModel):
     enabled: bool = False
     count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
     speed: float = 1.0  # Maps to DynamicForagingEnvironment.predator_speed
-    movement_pattern: str = "random"  # Only 'random' is currently supported
+    movement_pattern: str = "random"  # Supported: 'random', 'stationary', 'pursuit'
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
     kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
@@ -163,21 +168,26 @@ class PredatorConfig(BaseModel):
     @classmethod
     def validate_movement_pattern(cls, v: str) -> str:
         """Validate movement pattern is supported."""
-        valid_patterns = ["random"]
+        valid_patterns = ["random", "stationary", "pursuit"]
         if v not in valid_patterns:
-            msg = (
-                f"Invalid movement_pattern: '{v}'. "
-                f"Currently only 'random' is supported. "
-                f"Future patterns (e.g., 'pursuit', 'patrol') are planned but not yet implemented."
-            )
+            msg = f"Invalid movement_pattern: '{v}'. Supported patterns: {valid_patterns}."
             raise ValueError(msg)
         return v
 
     def to_params(self) -> PredatorParams:
         """Convert to PredatorParams for environment initialization."""
+        # Map movement_pattern string to PredatorType enum
+        pattern_to_type = {
+            "random": PredatorType.RANDOM,
+            "stationary": PredatorType.STATIONARY,
+            "pursuit": PredatorType.PURSUIT,
+        }
+        predator_type = pattern_to_type[self.movement_pattern]
+
         return PredatorParams(
             enabled=self.enabled,
             count=self.count,
+            predator_type=predator_type,
             speed=self.speed,
             detection_radius=self.detection_radius,
             kill_radius=self.kill_radius,

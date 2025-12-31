@@ -58,6 +58,20 @@ class ScalingMethod(Enum):
     TANH = "tanh"
 
 
+class PredatorType(Enum):
+    """
+    Types of predator movement behaviors.
+
+    RANDOM: Moves randomly in one of four directions each step (default).
+    STATIONARY: Does not move, acts as a toxic zone with larger damage radius.
+    PURSUIT: Moves toward the agent when within detection radius, otherwise random.
+    """
+
+    RANDOM = "random"
+    STATIONARY = "stationary"
+    PURSUIT = "pursuit"
+
+
 # Health system defaults
 DEFAULT_MAX_HP = 100.0
 DEFAULT_PREDATOR_DAMAGE = 10.0
@@ -92,6 +106,7 @@ class PredatorParams:
 
     enabled: bool = False
     count: int = 2
+    predator_type: PredatorType = PredatorType.RANDOM
     speed: float = 1.0
     detection_radius: int = 8
     kill_radius: int = 0
@@ -122,6 +137,8 @@ class Predator:
     ----------
     position : tuple[int, int]
         Current position of the predator.
+    predator_type : PredatorType
+        Movement behavior type (RANDOM, STATIONARY, or PURSUIT).
     speed : float
         Movement speed relative to agent (1.0 = same speed).
         Supports fractional speeds (< 1.0) and multi-step movement (> 1.0).
@@ -133,6 +150,7 @@ class Predator:
     def __init__(
         self,
         position: tuple[int, int],
+        predator_type: PredatorType = PredatorType.RANDOM,
         speed: float = 1.0,
         movement_accumulator: float = 0.0,
     ) -> None:
@@ -143,10 +161,13 @@ class Predator:
         ----------
         position : tuple[int, int]
             Starting position of the predator.
+        predator_type : PredatorType
+            Movement behavior type (default RANDOM).
         speed : float
             Movement speed (default 1.0).
         """
         self.position = position
+        self.predator_type = predator_type
         self.speed = speed
         self.movement_accumulator = movement_accumulator
 
@@ -901,8 +922,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     predator = Predator(position=candidate, speed=self.predator.speed)
                     self.predators.append(predator)
                     logger.debug(
-                        f"Initialized predator at {candidate} "
-                        f"(distance to agent: {distance_to_agent})",
+                        f"Initialized {self.predator.predator_type.value} predator "
+                        f"at {candidate} (distance to agent: {distance_to_agent})",
                     )
                     break
             else:
@@ -1438,6 +1459,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             new_env.predators = [
                 Predator(
                     position=p.position,
+                    predator_type=p.predator_type,
                     speed=p.speed,
                     movement_accumulator=p.movement_accumulator,
                 )

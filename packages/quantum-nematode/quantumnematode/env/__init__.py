@@ -9,6 +9,7 @@ __all__ = [
     "ForagingParams",
     "HealthParams",
     "PredatorParams",
+    "PredatorType",
     "StaticEnvironment",
 ]
 
@@ -21,5 +22,6 @@ from quantumnematode.env.env import (
     ForagingParams,
     HealthParams,
     PredatorParams,
+    PredatorType,
     StaticEnvironment,
 )
