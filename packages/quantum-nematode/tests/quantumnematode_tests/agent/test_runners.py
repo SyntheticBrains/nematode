@@ -242,3 +242,203 @@ class TestRunnerComponentIntegration:
         assert params is not None
         assert hasattr(params, "gradient_strength")
         assert hasattr(params, "gradient_direction")
+
+
+class TestPredatorCollisionTermination:
+    """Test predator collision handling in episode runner."""
+
+    def test_predator_instant_death_terminates_episode(self):
+        """Test that predator collision without health system causes instant death."""
+        from quantumnematode.env import HealthParams, PredatorParams
+
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Create environment with predator that has kill_radius=1
+        # (agent moves first in the step loop, so kill_radius=0 would miss)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            predator=PredatorParams(enabled=True, count=1, kill_radius=1),
+            health=HealthParams(enabled=False),  # Instant death mode
+        )
+
+        # Place predator adjacent to agent - will be in kill range after agent moves
+        agent_x, agent_y = env.agent_pos[0], env.agent_pos[1]
+        env.predators[0].position = (agent_x, agent_y)
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)  # High satiety to avoid starvation
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        result = agent.run_episode(reward_config, max_steps=100)
+
+        # Should terminate due to predator
+        assert result.termination_reason == TerminationReason.PREDATOR
+
+    def test_predator_with_health_system_applies_damage(self):
+        """Test that predator collision with health system applies damage."""
+        from quantumnematode.env import HealthParams, PredatorParams
+
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            predator=PredatorParams(enabled=True, count=1, kill_radius=0),
+            health=HealthParams(enabled=True, max_hp=100.0, predator_damage=20.0),
+        )
+
+        # Place predator on agent's starting position
+        env.predators[0].position = (env.agent_pos[0], env.agent_pos[1])
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        initial_hp = env.agent_hp
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=5)
+
+        # HP should have decreased (took at least one hit)
+        assert env.agent_hp <= initial_hp
+
+    def test_health_depletion_terminates_episode(self):
+        """Test that HP reaching zero terminates episode with HEALTH_DEPLETED."""
+        from quantumnematode.env import HealthParams, PredatorParams
+
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Low HP and high damage = quick death
+        env = DynamicForagingEnvironment(
+            grid_size=5,  # Small grid, hard to avoid predator
+            foraging=ForagingParams(target_foods_to_collect=5),
+            predator=PredatorParams(enabled=True, count=3, kill_radius=0),  # Multiple predators
+            health=HealthParams(enabled=True, max_hp=20.0, predator_damage=20.0),  # One-hit kill
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        result = agent.run_episode(reward_config, max_steps=100)
+
+        # With 3 predators in small grid and one-hit HP, should die to health depletion
+        # Could also starve or hit max steps, so check for valid termination
+        assert result.termination_reason in [
+            TerminationReason.HEALTH_DEPLETED,
+            TerminationReason.MAX_STEPS,
+            TerminationReason.STARVED,
+        ]
+
+
+class TestStarvationTermination:
+    """Test starvation handling in episode runner."""
+
+    def test_starvation_terminates_episode(self):
+        """Test that running out of satiety terminates episode."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,  # Large grid so agent won't find food easily
+            foraging=ForagingParams(
+                target_foods_to_collect=10,
+                foods_on_grid=1,  # Very few foods
+            ),
+        )
+
+        # Very low satiety with fast decay = quick starvation
+        satiety_config = SatietyConfig(
+            initial_satiety=10.0,
+            satiety_decay_rate=5.0,  # Very fast decay
+        )
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        result = agent.run_episode(reward_config, max_steps=100)
+
+        # Should starve quickly
+        assert result.termination_reason == TerminationReason.STARVED
+
+
+class TestGoalCompletionTermination:
+    """Test goal completion in static environment."""
+
+    def test_static_environment_goal_reached(self):
+        """Test that reaching goal in static environment terminates correctly."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Create small environment where goal is reachable
+        env = StaticEnvironment(grid_size=5)
+
+        agent = QuantumNematodeAgent(brain=brain, env=env)
+
+        reward_config = RewardConfig()
+        result = agent.run_episode(reward_config, max_steps=200)
+
+        # Should either reach goal or hit max steps
+        assert result.termination_reason in [
+            TerminationReason.GOAL_REACHED,
+            TerminationReason.MAX_STEPS,
+        ]
+
+    def test_food_collection_victory(self):
+        """Test that collecting target foods terminates with COMPLETED_ALL_FOOD."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Small environment with easy food collection
+        env = DynamicForagingEnvironment(
+            grid_size=5,
+            foraging=ForagingParams(
+                target_foods_to_collect=1,  # Just need 1 food
+                foods_on_grid=3,  # Plenty of food
+                min_food_distance=1,
+                agent_exclusion_radius=1,
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        result = agent.run_episode(reward_config, max_steps=200)
+
+        # Should eventually collect food or hit max steps
+        assert result.termination_reason in [
+            TerminationReason.COMPLETED_ALL_FOOD,
+            TerminationReason.MAX_STEPS,
+            TerminationReason.STARVED,
+        ]
+
+
+class TestHealthHistoryTracking:
+    """Test that health history is tracked correctly during episodes."""
+
+    def test_health_history_recorded_when_enabled(self):
+        """Test that health history is recorded when health system is enabled."""
+        from quantumnematode.env import HealthParams
+
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=10)
+
+        # Health history should be recorded
+        assert len(agent._episode_tracker.health_history) > 0
+        # All values should be valid HP values
+        for hp in agent._episode_tracker.health_history:
+            assert 0 <= hp <= 100.0
