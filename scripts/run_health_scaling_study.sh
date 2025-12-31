@@ -44,9 +44,9 @@ CONDITIONS=(
 # Create log directory
 mkdir -p "${LOG_DIR}"
 
-# Initialize summary CSV
-if [ ! -f "${SUMMARY_FILE}" ]; then
-    echo "condition,session,session_id,success_rate,convergence_run,post_conv_success,starved,health_depleted,max_steps,avg_reward,avg_foods,timestamp" > "${SUMMARY_FILE}"
+# Initialize summary CSV (always recreate in test mode to avoid stale data)
+if [ "$TEST_MODE" -eq 1 ] || [ ! -f "${SUMMARY_FILE}" ]; then
+    echo "condition,session,session_id,success_rate,starved,health_depleted,max_steps,avg_reward,avg_foods,timestamp" > "${SUMMARY_FILE}"
 fi
 
 # Function to run a single session and extract key metrics
@@ -69,26 +69,39 @@ run_session() {
         > "${log_file}" 2>&1; then
 
         # Extract session ID from log
-        session_id=$(grep -o "Session ID: [0-9_]*" "${log_file}" | head -1 | cut -d' ' -f3)
+        session_id=$(grep "Session ID:" "${log_file}" | tail -1 | awk '{print $NF}')
 
         # Extract metrics from log (using grep and awk)
-        success_rate=$(grep "Success rate:" "${log_file}" | tail -1 | grep -o "[0-9.]*%" | tr -d '%')
-        convergence_run=$(grep "Convergence run:" "${log_file}" | tail -1 | awk '{print $NF}' || echo "N/A")
-        post_conv=$(grep "Post-convergence success:" "${log_file}" | tail -1 | grep -o "[0-9.]*%" | tr -d '%' || echo "N/A")
-        starved=$(grep "Failed runs - Starved:" "${log_file}" | tail -1 | awk '{print $5}' || echo "0")
-        health_depleted=$(grep "Failed runs - Health Depleted:" "${log_file}" | tail -1 | awk '{print $6}' || echo "0")
-        max_steps=$(grep "Failed runs - Max Steps:" "${log_file}" | tail -1 | awk '{print $6}' || echo "0")
-        avg_reward=$(grep "Average reward per run:" "${log_file}" | tail -1 | awk '{print $NF}' || echo "N/A")
-        avg_foods=$(grep "Average foods collected per run:" "${log_file}" | tail -1 | awk '{print $NF}' || echo "N/A")
+        # Format: "Success rate: 20.00%"
+        success_rate=$(grep "^Success rate:" "${log_file}" | tail -1 | awk '{print $3}' | tr -d '%')
+
+        # Format: "Failed runs - Starved: 1 (20.0%)"
+        starved=$(grep "Failed runs - Starved:" "${log_file}" | tail -1 | awk '{print $5}')
+        [ -z "$starved" ] && starved="0"
+
+        # Format: "Failed runs - Health Depleted: 1 (20.0%)"
+        health_depleted=$(grep "Failed runs - Health Depleted:" "${log_file}" | tail -1 | awk '{print $6}')
+        [ -z "$health_depleted" ] && health_depleted="0"
+
+        # Format: "Failed runs - Max Steps: 2 (40.0%)"
+        max_steps=$(grep "Failed runs - Max Steps:" "${log_file}" | tail -1 | awk '{print $6}')
+        [ -z "$max_steps" ] && max_steps="0"
+
+        # Format: "Average reward per run: 10.36"
+        avg_reward=$(grep "^Average reward per run:" "${log_file}" | tail -1 | awk '{print $NF}')
+
+        # Format: "Average foods collected per run: 5.40"
+        avg_foods=$(grep "^Average foods collected per run:" "${log_file}" | tail -1 | awk '{print $NF}')
+
         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
         # Append to summary
-        echo "${condition},${session_num},${session_id},${success_rate},${convergence_run},${post_conv},${starved},${health_depleted},${max_steps},${avg_reward},${avg_foods},${timestamp}" >> "${SUMMARY_FILE}"
+        echo "${condition},${session_num},${session_id},${success_rate},${starved},${health_depleted},${max_steps},${avg_reward},${avg_foods},${timestamp}" >> "${SUMMARY_FILE}"
 
         echo "[$(date '+%H:%M:%S')] Completed ${condition} session ${session_num}: ${success_rate}% success (ID: ${session_id})"
     else
         echo "[$(date '+%H:%M:%S')] FAILED ${condition} session ${session_num} - check ${log_file}"
-        echo "${condition},${session_num},FAILED,,,,,,,,,$(date '+%Y-%m-%d %H:%M:%S')" >> "${SUMMARY_FILE}"
+        echo "${condition},${session_num},FAILED,,,,,,,$(date '+%Y-%m-%d %H:%M:%S')" >> "${SUMMARY_FILE}"
     fi
 }
 
