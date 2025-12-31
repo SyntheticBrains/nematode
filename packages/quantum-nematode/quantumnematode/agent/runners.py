@@ -263,6 +263,10 @@ class StandardEpisodeRunner(EpisodeRunner):
                             f", HP +{food_result.health_restored:.1f} "
                             f"to {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}"
                         )
+                        # Apply healing reward (learning signal for recovering health)
+                        healing_reward = reward_config.reward_health_gain
+                        reward += healing_reward
+                        agent._episode_tracker.track_reward(healing_reward)
 
                     logger.info(
                         f"Food #{agent._episode_tracker.foods_collected} collected! "
@@ -311,6 +315,11 @@ class StandardEpisodeRunner(EpisodeRunner):
                             f"Predator contact! Took {damage:.1f} damage. "
                             f"HP: {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}",
                         )
+
+                        # Apply damage penalty (learning signal for taking damage)
+                        damage_penalty = -reward_config.penalty_health_damage
+                        reward += damage_penalty
+                        agent._episode_tracker.track_reward(damage_penalty)
 
                         # Check if health depleted
                         if agent.env.is_health_depleted():
@@ -397,6 +406,11 @@ class StandardEpisodeRunner(EpisodeRunner):
                             f"Predator stepped on agent! Took {damage:.1f} damage. "
                             f"HP: {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}",
                         )
+
+                        # Apply damage penalty (learning signal for taking damage)
+                        damage_penalty = -reward_config.penalty_health_damage
+                        reward += damage_penalty
+                        agent._episode_tracker.track_reward(damage_penalty)
 
                         # Check if health depleted
                         if agent.env.is_health_depleted():

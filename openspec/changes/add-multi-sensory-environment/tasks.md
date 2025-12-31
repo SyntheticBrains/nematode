@@ -169,16 +169,16 @@ ______________________________________________________________________
 - [ ] Add `penalty_temperature_danger: float`
 - [ ] Add `hp_damage_temperature_danger: float`
 - [ ] Add `hp_damage_temperature_lethal: float`
-- [ ] Add `reward_health_gain: float`
-- [ ] Add `penalty_health_damage: float`
+- [x] Add `reward_health_gain: float`
+- [x] Add `penalty_health_damage: float`
 - [ ] Add `penalty_boundary_collision: float`
 
 ### 6.2 RewardCalculator Updates
 
 - [ ] Add temperature comfort/discomfort reward calculation
-- [ ] Add health-based reward calculation
+- [x] Add health-based reward calculation
 - [ ] Add boundary collision penalty
-- [ ] Ensure rewards are only applied when features are enabled
+- [x] Ensure rewards are only applied when features are enabled
 
 **Validation**: Rewards correctly computed for multi-objective scenarios
 
