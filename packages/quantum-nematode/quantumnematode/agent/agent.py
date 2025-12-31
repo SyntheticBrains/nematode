@@ -443,6 +443,9 @@ class QuantumNematodeAgent:
                 print(  # noqa: T201
                     f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.foraging.target_foods_to_collect}",
                 )
+                print(  # noqa: T201
+                    f"Health:\t\t{self.env.agent_hp:.1f}/{self.env.health.max_hp}",
+                )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
                 # Display danger status if predators are enabled
                 if self.env.predator.enabled:

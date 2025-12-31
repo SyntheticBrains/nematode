@@ -1,7 +1,5 @@
 """Tests for configuration loading utilities."""
 
-import pytest
-
 from quantumnematode.env import ForagingParams, HealthParams, PredatorParams
 from quantumnematode.utils.config_loader import (
     DynamicEnvironmentConfig,
