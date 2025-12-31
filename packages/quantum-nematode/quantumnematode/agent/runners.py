@@ -261,7 +261,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     if food_result.health_restored > 0:
                         health_msg = (
                             f", HP +{food_result.health_restored:.1f} "
-                            f"to {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}"
+                            f"to {agent.env.agent_hp:.1f}/{agent.env.health.max_hp:.1f}"
                         )
                         # Apply healing reward (learning signal for recovering health)
                         healing_reward = reward_config.reward_health_gain
@@ -278,7 +278,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     if agent.env.has_collected_target_foods(agent._episode_tracker.foods_collected):
                         logger.info(
                             "Successfully completed episode: collected target of "
-                            f"{agent.env.target_foods_to_collect} food!",
+                            f"{agent.env.foraging.target_foods_to_collect} food!",
                         )
 
                         if isinstance(agent.brain, ClassicalBrain):
@@ -309,11 +309,11 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Check for predator collision BEFORE predators move
                 if agent.env.check_predator_collision():
                     # Health: apply damage instead of instant death
-                    if agent.env.health_enabled:
+                    if agent.env.health.enabled:
                         damage = agent.env.apply_predator_damage()
                         logger.info(
                             f"Predator contact! Took {damage:.1f} damage. "
-                            f"HP: {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}",
+                            f"HP: {agent.env.agent_hp:.1f}/{agent.env.health.max_hp:.1f}",
                         )
 
                         # Apply damage penalty (learning signal for taking damage)
@@ -400,11 +400,11 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # (predator may step onto agent's position)
                 if agent.env.check_predator_collision():
                     # Health: apply damage instead of instant death
-                    if agent.env.health_enabled:
+                    if agent.env.health.enabled:
                         damage = agent.env.apply_predator_damage()
                         logger.info(
                             f"Predator stepped on agent! Took {damage:.1f} damage. "
-                            f"HP: {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}",
+                            f"HP: {agent.env.agent_hp:.1f}/{agent.env.health.max_hp:.1f}",
                         )
 
                         # Apply damage penalty (learning signal for taking damage)
@@ -645,11 +645,12 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Handle all food collected (for dynamic environments)
             if (
                 isinstance(agent.env, DynamicForagingEnvironment)
-                and agent._episode_tracker.foods_collected >= agent.env.target_foods_to_collect
+                and agent._episode_tracker.foods_collected
+                >= agent.env.foraging.target_foods_to_collect
             ):
                 logger.info(
                     "Successfully completed episode: collected target of "
-                    f"{agent.env.target_foods_to_collect} food.",
+                    f"{agent.env.foraging.target_foods_to_collect} food.",
                 )
 
                 if isinstance(agent.brain, ClassicalBrain):
