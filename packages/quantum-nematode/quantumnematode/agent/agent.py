@@ -37,6 +37,8 @@ DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_PENALTY_STARVATION = 10.0
 DEFAULT_PENALTY_PREDATOR_DEATH = 10.0
 DEFAULT_PENALTY_PREDATOR_PROXIMITY = 0.1
+DEFAULT_PENALTY_HEALTH_DAMAGE = 0.5  # Penalty when taking damage (per hit)
+DEFAULT_REWARD_HEALTH_GAIN = 0.1  # Reward when healing (per healing event)
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -83,6 +85,13 @@ class RewardConfig(BaseModel):
     )
     penalty_predator_proximity: float = (
         DEFAULT_PENALTY_PREDATOR_PROXIMITY  # Penalty per step within predator detection radius
+    )
+    # Health system rewards (only applied when health system is enabled)
+    penalty_health_damage: float = (
+        DEFAULT_PENALTY_HEALTH_DAMAGE  # Penalty when taking damage from predators
+    )
+    reward_health_gain: float = (
+        DEFAULT_REWARD_HEALTH_GAIN  # Reward when healing from food consumption
     )
 
 
