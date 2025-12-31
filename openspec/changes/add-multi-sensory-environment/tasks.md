@@ -104,16 +104,16 @@ ______________________________________________________________________
 
 ### 3.2 Stationary Predator
 
-- [ ] Implement stationary behavior (no movement)
+- [x] Implement stationary behavior (no movement)
 - [ ] Add configurable `damage_radius` for toxic zones
 - [ ] Stationary predators affect larger area than random predators
 
 ### 3.3 Pursuit Predator
 
-- [ ] Implement pursuit behavior (move toward agent)
-- [ ] Add `detection_radius` for pursuit activation
-- [ ] Pursuit only activates when agent within detection radius
-- [ ] Outside detection radius, behave as random
+- [x] Implement pursuit behavior (move toward agent)
+- [x] Add `detection_radius` for pursuit activation
+- [x] Pursuit only activates when agent within detection radius
+- [x] Outside detection radius, behave as random
 
 ### 3.4 Mixed Types Configuration
 

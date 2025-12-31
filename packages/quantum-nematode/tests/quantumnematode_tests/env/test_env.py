@@ -9,6 +9,7 @@ from quantumnematode.env import (
     ForagingParams,
     HealthParams,
     PredatorParams,
+    PredatorType,
     StaticEnvironment,
 )
 from quantumnematode.env.theme import Theme
@@ -1380,3 +1381,229 @@ class TestHealthSystem:
         # Heal (should cap at max)
         env.apply_food_healing()
         assert env.agent_hp == 50.0  # 45 + 15 = 60, but capped at 50
+
+
+class TestPredatorTypes:
+    """Test cases for different predator movement behaviors."""
+
+    def test_predator_type_defaults_to_random(self):
+        """Test that predator type defaults to RANDOM."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(position=(5, 5))
+        assert predator.predator_type == PredatorType.RANDOM
+
+    def test_stationary_predator_does_not_move(self):
+        """Test that stationary predators never move."""
+        from quantumnematode.env.env import Predator
+
+        predator = Predator(
+            position=(5, 5),
+            predator_type=PredatorType.STATIONARY,
+            speed=1.0,
+        )
+        initial_pos = predator.position
+        rng = get_rng(42)
+
+        # Update position many times
+        for _ in range(100):
+            predator.update_position(grid_size=20, rng=rng, agent_pos=(10, 10))
+            assert predator.position == initial_pos
+
+    def test_pursuit_predator_moves_toward_agent_when_in_range(self):
+        """Test that pursuit predators move toward agent when within detection radius."""
+        from quantumnematode.env.env import Predator
+
+        # Start predator at (5, 5) with detection radius 10
+        # Agent at (8, 5) - distance 3, within detection radius
+        predator = Predator(
+            position=(5, 5),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=10,
+        )
+        rng = get_rng(42)
+
+        agent_pos = (8, 5)
+        initial_distance = abs(predator.position[0] - agent_pos[0]) + abs(
+            predator.position[1] - agent_pos[1],
+        )
+
+        # Move predator
+        predator.update_position(grid_size=20, rng=rng, agent_pos=agent_pos)
+
+        # Should have moved closer to agent
+        new_distance = abs(predator.position[0] - agent_pos[0]) + abs(
+            predator.position[1] - agent_pos[1],
+        )
+        assert new_distance < initial_distance
+
+    def test_pursuit_predator_moves_randomly_when_out_of_range(self):
+        """Test that pursuit predators move randomly when outside detection radius."""
+        from quantumnematode.env.env import Predator
+
+        # Start predator at (0, 0) with detection radius 5
+        # Agent at (15, 15) - distance 30, outside detection radius
+        predator = Predator(
+            position=(5, 5),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=5,
+        )
+        rng = get_rng(42)
+
+        agent_pos = (18, 18)  # Far from predator
+
+        # Move predator multiple times - movement should be random
+        positions = [predator.position]
+        for _ in range(10):
+            predator.update_position(grid_size=20, rng=rng, agent_pos=agent_pos)
+            positions.append(predator.position)
+
+        # Should have moved (not stationary)
+        assert len(set(positions)) > 1
+
+    def test_pursuit_predator_catches_agent(self):
+        """Test that pursuit predator eventually catches stationary agent."""
+        from quantumnematode.env.env import Predator
+
+        # Predator starts close to agent
+        predator = Predator(
+            position=(5, 5),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=10,
+        )
+        rng = get_rng(42)
+
+        agent_pos = (8, 5)
+
+        # Move predator until it reaches agent (max 10 steps should be enough)
+        for _ in range(10):
+            predator.update_position(grid_size=20, rng=rng, agent_pos=agent_pos)
+            if predator.position == agent_pos:
+                break
+
+        assert predator.position == agent_pos
+
+    def test_environment_with_stationary_predators(self):
+        """Test environment initialization with stationary predators."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            predator=PredatorParams(
+                enabled=True,
+                count=3,
+                predator_type=PredatorType.STATIONARY,
+                speed=1.0,
+            ),
+        )
+
+        assert len(env.predators) == 3
+        for pred in env.predators:
+            assert pred.predator_type == PredatorType.STATIONARY
+
+        # Store initial positions
+        initial_positions = [p.position for p in env.predators]
+
+        # Update predators
+        env.update_predators()
+
+        # Stationary predators should not move
+        for i, pred in enumerate(env.predators):
+            assert pred.position == initial_positions[i]
+
+    def test_environment_with_pursuit_predators(self):
+        """Test environment initialization with pursuit predators."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            predator=PredatorParams(
+                enabled=True,
+                count=2,
+                predator_type=PredatorType.PURSUIT,
+                speed=1.0,
+                detection_radius=15,
+            ),
+        )
+
+        assert len(env.predators) == 2
+        for pred in env.predators:
+            assert pred.predator_type == PredatorType.PURSUIT
+            assert pred.detection_radius == 15
+
+    def test_predator_copy_preserves_type(self):
+        """Test that environment copy preserves predator type."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            predator=PredatorParams(
+                enabled=True,
+                count=2,
+                predator_type=PredatorType.PURSUIT,
+                speed=0.5,
+                detection_radius=12,
+            ),
+        )
+
+        copied_env = env.copy()
+
+        assert len(copied_env.predators) == 2
+        for i, pred in enumerate(copied_env.predators):
+            assert pred.predator_type == env.predators[i].predator_type
+            assert pred.speed == env.predators[i].speed
+            assert pred.detection_radius == env.predators[i].detection_radius
+
+    def test_pursuit_greedy_movement_horizontal(self):
+        """Test that pursuit uses greedy movement (larger axis first)."""
+        from quantumnematode.env.env import Predator
+
+        # Predator at (0, 0), agent at (5, 2)
+        # Horizontal distance (5) > vertical (2), so should move right first
+        predator = Predator(
+            position=(0, 0),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=10,
+        )
+        rng = get_rng(42)
+
+        predator.update_position(grid_size=20, rng=rng, agent_pos=(5, 2))
+
+        # Should have moved right (x increased)
+        assert predator.position == (1, 0)
+
+    def test_pursuit_greedy_movement_vertical(self):
+        """Test that pursuit uses greedy movement (larger axis first)."""
+        from quantumnematode.env.env import Predator
+
+        # Predator at (0, 0), agent at (2, 5)
+        # Vertical distance (5) > horizontal (2), so should move down first
+        predator = Predator(
+            position=(0, 0),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=10,
+        )
+        rng = get_rng(42)
+
+        predator.update_position(grid_size=20, rng=rng, agent_pos=(2, 5))
+
+        # Should have moved down (y increased)
+        assert predator.position == (0, 1)
+
+    def test_predator_type_in_predator_params(self):
+        """Test that PredatorParams includes predator_type field."""
+        params = PredatorParams(
+            enabled=True,
+            count=2,
+            predator_type=PredatorType.PURSUIT,
+        )
+        assert params.predator_type == PredatorType.PURSUIT
+
+        # Default should be RANDOM
+        default_params = PredatorParams(enabled=True, count=2)
+        assert default_params.predator_type == PredatorType.RANDOM
