@@ -251,6 +251,7 @@ To isolate initial risk-taking from accumulated contacts, we examined when agent
 **Key finding**: First-contact timing is nearly identical (~156-158 steps), indicating **initial risk-taking behavior is the same** between conditions.
 
 The higher normalized contact rate (1.5-2.4x) in health-enabled agents comes from contacts *after* the first:
+
 - Control: 1 contact per run (fatal), rate = 1/158 ≈ 6.3 per 1000 steps
 - Health: Multiple contacts per run, rate ≈ 10.6 per 1000 steps
 
