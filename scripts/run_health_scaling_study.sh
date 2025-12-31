@@ -44,8 +44,8 @@ CONDITIONS=(
 # Create log directory
 mkdir -p "${LOG_DIR}"
 
-# Initialize summary CSV (always recreate in test mode to avoid stale data)
-if [ "$TEST_MODE" -eq 1 ] || [ ! -f "${SUMMARY_FILE}" ]; then
+# Initialize summary CSV if it doesn't exist
+if [ ! -f "${SUMMARY_FILE}" ]; then
     echo "condition,session,session_id,success_rate,starved,health_depleted,max_steps,avg_reward,avg_foods,timestamp" > "${SUMMARY_FILE}"
 fi
 
