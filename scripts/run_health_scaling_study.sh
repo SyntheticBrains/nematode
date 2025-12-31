@@ -62,8 +62,10 @@ run_session() {
     if uv run python scripts/run_simulation.py \
         --config "${config_file}" \
         --runs "${RUNS_PER_SESSION}" \
-        --no-render \
-        --export \
+        --log-level INFO \
+        --show-last-frame-only \
+        --track-per-run \
+        --track-experiment \
         > "${log_file}" 2>&1; then
 
         # Extract session ID from log
