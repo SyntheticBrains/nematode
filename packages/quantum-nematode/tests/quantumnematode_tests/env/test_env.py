@@ -7,6 +7,7 @@ from quantumnematode.env import (
     Direction,
     DynamicForagingEnvironment,
     ForagingParams,
+    HealthParams,
     PredatorParams,
     StaticEnvironment,
 )
@@ -1088,3 +1089,294 @@ class TestPredatorMechanics:
         assert predator.movement_accumulator == 0.0, (
             f"Expected accumulator 0.0 after reaching 1.0, got {predator.movement_accumulator}"
         )
+
+
+class TestHealthSystem:
+    """Test cases for HP-based health system."""
+
+    @pytest.fixture
+    def health_env(self):
+        """Create environment with health system enabled."""
+        return DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(
+                enabled=True,
+                max_hp=100.0,
+                predator_damage=10.0,
+                food_healing=5.0,
+            ),
+        )
+
+    @pytest.fixture
+    def health_predator_env(self):
+        """Create environment with both health and predators enabled."""
+        return DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(
+                enabled=True,
+                max_hp=100.0,
+                predator_damage=25.0,
+                food_healing=10.0,
+            ),
+            predator=PredatorParams(
+                enabled=True,
+                count=2,
+                speed=1.0,
+                detection_radius=8,
+                kill_radius=1,
+            ),
+        )
+
+    def test_health_disabled_by_default(self):
+        """Test that health system is disabled by default."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        assert env.health.enabled is False
+        assert env.agent_hp == 0.0  # HP is 0 when disabled
+
+    def test_health_initialization(self, health_env):
+        """Test health system initialization."""
+        assert health_env.health.enabled is True
+        assert health_env.health.max_hp == 100.0
+        assert health_env.health.predator_damage == 10.0
+        assert health_env.health.food_healing == 5.0
+        assert health_env.agent_hp == 100.0  # Starts at max HP
+
+    def test_health_params_defaults(self):
+        """Test HealthParams default values."""
+        params = HealthParams()
+        assert params.enabled is False
+        assert params.max_hp == 100.0
+        assert params.predator_damage == 10.0
+        assert params.food_healing == 5.0
+
+    def test_health_params_custom_values(self):
+        """Test HealthParams with custom values."""
+        params = HealthParams(
+            enabled=True,
+            max_hp=200.0,
+            predator_damage=50.0,
+            food_healing=25.0,
+        )
+        assert params.enabled is True
+        assert params.max_hp == 200.0
+        assert params.predator_damage == 50.0
+        assert params.food_healing == 25.0
+
+    def test_apply_predator_damage(self, health_env):
+        """Test applying predator damage."""
+        initial_hp = health_env.agent_hp
+        damage = health_env.apply_predator_damage()
+
+        assert damage == 10.0
+        assert health_env.agent_hp == initial_hp - 10.0
+        assert health_env.agent_hp == 90.0
+
+    def test_apply_predator_damage_multiple_times(self, health_env):
+        """Test applying predator damage multiple times."""
+        for i in range(5):
+            health_env.apply_predator_damage()
+            expected_hp = 100.0 - (i + 1) * 10.0
+            assert health_env.agent_hp == expected_hp
+
+    def test_apply_predator_damage_does_not_go_negative(self, health_env):
+        """Test that HP cannot go below zero."""
+        # Apply damage 15 times (150 damage, but max HP is 100)
+        for _ in range(15):
+            health_env.apply_predator_damage()
+
+        assert health_env.agent_hp == 0.0
+        assert health_env.is_health_depleted() is True
+
+    def test_apply_predator_damage_when_disabled(self):
+        """Test that damage is not applied when health system is disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(enabled=False),
+        )
+
+        damage = env.apply_predator_damage()
+        assert damage == 0.0
+        assert env.agent_hp == 0.0
+
+    def test_apply_food_healing(self, health_env):
+        """Test applying food healing."""
+        # First reduce HP
+        health_env.agent_hp = 80.0
+
+        healing = health_env.apply_food_healing()
+
+        assert healing == 5.0
+        assert health_env.agent_hp == 85.0
+
+    def test_apply_food_healing_caps_at_max(self, health_env):
+        """Test that healing does not exceed max HP."""
+        # Set HP close to max
+        health_env.agent_hp = 98.0
+
+        healing = health_env.apply_food_healing()
+
+        assert healing == 2.0  # Only heals 2, not full 5
+        assert health_env.agent_hp == 100.0
+
+    def test_apply_food_healing_at_max_hp(self, health_env):
+        """Test healing when already at max HP."""
+        assert health_env.agent_hp == 100.0
+
+        healing = health_env.apply_food_healing()
+
+        assert healing == 0.0
+        assert health_env.agent_hp == 100.0
+
+    def test_apply_food_healing_when_disabled(self):
+        """Test that healing is not applied when health system is disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(enabled=False),
+        )
+
+        healing = env.apply_food_healing()
+        assert healing == 0.0
+
+    def test_is_health_depleted(self, health_env):
+        """Test health depletion check."""
+        assert health_env.is_health_depleted() is False
+
+        health_env.agent_hp = 0.0
+        assert health_env.is_health_depleted() is True
+
+        health_env.agent_hp = 0.1
+        assert health_env.is_health_depleted() is False
+
+    def test_is_health_depleted_when_disabled(self):
+        """Test that health depletion returns False when disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(enabled=False),
+        )
+
+        # Even with HP at 0, should return False when disabled
+        assert env.agent_hp == 0.0
+        assert env.is_health_depleted() is False
+
+    def test_reset_health(self, health_env):
+        """Test resetting health to max."""
+        health_env.agent_hp = 25.0
+        health_env.reset_health()
+        assert health_env.agent_hp == 100.0
+
+    def test_reset_health_when_disabled(self):
+        """Test that reset_health does nothing when disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(enabled=False),
+        )
+
+        env.reset_health()
+        assert env.agent_hp == 0.0  # Should remain 0 when disabled
+
+    def test_health_with_predator_damage_workflow(self, health_predator_env):
+        """Test complete health + predator workflow."""
+        env = health_predator_env
+        assert env.agent_hp == 100.0
+
+        # Apply damage from predator contact
+        damage = env.apply_predator_damage()
+        assert damage == 25.0
+        assert env.agent_hp == 75.0
+        assert env.is_health_depleted() is False
+
+        # Apply more damage
+        env.apply_predator_damage()
+        env.apply_predator_damage()
+        assert env.agent_hp == 25.0
+
+        # Heal with food
+        healing = env.apply_food_healing()
+        assert healing == 10.0
+        assert env.agent_hp == 35.0
+
+        # Final damage to deplete
+        env.apply_predator_damage()
+        assert env.agent_hp == 10.0
+        env.apply_predator_damage()
+        assert env.agent_hp == 0.0
+        assert env.is_health_depleted() is True
+
+    def test_environment_copy_preserves_health(self, health_env):
+        """Test that environment copy preserves health state."""
+        health_env.agent_hp = 50.0
+
+        copied_env = health_env.copy()
+
+        assert copied_env.health.enabled is True
+        assert copied_env.health.max_hp == 100.0
+        assert copied_env.agent_hp == 50.0
+
+        # Modify original should not affect copy
+        health_env.agent_hp = 25.0
+        assert copied_env.agent_hp == 50.0
+
+    def test_environment_copy_preserves_health_config(self, health_env):
+        """Test that environment copy preserves health config."""
+        copied_env = health_env.copy()
+
+        assert copied_env.health.predator_damage == health_env.health.predator_damage
+        assert copied_env.health.food_healing == health_env.health.food_healing
+
+    def test_custom_health_values(self):
+        """Test environment with custom health values."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(
+                enabled=True,
+                max_hp=50.0,
+                predator_damage=5.0,
+                food_healing=15.0,
+            ),
+        )
+
+        assert env.agent_hp == 50.0
+        assert env.health.max_hp == 50.0
+
+        # Damage
+        env.apply_predator_damage()
+        assert env.agent_hp == 45.0
+
+        # Heal (should cap at max)
+        env.apply_food_healing()
+        assert env.agent_hp == 50.0  # 45 + 15 = 60, but capped at 50
