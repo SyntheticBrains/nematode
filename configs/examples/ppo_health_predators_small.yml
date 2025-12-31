@@ -3,13 +3,13 @@
 # Agent can survive multiple predator contacts and heal by collecting food.
 #
 # Key features:
-# - Health system ENABLED: predator contact deals 10 HP damage instead of instant death
+# - Health system ENABLED: predator contact deals 20 HP damage instead of instant death
 # - Food restores 5 HP per food collected
 # - Agent dies when HP reaches 0 (HEALTH_DEPLETED termination)
 # - Satiety system DISABLED: no time-based hunger (simpler learning objective)
 #
 # Balanced for learning: 25x25 grid with 5 predators, 8 foods, collect 15 to win
-# Agent can take 10 hits before death, food heals ~2 hits worth
+# Agent can take 5 hits before death, food heals ~2 hits worth
 
 max_steps: 600
 brain:
@@ -82,5 +82,5 @@ environment:
     health:
       enabled: true
       max_hp: 100.0
-      predator_damage: 10.0
+      predator_damage: 20.0
       food_healing: 5.0
