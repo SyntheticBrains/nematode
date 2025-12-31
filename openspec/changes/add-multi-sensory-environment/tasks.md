@@ -60,6 +60,38 @@ ______________________________________________________________________
 
 **Validation**: Agent can survive predator contact, die from accumulated damage. Food restores both HP and satiety.
 
+### 2.5 Health System Observability
+
+> **Note**: When adding new tracking systems (like health), ensure full observability coverage across console output, session-level aggregates, per-run exports, and visualizations.
+
+#### Console Output
+
+- [x] Display per-run health value in simulation summary (e.g., `Health: 85.0`)
+- [x] Display "Failed runs - Health Depleted" count in session summary
+- [x] Format health values to 1 decimal place for readability
+- [x] Track `total_health_depleted` counter at session level in run_simulation.py
+
+#### Session-Level Reporting
+
+- [x] Add `total_health_depleted` to PerformanceMetrics
+- [x] Include health depletion percentage in session summary output
+- [x] Generate session-level health progression plot (multi-run overlay)
+
+#### Per-Run Exports
+
+- [x] Export `health_history.csv` per run (step-by-step HP values)
+- [x] Include health metrics in `foraging_summary.csv` (final HP, died_to_health_depletion)
+- [x] Generate per-run health progression plot (`health_progression.png`)
+
+#### Data Capture
+
+- [x] Track health at each step via `EpisodeTracker.track_health()`
+- [x] Capture final 0 HP value before early return on health depletion
+- [x] Include `health_history` in EpisodeTrackingData and SimulationResult
+- [x] Track `died_to_health_depletion` boolean in SimulationResult
+
+**Validation**: Console shows health per run and session totals, exports include health history CSV and plots at both session and per-run level.
+
 ______________________________________________________________________
 
 ## 3. Enhanced Predator Behaviors
