@@ -145,6 +145,9 @@ class Predator:
         Capped at 10 steps per update for safety.
     movement_accumulator : float
         Accumulator for fractional movement (handles both speed < 1.0 and > 1.0).
+    detection_radius : int
+        Distance at which pursuit predators detect and chase the agent.
+        Only used for PURSUIT type predators.
     """
 
     def __init__(
@@ -153,6 +156,7 @@ class Predator:
         predator_type: PredatorType = PredatorType.RANDOM,
         speed: float = 1.0,
         movement_accumulator: float = 0.0,
+        detection_radius: int = 8,
     ) -> None:
         """
         Initialize a predator.
@@ -165,13 +169,44 @@ class Predator:
             Movement behavior type (default RANDOM).
         speed : float
             Movement speed (default 1.0).
+        movement_accumulator : float
+            Initial movement accumulator (default 0.0).
+        detection_radius : int
+            Detection radius for pursuit predators (default 8).
         """
         self.position = position
         self.predator_type = predator_type
         self.speed = speed
         self.movement_accumulator = movement_accumulator
+        self.detection_radius = detection_radius
 
-    def update_position(self, grid_size: int, rng: np.random.Generator) -> None:
+    def update_position(
+        self,
+        grid_size: int,
+        rng: np.random.Generator,
+        agent_pos: tuple[int, int] | None = None,
+    ) -> None:
+        """
+        Update predator position based on its type.
+
+        Parameters
+        ----------
+        grid_size : int
+            Size of the grid (for boundary checking).
+        rng : np.random.Generator
+            Random number generator for reproducible movement.
+        agent_pos : tuple[int, int] | None
+            Current agent position. Required for PURSUIT type predators.
+        """
+        if self.predator_type == PredatorType.STATIONARY:
+            return  # Stationary predators don't move
+
+        if self.predator_type == PredatorType.PURSUIT and agent_pos is not None:
+            self._update_pursuit(grid_size, rng, agent_pos)
+        else:
+            self._update_random(grid_size, rng)
+
+    def _update_random(self, grid_size: int, rng: np.random.Generator) -> None:
         """
         Update predator position with random movement.
 
@@ -217,6 +252,70 @@ class Predator:
                 x = max(0, x - 1)
             elif direction_choice == right:
                 x = min(grid_size - 1, x + 1)
+
+            self.position = (x, y)
+
+    def _update_pursuit(
+        self,
+        grid_size: int,
+        rng: np.random.Generator,
+        agent_pos: tuple[int, int],
+    ) -> None:
+        """
+        Update predator position with pursuit behavior.
+
+        When within detection radius, moves toward the agent.
+        When outside detection radius, moves randomly.
+
+        Parameters
+        ----------
+        grid_size : int
+            Size of the grid (for boundary checking).
+        rng : np.random.Generator
+            Random number generator for reproducible movement.
+        agent_pos : tuple[int, int]
+            Current agent position.
+        """
+        # Calculate Manhattan distance to agent
+        px, py = self.position
+        ax, ay = agent_pos
+        distance = abs(px - ax) + abs(py - ay)
+
+        # If outside detection radius, move randomly
+        if distance > self.detection_radius:
+            self._update_random(grid_size, rng)
+            return
+
+        # Inside detection radius: pursue the agent
+        self.movement_accumulator += self.speed
+        if self.movement_accumulator < 1.0:
+            return  # Don't move yet
+
+        max_steps_per_update = 10
+        steps_taken = 0
+
+        while self.movement_accumulator >= 1.0 and steps_taken < max_steps_per_update:
+            self.movement_accumulator -= 1.0
+            steps_taken += 1
+
+            x, y = self.position
+
+            # Calculate direction toward agent
+            dx = ax - x
+            dy = ay - y
+
+            # Move in the direction with larger distance first (greedy pursuit)
+            if abs(dx) >= abs(dy):
+                # Move horizontally
+                if dx > 0:
+                    x = min(grid_size - 1, x + 1)
+                elif dx < 0:
+                    x = max(0, x - 1)
+            # Move vertically
+            elif dy > 0:
+                y = min(grid_size - 1, y + 1)
+            elif dy < 0:
+                y = max(0, y - 1)
 
             self.position = (x, y)
 
@@ -919,7 +1018,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 )
                 # Ensure predator spawns outside detection radius
                 if distance_to_agent > self.predator.detection_radius:
-                    predator = Predator(position=candidate, speed=self.predator.speed)
+                    predator = Predator(
+                        position=candidate,
+                        predator_type=self.predator.predator_type,
+                        speed=self.predator.speed,
+                        detection_radius=self.predator.detection_radius,
+                    )
                     self.predators.append(predator)
                     logger.debug(
                         f"Initialized {self.predator.predator_type.value} predator "
@@ -934,7 +1038,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     f"after {MAX_POISSON_ATTEMPTS} attempts. "
                     f"Spawning at {candidate} anyway.",
                 )
-                predator = Predator(position=candidate, speed=self.predator.speed)
+                predator = Predator(
+                    position=candidate,
+                    predator_type=self.predator.predator_type,
+                    speed=self.predator.speed,
+                    detection_radius=self.predator.detection_radius,
+                )
                 self.predators.append(predator)
 
     def spawn_food(self) -> bool:
@@ -1233,8 +1342,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Update all predator positions."""
         if not self.predator.enabled:
             return
+        agent_pos = (int(self.agent_pos[0]), int(self.agent_pos[1]))
         for pred in self.predators:
-            pred.update_position(self.grid_size, self.rng)
+            pred.update_position(self.grid_size, self.rng, agent_pos)
 
     def check_predator_collision(self) -> bool:
         """
@@ -1462,6 +1572,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     predator_type=p.predator_type,
                     speed=p.speed,
                     movement_accumulator=p.movement_accumulator,
+                    detection_radius=p.detection_radius,
                 )
                 for p in self.predators
             ]
