@@ -650,6 +650,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 outcome_msg += "FAILED: Agent starved"
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 outcome_msg += "FAILED: Max steps reached"
+            elif step_result.termination_reason == TerminationReason.PREDATOR:
+                outcome_msg += "FAILED: Killed by predator"
+            elif step_result.termination_reason == TerminationReason.HEALTH_DEPLETED:
+                outcome_msg += "FAILED: Health depleted"
 
             logger.info(outcome_msg)
 
