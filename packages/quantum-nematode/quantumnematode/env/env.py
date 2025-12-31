@@ -20,7 +20,12 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.env.theme import THEME_SYMBOLS, DarkColorRichStyleConfig, Theme
+from quantumnematode.env.theme import (
+    THEME_SYMBOLS,
+    DarkColorRichStyleConfig,
+    Theme,
+    ThemeSymbolSet,
+)
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng
 
@@ -1494,6 +1499,32 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return self._render_grid_to_strings(grid)
 
+    def _get_predator_symbol(
+        self,
+        predator: Predator,
+        symbols: "ThemeSymbolSet",
+    ) -> str:
+        """
+        Get the appropriate symbol for a predator based on its type.
+
+        Parameters
+        ----------
+        predator : Predator
+            The predator to get the symbol for.
+        symbols : ThemeSymbolSet
+            The current theme's symbol set.
+
+        Returns
+        -------
+        str
+            The symbol to use for rendering this predator.
+        """
+        if predator.predator_type == PredatorType.STATIONARY:
+            return symbols.predator_stationary
+        if predator.predator_type == PredatorType.PURSUIT:
+            return symbols.predator_pursuit
+        return symbols.predator
+
     def _render_predators(
         self,
         grid: list[list[str]],
@@ -1512,6 +1543,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         symbols = THEME_SYMBOLS[self.theme]
 
         for predator in self.predators:
+            predator_symbol = self._get_predator_symbol(predator, symbols)
             if viewport:
                 min_x, min_y, max_x, max_y = viewport
                 # Only render predator if in viewport
@@ -1522,11 +1554,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     agent_y = self.agent_pos[1] - min_y
                     agent_x = self.agent_pos[0] - min_x
                     if grid_y != agent_y or grid_x != agent_x:
-                        grid[grid_y][grid_x] = symbols.predator
+                        grid[grid_y][grid_x] = predator_symbol
             # Full grid rendering
             # Don't overwrite agent position
             elif predator.position != tuple(self.agent_pos):
-                grid[predator.position[1]][predator.position[0]] = symbols.predator
+                grid[predator.position[1]][predator.position[0]] = predator_symbol
 
     def copy(self) -> "DynamicForagingEnvironment":
         """
