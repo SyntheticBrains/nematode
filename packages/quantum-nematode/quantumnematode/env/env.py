@@ -1270,17 +1270,20 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Returns
         -------
         float
-            Amount of damage applied (0 if health system disabled).
+            Actual amount of damage applied (0 if health system disabled).
+            May be less than configured damage if HP was already low.
         """
         if not self.health.enabled:
             return 0.0
 
+        old_hp = self.agent_hp
         self.agent_hp = max(0.0, self.agent_hp - self.health.predator_damage)
+        actual_damage = old_hp - self.agent_hp
         logger.debug(
-            f"Predator damage applied: {self.health.predator_damage} HP. "
+            f"Predator damage applied: {actual_damage} HP. "
             f"Current HP: {self.agent_hp}/{self.health.max_hp}",
         )
-        return self.health.predator_damage
+        return actual_damage
 
     def apply_food_healing(self) -> float:
         """
