@@ -21,6 +21,8 @@ class TerminationReason(str, Enum):
         Agent's satiety reached zero (DynamicForagingEnvironment).
     PREDATOR : str
         Agent was caught by a predator (DynamicForagingEnvironment with predators enabled).
+    HEALTH_DEPLETED : str
+        Agent's HP reached zero from accumulated damage (health system enabled).
     MAX_STEPS : str
         Agent reached maximum allowed steps.
     INTERRUPTED : str
@@ -31,6 +33,7 @@ class TerminationReason(str, Enum):
     COMPLETED_ALL_FOOD = "completed_all_food"
     STARVED = "starved"
     PREDATOR = "predator"
+    HEALTH_DEPLETED = "health_depleted"
     MAX_STEPS = "max_steps"
     INTERRUPTED = "interrupted"
 
@@ -70,12 +73,16 @@ class SimulationResult(BaseModel):
         Average distance efficiency per food collected (DynamicForagingEnvironment only).
     satiety_history : list[float] | None
         Step-by-step satiety levels throughout the run (DynamicForagingEnvironment only).
+    health_history : list[float] | None
+        Step-by-step health (HP) levels throughout the run (health system enabled only).
     predator_encounters : int | None
         Number of predator encounters (predator environments only).
     successful_evasions : int | None
         Number of successful predator evasions (predator environments only).
     died_to_predator : bool | None
         Whether run ended due to predator death (predator environments only).
+    died_to_health_depletion : bool | None
+        Whether run ended due to HP reaching zero (health system enabled).
     food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
     """
@@ -94,9 +101,11 @@ class SimulationResult(BaseModel):
     satiety_remaining: float | None = None
     average_distance_efficiency: float | None = None
     satiety_history: list[float] | None = None
+    health_history: list[float] | None = None
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_predator: bool | None = None
+    died_to_health_depletion: bool | None = None
     food_history: FoodHistory | None = None
 
 
@@ -110,6 +119,8 @@ class EpisodeTrackingData(BaseModel):
     ----------
     satiety_history : list[float]
         Step-by-step satiety levels throughout the episode.
+    health_history : list[float]
+        Step-by-step health (HP) levels throughout the episode (health system enabled).
     foods_collected : int
         Number of foods collected in this episode.
     distance_efficiencies : list[float]
@@ -123,6 +134,7 @@ class EpisodeTrackingData(BaseModel):
     """
 
     satiety_history: list[float] = Field(default_factory=list)
+    health_history: list[float] = Field(default_factory=list)
     foods_collected: int = 0
     distance_efficiencies: list[float] = Field(default_factory=list)
     predator_encounters: int = 0
@@ -176,6 +188,8 @@ class PerformanceMetrics(BaseModel):
         Total number of predator encounters across all runs.
     total_predator_deaths : int
         Total number of runs that ended due to predator collision.
+    total_health_depleted : int
+        Total number of runs that ended due to HP reaching zero (health system).
     total_successful_evasions : int
         Total number of successful predator evasions across all runs.
     total_max_steps : int
@@ -198,6 +212,7 @@ class PerformanceMetrics(BaseModel):
     total_starved: int = 0
     total_predator_encounters: int = 0
     total_predator_deaths: int = 0
+    total_health_depleted: int = 0
     total_successful_evasions: int = 0
     total_max_steps: int = 0
     total_interrupted: int = 0

@@ -74,7 +74,10 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Add environment specific data
         additional_info = " "
         if result.satiety_remaining is not None:
-            additional_info += f"Satiety: {result.satiety_remaining:<6} "
+            additional_info += f"Satiety: {result.satiety_remaining:<6.1f} "
+        if result.health_history:
+            final_health = result.health_history[-1]
+            additional_info += f"Health: {final_health:<6.1f} "
         if result.foods_collected is not None and result.foods_available is not None:
             foods_info = f"Eaten: {result.foods_collected}/{result.foods_available:<6} "
             additional_info += foods_info
@@ -110,17 +113,22 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         f"({metrics.total_successes / total_runs_done * 100:.1f}%)",
     )
 
-    if metrics.total_starved is not None:
+    if metrics.total_starved is not None and metrics.total_starved > 0:
         output_lines.append(
             f"Failed runs - Starved: {metrics.total_starved} "
             f"({metrics.total_starved / total_runs_done * 100:.1f}%)",
         )
-    if metrics.total_predator_deaths is not None:
+    if metrics.total_predator_deaths is not None and metrics.total_predator_deaths > 0:
         output_lines.append(
             f"Failed runs - Eaten by Predator: {metrics.total_predator_deaths} "
             f"({metrics.total_predator_deaths / total_runs_done * 100:.1f}%)",
         )
-    if metrics.total_max_steps is not None:
+    if metrics.total_health_depleted is not None and metrics.total_health_depleted > 0:
+        output_lines.append(
+            f"Failed runs - Health Depleted: {metrics.total_health_depleted} "
+            f"({metrics.total_health_depleted / total_runs_done * 100:.1f}%)",
+        )
+    if metrics.total_max_steps is not None and metrics.total_max_steps > 0:
         output_lines.append(
             f"Failed runs - Max Steps: {metrics.total_max_steps} "
             f"({metrics.total_max_steps / total_runs_done * 100:.1f}%)",

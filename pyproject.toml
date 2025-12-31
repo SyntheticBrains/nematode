@@ -61,6 +61,7 @@ dev = [
     "quantum-nematode",
     "pytest>=8.4.1",
     "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.5.0",
 ]
 
 [tool.uv.workspace]
@@ -141,3 +142,7 @@ reportUnusedFunction = "error"
 reportConstantRedefinition = "error"
 pythonVersion = "3.12"
 pythonPlatform = "Linux"
+
+[tool.pytest.ini_options]
+testpaths = ["packages/quantum-nematode/tests"]
+addopts = "-n auto"

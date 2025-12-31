@@ -80,7 +80,8 @@ class TestDynamicForagingRewards:
         env.foods = [(5, 5), (1, 1)]
         env.get_nearest_food_distance = Mock(return_value=1)
         env.visited_cells = set()
-        env.predators_enabled = False
+        env.predator = Mock()
+        env.predator.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(3, 3), (2, 2)]  # Previous nearest was Manhattan=4, now=1
@@ -99,7 +100,8 @@ class TestDynamicForagingRewards:
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = set()
-        env.predators_enabled = False
+        env.predator = Mock()
+        env.predator.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -117,7 +119,8 @@ class TestDynamicForagingRewards:
         env.agent_pos = [1, 2]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(1, 2)}
-        env.predators_enabled = False
+        env.predator = Mock()
+        env.predator.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -184,7 +187,8 @@ class TestPredatorProximityPenalty:
         env.agent_pos = [5, 5]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
-        env.predators_enabled = True
+        env.predator = Mock()
+        env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=True)  # Within detection radius
 
         calculator = RewardCalculator(config)
@@ -207,7 +211,8 @@ class TestPredatorProximityPenalty:
         env.agent_pos = [5, 5]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
-        env.predators_enabled = True
+        env.predator = Mock()
+        env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=False)  # Outside detection radius
 
         calculator = RewardCalculator(config)
@@ -230,7 +235,8 @@ class TestPredatorProximityPenalty:
         env.agent_pos = [5, 5]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
-        env.predators_enabled = False  # Predators disabled
+        env.predator = Mock()
+        env.predator.enabled = False  # Predators disabled
 
         calculator = RewardCalculator(config)
         path = [(5, 5)]
@@ -252,7 +258,8 @@ class TestPredatorProximityPenalty:
         env.agent_pos = [5, 5]
         env.get_nearest_food_distance = Mock(return_value=None)
         env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
-        env.predators_enabled = True
+        env.predator = Mock()
+        env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=True)
 
         calculator = RewardCalculator(config)

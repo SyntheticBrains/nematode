@@ -6,7 +6,7 @@ The system SHALL provide an optional HP-based health system as an alternative to
 
 #### Scenario: Health System Initialization
 
-- **GIVEN** a configuration with `health_system.enabled: true` and `health_system.max_hp: 100`
+- **GIVEN** a configuration with `health.enabled: true` and `health.max_hp: 100`
 - **WHEN** the environment is initialized
 - **THEN** the agent SHALL start with HP equal to max_hp (100)
 - **AND** the health system SHALL track current HP throughout the episode
@@ -47,7 +47,7 @@ The system SHALL provide an optional HP-based health system as an alternative to
 
 #### Scenario: Health System Disabled (Default)
 
-- **GIVEN** a configuration without health_system or `health_system.enabled: false`
+- **GIVEN** a configuration without health or `health.enabled: false`
 - **WHEN** predator collision occurs
 - **THEN** the existing instant-death behavior SHALL apply
 - **AND** backward compatibility SHALL be maintained

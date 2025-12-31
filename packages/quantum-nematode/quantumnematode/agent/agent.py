@@ -37,6 +37,8 @@ DEFAULT_PENALTY_STUCK_POSITION = 0.5
 DEFAULT_PENALTY_STARVATION = 10.0
 DEFAULT_PENALTY_PREDATOR_DEATH = 10.0
 DEFAULT_PENALTY_PREDATOR_PROXIMITY = 0.1
+DEFAULT_PENALTY_HEALTH_DAMAGE = 0.5  # Penalty when taking damage (per hit)
+DEFAULT_REWARD_HEALTH_GAIN = 0.1  # Reward when healing (per healing event)
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -83,6 +85,13 @@ class RewardConfig(BaseModel):
     )
     penalty_predator_proximity: float = (
         DEFAULT_PENALTY_PREDATOR_PROXIMITY  # Penalty per step within predator detection radius
+    )
+    # Health system rewards (only applied when health system is enabled)
+    penalty_health_damage: float = (
+        DEFAULT_PENALTY_HEALTH_DAMAGE  # Penalty when taking damage from predators
+    )
+    reward_health_gain: float = (
+        DEFAULT_REWARD_HEALTH_GAIN  # Reward when healing from food consumption
     )
 
 
@@ -432,11 +441,14 @@ class QuantumNematodeAgent:
                 pass
             case DynamicForagingEnvironment():
                 print(  # noqa: T201
-                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.target_foods_to_collect}",
+                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.foraging.target_foods_to_collect}",
+                )
+                print(  # noqa: T201
+                    f"Health:\t\t{self.env.agent_hp:.1f}/{self.env.health.max_hp}",
                 )
                 print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
                 # Display danger status if predators are enabled
-                if self.env.predators_enabled:
+                if self.env.predator.enabled:
                     danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
                     print(f"Status:\t\t{danger_status}")  # noqa: T201
 
@@ -479,24 +491,14 @@ class QuantumNematodeAgent:
         if isinstance(self.env, DynamicForagingEnvironment):
             self.env = DynamicForagingEnvironment(
                 grid_size=self.env.grid_size,
-                foods_on_grid=self.env.foods_on_grid,
-                target_foods_to_collect=self.env.target_foods_to_collect,
-                min_food_distance=self.env.min_food_distance,
-                agent_exclusion_radius=self.env.agent_exclusion_radius,
-                gradient_decay_constant=self.env.gradient_decay_constant,
-                gradient_strength=self.env.gradient_strength_base,
                 viewport_size=self.env.viewport_size,
                 max_body_length=self.max_body_length,
                 theme=self.env.theme,
                 rich_style_config=self.env.rich_style_config,
-                # Predator parameters (preserve from original env)
-                predators_enabled=self.env.predators_enabled,
-                num_predators=self.env.num_predators,
-                predator_speed=self.env.predator_speed,
-                predator_detection_radius=self.env.predator_detection_radius,
-                predator_kill_radius=self.env.predator_kill_radius,
-                predator_gradient_decay=self.env.predator_gradient_decay,
-                predator_gradient_strength=self.env.predator_gradient_strength,
+                # Preserve params from original env
+                foraging=self.env.foraging,
+                predator=self.env.predator,
+                health=self.env.health,
                 # Reproducibility: preserve seed from original environment
                 seed=self.env.seed,
             )
@@ -561,7 +563,7 @@ class QuantumNematodeAgent:
         """
         # Determine if predators are enabled for proper metrics calculation
         predators_enabled = (
-            isinstance(self.env, DynamicForagingEnvironment) and self.env.predators_enabled
+            isinstance(self.env, DynamicForagingEnvironment) and self.env.predator.enabled
         )
 
         metrics = self._metrics_tracker.calculate_metrics(

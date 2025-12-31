@@ -9,7 +9,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
 from quantumnematode.brain.modules import ModuleName
-from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
 
 
 class TestSatietyConfig:
@@ -130,8 +130,7 @@ class TestQuantumNematodeAgentInitialization:
         """Test agent initialization with dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            foods_on_grid=5,
-            target_foods_to_collect=8,
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
         )
         agent = QuantumNematodeAgent(brain=modular_brain, env=env)
 
@@ -209,8 +208,7 @@ class TestQuantumNematodeAgentReset:
         """Test resetting dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            foods_on_grid=5,
-            target_foods_to_collect=8,
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
@@ -283,8 +281,7 @@ class TestQuantumNematodeAgentMetrics:
         """Test metrics calculation for dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
-            foods_on_grid=5,
-            target_foods_to_collect=8,
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
         )
         agent = QuantumNematodeAgent(brain=modular_brain, env=env)
 

@@ -8,7 +8,7 @@ from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.modular import ModularBrain
-from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
 
 
 class TestPresetConfigurations:
@@ -180,12 +180,14 @@ class TestDynamicEnvironmentWithBrain:
         return DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
-            foods_on_grid=5,
-            target_foods_to_collect=10,
-            min_food_distance=3,
-            agent_exclusion_radius=5,
-            gradient_decay_constant=8.0,
-            gradient_strength=1.0,
+            foraging=ForagingParams(
+                foods_on_grid=5,
+                target_foods_to_collect=10,
+                min_food_distance=3,
+                agent_exclusion_radius=5,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+            ),
             viewport_size=(11, 11),
             max_body_length=0,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
