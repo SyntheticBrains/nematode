@@ -124,47 +124,92 @@ class BrainHistoryData(BaseModel):
 
 
 class BrainParams(BaseModel):
-    """Parameters for the brain's operation."""
+    """Parameters for the brain's operation.
 
-    gradient_strength: float | None = Field(
-        default=None,
-        description="Strength of the chemical gradient (combined food + predator).",
-    )
-    gradient_direction: float | None = Field(
-        default=None,
-        description="Direction of the chemical gradient (combined food + predator).",
-    )
-    food_gradient_strength: float | None = Field(
-        default=None,
-        description="LOCAL food gradient magnitude sensed at agent's position.",
-    )
-    food_gradient_direction: float | None = Field(
-        default=None,
-        description="LOCAL food gradient direction sensed at agent's position (radians).",
-    )
-    predator_gradient_strength: float | None = Field(
-        default=None,
-        description="LOCAL predator gradient magnitude sensed at agent's position.",
-    )
-    predator_gradient_direction: float | None = Field(
-        default=None,
-        description="LOCAL predator gradient direction sensed at agent's position (radians).",
-    )
-    satiety: float | None = Field(
-        default=None,
-        description="Current satiety level of the agent (hunger state).",
-    )
+    Sensory inputs and state information passed from the environment to the brain.
+    All fields are optional with None defaults for backward compatibility.
+    """
+
+    # --- Agent state ---
     agent_position: tuple[float, float] | None = Field(
         default=None,
         description="Current position of the agent in the environment.",
     )
     agent_direction: Direction | None = Field(
         default=None,
-        description="Current direction of the agent in the environment.",
+        description="Current direction the agent is facing.",
     )
     action: ActionData | None = Field(
         default=None,
-        description="Action taken by the agent.",
+        description="Last action taken by the agent.",
+    )
+
+    # --- Chemotaxis (food/predator gradients) ---
+    gradient_strength: float | None = Field(
+        default=None,
+        description="Combined gradient magnitude (food attraction + predator repulsion).",
+    )
+    gradient_direction: float | None = Field(
+        default=None,
+        description="Combined gradient direction (radians).",
+    )
+    food_gradient_strength: float | None = Field(
+        default=None,
+        description="Food gradient magnitude at agent's position.",
+    )
+    food_gradient_direction: float | None = Field(
+        default=None,
+        description="Food gradient direction at agent's position (radians).",
+    )
+    predator_gradient_strength: float | None = Field(
+        default=None,
+        description="Predator gradient magnitude at agent's position.",
+    )
+    predator_gradient_direction: float | None = Field(
+        default=None,
+        description="Predator gradient direction at agent's position (radians).",
+    )
+
+    # --- Thermotaxis (temperature sensing) ---
+    temperature: float | None = Field(
+        default=None,
+        description="Current temperature at agent's position (°C).",
+    )
+    temperature_gradient_strength: float | None = Field(
+        default=None,
+        description="Temperature gradient magnitude (°C per cell).",
+    )
+    temperature_gradient_direction: float | None = Field(
+        default=None,
+        description="Temperature gradient direction (radians).",
+    )
+    cultivation_temperature: float | None = Field(
+        default=None,
+        description="Cultivation temperature (Tc) - the agent's preferred temperature.",
+    )
+
+    # --- Mechanosensation (touch/contact) ---
+    boundary_contact: bool | None = Field(
+        default=None,
+        description="True if agent is touching grid boundary.",
+    )
+    predator_contact: bool | None = Field(
+        default=None,
+        description="True if agent is in physical contact with a predator.",
+    )
+
+    # --- Homeostasis (internal state) ---
+    satiety: float | None = Field(
+        default=None,
+        description="Current satiety level (hunger state, decays over time).",
+    )
+    health: float | None = Field(
+        default=None,
+        description="Current HP (decreases from damage events).",
+    )
+    max_health: float | None = Field(
+        default=None,
+        description="Maximum HP the agent can have.",
     )
 
 

@@ -66,6 +66,7 @@ def _export_main_results(
             "predator_encounters",
             "successful_evasions",
             "died_to_predator",
+            "died_to_health_depletion",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -103,6 +104,9 @@ def _export_main_results(
                     else np.nan,
                     "died_to_predator": result.died_to_predator
                     if result.died_to_predator is not None
+                    else np.nan,
+                    "died_to_health_depletion": result.died_to_health_depletion
+                    if result.died_to_health_depletion is not None
                     else np.nan,
                 },
             )
@@ -681,6 +685,15 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
                 for step, satiety in enumerate(current_episode_run_data.satiety_history):
                     writer.writerow({"step": step, "satiety": satiety})
 
+        # Export health history (if health system was enabled)
+        if current_episode_run_data.health_history:
+            filepath = run_dir / "health_history.csv"
+            with filepath.open("w", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=["step", "health"])
+                writer.writeheader()
+                for step, health in enumerate(current_episode_run_data.health_history):
+                    writer.writerow({"step": step, "health": health})
+
         # Export distance efficiencies
         if current_episode_run_data.distance_efficiencies:
             filepath = run_dir / "distance_efficiencies.csv"
@@ -713,6 +726,11 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
                 max_satiety = max(current_episode_run_data.satiety_history)
                 writer.writerow({"metric": "final_satiety", "value": f"{final_satiety:.2f}"})
                 writer.writerow({"metric": "max_satiety", "value": f"{max_satiety:.2f}"})
+            if current_episode_run_data.health_history:
+                final_health = current_episode_run_data.health_history[-1]
+                max_health = max(current_episode_run_data.health_history)
+                writer.writerow({"metric": "final_health", "value": f"{final_health:.2f}"})
+                writer.writerow({"metric": "max_health", "value": f"{max_health:.2f}"})
 
 
 # Dynamic Foraging Environment Specific Exports
@@ -749,6 +767,7 @@ def export_foraging_results_to_csv(  # pragma: no cover
             "predator_encounters",
             "successful_evasions",
             "died_to_predator",
+            "died_to_health_depletion",
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -783,6 +802,9 @@ def export_foraging_results_to_csv(  # pragma: no cover
                         else np.nan,
                         "died_to_predator": result.died_to_predator
                         if result.died_to_predator is not None
+                        else np.nan,
+                        "died_to_health_depletion": result.died_to_health_depletion
+                        if result.died_to_health_depletion is not None
                         else np.nan,
                     },
                 )
@@ -884,6 +906,9 @@ def export_foraging_session_metrics_to_csv(  # pragma: no cover
     max_steps_count = sum(
         1 for r in foraging_results if "max_steps" in r.termination_reason.value.lower()
     )
+    health_depleted_count = sum(
+        1 for r in foraging_results if "health" in r.termination_reason.value.lower()
+    )
     success_count = sum(1 for r in foraging_results if r.success)
 
     with filepath.open("w", newline="") as csvfile:
@@ -899,6 +924,7 @@ def export_foraging_session_metrics_to_csv(  # pragma: no cover
         )
         writer.writerow({"metric": "success_count", "value": success_count})
         writer.writerow({"metric": "starvation_count", "value": starvation_count})
+        writer.writerow({"metric": "health_depleted_count", "value": health_depleted_count})
         writer.writerow({"metric": "max_steps_count", "value": max_steps_count})
         writer.writerow({"metric": "success_rate", "value": f"{metrics.success_rate:.4f}"})
 

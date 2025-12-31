@@ -312,6 +312,8 @@ class ResultsMetadata(BaseModel):
         Number of runs that reached the goal.
     predator_deaths : int
         Number of runs that ended due to predator collision.
+    health_depleted : int
+        Number of runs that ended due to HP reaching zero (health system enabled).
     avg_predator_encounters : float | None
         Average predator encounters per run (predator environments only).
     avg_successful_evasions : float | None
@@ -387,6 +389,7 @@ class ResultsMetadata(BaseModel):
     max_steps_reached: int = 0
     goal_reached: int = 0
     predator_deaths: int = 0
+    health_depleted: int = 0
     avg_predator_encounters: float | None = None
     avg_successful_evasions: float | None = None
     # Convergence-based metrics (added for benchmark v2)

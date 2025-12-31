@@ -4,7 +4,7 @@ import time
 
 import pytest
 from quantumnematode.brain.actions import Action
-from quantumnematode.env import DynamicForagingEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, PredatorParams
 
 
 class TestPredatorPerformance:
@@ -16,22 +16,26 @@ class TestPredatorPerformance:
         return DynamicForagingEnvironment(
             grid_size=100,
             start_pos=(50, 50),
-            foods_on_grid=50,
-            target_foods_to_collect=75,
-            min_food_distance=5,
-            agent_exclusion_radius=10,
-            gradient_decay_constant=10.0,
-            gradient_strength=1.0,
+            foraging=ForagingParams(
+                foods_on_grid=50,
+                target_foods_to_collect=75,
+                min_food_distance=5,
+                agent_exclusion_radius=10,
+                gradient_decay_constant=10.0,
+                gradient_strength=1.0,
+            ),
             viewport_size=(11, 11),
             max_body_length=6,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            predators_enabled=True,
-            num_predators=5,
-            predator_speed=1.0,
-            predator_detection_radius=8,
-            predator_kill_radius=0,
-            predator_gradient_decay=5.0,
-            predator_gradient_strength=1.0,
+            predator=PredatorParams(
+                enabled=True,
+                count=5,
+                speed=1.0,
+                detection_radius=8,
+                kill_radius=0,
+                gradient_decay_constant=5.0,
+                gradient_strength=1.0,
+            ),
         )
 
     def test_step_time_with_predators(self, large_predator_env):

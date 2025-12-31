@@ -20,6 +20,7 @@ class EpisodeTracker:
             foods_collected=0,
             distance_efficiencies=[],
             satiety_history=[],
+            health_history=[],
             predator_encounters=0,
             successful_evasions=0,
             in_danger=False,
@@ -49,6 +50,11 @@ class EpisodeTracker:
     def satiety_history(self) -> list[float]:
         """Get the satiety history for the episode."""
         return self.data.satiety_history
+
+    @property
+    def health_history(self) -> list[float]:
+        """Get the health history for the episode."""
+        return self.data.health_history
 
     @property
     def predator_encounters(self) -> int:
@@ -113,6 +119,16 @@ class EpisodeTracker:
         """
         self.data.satiety_history.append(satiety)
 
+    def track_health(self, health: float) -> None:
+        """Track current health level.
+
+        Parameters
+        ----------
+        health : float
+            Current health (HP) level for this step.
+        """
+        self.data.health_history.append(health)
+
     def track_step(self, reward: float = 0.0, satiety: float | None = None) -> None:
         """Track a single step.
 
@@ -136,6 +152,7 @@ class EpisodeTracker:
             foods_collected=0,
             distance_efficiencies=[],
             satiety_history=[],
+            health_history=[],
             predator_encounters=0,
             successful_evasions=0,
             in_danger=False,

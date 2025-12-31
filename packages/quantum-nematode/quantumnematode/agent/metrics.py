@@ -40,6 +40,8 @@ class MetricsTracker:
         self.total_starved = 0
         self.total_max_steps = 0
         self.total_interrupted = 0
+        # Health system tracking
+        self.total_health_depleted = 0
 
     def track_episode_completion(  # noqa: PLR0913 - comprehensive episode tracking requires many parameters
         self,
@@ -92,6 +94,8 @@ class MetricsTracker:
                 self.total_predator_deaths += 1
             elif termination_reason == TerminationReason.STARVED:
                 self.total_starved += 1
+            elif termination_reason == TerminationReason.HEALTH_DEPLETED:
+                self.total_health_depleted += 1
             elif termination_reason == TerminationReason.MAX_STEPS:
                 self.total_max_steps += 1
             elif termination_reason == TerminationReason.INTERRUPTED:
@@ -161,6 +165,7 @@ class MetricsTracker:
             total_starved=self.total_starved,
             total_predator_encounters=self.total_predator_encounters,
             total_predator_deaths=self.total_predator_deaths,
+            total_health_depleted=self.total_health_depleted,
             total_successful_evasions=self.total_successful_evasions,
             total_max_steps=self.total_max_steps,
             total_interrupted=self.total_interrupted,
@@ -180,3 +185,4 @@ class MetricsTracker:
         self.total_starved = 0
         self.total_max_steps = 0
         self.total_interrupted = 0
+        self.total_health_depleted = 0

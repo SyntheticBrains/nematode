@@ -103,7 +103,7 @@ class RewardCalculator:
         # Proximity penalty for being near predators (dynamic foraging only)
         if (
             isinstance(env, DynamicForagingEnvironment)
-            and env.predators_enabled
+            and env.predator.enabled
             and env.is_agent_in_danger()
         ):
             proximity_penalty = self.config.penalty_predator_proximity

@@ -10,17 +10,17 @@ ______________________________________________________________________
 
 ### 1.1 Add Sensory Fields
 
-- [ ] Add `temperature: float | None` to BrainParams
-- [ ] Add `temperature_gradient_strength: float | None` to BrainParams
-- [ ] Add `temperature_gradient_direction: float | None` to BrainParams
-- [ ] Add `cultivation_temperature: float | None` to BrainParams
-- [ ] Add `health: float | None` to BrainParams
-- [ ] Add `max_health: float | None` to BrainParams
-- [ ] Add `boundary_contact: bool | None` to BrainParams
-- [ ] Add `predator_contact: bool | None` to BrainParams
-- [ ] Update docstrings with field descriptions
+- [x] Add `temperature: float | None` to BrainParams
+- [x] Add `temperature_gradient_strength: float | None` to BrainParams
+- [x] Add `temperature_gradient_direction: float | None` to BrainParams
+- [x] Add `cultivation_temperature: float | None` to BrainParams
+- [x] Add `health: float | None` to BrainParams
+- [x] Add `max_health: float | None` to BrainParams
+- [x] Add `boundary_contact: bool | None` to BrainParams
+- [x] Add `predator_contact: bool | None` to BrainParams
+- [x] Update docstrings with field descriptions
 
-**Validation**: Existing tests pass, new fields default to None
+**Validation**: Existing tests pass, new fields default to None ✅
 
 ______________________________________________________________________
 
@@ -30,35 +30,67 @@ ______________________________________________________________________
 
 ### 2.1 Environment Health Tracking
 
-- [ ] Add `health_system_enabled: bool` to DynamicForagingEnvironment
-- [ ] Add `agent_hp: float` and `max_hp: float` to environment state
-- [ ] Add `HealthSystemConfig` dataclass for configuration
-- [ ] Implement HP initialization on episode reset
-- [ ] Ensure HP system operates independently from existing satiety system
+- [x] Add `health_enabled: bool` to DynamicForagingEnvironment
+- [x] Add `agent_hp: float` and `max_hp: float` to environment state
+- [x] Add `HealthConfig` dataclass for configuration
+- [x] Implement HP initialization on episode reset
+- [x] Ensure HP system operates independently from existing satiety system
 
 ### 2.2 Damage and Healing
 
-- [ ] Implement predator damage on contact (configurable `predator_damage`)
-- [ ] Implement food healing (configurable `food_healing`)
-- [ ] Ensure food consumption restores both HP AND satiety when both systems enabled
-- [ ] Add temperature damage (for thermotaxis integration)
-- [ ] Cap HP at max_hp, floor at 0
+- [x] Implement predator damage on contact (configurable `predator_damage`)
+- [x] Implement food healing (configurable `food_healing`)
+- [x] Ensure food consumption restores both HP AND satiety when both systems enabled
+- [x] Add temperature damage (for thermotaxis integration) - defer
+- [x] Cap HP at max_hp, floor at 0
 
 ### 2.3 Termination
 
-- [ ] Add `TerminationReason.HEALTH_DEPLETED` enum value
-- [ ] Implement HP depletion check in step function
-- [ ] Return appropriate termination when HP reaches 0
-- [ ] Document distinction from STARVATION termination (satiety system)
+- [x] Add `TerminationReason.HEALTH_DEPLETED` enum value
+- [x] Implement HP depletion check in step function
+- [x] Return appropriate termination when HP reaches 0
+- [x] Document distinction from STARVATION termination (satiety system)
 
 ### 2.4 Configuration
 
-- [ ] Add `health_system` section to environment YAML schema
-- [ ] Add config loader support for health system
-- [ ] Create example config with health system enabled
-- [ ] Create example config with BOTH health system and satiety enabled
+- [x] Add `health` section to environment YAML schema
+- [x] Add config loader support for health system
+- [x] Create example config with health system enabled
+- [x] Create example config with BOTH health system and satiety enabled
 
 **Validation**: Agent can survive predator contact, die from accumulated damage. Food restores both HP and satiety.
+
+### 2.5 Health System Observability
+
+> **Note**: When adding new tracking systems (like health), ensure full observability coverage across console output, session-level aggregates, per-run exports, and visualizations.
+
+#### Console Output
+
+- [x] Display per-run health value in simulation summary (e.g., `Health: 85.0`)
+- [x] Display "Failed runs - Health Depleted" count in session summary
+- [x] Format health values to 1 decimal place for readability
+- [x] Track `total_health_depleted` counter at session level in run_simulation.py
+
+#### Session-Level Reporting
+
+- [x] Add `total_health_depleted` to PerformanceMetrics
+- [x] Include health depletion percentage in session summary output
+- [x] Generate session-level health progression plot (multi-run overlay)
+
+#### Per-Run Exports
+
+- [x] Export `health_history.csv` per run (step-by-step HP values)
+- [x] Include health metrics in `foraging_summary.csv` (final HP, died_to_health_depletion)
+- [x] Generate per-run health progression plot (`health_progression.png`)
+
+#### Data Capture
+
+- [x] Track health at each step via `EpisodeTracker.track_health()`
+- [x] Capture final 0 HP value before early return on health depletion
+- [x] Include `health_history` in EpisodeTrackingData and SimulationResult
+- [x] Track `died_to_health_depletion` boolean in SimulationResult
+
+**Validation**: Console shows health per run and session totals, exports include health history CSV and plots at both session and per-run level.
 
 ______________________________________________________________________
 
@@ -169,16 +201,16 @@ ______________________________________________________________________
 - [ ] Add `penalty_temperature_danger: float`
 - [ ] Add `hp_damage_temperature_danger: float`
 - [ ] Add `hp_damage_temperature_lethal: float`
-- [ ] Add `reward_health_gain: float`
-- [ ] Add `penalty_health_damage: float`
+- [x] Add `reward_health_gain: float`
+- [x] Add `penalty_health_damage: float`
 - [ ] Add `penalty_boundary_collision: float`
 
 ### 6.2 RewardCalculator Updates
 
 - [ ] Add temperature comfort/discomfort reward calculation
-- [ ] Add health-based reward calculation
+- [x] Add health-based reward calculation
 - [ ] Add boundary collision penalty
-- [ ] Ensure rewards are only applied when features are enabled
+- [x] Ensure rewards are only applied when features are enabled
 
 **Validation**: Rewards correctly computed for multi-objective scenarios
 
@@ -292,9 +324,10 @@ ______________________________________________________________________
 
 ### 11.1 Example Configs
 
-- [ ] Create `configs/examples/thermotaxis_foraging_small.yml`
-- [ ] Create `configs/examples/health_system_demo.yml`
-- [ ] Create `configs/examples/pursuit_predators.yml`
+- [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml`
+- [x] Create `configs/examples/ppo_health_predators_small.yml`
+- [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
+- [ ] Create `configs/examples/ppo_pursuit_predators_small.yml`
 
 ### 11.2 Documentation
 

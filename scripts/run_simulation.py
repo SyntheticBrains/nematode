@@ -79,6 +79,8 @@ from quantumnematode.report.plots import (
     plot_foods_vs_reward_correlation,
     plot_foods_vs_steps_correlation,
     plot_foraging_efficiency_per_run,
+    plot_health_at_episode_end,
+    plot_health_progression_single_run,
     plot_last_cumulative_rewards,
     plot_predator_encounters_over_time,
     plot_running_average_steps,
@@ -370,27 +372,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Get foraging and predator configs (with automatic migration)
         foraging_config = dynamic_config.get_foraging_config()
         predator_config = dynamic_config.get_predator_config()
+        health_config = dynamic_config.get_health_config()
 
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
-            foods_on_grid=foraging_config.foods_on_grid,
-            target_foods_to_collect=foraging_config.target_foods_to_collect,
-            min_food_distance=foraging_config.min_food_distance,
-            agent_exclusion_radius=foraging_config.agent_exclusion_radius,
-            gradient_decay_constant=foraging_config.gradient_decay_constant,
-            gradient_strength=foraging_config.gradient_strength,
             viewport_size=dynamic_config.viewport_size,
             max_body_length=body_length,
             theme=theme,
             seed=simulation_seed,
-            # Predator parameters
-            predators_enabled=predator_config.enabled,
-            num_predators=predator_config.count,
-            predator_speed=predator_config.speed,
-            predator_detection_radius=predator_config.detection_radius,
-            predator_kill_radius=predator_config.kill_radius,
-            predator_gradient_decay=predator_config.gradient_decay_constant,
-            predator_gradient_strength=predator_config.gradient_strength,
+            foraging=foraging_config.to_params(),
+            predator=predator_config.to_params(),
+            health=health_config.to_params(),
         )
         predator_info = ""
         if predator_config.enabled:
@@ -399,10 +391,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 f"(detection_radius={predator_config.detection_radius}, "
                 f"kill_radius={predator_config.kill_radius})"
             )
+        health_info = ""
+        if health_config.enabled:
+            health_info = (
+                f", health (max_hp={health_config.max_hp}, "
+                f"predator_damage={health_config.predator_damage}, "
+                f"food_healing={health_config.food_healing})"
+            )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
             f"{foraging_config.foods_on_grid} foods on grid, "
-            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}",
+            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}{health_info}",
         )
     else:
         logger.info("Using static maze environment")
@@ -452,6 +451,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Session-level termination tracking
     total_successes = 0
     total_starved = 0
+    total_health_depleted = 0
     total_max_steps = 0
     total_interrupted = 0
 
@@ -485,7 +485,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
             if isinstance(agent.env, DynamicForagingEnvironment):
                 logger.info(f"Initial food positions: {agent.env.foods}")
-                logger.info(f"Foods on grid: {len(agent.env.foods)}/{agent.env.foods_on_grid}")
+                logger.info(
+                    f"Foods on grid: {len(agent.env.foods)}/{agent.env.foraging.foods_on_grid}",
+                )
                 logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
                 # Log full environment render
@@ -566,6 +568,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_successes += 1
             if step_result.termination_reason == TerminationReason.STARVED:
                 total_starved += 1
+            elif step_result.termination_reason == TerminationReason.HEALTH_DEPLETED:
+                total_health_depleted += 1
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 total_max_steps += 1
 
@@ -579,13 +583,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_encounters_this_run = None
             successful_evasions_this_run = None
             died_to_predator_this_run = None
+            died_to_health_depletion_this_run = None
+            health_history_this_run = None
             match agent.env:
                 case StaticEnvironment():
                     # Calculate efficiency score for the run
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():
                     foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
-                    foods_available_this_run = agent.env.target_foods_to_collect
+                    foods_available_this_run = agent.env.foraging.target_foods_to_collect
                     satiety_remaining_this_run = agent.current_satiety
                     distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
                     average_distance_efficiency = (
@@ -599,6 +605,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     died_to_predator_this_run = (
                         step_result.termination_reason == TerminationReason.PREDATOR
                     )
+                    died_to_health_depletion_this_run = (
+                        step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
+                    )
+                    # Copy health history if health system is enabled
+                    if agent.env.health.enabled:
+                        health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
@@ -618,9 +630,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 satiety_remaining=satiety_remaining_this_run,
                 average_distance_efficiency=average_distance_efficiency,
                 satiety_history=satiety_history_this_run,
+                health_history=health_history_this_run,
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
                 died_to_predator=died_to_predator_this_run,
+                died_to_health_depletion=died_to_health_depletion_this_run,
                 food_history=step_result.food_history,
             )
             all_results.append(result)
@@ -636,6 +650,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 outcome_msg += "FAILED: Agent starved"
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 outcome_msg += "FAILED: Max steps reached"
+            elif step_result.termination_reason == TerminationReason.PREDATOR:
+                outcome_msg += "FAILED: Killed by predator"
+            elif step_result.termination_reason == TerminationReason.HEALTH_DEPLETED:
+                outcome_msg += "FAILED: Health depleted"
 
             logger.info(outcome_msg)
 
@@ -648,6 +666,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data.episode_data[run_num] = EpisodeTrackingData(
                     satiety_history=satiety_history_this_run.copy()
                     if satiety_history_this_run
+                    else [],
+                    health_history=health_history_this_run.copy()
+                    if health_history_this_run
                     else [],
                     foods_collected=foods_collected_this_run or 0,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
@@ -697,6 +718,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Update metrics with session-level termination counts
     metrics.total_successes = total_successes
     metrics.total_starved = total_starved
+    metrics.total_health_depleted = total_health_depleted
     metrics.total_max_steps = total_max_steps
     metrics.total_interrupted = total_interrupted
 
@@ -1413,6 +1435,26 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
                 max_satiety,
             )
 
+        # Plot: Health at Episode End (for runs with health system enabled)
+        health_results = [r for r in foraging_results if r.health_history]
+        if health_results:
+            health_remaining_list = [
+                r.health_history[-1] for r in health_results if r.health_history
+            ]
+            health_runs = [r.run for r in health_results]
+            # Get max health from first result's history
+            max_health = (
+                max(health_results[0].health_history) if health_results[0].health_history else 100.0
+            )
+            if health_remaining_list:
+                plot_health_at_episode_end(
+                    file_prefix,
+                    health_runs,
+                    plot_dir,
+                    health_remaining_list,
+                    max_health,
+                )
+
         # Plot: All Distance Efficiencies Distribution
         if avg_distance_effs:
             plot_all_distance_efficiencies_distribution(
@@ -1534,6 +1576,17 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
                 last_run.run,
                 last_run.satiety_history,
                 max_satiety_pred,
+            )
+
+        # Plot: Health Progression for Single Run (for health-enabled environments)
+        if last_run.health_history:
+            max_health_pred = max(last_run.health_history)
+            plot_health_progression_single_run(
+                file_prefix,
+                plot_dir,
+                last_run.run,
+                last_run.health_history,
+                max_health_pred,
             )
 
 
