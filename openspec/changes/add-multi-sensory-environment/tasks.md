@@ -326,6 +326,7 @@ ______________________________________________________________________
 
 - [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml`
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
+- [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
 - [ ] Create `configs/examples/ppo_pursuit_predators_small.yml`
 
 ### 11.2 Documentation
