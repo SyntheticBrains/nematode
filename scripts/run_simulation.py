@@ -370,6 +370,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Get foraging and predator configs (with automatic migration)
         foraging_config = dynamic_config.get_foraging_config()
         predator_config = dynamic_config.get_predator_config()
+        health_config = dynamic_config.get_health_config()
 
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
@@ -391,6 +392,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_kill_radius=predator_config.kill_radius,
             predator_gradient_decay=predator_config.gradient_decay_constant,
             predator_gradient_strength=predator_config.gradient_strength,
+            # Health parameters
+            health_enabled=health_config.enabled,
+            max_hp=health_config.max_hp,
+            predator_damage=health_config.predator_damage,
+            food_healing=health_config.food_healing,
         )
         predator_info = ""
         if predator_config.enabled:
@@ -399,10 +405,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 f"(detection_radius={predator_config.detection_radius}, "
                 f"kill_radius={predator_config.kill_radius})"
             )
+        health_info = ""
+        if health_config.enabled:
+            health_info = (
+                f", health (max_hp={health_config.max_hp}, "
+                f"predator_damage={health_config.predator_damage}, "
+                f"food_healing={health_config.food_healing})"
+            )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
             f"{foraging_config.foods_on_grid} foods on grid, "
-            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}",
+            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}{health_info}",
         )
     else:
         logger.info("Using static maze environment")

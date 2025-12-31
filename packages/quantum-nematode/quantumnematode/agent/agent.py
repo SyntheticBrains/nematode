@@ -497,6 +497,11 @@ class QuantumNematodeAgent:
                 predator_kill_radius=self.env.predator_kill_radius,
                 predator_gradient_decay=self.env.predator_gradient_decay,
                 predator_gradient_strength=self.env.predator_gradient_strength,
+                # Health (preserve from original env)
+                health_enabled=self.env.health_enabled,
+                max_hp=self.env.max_hp,
+                predator_damage=self.env.predator_damage,
+                food_healing=self.env.food_healing,
                 # Reproducibility: preserve seed from original environment
                 seed=self.env.seed,
             )

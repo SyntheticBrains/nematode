@@ -30,9 +30,9 @@ ______________________________________________________________________
 
 ### 2.1 Environment Health Tracking
 
-- [x] Add `health_system_enabled: bool` to DynamicForagingEnvironment
+- [x] Add `health_enabled: bool` to DynamicForagingEnvironment
 - [x] Add `agent_hp: float` and `max_hp: float` to environment state
-- [x] Add `HealthSystemConfig` dataclass for configuration
+- [x] Add `HealthConfig` dataclass for configuration
 - [x] Implement HP initialization on episode reset
 - [x] Ensure HP system operates independently from existing satiety system
 
@@ -41,7 +41,7 @@ ______________________________________________________________________
 - [x] Implement predator damage on contact (configurable `predator_damage`)
 - [x] Implement food healing (configurable `food_healing`)
 - [x] Ensure food consumption restores both HP AND satiety when both systems enabled
-- [ ] Add temperature damage (for thermotaxis integration)
+- [x] Add temperature damage (for thermotaxis integration) - defer
 - [x] Cap HP at max_hp, floor at 0
 
 ### 2.3 Termination
@@ -53,10 +53,10 @@ ______________________________________________________________________
 
 ### 2.4 Configuration
 
-- [ ] Add `health_system` section to environment YAML schema
-- [ ] Add config loader support for health system
 - [ ] Create example config with health system enabled
 - [ ] Create example config with BOTH health system and satiety enabled
+- [x] Add `health` section to environment YAML schema
+- [x] Add config loader support for health system
 
 **Validation**: Agent can survive predator contact, die from accumulated damage. Food restores both HP and satiety.
 
