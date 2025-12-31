@@ -8,7 +8,7 @@
 # Agent must eat to survive (satiety) while avoiding predators (HP).
 #
 # Key features:
-# - Health system: 100 HP, 10 damage per predator hit, 10 healing per food
+# - Health system: 100 HP, 20 damage per predator hit, 10 healing per food
 # - Satiety system: starts at 300, decays at 0.8/step
 # - Food restores 20% satiety AND 10 HP
 # - Can die from either STARVATION or HEALTH_DEPLETED
@@ -85,5 +85,5 @@ environment:
     health:
       enabled: true
       max_hp: 100.0
-      predator_damage: 10.0
+      predator_damage: 20.0
       food_healing: 10.0
