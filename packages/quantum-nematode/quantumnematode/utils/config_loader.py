@@ -162,6 +162,19 @@ class PredatorConfig(BaseModel):
         return v
 
 
+class HealthConfig(BaseModel):
+    """Configuration for HP-based health system.
+
+    When enabled, predator contact deals damage instead of instant death.
+    Food consumption restores both HP and satiety (when both systems are enabled).
+    """
+
+    enabled: bool = False
+    max_hp: float = 100.0
+    predator_damage: float = 10.0
+    food_healing: float = 5.0
+
+
 class DynamicEnvironmentConfig(BaseModel):
     """Configuration for dynamic foraging environment."""
 
@@ -172,6 +185,7 @@ class DynamicEnvironmentConfig(BaseModel):
     # Nested configuration subsections
     foraging: ForagingConfig | None = None
     predators: PredatorConfig | None = None
+    health: HealthConfig | None = None
 
     def get_foraging_config(self) -> ForagingConfig:
         """Get foraging configuration with defaults."""
@@ -180,6 +194,10 @@ class DynamicEnvironmentConfig(BaseModel):
     def get_predator_config(self) -> PredatorConfig:
         """Get predator configuration with defaults."""
         return self.predators or PredatorConfig()
+
+    def get_health_config(self) -> HealthConfig:
+        """Get health configuration with defaults."""
+        return self.health or HealthConfig()
 
 
 class EnvironmentConfig(BaseModel):

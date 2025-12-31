@@ -6,7 +6,6 @@ __all__ = [
     "Direction",
     "DynamicForagingEnvironment",
     "EnvironmentType",
-    "HealthSystemConfig",
     "StaticEnvironment",
 ]
 
@@ -16,6 +15,5 @@ from quantumnematode.env.env import (
     Direction,
     DynamicForagingEnvironment,
     EnvironmentType,
-    HealthSystemConfig,
     StaticEnvironment,
 )

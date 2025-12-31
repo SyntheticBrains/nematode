@@ -259,8 +259,10 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                     health_msg = ""
                     if food_result.health_restored > 0:
-                        health_msg = f", HP +{food_result.health_restored:.1f} "
-                        f"to {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}"
+                        health_msg = (
+                            f", HP +{food_result.health_restored:.1f} "
+                            f"to {agent.env.agent_hp:.1f}/{agent.env.max_hp:.1f}"
+                        )
 
                     logger.info(
                         f"Food #{agent._episode_tracker.foods_collected} collected! "
@@ -302,8 +304,8 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Check for predator collision BEFORE predators move
                 if agent.env.check_predator_collision():
-                    # Health system: apply damage instead of instant death
-                    if agent.env.health_system_enabled:
+                    # Health: apply damage instead of instant death
+                    if agent.env.health_enabled:
                         damage = agent.env.apply_predator_damage()
                         logger.info(
                             f"Predator contact! Took {damage:.1f} damage. "
@@ -388,8 +390,8 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Check for predator collision AFTER predators move
                 # (predator may step onto agent's position)
                 if agent.env.check_predator_collision():
-                    # Health system: apply damage instead of instant death
-                    if agent.env.health_system_enabled:
+                    # Health: apply damage instead of instant death
+                    if agent.env.health_enabled:
                         damage = agent.env.apply_predator_damage()
                         logger.info(
                             f"Predator stepped on agent! Took {damage:.1f} damage. "

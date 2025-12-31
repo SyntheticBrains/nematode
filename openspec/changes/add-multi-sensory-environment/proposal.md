@@ -34,7 +34,7 @@ Add HP-based damage tracking as an alternative to instant-death predator encount
 - Temperature extremes deal damage (configurable `hp_damage_temperature_*`)
 - Food provides healing (configurable `food_healing`)
 - Episode terminates when HP reaches 0 (`TerminationReason.HEALTH_DEPLETED`)
-- Enabled via `health_system.enabled: true` in config
+- Enabled via `health.enabled: true` in config
 
 **Relationship with Satiety System**: HP and satiety are independent systems that coexist:
 

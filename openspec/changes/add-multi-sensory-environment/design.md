@@ -54,7 +54,7 @@ Phase 1 of the Quantum Nematode roadmap introduces multi-modal sensory capabilit
 **Implementation**:
 
 ```yaml
-health_system:
+health:
   enabled: false  # Opt-in
 thermotaxis:
   enabled: false  # Opt-in
@@ -245,7 +245,7 @@ satiety:
   decay_rate: 0.5
   starvation_threshold: 0.0
 
-health_system:
+health:
   enabled: true
   max_hp: 100
   predator_damage: 10
