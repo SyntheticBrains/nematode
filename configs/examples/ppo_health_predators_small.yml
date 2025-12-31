@@ -8,7 +8,7 @@
 # - Agent dies when HP reaches 0 (HEALTH_DEPLETED termination)
 # - Satiety system DISABLED: no time-based hunger (simpler learning objective)
 #
-# Balanced for learning: 25x25 grid with 3 predators, 8 foods, collect 15 to win
+# Balanced for learning: 25x25 grid with 5 predators, 8 foods, collect 15 to win
 # Agent can take 10 hits before death, food heals ~2 hits worth
 
 max_steps: 600

@@ -13,7 +13,7 @@
 # - Food restores 20% satiety AND 10 HP
 # - Can die from either STARVATION or HEALTH_DEPLETED
 #
-# Balanced for learning: 25x25 grid, 2 predators (moderate threat), 8 foods
+# Balanced for learning: 25x25 grid, 5 predators (moderate threat), 8 foods
 
 max_steps: 500
 brain:
@@ -74,7 +74,7 @@ environment:
 
     predators:
       enabled: true
-      count: 2
+      count: 5
       speed: 1.0
       movement_pattern: random
       detection_radius: 8
