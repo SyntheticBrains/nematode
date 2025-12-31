@@ -1405,6 +1405,13 @@ class DynamicForagingEnvironment(BaseEnvironment):
         -------
         DynamicForagingEnvironment
             A new instance with the same state.
+
+        Notes
+        -----
+        Config objects (ForagingParams, PredatorParams, HealthParams) are shared
+        between the original and copy, not deep-copied. This is intentional as these
+        are treated as immutable configuration. Runtime state (foods, visited_cells,
+        agent_hp, predator positions) is properly copied.
         """
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,
