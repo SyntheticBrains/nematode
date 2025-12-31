@@ -12,6 +12,7 @@ from quantumnematode.env import (
     PredatorType,
     StaticEnvironment,
 )
+from quantumnematode.env.env import Predator
 from quantumnematode.env.theme import Theme
 from quantumnematode.utils.seeding import get_rng
 
@@ -1607,3 +1608,126 @@ class TestPredatorTypes:
         # Default should be RANDOM
         default_params = PredatorParams(enabled=True, count=2)
         assert default_params.predator_type == PredatorType.RANDOM
+
+
+class TestPredatorTypeSymbols:
+    """Tests for predator-type-specific rendering symbols."""
+
+    def test_theme_has_predator_type_symbols(self):
+        """Test that ThemeSymbolSet includes symbols for each predator type."""
+        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
+
+        for theme in Theme:
+            symbols = THEME_SYMBOLS[theme]
+            assert hasattr(symbols, "predator")
+            assert hasattr(symbols, "predator_stationary")
+            assert hasattr(symbols, "predator_pursuit")
+            # All symbols should be non-empty strings
+            assert symbols.predator
+            assert symbols.predator_stationary
+            assert symbols.predator_pursuit
+
+    def test_predator_symbols_are_distinct(self):
+        """Test that different predator types have distinct symbols in ASCII theme."""
+        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
+
+        symbols = THEME_SYMBOLS[Theme.ASCII]
+        # All three predator symbols should be different
+        assert symbols.predator != symbols.predator_stationary
+        assert symbols.predator != symbols.predator_pursuit
+        assert symbols.predator_stationary != symbols.predator_pursuit
+
+    def test_render_predators_uses_correct_symbols(self):
+        """Test that rendering uses type-specific symbols."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.RANDOM,
+            ),
+        )
+        # Set predator position within viewport
+        env.predators[0].position = (8, 8)
+
+        rendered = env.render()
+        rendered_str = "\n".join(rendered)
+        # ASCII theme uses '#' for random predators
+        assert "#" in rendered_str
+
+    def test_render_stationary_predator_symbol(self):
+        """Test that stationary predators render with their specific symbol."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+            ),
+        )
+        # Set predator position within viewport
+        env.predators[0].position = (8, 8)
+
+        rendered = env.render()
+        rendered_str = "\n".join(rendered)
+        # ASCII theme uses 'X' for stationary predators
+        assert "X" in rendered_str
+
+    def test_render_pursuit_predator_symbol(self):
+        """Test that pursuit predators render with their specific symbol."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.PURSUIT,
+            ),
+        )
+        # Set predator position within viewport
+        env.predators[0].position = (8, 8)
+
+        rendered = env.render()
+        rendered_str = "\n".join(rendered)
+        # ASCII theme uses '@' for pursuit predators
+        assert "@" in rendered_str
+
+    def test_get_predator_symbol_helper(self):
+        """Test the _get_predator_symbol helper method."""
+        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+        )
+        symbols = THEME_SYMBOLS[Theme.ASCII]
+
+        # Create predators of each type
+        random_pred = Predator(
+            position=(0, 0),
+            predator_type=PredatorType.RANDOM,
+            speed=1.0,
+            detection_radius=8,
+        )
+        stationary_pred = Predator(
+            position=(1, 1),
+            predator_type=PredatorType.STATIONARY,
+            speed=0.0,
+            detection_radius=8,
+        )
+        pursuit_pred = Predator(
+            position=(2, 2),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=8,
+        )
+
+        assert env._get_predator_symbol(random_pred, symbols) == "#"
+        assert env._get_predator_symbol(stationary_pred, symbols) == "X"
+        assert env._get_predator_symbol(pursuit_pred, symbols) == "@"
