@@ -9,7 +9,7 @@
 # - Satiety system DISABLED: no time-based hunger (simpler learning objective)
 #
 # Balanced for learning: 25x25 grid with 5 predators, 8 foods, collect 15 to win
-# Agent can take 5 hits before death, food heals ~2 hits worth
+# Agent can take 5 hits before death, food heals 0.25 hits worth (5 HP)
 
 max_steps: 600
 brain:
