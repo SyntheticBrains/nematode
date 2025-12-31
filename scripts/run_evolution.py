@@ -267,23 +267,14 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
 
     foraging_config = dynamic_config.get_foraging_config()
     predator_config = dynamic_config.get_predator_config()
+    health_config = dynamic_config.get_health_config()
 
     return DynamicForagingEnvironment(
         grid_size=dynamic_config.grid_size,
-        foods_on_grid=foraging_config.foods_on_grid,
-        target_foods_to_collect=foraging_config.target_foods_to_collect,
-        min_food_distance=foraging_config.min_food_distance,
-        agent_exclusion_radius=foraging_config.agent_exclusion_radius,
-        gradient_decay_constant=foraging_config.gradient_decay_constant,
-        gradient_strength=foraging_config.gradient_strength,
+        foraging=foraging_config.to_params(),
         viewport_size=dynamic_config.viewport_size,
-        predators_enabled=predator_config.enabled,
-        num_predators=predator_config.count,
-        predator_speed=predator_config.speed,
-        predator_detection_radius=predator_config.detection_radius,
-        predator_kill_radius=predator_config.kill_radius,
-        predator_gradient_decay=predator_config.gradient_decay_constant,
-        predator_gradient_strength=predator_config.gradient_strength,
+        predator=predator_config.to_params(),
+        health=health_config.to_params(),
     )
 
 
@@ -369,12 +360,12 @@ def run_episode(  # noqa: PLR0913
                 env.spawn_food()  # Spawn new food
 
                 # Check for success (collected target foods)
-                if foods_collected >= env.target_foods_to_collect:
+                if foods_collected >= env.foraging.target_foods_to_collect:
                     success = True
                     return True
 
             # Move predators and check for death
-            if env.predators_enabled:
+            if env.predator.enabled:
                 env.update_predators()
                 if env.check_predator_collision():
                     return False  # Died to predator

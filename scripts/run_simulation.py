@@ -374,29 +374,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
-            foods_on_grid=foraging_config.foods_on_grid,
-            target_foods_to_collect=foraging_config.target_foods_to_collect,
-            min_food_distance=foraging_config.min_food_distance,
-            agent_exclusion_radius=foraging_config.agent_exclusion_radius,
-            gradient_decay_constant=foraging_config.gradient_decay_constant,
-            gradient_strength=foraging_config.gradient_strength,
             viewport_size=dynamic_config.viewport_size,
             max_body_length=body_length,
             theme=theme,
             seed=simulation_seed,
-            # Predator parameters
-            predators_enabled=predator_config.enabled,
-            num_predators=predator_config.count,
-            predator_speed=predator_config.speed,
-            predator_detection_radius=predator_config.detection_radius,
-            predator_kill_radius=predator_config.kill_radius,
-            predator_gradient_decay=predator_config.gradient_decay_constant,
-            predator_gradient_strength=predator_config.gradient_strength,
-            # Health parameters
-            health_enabled=health_config.enabled,
-            max_hp=health_config.max_hp,
-            predator_damage=health_config.predator_damage,
-            food_healing=health_config.food_healing,
+            foraging=foraging_config.to_params(),
+            predator=predator_config.to_params(),
+            health=health_config.to_params(),
         )
         predator_info = ""
         if predator_config.enabled:
@@ -498,7 +482,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
             if isinstance(agent.env, DynamicForagingEnvironment):
                 logger.info(f"Initial food positions: {agent.env.foods}")
-                logger.info(f"Foods on grid: {len(agent.env.foods)}/{agent.env.foods_on_grid}")
+                logger.info(
+                    f"Foods on grid: {len(agent.env.foods)}/{agent.env.foraging.foods_on_grid}",
+                )
                 logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
                 # Log full environment render
@@ -598,7 +584,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     efficiency_score = initial_distance - steps_taken
                 case DynamicForagingEnvironment():
                     foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
-                    foods_available_this_run = agent.env.target_foods_to_collect
+                    foods_available_this_run = agent.env.foraging.target_foods_to_collect
                     satiety_remaining_this_run = agent.current_satiety
                     distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
                     average_distance_efficiency = (

@@ -74,21 +74,23 @@ def extract_environment_metadata(
         return EnvironmentMetadata(
             type="dynamic",
             grid_size=env.grid_size,
-            num_foods=env.foods_on_grid,
-            target_foods_to_collect=env.target_foods_to_collect,
+            num_foods=env.foraging.foods_on_grid,
+            target_foods_to_collect=env.foraging.target_foods_to_collect,
             initial_satiety=satiety_config.get("initial"),
             satiety_decay_rate=satiety_config.get("decay_rate"),
             viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,
-            predators_enabled=env.predators_enabled,
-            num_predators=env.num_predators if env.predators_enabled else None,
-            predator_speed=env.predator_speed if env.predators_enabled else None,
-            predator_detection_radius=env.predator_detection_radius
-            if env.predators_enabled
+            predators_enabled=env.predator.enabled,
+            num_predators=env.predator.count if env.predator.enabled else None,
+            predator_speed=env.predator.speed if env.predator.enabled else None,
+            predator_detection_radius=env.predator.detection_radius
+            if env.predator.enabled
             else None,
-            predator_kill_radius=env.predator_kill_radius if env.predators_enabled else None,
-            predator_gradient_decay=env.predator_gradient_decay if env.predators_enabled else None,
-            predator_gradient_strength=env.predator_gradient_strength
-            if env.predators_enabled
+            predator_kill_radius=env.predator.kill_radius if env.predator.enabled else None,
+            predator_gradient_decay=env.predator.gradient_decay_constant
+            if env.predator.enabled
+            else None,
+            predator_gradient_strength=env.predator.gradient_strength
+            if env.predator.enabled
             else None,
         )
     # Static environment

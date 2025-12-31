@@ -19,6 +19,7 @@ from quantumnematode.brain.arch import (
     SpikingBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
+from quantumnematode.env.env import ForagingParams, HealthParams, PredatorParams
 from quantumnematode.initializers import (
     ManualParameterInitializer,
     RandomPiUniformInitializer,
@@ -131,6 +132,17 @@ class ForagingConfig(BaseModel):
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
 
+    def to_params(self) -> ForagingParams:
+        """Convert to ForagingParams for environment initialization."""
+        return ForagingParams(
+            foods_on_grid=self.foods_on_grid,
+            target_foods_to_collect=self.target_foods_to_collect,
+            min_food_distance=self.min_food_distance,
+            agent_exclusion_radius=self.agent_exclusion_radius,
+            gradient_decay_constant=self.gradient_decay_constant,
+            gradient_strength=self.gradient_strength,
+        )
+
 
 class PredatorConfig(BaseModel):
     """Configuration for predator mechanics in dynamic environment."""
@@ -161,6 +173,18 @@ class PredatorConfig(BaseModel):
             raise ValueError(msg)
         return v
 
+    def to_params(self) -> PredatorParams:
+        """Convert to PredatorParams for environment initialization."""
+        return PredatorParams(
+            enabled=self.enabled,
+            count=self.count,
+            speed=self.speed,
+            detection_radius=self.detection_radius,
+            kill_radius=self.kill_radius,
+            gradient_decay_constant=self.gradient_decay_constant,
+            gradient_strength=self.gradient_strength,
+        )
+
 
 class HealthConfig(BaseModel):
     """Configuration for HP-based health system.
@@ -173,6 +197,15 @@ class HealthConfig(BaseModel):
     max_hp: float = 100.0
     predator_damage: float = 10.0
     food_healing: float = 5.0
+
+    def to_params(self) -> HealthParams:
+        """Convert to HealthParams for environment initialization."""
+        return HealthParams(
+            enabled=self.enabled,
+            max_hp=self.max_hp,
+            predator_damage=self.predator_damage,
+            food_healing=self.food_healing,
+        )
 
 
 class DynamicEnvironmentConfig(BaseModel):

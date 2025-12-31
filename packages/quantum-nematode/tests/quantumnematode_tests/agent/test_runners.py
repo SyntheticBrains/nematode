@@ -8,7 +8,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
-from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
 from quantumnematode.report.dtypes import TerminationReason
 
 
@@ -55,7 +55,7 @@ class TestStandardEpisodeRunnerIntegration:
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
-            target_foods_to_collect=3,
+            foraging=ForagingParams(target_foods_to_collect=3),
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
@@ -165,7 +165,7 @@ class TestRunnerComponentIntegration:
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
-            target_foods_to_collect=3,
+            foraging=ForagingParams(target_foods_to_collect=3),
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
@@ -189,7 +189,7 @@ class TestRunnerComponentIntegration:
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
-            target_foods_to_collect=3,
+            foraging=ForagingParams(target_foods_to_collect=3),
         )
         satiety_config = SatietyConfig(
             initial_satiety=100.0,
