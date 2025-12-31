@@ -808,7 +808,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 f"gradient_decay_constant must be > 0, got {self.foraging.gradient_decay_constant}"
             )
             raise ValueError(msg)
-        if self.predator.gradient_decay_constant <= 0:
+        # Only validate predator gradient decay if predators are enabled
+        if self.predator.enabled and self.predator.gradient_decay_constant <= 0:
             msg = (
                 f"predator_gradient_decay must be > 0, got {self.predator.gradient_decay_constant}"
             )
