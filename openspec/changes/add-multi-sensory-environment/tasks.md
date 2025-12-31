@@ -293,7 +293,7 @@ ______________________________________________________________________
 ### 11.1 Example Configs
 
 - [ ] Create `configs/examples/thermotaxis_foraging_small.yml`
-- [ ] Create `configs/examples/health_system_demo.yml`
+- [ ] Create `configs/examples/health_predators_small.yml`
 - [ ] Create `configs/examples/pursuit_predators.yml`
 
 ### 11.2 Documentation
