@@ -79,6 +79,8 @@ from quantumnematode.report.plots import (
     plot_foods_vs_reward_correlation,
     plot_foods_vs_steps_correlation,
     plot_foraging_efficiency_per_run,
+    plot_health_at_episode_end,
+    plot_health_progression_single_run,
     plot_last_cumulative_rewards,
     plot_predator_encounters_over_time,
     plot_running_average_steps,
@@ -449,6 +451,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Session-level termination tracking
     total_successes = 0
     total_starved = 0
+    total_health_depleted = 0
     total_max_steps = 0
     total_interrupted = 0
 
@@ -565,6 +568,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_successes += 1
             if step_result.termination_reason == TerminationReason.STARVED:
                 total_starved += 1
+            elif step_result.termination_reason == TerminationReason.HEALTH_DEPLETED:
+                total_health_depleted += 1
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 total_max_steps += 1
 
@@ -578,6 +583,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_encounters_this_run = None
             successful_evasions_this_run = None
             died_to_predator_this_run = None
+            died_to_health_depletion_this_run = None
+            health_history_this_run = None
             match agent.env:
                 case StaticEnvironment():
                     # Calculate efficiency score for the run
@@ -598,6 +605,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     died_to_predator_this_run = (
                         step_result.termination_reason == TerminationReason.PREDATOR
                     )
+                    died_to_health_depletion_this_run = (
+                        step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
+                    )
+                    # Copy health history if health system is enabled
+                    if agent.env.health.enabled:
+                        health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
@@ -617,9 +630,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 satiety_remaining=satiety_remaining_this_run,
                 average_distance_efficiency=average_distance_efficiency,
                 satiety_history=satiety_history_this_run,
+                health_history=health_history_this_run,
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
                 died_to_predator=died_to_predator_this_run,
+                died_to_health_depletion=died_to_health_depletion_this_run,
                 food_history=step_result.food_history,
             )
             all_results.append(result)
@@ -647,6 +662,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 tracking_data.episode_data[run_num] = EpisodeTrackingData(
                     satiety_history=satiety_history_this_run.copy()
                     if satiety_history_this_run
+                    else [],
+                    health_history=health_history_this_run.copy()
+                    if health_history_this_run
                     else [],
                     foods_collected=foods_collected_this_run or 0,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
@@ -696,6 +714,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Update metrics with session-level termination counts
     metrics.total_successes = total_successes
     metrics.total_starved = total_starved
+    metrics.total_health_depleted = total_health_depleted
     metrics.total_max_steps = total_max_steps
     metrics.total_interrupted = total_interrupted
 
@@ -1412,6 +1431,26 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
                 max_satiety,
             )
 
+        # Plot: Health at Episode End (for runs with health system enabled)
+        health_results = [r for r in foraging_results if r.health_history]
+        if health_results:
+            health_remaining_list = [
+                r.health_history[-1] for r in health_results if r.health_history
+            ]
+            health_runs = [r.run for r in health_results]
+            # Get max health from first result's history
+            max_health = (
+                max(health_results[0].health_history) if health_results[0].health_history else 100.0
+            )
+            if health_remaining_list:
+                plot_health_at_episode_end(
+                    file_prefix,
+                    health_runs,
+                    plot_dir,
+                    health_remaining_list,
+                    max_health,
+                )
+
         # Plot: All Distance Efficiencies Distribution
         if avg_distance_effs:
             plot_all_distance_efficiencies_distribution(
@@ -1533,6 +1572,17 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
                 last_run.run,
                 last_run.satiety_history,
                 max_satiety_pred,
+            )
+
+        # Plot: Health Progression for Single Run (for health-enabled environments)
+        if last_run.health_history:
+            max_health_pred = max(last_run.health_history)
+            plot_health_progression_single_run(
+                file_prefix,
+                plot_dir,
+                last_run.run,
+                last_run.health_history,
+                max_health_pred,
             )
 
 

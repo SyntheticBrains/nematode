@@ -40,6 +40,8 @@ class EpisodeData:
         The distance efficiencies recorded during the episode.
     satiety_history : list[float]
         The satiety levels at each step (for dynamic foraging environments).
+    health_history : list[float]
+        The health (HP) levels at each step (when health system is enabled).
     predator_encounters : int
         Number of times agent entered predator detection radius.
     successful_evasions : int
@@ -53,6 +55,7 @@ class EpisodeData:
     foods_collected: int
     distance_efficiencies: list[float]
     satiety_history: list[float]
+    health_history: list[float]
     predator_encounters: int = 0
     successful_evasions: int = 0
     in_danger: bool = False
@@ -323,6 +326,9 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                         # Check if health depleted
                         if agent.env.is_health_depleted():
+                            # Track final health (0 HP) before returning
+                            agent._episode_tracker.track_health(agent.env.agent_hp)
+
                             logger.warning(
                                 "Failed to complete episode: health depleted from predator damage!",
                             )
@@ -414,6 +420,9 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                         # Check if health depleted
                         if agent.env.is_health_depleted():
+                            # Track final health (0 HP) before returning
+                            agent._episode_tracker.track_health(agent.env.agent_hp)
+
                             logger.warning(
                                 "Failed to complete episode: health depleted from predator damage!",
                             )
@@ -480,6 +489,10 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 # Track satiety after decay
                 agent._episode_tracker.track_satiety(agent.current_satiety)
+
+                # Track health if health system is enabled
+                if agent.env.health.enabled:
+                    agent._episode_tracker.track_health(agent.env.agent_hp)
 
                 logger.debug(
                     f"Satiety: {agent.current_satiety:.1f}/{agent.max_satiety}",

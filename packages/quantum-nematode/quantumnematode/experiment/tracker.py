@@ -320,6 +320,11 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
     predator_deaths = sum(
         1 for r in all_results if r.termination_reason == TerminationReason.PREDATOR
     )
+
+    # Health system metrics
+    health_depleted = sum(
+        1 for r in all_results if r.termination_reason == TerminationReason.HEALTH_DEPLETED
+    )
     predator_encounters_list = [
         r.predator_encounters for r in all_results if r.predator_encounters is not None
     ]
@@ -477,6 +482,7 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         max_steps_reached=max_steps_reached,
         goal_reached=goal_reached,
         predator_deaths=predator_deaths,
+        health_depleted=health_depleted,
         avg_predator_encounters=avg_predator_encounters,
         avg_successful_evasions=avg_successful_evasions,
         # Convergence-based metrics

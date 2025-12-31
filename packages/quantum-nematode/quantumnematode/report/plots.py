@@ -454,6 +454,46 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0915
             plt.savefig(run_dir / "satiety_progression.png")
             plt.close()
 
+        # Plot health progression (if health system was enabled)
+        if episode_data.health_history:
+            health_history = episode_data.health_history
+            max_health = max(health_history) if health_history else 100.0
+            steps = list(range(len(health_history)))
+
+            plt.figure(figsize=(14, 6))
+            plt.plot(steps, health_history, linewidth=2, label="Health (HP)", color="purple")
+            plt.axhline(
+                y=0,
+                color="red",
+                linestyle="--",
+                linewidth=2,
+                label="Death Threshold",
+            )
+            plt.axhline(
+                y=max_health * 0.3,
+                color="orange",
+                linestyle=":",
+                linewidth=1.5,
+                label="Low Health (30%)",
+            )
+            plt.axhline(
+                y=max_health,
+                color="green",
+                linestyle=":",
+                linewidth=1.5,
+                alpha=0.5,
+                label=f"Max Health ({max_health:.0f})",
+            )
+            plt.fill_between(steps, 0, health_history, alpha=0.2, color="purple")
+            plt.title(f"Health Progression (run {run})")
+            plt.xlabel("Step")
+            plt.ylabel("Health (HP)")
+            plt.legend()
+            plt.grid(alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(run_dir / "health_progression.png")
+            plt.close()
+
         # Plot distance efficiencies for this run
         if episode_data.distance_efficiencies:
             dist_effs = episode_data.distance_efficiencies
@@ -792,6 +832,10 @@ def plot_termination_reasons_breakdown(  # pragma: no cover
         if "goal" in r.lower() or "food" in r.lower()
         else "red"
         if "starved" in r.lower()
+        else "darkred"
+        if "predator" in r.lower()
+        else "purple"
+        if "health" in r.lower()
         else "orange"
         if "max_steps" in r.lower()
         else "gray"
@@ -1013,6 +1057,135 @@ def plot_satiety_progression_single_run(  # pragma: no cover
     plt.grid(alpha=0.3)
     plt.tight_layout()
     plt.savefig(plot_dir / f"{file_prefix}satiety_progression_run_{run_number}.png")
+    plt.close()
+
+
+# Health System Specific Plots
+
+
+def plot_health_at_episode_end(  # pragma: no cover
+    file_prefix: str,
+    runs: list[int],
+    plot_dir: Path,
+    health_remaining: list[float],
+    max_health: float,
+) -> None:
+    """Plot health levels at episode end per run.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    runs : list[int]
+        List of run indices.
+    plot_dir : Path
+        Directory to save the plot.
+    health_remaining : list[float]
+        Final health level at end of each run.
+    max_health : float
+        Maximum health level.
+    """
+    if not runs or not health_remaining:
+        logger.warning("No health data to plot")
+        return
+
+    plt.figure(figsize=(12, 6))
+    colors = [
+        "red" if h <= 0 else "orange" if h < max_health * 0.3 else "green" for h in health_remaining
+    ]
+    plt.bar(runs, health_remaining, alpha=0.7, color=colors, label="Health Remaining")
+    plt.axhline(
+        y=0,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Death Threshold",
+    )
+    plt.axhline(
+        y=max_health * 0.3,
+        color="orange",
+        linestyle=":",
+        linewidth=1.5,
+        label="Low Health (30%)",
+    )
+    avg_health = sum(health_remaining) / len(health_remaining)
+    plt.axhline(
+        y=avg_health,
+        color="blue",
+        linestyle="--",
+        linewidth=2,
+        label=f"Average ({avg_health:.1f})",
+    )
+    plt.title("Health at Episode End Per Run")
+    plt.xlabel("Run")
+    plt.ylabel("Health (HP)")
+    plt.legend()
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}health_at_episode_end.png")
+    plt.close()
+
+
+def plot_health_progression_single_run(  # pragma: no cover
+    file_prefix: str,
+    plot_dir: Path,
+    run_number: int,
+    health_history: list[float],
+    max_health: float,
+) -> None:
+    """Plot health progression throughout a single run.
+
+    Parameters
+    ----------
+    file_prefix : str
+        Prefix for the output file name.
+    plot_dir : Path
+        Directory to save the plot.
+    run_number : int
+        The run number being plotted.
+    health_history : list[float]
+        Health levels at each step.
+    max_health : float
+        Maximum health level.
+    """
+    if not health_history:
+        logger.warning(f"No health history for run {run_number}")
+        return
+
+    steps = list(range(len(health_history)))
+
+    plt.figure(figsize=(14, 6))
+    plt.plot(steps, health_history, linewidth=2, color="purple", label="Health (HP)")
+    plt.axhline(
+        y=0,
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Death Threshold",
+    )
+    plt.axhline(
+        y=max_health * 0.3,
+        color="orange",
+        linestyle=":",
+        linewidth=1.5,
+        label="Low Health (30%)",
+    )
+    plt.axhline(
+        y=max_health,
+        color="green",
+        linestyle=":",
+        linewidth=1.5,
+        alpha=0.5,
+        label=f"Max Health ({max_health:.0f})",
+    )
+    plt.fill_between(steps, 0, health_history, alpha=0.2, color="purple")
+    plt.title(f"Health Progression - Run {run_number}")
+    plt.xlabel("Step")
+    plt.ylabel("Health (HP)")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(plot_dir / f"{file_prefix}health_progression_run_{run_number}.png")
     plt.close()
 
 

@@ -73,12 +73,16 @@ class SimulationResult(BaseModel):
         Average distance efficiency per food collected (DynamicForagingEnvironment only).
     satiety_history : list[float] | None
         Step-by-step satiety levels throughout the run (DynamicForagingEnvironment only).
+    health_history : list[float] | None
+        Step-by-step health (HP) levels throughout the run (health system enabled only).
     predator_encounters : int | None
         Number of predator encounters (predator environments only).
     successful_evasions : int | None
         Number of successful predator evasions (predator environments only).
     died_to_predator : bool | None
         Whether run ended due to predator death (predator environments only).
+    died_to_health_depletion : bool | None
+        Whether run ended due to HP reaching zero (health system enabled).
     food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
     """
@@ -97,9 +101,11 @@ class SimulationResult(BaseModel):
     satiety_remaining: float | None = None
     average_distance_efficiency: float | None = None
     satiety_history: list[float] | None = None
+    health_history: list[float] | None = None
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_predator: bool | None = None
+    died_to_health_depletion: bool | None = None
     food_history: FoodHistory | None = None
 
 
@@ -113,6 +119,8 @@ class EpisodeTrackingData(BaseModel):
     ----------
     satiety_history : list[float]
         Step-by-step satiety levels throughout the episode.
+    health_history : list[float]
+        Step-by-step health (HP) levels throughout the episode (health system enabled).
     foods_collected : int
         Number of foods collected in this episode.
     distance_efficiencies : list[float]
@@ -126,6 +134,7 @@ class EpisodeTrackingData(BaseModel):
     """
 
     satiety_history: list[float] = Field(default_factory=list)
+    health_history: list[float] = Field(default_factory=list)
     foods_collected: int = 0
     distance_efficiencies: list[float] = Field(default_factory=list)
     predator_encounters: int = 0
