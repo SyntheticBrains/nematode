@@ -98,9 +98,9 @@ ______________________________________________________________________
 
 ### 3.1 Predator Type Refactor
 
-- [ ] Add `PredatorType` enum (RANDOM, STATIONARY, PURSUIT)
-- [ ] Add `predator_type` field to Predator class
-- [ ] Refactor `Predator.move()` to dispatch by type
+- [x] Add `PredatorType` enum (RANDOM, STATIONARY, PURSUIT)
+- [x] Add `predator_type` field to Predator class
+- [x] Refactor `Predator.move()` to dispatch by type
 
 ### 3.2 Stationary Predator
 
@@ -117,21 +117,16 @@ ______________________________________________________________________
 
 ### 3.4 Mixed Types Configuration
 
-- [ ] Update predator config schema to support type list:
+- [x] Update predator config schema to support type selection (movement_pattern: random|stationary|pursuit)
 
-  ```yaml
-  types:
-    - type: stationary
-      count: 2
-    - type: pursuit
-      count: 1
-  ```
+> **Note**: Full mixed-type support (multiple types per environment) deferred to future work.
+> Current implementation supports one type per environment via PredatorParams.predator_type.
 
-- [ ] Implement mixed-type spawning
+- [ ] Implement mixed-type spawning (types list in config)
 
 - [ ] Update gradient computation for different predator types
 
-**Validation**: Pursuit predators track agent, stationary predators don't move
+**Validation**: Pursuit predators track agent, stationary predators don't move ✅
 
 ______________________________________________________________________
 
