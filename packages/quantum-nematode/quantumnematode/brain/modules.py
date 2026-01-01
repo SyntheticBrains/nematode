@@ -304,11 +304,11 @@ def mechanosensation_features(
     - ASH, ADL: Harsh touch / nociception neurons (predator contact)
 
     Feature encoding:
-    - RX: Boundary contact (±π/2 if touching grid edge)
-    - RY: Predator contact (±π/2 if in physical contact with predator)
+    - RX: Boundary contact (π/2 if touching grid edge, 0 otherwise)
+    - RY: Predator contact (π/2 if in physical contact with predator, 0 otherwise)
     - RZ: Combined contact urgency (max of both, used for escape response)
 
-    All features scaled to [-π/2, π/2] for quantum gate stability.
+    All features are non-negative in range [0, π/2] for quantum gate stability.
 
     Note: Current implementation uses binary signals (contact vs no contact).
     Future enhancement could add direction-aware encoding to support:
