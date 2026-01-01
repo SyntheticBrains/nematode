@@ -159,9 +159,11 @@ ______________________________________________________________________
 
 ### 5.1 Create Feature Extraction Layer
 
-- [ ] Create `brain/features.py` module
-- [ ] Implement `extract_sensory_features(params: BrainParams) -> dict[str, np.ndarray]`
-- [ ] Return feature vectors for each sensory modality
+- [x] Create `brain/features.py` module
+- [x] Implement `extract_sensory_features(params: BrainParams) -> dict[str, np.ndarray]`
+- [x] Return feature vectors for each sensory modality
+- [x] Add `extract_flat_features()` for classical networks (PPO)
+- [x] Add `get_feature_dimension()` utility
 
 ### 5.2 Module Renaming
 
@@ -184,7 +186,7 @@ ______________________________________________________________________
 - [ ] Update PPOBrain to optionally use unified extraction (concatenate to input) *(optional enhancement)*
 - [x] Ensure backward compatibility with existing configs (legacy module names still work)
 
-**Validation**: Both brain types can consume new sensory features
+**Validation**: Feature extraction layer complete with backward compatibility ✅
 
 ______________________________________________________________________
 
