@@ -294,6 +294,53 @@ def memory_action_features(
     return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: angle}
 
 
+def mechanosensation_features(
+    params: BrainParams,
+) -> dict[RotationAxis, float]:
+    """
+    Extract mechanosensation features: physical contact with boundaries and predators.
+
+    Modeled after C. elegans touch response neurons:
+    - ALM, PLM, AVM: Gentle touch neurons (boundary contact)
+    - ASH, ADL: Harsh touch / nociception neurons (predator contact)
+
+    Feature encoding:
+    - RX: Boundary contact (±π/2 if touching grid edge)
+    - RY: Predator contact (±π/2 if in physical contact with predator)
+    - RZ: Combined contact urgency (max of both, used for escape response)
+
+    All features scaled to [-π/2, π/2] for quantum gate stability.
+
+    Args:
+        params: BrainParams containing agent state.
+
+    Returns
+    -------
+        Dictionary with rx, ry, rz values for mechanosensation qubit(s).
+    """
+    # Boundary contact: gentle touch (ALM, PLM, AVM neurons)
+    # Encode as π/2 when touching boundary (aversive signal)
+    boundary_value = 0.0
+    if params.boundary_contact is True:
+        boundary_value = np.pi / 2
+
+    # Predator contact: harsh touch / nociception (ASH, ADL neurons)
+    # Encode as π/2 when in predator contact (strong aversive signal)
+    predator_value = 0.0
+    if params.predator_contact is True:
+        predator_value = np.pi / 2
+
+    # Combined contact urgency: max of both signals
+    # This provides an overall "danger" signal for escape response
+    urgency = max(boundary_value, predator_value)
+
+    return {
+        RotationAxis.RX: boundary_value,
+        RotationAxis.RY: predator_value,
+        RotationAxis.RZ: urgency,
+    }
+
+
 class ModuleName(str, Enum):
     """Module names used in ModularBrain."""
 
@@ -305,6 +352,7 @@ class ModuleName(str, Enum):
     ACTION = "action"
     APPETITIVE = "appetitive"
     AVERSIVE = "aversive"
+    MECHANOSENSATION = "mechanosensation"
 
 
 MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
@@ -316,6 +364,7 @@ MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
     ModuleName.ACTION: memory_action_features,
     ModuleName.APPETITIVE: appetitive_features,
     ModuleName.AVERSIVE: aversive_features,
+    ModuleName.MECHANOSENSATION: mechanosensation_features,
 }
 
 Modules = dict[ModuleName, list[int]]
