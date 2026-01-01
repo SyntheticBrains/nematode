@@ -39,6 +39,7 @@ reward:
   penalty_predator_death: 2.0
   penalty_predator_proximity: 0.1
   stuck_position_threshold: 3
+  penalty_boundary_collision: 0.02
 
 satiety:
   initial_satiety: 800.0

@@ -39,6 +39,7 @@ reward:
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0.1
   stuck_position_threshold: 10
+  penalty_boundary_collision: 0.02
 
 environment:
   type: static
