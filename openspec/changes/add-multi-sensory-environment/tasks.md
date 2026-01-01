@@ -105,8 +105,8 @@ ______________________________________________________________________
 ### 3.2 Stationary Predator
 
 - [x] Implement stationary behavior (no movement)
-- [ ] Add configurable `damage_radius` for toxic zones
-- [ ] Stationary predators affect larger area than random predators
+- [x] Add configurable `damage_radius` for toxic zones
+- [x] Stationary predators affect larger area than random predators
 
 ### 3.3 Pursuit Predator
 
@@ -323,6 +323,7 @@ ______________________________________________________________________
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
 - [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
 - [x] Create `configs/examples/ppo_pursuit_predators_small.yml`
+- [x] Create `configs/examples/ppo_stationary_predators_small.yml`
 
 ### 11.2 Documentation
 

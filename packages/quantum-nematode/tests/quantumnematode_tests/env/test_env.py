@@ -1731,3 +1731,141 @@ class TestPredatorTypeSymbols:
         assert env._get_predator_symbol(random_pred, symbols) == "#"
         assert env._get_predator_symbol(stationary_pred, symbols) == "X"
         assert env._get_predator_symbol(pursuit_pred, symbols) == "@"
+
+
+class TestDamageRadius:
+    """Tests for per-predator damage_radius functionality."""
+
+    def test_predator_has_damage_radius(self):
+        """Test that Predator class has damage_radius attribute."""
+        pred = Predator(
+            position=(5, 5),
+            predator_type=PredatorType.RANDOM,
+            speed=1.0,
+            detection_radius=8,
+            damage_radius=1,
+        )
+        assert pred.damage_radius == 1
+
+    def test_predator_params_has_damage_radius(self):
+        """Test that PredatorParams includes damage_radius field."""
+        params = PredatorParams(
+            enabled=True,
+            count=2,
+            damage_radius=3,
+        )
+        assert params.damage_radius == 3
+
+        # Default should be 1
+        default_params = PredatorParams(enabled=True, count=2)
+        assert default_params.damage_radius == 1
+
+    def test_is_agent_in_damage_radius_true(self):
+        """Test that is_agent_in_damage_radius returns True when within radius."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                damage_radius=2,
+            ),
+        )
+        # Place predator 1 cell away from agent (within damage_radius=2)
+        env.predators[0].position = (11, 10)
+
+        assert env.is_agent_in_damage_radius() is True
+
+    def test_is_agent_in_damage_radius_false(self):
+        """Test that is_agent_in_damage_radius returns False when outside radius."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                damage_radius=1,
+            ),
+        )
+        # Place predator 3 cells away from agent (outside damage_radius=1)
+        env.predators[0].position = (13, 10)
+
+        assert env.is_agent_in_damage_radius() is False
+
+    def test_is_agent_in_damage_radius_uses_per_predator_radius(self):
+        """Test that is_agent_in_damage_radius uses each predator's own radius."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=2,
+                damage_radius=1,  # Default radius
+            ),
+        )
+        # Place first predator far away
+        env.predators[0].position = (0, 0)
+        env.predators[0].damage_radius = 1
+
+        # Place second predator closer with larger radius
+        env.predators[1].position = (13, 10)  # 3 cells away
+        env.predators[1].damage_radius = 3  # Now agent is within this radius
+
+        assert env.is_agent_in_damage_radius() is True
+
+    def test_stationary_predator_large_damage_radius(self):
+        """Test stationary predator can have larger damage_radius (toxic zone)."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=3,  # Larger toxic zone
+            ),
+        )
+        # Place stationary predator 2 cells away (within damage_radius=3)
+        env.predators[0].position = (12, 10)
+
+        assert env.is_agent_in_damage_radius() is True
+        # Verify it's stationary
+        assert env.predators[0].predator_type == PredatorType.STATIONARY
+
+    def test_damage_radius_copied_in_env_copy(self):
+        """Test that damage_radius is preserved when copying environment."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                damage_radius=5,
+            ),
+        )
+        env.predators[0].damage_radius = 7  # Set different value
+
+        env_copy = env.copy()
+
+        assert env_copy.predators[0].damage_radius == 7
+
+    def test_damage_radius_initialized_from_params(self):
+        """Test that predators get damage_radius from PredatorParams."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(11, 11),
+            predator=PredatorParams(
+                enabled=True,
+                count=3,
+                damage_radius=4,
+            ),
+        )
+
+        for pred in env.predators:
+            assert pred.damage_radius == 4
