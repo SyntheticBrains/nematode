@@ -381,6 +381,20 @@ class QuantumNematodeAgent:
                 logger.error(error_message)
                 raise ValueError(error_message)
 
+        # Mechanosensation: detect physical contact with boundaries and predators
+        boundary_contact = None
+        predator_contact = None
+        health = None
+        max_health = None
+
+        if isinstance(self.env, DynamicForagingEnvironment):
+            boundary_contact = self.env.is_agent_at_boundary()
+            predator_contact = self.env.is_agent_in_predator_contact()
+            # Health state (if health system enabled)
+            if self.env.health.enabled:
+                health = self.env.agent_hp
+                max_health = self.env.health.max_hp
+
         return BrainParams(
             # Combined gradients
             gradient_strength=gradient_strength,
@@ -392,6 +406,12 @@ class QuantumNematodeAgent:
             predator_gradient_direction=separated_grads.get("predator_gradient_direction"),
             # Internal state (hunger)
             satiety=self.current_satiety,
+            # Health state
+            health=health,
+            max_health=max_health,
+            # Mechanosensation (physical contact)
+            boundary_contact=boundary_contact,
+            predator_contact=predator_contact,
             # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,

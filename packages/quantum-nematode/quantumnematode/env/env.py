@@ -1466,6 +1466,46 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 return True
         return False
 
+    # --- Mechanosensation methods ---
+
+    def is_agent_at_boundary(self) -> bool:
+        """
+        Check if agent is touching grid boundary.
+
+        Mechanosensation: Detects physical contact with environment edges,
+        modeled after C. elegans gentle touch neurons (ALM, PLM, AVM).
+
+        Returns
+        -------
+        bool
+            True if agent is at x=0, x=grid_size-1, y=0, or y=grid_size-1.
+        """
+        x, y = self.agent_pos
+        return x == 0 or x == self.grid_size - 1 or y == 0 or y == self.grid_size - 1
+
+    def is_agent_in_predator_contact(self) -> bool:
+        """
+        Check if agent is in physical contact with a predator.
+
+        Mechanosensation: Detects harsh touch from predator contact,
+        modeled after C. elegans harsh touch response (ASH, ADL neurons).
+
+        This uses kill_radius for non-health environments and damage_radius
+        for health-enabled environments to determine physical contact.
+
+        Returns
+        -------
+        bool
+            True if agent is within contact radius of any predator.
+        """
+        if not self.predator.enabled:
+            return False
+
+        # Use damage_radius if health system enabled, otherwise kill_radius
+        if self.health.enabled:
+            return self.is_agent_in_damage_radius()
+        return self.check_predator_collision()
+
     # --- Health methods ---
 
     def apply_predator_damage(self) -> float:
