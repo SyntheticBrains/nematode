@@ -122,9 +122,9 @@ ______________________________________________________________________
 > **Note**: Full mixed-type support (multiple types per environment) deferred to future work.
 > Current implementation supports one type per environment via PredatorParams.predator_type.
 
-- [ ] Implement mixed-type spawning (types list in config)
+- [x] Implement mixed-type spawning (types list in config) - defer
 
-- [ ] Update gradient computation for different predator types
+- [x] Update gradient computation for different predator types - defer, we need to implement mixed-type predator spawning first
 
 **Validation**: Pursuit predators track agent, stationary predators don't move ✅
 
