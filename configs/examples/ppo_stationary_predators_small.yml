@@ -3,7 +3,7 @@
 #
 # Key differences from moving predators:
 # - Stationary predators don't move (act as toxic zones)
-# - Larger damage_radius (3) creates hazardous areas to avoid
+# - Larger damage_radius (2) creates hazardous areas to avoid
 # - Agent must navigate around fixed obstacles while foraging
 # - Good for testing spatial awareness and path planning
 
@@ -68,7 +68,7 @@ environment:
       movement_pattern: stationary
       detection_radius: 4
       kill_radius: 0
-      damage_radius: 3
+      damage_radius: 2
       gradient_decay_constant: 8.0
       gradient_strength: 1.2
 
