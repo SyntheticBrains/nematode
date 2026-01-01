@@ -1760,9 +1760,9 @@ class TestDamageRadius:
         )
         assert params.damage_radius == 3
 
-        # Default should be 1
+        # Default should be 0
         default_params = PredatorParams(enabled=True, count=2)
-        assert default_params.damage_radius == 1
+        assert default_params.damage_radius == 0
 
     def test_is_agent_in_damage_radius_true(self):
         """Test that is_agent_in_damage_radius returns True when within radius."""

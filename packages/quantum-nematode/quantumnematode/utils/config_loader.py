@@ -186,7 +186,7 @@ class PredatorConfig(BaseModel):
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
     kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
-    damage_radius: int = 1  # Distance for damage application (health system)
+    damage_radius: int = 0  # Distance for damage application (health system)
     # Maps to DynamicForagingEnvironment.predator_gradient_decay
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
