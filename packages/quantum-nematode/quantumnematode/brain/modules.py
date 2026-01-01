@@ -6,6 +6,17 @@ which are then used to inform the agent's actions. Each module corresponds to a
 specific aspect of the agent's sensory input or internal state.
 
 The features are extracted as RX, RY, and RZ values for the qubits assigned to each module.
+All features are scaled to quantum-compatible ranges (typically [-π/2, π/2] or [0, π])
+for direct use in quantum rotation gates.
+
+Module naming follows C. elegans neuroscience conventions with neuron references:
+- proprioception: Body orientation sensing
+- chemotaxis: Combined gradient sensing (ASE neurons)
+- food_chemotaxis: Food-specific approach behavior (AWC, AWA neurons)
+- nociception: Aversive/escape response (ASH, ADL neurons)
+- thermotaxis: Temperature sensing (AFD neurons) - placeholder
+- aerotaxis: Oxygen sensing (URX, BAG neurons) - placeholder
+- mechanosensation: Touch/contact detection (ALM, PLM, AVM neurons)
 
 In the future, features can take more advanced forms, such as sub-circuits, groups of qubits,
 or even more complex quantum operations.
@@ -41,8 +52,12 @@ def proprioception_features(
     """
     Extract proprioception features: agent's own direction only.
 
+    Encodes the agent's current facing direction as a rotation angle.
     In future, this could be extended to include more complex proprioceptive data
     such as joint angles, body posture/bend, local relative position, etc.
+
+    Feature encoding:
+    - RZ: Agent facing direction (0=UP, π=DOWN, ±π/2=LEFT/RIGHT)
 
     Args:
         params: BrainParams containing agent state.
@@ -65,7 +80,18 @@ def chemotaxis_features(
     params: BrainParams,
 ) -> dict[RotationAxis, float]:
     """
-    Extract chemotaxis features: gradient strength and relative direction to goal.
+    Extract chemotaxis features: combined gradient strength and relative direction.
+
+    Modeled after C. elegans ASE neurons which sense combined chemical gradients.
+    Uses the combined gradient (food attraction + predator repulsion) for general
+    navigation. For separated food/predator gradients, use food_chemotaxis_features
+    and nociception_features respectively.
+
+    Feature encoding:
+    - RX: Combined gradient strength scaled to [-π/2, π/2]
+    - RY: Relative direction to goal scaled to [-π/2, π/2]
+
+    C. elegans neuron reference: ASE (amphid sensory neurons)
 
     Args:
         params: BrainParams containing agent state.
@@ -108,7 +134,19 @@ def thermotaxis_features(
     params: BrainParams,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
-    Extract thermotaxis features (placeholder).
+    Extract thermotaxis features for temperature-guided navigation (placeholder).
+
+    Will encode temperature sensing for navigation toward preferred temperature (Tc).
+    Modeled after C. elegans AFD neurons which sense temperature gradients.
+
+    Planned feature encoding:
+    - RX: Deviation from cultivation temperature (Tc)
+    - RY: Temperature gradient direction relative to agent
+    - RZ: Temperature gradient strength
+
+    C. elegans neuron reference: AFD (amphid finger cell neurons)
+
+    Note: This is a placeholder. Full implementation in add-thermotaxis-system.
 
     Args:
         params: BrainParams containing agent state.
@@ -120,20 +158,36 @@ def thermotaxis_features(
     return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
-def oxygen_features(
+def aerotaxis_features(
     params: BrainParams,  # noqa: ARG001
 ) -> dict[RotationAxis, float]:
     """
-    Extract oxygen sensing features (placeholder).
+    Extract aerotaxis features for oxygen-guided navigation (placeholder).
+
+    Will encode oxygen concentration sensing for navigation toward preferred O2 levels.
+    Modeled after C. elegans URX and BAG neurons which sense oxygen levels.
+
+    Planned feature encoding:
+    - RX: Oxygen concentration relative to preferred level
+    - RY: Oxygen gradient direction
+    - RZ: Oxygen gradient strength
+
+    C. elegans neuron reference: URX, BAG (oxygen-sensing neurons)
+
+    Note: This is a placeholder. Implementation deferred to future work.
 
     Args:
         params: BrainParams containing agent state.
 
     Returns
     -------
-        Dictionary with rx, ry, rz values for oxygen qubit(s).
+        Dictionary with rx, ry, rz values for aerotaxis qubit(s).
     """
     return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
+
+
+# Backward compatibility alias
+oxygen_features = aerotaxis_features
 
 
 def vision_features(
@@ -141,6 +195,9 @@ def vision_features(
 ) -> dict[RotationAxis, float]:
     """
     Extract vision features (placeholder).
+
+    Note: C. elegans has minimal light sensing capability via ASJ and AWB neurons.
+    This module is primarily for future extensions to more complex agents.
 
     Args:
         params: BrainParams containing agent state.
@@ -152,30 +209,33 @@ def vision_features(
     return {RotationAxis.RX: 0.0, RotationAxis.RY: 0.0, RotationAxis.RZ: 0.0}
 
 
-def appetitive_features(
+def food_chemotaxis_features(
     params: BrainParams,
 ) -> dict[RotationAxis, float]:
     """
-    Extract appetitive (food-seeking) features for approach behavior.
+    Extract food chemotaxis features for appetitive/approach behavior.
 
     This module encodes signals that drive the agent toward food sources,
-    inspired by C. elegans appetitive chemotaxis circuits (AWC neurons).
-
-    Uses SEPARATED food gradient to encode pure food-seeking behavior.
+    using the SEPARATED food gradient for pure food-seeking behavior.
     This is distinct from the chemotaxis module which uses the combined gradient.
+
+    Modeled after C. elegans AWC and AWA neurons which mediate attraction to
+    volatile odorants associated with food sources.
 
     Feature encoding:
     - RX: Food gradient strength (how strongly food is sensed)
     - RY: Relative direction to food (where to go)
 
-    All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
+    All features scaled to [-π/2, π/2] for quantum gate stability.
+
+    C. elegans neuron reference: AWC, AWA (amphid wing neurons)
 
     Args:
         params: BrainParams containing agent state.
 
     Returns
     -------
-        Dictionary with rx, ry, rz values for appetitive qubit(s).
+        Dictionary with rx, ry, rz values for food_chemotaxis qubit(s).
     """
     # Food gradient strength - use separated food gradient
     food_strength = params.food_gradient_strength or 0.0
@@ -209,30 +269,37 @@ def appetitive_features(
     }
 
 
-def aversive_features(
+# Backward compatibility alias
+appetitive_features = food_chemotaxis_features
+
+
+def nociception_features(
     params: BrainParams,
 ) -> dict[RotationAxis, float]:
     """
-    Extract aversive (predator-avoidance) features for escape behavior.
+    Extract nociception features for aversive/escape behavior.
 
     This module encodes predator gradient signals for avoidance behavior,
-    inspired by C. elegans aversive response circuits (ASH neurons).
-
-    Uses SEPARATED predator gradient to encode pure escape behavior.
+    using the SEPARATED predator gradient for pure escape behavior.
     The predator_gradient_direction points AWAY from predators (escape direction).
+
+    Modeled after C. elegans ASH and ADL neurons which mediate avoidance of
+    noxious stimuli including predator pheromones.
 
     Feature encoding:
     - RX: Predator threat level (how strongly predator is sensed)
     - RY: Escape direction relative to agent facing (where to flee)
 
-    All features scaled to [-π/2, π/2] or [0, π] for quantum gate stability.
+    All features scaled to [-π/2, π/2] for quantum gate stability.
+
+    C. elegans neuron reference: ASH, ADL (nociceptive neurons)
 
     Args:
         params: BrainParams containing agent state.
 
     Returns
     -------
-        Dictionary with rx, ry, rz values for aversive qubit(s).
+        Dictionary with rx, ry, rz values for nociception qubit(s).
     """
     # Predator gradient strength - indicates threat level
     predator_strength = params.predator_gradient_strength or 0.0
@@ -264,6 +331,10 @@ def aversive_features(
         RotationAxis.RY: escape_scaled,
         RotationAxis.RZ: 0.0,
     }
+
+
+# Backward compatibility alias
+aversive_features = nociception_features
 
 
 def memory_action_features(
@@ -349,29 +420,55 @@ def mechanosensation_features(
 
 
 class ModuleName(str, Enum):
-    """Module names used in ModularBrain."""
+    """Module names used in ModularBrain.
+
+    Module names follow C. elegans neuroscience conventions where possible.
+    Both scientific names and legacy names are supported for compatibility:
+
+    Scientific names (preferred):
+    - FOOD_CHEMOTAXIS: Food-specific chemotaxis (AWC, AWA neurons)
+    - NOCICEPTION: Aversive/escape response (ASH, ADL neurons)
+    - AEROTAXIS: Oxygen sensing (URX, BAG neurons)
+
+    Legacy names (deprecated, kept for backward compatibility):
+    - APPETITIVE: Alias for food_chemotaxis
+    - AVERSIVE: Alias for nociception
+    - OXYGEN: Alias for aerotaxis
+    """
 
     PROPRIOCEPTION = "proprioception"
     CHEMOTAXIS = "chemotaxis"
     THERMOTAXIS = "thermotaxis"
-    OXYGEN = "oxygen"
     VISION = "vision"
     ACTION = "action"
+    MECHANOSENSATION = "mechanosensation"
+
+    # Scientific names (preferred)
+    FOOD_CHEMOTAXIS = "food_chemotaxis"
+    NOCICEPTION = "nociception"
+    AEROTAXIS = "aerotaxis"
+
+    # Legacy names (deprecated, kept for backward compatibility)
     APPETITIVE = "appetitive"
     AVERSIVE = "aversive"
-    MECHANOSENSATION = "mechanosensation"
+    OXYGEN = "oxygen"
 
 
 MODULE_FEATURE_EXTRACTORS: dict[ModuleName, Any] = {
     ModuleName.PROPRIOCEPTION: proprioception_features,
     ModuleName.CHEMOTAXIS: chemotaxis_features,
     ModuleName.THERMOTAXIS: thermotaxis_features,
-    ModuleName.OXYGEN: oxygen_features,
     ModuleName.VISION: vision_features,
     ModuleName.ACTION: memory_action_features,
-    ModuleName.APPETITIVE: appetitive_features,
-    ModuleName.AVERSIVE: aversive_features,
     ModuleName.MECHANOSENSATION: mechanosensation_features,
+    # Scientific names
+    ModuleName.FOOD_CHEMOTAXIS: food_chemotaxis_features,
+    ModuleName.NOCICEPTION: nociception_features,
+    ModuleName.AEROTAXIS: aerotaxis_features,
+    # Legacy names (map to same functions for backward compatibility)
+    ModuleName.APPETITIVE: appetitive_features,  # Same as food_chemotaxis_features
+    ModuleName.AVERSIVE: aversive_features,  # Same as nociception_features
+    ModuleName.OXYGEN: oxygen_features,  # Same as aerotaxis_features
 }
 
 Modules = dict[ModuleName, list[int]]
