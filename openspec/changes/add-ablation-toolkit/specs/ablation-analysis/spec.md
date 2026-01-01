@@ -82,6 +82,78 @@ The PPOBrain architecture SHALL support ablation of hidden layers, critic networ
 - **AND** other features SHALL pass through normally
 - **AND** this tests individual sensory modality importance
 
+### Requirement: PPOBrain Sensory Module Ablation
+
+The PPOBrain architecture SHALL support ablation of sensory module configurations to compare unified modular features vs legacy preprocessing.
+
+#### Scenario: Legacy vs Unified Mode Comparison
+
+- **GIVEN** a PPOBrain configuration with sensory_modules specified
+- **WHEN** sensory module ablation switches to legacy mode
+- **THEN** the brain SHALL use 2-feature legacy preprocessing (gradient_strength, rel_angle_norm)
+- **AND** this tests whether unified modular features improve over legacy
+
+#### Scenario: Sensory Module Subset Ablation
+
+- **GIVEN** a PPOBrain with sensory_modules [food_chemotaxis, nociception, mechanosensation]
+- **WHEN** nociception module is ablated
+- **THEN** the brain SHALL use only [food_chemotaxis, mechanosensation] (6 features)
+- **AND** nociception features SHALL not be included in input vector
+- **AND** this tests individual sensory modality importance
+
+#### Scenario: Module Combination Study
+
+- **GIVEN** a PPOBrain ablation study
+- **WHEN** module combinations are enumerated
+- **THEN** the framework SHALL test:
+  - Single module conditions (food_chemotaxis only, nociception only, mechanosensation only)
+  - Paired module conditions (food_chemotaxis + nociception, etc.)
+  - Full module configuration
+- **AND** this identifies minimal sufficient module sets
+
+### Requirement: Gradient Mode Ablation
+
+The system SHALL support ablation of gradient computation modes to compare combined vs separated gradient sensing.
+
+#### Scenario: Combined vs Separated Gradient Comparison
+
+- **GIVEN** a PPOBrain with separated gradients (use_separated_gradients: true)
+- **WHEN** gradient mode is ablated to combined mode
+- **THEN** the brain SHALL use chemotaxis module (combined gradient) instead of food_chemotaxis + nociception
+- **AND** environment SHALL compute combined gradient instead of separated food/predator gradients
+- **AND** this tests whether gradient separation improves predator avoidance
+
+#### Scenario: Gradient Mode with Module Mapping
+
+- **GIVEN** gradient mode ablation configuration
+- **WHEN** switching from separated to combined mode
+- **THEN** sensory modules SHALL be remapped:
+  - food_chemotaxis + nociception → chemotaxis
+  - Input dimension changes from 6 to 3 (for gradient-related modules)
+- **AND** results SHALL be comparable across modes
+
+### Requirement: Feature Normalization Ablation
+
+The system SHALL support ablation of feature normalization modes to validate correct scaling for different architectures.
+
+#### Scenario: Classical vs Quantum Normalization
+
+- **GIVEN** a PPOBrain with normalize_for_classical=True (default for PPO)
+- **WHEN** normalization mode is ablated to quantum scaling
+- **THEN** features SHALL be in range [-π/2, π/2] instead of [-1, 1]
+- **AND** this tests whether classical normalization is necessary for PPO performance
+- **NOTE** quantum normalization for PPO is expected to degrade performance significantly
+
+#### Scenario: Normalization Impact Measurement
+
+- **GIVEN** ablation results for classical vs quantum normalization
+- **WHEN** performance is compared
+- **THEN** the report SHALL include:
+  - Success rate difference
+  - Convergence rate difference
+  - Feature value distribution statistics
+- **AND** this validates the normalization design decision
+
 ### Requirement: Feature Importance Calculation
 
 The system SHALL compute feature importance scores based on performance degradation when components are removed.
