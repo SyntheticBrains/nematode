@@ -41,7 +41,7 @@ ______________________________________________________________________
 - [x] Implement predator damage on contact (configurable `predator_damage`)
 - [x] Implement food healing (configurable `food_healing`)
 - [x] Ensure food consumption restores both HP AND satiety when both systems enabled
-- [x] Add temperature damage (for thermotaxis integration) - defer
+- [ ] Add temperature damage (for thermotaxis integration) *(deferred to add-thermotaxis-system)*
 - [x] Cap HP at max_hp, floor at 0
 
 ### 2.3 Termination
@@ -191,18 +191,18 @@ ______________________________________________________________________
 
 ### 6.1 RewardConfig Extensions
 
-- [ ] Add `reward_temperature_comfort: float`
-- [ ] Add `penalty_temperature_discomfort: float`
-- [ ] Add `penalty_temperature_danger: float`
-- [ ] Add `hp_damage_temperature_danger: float`
-- [ ] Add `hp_damage_temperature_lethal: float`
+- [ ] Add `reward_temperature_comfort: float` *(deferred to add-thermotaxis-system)*
+- [ ] Add `penalty_temperature_discomfort: float` *(deferred to add-thermotaxis-system)*
+- [ ] Add `penalty_temperature_danger: float` *(deferred to add-thermotaxis-system)*
+- [ ] Add `hp_damage_temperature_danger: float` *(deferred to add-thermotaxis-system)*
+- [ ] Add `hp_damage_temperature_lethal: float` *(deferred to add-thermotaxis-system)*
 - [x] Add `reward_health_gain: float`
 - [x] Add `penalty_health_damage: float`
 - [x] Add `penalty_boundary_collision: float`
 
 ### 6.2 RewardCalculator Updates
 
-- [ ] Add temperature comfort/discomfort reward calculation
+- [ ] Add temperature comfort/discomfort reward calculation *(deferred to add-thermotaxis-system)*
 - [x] Add health-based reward calculation
 - [x] Add boundary collision penalty
 - [x] Ensure rewards are only applied when features are enabled
@@ -215,9 +215,9 @@ ______________________________________________________________________
 
 ### 7.1 SimulationResult Extensions
 
-- [ ] Add `temperature_comfort_score: float | None`
+- [ ] Add `temperature_comfort_score: float | None` *(deferred to add-thermotaxis-system)*
 - [ ] Add `survival_score: float | None`
-- [ ] Add `thermotaxis_success: bool | None`
+- [ ] Add `thermotaxis_success: bool | None` *(deferred to add-thermotaxis-system)*
 
 ### 7.2 Composite Score Update
 
@@ -236,12 +236,14 @@ ______________________________________________________________________
 
 ## 8. Food Spawning in Safe Zones
 
+> **Note**: This work stream is deferred to `add-thermotaxis-system` as it depends on temperature zones.
+
 ### 8.1 Safe Zone Spawning
 
-- [ ] Add `food_safe_zone_ratio: float` config parameter (default 0.8)
-- [ ] Implement `sample_safe_position()` method
-- [ ] Bias food spawning toward safe temperature zones when thermotaxis enabled
-- [ ] Fall back to random spawning when thermotaxis disabled
+- [ ] Add `food_safe_zone_ratio: float` config parameter (default 0.8) *(deferred to add-thermotaxis-system)*
+- [ ] Implement `sample_safe_position()` method *(deferred to add-thermotaxis-system)*
+- [ ] Bias food spawning toward safe temperature zones when thermotaxis enabled *(deferred to add-thermotaxis-system)*
+- [ ] Fall back to random spawning when thermotaxis disabled *(deferred to add-thermotaxis-system)*
 
 **Validation**: Food distribution biased toward safe zones
 
@@ -249,10 +251,12 @@ ______________________________________________________________________
 
 ## 9. Visualization
 
+> **Note**: Temperature zone visualization is deferred to `add-thermotaxis-system`.
+
 ### 9.1 Temperature Zone Coloring
 
-- [ ] Extend Rich theme to support background colors
-- [ ] Implement temperature zone color mapping:
+- [ ] Extend Rich theme to support background colors *(deferred to add-thermotaxis-system)*
+- [ ] Implement temperature zone color mapping *(deferred to add-thermotaxis-system)*:
   - Lethal cold (\<5°C): blue
   - Danger cold (5-10°C): cyan
   - Discomfort cold (10-15°C): light cyan
@@ -260,12 +264,12 @@ ______________________________________________________________________
   - Discomfort hot (25-30°C): light yellow
   - Danger hot (30-35°C): yellow
   - Lethal hot (>35°C): red
-- [ ] Implement priority system: Agent > Predators > Food > Temperature
+- [ ] Implement priority system: Agent > Predators > Food > Temperature *(deferred to add-thermotaxis-system)*
 
 ### 9.2 Debug Logging
 
 - [ ] Add environment snapshot logging at episode start
-- [ ] Include temperature samples at key positions
+- [ ] Include temperature samples at key positions *(deferred to add-thermotaxis-system)*
 - [ ] Log health system state changes
 
 **Validation**: Temperature zones visible in Rich theme output
@@ -319,7 +323,7 @@ ______________________________________________________________________
 
 ### 11.1 Example Configs
 
-- [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml`
+- [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml` *(deferred to add-thermotaxis-system)*
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
 - [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
 - [x] Create `configs/examples/ppo_pursuit_predators_small.yml`
