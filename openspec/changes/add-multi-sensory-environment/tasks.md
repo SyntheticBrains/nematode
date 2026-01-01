@@ -134,24 +134,24 @@ ______________________________________________________________________
 
 ### 4.1 Boundary Detection
 
-- [ ] Detect when agent is at grid boundary (x=0, x=max, y=0, y=max)
-- [ ] Set `boundary_contact` in BrainParams
-- [ ] Add boundary collision penalty to reward calculator
+- [x] Detect when agent is at grid boundary (x=0, x=max, y=0, y=max)
+- [x] Set `boundary_contact` in BrainParams
+- [x] Add boundary collision penalty to reward calculator
 
 ### 4.2 Predator Contact Detection
 
-- [ ] Detect when agent is within predator kill radius
-- [ ] Set `predator_contact` in BrainParams
-- [ ] Distinguish contact from proximity (already tracked)
+- [x] Detect when agent is within predator kill radius
+- [x] Set `predator_contact` in BrainParams
+- [x] Distinguish contact from proximity (already tracked)
 
 ### 4.3 Feature Extraction Module
 
-- [ ] Create `mechanosensation_features()` in modules.py
-- [ ] Encode boundary contact as RX rotation
-- [ ] Encode predator contact as RY rotation
-- [ ] Add ALM, PLM, AVM neuron references to docstring
+- [x] Create `mechanosensation_features()` in modules.py
+- [x] Encode boundary contact as RX rotation
+- [x] Encode predator contact as RY rotation
+- [x] Add ALM, PLM, AVM neuron references to docstring
 
-**Validation**: BrainParams correctly reports contact states
+**Validation**: BrainParams correctly reports contact states ✅
 
 ______________________________________________________________________
 
@@ -198,13 +198,13 @@ ______________________________________________________________________
 - [ ] Add `hp_damage_temperature_lethal: float`
 - [x] Add `reward_health_gain: float`
 - [x] Add `penalty_health_damage: float`
-- [ ] Add `penalty_boundary_collision: float`
+- [x] Add `penalty_boundary_collision: float`
 
 ### 6.2 RewardCalculator Updates
 
 - [ ] Add temperature comfort/discomfort reward calculation
 - [x] Add health-based reward calculation
-- [ ] Add boundary collision penalty
+- [x] Add boundary collision penalty
 - [x] Ensure rewards are only applied when features are enabled
 
 **Validation**: Rewards correctly computed for multi-objective scenarios
