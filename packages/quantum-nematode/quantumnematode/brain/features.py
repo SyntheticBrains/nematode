@@ -27,7 +27,16 @@ from quantumnematode.brain.modules import (
     MODULE_FEATURE_EXTRACTORS,
     ModuleName,
     RotationAxis,
+    extract_features_for_module,
 )
+
+# Re-export for convenience
+__all__ = [
+    "extract_features_for_module",
+    "extract_flat_features",
+    "extract_sensory_features",
+    "get_feature_dimension",
+]
 
 if TYPE_CHECKING:
     from quantumnematode.brain.arch import BrainParams
