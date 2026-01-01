@@ -188,7 +188,7 @@ class Predator:
         speed: float = 1.0,
         movement_accumulator: float = 0.0,
         detection_radius: int = 8,
-        damage_radius: int = 1,
+        damage_radius: int = 0,
     ) -> None:
         """
         Initialize a predator.
@@ -206,7 +206,7 @@ class Predator:
         detection_radius : int
             Detection radius for pursuit predators (default 8).
         damage_radius : int
-            Distance at which this predator deals damage (default 1).
+            Distance at which this predator deals damage (default 0).
         """
         self.position = position
         self.predator_type = predator_type
