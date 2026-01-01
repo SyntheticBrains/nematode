@@ -12,7 +12,6 @@ or even more complex quantum operations.
 
 Other possible modules to add in the short term (excluding placeholders):
 - Satiety/hunger
-- Touch/tactile
 - Memory (short-term/long-term)
 - Decision-making (e.g., reinforcement learning)
 
@@ -310,6 +309,14 @@ def mechanosensation_features(
     - RZ: Combined contact urgency (max of both, used for escape response)
 
     All features scaled to [-π/2, π/2] for quantum gate stability.
+
+    Note: Current implementation uses binary signals (contact vs no contact).
+    Future enhancement could add direction-aware encoding to support:
+    - Anterior vs posterior touch distinction (like real C. elegans ALM/PLM)
+    - Direction of contact relative to agent heading for directional escape
+    Binary is sufficient for now since predator direction is already
+    available via aversive_features, and boundary direction can be inferred
+    from proprioception + boundary_contact.
 
     Args:
         params: BrainParams containing agent state.
