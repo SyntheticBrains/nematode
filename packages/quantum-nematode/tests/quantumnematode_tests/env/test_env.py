@@ -914,19 +914,23 @@ class TestPredatorMechanics:
         assert env.check_predator_collision() is False
 
     def test_predators_spawn_outside_detection_radius(self, predator_env):
-        """Test that predators spawn outside detection radius of agent at initialization."""
+        """Test that predators spawn outside detection/damage radius of agent at initialization."""
         agent_pos = predator_env.agent_pos
         detection_radius = predator_env.predator.detection_radius
+        damage_radius = predator_env.predator.damage_radius
+        # Predators should spawn outside both detection and damage radius
+        min_spawn_distance = max(detection_radius, damage_radius)
 
-        # Verify all predators spawn outside detection radius
+        # Verify all predators spawn outside the minimum safe distance
         for predator in predator_env.predators:
-            # Calculate Manhattan distance
-            distance = abs(predator.position[0] - agent_pos[0]) + abs(
-                predator.position[1] - agent_pos[1],
+            # Calculate Euclidean distance (consistent with implementation)
+            distance = np.sqrt(
+                (predator.position[0] - agent_pos[0]) ** 2
+                + (predator.position[1] - agent_pos[1]) ** 2,
             )
-            assert distance > detection_radius, (
-                f"Predator at {predator.position} spawned within detection radius "
-                f"({distance} <= {detection_radius}) of agent at {agent_pos}"
+            assert distance > min_spawn_distance, (
+                f"Predator at {predator.position} spawned within min spawn distance "
+                f"({distance:.2f} <= {min_spawn_distance}) of agent at {agent_pos}"
             )
 
         # Agent should not be in danger at initialization
