@@ -157,36 +157,62 @@ ______________________________________________________________________
 
 ## 5. Unified Feature Extraction
 
-### 5.1 Create Feature Extraction Layer
+### 5.1 Unified SensoryModule Architecture
 
-- [x] Create `brain/features.py` module
-- [x] Implement `extract_sensory_features(params: BrainParams) -> dict[str, np.ndarray]`
-- [x] Return feature vectors for each sensory modality
-- [x] Add `extract_flat_features()` for classical networks (PPO)
-- [x] Add `get_feature_dimension()` utility
+> **Note**: The original `brain/features.py` was consolidated into `brain/modules.py` during refactoring.
 
-### 5.2 Module Renaming
+- [x] Create `SensoryModule` dataclass with unified interface:
+  - `extract(params) -> CoreFeatures` - architecture-agnostic extraction
+  - `to_quantum(params) -> np.ndarray` - returns [rx, ry, rz] gate angles
+  - `to_classical(params) -> np.ndarray` - returns [strength, angle] semantic values
+  - `to_quantum_dict(params) -> dict` - convenience method for ModularBrain
+- [x] Create `CoreFeatures` dataclass with semantic ranges:
+  - `strength: float` in [0, 1] where 0 = no signal
+  - `angle: float` in [-1, 1] where 0 = aligned with agent
+  - `binary: float` for on/off signals
+- [x] Build `SENSORY_MODULES` registry as single source of truth
+- [x] Add `extract_classical_features()` for PPOBrain
+- [x] Add `get_classical_feature_dimension()` utility
+- [x] Delete `brain/features.py` (consolidated into modules.py)
+
+### 5.2 Module Renaming and Registry Consolidation
 
 - [x] Rename `appetitive_features` to `food_chemotaxis_features`
 - [x] Rename `aversive_features` to `nociception_features`
-- [x] Add neuron references to all module docstrings:
+- [x] Add neuron references to all `SensoryModule` descriptions:
   - chemotaxis: ASE neurons ✅
   - food_chemotaxis: AWC, AWA neurons ✅
   - nociception: ASH, ADL neurons ✅
   - thermotaxis: AFD neurons ✅
   - aerotaxis: URX, BAG neurons ✅
   - mechanosensation: ALM, PLM, AVM neurons ✅
-- [x] Update MODULE_FEATURE_EXTRACTORS dict
-- [x] Update ModuleName enum
-- [x] Add backward compatibility aliases (appetitive→food_chemotaxis, aversive→nociception, oxygen→aerotaxis)
+  - proprioception: DVA, PVD neurons ✅
+  - vision: ASJ, ASI neurons ✅
+  - action: interneurons ✅
+- [x] Remove old registries (`MODULE_FEATURE_EXTRACTORS`, `CORE_FEATURE_EXTRACTORS`)
+- [x] Remove standalone quantum transform functions (consolidated into `SensoryModule` methods)
+- [x] Update `ModuleName` enum with all 9 modules
+- [x] Add backward compatibility aliases:
+  - `appetitive` → `food_chemotaxis`
+  - `aversive` → `nociception`
+  - `oxygen` → `aerotaxis`
 
 ### 5.3 Integration with Brains
 
-- [x] ModularBrain already uses unified extraction via `extract_features_for_module()`
-- [ ] Update PPOBrain to optionally use unified extraction (concatenate to input) *(optional enhancement)*
+- [x] ModularBrain uses `SENSORY_MODULES[module].to_quantum_dict(params)`
+- [x] QModularBrain uses `SENSORY_MODULES[module].to_quantum_dict(params)`
+- [x] PPOBrain uses unified extraction via `extract_classical_features()`:
+  - Added `sensory_modules` config option to `PPOBrainConfig`
+  - Each module contributes 2 features [strength, angle] with semantic ranges
+  - Auto-computes `input_dim` from modules (2 features per module)
+  - Legacy mode (default) still uses 2-feature preprocessing
 - [x] Ensure backward compatibility with existing configs (legacy module names still work)
 
-**Validation**: Feature extraction layer complete with backward compatibility ✅
+**Validation**: Unified SensoryModule architecture complete ✅
+- Single source of truth: `SENSORY_MODULES` registry
+- All modules usable by both quantum and classical brains
+- Clear interface: `module.to_quantum(params)` vs `module.to_classical(params)`
+- Scientific documentation lives with module definitions
 
 ______________________________________________________________________
 
