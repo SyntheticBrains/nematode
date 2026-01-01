@@ -113,7 +113,8 @@ class RewardCalculator:
             )
 
         # Boundary collision penalty (mechanosensation - dynamic foraging only)
-        if isinstance(env, DynamicForagingEnvironment) and env.is_agent_at_boundary():
+        # Penalizes when agent attempts to move into a wall, not just for being at edge
+        if isinstance(env, DynamicForagingEnvironment) and env.wall_collision_occurred:
             boundary_penalty = self.config.penalty_boundary_collision
             reward -= boundary_penalty
             logger.debug(

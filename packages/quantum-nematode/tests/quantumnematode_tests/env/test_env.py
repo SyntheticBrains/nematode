@@ -2017,3 +2017,86 @@ class TestMechanosensation:
         # Place predator just outside damage radius (3 cells away)
         env.predators[0].position = (13, 10)  # Manhattan distance = 3 > damage_radius
         assert env.is_agent_in_predator_contact() is False
+
+    def test_wall_collision_flag_initialized_false(self, env):
+        """Test wall_collision_occurred starts as False."""
+        assert env.wall_collision_occurred is False
+
+    def test_wall_collision_flag_set_on_wall_hit(self):
+        """Test wall_collision_occurred is set when agent tries to move into wall."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(0, 5),  # Start at left edge
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # Agent faces UP by default, turn to face LEFT
+        env.current_direction = Direction.LEFT
+        assert env.agent_pos == (0, 5)
+        assert env.wall_collision_occurred is False
+
+        # Try to move forward (into left wall)
+        env.move_agent(Action.FORWARD)
+
+        # Position shouldn't change, collision flag should be set
+        assert env.agent_pos == (0, 5)
+        assert env.wall_collision_occurred is True
+
+    def test_wall_collision_flag_not_set_on_normal_move(self):
+        """Test wall_collision_occurred is False when move succeeds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),  # Start in center
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        assert env.wall_collision_occurred is False
+
+        # Move forward (should succeed, agent faces UP)
+        env.move_agent(Action.FORWARD)
+
+        # Position should change, collision flag should be False
+        assert env.agent_pos == (5, 6)
+        assert env.wall_collision_occurred is False
+
+    def test_wall_collision_flag_reset_each_move(self):
+        """Test wall_collision_occurred is reset at start of each move."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(0, 5),  # Start at left edge
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # Face left and try to move into wall
+        env.current_direction = Direction.LEFT
+        env.move_agent(Action.FORWARD)
+        assert env.wall_collision_occurred is True
+
+        # Turn and move successfully (face UP and move forward)
+        env.current_direction = Direction.UP
+        env.move_agent(Action.FORWARD)
+
+        # Flag should be reset to False
+        assert env.wall_collision_occurred is False
+        assert env.agent_pos == (0, 6)
+
+    def test_wall_collision_flag_not_set_on_stay(self):
+        """Test wall_collision_occurred is False when agent stays."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(0, 5),  # At left edge
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # STAY action shouldn't trigger wall collision
+        env.move_agent(Action.STAY)
+        assert env.wall_collision_occurred is False
+        assert env.agent_pos == (0, 5)
