@@ -72,6 +72,7 @@ reward:
   penalty_stuck_position: 0.1
   penalty_starvation: 2.0
   stuck_position_threshold: 3
+  penalty_boundary_collision: 0.02
 
 satiety:
   initial_satiety: 800.0

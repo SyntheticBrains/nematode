@@ -45,6 +45,7 @@ reward:
   penalty_predator_death: 10.0
   penalty_predator_proximity: 0.1
   stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
   # Health system rewards
   penalty_health_damage: 0.5
   reward_health_gain: 0.1
