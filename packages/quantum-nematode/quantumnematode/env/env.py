@@ -508,6 +508,37 @@ class BaseEnvironment(ABC):
 
         return gradient_strength, gradient_direction, distance_to_goal
 
+    def _get_new_position_if_valid(
+        self,
+        direction: Direction,
+    ) -> tuple[int, int] | None:
+        """
+        Calculate the new position if moving in the given direction is valid.
+
+        Parameters
+        ----------
+        direction : Direction
+            The direction to move.
+
+        Returns
+        -------
+        tuple[int, int] | None
+            The new position if the move is valid (within grid bounds),
+            or None if the move would hit a wall.
+        """
+        x, y = self.agent_pos
+        match direction:
+            case Direction.UP:
+                return (x, y + 1) if y < self.grid_size - 1 else None
+            case Direction.DOWN:
+                return (x, y - 1) if y > 0 else None
+            case Direction.RIGHT:
+                return (x + 1, y) if x < self.grid_size - 1 else None
+            case Direction.LEFT:
+                return (x - 1, y) if x > 0 else None
+            case _:
+                return None
+
     def move_agent(self, action: Action) -> None:
         """
         Move the agent based on its perspective.
@@ -536,16 +567,8 @@ class BaseEnvironment(ABC):
         self.current_direction = new_direction
 
         # Calculate the new position based on the new direction
-        new_pos = list(self.agent_pos)
-        if new_direction == Direction.UP and self.agent_pos[1] < self.grid_size - 1:
-            new_pos[1] += 1
-        elif new_direction == Direction.DOWN and self.agent_pos[1] > 0:
-            new_pos[1] -= 1
-        elif new_direction == Direction.RIGHT and self.agent_pos[0] < self.grid_size - 1:
-            new_pos[0] += 1
-        elif new_direction == Direction.LEFT and self.agent_pos[0] > 0:
-            new_pos[0] -= 1
-        else:
+        new_pos = self._get_new_position_if_valid(new_direction)
+        if new_pos is None:
             logger.debug(
                 f"Collision against boundary with action: {action.value}, staying in place.",
             )
@@ -1515,20 +1538,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             return False
 
         intended_direction = self.DIRECTION_MAP[self.current_direction][action]
-        x, y = self.agent_pos
-
-        # Check if moving in that direction would hit a wall
-        match intended_direction:
-            case Direction.UP:
-                return y >= self.grid_size - 1
-            case Direction.DOWN:
-                return y <= 0
-            case Direction.RIGHT:
-                return x >= self.grid_size - 1
-            case Direction.LEFT:
-                return x <= 0
-            case _:
-                return False
+        return self._get_new_position_if_valid(intended_direction) is None
 
     def is_agent_at_boundary(self) -> bool:
         """
