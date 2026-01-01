@@ -3,21 +3,19 @@
 from .arch.mlp import MLPBrain
 from .arch.modular import ModularBrain
 from .arch.spiking import SpikingBrain
-from .features import (
-    extract_features_for_module,
-    extract_flat_features,
-    extract_sensory_features,
-    get_feature_dimension,
+from .modules import (
+    SENSORY_MODULES,
+    ModuleName,
+    extract_classical_features,
+    get_classical_feature_dimension,
 )
-from .modules import ModuleName
 
 __all__ = [
+    "SENSORY_MODULES",
     "MLPBrain",
     "ModularBrain",
     "ModuleName",
     "SpikingBrain",
-    "extract_features_for_module",
-    "extract_flat_features",
-    "extract_sensory_features",
-    "get_feature_dimension",
+    "extract_classical_features",
+    "get_classical_feature_dimension",
 ]
