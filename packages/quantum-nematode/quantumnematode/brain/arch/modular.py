@@ -89,10 +89,9 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import DEFAULT_SHOTS, BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
+    SENSORY_MODULES,
     ModuleName,
-    RotationAxis,
     count_total_qubits,
-    extract_features_for_module,
 )
 from quantumnematode.errors import (
     ERROR_MISSING_IMPORT_QISKIT_AER,
@@ -412,12 +411,12 @@ class ModularBrain(QuantumBrain):
             for module, qubit_indices in self.modules.items():
                 features = input_params.get(module, {}) if input_params else {}
                 for _idx, q in enumerate(qubit_indices):
-                    rx = features.get(RotationAxis.RX.value, 0.0)
-                    ry = features.get(RotationAxis.RY.value, 0.0)
-                    rz = features.get(RotationAxis.RZ.value, 0.0)
-                    qc.rx(rx + self.parameters[f"{RotationAxis.RX.value}_{layer + 1}"][q], q)
-                    qc.ry(ry + self.parameters[f"{RotationAxis.RY.value}_{layer + 1}"][q], q)
-                    qc.rz(rz + self.parameters[f"{RotationAxis.RZ.value}_{layer + 1}"][q], q)
+                    rx = features.get("rx", 0.0)
+                    ry = features.get("ry", 0.0)
+                    rz = features.get("rz", 0.0)
+                    qc.rx(rx + self.parameters[f"rx_{layer + 1}"][q], q)
+                    qc.ry(ry + self.parameters[f"ry_{layer + 1}"][q], q)
+                    qc.rz(rz + self.parameters[f"rz_{layer + 1}"][q], q)
             # Entanglement for this layer
             for i in range(self.num_qubits):
                 for j in range(i + 1, self.num_qubits):
@@ -535,7 +534,7 @@ class ModularBrain(QuantumBrain):
             )  # Used for reporting only
 
         input_params = {
-            module.value: extract_features_for_module(module, params) for module in self.modules
+            module.value: SENSORY_MODULES[module].to_quantum_dict(params) for module in self.modules
         }
 
         flat_input_params = {
@@ -1178,7 +1177,7 @@ class ModularBrain(QuantumBrain):
 
             # Build input features for this timestep
             input_params = {
-                module.value: extract_features_for_module(module, params_t)
+                module.value: SENSORY_MODULES[module].to_quantum_dict(params_t)
                 for module in self.modules
             }
 
@@ -1315,7 +1314,8 @@ class ModularBrain(QuantumBrain):
             # For Q-CTRL, build circuit with actual features from params
             # (Q-CTRL recommends untranspiled circuits)
             input_params = {
-                module.value: extract_features_for_module(module, params) for module in self.modules
+                module.value: SENSORY_MODULES[module].to_quantum_dict(params)
+                for module in self.modules
             }
             qc = self.build_brain(input_params)
             for plus, minus in param_sets:

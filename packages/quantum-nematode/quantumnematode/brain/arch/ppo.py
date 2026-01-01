@@ -39,6 +39,11 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.modules import (
+    ModuleName,
+    extract_classical_features,
+    get_classical_feature_dimension,
+)
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
@@ -64,7 +69,26 @@ EPISODE_LOG_INTERVAL = 25
 
 
 class PPOBrainConfig(BrainConfig):
-    """Configuration for the PPOBrain architecture."""
+    """Configuration for the PPOBrain architecture.
+
+    Supports two modes for input feature extraction:
+
+    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
+       - Set `sensory_modules=None` (default)
+       - Requires explicit `input_dim=2` when creating PPOBrain
+
+    2. **Unified sensory mode**: Uses modular feature extraction from brain/features.py
+       - Set `sensory_modules` to a list of ModuleName values
+       - Uses extract_classical_features() which outputs semantic-preserving ranges
+       - Each module contributes 2 features [strength, angle] in [0,1] and [-1,1]
+       - `input_dim` is auto-computed as `len(sensory_modules) * 2`
+
+    Example unified mode config:
+        >>> config = PPOBrainConfig(
+        ...     sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        ... )
+        >>> # input_dim will be 4 (2 modules * 2 features each)
+    """
 
     # Network architecture
     actor_hidden_dim: int = DEFAULT_ACTOR_HIDDEN_DIM
@@ -86,6 +110,12 @@ class PPOBrainConfig(BrainConfig):
 
     # Rollout buffer
     rollout_buffer_size: int = DEFAULT_ROLLOUT_BUFFER_SIZE
+
+    # Unified sensory feature extraction (optional)
+    # When set, uses extract_classical_features() which outputs:
+    # - strength: [0, 1] where 0 = no signal (matches legacy semantics)
+    # - angle: [-1, 1] where 0 = aligned with agent heading
+    sensory_modules: list[ModuleName] | None = None
 
 
 class RolloutBuffer:
@@ -228,8 +258,8 @@ class PPOBrain(ClassicalBrain):
     def __init__(  # noqa: PLR0913
         self,
         config: PPOBrainConfig,
-        input_dim: int,
-        num_actions: int,
+        input_dim: int | None = None,
+        num_actions: int = 4,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
         *,
@@ -245,9 +275,35 @@ class PPOBrain(ClassicalBrain):
         set_global_seed(self.seed)  # Set global numpy/torch seeds
         logger.info(f"PPOBrain using seed: {self.seed}")
 
+        # Store sensory modules for feature extraction
+        self.sensory_modules = config.sensory_modules
+
+        # Determine input dimension
+        if config.sensory_modules is not None:
+            # Unified sensory mode: use classical feature extraction
+            # Each module contributes 2 features [strength, angle]
+            computed_dim = get_classical_feature_dimension(config.sensory_modules)
+            if input_dim is not None and input_dim != computed_dim:
+                logger.warning(
+                    f"input_dim={input_dim} overridden by sensory_modules "
+                    f"(computed: {computed_dim})",
+                )
+            self.input_dim = computed_dim
+            logger.info(
+                f"Using classical feature extraction with modules: "
+                f"{[m.value for m in config.sensory_modules]} "
+                f"(input_dim={self.input_dim}, features=[strength, angle] per module)",
+            )
+        elif input_dim is not None:
+            # Legacy mode: explicit input_dim
+            self.input_dim = input_dim
+        else:
+            # Default legacy mode: 2 features
+            self.input_dim = 2
+            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
-        self.input_dim = input_dim
         self.num_actions = num_actions
         self.device = torch.device(device.value)
         self._action_set = action_set
@@ -341,10 +397,22 @@ class PPOBrain(ClassicalBrain):
         """
         Preprocess BrainParams to extract features for the neural network.
 
-        Matches MLPBrain preprocessing exactly:
-        - Gradient strength (float, [0, 1])
-        - Normalized relative angle to goal ([-1, 1])
+        Two modes:
+        1. **Unified sensory mode** (when sensory_modules is set):
+           Uses extract_classical_features() which outputs semantic-preserving ranges:
+           - strength: [0, 1] where 0 = no signal (matches legacy)
+           - angle: [-1, 1] where 0 = aligned with agent heading
+
+        2. **Legacy mode** (default):
+           Matches original MLPBrain preprocessing:
+           - Gradient strength (float, [0, 1])
+           - Normalized relative angle to goal ([-1, 1])
         """
+        # Unified sensory mode: use classical feature extraction
+        if self.sensory_modules is not None:
+            return extract_classical_features(params, self.sensory_modules)
+
+        # Legacy mode: 2-feature preprocessing
         grad_strength = float(params.gradient_strength or 0.0)
 
         grad_direction = float(params.gradient_direction or 0.0)
