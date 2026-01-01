@@ -11,6 +11,7 @@ The environment provides methods to get the current state, move the agent,
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import ClassVar
 
 import numpy as np
 from pydantic.dataclasses import dataclass
@@ -379,6 +380,31 @@ class BaseEnvironment(ABC):
         Seeded random number generator for all random operations.
     """
 
+    # Maps current direction + action to resulting direction
+    # Used for relative movement (FORWARD/LEFT/RIGHT from agent's perspective)
+    DIRECTION_MAP: ClassVar[dict[Direction, dict[Action, Direction]]] = {
+        Direction.UP: {
+            Action.FORWARD: Direction.UP,
+            Action.LEFT: Direction.LEFT,
+            Action.RIGHT: Direction.RIGHT,
+        },
+        Direction.DOWN: {
+            Action.FORWARD: Direction.DOWN,
+            Action.LEFT: Direction.RIGHT,
+            Action.RIGHT: Direction.LEFT,
+        },
+        Direction.LEFT: {
+            Action.FORWARD: Direction.LEFT,
+            Action.LEFT: Direction.DOWN,
+            Action.RIGHT: Direction.UP,
+        },
+        Direction.RIGHT: {
+            Action.FORWARD: Direction.RIGHT,
+            Action.LEFT: Direction.UP,
+            Action.RIGHT: Direction.DOWN,
+        },
+    }
+
     def __init__(  # noqa: PLR0913
         self,
         grid_size: int,
@@ -482,6 +508,37 @@ class BaseEnvironment(ABC):
 
         return gradient_strength, gradient_direction, distance_to_goal
 
+    def _get_new_position_if_valid(
+        self,
+        direction: Direction,
+    ) -> tuple[int, int] | None:
+        """
+        Calculate the new position if moving in the given direction is valid.
+
+        Parameters
+        ----------
+        direction : Direction
+            The direction to move.
+
+        Returns
+        -------
+        tuple[int, int] | None
+            The new position if the move is valid (within grid bounds),
+            or None if the move would hit a wall.
+        """
+        x, y = self.agent_pos
+        match direction:
+            case Direction.UP:
+                return (x, y + 1) if y < self.grid_size - 1 else None
+            case Direction.DOWN:
+                return (x, y - 1) if y > 0 else None
+            case Direction.RIGHT:
+                return (x + 1, y) if x < self.grid_size - 1 else None
+            case Direction.LEFT:
+                return (x - 1, y) if x > 0 else None
+            case _:
+                return None
+
     def move_agent(self, action: Action) -> None:
         """
         Move the agent based on its perspective.
@@ -505,45 +562,13 @@ class BaseEnvironment(ABC):
             logger.debug("Action is stay: staying in place.")
             return
 
-        # Define direction mappings
-        direction_map = {
-            Direction.UP: {
-                Action.FORWARD: Direction.UP,
-                Action.LEFT: Direction.LEFT,
-                Action.RIGHT: Direction.RIGHT,
-            },
-            Direction.DOWN: {
-                Action.FORWARD: Direction.DOWN,
-                Action.LEFT: Direction.RIGHT,
-                Action.RIGHT: Direction.LEFT,
-            },
-            Direction.LEFT: {
-                Action.FORWARD: Direction.LEFT,
-                Action.LEFT: Direction.DOWN,
-                Action.RIGHT: Direction.UP,
-            },
-            Direction.RIGHT: {
-                Action.FORWARD: Direction.RIGHT,
-                Action.LEFT: Direction.UP,
-                Action.RIGHT: Direction.DOWN,
-            },
-        }
-
         previous_direction = self.current_direction
-        new_direction = direction_map[self.current_direction][action]
+        new_direction = self.DIRECTION_MAP[self.current_direction][action]
         self.current_direction = new_direction
 
         # Calculate the new position based on the new direction
-        new_pos = list(self.agent_pos)
-        if new_direction == Direction.UP and self.agent_pos[1] < self.grid_size - 1:
-            new_pos[1] += 1
-        elif new_direction == Direction.DOWN and self.agent_pos[1] > 0:
-            new_pos[1] -= 1
-        elif new_direction == Direction.RIGHT and self.agent_pos[0] < self.grid_size - 1:
-            new_pos[0] += 1
-        elif new_direction == Direction.LEFT and self.agent_pos[0] > 0:
-            new_pos[0] -= 1
-        else:
+        new_pos = self._get_new_position_if_valid(new_direction)
+        if new_pos is None:
             logger.debug(
                 f"Collision against boundary with action: {action.value}, staying in place.",
             )
@@ -981,6 +1006,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         # Track visited cells for exploration bonus
         self.visited_cells: set[tuple[int, int]] = {(self.agent_pos[0], self.agent_pos[1])}
+
+        # Track wall collision for boundary penalty (reset each step)
+        self.wall_collision_occurred: bool = False
 
     def _initialize_foods(self) -> None:
         """Initialize food sources using Poisson disk sampling."""
@@ -1465,6 +1493,90 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 )
                 return True
         return False
+
+    # --- Mechanosensation methods ---
+
+    def move_agent(self, action: Action) -> None:
+        """
+        Move the agent based on its perspective.
+
+        Overrides base class to track wall collisions for boundary penalty.
+        Distinguishes wall collisions from body collisions by checking
+        if the intended move would exceed grid bounds.
+
+        Parameters
+        ----------
+        action : Action
+            The action to take.
+        """
+        # Reset wall collision flag at start of each move
+        self.wall_collision_occurred = False
+
+        # Check if this action would result in a wall collision BEFORE calling parent
+        # This distinguishes wall collisions from body collisions
+        if action != Action.STAY:
+            self.wall_collision_occurred = self._would_hit_wall(action)
+
+        # Call parent move_agent
+        super().move_agent(action)
+
+    def _would_hit_wall(self, action: Action) -> bool:
+        """
+        Check if the given action would cause a wall collision.
+
+        Parameters
+        ----------
+        action : Action
+            The action to check.
+
+        Returns
+        -------
+        bool
+            True if the action would cause a wall collision, False otherwise.
+        """
+        if action == Action.STAY:
+            return False
+
+        intended_direction = self.DIRECTION_MAP[self.current_direction][action]
+        return self._get_new_position_if_valid(intended_direction) is None
+
+    def is_agent_at_boundary(self) -> bool:
+        """
+        Check if agent is touching grid boundary.
+
+        Mechanosensation: Detects physical contact with environment edges,
+        modeled after C. elegans gentle touch neurons (ALM, PLM, AVM).
+
+        Returns
+        -------
+        bool
+            True if agent is at x=0, x=grid_size-1, y=0, or y=grid_size-1.
+        """
+        x, y = self.agent_pos
+        return x == 0 or x == self.grid_size - 1 or y == 0 or y == self.grid_size - 1
+
+    def is_agent_in_predator_contact(self) -> bool:
+        """
+        Check if agent is in physical contact with a predator.
+
+        Mechanosensation: Detects harsh touch from predator contact,
+        modeled after C. elegans harsh touch response (ASH, ADL neurons).
+
+        This uses kill_radius for non-health environments and damage_radius
+        for health-enabled environments to determine physical contact.
+
+        Returns
+        -------
+        bool
+            True if agent is within contact radius of any predator.
+        """
+        if not self.predator.enabled:
+            return False
+
+        # Use damage_radius if health system enabled, otherwise kill_radius
+        if self.health.enabled:
+            return self.is_agent_in_damage_radius()
+        return self.check_predator_collision()
 
     # --- Health methods ---
 

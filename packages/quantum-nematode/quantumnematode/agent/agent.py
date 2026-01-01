@@ -39,6 +39,9 @@ DEFAULT_PENALTY_PREDATOR_DEATH = 10.0
 DEFAULT_PENALTY_PREDATOR_PROXIMITY = 0.1
 DEFAULT_PENALTY_HEALTH_DAMAGE = 0.5  # Penalty when taking damage (per hit)
 DEFAULT_REWARD_HEALTH_GAIN = 0.1  # Reward when healing (per healing event)
+DEFAULT_PENALTY_BOUNDARY_COLLISION = (
+    0.0  # Penalty for touching grid boundary (disabled by default for backward compatibility)
+)
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -92,6 +95,10 @@ class RewardConfig(BaseModel):
     )
     reward_health_gain: float = (
         DEFAULT_REWARD_HEALTH_GAIN  # Reward when healing from food consumption
+    )
+    # Mechanosensation penalties
+    penalty_boundary_collision: float = (
+        DEFAULT_PENALTY_BOUNDARY_COLLISION  # Penalty per step touching grid boundary
     )
 
 
@@ -381,6 +388,20 @@ class QuantumNematodeAgent:
                 logger.error(error_message)
                 raise ValueError(error_message)
 
+        # Mechanosensation: detect physical contact with boundaries and predators
+        boundary_contact = None
+        predator_contact = None
+        health = None
+        max_health = None
+
+        if isinstance(self.env, DynamicForagingEnvironment):
+            boundary_contact = self.env.is_agent_at_boundary()
+            predator_contact = self.env.is_agent_in_predator_contact()
+            # Health state (if health system enabled)
+            if self.env.health.enabled:
+                health = self.env.agent_hp
+                max_health = self.env.health.max_hp
+
         return BrainParams(
             # Combined gradients
             gradient_strength=gradient_strength,
@@ -392,6 +413,12 @@ class QuantumNematodeAgent:
             predator_gradient_direction=separated_grads.get("predator_gradient_direction"),
             # Internal state (hunger)
             satiety=self.current_satiety,
+            # Health state
+            health=health,
+            max_health=max_health,
+            # Mechanosensation (physical contact)
+            boundary_contact=boundary_contact,
+            predator_contact=predator_contact,
             # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
