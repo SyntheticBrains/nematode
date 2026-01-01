@@ -181,7 +181,7 @@ class Predator:
         Stationary predators typically have larger damage_radius (toxic zones).
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         position: tuple[int, int],
         predator_type: PredatorType = PredatorType.RANDOM,
@@ -1037,22 +1037,29 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return True
 
     def _initialize_predators(self) -> None:
-        """Initialize predators at random positions outside detection radius of agent."""
+        """Initialize predators at random positions outside damage radius of agent."""
         self.predators = []
+        # Use the larger of detection_radius or damage_radius as minimum spawn distance
+        # to ensure agent doesn't start in danger zone or immediately detected
+        min_spawn_distance = max(
+            self.predator.detection_radius,
+            self.predator.damage_radius,
+        )
         for _ in range(self.predator.count):
-            # Spawn predators outside detection radius to avoid immediate danger
+            # Spawn predators outside danger zone to avoid immediate damage
             candidate = (0, 0)  # Default position in case loop never runs
             for _ in range(MAX_POISSON_ATTEMPTS):
                 candidate = (
                     int(self.rng.integers(self.grid_size)),
                     int(self.rng.integers(self.grid_size)),
                 )
-                # Calculate Manhattan distance to agent
-                distance_to_agent = abs(candidate[0] - self.agent_pos[0]) + abs(
-                    candidate[1] - self.agent_pos[1],
+                # Calculate Euclidean distance to agent (consistent with Predator methods)
+                distance_to_agent = np.sqrt(
+                    (candidate[0] - self.agent_pos[0]) ** 2
+                    + (candidate[1] - self.agent_pos[1]) ** 2,
                 )
-                # Ensure predator spawns outside detection radius
-                if distance_to_agent > self.predator.detection_radius:
+                # Ensure predator spawns outside both detection and damage radius
+                if distance_to_agent > min_spawn_distance:
                     predator = Predator(
                         position=candidate,
                         predator_type=self.predator.predator_type,
@@ -1063,7 +1070,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     self.predators.append(predator)
                     logger.debug(
                         f"Initialized {self.predator.predator_type.value} predator "
-                        f"at {candidate} (distance to agent: {distance_to_agent})",
+                        f"at {candidate} (euclidean distance to agent: {distance_to_agent:.2f})",
                     )
                     break
             else:
