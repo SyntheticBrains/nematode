@@ -1476,6 +1476,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Move the agent based on its perspective.
 
         Overrides base class to track wall collisions for boundary penalty.
+        Distinguishes wall collisions from body collisions by checking
+        if the intended move would exceed grid bounds.
 
         Parameters
         ----------
@@ -1485,15 +1487,70 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Reset wall collision flag at start of each move
         self.wall_collision_occurred = False
 
-        # Store position before move to detect if wall collision occurred
-        pos_before = self.agent_pos
+        # Check if this action would result in a wall collision BEFORE calling parent
+        # This distinguishes wall collisions from body collisions
+        if action != Action.STAY:
+            self.wall_collision_occurred = self._would_hit_wall(action)
 
         # Call parent move_agent
         super().move_agent(action)
 
-        # If action wasn't STAY and position didn't change, it was a wall collision
-        if action != Action.STAY and self.agent_pos == pos_before:
-            self.wall_collision_occurred = True
+    def _would_hit_wall(self, action: Action) -> bool:
+        """
+        Check if the given action would cause a wall collision.
+
+        Parameters
+        ----------
+        action : Action
+            The action to check.
+
+        Returns
+        -------
+        bool
+            True if the action would cause a wall collision, False otherwise.
+        """
+        if action == Action.STAY:
+            return False
+
+        # Calculate intended direction based on current direction and action
+        direction_map = {
+            Direction.UP: {
+                Action.FORWARD: Direction.UP,
+                Action.LEFT: Direction.LEFT,
+                Action.RIGHT: Direction.RIGHT,
+            },
+            Direction.DOWN: {
+                Action.FORWARD: Direction.DOWN,
+                Action.LEFT: Direction.RIGHT,
+                Action.RIGHT: Direction.LEFT,
+            },
+            Direction.LEFT: {
+                Action.FORWARD: Direction.LEFT,
+                Action.LEFT: Direction.DOWN,
+                Action.RIGHT: Direction.UP,
+            },
+            Direction.RIGHT: {
+                Action.FORWARD: Direction.RIGHT,
+                Action.LEFT: Direction.UP,
+                Action.RIGHT: Direction.DOWN,
+            },
+        }
+
+        intended_direction = direction_map[self.current_direction][action]
+        x, y = self.agent_pos
+
+        # Check if moving in that direction would hit a wall
+        match intended_direction:
+            case Direction.UP:
+                return y >= self.grid_size - 1
+            case Direction.DOWN:
+                return y <= 0
+            case Direction.RIGHT:
+                return x >= self.grid_size - 1
+            case Direction.LEFT:
+                return x <= 0
+            case _:
+                return False
 
     def is_agent_at_boundary(self) -> bool:
         """

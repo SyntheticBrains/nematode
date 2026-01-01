@@ -2100,3 +2100,31 @@ class TestMechanosensation:
         env.move_agent(Action.STAY)
         assert env.wall_collision_occurred is False
         assert env.agent_pos == (0, 5)
+
+    def test_wall_collision_flag_not_set_on_body_collision(self):
+        """Test wall_collision_occurred is False when agent hits its own body.
+
+        This is the key distinction: body collisions should NOT trigger the
+        boundary penalty. Only wall collisions should.
+        """
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),  # Start in center
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            max_body_length=3,  # Long enough body to collide with
+        )
+
+        # Manually set up a body collision scenario
+        env.agent_pos = (5, 5)
+        env.body = [(4, 5), (3, 5)]  # Body to the left
+        env.current_direction = Direction.LEFT  # Facing left toward body
+
+        # Try to move forward into body at (4, 5)
+        pos_before = env.agent_pos
+        env.move_agent(Action.FORWARD)
+
+        # Position shouldn't change (body collision), but flag should be False
+        assert env.agent_pos == pos_before  # Didn't move due to body collision
+        assert env.wall_collision_occurred is False  # NOT a wall collision
