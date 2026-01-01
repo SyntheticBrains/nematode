@@ -1873,3 +1873,258 @@ class TestDamageRadius:
 
         for pred in env.predators:
             assert pred.damage_radius == 4
+
+
+class TestMechanosensation:
+    """Tests for mechanosensation (boundary and predator contact detection)."""
+
+    @pytest.fixture
+    def env(self):
+        """Create environment for mechanosensation testing."""
+        return DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+    def test_is_agent_at_boundary_center(self, env):
+        """Test agent at center is not at boundary."""
+        env.agent_pos = (10, 10)
+        assert env.is_agent_at_boundary() is False
+
+    def test_is_agent_at_boundary_left_edge(self, env):
+        """Test agent at left edge (x=0) is at boundary."""
+        env.agent_pos = (0, 10)
+        assert env.is_agent_at_boundary() is True
+
+    def test_is_agent_at_boundary_right_edge(self, env):
+        """Test agent at right edge (x=max) is at boundary."""
+        env.agent_pos = (19, 10)  # grid_size=20, so max is 19
+        assert env.is_agent_at_boundary() is True
+
+    def test_is_agent_at_boundary_top_edge(self, env):
+        """Test agent at top edge (y=max) is at boundary."""
+        env.agent_pos = (10, 19)
+        assert env.is_agent_at_boundary() is True
+
+    def test_is_agent_at_boundary_bottom_edge(self, env):
+        """Test agent at bottom edge (y=0) is at boundary."""
+        env.agent_pos = (10, 0)
+        assert env.is_agent_at_boundary() is True
+
+    def test_is_agent_at_boundary_corner(self, env):
+        """Test agent at corner is at boundary."""
+        env.agent_pos = (0, 0)
+        assert env.is_agent_at_boundary() is True
+
+        env.agent_pos = (19, 19)
+        assert env.is_agent_at_boundary() is True
+
+        env.agent_pos = (0, 19)
+        assert env.is_agent_at_boundary() is True
+
+        env.agent_pos = (19, 0)
+        assert env.is_agent_at_boundary() is True
+
+    def test_is_agent_at_boundary_one_off_edge(self, env):
+        """Test agent one cell from edge is not at boundary."""
+        env.agent_pos = (1, 10)
+        assert env.is_agent_at_boundary() is False
+
+        env.agent_pos = (18, 10)
+        assert env.is_agent_at_boundary() is False
+
+        env.agent_pos = (10, 1)
+        assert env.is_agent_at_boundary() is False
+
+        env.agent_pos = (10, 18)
+        assert env.is_agent_at_boundary() is False
+
+    def test_is_agent_in_predator_contact_no_predators(self, env):
+        """Test predator contact returns False when predators disabled."""
+        assert env.predator.enabled is False
+        assert env.is_agent_in_predator_contact() is False
+
+    def test_is_agent_in_predator_contact_with_health(self):
+        """Test predator contact uses damage radius when health system enabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(enabled=True, max_hp=100.0),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                damage_radius=2,
+            ),
+        )
+
+        # Place predator within damage radius
+        env.predators[0].position = (11, 10)  # 1 cell away, within damage_radius=2
+        assert env.is_agent_in_predator_contact() is True
+
+        # Place predator outside damage radius
+        env.predators[0].position = (13, 10)  # 3 cells away, outside damage_radius=2
+        assert env.is_agent_in_predator_contact() is False
+
+    def test_is_agent_in_predator_contact_without_health(self):
+        """Test predator contact uses kill radius when health system disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                kill_radius=1,
+            ),
+        )
+
+        # Place predator within kill radius
+        env.predators[0].position = (11, 10)  # 1 cell away, within kill_radius=1
+        assert env.is_agent_in_predator_contact() is True
+
+        # Place predator outside kill radius
+        env.predators[0].position = (12, 10)  # 2 cells away, outside kill_radius=1
+        assert env.is_agent_in_predator_contact() is False
+
+    def test_is_agent_in_predator_contact_exact_boundary(self):
+        """Test predator contact at exact radius boundary."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            health=HealthParams(enabled=True, max_hp=100.0),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                damage_radius=2,
+            ),
+        )
+
+        # Place predator exactly at damage radius boundary (2 cells away)
+        env.predators[0].position = (12, 10)  # Manhattan distance = 2 = damage_radius
+        assert env.is_agent_in_predator_contact() is True
+
+        # Place predator just outside damage radius (3 cells away)
+        env.predators[0].position = (13, 10)  # Manhattan distance = 3 > damage_radius
+        assert env.is_agent_in_predator_contact() is False
+
+    def test_wall_collision_flag_initialized_false(self, env):
+        """Test wall_collision_occurred starts as False."""
+        assert env.wall_collision_occurred is False
+
+    def test_wall_collision_flag_set_on_wall_hit(self):
+        """Test wall_collision_occurred is set when agent tries to move into wall."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(0, 5),  # Start at left edge
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # Agent faces UP by default, turn to face LEFT
+        env.current_direction = Direction.LEFT
+        assert env.agent_pos == (0, 5)
+        assert env.wall_collision_occurred is False
+
+        # Try to move forward (into left wall)
+        env.move_agent(Action.FORWARD)
+
+        # Position shouldn't change, collision flag should be set
+        assert env.agent_pos == (0, 5)
+        assert env.wall_collision_occurred is True
+
+    def test_wall_collision_flag_not_set_on_normal_move(self):
+        """Test wall_collision_occurred is False when move succeeds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),  # Start in center
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        assert env.wall_collision_occurred is False
+
+        # Move forward (should succeed, agent faces UP)
+        env.move_agent(Action.FORWARD)
+
+        # Position should change, collision flag should be False
+        assert env.agent_pos == (5, 6)
+        assert env.wall_collision_occurred is False
+
+    def test_wall_collision_flag_reset_each_move(self):
+        """Test wall_collision_occurred is reset at start of each move."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(0, 5),  # Start at left edge
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # Face left and try to move into wall
+        env.current_direction = Direction.LEFT
+        env.move_agent(Action.FORWARD)
+        assert env.wall_collision_occurred is True
+
+        # Turn and move successfully (face UP and move forward)
+        env.current_direction = Direction.UP
+        env.move_agent(Action.FORWARD)
+
+        # Flag should be reset to False
+        assert env.wall_collision_occurred is False
+        assert env.agent_pos == (0, 6)
+
+    def test_wall_collision_flag_not_set_on_stay(self):
+        """Test wall_collision_occurred is False when agent stays."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(0, 5),  # At left edge
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+        # STAY action shouldn't trigger wall collision
+        env.move_agent(Action.STAY)
+        assert env.wall_collision_occurred is False
+        assert env.agent_pos == (0, 5)
+
+    def test_wall_collision_flag_not_set_on_body_collision(self):
+        """Test wall_collision_occurred is False when agent hits its own body.
+
+        This is the key distinction: body collisions should NOT trigger the
+        boundary penalty. Only wall collisions should.
+        """
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),  # Start in center
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            max_body_length=3,  # Long enough body to collide with
+        )
+
+        # Manually set up a body collision scenario
+        env.agent_pos = (5, 5)
+        env.body = [(4, 5), (3, 5)]  # Body to the left
+        env.current_direction = Direction.LEFT  # Facing left toward body
+
+        # Try to move forward into body at (4, 5)
+        pos_before = env.agent_pos
+        env.move_agent(Action.FORWARD)
+
+        # Position shouldn't change (body collision), but flag should be False
+        assert env.agent_pos == pos_before  # Didn't move due to body collision
+        assert env.wall_collision_occurred is False  # NOT a wall collision

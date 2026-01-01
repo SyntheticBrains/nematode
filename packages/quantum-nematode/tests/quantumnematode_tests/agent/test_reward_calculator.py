@@ -82,6 +82,7 @@ class TestDynamicForagingRewards:
         env.visited_cells = set()
         env.predator = Mock()
         env.predator.enabled = False
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(default_config)
         path = [(3, 3), (2, 2)]  # Previous nearest was Manhattan=4, now=1
@@ -102,6 +103,7 @@ class TestDynamicForagingRewards:
         env.visited_cells = set()
         env.predator = Mock()
         env.predator.enabled = False
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -121,6 +123,7 @@ class TestDynamicForagingRewards:
         env.visited_cells = {(1, 2)}
         env.predator = Mock()
         env.predator.enabled = False
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -190,6 +193,7 @@ class TestPredatorProximityPenalty:
         env.predator = Mock()
         env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=True)  # Within detection radius
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(config)
         path = [(5, 5)]
@@ -214,6 +218,7 @@ class TestPredatorProximityPenalty:
         env.predator = Mock()
         env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=False)  # Outside detection radius
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(config)
         path = [(5, 5)]
@@ -237,6 +242,7 @@ class TestPredatorProximityPenalty:
         env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
         env.predator = Mock()
         env.predator.enabled = False  # Predators disabled
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(config)
         path = [(5, 5)]
@@ -261,6 +267,7 @@ class TestPredatorProximityPenalty:
         env.predator = Mock()
         env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=True)
+        env.wall_collision_occurred = False
 
         calculator = RewardCalculator(config)
         path = [(5, 5)]
@@ -320,3 +327,112 @@ class TestStuckPositionPenalty:
         # Stuck penalty: 0.02 * min(20-3, 10) = 0.02 * 10 = 0.20
         # Step penalty: 0.01
         assert reward == pytest.approx(-0.21)
+
+
+class TestBoundaryCollisionPenalty:
+    """Test boundary collision penalty.
+
+    Note: Boundary penalty is collision-based, not position-based.
+    Penalty applies when agent tries to move into a wall, not when at an edge cell.
+    This allows agents to collect food at edges without being penalized.
+    """
+
+    def test_boundary_collision_penalty_applied(self):
+        """Test penalty when agent collided with wall (tried to move into boundary)."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_boundary_collision=0.02,
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [0, 5]  # At left edge after failed move
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(0, 5)}  # Mark as visited
+        env.predator = Mock()
+        env.predator.enabled = False
+        env.wall_collision_occurred = True  # Tried to move into wall
+
+        calculator = RewardCalculator(config)
+        path = [(0, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Boundary penalty: -0.02, Step penalty: -0.01
+        assert reward == pytest.approx(-0.03)
+
+    def test_no_boundary_collision_penalty_when_no_collision(self):
+        """Test no penalty when agent didn't try to move into a wall."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_boundary_collision=0.02,
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [5, 5]  # In middle of grid
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(5, 5)}  # Mark as visited
+        env.predator = Mock()
+        env.predator.enabled = False
+        env.wall_collision_occurred = False  # No wall collision
+
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_no_penalty_at_edge_without_collision(self):
+        """Test no penalty when agent is at edge but didn't try to move into wall.
+
+        This is the key difference from position-based penalty: agent can be at
+        edge cell (e.g., collecting food) without being penalized.
+        """
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_boundary_collision=0.02,
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [0, 5]  # At left edge
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(0, 5)}  # Mark as visited
+        env.predator = Mock()
+        env.predator.enabled = False
+        env.wall_collision_occurred = False  # At edge but no collision attempt
+
+        calculator = RewardCalculator(config)
+        path = [(0, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01 (no boundary penalty despite being at edge)
+        assert reward == pytest.approx(-0.01)
+
+    def test_boundary_collision_penalty_zero_disabled(self):
+        """Test that zero boundary penalty effectively disables the feature."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_boundary_collision=0.0,  # Disabled
+        )
+
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = [0, 5]  # At left edge
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {(0, 5)}  # Mark as visited
+        env.predator = Mock()
+        env.predator.enabled = False
+        env.wall_collision_occurred = True  # Collision occurred but penalty is 0
+
+        calculator = RewardCalculator(config)
+        path = [(0, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01 (no boundary penalty)
+        assert reward == pytest.approx(-0.01)

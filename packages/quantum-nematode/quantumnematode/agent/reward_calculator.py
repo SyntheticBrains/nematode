@@ -112,6 +112,15 @@ class RewardCalculator:
                 f"[Penalty] Predator proximity penalty applied: {-proximity_penalty}",
             )
 
+        # Boundary collision penalty (mechanosensation - dynamic foraging only)
+        # Penalizes when agent attempts to move into a wall, not just for being at edge
+        if isinstance(env, DynamicForagingEnvironment) and env.wall_collision_occurred:
+            boundary_penalty = self.config.penalty_boundary_collision
+            reward -= boundary_penalty
+            logger.debug(
+                f"[Penalty] Boundary collision penalty applied: {-boundary_penalty}",
+            )
+
         # Stuck position penalty: penalize agent for staying in same position
         if (
             self.config.stuck_position_threshold > 0
