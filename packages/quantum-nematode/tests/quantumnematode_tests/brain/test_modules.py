@@ -12,6 +12,7 @@ from quantumnematode.brain.modules import (
     chemotaxis_features,
     count_total_qubits,
     extract_features_for_module,
+    mechanosensation_features,
     memory_action_features,
     oxygen_features,
     proprioception_features,
@@ -755,3 +756,132 @@ class TestAppetitiveAversiveValueRanges:
             )
             features = aversive_features(params)
             assert features[RotationAxis.RZ] == pytest.approx(0.0)
+
+
+class TestMechanosensationFeatures:
+    """Test mechanosensation (touch/contact) feature extraction.
+
+    Modeled after C. elegans touch response neurons:
+    - ALM, PLM, AVM: Gentle touch neurons (boundary contact)
+    - ASH, ADL: Harsh touch / nociception neurons (predator contact)
+    """
+
+    def test_no_contact(self):
+        """Test mechanosensation features when no contact detected."""
+        params = BrainParams(
+            boundary_contact=False,
+            predator_contact=False,
+        )
+        features = mechanosensation_features(params)
+
+        assert features[RotationAxis.RX] == 0.0
+        assert features[RotationAxis.RY] == 0.0
+        assert features[RotationAxis.RZ] == 0.0
+
+    def test_boundary_contact_only(self):
+        """Test mechanosensation features when only boundary contact detected."""
+        params = BrainParams(
+            boundary_contact=True,
+            predator_contact=False,
+        )
+        features = mechanosensation_features(params)
+
+        # RX encodes boundary contact (gentle touch)
+        assert features[RotationAxis.RX] == pytest.approx(np.pi / 2)
+        # RY encodes predator contact (harsh touch)
+        assert features[RotationAxis.RY] == 0.0
+        # RZ encodes combined urgency (max of both)
+        assert features[RotationAxis.RZ] == pytest.approx(np.pi / 2)
+
+    def test_predator_contact_only(self):
+        """Test mechanosensation features when only predator contact detected."""
+        params = BrainParams(
+            boundary_contact=False,
+            predator_contact=True,
+        )
+        features = mechanosensation_features(params)
+
+        # RX encodes boundary contact (gentle touch)
+        assert features[RotationAxis.RX] == 0.0
+        # RY encodes predator contact (harsh touch)
+        assert features[RotationAxis.RY] == pytest.approx(np.pi / 2)
+        # RZ encodes combined urgency (max of both)
+        assert features[RotationAxis.RZ] == pytest.approx(np.pi / 2)
+
+    def test_both_contacts(self):
+        """Test mechanosensation features when both contacts detected."""
+        params = BrainParams(
+            boundary_contact=True,
+            predator_contact=True,
+        )
+        features = mechanosensation_features(params)
+
+        # Both RX and RY should be active
+        assert features[RotationAxis.RX] == pytest.approx(np.pi / 2)
+        assert features[RotationAxis.RY] == pytest.approx(np.pi / 2)
+        # RZ encodes combined urgency (max of both, which is still π/2)
+        assert features[RotationAxis.RZ] == pytest.approx(np.pi / 2)
+
+    def test_none_values_treated_as_no_contact(self):
+        """Test that None values are treated as no contact."""
+        params = BrainParams(
+            boundary_contact=None,
+            predator_contact=None,
+        )
+        features = mechanosensation_features(params)
+
+        assert features[RotationAxis.RX] == 0.0
+        assert features[RotationAxis.RY] == 0.0
+        assert features[RotationAxis.RZ] == 0.0
+
+    def test_mechanosensation_deterministic(self):
+        """Test that mechanosensation features are deterministic."""
+        params = BrainParams(
+            boundary_contact=True,
+            predator_contact=False,
+        )
+        features1 = mechanosensation_features(params)
+        features2 = mechanosensation_features(params)
+
+        assert features1 == features2
+
+    def test_mechanosensation_in_module_name_enum(self):
+        """Test that MECHANOSENSATION is in ModuleName enum."""
+        assert ModuleName.MECHANOSENSATION.value == "mechanosensation"
+
+    def test_mechanosensation_in_feature_extractors(self):
+        """Test that mechanosensation has a feature extractor registered."""
+        assert ModuleName.MECHANOSENSATION in MODULE_FEATURE_EXTRACTORS
+        assert MODULE_FEATURE_EXTRACTORS[ModuleName.MECHANOSENSATION] == mechanosensation_features
+
+    def test_extract_features_for_mechanosensation(self):
+        """Test extract_features_for_module with mechanosensation."""
+        params = BrainParams(
+            boundary_contact=True,
+            predator_contact=False,
+        )
+        features = extract_features_for_module(ModuleName.MECHANOSENSATION, params)
+
+        # Should return dict with string keys
+        assert "rx" in features
+        assert "ry" in features
+        assert "rz" in features
+        assert features["rx"] == pytest.approx(np.pi / 2)
+        assert features["ry"] == 0.0
+        assert features["rz"] == pytest.approx(np.pi / 2)
+
+    def test_feature_values_bounded(self):
+        """Test that mechanosensation features stay within quantum gate bounds."""
+        # Test all combinations of contact states
+        for boundary in [True, False, None]:
+            for predator in [True, False, None]:
+                params = BrainParams(
+                    boundary_contact=boundary,
+                    predator_contact=predator,
+                )
+                features = mechanosensation_features(params)
+
+                # All values should be in [0, π/2] (non-negative aversive signals)
+                assert 0.0 <= features[RotationAxis.RX] <= np.pi / 2
+                assert 0.0 <= features[RotationAxis.RY] <= np.pi / 2
+                assert 0.0 <= features[RotationAxis.RZ] <= np.pi / 2
