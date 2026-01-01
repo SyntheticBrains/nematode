@@ -276,14 +276,23 @@ class TestModuleName:
 
     def test_module_names(self):
         """Test that all module names have correct values."""
+        # Core modules
         assert ModuleName.PROPRIOCEPTION.value == "proprioception"
         assert ModuleName.CHEMOTAXIS.value == "chemotaxis"
         assert ModuleName.THERMOTAXIS.value == "thermotaxis"
-        assert ModuleName.OXYGEN.value == "oxygen"
         assert ModuleName.VISION.value == "vision"
         assert ModuleName.ACTION.value == "action"
+        assert ModuleName.MECHANOSENSATION.value == "mechanosensation"
+
+        # Scientific names (preferred)
+        assert ModuleName.FOOD_CHEMOTAXIS.value == "food_chemotaxis"
+        assert ModuleName.NOCICEPTION.value == "nociception"
+        assert ModuleName.AEROTAXIS.value == "aerotaxis"
+
+        # Legacy names (deprecated, kept for backward compatibility)
         assert ModuleName.APPETITIVE.value == "appetitive"
         assert ModuleName.AVERSIVE.value == "aversive"
+        assert ModuleName.OXYGEN.value == "oxygen"
 
     def test_all_modules_have_extractors(self):
         """Test that all module names have corresponding feature extractors."""

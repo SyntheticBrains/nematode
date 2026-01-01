@@ -165,23 +165,24 @@ ______________________________________________________________________
 
 ### 5.2 Module Renaming
 
-- [ ] Rename `appetitive_features` to `food_chemotaxis_features`
-- [ ] Rename `aversive_features` to `nociception_features`
-- [ ] Add neuron references to all module docstrings:
-  - chemotaxis: ASE neurons
-  - food_chemotaxis: AWC, AWA neurons
-  - nociception: ASH, ADL neurons
-  - thermotaxis: AFD neurons
-  - aerotaxis: URX, BAG neurons
-  - mechanosensation: ALM, PLM, AVM neurons
-- [ ] Update MODULE_FEATURE_EXTRACTORS dict
-- [ ] Update ModuleName enum
+- [x] Rename `appetitive_features` to `food_chemotaxis_features`
+- [x] Rename `aversive_features` to `nociception_features`
+- [x] Add neuron references to all module docstrings:
+  - chemotaxis: ASE neurons ✅
+  - food_chemotaxis: AWC, AWA neurons ✅
+  - nociception: ASH, ADL neurons ✅
+  - thermotaxis: AFD neurons ✅
+  - aerotaxis: URX, BAG neurons ✅
+  - mechanosensation: ALM, PLM, AVM neurons ✅
+- [x] Update MODULE_FEATURE_EXTRACTORS dict
+- [x] Update ModuleName enum
+- [x] Add backward compatibility aliases (appetitive→food_chemotaxis, aversive→nociception, oxygen→aerotaxis)
 
 ### 5.3 Integration with Brains
 
-- [ ] Update ModularBrain to use unified extraction (convert to RX/RY/RZ)
-- [ ] Update PPOBrain to use unified extraction (concatenate to input)
-- [ ] Ensure backward compatibility with existing configs
+- [x] ModularBrain already uses unified extraction via `extract_features_for_module()`
+- [ ] Update PPOBrain to optionally use unified extraction (concatenate to input) *(optional enhancement)*
+- [x] Ensure backward compatibility with existing configs (legacy module names still work)
 
 **Validation**: Both brain types can consume new sensory features
 
