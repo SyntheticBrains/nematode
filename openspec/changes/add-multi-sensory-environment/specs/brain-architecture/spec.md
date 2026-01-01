@@ -158,7 +158,7 @@ The RewardConfig class SHALL include configurable weights for multi-objective re
 - **GIVEN** a RewardConfig
 - **WHEN** reward parameters are specified
 - **THEN** the following field SHALL be configurable:
-  - `penalty_boundary_collision: float` - Penalty for hitting grid boundary (default 0.02)
+  - `penalty_boundary_collision: float` - Penalty for hitting grid boundary (code default 0.0 for backward compatibility; example configs use 0.02)
 
 ### Requirement: Multi-Objective Evaluation Metrics
 
