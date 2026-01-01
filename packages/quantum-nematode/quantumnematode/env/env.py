@@ -982,6 +982,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Track visited cells for exploration bonus
         self.visited_cells: set[tuple[int, int]] = {(self.agent_pos[0], self.agent_pos[1])}
 
+        # Track wall collision for boundary penalty (reset each step)
+        self.wall_collision_occurred: bool = False
+
     def _initialize_foods(self) -> None:
         """Initialize food sources using Poisson disk sampling."""
         self.foods = []
@@ -1467,6 +1470,30 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return False
 
     # --- Mechanosensation methods ---
+
+    def move_agent(self, action: Action) -> None:
+        """
+        Move the agent based on its perspective.
+
+        Overrides base class to track wall collisions for boundary penalty.
+
+        Parameters
+        ----------
+        action : Action
+            The action to take.
+        """
+        # Reset wall collision flag at start of each move
+        self.wall_collision_occurred = False
+
+        # Store position before move to detect if wall collision occurred
+        pos_before = self.agent_pos
+
+        # Call parent move_agent
+        super().move_agent(action)
+
+        # If action wasn't STAY and position didn't change, it was a wall collision
+        if action != Action.STAY and self.agent_pos == pos_before:
+            self.wall_collision_occurred = True
 
     def is_agent_at_boundary(self) -> bool:
         """
