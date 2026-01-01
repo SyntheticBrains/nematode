@@ -86,6 +86,7 @@ def extract_environment_metadata(
             if env.predator.enabled
             else None,
             predator_kill_radius=env.predator.kill_radius if env.predator.enabled else None,
+            predator_damage_radius=env.predator.damage_radius if env.predator.enabled else None,
             predator_gradient_decay=env.predator.gradient_decay_constant
             if env.predator.enabled
             else None,

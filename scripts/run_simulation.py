@@ -389,7 +389,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             predator_info = (
                 f", {predator_config.count} predators "
                 f"(detection_radius={predator_config.detection_radius}, "
-                f"kill_radius={predator_config.kill_radius})"
+                f"kill_radius={predator_config.kill_radius}, "
+                f"damage_radius={predator_config.damage_radius})"
             )
         health_info = ""
         if health_config.enabled:

@@ -39,7 +39,11 @@ class ThemeSymbolSet(BaseModel):
     empty : str
         Symbol for an empty cell.
     predator : str
-        Symbol representing a predator.
+        Symbol representing a predator (default/random type).
+    predator_stationary : str
+        Symbol for stationary predators (toxic zones).
+    predator_pursuit : str
+        Symbol for pursuit predators (actively chase agent).
     """
 
     goal: str
@@ -50,6 +54,8 @@ class ThemeSymbolSet(BaseModel):
     right: str
     empty: str
     predator: str
+    predator_stationary: str
+    predator_pursuit: str
 
 
 class DarkColorRichStyleConfig(BaseModel):
@@ -86,6 +92,8 @@ THEME_SYMBOLS = {
         right=">",
         empty=".",
         predator="#",
+        predator_stationary="X",
+        predator_pursuit="@",
     ),
     Theme.EMOJI: ThemeSymbolSet(
         goal="🦠",
@@ -96,6 +104,8 @@ THEME_SYMBOLS = {
         right="▶️ ",
         empty="⬜️",
         predator="🕷️ ",
+        predator_stationary="☠️ ",
+        predator_pursuit="🦂",
     ),
     Theme.UNICODE: ThemeSymbolSet(
         goal="◆",
@@ -106,6 +116,8 @@ THEME_SYMBOLS = {
         right="→",
         empty="·",
         predator="#",
+        predator_stationary="⊗",
+        predator_pursuit="⊛",
     ),
     Theme.COLORED_ASCII: ThemeSymbolSet(
         goal="\033[91m*\033[0m",
@@ -116,6 +128,8 @@ THEME_SYMBOLS = {
         right="\033[92m>\033[0m",
         empty="\033[90m.\033[0m",
         predator="\033[91m#\033[0m",
+        predator_stationary="\033[95mX\033[0m",
+        predator_pursuit="\033[93m@\033[0m",
     ),
     Theme.RICH: ThemeSymbolSet(
         goal="⬢",
@@ -126,6 +140,8 @@ THEME_SYMBOLS = {
         right="▶",
         empty="·",
         predator="#",
+        predator_stationary="⊗",
+        predator_pursuit="⊛",
     ),
     Theme.EMOJI_RICH: ThemeSymbolSet(
         goal=" 🦠",
@@ -136,5 +152,7 @@ THEME_SYMBOLS = {
         right="▶️",
         empty=" ",
         predator=" 🕷️",
+        predator_stationary=" ☠️",
+        predator_pursuit="🦂",
     ),
 }

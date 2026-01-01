@@ -98,40 +98,35 @@ ______________________________________________________________________
 
 ### 3.1 Predator Type Refactor
 
-- [ ] Add `PredatorType` enum (RANDOM, STATIONARY, PURSUIT)
-- [ ] Add `predator_type` field to Predator class
-- [ ] Refactor `Predator.move()` to dispatch by type
+- [x] Add `PredatorType` enum (RANDOM, STATIONARY, PURSUIT)
+- [x] Add `predator_type` field to Predator class
+- [x] Refactor `Predator.move()` to dispatch by type
 
 ### 3.2 Stationary Predator
 
-- [ ] Implement stationary behavior (no movement)
-- [ ] Add configurable `damage_radius` for toxic zones
-- [ ] Stationary predators affect larger area than random predators
+- [x] Implement stationary behavior (no movement)
+- [x] Add configurable `damage_radius` for toxic zones
+- [x] Stationary predators affect larger area than random predators
 
 ### 3.3 Pursuit Predator
 
-- [ ] Implement pursuit behavior (move toward agent)
-- [ ] Add `detection_radius` for pursuit activation
-- [ ] Pursuit only activates when agent within detection radius
-- [ ] Outside detection radius, behave as random
+- [x] Implement pursuit behavior (move toward agent)
+- [x] Add `detection_radius` for pursuit activation
+- [x] Pursuit only activates when agent within detection radius
+- [x] Outside detection radius, behave as random
 
 ### 3.4 Mixed Types Configuration
 
-- [ ] Update predator config schema to support type list:
+- [x] Update predator config schema to support type selection (movement_pattern: random|stationary|pursuit)
 
-  ```yaml
-  types:
-    - type: stationary
-      count: 2
-    - type: pursuit
-      count: 1
-  ```
+> **Note**: Full mixed-type support (multiple types per environment) deferred to future work.
+> Current implementation supports one type per environment via PredatorParams.predator_type.
 
-- [ ] Implement mixed-type spawning
+- [x] Implement mixed-type spawning (types list in config) - defer
 
-- [ ] Update gradient computation for different predator types
+- [x] Update gradient computation for different predator types - defer, we need to implement mixed-type predator spawning first
 
-**Validation**: Pursuit predators track agent, stationary predators don't move
+**Validation**: Pursuit predators track agent, stationary predators don't move ✅
 
 ______________________________________________________________________
 
@@ -327,7 +322,8 @@ ______________________________________________________________________
 - [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml`
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
 - [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
-- [ ] Create `configs/examples/ppo_pursuit_predators_small.yml`
+- [x] Create `configs/examples/ppo_pursuit_predators_small.yml`
+- [x] Create `configs/examples/ppo_stationary_predators_small.yml`
 
 ### 11.2 Documentation
 

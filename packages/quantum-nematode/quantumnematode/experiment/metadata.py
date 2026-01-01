@@ -122,6 +122,8 @@ class EnvironmentMetadata(BaseModel):
         Predator detection radius (predator environments only).
     predator_kill_radius : int | None
         Predator kill radius (predator environments only).
+    predator_damage_radius : int | None
+        Predator damage radius for HP damage (predator environments with health system only).
     predator_gradient_decay : float | None
         Predator gradient decay constant (predator environments only).
     predator_gradient_strength : float | None
@@ -140,6 +142,7 @@ class EnvironmentMetadata(BaseModel):
     predator_speed: float | None = None
     predator_detection_radius: int | None = None
     predator_kill_radius: int | None = None
+    predator_damage_radius: int | None = None
     predator_gradient_decay: float | None = None
     predator_gradient_strength: float | None = None
 

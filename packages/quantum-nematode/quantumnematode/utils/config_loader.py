@@ -1,9 +1,10 @@
 """Load and configure simulation settings from a YAML file."""
 
 from pathlib import Path
+from typing import Literal
 
 import yaml
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -19,7 +20,12 @@ from quantumnematode.brain.arch import (
     SpikingBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
-from quantumnematode.env.env import ForagingParams, HealthParams, PredatorParams
+from quantumnematode.env.env import (
+    ForagingParams,
+    HealthParams,
+    PredatorParams,
+    PredatorType,
+)
 from quantumnematode.initializers import (
     ManualParameterInitializer,
     RandomPiUniformInitializer,
@@ -64,6 +70,9 @@ BrainConfigType = (
     | QModularBrainConfig
     | SpikingBrainConfig
 )
+
+# Type alias for predator movement patterns
+MovementPattern = Literal["random", "stationary", "pursuit"]
 
 
 class BrainContainerConfig(BaseModel):
@@ -145,42 +154,62 @@ class ForagingConfig(BaseModel):
 
 
 class PredatorConfig(BaseModel):
-    """Configuration for predator mechanics in dynamic environment."""
+    """Configuration for predator mechanics in dynamic environment.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether predators are active in the environment.
+    count : int
+        Number of predators to spawn.
+    speed : float
+        Movement speed relative to agent.
+    movement_pattern : MovementPattern
+        Movement behavior: "random", "stationary", or "pursuit".
+    detection_radius : int
+        Distance at which pursuit predators detect the agent.
+    kill_radius : int
+        Distance for instant death (when health system disabled).
+    damage_radius : int
+        Distance at which predators deal damage (when health system enabled).
+        Stationary predators typically have larger damage_radius (toxic zones).
+    gradient_decay_constant : float
+        Controls how quickly predator gradient signal decays with distance.
+    gradient_strength : float
+        Multiplier for predator gradient signal strength.
+    """
 
     enabled: bool = False
     count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
     speed: float = 1.0  # Maps to DynamicForagingEnvironment.predator_speed
-    movement_pattern: str = "random"  # Only 'random' is currently supported
+    movement_pattern: MovementPattern = "random"
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
     kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
+    damage_radius: int = 0  # Distance for damage application (health system)
     # Maps to DynamicForagingEnvironment.predator_gradient_decay
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
     gradient_strength: float = 1.0
 
-    @field_validator("movement_pattern")
-    @classmethod
-    def validate_movement_pattern(cls, v: str) -> str:
-        """Validate movement pattern is supported."""
-        valid_patterns = ["random"]
-        if v not in valid_patterns:
-            msg = (
-                f"Invalid movement_pattern: '{v}'. "
-                f"Currently only 'random' is supported. "
-                f"Future patterns (e.g., 'pursuit', 'patrol') are planned but not yet implemented."
-            )
-            raise ValueError(msg)
-        return v
-
     def to_params(self) -> PredatorParams:
         """Convert to PredatorParams for environment initialization."""
+        # Map movement_pattern string to PredatorType enum
+        pattern_to_type = {
+            "random": PredatorType.RANDOM,
+            "stationary": PredatorType.STATIONARY,
+            "pursuit": PredatorType.PURSUIT,
+        }
+        predator_type = pattern_to_type[self.movement_pattern]
+
         return PredatorParams(
             enabled=self.enabled,
             count=self.count,
+            predator_type=predator_type,
             speed=self.speed,
             detection_radius=self.detection_radius,
             kill_radius=self.kill_radius,
+            damage_radius=self.damage_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
         )
