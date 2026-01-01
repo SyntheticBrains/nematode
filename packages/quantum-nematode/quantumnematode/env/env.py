@@ -11,6 +11,7 @@ The environment provides methods to get the current state, move the agent,
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import ClassVar
 
 import numpy as np
 from pydantic.dataclasses import dataclass
@@ -379,6 +380,31 @@ class BaseEnvironment(ABC):
         Seeded random number generator for all random operations.
     """
 
+    # Maps current direction + action to resulting direction
+    # Used for relative movement (FORWARD/LEFT/RIGHT from agent's perspective)
+    DIRECTION_MAP: ClassVar[dict[Direction, dict[Action, Direction]]] = {
+        Direction.UP: {
+            Action.FORWARD: Direction.UP,
+            Action.LEFT: Direction.LEFT,
+            Action.RIGHT: Direction.RIGHT,
+        },
+        Direction.DOWN: {
+            Action.FORWARD: Direction.DOWN,
+            Action.LEFT: Direction.RIGHT,
+            Action.RIGHT: Direction.LEFT,
+        },
+        Direction.LEFT: {
+            Action.FORWARD: Direction.LEFT,
+            Action.LEFT: Direction.DOWN,
+            Action.RIGHT: Direction.UP,
+        },
+        Direction.RIGHT: {
+            Action.FORWARD: Direction.RIGHT,
+            Action.LEFT: Direction.UP,
+            Action.RIGHT: Direction.DOWN,
+        },
+    }
+
     def __init__(  # noqa: PLR0913
         self,
         grid_size: int,
@@ -505,32 +531,8 @@ class BaseEnvironment(ABC):
             logger.debug("Action is stay: staying in place.")
             return
 
-        # Define direction mappings
-        direction_map = {
-            Direction.UP: {
-                Action.FORWARD: Direction.UP,
-                Action.LEFT: Direction.LEFT,
-                Action.RIGHT: Direction.RIGHT,
-            },
-            Direction.DOWN: {
-                Action.FORWARD: Direction.DOWN,
-                Action.LEFT: Direction.RIGHT,
-                Action.RIGHT: Direction.LEFT,
-            },
-            Direction.LEFT: {
-                Action.FORWARD: Direction.LEFT,
-                Action.LEFT: Direction.DOWN,
-                Action.RIGHT: Direction.UP,
-            },
-            Direction.RIGHT: {
-                Action.FORWARD: Direction.RIGHT,
-                Action.LEFT: Direction.UP,
-                Action.RIGHT: Direction.DOWN,
-            },
-        }
-
         previous_direction = self.current_direction
-        new_direction = direction_map[self.current_direction][action]
+        new_direction = self.DIRECTION_MAP[self.current_direction][action]
         self.current_direction = new_direction
 
         # Calculate the new position based on the new direction
@@ -1512,31 +1514,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if action == Action.STAY:
             return False
 
-        # Calculate intended direction based on current direction and action
-        direction_map = {
-            Direction.UP: {
-                Action.FORWARD: Direction.UP,
-                Action.LEFT: Direction.LEFT,
-                Action.RIGHT: Direction.RIGHT,
-            },
-            Direction.DOWN: {
-                Action.FORWARD: Direction.DOWN,
-                Action.LEFT: Direction.RIGHT,
-                Action.RIGHT: Direction.LEFT,
-            },
-            Direction.LEFT: {
-                Action.FORWARD: Direction.LEFT,
-                Action.LEFT: Direction.DOWN,
-                Action.RIGHT: Direction.UP,
-            },
-            Direction.RIGHT: {
-                Action.FORWARD: Direction.RIGHT,
-                Action.LEFT: Direction.UP,
-                Action.RIGHT: Direction.DOWN,
-            },
-        }
-
-        intended_direction = direction_map[self.current_direction][action]
+        intended_direction = self.DIRECTION_MAP[self.current_direction][action]
         x, y = self.agent_pos
 
         # Check if moving in that direction would hit a wall
