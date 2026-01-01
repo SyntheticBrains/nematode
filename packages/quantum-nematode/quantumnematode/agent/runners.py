@@ -309,9 +309,14 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Track danger status at start of step (before any movement)
                 was_in_danger_at_step_start = agent._episode_tracker.in_danger
 
-                # Check for predator collision BEFORE predators move
-                if agent.env.check_predator_collision():
-                    # Health: apply damage instead of instant death
+                # Check for predator collision/damage BEFORE predators move
+                # Use damage_radius for health system, kill_radius for instant death
+                predator_contact = (
+                    agent.env.is_agent_in_damage_radius()
+                    if agent.env.health.enabled
+                    else agent.env.check_predator_collision()
+                )
+                if predator_contact:
                     if agent.env.health.enabled:
                         damage = agent.env.apply_predator_damage()
                         logger.info(
@@ -402,10 +407,15 @@ class StandardEpisodeRunner(EpisodeRunner):
 
                 agent._episode_tracker.in_danger = is_in_danger_at_step_end
 
-                # Check for predator collision AFTER predators move
+                # Check for predator collision/damage AFTER predators move
                 # (predator may step onto agent's position)
-                if agent.env.check_predator_collision():
-                    # Health: apply damage instead of instant death
+                # Use damage_radius for health system, kill_radius for instant death
+                predator_contact_after = (
+                    agent.env.is_agent_in_damage_radius()
+                    if agent.env.health.enabled
+                    else agent.env.check_predator_collision()
+                )
+                if predator_contact_after:
                     if agent.env.health.enabled:
                         damage = agent.env.apply_predator_damage()
                         logger.info(

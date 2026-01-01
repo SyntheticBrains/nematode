@@ -154,7 +154,30 @@ class ForagingConfig(BaseModel):
 
 
 class PredatorConfig(BaseModel):
-    """Configuration for predator mechanics in dynamic environment."""
+    """Configuration for predator mechanics in dynamic environment.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether predators are active in the environment.
+    count : int
+        Number of predators to spawn.
+    speed : float
+        Movement speed relative to agent.
+    movement_pattern : MovementPattern
+        Movement behavior: "random", "stationary", or "pursuit".
+    detection_radius : int
+        Distance at which pursuit predators detect the agent.
+    kill_radius : int
+        Distance for instant death (when health system disabled).
+    damage_radius : int
+        Distance at which predators deal damage (when health system enabled).
+        Stationary predators typically have larger damage_radius (toxic zones).
+    gradient_decay_constant : float
+        Controls how quickly predator gradient signal decays with distance.
+    gradient_strength : float
+        Multiplier for predator gradient signal strength.
+    """
 
     enabled: bool = False
     count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
@@ -163,6 +186,7 @@ class PredatorConfig(BaseModel):
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
     kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
+    damage_radius: int = 1  # Distance for damage application (health system)
     # Maps to DynamicForagingEnvironment.predator_gradient_decay
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
@@ -185,6 +209,7 @@ class PredatorConfig(BaseModel):
             speed=self.speed,
             detection_radius=self.detection_radius,
             kill_radius=self.kill_radius,
+            damage_radius=self.damage_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
         )

@@ -107,6 +107,28 @@ class PredatorParams:
 
     TODO: Freeze this class once the following Pylance issue is resolved:
     https://github.com/microsoft/pylance-release/issues/7801
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether predators are active in the environment.
+    count : int
+        Number of predators to spawn.
+    predator_type : PredatorType
+        Movement behavior type (RANDOM, STATIONARY, or PURSUIT).
+    speed : float
+        Movement speed relative to agent.
+    detection_radius : int
+        Distance at which pursuit predators detect the agent.
+    kill_radius : int
+        Distance for instant death (when health system disabled).
+    damage_radius : int
+        Distance at which predators deal damage (when health system enabled).
+        Stationary predators typically have larger damage_radius (toxic zones).
+    gradient_decay_constant : float
+        Controls how quickly predator gradient signal decays with distance.
+    gradient_strength : float
+        Multiplier for predator gradient signal strength.
     """
 
     enabled: bool = False
@@ -115,6 +137,7 @@ class PredatorParams:
     speed: float = 1.0
     detection_radius: int = 8
     kill_radius: int = 0
+    damage_radius: int = 1
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
 
@@ -153,6 +176,9 @@ class Predator:
     detection_radius : int
         Distance at which pursuit predators detect and chase the agent.
         Only used for PURSUIT type predators.
+    damage_radius : int
+        Distance at which this predator deals damage (when health system enabled).
+        Stationary predators typically have larger damage_radius (toxic zones).
     """
 
     def __init__(
@@ -162,6 +188,7 @@ class Predator:
         speed: float = 1.0,
         movement_accumulator: float = 0.0,
         detection_radius: int = 8,
+        damage_radius: int = 1,
     ) -> None:
         """
         Initialize a predator.
@@ -178,12 +205,15 @@ class Predator:
             Initial movement accumulator (default 0.0).
         detection_radius : int
             Detection radius for pursuit predators (default 8).
+        damage_radius : int
+            Distance at which this predator deals damage (default 1).
         """
         self.position = position
         self.predator_type = predator_type
         self.speed = speed
         self.movement_accumulator = movement_accumulator
         self.detection_radius = detection_radius
+        self.damage_radius = damage_radius
 
     def update_position(
         self,
@@ -1028,6 +1058,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                         predator_type=self.predator.predator_type,
                         speed=self.predator.speed,
                         detection_radius=self.predator.detection_radius,
+                        damage_radius=self.predator.damage_radius,
                     )
                     self.predators.append(predator)
                     logger.debug(
@@ -1048,6 +1079,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     predator_type=self.predator.predator_type,
                     speed=self.predator.speed,
                     detection_radius=self.predator.detection_radius,
+                    damage_radius=self.predator.damage_radius,
                 )
                 self.predators.append(predator)
 
@@ -1398,6 +1430,35 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 return True
         return False
 
+    def is_agent_in_damage_radius(self) -> bool:
+        """
+        Check if agent is within damage radius of any predator.
+
+        Uses per-predator damage_radius which may vary by predator type.
+        Stationary predators typically have larger damage_radius (toxic zones).
+
+        Returns
+        -------
+        bool
+            True if within damage radius of any predator, False otherwise.
+        """
+        if not self.predator.enabled:
+            return False
+
+        agent_pos = self.agent_pos
+        for pred in self.predators:
+            # Manhattan distance for damage radius (per-predator)
+            distance = abs(agent_pos[0] - pred.position[0]) + abs(
+                agent_pos[1] - pred.position[1],
+            )
+            if distance <= pred.damage_radius:
+                logger.debug(
+                    f"Agent in damage radius of {pred.predator_type.value} predator "
+                    f"at {pred.position} (distance: {distance}, radius: {pred.damage_radius})",
+                )
+                return True
+        return False
+
     # --- Health methods ---
 
     def apply_predator_damage(self) -> float:
@@ -1605,6 +1666,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     speed=p.speed,
                     movement_accumulator=p.movement_accumulator,
                     detection_radius=p.detection_radius,
+                    damage_radius=p.damage_radius,
                 )
                 for p in self.predators
             ]
