@@ -160,7 +160,11 @@ def _food_chemotaxis_core(params: BrainParams) -> CoreFeatures:
 def _nociception_core(params: BrainParams) -> CoreFeatures:
     """Extract nociception features from separated predator gradient.
 
-    Note: predator_gradient_direction points AWAY from predators (escape direction).
+    Semantics (consistent with food_chemotaxis):
+    - strength: [0, 1] where higher = closer predator danger
+    - angle: [-1, 1] where 0 = predator is directly ahead
+
+    The brain should learn: high strength + angle near 0 = danger ahead, turn away!
     """
     strength = float(params.predator_gradient_strength or 0.0)
     angle = _compute_relative_angle(
