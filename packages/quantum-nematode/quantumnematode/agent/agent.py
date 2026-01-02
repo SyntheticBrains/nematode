@@ -497,6 +497,12 @@ class QuantumNematodeAgent:
                 if self.env.predator.enabled:
                     danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
                     print(f"Status:\t\t{danger_status}")  # noqa: T201
+                # Display temperature if thermotaxis is enabled
+                if self.env.thermotaxis.enabled:
+                    temperature = self.env.get_temperature()
+                    zone = self.env.get_temperature_zone()
+                    zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
+                    print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
 
     def calculate_reward(
         self,
