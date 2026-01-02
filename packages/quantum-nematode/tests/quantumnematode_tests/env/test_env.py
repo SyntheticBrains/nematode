@@ -2142,8 +2142,8 @@ class TestThermotaxisIntegration:
         )
         temp = env.get_temperature()
         assert temp is not None
-        # At position (10, 10) with gradient strength 0.5: 20 + 10*0.5 = 25
-        assert temp == pytest.approx(25.0)
+        # At position (10, 10) = grid center, temp equals base_temperature
+        assert temp == pytest.approx(20.0)
 
     def test_get_temperature_gradient_returns_polar_coordinates(self):
         """Test that get_temperature_gradient returns (magnitude, direction)."""
@@ -2182,21 +2182,23 @@ class TestThermotaxisIntegration:
 
     def test_get_temperature_zone_discomfort_hot(self):
         """Test zone classification returns DISCOMFORT_HOT when above comfort."""
+        # Grid center is (10, 10), so x=18 is 8 cells right of center
+        # With gradient_strength=1.0: temp = 20 + 8*1.0 = 28°C
         env = DynamicForagingEnvironment(
             grid_size=20,
-            start_pos=(15, 0),  # Right side of grid
+            start_pos=(18, 10),  # 8 cells right of center
             foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
                 base_temperature=20.0,
                 gradient_direction=0.0,  # Increases to right
-                gradient_strength=0.5,  # At x=15: 20 + 15*0.5 = 27.5°C
+                gradient_strength=1.0,  # At x=18 (8 from center): 20 + 8 = 28°C
                 comfort_delta=5.0,  # Comfort: 15-25°C
             ),
         )
         zone = env.get_temperature_zone()
-        # 27.5°C is in discomfort zone (25-30°C)
+        # 28°C is in discomfort zone (25-30°C)
         assert zone == TemperatureZone.DISCOMFORT_HOT
 
     def test_apply_temperature_effects_comfort_reward(self):
@@ -2221,9 +2223,11 @@ class TestThermotaxisIntegration:
 
     def test_apply_temperature_effects_danger_damage(self):
         """Test that danger zone applies HP damage when health enabled."""
+        # Grid center is (10, 10). With grid_size=30, center is (15, 15).
+        # At x=30, distance from center=15: temp = 20 + 15*2.0 = 50°C (lethal!)
         env = DynamicForagingEnvironment(
-            grid_size=20,
-            start_pos=(25, 0),  # Far right, hot zone
+            grid_size=30,
+            start_pos=(29, 15),  # 14 cells right of center (15, 15)
             foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
             health=HealthParams(enabled=True, max_hp=100.0),
             thermotaxis=ThermotaxisParams(
@@ -2231,7 +2235,7 @@ class TestThermotaxisIntegration:
                 cultivation_temperature=20.0,
                 base_temperature=20.0,
                 gradient_direction=0.0,
-                gradient_strength=1.0,  # At x=25: 20 + 25 = 45°C (lethal!)
+                gradient_strength=2.0,  # At x=29 (14 from center): 20 + 14*2 = 48°C (lethal!)
                 danger_hp_damage=5.0,
                 lethal_hp_damage=10.0,
             ),
@@ -2239,7 +2243,7 @@ class TestThermotaxisIntegration:
         initial_hp = env.agent_hp
         reward_delta, hp_damage = env.apply_temperature_effects()
 
-        # Should be in lethal zone
+        # Should be in lethal zone (>35°C)
         assert hp_damage == 10.0
         assert env.agent_hp == initial_hp - 10.0
         assert reward_delta < 0  # Penalty applied
