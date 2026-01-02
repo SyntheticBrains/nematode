@@ -201,19 +201,87 @@ class TestChemotaxisModule:
         assert features[1] == pytest.approx(0.0)
 
 
-class TestPlaceholderModules:
-    """Test placeholder modules that return zero features."""
+class TestThermotaxisModule:
+    """Test thermotaxis (temperature sensing) module."""
 
-    def test_thermotaxis_returns_zeros(self):
-        """Test that thermotaxis returns all zeros (placeholder)."""
+    def test_thermotaxis_when_disabled(self):
+        """Test thermotaxis returns default transform when temperature is None.
+
+        When thermotaxis is disabled (temperature=None), CoreFeatures returns
+        all zeros, but the standard transform still applies the offset:
+        RX = 0 * π - π/2 = -π/2 (same as chemotaxis when gradient_strength=None)
+        """
         module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
-        assert module.is_placeholder is True
+        assert module.is_placeholder is False
 
+        # No temperature fields set (thermotaxis disabled)
         params = BrainParams()
         features = module.to_quantum(params)
 
-        # Placeholder transform returns all zeros
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
+        # Standard transform: strength=0 -> RX = -π/2, angle=0 -> RY = 0, binary=0 -> RZ = 0
+        assert features[0] == pytest.approx(-np.pi / 2)
+        assert features[1] == pytest.approx(0.0)
+        assert features[2] == pytest.approx(0.0)
+
+    def test_thermotaxis_at_cultivation_temperature(self):
+        """Test thermotaxis at cultivation temperature (comfort zone)."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # At cultivation temperature with no gradient
+        params = BrainParams(
+            temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_quantum(params)
+
+        # At cultivation temp: deviation=0, gradient_strength=0
+        # Standard transform: strength=0 -> RX = -π/2, angle scales, binary=0 -> RZ = 0
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: tanh(0)*π - π/2 = -π/2
+        assert features[1] == pytest.approx(
+            -np.pi / 4,
+        )  # RY: angle=-0.5 (right is ahead when facing up) -> -π/4
+        assert features[2] == pytest.approx(0.0)  # RZ: deviation=0 -> 0
+
+    def test_thermotaxis_hotter_than_cultivation(self):
+        """Test thermotaxis when hotter than cultivation temperature."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 15°C hotter than cultivation (at danger threshold)
+        params = BrainParams(
+            temperature=35.0,
+            temperature_gradient_strength=0.5,
+            temperature_gradient_direction=0.0,  # Warmer to the right
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_quantum(params)
+
+        # Binary should be +1 (15/15 = 1.0, clamped) -> RZ = pi/2
+        assert features[2] == pytest.approx(np.pi / 2, abs=0.1)
+
+    def test_thermotaxis_colder_than_cultivation(self):
+        """Test thermotaxis when colder than cultivation temperature."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 15°C colder than cultivation (at danger threshold)
+        params = BrainParams(
+            temperature=5.0,
+            temperature_gradient_strength=0.5,
+            temperature_gradient_direction=0.0,
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_quantum(params)
+
+        # Binary should be -1 (-15/15 = -1.0) -> RZ = -pi/2
+        assert features[2] == pytest.approx(-np.pi / 2, abs=0.1)
+
+
+class TestPlaceholderModules:
+    """Test placeholder modules that return zero features."""
 
     def test_aerotaxis_returns_zeros(self):
         """Test that aerotaxis returns zeros (placeholder)."""

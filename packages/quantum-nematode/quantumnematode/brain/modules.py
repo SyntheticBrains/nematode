@@ -81,9 +81,9 @@ class ModuleName(str, Enum):
     FOOD_CHEMOTAXIS = "food_chemotaxis"
     NOCICEPTION = "nociception"
     MECHANOSENSATION = "mechanosensation"
+    THERMOTAXIS = "thermotaxis"
 
     # Placeholder modules
-    THERMOTAXIS = "thermotaxis"
     AEROTAXIS = "aerotaxis"
     VISION = "vision"
     ACTION = "action"
@@ -201,9 +201,53 @@ def _proprioception_core(params: BrainParams) -> CoreFeatures:
     return CoreFeatures(binary=direction)
 
 
-def _thermotaxis_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
-    """Extract thermotaxis features (placeholder - returns zeros)."""
-    return CoreFeatures()
+def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract thermotaxis features from temperature gradient.
+
+    Thermotaxis (AFD neurons) encodes:
+    - strength: temperature gradient magnitude (how quickly temp changes spatially)
+    - angle: relative direction to warmer temperatures (egocentric)
+    - binary: temperature deviation from cultivation temperature (normalized)
+
+    Note on Biological Accuracy:
+        Real C. elegans thermotaxis uses temporal comparison (sensing temperature
+        change over time as the worm moves) rather than direct spatial gradient
+        sensing. The spatial gradient approach used here is computationally
+        equivalent for stateless brains and matches the existing chemotaxis pattern.
+        When memory systems are added to the architecture (roadmap item), temporal
+        sensing features should be implemented as a more biologically accurate
+        alternative.
+    """
+    # Handle disabled thermotaxis (all fields None)
+    if params.temperature is None:
+        return CoreFeatures()
+
+    # Temperature deviation from cultivation temperature
+    # Normalized to [-1, 1] where:
+    #   0 = at cultivation temperature (preferred)
+    #   +1 = 15°C hotter than Tc (danger hot)
+    #   -1 = 15°C colder than Tc (danger cold)
+    cultivation_temp = params.cultivation_temperature or 20.0  # Default Tc
+    temp_deviation = (params.temperature - cultivation_temp) / 15.0
+    temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
+
+    # Gradient strength (0 = no gradient, 1 = strong gradient)
+    # Use tanh normalization like chemotaxis
+    gradient_strength = float(params.temperature_gradient_strength or 0.0)
+    normalized_strength = float(np.tanh(gradient_strength))
+
+    # Relative angle to temperature gradient (where warmer is)
+    # Uses same egocentric computation as chemotaxis
+    angle = _compute_relative_angle(
+        params.temperature_gradient_direction,
+        params.agent_direction,
+    )
+
+    return CoreFeatures(
+        strength=normalized_strength,
+        angle=angle,
+        binary=temp_deviation,
+    )
 
 
 def _aerotaxis_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
@@ -391,16 +435,18 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
         ),
         transform_type="proprioception",
     ),
-    # [PLACEHOLDER] Thermotaxis - temperature
+    # Thermotaxis - temperature (AFD neurons)
     ModuleName.THERMOTAXIS: SensoryModule(
         name=ModuleName.THERMOTAXIS,
         extract=_thermotaxis_core,
         description=(
-            "Temperature sensing (AFD neurons). Placeholder: will encode navigation "
-            "toward preferred temperature (Tc)."
+            "Temperature sensing (AFD neurons). Encodes temperature gradient for "
+            "navigation toward cultivation temperature (Tc). Uses spatial gradient "
+            "sensing (biologically, C. elegans uses temporal sensing). strength: "
+            "gradient magnitude, angle: direction to warmer temp, binary: deviation "
+            "from Tc (normalized to [-1, 1])."
         ),
-        transform_type="placeholder",
-        is_placeholder=True,
+        transform_type="standard",
     ),
     # [PLACEHOLDER] Aerotaxis - oxygen
     ModuleName.AEROTAXIS: SensoryModule(
