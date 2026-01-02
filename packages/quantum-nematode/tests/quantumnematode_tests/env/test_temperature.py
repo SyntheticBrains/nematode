@@ -13,7 +13,7 @@ class TestTemperatureField:
     """Test TemperatureField class."""
 
     def test_base_temperature(self):
-        """Test that base temperature is returned at origin with no gradient."""
+        """Test that base temperature is returned at grid center with no gradient."""
         field = TemperatureField(
             grid_size=20,
             base_temperature=20.0,
@@ -23,34 +23,62 @@ class TestTemperatureField:
         assert field.get_temperature((0, 0)) == pytest.approx(20.0)
         assert field.get_temperature((10, 10)) == pytest.approx(20.0)
 
+    def test_base_temperature_at_center(self):
+        """Test that base temperature is at grid center with gradient."""
+        field = TemperatureField(
+            grid_size=20,
+            base_temperature=20.0,
+            gradient_direction=0.0,
+            gradient_strength=0.5,
+        )
+        # Center of 20x20 grid is at (10, 10)
+        # Base temperature should be exactly at center
+        assert field.get_temperature((10, 10)) == pytest.approx(20.0)
+
     def test_linear_gradient_rightward(self):
-        """Test linear gradient increasing to the right."""
+        """Test linear gradient increasing to the right from center."""
         field = TemperatureField(
             grid_size=20,
             base_temperature=20.0,
             gradient_direction=0.0,  # Increases to the right
             gradient_strength=0.5,  # 0.5°C per cell
         )
-        # Temperature should increase with x
-        temp_at_0 = field.get_temperature((0, 0))
-        temp_at_10 = field.get_temperature((10, 0))
-        temp_at_20 = field.get_temperature((19, 0))
+        # Center is at x=10, base temp is 20.0
+        center_temp = field.get_temperature((10, 10))
+        assert center_temp == pytest.approx(20.0)
 
-        assert temp_at_10 > temp_at_0
-        assert temp_at_20 > temp_at_10
-        assert temp_at_10 - temp_at_0 == pytest.approx(5.0)  # 10 cells * 0.5°C
+        # Temperature should increase with x from center
+        temp_at_left = field.get_temperature((0, 10))  # 10 cells left of center
+        temp_at_right = field.get_temperature((19, 10))  # 9 cells right of center
+
+        assert temp_at_right > center_temp
+        assert temp_at_left < center_temp
+        # 10 cells left = -5.0°C from base
+        assert temp_at_left == pytest.approx(15.0)
+        # 9 cells right = +4.5°C from base
+        assert temp_at_right == pytest.approx(24.5)
 
     def test_linear_gradient_upward(self):
-        """Test linear gradient increasing upward (positive y)."""
+        """Test linear gradient increasing upward (positive y) from center."""
         field = TemperatureField(
             grid_size=20,
             base_temperature=20.0,
             gradient_direction=np.pi / 2,  # Increases upward
             gradient_strength=1.0,
         )
-        # Temperature should increase with y
-        assert field.get_temperature((0, 10)) > field.get_temperature((0, 0))
-        assert field.get_temperature((0, 10)) - field.get_temperature((0, 0)) == pytest.approx(10.0)
+        # Center is at y=10, temperature increases upward
+        center_temp = field.get_temperature((10, 10))
+        assert center_temp == pytest.approx(20.0)
+
+        temp_at_bottom = field.get_temperature((10, 0))  # 10 cells below center
+        temp_at_top = field.get_temperature((10, 19))  # 9 cells above center
+
+        assert temp_at_top > center_temp
+        assert temp_at_bottom < center_temp
+        # 10 cells down = -10.0°C from base
+        assert temp_at_bottom == pytest.approx(10.0)
+        # 9 cells up = +9.0°C from base
+        assert temp_at_top == pytest.approx(29.0)
 
     def test_hot_spot(self):
         """Test hot spot contribution."""

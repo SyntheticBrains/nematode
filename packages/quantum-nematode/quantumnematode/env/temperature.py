@@ -70,16 +70,20 @@ class TemperatureField:
 
     The temperature at any position is computed as:
     T(x, y) = base_temperature
-              + gradient contribution (linear)
+              + gradient contribution (linear, center-relative)
               + hot spot contributions (exponential falloff)
               + cold spot contributions (exponential falloff)
+
+    The gradient is computed relative to the grid center, so the
+    base_temperature is at the center of the grid. This ensures agents
+    spawning at the center start at the base temperature.
 
     Attributes
     ----------
     grid_size : int
         Size of the simulation grid.
     base_temperature : float
-        Base temperature in °C, typically the cultivation temperature.
+        Base temperature in °C at the grid center (spawn point).
         Default is 20.0°C, a common C. elegans cultivation temperature.
     gradient_direction : float
         Direction of increasing temperature in radians.
@@ -116,6 +120,10 @@ class TemperatureField:
         """
         Compute temperature at a given position.
 
+        The gradient is computed relative to the grid center, so the
+        base_temperature is at the center. This ensures agents spawning
+        at center start at the base temperature.
+
         Parameters
         ----------
         position : GridPosition
@@ -128,9 +136,14 @@ class TemperatureField:
         """
         x, y = position
 
-        # Linear gradient contribution
-        # Project position onto gradient direction vector
-        gradient_component = x * np.cos(self.gradient_direction) + y * np.sin(
+        # Compute position relative to grid center
+        center = self.grid_size / 2.0
+        rel_x = x - center
+        rel_y = y - center
+
+        # Linear gradient contribution (center-relative)
+        # Project relative position onto gradient direction vector
+        gradient_component = rel_x * np.cos(self.gradient_direction) + rel_y * np.sin(
             self.gradient_direction,
         )
         temp = self.base_temperature + gradient_component * self.gradient_strength
