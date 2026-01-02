@@ -2128,3 +2128,215 @@ class TestMechanosensation:
         # Position shouldn't change (body collision), but flag should be False
         assert env.agent_pos == pos_before  # Didn't move due to body collision
         assert env.wall_collision_occurred is False  # NOT a wall collision
+
+
+class TestThermotaxisIntegration:
+    """Test thermotaxis integration with DynamicForagingEnvironment."""
+
+    def test_thermotaxis_disabled_by_default(self):
+        """Test that thermotaxis is disabled when not configured."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+        )
+        assert env.thermotaxis.enabled is False
+        assert env.temperature_field is None
+        assert env.get_temperature() is None
+        assert env.get_temperature_gradient() is None
+        assert env.get_temperature_zone() is None
+
+    def test_thermotaxis_enabled_creates_temperature_field(self):
+        """Test that enabling thermotaxis creates a temperature field."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,
+                gradient_strength=0.5,
+            ),
+        )
+        assert env.thermotaxis.enabled is True
+        assert env.temperature_field is not None
+        assert env.temperature_field.grid_size == 20
+        assert env.temperature_field.base_temperature == 20.0
+        assert env.temperature_field.gradient_strength == 0.5
+
+    def test_get_temperature_returns_value_when_enabled(self):
+        """Test that get_temperature returns a value when thermotaxis is enabled."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                base_temperature=20.0,
+                gradient_direction=0.0,  # Increasing to the right
+                gradient_strength=0.5,
+            ),
+        )
+        temp = env.get_temperature()
+        assert temp is not None
+        # At position (10, 10) with gradient strength 0.5: 20 + 10*0.5 = 25
+        assert temp == pytest.approx(25.0)
+
+    def test_get_temperature_gradient_returns_polar_coordinates(self):
+        """Test that get_temperature_gradient returns (magnitude, direction)."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                gradient_direction=0.0,  # Increasing to the right
+                gradient_strength=1.0,
+            ),
+        )
+        gradient = env.get_temperature_gradient()
+        assert gradient is not None
+        magnitude, direction = gradient
+        # With linear gradient pointing right, direction should be ~0
+        assert direction == pytest.approx(0.0, abs=0.1)
+        assert magnitude > 0
+
+    def test_get_temperature_zone_comfort(self):
+        """Test zone classification returns COMFORT at cultivation temperature."""
+        from quantumnematode.env import TemperatureZone, ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),  # At origin
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,  # Base = Tc, no gradient offset at origin
+                gradient_strength=0.0,  # No gradient
+            ),
+        )
+        zone = env.get_temperature_zone()
+        assert zone == TemperatureZone.COMFORT
+
+    def test_get_temperature_zone_discomfort_hot(self):
+        """Test zone classification returns DISCOMFORT_HOT when above comfort."""
+        from quantumnematode.env import TemperatureZone, ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(15, 0),  # Right side of grid
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,  # Increases to right
+                gradient_strength=0.5,  # At x=15: 20 + 15*0.5 = 27.5°C
+                comfort_delta=5.0,  # Comfort: 15-25°C
+            ),
+        )
+        zone = env.get_temperature_zone()
+        # 27.5°C is in discomfort zone (25-30°C)
+        assert zone == TemperatureZone.DISCOMFORT_HOT
+
+    def test_apply_temperature_effects_comfort_reward(self):
+        """Test that comfort zone gives positive reward."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.0,  # No gradient, always at Tc
+                comfort_reward=0.1,
+            ),
+        )
+        reward_delta, hp_damage = env.apply_temperature_effects()
+        assert reward_delta == pytest.approx(0.1)
+        assert hp_damage == 0.0
+        assert env.steps_in_comfort_zone == 1
+        assert env.total_thermotaxis_steps == 1
+
+    def test_apply_temperature_effects_danger_damage(self):
+        """Test that danger zone applies HP damage when health enabled."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(25, 0),  # Far right, hot zone
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,
+                gradient_strength=1.0,  # At x=25: 20 + 25 = 45°C (lethal!)
+                danger_hp_damage=5.0,
+                lethal_hp_damage=10.0,
+            ),
+        )
+        initial_hp = env.agent_hp
+        reward_delta, hp_damage = env.apply_temperature_effects()
+
+        # Should be in lethal zone
+        assert hp_damage == 10.0
+        assert env.agent_hp == initial_hp - 10.0
+        assert reward_delta < 0  # Penalty applied
+
+    def test_temperature_comfort_score_calculation(self):
+        """Test comfort score is calculated correctly."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.0,  # Always at comfort
+            ),
+        )
+
+        # Apply effects 4 times (all in comfort)
+        for _ in range(4):
+            env.apply_temperature_effects()
+
+        assert env.get_temperature_comfort_score() == pytest.approx(1.0)
+        assert env.steps_in_comfort_zone == 4
+        assert env.total_thermotaxis_steps == 4
+
+    def test_reset_thermotaxis_clears_counters(self):
+        """Test that reset_thermotaxis clears the tracking counters."""
+        from quantumnematode.env import ThermotaxisParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(enabled=True),
+        )
+
+        # Accumulate some steps
+        env.apply_temperature_effects()
+        env.apply_temperature_effects()
+        assert env.total_thermotaxis_steps == 2
+
+        # Reset
+        env.reset_thermotaxis()
+        assert env.steps_in_comfort_zone == 0
+        assert env.total_thermotaxis_steps == 0
+        assert env.get_temperature_comfort_score() == 0.0
