@@ -62,7 +62,7 @@ thermotaxis:
 
 ### Decision 3: Unified Feature Extraction Layer
 
-**What**: Create `brain/features.py` with shared feature extraction used by both quantum (ModularBrain) and classical (PPOBrain) architectures.
+**What**: Modify `brain/modules.py` with shared feature extraction used by both quantum (ModularBrain) and classical (PPOBrain) architectures.
 
 **Why**:
 

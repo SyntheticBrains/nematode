@@ -1318,19 +1318,31 @@ class DynamicForagingEnvironment(BaseEnvironment):
         predator_vector_x, predator_vector_y = self._compute_predator_gradient_vector(position)
 
         # Convert vectors to magnitude + direction (what sensors detect)
-        food_magnitude = np.sqrt(food_vector_x**2 + food_vector_y**2)
-        food_direction = np.arctan2(food_vector_y, food_vector_x) if food_magnitude > 0 else 0.0
+        food_magnitude_raw = np.sqrt(food_vector_x**2 + food_vector_y**2)
+        food_direction = np.arctan2(food_vector_y, food_vector_x) if food_magnitude_raw > 0 else 0.0
 
-        predator_magnitude = np.sqrt(predator_vector_x**2 + predator_vector_y**2)
+        predator_magnitude_raw = np.sqrt(predator_vector_x**2 + predator_vector_y**2)
+        # Note: predator_vector is negative (repulsive), so we negate to get direction
+        # TOWARD predators. This gives consistent semantics with food_direction:
+        # - food_direction: points toward food (move this way to eat)
+        # - predator_direction: points toward predator (move AWAY from this direction)
         predator_direction = (
-            np.arctan2(predator_vector_y, predator_vector_x) if predator_magnitude > 0 else 0.0
+            np.arctan2(-predator_vector_y, -predator_vector_x)
+            if predator_magnitude_raw > 0
+            else 0.0
         )
+
+        # Normalize magnitudes to [0, 1] using tanh, matching combined gradient scaling.
+        # This ensures food_chemotaxis and nociception modules receive properly scaled
+        # inputs that work with the same feature extraction logic as chemotaxis.
+        food_magnitude = float(np.tanh(food_magnitude_raw * GRADIENT_SCALING_TANH_FACTOR))
+        predator_magnitude = float(np.tanh(predator_magnitude_raw * GRADIENT_SCALING_TANH_FACTOR))
 
         # TODO: Convert to dataclass
         result = {
-            "food_gradient_strength": float(food_magnitude),
+            "food_gradient_strength": food_magnitude,
             "food_gradient_direction": float(food_direction),
-            "predator_gradient_strength": float(predator_magnitude),
+            "predator_gradient_strength": predator_magnitude,
             "predator_gradient_direction": float(predator_direction),
         }
 

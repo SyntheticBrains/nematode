@@ -40,10 +40,9 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     DEFAULT_MODULES,
+    SENSORY_MODULES,
     ModuleName,
-    RotationAxis,
     count_total_qubits,
-    extract_features_for_module,
 )
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
@@ -294,9 +293,9 @@ class QModularBrain:
                 features = input_params.get(module, {}) if input_params else {}
                 for _, q in enumerate(qubit_indices):
                     if q < self.num_qubits:  # Safety check
-                        rx = features.get(RotationAxis.RX.value, 0.0)
-                        ry = features.get(RotationAxis.RY.value, 0.0)
-                        rz = features.get(RotationAxis.RZ.value, 0.0)
+                        rx = features.get("rx", 0.0)
+                        ry = features.get("ry", 0.0)
+                        rz = features.get("rz", 0.0)
 
                         # Apply parameterized gates
                         qc.rx(rx + self.parameters[f"rx_{layer + 1}"][q], q)
@@ -367,11 +366,7 @@ class QModularBrain:
         input_params: dict[ModuleName, dict[str, float]] = {}
 
         for module in self.modules:
-            features = extract_features_for_module(
-                module,
-                brain_params,
-            )
-            input_params[module] = features
+            input_params[module] = SENSORY_MODULES[module].to_quantum_dict(brain_params)
 
         return input_params
 

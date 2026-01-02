@@ -39,6 +39,11 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
+from quantumnematode.brain.modules import (
+    ModuleName,
+    extract_classical_features,
+    get_classical_feature_dimension,
+)
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
@@ -64,7 +69,26 @@ EPISODE_LOG_INTERVAL = 25
 
 
 class PPOBrainConfig(BrainConfig):
-    """Configuration for the PPOBrain architecture."""
+    """Configuration for the PPOBrain architecture.
+
+    Supports two modes for input feature extraction:
+
+    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
+       - Set `sensory_modules=None` (default)
+       - Requires explicit `input_dim=2` when creating PPOBrain
+
+    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
+       - Set `sensory_modules` to a list of ModuleName values
+       - Uses extract_classical_features() which outputs semantic-preserving ranges
+       - Each module contributes 2 features [strength, angle] in [0,1] and [-1,1]
+       - `input_dim` is auto-computed as `len(sensory_modules) * 2`
+
+    Example unified mode config:
+        >>> config = PPOBrainConfig(
+        ...     sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        ... )
+        >>> # input_dim will be 4 (2 modules * 2 features each)
+    """
 
     # Network architecture
     actor_hidden_dim: int = DEFAULT_ACTOR_HIDDEN_DIM
@@ -86,6 +110,23 @@ class PPOBrainConfig(BrainConfig):
 
     # Rollout buffer
     rollout_buffer_size: int = DEFAULT_ROLLOUT_BUFFER_SIZE
+
+    # Unified sensory feature extraction (optional)
+    # When set, uses extract_classical_features() which outputs:
+    # - strength: [0, 1] where 0 = no signal (matches legacy semantics)
+    # - angle: [-1, 1] where 0 = aligned with agent heading
+    sensory_modules: list[ModuleName] | None = None
+
+    # Learning rate scheduling (optional)
+    # Supports warmup followed by optional decay for more stable early learning.
+    # - lr_warmup_episodes: Episodes to linearly increase LR from lr_warmup_start to learning_rate
+    # - lr_warmup_start: Initial LR during warmup (default: 10% of learning_rate)
+    # - lr_decay_episodes: Episodes after warmup to decay LR to lr_decay_end (None = no decay)
+    # - lr_decay_end: Final LR after decay (default: 10% of learning_rate)
+    lr_warmup_episodes: int = 0  # 0 = no warmup
+    lr_warmup_start: float | None = None  # None = 0.1 * learning_rate
+    lr_decay_episodes: int | None = None  # None = no decay after warmup
+    lr_decay_end: float | None = None  # None = 0.1 * learning_rate
 
 
 class RolloutBuffer:
@@ -225,11 +266,11 @@ class PPOBrain(ClassicalBrain):
     This is a SOTA classical baseline for comparison with quantum approaches.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         config: PPOBrainConfig,
-        input_dim: int,
-        num_actions: int,
+        input_dim: int | None = None,
+        num_actions: int = 4,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
         *,
@@ -245,9 +286,35 @@ class PPOBrain(ClassicalBrain):
         set_global_seed(self.seed)  # Set global numpy/torch seeds
         logger.info(f"PPOBrain using seed: {self.seed}")
 
+        # Store sensory modules for feature extraction
+        self.sensory_modules = config.sensory_modules
+
+        # Determine input dimension
+        if config.sensory_modules is not None:
+            # Unified sensory mode: use classical feature extraction
+            # Each module contributes 2 features [strength, angle]
+            computed_dim = get_classical_feature_dimension(config.sensory_modules)
+            if input_dim is not None and input_dim != computed_dim:
+                logger.warning(
+                    f"input_dim={input_dim} overridden by sensory_modules "
+                    f"(computed: {computed_dim})",
+                )
+            self.input_dim = computed_dim
+            logger.info(
+                f"Using classical feature extraction with modules: "
+                f"{[m.value for m in config.sensory_modules]} "
+                f"(input_dim={self.input_dim}, features=[strength, angle] per module)",
+            )
+        elif input_dim is not None:
+            # Legacy mode: explicit input_dim
+            self.input_dim = input_dim
+        else:
+            # Default legacy mode: 2 features
+            self.input_dim = 2
+            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
-        self.input_dim = input_dim
         self.num_actions = num_actions
         self.device = torch.device(device.value)
         self._action_set = action_set
@@ -262,6 +329,30 @@ class PPOBrain(ClassicalBrain):
         self.num_epochs = config.num_epochs
         self.num_minibatches = config.num_minibatches
         self.max_grad_norm = config.max_grad_norm
+
+        # Store LR scheduling config
+        self.base_lr = config.learning_rate
+        self.lr_warmup_episodes = config.lr_warmup_episodes
+        self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.learning_rate)
+        self.lr_decay_episodes = config.lr_decay_episodes
+        self.lr_decay_end = config.lr_decay_end or (0.1 * config.learning_rate)
+        self.lr_scheduling_enabled = (
+            self.lr_warmup_episodes > 0 or self.lr_decay_episodes is not None
+        )
+
+        if self.lr_scheduling_enabled:
+            schedule_desc = []
+            if self.lr_warmup_episodes > 0:
+                schedule_desc.append(
+                    f"warmup {self.lr_warmup_start:.6f} -> {self.base_lr:.6f} "
+                    f"over {self.lr_warmup_episodes} episodes",
+                )
+            if self.lr_decay_episodes is not None:
+                schedule_desc.append(
+                    f"decay {self.base_lr:.6f} -> {self.lr_decay_end:.6f} "
+                    f"over {self.lr_decay_episodes} episodes",
+                )
+            logger.info(f"LR scheduling enabled: {', then '.join(schedule_desc)}")
 
         # Build networks
         self.actor = self._build_network(
@@ -341,10 +432,22 @@ class PPOBrain(ClassicalBrain):
         """
         Preprocess BrainParams to extract features for the neural network.
 
-        Matches MLPBrain preprocessing exactly:
-        - Gradient strength (float, [0, 1])
-        - Normalized relative angle to goal ([-1, 1])
+        Two modes:
+        1. **Unified sensory mode** (when sensory_modules is set):
+           Uses extract_classical_features() which outputs semantic-preserving ranges:
+           - strength: [0, 1] where 0 = no signal (matches legacy)
+           - angle: [-1, 1] where 0 = aligned with agent heading
+
+        2. **Legacy mode** (default):
+           Matches original MLPBrain preprocessing:
+           - Gradient strength (float, [0, 1])
+           - Normalized relative angle to goal ([-1, 1])
         """
+        # Unified sensory mode: use classical feature extraction
+        if self.sensory_modules is not None:
+            return extract_classical_features(params, self.sensory_modules)
+
+        # Legacy mode: 2-feature preprocessing
         grad_strength = float(params.gradient_strength or 0.0)
 
         grad_direction = float(params.gradient_direction or 0.0)
@@ -360,6 +463,44 @@ class PPOBrain(ClassicalBrain):
 
         features = [grad_strength, rel_angle_norm]
         return np.array(features, dtype=np.float32)
+
+    def _get_current_lr(self) -> float:
+        """Get the current learning rate based on episode count.
+
+        Supports warmup followed by optional decay:
+        - During warmup: linearly increases from lr_warmup_start to base_lr
+        - After warmup (if decay enabled): linearly decreases from base_lr to lr_decay_end
+        - Otherwise: returns base_lr
+        """
+        if not self.lr_scheduling_enabled:
+            return self.base_lr
+
+        episode = self.overfit_detector_episode_count
+
+        # Warmup phase
+        if episode < self.lr_warmup_episodes:
+            progress = episode / self.lr_warmup_episodes
+            return self.lr_warmup_start + (self.base_lr - self.lr_warmup_start) * progress
+
+        # Decay phase (if enabled)
+        if self.lr_decay_episodes is not None:
+            decay_start_episode = self.lr_warmup_episodes
+            decay_episode = episode - decay_start_episode
+            if decay_episode < self.lr_decay_episodes:
+                progress = decay_episode / self.lr_decay_episodes
+                return self.base_lr + (self.lr_decay_end - self.base_lr) * progress
+            return self.lr_decay_end
+
+        return self.base_lr
+
+    def _update_learning_rate(self) -> None:
+        """Update optimizer learning rate based on current schedule."""
+        if not self.lr_scheduling_enabled:
+            return
+
+        new_lr = self._get_current_lr()
+        for param_group in self.optimizer.param_groups:
+            param_group["lr"] = new_lr
 
     def forward_actor(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through actor network."""
@@ -615,6 +756,9 @@ class PPOBrain(ClassicalBrain):
             )
 
         self.overfit_detector_episode_count += 1
+
+        # Update learning rate based on schedule (if enabled)
+        self._update_learning_rate()
 
         if self.overfit_detector_episode_count % EPISODE_LOG_INTERVAL == 0:
             self.overfitting_detector.log_overfitting_analysis()
