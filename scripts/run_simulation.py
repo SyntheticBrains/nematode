@@ -595,6 +595,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             died_to_predator_this_run = None
             died_to_health_depletion_this_run = None
             health_history_this_run = None
+            temperature_history_this_run = None
             match agent.env:
                 case StaticEnvironment():
                     # Calculate efficiency score for the run
@@ -621,6 +622,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     # Copy health history if health system is enabled
                     if agent.env.health.enabled:
                         health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
+                    # Copy temperature history if thermotaxis is enabled
+                    if agent.env.thermotaxis.enabled:
+                        temperature_history_this_run = (
+                            agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
+                        )
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
@@ -641,6 +647,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 average_distance_efficiency=average_distance_efficiency,
                 satiety_history=satiety_history_this_run,
                 health_history=health_history_this_run,
+                temperature_history=temperature_history_this_run,
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
                 died_to_predator=died_to_predator_this_run,
@@ -679,6 +686,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     else [],
                     health_history=health_history_this_run.copy()
                     if health_history_this_run
+                    else [],
+                    temperature_history=temperature_history_this_run.copy()
+                    if temperature_history_this_run
                     else [],
                     foods_collected=foods_collected_this_run or 0,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001

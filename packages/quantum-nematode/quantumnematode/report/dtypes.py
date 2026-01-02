@@ -75,6 +75,8 @@ class SimulationResult(BaseModel):
         Step-by-step satiety levels throughout the run (DynamicForagingEnvironment only).
     health_history : list[float] | None
         Step-by-step health (HP) levels throughout the run (health system enabled only).
+    temperature_history : list[float] | None
+        Step-by-step temperatures throughout the run (thermotaxis enabled only).
     predator_encounters : int | None
         Number of predator encounters (predator environments only).
     successful_evasions : int | None
@@ -102,6 +104,7 @@ class SimulationResult(BaseModel):
     average_distance_efficiency: float | None = None
     satiety_history: list[float] | None = None
     health_history: list[float] | None = None
+    temperature_history: list[float] | None = None
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_predator: bool | None = None
@@ -121,6 +124,8 @@ class EpisodeTrackingData(BaseModel):
         Step-by-step satiety levels throughout the episode.
     health_history : list[float]
         Step-by-step health (HP) levels throughout the episode (health system enabled).
+    temperature_history : list[float]
+        Step-by-step temperatures throughout the episode (thermotaxis enabled).
     foods_collected : int
         Number of foods collected in this episode.
     distance_efficiencies : list[float]
@@ -135,6 +140,7 @@ class EpisodeTrackingData(BaseModel):
 
     satiety_history: list[float] = Field(default_factory=list)
     health_history: list[float] = Field(default_factory=list)
+    temperature_history: list[float] = Field(default_factory=list)
     foods_collected: int = 0
     distance_efficiencies: list[float] = Field(default_factory=list)
     predator_encounters: int = 0
