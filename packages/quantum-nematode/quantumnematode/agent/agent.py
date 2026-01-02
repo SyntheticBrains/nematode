@@ -545,6 +545,7 @@ class QuantumNematodeAgent:
                 foraging=self.env.foraging,
                 predator=self.env.predator,
                 health=self.env.health,
+                thermotaxis=self.env.thermotaxis,
                 # Reproducibility: preserve seed from original environment
                 seed=self.env.seed,
             )

@@ -78,9 +78,10 @@ ______________________________________________________________________
 
 ### 2.5 Configuration Loader Support
 
-- [ ] Add `ThermotaxisConfig` class to `config_loader.py`
-- [ ] Add `thermotaxis` field to `DynamicEnvironmentConfig`
-- [ ] Implement `to_params()` method for converting to `ThermotaxisParams`
+- [x] Add `ThermotaxisConfig` class to `config_loader.py`
+- [x] Add `thermotaxis` field to `DynamicEnvironmentConfig`
+- [x] Implement `to_params()` method for converting to `ThermotaxisParams`
+- [x] Integrate temperature effects into `runners.py` step loop
 - [ ] Add thermotaxis section to YAML schema documentation
 
 **Validation**: Integration test with agent navigating temperature gradient ✅ (10 tests in test_env.py::TestThermotaxisIntegration)

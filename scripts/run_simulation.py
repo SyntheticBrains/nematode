@@ -373,6 +373,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         foraging_config = dynamic_config.get_foraging_config()
         predator_config = dynamic_config.get_predator_config()
         health_config = dynamic_config.get_health_config()
+        thermotaxis_config = dynamic_config.get_thermotaxis_config()
 
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
@@ -383,6 +384,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             foraging=foraging_config.to_params(),
             predator=predator_config.to_params(),
             health=health_config.to_params(),
+            thermotaxis=thermotaxis_config.to_params(),
         )
         predator_info = ""
         if predator_config.enabled:
@@ -399,10 +401,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 f"predator_damage={health_config.predator_damage}, "
                 f"food_healing={health_config.food_healing})"
             )
+        thermotaxis_info = ""
+        if thermotaxis_config.enabled:
+            thermotaxis_info = (
+                f", thermotaxis (Tc={thermotaxis_config.cultivation_temperature}°C, "
+                f"gradient={thermotaxis_config.gradient_strength}°C/cell)"
+            )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
             f"{foraging_config.foods_on_grid} foods on grid, "
-            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}{health_info}",
+            f"target {foraging_config.target_foods_to_collect} to collect"
+            f"{predator_info}{health_info}{thermotaxis_info}",
         )
     else:
         logger.info("Using static maze environment")

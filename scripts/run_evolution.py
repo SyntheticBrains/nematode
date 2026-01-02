@@ -268,6 +268,7 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
     foraging_config = dynamic_config.get_foraging_config()
     predator_config = dynamic_config.get_predator_config()
     health_config = dynamic_config.get_health_config()
+    thermotaxis_config = dynamic_config.get_thermotaxis_config()
 
     return DynamicForagingEnvironment(
         grid_size=dynamic_config.grid_size,
@@ -275,6 +276,7 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
         viewport_size=dynamic_config.viewport_size,
         predator=predator_config.to_params(),
         health=health_config.to_params(),
+        thermotaxis=thermotaxis_config.to_params(),
     )
 
 
