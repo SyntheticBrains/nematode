@@ -239,41 +239,59 @@ def _mechanosensation_core(params: BrainParams) -> CoreFeatures:
 
 
 def _proprioception_core(params: BrainParams) -> CoreFeatures:
-    """Extract proprioception features from agent's facing direction.
+    """Extract proprioception features from agent's facing direction and movement.
 
     Proprioception (DVA, PVD neurons) encodes the agent's own body state:
-    - strength: unused (0)
-    - angle: unused (0)
-    - binary: facing direction encoded as rotation angle
+    - strength: movement indicator (1.0 if moved this step, 0.0 if stayed)
+    - angle: facing direction encoded as normalized angle [-1, 1]
+    - binary: unused (0)
 
-    Direction encoding (scaled for proprioception transform):
-    - UP: 0.0    -> RZ = 0
-    - DOWN: 1.0  -> RZ = π (opposite direction)
-    - LEFT: 0.5  -> RZ = π/2 (90° left)
-    - RIGHT: -0.5 -> RZ = -π/2 (90° right)
+    Direction encoding (using angle field for semantic consistency):
+    - UP: 0.5     -> 90° (facing up/north)
+    - DOWN: -0.5  -> -90° (facing down/south)
+    - LEFT: 1.0   -> 180° (facing left/west)
+    - RIGHT: 0.0  -> 0° (facing right/east)
 
-    This provides the brain with awareness of its current heading, enabling
-    it to maintain consistent navigation strategies regardless of absolute
-    grid orientation.
+    Movement detection:
+    - Uses params.action to detect if agent moved (any action except STAY)
+    - FORWARD, LEFT, RIGHT, FORWARD_LEFT, FORWARD_RIGHT all indicate movement
+
+    This provides the brain with awareness of its current heading and whether
+    it is actively moving, enabling it to maintain consistent navigation
+    strategies regardless of absolute grid orientation.
+
+    Note on Acceleration:
+        True acceleration sensing (velocity change over time) is not currently
+        possible as the agent has constant speed. When variable speed or
+        momentum is implemented, a separate vestibular/kinesthesia module
+        could track acceleration.
 
     Biological Reference:
         DVA is a stretch-sensitive interneuron that modulates locomotion based
         on body posture. PVD neurons are proprioceptive neurons that sense
         body bending and curvature. Together they enable coordinated movement.
 
-    Transform (proprioception):
-        RX = 0                  -> no strength signal
-        RY = 0                  -> no angle signal
-        RZ = binary * π        -> [-π, π] (full rotation encoding)
+    Transform (standard):
+        RX = strength * π - π/2  -> [-π/2, π/2] (movement occurred)
+        RY = angle * π/2         -> [-π/2, π/2] (facing direction)
+        RZ = 0                   -> no binary signal
     """
+    # Facing direction encoded as angle in [-1, 1]
+    # Maps to same angles as other egocentric modules
     direction_map = {
-        Direction.UP: 0.0,
-        Direction.DOWN: 1.0,
-        Direction.LEFT: 0.5,
-        Direction.RIGHT: -0.5,
+        Direction.UP: 0.5,  # 90° / π -> normalized to 0.5
+        Direction.DOWN: -0.5,  # -90° / -π -> normalized to -0.5
+        Direction.LEFT: 1.0,  # 180° / π -> normalized to 1.0 (or -1.0, same angle)
+        Direction.RIGHT: 0.0,  # 0° -> normalized to 0.0
     }
-    direction = direction_map.get(params.agent_direction or Direction.UP, 0.0)
-    return CoreFeatures(binary=direction)
+    facing_angle = direction_map.get(params.agent_direction or Direction.UP, 0.0)
+
+    # Movement indicator: 1.0 if agent moved this step (any action except STAY)
+    movement_strength = 0.0
+    if params.action is not None:
+        movement_strength = 0.0 if params.action.action == Action.STAY else 1.0
+
+    return CoreFeatures(strength=movement_strength, angle=facing_angle)
 
 
 def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
@@ -393,7 +411,7 @@ class SensoryModule:
     name: ModuleName
     extract: Callable[[BrainParams], CoreFeatures]
     description: str
-    transform_type: Literal["standard", "binary", "proprioception", "placeholder"] = "standard"
+    transform_type: Literal["standard", "binary", "placeholder"] = "standard"
     is_placeholder: bool = False
 
     def to_quantum(self, params: BrainParams) -> np.ndarray:
@@ -404,7 +422,6 @@ class SensoryModule:
             np.ndarray of shape (3,) with values depending on transform_type:
             - standard: RX uses offset for full range
             - binary: all values scaled by π/2 (for on/off signals)
-            - proprioception: RZ uses full π scaling for direction encoding
             - placeholder: returns zeros
         """
         core = self.extract(params)
@@ -418,17 +435,6 @@ class SensoryModule:
                     core.strength * np.pi / 2,
                     core.angle * np.pi / 2,
                     core.binary * np.pi / 2,
-                ],
-                dtype=np.float32,
-            )
-        if self.transform_type == "proprioception":
-            # Proprioception: RZ uses full π scaling for direction
-            # binary in [-1, 1] -> RZ in [-π, π]
-            return np.array(
-                [
-                    0.0,
-                    0.0,
-                    core.binary * np.pi,  # [-1,1] -> [-π, π]
                 ],
                 dtype=np.float32,
             )
@@ -523,10 +529,11 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
         name=ModuleName.PROPRIOCEPTION,
         extract=_proprioception_core,
         description=(
-            "Body orientation sensing. Encodes the agent's current facing direction "
-            "as a rotation angle in the binary field."
+            "Body orientation sensing (DVA, PVD neurons). Encodes the agent's current "
+            "facing direction in the angle field and strength if the agent is moving. "
+            "Uses standard transform for semantic consistency."
         ),
-        transform_type="proprioception",
+        transform_type="standard",
     ),
     # Thermotaxis - temperature (AFD neurons)
     ModuleName.THERMOTAXIS: SensoryModule(
