@@ -1,0 +1,99 @@
+# PPO with Stationary Predators + Unified Sensory Modules - Tuned Configuration
+# Experiment: LR warmup + decay for stable learning and fine-tuning
+#
+# Changes from baseline ppo_stationary_predators_sensory_small.yml:
+# - actor_hidden_dim: 128 (was 64) - 2x capacity
+# - critic_hidden_dim: 128 (was 64) - 2x capacity
+# - rollout_buffer_size: 512 (was 256) - 2x buffer for more stable gradients
+# - num_epochs: 20 (was 10) - more gradient updates per rollout
+# - gae_lambda: 0.98 (was 0.95) - better long-term credit assignment
+# - reward_distance_scale: 0.3 (was 0.5) - weaker greedy pull toward nearest food
+# - penalty_predator_proximity: 0.3 (was 0.1) - stronger immediate avoidance signal
+# - penalty_health_damage: 1.5 (was 0.5) - make each damage hit more salient
+# - lr_warmup_episodes: 50 - warm up LR over first 50 episodes
+# - lr_warmup_start: 0.0001 - start with 10x lower LR for stable early exploration
+# - lr_decay_episodes: 200 - decay LR over final 200 episodes for fine-tuning
+# - lr_decay_end: 0.0001 - end at 10% of peak LR to lock in learned behavior
+#
+# LR Schedule: 0.0001 -> 0.001 (warmup 0-50) -> 0.001 (stable 50-300) -> 0.0001 (decay 300-500)
+
+max_steps: 500
+brain:
+  name: ppo
+  config:
+    actor_hidden_dim: 128
+    critic_hidden_dim: 128
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.98
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 512
+    num_epochs: 20
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    use_input_layer_norm: false
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 200
+    lr_decay_end: 0.0001
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.3
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.3
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 1.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 20
+    viewport_size: [11, 11]
+    use_separated_gradients: true
+
+    foraging:
+      foods_on_grid: 6
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0
+
+    predators:
+      enabled: true
+      count: 3
+      speed: 0.0
+      movement_pattern: stationary
+      detection_radius: 4
+      kill_radius: 0
+      damage_radius: 2
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.2
+
+    health:
+      enabled: true
+      max_hp: 100.0
+      predator_damage: 15.0
+      food_healing: 10.0

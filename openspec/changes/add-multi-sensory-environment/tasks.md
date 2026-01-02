@@ -157,33 +157,81 @@ ______________________________________________________________________
 
 ## 5. Unified Feature Extraction
 
-### 5.1 Create Feature Extraction Layer
+### 5.1 Unified SensoryModule Architecture
 
-- [ ] Create `brain/features.py` module
-- [ ] Implement `extract_sensory_features(params: BrainParams) -> dict[str, np.ndarray]`
-- [ ] Return feature vectors for each sensory modality
+> **Note**: The original `brain/features.py` was consolidated into `brain/modules.py` during refactoring.
 
-### 5.2 Module Renaming
+- [x] Create `SensoryModule` dataclass with unified interface:
+  - `extract(params) -> CoreFeatures` - architecture-agnostic extraction
+  - `to_quantum(params) -> np.ndarray` - returns [rx, ry, rz] gate angles
+  - `to_classical(params) -> np.ndarray` - returns [strength, angle] semantic values
+  - `to_quantum_dict(params) -> dict` - convenience method for ModularBrain
+- [x] Create `CoreFeatures` dataclass with semantic ranges:
+  - `strength: float` in [0, 1] where 0 = no signal
+  - `angle: float` in [-1, 1] where 0 = aligned with agent
+  - `binary: float` for on/off signals
+- [x] Build `SENSORY_MODULES` registry as single source of truth
+- [x] Add `extract_classical_features()` for PPOBrain
+- [x] Add `get_classical_feature_dimension()` utility
+- [x] Delete `brain/features.py` (consolidated into modules.py)
 
-- [ ] Rename `appetitive_features` to `food_chemotaxis_features`
-- [ ] Rename `aversive_features` to `nociception_features`
-- [ ] Add neuron references to all module docstrings:
-  - chemotaxis: ASE neurons
-  - food_chemotaxis: AWC, AWA neurons
-  - nociception: ASH, ADL neurons
-  - thermotaxis: AFD neurons
-  - aerotaxis: URX, BAG neurons
-  - mechanosensation: ALM, PLM, AVM neurons
-- [ ] Update MODULE_FEATURE_EXTRACTORS dict
-- [ ] Update ModuleName enum
+### 5.2 Module Renaming and Registry Consolidation
+
+- [x] Rename `appetitive_features` to `food_chemotaxis_features`
+- [x] Rename `aversive_features` to `nociception_features`
+- [x] Add neuron references to all `SensoryModule` descriptions:
+  - chemotaxis: ASE neurons ✅
+  - food_chemotaxis: AWC, AWA neurons ✅
+  - nociception: ASH, ADL neurons ✅
+  - thermotaxis: AFD neurons ✅
+  - aerotaxis: URX, BAG neurons ✅
+  - mechanosensation: ALM, PLM, AVM neurons ✅
+  - proprioception: DVA, PVD neurons ✅
+  - vision: ASJ, ASI neurons ✅
+  - action: interneurons ✅
+- [x] Remove old registries (`MODULE_FEATURE_EXTRACTORS`, `CORE_FEATURE_EXTRACTORS`)
+- [x] Remove standalone quantum transform functions (consolidated into `SensoryModule` methods)
+- [x] Update `ModuleName` enum with all 9 modules
+- [x] Add backward compatibility aliases:
+  - `appetitive` → `food_chemotaxis`
+  - `aversive` → `nociception`
+  - `oxygen` → `aerotaxis`
 
 ### 5.3 Integration with Brains
 
-- [ ] Update ModularBrain to use unified extraction (convert to RX/RY/RZ)
-- [ ] Update PPOBrain to use unified extraction (concatenate to input)
-- [ ] Ensure backward compatibility with existing configs
+- [x] ModularBrain uses `SENSORY_MODULES[module].to_quantum_dict(params)`
+- [x] QModularBrain uses `SENSORY_MODULES[module].to_quantum_dict(params)`
+- [x] PPOBrain uses unified extraction via `extract_classical_features()`:
+  - Added `sensory_modules` config option to `PPOBrainConfig`
+  - Each module contributes 2 features [strength, angle] with semantic ranges
+  - Auto-computes `input_dim` from modules (2 features per module)
+  - Legacy mode (default) still uses 2-feature preprocessing
+- [x] Ensure backward compatibility with existing configs (legacy module names still work)
 
-**Validation**: Both brain types can consume new sensory features
+### 5.4 PPO Training Improvements for Multi-Feature Learning
+
+> **Context**: With unified sensory modules (4 features: food_chemotaxis + nociception), PPO required additional tuning to match legacy 2-feature performance. The network must independently learn food=good and predator=bad correlations.
+
+- [x] Fixed predator gradient direction semantics (point TOWARD danger, not away)
+- [x] Added reward shaping for multi-feature credit assignment:
+  - `reward_distance_scale: 0.3` (reduced from 0.5)
+  - `penalty_predator_proximity: 0.3` (increased from 0.1)
+  - `penalty_health_damage: 1.5` (increased from 0.5)
+- [x] Added learning rate scheduling to PPOBrainConfig:
+  - `lr_warmup_episodes: int` - episodes to warm up LR
+  - `lr_warmup_start: float | None` - starting LR (default 10% of base)
+  - `lr_decay_episodes: int | None` - episodes to decay LR after warmup
+  - `lr_decay_end: float | None` - final LR (default 10% of base)
+- [x] Added LR scheduling tests to test_ppo.py (8 tests)
+
+**Results**: Unified 4-feature mode achieves 73% late-stage success (within 2% of legacy's 75%)
+
+**Validation**: Unified SensoryModule architecture complete ✅
+
+- Single source of truth: `SENSORY_MODULES` registry
+- All modules usable by both quantum and classical brains
+- Clear interface: `module.to_quantum(params)` vs `module.to_classical(params)`
+- Scientific documentation lives with module definitions
 
 ______________________________________________________________________
 

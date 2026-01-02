@@ -94,9 +94,80 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 4. Feature Importance Analysis
+## 4. PPOBrain Sensory Configuration Ablation
 
-### 4.1 Importance Calculation
+### 4.1 Legacy vs Unified Mode Switching
+
+- [ ] Add `SensoryModeAblation` type:
+  - `legacy` - Use 2-feature preprocessing (gradient_strength, rel_angle_norm)
+  - `unified` - Use modular feature extraction with sensory_modules
+- [ ] Implement mode switching in ablation framework
+- [ ] Track input dimension changes in results
+
+### 4.2 Sensory Module Subset Testing
+
+- [ ] Implement `SensoryModuleSubsetAblation(modules: list[ModuleName])`
+- [ ] Generate all meaningful module subsets:
+  - Single modules: [food_chemotaxis], [nociception], [mechanosensation]
+  - Pairs: [food_chemotaxis, nociception], [food_chemotaxis, mechanosensation], etc.
+  - Full: [food_chemotaxis, nociception, mechanosensation]
+- [ ] Auto-compute input_dim for each subset (3 features per module)
+
+### 4.3 Module Combination Enumeration
+
+- [ ] Create `enumerate_module_combinations(base_modules: list[ModuleName])` helper
+- [ ] Filter out empty and single-element subsets for efficiency (optional)
+- [ ] Generate ablation study conditions for all combinations
+
+**Validation**: Can compare performance across all sensory module configurations
+
+______________________________________________________________________
+
+## 5. Gradient Mode Ablation
+
+### 5.1 Gradient Mode Switching
+
+- [ ] Add `GradientModeAblation` type:
+  - `combined` - Use chemotaxis module with combined gradient
+  - `separated` - Use food_chemotaxis + nociception with separated gradients
+- [ ] Implement environment config switching (use_separated_gradients flag)
+- [ ] Implement module remapping:
+  - combined: [chemotaxis, mechanosensation] (6 features)
+  - separated: [food_chemotaxis, nociception, mechanosensation] (9 features)
+
+### 5.2 Gradient Mode Comparison
+
+- [ ] Run baseline with separated gradients
+- [ ] Run ablated condition with combined gradients
+- [ ] Compare predator avoidance metrics specifically
+
+**Validation**: Can switch gradient modes and compare performance
+
+______________________________________________________________________
+
+## 6. Feature Normalization Ablation
+
+### 6.1 Normalization Mode Switching
+
+- [ ] Add `NormalizationAblation` type:
+  - `classical` - Scale features to [-1, 1] (normalize_for_classical=True)
+  - `quantum` - Scale features to [-π/2, π/2] (normalize_for_classical=False)
+- [ ] Implement normalization mode override in PPOBrain preprocess
+
+### 6.2 Normalization Impact Analysis
+
+- [ ] Record feature value distributions for each mode
+- [ ] Compute statistics: mean, std, min, max for each feature
+- [ ] Include convergence rate comparison
+- [ ] Add warning note that quantum normalization is expected to degrade PPO performance
+
+**Validation**: Can compare normalization modes and measure impact
+
+______________________________________________________________________
+
+## 7. Feature Importance Analysis
+
+### 7.1 Importance Calculation
 
 - [ ] Implement `compute_feature_importance()`:
 
@@ -111,13 +182,13 @@ ______________________________________________________________________
       return importance
   ```
 
-### 4.2 Importance Ranking
+### 7.2 Importance Ranking
 
 - [ ] Sort modules/components by importance score
 - [ ] Identify critical components (importance > 0.1)
 - [ ] Identify redundant components (importance < 0.01)
 
-### 4.3 Cross-Architecture Comparison
+### 7.3 Cross-Architecture Comparison
 
 - [ ] Compare module importance between quantum and classical
 - [ ] Identify architecture-specific critical components
@@ -127,9 +198,9 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 5. Automated Reporting
+## 8. Automated Reporting
 
-### 5.1 Markdown Report Generation
+### 8.1 Markdown Report Generation
 
 - [ ] Implement `generate_report() -> str`:
   - Summary table of all ablation conditions
@@ -137,7 +208,7 @@ ______________________________________________________________________
   - Feature importance ranking
   - Key findings bullet points
 
-### 5.2 Report Template
+### 8.2 Report Template
 
 ```markdown
 # Ablation Study Report
@@ -169,7 +240,7 @@ ______________________________________________________________________
 - Classical and quantum architectures show similar module importance
 ```
 
-### 5.3 Optional Visualization
+### 8.3 Optional Visualization
 
 - [ ] If matplotlib available, generate bar charts of importance
 - [ ] Performance degradation curves
@@ -179,16 +250,16 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 6. CLI Integration
+## 9. CLI Integration
 
-### 6.1 Ablation CLI Script
+### 9.1 Ablation CLI Script
 
 - [ ] Create `scripts/run_ablation.py`
 - [ ] Accept config path and ablation parameters
 - [ ] Run ablation study and generate report
 - [ ] Save results to specified output directory
 
-### 6.2 CLI Arguments
+### 9.2 CLI Arguments
 
 ```bash
 python scripts/run_ablation.py \
@@ -199,7 +270,7 @@ python scripts/run_ablation.py \
   --output ablation_results/
 ```
 
-### 6.3 Integration with Existing CLI
+### 9.3 Integration with Existing CLI
 
 - [ ] Add `--ablation` mode to run_simulation.py (optional)
 - [ ] Or keep as separate script for clarity
@@ -208,15 +279,15 @@ python scripts/run_ablation.py \
 
 ______________________________________________________________________
 
-## 7. Documentation
+## 10. Documentation
 
-### 7.1 Usage Documentation
+### 10.1 Usage Documentation
 
 - [ ] Document ablation framework usage
 - [ ] Provide example ablation configurations
 - [ ] Explain importance calculation methodology
 
-### 7.2 Research Documentation
+### 10.2 Research Documentation
 
 - [ ] Document how to interpret ablation results
 - [ ] Guidance for publication-ready ablation studies
@@ -231,18 +302,30 @@ ______________________________________________________________________
          │
          ├──► 2. ModularBrain Ablation
          │
-         ├──► 3. PPOBrain Ablation
-         │
-         └──► 4. Feature Importance
+         ├──► 3. PPOBrain Ablation ──────────────────┐
+         │                                           │
+         │    ┌──────────────────────────────────────┤
+         │    │                                      │
+         │    ├──► 4. PPOBrain Sensory Config        │
+         │    │    (legacy vs unified, module subsets)
+         │    │                                      │
+         │    ├──► 5. Gradient Mode Ablation         │
+         │    │    (combined vs separated)           │
+         │    │                                      │
+         │    └──► 6. Normalization Ablation         │
+         │         (classical vs quantum scaling)    │
+         │                                           │
+         └──► 7. Feature Importance ◄────────────────┘
                     │
                     v
-              5. Reporting
+              8. Reporting
                     │
                     v
-              6. CLI + 7. Docs
+              9. CLI + 10. Docs
 ```
 
-Work streams 2 and 3 can proceed in parallel after framework is complete.
+Work streams 2-6 can proceed in parallel after framework is complete.
+Work streams 4, 5, 6 depend on PPOBrain ablation infrastructure.
 
 ______________________________________________________________________
 
@@ -250,6 +333,10 @@ ______________________________________________________________________
 
 - [ ] Can ablate individual modules from ModularBrain
 - [ ] Can ablate hidden layers from PPOBrain
+- [ ] Can switch between legacy and unified sensory modes for PPO
+- [ ] Can switch between combined and separated gradient modes
+- [ ] Can switch between classical and quantum normalization
+- [ ] Can test all sensory module combinations systematically
 - [ ] Feature importance scores correctly identify critical modules
 - [ ] Automated reports are readable and informative
 - [ ] CLI allows running ablation studies without code changes
