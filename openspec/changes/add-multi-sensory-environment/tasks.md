@@ -371,7 +371,9 @@ ______________________________________________________________________
 
 ### 11.1 Example Configs
 
-- [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml` *(deferred to add-thermotaxis-system)*
+- [x] Create `configs/examples/ppo_thermotaxis_foraging_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
 - [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
 - [x] Create `configs/examples/ppo_pursuit_predators_small.yml`
