@@ -1,6 +1,6 @@
 # 006: Unified Sensory Modules for PPO
 
-**Status**: `complete`
+**Status**: `completed`
 
 **Branch**: `feature/unified-feature-extraction`
 
