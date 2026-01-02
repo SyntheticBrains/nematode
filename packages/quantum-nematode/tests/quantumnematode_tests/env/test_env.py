@@ -12,8 +12,9 @@ from quantumnematode.env import (
     PredatorType,
     StaticEnvironment,
 )
-from quantumnematode.env.env import Predator
-from quantumnematode.env.theme import Theme
+from quantumnematode.env.env import Predator, ThermotaxisParams
+from quantumnematode.env.temperature import TemperatureZone
+from quantumnematode.env.theme import THEME_SYMBOLS, Theme
 from quantumnematode.utils.seeding import get_rng
 
 
@@ -938,8 +939,6 @@ class TestPredatorMechanics:
 
     def test_predator_fractional_speed(self):
         """Test predator with fractional speed (< 1.0)."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         # Speed 0.5 should move every 2 updates
         predator = Predator(position=(5, 5), speed=0.5)
@@ -957,8 +956,6 @@ class TestPredatorMechanics:
 
     def test_predator_normal_speed(self):
         """Test predator with normal speed (1.0)."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         predator = Predator(position=(5, 5), speed=1.0)
         initial_pos = predator.position
@@ -976,8 +973,6 @@ class TestPredatorMechanics:
 
     def test_predator_double_speed(self):
         """Test predator with double speed (2.0) takes two movement steps per update."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         predator = Predator(position=(5, 5), speed=2.0)
 
@@ -992,8 +987,6 @@ class TestPredatorMechanics:
 
     def test_predator_triple_speed(self):
         """Test predator with triple speed (3.0) takes three movement steps per update."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         predator = Predator(position=(5, 5), speed=3.0)
 
@@ -1008,8 +1001,6 @@ class TestPredatorMechanics:
 
     def test_predator_fractional_multi_speed(self):
         """Test predator with fractional multi-step speed (2.5)."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         predator = Predator(position=(5, 5), speed=2.5)
 
@@ -1029,8 +1020,6 @@ class TestPredatorMechanics:
 
     def test_predator_high_speed_capped(self):
         """Test predator with very high speed is capped at 10 steps per update."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         predator = Predator(position=(5, 5), speed=15.0)
 
@@ -1046,8 +1035,6 @@ class TestPredatorMechanics:
 
     def test_predator_speed_boundary_clamping(self):
         """Test that high-speed predators respect grid boundaries."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         # Place predator near edge with high speed
         predator = Predator(position=(1, 1), speed=5.0)
@@ -1061,8 +1048,6 @@ class TestPredatorMechanics:
 
     def test_predator_zero_speed(self):
         """Test predator with zero speed never moves."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         predator = Predator(position=(5, 5), speed=0.0)
         initial_pos = predator.position
@@ -1075,8 +1060,6 @@ class TestPredatorMechanics:
 
     def test_predator_very_slow_speed(self):
         """Test predator with very slow speed (0.25)."""
-        from quantumnematode.env.env import Predator
-
         rng = get_rng(42)
         # Use 0.25 to avoid floating point precision issues (4 * 0.25 = 1.0 exactly)
         predator = Predator(position=(5, 5), speed=0.25)
@@ -1393,15 +1376,11 @@ class TestPredatorTypes:
 
     def test_predator_type_defaults_to_random(self):
         """Test that predator type defaults to RANDOM."""
-        from quantumnematode.env.env import Predator
-
         predator = Predator(position=(5, 5))
         assert predator.predator_type == PredatorType.RANDOM
 
     def test_stationary_predator_does_not_move(self):
         """Test that stationary predators never move."""
-        from quantumnematode.env.env import Predator
-
         predator = Predator(
             position=(5, 5),
             predator_type=PredatorType.STATIONARY,
@@ -1417,8 +1396,6 @@ class TestPredatorTypes:
 
     def test_pursuit_predator_moves_toward_agent_when_in_range(self):
         """Test that pursuit predators move toward agent when within detection radius."""
-        from quantumnematode.env.env import Predator
-
         # Start predator at (5, 5) with detection radius 10
         # Agent at (8, 5) - distance 3, within detection radius
         predator = Predator(
@@ -1445,8 +1422,6 @@ class TestPredatorTypes:
 
     def test_pursuit_predator_moves_randomly_when_out_of_range(self):
         """Test that pursuit predators move randomly when outside detection radius."""
-        from quantumnematode.env.env import Predator
-
         # Start predator at (0, 0) with detection radius 5
         # Agent at (15, 15) - distance 30, outside detection radius
         predator = Predator(
@@ -1470,8 +1445,6 @@ class TestPredatorTypes:
 
     def test_pursuit_predator_catches_agent(self):
         """Test that pursuit predator eventually catches stationary agent."""
-        from quantumnematode.env.env import Predator
-
         # Predator starts close to agent
         predator = Predator(
             position=(5, 5),
@@ -1564,8 +1537,6 @@ class TestPredatorTypes:
 
     def test_pursuit_greedy_movement_horizontal(self):
         """Test that pursuit uses greedy movement (larger axis first)."""
-        from quantumnematode.env.env import Predator
-
         # Predator at (0, 0), agent at (5, 2)
         # Horizontal distance (5) > vertical (2), so should move right first
         predator = Predator(
@@ -1583,8 +1554,6 @@ class TestPredatorTypes:
 
     def test_pursuit_greedy_movement_vertical(self):
         """Test that pursuit uses greedy movement (larger axis first)."""
-        from quantumnematode.env.env import Predator
-
         # Predator at (0, 0), agent at (2, 5)
         # Vertical distance (5) > horizontal (2), so should move down first
         predator = Predator(
@@ -1619,8 +1588,6 @@ class TestPredatorTypeSymbols:
 
     def test_theme_has_predator_type_symbols(self):
         """Test that ThemeSymbolSet includes symbols for each predator type."""
-        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
-
         for theme in Theme:
             symbols = THEME_SYMBOLS[theme]
             assert hasattr(symbols, "predator")
@@ -1633,8 +1600,6 @@ class TestPredatorTypeSymbols:
 
     def test_predator_symbols_are_distinct(self):
         """Test that different predator types have distinct symbols in ASCII theme."""
-        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
-
         symbols = THEME_SYMBOLS[Theme.ASCII]
         # All three predator symbols should be different
         assert symbols.predator != symbols.predator_stationary
@@ -1703,8 +1668,6 @@ class TestPredatorTypeSymbols:
 
     def test_get_predator_symbol_helper(self):
         """Test the _get_predator_symbol helper method."""
-        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
@@ -2147,8 +2110,6 @@ class TestThermotaxisIntegration:
 
     def test_thermotaxis_enabled_creates_temperature_field(self):
         """Test that enabling thermotaxis creates a temperature field."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
@@ -2168,8 +2129,6 @@ class TestThermotaxisIntegration:
 
     def test_get_temperature_returns_value_when_enabled(self):
         """Test that get_temperature returns a value when thermotaxis is enabled."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
@@ -2188,8 +2147,6 @@ class TestThermotaxisIntegration:
 
     def test_get_temperature_gradient_returns_polar_coordinates(self):
         """Test that get_temperature_gradient returns (magnitude, direction)."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
@@ -2209,8 +2166,6 @@ class TestThermotaxisIntegration:
 
     def test_get_temperature_zone_comfort(self):
         """Test zone classification returns COMFORT at cultivation temperature."""
-        from quantumnematode.env import TemperatureZone, ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),  # At origin
@@ -2227,8 +2182,6 @@ class TestThermotaxisIntegration:
 
     def test_get_temperature_zone_discomfort_hot(self):
         """Test zone classification returns DISCOMFORT_HOT when above comfort."""
-        from quantumnematode.env import TemperatureZone, ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(15, 0),  # Right side of grid
@@ -2248,8 +2201,6 @@ class TestThermotaxisIntegration:
 
     def test_apply_temperature_effects_comfort_reward(self):
         """Test that comfort zone gives positive reward."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),
@@ -2270,8 +2221,6 @@ class TestThermotaxisIntegration:
 
     def test_apply_temperature_effects_danger_damage(self):
         """Test that danger zone applies HP damage when health enabled."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(25, 0),  # Far right, hot zone
@@ -2297,8 +2246,6 @@ class TestThermotaxisIntegration:
 
     def test_temperature_comfort_score_calculation(self):
         """Test comfort score is calculated correctly."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),
@@ -2321,8 +2268,6 @@ class TestThermotaxisIntegration:
 
     def test_reset_thermotaxis_clears_counters(self):
         """Test that reset_thermotaxis clears the tracking counters."""
-        from quantumnematode.env import ThermotaxisParams
-
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(0, 0),
