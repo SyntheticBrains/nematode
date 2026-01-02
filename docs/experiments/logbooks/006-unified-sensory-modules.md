@@ -1,12 +1,12 @@
 # 006: Unified Sensory Modules for PPO
 
-**Status**: `active`
+**Status**: `complete`
 
 **Branch**: `feature/unified-feature-extraction`
 
 **Date Started**: 2026-01-01
 
-**Date Completed**: (pending pursuit predator results)
+**Date Completed**: 2026-01-02
 
 ## Objective
 
@@ -329,9 +329,20 @@ ______________________________________________________________________
 
 - [x] Run pursuit predator benchmarks (legacy vs unified)
 - [x] Document pursuit predator results
-- [ ] Investigate pursuit gap further (LSTM/attention for temporal credit assignment)
 - [ ] Test thermotaxis integration (4th module)
 - [ ] Consider attention mechanisms if 4+ modules struggle
+
+## Future Work
+
+### LSTM/Memory for Pursuit Gap
+
+The remaining ~21% pursuit gap is likely due to temporal credit assignment - the network sees instantaneous gradients but pursuit predators require tracking trajectory over time. Adding LSTM/GRU could help by:
+
+1. **Remembering predator trajectory**: "It was approaching from the left" → continue evasion
+2. **Anticipating pursuit**: Learning that proximity → sustained chase
+3. **Better credit assignment**: Connecting current actions to future outcomes
+
+**Deferred because**: 73% late-stage is a solid result for the unified architecture. LSTM adds significant complexity (hidden state management, sequence-based rollouts, longer training). Recommend pursuing thermotaxis integration first to validate the modular architecture scales, then revisit memory if needed.
 
 ______________________________________________________________________
 
