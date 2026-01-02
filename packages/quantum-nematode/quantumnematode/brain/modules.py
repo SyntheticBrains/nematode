@@ -321,6 +321,12 @@ class SensoryModule:
     def to_classical(self, params: BrainParams) -> np.ndarray:
         """Extract and transform to classical features [strength, angle].
 
+        Note: Only returns strength and angle, omitting the binary field from
+        CoreFeatures. For modules like mechanosensation, the binary field
+        contains derived values (e.g., urgency = max of other fields) that
+        are intentionally excluded from classical networks to keep feature
+        dimensions consistent across modules.
+
         Returns
         -------
             np.ndarray of shape (2,) with semantic-preserving ranges:
