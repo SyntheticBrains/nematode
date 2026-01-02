@@ -361,7 +361,7 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
         description=(
             "Aversive/escape response (ASH, ADL neurons). Encodes predator gradient "
             "signals for avoidance behavior. The predator_gradient_direction points "
-            "AWAY from predators (escape direction)."
+            "TOWARD predators (danger direction), so angle=0 means predator is ahead."
         ),
     ),
     # Mechanosensation - touch/contact
