@@ -21,6 +21,7 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
+from quantumnematode.dtypes import GradientPolar, GridPosition
 from quantumnematode.env.temperature import (
     TemperatureField,
     TemperatureZone,
@@ -1751,13 +1752,13 @@ class DynamicForagingEnvironment(BaseEnvironment):
     # Thermotaxis Methods
     # -------------------------------------------------------------------------
 
-    def get_temperature(self, position: tuple[int, int] | None = None) -> float | None:
+    def get_temperature(self, position: GridPosition | None = None) -> float | None:
         """
         Get temperature at a position (or agent position if not specified).
 
         Parameters
         ----------
-        position : tuple[int, int] | None
+        position : GridPosition | None
             Position to query. Uses agent position if None.
 
         Returns
@@ -1767,42 +1768,42 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         if not self.thermotaxis.enabled or self.temperature_field is None:
             return None
-        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
         return self.temperature_field.get_temperature(pos)
 
     def get_temperature_gradient(
         self,
-        position: tuple[int, int] | None = None,
-    ) -> tuple[float, float] | None:
+        position: GridPosition | None = None,
+    ) -> GradientPolar | None:
         """
         Get temperature gradient (magnitude, direction) at a position.
 
         Parameters
         ----------
-        position : tuple[int, int] | None
+        position : GridPosition | None
             Position to query. Uses agent position if None.
 
         Returns
         -------
-        tuple[float, float] | None
+        GradientPolar | None
             (magnitude, direction) or None if thermotaxis is disabled.
             Direction points toward increasing temperature.
         """
         if not self.thermotaxis.enabled or self.temperature_field is None:
             return None
-        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
         return self.temperature_field.get_gradient_polar(pos)
 
     def get_temperature_zone(
         self,
-        position: tuple[int, int] | None = None,
+        position: GridPosition | None = None,
     ) -> TemperatureZone | None:
         """
         Get the temperature zone at a position.
 
         Parameters
         ----------
-        position : tuple[int, int] | None
+        position : GridPosition | None
             Position to query. Uses agent position if None.
 
         Returns
