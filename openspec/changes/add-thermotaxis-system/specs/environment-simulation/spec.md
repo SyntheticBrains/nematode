@@ -66,30 +66,30 @@ The system SHALL apply rewards, penalties, and health effects based on temperatu
 
 #### Scenario: Comfort Zone Reward
 
-- **GIVEN** thermotaxis enabled with comfort zone 15-25°C
+- **GIVEN** thermotaxis enabled with comfort_delta=5.0 (comfort zone: Tc±5°C = 15-25°C for Tc=20)
 - **WHEN** agent is at a position with temperature 20°C
-- **THEN** a comfort reward SHALL be applied (configurable, default +0.05)
+- **THEN** a comfort reward SHALL be applied (configurable, default +0.01)
 - **AND** no HP damage SHALL occur
 
 #### Scenario: Discomfort Zone Penalty
 
-- **GIVEN** thermotaxis enabled with discomfort zones 10-15°C and 25-30°C
-- **WHEN** agent is at a position with temperature 12°C
-- **THEN** a discomfort penalty SHALL be applied (configurable, default -0.1)
+- **GIVEN** thermotaxis enabled with discomfort_delta=10.0 (discomfort: Tc±10°C outside comfort)
+- **WHEN** agent is at a position with temperature 12°C (within 10-15°C zone)
+- **THEN** a discomfort penalty SHALL be applied (configurable, default -0.02)
 - **AND** no HP damage SHALL occur
 
 #### Scenario: Danger Zone Damage
 
-- **GIVEN** thermotaxis and health system enabled with danger zones \<10°C and >30°C
-- **WHEN** agent is at a position with temperature 8°C
-- **THEN** a danger penalty SHALL be applied (configurable, default -0.3)
-- **AND** HP damage SHALL be applied (configurable, default -2 HP per step)
+- **GIVEN** thermotaxis and health system enabled with danger_delta=15.0 (danger: Tc±15°C outside discomfort)
+- **WHEN** agent is at a position with temperature 8°C (within 5-10°C zone)
+- **THEN** a danger penalty SHALL be applied (configurable, default -0.05)
+- **AND** HP damage SHALL be applied (configurable, default -5.0 HP per step)
 
 #### Scenario: Lethal Zone Rapid Damage
 
-- **GIVEN** thermotaxis and health system enabled with lethal zones \<5°C and >35°C
-- **WHEN** agent is at a position with temperature 3°C
-- **THEN** rapid HP damage SHALL be applied (configurable, default -10 HP per step)
+- **GIVEN** thermotaxis and health system enabled with lethal zones (beyond danger_delta)
+- **WHEN** agent is at a position with temperature 3°C (beyond 5°C, i.e., < Tc-15)
+- **THEN** rapid HP damage SHALL be applied (configurable, default -20.0 HP per step)
 - **AND** this SHALL likely cause HP depletion within a few steps
 
 ### Requirement: Thermotaxis Success Criteria
@@ -142,3 +142,54 @@ The system SHALL provide hierarchical benchmark categories for thermotaxis-enabl
 - **WHEN** benchmark category is determined
 - **THEN** category SHALL be `thermotaxis/foraging_predator_small/quantum` or `thermotaxis/foraging_predator_small/classical`
 - **AND** this combines temperature, food, and threat avoidance objectives
+
+### Requirement: ThermotaxisParams Configuration
+
+The DynamicForagingEnvironment SHALL accept a ThermotaxisParams dataclass for configuration.
+
+#### Scenario: ThermotaxisParams Fields
+
+- **GIVEN** ThermotaxisParams configuration
+- **THEN** the following fields SHALL be supported:
+  - `enabled: bool` (default False) - master toggle
+  - `cultivation_temperature: float` (default 20.0) - agent's preferred temperature (Tc)
+  - `base_temperature: float` (default 20.0) - environment base temperature
+  - `gradient_direction: float` (default 0.0) - direction of linear gradient in radians
+  - `gradient_strength: float` (default 0.5) - temperature change per cell (°C/cell)
+  - `hot_spots: list[tuple[int, int, float]] | None` - localized heat sources
+  - `cold_spots: list[tuple[int, int, float]] | None` - localized cold sources
+  - `comfort_delta: float` (default 5.0) - comfort zone boundary from Tc
+  - `discomfort_delta: float` (default 10.0) - discomfort zone boundary from Tc
+  - `danger_delta: float` (default 15.0) - danger zone boundary from Tc
+  - `comfort_reward: float` (default 0.01) - reward per step in comfort zone
+  - `discomfort_penalty: float` (default -0.02) - penalty per step in discomfort zone
+  - `danger_penalty: float` (default -0.05) - penalty per step in danger zone
+  - `danger_hp_damage: float` (default 5.0) - HP damage per step in danger zone
+  - `lethal_hp_damage: float` (default 20.0) - HP damage per step in lethal zone
+
+### Requirement: Environment Thermotaxis Methods
+
+The DynamicForagingEnvironment SHALL provide methods for temperature querying and effects.
+
+#### Scenario: Temperature Query Methods
+
+- **GIVEN** a thermotaxis-enabled environment
+- **THEN** the following methods SHALL be available:
+  - `get_temperature(position: GridPosition | None) -> float | None`
+  - `get_temperature_gradient(position: GridPosition | None) -> GradientPolar | None`
+  - `get_temperature_zone(position: GridPosition | None) -> TemperatureZone | None`
+  - `apply_temperature_effects() -> tuple[float, float]` (returns reward_delta, hp_damage)
+  - `get_temperature_comfort_score() -> float` (returns steps_in_comfort / total_steps)
+  - `reset_thermotaxis() -> None` (resets tracking counters)
+
+#### Scenario: Temperature Zone Enum
+
+- **GIVEN** the TemperatureZone enum
+- **THEN** the following zones SHALL be defined:
+  - `LETHAL_COLD` - temperature < Tc - danger_delta
+  - `DANGER_COLD` - Tc - danger_delta \<= temperature < Tc - discomfort_delta
+  - `DISCOMFORT_COLD` - Tc - discomfort_delta \<= temperature < Tc - comfort_delta
+  - `COMFORT` - Tc - comfort_delta \<= temperature \<= Tc + comfort_delta
+  - `DISCOMFORT_HOT` - Tc + comfort_delta < temperature \<= Tc + discomfort_delta
+  - `DANGER_HOT` - Tc + discomfort_delta < temperature \<= Tc + danger_delta
+  - `LETHAL_HOT` - temperature > Tc + danger_delta

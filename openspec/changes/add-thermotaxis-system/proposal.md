@@ -36,13 +36,18 @@ Integrate temperature sensing into DynamicForagingEnvironment:
 
 ### 3. Thermotaxis Feature Extraction
 
-Implement real `thermotaxis_features()` in modules.py:
+Implement `_thermotaxis_core()` in modules.py using unified SensoryModule architecture:
 
-- RX: Deviation from cultivation temperature (Tc)
-- RY: Direction to move toward preferred temperature (spatial gradient)
-- RZ: Temperature gradient strength
+- CoreFeatures mapping (uses standard transform):
+  - `strength`: Temperature gradient magnitude (`tanh(gradient_strength)`) → RX
+  - `angle`: Relative direction to warmer temperatures (egocentric) → RY
+  - `binary`: Temperature deviation from cultivation temp (`(T - Tc) / 15.0`) → RZ
+- Standard transform applied (consistent with other sensory modules):
+  - RX = strength × π - π/2 (gradient strength: [-π/2, π/2])
+  - RY = angle × π/2 (direction to warmer: [-π/2, π/2])
+  - RZ = binary × π/2 (temperature deviation: [-π/2, π/2])
 - AFD neuron-inspired computation
-- Scale to quantum gate ranges [-π/2, π/2]
+- Seamlessly integrates with PPOBrain via `extract_classical_features()` and ModularBrain via `to_quantum_dict()`
 
 **Note on Biological Accuracy**: Real C. elegans thermotaxis uses temporal comparison (sensing temperature change over time as the worm moves) rather than direct spatial gradient sensing. The spatial gradient approach used here is computationally equivalent for stateless brains and matches the existing chemotaxis pattern. When memory systems are added to the architecture (roadmap item), temporal sensing features should be implemented as a more biologically accurate alternative.
 
@@ -59,15 +64,35 @@ Create benchmark configurations and validation:
 
 **Affected Specs:**
 
-- `environment-simulation`: ADDED - TemperatureField, temperature zone mechanics
-- `brain-architecture`: MODIFIED - thermotaxis_features() implementation
+- `environment-simulation`: ADDED - TemperatureField, temperature zone mechanics, ThermotaxisParams
+- `brain-architecture`: MODIFIED - \_thermotaxis_core() in SensoryModule architecture
+- `configuration-system`: ADDED - ThermotaxisConfig class
 
 **Affected Code:**
 
-- `packages/quantum-nematode/quantumnematode/env/temperature.py` - NEW: TemperatureField class
-- `packages/quantum-nematode/quantumnematode/env/env.py` - Temperature field integration
-- `packages/quantum-nematode/quantumnematode/brain/modules.py` - thermotaxis_features()
-- `configs/examples/thermotaxis_*.yml` - NEW: Thermotaxis benchmark configs
+Core implementation:
+
+- `quantumnematode/env/temperature.py` - NEW: TemperatureField, TemperatureZone, TemperatureZoneThresholds
+- `quantumnematode/env/env.py` - ThermotaxisParams, temperature methods, apply_temperature_effects()
+- `quantumnematode/brain/modules.py` - \_thermotaxis_core(), SENSORY_MODULES[THERMOTAXIS]
+- `quantumnematode/dtypes.py` - TemperatureSpot type alias
+- `quantumnematode/utils/config_loader.py` - ThermotaxisConfig class
+
+Agent integration:
+
+- `quantumnematode/agent/agent.py` - BrainParams population, reset_environment() preservation
+- `quantumnematode/agent/runners.py` - apply_temperature_effects() in step loop
+
+Scripts:
+
+- `scripts/run_simulation.py` - thermotaxis config loading
+- `scripts/run_evolution.py` - thermotaxis config loading
+
+Configs:
+
+- `configs/examples/ppo_thermotaxis_foraging_small.yml` - NEW
+- `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` - NEW
+- `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` - NEW
 
 **Dependencies:**
 

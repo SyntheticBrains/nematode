@@ -20,8 +20,11 @@ ______________________________________________________________________
   - `gradient_strength: float` (degrees per cell, default 0.5)
   - `hot_spots: list[TemperatureSpot]` (x, y, intensity) - using typed alias
   - `cold_spots: list[TemperatureSpot]` (x, y, intensity) - using typed alias
+  - `spot_decay_constant: float` (exponential falloff rate for hot/cold spots)
 
 ### 1.2 Temperature Computation
+
+Uses shared types from `quantumnematode/dtypes.py`: `GridPosition`, `GradientPolar`, `GradientVector`, `TemperatureSpot`
 
 - [x] Implement `get_temperature(position: GridPosition) -> float`
   - Linear gradient component based on direction and strength
@@ -39,7 +42,7 @@ ______________________________________________________________________
 - [x] Define `TemperatureZone` enum: LETHAL_COLD, DANGER_COLD, DISCOMFORT_COLD, COMFORT, DISCOMFORT_HOT, DANGER_HOT, LETHAL_HOT
 - [x] Use configurable thresholds via `TemperatureZoneThresholds` dataclass
 
-**Validation**: Unit tests for temperature calculation and zone classification ✅ (12 tests in test_temperature.py)
+**Validation**: Unit tests for temperature calculation and zone classification ✅ (14 tests in test_temperature.py)
 
 ______________________________________________________________________
 
@@ -49,8 +52,16 @@ ______________________________________________________________________
 
 - [x] Add `thermotaxis: ThermotaxisParams` to DynamicForagingEnvironment
 - [x] Add `temperature_field: TemperatureField | None` attribute
+- [x] Add `steps_in_comfort_zone: int` and `total_thermotaxis_steps: int` tracking counters
 - [x] Initialize temperature field from config when enabled
-- [x] Add `ThermotaxisParams` dataclass for YAML configuration
+- [x] Import `GridPosition` and `GradientPolar` types from dtypes for method signatures
+- [x] Add `ThermotaxisParams` dataclass with fields:
+  - `enabled`, `cultivation_temperature`, `base_temperature`
+  - `gradient_direction`, `gradient_strength`
+  - `hot_spots`, `cold_spots` (optional localized temperature sources)
+  - `comfort_reward`, `discomfort_penalty`, `danger_penalty`
+  - `danger_hp_damage`, `lethal_hp_damage`
+  - `comfort_delta`, `discomfort_delta`, `danger_delta` (zone thresholds)
 
 ### 2.2 Temperature in Step Execution
 
@@ -59,6 +70,7 @@ ______________________________________________________________________
 - [x] Populate `BrainParams.temperature_gradient_strength`
 - [x] Populate `BrainParams.temperature_gradient_direction`
 - [x] Populate `BrainParams.cultivation_temperature`
+- [x] Integration in `agent.py::_create_brain_params()` to query env thermotaxis state
 
 ### 2.3 Temperature Zone Effects
 
@@ -82,9 +94,15 @@ ______________________________________________________________________
 - [x] Add `thermotaxis` field to `DynamicEnvironmentConfig`
 - [x] Implement `to_params()` method for converting to `ThermotaxisParams`
 - [x] Integrate temperature effects into `runners.py` step loop
+- [x] Update `scripts/run_simulation.py` to load and pass thermotaxis config
+- [x] Update `scripts/run_evolution.py` to load and pass thermotaxis config
+- [x] Update `agent.py::reset_environment()` to preserve thermotaxis config
 - [ ] Add thermotaxis section to YAML schema documentation
 
-**Validation**: Integration test with agent navigating temperature gradient ✅ (10 tests in test_env.py::TestThermotaxisIntegration)
+**Validation**: Integration tests ✅
+
+- 10 tests in test_env.py::TestThermotaxisIntegration (environment methods)
+- 3 tests in test_runners.py::TestThermotaxisIntegration (episode runner integration)
 
 ______________________________________________________________________
 
@@ -94,16 +112,16 @@ ______________________________________________________________________
 
 > **Note**: Uses spatial gradient sensing (matches chemotaxis pattern). Temporal sensing (biologically accurate) to be added when memory systems are implemented per roadmap.
 
-- [x] Implement `thermotaxis_features(params: BrainParams) -> dict[RotationAxis, float]`
-- [x] RX: Temperature deviation from cultivation temperature
-  - `temp_deviation = (current_temp - cultivation_temp) / 15.0` (normalized)
-  - Scale to [-π/2, π/2]
-- [x] RY: Relative angle to temperature gradient (spatial)
-  - Egocentric (relative to agent facing direction)
-  - Scale to [-π/2, π/2]
-- [x] RZ: Temperature gradient strength
-  - `tanh(gradient_magnitude) * π/2`
-- [x] Handle None values gracefully (return zeros)
+- [x] Implement `_thermotaxis_core(params: BrainParams) -> CoreFeatures` in unified SensoryModule architecture
+- [x] CoreFeatures mapping (uses standard transform):
+  - `strength`: Temperature gradient magnitude (`tanh(gradient_strength)`) → RX
+  - `angle`: Relative direction to warmer temperatures (egocentric) → RY
+  - `binary`: Temperature deviation from cultivation temp (`(T - Tc) / 15.0`, clipped to [-1, 1]) → RZ
+- [x] Standard transform applied:
+  - RX = strength × π - π/2 (gradient strength: [-π/2, π/2])
+  - RY = angle × π/2 (direction to warmer: [-π/2, π/2])
+  - RZ = binary × π/2 (temperature deviation: [-π/2, π/2])
+- [x] Handle None values gracefully (return zeros when thermotaxis disabled)
 - [x] Add docstring note documenting spatial vs temporal sensing trade-off
 
 ### 3.2 Module Registration
@@ -264,10 +282,66 @@ ______________________________________________________________________
 
 ## Success Criteria
 
-- [x] TemperatureField computes correct temperatures and gradients ✅ (12 tests)
+- [x] TemperatureField computes correct temperatures and gradients ✅ (14 tests in test_temperature.py)
 - [x] Agent receives temperature in BrainParams when thermotaxis enabled ✅
-- [x] thermotaxis_features() produces valid rotation values ✅ (4 tests)
+- [x] thermotaxis_features() produces valid rotation values ✅ (4 tests in test_modules.py)
+- [x] Environment integration complete ✅ (10 tests in test_env.py::TestThermotaxisIntegration)
+- [x] Runners integration with temperature effects ✅ (3 tests in test_runners.py::TestThermotaxisIntegration)
 - [ ] PPO can learn to navigate to comfort zone (>60% time) *(ready for evaluation)*
 - [ ] ModularBrain with thermotaxis module achieves comparable performance *(ready for evaluation)*
 - [ ] Combined chemotaxis+thermotaxis task is learnable *(ready for evaluation)*
-- [ ] Temperature zones visible in Rich theme rendering *(deferred to Section 5)*
+- [ ] Temperature zones visible in Rich theme rendering *(deferred to Section 6)*
+
+______________________________________________________________________
+
+## Files Modified (Reference for Future Sensory Systems)
+
+This section documents all files touched during thermotaxis implementation to serve as a template for adding future sensory systems like aerotaxis.
+
+### Core Implementation Files
+
+| File | Changes |
+|------|---------|
+| `quantumnematode/env/temperature.py` | **NEW** - TemperatureField class, TemperatureZone enum, TemperatureZoneThresholds |
+| `quantumnematode/env/env.py` | ThermotaxisParams dataclass, temperature_field attribute, get_temperature(), get_temperature_gradient(), get_temperature_zone(), apply_temperature_effects(), get_temperature_comfort_score(), reset_thermotaxis() |
+| `quantumnematode/brain/modules.py` | \_thermotaxis_core() function, SENSORY_MODULES registry entry for THERMOTAXIS |
+| `quantumnematode/dtypes.py` | TemperatureSpot type alias (shared types already existed) |
+| `quantumnematode/utils/config_loader.py` | ThermotaxisConfig class, to_params() method, DynamicEnvironmentConfig.thermotaxis field |
+| `quantumnematode/agent/agent.py` | \_create_brain_params() thermotaxis state population, reset_environment() config preservation |
+| `quantumnematode/agent/runners.py` | apply_temperature_effects() call in step loop, HP depletion check |
+
+### Script Files
+
+| File | Changes |
+|------|---------|
+| `scripts/run_simulation.py` | Load thermotaxis config, pass to environment constructor |
+| `scripts/run_evolution.py` | Load thermotaxis config, pass to environment constructor |
+
+### Test Files
+
+| File | Tests Added |
+|------|-------------|
+| `tests/.../env/test_temperature.py` | **NEW** - 14 tests for TemperatureField |
+| `tests/.../env/test_env.py` | TestThermotaxisIntegration class - 10 tests |
+| `tests/.../brain/test_modules.py` | TestThermotaxisModule class - 4 tests |
+| `tests/.../agent/test_runners.py` | TestThermotaxisIntegration class - 3 tests |
+
+### Config Files
+
+| File | Purpose |
+|------|---------|
+| `configs/examples/ppo_thermotaxis_foraging_small.yml` | Basic thermotaxis + food foraging |
+| `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` | Thermotaxis + stationary predators |
+| `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` | Thermotaxis + pursuit predators |
+
+### Pattern for Adding New Sensory Systems (e.g., Aerotaxis)
+
+1. **Create field module** (like `temperature.py` → `oxygen.py`)
+2. **Add params dataclass** to `env.py` (like `ThermotaxisParams` → `AerotaxisParams`)
+3. **Add environment methods** for querying field state
+4. **Implement core features** in `modules.py` following SensoryModule pattern
+5. **Add config loader** class with `to_params()` method
+6. **Update agent.py** to populate BrainParams with new sensory data
+7. **Update runners.py** to apply zone effects if applicable
+8. **Update scripts** to load and pass new config
+9. **Add comprehensive tests** for each layer
