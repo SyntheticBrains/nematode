@@ -46,6 +46,7 @@ This project has complementary systems for tracking experiments:
 | 003 | [Spiking Brain Optimization](logbooks/003-spiking-brain-optimization.md) | completed | Surrogate gradients, LIF neurons, decay schedules |
 | 004 | [PPO Brain Implementation](logbooks/004-ppo-brain-implementation.md) | completed | SOTA RL baseline, actor-critic, 98.5% foraging, 93% predators |
 | 005 | [Health System Predator Scaling](logbooks/005-health-system-predator-scaling.md) | completed | Health system enables better evasion learning via survival + richer rewards |
+| 006 | [Unified Sensory Modules](logbooks/006-unified-sensory-modules.md) | active | Biologically-inspired 4-feature architecture matches legacy 2-feature performance |
 
 ## How to Use Logbooks
 
