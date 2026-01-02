@@ -73,8 +73,15 @@ ______________________________________________________________________
 
 ### 2.4 Temperature Termination
 
-- [ ] Log temperature as cause when terminating from temperature damage
 - [x] Check for HP depletion from temperature damage (via existing health system)
+- ~~Log temperature as cause when terminating from temperature damage~~ *(not needed - uses existing HEALTH_DEPLETED termination)*
+
+### 2.5 Configuration Loader Support
+
+- [ ] Add `ThermotaxisConfig` class to `config_loader.py`
+- [ ] Add `thermotaxis` field to `DynamicEnvironmentConfig`
+- [ ] Implement `to_params()` method for converting to `ThermotaxisParams`
+- [ ] Add thermotaxis section to YAML schema documentation
 
 **Validation**: Integration test with agent navigating temperature gradient ✅ (10 tests in test_env.py::TestThermotaxisIntegration)
 
@@ -162,15 +169,51 @@ thermotaxis/                    # Temperature-aware tasks
 
 ______________________________________________________________________
 
-## 5. Visualization
+## 5. Observability and Exports
 
-### 5.1 Temperature Background Colors
+### 5.1 Console Output
+
+- [ ] Display `temperature_comfort_score` in per-run simulation summary
+- [ ] Display current temperature in step debug output (when verbose)
+- [ ] Display temperature zone counts in session summary
+
+### 5.2 Experiment Tracking (JSON)
+
+- [ ] Add `temperature_comfort_score: float | None` to experiment JSON output
+- [ ] Add `final_temperature: float | None` to experiment JSON
+- [ ] Add `steps_in_comfort_zone: int` and `total_thermotaxis_steps: int`
+
+### 5.3 Per-Run CSV Exports
+
+- [ ] Export `temperature_history.csv` (step, temperature, zone)
+- [ ] Include `temperature_comfort_score` in `foraging_summary.csv`
+- [ ] Include `final_temperature` and `died_to_temperature` in summary
+
+### 5.4 Per-Run Plots
+
+- [ ] Generate `temperature_progression.png` (temperature over time)
+- [ ] Color-code background by temperature zone
+- [ ] Overlay comfort zone boundaries as horizontal lines
+
+### 5.5 Session-Level Plots
+
+- [ ] Generate session-level temperature comfort score distribution
+- [ ] Generate multi-run temperature progression overlay plot
+- [ ] Include temperature stats in session summary plots
+
+**Validation**: Console shows temperature metrics, exports include temperature history and plots
+
+______________________________________________________________________
+
+## 6. Visualization
+
+### 6.1 Temperature Background Colors
 
 - [ ] Extend Rich theme renderer to query temperature at each cell
 - [ ] Apply background color based on temperature zone
 - [ ] Ensure entity rendering (agent, food, predator) takes priority over background
 
-### 5.2 Debug Logging
+### 6.2 Debug Logging
 
 - [ ] Log temperature field parameters at episode start
 - [ ] Log temperature samples at corners and center
@@ -180,15 +223,15 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## 6. Documentation
+## 7. Documentation
 
-### 6.1 Configuration Documentation
+### 7.1 Configuration Documentation
 
 - [ ] Document thermotaxis configuration options
 - [ ] Provide example configurations with explanations
 - [ ] Document temperature zone thresholds
 
-### 6.2 Architecture Documentation
+### 7.2 Architecture Documentation
 
 - [ ] Document thermotaxis_features() computation
 - [ ] Document AFD neuron modeling approach
@@ -211,7 +254,7 @@ add-multi-sensory-environment (MUST be complete)
 4. Benchmarks ◄────────────────────────┘
          │
          v
-5. Visualization + 6. Documentation
+5. Observability + 6. Visualization + 7. Documentation
 ```
 
 All tasks in this proposal depend on `add-multi-sensory-environment` being complete first.
