@@ -1,0 +1,90 @@
+# PPO with Stationary Predators + Unified Sensory Modules - Small Configuration
+# Compares unified modular feature extraction vs legacy 2-feature preprocessing
+#
+# Key differences from ppo_stationary_predators_small.yml:
+# - Uses sensory_modules for unified feature extraction
+# - Each module contributes 2 features [strength, angle] in semantic ranges
+# - Requires use_separated_gradients: true for food/predator gradient data
+#
+# Sensory modules (C. elegans neuron references):
+# - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
+# - nociception: Predator avoidance (ASH, ADL neurons)
+#
+# Note: We use food_chemotaxis + nociception (separated gradients) instead of
+# chemotaxis (combined gradient) for more biologically accurate sensing.
+
+max_steps: 500
+brain:
+  name: ppo
+  config:
+    actor_hidden_dim: 128
+    critic_hidden_dim: 128
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.98
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 512
+    num_epochs: 20
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.3
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.3
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 1.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  type: dynamic
+  dynamic:
+    grid_size: 20
+    viewport_size: [11, 11]
+    use_separated_gradients: true
+
+    foraging:
+      foods_on_grid: 6
+      target_foods_to_collect: 10
+      min_food_distance: 3
+      agent_exclusion_radius: 5
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.0
+
+    predators:
+      enabled: true
+      count: 3
+      speed: 0.0
+      movement_pattern: stationary
+      detection_radius: 4
+      kill_radius: 0
+      damage_radius: 2
+      gradient_decay_constant: 8.0
+      gradient_strength: 1.2
+
+    health:
+      enabled: true
+      max_hp: 100.0
+      predator_damage: 15.0
+      food_healing: 10.0
