@@ -41,7 +41,7 @@ ______________________________________________________________________
 - [x] Implement predator damage on contact (configurable `predator_damage`)
 - [x] Implement food healing (configurable `food_healing`)
 - [x] Ensure food consumption restores both HP AND satiety when both systems enabled
-- [ ] Add temperature damage (for thermotaxis integration) *(deferred to add-thermotaxis-system)*
+- [x] Add temperature damage (for thermotaxis integration) ✅ *(implemented in add-thermotaxis-system)*
 - [x] Cap HP at max_hp, floor at 0
 
 ### 2.3 Termination
@@ -263,9 +263,9 @@ ______________________________________________________________________
 
 ### 7.1 SimulationResult Extensions
 
-- [ ] Add `temperature_comfort_score: float | None` *(deferred to add-thermotaxis-system)*
+- [x] Add `temperature_comfort_score: float | None` ✅ *(implemented in add-thermotaxis-system via get_temperature_comfort_score())*
 - [ ] Add `survival_score: float | None`
-- [ ] Add `thermotaxis_success: bool | None` *(deferred to add-thermotaxis-system)*
+- [ ] Add `thermotaxis_success: bool | None` *(requires evaluation metrics)*
 
 ### 7.2 Composite Score Update
 
