@@ -63,7 +63,7 @@ Add touch/collision detection:
 
 ### 5. Unified Feature Extraction
 
-Create shared feature extraction layer (`brain/features.py`):
+Add shared feature extraction layer (`brain/modules.py`):
 
 - `extract_sensory_features(params: BrainParams) -> dict[str, np.ndarray]`
 - Used by ModularBrain (converts to RX/RY/RZ rotations)
@@ -146,7 +146,6 @@ When thermotaxis is enabled, bias food spawning toward safe temperature zones:
 - `packages/quantum-nematode/quantumnematode/env/env.py` - Health system, predator types
 - `packages/quantum-nematode/quantumnematode/brain/arch/_brain.py` - BrainParams extensions
 - `packages/quantum-nematode/quantumnematode/brain/modules.py` - Module renaming, mechanosensation
-- `packages/quantum-nematode/quantumnematode/brain/features.py` - NEW: Unified feature extraction
 - `packages/quantum-nematode/quantumnematode/agent/agent.py` - RewardConfig extensions
 - `packages/quantum-nematode/quantumnematode/benchmark/convergence.py` - Multi-objective scoring
 - `packages/quantum-nematode/quantumnematode/experiment/metadata.py` - SimulationResult extensions

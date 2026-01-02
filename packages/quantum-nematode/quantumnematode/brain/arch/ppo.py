@@ -77,7 +77,7 @@ class PPOBrainConfig(BrainConfig):
        - Set `sensory_modules=None` (default)
        - Requires explicit `input_dim=2` when creating PPOBrain
 
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/features.py
+    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
        - Set `sensory_modules` to a list of ModuleName values
        - Uses extract_classical_features() which outputs semantic-preserving ranges
        - Each module contributes 2 features [strength, angle] in [0,1] and [-1,1]
