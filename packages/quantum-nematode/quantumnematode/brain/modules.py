@@ -148,7 +148,26 @@ def _chemotaxis_core(params: BrainParams) -> CoreFeatures:
 
 
 def _food_chemotaxis_core(params: BrainParams) -> CoreFeatures:
-    """Extract food chemotaxis features from separated food gradient."""
+    """Extract food chemotaxis features from separated food gradient.
+
+    Food chemotaxis (AWC, AWA neurons) encodes attraction toward food sources:
+    - strength: food gradient magnitude [0, 1], higher = closer/stronger food signal
+    - angle: egocentric direction to food [-1, 1], 0 = food directly ahead
+
+    This module uses SEPARATED food gradients (food_gradient_*) rather than
+    combined gradients (gradient_*), allowing the brain to independently learn
+    food attraction vs predator avoidance behaviors.
+
+    Biological Reference:
+        AWC neurons detect volatile attractants (benzaldehyde, isoamyl alcohol).
+        AWA neurons detect additional attractants (diacetyl, pyrazine).
+        Both project to interneurons that modulate turning behavior.
+
+    Transform (standard):
+        RX = tanh(strength) * π - π/2  -> [-π/2, π/2] (biased by signal strength)
+        RY = angle * π/2               -> [-π/2, π/2] (turn toward food)
+        RZ = 0                         -> no binary signal
+    """
     strength = float(params.food_gradient_strength or 0.0)
     angle = _compute_relative_angle(
         params.food_gradient_direction,
@@ -160,11 +179,27 @@ def _food_chemotaxis_core(params: BrainParams) -> CoreFeatures:
 def _nociception_core(params: BrainParams) -> CoreFeatures:
     """Extract nociception features from separated predator gradient.
 
-    Semantics (consistent with food_chemotaxis):
-    - strength: [0, 1] where higher = closer predator danger
-    - angle: [-1, 1] where 0 = predator is directly ahead
+    Nociception (ASH, ADL neurons) encodes aversive/danger signals:
+    - strength: predator gradient magnitude [0, 1], higher = closer predator
+    - angle: egocentric direction TOWARD predator [-1, 1], 0 = predator ahead
 
     The brain should learn: high strength + angle near 0 = danger ahead, turn away!
+
+    Note on Gradient Direction:
+        The predator gradient points TOWARD predators (danger direction), not away.
+        This gives consistent semantics with food_chemotaxis where angle=0 means
+        the signal source is directly ahead. The brain must learn that for
+        nociception, moving AWAY from the angle direction is beneficial.
+
+    Biological Reference:
+        ASH neurons are polymodal nociceptors responding to nose touch, high
+        osmolarity, and volatile repellents. ADL neurons respond to octanol
+        and other repellents. Both trigger avoidance reflexes via interneurons.
+
+    Transform (standard):
+        RX = tanh(strength) * π - π/2  -> [-π/2, π/2] (danger intensity)
+        RY = angle * π/2               -> [-π/2, π/2] (danger direction)
+        RZ = 0                         -> no binary signal
     """
     strength = float(params.predator_gradient_strength or 0.0)
     angle = _compute_relative_angle(
@@ -175,7 +210,28 @@ def _nociception_core(params: BrainParams) -> CoreFeatures:
 
 
 def _mechanosensation_core(params: BrainParams) -> CoreFeatures:
-    """Extract mechanosensation features from touch/contact signals."""
+    """Extract mechanosensation features from touch/contact signals.
+
+    Mechanosensation (ALM, PLM, AVM neurons) encodes physical contact:
+    - strength: boundary contact [0, 1], 1 = touching grid boundary
+    - angle: predator contact [0, 1], 1 = in physical contact with predator
+    - binary: urgency signal = max(boundary, predator), any contact triggers
+
+    Unlike gradient-based modules, mechanosensation provides binary touch signals
+    that indicate immediate physical contact. This is a "last resort" signal that
+    fires when the agent is already in a dangerous situation.
+
+    Biological Reference:
+        ALM (Anterior Lateral Microtubule) and PLM (Posterior Lateral Microtubule)
+        neurons are touch receptor neurons along the body. AVM (Anterior Ventral
+        Microtubule) responds to light touch at the head. These trigger rapid
+        reversal or acceleration responses.
+
+    Transform (binary):
+        RX = strength * π/2  -> [0, π/2] (boundary contact)
+        RY = angle * π/2     -> [0, π/2] (predator contact)
+        RZ = binary * π/2    -> [0, π/2] (any contact urgency)
+    """
     boundary = 1.0 if params.boundary_contact is True else 0.0
     predator = 1.0 if params.predator_contact is True else 0.0
     urgency = max(boundary, predator)
@@ -185,11 +241,30 @@ def _mechanosensation_core(params: BrainParams) -> CoreFeatures:
 def _proprioception_core(params: BrainParams) -> CoreFeatures:
     """Extract proprioception features from agent's facing direction.
 
-    The direction is stored in the binary field, scaled to [-1, 1]:
-    - UP: 0.0
-    - DOWN: 1.0 (will become π with binary transform: 1 * π = π)
-    - LEFT: 0.5 (will become π/2 with binary transform: 0.5 * π = π/2)
-    - RIGHT: -0.5 (will become -π/2 with binary transform: -0.5 * π = -π/2)
+    Proprioception (DVA, PVD neurons) encodes the agent's own body state:
+    - strength: unused (0)
+    - angle: unused (0)
+    - binary: facing direction encoded as rotation angle
+
+    Direction encoding (scaled for proprioception transform):
+    - UP: 0.0    -> RZ = 0
+    - DOWN: 1.0  -> RZ = π (opposite direction)
+    - LEFT: 0.5  -> RZ = π/2 (90° left)
+    - RIGHT: -0.5 -> RZ = -π/2 (90° right)
+
+    This provides the brain with awareness of its current heading, enabling
+    it to maintain consistent navigation strategies regardless of absolute
+    grid orientation.
+
+    Biological Reference:
+        DVA is a stretch-sensitive interneuron that modulates locomotion based
+        on body posture. PVD neurons are proprioceptive neurons that sense
+        body bending and curvature. Together they enable coordinated movement.
+
+    Transform (proprioception):
+        RX = 0                  -> no strength signal
+        RY = 0                  -> no angle signal
+        RZ = binary * π        -> [-π, π] (full rotation encoding)
     """
     direction_map = {
         Direction.UP: 0.0,
@@ -251,7 +326,25 @@ def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
 
 
 def _aerotaxis_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
-    """Extract aerotaxis features (placeholder - returns zeros)."""
+    """Extract aerotaxis features (placeholder - returns zeros).
+
+    Aerotaxis (URX, BAG neurons) will encode oxygen gradient navigation:
+    - strength: oxygen gradient magnitude (planned)
+    - angle: egocentric direction to preferred O2 level (planned)
+    - binary: deviation from preferred O2 concentration (planned)
+
+    C. elegans prefer ~10% O2 (normoxia), avoiding both hypoxia (<5%) and
+    hyperoxia (>14%). Implementation will follow thermotaxis pattern with
+    an oxygen field class and O2 zone classification.
+
+    Biological Reference:
+        URX neurons are oxygen sensors that detect increases in O2.
+        BAG neurons detect decreases in O2 (CO2 also affects BAG).
+        AQR and PQR provide additional O2 sensing at head/tail.
+        Together they enable navigation to optimal oxygen levels.
+
+    Status: PLACEHOLDER - returns zeros until oxygen field is implemented.
+    """
     return CoreFeatures()
 
 
