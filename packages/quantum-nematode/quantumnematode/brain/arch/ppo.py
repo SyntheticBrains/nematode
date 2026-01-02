@@ -117,6 +117,17 @@ class PPOBrainConfig(BrainConfig):
     # - angle: [-1, 1] where 0 = aligned with agent heading
     sensory_modules: list[ModuleName] | None = None
 
+    # Learning rate scheduling (optional)
+    # Supports warmup followed by optional decay for more stable early learning.
+    # - lr_warmup_episodes: Episodes to linearly increase LR from lr_warmup_start to learning_rate
+    # - lr_warmup_start: Initial LR during warmup (default: 10% of learning_rate)
+    # - lr_decay_episodes: Episodes after warmup to decay LR to lr_decay_end (None = no decay)
+    # - lr_decay_end: Final LR after decay (default: 10% of learning_rate)
+    lr_warmup_episodes: int = 0  # 0 = no warmup
+    lr_warmup_start: float | None = None  # None = 0.1 * learning_rate
+    lr_decay_episodes: int | None = None  # None = no decay after warmup
+    lr_decay_end: float | None = None  # None = 0.1 * learning_rate
+
 
 class RolloutBuffer:
     """Buffer for storing rollout experience for PPO updates."""
@@ -255,7 +266,7 @@ class PPOBrain(ClassicalBrain):
     This is a SOTA classical baseline for comparison with quantum approaches.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         config: PPOBrainConfig,
         input_dim: int | None = None,
@@ -318,6 +329,28 @@ class PPOBrain(ClassicalBrain):
         self.num_epochs = config.num_epochs
         self.num_minibatches = config.num_minibatches
         self.max_grad_norm = config.max_grad_norm
+
+        # Store LR scheduling config
+        self.base_lr = config.learning_rate
+        self.lr_warmup_episodes = config.lr_warmup_episodes
+        self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.learning_rate)
+        self.lr_decay_episodes = config.lr_decay_episodes
+        self.lr_decay_end = config.lr_decay_end or (0.1 * config.learning_rate)
+        self.lr_scheduling_enabled = self.lr_warmup_episodes > 0 or self.lr_decay_episodes is not None
+
+        if self.lr_scheduling_enabled:
+            schedule_desc = []
+            if self.lr_warmup_episodes > 0:
+                schedule_desc.append(
+                    f"warmup {self.lr_warmup_start:.6f} -> {self.base_lr:.6f} "
+                    f"over {self.lr_warmup_episodes} episodes"
+                )
+            if self.lr_decay_episodes is not None:
+                schedule_desc.append(
+                    f"decay {self.base_lr:.6f} -> {self.lr_decay_end:.6f} "
+                    f"over {self.lr_decay_episodes} episodes"
+                )
+            logger.info(f"LR scheduling enabled: {', then '.join(schedule_desc)}")
 
         # Build networks
         self.actor = self._build_network(
@@ -428,6 +461,44 @@ class PPOBrain(ClassicalBrain):
 
         features = [grad_strength, rel_angle_norm]
         return np.array(features, dtype=np.float32)
+
+    def _get_current_lr(self) -> float:
+        """Get the current learning rate based on episode count.
+
+        Supports warmup followed by optional decay:
+        - During warmup: linearly increases from lr_warmup_start to base_lr
+        - After warmup (if decay enabled): linearly decreases from base_lr to lr_decay_end
+        - Otherwise: returns base_lr
+        """
+        if not self.lr_scheduling_enabled:
+            return self.base_lr
+
+        episode = self.overfit_detector_episode_count
+
+        # Warmup phase
+        if episode < self.lr_warmup_episodes:
+            progress = episode / self.lr_warmup_episodes
+            return self.lr_warmup_start + (self.base_lr - self.lr_warmup_start) * progress
+
+        # Decay phase (if enabled)
+        if self.lr_decay_episodes is not None:
+            decay_start_episode = self.lr_warmup_episodes
+            decay_episode = episode - decay_start_episode
+            if decay_episode < self.lr_decay_episodes:
+                progress = decay_episode / self.lr_decay_episodes
+                return self.base_lr + (self.lr_decay_end - self.base_lr) * progress
+            return self.lr_decay_end
+
+        return self.base_lr
+
+    def _update_learning_rate(self) -> None:
+        """Update optimizer learning rate based on current schedule."""
+        if not self.lr_scheduling_enabled:
+            return
+
+        new_lr = self._get_current_lr()
+        for param_group in self.optimizer.param_groups:
+            param_group["lr"] = new_lr
 
     def forward_actor(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through actor network."""
@@ -683,6 +754,9 @@ class PPOBrain(ClassicalBrain):
             )
 
         self.overfit_detector_episode_count += 1
+
+        # Update learning rate based on schedule (if enabled)
+        self._update_learning_rate()
 
         if self.overfit_detector_episode_count % EPISODE_LOG_INTERVAL == 0:
             self.overfitting_detector.log_overfitting_analysis()
