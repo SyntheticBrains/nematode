@@ -118,12 +118,17 @@ ______________________________________________________________________
 
 ### 4.1 Thermotaxis Benchmark Configs
 
-- [ ] Create `configs/examples/thermotaxis_foraging_small.yml`
+- [x] Create `configs/examples/ppo_thermotaxis_foraging_small.yml`
   - 20x20 grid, food collection goal
   - Thermotaxis enabled with linear gradient
   - Health system enabled
-  - Success: collect all food + stay >60% in comfort zone
-- [ ] Create `configs/examples/thermotaxis_foraging_medium.yml`
+  - sensory_modules: [food_chemotaxis, thermotaxis]
+- [x] Create `configs/examples/ppo_thermotaxis_stationary_predators_small.yml`
+  - Multi-objective: food + stationary predators + temperature
+  - sensory_modules: [food_chemotaxis, nociception, mechanosensation, thermotaxis]
+- [x] Create `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml`
+  - Multi-objective: food + pursuit predators + temperature
+  - sensory_modules: [food_chemotaxis, nociception, mechanosensation, thermotaxis]
 - [ ] Create `configs/examples/thermotaxis_isothermal_small.yml`
   - Pure thermotaxis task (no food collection goal)
   - Success: stay >80% in comfort zone for episode duration
