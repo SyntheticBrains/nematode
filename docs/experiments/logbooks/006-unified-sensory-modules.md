@@ -124,6 +124,11 @@ ______________________________________________________________________
 
 ## Results
 
+> **Metrics**: Tables show two late-stage metrics:
+>
+> - **Post-Conv**: Success rate after convergence detection (variable window based on when model converges)
+> - **Last 50**: Success rate for final 50 runs (fixed window: runs 451-500 for 500-run sessions)
+
 ### Stationary Predators: Progression Summary
 
 | Configuration | Runs | Avg Success | Late Success | vs Legacy |
@@ -138,62 +143,62 @@ ______________________________________________________________________
 
 ### Stationary Predators: Final Results (LR Warmup + Decay)
 
-| Session ID | Success Rate | Late-Stage (450-500) | Health Deaths |
-|------------|--------------|---------------------|---------------|
-| 20260102_052408 | 56.2% | 76.5% | 155 |
-| 20260102_052410 | 49.8% | 74.5% | 150 |
-| 20260102_052412 | **63.6%** | **80.4%** | 122 |
-| 20260102_052415 | 58.8% | 68.6% | 152 |
-| **Average** | **57.1%** | **75.0%** | **145** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_052408 | 56.2% | 77.2% | 76.0% | 155 |
+| 20260102_052410 | 49.8% | 73.3% | 74.0% | 150 |
+| 20260102_052412 | **63.6%** | **76.2%** | **80.0%** | 122 |
+| 20260102_052415 | 58.8% | 75.5% | 68.0% | 152 |
+| **Average** | **57.1%** | **75.5%** | **74.5%** | **145** |
 
 ### Ablation Studies
 
 #### 200 Runs (Shorter Training)
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_063518 | 27.0% | 38.1% | 100 |
-| 20260102_063522 | 44.0% | 57.1% | 70 |
-| 20260102_063525 | 27.0% | 38.1% | 78 |
-| 20260102_063528 | 45.0% | 71.4% | 60 |
-| **Average** | **35.8%** | **51.2%** | **77** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_063518 | 27.0% | 30.0% | 42.0% | 100 |
+| 20260102_063522 | 44.0% | 70.0% | 60.0% | 70 |
+| 20260102_063525 | 27.0% | 20.0% | 60.0% | 78 |
+| 20260102_063528 | 45.0% | 76.9% | 72.0% | 60 |
+| **Average** | **35.8%** | **49.2%** | **58.5%** | **77** |
 
 **Conclusion**: 500 runs required for this configuration to converge reliably.
 
 #### Input Layer Norm (500 runs)
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_065108 | 41.4% | 39.2% | 231 |
-| 20260102_065112 | 31.6% | 27.5% | 235 |
-| 20260102_065114 | 41.2% | 37.3% | 172 |
-| 20260102_065117 | 38.6% | 52.9% | 220 |
-| **Average** | **38.2%** | **39.2%** | **214** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_065108 | 41.4% | 60.0% | 40.0% | 231 |
+| 20260102_065112 | 31.6% | 10.0% | 28.0% | 235 |
+| 20260102_065114 | 41.2% | 60.0% | 36.0% | 172 |
+| 20260102_065117 | 38.6% | 70.0% | 54.0% | 220 |
+| **Average** | **38.2%** | **50.0%** | **39.5%** | **214** |
 
-**Conclusion**: LayerNorm severely degrades learning. Late-stage worse than early baseline.
+**Conclusion**: LayerNorm degrades learning. Post-conv 50% / Last-50 39.5% vs baseline 75.5% / 74.5%.
 
 #### Entropy Scheduling (500 runs)
 
 Config: `entropy_coef_start: 0.1`, `entropy_coef: 0.02`, `entropy_schedule_episodes: 100`
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_072933 | 60.6% | 70.6% | 129 |
-| 20260102_072936 | 54.8% | 66.7% | 170 |
-| 20260102_072939 | 53.8% | 62.7% | 186 |
-| **Average** | **52.6%** | **59.3%** | **164** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_072933 | 60.6% | 74.9% | 72.0% | 129 |
+| 20260102_072936 | 54.8% | 67.3% | 66.0% | 170 |
+| 20260102_072939 | 53.8% | 69.9% | 62.0% | 186 |
+| **Average** | **56.4%** | **70.7%** | **66.7%** | **162** |
 
-**Conclusion**: Entropy scheduling hurts performance vs baseline (57.1%/75.0%).
+**Conclusion**: Entropy scheduling hurts performance vs baseline (75.5% / 74.5%).
 
 #### Mechanosensation Added (500 runs, 6 features)
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_060315 | 54.0% | 68.6% | 164 |
-| 20260102_060318 | 64.0% | 84.3% | 107 |
-| 20260102_060320 | 61.0% | 78.4% | 121 |
-| 20260102_060323 | 52.0% | 62.7% | 188 |
-| **Average** | **57.8%** | **73.5%** | **145** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_060315 | 54.0% | 74.0% | 68.0% | 164 |
+| 20260102_060318 | 64.0% | 78.1% | 84.0% | 107 |
+| 20260102_060320 | 61.0% | 74.8% | 80.0% | 121 |
+| 20260102_060323 | 52.0% | 64.9% | 62.0% | 188 |
+| **Average** | **57.8%** | **73.0%** | **73.5%** | **145** |
 
 **Conclusion**: Adding 3rd module (mechanosensation) maintains performance. Architecture scales.
 
@@ -203,25 +208,25 @@ Pursuit predators create different challenges than stationary: the agent is chas
 
 #### Legacy Baseline (Combined Gradient)
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_081941 | 82.5% | 95.2% | 35 |
-| 20260102_081944 | 88.5% | 100.0% | 23 |
-| 20260102_081946 | 83.0% | 100.0% | 34 |
-| 20260102_081948 | 79.0% | 81.0% | 42 |
-| **Average** | **83.2%** | **94.0%** | **34** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_081941 | 82.5% | 93.8% | 94.0% | 35 |
+| 20260102_081944 | 88.5% | 96.6% | 96.0% | 23 |
+| 20260102_081946 | 83.0% | 95.5% | 100.0% | 34 |
+| 20260102_081948 | 79.0% | 91.9% | 86.0% | 42 |
+| **Average** | **83.2%** | **94.5%** | **94.0%** | **34** |
 
 #### Unified with Stationary Rewards (FAILED)
 
 Initial attempt using stationary predator reward config:
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_082832 | 37.4% | 47.1% | 236 |
-| 20260102_082836 | 26.4% | 41.2% | 249 |
-| 20260102_082839 | 12.6% | 7.8% | 289 |
-| 20260102_082842 | 24.4% | 62.7% | 244 |
-| **Average** | **25.2%** | **39.7%** | **254** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_082832 | 37.4% | 50.5% | 46.0% | 236 |
+| 20260102_082836 | 26.4% | 30.0% | 40.0% | 249 |
+| 20260102_082839 | 12.6% | 10.0% | 8.0% | 289 |
+| 20260102_082842 | 24.4% | 70.0% | 62.0% | 244 |
+| **Average** | **25.2%** | **40.1%** | **39.0%** | **254** |
 
 **Problem**: Stationary reward shaping backfires for pursuit - high proximity/damage penalties punish unavoidable chase behavior.
 
@@ -233,26 +238,26 @@ Adjusted rewards to match legacy pursuit config:
 - `penalty_predator_proximity: 0.15` (was 0.3) - lower chase punishment
 - `penalty_health_damage: 0.5` (was 1.5) - less damage penalty
 
-| Session ID | Success Rate | Late-Stage | Health Deaths |
-|------------|--------------|------------|---------------|
-| 20260102_093703 | 58.6% | 64.7% | 205 |
-| 20260102_093709 | 60.4% | 76.5% | 197 |
-| 20260102_093711 | 54.0% | 74.5% | 227 |
-| 20260102_095905 | 59.6% | 74.5% | 196 |
-| 20260102_095907 | 53.4% | 70.6% | 231 |
-| 20260102_095909 | 48.6% | 74.5% | 257 |
-| 20260102_095912 | 47.8% | 76.5% | 258 |
-| **Average** | **54.6%** | **73.1%** | **224** |
+| Session ID | Success Rate | Post-Conv | Last 50 | Health Deaths |
+|------------|--------------|-----------|---------|---------------|
+| 20260102_093703 | 58.6% | 62.2% | 64.0% | 205 |
+| 20260102_093709 | 60.4% | 81.3% | 76.0% | 197 |
+| 20260102_093711 | 54.0% | 76.2% | 74.0% | 227 |
+| 20260102_095905 | 59.6% | 75.3% | 74.0% | 196 |
+| 20260102_095907 | 53.4% | 62.3% | 70.0% | 231 |
+| 20260102_095909 | 48.6% | 74.2% | 74.0% | 257 |
+| 20260102_095912 | 47.8% | 69.9% | 76.0% | 258 |
+| **Average** | **54.6%** | **71.6%** | **72.6%** | **224** |
 
 #### Pursuit Summary
 
-| Configuration | Avg Success | Late-Stage | vs Legacy |
-|---------------|-------------|------------|-----------|
-| Legacy (combined gradient) | 83.2% | 94.0% | - |
-| Unified (stationary rewards) | 25.2% | 39.7% | -54.3% |
-| **Unified (pursuit rewards)** | **54.6%** | **73.1%** | **-20.9%** |
+| Configuration | Avg Success | Post-Conv | Last 50 | vs Legacy |
+|---------------|-------------|-----------|---------|-----------|
+| Legacy (combined gradient) | 83.2% | 94.5% | 94.0% | - |
+| Unified (stationary rewards) | 25.2% | 40.1% | 39.0% | -55% |
+| **Unified (pursuit rewards)** | **54.6%** | **71.6%** | **72.6%** | **-21%** |
 
-**Key finding**: Pursuit requires different reward tuning than stationary. The remaining ~21% gap is likely due to temporal credit assignment challenges with moving predators.
+**Key finding**: Pursuit requires different reward tuning than stationary. The remaining ~21-23% gap is likely due to temporal credit assignment challenges with moving predators.
 
 ______________________________________________________________________
 
@@ -311,7 +316,7 @@ ______________________________________________________________________
 
 1. **Goal achieved for stationary**: Unified 4-feature architecture matches legacy 75% late-stage performance on stationary predators
 
-2. **Pursuit gap remains**: Unified achieves 72% late-stage vs legacy's 94% on pursuit predators (-22% gap)
+2. **Pursuit gap remains**: Unified achieves 72% late-stage vs legacy's 95% on pursuit predators (-23% gap)
 
 3. **Reward tuning is scenario-specific**: Stationary needs high penalties; pursuit needs low penalties (unavoidable chase)
 
@@ -336,7 +341,7 @@ ______________________________________________________________________
 
 ### LSTM/Memory for Pursuit Gap
 
-The remaining ~21% pursuit gap is likely due to temporal credit assignment - the network sees instantaneous gradients but pursuit predators require tracking trajectory over time. Adding LSTM/GRU could help by:
+The remaining ~23% pursuit gap is likely due to temporal credit assignment - the network sees instantaneous gradients but pursuit predators require tracking trajectory over time. Adding LSTM/GRU could help by:
 
 1. **Remembering predator trajectory**: "It was approaching from the left" → continue evasion
 2. **Anticipating pursuit**: Learning that proximity → sustained chase
