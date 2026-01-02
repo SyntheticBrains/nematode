@@ -694,6 +694,15 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
                 for step, health in enumerate(current_episode_run_data.health_history):
                     writer.writerow({"step": step, "health": health})
 
+        # Export temperature history (if thermotaxis was enabled)
+        if current_episode_run_data.temperature_history:
+            filepath = run_dir / "temperature_history.csv"
+            with filepath.open("w", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=["step", "temperature"])
+                writer.writeheader()
+                for step, temperature in enumerate(current_episode_run_data.temperature_history):
+                    writer.writerow({"step": step, "temperature": temperature})
+
         # Export distance efficiencies
         if current_episode_run_data.distance_efficiencies:
             filepath = run_dir / "distance_efficiencies.csv"
@@ -731,6 +740,16 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
                 max_health = max(current_episode_run_data.health_history)
                 writer.writerow({"metric": "final_health", "value": f"{final_health:.2f}"})
                 writer.writerow({"metric": "max_health", "value": f"{max_health:.2f}"})
+            if current_episode_run_data.temperature_history:
+                temps = current_episode_run_data.temperature_history
+                final_temp = temps[-1]
+                mean_temp = sum(temps) / len(temps)
+                min_temp = min(temps)
+                max_temp = max(temps)
+                writer.writerow({"metric": "final_temperature", "value": f"{final_temp:.2f}"})
+                writer.writerow({"metric": "mean_temperature", "value": f"{mean_temp:.2f}"})
+                writer.writerow({"metric": "min_temperature", "value": f"{min_temp:.2f}"})
+                writer.writerow({"metric": "max_temperature", "value": f"{max_temp:.2f}"})
 
 
 # Dynamic Foraging Environment Specific Exports
