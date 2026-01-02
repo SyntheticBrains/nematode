@@ -9,6 +9,7 @@ from quantumnematode.agent import (
 from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
+from quantumnematode.env.env import HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.report.dtypes import TerminationReason
 
 
@@ -249,8 +250,6 @@ class TestPredatorCollisionTermination:
 
     def test_predator_instant_death_terminates_episode(self):
         """Test that predator collision without health system causes instant death."""
-        from quantumnematode.env import HealthParams, PredatorParams
-
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
 
@@ -278,8 +277,6 @@ class TestPredatorCollisionTermination:
 
     def test_predator_with_health_system_applies_damage(self):
         """Test that predator collision with health system applies damage."""
-        from quantumnematode.env import HealthParams, PredatorParams
-
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
 
@@ -305,8 +302,6 @@ class TestPredatorCollisionTermination:
 
     def test_health_depletion_terminates_episode(self):
         """Test that HP reaching zero terminates episode with HEALTH_DEPLETED."""
-        from quantumnematode.env import HealthParams, PredatorParams
-
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
 
@@ -420,8 +415,6 @@ class TestHealthHistoryTracking:
 
     def test_health_history_recorded_when_enabled(self):
         """Test that health history is recorded when health system is enabled."""
-        from quantumnematode.env import HealthParams
-
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
 
@@ -442,3 +435,97 @@ class TestHealthHistoryTracking:
         # All values should be valid HP values
         for hp in agent._episode_tracker.health_history:
             assert 0 <= hp <= 100.0
+
+
+class TestThermotaxisIntegration:
+    """Test thermotaxis integration in episode runner."""
+
+    def test_temperature_effects_applied_during_episode(self):
+        """Test that temperature zone effects are applied during episode when enabled."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Create environment with thermotaxis enabled and strong gradient
+        # Agent starts in a danger zone to ensure we can detect effects
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=35.0,  # Hot environment (danger zone)
+                gradient_strength=0.0,  # No gradient, uniform hot temp
+                danger_hp_damage=5.0,
+                comfort_delta=5.0,
+                discomfort_delta=10.0,
+                danger_delta=15.0,
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        initial_hp = env.agent_hp
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=10)
+
+        # HP should have decreased due to temperature danger zone damage
+        assert env.agent_hp < initial_hp, "Temperature danger zone should cause HP damage"
+
+    def test_temperature_comfort_score_tracked(self):
+        """Test that temperature comfort score is tracked during episode."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment at comfortable temperature
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,  # At cultivation temp (comfort zone)
+                gradient_strength=0.0,  # Uniform temperature
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        agent.run_episode(reward_config, max_steps=10)
+
+        # Temperature comfort score should be tracked and high (we're in comfort zone)
+        comfort_score = env.get_temperature_comfort_score()
+        assert comfort_score is not None
+        assert comfort_score == 1.0, "Should be 100% in comfort zone at cultivation temperature"
+
+    def test_temperature_lethal_zone_causes_death(self):
+        """Test that extreme temperatures can cause death through health depletion."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Lethal temperature environment with high damage
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=50.0),  # Low HP
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=50.0,  # Extreme heat (lethal zone: >35°C)
+                gradient_strength=0.0,
+                lethal_hp_damage=20.0,  # 20 HP per step in lethal zone
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig()
+        result = agent.run_episode(reward_config, max_steps=100)
+
+        # Should die from lethal temperature damage
+        assert result.termination_reason == TerminationReason.HEALTH_DEPLETED
