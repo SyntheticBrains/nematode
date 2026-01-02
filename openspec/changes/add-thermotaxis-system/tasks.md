@@ -12,32 +12,34 @@ ______________________________________________________________________
 
 ### 1.1 Create Temperature Module
 
-- [ ] Create `packages/quantum-nematode/quantumnematode/env/temperature.py`
-- [ ] Define `TemperatureField` dataclass with fields:
+- [x] Create `packages/quantum-nematode/quantumnematode/env/temperature.py`
+- [x] Define `TemperatureField` dataclass with fields:
   - `grid_size: int`
   - `base_temperature: float` (default 20.0, cultivation temperature)
   - `gradient_direction: float` (radians, 0 = temp increases to right)
   - `gradient_strength: float` (degrees per cell, default 0.5)
-  - `hot_spots: list[tuple[int, int, float]]` (x, y, intensity)
-  - `cold_spots: list[tuple[int, int, float]]` (x, y, intensity)
+  - `hot_spots: list[TemperatureSpot]` (x, y, intensity) - using typed alias
+  - `cold_spots: list[TemperatureSpot]` (x, y, intensity) - using typed alias
 
 ### 1.2 Temperature Computation
 
-- [ ] Implement `get_temperature(position: tuple[int, int]) -> float`
+- [x] Implement `get_temperature(position: GridPosition) -> float`
   - Linear gradient component based on direction and strength
   - Add hot spot contributions (exponential falloff)
   - Add cold spot contributions (exponential falloff)
-- [ ] Implement `get_gradient(position: tuple[int, int]) -> tuple[float, float]`
+- [x] Implement `get_gradient(position: GridPosition) -> GradientVector`
   - Central difference approximation
   - Return (dx, dy) gradient vector
+- [x] Implement `get_gradient_polar(position: GridPosition) -> GradientPolar`
+  - Returns (magnitude, direction) in polar coordinates
 
 ### 1.3 Temperature Zone Classification
 
-- [ ] Implement `get_zone(temperature: float) -> TemperatureZone`
-- [ ] Define `TemperatureZone` enum: LETHAL_COLD, DANGER_COLD, DISCOMFORT_COLD, COMFORT, DISCOMFORT_HOT, DANGER_HOT, LETHAL_HOT
-- [ ] Use configurable thresholds from environment config
+- [x] Implement `get_zone(temperature: float) -> TemperatureZone`
+- [x] Define `TemperatureZone` enum: LETHAL_COLD, DANGER_COLD, DISCOMFORT_COLD, COMFORT, DISCOMFORT_HOT, DANGER_HOT, LETHAL_HOT
+- [x] Use configurable thresholds via `TemperatureZoneThresholds` dataclass
 
-**Validation**: Unit tests for temperature calculation and zone classification
+**Validation**: Unit tests for temperature calculation and zone classification ✅ (12 tests in test_temperature.py)
 
 ______________________________________________________________________
 
@@ -45,33 +47,36 @@ ______________________________________________________________________
 
 ### 2.1 Temperature Field in Environment
 
-- [ ] Add `thermotaxis_enabled: bool` to DynamicForagingEnvironment
-- [ ] Add `temperature_field: TemperatureField | None` attribute
-- [ ] Initialize temperature field from config when enabled
-- [ ] Add `ThermotaxisConfig` dataclass for YAML configuration
+- [x] Add `thermotaxis: ThermotaxisParams` to DynamicForagingEnvironment
+- [x] Add `temperature_field: TemperatureField | None` attribute
+- [x] Initialize temperature field from config when enabled
+- [x] Add `ThermotaxisParams` dataclass for YAML configuration
 
 ### 2.2 Temperature in Step Execution
 
-- [ ] Compute temperature at agent position each step
-- [ ] Populate `BrainParams.temperature` with current temperature
-- [ ] Populate `BrainParams.temperature_gradient_strength`
-- [ ] Populate `BrainParams.temperature_gradient_direction`
-- [ ] Populate `BrainParams.cultivation_temperature`
+- [x] Compute temperature at agent position each step (`get_temperature()`)
+- [x] Populate `BrainParams.temperature` with current temperature
+- [x] Populate `BrainParams.temperature_gradient_strength`
+- [x] Populate `BrainParams.temperature_gradient_direction`
+- [x] Populate `BrainParams.cultivation_temperature`
 
 ### 2.3 Temperature Zone Effects
 
-- [ ] Apply comfort reward when in comfort zone
-- [ ] Apply discomfort penalty when in discomfort zone
-- [ ] Apply danger penalty + HP damage when in danger zone
-- [ ] Apply lethal HP damage when in lethal zone
-- [ ] Track temperature_comfort_score (time in comfort / total time)
+- [x] Apply comfort reward when in comfort zone
+- [x] Apply discomfort penalty when in discomfort zone
+- [x] Apply danger penalty + HP damage when in danger zone
+- [x] Apply lethal HP damage when in lethal zone
+- [x] Track temperature_comfort_score (time in comfort / total time)
+- [x] Implement `apply_temperature_effects()` method
+- [x] Implement `get_temperature_comfort_score()` method
+- [x] Implement `reset_thermotaxis()` method
 
 ### 2.4 Temperature Termination
 
-- [ ] Check for HP depletion from temperature damage
 - [ ] Log temperature as cause when terminating from temperature damage
+- [x] Check for HP depletion from temperature damage (via existing health system)
 
-**Validation**: Integration test with agent navigating temperature gradient
+**Validation**: Integration test with agent navigating temperature gradient ✅ (10 tests in test_env.py::TestThermotaxisIntegration)
 
 ______________________________________________________________________
 
@@ -81,31 +86,31 @@ ______________________________________________________________________
 
 > **Note**: Uses spatial gradient sensing (matches chemotaxis pattern). Temporal sensing (biologically accurate) to be added when memory systems are implemented per roadmap.
 
-- [ ] Implement `thermotaxis_features(params: BrainParams) -> dict[RotationAxis, float]`
-- [ ] RX: Temperature deviation from cultivation temperature
+- [x] Implement `thermotaxis_features(params: BrainParams) -> dict[RotationAxis, float]`
+- [x] RX: Temperature deviation from cultivation temperature
   - `temp_deviation = (current_temp - cultivation_temp) / 15.0` (normalized)
   - Scale to [-π/2, π/2]
-- [ ] RY: Relative angle to temperature gradient (spatial)
+- [x] RY: Relative angle to temperature gradient (spatial)
   - Egocentric (relative to agent facing direction)
   - Scale to [-π/2, π/2]
-- [ ] RZ: Temperature gradient strength
+- [x] RZ: Temperature gradient strength
   - `tanh(gradient_magnitude) * π/2`
-- [ ] Handle None values gracefully (return zeros)
-- [ ] Add docstring note documenting spatial vs temporal sensing trade-off
+- [x] Handle None values gracefully (return zeros)
+- [x] Add docstring note documenting spatial vs temporal sensing trade-off
 
 ### 3.2 Module Registration
 
-- [ ] Add `ModuleName.THERMOTAXIS` to enum (if not already present)
-- [ ] Register `thermotaxis_features` in `MODULE_FEATURE_EXTRACTORS`
-- [ ] Add AFD neuron reference to docstring
+- [x] Add `ModuleName.THERMOTAXIS` to enum (if not already present)
+- [x] Register `thermotaxis_features` in `SENSORY_MODULES` registry
+- [x] Add AFD neuron reference to docstring
 
 ### 3.3 Unified Feature Extraction Integration
 
-- [ ] Add thermotaxis to `extract_sensory_features()` in `modules.py`
-- [ ] Ensure PPOBrain receives thermotaxis features in input vector
-- [ ] Ensure ModularBrain can map thermotaxis module to qubits
+- [x] Add thermotaxis to unified `SensoryModule` architecture in `modules.py`
+- [x] Ensure PPOBrain receives thermotaxis features via `extract_classical_features()`
+- [x] Ensure ModularBrain can map thermotaxis module to qubits via `to_quantum_dict()`
 
-**Validation**: Unit tests for feature extraction with various temperature values
+**Validation**: Unit tests for feature extraction with various temperature values ✅ (4 tests in test_modules.py::TestThermotaxisModule)
 
 ______________________________________________________________________
 
@@ -210,10 +215,10 @@ ______________________________________________________________________
 
 ## Success Criteria
 
-- [ ] TemperatureField computes correct temperatures and gradients
-- [ ] Agent receives temperature in BrainParams when thermotaxis enabled
-- [ ] thermotaxis_features() produces valid rotation values
-- [ ] PPO can learn to navigate to comfort zone (>60% time)
-- [ ] ModularBrain with thermotaxis module achieves comparable performance
-- [ ] Combined chemotaxis+thermotaxis task is learnable
-- [ ] Temperature zones visible in Rich theme rendering
+- [x] TemperatureField computes correct temperatures and gradients ✅ (12 tests)
+- [x] Agent receives temperature in BrainParams when thermotaxis enabled ✅
+- [x] thermotaxis_features() produces valid rotation values ✅ (4 tests)
+- [ ] PPO can learn to navigate to comfort zone (>60% time) *(ready for evaluation)*
+- [ ] ModularBrain with thermotaxis module achieves comparable performance *(ready for evaluation)*
+- [ ] Combined chemotaxis+thermotaxis task is learnable *(ready for evaluation)*
+- [ ] Temperature zones visible in Rich theme rendering *(deferred to Section 5)*
