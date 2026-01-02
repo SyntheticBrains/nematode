@@ -239,18 +239,18 @@ ______________________________________________________________________
 
 ### 6.1 RewardConfig Extensions
 
-- [ ] Add `reward_temperature_comfort: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `penalty_temperature_discomfort: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `penalty_temperature_danger: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `hp_damage_temperature_danger: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `hp_damage_temperature_lethal: float` *(deferred to add-thermotaxis-system)*
+- [x] Add `reward_temperature_comfort: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `penalty_temperature_discomfort: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `penalty_temperature_danger: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `hp_damage_temperature_danger: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `hp_damage_temperature_lethal: float` ✅ *(implemented in add-thermotaxis-system)*
 - [x] Add `reward_health_gain: float`
 - [x] Add `penalty_health_damage: float`
 - [x] Add `penalty_boundary_collision: float`
 
 ### 6.2 RewardCalculator Updates
 
-- [ ] Add temperature comfort/discomfort reward calculation *(deferred to add-thermotaxis-system)*
+- [x] Add temperature comfort/discomfort reward calculation ✅ *(implemented in add-thermotaxis-system)*
 - [x] Add health-based reward calculation
 - [x] Add boundary collision penalty
 - [x] Ensure rewards are only applied when features are enabled
