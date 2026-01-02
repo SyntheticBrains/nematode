@@ -21,6 +21,11 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
+from quantumnematode.env.temperature import (
+    TemperatureField,
+    TemperatureZone,
+    TemperatureZoneThresholds,
+)
 from quantumnematode.env.theme import (
     THEME_SYMBOLS,
     DarkColorRichStyleConfig,
@@ -156,6 +161,79 @@ class HealthParams:
     max_hp: float = DEFAULT_MAX_HP
     predator_damage: float = DEFAULT_PREDATOR_DAMAGE
     food_healing: float = DEFAULT_FOOD_HEALING
+
+
+# Thermotaxis system defaults
+DEFAULT_CULTIVATION_TEMPERATURE = 20.0
+DEFAULT_TEMPERATURE_GRADIENT_STRENGTH = 0.5
+DEFAULT_COMFORT_REWARD = 0.05
+DEFAULT_DISCOMFORT_PENALTY = -0.1
+DEFAULT_DANGER_PENALTY = -0.3
+DEFAULT_DANGER_HP_DAMAGE = 2.0
+DEFAULT_LETHAL_HP_DAMAGE = 10.0
+
+
+@dataclass
+class ThermotaxisParams:
+    """
+    Parameters for thermotaxis configuration in the environment.
+
+    Thermotaxis simulates C. elegans temperature-guided navigation behavior.
+    Worms navigate toward their cultivation temperature (Tc) using AFD
+    thermosensory neurons.
+
+    TODO: Freeze this class once the following Pylance issue is resolved:
+    https://github.com/microsoft/pylance-release/issues/7801
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether thermotaxis is active in the environment.
+    cultivation_temperature : float
+        The worm's preferred temperature (Tc) in °C.
+    base_temperature : float
+        Base temperature of the environment in °C.
+    gradient_direction : float
+        Direction of increasing temperature in radians (0 = rightward).
+    gradient_strength : float
+        Temperature change per cell in °C.
+    hot_spots : list[tuple[int, int, float]] | None
+        Localized hot spots as (x, y, intensity) tuples.
+    cold_spots : list[tuple[int, int, float]] | None
+        Localized cold spots as (x, y, intensity) tuples.
+    comfort_reward : float
+        Reward per step when in comfort zone.
+    discomfort_penalty : float
+        Penalty per step when in discomfort zone.
+    danger_penalty : float
+        Penalty per step when in danger zone.
+    danger_hp_damage : float
+        HP damage per step when in danger zone (requires health system).
+    lethal_hp_damage : float
+        HP damage per step when in lethal zone (requires health system).
+    comfort_delta : float
+        Temperature deviation from Tc for comfort zone boundary (°C).
+    discomfort_delta : float
+        Temperature deviation from Tc for discomfort zone boundary (°C).
+    danger_delta : float
+        Temperature deviation from Tc for danger zone boundary (°C).
+    """
+
+    enabled: bool = False
+    cultivation_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
+    base_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
+    gradient_direction: float = 0.0
+    gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
+    hot_spots: list[tuple[int, int, float]] | None = None
+    cold_spots: list[tuple[int, int, float]] | None = None
+    comfort_reward: float = DEFAULT_COMFORT_REWARD
+    discomfort_penalty: float = DEFAULT_DISCOMFORT_PENALTY
+    danger_penalty: float = DEFAULT_DANGER_PENALTY
+    danger_hp_damage: float = DEFAULT_DANGER_HP_DAMAGE
+    lethal_hp_damage: float = DEFAULT_LETHAL_HP_DAMAGE
+    comfort_delta: float = 5.0
+    discomfort_delta: float = 10.0
+    danger_delta: float = 15.0
 
 
 class Predator:
@@ -957,6 +1035,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         foraging: ForagingParams | None = None,
         predator: PredatorParams | None = None,
         health: HealthParams | None = None,
+        thermotaxis: ThermotaxisParams | None = None,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -976,11 +1055,28 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.foraging = foraging or ForagingParams()
         self.predator = predator or PredatorParams()
         self.health = health or HealthParams()
+        self.thermotaxis = thermotaxis or ThermotaxisParams()
 
         self.viewport_size = viewport_size
 
         # Health state (runtime, not config)
         self.agent_hp: float = self.health.max_hp if self.health.enabled else 0.0
+
+        # Temperature field (runtime, created from thermotaxis config)
+        self.temperature_field: TemperatureField | None = None
+        if self.thermotaxis.enabled:
+            self.temperature_field = TemperatureField(
+                grid_size=grid_size,
+                base_temperature=self.thermotaxis.base_temperature,
+                gradient_direction=self.thermotaxis.gradient_direction,
+                gradient_strength=self.thermotaxis.gradient_strength,
+                hot_spots=self.thermotaxis.hot_spots,
+                cold_spots=self.thermotaxis.cold_spots,
+            )
+
+        # Thermotaxis tracking (comfort score calculation)
+        self.steps_in_comfort_zone: int = 0
+        self.total_thermotaxis_steps: int = 0
 
         # Validate gradient parameters to prevent divide-by-zero in exp(-distance/decay)
         if self.foraging.gradient_decay_constant <= 0:
@@ -1650,6 +1746,155 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """Reset agent HP to maximum (called at episode start)."""
         if self.health.enabled:
             self.agent_hp = self.health.max_hp
+
+    # -------------------------------------------------------------------------
+    # Thermotaxis Methods
+    # -------------------------------------------------------------------------
+
+    def get_temperature(self, position: tuple[int, int] | None = None) -> float | None:
+        """
+        Get temperature at a position (or agent position if not specified).
+
+        Parameters
+        ----------
+        position : tuple[int, int] | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        float | None
+            Temperature in °C, or None if thermotaxis is disabled.
+        """
+        if not self.thermotaxis.enabled or self.temperature_field is None:
+            return None
+        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        return self.temperature_field.get_temperature(pos)
+
+    def get_temperature_gradient(
+        self,
+        position: tuple[int, int] | None = None,
+    ) -> tuple[float, float] | None:
+        """
+        Get temperature gradient (magnitude, direction) at a position.
+
+        Parameters
+        ----------
+        position : tuple[int, int] | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        tuple[float, float] | None
+            (magnitude, direction) or None if thermotaxis is disabled.
+            Direction points toward increasing temperature.
+        """
+        if not self.thermotaxis.enabled or self.temperature_field is None:
+            return None
+        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        return self.temperature_field.get_gradient_polar(pos)
+
+    def get_temperature_zone(
+        self,
+        position: tuple[int, int] | None = None,
+    ) -> TemperatureZone | None:
+        """
+        Get the temperature zone at a position.
+
+        Parameters
+        ----------
+        position : tuple[int, int] | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        TemperatureZone | None
+            The temperature zone, or None if thermotaxis is disabled.
+        """
+        if not self.thermotaxis.enabled or self.temperature_field is None:
+            return None
+
+        temp = self.get_temperature(position)
+        if temp is None:
+            return None
+
+        thresholds = TemperatureZoneThresholds(
+            comfort_delta=self.thermotaxis.comfort_delta,
+            discomfort_delta=self.thermotaxis.discomfort_delta,
+            danger_delta=self.thermotaxis.danger_delta,
+        )
+        return self.temperature_field.get_zone(
+            temp,
+            self.thermotaxis.cultivation_temperature,
+            thresholds,
+        )
+
+    def apply_temperature_effects(self) -> tuple[float, float]:
+        """
+        Apply temperature zone effects (rewards/penalties and HP damage).
+
+        Updates the comfort zone tracking counters and applies appropriate
+        rewards, penalties, and HP damage based on the current temperature zone.
+
+        Returns
+        -------
+        tuple[float, float]
+            (reward_delta, hp_damage) applied this step.
+            reward_delta is positive for comfort, negative for discomfort/danger.
+            hp_damage is always non-negative (0 if no damage).
+        """
+        if not self.thermotaxis.enabled:
+            return 0.0, 0.0
+
+        zone = self.get_temperature_zone()
+        if zone is None:
+            return 0.0, 0.0
+
+        # Track comfort zone time
+        self.total_thermotaxis_steps += 1
+        if zone == TemperatureZone.COMFORT:
+            self.steps_in_comfort_zone += 1
+
+        reward_delta = 0.0
+        hp_damage = 0.0
+
+        if zone == TemperatureZone.COMFORT:
+            reward_delta = self.thermotaxis.comfort_reward
+        elif zone in (TemperatureZone.DISCOMFORT_COLD, TemperatureZone.DISCOMFORT_HOT):
+            reward_delta = self.thermotaxis.discomfort_penalty
+        elif zone in (TemperatureZone.DANGER_COLD, TemperatureZone.DANGER_HOT):
+            reward_delta = self.thermotaxis.danger_penalty
+            hp_damage = self.thermotaxis.danger_hp_damage
+        elif zone in (TemperatureZone.LETHAL_COLD, TemperatureZone.LETHAL_HOT):
+            reward_delta = self.thermotaxis.danger_penalty  # Use danger penalty for lethal too
+            hp_damage = self.thermotaxis.lethal_hp_damage
+
+        # Apply HP damage if health system is enabled
+        if hp_damage > 0 and self.health.enabled:
+            self.agent_hp = max(0.0, self.agent_hp - hp_damage)
+            logger.debug(
+                f"Temperature damage: zone={zone.value}, damage={hp_damage}, hp={self.agent_hp}",
+            )
+
+        return reward_delta, hp_damage
+
+    def get_temperature_comfort_score(self) -> float:
+        """
+        Get the fraction of time spent in the comfort zone.
+
+        Returns
+        -------
+        float
+            Ratio of steps in comfort zone to total steps (0.0 to 1.0).
+            Returns 0.0 if no thermotaxis steps have occurred.
+        """
+        if self.total_thermotaxis_steps == 0:
+            return 0.0
+        return self.steps_in_comfort_zone / self.total_thermotaxis_steps
+
+    def reset_thermotaxis(self) -> None:
+        """Reset thermotaxis tracking counters (called at episode start)."""
+        self.steps_in_comfort_zone = 0
+        self.total_thermotaxis_steps = 0
 
     def _get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """

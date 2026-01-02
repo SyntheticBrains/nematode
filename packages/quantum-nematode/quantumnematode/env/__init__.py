@@ -11,6 +11,10 @@ __all__ = [
     "PredatorParams",
     "PredatorType",
     "StaticEnvironment",
+    "TemperatureField",
+    "TemperatureZone",
+    "TemperatureZoneThresholds",
+    "ThermotaxisParams",
 ]
 
 from quantumnematode.env.env import (
@@ -24,4 +28,10 @@ from quantumnematode.env.env import (
     PredatorParams,
     PredatorType,
     StaticEnvironment,
+    ThermotaxisParams,
+)
+from quantumnematode.env.temperature import (
+    TemperatureField,
+    TemperatureZone,
+    TemperatureZoneThresholds,
 )
