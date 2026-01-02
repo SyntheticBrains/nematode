@@ -101,7 +101,7 @@ ______________________________________________________________________
 
 ### 3.3 Unified Feature Extraction Integration
 
-- [ ] Add thermotaxis to `extract_sensory_features()` in features.py
+- [ ] Add thermotaxis to `extract_sensory_features()` in `modules.py`
 - [ ] Ensure PPOBrain receives thermotaxis features in input vector
 - [ ] Ensure ModularBrain can map thermotaxis module to qubits
 
