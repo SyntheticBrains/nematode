@@ -394,6 +394,12 @@ class QuantumNematodeAgent:
         health = None
         max_health = None
 
+        # Thermotaxis: temperature sensing
+        temperature = None
+        temperature_gradient_strength = None
+        temperature_gradient_direction = None
+        cultivation_temperature = None
+
         if isinstance(self.env, DynamicForagingEnvironment):
             boundary_contact = self.env.is_agent_at_boundary()
             predator_contact = self.env.is_agent_in_predator_contact()
@@ -401,6 +407,14 @@ class QuantumNematodeAgent:
             if self.env.health.enabled:
                 health = self.env.agent_hp
                 max_health = self.env.health.max_hp
+            # Thermotaxis state (if thermotaxis enabled)
+            if self.env.thermotaxis.enabled:
+                temperature = self.env.get_temperature()
+                temp_gradient = self.env.get_temperature_gradient()
+                if temp_gradient is not None:
+                    temperature_gradient_strength = temp_gradient[0]
+                    temperature_gradient_direction = temp_gradient[1]
+                cultivation_temperature = self.env.thermotaxis.cultivation_temperature
 
         return BrainParams(
             # Combined gradients
@@ -419,6 +433,11 @@ class QuantumNematodeAgent:
             # Mechanosensation (physical contact)
             boundary_contact=boundary_contact,
             predator_contact=predator_contact,
+            # Thermotaxis (temperature sensing)
+            temperature=temperature,
+            temperature_gradient_strength=temperature_gradient_strength,
+            temperature_gradient_direction=temperature_gradient_direction,
+            cultivation_temperature=cultivation_temperature,
             # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
