@@ -1327,7 +1327,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # - food_direction: points toward food (move this way to eat)
         # - predator_direction: points toward predator (move AWAY from this direction)
         predator_direction = (
-            np.arctan2(-predator_vector_y, -predator_vector_x) if predator_magnitude_raw > 0 else 0.0
+            np.arctan2(-predator_vector_y, -predator_vector_x)
+            if predator_magnitude_raw > 0
+            else 0.0
         )
 
         # Normalize magnitudes to [0, 1] using tanh, matching combined gradient scaling.

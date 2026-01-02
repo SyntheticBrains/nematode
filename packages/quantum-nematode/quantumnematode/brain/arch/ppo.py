@@ -336,19 +336,21 @@ class PPOBrain(ClassicalBrain):
         self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.learning_rate)
         self.lr_decay_episodes = config.lr_decay_episodes
         self.lr_decay_end = config.lr_decay_end or (0.1 * config.learning_rate)
-        self.lr_scheduling_enabled = self.lr_warmup_episodes > 0 or self.lr_decay_episodes is not None
+        self.lr_scheduling_enabled = (
+            self.lr_warmup_episodes > 0 or self.lr_decay_episodes is not None
+        )
 
         if self.lr_scheduling_enabled:
             schedule_desc = []
             if self.lr_warmup_episodes > 0:
                 schedule_desc.append(
                     f"warmup {self.lr_warmup_start:.6f} -> {self.base_lr:.6f} "
-                    f"over {self.lr_warmup_episodes} episodes"
+                    f"over {self.lr_warmup_episodes} episodes",
                 )
             if self.lr_decay_episodes is not None:
                 schedule_desc.append(
                     f"decay {self.base_lr:.6f} -> {self.lr_decay_end:.6f} "
-                    f"over {self.lr_decay_episodes} episodes"
+                    f"over {self.lr_decay_episodes} episodes",
                 )
             logger.info(f"LR scheduling enabled: {', then '.join(schedule_desc)}")
 
