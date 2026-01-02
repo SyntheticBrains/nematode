@@ -208,6 +208,24 @@ ______________________________________________________________________
   - Legacy mode (default) still uses 2-feature preprocessing
 - [x] Ensure backward compatibility with existing configs (legacy module names still work)
 
+### 5.4 PPO Training Improvements for Multi-Feature Learning
+
+> **Context**: With unified sensory modules (4 features: food_chemotaxis + nociception), PPO required additional tuning to match legacy 2-feature performance. The network must independently learn food=good and predator=bad correlations.
+
+- [x] Fixed predator gradient direction semantics (point TOWARD danger, not away)
+- [x] Added reward shaping for multi-feature credit assignment:
+  - `reward_distance_scale: 0.3` (reduced from 0.5)
+  - `penalty_predator_proximity: 0.3` (increased from 0.1)
+  - `penalty_health_damage: 1.5` (increased from 0.5)
+- [x] Added learning rate scheduling to PPOBrainConfig:
+  - `lr_warmup_episodes: int` - episodes to warm up LR
+  - `lr_warmup_start: float | None` - starting LR (default 10% of base)
+  - `lr_decay_episodes: int | None` - episodes to decay LR after warmup
+  - `lr_decay_end: float | None` - final LR (default 10% of base)
+- [x] Added LR scheduling tests to test_ppo.py (8 tests)
+
+**Results**: Unified 4-feature mode achieves 73% late-stage success (within 2% of legacy's 75%)
+
 **Validation**: Unified SensoryModule architecture complete ✅
 - Single source of truth: `SENSORY_MODULES` registry
 - All modules usable by both quantum and classical brains

@@ -584,6 +584,187 @@ class TestPPOBrainIntegration:
         assert torch.isfinite(torch.tensor(final_value))
 
 
+class TestLRScheduling:
+    """Tests for learning rate scheduling (warmup and decay)."""
+
+    def test_lr_scheduling_disabled_by_default(self):
+        """Test that LR scheduling is disabled when no warmup episodes set."""
+        config = PPOBrainConfig(learning_rate=0.001)
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        assert brain.lr_scheduling_enabled is False
+        assert brain._get_current_lr() == 0.001
+
+    def test_lr_warmup_enabled(self):
+        """Test that LR warmup can be enabled via config."""
+        config = PPOBrainConfig(
+            learning_rate=0.001,
+            lr_warmup_episodes=50,
+            lr_warmup_start=0.0001,
+        )
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        assert brain.lr_scheduling_enabled is True
+        assert brain.lr_warmup_episodes == 50
+        assert brain.lr_warmup_start == 0.0001
+        assert brain.base_lr == 0.001
+
+    def test_lr_warmup_default_start(self):
+        """Test that lr_warmup_start defaults to 10% of base LR."""
+        config = PPOBrainConfig(
+            learning_rate=0.001,
+            lr_warmup_episodes=50,
+            # lr_warmup_start not set
+        )
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        assert brain.lr_warmup_start == 0.0001  # 10% of 0.001
+
+    def test_lr_warmup_progression(self):
+        """Test that LR increases linearly during warmup phase."""
+        config = PPOBrainConfig(
+            learning_rate=0.001,
+            lr_warmup_episodes=100,
+            lr_warmup_start=0.0001,
+        )
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        # Episode 0: should be at warmup start
+        brain.overfit_detector_episode_count = 0
+        assert brain._get_current_lr() == pytest.approx(0.0001)
+
+        # Episode 50: should be at midpoint
+        brain.overfit_detector_episode_count = 50
+        expected_mid = 0.0001 + (0.001 - 0.0001) * 0.5
+        assert brain._get_current_lr() == pytest.approx(expected_mid)
+
+        # Episode 100: should be at base LR
+        brain.overfit_detector_episode_count = 100
+        assert brain._get_current_lr() == pytest.approx(0.001)
+
+        # Episode 150: should stay at base LR (no decay configured)
+        brain.overfit_detector_episode_count = 150
+        assert brain._get_current_lr() == pytest.approx(0.001)
+
+    def test_lr_decay_after_warmup(self):
+        """Test that LR decays after warmup when decay is configured."""
+        config = PPOBrainConfig(
+            learning_rate=0.001,
+            lr_warmup_episodes=50,
+            lr_warmup_start=0.0001,
+            lr_decay_episodes=200,
+            lr_decay_end=0.0001,
+        )
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        # Episode 0: warmup start
+        brain.overfit_detector_episode_count = 0
+        assert brain._get_current_lr() == pytest.approx(0.0001)
+
+        # Episode 50: warmup complete, at base LR
+        brain.overfit_detector_episode_count = 50
+        assert brain._get_current_lr() == pytest.approx(0.001)
+
+        # Episode 150: midpoint of decay (50 + 100 = 150)
+        brain.overfit_detector_episode_count = 150
+        expected_mid = 0.001 + (0.0001 - 0.001) * 0.5
+        assert brain._get_current_lr() == pytest.approx(expected_mid)
+
+        # Episode 250: decay complete (50 + 200 = 250)
+        brain.overfit_detector_episode_count = 250
+        assert brain._get_current_lr() == pytest.approx(0.0001)
+
+        # Episode 300: stays at decay end
+        brain.overfit_detector_episode_count = 300
+        assert brain._get_current_lr() == pytest.approx(0.0001)
+
+    def test_lr_decay_default_end(self):
+        """Test that lr_decay_end defaults to 10% of base LR."""
+        config = PPOBrainConfig(
+            learning_rate=0.001,
+            lr_warmup_episodes=50,
+            lr_decay_episodes=100,
+            # lr_decay_end not set
+        )
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        assert brain.lr_decay_end == 0.0001  # 10% of 0.001
+
+    def test_update_learning_rate_modifies_optimizer(self):
+        """Test that _update_learning_rate actually updates the optimizer."""
+        config = PPOBrainConfig(
+            learning_rate=0.001,
+            lr_warmup_episodes=100,
+            lr_warmup_start=0.0001,
+        )
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        # Initially at warmup start
+        brain.overfit_detector_episode_count = 0
+        brain._update_learning_rate()
+        for param_group in brain.optimizer.param_groups:
+            assert param_group["lr"] == pytest.approx(0.0001)
+
+        # After some episodes, LR should have increased
+        brain.overfit_detector_episode_count = 50
+        brain._update_learning_rate()
+        expected = 0.0001 + (0.001 - 0.0001) * 0.5
+        for param_group in brain.optimizer.param_groups:
+            assert param_group["lr"] == pytest.approx(expected)
+
+    def test_lr_scheduling_no_update_when_disabled(self):
+        """Test that _update_learning_rate does nothing when scheduling disabled."""
+        config = PPOBrainConfig(learning_rate=0.001)
+        brain = PPOBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        original_lr = brain.optimizer.param_groups[0]["lr"]
+        brain.overfit_detector_episode_count = 100
+        brain._update_learning_rate()
+
+        # LR should be unchanged
+        assert brain.optimizer.param_groups[0]["lr"] == original_lr
+
+
 class TestPPOClipping:
     """Tests specifically for PPO clipping mechanism."""
 
