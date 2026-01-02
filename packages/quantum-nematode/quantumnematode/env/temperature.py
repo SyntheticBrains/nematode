@@ -17,6 +17,8 @@ from enum import Enum
 import numpy as np
 from pydantic.dataclasses import dataclass
 
+from quantumnematode.dtypes import GradientPolar, GradientVector, GridPosition, TemperatureSpot
+
 
 class TemperatureZone(Enum):
     """
@@ -99,8 +101,8 @@ class TemperatureField:
     base_temperature: float = 20.0
     gradient_direction: float = 0.0
     gradient_strength: float = 0.5
-    hot_spots: list[tuple[int, int, float]] | None = None
-    cold_spots: list[tuple[int, int, float]] | None = None
+    hot_spots: list[TemperatureSpot] | None = None
+    cold_spots: list[TemperatureSpot] | None = None
     spot_decay_constant: float = 5.0
 
     def __post_init__(self) -> None:
@@ -110,13 +112,13 @@ class TemperatureField:
         if self.cold_spots is None:
             self.cold_spots = []
 
-    def get_temperature(self, position: tuple[int, int]) -> float:
+    def get_temperature(self, position: GridPosition) -> float:
         """
         Compute temperature at a given position.
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : GridPosition
             (x, y) position to query.
 
         Returns
@@ -145,7 +147,7 @@ class TemperatureField:
 
         return float(temp)
 
-    def get_gradient(self, position: tuple[int, int]) -> tuple[float, float]:
+    def get_gradient(self, position: GridPosition) -> GradientVector:
         """
         Compute temperature gradient vector at a given position.
 
@@ -155,12 +157,12 @@ class TemperatureField:
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : GridPosition
             (x, y) position to query gradient at.
 
         Returns
         -------
-        tuple[float, float]
+        GradientVector
             (dx, dy) gradient vector pointing toward increasing temperature.
         """
         x, y = position
@@ -178,18 +180,18 @@ class TemperatureField:
 
         return float(dx), float(dy)
 
-    def get_gradient_polar(self, position: tuple[int, int]) -> tuple[float, float]:
+    def get_gradient_polar(self, position: GridPosition) -> GradientPolar:
         """
         Compute temperature gradient in polar coordinates.
 
         Parameters
         ----------
-        position : tuple[int, int]
+        position : GridPosition
             (x, y) position to query gradient at.
 
         Returns
         -------
-        tuple[float, float]
+        GradientPolar
             (magnitude, direction) where:
             - magnitude: gradient strength in °C per cell
             - direction: angle in radians pointing toward increasing temperature
