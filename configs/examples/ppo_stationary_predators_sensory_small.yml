@@ -33,6 +33,8 @@ brain:
     normalize_advantages: true
     lr_warmup_episodes: 50
     lr_warmup_start: 0.0001
+    lr_decay_episodes: 200
+    lr_decay_end: 0.0001
     sensory_modules:
       - food_chemotaxis
       - nociception
