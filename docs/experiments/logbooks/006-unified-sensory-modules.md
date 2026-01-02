@@ -238,7 +238,11 @@ Adjusted rewards to match legacy pursuit config:
 | 20260102_093703 | 58.6% | 64.7% | 205 |
 | 20260102_093709 | 60.4% | 76.5% | 197 |
 | 20260102_093711 | 54.0% | 74.5% | 227 |
-| **Average** | **57.7%** | **71.9%** | **210** |
+| 20260102_095905 | 59.6% | 74.5% | 196 |
+| 20260102_095907 | 53.4% | 70.6% | 231 |
+| 20260102_095909 | 48.6% | 74.5% | 257 |
+| 20260102_095912 | 47.8% | 76.5% | 258 |
+| **Average** | **54.6%** | **73.1%** | **224** |
 
 #### Pursuit Summary
 
@@ -246,9 +250,9 @@ Adjusted rewards to match legacy pursuit config:
 |---------------|-------------|------------|-----------|
 | Legacy (combined gradient) | 83.2% | 94.0% | - |
 | Unified (stationary rewards) | 25.2% | 39.7% | -54.3% |
-| **Unified (pursuit rewards)** | **57.7%** | **71.9%** | **-22.1%** |
+| **Unified (pursuit rewards)** | **54.6%** | **73.1%** | **-20.9%** |
 
-**Key finding**: Pursuit requires different reward tuning than stationary. The remaining ~22% gap is likely due to temporal credit assignment challenges with moving predators.
+**Key finding**: Pursuit requires different reward tuning than stationary. The remaining ~21% gap is likely due to temporal credit assignment challenges with moving predators.
 
 ______________________________________________________________________
 
@@ -351,7 +355,7 @@ ______________________________________________________________________
 
 - Legacy: `20260102_081941`, `20260102_081944`, `20260102_081946`, `20260102_081948`
 - Unified (stationary rewards - failed): `20260102_082832`, `20260102_082836`, `20260102_082839`, `20260102_082842`
-- Unified (pursuit rewards): `20260102_093703`, `20260102_093709`, `20260102_093711`
+- Unified (pursuit rewards): `20260102_093703`, `20260102_093709`, `20260102_093711`, `20260102_095905`, `20260102_095907`, `20260102_095909`, `20260102_095912`
 
 > **Note**: Only the top sessions are saved in `artifacts/experiments`.
 
