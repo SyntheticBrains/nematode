@@ -204,13 +204,14 @@ ______________________________________________________________________
 
 ### 5.3 Per-Run CSV Exports
 
-- [ ] Export `temperature_history.csv` (step, temperature, zone)
+- [x] Export `temperature_history.csv` (step, temperature)
+- [x] Include temperature metrics (`final_temperature`, `mean_temperature`, `min_temperature`, `max_temperature`) in `foraging_summary.csv`
 - [ ] Include `temperature_comfort_score` in `foraging_summary.csv`
-- [ ] Include `final_temperature` and `died_to_temperature` in summary
+- [ ] Include `died_to_temperature` in summary
 
 ### 5.4 Per-Run Plots
 
-- [ ] Generate `temperature_progression.png` (temperature over time)
+- [x] Generate `temperature_progression.png` (temperature over time with mean line)
 - [ ] Color-code background by temperature zone
 - [ ] Overlay comfort zone boundaries as horizontal lines
 
@@ -219,6 +220,15 @@ ______________________________________________________________________
 - [ ] Generate session-level temperature comfort score distribution
 - [ ] Generate multi-run temperature progression overlay plot
 - [ ] Include temperature stats in session summary plots
+
+### 5.6 Data Pipeline Infrastructure
+
+- [x] Add `temperature_history: list[float]` to `EpisodeData` dataclass in `runners.py`
+- [x] Add `track_temperature()` method to `EpisodeTracker` in `tracker.py`
+- [x] Track temperature at agent position each step in runners.py step loop
+- [x] Add `temperature_history` to `SimulationResult` in `report/dtypes.py`
+- [x] Add `temperature_history` to `EpisodeTrackingData` in `report/dtypes.py`
+- [x] Pass temperature history through `run_simulation.py` to exports
 
 **Validation**: Console shows temperature metrics, exports include temperature history and plots
 
@@ -308,7 +318,11 @@ This section documents all files touched during thermotaxis implementation to se
 | `quantumnematode/dtypes.py` | TemperatureSpot type alias (shared types already existed) |
 | `quantumnematode/utils/config_loader.py` | ThermotaxisConfig class, to_params() method, DynamicEnvironmentConfig.thermotaxis field |
 | `quantumnematode/agent/agent.py` | \_create_brain_params() thermotaxis state population, reset_environment() config preservation |
-| `quantumnematode/agent/runners.py` | apply_temperature_effects() call in step loop, HP depletion check |
+| `quantumnematode/agent/runners.py` | apply_temperature_effects() call in step loop, HP depletion check, temperature_history in EpisodeData, track_temperature() call |
+| `quantumnematode/agent/tracker.py` | temperature_history field, track_temperature() method, temperature_history property |
+| `quantumnematode/report/dtypes.py` | temperature_history in SimulationResult and EpisodeTrackingData |
+| `quantumnematode/report/plots.py` | temperature_progression.png plot generation |
+| `quantumnematode/report/csv_export.py` | temperature_history.csv export, temperature metrics in foraging_summary.csv |
 
 ### Script Files
 
