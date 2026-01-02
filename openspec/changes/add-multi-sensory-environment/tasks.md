@@ -227,6 +227,7 @@ ______________________________________________________________________
 **Results**: Unified 4-feature mode achieves 73% late-stage success (within 2% of legacy's 75%)
 
 **Validation**: Unified SensoryModule architecture complete ✅
+
 - Single source of truth: `SENSORY_MODULES` registry
 - All modules usable by both quantum and classical brains
 - Clear interface: `module.to_quantum(params)` vs `module.to_classical(params)`
