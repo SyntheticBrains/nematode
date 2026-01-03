@@ -2354,10 +2354,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Notes
         -----
-        Config objects (ForagingParams, PredatorParams, HealthParams) are shared
-        between the original and copy, not deep-copied. This is intentional as these
-        are treated as immutable configuration. Runtime state (foods, visited_cells,
-        agent_hp, predator positions) is properly copied.
+        Config objects (ForagingParams, PredatorParams, HealthParams, ThermotaxisParams)
+        are shared between the original and copy, not deep-copied. This is intentional
+        as these are treated as immutable configuration. Runtime state (foods,
+        visited_cells, agent_hp, predator positions, thermotaxis counters) is properly
+        copied.
         """
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,
@@ -2371,6 +2372,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             foraging=self.foraging,
             predator=self.predator,
             health=self.health,
+            thermotaxis=self.thermotaxis,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
@@ -2380,6 +2382,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env.rng = get_rng(self.seed)
         # Copy health state
         new_env.agent_hp = self.agent_hp
+        # Copy thermotaxis tracking state
+        new_env.steps_in_comfort_zone = self.steps_in_comfort_zone
+        new_env.total_thermotaxis_steps = self.total_thermotaxis_steps
         if self.predator.enabled:
             new_env.predators = [
                 Predator(
