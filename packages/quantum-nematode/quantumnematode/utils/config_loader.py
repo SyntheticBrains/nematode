@@ -21,10 +21,18 @@ from quantumnematode.brain.arch import (
 )
 from quantumnematode.brain.modules import Modules
 from quantumnematode.env.env import (
+    DEFAULT_COMFORT_REWARD,
+    DEFAULT_CULTIVATION_TEMPERATURE,
+    DEFAULT_DANGER_HP_DAMAGE,
+    DEFAULT_DANGER_PENALTY,
+    DEFAULT_DISCOMFORT_PENALTY,
+    DEFAULT_LETHAL_HP_DAMAGE,
+    DEFAULT_TEMPERATURE_GRADIENT_STRENGTH,
     ForagingParams,
     HealthParams,
     PredatorParams,
     PredatorType,
+    ThermotaxisParams,
 )
 from quantumnematode.initializers import (
     ManualParameterInitializer,
@@ -237,6 +245,76 @@ class HealthConfig(BaseModel):
         )
 
 
+class ThermotaxisConfig(BaseModel):
+    """Configuration for thermotaxis (temperature sensing) system.
+
+    When enabled, the environment has a temperature field that the agent
+    can sense. Temperature zones affect rewards and HP damage based on
+    deviation from the cultivation temperature.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether thermotaxis is active in the environment.
+    cultivation_temperature : float
+        The temperature the agent was raised at (°C). Agent is most comfortable here.
+    base_temperature : float
+        Base temperature of the environment before gradients/spots (°C).
+    gradient_direction : float
+        Direction of linear temperature gradient (radians, 0 = increases to right).
+    gradient_strength : float
+        How quickly temperature changes per cell (°C/cell).
+    comfort_delta : float
+        Temperature deviation from cultivation temp considered comfortable (°C).
+    discomfort_delta : float
+        Temperature deviation threshold for discomfort zone (°C).
+    danger_delta : float
+        Temperature deviation threshold for danger zone (°C).
+    comfort_reward : float
+        Reward per step when in comfort zone.
+    discomfort_penalty : float
+        Penalty per step when in discomfort zone (should be negative).
+    danger_penalty : float
+        Penalty per step when in danger zone (should be negative).
+    danger_hp_damage : float
+        HP damage per step when in danger zone.
+    lethal_hp_damage : float
+        HP damage per step when in lethal zone.
+    """
+
+    enabled: bool = False
+    cultivation_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
+    base_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
+    gradient_direction: float = 0.0
+    gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
+    comfort_delta: float = 5.0
+    discomfort_delta: float = 10.0
+    danger_delta: float = 15.0
+    comfort_reward: float = DEFAULT_COMFORT_REWARD
+    discomfort_penalty: float = DEFAULT_DISCOMFORT_PENALTY
+    danger_penalty: float = DEFAULT_DANGER_PENALTY
+    danger_hp_damage: float = DEFAULT_DANGER_HP_DAMAGE
+    lethal_hp_damage: float = DEFAULT_LETHAL_HP_DAMAGE
+
+    def to_params(self) -> ThermotaxisParams:
+        """Convert to ThermotaxisParams for environment initialization."""
+        return ThermotaxisParams(
+            enabled=self.enabled,
+            cultivation_temperature=self.cultivation_temperature,
+            base_temperature=self.base_temperature,
+            gradient_direction=self.gradient_direction,
+            gradient_strength=self.gradient_strength,
+            comfort_delta=self.comfort_delta,
+            discomfort_delta=self.discomfort_delta,
+            danger_delta=self.danger_delta,
+            comfort_reward=self.comfort_reward,
+            discomfort_penalty=self.discomfort_penalty,
+            danger_penalty=self.danger_penalty,
+            danger_hp_damage=self.danger_hp_damage,
+            lethal_hp_damage=self.lethal_hp_damage,
+        )
+
+
 class DynamicEnvironmentConfig(BaseModel):
     """Configuration for dynamic foraging environment."""
 
@@ -248,6 +326,7 @@ class DynamicEnvironmentConfig(BaseModel):
     foraging: ForagingConfig | None = None
     predators: PredatorConfig | None = None
     health: HealthConfig | None = None
+    thermotaxis: ThermotaxisConfig | None = None
 
     def get_foraging_config(self) -> ForagingConfig:
         """Get foraging configuration with defaults."""
@@ -260,6 +339,10 @@ class DynamicEnvironmentConfig(BaseModel):
     def get_health_config(self) -> HealthConfig:
         """Get health configuration with defaults."""
         return self.health or HealthConfig()
+
+    def get_thermotaxis_config(self) -> ThermotaxisConfig:
+        """Get thermotaxis configuration with defaults."""
+        return self.thermotaxis or ThermotaxisConfig()
 
 
 class EnvironmentConfig(BaseModel):

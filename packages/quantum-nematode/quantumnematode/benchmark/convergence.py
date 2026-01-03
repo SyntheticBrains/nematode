@@ -65,6 +65,13 @@ class ConvergenceMetrics(BaseModel):
     Measures consistency of success rates across runs.
     """
 
+    # Multi-objective metrics (added for thermotaxis/survival tasks)
+    avg_survival_score: float | None = None
+    """Average survival score (final_hp / max_hp) across all runs. None if health disabled."""
+
+    avg_temperature_comfort_score: float | None = None
+    """Average temperature comfort score across all runs. None if thermotaxis disabled."""
+
 
 def detect_convergence(
     results: list[SimulationResult],
@@ -365,12 +372,32 @@ def calculate_post_convergence_metrics(
         ]
         distance_efficiency = float(np.mean(efficiencies)) if efficiencies else None
 
+    # Multi-objective metrics (survival and temperature comfort)
+    avg_survival_score = None
+    avg_temperature_comfort_score = None
+
+    # Calculate average survival score if available
+    survival_scores = [r.survival_score for r in analysis_runs if r.survival_score is not None]
+    if survival_scores:
+        avg_survival_score = float(np.mean(survival_scores))
+
+    # Calculate average temperature comfort score if available
+    comfort_scores = [
+        r.temperature_comfort_score
+        for r in analysis_runs
+        if r.temperature_comfort_score is not None
+    ]
+    if comfort_scores:
+        avg_temperature_comfort_score = float(np.mean(comfort_scores))
+
     return {
         "success_rate": success_rate,
         "avg_steps": avg_steps,
         "avg_foods": avg_foods,
         "variance": variance,
         "distance_efficiency": distance_efficiency,
+        "avg_survival_score": avg_survival_score,
+        "avg_temperature_comfort_score": avg_temperature_comfort_score,
     }
 
 
@@ -381,15 +408,25 @@ def calculate_composite_score(  # noqa: PLR0913
     variance: float,
     total_runs: int = 50,
     max_variance: float = 0.2,
+    survival_score: float | None = None,
+    temperature_comfort_score: float | None = None,
 ) -> float:
     """
-    Calculate weighted composite benchmark score.
+    Calculate weighted composite benchmark score with multi-objective support.
 
-    The composite score combines multiple aspects of learning performance:
+    The composite score uses hierarchical weighting where survival acts as a gate:
+    - If agent died (survival_score provided but low): score is capped
+    - Secondary objectives (temperature comfort) only count if agent survives
+
+    For single-objective tasks (no survival/thermotaxis), uses the original formula:
     - Success rate (40%): How often the strategy succeeds
-    - Distance efficiency (30%): How efficiently it navigates (optimal path / actual path)
+    - Distance efficiency (30%): How efficiently it navigates
     - Learning speed (20%): How quickly it converges
     - Stability (10%): How consistent it is after convergence
+
+    For multi-objective tasks, the formula adapts:
+    - If died (survival_score < 0.1): composite capped at 0.3 * primary_completion
+    - If survived: weights redistribute to include secondary objectives
 
     Parameters
     ----------
@@ -406,6 +443,10 @@ def calculate_composite_score(  # noqa: PLR0913
         Total number of runs in the session (default: 50).
     max_variance : float, optional
         Maximum variance for normalization (default: 0.2).
+    survival_score : float | None, optional
+        Average survival score (final_hp / max_hp). None if health system disabled.
+    temperature_comfort_score : float | None, optional
+        Average temperature comfort score. None if thermotaxis disabled.
 
     Returns
     -------
@@ -414,12 +455,17 @@ def calculate_composite_score(  # noqa: PLR0913
 
     Notes
     -----
-    All components are normalized to [0, 1] before weighting:
-    - Success rate: Already normalized
-    - Distance efficiency: Already normalized (0.0 to 1.0)
-    - Speed: Inverted (faster = better)
-    - Stability: Inverted variance (lower variance = better)
+    Multi-objective scoring hierarchy:
+    1. Survival is a gate - dying significantly caps the score
+    2. Primary objective (food collection) is the main metric
+    3. Secondary objectives (temperature comfort, efficiency) matter only if survived
+
+    This mirrors biological fitness where a dead organism gets no credit for
+    almost completing a task.
     """
+    # Determine if this is a multi-objective task
+    is_multi_objective = survival_score is not None or temperature_comfort_score is not None
+
     # Component 1: Success rate (already 0-1)
     norm_success = success_rate
 
@@ -438,8 +484,50 @@ def calculate_composite_score(  # noqa: PLR0913
     # Component 4: Stability (lower variance = better)
     norm_stability = max(0.0, 1.0 - (variance / max_variance))
 
-    # Weighted composite score
-    return 0.40 * norm_success + 0.30 * norm_efficiency + 0.20 * norm_speed + 0.10 * norm_stability
+    if not is_multi_objective:
+        # Original single-objective formula
+        return (
+            0.40 * norm_success + 0.30 * norm_efficiency + 0.20 * norm_speed + 0.10 * norm_stability
+        )
+
+    # Multi-objective scoring with hierarchical weighting
+    # Survival acts as a gate
+    effective_survival = survival_score if survival_score is not None else 1.0
+    effective_comfort = temperature_comfort_score if temperature_comfort_score is not None else 0.0
+
+    # Check if agent "died" (survival score below threshold)
+    survival_threshold = 0.1
+    if effective_survival < survival_threshold:
+        # Died: cap score at 30% of primary completion
+        return 0.30 * norm_success
+
+    # Survived: use full multi-objective formula
+    # Weights:
+    # - Primary objective (success rate): 50%
+    # - Survival quality: 15% (how healthy agent remained)
+    # - Temperature comfort: 10% (if thermotaxis enabled)
+    # - Distance efficiency: 15%
+    # - Learning speed + stability: 10%
+
+    if temperature_comfort_score is not None:
+        # Full multi-objective with thermotaxis
+        return (
+            0.50 * norm_success
+            + 0.15 * effective_survival
+            + 0.10 * effective_comfort
+            + 0.15 * norm_efficiency
+            + 0.05 * norm_speed
+            + 0.05 * norm_stability
+        )
+
+    # Multi-objective without thermotaxis (just health)
+    return (
+        0.50 * norm_success
+        + 0.20 * effective_survival
+        + 0.20 * norm_efficiency
+        + 0.05 * norm_speed
+        + 0.05 * norm_stability
+    )
 
 
 def analyze_convergence(
@@ -514,6 +602,8 @@ def analyze_convergence(
         runs_to_convergence=runs_to_convergence,
         variance=post_metrics["variance"] if post_metrics["variance"] is not None else 1.0,
         total_runs=total_runs,
+        survival_score=post_metrics["avg_survival_score"],
+        temperature_comfort_score=post_metrics["avg_temperature_comfort_score"],
     )
 
     # Step 6: Build convergence metrics object
@@ -530,4 +620,6 @@ def analyze_convergence(
         learning_speed=learning_speed,
         learning_speed_episodes=learning_speed_episodes,
         stability=stability,
+        avg_survival_score=post_metrics["avg_survival_score"],
+        avg_temperature_comfort_score=post_metrics["avg_temperature_comfort_score"],
     )

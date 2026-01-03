@@ -342,7 +342,7 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
             logger.warning(f"Unrecognized data type for {key}. Skipping plot.")
 
 
-def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0915
+def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
     timestamp: str,
     run: int,
@@ -492,6 +492,37 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0915
             plt.grid(alpha=0.3)
             plt.tight_layout()
             plt.savefig(run_dir / "health_progression.png")
+            plt.close()
+
+        # Plot temperature progression (if thermotaxis was enabled)
+        if episode_data.temperature_history:
+            temperature_history = episode_data.temperature_history
+            steps = list(range(len(temperature_history)))
+
+            plt.figure(figsize=(14, 6))
+            plt.plot(
+                steps,
+                temperature_history,
+                linewidth=2,
+                label="Temperature",
+                color="red",
+            )
+            # Calculate and show mean temperature
+            mean_temp = float(np.mean(temperature_history))
+            plt.axhline(
+                y=mean_temp,
+                color="orange",
+                linestyle="--",
+                linewidth=1.5,
+                label=f"Mean: {mean_temp:.1f}°C",
+            )
+            plt.title(f"Temperature Progression (run {run})")
+            plt.xlabel("Step")
+            plt.ylabel("Temperature (°C)")
+            plt.legend()
+            plt.grid(alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(run_dir / "temperature_progression.png")
             plt.close()
 
         # Plot distance efficiencies for this run

@@ -81,9 +81,9 @@ class ModuleName(str, Enum):
     FOOD_CHEMOTAXIS = "food_chemotaxis"
     NOCICEPTION = "nociception"
     MECHANOSENSATION = "mechanosensation"
+    THERMOTAXIS = "thermotaxis"
 
     # Placeholder modules
-    THERMOTAXIS = "thermotaxis"
     AEROTAXIS = "aerotaxis"
     VISION = "vision"
     ACTION = "action"
@@ -148,7 +148,26 @@ def _chemotaxis_core(params: BrainParams) -> CoreFeatures:
 
 
 def _food_chemotaxis_core(params: BrainParams) -> CoreFeatures:
-    """Extract food chemotaxis features from separated food gradient."""
+    """Extract food chemotaxis features from separated food gradient.
+
+    Food chemotaxis (AWC, AWA neurons) encodes attraction toward food sources:
+    - strength: food gradient magnitude [0, 1], higher = closer/stronger food signal
+    - angle: egocentric direction to food [-1, 1], 0 = food directly ahead
+
+    This module uses SEPARATED food gradients (food_gradient_*) rather than
+    combined gradients (gradient_*), allowing the brain to independently learn
+    food attraction vs predator avoidance behaviors.
+
+    Biological Reference:
+        AWC neurons detect volatile attractants (benzaldehyde, isoamyl alcohol).
+        AWA neurons detect additional attractants (diacetyl, pyrazine).
+        Both project to interneurons that modulate turning behavior.
+
+    Transform (standard):
+        RX = tanh(strength) * π - π/2  -> [-π/2, π/2] (biased by signal strength)
+        RY = angle * π/2               -> [-π/2, π/2] (turn toward food)
+        RZ = 0                         -> no binary signal
+    """
     strength = float(params.food_gradient_strength or 0.0)
     angle = _compute_relative_angle(
         params.food_gradient_direction,
@@ -160,11 +179,27 @@ def _food_chemotaxis_core(params: BrainParams) -> CoreFeatures:
 def _nociception_core(params: BrainParams) -> CoreFeatures:
     """Extract nociception features from separated predator gradient.
 
-    Semantics (consistent with food_chemotaxis):
-    - strength: [0, 1] where higher = closer predator danger
-    - angle: [-1, 1] where 0 = predator is directly ahead
+    Nociception (ASH, ADL neurons) encodes aversive/danger signals:
+    - strength: predator gradient magnitude [0, 1], higher = closer predator
+    - angle: egocentric direction TOWARD predator [-1, 1], 0 = predator ahead
 
     The brain should learn: high strength + angle near 0 = danger ahead, turn away!
+
+    Note on Gradient Direction:
+        The predator gradient points TOWARD predators (danger direction), not away.
+        This gives consistent semantics with food_chemotaxis where angle=0 means
+        the signal source is directly ahead. The brain must learn that for
+        nociception, moving AWAY from the angle direction is beneficial.
+
+    Biological Reference:
+        ASH neurons are polymodal nociceptors responding to nose touch, high
+        osmolarity, and volatile repellents. ADL neurons respond to octanol
+        and other repellents. Both trigger avoidance reflexes via interneurons.
+
+    Transform (standard):
+        RX = tanh(strength) * π - π/2  -> [-π/2, π/2] (danger intensity)
+        RY = angle * π/2               -> [-π/2, π/2] (danger direction)
+        RZ = 0                         -> no binary signal
     """
     strength = float(params.predator_gradient_strength or 0.0)
     angle = _compute_relative_angle(
@@ -175,7 +210,28 @@ def _nociception_core(params: BrainParams) -> CoreFeatures:
 
 
 def _mechanosensation_core(params: BrainParams) -> CoreFeatures:
-    """Extract mechanosensation features from touch/contact signals."""
+    """Extract mechanosensation features from touch/contact signals.
+
+    Mechanosensation (ALM, PLM, AVM neurons) encodes physical contact:
+    - strength: boundary contact [0, 1], 1 = touching grid boundary
+    - angle: predator contact [0, 1], 1 = in physical contact with predator
+    - binary: urgency signal = max(boundary, predator), any contact triggers
+
+    Unlike gradient-based modules, mechanosensation provides binary touch signals
+    that indicate immediate physical contact. This is a "last resort" signal that
+    fires when the agent is already in a dangerous situation.
+
+    Biological Reference:
+        ALM (Anterior Lateral Microtubule) and PLM (Posterior Lateral Microtubule)
+        neurons are touch receptor neurons along the body. AVM (Anterior Ventral
+        Microtubule) responds to light touch at the head. These trigger rapid
+        reversal or acceleration responses.
+
+    Transform (binary):
+        RX = strength * π/2  -> [0, π/2] (boundary contact)
+        RY = angle * π/2     -> [0, π/2] (predator contact)
+        RZ = binary * π/2    -> [0, π/2] (any contact urgency)
+    """
     boundary = 1.0 if params.boundary_contact is True else 0.0
     predator = 1.0 if params.predator_contact is True else 0.0
     urgency = max(boundary, predator)
@@ -183,31 +239,133 @@ def _mechanosensation_core(params: BrainParams) -> CoreFeatures:
 
 
 def _proprioception_core(params: BrainParams) -> CoreFeatures:
-    """Extract proprioception features from agent's facing direction.
+    """Extract proprioception features from agent's facing direction and movement.
 
-    The direction is stored in the binary field, scaled to [-1, 1]:
-    - UP: 0.0
-    - DOWN: 1.0 (will become π with binary transform: 1 * π = π)
-    - LEFT: 0.5 (will become π/2 with binary transform: 0.5 * π = π/2)
-    - RIGHT: -0.5 (will become -π/2 with binary transform: -0.5 * π = -π/2)
+    Proprioception (DVA, PVD neurons) encodes the agent's own body state:
+    - strength: movement indicator (1.0 if moved this step, 0.0 if stayed)
+    - angle: facing direction encoded as normalized angle [-1, 1]
+    - binary: unused (0)
+
+    Direction encoding (using angle field for semantic consistency):
+    - UP: 0.5     -> 90° (facing up/north)
+    - DOWN: -0.5  -> -90° (facing down/south)
+    - LEFT: 1.0   -> 180° (facing left/west)
+    - RIGHT: 0.0  -> 0° (facing right/east)
+
+    Movement detection:
+    - Uses params.action to detect if agent moved (any action except STAY)
+    - FORWARD, LEFT, RIGHT, FORWARD_LEFT, FORWARD_RIGHT all indicate movement
+
+    This provides the brain with awareness of its current heading and whether
+    it is actively moving, enabling it to maintain consistent navigation
+    strategies regardless of absolute grid orientation.
+
+    Note on Acceleration:
+        True acceleration sensing (velocity change over time) is not currently
+        possible as the agent has constant speed. When variable speed or
+        momentum is implemented, a separate vestibular/kinesthesia module
+        could track acceleration.
+
+    Biological Reference:
+        DVA is a stretch-sensitive interneuron that modulates locomotion based
+        on body posture. PVD neurons are proprioceptive neurons that sense
+        body bending and curvature. Together they enable coordinated movement.
+
+    Transform (standard):
+        RX = strength * π - π/2  -> [-π/2, π/2] (movement occurred)
+        RY = angle * π/2         -> [-π/2, π/2] (facing direction)
+        RZ = 0                   -> no binary signal
     """
+    # Facing direction encoded as angle in [-1, 1]
+    # Maps to same angles as other egocentric modules
     direction_map = {
-        Direction.UP: 0.0,
-        Direction.DOWN: 1.0,
-        Direction.LEFT: 0.5,
-        Direction.RIGHT: -0.5,
+        Direction.UP: 0.5,  # 90° / π -> normalized to 0.5
+        Direction.DOWN: -0.5,  # -90° / -π -> normalized to -0.5
+        Direction.LEFT: 1.0,  # 180° / π -> normalized to 1.0 (or -1.0, same angle)
+        Direction.RIGHT: 0.0,  # 0° -> normalized to 0.0
     }
-    direction = direction_map.get(params.agent_direction or Direction.UP, 0.0)
-    return CoreFeatures(binary=direction)
+    facing_angle = direction_map.get(params.agent_direction or Direction.UP, 0.0)
+
+    # Movement indicator: 1.0 if agent moved this step (any action except STAY)
+    movement_strength = 0.0
+    if params.action is not None:
+        movement_strength = 0.0 if params.action.action == Action.STAY else 1.0
+
+    return CoreFeatures(strength=movement_strength, angle=facing_angle)
 
 
-def _thermotaxis_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
-    """Extract thermotaxis features (placeholder - returns zeros)."""
-    return CoreFeatures()
+def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract thermotaxis features from temperature gradient.
+
+    Thermotaxis (AFD neurons) encodes:
+    - strength: temperature gradient magnitude (how quickly temp changes spatially)
+    - angle: relative direction to warmer temperatures (egocentric)
+    - binary: temperature deviation from cultivation temperature (normalized)
+
+    Note on Biological Accuracy:
+        Real C. elegans thermotaxis uses temporal comparison (sensing temperature
+        change over time as the worm moves) rather than direct spatial gradient
+        sensing. The spatial gradient approach used here is computationally
+        equivalent for stateless brains and matches the existing chemotaxis pattern.
+        When memory systems are added to the architecture (roadmap item), temporal
+        sensing features should be implemented as a more biologically accurate
+        alternative.
+    """
+    # Handle disabled thermotaxis (all fields None)
+    if params.temperature is None:
+        return CoreFeatures()
+
+    # Temperature deviation from cultivation temperature
+    # Normalized to [-1, 1] where:
+    #   0 = at cultivation temperature (preferred)
+    #   +1 = 15°C hotter than Tc (danger hot)
+    #   -1 = 15°C colder than Tc (danger cold)
+    # Default Tc - use explicit None check to allow Tc=0°C if ever needed
+    cultivation_temp = (
+        params.cultivation_temperature if params.cultivation_temperature is not None else 20.0
+    )
+    temp_deviation = (params.temperature - cultivation_temp) / 15.0
+    temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
+
+    # Gradient strength (0 = no gradient, 1 = strong gradient)
+    # Use tanh normalization like chemotaxis
+    gradient_strength = float(params.temperature_gradient_strength or 0.0)
+    normalized_strength = float(np.tanh(gradient_strength))
+
+    # Relative angle to temperature gradient (where warmer is)
+    # Uses same egocentric computation as chemotaxis
+    angle = _compute_relative_angle(
+        params.temperature_gradient_direction,
+        params.agent_direction,
+    )
+
+    return CoreFeatures(
+        strength=normalized_strength,
+        angle=angle,
+        binary=temp_deviation,
+    )
 
 
 def _aerotaxis_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
-    """Extract aerotaxis features (placeholder - returns zeros)."""
+    """Extract aerotaxis features (placeholder - returns zeros).
+
+    Aerotaxis (URX, BAG neurons) will encode oxygen gradient navigation:
+    - strength: oxygen gradient magnitude (planned)
+    - angle: egocentric direction to preferred O2 level (planned)
+    - binary: deviation from preferred O2 concentration (planned)
+
+    C. elegans prefer ~10% O2 (normoxia), avoiding both hypoxia (<5%) and
+    hyperoxia (>14%). Implementation will follow thermotaxis pattern with
+    an oxygen field class and O2 zone classification.
+
+    Biological Reference:
+        URX neurons are oxygen sensors that detect increases in O2.
+        BAG neurons detect decreases in O2 (CO2 also affects BAG).
+        AQR and PQR provide additional O2 sensing at head/tail.
+        Together they enable navigation to optimal oxygen levels.
+
+    Status: PLACEHOLDER - returns zeros until oxygen field is implemented.
+    """
     return CoreFeatures()
 
 
@@ -256,7 +414,7 @@ class SensoryModule:
     name: ModuleName
     extract: Callable[[BrainParams], CoreFeatures]
     description: str
-    transform_type: Literal["standard", "binary", "proprioception", "placeholder"] = "standard"
+    transform_type: Literal["standard", "binary", "placeholder"] = "standard"
     is_placeholder: bool = False
 
     def to_quantum(self, params: BrainParams) -> np.ndarray:
@@ -267,7 +425,6 @@ class SensoryModule:
             np.ndarray of shape (3,) with values depending on transform_type:
             - standard: RX uses offset for full range
             - binary: all values scaled by π/2 (for on/off signals)
-            - proprioception: RZ uses full π scaling for direction encoding
             - placeholder: returns zeros
         """
         core = self.extract(params)
@@ -281,17 +438,6 @@ class SensoryModule:
                     core.strength * np.pi / 2,
                     core.angle * np.pi / 2,
                     core.binary * np.pi / 2,
-                ],
-                dtype=np.float32,
-            )
-        if self.transform_type == "proprioception":
-            # Proprioception: RZ uses full π scaling for direction
-            # binary in [-1, 1] -> RZ in [-π, π]
-            return np.array(
-                [
-                    0.0,
-                    0.0,
-                    core.binary * np.pi,  # [-1,1] -> [-π, π]
                 ],
                 dtype=np.float32,
             )
@@ -386,21 +532,24 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
         name=ModuleName.PROPRIOCEPTION,
         extract=_proprioception_core,
         description=(
-            "Body orientation sensing. Encodes the agent's current facing direction "
-            "as a rotation angle in the binary field."
+            "Body orientation sensing (DVA, PVD neurons). Encodes the agent's current "
+            "facing direction in the angle field and strength if the agent is moving. "
+            "Uses standard transform for semantic consistency."
         ),
-        transform_type="proprioception",
+        transform_type="standard",
     ),
-    # [PLACEHOLDER] Thermotaxis - temperature
+    # Thermotaxis - temperature (AFD neurons)
     ModuleName.THERMOTAXIS: SensoryModule(
         name=ModuleName.THERMOTAXIS,
         extract=_thermotaxis_core,
         description=(
-            "Temperature sensing (AFD neurons). Placeholder: will encode navigation "
-            "toward preferred temperature (Tc)."
+            "Temperature sensing (AFD neurons). Encodes temperature gradient for "
+            "navigation toward cultivation temperature (Tc). Uses spatial gradient "
+            "sensing (biologically, C. elegans uses temporal sensing). strength: "
+            "gradient magnitude, angle: direction to warmer temp, binary: deviation "
+            "from Tc (normalized to [-1, 1])."
         ),
-        transform_type="placeholder",
-        is_placeholder=True,
+        transform_type="standard",
     ),
     # [PLACEHOLDER] Aerotaxis - oxygen
     ModuleName.AEROTAXIS: SensoryModule(

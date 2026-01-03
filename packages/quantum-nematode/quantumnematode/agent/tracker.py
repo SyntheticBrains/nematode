@@ -21,6 +21,7 @@ class EpisodeTracker:
             distance_efficiencies=[],
             satiety_history=[],
             health_history=[],
+            temperature_history=[],
             predator_encounters=0,
             successful_evasions=0,
             in_danger=False,
@@ -55,6 +56,11 @@ class EpisodeTracker:
     def health_history(self) -> list[float]:
         """Get the health history for the episode."""
         return self.data.health_history
+
+    @property
+    def temperature_history(self) -> list[float]:
+        """Get the temperature history for the episode."""
+        return self.data.temperature_history
 
     @property
     def predator_encounters(self) -> int:
@@ -129,6 +135,16 @@ class EpisodeTracker:
         """
         self.data.health_history.append(health)
 
+    def track_temperature(self, temperature: float) -> None:
+        """Track current temperature.
+
+        Parameters
+        ----------
+        temperature : float
+            Current temperature at agent position for this step.
+        """
+        self.data.temperature_history.append(temperature)
+
     def track_step(self, reward: float = 0.0, satiety: float | None = None) -> None:
         """Track a single step.
 
@@ -153,6 +169,7 @@ class EpisodeTracker:
             distance_efficiencies=[],
             satiety_history=[],
             health_history=[],
+            temperature_history=[],
             predator_encounters=0,
             successful_evasions=0,
             in_danger=False,

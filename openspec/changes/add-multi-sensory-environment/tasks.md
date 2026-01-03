@@ -41,7 +41,7 @@ ______________________________________________________________________
 - [x] Implement predator damage on contact (configurable `predator_damage`)
 - [x] Implement food healing (configurable `food_healing`)
 - [x] Ensure food consumption restores both HP AND satiety when both systems enabled
-- [ ] Add temperature damage (for thermotaxis integration) *(deferred to add-thermotaxis-system)*
+- [x] Add temperature damage (for thermotaxis integration) ✅ *(implemented in add-thermotaxis-system)*
 - [x] Cap HP at max_hp, floor at 0
 
 ### 2.3 Termination
@@ -239,18 +239,18 @@ ______________________________________________________________________
 
 ### 6.1 RewardConfig Extensions
 
-- [ ] Add `reward_temperature_comfort: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `penalty_temperature_discomfort: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `penalty_temperature_danger: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `hp_damage_temperature_danger: float` *(deferred to add-thermotaxis-system)*
-- [ ] Add `hp_damage_temperature_lethal: float` *(deferred to add-thermotaxis-system)*
+- [x] Add `reward_temperature_comfort: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `penalty_temperature_discomfort: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `penalty_temperature_danger: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `hp_damage_temperature_danger: float` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Add `hp_damage_temperature_lethal: float` ✅ *(implemented in add-thermotaxis-system)*
 - [x] Add `reward_health_gain: float`
 - [x] Add `penalty_health_damage: float`
 - [x] Add `penalty_boundary_collision: float`
 
 ### 6.2 RewardCalculator Updates
 
-- [ ] Add temperature comfort/discomfort reward calculation *(deferred to add-thermotaxis-system)*
+- [x] Add temperature comfort/discomfort reward calculation ✅ *(implemented in add-thermotaxis-system)*
 - [x] Add health-based reward calculation
 - [x] Add boundary collision penalty
 - [x] Ensure rewards are only applied when features are enabled
@@ -263,22 +263,33 @@ ______________________________________________________________________
 
 ### 7.1 SimulationResult Extensions
 
-- [ ] Add `temperature_comfort_score: float | None` *(deferred to add-thermotaxis-system)*
-- [ ] Add `survival_score: float | None`
-- [ ] Add `thermotaxis_success: bool | None` *(deferred to add-thermotaxis-system)*
+- [x] Add `temperature_comfort_score: float | None` ✅ *(implemented in add-thermotaxis-system via get_temperature_comfort_score())*
+- [x] Add `survival_score: float | None` ✅
+- [x] Decision: Use continuous `temperature_comfort_score` instead of binary `thermotaxis_success`
 
 ### 7.2 Composite Score Update
 
-- [ ] Extend `calculate_composite_score()` to handle multi-objective metrics
-- [ ] When multi-objective enabled: reweight base components
-- [ ] Document updated scoring formula
+- [x] Extend `calculate_composite_score()` to handle multi-objective metrics ✅
+- [x] When multi-objective enabled: reweight base components with hierarchical scoring ✅
+  - Survival acts as gate: if survival_score < 0.1, score capped at 30% of primary
+  - With thermotaxis: 50% success, 15% survival, 10% comfort, 15% efficiency, 10% learning
+  - Without thermotaxis: 50% success, 20% survival, 20% efficiency, 10% learning
+- [x] Document updated scoring formula ✅ *(in calculate_composite_score docstring)*
 
 ### 7.3 Experiment Tracking
 
-- [ ] Track per-objective scores during episode
-- [ ] Include multi-objective metrics in experiment JSON
+- [x] Track per-objective scores during episode ✅
+- [x] Include multi-objective metrics in experiment JSON ✅
+  - Added `survival_score` and `temperature_comfort_score` to PerRunResult
+  - Added avg/post-convergence fields to ResultsMetadata
+  - Added avg fields to ConvergenceMetrics
 
-**Validation**: Multi-objective scores computed and tracked correctly
+### 7.4 Baseline Configuration
+
+- [x] Create pure isothermal thermotaxis config (`ppo_thermotaxis_isothermal_small.yml`) ✅
+  - Uniform temperature (gradient_strength=0) for baseline comparison
+
+**Validation**: Multi-objective scores computed and tracked correctly ✅
 
 ______________________________________________________________________
 
@@ -299,28 +310,38 @@ ______________________________________________________________________
 
 ## 9. Visualization
 
-> **Note**: Temperature zone visualization is deferred to `add-thermotaxis-system`.
+> **Status**: Temperature zone and toxic zone visualization implemented in `add-thermotaxis-system`.
 
 ### 9.1 Temperature Zone Coloring
 
-- [ ] Extend Rich theme to support background colors *(deferred to add-thermotaxis-system)*
-- [ ] Implement temperature zone color mapping *(deferred to add-thermotaxis-system)*:
+- [x] Extend Rich theme to support background colors ✅ *(implemented in add-thermotaxis-system)*
+- [x] Implement temperature zone color mapping ✅ *(implemented in add-thermotaxis-system)*:
   - Lethal cold (\<5°C): blue
   - Danger cold (5-10°C): cyan
   - Discomfort cold (10-15°C): light cyan
-  - Comfort (15-25°C): white (default)
-  - Discomfort hot (25-30°C): light yellow
-  - Danger hot (30-35°C): yellow
+  - Comfort (15-25°C): default (no background)
+  - Discomfort hot (25-30°C): light goldenrod
+  - Danger hot (30-35°C): orange
   - Lethal hot (>35°C): red
-- [ ] Implement priority system: Agent > Predators > Food > Temperature *(deferred to add-thermotaxis-system)*
+- [x] Implement priority system: Agent > Predators > Food > Temperature ✅ *(implemented in add-thermotaxis-system)*
+  - Foreground styles (entity colors) combined with background styles (zone colors)
+  - Toxic zones (stationary predator damage radius) have highest background priority
 
-### 9.2 Debug Logging
+### 9.2 Toxic Zone Coloring
+
+- [x] Add toxic zone background for stationary predator damage_radius ✅ *(implemented in add-thermotaxis-system)*
+  - Purple (`on medium_purple`) background
+  - Priority over temperature zones
+- [x] Add predator foreground styles ✅ *(implemented in add-thermotaxis-system)*
+  - Random: magenta, Stationary: dark_magenta, Pursuit: yellow
+
+### 9.3 Debug Logging
 
 - [ ] Add environment snapshot logging at episode start
-- [ ] Include temperature samples at key positions *(deferred to add-thermotaxis-system)*
+- [ ] Include temperature samples at key positions *(deferred)*
 - [ ] Log health system state changes
 
-**Validation**: Temperature zones visible in Rich theme output
+**Validation**: 9 tests in test_env.py::TestZoneVisualization ✅
 
 ______________________________________________________________________
 
@@ -371,7 +392,9 @@ ______________________________________________________________________
 
 ### 11.1 Example Configs
 
-- [ ] Create `configs/examples/ppo_thermotaxis_foraging_small.yml` *(deferred to add-thermotaxis-system)*
+- [x] Create `configs/examples/ppo_thermotaxis_foraging_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
 - [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
 - [x] Create `configs/examples/ppo_pursuit_predators_small.yml`

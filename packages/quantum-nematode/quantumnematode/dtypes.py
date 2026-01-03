@@ -15,6 +15,25 @@ GridPosition = tuple[int, int]
 Position = tuple[float, float]
 
 # =============================================================================
+# Gradient Types
+# =============================================================================
+
+# Gradient in polar coordinates (magnitude, direction_radians)
+# Used by temperature, food, and predator gradient computations
+GradientPolar = tuple[float, float]
+
+# Gradient in Cartesian coordinates (dx, dy)
+GradientVector = tuple[float, float]
+
+# =============================================================================
+# Spot Types (for temperature field)
+# =============================================================================
+
+# Hot/cold spot definition: (x, y, intensity)
+# Intensity is temperature delta in °C (positive for hot, used as-is for cold)
+TemperatureSpot = tuple[int, int, float]
+
+# =============================================================================
 # Path and History Types
 # =============================================================================
 

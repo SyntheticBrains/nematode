@@ -44,6 +44,22 @@ class ThemeSymbolSet(BaseModel):
         Symbol for stationary predators (toxic zones).
     predator_pursuit : str
         Symbol for pursuit predators (actively chase agent).
+    zone_lethal_cold : str
+        Symbol/style for lethal cold zone background.
+    zone_danger_cold : str
+        Symbol/style for danger cold zone background.
+    zone_discomfort_cold : str
+        Symbol/style for discomfort cold zone background.
+    zone_comfort : str
+        Symbol/style for comfort zone background (typically same as empty).
+    zone_discomfort_hot : str
+        Symbol/style for discomfort hot zone background.
+    zone_danger_hot : str
+        Symbol/style for danger hot zone background.
+    zone_lethal_hot : str
+        Symbol/style for lethal hot zone background.
+    zone_toxic : str
+        Symbol/style for toxic zone background (stationary predator radius).
     """
 
     goal: str
@@ -56,6 +72,15 @@ class ThemeSymbolSet(BaseModel):
     predator: str
     predator_stationary: str
     predator_pursuit: str
+    # Zone backgrounds (optional, default to empty for themes without zone support)
+    zone_lethal_cold: str = ""
+    zone_danger_cold: str = ""
+    zone_discomfort_cold: str = ""
+    zone_comfort: str = ""
+    zone_discomfort_hot: str = ""
+    zone_danger_hot: str = ""
+    zone_lethal_hot: str = ""
+    zone_toxic: str = ""
 
 
 class DarkColorRichStyleConfig(BaseModel):
@@ -73,6 +98,28 @@ class DarkColorRichStyleConfig(BaseModel):
         Rich style string for empty cells.
     grid_background : str
         Rich style string for grid cell backgrounds.
+    predator_style : str
+        Rich style string for random predators.
+    predator_stationary_style : str
+        Rich style string for stationary predators.
+    predator_pursuit_style : str
+        Rich style string for pursuit predators.
+    zone_lethal_cold_bg : str
+        Background style for lethal cold temperature zone.
+    zone_danger_cold_bg : str
+        Background style for danger cold temperature zone.
+    zone_discomfort_cold_bg : str
+        Background style for discomfort cold temperature zone.
+    zone_comfort_bg : str
+        Background style for comfort temperature zone (default: no background).
+    zone_discomfort_hot_bg : str
+        Background style for discomfort hot temperature zone.
+    zone_danger_hot_bg : str
+        Background style for danger hot temperature zone.
+    zone_lethal_hot_bg : str
+        Background style for lethal hot temperature zone.
+    zone_toxic_bg : str
+        Background style for toxic zones (stationary predator damage radius).
     """
 
     goal_style: str = "bold red"
@@ -80,6 +127,23 @@ class DarkColorRichStyleConfig(BaseModel):
     agent_style: str = "bold green"
     empty_style: str = "dim grey93"
     grid_background: str = "bold grey93"
+
+    # Predator foreground styles
+    predator_style: str = "bold magenta"
+    predator_stationary_style: str = "bold dark_magenta"
+    predator_pursuit_style: str = "bold yellow"
+
+    # Temperature zone background styles (cold to hot gradient)
+    zone_lethal_cold_bg: str = "on blue"
+    zone_danger_cold_bg: str = "on cyan"
+    zone_discomfort_cold_bg: str = "on light_cyan3"
+    zone_comfort_bg: str = ""  # No background override for comfort zone
+    zone_discomfort_hot_bg: str = "on light_goldenrod1"
+    zone_danger_hot_bg: str = "on orange1"
+    zone_lethal_hot_bg: str = "on red"
+
+    # Toxic zone background (higher priority than temperature)
+    zone_toxic_bg: str = "on medium_purple"
 
 
 THEME_SYMBOLS = {
@@ -97,7 +161,7 @@ THEME_SYMBOLS = {
     ),
     Theme.EMOJI: ThemeSymbolSet(
         goal="🦠",
-        body="🔵",
+        body="🟤",
         up="🔼",
         down="🔽",
         left="◀️ ",
@@ -106,6 +170,15 @@ THEME_SYMBOLS = {
         predator="🕷️ ",
         predator_stationary="☠️ ",
         predator_pursuit="🦂",
+        # Zone backgrounds using colored square emojis
+        zone_lethal_cold="🟦",
+        zone_danger_cold="🟩",
+        zone_discomfort_cold="🟩",
+        zone_comfort="",
+        zone_discomfort_hot="🟨",
+        zone_danger_hot="🟧",
+        zone_lethal_hot="🟥",
+        zone_toxic="🟪",
     ),
     Theme.UNICODE: ThemeSymbolSet(
         goal="◆",
@@ -130,6 +203,15 @@ THEME_SYMBOLS = {
         predator="\033[91m#\033[0m",
         predator_stationary="\033[95mX\033[0m",
         predator_pursuit="\033[93m@\033[0m",
+        # Zone symbols using colored dots (foreground colors)
+        zone_lethal_cold="\033[94m.\033[0m",  # Blue dot
+        zone_danger_cold="\033[96m.\033[0m",  # Cyan dot
+        zone_discomfort_cold="\033[96m.\033[0m",  # Cyan dot
+        zone_comfort="",
+        zone_discomfort_hot="\033[93m.\033[0m",  # Yellow dot
+        zone_danger_hot="\033[33m.\033[0m",  # Orange/dark yellow dot
+        zone_lethal_hot="\033[91m.\033[0m",  # Red dot
+        zone_toxic="\033[95m.\033[0m",  # Magenta/purple dot
     ),
     Theme.RICH: ThemeSymbolSet(
         goal="⬢",
@@ -145,7 +227,7 @@ THEME_SYMBOLS = {
     ),
     Theme.EMOJI_RICH: ThemeSymbolSet(
         goal=" 🦠",
-        body=" 🔵",
+        body=" 🟤",
         up=" 🔼",
         down=" 🔽",
         left="◀️",
