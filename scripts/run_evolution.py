@@ -349,18 +349,10 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 health = env.agent_hp
                 max_health = env.health.max_hp
 
-            # Check boundary contact
-            boundary_contact = (
-                position[0] == 0
-                or position[0] == env.grid_size - 1
-                or position[1] == 0
-                or position[1] == env.grid_size - 1
-            )
-
-            # Check predator contact (within kill radius)
-            predator_contact = False
-            if env.predator.enabled:
-                predator_contact = env.check_predator_collision()
+            # Mechanosensation
+            # (uses damage_radius when health enabled, kill_radius otherwise)
+            boundary_contact = env.is_agent_at_boundary()
+            predator_contact = env.is_agent_in_predator_contact()
 
             # Build BrainParams with all available sensory information
             params = BrainParams(
