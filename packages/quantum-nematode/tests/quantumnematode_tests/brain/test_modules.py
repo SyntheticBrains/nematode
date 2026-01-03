@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.modules import (
     SENSORY_MODULES,
@@ -81,7 +82,19 @@ class TestSensoryModule:
 
 
 class TestProprioceptionModule:
-    """Test proprioception feature extraction."""
+    """Test proprioception feature extraction.
+
+    Proprioception now uses the standard transform with:
+    - strength (RX): movement indicator (0.0 for now, placeholder for future)
+    - angle (RY): facing direction encoded as normalized angle [-1, 1]
+    - binary (RZ): unused (0)
+
+    Direction encoding:
+    - UP: angle = 0.5 (90°)
+    - DOWN: angle = -0.5 (-90°)
+    - LEFT: angle = 1.0 (180°)
+    - RIGHT: angle = 0.0 (0°)
+    """
 
     def test_direction_up(self):
         """Test proprioception features for UP direction."""
@@ -89,11 +102,14 @@ class TestProprioceptionModule:
         params = BrainParams(agent_direction=Direction.UP)
         features = module.to_quantum(params)
 
-        # Proprioception transform: RX=0, RY=0, RZ = binary * π
-        # UP: binary = 0.0, so RZ = 0
-        assert features[0] == pytest.approx(0.0)
-        assert features[1] == pytest.approx(0.0)
-        assert features[2] == pytest.approx(0.0)
+        # Standard transform: RX = strength*π - π/2, RY = angle*π/2, RZ = binary*π/2
+        # UP: strength=0, angle=0.5, binary=0
+        # RX: = 0*π - π/2 = -π/2
+        # RY: = 0.5 * π/2 = π/4
+        # RZ: = 0.0
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: no movement
+        assert features[1] == pytest.approx(np.pi / 4)  # RY: 90° facing up
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
 
     def test_direction_down(self):
         """Test proprioception features for DOWN direction."""
@@ -101,10 +117,11 @@ class TestProprioceptionModule:
         params = BrainParams(agent_direction=Direction.DOWN)
         features = module.to_quantum(params)
 
-        # DOWN: binary = 1.0, so RZ = 1.0 * π = π
-        assert features[0] == pytest.approx(0.0)
-        assert features[1] == pytest.approx(0.0)
-        assert features[2] == pytest.approx(np.pi)
+        # DOWN: strength=0, angle=-0.5, binary=0
+        # RY = -0.5 * π/2 = -π/4
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: no movement
+        assert features[1] == pytest.approx(-np.pi / 4)  # RY: -90° facing down
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
 
     def test_direction_left(self):
         """Test proprioception features for LEFT direction."""
@@ -112,10 +129,11 @@ class TestProprioceptionModule:
         params = BrainParams(agent_direction=Direction.LEFT)
         features = module.to_quantum(params)
 
-        # LEFT: binary = 0.5, so RZ = 0.5 * π = π/2
-        assert features[0] == pytest.approx(0.0)
-        assert features[1] == pytest.approx(0.0)
-        assert features[2] == pytest.approx(np.pi / 2)
+        # LEFT: strength=0, angle=1.0, binary=0
+        # RY = 1.0 * π/2 = π/2
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: no movement
+        assert features[1] == pytest.approx(np.pi / 2)  # RY: 180° facing left
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
 
     def test_direction_right(self):
         """Test proprioception features for RIGHT direction."""
@@ -123,10 +141,47 @@ class TestProprioceptionModule:
         params = BrainParams(agent_direction=Direction.RIGHT)
         features = module.to_quantum(params)
 
-        # RIGHT: binary = -0.5, so RZ = -0.5 * π = -π/2
-        assert features[0] == pytest.approx(0.0)
-        assert features[1] == pytest.approx(0.0)
-        assert features[2] == pytest.approx(-np.pi / 2)
+        # RIGHT: strength=0, angle=0.0, binary=0
+        # RY = 0.0 * π/2 = 0
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: no movement
+        assert features[1] == pytest.approx(0.0)  # RY: 0° facing right
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
+
+    def test_movement_detection_forward(self):
+        """Test that FORWARD action is detected as movement."""
+        module = SENSORY_MODULES[ModuleName.PROPRIOCEPTION]
+        action = ActionData(state="test", action=Action.FORWARD, probability=1.0)
+        params = BrainParams(agent_direction=Direction.UP, action=action)
+        features = module.to_quantum(params)
+
+        # With movement: strength=1.0, so RX = 1.0*π - π/2 = π/2
+        assert features[0] == pytest.approx(np.pi / 2)  # RX: moved
+        assert features[1] == pytest.approx(np.pi / 4)  # RY: facing up
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
+
+    def test_movement_detection_stay(self):
+        """Test that STAY action is detected as no movement."""
+        module = SENSORY_MODULES[ModuleName.PROPRIOCEPTION]
+        action = ActionData(state="test", action=Action.STAY, probability=1.0)
+        params = BrainParams(agent_direction=Direction.UP, action=action)
+        features = module.to_quantum(params)
+
+        # No movement: strength=0.0, so RX = 0*π - π/2 = -π/2
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: stayed
+        assert features[1] == pytest.approx(np.pi / 4)  # RY: facing up
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
+
+    def test_movement_detection_turn(self):
+        """Test that LEFT/RIGHT turns are detected as movement."""
+        module = SENSORY_MODULES[ModuleName.PROPRIOCEPTION]
+        action = ActionData(state="test", action=Action.LEFT, probability=1.0)
+        params = BrainParams(agent_direction=Direction.LEFT, action=action)
+        features = module.to_quantum(params)
+
+        # Turning counts as movement: strength=1.0
+        assert features[0] == pytest.approx(np.pi / 2)  # RX: moved (turned)
+        assert features[1] == pytest.approx(np.pi / 2)  # RY: facing left
+        assert features[2] == pytest.approx(0.0)  # RZ: unused
 
 
 class TestChemotaxisModule:
@@ -201,19 +256,88 @@ class TestChemotaxisModule:
         assert features[1] == pytest.approx(0.0)
 
 
-class TestPlaceholderModules:
-    """Test placeholder modules that return zero features."""
+class TestThermotaxisModule:
+    """Test thermotaxis (temperature sensing) module."""
 
-    def test_thermotaxis_returns_zeros(self):
-        """Test that thermotaxis returns all zeros (placeholder)."""
+    def test_thermotaxis_when_disabled(self):
+        """Test thermotaxis returns default transform when temperature is None.
+
+        When thermotaxis is disabled (temperature=None), CoreFeatures returns
+        all zeros, but the standard transform still applies the offset:
+        RX = 0 * π - π/2 = -π/2 (same as chemotaxis when gradient_strength=None)
+        """
         module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
-        assert module.is_placeholder is True
+        assert module.is_placeholder is False
 
+        # No temperature fields set (thermotaxis disabled)
         params = BrainParams()
         features = module.to_quantum(params)
 
-        # Placeholder transform returns all zeros
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
+        # Standard transform: strength=0 -> RX = -π/2, angle=0 -> RY = 0, binary=0 -> RZ = 0
+        assert features[0] == pytest.approx(-np.pi / 2)
+        assert features[1] == pytest.approx(0.0)
+        assert features[2] == pytest.approx(0.0)
+
+    def test_thermotaxis_at_cultivation_temperature(self):
+        """Test thermotaxis at cultivation temperature (comfort zone)."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # At cultivation temperature with no gradient
+        params = BrainParams(
+            temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_quantum(params)
+
+        # At cultivation temp: deviation=0, gradient_strength=0
+        # Standard transform: strength=0 -> RX = -π/2, angle scales, binary=0 -> RZ = 0
+        assert features[0] == pytest.approx(-np.pi / 2)  # RX: tanh(0)*π - π/2 = -π/2
+        # RY encodes egocentric direction to warmer temperatures
+        # Gradient points right (direction=0). Agent faces up.
+        # Egocentric angle = -0.5 (warmer is to agent's right) -> RY = -π/4
+        assert features[1] == pytest.approx(-np.pi / 4)
+        assert features[2] == pytest.approx(0.0)  # RZ: deviation=0 -> 0
+
+    def test_thermotaxis_hotter_than_cultivation(self):
+        """Test thermotaxis when hotter than cultivation temperature."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 15°C hotter than cultivation (at danger threshold)
+        params = BrainParams(
+            temperature=35.0,
+            temperature_gradient_strength=0.5,
+            temperature_gradient_direction=0.0,  # Warmer to the right
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_quantum(params)
+
+        # Binary should be +1 (15/15 = 1.0, clamped) -> RZ = pi/2
+        assert features[2] == pytest.approx(np.pi / 2, abs=0.1)
+
+    def test_thermotaxis_colder_than_cultivation(self):
+        """Test thermotaxis when colder than cultivation temperature."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 15°C colder than cultivation (at danger threshold)
+        params = BrainParams(
+            temperature=5.0,
+            temperature_gradient_strength=0.5,
+            temperature_gradient_direction=0.0,
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_quantum(params)
+
+        # Binary should be -1 (-15/15 = -1.0) -> RZ = -pi/2
+        assert features[2] == pytest.approx(-np.pi / 2, abs=0.1)
+
+
+class TestPlaceholderModules:
+    """Test placeholder modules that return zero features."""
 
     def test_aerotaxis_returns_zeros(self):
         """Test that aerotaxis returns zeros (placeholder)."""
@@ -325,10 +449,11 @@ class TestToQuantumDict:
         module = SENSORY_MODULES[ModuleName.PROPRIOCEPTION]
         features = module.to_quantum_dict(params)
 
-        # DOWN: binary = 1.0, with proprioception transform: RZ = 1.0 * π = π
-        assert features["rx"] == pytest.approx(0.0)
-        assert features["ry"] == pytest.approx(0.0)
-        assert features["rz"] == pytest.approx(np.pi)
+        # DOWN: strength=0, angle=-0.5, binary=0
+        # Standard transform: RX = 0*π - π/2 = -π/2, RY = -0.5 * π/2 = -π/4, RZ = 0
+        assert features["rx"] == pytest.approx(-np.pi / 2)
+        assert features["ry"] == pytest.approx(-np.pi / 4)
+        assert features["rz"] == pytest.approx(0.0)
 
     def test_extract_placeholder_module(self):
         """Test extracting features from placeholder module."""

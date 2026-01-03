@@ -75,6 +75,8 @@ class SimulationResult(BaseModel):
         Step-by-step satiety levels throughout the run (DynamicForagingEnvironment only).
     health_history : list[float] | None
         Step-by-step health (HP) levels throughout the run (health system enabled only).
+    temperature_history : list[float] | None
+        Step-by-step temperatures throughout the run (thermotaxis enabled only).
     predator_encounters : int | None
         Number of predator encounters (predator environments only).
     successful_evasions : int | None
@@ -85,6 +87,10 @@ class SimulationResult(BaseModel):
         Whether run ended due to HP reaching zero (health system enabled).
     food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
+    survival_score : float | None
+        Survival score: final_hp / max_hp (0.0 to 1.0). None if health system disabled.
+    temperature_comfort_score : float | None
+        Fraction of time spent in comfort zone (0.0 to 1.0). None if thermotaxis disabled.
     """
 
     run: int
@@ -102,11 +108,16 @@ class SimulationResult(BaseModel):
     average_distance_efficiency: float | None = None
     satiety_history: list[float] | None = None
     health_history: list[float] | None = None
+    temperature_history: list[float] | None = None
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_predator: bool | None = None
     died_to_health_depletion: bool | None = None
     food_history: FoodHistory | None = None
+    survival_score: float | None = None
+    """Survival score: final_hp / max_hp (0.0 to 1.0). None if health system disabled."""
+    temperature_comfort_score: float | None = None
+    """Fraction of time spent in comfort zone (0.0 to 1.0). None if thermotaxis disabled."""
 
 
 TrackingRunIndex = int
@@ -121,6 +132,8 @@ class EpisodeTrackingData(BaseModel):
         Step-by-step satiety levels throughout the episode.
     health_history : list[float]
         Step-by-step health (HP) levels throughout the episode (health system enabled).
+    temperature_history : list[float]
+        Step-by-step temperatures throughout the episode (thermotaxis enabled).
     foods_collected : int
         Number of foods collected in this episode.
     distance_efficiencies : list[float]
@@ -135,6 +148,7 @@ class EpisodeTrackingData(BaseModel):
 
     satiety_history: list[float] = Field(default_factory=list)
     health_history: list[float] = Field(default_factory=list)
+    temperature_history: list[float] = Field(default_factory=list)
     foods_collected: int = 0
     distance_efficiencies: list[float] = Field(default_factory=list)
     predator_encounters: int = 0
@@ -200,6 +214,10 @@ class PerformanceMetrics(BaseModel):
         Average number of predator encounters per run (predator environments only).
     average_successful_evasions : float | None
         Average number of successful evasions per run (predator environments only).
+    average_survival_score : float | None
+        Average survival score (final_hp / max_hp) across runs (health system only).
+    average_temperature_comfort_score : float | None
+        Average temperature comfort score across runs (thermotaxis only).
     """
 
     success_rate: float
@@ -218,3 +236,5 @@ class PerformanceMetrics(BaseModel):
     total_interrupted: int = 0
     average_predator_encounters: float | None = None
     average_successful_evasions: float | None = None
+    average_survival_score: float | None = None
+    average_temperature_comfort_score: float | None = None

@@ -83,9 +83,8 @@ class RewardConfig(BaseModel):
     reward_goal: float = DEFAULT_REWARD_GOAL
     reward_exploration: float = DEFAULT_REWARD_EXPLORATION  # Bonus for visiting new cells
     penalty_starvation: float = DEFAULT_PENALTY_STARVATION  # Penalty when satiety reaches 0
-    penalty_predator_death: float = (
-        DEFAULT_PENALTY_PREDATOR_DEATH  # Penalty when caught by predator
-    )
+    # Penalty for health depletion (predator damage or temperature)
+    penalty_predator_death: float = DEFAULT_PENALTY_PREDATOR_DEATH
     penalty_predator_proximity: float = (
         DEFAULT_PENALTY_PREDATOR_PROXIMITY  # Penalty per step within predator detection radius
     )
@@ -394,6 +393,12 @@ class QuantumNematodeAgent:
         health = None
         max_health = None
 
+        # Thermotaxis: temperature sensing
+        temperature = None
+        temperature_gradient_strength = None
+        temperature_gradient_direction = None
+        cultivation_temperature = None
+
         if isinstance(self.env, DynamicForagingEnvironment):
             boundary_contact = self.env.is_agent_at_boundary()
             predator_contact = self.env.is_agent_in_predator_contact()
@@ -401,6 +406,14 @@ class QuantumNematodeAgent:
             if self.env.health.enabled:
                 health = self.env.agent_hp
                 max_health = self.env.health.max_hp
+            # Thermotaxis state (if thermotaxis enabled)
+            if self.env.thermotaxis.enabled:
+                temperature = self.env.get_temperature()
+                temp_gradient = self.env.get_temperature_gradient()
+                if temp_gradient is not None:
+                    temperature_gradient_strength = temp_gradient[0]
+                    temperature_gradient_direction = temp_gradient[1]
+                cultivation_temperature = self.env.thermotaxis.cultivation_temperature
 
         return BrainParams(
             # Combined gradients
@@ -419,6 +432,11 @@ class QuantumNematodeAgent:
             # Mechanosensation (physical contact)
             boundary_contact=boundary_contact,
             predator_contact=predator_contact,
+            # Thermotaxis (temperature sensing)
+            temperature=temperature,
+            temperature_gradient_strength=temperature_gradient_strength,
+            temperature_gradient_direction=temperature_gradient_direction,
+            cultivation_temperature=cultivation_temperature,
             # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
@@ -478,6 +496,13 @@ class QuantumNematodeAgent:
                 if self.env.predator.enabled:
                     danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
                     print(f"Status:\t\t{danger_status}")  # noqa: T201
+                # Display temperature if thermotaxis is enabled
+                if self.env.thermotaxis.enabled:
+                    temperature = self.env.get_temperature()
+                    zone = self.env.get_temperature_zone()
+                    if temperature is not None:
+                        zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
+                        print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
 
     def calculate_reward(
         self,
@@ -526,6 +551,7 @@ class QuantumNematodeAgent:
                 foraging=self.env.foraging,
                 predator=self.env.predator,
                 health=self.env.health,
+                thermotaxis=self.env.thermotaxis,
                 # Reproducibility: preserve seed from original environment
                 seed=self.env.seed,
             )

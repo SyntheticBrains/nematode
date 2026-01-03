@@ -343,6 +343,17 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         else None
     )
 
+    # Multi-objective metrics (survival and temperature comfort)
+    survival_scores = [r.survival_score for r in all_results if r.survival_score is not None]
+    avg_survival_score = sum(survival_scores) / len(survival_scores) if survival_scores else None
+
+    comfort_scores = [
+        r.temperature_comfort_score for r in all_results if r.temperature_comfort_score is not None
+    ]
+    avg_temperature_comfort_score = (
+        sum(comfort_scores) / len(comfort_scores) if comfort_scores else None
+    )
+
     # BUILD PER-RUN RESULTS for full transparency
     per_run_results = []
     for r in all_results:
@@ -363,6 +374,8 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
                 termination_reason=r.termination_reason.value,
                 foods_collected=r.foods_collected,
                 distance_efficiency=r.average_distance_efficiency,
+                survival_score=r.survival_score,
+                temperature_comfort_score=r.temperature_comfort_score,
             ),
         )
 
@@ -501,6 +514,11 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         learning_speed_episodes=convergence_metrics.learning_speed_episodes,
         stability=convergence_metrics.stability,
         per_run_results=per_run_results if per_run_results else None,
+        # Multi-objective metrics (survival and temperature comfort)
+        avg_survival_score=avg_survival_score,
+        avg_temperature_comfort_score=avg_temperature_comfort_score,
+        post_convergence_survival_score=convergence_metrics.avg_survival_score,
+        post_convergence_temperature_comfort_score=convergence_metrics.avg_temperature_comfort_score,
         # Chemotaxis validation metrics
         avg_chemotaxis_index=avg_chemotaxis_index,
         avg_time_in_attractant=avg_time_in_attractant,

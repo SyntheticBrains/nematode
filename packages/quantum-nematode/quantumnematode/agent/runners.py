@@ -42,6 +42,8 @@ class EpisodeData:
         The satiety levels at each step (for dynamic foraging environments).
     health_history : list[float]
         The health (HP) levels at each step (when health system is enabled).
+    temperature_history : list[float]
+        The temperature at each step (when thermotaxis is enabled).
     predator_encounters : int
         Number of times agent entered predator detection radius.
     successful_evasions : int
@@ -56,6 +58,7 @@ class EpisodeData:
     distance_efficiencies: list[float]
     satiety_history: list[float]
     health_history: list[float]
+    temperature_history: list[float]
     predator_encounters: int = 0
     successful_evasions: int = 0
     in_danger: bool = False
@@ -190,11 +193,6 @@ class StandardEpisodeRunner(EpisodeRunner):
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = agent.env.get_state(agent.path[-1])
-
-            if logger.isEnabledFor(logging.DEBUG):
-                print()  # noqa: T201
-                print(f"Gradient strength: {gradient_strength}")  # noqa: T201
-                print(f"Gradient direction: {gradient_direction}")  # noqa: T201
 
             # Track if agent stays in same position
             current_position = tuple(agent.env.agent_pos)
@@ -503,6 +501,51 @@ class StandardEpisodeRunner(EpisodeRunner):
                 # Track health if health system is enabled
                 if agent.env.health.enabled:
                     agent._episode_tracker.track_health(agent.env.agent_hp)
+
+                # Apply temperature zone effects (rewards/penalties and HP damage)
+                if agent.env.thermotaxis.enabled:
+                    # Track temperature at agent position
+                    current_temp = agent.env.get_temperature()
+                    if current_temp is not None:
+                        agent._episode_tracker.track_temperature(current_temp)
+
+                    temp_reward, temp_damage = agent.env.apply_temperature_effects()
+                    if temp_reward != 0.0:
+                        reward += temp_reward
+                        agent._episode_tracker.track_reward(temp_reward)
+
+                    # Check if temperature damage depleted health
+                    if temp_damage > 0 and agent.env.is_health_depleted():
+                        logger.warning(
+                            "Failed to complete episode: health depleted from temperature damage!",
+                        )
+                        # Apply death penalty
+                        penalty = (
+                            -reward_config.penalty_predator_death
+                        )  # Reuse predator death penalty
+                        reward += penalty
+                        agent._episode_tracker.track_reward(penalty)
+
+                        if isinstance(agent.brain, ClassicalBrain):
+                            agent.brain.learn(params=params, reward=reward, episode_done=True)
+
+                        agent.brain.update_memory(reward)
+                        agent.brain.post_process_episode(episode_success=False)
+                        agent._metrics_tracker.track_episode_completion(
+                            success=False,
+                            steps=agent._episode_tracker.steps,
+                            reward=agent._episode_tracker.rewards,
+                            foods_collected=agent._episode_tracker.foods_collected,
+                            distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+                            predator_encounters=agent._episode_tracker.predator_encounters,
+                            successful_evasions=agent._episode_tracker.successful_evasions,
+                            termination_reason=TerminationReason.HEALTH_DEPLETED,
+                        )
+                        return EpisodeResult(
+                            agent_path=agent.path,
+                            termination_reason=TerminationReason.HEALTH_DEPLETED,
+                            food_history=agent.food_history,
+                        )
 
                 logger.debug(
                     f"Satiety: {agent.current_satiety:.1f}/{agent.max_satiety}",

@@ -373,6 +373,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         foraging_config = dynamic_config.get_foraging_config()
         predator_config = dynamic_config.get_predator_config()
         health_config = dynamic_config.get_health_config()
+        thermotaxis_config = dynamic_config.get_thermotaxis_config()
 
         env = DynamicForagingEnvironment(
             grid_size=dynamic_config.grid_size,
@@ -383,6 +384,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             foraging=foraging_config.to_params(),
             predator=predator_config.to_params(),
             health=health_config.to_params(),
+            thermotaxis=thermotaxis_config.to_params(),
         )
         predator_info = ""
         if predator_config.enabled:
@@ -399,10 +401,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 f"predator_damage={health_config.predator_damage}, "
                 f"food_healing={health_config.food_healing})"
             )
+        thermotaxis_info = ""
+        if thermotaxis_config.enabled:
+            thermotaxis_info = (
+                f", thermotaxis (Tc={thermotaxis_config.cultivation_temperature}°C, "
+                f"gradient={thermotaxis_config.gradient_strength}°C/cell)"
+            )
         logger.info(
             f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
             f"{foraging_config.foods_on_grid} foods on grid, "
-            f"target {foraging_config.target_foods_to_collect} to collect{predator_info}{health_info}",
+            f"target {foraging_config.target_foods_to_collect} to collect"
+            f"{predator_info}{health_info}{thermotaxis_info}",
         )
     else:
         logger.info("Using static maze environment")
@@ -586,6 +595,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             died_to_predator_this_run = None
             died_to_health_depletion_this_run = None
             health_history_this_run = None
+            temperature_history_this_run = None
             match agent.env:
                 case StaticEnvironment():
                     # Calculate efficiency score for the run
@@ -612,9 +622,29 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     # Copy health history if health system is enabled
                     if agent.env.health.enabled:
                         health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
+                    # Copy temperature history if thermotaxis is enabled
+                    if agent.env.thermotaxis.enabled:
+                        temperature_history_this_run = (
+                            agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
+                        )
                     # Efficiency score not defined for dynamic environment
                 case _:
                     pass
+
+            # Calculate multi-objective scores
+            survival_score_this_run = None
+            temperature_comfort_score_this_run = None
+
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                # Survival score: final_hp / max_hp
+                if agent.env.health.enabled and health_history_this_run:
+                    final_hp = health_history_this_run[-1]
+                    max_hp = agent.env.health.max_hp
+                    survival_score_this_run = final_hp / max_hp if max_hp > 0 else 0.0
+
+                # Temperature comfort score: fraction of time in comfort zone
+                if agent.env.thermotaxis.enabled and temperature_history_this_run:
+                    temperature_comfort_score_this_run = agent.env.get_temperature_comfort_score()
 
             result = SimulationResult(
                 run=run_num,
@@ -632,11 +662,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 average_distance_efficiency=average_distance_efficiency,
                 satiety_history=satiety_history_this_run,
                 health_history=health_history_this_run,
+                temperature_history=temperature_history_this_run,
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
                 died_to_predator=died_to_predator_this_run,
                 died_to_health_depletion=died_to_health_depletion_this_run,
                 food_history=step_result.food_history,
+                survival_score=survival_score_this_run,
+                temperature_comfort_score=temperature_comfort_score_this_run,
             )
             all_results.append(result)
 
@@ -670,6 +703,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     else [],
                     health_history=health_history_this_run.copy()
                     if health_history_this_run
+                    else [],
+                    temperature_history=temperature_history_this_run.copy()
+                    if temperature_history_this_run
                     else [],
                     foods_collected=foods_collected_this_run or 0,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
