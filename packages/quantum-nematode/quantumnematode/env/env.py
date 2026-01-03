@@ -43,6 +43,10 @@ MAX_POISSON_ATTEMPTS = 100
 # Constants for gradient scaling
 GRADIENT_SCALING_TANH_FACTOR = 1.0
 
+# Type aliases
+type Viewport = tuple[int, int, int, int]
+"""Viewport bounds as (min_x, min_y, max_x, max_y) in world coordinates."""
+
 
 class Corner(Enum):
     """Corners of the maze grid."""
@@ -684,7 +688,7 @@ class BaseEnvironment(ABC):
     def _render_grid(
         self,
         goals: list[tuple[int, int]],
-        viewport: tuple[int, int, int, int] | None = None,
+        viewport: Viewport | None = None,
     ) -> list[list[str]]:
         """
         Render the grid with goals and agent.
@@ -744,10 +748,23 @@ class BaseEnvironment(ABC):
 
         return grid
 
-    def _render_grid_to_strings(self, grid: list[list[str]]) -> list[str]:
-        """Convert grid to string representation based on theme."""
+    def _render_grid_to_strings(
+        self,
+        grid: list[list[str]],
+        viewport: Viewport | None = None,
+    ) -> list[str]:
+        """Convert grid to string representation based on theme.
+
+        Parameters
+        ----------
+        grid : list[list[str]]
+            The grid of symbols to render.
+        viewport : tuple[int, int, int, int] | None
+            Viewport bounds (min_x, min_y, max_x, max_y) for coordinate mapping.
+            Used by subclasses to determine zone backgrounds.
+        """
         if self.theme in (Theme.RICH, Theme.EMOJI_RICH):
-            return self._render_rich(grid, theme=self.theme)
+            return self._render_rich(grid, theme=self.theme, viewport=viewport)
 
         if self.theme == Theme.EMOJI:
             return ["".join(row) for row in reversed(grid)] + [""]
@@ -757,8 +774,24 @@ class BaseEnvironment(ABC):
             return ["".join(row) for row in reversed(grid)] + [""]
         return [" ".join(row) for row in reversed(grid)] + [""]
 
-    def _render_rich(self, grid: list[list[str]], theme: Theme) -> list[str]:
-        """Render the grid with Rich styling and colors as strings."""
+    def _render_rich(
+        self,
+        grid: list[list[str]],
+        theme: Theme,
+        viewport: Viewport | None = None,  # noqa: ARG002 - used by subclass override
+    ) -> list[str]:
+        """Render the grid with Rich styling and colors as strings.
+
+        Parameters
+        ----------
+        grid : list[list[str]]
+            2D grid of symbols to render.
+        theme : Theme
+            The theme to use for rendering.
+        viewport : Viewport | None
+            Viewport bounds for coordinate mapping. Unused in base class but
+            used by subclasses (e.g., DynamicForagingEnvironment) for zone rendering.
+        """
         width_extra_pad = 1 if theme == Theme.EMOJI_RICH else 0
         grid_width = len(grid[0])
         table_width = (grid_width * (4 + width_extra_pad)) + 1
@@ -1925,7 +1958,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if self.predator.enabled:
             self._render_predators(grid, viewport)
 
-        return self._render_grid_to_strings(grid)
+        return self._render_grid_to_strings(grid, viewport=viewport)
 
     def render_full(self) -> list[str]:
         """Render the entire environment (for logging/debugging)."""
@@ -1935,7 +1968,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if self.predator.enabled:
             self._render_predators(grid, viewport=None)
 
-        return self._render_grid_to_strings(grid)
+        return self._render_grid_to_strings(grid, viewport=None)
 
     def _get_predator_symbol(
         self,
@@ -1966,7 +1999,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
     def _render_predators(
         self,
         grid: list[list[str]],
-        viewport: tuple[int, int, int, int] | None = None,
+        viewport: Viewport | None = None,
     ) -> None:
         """
         Add predators to the rendered grid.
@@ -1997,6 +2030,318 @@ class DynamicForagingEnvironment(BaseEnvironment):
             # Don't overwrite agent position
             elif predator.position != tuple(self.agent_pos):
                 grid[predator.position[1]][predator.position[0]] = predator_symbol
+
+    def _is_in_toxic_zone(self, world_x: int, world_y: int) -> bool:
+        """Check if a world position is within a toxic zone (stationary predator damage radius).
+
+        Parameters
+        ----------
+        world_x : int
+            X coordinate in world space.
+        world_y : int
+            Y coordinate in world space.
+
+        Returns
+        -------
+        bool
+            True if position is within damage radius of any stationary predator.
+        """
+        if not self.predator.enabled:
+            return False
+
+        for pred in self.predators:
+            if pred.predator_type != PredatorType.STATIONARY:
+                continue
+            if pred.damage_radius <= 0:
+                continue
+            # Manhattan distance check
+            distance = abs(pred.position[0] - world_x) + abs(pred.position[1] - world_y)
+            if distance <= pred.damage_radius:
+                return True
+        return False
+
+    def _get_zone_background_style(self, world_x: int, world_y: int) -> str:
+        """Get the background style for a cell based on zone type.
+
+        Priority order (highest to lowest):
+        1. Toxic zone (stationary predator damage radius) - purple
+        2. Temperature zone (if thermotaxis enabled) - cold/hot gradient
+        3. Default (no background override)
+
+        Parameters
+        ----------
+        world_x : int
+            X coordinate in world space.
+        world_y : int
+            Y coordinate in world space.
+
+        Returns
+        -------
+        str
+            Rich style string for background (e.g., "on blue") or empty string.
+        """
+        # Priority 1: Toxic zones
+        if self._is_in_toxic_zone(world_x, world_y):
+            return self.rich_style_config.zone_toxic_bg
+
+        # Priority 2: Temperature zones
+        if self.thermotaxis.enabled and self.temperature_field is not None:
+            temp = self.temperature_field.get_temperature((world_x, world_y))
+            thresholds = TemperatureZoneThresholds(
+                comfort_delta=self.thermotaxis.comfort_delta,
+                discomfort_delta=self.thermotaxis.discomfort_delta,
+                danger_delta=self.thermotaxis.danger_delta,
+            )
+            zone = self.temperature_field.get_zone(
+                temp,
+                cultivation_temperature=self.thermotaxis.cultivation_temperature,
+                thresholds=thresholds,
+            )
+
+            zone_bg_map = {
+                TemperatureZone.LETHAL_COLD: self.rich_style_config.zone_lethal_cold_bg,
+                TemperatureZone.DANGER_COLD: self.rich_style_config.zone_danger_cold_bg,
+                TemperatureZone.DISCOMFORT_COLD: self.rich_style_config.zone_discomfort_cold_bg,
+                TemperatureZone.COMFORT: self.rich_style_config.zone_comfort_bg,
+                TemperatureZone.DISCOMFORT_HOT: self.rich_style_config.zone_discomfort_hot_bg,
+                TemperatureZone.DANGER_HOT: self.rich_style_config.zone_danger_hot_bg,
+                TemperatureZone.LETHAL_HOT: self.rich_style_config.zone_lethal_hot_bg,
+            }
+            return zone_bg_map.get(zone, "")
+
+        return ""
+
+    def _get_zone_symbol(self, world_x: int, world_y: int) -> str:
+        """Get the zone symbol for a cell based on zone type.
+
+        Used by EMOJI and COLORED_ASCII themes to replace empty cells with
+        zone-specific symbols or apply zone background styling.
+
+        Priority order (highest to lowest):
+        1. Toxic zone (stationary predator damage radius)
+        2. Temperature zone (if thermotaxis enabled)
+        3. Default (empty string, use normal empty symbol)
+
+        Parameters
+        ----------
+        world_x : int
+            X coordinate in world space.
+        world_y : int
+            Y coordinate in world space.
+
+        Returns
+        -------
+        str
+            Zone symbol/background style or empty string for default.
+        """
+        symbols = THEME_SYMBOLS[self.theme]
+
+        # Priority 1: Toxic zones
+        if self._is_in_toxic_zone(world_x, world_y):
+            return symbols.zone_toxic
+
+        # Priority 2: Temperature zones
+        if self.thermotaxis.enabled and self.temperature_field is not None:
+            temp = self.temperature_field.get_temperature((world_x, world_y))
+            thresholds = TemperatureZoneThresholds(
+                comfort_delta=self.thermotaxis.comfort_delta,
+                discomfort_delta=self.thermotaxis.discomfort_delta,
+                danger_delta=self.thermotaxis.danger_delta,
+            )
+            zone = self.temperature_field.get_zone(
+                temp,
+                cultivation_temperature=self.thermotaxis.cultivation_temperature,
+                thresholds=thresholds,
+            )
+
+            zone_symbol_map = {
+                TemperatureZone.LETHAL_COLD: symbols.zone_lethal_cold,
+                TemperatureZone.DANGER_COLD: symbols.zone_danger_cold,
+                TemperatureZone.DISCOMFORT_COLD: symbols.zone_discomfort_cold,
+                TemperatureZone.COMFORT: symbols.zone_comfort,
+                TemperatureZone.DISCOMFORT_HOT: symbols.zone_discomfort_hot,
+                TemperatureZone.DANGER_HOT: symbols.zone_danger_hot,
+                TemperatureZone.LETHAL_HOT: symbols.zone_lethal_hot,
+            }
+            return zone_symbol_map.get(zone, "")
+
+        return ""
+
+    def _render_grid_to_strings(  # noqa: C901, PLR0912
+        self,
+        grid: list[list[str]],
+        viewport: Viewport | None = None,
+    ) -> list[str]:
+        """Convert grid to string representation with zone visualization.
+
+        Overrides base class to add zone backgrounds for EMOJI and COLORED_ASCII themes.
+
+        Parameters
+        ----------
+        grid : list[list[str]]
+            The grid of symbols to render.
+        viewport : tuple[int, int, int, int] | None
+            Viewport bounds (min_x, min_y, max_x, max_y) for coordinate mapping.
+        """
+        if self.theme in (Theme.RICH, Theme.EMOJI_RICH):
+            return self._render_rich(grid, theme=self.theme, viewport=viewport)
+
+        symbols = THEME_SYMBOLS[self.theme]
+        grid_height = len(grid)
+
+        # Determine coordinate offset from viewport
+        offset_x = viewport[0] if viewport else 0
+        offset_y = viewport[1] if viewport else 0
+
+        if self.theme == Theme.EMOJI:
+            rendered_rows = []
+            for grid_row_idx, row in enumerate(reversed(grid)):
+                world_y = offset_y + (grid_height - 1 - grid_row_idx)
+                rendered_row = []
+                for grid_col_idx, cell in enumerate(row):
+                    world_x = offset_x + grid_col_idx
+                    # For empty cells, use zone symbol if available
+                    if cell == symbols.empty:
+                        zone_symbol = self._get_zone_symbol(world_x, world_y)
+                        if zone_symbol:
+                            rendered_row.append(zone_symbol)
+                        else:
+                            rendered_row.append(cell)
+                    else:
+                        rendered_row.append(cell)
+                rendered_rows.append("".join(rendered_row))
+            return [*rendered_rows, ""]
+
+        if self.theme == Theme.COLORED_ASCII:
+            rendered_rows = []
+            for grid_row_idx, row in enumerate(reversed(grid)):
+                world_y = offset_y + (grid_height - 1 - grid_row_idx)
+                rendered_row = []
+                for grid_col_idx, cell in enumerate(row):
+                    world_x = offset_x + grid_col_idx
+                    # For empty cells, use zone-colored dot if available
+                    if cell == symbols.empty:
+                        zone_symbol = self._get_zone_symbol(world_x, world_y)
+                        if zone_symbol:
+                            rendered_row.append(zone_symbol)
+                        else:
+                            rendered_row.append(cell)
+                    else:
+                        rendered_row.append(cell)
+                rendered_rows.append(" ".join(rendered_row))
+            return [*rendered_rows, ""]
+
+        # Default handling for other themes (ASCII, UNICODE)
+        if self.theme == Theme.UNICODE:
+            return [" ".join(row) for row in reversed(grid)] + [""]
+
+        return [" ".join(row) for row in reversed(grid)] + [""]
+
+    def _render_rich(
+        self,
+        grid: list[list[str]],
+        theme: Theme,
+        viewport: Viewport | None = None,
+    ) -> list[str]:
+        """Render the grid with Rich styling, zone backgrounds, and colors.
+
+        Overrides base class to add temperature zone and toxic zone backgrounds.
+
+        Parameters
+        ----------
+        grid : list[list[str]]
+            2D grid of symbols to render.
+        theme : Theme
+            The theme to use for rendering.
+        viewport : tuple[int, int, int, int] | None
+            Viewport bounds (min_x, min_y, max_x, max_y) for coordinate mapping.
+            If None, assumes full grid starting at (0, 0).
+
+        Returns
+        -------
+        list[str]
+            List of strings representing the rendered Rich table.
+        """
+        width_extra_pad = 1 if theme == Theme.EMOJI_RICH else 0
+        grid_width = len(grid[0])
+        grid_height = len(grid)
+        table_width = (grid_width * (4 + width_extra_pad)) + 1
+
+        console = Console(
+            record=True,
+            width=table_width,
+            legacy_windows=False,
+            force_terminal=True,
+        )
+
+        symbols = THEME_SYMBOLS[self.theme]
+
+        table = Table(
+            show_header=False,
+            show_lines=True,
+            box=box.SQUARE,
+            padding=(0, 0),
+            pad_edge=False,
+            style=self.rich_style_config.grid_background,
+        )
+
+        for _ in range(grid_width):
+            table.add_column(
+                justify="center",
+                width=3 + width_extra_pad,
+                min_width=3 + width_extra_pad,
+                max_width=3 + width_extra_pad,
+                no_wrap=True,
+            )
+
+        # Determine coordinate offset from viewport
+        offset_x = viewport[0] if viewport else 0
+        offset_y = viewport[1] if viewport else 0
+
+        # Grid is rendered reversed (top row is highest y)
+        for grid_row_idx, row in enumerate(reversed(grid)):
+            styled_cells = []
+            # Convert grid row index to world y coordinate
+            # reversed grid means grid_row_idx 0 = highest y in grid
+            world_y = offset_y + (grid_height - 1 - grid_row_idx)
+
+            for grid_col_idx, cell in enumerate(row):
+                world_x = offset_x + grid_col_idx
+
+                # Determine foreground style based on entity
+                if cell == symbols.goal:
+                    fg_style = self.rich_style_config.goal_style
+                elif cell == symbols.body:
+                    fg_style = self.rich_style_config.body_style
+                elif cell in [symbols.up, symbols.down, symbols.left, symbols.right]:
+                    fg_style = self.rich_style_config.agent_style
+                elif cell == symbols.predator:
+                    fg_style = self.rich_style_config.predator_style
+                elif cell == symbols.predator_stationary:
+                    fg_style = self.rich_style_config.predator_stationary_style
+                elif cell == symbols.predator_pursuit:
+                    fg_style = self.rich_style_config.predator_pursuit_style
+                else:
+                    fg_style = self.rich_style_config.empty_style
+
+                # Get background style based on zone
+                bg_style = self._get_zone_background_style(world_x, world_y)
+
+                # Combine foreground and background styles
+                combined_style = f"{fg_style} {bg_style}" if bg_style else fg_style
+
+                styled_cell = RichText(cell, style=combined_style, justify="center")
+                styled_cells.append(styled_cell)
+
+            table.add_row(*styled_cells)
+
+        with console.capture() as capture:
+            console.print(table, crop=True)
+
+        output_lines = capture.get().splitlines()
+        cleaned_lines = [line.rstrip() for line in output_lines if line.strip()]
+
+        return [*cleaned_lines, ""]
 
     def copy(self) -> "DynamicForagingEnvironment":
         """

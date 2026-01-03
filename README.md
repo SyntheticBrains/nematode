@@ -245,45 +245,55 @@ See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guid
 The simulation provides real-time visualization of the nematode's navigation:
 
 ```text
-⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ 🦠 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ 🔼 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ 🔵 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ 🔵 ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
-⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️ ⬜️
+🟧 🟧 🟧 🟧 🟧 🟧 🟨 🟨 🟨 ⬜️
+🟧 🟧 🟧 🟧 🟧 🟨 🟨 🟨 ⬜️ ⬜️
+🟧 🟧 🟧 🟧 🟨 🟨 🟨 ⬜️ ⬜️ ⬜️
+🟥 🟧 🦠 🟨 🟨 🟨 ⬜️ ⬜️ ⬜️ ⬜️
+🟥 🟧 🔼 🟨 🟨 ⬜️ ⬜️ ⬜️ ⬜️ 🟩
+🟥 🟧 🟤 🟨 ⬜️ ⬜️ ⬜️ ⬜️ 🟩 🟩
+🟥 🟧 🟤 ⬜️ ⬜️ ⬜️ ⬜️ 🟩 🟩 🟩
+🟥 🟥 ⬜️ ⬜️ ⬜️ ⬜️ 🟩 🟩 🟩 🟦
+🟥 🟥 ⬜️ ⬜️ ⬜️ 🟩 🟩 🟩 🟦 🟦
+🟥 🟥 ⬜️ ⬜️ 🟩 🟩 🟩 🟦 🟦 🟦
 
-Run:          10/10
-Steps(Avg):   35.89/10
-Step:         20/300
-Wins:         10
+Run:          10/50
+Steps(Avg):   180.5
+Step:         45/500
+Wins:         6
+Temp:         32.5°C (danger hot)
 
-Session ID: 20250101_000000
+Session ID: 20260101_000000
 All runs completed:
-Run 1: 28 steps    Run 6: 23 steps
-Run 2: 44 steps    Run 7: 40 steps
-Run 3: 21 steps    Run 8: 30 steps
-Run 4: 66 steps    Run 9: 29 steps
-Run 5: 33 steps    Run 10: 23 steps
 
-Average steps per run: 33.70
-Average efficiency score: -19.70
-Improvement metric (steps): 17.86%
-Success rate: 100.00%
+Run: 1   Status: FAILED  Reason: starved              Steps: 398    Reward:   -9.43  Health: 36.0   Eaten: 1/10   Dist Eff: 0.30
+...
+Run: 50  Status: SUCCESS Reason: completed_all_food   Steps: 202    Reward:   11.61  Health: 65.0   Eaten: 10/10  Dist Eff: 0.43
+
+Total runs completed: 50
+Successful runs: 30 (60.0%)
+Failed runs - Starved: 2 (4.0%)
+Failed runs - Health Depleted: 15 (30.0%)
+Failed runs - Max Steps: 3 (6.0%)
+Average foods collected per run: 8.18
+Average steps per run: 300.20
+Average reward per run: 1.93
+Average distance efficiency: 0.32
+Average survival score: 0.72
+Average temperature comfort: 0.68
+Success rate: 60.00%
 ```
 
 Where:
 
 - 🔼 = Agent's head (🔼/🔽/◀️/▶️ with direction)
-- 🔵 = Agent's trail/body
+- 🟤 = Agent's trail/body
 - 🦠 = Food
-- 🕷️ = Predator
-- ⬜️ = Empty
+- 🕷️ = Predator (random), ☠️ = Stationary predator, 🦂 = Pursuit predator
+- ⬜️ = Empty (comfort zone)
+- 🟦 = Lethal cold zone, 🟩 = Cold zone, 🟨 = Warm zone, 🟧 = Hot zone, 🟥 = Lethal hot zone
+- 🟪 = Toxic zone (stationary predator damage radius)
 
-When predators are enabled, the status line shows "IN DANGER" when the agent is within a predator's detection radius.
+When predators are enabled, the status line shows "IN DANGER" when the agent is within a predator's detection radius. Temperature zones visualize the thermal gradient that affects agent health.
 
 ## 🧰 Built With
 

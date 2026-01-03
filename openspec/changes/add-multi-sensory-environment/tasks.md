@@ -305,28 +305,38 @@ ______________________________________________________________________
 
 ## 9. Visualization
 
-> **Note**: Temperature zone visualization is deferred to `add-thermotaxis-system`.
+> **Status**: Temperature zone and toxic zone visualization implemented in `add-thermotaxis-system`.
 
 ### 9.1 Temperature Zone Coloring
 
-- [ ] Extend Rich theme to support background colors *(deferred to add-thermotaxis-system)*
-- [ ] Implement temperature zone color mapping *(deferred to add-thermotaxis-system)*:
+- [x] Extend Rich theme to support background colors ✅ *(implemented in add-thermotaxis-system)*
+- [x] Implement temperature zone color mapping ✅ *(implemented in add-thermotaxis-system)*:
   - Lethal cold (\<5°C): blue
   - Danger cold (5-10°C): cyan
   - Discomfort cold (10-15°C): light cyan
-  - Comfort (15-25°C): white (default)
-  - Discomfort hot (25-30°C): light yellow
-  - Danger hot (30-35°C): yellow
+  - Comfort (15-25°C): default (no background)
+  - Discomfort hot (25-30°C): light goldenrod
+  - Danger hot (30-35°C): orange
   - Lethal hot (>35°C): red
-- [ ] Implement priority system: Agent > Predators > Food > Temperature *(deferred to add-thermotaxis-system)*
+- [x] Implement priority system: Agent > Predators > Food > Temperature ✅ *(implemented in add-thermotaxis-system)*
+  - Foreground styles (entity colors) combined with background styles (zone colors)
+  - Toxic zones (stationary predator damage radius) have highest background priority
 
-### 9.2 Debug Logging
+### 9.2 Toxic Zone Coloring
+
+- [x] Add toxic zone background for stationary predator damage_radius ✅ *(implemented in add-thermotaxis-system)*
+  - Purple (`on medium_purple`) background
+  - Priority over temperature zones
+- [x] Add predator foreground styles ✅ *(implemented in add-thermotaxis-system)*
+  - Random: magenta, Stationary: dark_magenta, Pursuit: yellow
+
+### 9.3 Debug Logging
 
 - [ ] Add environment snapshot logging at episode start
-- [ ] Include temperature samples at key positions *(deferred to add-thermotaxis-system)*
+- [ ] Include temperature samples at key positions *(deferred)*
 - [ ] Log health system state changes
 
-**Validation**: Temperature zones visible in Rich theme output
+**Validation**: 9 tests in test_env.py::TestZoneVisualization ✅
 
 ______________________________________________________________________
 
