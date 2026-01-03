@@ -79,6 +79,61 @@ Capped at [0, 1].
 
 **Rationale:** Stable algorithms are more reliable for real-world deployment.
 
+## Multi-Objective Scoring
+
+When health and/or thermotaxis systems are enabled, the composite score uses a hierarchical multi-objective formula. This reflects biological fitness where survival is a prerequisite for task completion.
+
+### Survival as a Gate
+
+If the agent dies (survival_score < 0.1), the composite score is capped:
+
+```text
+score = 0.30 × success_rate  (capped at 30% of primary completion)
+```
+
+This means a dead agent cannot score higher than 0.30 regardless of partial task completion.
+
+### Multi-Objective Weights
+
+For thermotaxis environments (health + temperature):
+
+```text
+score = 0.50 × success_rate +
+        0.15 × survival_score +
+        0.10 × temperature_comfort_score +
+        0.15 × distance_efficiency +
+        0.05 × learning_speed +
+        0.05 × stability
+```
+
+For health-only environments (no thermotaxis):
+
+```text
+score = 0.50 × success_rate +
+        0.20 × survival_score +
+        0.20 × distance_efficiency +
+        0.05 × learning_speed +
+        0.05 × stability
+```
+
+### Additional Metrics
+
+| Metric | Definition | Range |
+|--------|------------|-------|
+| survival_score | final_hp / max_hp | [0, 1] |
+| temperature_comfort_score | fraction of steps in comfort zone | [0, 1] |
+
+The comfort zone is defined as ±5°C from the cultivation temperature (typically 15-25°C for Tc=20°C).
+
+### Rationale
+
+This hierarchical approach mirrors biological fitness:
+
+1. **Survival is prerequisite** - A dead organism cannot complete tasks
+2. **Primary objective dominates** - Food collection remains the main goal (50%)
+3. **Secondary objectives matter** - Surviving healthily and maintaining temperature comfort are rewarded
+4. **Efficiency and learning are secondary** - Important but less critical than survival
+
 ## Score Interpretation
 
 | Score Range | Performance Level |

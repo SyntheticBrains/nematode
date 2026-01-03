@@ -81,6 +81,10 @@ class PerRunResult(BaseModel):
         Foods collected (dynamic environments only).
     distance_efficiency : float | None
         Navigation efficiency for this run (dynamic environments only).
+    survival_score : float | None
+        Survival score (final_hp / max_hp). None if health system disabled.
+    temperature_comfort_score : float | None
+        Fraction of time in comfort zone. None if thermotaxis disabled.
     """
 
     run: int
@@ -91,6 +95,8 @@ class PerRunResult(BaseModel):
     termination_reason: str
     foods_collected: int | None = None
     distance_efficiency: float | None = None
+    survival_score: float | None = None
+    temperature_comfort_score: float | None = None
 
 
 class EnvironmentMetadata(BaseModel):
@@ -353,6 +359,14 @@ class ResultsMetadata(BaseModel):
     per_run_results : list[PerRunResult] | None
         Per-run result data for full transparency and reproducibility verification.
         Contains essential metrics for each run including seeds.
+    avg_survival_score : float | None
+        Average survival score across all runs (final_hp / max_hp). None if health disabled.
+    avg_temperature_comfort_score : float | None
+        Average temperature comfort score across all runs. None if thermotaxis disabled.
+    post_convergence_survival_score : float | None
+        Average survival score in post-convergence runs. None if health disabled.
+    post_convergence_temperature_comfort_score : float | None
+        Average temperature comfort score in post-convergence runs. None if thermotaxis disabled.
     avg_chemotaxis_index : float | None
         Average chemotaxis index across all runs (dynamic environments only).
     avg_time_in_attractant : float | None
@@ -410,6 +424,11 @@ class ResultsMetadata(BaseModel):
     learning_speed_episodes: int | None = None
     stability: float | None = None
     per_run_results: list[PerRunResult] | None = None
+    # Multi-objective metrics (added for thermotaxis/survival tasks)
+    avg_survival_score: float | None = None
+    avg_temperature_comfort_score: float | None = None
+    post_convergence_survival_score: float | None = None
+    post_convergence_temperature_comfort_score: float | None = None
     # Chemotaxis validation metrics (added for biological validation)
     # All-run chemotaxis metrics (includes learning phase)
     avg_chemotaxis_index: float | None = None

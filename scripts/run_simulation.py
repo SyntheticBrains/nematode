@@ -631,6 +631,34 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 case _:
                     pass
 
+            # Calculate multi-objective scores
+            survival_score_this_run = None
+            temperature_comfort_score_this_run = None
+
+            if isinstance(agent.env, DynamicForagingEnvironment):
+                # Survival score: final_hp / max_hp
+                if agent.env.health.enabled and health_history_this_run:
+                    final_hp = health_history_this_run[-1]
+                    max_hp = agent.env.health.max_hp
+                    survival_score_this_run = final_hp / max_hp if max_hp > 0 else 0.0
+
+                # Temperature comfort score: fraction of time in comfort zone
+                if agent.env.thermotaxis.enabled and temperature_history_this_run:
+                    comfort_delta = agent.env.thermotaxis.comfort_delta
+                    cultivation_temp = agent.env.thermotaxis.cultivation_temperature
+                    comfort_min = cultivation_temp - comfort_delta
+                    comfort_max = cultivation_temp + comfort_delta
+                    steps_in_comfort = sum(
+                        1
+                        for temp in temperature_history_this_run
+                        if comfort_min <= temp <= comfort_max
+                    )
+                    temperature_comfort_score_this_run = (
+                        steps_in_comfort / len(temperature_history_this_run)
+                        if temperature_history_this_run
+                        else 0.0
+                    )
+
             result = SimulationResult(
                 run=run_num,
                 seed=run_seed,
@@ -653,6 +681,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 died_to_predator=died_to_predator_this_run,
                 died_to_health_depletion=died_to_health_depletion_this_run,
                 food_history=step_result.food_history,
+                survival_score=survival_score_this_run,
+                temperature_comfort_score=temperature_comfort_score_this_run,
             )
             all_results.append(result)
 
