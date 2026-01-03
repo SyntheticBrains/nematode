@@ -644,20 +644,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
                 # Temperature comfort score: fraction of time in comfort zone
                 if agent.env.thermotaxis.enabled and temperature_history_this_run:
-                    comfort_delta = agent.env.thermotaxis.comfort_delta
-                    cultivation_temp = agent.env.thermotaxis.cultivation_temperature
-                    comfort_min = cultivation_temp - comfort_delta
-                    comfort_max = cultivation_temp + comfort_delta
-                    steps_in_comfort = sum(
-                        1
-                        for temp in temperature_history_this_run
-                        if comfort_min <= temp <= comfort_max
-                    )
-                    temperature_comfort_score_this_run = (
-                        steps_in_comfort / len(temperature_history_this_run)
-                        if temperature_history_this_run
-                        else 0.0
-                    )
+                    temperature_comfort_score_this_run = agent.env.get_temperature_comfort_score()
 
             result = SimulationResult(
                 run=run_num,
