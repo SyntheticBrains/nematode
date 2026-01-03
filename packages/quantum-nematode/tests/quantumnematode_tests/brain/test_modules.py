@@ -295,9 +295,10 @@ class TestThermotaxisModule:
         # At cultivation temp: deviation=0, gradient_strength=0
         # Standard transform: strength=0 -> RX = -π/2, angle scales, binary=0 -> RZ = 0
         assert features[0] == pytest.approx(-np.pi / 2)  # RX: tanh(0)*π - π/2 = -π/2
-        assert features[1] == pytest.approx(
-            -np.pi / 4,
-        )  # RY: angle=-0.5 (right is ahead when facing up) -> -π/4
+        # RY encodes egocentric direction to warmer temperatures
+        # Gradient points right (direction=0). Agent faces up.
+        # Egocentric angle = -0.5 (warmer is to agent's right) -> RY = -π/4
+        assert features[1] == pytest.approx(-np.pi / 4)
         assert features[2] == pytest.approx(0.0)  # RZ: deviation=0 -> 0
 
     def test_thermotaxis_hotter_than_cultivation(self):
