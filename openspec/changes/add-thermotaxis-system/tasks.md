@@ -246,17 +246,36 @@ ______________________________________________________________________
 
 ### 6.1 Temperature Background Colors
 
-- [ ] Extend Rich theme renderer to query temperature at each cell
-- [ ] Apply background color based on temperature zone
-- [ ] Ensure entity rendering (agent, food, predator) takes priority over background
+- [x] Extend Rich theme renderer to query temperature at each cell ✅
+  - Added `_get_zone_background_style()` method to DynamicForagingEnvironment
+  - Calculates background style based on world coordinates
+- [x] Apply background color based on temperature zone ✅
+  - Added zone background styles to `DarkColorRichStyleConfig` in theme.py
+  - Cold zones: blue → cyan → light_cyan3 gradient
+  - Hot zones: light_goldenrod1 → orange1 → red gradient
+  - Comfort zone: no background override (default)
+- [x] Ensure entity rendering (agent, food, predator) takes priority over background ✅
+  - Foreground styles combined with background styles in Rich Text
+  - Entity symbols always visible on top of zone backgrounds
 
-### 6.2 Debug Logging
+### 6.2 Toxic Zone Visualization
+
+- [x] Add toxic zone background for stationary predator damage radius ✅
+  - Purple (`on medium_purple`) background for cells within damage_radius
+  - Toxic zone has priority over temperature zones
+- [x] Add `_is_in_toxic_zone()` helper method ✅
+- [x] Add predator foreground styles ✅
+  - Random predator: magenta
+  - Stationary predator: dark_magenta
+  - Pursuit predator: yellow
+
+### 6.3 Debug Logging
 
 - [ ] Log temperature field parameters at episode start
 - [ ] Log temperature samples at corners and center
 - [ ] Log agent's current temperature in step output
 
-**Validation**: Visual inspection of temperature rendering in Rich theme
+**Validation**: 9 tests in test_env.py::TestZoneVisualization ✅
 
 ______________________________________________________________________
 
@@ -321,7 +340,8 @@ This section documents all files touched during thermotaxis implementation to se
 | File | Changes |
 |------|---------|
 | `quantumnematode/env/temperature.py` | **NEW** - TemperatureField class, TemperatureZone enum, TemperatureZoneThresholds |
-| `quantumnematode/env/env.py` | ThermotaxisParams dataclass, temperature_field attribute, get_temperature(), get_temperature_gradient(), get_temperature_zone(), apply_temperature_effects(), get_temperature_comfort_score(), reset_thermotaxis() |
+| `quantumnematode/env/env.py` | ThermotaxisParams dataclass, temperature_field attribute, get_temperature(), get_temperature_gradient(), get_temperature_zone(), apply_temperature_effects(), get_temperature_comfort_score(), reset_thermotaxis(), \_is_in_toxic_zone(), \_get_zone_background_style(), \_render_rich() override |
+| `quantumnematode/env/theme.py` | Added predator foreground styles, temperature zone background styles, toxic zone background style to DarkColorRichStyleConfig |
 | `quantumnematode/brain/modules.py` | \_thermotaxis_core() function, SENSORY_MODULES registry entry for THERMOTAXIS |
 | `quantumnematode/dtypes.py` | TemperatureSpot type alias (shared types already existed) |
 | `quantumnematode/utils/config_loader.py` | ThermotaxisConfig class, to_params() method, DynamicEnvironmentConfig.thermotaxis field |
@@ -347,7 +367,7 @@ This section documents all files touched during thermotaxis implementation to se
 | File | Tests Added |
 |------|-------------|
 | `tests/.../env/test_temperature.py` | **NEW** - 14 tests for TemperatureField |
-| `tests/.../env/test_env.py` | TestThermotaxisIntegration class - 10 tests |
+| `tests/.../env/test_env.py` | TestThermotaxisIntegration class - 10 tests, TestZoneVisualization class - 9 tests |
 | `tests/.../brain/test_modules.py` | TestThermotaxisModule class - 4 tests |
 | `tests/.../agent/test_runners.py` | TestThermotaxisIntegration class - 3 tests |
 

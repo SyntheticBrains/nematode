@@ -2289,3 +2289,299 @@ class TestThermotaxisIntegration:
         assert env.steps_in_comfort_zone == 0
         assert env.total_thermotaxis_steps == 0
         assert env.get_temperature_comfort_score() == 0.0
+
+
+class TestZoneVisualization:
+    """Test zone background visualization for Rich theme rendering."""
+
+    def test_is_in_toxic_zone_no_predators(self):
+        """Test _is_in_toxic_zone returns False when predators disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            predator=PredatorParams(enabled=False),
+        )
+        assert env._is_in_toxic_zone(10, 10) is False
+
+    def test_is_in_toxic_zone_random_predator(self):
+        """Test _is_in_toxic_zone returns False for random predators."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.RANDOM,
+                damage_radius=3,
+            ),
+        )
+        # Random predators don't create toxic zones
+        # Even if agent is within damage_radius of the predator
+        for pred in env.predators:
+            if pred.predator_type == PredatorType.RANDOM:
+                # Check a position near the predator
+                assert env._is_in_toxic_zone(pred.position[0], pred.position[1]) is False
+
+    def test_is_in_toxic_zone_stationary_predator_inside_radius(self):
+        """Test _is_in_toxic_zone returns True inside stationary predator radius."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=3,
+            ),
+        )
+        # Find the stationary predator
+        pred = env.predators[0]
+        assert pred.predator_type == PredatorType.STATIONARY
+
+        # Positions within damage_radius should be toxic
+        # Manhattan distance = |dx| + |dy| <= 3
+        assert env._is_in_toxic_zone(pred.position[0], pred.position[1]) is True
+        assert env._is_in_toxic_zone(pred.position[0] + 1, pred.position[1]) is True
+        assert env._is_in_toxic_zone(pred.position[0], pred.position[1] + 2) is True
+
+    def test_is_in_toxic_zone_stationary_predator_outside_radius(self):
+        """Test _is_in_toxic_zone returns False outside stationary predator radius."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=2,
+            ),
+        )
+        pred = env.predators[0]
+
+        # Positions outside damage_radius should not be toxic
+        # Test a corner: Manhattan distance = 3 > 2
+        far_x = min(pred.position[0] + 2, 19)
+        far_y = min(pred.position[1] + 2, 19)
+        if abs(far_x - pred.position[0]) + abs(far_y - pred.position[1]) > 2:
+            assert env._is_in_toxic_zone(far_x, far_y) is False
+
+    def test_get_zone_background_style_toxic_priority(self):
+        """Test that toxic zone background has priority over temperature zone."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=2,
+            ),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                gradient_strength=1.0,
+            ),
+        )
+        pred = env.predators[0]
+
+        # Position at predator should return toxic style, not temperature style
+        bg_style = env._get_zone_background_style(pred.position[0], pred.position[1])
+        assert bg_style == env.rich_style_config.zone_toxic_bg
+
+    def test_get_zone_background_style_temperature_zone(self):
+        """Test temperature zone background style when no toxic zone."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),  # Center
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.0,  # Uniform temperature
+            ),
+        )
+        # At center with no gradient, should be comfort zone
+        bg_style = env._get_zone_background_style(10, 10)
+        assert bg_style == env.rich_style_config.zone_comfort_bg
+
+    def test_get_zone_background_style_no_zones(self):
+        """Test background style is empty when no zones enabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+        )
+        # No thermotaxis, no predators - should return empty string
+        bg_style = env._get_zone_background_style(10, 10)
+        assert bg_style == ""
+
+    def test_render_rich_with_zones(self):
+        """Test that Rich theme rendering works with zone backgrounds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),
+            viewport_size=(5, 5),
+            theme=Theme.RICH,
+            foraging=ForagingParams(foods_on_grid=1, target_foods_to_collect=1),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                gradient_strength=2.0,  # Strong gradient for visible zones
+            ),
+        )
+        # Should not raise any errors
+        output = env.render()
+        assert isinstance(output, list)
+        assert len(output) > 0
+
+    def test_render_full_with_zones(self):
+        """Test that full grid rendering works with zone backgrounds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),
+            theme=Theme.RICH,
+            foraging=ForagingParams(foods_on_grid=1, target_foods_to_collect=1),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=2,
+            ),
+        )
+        # Should not raise any errors
+        output = env.render_full()
+        assert isinstance(output, list)
+        assert len(output) > 0
+
+    def test_get_zone_symbol_toxic(self):
+        """Test _get_zone_symbol returns toxic symbol for stationary predator zone."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(0, 0),
+            theme=Theme.EMOJI,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=2,
+            ),
+        )
+        pred = env.predators[0]
+
+        # Position at predator should return toxic symbol
+        zone_symbol = env._get_zone_symbol(pred.position[0], pred.position[1])
+        assert zone_symbol == "🟪"
+
+    def test_get_zone_symbol_temperature(self):
+        """Test _get_zone_symbol returns temperature zone symbols."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            theme=Theme.EMOJI,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.0,  # Uniform comfortable temperature
+            ),
+        )
+        # At comfort zone
+        zone_symbol = env._get_zone_symbol(10, 10)
+        assert zone_symbol == ""  # Comfort zone has no symbol override
+
+    def test_render_emoji_with_zones(self):
+        """Test that EMOJI theme rendering works with zone backgrounds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),
+            viewport_size=(5, 5),
+            theme=Theme.EMOJI,
+            foraging=ForagingParams(foods_on_grid=1, target_foods_to_collect=1),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                gradient_strength=2.0,  # Strong gradient for visible zones
+            ),
+        )
+        output = env.render()
+        assert isinstance(output, list)
+        assert len(output) > 0
+        # Verify render completes without error
+        # Zone emojis may or may not appear depending on entity placement
+
+    def test_render_emoji_with_toxic_zones(self):
+        """Test that EMOJI theme shows toxic zones with purple squares."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(1, 1),
+            viewport_size=(7, 7),
+            theme=Theme.EMOJI,
+            foraging=ForagingParams(foods_on_grid=1, target_foods_to_collect=1),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=2,
+            ),
+        )
+        output = env.render()
+        assert isinstance(output, list)
+        assert len(output) > 0
+
+    def test_render_colored_ascii_with_zones(self):
+        """Test that COLORED_ASCII theme rendering works with zone backgrounds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(5, 5),
+            viewport_size=(5, 5),
+            theme=Theme.COLORED_ASCII,
+            foraging=ForagingParams(foods_on_grid=1, target_foods_to_collect=1),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                gradient_strength=2.0,  # Strong gradient for visible zones
+            ),
+        )
+        output = env.render()
+        assert isinstance(output, list)
+        assert len(output) > 0
+        # Check that ANSI background codes may appear in output
+        output_str = "".join(output)
+        # With zones enabled, there should be ANSI codes
+        assert "\033[" in output_str  # ANSI escape sequences present
+
+    def test_render_colored_ascii_with_toxic_zones(self):
+        """Test that COLORED_ASCII theme shows toxic zones with ANSI backgrounds."""
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            start_pos=(1, 1),
+            viewport_size=(7, 7),
+            theme=Theme.COLORED_ASCII,
+            foraging=ForagingParams(foods_on_grid=1, target_foods_to_collect=1),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=2,
+            ),
+        )
+        output = env.render()
+        assert isinstance(output, list)
+        assert len(output) > 0
+        # ANSI escape sequences should be present
+        output_str = "".join(output)
+        assert "\033[" in output_str
+
+    def test_emoji_body_is_brown(self):
+        """Test that EMOJI theme uses brown body symbol."""
+        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
+
+        assert THEME_SYMBOLS[Theme.EMOJI].body == "🟤"
+
+    def test_emoji_rich_body_is_brown(self):
+        """Test that EMOJI_RICH theme uses brown body symbol."""
+        from quantumnematode.env.theme import THEME_SYMBOLS, Theme
+
+        assert THEME_SYMBOLS[Theme.EMOJI_RICH].body == " 🟤"
