@@ -95,7 +95,9 @@ ______________________________________________________________________
 - [x] Implement `to_params()` method for converting to `ThermotaxisParams`
 - [x] Integrate temperature effects into `runners.py` step loop
 - [x] Update `scripts/run_simulation.py` to load and pass thermotaxis config
-- [x] Update `scripts/run_evolution.py` to load and pass thermotaxis config
+- [x] Update `scripts/run_evolution.py` to load and pass thermotaxis config ✅
+  - Added full BrainParams population (temperature, health, boundary_contact, predator_contact)
+  - Added temperature zone damage application via `apply_temperature_effects()`
 - [x] Update `agent.py::reset_environment()` to preserve thermotaxis config
 - [ ] Add thermotaxis section to YAML schema documentation
 
@@ -198,7 +200,13 @@ ______________________________________________________________________
 
 ### 5.2 Experiment Tracking (JSON)
 
-- [ ] Add `temperature_comfort_score: float | None` to experiment JSON output
+- [x] Add `temperature_comfort_score: float | None` to experiment JSON output ✅
+  - Added to `PerRunResult` in metadata.py
+  - Added `avg_temperature_comfort_score` to `ResultsMetadata`
+  - Added `post_convergence_temperature_comfort_score` to `ResultsMetadata`
+- [x] Add `survival_score: float | None` to per-run and aggregate results ✅
+  - Added to `PerRunResult` in metadata.py
+  - Added `avg_survival_score` and `post_convergence_survival_score` to `ResultsMetadata`
 - [ ] Add `final_temperature: float | None` to experiment JSON
 - [ ] Add `steps_in_comfort_zone: int` and `total_thermotaxis_steps: int`
 
@@ -320,6 +328,9 @@ This section documents all files touched during thermotaxis implementation to se
 | `quantumnematode/agent/agent.py` | \_create_brain_params() thermotaxis state population, reset_environment() config preservation |
 | `quantumnematode/agent/runners.py` | apply_temperature_effects() call in step loop, HP depletion check, temperature_history in EpisodeData, track_temperature() call |
 | `quantumnematode/agent/tracker.py` | temperature_history field, track_temperature() method, temperature_history property |
+| `quantumnematode/experiment/metadata.py` | survival_score and temperature_comfort_score in PerRunResult, avg/post-convergence fields in ResultsMetadata |
+| `quantumnematode/experiment/tracker.py` | Multi-objective metrics calculation and aggregation |
+| `quantumnematode/benchmark/convergence.py` | Hierarchical multi-objective composite scoring formula |
 | `quantumnematode/report/dtypes.py` | temperature_history in SimulationResult and EpisodeTrackingData |
 | `quantumnematode/report/plots.py` | temperature_progression.png plot generation |
 | `quantumnematode/report/csv_export.py` | temperature_history.csv export, temperature metrics in foraging_summary.csv |
@@ -328,8 +339,8 @@ This section documents all files touched during thermotaxis implementation to se
 
 | File | Changes |
 |------|---------|
-| `scripts/run_simulation.py` | Load thermotaxis config, pass to environment constructor |
-| `scripts/run_evolution.py` | Load thermotaxis config, pass to environment constructor |
+| `scripts/run_simulation.py` | Load thermotaxis config, pass to environment constructor, calculate survival_score and temperature_comfort_score |
+| `scripts/run_evolution.py` | Load thermotaxis config, pass to environment constructor, full BrainParams population (temperature, health, boundary_contact, predator_contact), apply_temperature_effects() call |
 
 ### Test Files
 
