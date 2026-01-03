@@ -83,9 +83,8 @@ class RewardConfig(BaseModel):
     reward_goal: float = DEFAULT_REWARD_GOAL
     reward_exploration: float = DEFAULT_REWARD_EXPLORATION  # Bonus for visiting new cells
     penalty_starvation: float = DEFAULT_PENALTY_STARVATION  # Penalty when satiety reaches 0
-    penalty_predator_death: float = (
-        DEFAULT_PENALTY_PREDATOR_DEATH  # Penalty when caught by predator
-    )
+    # Penalty for health depletion (predator damage or temperature)
+    penalty_predator_death: float = DEFAULT_PENALTY_PREDATOR_DEATH
     penalty_predator_proximity: float = (
         DEFAULT_PENALTY_PREDATOR_PROXIMITY  # Penalty per step within predator detection radius
     )
