@@ -158,7 +158,7 @@ class TestTemperatureGradient:
             base_temperature=20.0,
             gradient_strength=0.0,
         )
-        magnitude, direction = field.get_gradient_polar((10, 10))
+        magnitude, _ = field.get_gradient_polar((10, 10))
 
         assert magnitude == pytest.approx(0.0)
 
