@@ -280,7 +280,7 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
     )
 
 
-def run_episode(  # noqa: C901, PLR0912, PLR0913
+def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
     brain: ModularBrain,
     env: DynamicForagingEnvironment,
     max_steps: int,
@@ -329,7 +329,40 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913
                 predator_gradient_strength = None
                 predator_gradient_direction = None
 
-            # Build BrainParams
+            # Get thermotaxis state if enabled
+            temperature = None
+            temperature_gradient_strength = None
+            temperature_gradient_direction = None
+            cultivation_temperature = None
+            if env.thermotaxis.enabled:
+                temperature = env.get_temperature(position)
+                temp_grad = env.get_temperature_gradient(position)
+                if temp_grad is not None:
+                    temperature_gradient_strength = temp_grad[0]
+                    temperature_gradient_direction = temp_grad[1]
+                cultivation_temperature = env.thermotaxis.cultivation_temperature
+
+            # Get health state if enabled
+            health = None
+            max_health = None
+            if env.health.enabled:
+                health = env.agent_hp
+                max_health = env.health.max_hp
+
+            # Check boundary contact
+            boundary_contact = (
+                position[0] == 0
+                or position[0] == env.grid_size - 1
+                or position[1] == 0
+                or position[1] == env.grid_size - 1
+            )
+
+            # Check predator contact (within kill radius)
+            predator_contact = False
+            if env.predator.enabled:
+                predator_contact = env.check_predator_collision()
+
+            # Build BrainParams with all available sensory information
             params = BrainParams(
                 gradient_strength=gradient_strength,
                 gradient_direction=gradient_direction,
@@ -340,6 +373,14 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913
                 satiety=satiety,
                 agent_direction=env.current_direction,
                 agent_position=(float(position[0]), float(position[1])),
+                temperature=temperature,
+                temperature_gradient_strength=temperature_gradient_strength,
+                temperature_gradient_direction=temperature_gradient_direction,
+                cultivation_temperature=cultivation_temperature,
+                health=health,
+                max_health=max_health,
+                boundary_contact=boundary_contact,
+                predator_contact=predator_contact,
             )
 
             # Get action from brain (no reward, no learning)
@@ -382,6 +423,13 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913
                     else:
                         # Instant death (original behavior)
                         return False  # Died to predator
+
+            # Apply temperature effects (rewards and HP damage) if thermotaxis enabled
+            if env.thermotaxis.enabled:
+                _reward_delta, _hp_damage = env.apply_temperature_effects()
+                # Check for death from temperature damage (only if health enabled)
+                if env.health.enabled and env.is_health_depleted():
+                    return False  # Died from temperature damage
 
             # Decay satiety
             satiety -= satiety_decay_rate
