@@ -501,8 +501,9 @@ class QuantumNematodeAgent:
                 if self.env.thermotaxis.enabled:
                     temperature = self.env.get_temperature()
                     zone = self.env.get_temperature_zone()
-                    zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
-                    print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
+                    if temperature is not None:
+                        zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
+                        print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
 
     def calculate_reward(
         self,
