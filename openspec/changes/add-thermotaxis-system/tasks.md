@@ -255,7 +255,7 @@ ______________________________________________________________________
   - Comfort zone: no background override (default)
 - [x] Ensure entity rendering (agent, food, predator) takes priority over background ✅
   - Foreground styles combined with background styles in Rich Text
-  - Entity symbols always visible on top of zone backgrounds
+  - Entity symbols are always visible on top of zone backgrounds
 
 ### 6.2 Toxic Zone Visualization
 
