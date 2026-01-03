@@ -284,7 +284,12 @@ ______________________________________________________________________
   - Added avg/post-convergence fields to ResultsMetadata
   - Added avg fields to ConvergenceMetrics
 
-**Validation**: Multi-objective scores computed and tracked correctly
+### 7.4 Baseline Configuration
+
+- [x] Create pure isothermal thermotaxis config (`ppo_thermotaxis_isothermal_small.yml`) ✅
+  - Uniform temperature (gradient_strength=0) for baseline comparison
+
+**Validation**: Multi-objective scores computed and tracked correctly ✅
 
 ______________________________________________________________________
 
