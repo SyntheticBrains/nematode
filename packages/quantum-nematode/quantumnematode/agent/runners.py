@@ -194,11 +194,6 @@ class StandardEpisodeRunner(EpisodeRunner):
             logger.debug("--- New Step ---")
             gradient_strength, gradient_direction = agent.env.get_state(agent.path[-1])
 
-            if logger.isEnabledFor(logging.DEBUG):
-                print()  # noqa: T201
-                print(f"Gradient strength: {gradient_strength}")  # noqa: T201
-                print(f"Gradient direction: {gradient_direction}")  # noqa: T201
-
             # Track if agent stays in same position
             current_position = tuple(agent.env.agent_pos)
             if current_position == previous_position:
