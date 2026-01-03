@@ -90,9 +90,7 @@ Scripts:
 
 Configs:
 
-- `configs/examples/ppo_thermotaxis_foraging_small.yml` - NEW
-- `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` - NEW
-- `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` - NEW
+- `configs/examples/ppo_thermotaxis_*.yml` - Multiple scale/predator variants
 
 **Dependencies:**
 
