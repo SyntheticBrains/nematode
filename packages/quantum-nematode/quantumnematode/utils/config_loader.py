@@ -21,6 +21,13 @@ from quantumnematode.brain.arch import (
 )
 from quantumnematode.brain.modules import Modules
 from quantumnematode.env.env import (
+    DEFAULT_COMFORT_REWARD,
+    DEFAULT_CULTIVATION_TEMPERATURE,
+    DEFAULT_DANGER_HP_DAMAGE,
+    DEFAULT_DANGER_PENALTY,
+    DEFAULT_DISCOMFORT_PENALTY,
+    DEFAULT_LETHAL_HP_DAMAGE,
+    DEFAULT_TEMPERATURE_GRADIENT_STRENGTH,
     ForagingParams,
     HealthParams,
     PredatorParams,
@@ -276,18 +283,18 @@ class ThermotaxisConfig(BaseModel):
     """
 
     enabled: bool = False
-    cultivation_temperature: float = 20.0
-    base_temperature: float = 20.0
+    cultivation_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
+    base_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
     gradient_direction: float = 0.0
-    gradient_strength: float = 0.5
+    gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
     comfort_delta: float = 5.0
     discomfort_delta: float = 10.0
     danger_delta: float = 15.0
-    comfort_reward: float = 0.01
-    discomfort_penalty: float = -0.02
-    danger_penalty: float = -0.05
-    danger_hp_damage: float = 5.0
-    lethal_hp_damage: float = 20.0
+    comfort_reward: float = DEFAULT_COMFORT_REWARD
+    discomfort_penalty: float = DEFAULT_DISCOMFORT_PENALTY
+    danger_penalty: float = DEFAULT_DANGER_PENALTY
+    danger_hp_damage: float = DEFAULT_DANGER_HP_DAMAGE
+    lethal_hp_damage: float = DEFAULT_LETHAL_HP_DAMAGE
 
     def to_params(self) -> ThermotaxisParams:
         """Convert to ThermotaxisParams for environment initialization."""
