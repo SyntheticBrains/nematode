@@ -320,7 +320,10 @@ def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
     #   0 = at cultivation temperature (preferred)
     #   +1 = 15°C hotter than Tc (danger hot)
     #   -1 = 15°C colder than Tc (danger cold)
-    cultivation_temp = params.cultivation_temperature or 20.0  # Default Tc
+    # Default Tc - use explicit None check to allow Tc=0°C if ever needed
+    cultivation_temp = (
+        params.cultivation_temperature if params.cultivation_temperature is not None else 20.0
+    )
     temp_deviation = (params.temperature - cultivation_temp) / 15.0
     temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
 
