@@ -264,19 +264,25 @@ ______________________________________________________________________
 ### 7.1 SimulationResult Extensions
 
 - [x] Add `temperature_comfort_score: float | None` ✅ *(implemented in add-thermotaxis-system via get_temperature_comfort_score())*
-- [ ] Add `survival_score: float | None`
-- [ ] Add `thermotaxis_success: bool | None` *(requires evaluation metrics)*
+- [x] Add `survival_score: float | None` ✅
+- [x] Decision: Use continuous `temperature_comfort_score` instead of binary `thermotaxis_success`
 
 ### 7.2 Composite Score Update
 
-- [ ] Extend `calculate_composite_score()` to handle multi-objective metrics
-- [ ] When multi-objective enabled: reweight base components
-- [ ] Document updated scoring formula
+- [x] Extend `calculate_composite_score()` to handle multi-objective metrics ✅
+- [x] When multi-objective enabled: reweight base components with hierarchical scoring ✅
+  - Survival acts as gate: if survival_score < 0.1, score capped at 30% of primary
+  - With thermotaxis: 50% success, 15% survival, 10% comfort, 15% efficiency, 10% learning
+  - Without thermotaxis: 50% success, 20% survival, 20% efficiency, 10% learning
+- [x] Document updated scoring formula ✅ *(in calculate_composite_score docstring)*
 
 ### 7.3 Experiment Tracking
 
-- [ ] Track per-objective scores during episode
-- [ ] Include multi-objective metrics in experiment JSON
+- [x] Track per-objective scores during episode ✅
+- [x] Include multi-objective metrics in experiment JSON ✅
+  - Added `survival_score` and `temperature_comfort_score` to PerRunResult
+  - Added avg/post-convergence fields to ResultsMetadata
+  - Added avg fields to ConvergenceMetrics
 
 **Validation**: Multi-objective scores computed and tracked correctly
 

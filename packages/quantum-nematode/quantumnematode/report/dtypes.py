@@ -87,6 +87,10 @@ class SimulationResult(BaseModel):
         Whether run ended due to HP reaching zero (health system enabled).
     food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
+    survival_score : float | None
+        Survival score: final_hp / max_hp (0.0 to 1.0). None if health system disabled.
+    temperature_comfort_score : float | None
+        Fraction of time spent in comfort zone (0.0 to 1.0). None if thermotaxis disabled.
     """
 
     run: int
@@ -110,6 +114,10 @@ class SimulationResult(BaseModel):
     died_to_predator: bool | None = None
     died_to_health_depletion: bool | None = None
     food_history: FoodHistory | None = None
+    survival_score: float | None = None
+    """Survival score: final_hp / max_hp (0.0 to 1.0). None if health system disabled."""
+    temperature_comfort_score: float | None = None
+    """Fraction of time spent in comfort zone (0.0 to 1.0). None if thermotaxis disabled."""
 
 
 TrackingRunIndex = int
@@ -206,6 +214,10 @@ class PerformanceMetrics(BaseModel):
         Average number of predator encounters per run (predator environments only).
     average_successful_evasions : float | None
         Average number of successful evasions per run (predator environments only).
+    average_survival_score : float | None
+        Average survival score (final_hp / max_hp) across runs (health system only).
+    average_temperature_comfort_score : float | None
+        Average temperature comfort score across runs (thermotaxis only).
     """
 
     success_rate: float
@@ -224,3 +236,5 @@ class PerformanceMetrics(BaseModel):
     total_interrupted: int = 0
     average_predator_encounters: float | None = None
     average_successful_evasions: float | None = None
+    average_survival_score: float | None = None
+    average_temperature_comfort_score: float | None = None
