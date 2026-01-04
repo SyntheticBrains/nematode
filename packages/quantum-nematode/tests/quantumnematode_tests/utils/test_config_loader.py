@@ -405,3 +405,34 @@ class TestThermotaxisConfig:
 
         with pytest.raises(ValueError, match=r"Invalid cold_spot at index 0"):
             config.to_params()
+
+    def test_to_params_default_values(self):
+        """Test ThermotaxisConfig.to_params() with default values."""
+        config = ThermotaxisConfig()
+        params = config.to_params()
+
+        assert isinstance(params, ThermotaxisParams)
+        assert params.enabled is False
+        assert params.cultivation_temperature == 20.0
+        assert params.base_temperature == 20.0
+        assert params.gradient_direction == 0.0
+        assert params.gradient_strength == 0.5
+        assert params.hot_spots is None
+        assert params.cold_spots is None
+        assert params.spot_decay_constant == 5.0
+        assert params.comfort_delta == 5.0
+        assert params.discomfort_delta == 10.0
+        assert params.danger_delta == 15.0
+
+    def test_to_params_with_empty_spots(self):
+        """Test that to_params() handles empty lists for hot_spots and cold_spots."""
+        config = ThermotaxisConfig(
+            enabled=True,
+            hot_spots=[],
+            cold_spots=[],
+        )
+
+        params = config.to_params()
+
+        assert params.hot_spots == []
+        assert params.cold_spots == []
