@@ -264,6 +264,12 @@ class ThermotaxisConfig(BaseModel):
         Direction of linear temperature gradient (radians, 0 = increases to right).
     gradient_strength : float
         How quickly temperature changes per cell (°C/cell).
+    hot_spots : list[list[float]] | None
+        Localized hot spots as [x, y, intensity] lists.
+    cold_spots : list[list[float]] | None
+        Localized cold spots as [x, y, intensity] lists.
+    spot_decay_constant : float
+        Decay constant for hot/cold spot exponential falloff.
     comfort_delta : float
         Temperature deviation from cultivation temp considered comfortable (°C).
     discomfort_delta : float
@@ -287,6 +293,9 @@ class ThermotaxisConfig(BaseModel):
     base_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
     gradient_direction: float = 0.0
     gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
+    hot_spots: list[list[float]] | None = None
+    cold_spots: list[list[float]] | None = None
+    spot_decay_constant: float = 5.0
     comfort_delta: float = 5.0
     discomfort_delta: float = 10.0
     danger_delta: float = 15.0
@@ -298,12 +307,28 @@ class ThermotaxisConfig(BaseModel):
 
     def to_params(self) -> ThermotaxisParams:
         """Convert to ThermotaxisParams for environment initialization."""
+        # Convert list of lists from YAML to list of tuples for ThermotaxisParams
+        hot_spots_tuples: list[tuple[int, int, float]] | None = None
+        if self.hot_spots is not None:
+            hot_spots_tuples = [
+                (int(spot[0]), int(spot[1]), float(spot[2])) for spot in self.hot_spots
+            ]
+
+        cold_spots_tuples: list[tuple[int, int, float]] | None = None
+        if self.cold_spots is not None:
+            cold_spots_tuples = [
+                (int(spot[0]), int(spot[1]), float(spot[2])) for spot in self.cold_spots
+            ]
+
         return ThermotaxisParams(
             enabled=self.enabled,
             cultivation_temperature=self.cultivation_temperature,
             base_temperature=self.base_temperature,
             gradient_direction=self.gradient_direction,
             gradient_strength=self.gradient_strength,
+            hot_spots=hot_spots_tuples,
+            cold_spots=cold_spots_tuples,
+            spot_decay_constant=self.spot_decay_constant,
             comfort_delta=self.comfort_delta,
             discomfort_delta=self.discomfort_delta,
             danger_delta=self.danger_delta,
