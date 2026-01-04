@@ -206,6 +206,8 @@ class ThermotaxisParams:
         Localized hot spots as (x, y, intensity) tuples.
     cold_spots : list[tuple[int, int, float]] | None
         Localized cold spots as (x, y, intensity) tuples.
+    spot_decay_constant : float
+        Decay constant for hot/cold spot exponential falloff.
     comfort_reward : float
         Reward per step when in comfort zone.
     discomfort_penalty : float
@@ -231,6 +233,7 @@ class ThermotaxisParams:
     gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
     hot_spots: list[tuple[int, int, float]] | None = None
     cold_spots: list[tuple[int, int, float]] | None = None
+    spot_decay_constant: float = 5.0
     comfort_reward: float = DEFAULT_COMFORT_REWARD
     discomfort_penalty: float = DEFAULT_DISCOMFORT_PENALTY
     danger_penalty: float = DEFAULT_DANGER_PENALTY
@@ -1106,6 +1109,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 gradient_strength=self.thermotaxis.gradient_strength,
                 hot_spots=self.thermotaxis.hot_spots,
                 cold_spots=self.thermotaxis.cold_spots,
+                spot_decay_constant=self.thermotaxis.spot_decay_constant,
             )
 
         # Thermotaxis tracking (comfort score calculation)
