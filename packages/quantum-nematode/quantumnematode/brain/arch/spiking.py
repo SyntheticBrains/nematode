@@ -49,7 +49,6 @@ from quantumnematode.brain.arch._spiking_layers import OutputMode, SpikingPolicy
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
-from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 # Default configuration parameters
@@ -298,13 +297,6 @@ class SpikingBrain(ClassicalBrain):
         self.initial_learning_rate = config.learning_rate
         self.initial_entropy_beta = config.entropy_beta
 
-        # Overfitting detection
-        self.overfitting_detector = create_overfitting_detector_for_brain("spiking")
-        self.overfit_detector_episode_count = 0
-        self.overfit_detector_current_episode_actions: list[Action] = []
-        self.overfit_detector_current_episode_positions: list[tuple[float, float]] = []
-        self.overfit_detector_current_episode_rewards: list[float] = []
-
         # Log parameter count
         total_params = sum(p.numel() for p in self.policy.parameters() if p.requires_grad)
         logger.info(f"SpikingBrain initialized with {total_params:,} trainable parameters")
@@ -525,11 +517,6 @@ class SpikingBrain(ClassicalBrain):
         self.latest_data.action = action_data
         self.latest_data.probability = probability
 
-        # Update overfitting detector
-        if params.agent_position is not None:
-            self.overfit_detector_current_episode_positions.append(params.agent_position)
-        self.overfit_detector_current_episode_actions.append(selected_action)
-
         logger.debug(
             f"SpikingBrain selected action {selected_action} with probability {probability:.3f}",
         )
@@ -563,7 +550,6 @@ class SpikingBrain(ClassicalBrain):
             Whether the episode is complete
         """
         self.episode_rewards.append(reward)
-        self.overfit_detector_current_episode_rewards.append(reward)
         self.steps_since_update += 1
 
         # Intra-episode updates: perform gradient update every N steps (like MLP brain)
@@ -908,51 +894,6 @@ class SpikingBrain(ClassicalBrain):
         episode_success : bool | None
             Whether the episode was successful (not used)
         """
-        # Update overfitting detector
-        if (
-            self.overfit_detector_current_episode_actions
-            and self.overfit_detector_current_episode_positions
-            and self.overfit_detector_current_episode_rewards
-        ):
-            try:
-                total_reward = sum(self.overfit_detector_current_episode_rewards)
-                num_steps = len(self.overfit_detector_current_episode_actions)
-
-                # Convert actions to strings
-                action_sequence = [
-                    action.value for action in self.overfit_detector_current_episode_actions
-                ]
-
-                # Update performance metrics
-                if hasattr(self.overfitting_detector, "update_performance_metrics"):
-                    self.overfitting_detector.update_performance_metrics(num_steps, total_reward)
-
-                # Update behavioral metrics if we have position data
-                if (
-                    hasattr(self.overfitting_detector, "update_behavioral_metrics")
-                    and self.overfit_detector_current_episode_positions
-                ):
-                    start_pos = self.overfit_detector_current_episode_positions[0]
-                    # Convert float positions to int for behavioral metrics
-                    int_positions = [
-                        (int(x), int(y)) for x, y in self.overfit_detector_current_episode_positions
-                    ]
-                    int_start_pos = (int(start_pos[0]), int(start_pos[1]))
-                    self.overfitting_detector.update_behavioral_metrics(
-                        action_sequence,
-                        int_positions,
-                        int_start_pos,
-                    )
-
-            except (AttributeError, ValueError, TypeError) as e:
-                logger.warning(f"Overfitting detector update failed: {e}")
-
-        # Clear episode tracking
-        self.overfit_detector_current_episode_actions.clear()
-        self.overfit_detector_current_episode_positions.clear()
-        self.overfit_detector_current_episode_rewards.clear()
-        self.overfit_detector_episode_count += 1
-
         logger.debug("Episode post-processing complete")
 
     def _get_current_entropy_beta(self) -> float:

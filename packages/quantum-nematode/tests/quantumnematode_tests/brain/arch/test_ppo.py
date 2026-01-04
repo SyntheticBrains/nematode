@@ -372,17 +372,16 @@ class TestPPOBrain:
 
     def test_post_process_episode(self, brain):
         """Test episode post-processing."""
-        # Add some episode data
-        brain.overfit_detector_current_episode_actions.append("FORWARD")
-        brain.overfit_detector_current_episode_positions.append((1, 1))
-        brain.overfit_detector_current_episode_rewards.append(0.5)
+        # Add some reward data
+        brain._current_episode_rewards.append(0.5)
+        initial_episode_count = brain._episode_count
 
         brain.post_process_episode()
 
+        # Episode count should increment
+        assert brain._episode_count == initial_episode_count + 1
         # Episode data should be cleared
-        assert len(brain.overfit_detector_current_episode_actions) == 0
-        assert len(brain.overfit_detector_current_episode_positions) == 0
-        assert len(brain.overfit_detector_current_episode_rewards) == 0
+        assert len(brain._current_episode_rewards) == 0
 
     def test_action_set_property(self, brain):
         """Test action_set property."""
@@ -650,20 +649,20 @@ class TestLRScheduling:
         )
 
         # Episode 0: should be at warmup start
-        brain.overfit_detector_episode_count = 0
+        brain._episode_count = 0
         assert brain._get_current_lr() == pytest.approx(0.0001)
 
         # Episode 50: should be at midpoint
-        brain.overfit_detector_episode_count = 50
+        brain._episode_count = 50
         expected_mid = 0.0001 + (0.001 - 0.0001) * 0.5
         assert brain._get_current_lr() == pytest.approx(expected_mid)
 
         # Episode 100: should be at base LR
-        brain.overfit_detector_episode_count = 100
+        brain._episode_count = 100
         assert brain._get_current_lr() == pytest.approx(0.001)
 
         # Episode 150: should stay at base LR (no decay configured)
-        brain.overfit_detector_episode_count = 150
+        brain._episode_count = 150
         assert brain._get_current_lr() == pytest.approx(0.001)
 
     def test_lr_decay_after_warmup(self):
@@ -683,24 +682,24 @@ class TestLRScheduling:
         )
 
         # Episode 0: warmup start
-        brain.overfit_detector_episode_count = 0
+        brain._episode_count = 0
         assert brain._get_current_lr() == pytest.approx(0.0001)
 
         # Episode 50: warmup complete, at base LR
-        brain.overfit_detector_episode_count = 50
+        brain._episode_count = 50
         assert brain._get_current_lr() == pytest.approx(0.001)
 
         # Episode 150: midpoint of decay (50 + 100 = 150)
-        brain.overfit_detector_episode_count = 150
+        brain._episode_count = 150
         expected_mid = 0.001 + (0.0001 - 0.001) * 0.5
         assert brain._get_current_lr() == pytest.approx(expected_mid)
 
         # Episode 250: decay complete (50 + 200 = 250)
-        brain.overfit_detector_episode_count = 250
+        brain._episode_count = 250
         assert brain._get_current_lr() == pytest.approx(0.0001)
 
         # Episode 300: stays at decay end
-        brain.overfit_detector_episode_count = 300
+        brain._episode_count = 300
         assert brain._get_current_lr() == pytest.approx(0.0001)
 
     def test_lr_decay_default_end(self):
@@ -735,13 +734,13 @@ class TestLRScheduling:
         )
 
         # Initially at warmup start
-        brain.overfit_detector_episode_count = 0
+        brain._episode_count = 0
         brain._update_learning_rate()
         for param_group in brain.optimizer.param_groups:
             assert param_group["lr"] == pytest.approx(0.0001)
 
         # After some episodes, LR should have increased
-        brain.overfit_detector_episode_count = 50
+        brain._episode_count = 50
         brain._update_learning_rate()
         expected = 0.0001 + (0.001 - 0.0001) * 0.5
         for param_group in brain.optimizer.param_groups:
@@ -758,7 +757,7 @@ class TestLRScheduling:
         )
 
         original_lr = brain.optimizer.param_groups[0]["lr"]
-        brain.overfit_detector_episode_count = 100
+        brain._episode_count = 100
         brain._update_learning_rate()
 
         # LR should be unchanged

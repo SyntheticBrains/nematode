@@ -203,17 +203,9 @@ class TestMLPBrain:
 
     def test_post_process_episode(self, brain):
         """Test episode post-processing."""
-        # Add some episode data
-        brain.overfit_detector_current_episode_actions.append(Action.FORWARD)
-        brain.overfit_detector_current_episode_positions.append((1, 1))
-        brain.overfit_detector_current_episode_rewards.append(0.5)
-
+        # post_process_episode is a no-op for MLPBrain
         brain.post_process_episode()
-
-        # Episode data should be cleared
-        assert len(brain.overfit_detector_current_episode_actions) == 0
-        assert len(brain.overfit_detector_current_episode_positions) == 0
-        assert len(brain.overfit_detector_current_episode_rewards) == 0
+        # Just verify it doesn't crash
 
     def test_action_set_property(self, brain):
         """Test action_set property."""
