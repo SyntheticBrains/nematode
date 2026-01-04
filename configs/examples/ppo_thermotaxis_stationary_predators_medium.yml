@@ -10,9 +10,10 @@
 # Temperature gradient creates an additional navigation constraint.
 #
 # Medium environment (50x50 grid):
-# - Temperature range: 0°C to 40°C with 0.8°C/cell gradient
-# - ~25% in comfort zone, ~40% in discomfort, ~35% in danger/lethal
-# - 3 stationary predators spread across the grid
+# - Temperature range: 5°C to 35°C with 0.6°C/cell gradient
+# - 4 stationary predators (~2% toxic coverage)
+# - Sharper gradient decay (4.0) for clearer toxic zone detection
+# - Comparable challenge to small grid baseline
 #
 # Success criteria:
 # - Collect target foods AND survive
@@ -30,18 +31,22 @@ brain:
   config:
     actor_hidden_dim: 128
     critic_hidden_dim: 128
-    num_hidden_layers: 3
+    num_hidden_layers: 2
     clip_epsilon: 0.2
     gamma: 0.99
-    gae_lambda: 0.95
+    gae_lambda: 0.98
     value_loss_coef: 0.5
     entropy_coef: 0.02
     learning_rate: 0.001
     rollout_buffer_size: 512
-    num_epochs: 10
+    num_epochs: 20
     num_minibatches: 2
     max_grad_norm: 0.5
     normalize_advantages: true
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 200
+    lr_decay_end: 0.0001
     sensory_modules:
       - food_chemotaxis
       - nociception
@@ -52,7 +57,7 @@ body_length: 2
 
 reward:
   reward_goal: 2.0
-  reward_distance_scale: 0.5
+  reward_distance_scale: 0.3
   reward_exploration: 0.05
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
@@ -67,7 +72,7 @@ reward:
 
 satiety:
   initial_satiety: 500.0
-  satiety_decay_rate: 1.0
+  satiety_decay_rate: 0.8
   satiety_gain_per_food: 0.2
 
 environment:
@@ -78,28 +83,28 @@ environment:
     use_separated_gradients: true
 
     foraging:
-      foods_on_grid: 20
-      target_foods_to_collect: 30
-      min_food_distance: 5
-      agent_exclusion_radius: 10
+      foods_on_grid: 15
+      target_foods_to_collect: 20
+      min_food_distance: 4
+      agent_exclusion_radius: 8
       gradient_decay_constant: 10.0
       gradient_strength: 1.0
 
     predators:
       enabled: true
-      count: 3
+      count: 4
       speed: 0.0
       movement_pattern: stationary
-      detection_radius: 6
+      detection_radius: 4
       kill_radius: 0
-      damage_radius: 3
-      gradient_decay_constant: 10.0
+      damage_radius: 2
+      gradient_decay_constant: 4.0
       gradient_strength: 1.2
 
     health:
       enabled: true
       max_hp: 100.0
-      predator_damage: 15.0
+      predator_damage: 8.0
       food_healing: 10.0
 
     thermotaxis:
@@ -107,12 +112,12 @@ environment:
       cultivation_temperature: 20.0
       base_temperature: 20.0  # Temperature at grid center (spawn point)
       gradient_direction: 0.0  # Temperature increases to the right
-      gradient_strength: 0.8   # 0.8°C per cell from center (range: 0°C to 40°C)
+      gradient_strength: 0.6   # 0.6°C per cell from center (range: 5°C to 35°C)
       comfort_reward: 0.05
       discomfort_penalty: -0.1
       danger_penalty: -0.3
-      danger_hp_damage: 2.0
-      lethal_hp_damage: 10.0
+      danger_hp_damage: 1.5
+      lethal_hp_damage: 8.0
       # Zone thresholds (relative to cultivation temp)
       comfort_delta: 5.0       # Comfort: 15-25°C
       discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
