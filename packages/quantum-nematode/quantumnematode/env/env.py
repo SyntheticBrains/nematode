@@ -21,7 +21,7 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.dtypes import GradientPolar, GridPosition
+from quantumnematode.dtypes import GradientPolar, GridPosition, TemperatureSpot
 from quantumnematode.env.temperature import (
     TemperatureField,
     TemperatureZone,
@@ -202,9 +202,9 @@ class ThermotaxisParams:
         Direction of increasing temperature in radians (0 = rightward).
     gradient_strength : float
         Temperature change per cell in °C.
-    hot_spots : list[tuple[int, int, float]] | None
+    hot_spots : list[TemperatureSpot] | None
         Localized hot spots as (x, y, intensity) tuples.
-    cold_spots : list[tuple[int, int, float]] | None
+    cold_spots : list[TemperatureSpot] | None
         Localized cold spots as (x, y, intensity) tuples.
     spot_decay_constant : float
         Decay constant for hot/cold spot exponential falloff.
@@ -231,8 +231,8 @@ class ThermotaxisParams:
     base_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
     gradient_direction: float = 0.0
     gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
-    hot_spots: list[tuple[int, int, float]] | None = None
-    cold_spots: list[tuple[int, int, float]] | None = None
+    hot_spots: list[TemperatureSpot] | None = None
+    cold_spots: list[TemperatureSpot] | None = None
     spot_decay_constant: float = 5.0
     comfort_reward: float = DEFAULT_COMFORT_REWARD
     discomfort_penalty: float = DEFAULT_DISCOMFORT_PENALTY
