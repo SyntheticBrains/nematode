@@ -1,5 +1,6 @@
 """Tests for configuration loading utilities."""
 
+import pytest
 from quantumnematode.env import ForagingParams, HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.utils.config_loader import (
     DynamicEnvironmentConfig,
@@ -387,8 +388,6 @@ class TestThermotaxisConfig:
 
     def test_to_params_validates_hot_spot_format(self):
         """Test that to_params() raises ValueError for malformed hot_spots."""
-        import pytest
-
         config = ThermotaxisConfig(
             enabled=True,
             hot_spots=[[75, 50]],  # Missing intensity
@@ -399,8 +398,6 @@ class TestThermotaxisConfig:
 
     def test_to_params_validates_cold_spot_format(self):
         """Test that to_params() raises ValueError for malformed cold_spots."""
-        import pytest
-
         config = ThermotaxisConfig(
             enabled=True,
             cold_spots=[[25, 25, 10.0, 5.0]],  # Extra element
