@@ -47,7 +47,6 @@ from quantumnematode.brain.modules import (
 from quantumnematode.env import Direction
 from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
-from quantumnematode.monitoring.overfitting_detector import create_overfitting_detector_for_brain
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 # Default hyperparameters
@@ -385,12 +384,9 @@ class PPOBrain(ClassicalBrain):
         self.last_value: torch.Tensor | None = None
         self.pending_reward: float | None = None
 
-        # Overfitting detection
-        self.overfitting_detector = create_overfitting_detector_for_brain("ppo")
-        self.overfit_detector_episode_count = 0
-        self.overfit_detector_current_episode_actions: list[str] = []
-        self.overfit_detector_current_episode_positions: list[tuple[int, int]] = []
-        self.overfit_detector_current_episode_rewards: list[float] = []
+        # Episode tracking
+        self._episode_count = 0
+        self._current_episode_rewards: list[float] = []
 
     def _build_network(
         self,
@@ -475,7 +471,7 @@ class PPOBrain(ClassicalBrain):
         if not self.lr_scheduling_enabled:
             return self.base_lr
 
-        episode = self.overfit_detector_episode_count
+        episode = self._episode_count
 
         # Warmup phase
         if episode < self.lr_warmup_episodes:
@@ -586,27 +582,11 @@ class PPOBrain(ClassicalBrain):
             probability=probs_np[action_idx],
         )
 
-        # Track for overfitting detection
-        self._track_episode_metrics(params, probs_np, action_name)
-
         # Update history
         self.history_data.actions.append(self.latest_data.action)
         self.history_data.probabilities.append(float(probs_np[action_idx]))
 
         return [ActionData(state=action_name, action=action_name, probability=probs_np[action_idx])]
-
-    def _track_episode_metrics(
-        self,
-        params: BrainParams,
-        probs_np: np.ndarray,
-        action_name: str,
-    ) -> None:
-        """Track metrics for overfitting detection."""
-        self.overfit_detector_current_episode_actions.append(action_name)
-        if params.agent_position is not None:
-            pos = (int(params.agent_position[0]), int(params.agent_position[1]))
-            self.overfit_detector_current_episode_positions.append(pos)
-        self.overfitting_detector.update_learning_metrics(loss=None, policy_probs=probs_np)
 
     def learn(
         self,
@@ -616,7 +596,7 @@ class PPOBrain(ClassicalBrain):
         episode_done: bool = False,
     ) -> None:
         """Add experience to buffer and update if buffer is full."""
-        self.overfit_detector_current_episode_rewards.append(reward)
+        self._current_episode_rewards.append(reward)
 
         # Add to buffer if we have pending state
         if hasattr(self, "_pending_state"):
@@ -709,10 +689,6 @@ class PPOBrain(ClassicalBrain):
             avg_loss = total_policy_loss / num_updates
             self.latest_data.loss = avg_loss
 
-            # Update overfitting detector
-            dummy_probs = np.zeros(self.num_actions)
-            self.overfitting_detector.update_learning_metrics(avg_loss, dummy_probs)
-
             logger.debug(
                 f"PPO update: policy_loss={total_policy_loss / num_updates:.4f}, "
                 f"value_loss={total_value_loss / num_updates:.4f}, "
@@ -731,42 +707,13 @@ class PPOBrain(ClassicalBrain):
         episode_success: bool | None = None,  # noqa: ARG002
     ) -> None:
         """Post-process after each episode."""
-        self._complete_episode_tracking()
-
-    def _complete_episode_tracking(self) -> None:
-        """Complete episode tracking for overfitting detection."""
-        total_steps = len(self.overfit_detector_current_episode_rewards)
-        total_reward = sum(self.overfit_detector_current_episode_rewards)
-
-        self.overfitting_detector.update_performance_metrics(total_steps, total_reward)
-
-        if (
-            self.overfit_detector_current_episode_actions
-            and self.overfit_detector_current_episode_positions
-        ):
-            start_pos = (
-                self.overfit_detector_current_episode_positions[0]
-                if self.overfit_detector_current_episode_positions
-                else (0, 0)
-            )
-            self.overfitting_detector.update_behavioral_metrics(
-                self.overfit_detector_current_episode_actions.copy(),
-                self.overfit_detector_current_episode_positions.copy(),
-                start_pos,
-            )
-
-        self.overfit_detector_episode_count += 1
+        self._episode_count += 1
 
         # Update learning rate based on schedule (if enabled)
         self._update_learning_rate()
 
-        if self.overfit_detector_episode_count % EPISODE_LOG_INTERVAL == 0:
-            self.overfitting_detector.log_overfitting_analysis()
-
         # Reset tracking
-        self.overfit_detector_current_episode_actions.clear()
-        self.overfit_detector_current_episode_positions.clear()
-        self.overfit_detector_current_episode_rewards.clear()
+        self._current_episode_rewards.clear()
 
     def copy(self) -> "PPOBrain":
         """PPOBrain does not support copying."""

@@ -417,17 +417,9 @@ class TestSpikingBrain:
 
     def test_post_process_episode(self, brain):
         """Test episode post-processing."""
-        # Add some episode data
-        brain.overfit_detector_current_episode_actions = [Action.FORWARD, Action.LEFT]
-        brain.overfit_detector_current_episode_positions = [(1.0, 1.0), (2.0, 1.0)]
-        brain.overfit_detector_current_episode_rewards = [0.1, 0.2]
-
+        # post_process_episode just logs debug info
         brain.post_process_episode()
-
-        # Episode data should be cleared
-        assert len(brain.overfit_detector_current_episode_actions) == 0
-        assert len(brain.overfit_detector_current_episode_positions) == 0
-        assert len(brain.overfit_detector_current_episode_rewards) == 0
+        # Just verify it doesn't crash
 
     def test_copy(self, brain):
         """Test brain copying functionality."""
