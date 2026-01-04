@@ -1,25 +1,30 @@
 # PPO with Thermotaxis + Foraging - Large Configuration
-# Curriculum level 3: Large-scale foraging with scattered temperature danger zones
+# Curriculum level 3: Large-scale foraging with scattered temperature zones
 #
 # Thermotaxis adds a new sensory modality (AFD neurons) that encodes:
 # - Temperature deviation from cultivation temperature (Tc = 20°C)
 # - Direction toward warmer temperatures (egocentric)
 # - Temperature gradient strength
 #
-# Large environment (100x100 grid) with multiple temperature zones:
-# - Weak linear gradient (0.15°C/cell) provides gentle temperature variation
-# - 3 hot spots and 3 cold spots create localized danger zones
-# - Central area remains comfortable for spawning
-# - Agent must navigate around scattered danger zones to forage
+# Large environment (100x100 grid) with moderate temperature challenges:
+# - Weak linear gradient (0.1°C/cell) from center
+# - 3 hot spots and 3 cold spots with REDUCED intensities
+# - Larger decay constant (12) = gentler falloff from spots
+# - Central safe zone for spawning (spawn is always comfortable)
+#
+# Key design principles for learnability:
+# - Spots create localized discomfort, not instant death
+# - Max temp deviation from spots ~15°C (danger, not lethal)
+# - HP damage is survivable - agent can learn to navigate
+# - Food healing (10 HP) exceeds danger damage (0.5 HP/step)
 #
 # Temperature zone layout:
 # - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
 # - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
-# - Each spot has exponential falloff (spot_decay_constant=8)
 #
 # Success criteria:
 # - Collect target foods
-# - Navigate around temperature danger zones
+# - Learn to avoid/minimize time in discomfort zones
 #
 # Sensory modules (C. elegans neuron references):
 # - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
@@ -43,6 +48,10 @@ brain:
     num_minibatches: 4
     max_grad_norm: 0.5
     normalize_advantages: true
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
     sensory_modules:
       - food_chemotaxis
       - thermotaxis
@@ -59,11 +68,13 @@ reward:
   penalty_starvation: 10.0
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.3   # Feedback on HP loss
+  reward_health_gain: 0.2      # Encourage food collection for healing
 
 satiety:
-  initial_satiety: 800.0
-  satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2
+  initial_satiety: 1000.0      # More satiety for larger grid
+  satiety_decay_rate: 0.8      # Slower decay - less starvation pressure
+  satiety_gain_per_food: 0.25  # Better satiety from food
 
 environment:
   type: dynamic
@@ -73,8 +84,8 @@ environment:
     use_separated_gradients: true
 
     foraging:
-      foods_on_grid: 45
-      target_foods_to_collect: 50
+      foods_on_grid: 30           # Sparse - forces grid exploration
+      target_foods_to_collect: 40  # Reduced target (from 50)
       min_food_distance: 10
       agent_exclusion_radius: 15
       gradient_decay_constant: 12.0
@@ -82,33 +93,37 @@ environment:
 
     health:
       enabled: true
-      max_hp: 100.0
+      max_hp: 150.0              # More HP buffer (from 100)
       predator_damage: 0.0
-      food_healing: 5.0
+      food_healing: 10.0         # Double healing (from 5)
 
     thermotaxis:
       enabled: true
       cultivation_temperature: 20.0
-      base_temperature: 20.0  # Temperature at grid center (spawn point)
-      gradient_direction: 0.0  # Temperature increases to the right
-      gradient_strength: 0.15  # Weak gradient (0.15°C/cell) - main challenge is spots
-      # Scattered hot spots (x, y, intensity in °C)
+      base_temperature: 20.0     # Temperature at grid center (spawn point)
+      gradient_direction: 0.0    # Temperature increases to the right
+      gradient_strength: 0.12    # Linear gradient contribution
+      # Scattered hot spots - SIGNIFICANT intensities
+      # Creates larger lethal cores that require real avoidance
+      # With decay=8, intensity drops to ~37% at 8 cells, ~14% at 16 cells
       hot_spots:
-        - [75, 50, 25.0]   # Hot zone right-center
-        - [25, 75, 20.0]   # Hot zone upper-left quadrant
-        - [80, 80, 22.0]   # Hot zone upper-right corner
-      # Scattered cold spots (x, y, intensity in °C)
+        - [75, 50, 20.0]   # Hot zone right-center - large lethal core
+        - [25, 75, 18.0]   # Hot zone upper-left - lethal core
+        - [80, 80, 18.0]   # Hot zone upper-right - lethal core
+      # Scattered cold spots - SIGNIFICANT intensities
       cold_spots:
-        - [25, 25, 25.0]   # Cold zone lower-left quadrant
-        - [75, 25, 20.0]   # Cold zone lower-right quadrant
-        - [50, 85, 18.0]   # Cold zone top-center
-      spot_decay_constant: 8.0  # Controls how quickly spots affect temperature
-      comfort_reward: 0.05
+        - [25, 25, 20.0]   # Cold zone lower-left - large lethal core
+        - [75, 25, 18.0]   # Cold zone lower-right - lethal core
+        - [50, 85, 15.0]   # Cold zone top-center - danger zone
+      spot_decay_constant: 8.0   # Steeper decay = more concentrated danger
+      # Rewards/penalties - strong signals
+      comfort_reward: 0.04
       discomfort_penalty: -0.1
-      danger_penalty: -0.3
-      danger_hp_damage: 2.0    # HP damage per step in danger zone
-      lethal_hp_damage: 10.0   # HP damage per step in lethal zone
-      # Zone thresholds (relative to cultivation temp)
-      comfort_delta: 5.0       # Comfort: 15-25°C
-      discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
-      danger_delta: 15.0       # Danger: 5-10°C or 30-35°C
+      danger_penalty: -0.25
+      # HP damage - punishing but still learnable
+      danger_hp_damage: 1.5      # 100 steps to die from full HP
+      lethal_hp_damage: 7.0      # ~21 steps to die from full HP
+      # Zone thresholds (unchanged)
+      comfort_delta: 5.0         # Comfort: 15-25°C
+      discomfort_delta: 10.0     # Discomfort: 10-15°C or 25-30°C
+      danger_delta: 15.0         # Danger: 5-10°C or 30-35°C
