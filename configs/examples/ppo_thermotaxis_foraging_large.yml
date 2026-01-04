@@ -68,7 +68,7 @@ environment:
     use_separated_gradients: true
 
     foraging:
-      foods_on_grid: 35
+      foods_on_grid: 45
       target_foods_to_collect: 50
       min_food_distance: 10
       agent_exclusion_radius: 15
