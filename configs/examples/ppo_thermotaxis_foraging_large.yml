@@ -1,20 +1,25 @@
 # PPO with Thermotaxis + Foraging - Large Configuration
-# Curriculum level 3: Challenging large-scale foraging with extreme temperature gradients
+# Curriculum level 3: Large-scale foraging with scattered temperature danger zones
 #
 # Thermotaxis adds a new sensory modality (AFD neurons) that encodes:
 # - Temperature deviation from cultivation temperature (Tc = 20°C)
 # - Direction toward warmer temperatures (egocentric)
 # - Temperature gradient strength
 #
-# Large environment (100x100 grid):
-# - Temperature range: -5°C to 45°C with 0.5°C/cell gradient
-# - ~20% in comfort zone, ~30% in discomfort, ~50% in danger/lethal
-# - Significant portions of grid are uninhabitable
-# - Forces strategic path planning around temperature zones
+# Large environment (100x100 grid) with multiple temperature zones:
+# - Weak linear gradient (0.15°C/cell) provides gentle temperature variation
+# - 3 hot spots and 3 cold spots create localized danger zones
+# - Central area remains comfortable for spawning
+# - Agent must navigate around scattered danger zones to forage
+#
+# Temperature zone layout:
+# - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
+# - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
+# - Each spot has exponential falloff (spot_decay_constant=8)
 #
 # Success criteria:
 # - Collect target foods
-# - Maintain >40% time in comfort zone (15-25°C)
+# - Navigate around temperature danger zones
 #
 # Sensory modules (C. elegans neuron references):
 # - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
@@ -86,7 +91,18 @@ environment:
       cultivation_temperature: 20.0
       base_temperature: 20.0  # Temperature at grid center (spawn point)
       gradient_direction: 0.0  # Temperature increases to the right
-      gradient_strength: 0.5   # 0.5°C per cell from center (range: -5°C to 45°C)
+      gradient_strength: 0.15  # Weak gradient (0.15°C/cell) - main challenge is spots
+      # Scattered hot spots (x, y, intensity in °C)
+      hot_spots:
+        - [75, 50, 25.0]   # Hot zone right-center
+        - [25, 75, 20.0]   # Hot zone upper-left quadrant
+        - [80, 80, 22.0]   # Hot zone upper-right corner
+      # Scattered cold spots (x, y, intensity in °C)
+      cold_spots:
+        - [25, 25, 25.0]   # Cold zone lower-left quadrant
+        - [75, 25, 20.0]   # Cold zone lower-right quadrant
+        - [50, 85, 18.0]   # Cold zone top-center
+      spot_decay_constant: 8.0  # Controls how quickly spots affect temperature
       comfort_reward: 0.05
       discomfort_penalty: -0.1
       danger_penalty: -0.3
