@@ -393,3 +393,40 @@ This section documents all files touched during thermotaxis implementation to se
 7. **Update runners.py** to apply zone effects if applicable
 8. **Update scripts** to load and pass new config
 9. **Add comprehensive tests** for each layer
+
+______________________________________________________________________
+
+## 8. Procedurally Generated Temperature Zones (Future Work)
+
+> **Status**: Deferred to future PR. Currently hot_spots and cold_spots are fixed positions defined in config files.
+
+### 8.1 Random Spot Generation
+
+- [ ] Add `random_hot_spots: int | None` to ThermotaxisParams (number of spots to generate)
+- [ ] Add `random_cold_spots: int | None` to ThermotaxisParams
+- [ ] Add `random_spot_intensity_range: tuple[float, float]` (min, max intensity)
+- [ ] Add `random_spot_min_distance: float` (minimum distance between spots)
+- [ ] Implement `_generate_random_spots()` in TemperatureField
+  - Ensure spots don't overlap excessively
+  - Ensure minimum distance from agent spawn point (comfort zone around spawn)
+  - Support seeding for reproducibility within a run
+
+### 8.2 Config Support
+
+- [ ] Add `ThermotaxisConfig` fields for random generation parameters
+- [ ] Support hybrid mode: fixed spots + random spots combined
+- [ ] Add validation: either explicit spots OR random generation, not both for same type
+
+### 8.3 Per-Episode Regeneration
+
+- [ ] Generate new spot positions at episode reset when random mode enabled
+- [ ] Ensure reproducibility with episode seed
+- [ ] Log generated spot positions for debugging
+
+### 8.4 Validation
+
+- [ ] Unit tests for random spot generation
+- [ ] Integration tests with PPO learning
+- [ ] Verify agent learns generalizable navigation (not memorizing fixed spots)
+
+**Rationale**: Procedurally generated zones force the agent to learn general temperature navigation strategies rather than memorizing fixed danger zone locations. This is more representative of real-world scenarios where temperature gradients vary.
