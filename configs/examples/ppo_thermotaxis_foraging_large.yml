@@ -102,27 +102,27 @@ environment:
       cultivation_temperature: 20.0
       base_temperature: 20.0     # Temperature at grid center (spawn point)
       gradient_direction: 0.0    # Temperature increases to the right
-      gradient_strength: 0.12    # Linear gradient contribution
-      # Scattered hot spots - SIGNIFICANT intensities
-      # Creates larger lethal cores that require real avoidance
+      gradient_strength: 0.15
+      # Scattered hot spots - High intensities
+      # Creates large lethal zones that require careful navigation
       # With decay=8, intensity drops to ~37% at 8 cells, ~14% at 16 cells
       hot_spots:
-        - [75, 50, 20.0]   # Hot zone right-center - large lethal core
-        - [25, 75, 18.0]   # Hot zone upper-left - lethal core
-        - [80, 80, 18.0]   # Hot zone upper-right - lethal core
-      # Scattered cold spots - SIGNIFICANT intensities
+        - [75, 50, 25.0]   # Hot zone right-center
+        - [25, 75, 20.0]   # Hot zone upper-left
+        - [80, 80, 22.0]   # Hot zone upper-right
+      # Scattered cold spots - High intensities
       cold_spots:
-        - [25, 25, 20.0]   # Cold zone lower-left - large lethal core
-        - [75, 25, 18.0]   # Cold zone lower-right - lethal core
-        - [50, 85, 15.0]   # Cold zone top-center - danger zone
-      spot_decay_constant: 8.0   # Steeper decay = more concentrated danger
+        - [25, 25, 25.0]   # Cold zone lower-left
+        - [75, 25, 20.0]   # Cold zone lower-right
+        - [50, 85, 18.0]   # Cold zone top-center
+      spot_decay_constant: 8.0
       # Rewards/penalties - strong signals
-      comfort_reward: 0.04
+      comfort_reward: 0.05
       discomfort_penalty: -0.1
-      danger_penalty: -0.25
-      # HP damage - punishing but still learnable
-      danger_hp_damage: 1.5      # 100 steps to die from full HP
-      lethal_hp_damage: 7.0      # ~21 steps to die from full HP
+      danger_penalty: -0.3
+      # HP damage
+      danger_hp_damage: 1.0      # 150 steps to die (was 2.0)
+      lethal_hp_damage: 5.0      # 30 steps to die (was 10.0)
       # Zone thresholds (unchanged)
       comfort_delta: 5.0         # Comfort: 15-25°C
       discomfort_delta: 10.0     # Discomfort: 10-15°C or 25-30°C
