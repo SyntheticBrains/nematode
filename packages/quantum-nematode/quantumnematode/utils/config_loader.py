@@ -20,6 +20,7 @@ from quantumnematode.brain.arch import (
     SpikingBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
+from quantumnematode.dtypes import TemperatureSpot
 from quantumnematode.env.env import (
     DEFAULT_COMFORT_REWARD,
     DEFAULT_CULTIVATION_TEMPERATURE,
@@ -245,6 +246,36 @@ class HealthConfig(BaseModel):
         )
 
 
+# Temperature spot configuration constants
+TEMPERATURE_SPOT_ELEMENTS = 3  # [x, y, intensity]
+
+
+def _validate_and_convert_spot(
+    spot: list[float],
+    spot_type: str,
+    index: int,
+) -> TemperatureSpot:
+    """Validate and convert a temperature spot from list to tuple.
+
+    Args:
+        spot: List of [x, y, intensity] values.
+        spot_type: Type of spot for error messages ("hot_spot" or "cold_spot").
+        index: Index of the spot in the list for error messages.
+
+    Returns
+    -------
+        TemperatureSpot tuple of (x, y, intensity) with x and y as integers.
+
+    Raises
+    ------
+        ValueError: If spot doesn't have exactly 3 elements.
+    """
+    if len(spot) != TEMPERATURE_SPOT_ELEMENTS:
+        msg = f"Invalid {spot_type} at index {index}: expected [x, y, intensity], got {spot}"
+        raise ValueError(msg)
+    return (int(spot[0]), int(spot[1]), float(spot[2]))
+
+
 class ThermotaxisConfig(BaseModel):
     """Configuration for thermotaxis (temperature sensing) system.
 
@@ -264,6 +295,12 @@ class ThermotaxisConfig(BaseModel):
         Direction of linear temperature gradient (radians, 0 = increases to right).
     gradient_strength : float
         How quickly temperature changes per cell (°C/cell).
+    hot_spots : list[list[float]] | None
+        Localized hot spots as [x, y, intensity] lists.
+    cold_spots : list[list[float]] | None
+        Localized cold spots as [x, y, intensity] lists.
+    spot_decay_constant : float
+        Decay constant for hot/cold spot exponential falloff.
     comfort_delta : float
         Temperature deviation from cultivation temp considered comfortable (°C).
     discomfort_delta : float
@@ -287,6 +324,9 @@ class ThermotaxisConfig(BaseModel):
     base_temperature: float = DEFAULT_CULTIVATION_TEMPERATURE
     gradient_direction: float = 0.0
     gradient_strength: float = DEFAULT_TEMPERATURE_GRADIENT_STRENGTH
+    hot_spots: list[list[float]] | None = None
+    cold_spots: list[list[float]] | None = None
+    spot_decay_constant: float = 5.0
     comfort_delta: float = 5.0
     discomfort_delta: float = 10.0
     danger_delta: float = 15.0
@@ -298,12 +338,30 @@ class ThermotaxisConfig(BaseModel):
 
     def to_params(self) -> ThermotaxisParams:
         """Convert to ThermotaxisParams for environment initialization."""
+        # Convert list of lists from YAML to list of TemperatureSpot tuples
+        hot_spots_tuples: list[TemperatureSpot] | None = None
+        if self.hot_spots is not None:
+            hot_spots_tuples = [
+                _validate_and_convert_spot(spot, "hot_spot", i)
+                for i, spot in enumerate(self.hot_spots)
+            ]
+
+        cold_spots_tuples: list[TemperatureSpot] | None = None
+        if self.cold_spots is not None:
+            cold_spots_tuples = [
+                _validate_and_convert_spot(spot, "cold_spot", i)
+                for i, spot in enumerate(self.cold_spots)
+            ]
+
         return ThermotaxisParams(
             enabled=self.enabled,
             cultivation_temperature=self.cultivation_temperature,
             base_temperature=self.base_temperature,
             gradient_direction=self.gradient_direction,
             gradient_strength=self.gradient_strength,
+            hot_spots=hot_spots_tuples,
+            cold_spots=cold_spots_tuples,
+            spot_decay_constant=self.spot_decay_constant,
             comfort_delta=self.comfort_delta,
             discomfort_delta=self.discomfort_delta,
             danger_delta=self.danger_delta,
