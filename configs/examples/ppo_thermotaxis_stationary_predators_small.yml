@@ -92,7 +92,7 @@ environment:
       detection_radius: 4
       kill_radius: 0
       damage_radius: 2
-      gradient_decay_constant: 8.0
+      gradient_decay_constant: 4.0
       gradient_strength: 1.2
 
     health:
