@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import time
 from dataclasses import dataclass
@@ -211,9 +210,6 @@ class StandardEpisodeRunner(EpisodeRunner):
                 stuck_position_count=stuck_position_count,
             )
             agent._episode_tracker.track_reward(reward)
-
-            if logger.isEnabledFor(logging.DEBUG):
-                print(f"Reward: {reward}")  # noqa: T201
 
             # Prepare input_data and brain parameters
             input_data = agent._prepare_input_data(gradient_strength)
