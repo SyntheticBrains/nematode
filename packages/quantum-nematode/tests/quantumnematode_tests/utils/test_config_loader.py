@@ -1,11 +1,12 @@
 """Tests for configuration loading utilities."""
 
-from quantumnematode.env import ForagingParams, HealthParams, PredatorParams
+from quantumnematode.env import ForagingParams, HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.utils.config_loader import (
     DynamicEnvironmentConfig,
     ForagingConfig,
     HealthConfig,
     PredatorConfig,
+    ThermotaxisConfig,
 )
 
 
@@ -248,3 +249,162 @@ class TestDynamicEnvironmentConfig:
         health_default = config_without.get_health_config()
         assert health_default.enabled is False  # Default value
         assert health_default.max_hp == 100.0  # Default value
+
+
+class TestThermotaxisConfig:
+    """Test cases for ThermotaxisConfig."""
+
+    def test_default_values(self):
+        """Test ThermotaxisConfig default values."""
+        config = ThermotaxisConfig()
+        assert config.enabled is False
+        assert config.cultivation_temperature == 20.0
+        assert config.base_temperature == 20.0
+        assert config.gradient_direction == 0.0
+        assert config.gradient_strength == 0.5
+        assert config.hot_spots is None
+        assert config.cold_spots is None
+        assert config.spot_decay_constant == 5.0
+        assert config.comfort_delta == 5.0
+        assert config.discomfort_delta == 10.0
+        assert config.danger_delta == 15.0
+
+    def test_custom_values_with_spots(self):
+        """Test ThermotaxisConfig with hot/cold spots."""
+        config = ThermotaxisConfig(
+            enabled=True,
+            cultivation_temperature=22.0,
+            base_temperature=22.0,
+            gradient_strength=0.15,
+            hot_spots=[[75, 50, 25.0], [25, 75, 20.0]],
+            cold_spots=[[25, 25, 25.0]],
+            spot_decay_constant=8.0,
+        )
+        assert config.enabled is True
+        assert config.cultivation_temperature == 22.0
+        assert config.gradient_strength == 0.15
+        assert config.hot_spots == [[75, 50, 25.0], [25, 75, 20.0]]
+        assert config.cold_spots == [[25, 25, 25.0]]
+        assert config.spot_decay_constant == 8.0
+
+    def test_to_params_basic(self):
+        """Test ThermotaxisConfig.to_params() basic conversion."""
+        config = ThermotaxisConfig(
+            enabled=True,
+            cultivation_temperature=22.0,
+            base_temperature=22.0,
+            gradient_direction=1.57,
+            gradient_strength=0.3,
+            comfort_delta=4.0,
+            discomfort_delta=8.0,
+            danger_delta=12.0,
+        )
+
+        params = config.to_params()
+
+        assert isinstance(params, ThermotaxisParams)
+        assert params.enabled is True
+        assert params.cultivation_temperature == 22.0
+        assert params.base_temperature == 22.0
+        assert params.gradient_direction == 1.57
+        assert params.gradient_strength == 0.3
+        assert params.comfort_delta == 4.0
+        assert params.discomfort_delta == 8.0
+        assert params.danger_delta == 12.0
+
+    def test_to_params_converts_hot_spots_to_tuples(self):
+        """Test that to_params() converts hot_spots from list of lists to list of tuples."""
+        config = ThermotaxisConfig(
+            enabled=True,
+            hot_spots=[[75, 50, 25.0], [25, 75, 20.0], [80, 80, 22.0]],
+            spot_decay_constant=8.0,
+        )
+
+        params = config.to_params()
+
+        assert params.hot_spots is not None
+        assert len(params.hot_spots) == 3
+        # Verify each spot is a tuple with correct values
+        assert params.hot_spots[0] == (75, 50, 25.0)
+        assert params.hot_spots[1] == (25, 75, 20.0)
+        assert params.hot_spots[2] == (80, 80, 22.0)
+        # Verify they are actual tuples (important for type safety)
+        assert isinstance(params.hot_spots[0], tuple)
+        assert params.spot_decay_constant == 8.0
+
+    def test_to_params_converts_cold_spots_to_tuples(self):
+        """Test that to_params() converts cold_spots from list of lists to list of tuples."""
+        config = ThermotaxisConfig(
+            enabled=True,
+            cold_spots=[[25, 25, 25.0], [75, 25, 20.0], [50, 85, 18.0]],
+            spot_decay_constant=10.0,
+        )
+
+        params = config.to_params()
+
+        assert params.cold_spots is not None
+        assert len(params.cold_spots) == 3
+        # Verify each spot is a tuple with correct values
+        assert params.cold_spots[0] == (25, 25, 25.0)
+        assert params.cold_spots[1] == (75, 25, 20.0)
+        assert params.cold_spots[2] == (50, 85, 18.0)
+        # Verify they are actual tuples
+        assert isinstance(params.cold_spots[0], tuple)
+        assert params.spot_decay_constant == 10.0
+
+    def test_to_params_with_none_spots(self):
+        """Test that to_params() handles None hot_spots and cold_spots."""
+        config = ThermotaxisConfig(
+            enabled=True,
+            hot_spots=None,
+            cold_spots=None,
+        )
+
+        params = config.to_params()
+
+        assert params.hot_spots is None
+        assert params.cold_spots is None
+
+    def test_to_params_converts_float_coordinates_to_int(self):
+        """Test that to_params() converts float coordinates to int."""
+        # YAML may parse coordinates as floats
+        config = ThermotaxisConfig(
+            enabled=True,
+            hot_spots=[[75.0, 50.0, 25.0]],
+            cold_spots=[[25.0, 25.0, 25.0]],
+        )
+
+        params = config.to_params()
+
+        assert params.hot_spots is not None
+        assert params.cold_spots is not None
+        # Coordinates should be int, intensity should be float
+        assert params.hot_spots[0] == (75, 50, 25.0)
+        assert params.cold_spots[0] == (25, 25, 25.0)
+        assert isinstance(params.hot_spots[0][0], int)
+        assert isinstance(params.hot_spots[0][1], int)
+        assert isinstance(params.hot_spots[0][2], float)
+
+    def test_to_params_validates_hot_spot_format(self):
+        """Test that to_params() raises ValueError for malformed hot_spots."""
+        import pytest
+
+        config = ThermotaxisConfig(
+            enabled=True,
+            hot_spots=[[75, 50]],  # Missing intensity
+        )
+
+        with pytest.raises(ValueError, match=r"Invalid hot_spot at index 0"):
+            config.to_params()
+
+    def test_to_params_validates_cold_spot_format(self):
+        """Test that to_params() raises ValueError for malformed cold_spots."""
+        import pytest
+
+        config = ThermotaxisConfig(
+            enabled=True,
+            cold_spots=[[25, 25, 10.0, 5.0]],  # Extra element
+        )
+
+        with pytest.raises(ValueError, match=r"Invalid cold_spot at index 0"):
+            config.to_params()
