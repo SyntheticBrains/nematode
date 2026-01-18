@@ -101,6 +101,25 @@ class ForagingParams:
 
     TODO: Freeze this class once the following Pylance issue is resolved:
     https://github.com/microsoft/pylance-release/issues/7801
+
+    Attributes
+    ----------
+    foods_on_grid : int
+        Number of food items to maintain on the grid.
+    target_foods_to_collect : int
+        Number of foods needed to complete the task.
+    min_food_distance : int
+        Minimum distance between food items (Poisson disk sampling).
+    agent_exclusion_radius : int
+        Minimum distance from agent for initial food placement.
+    gradient_decay_constant : float
+        Decay constant for food gradient sensing.
+    gradient_strength : float
+        Strength of food gradient signal.
+    safe_zone_food_bias : float
+        Probability (0.0-1.0) that food spawns in safe temperature zones
+        (COMFORT or DISCOMFORT). Set to 0.0 to disable (uniform spawning).
+        Requires thermotaxis to be enabled; ignored otherwise.
     """
 
     foods_on_grid: int = 10
@@ -109,6 +128,7 @@ class ForagingParams:
     agent_exclusion_radius: int = 10
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
+    safe_zone_food_bias: float = 0.0
 
 
 @dataclass
@@ -1145,10 +1165,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.wall_collision_occurred: bool = False
 
     def _initialize_foods(self) -> None:
-        """Initialize food sources using Poisson disk sampling."""
+        """
+        Initialize food sources using Poisson disk sampling.
+
+        Respects safe_zone_food_bias: with probability `bias`, food is only
+        placed in safe temperature zones (COMFORT or DISCOMFORT). Otherwise,
+        food can be placed anywhere valid.
+        """
         self.foods = []
         attempts = 0
         max_total_attempts = MAX_POISSON_ATTEMPTS * self.foraging.foods_on_grid
+        bias = self.foraging.safe_zone_food_bias
 
         while len(self.foods) < self.foraging.foods_on_grid and attempts < max_total_attempts:
             candidate = (
@@ -1157,6 +1184,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
             )
 
             if self._is_valid_food_position(candidate):
+                # Apply safe zone bias if thermotaxis is enabled
+                if bias > 0 and self.thermotaxis.enabled:
+                    require_safe_zone = self.rng.random() < bias
+                    if require_safe_zone and not self._is_safe_temperature_zone(candidate):
+                        attempts += 1
+                        continue
                 self.foods.append(candidate)
 
             attempts += 1
@@ -1259,6 +1292,10 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Always attempts to maintain foods_on_grid count on the grid.
         Food spawns immediately after collection to ensure constant supply.
 
+        Respects safe_zone_food_bias: with probability `bias`, food is only
+        placed in safe temperature zones (COMFORT or DISCOMFORT). Otherwise,
+        food can be placed anywhere valid.
+
         Returns
         -------
         bool
@@ -1268,6 +1305,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if len(self.foods) >= self.foraging.foods_on_grid:
             return False
 
+        bias = self.foraging.safe_zone_food_bias
+        require_safe_zone = bias > 0 and self.thermotaxis.enabled and self.rng.random() < bias
+
         # Attempt to spawn food at valid location
         for _ in range(MAX_POISSON_ATTEMPTS):
             candidate = (
@@ -1276,6 +1316,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             )
 
             if self._is_valid_food_position(candidate):
+                # Check safe zone requirement if applicable
+                if require_safe_zone and not self._is_safe_temperature_zone(candidate):
+                    continue
                 self.foods.append(candidate)
                 logger.debug(
                     f"Spawned food at {candidate} "
@@ -1864,6 +1907,37 @@ class DynamicForagingEnvironment(BaseEnvironment):
             temp,
             self.thermotaxis.cultivation_temperature,
             thresholds,
+        )
+
+    def _is_safe_temperature_zone(self, position: tuple[int, int]) -> bool:
+        """
+        Check if a position is in a safe temperature zone (COMFORT or DISCOMFORT).
+
+        Safe zones are defined as zones where the agent does not take HP damage.
+        This includes COMFORT, DISCOMFORT_COLD, and DISCOMFORT_HOT zones.
+
+        Parameters
+        ----------
+        position : tuple[int, int]
+            Position to check.
+
+        Returns
+        -------
+        bool
+            True if position is in a safe zone, False if in danger/lethal zone.
+            Returns True if thermotaxis is disabled (all positions are "safe").
+        """
+        if not self.thermotaxis.enabled or self.temperature_field is None:
+            return True
+
+        zone = self.get_temperature_zone(position)
+        if zone is None:
+            return True
+
+        return zone in (
+            TemperatureZone.COMFORT,
+            TemperatureZone.DISCOMFORT_COLD,
+            TemperatureZone.DISCOMFORT_HOT,
         )
 
     def apply_temperature_effects(self) -> tuple[float, float]:
