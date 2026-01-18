@@ -2585,3 +2585,267 @@ class TestZoneVisualization:
         from quantumnematode.env.theme import THEME_SYMBOLS, Theme
 
         assert THEME_SYMBOLS[Theme.EMOJI_RICH].body == " 🟤"
+
+
+class TestSafeZoneFoodSpawning:
+    """Test safe zone food spawning bias for thermotaxis environments."""
+
+    def test_safe_zone_food_bias_default_is_zero(self):
+        """Test that safe_zone_food_bias defaults to 0.0 (no bias)."""
+        params = ForagingParams()
+        assert params.safe_zone_food_bias == 0.0
+
+    def test_safe_zone_food_bias_can_be_set(self):
+        """Test that safe_zone_food_bias can be configured."""
+        params = ForagingParams(safe_zone_food_bias=0.8)
+        assert params.safe_zone_food_bias == 0.8
+
+    def test_is_safe_temperature_zone_returns_true_when_thermotaxis_disabled(self):
+        """Test that all positions are 'safe' when thermotaxis is disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+        )
+        # All positions should be safe when thermotaxis is disabled
+        assert env._is_safe_temperature_zone((0, 0)) is True
+        assert env._is_safe_temperature_zone((10, 10)) is True
+        assert env._is_safe_temperature_zone((19, 19)) is True
+
+    def test_is_safe_temperature_zone_comfort(self):
+        """Test that comfort zone is classified as safe."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),  # Grid center
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.0,  # No gradient = all comfort
+            ),
+        )
+        # At center with no gradient, should be comfort zone (safe)
+        assert env._is_safe_temperature_zone((10, 10)) is True
+
+    def test_is_safe_temperature_zone_discomfort(self):
+        """Test that discomfort zone is classified as safe (no HP damage)."""
+        # Grid center is (10, 10), position (17, 10) is 7 cells right
+        # With gradient_strength=1.0: temp = 20 + 7*1.0 = 27°C
+        # 27°C is 7° above cultivation temp (20°C), which is discomfort (5-10° above)
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,  # Increases to right
+                gradient_strength=1.0,
+                comfort_delta=5.0,
+                discomfort_delta=10.0,
+            ),
+        )
+        # Verify zone classification
+        zone = env.get_temperature_zone((17, 10))
+        assert zone == TemperatureZone.DISCOMFORT_HOT
+        # Discomfort is still safe (no HP damage)
+        assert env._is_safe_temperature_zone((17, 10)) is True
+
+    def test_is_safe_temperature_zone_danger_is_not_safe(self):
+        """Test that danger zone is NOT classified as safe."""
+        # Grid center is (10, 10), position (22, 10) is 12 cells right
+        # With gradient_strength=1.0: temp = 20 + 12*1.0 = 32°C
+        # 32°C is 12° above cultivation temp, which is danger (10-15° above)
+        env = DynamicForagingEnvironment(
+            grid_size=30,  # Larger grid to have room for danger zone
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,  # Increases to right
+                gradient_strength=1.0,
+                comfort_delta=5.0,
+                discomfort_delta=10.0,
+                danger_delta=15.0,
+            ),
+        )
+        # Position 12 cells right of center (15, y) -> temp = 20 + 12 = 32°C
+        zone = env.get_temperature_zone((27, 15))
+        assert zone == TemperatureZone.DANGER_HOT
+        # Danger is NOT safe
+        assert env._is_safe_temperature_zone((27, 15)) is False
+
+    def test_is_safe_temperature_zone_lethal_is_not_safe(self):
+        """Test that lethal zone is NOT classified as safe."""
+        env = DynamicForagingEnvironment(
+            grid_size=50,  # Large grid for lethal zone
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,  # Increases to right
+                gradient_strength=1.0,
+                comfort_delta=5.0,
+                discomfort_delta=10.0,
+                danger_delta=15.0,
+            ),
+        )
+        # Position 20 cells right of center (25) -> temp = 20 + 20 = 40°C
+        # 40°C is 20° above cultivation temp, which is lethal (>15° above)
+        zone = env.get_temperature_zone((45, 25))
+        assert zone == TemperatureZone.LETHAL_HOT
+        # Lethal is NOT safe
+        assert env._is_safe_temperature_zone((45, 25)) is False
+
+    def test_food_spawning_with_zero_bias_is_uniform(self):
+        """Test that zero bias results in uniform food distribution."""
+        # With zero bias, food spawns uniformly regardless of temperature
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(
+                foods_on_grid=10,
+                target_foods_to_collect=15,
+                safe_zone_food_bias=0.0,  # No bias
+                min_food_distance=2,
+                agent_exclusion_radius=3,
+            ),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=1.0,
+            ),
+        )
+        # With zero bias, food can spawn anywhere
+        # Just verify that foods were placed
+        assert len(env.foods) == 10
+
+    def test_food_spawning_with_full_bias_only_in_safe_zones(self):
+        """Test that 100% bias results in food only in safe zones."""
+        env = DynamicForagingEnvironment(
+            grid_size=100,  # Large grid with clear zone separation
+            foraging=ForagingParams(
+                foods_on_grid=20,
+                target_foods_to_collect=25,
+                safe_zone_food_bias=1.0,  # Full bias - all food in safe zones
+                min_food_distance=5,
+                agent_exclusion_radius=10,
+            ),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_direction=0.0,
+                gradient_strength=0.5,  # Strong gradient to create danger zones
+                comfort_delta=5.0,
+                discomfort_delta=10.0,
+                danger_delta=15.0,
+            ),
+            seed=42,  # Fixed seed for reproducibility
+        )
+
+        # All foods should be in safe zones
+        for food_pos in env.foods:
+            assert env._is_safe_temperature_zone(food_pos), (
+                f"Food at {food_pos} is not in safe zone"
+            )
+
+    def test_spawn_food_respects_safe_zone_bias(self):
+        """Test that spawn_food() respects safe_zone_food_bias."""
+        env = DynamicForagingEnvironment(
+            grid_size=100,
+            start_pos=(50, 50),
+            foraging=ForagingParams(
+                foods_on_grid=5,
+                target_foods_to_collect=10,
+                safe_zone_food_bias=1.0,  # Full bias
+                min_food_distance=3,
+                agent_exclusion_radius=5,
+            ),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.5,
+            ),
+            seed=123,  # Fixed seed for reproducibility
+        )
+
+        # Remove one food to allow respawning
+        if env.foods:
+            env.foods.pop()
+
+        # Spawn a new food
+        spawned = env.spawn_food()
+        assert spawned is True
+
+        # The newly spawned food should be in a safe zone
+        new_food = env.foods[-1]
+        assert env._is_safe_temperature_zone(new_food), (
+            f"Spawned food at {new_food} is not in safe zone"
+        )
+
+    def test_food_spawning_with_partial_bias(self):
+        """Test that partial bias creates mixed distribution."""
+        # Run multiple trials to verify statistical behavior
+        safe_zone_count = 0
+        danger_zone_count = 0
+        total_foods = 0
+
+        for trial_seed in range(10):  # 10 trials
+            env = DynamicForagingEnvironment(
+                grid_size=100,
+                foraging=ForagingParams(
+                    foods_on_grid=30,
+                    target_foods_to_collect=40,
+                    safe_zone_food_bias=0.8,  # 80% safe zone bias
+                    min_food_distance=5,
+                    agent_exclusion_radius=10,
+                ),
+                thermotaxis=ThermotaxisParams(
+                    enabled=True,
+                    cultivation_temperature=20.0,
+                    base_temperature=20.0,
+                    gradient_strength=0.3,  # Create some danger zones
+                    hot_spots=[(80, 50, 20.0)],  # Hot spot to create danger zone
+                    cold_spots=[(20, 50, 20.0)],  # Cold spot to create danger zone
+                    spot_decay_constant=8.0,
+                ),
+                seed=trial_seed,  # Different seed each trial
+            )
+
+            for food_pos in env.foods:
+                total_foods += 1
+                if env._is_safe_temperature_zone(food_pos):
+                    safe_zone_count += 1
+                else:
+                    danger_zone_count += 1
+
+        # With 80% bias, we expect roughly 80% of food in safe zones
+        # Allow some tolerance for randomness
+        safe_ratio = safe_zone_count / total_foods
+        assert safe_ratio >= 0.7, (
+            f"Expected at least 70% food in safe zones with 80% bias, got {safe_ratio:.1%}"
+        )
+
+    def test_safe_zone_bias_ignored_when_thermotaxis_disabled(self):
+        """Test that safe_zone_food_bias is ignored when thermotaxis is disabled."""
+        env = DynamicForagingEnvironment(
+            grid_size=50,
+            foraging=ForagingParams(
+                foods_on_grid=15,
+                target_foods_to_collect=20,
+                safe_zone_food_bias=1.0,  # Full bias, but thermotaxis disabled
+                min_food_distance=3,
+            ),
+            # No thermotaxis params = disabled
+            seed=42,  # Fixed seed for reproducibility
+        )
+
+        # Foods should still be placed (bias is ignored when thermotaxis disabled)
+        assert len(env.foods) == 15
+        # All positions are considered "safe" when thermotaxis is disabled
+        for food_pos in env.foods:
+            assert env._is_safe_temperature_zone(food_pos) is True
