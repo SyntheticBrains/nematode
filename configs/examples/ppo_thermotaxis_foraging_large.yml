@@ -1,30 +1,14 @@
 # PPO with Thermotaxis + Foraging - Large Configuration
 # Curriculum level 3: Large-scale foraging with scattered temperature zones
 #
-# Thermotaxis adds a new sensory modality (AFD neurons) that encodes:
-# - Temperature deviation from cultivation temperature (Tc = 20°C)
-# - Direction toward warmer temperatures (egocentric)
-# - Temperature gradient strength
-#
-# Large environment (100x100 grid) with moderate temperature challenges:
-# - Weak linear gradient (0.1°C/cell) from center
-# - 3 hot spots and 3 cold spots with REDUCED intensities
-# - Larger decay constant (12) = gentler falloff from spots
-# - Central safe zone for spawning (spawn is always comfortable)
-#
-# Key design principles for learnability:
-# - Spots create localized discomfort, not instant death
-# - Max temp deviation from spots ~15°C (danger, not lethal)
-# - HP damage is survivable - agent can learn to navigate
-# - Food healing (10 HP) exceeds danger damage (0.5 HP/step)
+# Key insight: When agent enters discomfort with sharp decay:
+# - Gradient magnitude will be HIGH (steep temperature change)
+# - Gradient direction points toward the hotspot
+# - Strong gradient + discomfort penalty = clear "turn back" signal
 #
 # Temperature zone layout:
 # - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
 # - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
-#
-# Success criteria:
-# - Collect target foods
-# - Learn to avoid/minimize time in discomfort zones
 #
 # Sensory modules (C. elegans neuron references):
 # - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
@@ -68,13 +52,13 @@ reward:
   penalty_starvation: 10.0
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
-  penalty_health_damage: 0.3   # Feedback on HP loss
-  reward_health_gain: 0.2      # Encourage food collection for healing
+  penalty_health_damage: 0.3
+  reward_health_gain: 0.2
 
 satiety:
-  initial_satiety: 1000.0      # More satiety for larger grid
-  satiety_decay_rate: 0.8      # Slower decay - less starvation pressure
-  satiety_gain_per_food: 0.25  # Better satiety from food
+  initial_satiety: 1000.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.25
 
 environment:
   type: dynamic
@@ -84,18 +68,19 @@ environment:
     use_separated_gradients: true
 
     foraging:
-      foods_on_grid: 30           # Sparse - forces grid exploration
-      target_foods_to_collect: 40  # Reduced target (from 50)
-      min_food_distance: 10
-      agent_exclusion_radius: 15
+      foods_on_grid: 40
+      target_foods_to_collect: 20
+      min_food_distance: 8
+      agent_exclusion_radius: 12
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
+      safe_zone_food_bias: 0.8
 
     health:
       enabled: true
-      max_hp: 150.0              # More HP buffer (from 100)
+      max_hp: 150.0
       predator_damage: 0.0
-      food_healing: 10.0         # Double healing (from 5)
+      food_healing: 15.0
 
     thermotaxis:
       enabled: true
@@ -115,15 +100,15 @@ environment:
         - [25, 25, 25.0]   # Cold zone lower-left
         - [75, 25, 20.0]   # Cold zone lower-right
         - [50, 85, 18.0]   # Cold zone top-center
-      spot_decay_constant: 8.0
-      # Rewards/penalties - strong signals
-      comfort_reward: 0.05
-      discomfort_penalty: -0.1
+      spot_decay_constant: 5.0
+      # Rewards/penalties - Sharp Gradient Signal
+      comfort_reward: 0.0        # MUST stay 0 (prevents freeze behavior)
+      discomfort_penalty: -0.3
       danger_penalty: -0.3
       # HP damage
-      danger_hp_damage: 1.0      # 150 steps to die (was 2.0)
-      lethal_hp_damage: 5.0      # 30 steps to die (was 10.0)
-      # Zone thresholds (unchanged)
+      danger_hp_damage: 0.5
+      lethal_hp_damage: 6.0
+      # Zone thresholds
       comfort_delta: 5.0         # Comfort: 15-25°C
       discomfort_delta: 10.0     # Discomfort: 10-15°C or 25-30°C
       danger_delta: 15.0         # Danger: 5-10°C or 30-35°C
