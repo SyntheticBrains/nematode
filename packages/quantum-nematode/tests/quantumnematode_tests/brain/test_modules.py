@@ -9,6 +9,8 @@ from quantumnematode.brain.modules import (
     CoreFeatures,
     ModuleName,
     count_total_qubits,
+    extract_classical_features,
+    get_classical_feature_dimension,
 )
 from quantumnematode.env import Direction
 
@@ -712,3 +714,357 @@ class TestFeatureConsistency:
         features2 = module.to_classical(params)
 
         np.testing.assert_array_equal(features1, features2)
+
+
+class TestClassicalDim:
+    """Test the classical_dim feature for variable-dimension classical outputs."""
+
+    def test_default_classical_dim_is_two(self):
+        """Test that most modules have classical_dim=2 by default."""
+        # Standard modules should have classical_dim=2
+        assert SENSORY_MODULES[ModuleName.CHEMOTAXIS].classical_dim == 2
+        assert SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS].classical_dim == 2
+        assert SENSORY_MODULES[ModuleName.NOCICEPTION].classical_dim == 2
+        assert SENSORY_MODULES[ModuleName.PROPRIOCEPTION].classical_dim == 2
+        assert SENSORY_MODULES[ModuleName.MECHANOSENSATION].classical_dim == 2
+
+    def test_thermotaxis_has_classical_dim_three(self):
+        """Test that thermotaxis has classical_dim=3 to include temp deviation."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+        assert module.classical_dim == 3
+
+    def test_to_classical_returns_two_values_for_standard_modules(self):
+        """Test that standard modules return 2 classical features."""
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        assert features.shape == (2,)
+        assert features.dtype == np.float32
+
+    def test_to_classical_returns_three_values_for_thermotaxis(self):
+        """Test that thermotaxis returns 3 classical features including temp deviation."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+        params = BrainParams(
+            temperature=25.0,
+            temperature_gradient_strength=0.5,
+            temperature_gradient_direction=0.0,
+            cultivation_temperature=20.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        assert features.shape == (3,)
+        assert features.dtype == np.float32
+
+    def test_thermotaxis_classical_includes_temp_deviation(self):
+        """Test that the third thermotaxis feature is temperature deviation."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 5°C above cultivation temp -> deviation = 5/15 = 0.333
+        params = BrainParams(
+            temperature=25.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        # Third value should be temp deviation
+        expected_deviation = (25.0 - 20.0) / 15.0  # 0.333
+        assert features[2] == pytest.approx(expected_deviation, abs=0.01)
+
+    def test_thermotaxis_deviation_at_cultivation_temp(self):
+        """Test temp deviation is 0 at cultivation temperature."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        params = BrainParams(
+            temperature=20.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        assert features[2] == pytest.approx(0.0)
+
+    def test_thermotaxis_deviation_clamped_hot(self):
+        """Test temp deviation is clamped at +1 for extreme heat."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 20°C above cultivation -> should clamp to +1
+        params = BrainParams(
+            temperature=40.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        assert features[2] == pytest.approx(1.0)
+
+    def test_thermotaxis_deviation_clamped_cold(self):
+        """Test temp deviation is clamped at -1 for extreme cold."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # 20°C below cultivation -> should clamp to -1
+        params = BrainParams(
+            temperature=0.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        assert features[2] == pytest.approx(-1.0)
+
+
+class TestGetClassicalFeatureDimension:
+    """Test get_classical_feature_dimension function."""
+
+    def test_single_standard_module(self):
+        """Test dimension for a single standard module."""
+        modules = [ModuleName.FOOD_CHEMOTAXIS]
+        assert get_classical_feature_dimension(modules) == 2
+
+    def test_single_thermotaxis_module(self):
+        """Test dimension for thermotaxis alone."""
+        modules = [ModuleName.THERMOTAXIS]
+        assert get_classical_feature_dimension(modules) == 3
+
+    def test_multiple_standard_modules(self):
+        """Test dimension for multiple standard modules."""
+        modules = [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION]
+        assert get_classical_feature_dimension(modules) == 4  # 2 + 2
+
+    def test_mixed_modules_with_thermotaxis(self):
+        """Test dimension for mixed modules including thermotaxis."""
+        modules = [ModuleName.FOOD_CHEMOTAXIS, ModuleName.THERMOTAXIS]
+        assert get_classical_feature_dimension(modules) == 5  # 2 + 3
+
+    def test_all_common_modules(self):
+        """Test dimension for a typical multi-sensory config."""
+        modules = [
+            ModuleName.FOOD_CHEMOTAXIS,
+            ModuleName.NOCICEPTION,
+            ModuleName.THERMOTAXIS,
+            ModuleName.MECHANOSENSATION,
+        ]
+        # 2 + 2 + 3 + 2 = 9
+        assert get_classical_feature_dimension(modules) == 9
+
+    def test_empty_module_list(self):
+        """Test dimension for empty module list."""
+        modules = []
+        assert get_classical_feature_dimension(modules) == 0
+
+
+class TestExtractClassicalFeatures:
+    """Test extract_classical_features function."""
+
+    def test_single_standard_module(self):
+        """Test extraction for a single standard module."""
+        params = BrainParams(
+            food_gradient_strength=0.8,
+            food_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        modules = [ModuleName.FOOD_CHEMOTAXIS]
+        features = extract_classical_features(params, modules)
+
+        assert features.shape == (2,)
+        assert features[0] == pytest.approx(0.8)  # strength
+
+    def test_thermotaxis_module_alone(self):
+        """Test extraction for thermotaxis alone returns 3 features."""
+        params = BrainParams(
+            temperature=25.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.5,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        modules = [ModuleName.THERMOTAXIS]
+        features = extract_classical_features(params, modules)
+
+        assert features.shape == (3,)
+        # Third value is temp deviation
+        expected_deviation = (25.0 - 20.0) / 15.0
+        assert features[2] == pytest.approx(expected_deviation, abs=0.01)
+
+    def test_mixed_modules_correct_shape(self):
+        """Test that mixed modules produce correct feature vector shape."""
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
+            temperature=25.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.3,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        modules = [ModuleName.FOOD_CHEMOTAXIS, ModuleName.THERMOTAXIS]
+        features = extract_classical_features(params, modules)
+
+        # food_chemotaxis (2) + thermotaxis (3) = 5
+        assert features.shape == (5,)
+        assert features.dtype == np.float32
+
+    def test_module_ordering_is_consistent(self):
+        """Test that modules are sorted consistently regardless of input order."""
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
+            temperature=25.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.3,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+
+        # Same modules, different order
+        modules1 = [ModuleName.THERMOTAXIS, ModuleName.FOOD_CHEMOTAXIS]
+        modules2 = [ModuleName.FOOD_CHEMOTAXIS, ModuleName.THERMOTAXIS]
+
+        features1 = extract_classical_features(params, modules1)
+        features2 = extract_classical_features(params, modules2)
+
+        np.testing.assert_array_equal(features1, features2)
+
+    def test_feature_order_matches_sorted_modules(self):
+        """Test that features appear in alphabetically sorted module order."""
+        params = BrainParams(
+            food_gradient_strength=0.7,
+            food_gradient_direction=0.0,
+            temperature=30.0,  # 10°C above Tc
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.4,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        modules = [ModuleName.THERMOTAXIS, ModuleName.FOOD_CHEMOTAXIS]
+        features = extract_classical_features(params, modules)
+
+        # Sorted order: food_chemotaxis, thermotaxis
+        # Features: food_strength, food_angle, thermo_strength, thermo_angle, temp_deviation
+        assert features[0] == pytest.approx(0.7)  # food_strength
+        # food_angle should be around -0.5 (food is to the right, agent faces up)
+        assert features[4] == pytest.approx((30.0 - 20.0) / 15.0, abs=0.01)  # temp_deviation
+
+    def test_thermotaxis_disabled_returns_zeros(self):
+        """Test that disabled thermotaxis (no temp data) returns zeros."""
+        params = BrainParams(agent_direction=Direction.UP)  # No temperature data
+        modules = [ModuleName.THERMOTAXIS]
+        features = extract_classical_features(params, modules)
+
+        assert features.shape == (3,)
+        # All zeros when thermotaxis is disabled
+        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
+
+
+class TestThermotaxisClassicalFeaturesBiologicalPlausibility:
+    """Test that thermotaxis classical features are biologically plausible.
+
+    Real C. elegans AFD neurons sense absolute temperature, not just gradients.
+    The temp_deviation feature enables reactive avoidance: "Am I in danger NOW?"
+    """
+
+    def test_comfort_zone_near_zero_deviation(self):
+        """Test that comfort zone (near Tc) has near-zero deviation."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # Within comfort zone (±5°C of Tc=20)
+        for temp in [16.0, 18.0, 20.0, 22.0, 24.0]:
+            params = BrainParams(
+                temperature=temp,
+                cultivation_temperature=20.0,
+                temperature_gradient_strength=0.0,
+                temperature_gradient_direction=0.0,
+                agent_direction=Direction.UP,
+            )
+            features = module.to_classical(params)
+            deviation = features[2]
+
+            # Deviation should be within [-0.33, 0.33] for comfort zone
+            assert abs(deviation) <= 0.34, f"Temp {temp}°C should be in comfort zone"
+
+    def test_discomfort_zone_moderate_deviation(self):
+        """Test that discomfort zone has moderate deviation."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # Discomfort: 25-30°C (hot) or 10-15°C (cold)
+        params_hot = BrainParams(
+            temperature=28.0,  # 8°C above Tc
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features_hot = module.to_classical(params_hot)
+        assert features_hot[2] == pytest.approx(8.0 / 15.0, abs=0.01)  # ~0.53
+
+        params_cold = BrainParams(
+            temperature=12.0,  # 8°C below Tc
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features_cold = module.to_classical(params_cold)
+        assert features_cold[2] == pytest.approx(-8.0 / 15.0, abs=0.01)  # ~-0.53
+
+    def test_danger_zone_high_deviation(self):
+        """Test that danger zone has high deviation (enabling reactive avoidance)."""
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # Danger hot: >30°C
+        params = BrainParams(
+            temperature=33.0,  # 13°C above Tc
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.0,
+            temperature_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        # Deviation should be high (~0.87)
+        assert features[2] == pytest.approx(13.0 / 15.0, abs=0.01)
+        assert features[2] > 0.8  # High enough to signal danger
+
+    def test_feature_enables_reactive_avoidance_learning(self):
+        """Test that temp_deviation provides signal for reactive avoidance.
+
+        With temp_deviation, the agent can learn:
+        - When deviation > 0.33: turn away from gradient direction
+        - When deviation < -0.33: turn toward gradient direction
+        - When |deviation| < 0.33: follow food gradient normally
+        """
+        module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
+
+        # Agent in danger zone (hot)
+        params = BrainParams(
+            temperature=32.0,
+            cultivation_temperature=20.0,
+            temperature_gradient_strength=0.8,  # Strong gradient
+            temperature_gradient_direction=0.0,  # Warmer to the right
+            agent_direction=Direction.UP,
+        )
+        features = module.to_classical(params)
+
+        # The agent now receives:
+        # - gradient_strength: 0.8 (strong gradient exists)
+        # - gradient_angle: some value (warmer is to the right)
+        # - temp_deviation: 0.8 (I'm way too hot!)
+
+        # This combination enables learning: "When deviation is high and
+        # gradient points right, go LEFT"
+        assert features[0] > 0.5  # Strong gradient signal
+        assert features[2] > 0.7  # High deviation - I'm in danger!
