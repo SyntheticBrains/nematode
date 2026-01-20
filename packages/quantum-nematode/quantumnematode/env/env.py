@@ -244,6 +244,9 @@ class ThermotaxisParams:
         Temperature deviation from Tc for discomfort zone boundary (°C).
     danger_delta : float
         Temperature deviation from Tc for danger zone boundary (°C).
+    reward_discomfort_food : float
+        Bonus reward for collecting food while in a discomfort zone.
+        Encourages "brave foraging" - entering uncomfortable but safe zones for food.
     """
 
     enabled: bool = False
@@ -262,6 +265,7 @@ class ThermotaxisParams:
     comfort_delta: float = 5.0
     discomfort_delta: float = 10.0
     danger_delta: float = 15.0
+    reward_discomfort_food: float = 0.0
 
 
 class Predator:
