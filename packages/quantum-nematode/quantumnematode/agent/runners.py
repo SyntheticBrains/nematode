@@ -529,6 +529,16 @@ class StandardEpisodeRunner(EpisodeRunner):
                         reward += temp_reward
                         agent._episode_tracker.track_reward(temp_reward)
 
+                    # Apply HP damage penalty for temperature damage (immediate learning signal)
+                    if temp_damage > 0:
+                        damage_penalty = -reward_config.penalty_health_damage
+                        reward += damage_penalty
+                        agent._episode_tracker.track_reward(damage_penalty)
+                        logger.debug(
+                            f"Temperature HP damage penalty applied: {damage_penalty} "
+                            f"(took {temp_damage:.1f} damage)",
+                        )
+
                     # Check if temperature damage depleted health
                     if temp_damage > 0 and agent.env.is_health_depleted():
                         logger.warning(
