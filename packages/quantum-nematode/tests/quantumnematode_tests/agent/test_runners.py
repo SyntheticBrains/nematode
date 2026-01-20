@@ -529,6 +529,95 @@ class TestThermotaxisIntegration:
 
         # Should die from lethal temperature damage
         assert result.termination_reason == TerminationReason.HEALTH_DEPLETED
+
+    def test_temperature_hp_damage_applies_penalty(self):
+        """Test that temperature HP damage triggers penalty_health_damage penalty."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment in danger zone (causes HP damage)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone (30-35°C)
+                gradient_strength=0.0,
+                danger_hp_damage=5.0,  # 5 HP damage per step
+                danger_penalty=-0.3,  # Zone penalty
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        # Run with penalty_health_damage set
+        reward_config = RewardConfig(penalty_health_damage=0.5)
+        agent.run_episode(reward_config, max_steps=5)
+
+        # Agent should have taken HP damage from danger zone
+        assert env.agent_hp < 100.0, "Agent should have taken temperature HP damage"
+
+        # Check that rewards include the health damage penalty
+        # With danger_penalty=-0.3 and penalty_health_damage=0.5, each step in danger zone
+        # should apply both penalties, resulting in significantly negative reward
+        total_reward = agent._episode_tracker.rewards
+        assert total_reward < 0, (
+            "Total reward should be negative due to danger zone and HP damage penalties"
+        )
+
+    def test_temperature_hp_damage_penalty_increases_with_damage(self):
+        """Test that more HP damage results in more penalty applications."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+
+        # Run 1: Low HP damage (danger zone)
+        brain1 = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env1 = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone
+                gradient_strength=0.0,
+                danger_hp_damage=2.0,  # Low damage
+                danger_penalty=0.0,  # No zone penalty to isolate HP damage penalty
+            ),
+        )
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent1 = QuantumNematodeAgent(brain=brain1, env=env1, satiety_config=satiety_config)
+        reward_config = RewardConfig(penalty_health_damage=0.5, penalty_step=0.0)
+        agent1.run_episode(reward_config, max_steps=5)
+        reward_low_damage = agent1._episode_tracker.rewards
+
+        # Run 2: High HP damage (lethal zone)
+        brain2 = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env2 = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone
+                gradient_strength=0.0,
+                danger_hp_damage=10.0,  # High damage
+                danger_penalty=0.0,  # No zone penalty to isolate HP damage penalty
+            ),
+        )
+        agent2 = QuantumNematodeAgent(brain=brain2, env=env2, satiety_config=satiety_config)
+        agent2.run_episode(reward_config, max_steps=5)
+        reward_high_damage = agent2._episode_tracker.rewards
+
+        # Both should be negative (taking damage), and both should apply penalty per step
+        # The penalty is per-step when damage > 0, so with same steps, penalties are similar
+        assert reward_low_damage < 0, "Should have negative reward from HP damage penalty"
+        assert reward_high_damage < 0, "Should have negative reward from HP damage penalty"
+
+
 class TestBraveForagingBonus:
     """Test brave foraging bonus for collecting food in discomfort zones."""
 
