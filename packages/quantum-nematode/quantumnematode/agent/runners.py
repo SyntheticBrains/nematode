@@ -16,6 +16,7 @@ from quantumnematode.dtypes import (  # noqa: TC001 - used at runtime
     GridPosition,
 )
 from quantumnematode.env import Direction, DynamicForagingEnvironment, StaticEnvironment
+from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import TerminationReason
 
@@ -265,10 +266,28 @@ class StandardEpisodeRunner(EpisodeRunner):
                         reward += healing_reward
                         agent._episode_tracker.track_reward(healing_reward)
 
+                    # Apply brave foraging bonus for collecting food in discomfort zones
+                    brave_msg = ""
+                    if agent.env.thermotaxis.enabled:
+                        zone = agent.env.get_temperature_zone()
+                        if zone in (
+                            TemperatureZone.DISCOMFORT_COLD,
+                            TemperatureZone.DISCOMFORT_HOT,
+                        ):
+                            brave_bonus = agent.env.thermotaxis.reward_discomfort_food
+                            if brave_bonus > 0:
+                                reward += brave_bonus
+                                agent._episode_tracker.track_reward(brave_bonus)
+                                brave_msg = f" [Brave foraging bonus: +{brave_bonus}]"
+                                logger.debug(
+                                    f"Brave foraging bonus applied: +{brave_bonus} "
+                                    f"(food collected in {zone.value} zone)",
+                                )
+
                     logger.info(
                         f"Food #{agent._episode_tracker.foods_collected} collected! "
                         f"Satiety restored by {food_result.satiety_restored:.1f} to "
-                        f"{agent.current_satiety:.1f}/{agent.max_satiety}{health_msg}{dist_eff_msg}",
+                        f"{agent.current_satiety:.1f}/{agent.max_satiety}{health_msg}{dist_eff_msg}{brave_msg}",
                     )
 
                     # Check for victory condition (collected target number of foods)
