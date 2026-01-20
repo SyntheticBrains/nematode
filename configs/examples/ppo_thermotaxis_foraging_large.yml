@@ -1,11 +1,6 @@
 # PPO with Thermotaxis + Foraging - Large Configuration
 # Curriculum level 3: Large-scale foraging with scattered temperature zones
 #
-# Key insight: When agent enters discomfort with sharp decay:
-# - Gradient magnitude will be HIGH (steep temperature change)
-# - Gradient direction points toward the hotspot
-# - Strong gradient + discomfort penalty = clear "turn back" signal
-#
 # Temperature zone layout:
 # - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
 # - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
@@ -100,11 +95,12 @@ environment:
         - [25, 25, 25.0]   # Cold zone lower-left
         - [75, 25, 20.0]   # Cold zone lower-right
         - [50, 85, 18.0]   # Cold zone top-center
-      spot_decay_constant: 5.0
-      # Rewards/penalties - Sharp Gradient Signal
+      spot_decay_constant: 6.5
+      # Rewards/penalties
       comfort_reward: 0.0        # MUST stay 0 (prevents freeze behavior)
-      discomfort_penalty: -0.3
-      danger_penalty: -0.3
+      discomfort_penalty: -0.05
+      danger_penalty: -0.5
+      reward_discomfort_food: 0.3
       # HP damage
       danger_hp_damage: 0.5
       lethal_hp_damage: 6.0
