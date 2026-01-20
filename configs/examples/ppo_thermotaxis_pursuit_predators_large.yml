@@ -4,17 +4,20 @@
 # This combines all challenge elements:
 # - Food collection in a large environment (chemotaxis)
 # - Active predator evasion with multiple hunters (nociception + mechanosensation)
-# - Extreme temperature gradients (thermotaxis)
+# - Scattered temperature zones (thermotaxis)
 #
 # Pursuit predators actively chase the agent when in detection range.
-# Temperature gradient creates lethal zones at grid edges.
-# Agent must balance escaping predators vs staying in comfort zone.
+# Temperature zones create dangerous areas that must be navigated while evading predators.
+# Agent must balance escaping predators vs avoiding dangerous temperature zones.
+#
+# Temperature zone layout (aligned with foraging baseline):
+# - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
+# - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
 #
 # Large environment (100x100 grid):
-# - Temperature range: -5°C to 45°C with 0.5°C/cell gradient
-# - ~20% in comfort zone, ~30% in discomfort, ~50% in danger/lethal
+# - Scattered hot/cold zones create diverse temperature landscape
 # - 4 pursuit predators (fewer than stationary due to difficulty)
-# - Significant portions of grid are uninhabitable
+# - Food biased toward safe temperature zones
 #
 # Pursuit-specific adjustments (vs stationary):
 # - Moderate predator speed (0.5)
@@ -46,6 +49,10 @@ brain:
     num_minibatches: 4
     max_grad_norm: 0.5
     normalize_advantages: true
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
     sensory_modules:
       - food_chemotaxis
       - nociception
@@ -66,8 +73,8 @@ reward:
   penalty_predator_proximity: 0.15
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
-  penalty_health_damage: 0.5
-  reward_health_gain: 0.1
+  penalty_health_damage: 0.3
+  reward_health_gain: 0.2
 
 satiety:
   initial_satiety: 800.0
@@ -83,11 +90,12 @@ environment:
 
     foraging:
       foods_on_grid: 45
-      target_foods_to_collect: 50
-      min_food_distance: 10
-      agent_exclusion_radius: 15
+      target_foods_to_collect: 25
+      min_food_distance: 8
+      agent_exclusion_radius: 12
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
+      safe_zone_food_bias: 0.8
 
     predators:
       enabled: true
@@ -101,22 +109,36 @@ environment:
 
     health:
       enabled: true
-      max_hp: 100.0
+      max_hp: 150.0
       predator_damage: 15.0
-      food_healing: 10.0
+      food_healing: 15.0
 
     thermotaxis:
       enabled: true
       cultivation_temperature: 20.0
-      base_temperature: 20.0  # Temperature at grid center (spawn point)
-      gradient_direction: 0.0  # Temperature increases to the right
-      gradient_strength: 0.5   # 0.5°C per cell from center (range: -5°C to 45°C)
-      comfort_reward: 0.05
-      discomfort_penalty: -0.1
-      danger_penalty: -0.3
-      danger_hp_damage: 2.0
-      lethal_hp_damage: 10.0
-      # Zone thresholds (relative to cultivation temp)
-      comfort_delta: 5.0       # Comfort: 15-25°C
-      discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
-      danger_delta: 15.0       # Danger: 5-10°C or 30-35°C
+      base_temperature: 20.0     # Temperature at grid center (spawn point)
+      gradient_direction: 0.0    # Temperature increases to the right
+      gradient_strength: 0.15    # Mild background gradient
+      # Scattered hot spots
+      hot_spots:
+        - [75, 50, 25.0]   # Hot zone right-center
+        - [25, 75, 20.0]   # Hot zone upper-left
+        - [80, 80, 22.0]   # Hot zone upper-right
+      # Scattered cold spots
+      cold_spots:
+        - [25, 25, 25.0]   # Cold zone lower-left
+        - [75, 25, 20.0]   # Cold zone lower-right
+        - [50, 85, 18.0]   # Cold zone top-center
+      spot_decay_constant: 6.5
+      # Rewards/penalties
+      comfort_reward: 0.0        # MUST stay 0 (prevents freeze behavior)
+      discomfort_penalty: -0.05
+      danger_penalty: -0.5
+      reward_discomfort_food: 0.3
+      # HP damage
+      danger_hp_damage: 0.5
+      lethal_hp_damage: 6.0
+      # Zone thresholds
+      comfort_delta: 5.0         # Comfort: 15-25°C
+      discomfort_delta: 10.0     # Discomfort: 10-15°C or 25-30°C
+      danger_delta: 15.0         # Danger: 5-10°C or 30-35°C
