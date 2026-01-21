@@ -295,7 +295,7 @@ ______________________________________________________________________
 
 ## 8. Food Spawning in Safe Zones
 
-> **Status**: Implemented in `feature/add-thermotaxis-benchmarking` branch.
+> **Status**: Implemented in `feature/optimize-thermotaxis` branch.
 
 ### 8.1 Safe Zone Spawning
 
