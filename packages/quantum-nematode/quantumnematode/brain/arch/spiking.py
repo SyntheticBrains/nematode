@@ -221,8 +221,6 @@ class SpikingBrain(ClassicalBrain):
     ) -> None:
         super().__init__()
 
-        logger.info(f"Initializing SpikingBrain with surrogate gradients: {config}")
-
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)

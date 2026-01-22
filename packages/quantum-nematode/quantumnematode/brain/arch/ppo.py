@@ -277,8 +277,6 @@ class PPOBrain(ClassicalBrain):
     ) -> None:
         super().__init__()
 
-        logger.info(f"Initializing PPOBrain with config: {config}")
-
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
