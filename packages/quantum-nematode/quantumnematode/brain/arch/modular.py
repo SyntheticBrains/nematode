@@ -271,9 +271,6 @@ class ModularBrain(QuantumBrain):
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
         num_qubits = count_total_qubits(config.modules)
-        logger.info(
-            f"Using configuration: {config}",
-        )
 
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)

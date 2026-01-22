@@ -217,6 +217,7 @@ def create_brain_from_config(
 
     # Use configure_brain to get the properly typed brain config
     brain_config = configure_brain(config)
+    logger.debug(f"Initializing brain config: {brain_config}")
 
     # Ensure we have a ModularBrainConfig
     if not isinstance(brain_config, ModularBrainConfig):
@@ -259,6 +260,8 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
     if env_config is None or env_config.type != "dynamic":
         msg = "Evolution requires a dynamic foraging environment"
         raise ValueError(msg)
+
+    logger.debug(f"Initializing environment config: {env_config}")
 
     dynamic_config = env_config.dynamic
     if dynamic_config is None:
