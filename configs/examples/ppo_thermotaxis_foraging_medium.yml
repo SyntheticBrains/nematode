@@ -57,7 +57,7 @@ reward:
   penalty_starvation: 10.0
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
-  penalty_health_damage: 0.5
+  penalty_health_damage: 0.0
   reward_health_gain: 0.1
 
 satiety:
@@ -92,9 +92,10 @@ environment:
       base_temperature: 20.0  # Temperature at grid center (spawn point)
       gradient_direction: 0.0  # Temperature increases to the right
       gradient_strength: 0.6   # 0.6°C per cell from center (range: 5°C to 35°C)
-      comfort_reward: 0.05
-      discomfort_penalty: -0.1
+      comfort_reward: 0.0
+      discomfort_penalty: 0.0
       danger_penalty: -0.3
+      reward_discomfort_food: 0.0
       danger_hp_damage: 1.5    # HP damage per step in danger zone
       lethal_hp_damage: 8.0    # HP damage per step in lethal zone
       # Zone thresholds (relative to cultivation temp)
