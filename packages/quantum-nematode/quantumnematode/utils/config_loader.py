@@ -149,6 +149,7 @@ class ForagingConfig(BaseModel):
     agent_exclusion_radius: int = 10
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
+    safe_zone_food_bias: float = 0.0
 
     def to_params(self) -> ForagingParams:
         """Convert to ForagingParams for environment initialization."""
@@ -159,6 +160,7 @@ class ForagingConfig(BaseModel):
             agent_exclusion_radius=self.agent_exclusion_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
+            safe_zone_food_bias=self.safe_zone_food_bias,
         )
 
 
