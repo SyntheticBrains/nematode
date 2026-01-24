@@ -92,12 +92,14 @@ environment:
       base_temperature: 20.0  # Temperature at grid center (spawn point)
       gradient_direction: 0.0  # Temperature increases to the right
       gradient_strength: 0.6   # 0.6°C per cell from center (range: 5°C to 35°C)
+      # Rewards/penalties
       comfort_reward: 0.0
       discomfort_penalty: 0.0
       danger_penalty: -0.3
       reward_discomfort_food: 0.0
-      danger_hp_damage: 1.5    # HP damage per step in danger zone
-      lethal_hp_damage: 8.0    # HP damage per step in lethal zone
+      # HP damage
+      danger_hp_damage: 1.5
+      lethal_hp_damage: 8.0
       # Zone thresholds (relative to cultivation temp)
       comfort_delta: 5.0       # Comfort: 15-25°C
       discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
