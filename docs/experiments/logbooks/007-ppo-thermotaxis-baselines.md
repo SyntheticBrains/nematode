@@ -500,7 +500,7 @@ Building on foraging baseline, predator configs were validated with extended tra
 
 1. **Reward shaping is environment-specific**: Large env learnings don't transfer to small/medium
 2. **comfort_reward must be 0 for LARGE only**: Prevents freeze behavior in scattered zones
-3. **Small/medium need comfort_reward: 0.05**: Creates positive incentive without freezing
+3. **Small/medium need comfort_reward: 0.0**: Same as large - zero prevents passivity
 4. **Brave foraging bonus (large only)**: Encourages risk-taking in scattered danger zones
 5. **Safe zone food bias (large only)**: Reduces unfair spawns in dangerous areas
 6. **Gradient decay matters**: Sharper decay (4.0-6.5) for better zone detection
