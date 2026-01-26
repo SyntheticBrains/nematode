@@ -77,8 +77,6 @@ class QMLPBrain(ClassicalBrain):
     ) -> None:
         super().__init__()
 
-        logger.info(f"Using Q-MLP configuration: {config}")
-
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)

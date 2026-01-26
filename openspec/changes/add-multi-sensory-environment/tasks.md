@@ -295,16 +295,26 @@ ______________________________________________________________________
 
 ## 8. Food Spawning in Safe Zones
 
-> **Note**: This work stream is deferred to `add-thermotaxis-system` as it depends on temperature zones.
+> **Status**: Implemented in `feature/optimize-thermotaxis` branch.
 
 ### 8.1 Safe Zone Spawning
 
-- [ ] Add `food_safe_zone_ratio: float` config parameter (default 0.8) *(deferred to add-thermotaxis-system)*
-- [ ] Implement `sample_safe_position()` method *(deferred to add-thermotaxis-system)*
-- [ ] Bias food spawning toward safe temperature zones when thermotaxis enabled *(deferred to add-thermotaxis-system)*
-- [ ] Fall back to random spawning when thermotaxis disabled *(deferred to add-thermotaxis-system)*
+- [x] Add `safe_zone_food_bias: float` config parameter (default 0.0) to `ForagingParams`
+  - Parameter name changed from `food_safe_zone_ratio` to `safe_zone_food_bias` for clarity
+  - Located in `ForagingParams` dataclass alongside other foraging config
+- [x] Implement `_is_safe_temperature_zone(position)` helper method
+  - Returns `True` for COMFORT, DISCOMFORT_COLD, DISCOMFORT_HOT zones (no HP damage)
+  - Returns `True` if thermotaxis disabled (all positions are "safe")
+- [x] Bias food spawning toward safe temperature zones when thermotaxis enabled
+  - Modified `_initialize_foods()` and `spawn_food()` to respect bias
+  - With probability `bias`, only accepts positions in safe zones
+- [x] Fall back to random spawning when thermotaxis disabled
+  - `_is_safe_temperature_zone()` returns `True` for all positions when thermotaxis disabled
 
-**Validation**: Food distribution biased toward safe zones
+**Validation**: Food distribution biased toward safe zones ✅
+
+- Config: `safe_zone_food_bias: 0.8` in `ppo_thermotaxis_foraging_large.yml`
+- Expected: ~80% of food in COMFORT/DISCOMFORT zones, ~20% anywhere
 
 ______________________________________________________________________
 

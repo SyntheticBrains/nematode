@@ -401,6 +401,7 @@ class SensoryModule:
     - Core extraction: BrainParams -> CoreFeatures (semantic values)
     - Quantum transform: to_quantum() -> np.ndarray [rx, ry, rz]
     - Classical transform: to_classical() -> np.ndarray [strength, angle]
+        or [strength, angle, binary]
 
     Attributes
     ----------
@@ -409,6 +410,7 @@ class SensoryModule:
         description: Scientific description with C. elegans neuron references
         transform_type: "standard" or "binary" for quantum transform
         is_placeholder: Whether module is fully implemented
+        classical_dim: Number of classical features (2 or 3). When 3, includes binary field.
     """
 
     name: ModuleName
@@ -416,6 +418,7 @@ class SensoryModule:
     description: str
     transform_type: Literal["standard", "binary", "placeholder"] = "standard"
     is_placeholder: bool = False
+    classical_dim: int = 2
 
     def to_quantum(self, params: BrainParams) -> np.ndarray:
         """Extract and transform to quantum gate angles [rx, ry, rz].
@@ -465,21 +468,27 @@ class SensoryModule:
         return {"rx": float(arr[0]), "ry": float(arr[1]), "rz": float(arr[2])}
 
     def to_classical(self, params: BrainParams) -> np.ndarray:
-        """Extract and transform to classical features [strength, angle].
+        """Extract and transform to classical features.
 
-        Note: Only returns strength and angle, omitting the binary field from
-        CoreFeatures. For modules like mechanosensation, the binary field
-        contains derived values (e.g., urgency = max of other fields) that
-        are intentionally excluded from classical networks to keep feature
-        dimensions consistent across modules.
+        Returns either [strength, angle] or [strength, angle, binary] depending
+        on the module's classical_dim setting. Most modules use 2 features, but
+        some (like thermotaxis) include the binary field for richer signals.
+
+        For thermotaxis, including the binary field (temperature deviation) is
+        biologically plausible: real C. elegans AFD neurons sense absolute
+        temperature, not just gradients. This enables reactive avoidance of
+        dangerous temperatures ("I'm too hot right now").
 
         Returns
         -------
-            np.ndarray of shape (2,) with semantic-preserving ranges:
+            np.ndarray of shape (classical_dim,) with semantic-preserving ranges:
             - strength: [0, 1] where 0 = no signal
             - angle: [-1, 1] where 0 = aligned with agent
+            - binary (if classical_dim=3): [-1, 1] module-specific scalar
         """
         core = self.extract(params)
+        if self.classical_dim == 3:  # noqa: PLR2004
+            return np.array([core.strength, core.angle, core.binary], dtype=np.float32)
         return np.array([core.strength, core.angle], dtype=np.float32)
 
 
@@ -550,6 +559,7 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
             "from Tc (normalized to [-1, 1])."
         ),
         transform_type="standard",
+        classical_dim=3,  # Include temp deviation for reactive avoidance
     ),
     # [PLACEHOLDER] Aerotaxis - oxygen
     ModuleName.AEROTAXIS: SensoryModule(
@@ -605,6 +615,7 @@ def extract_classical_features(
 
     - strength: [0, 1] where 0 = no signal, 1 = strong signal
     - angle: [-1, 1] where 0 = aligned with agent heading
+    - binary (for modules with classical_dim=3): [-1, 1] module-specific scalar
 
     Parameters
     ----------
@@ -616,13 +627,16 @@ def extract_classical_features(
     Returns
     -------
     np.ndarray
-        Flat array of features with 2 values per module [strength, angle].
-        Shape: (len(modules) * 2,)
+        Flat array of features. Most modules contribute 2 values [strength, angle],
+        while some (like thermotaxis) contribute 3 values [strength, angle, binary].
+        Shape: (sum of classical_dim for all modules,)
 
     Examples
     --------
     >>> features = extract_classical_features(params, [ModuleName.FOOD_CHEMOTAXIS])
     >>> # Returns [food_strength, food_angle] in [0,1] and [-1,1] respectively
+    >>> features = extract_classical_features(params, [ModuleName.THERMOTAXIS])
+    >>> # Returns [grad_strength, grad_angle, temp_deviation] with temp_deviation in [-1,1]
     """
     features = []
 
@@ -635,7 +649,7 @@ def extract_classical_features(
             classical = sensory_module.to_classical(params)
             features.extend(classical.tolist())
         else:
-            # Module not found - output zeros
+            # Module not found - output zeros (default 2 features)
             features.extend([0.0, 0.0])
 
     return np.array(features, dtype=np.float32)
@@ -644,7 +658,9 @@ def extract_classical_features(
 def get_classical_feature_dimension(modules: list[ModuleName]) -> int:
     """Get the dimension of the classical feature vector for given modules.
 
-    Classical features output 2 values per module: [strength, angle].
+    Classical features output either 2 or 3 values per module depending on
+    the module's classical_dim setting. Most modules output [strength, angle],
+    while some (like thermotaxis) output [strength, angle, binary].
 
     Parameters
     ----------
@@ -654,9 +670,16 @@ def get_classical_feature_dimension(modules: list[ModuleName]) -> int:
     Returns
     -------
     int
-        Number of features (2 per module).
+        Total number of features across all modules.
     """
-    return len(modules) * 2
+    total = 0
+    for module in modules:
+        sensory_module = SENSORY_MODULES.get(module)
+        if sensory_module is not None:
+            total += sensory_module.classical_dim
+        else:
+            total += 2  # Default for unknown modules
+    return total
 
 
 # =============================================================================

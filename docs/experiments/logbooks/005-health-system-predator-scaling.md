@@ -375,6 +375,6 @@ ______________________________________________________________________
 
 ### Raw Data
 
-- **Summary CSV**: `artifacts/studies/el005_health_scaling_study/summary.csv`
+- **Summary CSV**: `artifacts/logbooks/005/summary.csv`
 - **Session logs**: `logs/health_scaling_study/<condition>_session<N>.log` - note: not saved
 - **Export data**: `exports/<session_id>/session/data/` (includes predator_results.csv with evasion metrics) - note: not saved

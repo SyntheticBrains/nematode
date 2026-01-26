@@ -219,6 +219,16 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
 
+    # Configure logging level
+    log_level = args.log_level.upper()
+    if log_level == "NONE":
+        logger.disabled = True
+    else:
+        logger.setLevel(log_level)
+        for handler in logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                handler.setLevel(log_level)
+
     # Initialize seed for reproducibility (auto-generate if not provided)
     simulation_seed = ensure_seed(args.seed)
     logger.info(f"Using simulation seed: {simulation_seed}")
@@ -227,7 +237,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     qubits = DEFAULT_QUBITS
     device = DeviceType(args.device.lower())
     show_last_frame_only = args.show_last_frame_only
-    log_level = args.log_level.upper()
     learning_rate = DynamicLearningRate()
     gradient_method = GradientCalculationMethod.RAW
     gradient_max_norm = None
@@ -270,6 +279,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     if config_file:
         config = load_simulation_config(config_file)
+        logger.info(f"Initializing simulation config: {config}")
 
         # Handle seed precedence: CLI > config file > auto-generated
         if args.seed is not None:
@@ -322,15 +332,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         grid_size = (environment_config.static or StaticEnvironmentConfig()).grid_size
 
     validate_simulation_parameters(grid_size, brain_type, qubits)
-
-    # Configure logging level
-    if log_level == "NONE":
-        logger.disabled = True
-    else:
-        logger.setLevel(log_level)
-        for handler in logger.handlers:
-            if isinstance(handler, logging.FileHandler):
-                handler.setLevel(log_level)
 
     # Set up the timestamp for saving results
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")

@@ -1,25 +1,9 @@
 # PPO with Thermotaxis + Foraging - Large Configuration
-# Curriculum level 3: Large-scale foraging with scattered temperature danger zones
-#
-# Thermotaxis adds a new sensory modality (AFD neurons) that encodes:
-# - Temperature deviation from cultivation temperature (Tc = 20°C)
-# - Direction toward warmer temperatures (egocentric)
-# - Temperature gradient strength
-#
-# Large environment (100x100 grid) with multiple temperature zones:
-# - Weak linear gradient (0.15°C/cell) provides gentle temperature variation
-# - 3 hot spots and 3 cold spots create localized danger zones
-# - Central area remains comfortable for spawning
-# - Agent must navigate around scattered danger zones to forage
+# Curriculum level 3: Large-scale foraging with scattered temperature zones
 #
 # Temperature zone layout:
 # - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
 # - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
-# - Each spot has exponential falloff (spot_decay_constant=8)
-#
-# Success criteria:
-# - Collect target foods
-# - Navigate around temperature danger zones
 #
 # Sensory modules (C. elegans neuron references):
 # - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
@@ -43,6 +27,10 @@ brain:
     num_minibatches: 4
     max_grad_norm: 0.5
     normalize_advantages: true
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
     sensory_modules:
       - food_chemotaxis
       - thermotaxis
@@ -59,11 +47,13 @@ reward:
   penalty_starvation: 10.0
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.3
+  reward_health_gain: 0.2
 
 satiety:
-  initial_satiety: 800.0
-  satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.2
+  initial_satiety: 1000.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.25
 
 environment:
   type: dynamic
@@ -73,42 +63,47 @@ environment:
     use_separated_gradients: true
 
     foraging:
-      foods_on_grid: 35
-      target_foods_to_collect: 50
-      min_food_distance: 10
-      agent_exclusion_radius: 15
+      foods_on_grid: 40
+      target_foods_to_collect: 20
+      min_food_distance: 8
+      agent_exclusion_radius: 12
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
 
     health:
       enabled: true
-      max_hp: 100.0
+      max_hp: 150.0
       predator_damage: 0.0
-      food_healing: 5.0
+      food_healing: 15.0
 
     thermotaxis:
       enabled: true
       cultivation_temperature: 20.0
-      base_temperature: 20.0  # Temperature at grid center (spawn point)
-      gradient_direction: 0.0  # Temperature increases to the right
-      gradient_strength: 0.15  # Weak gradient (0.15°C/cell) - main challenge is spots
-      # Scattered hot spots (x, y, intensity in °C)
+      base_temperature: 20.0     # Temperature at grid center (spawn point)
+      gradient_direction: 0.0    # Temperature increases to the right
+      gradient_strength: 0.15
+      # Hot/cold spots: [x, y, intensity] where intensity is temperature DELTA from base
+      # - Hot spots ADD intensity to base temp (e.g., 25.0 → up to 45°C at center)
+      # - Cold spots SUBTRACT intensity from base temp (e.g., 25.0 → down to -5°C at center)
+      # - Effect decays exponentially with distance (spot_decay_constant controls falloff)
       hot_spots:
-        - [75, 50, 25.0]   # Hot zone right-center
-        - [25, 75, 20.0]   # Hot zone upper-left quadrant
-        - [80, 80, 22.0]   # Hot zone upper-right corner
-      # Scattered cold spots (x, y, intensity in °C)
+        - [75, 50, 25.0]   # Right-center: +25°C intensity (up to 45°C)
+        - [25, 75, 20.0]   # Upper-left: +20°C intensity (up to 40°C)
+        - [80, 80, 22.0]   # Upper-right: +22°C intensity (up to 42°C)
       cold_spots:
-        - [25, 25, 25.0]   # Cold zone lower-left quadrant
-        - [75, 25, 20.0]   # Cold zone lower-right quadrant
-        - [50, 85, 18.0]   # Cold zone top-center
-      spot_decay_constant: 8.0  # Controls how quickly spots affect temperature
-      comfort_reward: 0.05
-      discomfort_penalty: -0.1
-      danger_penalty: -0.3
-      danger_hp_damage: 2.0    # HP damage per step in danger zone
-      lethal_hp_damage: 10.0   # HP damage per step in lethal zone
-      # Zone thresholds (relative to cultivation temp)
-      comfort_delta: 5.0       # Comfort: 15-25°C
-      discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
-      danger_delta: 15.0       # Danger: 5-10°C or 30-35°C
+        - [25, 25, 25.0]   # Lower-left: -25°C intensity (down to -5°C)
+        - [75, 25, 20.0]   # Lower-right: -20°C intensity (down to 0°C)
+        - [50, 85, 18.0]   # Top-center: -18°C intensity (down to 2°C)
+      spot_decay_constant: 6.5
+      # Rewards/penalties
+      comfort_reward: 0.0        # MUST stay 0 (prevents freeze behavior)
+      discomfort_penalty: -0.05
+      danger_penalty: -0.5
+      reward_discomfort_food: 0.3
+      # HP damage
+      danger_hp_damage: 0.5
+      lethal_hp_damage: 6.0
+      # Zone thresholds
+      comfort_delta: 5.0         # Comfort: 15-25°C
+      discomfort_delta: 10.0     # Discomfort: 10-15°C or 25-30°C
+      danger_delta: 15.0         # Danger: 5-10°C or 30-35°C

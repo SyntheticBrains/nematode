@@ -149,6 +149,7 @@ class ForagingConfig(BaseModel):
     agent_exclusion_radius: int = 10
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
+    safe_zone_food_bias: float = 0.0
 
     def to_params(self) -> ForagingParams:
         """Convert to ForagingParams for environment initialization."""
@@ -159,6 +160,7 @@ class ForagingConfig(BaseModel):
             agent_exclusion_radius=self.agent_exclusion_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
+            safe_zone_food_bias=self.safe_zone_food_bias,
         )
 
 
@@ -317,6 +319,9 @@ class ThermotaxisConfig(BaseModel):
         HP damage per step when in danger zone.
     lethal_hp_damage : float
         HP damage per step when in lethal zone.
+    reward_discomfort_food : float
+        Bonus reward for collecting food while in a discomfort zone.
+        Encourages "brave foraging" - entering uncomfortable but safe zones for food.
     """
 
     enabled: bool = False
@@ -335,6 +340,7 @@ class ThermotaxisConfig(BaseModel):
     danger_penalty: float = DEFAULT_DANGER_PENALTY
     danger_hp_damage: float = DEFAULT_DANGER_HP_DAMAGE
     lethal_hp_damage: float = DEFAULT_LETHAL_HP_DAMAGE
+    reward_discomfort_food: float = 0.0
 
     def to_params(self) -> ThermotaxisParams:
         """Convert to ThermotaxisParams for environment initialization."""
@@ -370,6 +376,7 @@ class ThermotaxisConfig(BaseModel):
             danger_penalty=self.danger_penalty,
             danger_hp_damage=self.danger_hp_damage,
             lethal_hp_damage=self.lethal_hp_damage,
+            reward_discomfort_food=self.reward_discomfort_food,
         )
 
 
