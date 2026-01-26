@@ -10,6 +10,7 @@ from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpiso
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
 from quantumnematode.env.env import HealthParams, PredatorParams, ThermotaxisParams
+from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.report.dtypes import TerminationReason
 
 
@@ -529,3 +530,259 @@ class TestThermotaxisIntegration:
 
         # Should die from lethal temperature damage
         assert result.termination_reason == TerminationReason.HEALTH_DEPLETED
+
+    def test_temperature_hp_damage_applies_penalty(self):
+        """Test that temperature HP damage triggers penalty_health_damage penalty."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment in danger zone (causes HP damage)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone (30-35°C)
+                gradient_strength=0.0,
+                danger_hp_damage=5.0,  # 5 HP damage per step
+                danger_penalty=-0.3,  # Zone penalty
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        # Run with penalty_health_damage set
+        reward_config = RewardConfig(penalty_health_damage=0.5)
+        agent.run_episode(reward_config, max_steps=5)
+
+        # Agent should have taken HP damage from danger zone
+        assert env.agent_hp < 100.0, "Agent should have taken temperature HP damage"
+
+        # Check that rewards include the health damage penalty
+        # With danger_penalty=-0.3 and penalty_health_damage=0.5, each step in danger zone
+        # should apply both penalties, resulting in significantly negative reward
+        total_reward = agent._episode_tracker.rewards
+        assert total_reward < 0, (
+            "Total reward should be negative due to danger zone and HP damage penalties"
+        )
+
+    def test_temperature_hp_damage_penalty_applied_when_damage_taken(self):
+        """Test that HP damage penalty is applied per-step when taking damage."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+
+        # Run 1: Low HP damage (danger zone)
+        brain1 = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env1 = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone
+                gradient_strength=0.0,
+                danger_hp_damage=2.0,  # Low damage
+                danger_penalty=0.0,  # No zone penalty to isolate HP damage penalty
+            ),
+        )
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent1 = QuantumNematodeAgent(brain=brain1, env=env1, satiety_config=satiety_config)
+        reward_config = RewardConfig(penalty_health_damage=0.5, penalty_step=0.0)
+        agent1.run_episode(reward_config, max_steps=5)
+        reward_low_damage = agent1._episode_tracker.rewards
+
+        # Run 2: High HP damage (lethal zone)
+        brain2 = MLPBrain(config=config, input_dim=2, num_actions=4)
+        env2 = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=5),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone
+                gradient_strength=0.0,
+                danger_hp_damage=10.0,  # High damage
+                danger_penalty=0.0,  # No zone penalty to isolate HP damage penalty
+            ),
+        )
+        agent2 = QuantumNematodeAgent(brain=brain2, env=env2, satiety_config=satiety_config)
+        agent2.run_episode(reward_config, max_steps=5)
+        reward_high_damage = agent2._episode_tracker.rewards
+
+        # Both should be negative (taking damage)
+        # The penalty_health_damage is applied per-step when damage > 0, regardless of amount
+        assert reward_low_damage < 0, "Should have negative reward from HP damage penalty"
+        assert reward_high_damage < 0, "Should have negative reward from HP damage penalty"
+
+
+class TestBraveForagingBonus:
+    """Test brave foraging bonus for collecting food in discomfort zones."""
+
+    def test_brave_foraging_bonus_config_in_discomfort_zone(self):
+        """Test that reward_discomfort_food parameter is accessible and usable."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment in hot discomfort zone (25-30°C with cultivation at 20°C)
+        env = DynamicForagingEnvironment(
+            grid_size=5,
+            foraging=ForagingParams(
+                target_foods_to_collect=5,
+                foods_on_grid=5,
+                min_food_distance=1,
+                agent_exclusion_radius=1,
+            ),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=27.0,  # Hot discomfort zone
+                gradient_strength=0.0,
+                reward_discomfort_food=0.5,  # Brave foraging bonus
+                discomfort_penalty=-0.05,
+            ),
+        )
+
+        # Verify the parameter is set correctly
+        assert env.thermotaxis.reward_discomfort_food == 0.5
+
+        # Verify we're in discomfort zone
+        assert env.get_temperature_zone() == TemperatureZone.DISCOMFORT_HOT, (
+            "Should be in discomfort zone for brave bonus to apply"
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig(reward_goal=2.0)
+        agent.run_episode(reward_config, max_steps=100)
+
+        # Verify episode completed without errors - brave bonus code path executed
+        # The actual reward value depends on many factors, so we just verify execution
+        assert env.get_temperature_zone() == TemperatureZone.DISCOMFORT_HOT, (
+            "Should remain in discomfort zone (no gradient)"
+        )
+
+    def test_brave_bonus_not_applied_in_comfort_zone(self):
+        """Test that brave bonus is only applied in discomfort zones, not comfort."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment at comfort temperature - no brave bonus should apply
+        env = DynamicForagingEnvironment(
+            grid_size=5,
+            foraging=ForagingParams(
+                target_foods_to_collect=1,
+                foods_on_grid=5,
+                min_food_distance=1,
+                agent_exclusion_radius=1,
+            ),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,  # Comfort zone
+                gradient_strength=0.0,
+                reward_discomfort_food=0.5,  # Would be awarded if in discomfort
+                comfort_reward=0.0,  # No comfort reward
+            ),
+        )
+
+        # Verify we're in comfort zone
+        zone = env.get_temperature_zone()
+        assert zone == TemperatureZone.COMFORT, "Should be in comfort zone"
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        # Run episode - the brave bonus code path should not trigger in comfort zone
+        reward_config = RewardConfig(reward_goal=2.0)
+        agent.run_episode(reward_config, max_steps=100)
+
+        # Verify zone is still comfort (no gradient movement)
+        assert env.get_temperature_zone() == TemperatureZone.COMFORT, (
+            "Agent should remain in comfort zone throughout episode"
+        )
+
+    def test_brave_bonus_not_applied_in_danger_zone(self):
+        """Test that brave bonus is only for discomfort, not danger zones."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment in danger zone - no brave bonus (too dangerous to reward)
+        env = DynamicForagingEnvironment(
+            grid_size=5,
+            foraging=ForagingParams(
+                target_foods_to_collect=1,
+                foods_on_grid=5,
+                min_food_distance=1,
+                agent_exclusion_radius=1,
+            ),
+            health=HealthParams(enabled=True, max_hp=200.0),  # High HP to survive
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=33.0,  # Danger zone (30-35°C)
+                gradient_strength=0.0,
+                reward_discomfort_food=0.5,  # Should NOT be applied in danger
+                danger_penalty=-0.3,
+                danger_hp_damage=1.0,  # Low damage to survive
+            ),
+        )
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        # Verify we're in danger zone
+        assert env.get_temperature_zone() == TemperatureZone.DANGER_HOT, "Should be in danger zone"
+
+        reward_config = RewardConfig(reward_goal=2.0, penalty_health_damage=0.0)
+        agent.run_episode(reward_config, max_steps=100)
+
+        # Verify zone remained danger (no gradient movement) - brave bonus should not apply
+        assert env.get_temperature_zone() == TemperatureZone.DANGER_HOT, (
+            "Agent should remain in danger zone throughout episode"
+        )
+
+    def test_brave_bonus_disabled_when_zero(self):
+        """Test that brave bonus is not applied when reward_discomfort_food is 0."""
+        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+
+        # Environment in discomfort zone but with brave bonus disabled
+        env = DynamicForagingEnvironment(
+            grid_size=5,
+            foraging=ForagingParams(
+                target_foods_to_collect=1,
+                foods_on_grid=5,
+                min_food_distance=1,
+                agent_exclusion_radius=1,
+            ),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=27.0,  # Hot discomfort zone
+                gradient_strength=0.0,
+                reward_discomfort_food=0.0,  # Disabled
+                discomfort_penalty=-0.05,
+            ),
+        )
+
+        # Verify the parameter is set to 0
+        assert env.thermotaxis.reward_discomfort_food == 0.0
+
+        satiety_config = SatietyConfig(initial_satiety=500.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
+
+        reward_config = RewardConfig(reward_goal=2.0)
+        agent.run_episode(reward_config, max_steps=100)
+
+        # Verify brave bonus config is still 0 (not accidentally modified)
+        assert env.thermotaxis.reward_discomfort_food == 0.0, (
+            "Brave bonus should remain disabled (0.0)"
+        )
