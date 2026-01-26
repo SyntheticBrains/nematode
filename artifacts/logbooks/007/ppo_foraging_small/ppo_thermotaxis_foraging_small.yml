@@ -8,7 +8,6 @@
 #
 # Success criteria:
 # - Collect target foods
-# - Maintain >60% time in comfort zone (15-25°C)
 #
 # Sensory modules (C. elegans neuron references):
 # - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
