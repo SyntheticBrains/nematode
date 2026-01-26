@@ -17,7 +17,6 @@
 # Large environment (100x100 grid):
 # - Scattered hot/cold zones create diverse temperature landscape
 # - 4 pursuit predators (fewer than stationary due to difficulty)
-# - Food biased toward safe temperature zones
 #
 # Pursuit-specific adjustments (vs stationary):
 # - Moderate predator speed (0.5)
