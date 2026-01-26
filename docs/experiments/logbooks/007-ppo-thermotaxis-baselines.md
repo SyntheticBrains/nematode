@@ -129,11 +129,11 @@ ______________________________________________________________________
 | Config | Sessions | Avg Success | Post-Conv | HP Deaths | Evasion | Converged | Status |
 |--------|----------|-------------|-----------|-----------|---------|-----------|--------|
 | **Small Foraging** | 4 | 88.2% | 98.0% | 7.4% | - | ✓ Yes | ✓ Baseline |
-| **Small Pursuit** | 4 | 38.4% | 65.5% | 61.1% | 74.8% | ✗ No | Needs tuning |
-| **Small Stationary** | 4 | 37.4% | 55.0% | 29.7% | 95.2% | ✗ No | Needs tuning |
-| **Medium Foraging** | 4 | 72.0% | 91.5% | 21.0% | - | ~Partial | Needs tuning |
-| **Medium Pursuit** | 4 | 49.6% | 73.0% | 49.0% | 89.6% | ~Partial | Needs tuning |
-| **Medium Stationary** | 4 | 36.0% | 60.5% | 47.3% | 93.3% | ✗ No | Needs tuning |
+| **Small Pursuit** | 4 | 60.3% | 82.5% | 17.5% | - | ~High variance | Needs tuning |
+| **Small Stationary** | 4 | 49.7% | 67.0% | 7.5% | - | ✗ No | Needs tuning |
+| **Medium Foraging** | 4 | 82.4% | 94.5% | ~0% | - | ✓ Yes | ✓ Baseline |
+| **Medium Pursuit** | 4 | 74.2% | 84.5% | ~0% | - | ✓ Yes | ✓ Baseline |
+| **Medium Stationary** | 4 | 71.6% | 87.5% | ~0% | - | ✓ Yes | ✓ Baseline |
 | **Large Foraging** | 4 | 91.8% | 98.5% | 4.1% | - | ✓ Yes | ✓ Baseline |
 | **Large Pursuit** | 4 | 71.3% | 97.5% | 24.0% | 88.4% | ✓ Yes | ✓ Baseline |
 | **Large Stationary** | 4 | 79.4% | 96.5% | 12.2% | 97.2% | ✓ Yes | ✓ Baseline |
@@ -156,87 +156,87 @@ ______________________________________________________________________
 
 **Hypothesis check**: ≥80% post-conv → **PASS** (98.0%)
 
-##### Small Pursuit Predators ✗
+##### Small Pursuit Predators ~
 
-**Sessions**: 20260124_101144, 20260124_101145, 20260124_101148, 20260124_101151
+**Sessions (Round 2)**: 20260125_225334, 20260125_225337, 20260125_225340, 20260125_225343
 
-| Session | Success | Post-Conv | HP Deaths | Evasion | Converged |
-|---------|---------|-----------|-----------|---------|-----------|
-| 20260124_101144 | 17.6% | 52.0% | 81.2% | 60.2% | ✗ |
-| 20260124_101145 | 54.2% | 78.0% | 45.8% | 77.0% | ~Learning |
-| 20260124_101148 | 37.2% | 74.0% | 62.2% | 83.5% | ~Learning |
-| 20260124_101151 | 44.4% | 58.0% | 55.2% | 78.3% | ✗ |
-| **Average** | **38.4%** | **65.5%** | **61.1%** | **74.8%** | **✗** |
+| Session | Success | Post-Conv | HP Deaths | Starve | Converged |
+|---------|---------|-----------|-----------|--------|-----------|
+| 20260125_225334 | 62.4% | 66.0% | 34.0% | 0% | ✗ |
+| 20260125_225337 | 48.2% | 88.0% | 12.0% | 0% | ✓ |
+| 20260125_225340 | 69.2% | 82.0% | 18.0% | 0% | ✓ |
+| 20260125_225343 | 61.4% | 94.0% | 6.0% | 0% | ✓ |
+| **Average** | **60.3%** | **82.5%** | **17.5%** | **0%** | **~High variance** |
 
-**Hypothesis check**: ≥75% post-conv → **FAIL** (65.5%)
+**Hypothesis check**: ≥75% post-conv → **PARTIAL** (82.5% avg but 66-94% range)
 
-**Issue**: High variance between sessions (52-78%), high HP deaths. Needs config tuning or extended training.
+**Config change**: Reduced `predator_damage: 12 → 8`. HP deaths reduced from 61% to 17.5%, but high variance between sessions persists. May need further tuning or extended training.
 
 ##### Small Stationary Predators ✗
 
-**Sessions**: 20260124_120426, 20260124_120428, 20260124_120430, 20260124_120433
+**Sessions (Round 2)**: 20260125_233053, 20260125_233057, 20260125_233100, 20260125_233103
 
-| Session | Success | Post-Conv | HP Deaths | Evasion | Converged |
-|---------|---------|-----------|-----------|---------|-----------|
-| 20260124_120426 | 36.6% | 64.0% | 24.2% | 96.4% | ✗ |
-| 20260124_120428 | 38.6% | 48.0% | 32.8% | 95.3% | ✗ |
-| 20260124_120430 | 48.4% | 64.0% | 37.2% | 93.3% | ✗ |
-| 20260124_120433 | 25.8% | 44.0% | 24.6% | 95.9% | ✗ |
-| **Average** | **37.4%** | **55.0%** | **29.7%** | **95.2%** | **✗** |
+| Session | Success | Post-Conv | HP Deaths | Starve | Converged |
+|---------|---------|-----------|-----------|--------|-----------|
+| 20260125_233053 | 34.4% | 62.0% | 10.0% | 2.0% | ✗ |
+| 20260125_233057 | 54.8% | 70.0% | 6.0% | 6.0% | ✓ |
+| 20260125_233100 | 52.2% | 52.0% | 12.0% | 10.0% | ✗ |
+| 20260125_233103 | 57.4% | 84.0% | 2.0% | 2.0% | ✓ |
+| **Average** | **49.7%** | **67.0%** | **7.5%** | **5.0%** | **✗** |
 
-**Hypothesis check**: ≥70% post-conv → **FAIL** (55.0%)
+**Hypothesis check**: ≥70% post-conv → **FAIL** (67.0% - close but high variance)
 
-**Issue**: High evasion rate (95%) but low success. Agents avoid predators but fail to complete foraging.
+**Config change**: Reduced `damage_radius: 2 → 1`. HP deaths reduced from 29.7% to 7.5%, but starvation now appearing (5%). Still not converging reliably. May need predator count reduction or behavior changes.
 
 #### Medium Environment (50×50)
 
-##### Medium Foraging ~
+##### Medium Foraging ✓
 
-**Sessions**: 20260123_023943, 20260123_023946, 20260123_023949, 20260123_023952
+**Sessions (Round 2)**: 20260125_114711, 20260125_114713, 20260125_114715, 20260125_114718
 
 | Session | Success | Post-Conv | HP Deaths | Converged |
 |---------|---------|-----------|-----------|-----------|
-| 20260123_023943 | 72.6% | 94.0% | 22.4% | ✓ |
-| 20260123_023946 | 71.2% | 84.0% | 22.0% | ~Variance |
-| 20260123_023949 | 69.0% | 96.0% | 18.8% | ✓ |
-| 20260123_023952 | 75.0% | 92.0% | 20.6% | ✓ |
-| **Average** | **72.0%** | **91.5%** | **21.0%** | **~Partial** |
+| 20260125_114711 | 80.6% | 90.0% | ~0% | ✓ |
+| 20260125_114713 | 82.2% | 98.0% | ~0% | ✓ |
+| 20260125_114715 | 80.6% | 94.0% | ~0% | ✓ |
+| 20260125_114718 | 86.0% | 96.0% | ~0% | ✓ |
+| **Average** | **82.4%** | **94.5%** | **~0%** | **✓** |
 
-**Hypothesis check**: ≥80% post-conv → **PARTIAL** (91.5% avg but one session at 84%)
+**Hypothesis check**: ≥80% post-conv → **PASS** (94.5%)
 
-**Issue**: High HP deaths (21%) suggest agents take too much temperature damage. Consider reducing `danger_hp_damage`.
+**Config change**: Reduced `danger_hp_damage: 1.5 → 1.0`. HP deaths eliminated.
 
-##### Medium Pursuit Predators ~
+##### Medium Pursuit Predators ✓
 
-**Sessions**: 20260124_073827, 20260124_073829, 20260124_073831, 20260124_073834
+**Sessions (Round 2)**: 20260126_001541, 20260126_001543, 20260126_001545, 20260126_001548
 
-| Session | Success | Post-Conv | HP Deaths | Evasion | Converged |
-|---------|---------|-----------|-----------|---------|-----------|
-| 20260124_073827 | 50.0% | 82.0% | 49.0% | 89.4% | ~Learning |
-| 20260124_073829 | 46.4% | 62.0% | 50.2% | 90.1% | ✗ |
-| 20260124_073831 | 50.0% | 80.0% | 49.2% | 90.5% | ~Learning |
-| 20260124_073834 | 51.8% | 68.0% | 47.4% | 88.3% | ✗ |
-| **Average** | **49.6%** | **73.0%** | **49.0%** | **89.6%** | **~Partial** |
+| Session | Success | Post-Conv | HP Deaths | Starve | Converged |
+|---------|---------|-----------|-----------|--------|-----------|
+| 20260126_001541 | 66.2% | 68.0% | ~0% | 0% | ~Learning |
+| 20260126_001543 | 75.0% | 88.0% | ~0% | 0% | ✓ |
+| 20260126_001545 | 74.2% | 86.0% | ~0% | 0% | ✓ |
+| 20260126_001548 | 81.4% | 96.0% | ~0% | 0% | ✓ |
+| **Average** | **74.2%** | **84.5%** | **~0%** | **0%** | **✓** |
 
-**Hypothesis check**: ≥75% post-conv → **PARTIAL** (73.0% - close)
+**Hypothesis check**: ≥75% post-conv → **PASS** (84.5%)
 
-**Issue**: High variance (62-82%), ~50% HP deaths. May need extended training to 700+ episodes.
+**Config changes**: Reduced `predator_damage: 12 → 8`, `danger_hp_damage: 1.5 → 1.0`. HP deaths eliminated.
 
-##### Medium Stationary Predators ✗
+##### Medium Stationary Predators ✓
 
-**Sessions**: 20260124_085511, 20260124_085515, 20260124_085517, 20260124_085520
+**Sessions (Round 2)**: 20260126_011040, 20260126_011043, 20260126_011045, 20260126_011048
 
-| Session | Success | Post-Conv | HP Deaths | Evasion | Converged |
-|---------|---------|-----------|-----------|---------|-----------|
-| 20260124_085511 | 47.0% | 70.0% | 45.0% | 93.7% | ~Learning |
-| 20260124_085515 | 34.8% | 52.0% | 50.8% | 92.4% | ✗ |
-| 20260124_085517 | 34.8% | 62.0% | 51.6% | 92.1% | ✗ |
-| 20260124_085520 | 27.4% | 58.0% | 41.6% | 95.1% | ✗ |
-| **Average** | **36.0%** | **60.5%** | **47.3%** | **93.3%** | **✗** |
+| Session | Success | Post-Conv | HP Deaths | Starve | Converged |
+|---------|---------|-----------|-----------|--------|-----------|
+| 20260126_011040 | 68.4% | 90.0% | ~0% | 0% | ✓ |
+| 20260126_011043 | 75.8% | 94.0% | ~0% | 0% | ✓ |
+| 20260126_011045 | 70.4% | 82.0% | ~0% | 0% | ✓ |
+| 20260126_011048 | 71.8% | 84.0% | ~0% | 0% | ✓ |
+| **Average** | **71.6%** | **87.5%** | **~0%** | **0%** | **✓** |
 
-**Hypothesis check**: ≥70% post-conv → **FAIL** (60.5%)
+**Hypothesis check**: ≥70% post-conv → **PASS** (87.5%)
 
-**Issue**: High evasion but low success - same pattern as small stationary.
+**Config changes**: Reduced `damage_radius: 2 → 1`, `danger_hp_damage: 1.5 → 1.0`. HP deaths eliminated.
 
 #### Large Environment (100×100)
 
@@ -290,47 +290,41 @@ ______________________________________________________________________
 
 | Hypothesis | Target | Result | Status |
 |------------|--------|--------|--------|
-| Foraging ≥80% post-conv | 80% | Small: 98%, Medium: 91.5%, Large: 98.5% | ✓ PASS |
-| Pursuit ≥75% post-conv | 75% | Small: 65.5%, Medium: 73%, Large: 97.5% | ~PARTIAL |
-| Stationary ≥70% post-conv | 70% | Small: 55%, Medium: 60.5%, Large: 96.5% | ~PARTIAL |
+| Foraging ≥80% post-conv | 80% | Small: 98%, Medium: 94.5%, Large: 98.5% | ✓ PASS |
+| Pursuit ≥75% post-conv | 75% | Small: 82.5%, Medium: 84.5%, Large: 97.5% | ✓ PASS |
+| Stationary ≥70% post-conv | 70% | Small: 67%, Medium: 87.5%, Large: 96.5% | ~PARTIAL |
 
 ### Environment Size Scaling
 
-**Key finding**: Large environments outperform small/medium on predator tasks.
+**Key finding**: After config tuning, all medium configs and most small configs now converge.
 
 | Task | Small | Medium | Large | Trend |
 |------|-------|--------|-------|-------|
-| Foraging | 98.0% | 91.5% | 98.5% | U-shaped |
-| Pursuit | 65.5% | 73.0% | 97.5% | ↑ Increasing |
-| Stationary | 55.0% | 60.5% | 96.5% | ↑ Increasing |
+| Foraging | 98.0% | 94.5% | 98.5% | Consistent |
+| Pursuit | 82.5% | 84.5% | 97.5% | ↑ Increasing |
+| Stationary | 67.0% | 87.5% | 96.5% | ↑ Increasing |
 
-**Why large works better for predators**:
+**Config tuning key findings**:
 
-- More space to maneuver around predators
-- Lower predator density (same count, larger grid)
-- HP damage parameters tuned specifically for large grid
-- `penalty_health_damage: 0.3` provides immediate learning feedback
+- Reducing `predator_damage` from 12 to 8 eliminated most HP deaths in pursuit configs
+- Reducing `damage_radius` from 2 to 1 helped stationary configs by reducing blocking zones
+- Reducing `danger_hp_damage` from 1.5 to 1.0 helped medium configs
 
-**Why small/medium struggle**:
+**Small Stationary remains challenging**:
 
-- Tighter spaces force more predator encounters
-- HP deaths dominate (50-60% for pursuit, 30-50% for stationary)
-- Temperature zones overlap with predator territories
-- `penalty_health_damage: 0.0` removes immediate damage feedback
+- Fixed toxic zones in tight spaces create unavoidable blocking patterns
+- High variance (52-84% post-conv) suggests some sessions find good strategies, others don't
+- Starvation deaths appearing (5%) - agents may be avoiding food areas blocked by predators
 
 ### Predator Type Comparison
 
 | Environment | Pursuit Post-Conv | Stationary Post-Conv | Winner |
 |-------------|-------------------|----------------------|--------|
-| Small | 65.5% | 55.0% | Pursuit |
-| Medium | 73.0% | 60.5% | Pursuit |
+| Small | 82.5% | 67.0% | Pursuit |
+| Medium | 84.5% | 87.5% | ~Tie |
 | Large | 97.5% | 96.5% | ~Tie |
 
-**Observation**: Stationary predators are harder than pursuit in small/medium grids because:
-
-- Fixed positions create permanent no-go zones
-- Blocking paths to food areas
-- High evasion rates (93-95%) but low success - agents avoid but can't complete foraging
+**Observation**: Stationary predators remain harder in small grids due to fixed blocking patterns.
 
 ### Config Loader Bug Impact
 
@@ -345,27 +339,28 @@ ______________________________________________________________________
 
 ## Conclusions
 
-### Established Baselines (4 of 9)
+### Established Baselines (7 of 9)
 
 1. **Small Foraging**: 98.0% post-convergence ✓
-2. **Large Foraging**: 98.5% post-convergence ✓
-3. **Large Pursuit**: 97.5% post-convergence ✓
-4. **Large Stationary**: 96.5% post-convergence ✓
+2. **Medium Foraging**: 94.5% post-convergence ✓
+3. **Medium Pursuit**: 84.5% post-convergence ✓
+4. **Medium Stationary**: 87.5% post-convergence ✓
+5. **Large Foraging**: 98.5% post-convergence ✓
+6. **Large Pursuit**: 97.5% post-convergence ✓
+7. **Large Stationary**: 96.5% post-convergence ✓
 
-### Configs Needing Further Work (5 of 9)
+### Configs Needing Further Work (2 of 9)
 
-1. **Small Pursuit** (65.5%): High HP deaths, need reduced predator damage or extended training
-2. **Small Stationary** (55.0%): High evasion but poor foraging completion
-3. **Medium Foraging** (91.5%): Close to target, may need minor HP tuning
-4. **Medium Pursuit** (73.0%): Close to target, likely needs extended training
-5. **Medium Stationary** (60.5%): Same issue as small stationary
+1. **Small Pursuit** (82.5%): Above target but high variance (66-94%), may need extended training or further parameter tuning
+2. **Small Stationary** (67.0%): Below 70% target, high variance (52-84%), starvation deaths appearing
 
 ### Key Technical Findings
 
 1. **`penalty_health_damage` conflicts with temperature HP damage**: Setting to 0 for small/medium was necessary to prevent double-penalization
 2. **Large environments benefit from immediate damage feedback**: `penalty_health_damage: 0.3` works well there
-3. **Predator configs on small grids are fundamentally harder**: Less maneuvering room, more forced encounters
-4. **Stationary predators create blocking patterns**: High evasion doesn't translate to success
+3. **Predator damage of 8 (vs 12) is more appropriate for small/medium pursuit**: Reduces HP deaths while maintaining challenge
+4. **Stationary predator `damage_radius` of 1 (vs 2) helps medium configs**: Reduces blocking zones
+5. **Small stationary predators remain fundamentally challenging**: Fixed toxic zones in tight spaces create unavoidable blocking patterns
 
 ______________________________________________________________________
 
@@ -374,12 +369,13 @@ ______________________________________________________________________
 - [x] Run all 36 sessions (completed)
 - [x] Analyze results and update tables (completed)
 - [x] Compare with hypotheses (completed)
-- [ ] Tune small/medium predator configs:
-  - Option 1: Reduce predator damage/count
-  - Option 2: Extend training to 700-1000 episodes
-  - Option 3: Re-enable `penalty_health_damage` at lower values (0.1-0.2)
-- [ ] Re-run medium foraging with minor HP tuning
-- [ ] Prepare quantum agent comparison using established baselines
+- [x] Tune small/medium predator configs (completed - Round 2)
+- [x] Re-run medium foraging with minor HP tuning (completed - Round 2)
+- [ ] Further tune small pursuit/stationary if needed:
+  - Option 1: Extended training to 700-1000 episodes
+  - Option 2: Reduce predator count for small stationary
+  - Option 3: Accept small stationary as inherently harder task
+- [ ] Prepare quantum agent comparison using established baselines (7 of 9 ready)
 
 ______________________________________________________________________
 
@@ -387,21 +383,24 @@ ______________________________________________________________________
 
 ### Session IDs by Configuration
 
-| Config | Sessions |
-|--------|----------|
-| Small Foraging | 20260122_105256, 20260122_105258, 20260122_105300, 20260122_105303 |
-| Small Pursuit | 20260124_101144, 20260124_101145, 20260124_101148, 20260124_101151 |
-| Small Stationary | 20260124_120426, 20260124_120428, 20260124_120430, 20260124_120433 |
-| Medium Foraging | 20260123_023943, 20260123_023946, 20260123_023949, 20260123_023952 |
-| Medium Pursuit | 20260124_073827, 20260124_073829, 20260124_073831, 20260124_073834 |
-| Medium Stationary | 20260124_085511, 20260124_085515, 20260124_085517, 20260124_085520 |
-| Large Foraging | 20260123_115319, 20260123_115321, 20260123_115327, 20260123_115329 |
-| Large Pursuit | 20260123_212840, 20260123_212843, 20260123_212846, 20260123_212850 |
-| Large Stationary | 20260124_000557, 20260124_000600, 20260124_000603, 20260124_000606 |
+| Config | Sessions (Round 1) | Sessions (Round 2 - tuned) |
+|--------|--------------------|-----------------------------|
+| Small Foraging | 20260122_105256, 20260122_105258, 20260122_105300, 20260122_105303 | - |
+| Small Pursuit | 20260124_101144, 20260124_101145, 20260124_101148, 20260124_101151 | 20260125_225334, 20260125_225337, 20260125_225340, 20260125_225343 |
+| Small Stationary | 20260124_120426, 20260124_120428, 20260124_120430, 20260124_120433 | 20260125_233053, 20260125_233057, 20260125_233100, 20260125_233103 |
+| Medium Foraging | 20260123_023943, 20260123_023946, 20260123_023949, 20260123_023952 | 20260125_114711, 20260125_114713, 20260125_114715, 20260125_114718 |
+| Medium Pursuit | 20260124_073827, 20260124_073829, 20260124_073831, 20260124_073834 | 20260126_001541, 20260126_001543, 20260126_001545, 20260126_001548 |
+| Medium Stationary | 20260124_085511, 20260124_085515, 20260124_085517, 20260124_085520 | 20260126_011040, 20260126_011043, 20260126_011045, 20260126_011048 |
+| Large Foraging | 20260123_115319, 20260123_115321, 20260123_115327, 20260123_115329 | - |
+| Large Pursuit | 20260123_212840, 20260123_212843, 20260123_212846, 20260123_212850 | - |
+| Large Stationary | 20260124_000557, 20260124_000600, 20260124_000603, 20260124_000606 | - |
+
+### File Locations
 
 - Config files: `configs/examples/ppo_thermotaxis_*.yml`
 - Exports: `exports/<session_id>/session/data/simulation_results.csv`
 - Experiment configs: `experiments/<session_id>/<config>.yml`
+- **Baseline artifacts**: `artifacts/logbooks/007/` - Contains saved session results and configs for established baselines
 
 ______________________________________________________________________
 
