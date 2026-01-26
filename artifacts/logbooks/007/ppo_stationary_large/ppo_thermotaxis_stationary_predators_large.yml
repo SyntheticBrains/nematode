@@ -16,7 +16,6 @@
 # Large environment (100x100 grid):
 # - Scattered hot/cold zones create diverse temperature landscape
 # - 5 stationary predators spread across the grid
-# - Food biased toward safe temperature zones
 #
 # Success criteria:
 # - Collect target foods AND survive
