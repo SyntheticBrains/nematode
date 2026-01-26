@@ -108,10 +108,12 @@ Environment-specific parameters scale with grid size:
 | Parameter | Small (20×20) | Medium (50×50) | Large (100×100) |
 |-----------|---------------|----------------|-----------------|
 | `gradient_strength` | 1.5°C/cell | 0.6°C/cell | 0.15°C/cell + spots |
-| `danger_hp_damage` | 2.0 | 1.5 | 0.5 |
+| `danger_hp_damage` | 2.0 | 1.0\* | 0.5 |
 | `lethal_hp_damage` | 10.0 | 8.0 | 6.0 |
 | `foods_on_grid` | 6 | 15 | 40-45 |
 | `target_foods` | 10 | 20 | 20-25 |
+
+*\*Medium `danger_hp_damage` tuned from 1.5 → 1.0 during baseline validation.*
 
 ### Sensory Modules
 
