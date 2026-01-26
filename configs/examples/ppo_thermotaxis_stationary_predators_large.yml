@@ -115,16 +115,18 @@ environment:
       base_temperature: 20.0     # Temperature at grid center (spawn point)
       gradient_direction: 0.0    # Temperature increases to the right
       gradient_strength: 0.15    # Mild background gradient
-      # Scattered hot spots
+      # Hot/cold spots: [x, y, intensity] where intensity is temperature DELTA from base
+      # - Hot spots ADD intensity to base temp (e.g., 25.0 → up to 45°C at center)
+      # - Cold spots SUBTRACT intensity from base temp (e.g., 25.0 → down to -5°C at center)
+      # - Effect decays exponentially with distance (spot_decay_constant controls falloff)
       hot_spots:
-        - [75, 50, 25.0]   # Hot zone right-center
-        - [25, 75, 20.0]   # Hot zone upper-left
-        - [80, 80, 22.0]   # Hot zone upper-right
-      # Scattered cold spots
+        - [75, 50, 25.0]   # Right-center: +25°C intensity (up to 45°C)
+        - [25, 75, 20.0]   # Upper-left: +20°C intensity (up to 40°C)
+        - [80, 80, 22.0]   # Upper-right: +22°C intensity (up to 42°C)
       cold_spots:
-        - [25, 25, 25.0]   # Cold zone lower-left
-        - [75, 25, 20.0]   # Cold zone lower-right
-        - [50, 85, 18.0]   # Cold zone top-center
+        - [25, 25, 25.0]   # Lower-left: -25°C intensity (down to -5°C)
+        - [75, 25, 20.0]   # Lower-right: -20°C intensity (down to 0°C)
+        - [50, 85, 18.0]   # Top-center: -18°C intensity (down to 2°C)
       spot_decay_constant: 6.5
       # Rewards/penalties
       comfort_reward: 0.0        # MUST stay 0 (prevents freeze behavior)
