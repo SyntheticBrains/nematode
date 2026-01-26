@@ -10,6 +10,7 @@ from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpiso
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
 from quantumnematode.env.env import HealthParams, PredatorParams, ThermotaxisParams
+from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.report.dtypes import TerminationReason
 
 
@@ -568,8 +569,8 @@ class TestThermotaxisIntegration:
             "Total reward should be negative due to danger zone and HP damage penalties"
         )
 
-    def test_temperature_hp_damage_penalty_increases_with_damage(self):
-        """Test that more HP damage results in more penalty applications."""
+    def test_temperature_hp_damage_penalty_applied_when_damage_taken(self):
+        """Test that HP damage penalty is applied per-step when taking damage."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
 
         # Run 1: Low HP damage (danger zone)
@@ -612,8 +613,8 @@ class TestThermotaxisIntegration:
         agent2.run_episode(reward_config, max_steps=5)
         reward_high_damage = agent2._episode_tracker.rewards
 
-        # Both should be negative (taking damage), and both should apply penalty per step
-        # The penalty is per-step when damage > 0, so with same steps, penalties are similar
+        # Both should be negative (taking damage)
+        # The penalty_health_damage is applied per-step when damage > 0, regardless of amount
         assert reward_low_damage < 0, "Should have negative reward from HP damage penalty"
         assert reward_high_damage < 0, "Should have negative reward from HP damage penalty"
 
@@ -622,7 +623,7 @@ class TestBraveForagingBonus:
     """Test brave foraging bonus for collecting food in discomfort zones."""
 
     def test_brave_foraging_bonus_config_in_discomfort_zone(self):
-        """Test that reward_discomfort_food parameter is accessible and affects rewards."""
+        """Test that reward_discomfort_food parameter is accessible and usable."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
 
@@ -649,18 +650,22 @@ class TestBraveForagingBonus:
         # Verify the parameter is set correctly
         assert env.thermotaxis.reward_discomfort_food == 0.5
 
+        # Verify we're in discomfort zone
+        assert env.get_temperature_zone() == TemperatureZone.DISCOMFORT_HOT, (
+            "Should be in discomfort zone for brave bonus to apply"
+        )
+
         satiety_config = SatietyConfig(initial_satiety=500.0)
         agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         reward_config = RewardConfig(reward_goal=2.0)
         agent.run_episode(reward_config, max_steps=100)
 
-        # If food was collected, total rewards should be positive
-        # (food reward + brave bonus should outweigh step/discomfort penalties)
-        if agent._metrics_tracker.foods_collected > 0:
-            # Food collected means reward_goal was applied per food
-            # With reward_goal=2.0 and brave_bonus=0.5, each food gives at least 2.5
-            assert agent._episode_tracker.rewards > 0 or agent._metrics_tracker.foods_collected > 0
+        # Verify episode completed without errors - brave bonus code path executed
+        # The actual reward value depends on many factors, so we just verify execution
+        assert env.get_temperature_zone() == TemperatureZone.DISCOMFORT_HOT, (
+            "Should remain in discomfort zone (no gradient)"
+        )
 
     def test_brave_bonus_not_applied_in_comfort_zone(self):
         """Test that brave bonus is only applied in discomfort zones, not comfort."""
@@ -689,8 +694,6 @@ class TestBraveForagingBonus:
 
         # Verify we're in comfort zone
         zone = env.get_temperature_zone()
-        from quantumnematode.env.temperature import TemperatureZone
-
         assert zone == TemperatureZone.COMFORT, "Should be in comfort zone"
 
         satiety_config = SatietyConfig(initial_satiety=500.0)
@@ -700,8 +703,10 @@ class TestBraveForagingBonus:
         reward_config = RewardConfig(reward_goal=2.0)
         agent.run_episode(reward_config, max_steps=100)
 
-        # Test passes if no errors - comfort zone logic correctly skips brave bonus
-        assert True
+        # Verify zone is still comfort (no gradient movement)
+        assert env.get_temperature_zone() == TemperatureZone.COMFORT, (
+            "Agent should remain in comfort zone throughout episode"
+        )
 
     def test_brave_bonus_not_applied_in_danger_zone(self):
         """Test that brave bonus is only for discomfort, not danger zones."""
@@ -732,12 +737,16 @@ class TestBraveForagingBonus:
         satiety_config = SatietyConfig(initial_satiety=500.0)
         agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
+        # Verify we're in danger zone
+        assert env.get_temperature_zone() == TemperatureZone.DANGER_HOT, "Should be in danger zone"
+
         reward_config = RewardConfig(reward_goal=2.0, penalty_health_damage=0.0)
         agent.run_episode(reward_config, max_steps=100)
 
-        # Test should complete without error - brave bonus logic should skip danger zones
-        # Food collection in danger zone gives reward_goal but no brave bonus
-        assert True  # If we get here, the logic handled danger zone correctly
+        # Verify zone remained danger (no gradient movement) - brave bonus should not apply
+        assert env.get_temperature_zone() == TemperatureZone.DANGER_HOT, (
+            "Agent should remain in danger zone throughout episode"
+        )
 
     def test_brave_bonus_disabled_when_zero(self):
         """Test that brave bonus is not applied when reward_discomfort_food is 0."""
@@ -773,5 +782,7 @@ class TestBraveForagingBonus:
         reward_config = RewardConfig(reward_goal=2.0)
         agent.run_episode(reward_config, max_steps=100)
 
-        # Test completes successfully - brave bonus code path handles 0 value
-        assert True
+        # Verify brave bonus config is still 0 (not accidentally modified)
+        assert env.thermotaxis.reward_discomfort_food == 0.0, (
+            "Brave bonus should remain disabled (0.0)"
+        )
