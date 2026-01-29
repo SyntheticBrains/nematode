@@ -47,7 +47,7 @@ The system SHALL provide a curated benchmark submission workflow with validation
 
 ### Requirement: Benchmark Categorization
 
-The system SHALL automatically categorize benchmarks hierarchically by environment type (static/dynamic size) and brain architecture (quantum/classical).
+The system SHALL automatically categorize benchmarks hierarchically by brain architecture (quantum/classical) and scenario (foraging/predator or other).
 
 #### Scenario: Foraging Medium Quantum Category
 

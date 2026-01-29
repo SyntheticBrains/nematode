@@ -61,7 +61,7 @@ The system SHALL provide example configurations for common spiking brain use cas
 #### Scenario: Medium Network Configuration
 
 - **GIVEN** a need for standard experimental setup
-- **WHEN** loading spiking_static_medium.yml configuration
+- **WHEN** loading spiking_foraging_medium.yml configuration
 - **THEN** the system SHALL configure a balanced network
 - **AND** SHALL use parameters suitable for robust learning
 

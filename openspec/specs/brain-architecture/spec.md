@@ -337,7 +337,7 @@ The system SHALL validate that the spiking brain learns successfully on standard
 - **GIVEN** a spiking brain with surrogate gradients on foraging environments
 - **WHEN** trained for 100-200 episodes
 - **THEN** the average reward SHALL show a positive trend
-- **AND** the success rate SHALL reach 100% on static and dynamic foraging (matching MLP)
+- **AND** the success rate SHALL reach 100% on dynamic foraging (matching MLP)
 - **AND** the success rate SHALL reach >60% on predator environments (vs 92% MLP)
 - **AND** the learning curve SHALL be comparable to MLPBrain within 2x episode count
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This specification defines the environment simulation system for the Quantum Nematode project, which supports both dynamic multi-food foraging environments and legacy static single-goal navigation. The dynamic foraging environment provides a realistic simulation of C. elegans foraging behavior with multiple simultaneous food sources, satiety-based agent lifecycle management, chemotaxis gradient superposition, and spatial food distribution. This enables research into complex decision-making strategies, multi-objective reinforcement learning, and quantum advantages in sequential foraging tasks.
+This specification defines the environment simulation system for the Quantum Nematode project, which supports dynamic multi-food foraging environments with optional predators and thermotaxis. The dynamic foraging environment provides a realistic simulation of C. elegans foraging behavior with multiple simultaneous food sources, satiety-based agent lifecycle management, chemotaxis gradient superposition, and spatial food distribution. This enables research into complex decision-making strategies, multi-objective reinforcement learning, and quantum advantages in sequential foraging tasks.
 
 ## Requirements
 
