@@ -104,8 +104,6 @@ class EnvironmentMetadata(BaseModel):
 
     Attributes
     ----------
-    type : str
-        Environment type ("static" or "dynamic").
     grid_size : int
         Size of the grid environment.
     num_foods : int | None
@@ -136,7 +134,6 @@ class EnvironmentMetadata(BaseModel):
         Predator gradient strength (predator environments only).
     """
 
-    type: str
     grid_size: int
     num_foods: int | None = None
     target_foods_to_collect: int | None = None
@@ -506,8 +503,6 @@ class ConfigSummary(BaseModel):
     ----------
     brain_type : str
         Brain architecture type ("modular", "mlp", "ppo", "spiking", etc.).
-    environment_type : str
-        Environment type ("static" or "dynamic").
     grid_size : int
         Size of the grid environment.
     predators_enabled : bool
@@ -515,7 +510,6 @@ class ConfigSummary(BaseModel):
     """
 
     brain_type: str
-    environment_type: str
     grid_size: int
     predators_enabled: bool = False
 
@@ -606,7 +600,6 @@ class ExperimentMetadata(BaseModel):
             # Build ordered dict with config_summary before results
             config_summary = ConfigSummary(
                 brain_type=self.brain.type,
-                environment_type=self.environment.type,
                 grid_size=self.environment.grid_size,
                 predators_enabled=self.environment.predators_enabled,
             ).model_dump()
@@ -651,7 +644,6 @@ class ExperimentMetadata(BaseModel):
             summary = data.pop("config_summary")
             # Create minimal stub metadata from config_summary
             data["environment"] = EnvironmentMetadata(
-                type=summary["environment_type"],
                 grid_size=summary["grid_size"],
                 predators_enabled=summary.get("predators_enabled", False),
             )

@@ -93,7 +93,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_foraging_small_quantum(self):
         """Test categorizing small foraging environment with quantum brain."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=15, num_foods=10)
+        env = EnvironmentMetadata(grid_size=15, num_foods=10)
         brain = BrainMetadata(type="qmodular", qubits=6, learning_rate=0.02)
         experiment = create_test_experiment(env, brain)
 
@@ -102,7 +102,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_foraging_small_classical(self):
         """Test categorizing small foraging environment with classical brain."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=20, num_foods=15)
+        env = EnvironmentMetadata(grid_size=20, num_foods=15)
         brain = BrainMetadata(type="qmlp", learning_rate=0.001)
         experiment = create_test_experiment(env, brain)
 
@@ -111,7 +111,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_foraging_medium_quantum(self):
         """Test categorizing medium foraging environment with quantum brain."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20)
+        env = EnvironmentMetadata(grid_size=50, num_foods=20)
         brain = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
         experiment = create_test_experiment(env, brain)
 
@@ -120,7 +120,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_foraging_medium_classical(self):
         """Test categorizing medium foraging environment with classical brain."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=40, num_foods=18)
+        env = EnvironmentMetadata(grid_size=40, num_foods=18)
         brain = BrainMetadata(type="mlp", learning_rate=0.001)
         experiment = create_test_experiment(env, brain)
 
@@ -129,7 +129,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_foraging_large_quantum(self):
         """Test categorizing large foraging environment with quantum brain."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=100, num_foods=50)
+        env = EnvironmentMetadata(grid_size=100, num_foods=50)
         brain = BrainMetadata(type="modular", qubits=8, learning_rate=0.005)
         experiment = create_test_experiment(env, brain)
 
@@ -138,7 +138,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_foraging_large_classical(self):
         """Test categorizing large foraging environment with classical brain."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=75, num_foods=30)
+        env = EnvironmentMetadata(grid_size=75, num_foods=30)
         brain = BrainMetadata(type="qmlp", learning_rate=0.0005)
         experiment = create_test_experiment(env, brain)
 
@@ -147,7 +147,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_boundary_case_small_medium(self):
         """Test boundary between small and medium (grid_size=20)."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=20, num_foods=10)
+        env = EnvironmentMetadata(grid_size=20, num_foods=10)
         brain = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
         experiment = create_test_experiment(env, brain)
 
@@ -156,7 +156,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_boundary_case_medium_large(self):
         """Test boundary between medium and large (grid_size=50)."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20)
+        env = EnvironmentMetadata(grid_size=50, num_foods=20)
         brain = BrainMetadata(type="mlp", learning_rate=0.001)
         experiment = create_test_experiment(env, brain)
 
@@ -165,7 +165,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_quantum_brain_types(self):
         """Test all quantum brain types categorize correctly."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=30, num_foods=15)
+        env = EnvironmentMetadata(grid_size=30, num_foods=15)
 
         for brain_type in ["modular", "qmodular"]:
             brain = BrainMetadata(type=brain_type, qubits=4, learning_rate=0.01)
@@ -175,7 +175,7 @@ class TestDetermineBenchmarkCategory:
 
     def test_classical_brain_types(self):
         """Test all classical brain types categorize correctly."""
-        env = EnvironmentMetadata(type="dynamic", grid_size=30, num_foods=15)
+        env = EnvironmentMetadata(grid_size=30, num_foods=15)
 
         for brain_type in ["mlp", "qmlp", "spiking"]:
             brain = BrainMetadata(type=brain_type, learning_rate=0.001)
@@ -186,7 +186,6 @@ class TestDetermineBenchmarkCategory:
     def test_predator_small_quantum(self):
         """Test categorizing small predator environment with quantum brain."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=20,
             num_foods=10,
             predators_enabled=True,
@@ -201,7 +200,6 @@ class TestDetermineBenchmarkCategory:
     def test_predator_small_classical(self):
         """Test categorizing small predator environment with classical brain."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=15,
             num_foods=10,
             predators_enabled=True,
@@ -216,7 +214,6 @@ class TestDetermineBenchmarkCategory:
     def test_predator_medium_quantum(self):
         """Test categorizing medium predator environment with quantum brain."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=50,
             num_foods=20,
             predators_enabled=True,
@@ -231,7 +228,6 @@ class TestDetermineBenchmarkCategory:
     def test_predator_medium_classical(self):
         """Test categorizing medium predator environment with classical brain."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=40,
             num_foods=18,
             predators_enabled=True,
@@ -246,7 +242,6 @@ class TestDetermineBenchmarkCategory:
     def test_predator_large_quantum(self):
         """Test categorizing large predator environment with quantum brain."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=100,
             num_foods=50,
             predators_enabled=True,
@@ -261,7 +256,6 @@ class TestDetermineBenchmarkCategory:
     def test_predator_large_classical(self):
         """Test categorizing large predator environment with classical brain."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=75,
             num_foods=30,
             predators_enabled=True,
@@ -276,7 +270,6 @@ class TestDetermineBenchmarkCategory:
     def test_predators_disabled_uses_foraging_category(self):
         """Test that predators_enabled=False uses foraging (non-predator) categories."""
         env = EnvironmentMetadata(
-            type="dynamic",
             grid_size=30,
             num_foods=15,
             predators_enabled=False,

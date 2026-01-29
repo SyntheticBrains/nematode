@@ -68,7 +68,7 @@ class MetricsTracker:
             Number of foods collected during the episode (dynamic environments only).
         distance_efficiencies : list[float] | None, optional
             For dynamic environments, list of distance efficiencies for foods
-            collected during the episode. None for static environments.
+            collected during the episode. None if no food collected.
         predator_encounters : int, optional
             Number of predator encounters in this episode.
         successful_evasions : int, optional

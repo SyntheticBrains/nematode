@@ -60,7 +60,7 @@ def print_experiments_table(experiments: list[ExperimentMetadata]) -> None:
         cells = [
             exp.experiment_id,
             config_name,
-            f"{exp.environment.type}/{exp.environment.grid_size}",
+            f"{exp.environment.grid_size}",
             exp.brain.type,
             f"{exp.results.success_rate:.0%}",
             f"{exp.results.avg_steps:.0f}",
@@ -94,7 +94,6 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:  # noqa: C90
     print(f"  Dirty: {'Yes' if metadata.git_dirty else 'No'}")
 
     print("\nEnvironment:")
-    print(f"  Type: {metadata.environment.type}")
     print(f"  Grid Size: {metadata.environment.grid_size}")
     if metadata.environment.num_foods:
         print(f"  Foods Visible: {metadata.environment.num_foods}")
@@ -216,7 +215,6 @@ def cmd_list(args: argparse.Namespace) -> None:
         since = datetime.fromisoformat(args.since).replace(tzinfo=UTC)
 
     experiments = list_experiments(
-        environment_type=args.env_type,
         brain_type=args.brain_type,
         min_success_rate=args.min_success_rate,
         since=since,
