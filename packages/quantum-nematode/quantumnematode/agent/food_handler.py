@@ -24,7 +24,7 @@ class FoodConsumptionResult:
         Reward for consuming food (0.0 if no food consumed).
     distance_efficiency : float | None
         For dynamic environments, the ratio of optimal distance to actual distance traveled.
-        None for static environments or when no food was consumed.
+        None when no food was consumed.
     health_restored : float
         Amount of HP restored by food (0.0 if no food consumed or health system disabled).
     """

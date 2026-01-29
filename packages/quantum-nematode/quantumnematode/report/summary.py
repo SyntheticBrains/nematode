@@ -39,9 +39,6 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         logger.warning("No simulation results to summarize.")
         return
 
-    average_efficiency_score = None
-    improvement_rate = None
-
     success_rate = sum(result.success for result in all_results) / num_runs * 100
 
     # Build output lines once - use fixed-width formatting for alignment
@@ -65,8 +62,6 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if result.foods_collected is not None and result.foods_available is not None:
             foods_info = f"Eaten: {result.foods_collected}/{result.foods_available:<6} "
             additional_info += foods_info
-        if result.efficiency_score is not None:
-            additional_info += f"Efficiency: {result.efficiency_score:<10.4f} "
         if result.average_distance_efficiency is not None:
             additional_info += f"Avg Dist Eff: {result.average_distance_efficiency:<10.4f} "
 
@@ -141,11 +136,6 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
 
     output_lines.append(f"Success rate: {success_rate:.2f}%")
-
-    if average_efficiency_score is not None:
-        output_lines.append(f"Average efficiency score: {average_efficiency_score:.2f}")
-    if improvement_rate is not None:
-        output_lines.append(f"Improvement metric (steps): {improvement_rate:.2f}%")
 
     # Print to console
     for line in output_lines:

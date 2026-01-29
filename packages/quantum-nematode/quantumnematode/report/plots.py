@@ -13,39 +13,6 @@ from quantumnematode.logging_config import (
 from quantumnematode.report.dtypes import PerformanceMetrics, TrackingData
 
 
-def plot_efficiency_score_over_time(  # pragma: no cover
-    file_prefix: str,
-    runs: list[int],
-    plot_dir: Path,
-    efficiency_scores: list[float],
-) -> None:
-    """
-    Plot efficiency scores over time and save the plot.
-
-    Args:
-        file_prefix (str): Prefix for the output file name.
-        runs (list[int]): List of run indices.
-        plot_dir (Path): Directory to save the plot.
-        efficiency_scores (list[float]): List of efficiency scores.
-    """
-    average_efficiency_score = sum(efficiency_scores) / len(efficiency_scores)
-    plt.figure(figsize=(10, 6))
-    plt.plot(runs, efficiency_scores, marker="o", label="Efficiency Score Over Time")
-    plt.axhline(
-        y=average_efficiency_score,
-        color="r",
-        linestyle="--",
-        label="Average Efficiency Score",
-    )
-    plt.title("Efficiency Score Over Time")
-    plt.xlabel("Run")
-    plt.ylabel("Efficiency Score")
-    plt.legend()
-    plt.grid()
-    plt.savefig(plot_dir / f"{file_prefix}efficiency_score_over_time.png")
-    plt.close()
-
-
 def plot_success_rate_over_time(  # pragma: no cover
     file_prefix: str,
     runs: list[int],

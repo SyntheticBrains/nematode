@@ -542,9 +542,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                         "Failed to complete episode: health depleted from temperature damage!",
                     )
                     # Apply death penalty
-                    penalty = (
-                        -reward_config.penalty_predator_death
-                    )  # Reuse predator death penalty
+                    penalty = -reward_config.penalty_predator_death  # Reuse predator death penalty
                     reward += penalty
                     agent._episode_tracker.track_reward(penalty)
 
@@ -664,10 +662,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 )
 
             # Handle all food collected
-            if (
-                agent._episode_tracker.foods_collected
-                >= agent.env.foraging.target_foods_to_collect
-            ):
+            if agent._episode_tracker.foods_collected >= agent.env.foraging.target_foods_to_collect:
                 logger.info(
                     "Successfully completed episode: collected target of "
                     f"{agent.env.foraging.target_foods_to_collect} food.",

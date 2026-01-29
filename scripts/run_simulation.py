@@ -73,7 +73,6 @@ from quantumnematode.report.plots import (
     plot_all_distance_efficiencies_distribution,
     plot_cumulative_reward_per_run,
     plot_distance_efficiency_trend,
-    plot_efficiency_score_over_time,
     plot_evasion_success_rate_over_time,
     plot_foods_collected_per_run,
     plot_foods_vs_reward_correlation,
@@ -581,7 +580,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 path=step_result.agent_path,
                 total_reward=total_reward,
                 last_total_reward=agent._episode_tracker.rewards,  # noqa: SLF001
-                efficiency_score=None,  # Only applicable for static environment (removed)
                 termination_reason=step_result.termination_reason,
                 success=success,
                 foods_collected=foods_collected_this_run,
@@ -625,12 +623,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             # Store episode tracking data
             tracking_data.episode_data[run_num] = EpisodeTrackingData(
-                satiety_history=satiety_history_this_run.copy()
-                if satiety_history_this_run
-                else [],
-                health_history=health_history_this_run.copy()
-                if health_history_this_run
-                else [],
+                satiety_history=satiety_history_this_run.copy() if satiety_history_this_run else [],
+                health_history=health_history_this_run.copy() if health_history_this_run else [],
                 temperature_history=temperature_history_this_run.copy()
                 if temperature_history_this_run
                 else [],
@@ -1324,13 +1318,6 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         sum(1 for r in all_results[:i] if r.success) / i for i in range(1, len(all_results) + 1)
     ]
     plot_success_rate_over_time(file_prefix, runs, plot_dir, success_rates)
-
-    # Plot: Efficiency Score Over Time
-    efficiency_scores: list[float] = [
-        result.efficiency_score for result in all_results if result.efficiency_score is not None
-    ]
-    if len(efficiency_scores) > 0:
-        plot_efficiency_score_over_time(file_prefix, runs, plot_dir, efficiency_scores)
 
     # Dynamic Foraging Environment Specific Plots
     foraging_results = [r for r in all_results if r.foods_collected is not None]
