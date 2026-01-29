@@ -153,12 +153,6 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/modular_
 uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/modular_predators_medium.yml --theme emoji
 ```
 
-##### Testing with Static Environment
-
-```bash
-uv run ./scripts/run_simulation.py --runs 10 --config ./configs/examples/modular_static_medium_finetune.yml --theme emoji
-```
-
 ### Experiment Tracking and Benchmarks
 
 The project includes a comprehensive experiment tracking and benchmark management system to facilitate reproducibility and performance comparison.

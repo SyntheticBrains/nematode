@@ -55,7 +55,6 @@ def _export_main_results(
             "steps",
             "total_reward",
             "last_total_reward",
-            "efficiency_score",
             "path_length",
             "termination_reason",
             "success",
@@ -78,9 +77,6 @@ def _export_main_results(
                     "steps": result.steps,
                     "total_reward": result.total_reward,
                     "last_total_reward": result.last_total_reward,
-                    "efficiency_score": result.efficiency_score
-                    if result.efficiency_score is not None
-                    else np.nan,
                     "path_length": len(result.path),
                     "termination_reason": result.termination_reason.value,
                     "success": result.success,
@@ -132,7 +128,6 @@ def _export_run_metrics(
             "steps",
             "is_success",
             "cumulative_reward",
-            "efficiency_score",
             "success_rate_to_date",
             "average_steps_to_date",
             "running_average_steps_5",
@@ -160,7 +155,6 @@ def _export_run_metrics(
                     "steps": result.steps,
                     "is_success": 1 if is_success else 0,
                     "cumulative_reward": result.total_reward,
-                    "efficiency_score": result.efficiency_score,
                     "success_rate_to_date": cumulative_success_count / (i + 1),
                     "average_steps_to_date": cumulative_steps / (i + 1),
                     "running_average_steps_5": running_avg_steps,

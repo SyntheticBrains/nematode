@@ -57,7 +57,7 @@ Quantum Nematode is a research platform that simulates a simplified nematode (C.
 - **Quantum Computing**: Variational quantum circuits, parameter-shift rule optimization, quantum feature encoding, entanglement for multi-sensory integration
 - **Reinforcement Learning**: Policy gradients (REINFORCE), Deep Q-Networks (DQN), experience replay, reward shaping for complex behaviors
 - **Foraging Environments**: Dynamic multi-food foraging with satiety decay, distance efficiency tracking, viewport-based perception, gradient-based navigation
-- **Grid World Environments**: 2D environments with realistic foraging dynamics (primary) and legacy static environment navigation (secondary)
+- **Grid World Environments**: 2D environments with realistic foraging dynamics
 - **Quantum-Classical Hybrid Learning**: Combining quantum circuits with classical optimization techniques for sequential decision-making
 - **Biologically Inspired Computing**: Spiking neural networks with LIF neurons and STDP learning
 

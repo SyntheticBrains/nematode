@@ -60,8 +60,6 @@ class SimulationResult(BaseModel):
         The reason why the episode terminated.
     success : bool
         Whether the run was successful (goal_reached or completed_all_food).
-    efficiency_score : float | None
-        The efficiency score of the simulation (legacy, no longer used).
     foods_collected : int | None
         Number of foods collected (DynamicForagingEnvironment only).
     foods_available : int | None
@@ -100,7 +98,6 @@ class SimulationResult(BaseModel):
     last_total_reward: float
     termination_reason: TerminationReason
     success: bool
-    efficiency_score: float | None = None
     foods_collected: int | None = None
     foods_available: int | None = None
     satiety_remaining: float | None = None
