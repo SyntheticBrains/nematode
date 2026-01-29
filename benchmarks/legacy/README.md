@@ -17,8 +17,12 @@ was implemented (pre-Phase 0 completion).
 | dynamic_predator_small/quantum | Pending re-run | - |
 | dynamic_small/classical | Pending re-run | - |
 | dynamic_small/quantum | Pending re-run | - |
-| static_maze/classical | Pending re-run | - |
-| static_maze/quantum | Pending re-run | - |
+| static_maze/classical | **Deprecated** | - |
+| static_maze/quantum | **Deprecated** | - |
+
+> **Note**: Static maze benchmarks are preserved for historical reference only.
+> The `StaticEnvironment` class was removed in favor of the more feature-rich
+> `DynamicForagingEnvironment`. No new static maze benchmarks will be accepted.
 
 ## Re-running Legacy Benchmarks
 
@@ -33,7 +37,10 @@ To re-run a legacy benchmark with full reproducibility:
 
 ## Legacy Leaderboards
 
-### Static Maze
+### Static Maze (Deprecated)
+
+> **Deprecated**: The `StaticEnvironment` class has been removed. These results
+> are preserved for historical reference only.
 
 #### Quantum Architectures
 
@@ -50,7 +57,7 @@ To re-run a legacy benchmark with full reproducibility:
 | ✓ spiking | 0.932 | 100% | 67 | 34 | 0.000 | @chrisjz | 2025-12-21 |
 | ✓ spiking | 0.896 | 100% | 79 | 52 | 0.000 | @chrisjz | 2025-12-19 |
 
-### Dynamic Small (≤20x20)
+### Foraging Small (≤20x20)
 
 #### Quantum Architectures
 
@@ -71,7 +78,7 @@ To re-run a legacy benchmark with full reproducibility:
 | ✓ mlp | 0.776 | 100% | 240 | 20 | 0.000 | @chrisjz | 2025-11-23 |
 | ✓ spiking | 0.733 | 100% | 267 | 22 | 0.000 | @chrisjz | 2025-12-21 |
 
-### Dynamic Medium (≤50x50)
+### Foraging Medium (≤50x50)
 
 #### Quantum Architectures
 
@@ -81,7 +88,7 @@ _No benchmarks submitted yet._
 
 _No benchmarks submitted yet._
 
-### Dynamic Large (>50x50)
+### Foraging Large (>50x50)
 
 #### Quantum Architectures
 
@@ -91,7 +98,7 @@ _No benchmarks submitted yet._
 
 _No benchmarks submitted yet._
 
-### Dynamic Predator Small (≤20x20)
+### Predator Small (≤20x20)
 
 #### Quantum Architectures
 
@@ -112,7 +119,7 @@ _No benchmarks submitted yet._
 | ✓ spiking | 0.556 | 63% | 247 | 20 | 0.234 | @chrisjz | 2025-12-22 |
 | ✓ spiking | 0.390 | 32% | 326 | 20 | 0.219 | @chrisjz | 2025-12-21 |
 
-### Dynamic Predator Medium (≤50x50)
+### Predator Medium (≤50x50)
 
 #### Quantum Architectures
 
@@ -122,7 +129,7 @@ _No benchmarks submitted yet._
 
 _No benchmarks submitted yet._
 
-### Dynamic Predator Large (>50x50)
+### Predator Large (>50x50)
 
 #### Quantum Architectures
 

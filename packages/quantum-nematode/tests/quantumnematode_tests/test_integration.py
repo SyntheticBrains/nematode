@@ -8,7 +8,7 @@ from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.modular import ModularBrain
-from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 
 
 class TestPresetConfigurations:
@@ -23,16 +23,10 @@ class TestPresetConfigurations:
     @pytest.mark.parametrize(
         ("config_file", "expected_brain", "expected_env_type"),
         [
-            # Dynamic foraging configs
+            # Foraging configs
             ("modular_foraging_small.yml", "modular", "dynamic"),
             ("modular_foraging_medium.yml", "modular", "dynamic"),
             ("modular_foraging_large.yml", "modular", "dynamic"),
-            # Static maze configs
-            ("modular_static_medium.yml", "modular", "static"),
-            ("qmodular_static_medium.yml", "qmodular", "static"),
-            ("mlp_static_medium.yml", "mlp", "static"),
-            ("qmlp_static_medium.yml", "qmlp", "static"),
-            ("spiking_static_medium.yml", "spiking", "static"),
         ],
     )
     def test_config_loads_correctly(
@@ -60,29 +54,20 @@ class TestPresetConfigurations:
         # Verify brain has config section
         assert "config" in config["brain"], f"Missing 'brain.config' in {config_file}"
 
-        # For dynamic environments, verify additional required sections
+        # Verify environment configuration
         if expected_env_type == "dynamic":
             assert "environment" in config, f"Missing 'environment' in {config_file}"
-            env_type_msg = (
-                f"Expected environment type 'dynamic' but got "
-                f"'{config['environment']['type']}' in {config_file}"
-            )
-            assert config["environment"]["type"] == "dynamic", env_type_msg
+            assert "satiety" in config, f"Missing 'satiety' section in config {config_file}"
 
-            assert "dynamic" in config["environment"], (
-                f"Missing 'environment.dynamic' section in dynamic config {config_file}"
-            )
-            assert "satiety" in config, f"Missing 'satiety' section in dynamic config {config_file}"
-
-            # Verify dynamic environment parameters
-            dynamic_config = config["environment"]["dynamic"]
-            assert "grid_size" in dynamic_config
+            # Verify environment parameters (type and dynamic wrapper removed)
+            env_config = config["environment"]
+            assert "grid_size" in env_config, f"Missing 'grid_size' in {config_file}"
 
             # Verify foraging subsection exists and has required fields
-            assert "foraging" in dynamic_config, (
-                f"Missing 'foraging' subsection in dynamic config {config_file}"
+            assert "foraging" in env_config, (
+                f"Missing 'foraging' subsection in config {config_file}"
             )
-            foraging_config = dynamic_config["foraging"]
+            foraging_config = env_config["foraging"]
             assert "foods_on_grid" in foraging_config
             assert "target_foods_to_collect" in foraging_config
             assert "min_food_distance" in foraging_config
@@ -93,24 +78,6 @@ class TestPresetConfigurations:
             assert "initial_satiety" in satiety_config
             assert "satiety_decay_rate" in satiety_config
             assert "satiety_gain_per_food" in satiety_config
-        else:
-            # Static maze configs use environment.static section
-            assert "environment" in config, f"Missing 'environment' in {config_file}"
-            env_type_msg = (
-                f"Expected environment type 'static' but got "
-                f"'{config['environment']['type']}' in {config_file}"
-            )
-            assert config["environment"]["type"] == "static", env_type_msg
-
-            assert "static" in config["environment"], (
-                f"Missing 'environment.static' section in static config {config_file}"
-            )
-
-            # Verify static environment parameters
-            static_config = config["environment"]["static"]
-            assert "grid_size" in static_config, (
-                f"Missing 'grid_size' in static config {config_file}"
-            )
 
         # Verify common required fields
         assert "max_steps" in config, f"Missing 'max_steps' in {config_file}"
@@ -131,9 +98,6 @@ class TestPresetConfigurations:
             ("modular_foraging_small.yml", 3000),
             ("modular_foraging_medium.yml", 3000),
             ("modular_foraging_large.yml", 3000),
-            ("modular_static_medium.yml", 1500),
-            # Other quantum architectures
-            ("qmodular_static_medium.yml", 1000),
             # Note: qmlp is Q-learning MLP, not quantum - it doesn't use shots
         ],
     )
@@ -152,23 +116,6 @@ class TestPresetConfigurations:
 
         # Verify qubits parameter exists
         assert "qubits" in config, f"Missing 'qubits' parameter in modular config {config_file}"
-
-    @pytest.mark.parametrize(
-        "config_file",
-        [
-            "spiking_static_medium.yml",
-        ],
-    )
-    def test_classical_configs_structure(self, config_dir, config_file):
-        """Test that classical brain configurations have appropriate structure."""
-        config_path = config_dir / config_file
-
-        with config_path.open() as f:
-            config = yaml.safe_load(f)
-
-        # Verify they have brain config
-        assert "brain" in config
-        assert "config" in config["brain"]
 
 
 class TestDynamicEnvironmentWithBrain:
@@ -297,48 +244,3 @@ class TestDynamicEnvironmentWithBrain:
         assert hasattr(agent, "_satiety_manager")
         assert agent.current_satiety >= 0.0
         assert agent.current_satiety <= agent.max_satiety
-
-
-class TestBackwardCompatibility:
-    """Test backward compatibility with existing StaticEnvironment."""
-
-    @pytest.fixture
-    def maze_env(self):
-        """Create traditional maze environment."""
-        return StaticEnvironment(
-            grid_size=15,
-            start_pos=(2, 2),
-            food_pos=(12, 12),
-            max_body_length=5,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-        )
-
-    @pytest.fixture
-    def modular_brain(self):
-        """Create a simple modular brain for testing."""
-        from quantumnematode.brain.arch.modular import ModularBrainConfig
-        from quantumnematode.brain.modules import ModuleName
-
-        config = ModularBrainConfig(
-            num_layers=1,
-            modules={
-                ModuleName.CHEMOTAXIS: [0, 1],
-            },
-        )
-        return ModularBrain(
-            config=config,
-            shots=50,
-            device=DeviceType.CPU,
-        )
-
-    def test_agent_with_maze_environment(self, maze_env, modular_brain):
-        """Test agent works with traditional StaticEnvironment."""
-        agent = QuantumNematodeAgent(
-            brain=modular_brain,
-            env=maze_env,
-        )
-
-        # Agent has satiety manager even with StaticEnvironment (defaults to 200.0)
-        assert hasattr(agent, "_satiety_manager")
-        assert agent.current_satiety == 200.0
-        assert isinstance(agent.env, StaticEnvironment)

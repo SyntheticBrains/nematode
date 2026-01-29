@@ -49,32 +49,30 @@ satiety:
   satiety_gain_per_food: 0.2
 
 environment:
-  type: dynamic
-  dynamic:
-    grid_size: 20
-    viewport_size: [11, 11]
+  grid_size: 20
+  viewport_size: [11, 11]
 
-    foraging:
-      foods_on_grid: 6
-      target_foods_to_collect: 10
-      min_food_distance: 3
-      agent_exclusion_radius: 5
-      gradient_decay_constant: 8.0
-      gradient_strength: 1.0
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
 
-    predators:
-      enabled: true
-      count: 3
-      speed: 0.0
-      movement_pattern: stationary
-      detection_radius: 4
-      kill_radius: 0
-      damage_radius: 2
-      gradient_decay_constant: 8.0
-      gradient_strength: 1.2
+  predators:
+    enabled: true
+    count: 3
+    speed: 0.0
+    movement_pattern: stationary
+    detection_radius: 4
+    kill_radius: 0
+    damage_radius: 2
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.2
 
-    health:
-      enabled: true
-      max_hp: 100.0
-      predator_damage: 15.0
-      food_healing: 10.0
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 15.0
+    food_healing: 10.0

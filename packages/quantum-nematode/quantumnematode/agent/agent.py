@@ -13,10 +13,7 @@ from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import FoodHistory, GridPosition  # noqa: TC001 - used at runtime
 from quantumnematode.env import (
-    BaseEnvironment,
     DynamicForagingEnvironment,
-    EnvironmentType,
-    StaticEnvironment,
 )
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
@@ -135,7 +132,7 @@ class QuantumNematodeAgent:
     def __init__(  # noqa: PLR0913
         self,
         brain: Brain,
-        env: EnvironmentType | None = None,
+        env: DynamicForagingEnvironment | None = None,
         maze_grid_size: int = DEFAULT_MAZE_GRID_SIZE,
         max_body_length: int = DEFAULT_MAX_AGENT_BODY_LENGTH,
         theme: Theme = DEFAULT_THEME,
@@ -151,10 +148,10 @@ class QuantumNematodeAgent:
         ----------
         brain : Brain
             The brain architecture used by the agent.
-        env : EnvironmentType | None
-            The environment to use. If None, creates a default StaticEnvironment.
+        env : DynamicForagingEnvironment | None
+            The environment to use. If None, creates a default DynamicForagingEnvironment.
         maze_grid_size : int, optional
-            Size of the grid environment, by default 5 (only used if env is None).
+            Size of the grid environment, by default 50 (only used if env is None).
         max_body_length : int, optional
             Maximum body length.
         theme : Theme, optional
@@ -172,7 +169,7 @@ class QuantumNematodeAgent:
         self.use_separated_gradients = use_separated_gradients
 
         if env is None:
-            self.env = StaticEnvironment(
+            self.env = DynamicForagingEnvironment(
                 grid_size=maze_grid_size,
                 max_body_length=max_body_length,
                 theme=theme,
@@ -183,9 +180,7 @@ class QuantumNematodeAgent:
 
         self.path: list[GridPosition] = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation
-        self.food_history: FoodHistory = []
-        if isinstance(self.env, DynamicForagingEnvironment):
-            self.food_history = [list(self.env.foods)]
+        self.food_history: FoodHistory = [list(self.env.foods)]
         self.max_body_length = min(
             self.env.grid_size - 1,
             max_body_length,
@@ -374,18 +369,10 @@ class QuantumNematodeAgent:
         # Get separated gradients for appetitive/aversive modules if configured
         separated_grads = {}
         if self.use_separated_gradients:
-            if isinstance(self.env, DynamicForagingEnvironment):
-                separated_grads = self.env.get_separated_gradients(
-                    self.env.agent_pos,
-                    disable_log=True,
-                )
-            else:
-                error_message = (
-                    "Separated gradients requested but "
-                    "environment is not DynamicForagingEnvironment."
-                )
-                logger.error(error_message)
-                raise ValueError(error_message)
+            separated_grads = self.env.get_separated_gradients(
+                self.env.agent_pos,
+                disable_log=True,
+            )
 
         # Mechanosensation: detect physical contact with boundaries and predators
         boundary_contact = None
@@ -399,21 +386,20 @@ class QuantumNematodeAgent:
         temperature_gradient_direction = None
         cultivation_temperature = None
 
-        if isinstance(self.env, DynamicForagingEnvironment):
-            boundary_contact = self.env.is_agent_at_boundary()
-            predator_contact = self.env.is_agent_in_predator_contact()
-            # Health state (if health system enabled)
-            if self.env.health.enabled:
-                health = self.env.agent_hp
-                max_health = self.env.health.max_hp
-            # Thermotaxis state (if thermotaxis enabled)
-            if self.env.thermotaxis.enabled:
-                temperature = self.env.get_temperature()
-                temp_gradient = self.env.get_temperature_gradient()
-                if temp_gradient is not None:
-                    temperature_gradient_strength = temp_gradient[0]
-                    temperature_gradient_direction = temp_gradient[1]
-                cultivation_temperature = self.env.thermotaxis.cultivation_temperature
+        boundary_contact = self.env.is_agent_at_boundary()
+        predator_contact = self.env.is_agent_in_predator_contact()
+        # Health state (if health system enabled)
+        if self.env.health.enabled:
+            health = self.env.agent_hp
+            max_health = self.env.health.max_hp
+        # Thermotaxis state (if thermotaxis enabled)
+        if self.env.thermotaxis.enabled:
+            temperature = self.env.get_temperature()
+            temp_gradient = self.env.get_temperature_gradient()
+            if temp_gradient is not None:
+                temperature_gradient_strength = temp_gradient[0]
+                temperature_gradient_direction = temp_gradient[1]
+            cultivation_temperature = self.env.thermotaxis.cultivation_temperature
 
         return BrainParams(
             # Combined gradients
@@ -481,33 +467,29 @@ class QuantumNematodeAgent:
         # Display environment-specific status
         print("Run:\n----")  # noqa: T201
         print(f"Step:\t\t{self._episode_tracker.steps}/{max_steps}")  # noqa: T201
-        match self.env:
-            case StaticEnvironment():
-                pass
-            case DynamicForagingEnvironment():
-                print(  # noqa: T201
-                    f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.foraging.target_foods_to_collect}",
-                )
-                print(  # noqa: T201
-                    f"Health:\t\t{self.env.agent_hp:.1f}/{self.env.health.max_hp}",
-                )
-                print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
-                # Display danger status if predators are enabled
-                if self.env.predator.enabled:
-                    danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
-                    print(f"Status:\t\t{danger_status}")  # noqa: T201
-                # Display temperature if thermotaxis is enabled
-                if self.env.thermotaxis.enabled:
-                    temperature = self.env.get_temperature()
-                    zone = self.env.get_temperature_zone()
-                    if temperature is not None:
-                        zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
-                        print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
+        print(  # noqa: T201
+            f"Eaten:\t\t{self._episode_tracker.foods_collected}/{self.env.foraging.target_foods_to_collect}",
+        )
+        print(  # noqa: T201
+            f"Health:\t\t{self.env.agent_hp:.1f}/{self.env.health.max_hp}",
+        )
+        print(f"Satiety:\t{self.current_satiety:.1f}/{self.max_satiety}")  # noqa: T201
+        # Display danger status if predators are enabled
+        if self.env.predator.enabled:
+            danger_status = "IN DANGER" if self.env.is_agent_in_danger() else "SAFE"
+            print(f"Status:\t\t{danger_status}")  # noqa: T201
+        # Display temperature if thermotaxis is enabled
+        if self.env.thermotaxis.enabled:
+            temperature = self.env.get_temperature()
+            zone = self.env.get_temperature_zone()
+            if temperature is not None:
+                zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
+                print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
 
     def calculate_reward(
         self,
         config: RewardConfig,
-        env: BaseEnvironment,
+        env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
         stuck_position_count: int = 0,
@@ -515,7 +497,7 @@ class QuantumNematodeAgent:
         """
         Calculate reward based on the agent's movement toward the goal.
 
-        Handles both StaticEnvironment (single goal) and DynamicForagingEnvironment (multiple foods)
+        Handles DynamicForagingEnvironment (multiple foods)
 
         Returns
         -------
@@ -540,35 +522,23 @@ class QuantumNematodeAgent:
         -------
         None
         """
-        if isinstance(self.env, DynamicForagingEnvironment):
-            self.env = DynamicForagingEnvironment(
-                grid_size=self.env.grid_size,
-                viewport_size=self.env.viewport_size,
-                max_body_length=self.max_body_length,
-                theme=self.env.theme,
-                rich_style_config=self.env.rich_style_config,
-                # Preserve params from original env
-                foraging=self.env.foraging,
-                predator=self.env.predator,
-                health=self.env.health,
-                thermotaxis=self.env.thermotaxis,
-                # Reproducibility: preserve seed from original environment
-                seed=self.env.seed,
-            )
-        else:
-            self.env = StaticEnvironment(
-                grid_size=self.env.grid_size,
-                max_body_length=self.max_body_length,
-                theme=self.env.theme,
-                rich_style_config=self.env.rich_style_config,
-                # Reproducibility: preserve seed from original environment
-                seed=self.env.seed,
-            )
+        self.env = DynamicForagingEnvironment(
+            grid_size=self.env.grid_size,
+            viewport_size=self.env.viewport_size,
+            max_body_length=self.max_body_length,
+            theme=self.env.theme,
+            rich_style_config=self.env.rich_style_config,
+            # Preserve params from original env
+            foraging=self.env.foraging,
+            predator=self.env.predator,
+            health=self.env.health,
+            thermotaxis=self.env.thermotaxis,
+            # Reproducibility: preserve seed from original environment
+            seed=self.env.seed,
+        )
         self.path = [(self.env.agent_pos[0], self.env.agent_pos[1])]
         # Track food positions at each step for chemotaxis validation
-        self.food_history = []
-        if isinstance(self.env, DynamicForagingEnvironment):
-            self.food_history = [list(self.env.foods)]
+        self.food_history = [list(self.env.foods)]
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
@@ -577,8 +547,7 @@ class QuantumNematodeAgent:
         self._satiety_manager.reset()
 
         # Reset food handler tracking for new environment
-        if isinstance(self.env, DynamicForagingEnvironment):
-            self._food_handler.reset()
+        self._food_handler.reset()
 
         # Reset episode tracker
         self._episode_tracker.reset()
@@ -615,37 +584,14 @@ class QuantumNematodeAgent:
             An object containing success rate, average steps, average reward, and dynamic metrics.
         """
         # Determine if predators are enabled for proper metrics calculation
-        predators_enabled = (
-            isinstance(self.env, DynamicForagingEnvironment) and self.env.predator.enabled
-        )
+        predators_enabled = self.env.predator.enabled
 
         metrics = self._metrics_tracker.calculate_metrics(
             total_runs=total_runs,
             predators_enabled=predators_enabled,
         )
 
-        # For non-dynamic environments, set foraging metrics to None (agent's original behavior)
-        if not isinstance(self.env, DynamicForagingEnvironment):
-            # Replace the foraging efficiency with agent's original calculation
-            return PerformanceMetrics(
-                success_rate=metrics.success_rate,
-                average_steps=metrics.average_steps,
-                average_reward=metrics.average_reward,
-                foraging_efficiency=None,
-                average_distance_efficiency=None,
-                average_foods_collected=None,
-                total_successes=metrics.total_successes,
-                total_starved=metrics.total_starved,
-                total_predator_encounters=metrics.total_predator_encounters,
-                total_predator_deaths=metrics.total_predator_deaths,
-                total_successful_evasions=metrics.total_successful_evasions,
-                total_max_steps=metrics.total_max_steps,
-                total_interrupted=metrics.total_interrupted,
-                average_predator_encounters=metrics.average_predator_encounters,
-                average_successful_evasions=metrics.average_successful_evasions,
-            )
-
-        # For dynamic environments, convert foraging_efficiency from foods/run to foods/step
+        # Convert foraging_efficiency from foods/run to foods/step
         foraging_efficiency_per_step = None
         if self._metrics_tracker.total_steps > 0:
             foraging_efficiency_per_step = (

@@ -5,11 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from quantumnematode.env import DynamicForagingEnvironment
-
 if TYPE_CHECKING:
     from quantumnematode.agent.satiety import SatietyManager
-    from quantumnematode.env import BaseEnvironment
+    from quantumnematode.env import DynamicForagingEnvironment
 
 
 @dataclass
@@ -47,7 +45,7 @@ class FoodConsumptionHandler:
 
     Parameters
     ----------
-    env : BaseEnvironment
+    env : DynamicForagingEnvironment
         The environment containing food.
     satiety_manager : SatietyManager
         The satiety manager to restore satiety when food is consumed.
@@ -56,7 +54,7 @@ class FoodConsumptionHandler:
 
     Attributes
     ----------
-    env : BaseEnvironment
+    env : DynamicForagingEnvironment
         The environment.
     satiety_manager : SatietyManager
         The satiety manager.
@@ -70,7 +68,7 @@ class FoodConsumptionHandler:
 
     def __init__(
         self,
-        env: BaseEnvironment,
+        env: DynamicForagingEnvironment,
         satiety_manager: SatietyManager,
         satiety_gain_fraction: float = 0.2,
     ) -> None:
@@ -78,7 +76,7 @@ class FoodConsumptionHandler:
 
         Parameters
         ----------
-        env : BaseEnvironment
+        env : DynamicForagingEnvironment
             The environment containing food.
         satiety_manager : SatietyManager
             The satiety manager to restore satiety when food is consumed.
@@ -93,9 +91,8 @@ class FoodConsumptionHandler:
         self._initial_distance: int | None = None
         self._steps_since_last_food = 0
 
-        # Initialize distance tracking for dynamic environments
-        if isinstance(env, DynamicForagingEnvironment):
-            self._initial_distance = env.get_nearest_food_distance()
+        # Initialize distance tracking
+        self._initial_distance = env.get_nearest_food_distance()
 
     def track_step(self) -> None:
         """Track a step for distance efficiency calculation."""
@@ -125,32 +122,31 @@ class FoodConsumptionHandler:
         distance_efficiency = None
         health_restored = 0.0
 
-        # For dynamic environments, calculate distance efficiency and update tracking
-        if isinstance(self.env, DynamicForagingEnvironment):
-            consumed = self.env.consume_food()
-            if not consumed:
-                return FoodConsumptionResult(
-                    food_consumed=False,
-                    satiety_restored=0.0,
-                    reward=0.0,
-                    distance_efficiency=None,
-                    health_restored=0.0,
-                )
+        # Consume food and calculate distance efficiency
+        consumed = self.env.consume_food()
+        if not consumed:
+            return FoodConsumptionResult(
+                food_consumed=False,
+                satiety_restored=0.0,
+                reward=0.0,
+                distance_efficiency=None,
+                health_restored=0.0,
+            )
 
-            # Calculate distance efficiency
-            if self._initial_distance is not None and self._initial_distance > 0:
-                distance_efficiency = (
-                    self._initial_distance / self._steps_since_last_food
-                    if self._steps_since_last_food > 0
-                    else 1.0
-                )
+        # Calculate distance efficiency
+        if self._initial_distance is not None and self._initial_distance > 0:
+            distance_efficiency = (
+                self._initial_distance / self._steps_since_last_food
+                if self._steps_since_last_food > 0
+                else 1.0
+            )
 
-            # Update tracking for next food
-            self._initial_distance = self.env.get_nearest_food_distance()
-            self._steps_since_last_food = 0
+        # Update tracking for next food
+        self._initial_distance = self.env.get_nearest_food_distance()
+        self._steps_since_last_food = 0
 
-            # Apply health healing if health system is enabled
-            health_restored = self.env.apply_food_healing()
+        # Apply health healing if health system is enabled
+        health_restored = self.env.apply_food_healing()
 
         # Restore satiety
         satiety_gain = self.satiety_manager.max_satiety * self.satiety_gain_fraction
@@ -167,5 +163,4 @@ class FoodConsumptionHandler:
     def reset(self) -> None:
         """Reset food consumption tracking."""
         self._steps_since_last_food = 0
-        if isinstance(self.env, DynamicForagingEnvironment):
-            self._initial_distance = self.env.get_nearest_food_distance()
+        self._initial_distance = self.env.get_nearest_food_distance()

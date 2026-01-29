@@ -10,70 +10,11 @@ from quantumnematode.env import (
     HealthParams,
     PredatorParams,
     PredatorType,
-    StaticEnvironment,
 )
 from quantumnematode.env.env import Predator, ThermotaxisParams
 from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.env.theme import THEME_SYMBOLS, Theme
 from quantumnematode.utils.seeding import get_rng
-
-
-class TestStaticEnvironment:
-    """Test cases for StaticEnvironment."""
-
-    @pytest.fixture
-    def maze_env(self):
-        """Create a test maze environment."""
-        return StaticEnvironment(
-            grid_size=10,
-            start_pos=(1, 1),
-            food_pos=(8, 8),
-            max_body_length=5,
-            theme=Theme.ASCII,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-        )
-
-    def test_maze_initialization(self, maze_env):
-        """Test maze environment initialization."""
-        assert maze_env.grid_size == 10
-        assert maze_env.agent_pos == (1, 1)
-        assert maze_env.goal == (8, 8)
-        assert maze_env.current_direction == Direction.UP
-        # Body starts with just head position
-        assert len(maze_env.body) >= 1
-
-    def test_maze_get_state(self, maze_env):
-        """Test gradient state retrieval in maze environment."""
-        strength, direction = maze_env.get_state((1, 1))
-
-        assert isinstance(strength, float)
-        assert isinstance(direction, float)
-        assert strength >= 0.0
-        assert -np.pi <= direction <= np.pi
-
-    def test_maze_goal_reached(self, maze_env):
-        """Test goal detection in maze environment."""
-        # Move agent to goal
-        maze_env.agent_pos = maze_env.goal
-
-        assert maze_env.reached_goal()
-
-    def test_maze_copy(self, maze_env):
-        """Test maze environment copying."""
-        # Modify original
-        maze_env.move_agent(Action.FORWARD)
-
-        # Copy
-        copied_env = maze_env.copy()
-
-        assert copied_env.grid_size == maze_env.grid_size
-        assert copied_env.agent_pos == maze_env.agent_pos
-        assert copied_env.goal == maze_env.goal
-
-        # Modify copy - should not affect original
-        original_pos = maze_env.agent_pos
-        copied_env.move_agent(Action.FORWARD)
-        assert maze_env.agent_pos == original_pos
 
 
 class TestDynamicForagingEnvironmentInit:

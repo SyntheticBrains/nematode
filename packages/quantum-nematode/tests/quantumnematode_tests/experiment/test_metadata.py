@@ -503,7 +503,7 @@ class TestBenchmarkMetadata:
         """Test creating benchmark with only required fields."""
         benchmark = BenchmarkMetadata(
             contributor="John Smith",
-            category="static_maze_classical",
+            category="dynamic_small_classical",
         )
 
         assert benchmark.contributor == "John Smith"
@@ -628,13 +628,13 @@ class TestExperimentMetadata:
             ),
             benchmark=BenchmarkMetadata(
                 contributor="Test User",
-                category="static_maze_classical",
+                category="dynamic_small_classical",
             ),
         )
 
         assert experiment.benchmark is not None
         assert experiment.benchmark.contributor == "Test User"
-        assert experiment.benchmark.category == "static_maze_classical"
+        assert experiment.benchmark.category == "dynamic_small_classical"
 
     def test_serialization(self):
         """Test complete serialization and deserialization."""

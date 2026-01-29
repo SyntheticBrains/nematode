@@ -8,15 +8,15 @@ from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.agent import RewardConfig
-    from quantumnematode.env import BaseEnvironment, DynamicForagingEnvironment, StaticEnvironment
+    from quantumnematode.env import DynamicForagingEnvironment
 
 
 class RewardCalculator:
     """Calculates rewards based on agent movement and environment state.
 
-    The reward calculator handles reward computation for both single-goal
-    environments (StaticEnvironment) and multi-food environments (DynamicForagingEnvironment).
-    It considers distance to goal/food, exploration, anti-dithering, and various penalties.
+    The reward calculator handles reward computation for multi-food environments
+    (DynamicForagingEnvironment). It considers distance to food, exploration,
+    anti-dithering, and various penalties.
 
     Parameters
     ----------
@@ -41,7 +41,7 @@ class RewardCalculator:
 
     def calculate_reward(
         self,
-        env: BaseEnvironment,
+        env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
         stuck_position_count: int = 0,
         current_step: int = 0,
@@ -49,12 +49,11 @@ class RewardCalculator:
     ) -> float:
         """Calculate reward based on the agent's movement toward the goal.
 
-        Handles both StaticEnvironment (single goal) and DynamicForagingEnvironment
-        (multiple foods).
+        Handles DynamicForagingEnvironment (multiple foods).
 
         Parameters
         ----------
-        env : BaseEnvironment
+        env : DynamicForagingEnvironment
             The environment instance.
         path : list[tuple[int, ...]]
             The agent's path history.
@@ -70,22 +69,16 @@ class RewardCalculator:
         float
             Reward value based on the agent's performance.
         """
-        # Import here to avoid circular dependency
-        from quantumnematode.env import DynamicForagingEnvironment, StaticEnvironment
-
         reward = 0.0
         distance_reward = 0.0
         anti_dither_penalty = 0.0
         exploration_bonus = 0.0
         goal_bonus = 0.0
 
-        # Handle distance-based rewards differently for each environment type
-        if isinstance(env, StaticEnvironment):
-            reward += self._calculate_maze_distance_reward(env, path)
-        elif isinstance(env, DynamicForagingEnvironment):
-            distance_reward = self._calculate_foraging_distance_reward(env, path)
-            exploration_bonus = self._calculate_exploration_bonus(env)
-            reward += distance_reward + exploration_bonus
+        # Handle distance-based rewards for foraging environment
+        distance_reward = self._calculate_foraging_distance_reward(env, path)
+        exploration_bonus = self._calculate_exploration_bonus(env)
+        reward += distance_reward + exploration_bonus
 
         # Anti-dithering: penalize if agent oscillates (returns to previous cell)
         if len(path) > 2 and env.agent_pos == path[-3]:  # noqa: PLR2004
@@ -100,21 +93,17 @@ class RewardCalculator:
         reward -= self.config.penalty_step
         logger.debug(f"[Penalty] Step penalty applied: {-self.config.penalty_step}.")
 
-        # Proximity penalty for being near predators (dynamic foraging only)
-        if (
-            isinstance(env, DynamicForagingEnvironment)
-            and env.predator.enabled
-            and env.is_agent_in_danger()
-        ):
+        # Proximity penalty for being near predators
+        if env.predator.enabled and env.is_agent_in_danger():
             proximity_penalty = self.config.penalty_predator_proximity
             reward -= proximity_penalty
             logger.debug(
                 f"[Penalty] Predator proximity penalty applied: {-proximity_penalty}",
             )
 
-        # Boundary collision penalty (mechanosensation - dynamic foraging only)
+        # Boundary collision penalty (mechanosensation)
         # Penalizes when agent attempts to move into a wall, not just for being at edge
-        if isinstance(env, DynamicForagingEnvironment) and env.wall_collision_occurred:
+        if env.wall_collision_occurred:
             boundary_penalty = self.config.penalty_boundary_collision
             reward -= boundary_penalty
             logger.debug(
@@ -147,40 +136,6 @@ class RewardCalculator:
             )
 
         return reward
-
-    def _calculate_maze_distance_reward(
-        self,
-        env: StaticEnvironment,
-        path: list[tuple[int, ...]],
-    ) -> float:
-        """Calculate distance-based reward for maze environments.
-
-        Parameters
-        ----------
-        env : StaticEnvironment
-            The maze environment.
-        path : list[tuple[int, ...]]
-            The agent's path history.
-
-        Returns
-        -------
-        float
-            Distance-based reward.
-        """
-        curr_pos = env.agent_pos
-        curr_dist = abs(curr_pos[0] - env.goal[0]) + abs(curr_pos[1] - env.goal[1])
-
-        if len(path) > 1:
-            prev_pos = path[-2]
-            prev_dist = abs(prev_pos[0] - env.goal[0]) + abs(prev_pos[1] - env.goal[1])
-            distance_reward = self.config.reward_distance_scale * (prev_dist - curr_dist)
-            logger.debug(
-                f"[Reward] Scaled distance reward: {distance_reward} "
-                f"(prev_dist={prev_dist}, curr_dist={curr_dist})",
-            )
-            return distance_reward
-
-        return 0.0
 
     def _calculate_foraging_distance_reward(
         self,

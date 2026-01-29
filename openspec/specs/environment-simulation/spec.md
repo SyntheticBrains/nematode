@@ -275,17 +275,7 @@ The system SHALL provide three preset configurations for curriculum learning: sm
   - movement pattern: "random"
 - **AND** both foraging and predator mechanics SHALL be active
 
-### Requirement: Backward Compatibility with Static Environments
-
-The system SHALL maintain full backward compatibility with existing single-food StaticEnvironment configurations and all brain architectures.
-
-#### Scenario: Existing Configuration Unchanged
-
-- **GIVEN** an existing simulation configuration without `environment_type` field
-- **WHEN** the simulation is run
-- **THEN** the system SHALL use the original `StaticEnvironment` class
-- **AND** behavior SHALL be identical to pre-dynamic-environment versions
-- **AND** all metrics and outputs SHALL match historical format
+### Requirement: Brain Architecture Compatibility
 
 #### Scenario: Brain Architecture Compatibility
 
@@ -294,13 +284,6 @@ The system SHALL maintain full backward compatibility with existing single-food 
 - **THEN** the brain SHALL receive the same observation format (gradient strength, gradient direction)
 - **AND** the brain SHALL produce the same action outputs
 - **AND** no brain code changes SHALL be required
-
-#### Scenario: Explicit Static Mode
-
-- **GIVEN** a configuration with `environment_type: "static"`
-- **WHEN** the simulation runs
-- **THEN** the system SHALL use `StaticEnvironment` with single goal
-- **AND** SHALL support explicit selection of legacy behavior
 
 ### Requirement: Predator Entities in Dynamic Environments
 

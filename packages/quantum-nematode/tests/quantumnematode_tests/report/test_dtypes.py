@@ -318,22 +318,6 @@ class TestTrackingData:
 class TestPerformanceMetrics:
     """Test PerformanceMetrics data model."""
 
-    def test_create_static_maze_metrics(self):
-        """Test creating metrics for static maze environment (no foraging fields)."""
-        metrics = PerformanceMetrics(
-            success_rate=0.75,
-            average_steps=50.5,
-            average_reward=100.0,
-        )
-
-        assert metrics.success_rate == 0.75
-        assert metrics.average_steps == 50.5
-        assert metrics.average_reward == 100.0
-        # Foraging fields should be None for static environments
-        assert metrics.foraging_efficiency is None
-        assert metrics.average_distance_efficiency is None
-        assert metrics.average_foods_collected is None
-
     def test_create_dynamic_foraging_metrics(self):
         """Test creating metrics for dynamic foraging environment."""
         metrics = PerformanceMetrics(
