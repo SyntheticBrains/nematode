@@ -71,9 +71,6 @@ def load_experiment_from_folder(experiment_dir: Path) -> ExperimentMetadata:
 
 # Valid benchmark categories
 VALID_CATEGORIES = [
-    # Static maze
-    "static_maze/quantum",
-    "static_maze/classical",
     # Foraging (dynamic without predators)
     "foraging_small/quantum",
     "foraging_small/classical",
@@ -131,9 +128,7 @@ def determine_category(experiment: ExperimentMetadata) -> str:
     brain = experiment.brain
 
     # Determine environment category
-    if env.type == "static":
-        env_category = "static_maze"
-    elif env.predators_enabled:
+    if env.predators_enabled:
         if env.grid_size <= 20:
             env_category = "predator_small"
         elif env.grid_size <= 50:
@@ -422,8 +417,6 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
         Command arguments.
     """
     categories = [
-        ("Static Maze - Quantum", "static_maze_quantum"),
-        ("Static Maze - Classical", "static_maze_classical"),
         ("Foraging Small - Quantum", "foraging_small_quantum"),
         ("Foraging Small - Classical", "foraging_small_classical"),
         ("Foraging Medium - Quantum", "foraging_medium_quantum"),

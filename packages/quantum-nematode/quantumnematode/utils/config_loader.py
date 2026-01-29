@@ -134,12 +134,6 @@ class ParameterInitializerConfig(BaseModel):
     manual_parameter_values: dict[str, float] | None = None
 
 
-class StaticEnvironmentConfig(BaseModel):
-    """Configuration for static maze environment."""
-
-    grid_size: int = 10
-
-
 class ForagingConfig(BaseModel):
     """Configuration for foraging mechanics in dynamic environment."""
 
@@ -380,8 +374,8 @@ class ThermotaxisConfig(BaseModel):
         )
 
 
-class DynamicEnvironmentConfig(BaseModel):
-    """Configuration for dynamic foraging environment."""
+class EnvironmentConfig(BaseModel):
+    """Configuration for the dynamic foraging environment."""
 
     grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
@@ -410,12 +404,8 @@ class DynamicEnvironmentConfig(BaseModel):
         return self.thermotaxis or ThermotaxisConfig()
 
 
-class EnvironmentConfig(BaseModel):
-    """Configuration for environment selection and parameters."""
-
-    type: str = "static"  # "static" or "dynamic"
-    static: StaticEnvironmentConfig | None = None
-    dynamic: DynamicEnvironmentConfig | None = None
+# Backward compatibility alias
+DynamicEnvironmentConfig = EnvironmentConfig
 
 
 class SimulationConfig(BaseModel):

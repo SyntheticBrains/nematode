@@ -21,7 +21,6 @@ def is_quantum_brain(brain_type: str) -> bool:
 
 
 def get_environment_category(
-    env_type: str,
     grid_size: int,
     *,
     predators_enabled: bool = False,
@@ -30,22 +29,16 @@ def get_environment_category(
 
     Parameters
     ----------
-    env_type : str
-        Environment type ("static" or "dynamic").
     grid_size : int
         Grid size.
     predators_enabled : bool, optional
-        Whether predators are enabled (dynamic environments only), by default False.
+        Whether predators are enabled, by default False.
 
     Returns
     -------
     str
-        Environment category (e.g., "static_maze", "foraging_small",
-        "predator_small").
+        Environment category (e.g., "foraging_small", "predator_small").
     """
-    if env_type == "static":
-        return "static_maze"
-
     # Size category based on grid size
     size_category = "small" if grid_size <= 20 else "medium" if grid_size <= 50 else "large"
 
@@ -70,7 +63,6 @@ def determine_benchmark_category(metadata: ExperimentMetadata) -> str:
         "predator_small_quantum").
     """
     env_category = get_environment_category(
-        metadata.environment.type,
         metadata.environment.grid_size,
         predators_enabled=metadata.environment.predators_enabled,
     )

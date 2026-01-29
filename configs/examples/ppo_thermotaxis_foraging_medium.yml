@@ -65,41 +65,39 @@ satiety:
   satiety_gain_per_food: 0.2
 
 environment:
-  type: dynamic
-  dynamic:
-    grid_size: 50
-    viewport_size: [11, 11]
-    use_separated_gradients: true
+  grid_size: 50
+  viewport_size: [11, 11]
+  use_separated_gradients: true
 
-    foraging:
-      foods_on_grid: 15
-      target_foods_to_collect: 20
-      min_food_distance: 4
-      agent_exclusion_radius: 8
-      gradient_decay_constant: 10.0
-      gradient_strength: 1.0
+  foraging:
+    foods_on_grid: 15
+    target_foods_to_collect: 20
+    min_food_distance: 4
+    agent_exclusion_radius: 8
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
 
-    health:
-      enabled: true
-      max_hp: 100.0
-      predator_damage: 0.0
-      food_healing: 5.0
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 0.0
+    food_healing: 5.0
 
-    thermotaxis:
-      enabled: true
-      cultivation_temperature: 20.0
-      base_temperature: 20.0  # Temperature at grid center (spawn point)
-      gradient_direction: 0.0  # Temperature increases to the right
-      gradient_strength: 0.6   # 0.6°C per cell from center (range: 5°C to 35°C)
-      # Rewards/penalties
-      comfort_reward: 0.0
-      discomfort_penalty: 0.0
-      danger_penalty: -0.3
-      reward_discomfort_food: 0.0
-      # HP damage
-      danger_hp_damage: 1.0
-      lethal_hp_damage: 8.0
-      # Zone thresholds (relative to cultivation temp)
-      comfort_delta: 5.0       # Comfort: 15-25°C
-      discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
-      danger_delta: 15.0       # Danger: 5-10°C or 30-35°C
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0  # Temperature at grid center (spawn point)
+    gradient_direction: 0.0  # Temperature increases to the right
+    gradient_strength: 0.6   # 0.6°C per cell from center (range: 5°C to 35°C)
+    # Rewards/penalties
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    # HP damage
+    danger_hp_damage: 1.0
+    lethal_hp_damage: 8.0
+    # Zone thresholds (relative to cultivation temp)
+    comfort_delta: 5.0       # Comfort: 15-25°C
+    discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
+    danger_delta: 15.0       # Danger: 5-10°C or 30-35°C

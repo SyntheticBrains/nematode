@@ -16,7 +16,6 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Predator Evasion**: Multi-objective learning with random-moving predators and gradient-based danger perception
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
 - ✅ **Classical ML Alternatives**: MLP, PPO, Q-learning, and spiking neural network brain architectures
-- ✅ **Static Maze Environment**: Traditional 2D grid navigation with single-goal seeking
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
 - ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
@@ -96,17 +95,14 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 # Dynamic foraging with classical MLP brain
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_foraging_medium.yml --theme emoji
 
-# Static maze with quantum modular brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_static_medium_finetune.yml --theme emoji
-
 # Spiking neural network brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spiking_static_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spiking_foraging_small.yml --theme emoji
 
 # Quantum hardware (IBM QPU) with dynamic foraging
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_foraging_small.yml --theme emoji --device qpu
 
 # Many-worlds quantum simulation
-uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_static_medium_finetune.yml --theme emoji --manyworlds
+uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_foraging_small.yml --theme emoji --manyworlds
 ```
 
 **Docker GPU Examples:**
@@ -121,7 +117,7 @@ docker-compose exec quantum-nematode bash
 
 ## ❓ How It Works
 
-### Dynamic Foraging Environment (Primary)
+### Dynamic Foraging Environment
 
 1. **State Perception**: The nematode perceives its environment through a viewport (distance to nearest food, gradient information, satiety level)
 2. **Brain Processing**: The selected brain architecture processes the state
@@ -130,10 +126,6 @@ docker-compose exec quantum-nematode bash
 5. **Food Collection**: When reaching food, satiety is restored and new food spawns
 6. **Learning**: Brain parameters are updated based on reward feedback
 7. **Repeat**: Process continues until all foods are collected, satiety reaches zero (starvation), or maximum steps reached
-
-### Static Maze Environment (Legacy)
-
-The traditional single-goal navigation follows a simpler loop without satiety management, terminating when the goal is reached or maximum steps are exceeded.
 
 ### Quantum Learning Process
 

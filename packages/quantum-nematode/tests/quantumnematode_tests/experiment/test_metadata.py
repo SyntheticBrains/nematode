@@ -21,19 +21,9 @@ from quantumnematode.experiment.metadata import (
 class TestEnvironmentMetadata:
     """Test EnvironmentMetadata model."""
 
-    def test_create_static_environment(self):
-        """Test creating static environment metadata."""
-        env_meta = EnvironmentMetadata(type="static", grid_size=10)
-
-        assert env_meta.type == "static"
-        assert env_meta.grid_size == 10
-        assert env_meta.num_foods is None
-        assert env_meta.target_foods_to_collect is None
-
     def test_create_dynamic_environment(self):
         """Test creating dynamic environment metadata."""
         env_meta = EnvironmentMetadata(
-            type="dynamic",
             grid_size=50,
             num_foods=20,
             target_foods_to_collect=5,
@@ -42,7 +32,6 @@ class TestEnvironmentMetadata:
             viewport_size=[5, 5],
         )
 
-        assert env_meta.type == "dynamic"
         assert env_meta.grid_size == 50
         assert env_meta.num_foods == 20
         assert env_meta.target_foods_to_collect == 5
@@ -53,7 +42,6 @@ class TestEnvironmentMetadata:
     def test_create_predator_environment(self):
         """Test creating predator-enabled environment metadata."""
         env_meta = EnvironmentMetadata(
-            type="dynamic",
             grid_size=20,
             num_foods=5,
             target_foods_to_collect=10,
@@ -69,7 +57,6 @@ class TestEnvironmentMetadata:
             predator_gradient_strength=1.0,
         )
 
-        assert env_meta.type == "dynamic"
         assert env_meta.predators_enabled is True
         assert env_meta.num_predators == 2
         assert env_meta.predator_speed == 1.0
@@ -81,7 +68,6 @@ class TestEnvironmentMetadata:
     def test_create_no_predator_environment(self):
         """Test creating environment without predators has None for predator fields."""
         env_meta = EnvironmentMetadata(
-            type="dynamic",
             grid_size=20,
             num_foods=5,
             predators_enabled=False,
@@ -97,17 +83,15 @@ class TestEnvironmentMetadata:
 
     def test_model_dump(self):
         """Test Pydantic model_dump."""
-        env_meta = EnvironmentMetadata(type="dynamic", grid_size=30, num_foods=10)
+        env_meta = EnvironmentMetadata(grid_size=30, num_foods=10)
 
         data = env_meta.model_dump()
         assert isinstance(data, dict)
-        assert data["type"] == "dynamic"
         assert data["grid_size"] == 30
 
     def test_model_dump_with_predators(self):
         """Test Pydantic model_dump with predator fields."""
         env_meta = EnvironmentMetadata(
-            type="dynamic",
             grid_size=20,
             predators_enabled=True,
             num_predators=3,
@@ -503,7 +487,7 @@ class TestBenchmarkMetadata:
         """Test creating benchmark with only required fields."""
         benchmark = BenchmarkMetadata(
             contributor="John Smith",
-            category="static_maze_classical",
+            category="dynamic_small_classical",
         )
 
         assert benchmark.contributor == "John Smith"
@@ -537,7 +521,7 @@ class TestExperimentMetadata:
             git_commit="def456",
             git_branch="main",
             git_dirty=False,
-            environment=EnvironmentMetadata(type="dynamic", grid_size=50),
+            environment=EnvironmentMetadata(grid_size=50),
             brain=BrainMetadata(type="modular", qubits=4, learning_rate=0.01),
             reward=RewardMetadata(
                 reward_goal=2.0,
@@ -596,7 +580,7 @@ class TestExperimentMetadata:
             timestamp=now,
             config_file="configs/test.yml",
             config_hash="xyz789",
-            environment=EnvironmentMetadata(type="static", grid_size=10),
+            environment=EnvironmentMetadata(grid_size=10),
             brain=BrainMetadata(type="mlp", learning_rate=0.001),
             reward=RewardMetadata(
                 reward_goal=0.2,
@@ -628,13 +612,13 @@ class TestExperimentMetadata:
             ),
             benchmark=BenchmarkMetadata(
                 contributor="Test User",
-                category="static_maze_classical",
+                category="dynamic_small_classical",
             ),
         )
 
         assert experiment.benchmark is not None
         assert experiment.benchmark.contributor == "Test User"
-        assert experiment.benchmark.category == "static_maze_classical"
+        assert experiment.benchmark.category == "dynamic_small_classical"
 
     def test_serialization(self):
         """Test complete serialization and deserialization."""
@@ -648,7 +632,6 @@ class TestExperimentMetadata:
             git_branch="feature",
             git_dirty=True,
             environment=EnvironmentMetadata(
-                type="dynamic",
                 grid_size=50,
                 num_foods=20,
             ),
@@ -728,7 +711,6 @@ class TestExperimentMetadata:
             config_file="configs/benchmark.yml",
             config_hash="hash123",
             environment=EnvironmentMetadata(
-                type="dynamic",
                 grid_size=50,
                 predators_enabled=True,
             ),
@@ -773,7 +755,6 @@ class TestExperimentMetadata:
         # config_summary should be present with essential fields
         assert "config_summary" in data
         assert data["config_summary"]["brain_type"] == "ppo"
-        assert data["config_summary"]["environment_type"] == "dynamic"
         assert data["config_summary"]["grid_size"] == 50
         assert data["config_summary"]["predators_enabled"] is True
 
@@ -791,7 +772,6 @@ class TestExperimentMetadata:
         restored = ExperimentMetadata.from_dict(data)
         assert restored.experiment_id == experiment.experiment_id
         # Essential fields are restored from config_summary
-        assert restored.environment.type == "dynamic"
         assert restored.environment.grid_size == 50
         assert restored.environment.predators_enabled is True
         assert restored.brain.type == "ppo"

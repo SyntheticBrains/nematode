@@ -36,7 +36,7 @@ def basic_experiment(reward_metadata: RewardMetadata) -> ExperimentMetadata:
         git_commit="def456",
         git_branch="main",
         git_dirty=False,
-        environment=EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=20),
+        environment=EnvironmentMetadata(grid_size=50, num_foods=20),
         brain=BrainMetadata(type="modular", qubits=4, learning_rate=0.01),
         reward=reward_metadata,
         learning_rate=LearningRateMetadata(
