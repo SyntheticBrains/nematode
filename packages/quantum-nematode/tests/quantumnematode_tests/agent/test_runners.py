@@ -8,7 +8,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
 from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
-from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 from quantumnematode.env.env import HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.report.dtypes import TerminationReason
@@ -26,13 +26,17 @@ class TestStandardEpisodeRunnerInitialization:
 class TestStandardEpisodeRunnerIntegration:
     """Integration tests for StandardEpisodeRunner with real agent."""
 
-    def test_run_episode_maze_environment(self):
-        """Test running episode in maze environment returns path and termination reason."""
+    def test_run_episode_returns_path_and_termination(self):
+        """Test running episode returns path and termination reason."""
         # Create real components
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = StaticEnvironment(grid_size=5)
-        agent = QuantumNematodeAgent(brain=brain, env=env)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=3),
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         # Store initial position before episode
         initial_pos = tuple(env.agent_pos)
@@ -82,8 +86,12 @@ class TestStandardEpisodeRunnerIntegration:
         """Test that running episode updates agent state correctly."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = StaticEnvironment(grid_size=5)
-        agent = QuantumNematodeAgent(brain=brain, env=env)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=3),
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         initial_steps = agent._metrics_tracker.total_steps
         initial_path_length = len(agent.path)
@@ -100,8 +108,12 @@ class TestStandardEpisodeRunnerIntegration:
         """Test that agent correctly delegates to StandardEpisodeRunner."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = StaticEnvironment(grid_size=5)
-        agent = QuantumNematodeAgent(brain=brain, env=env)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=3),
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         # Verify runner was created
         assert hasattr(agent, "_standard_runner")
@@ -132,8 +144,12 @@ class TestManyworldsEpisodeRunnerIntegration:
         """Test that agent creates manyworlds runner correctly."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = StaticEnvironment(grid_size=5)
-        agent = QuantumNematodeAgent(brain=brain, env=env)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=3),
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         # Verify runner was created
         assert hasattr(agent, "_manyworlds_runner")
@@ -143,8 +159,12 @@ class TestManyworldsEpisodeRunnerIntegration:
         """Test that manyworlds runner accepts config parameter."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = StaticEnvironment(grid_size=5)
-        agent = QuantumNematodeAgent(brain=brain, env=env)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=3),
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         # Create custom config
         config = ManyworldsModeConfig(
@@ -216,8 +236,12 @@ class TestRunnerComponentIntegration:
         """Test that runners can access agent helper methods."""
         config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-        env = StaticEnvironment(grid_size=5)
-        agent = QuantumNematodeAgent(brain=brain, env=env)
+        env = DynamicForagingEnvironment(
+            grid_size=10,
+            foraging=ForagingParams(target_foods_to_collect=3),
+        )
+        satiety_config = SatietyConfig(initial_satiety=100.0)
+        agent = QuantumNematodeAgent(brain=brain, env=env, satiety_config=satiety_config)
 
         # Verify helper methods exist and are callable
         assert hasattr(agent, "_get_agent_position_tuple")
@@ -360,26 +384,7 @@ class TestStarvationTermination:
 
 
 class TestGoalCompletionTermination:
-    """Test goal completion in static environment."""
-
-    def test_static_environment_goal_reached(self):
-        """Test that reaching goal in static environment terminates correctly."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
-
-        # Create small environment where goal is reachable
-        env = StaticEnvironment(grid_size=5)
-
-        agent = QuantumNematodeAgent(brain=brain, env=env)
-
-        reward_config = RewardConfig()
-        result = agent.run_episode(reward_config, max_steps=200)
-
-        # Should either reach goal or hit max steps
-        assert result.termination_reason in [
-            TerminationReason.GOAL_REACHED,
-            TerminationReason.MAX_STEPS,
-        ]
+    """Test goal completion termination."""
 
     def test_food_collection_victory(self):
         """Test that collecting target foods terminates with COMPLETED_ALL_FOOD."""

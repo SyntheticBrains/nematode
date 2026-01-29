@@ -25,7 +25,6 @@ class TestConvergenceDetection:
                 last_total_reward=10.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
                 success=i >= 10,  # First 10 fails, then succeeds
-                efficiency_score=1.0,
             )
             for i in range(50)
         ]
@@ -50,7 +49,6 @@ class TestConvergenceDetection:
                 last_total_reward=10.0 if i % 2 == 0 else 0.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
                 success=i % 2 == 0,
-                efficiency_score=1.0 if i % 2 == 0 else 0.0,
             )
             for i in range(50)
         ]
@@ -71,7 +69,6 @@ class TestConvergenceDetection:
                 last_total_reward=10.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
                 success=True,
-                efficiency_score=1.0,
             )
             for i in range(25)  # Less than min_total_runs (30)
         ]
@@ -85,20 +82,18 @@ class TestConvergenceDetection:
         """Test convergence with gradual improvement to stability."""
         # Linearly improving success rate
         results = []
-        for i in range(50):
-            success_prob = min(i / 25.0, 1.0)  # 0% at start, 100% at run 25
-            results.append(
-                SimulationResult(
-                    run=i,
-                    steps=50,
-                    path=[],
-                    total_reward=10.0 if i >= 25 else 0.0,
-                    last_total_reward=10.0 if i >= 25 else 0.0,
-                    termination_reason=TerminationReason.GOAL_REACHED,
-                    success=i >= 25,  # Stable after run 25
-                    efficiency_score=success_prob,
-                ),
+        results = [
+            SimulationResult(
+                run=i,
+                steps=50,
+                path=[],
+                total_reward=10.0 if i >= 25 else 0.0,
+                last_total_reward=10.0 if i >= 25 else 0.0,
+                termination_reason=TerminationReason.GOAL_REACHED,
+                success=i >= 25,  # Stable after run 25
             )
+            for i in range(50)
+        ]
 
         convergence_run = detect_convergence(results)
 
@@ -120,7 +115,6 @@ class TestConvergenceDetection:
                 last_total_reward=10.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
                 success=i >= 4,  # First 4 fails (indices 0-3), then succeeds
-                efficiency_score=1.0,
             )
             for i in range(50)
         ]
@@ -147,7 +141,6 @@ class TestPostConvergenceMetrics:
                 last_total_reward=5.0 if i < 20 else 10.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
                 success=i >= 15,  # Success rate improves
-                efficiency_score=0.5 if i < 20 else 1.0,
                 foods_collected=5 if i >= 20 else 2,
             )
             for i in range(50)
@@ -173,7 +166,6 @@ class TestPostConvergenceMetrics:
                 last_total_reward=10.0,
                 termination_reason=TerminationReason.GOAL_REACHED,
                 success=i >= 40,  # Only last 10 succeed
-                efficiency_score=1.0 if i >= 40 else 0.0,
             )
             for i in range(50)
         ]
@@ -200,7 +192,6 @@ class TestPostConvergenceMetrics:
                 last_total_reward=10.0,
                 termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
                 success=True,
-                efficiency_score=None,
                 foods_collected=10,
                 average_distance_efficiency=0.34,  # 34% efficiency
             )
@@ -245,20 +236,6 @@ class TestCompositeScore:
         # (Variance over max gets clamped to 0)
         assert score == 0.0
 
-    def test_composite_score_static_environment(self):
-        """Test composite score for static environment (no distance efficiency)."""
-        score = calculate_composite_score(
-            success_rate=0.8,  # Good success
-            distance_efficiency=None,  # Static environment - uses success as proxy
-            runs_to_convergence=25,
-            variance=0.05,
-            total_runs=50,
-        )
-
-        # Efficiency component uses success rate as fallback
-        # Score = 0.4*0.8 + 0.3*0.8 + 0.2*0.5 + 0.1*0.75 = 0.735
-        assert score == pytest.approx(0.735, abs=0.01)
-
     def test_composite_score_component_weights(self):
         """Test that component weights sum to 1.0."""
         # Components: success (0.4), efficiency (0.3), speed (0.2), stability (0.1)
@@ -296,7 +273,6 @@ class TestAnalyzeConvergence:
                     if success
                     else TerminationReason.STARVED,
                     success=success,
-                    efficiency_score=None,
                     foods_collected=foods,
                     average_distance_efficiency=0.34 if success else None,  # 34% efficiency
                 ),
@@ -336,7 +312,6 @@ class TestAnalyzeConvergence:
                 last_total_reward=random.random() * 10,  # noqa: S311
                 termination_reason=TerminationReason.MAX_STEPS,
                 success=random.random() > 0.5,  # noqa: S311
-                efficiency_score=random.random(),  # noqa: S311
             )
             for i in range(50)
         ]

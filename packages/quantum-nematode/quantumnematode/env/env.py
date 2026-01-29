@@ -1,12 +1,11 @@
 """
-Maze environments for the Nematode agent.
+Foraging environments for the Nematode agent.
 
-These environments simulate mazes where the agent navigates to reach
-either a single (StaticEnvironment) or multiple (DynamicForagingEnvironment) food sources.
-The agent can move in four directions: up, down, left, or right.
-The agent must avoid colliding with itself.
+These environments simulate foraging tasks where the agent navigates to collect
+food sources in a DynamicForagingEnvironment. The agent can move in four directions:
+up, down, left, or right. The agent must avoid colliding with itself.
 The environment provides methods to get the current state, move the agent,
-    check if the goal is reached, and render the maze.
+check if the goal is reached, and render the environment.
 """
 
 from abc import ABC, abstractmethod
@@ -48,15 +47,6 @@ type Viewport = tuple[int, int, int, int]
 """Viewport bounds as (min_x, min_y, max_x, max_y) in world coordinates."""
 
 
-class Corner(Enum):
-    """Corners of the maze grid."""
-
-    TOP_LEFT = "top_left"
-    TOP_RIGHT = "top_right"
-    BOTTOM_LEFT = "bottom_left"
-    BOTTOM_RIGHT = "bottom_right"
-
-
 class Direction(Enum):
     """Directions the agent can move."""
 
@@ -65,13 +55,6 @@ class Direction(Enum):
     LEFT = "left"
     RIGHT = "right"
     STAY = "stay"
-
-
-class ScalingMethod(Enum):
-    """Scaling methods used in the maze environment."""
-
-    EXPONENTIAL = "exponential"
-    TANH = "tanh"
 
 
 class PredatorType(Enum):
@@ -579,45 +562,6 @@ class BaseEnvironment(ABC):
             True if goal is reached, False otherwise.
         """
 
-    def _compute_single_gradient(
-        self,
-        position: tuple[int, ...],
-        goal: tuple[int, int],
-        scaling_method: ScalingMethod,
-    ) -> tuple[float, float, int]:
-        """
-        Compute gradient from a single goal position.
-
-        Parameters
-        ----------
-        position : tuple[int, ...]
-            Current position.
-        goal : tuple[int, int]
-            Goal position.
-        scaling_method : ScalingMethod
-            Scaling method for gradient strength.
-
-        Returns
-        -------
-        tuple[float, float, int]
-            Gradient strength, direction, and Manhattan distance.
-        """
-        dx = goal[0] - position[0]
-        dy = goal[1] - position[1]
-
-        max_distance = self.grid_size * 2
-        distance_to_goal = abs(dx) + abs(dy)
-        gradient_strength = max(0.0, 1.0 - (distance_to_goal / max_distance))
-
-        if scaling_method == ScalingMethod.EXPONENTIAL:
-            gradient_strength = np.exp(-distance_to_goal / max_distance)
-        elif scaling_method == ScalingMethod.TANH:
-            gradient_strength = np.tanh(gradient_strength * GRADIENT_SCALING_TANH_FACTOR)
-
-        gradient_direction = np.arctan2(dy, dx) if dx != 0 or dy != 0 else 0.0
-
-        return gradient_strength, gradient_direction, distance_to_goal
-
     def _get_new_position_if_valid(
         self,
         direction: Direction,
@@ -887,175 +831,6 @@ class BaseEnvironment(ABC):
         BaseEnvironment
             A new instance with the same state.
         """
-
-
-class StaticEnvironment(BaseEnvironment):
-    """
-    A simple maze environment for the Nematode agent.
-
-    The agent navigates a grid to reach a goal position while avoiding its own body.
-    The agent can move in four directions: up, down, left, or right.
-
-    Attributes
-    ----------
-    grid_size : int
-        Size of the maze grid.
-    agent_pos : tuple[int, int]
-        Current position of the agent in the grid.
-    body : list[tuple[int, int]]
-        Positions of the agent's body segments.
-    goal : tuple[int, int]
-        Position of the goal in the grid.
-    """
-
-    def __init__(  # noqa: PLR0913
-        self,
-        grid_size: int = 5,
-        start_pos: tuple[int, int] | None = None,
-        food_pos: tuple[int, int] | None = None,
-        max_body_length: int = 6,
-        theme: Theme = Theme.ASCII,
-        action_set: list[Action] = DEFAULT_ACTIONS,
-        rich_style_config: DarkColorRichStyleConfig | None = None,
-        seed: int | None = None,
-    ) -> None:
-        # Initialize base class first to get seeded RNG
-        # We need to handle random position selection after base init
-        super().__init__(
-            grid_size=grid_size,
-            start_pos=start_pos if start_pos else (1, 1),  # Temporary, will update
-            max_body_length=max_body_length,
-            theme=theme,
-            action_set=action_set,
-            rich_style_config=rich_style_config,
-            seed=seed,
-        )
-
-        # Randomize agent and goal positions to all 4 corners
-        corners = [
-            (1, 1),
-            (1, grid_size - 2),
-            (grid_size - 2, 1),
-            (grid_size - 2, grid_size - 2),
-        ]
-
-        corners_map = {
-            Corner.TOP_LEFT: corners[0],
-            Corner.TOP_RIGHT: corners[1],
-            Corner.BOTTOM_LEFT: corners[2],
-            Corner.BOTTOM_RIGHT: corners[3],
-        }
-
-        agent_chosen_corner = None
-        if start_pos is None:
-            corner_list = list(Corner)
-            agent_chosen_corner = corner_list[self.rng.integers(len(corner_list))]
-            start_pos = corners_map[agent_chosen_corner]
-            # Update agent position after random selection
-            self.agent_pos = start_pos
-            self.body = [tuple(self.agent_pos)] if max_body_length > 0 else []
-
-        if food_pos is None:
-            if agent_chosen_corner is not None:
-                if agent_chosen_corner == Corner.TOP_LEFT:
-                    food_pos = corners_map[Corner.BOTTOM_RIGHT]
-                elif agent_chosen_corner == Corner.TOP_RIGHT:
-                    food_pos = corners_map[Corner.BOTTOM_LEFT]
-                elif agent_chosen_corner == Corner.BOTTOM_LEFT:
-                    food_pos = corners_map[Corner.TOP_RIGHT]
-                elif agent_chosen_corner == Corner.BOTTOM_RIGHT:
-                    food_pos = corners_map[Corner.TOP_LEFT]
-                else:
-                    food_pos = corners[self.rng.integers(len(corners))]
-            else:
-                food_pos = corners[self.rng.integers(len(corners))]
-
-        self.goal = food_pos
-
-    def get_state(
-        self,
-        position: tuple[int, ...],
-        *,
-        scaling_method: ScalingMethod = ScalingMethod.TANH,
-        disable_log: bool = False,
-    ) -> tuple[float, float]:
-        """
-        Get the current state of the agent in relation to the goal (chemical gradient).
-
-        Returns
-        -------
-        tuple
-            A tuple containing the gradient strength and direction.
-        """
-        gradient_strength, gradient_direction, _ = self._compute_single_gradient(
-            position,
-            self.goal,
-            scaling_method,
-        )
-
-        if not disable_log:
-            dx = self.goal[0] - position[0]
-            dy = self.goal[1] - position[1]
-            logger.debug(
-                f"Gradient computation details: dx={dx}, dy={dy}, "
-                f"gradient_strength={gradient_strength}, gradient_direction={gradient_direction}",
-            )
-            logger.debug(
-                f"Agent position: {self.agent_pos}, Body positions: {self.body}, Goal: {self.goal}",
-            )
-
-        return gradient_strength, gradient_direction
-
-    def reached_goal(self) -> bool:
-        """
-        Check if the agent has reached the goal.
-
-        Returns
-        -------
-        bool
-            True if the agent's position matches the goal position, False otherwise.
-        """
-        return tuple(self.agent_pos) == self.goal
-
-    def render(self) -> list[str]:
-        """Render the current state of the maze using the selected theme."""
-        grid = self._render_grid([self.goal])
-        return self._render_grid_to_strings(grid)
-
-    def print_rich(self) -> None:
-        """Print the grid using Rich console with colors (Rich theme only)."""
-        console = Console()
-        styled_grid = self.render()
-        for row in styled_grid:
-            if row:
-                console.print(" ".join(str(cell) for cell in row))
-            else:
-                console.print()
-
-    def copy(self) -> "StaticEnvironment":
-        """
-        Create a deep copy of the StaticEnvironment instance.
-
-        Returns
-        -------
-        StaticEnvironment
-            A new instance of StaticEnvironment with the same state.
-        """
-        new_env = StaticEnvironment(
-            grid_size=self.grid_size,
-            start_pos=(self.agent_pos[0], self.agent_pos[1])
-            if self.agent_pos is not None
-            else None,
-            food_pos=self.goal,
-            max_body_length=len(self.body),
-            theme=self.theme,
-            seed=self.seed,
-        )
-        new_env.body = self.body.copy()
-        new_env.current_direction = self.current_direction
-        # Copy RNG state for reproducibility
-        new_env.rng = get_rng(self.seed)
-        return new_env
 
 
 class DynamicForagingEnvironment(BaseEnvironment):
@@ -2482,4 +2257,4 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return new_env
 
 
-type EnvironmentType = StaticEnvironment | DynamicForagingEnvironment
+type EnvironmentType = DynamicForagingEnvironment

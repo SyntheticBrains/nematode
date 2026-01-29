@@ -9,16 +9,6 @@ For submission guidelines, see [SUBMISSION_GUIDE.md](SUBMISSION_GUIDE.md).
 
 ## Categories
 
-### Static Maze
-
-#### Quantum Architectures
-
-_No NematodeBench submissions yet._
-
-#### Classical Architectures
-
-_No NematodeBench submissions yet._
-
 ### Foraging Small (≤20x20)
 
 #### Quantum Architectures

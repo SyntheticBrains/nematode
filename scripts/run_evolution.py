@@ -257,26 +257,21 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
 
     # Extract environment config
     env_config = config.environment
-    if env_config is None or env_config.type != "dynamic":
-        msg = "Evolution requires a dynamic foraging environment"
+    if env_config is None:
+        msg = "Environment config is required"
         raise ValueError(msg)
 
     logger.debug(f"Initializing environment config: {env_config}")
 
-    dynamic_config = env_config.dynamic
-    if dynamic_config is None:
-        msg = "Dynamic environment config is required"
-        raise ValueError(msg)
-
-    foraging_config = dynamic_config.get_foraging_config()
-    predator_config = dynamic_config.get_predator_config()
-    health_config = dynamic_config.get_health_config()
-    thermotaxis_config = dynamic_config.get_thermotaxis_config()
+    foraging_config = env_config.get_foraging_config()
+    predator_config = env_config.get_predator_config()
+    health_config = env_config.get_health_config()
+    thermotaxis_config = env_config.get_thermotaxis_config()
 
     return DynamicForagingEnvironment(
-        grid_size=dynamic_config.grid_size,
+        grid_size=env_config.grid_size,
         foraging=foraging_config.to_params(),
-        viewport_size=dynamic_config.viewport_size,
+        viewport_size=env_config.viewport_size,
         predator=predator_config.to_params(),
         health=health_config.to_params(),
         thermotaxis=thermotaxis_config.to_params(),
@@ -500,8 +495,8 @@ def evaluate_fitness(  # noqa: PLR0913
 
     # Check if separated gradients are needed (for appetitive/aversive modules)
     use_separated_gradients = False
-    if config.environment and config.environment.dynamic:
-        use_separated_gradients = config.environment.dynamic.use_separated_gradients
+    if config.environment:
+        use_separated_gradients = config.environment.use_separated_gradients
 
     successes = 0
 

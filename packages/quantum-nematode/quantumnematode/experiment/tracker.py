@@ -9,7 +9,6 @@ from pathlib import Path
 from quantumnematode.benchmark.convergence import analyze_convergence
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.env import DynamicForagingEnvironment
-from quantumnematode.env.env import StaticEnvironment
 from quantumnematode.experiment.git_utils import capture_git_context, get_relative_config_path
 from quantumnematode.experiment.metadata import (
     BrainMetadata,
@@ -53,14 +52,14 @@ def compute_config_hash(config_path: Path) -> str:
 
 
 def extract_environment_metadata(
-    env: DynamicForagingEnvironment | StaticEnvironment,
+    env: DynamicForagingEnvironment,
     satiety_config: dict,
 ) -> EnvironmentMetadata:
     """Extract environment metadata from environment instance.
 
     Parameters
     ----------
-    env : DynamicForagingEnvironment | StaticEnvironment
+    env : DynamicForagingEnvironment
         Environment instance.
     satiety_config : dict
         Satiety configuration dictionary.
@@ -70,34 +69,23 @@ def extract_environment_metadata(
     EnvironmentMetadata
         Environment metadata.
     """
-    if isinstance(env, DynamicForagingEnvironment):
-        return EnvironmentMetadata(
-            type="dynamic",
-            grid_size=env.grid_size,
-            num_foods=env.foraging.foods_on_grid,
-            target_foods_to_collect=env.foraging.target_foods_to_collect,
-            initial_satiety=satiety_config.get("initial"),
-            satiety_decay_rate=satiety_config.get("decay_rate"),
-            viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,
-            predators_enabled=env.predator.enabled,
-            num_predators=env.predator.count if env.predator.enabled else None,
-            predator_speed=env.predator.speed if env.predator.enabled else None,
-            predator_detection_radius=env.predator.detection_radius
-            if env.predator.enabled
-            else None,
-            predator_kill_radius=env.predator.kill_radius if env.predator.enabled else None,
-            predator_damage_radius=env.predator.damage_radius if env.predator.enabled else None,
-            predator_gradient_decay=env.predator.gradient_decay_constant
-            if env.predator.enabled
-            else None,
-            predator_gradient_strength=env.predator.gradient_strength
-            if env.predator.enabled
-            else None,
-        )
-    # Static environment
     return EnvironmentMetadata(
-        type="static",
         grid_size=env.grid_size,
+        num_foods=env.foraging.foods_on_grid,
+        target_foods_to_collect=env.foraging.target_foods_to_collect,
+        initial_satiety=satiety_config.get("initial"),
+        satiety_decay_rate=satiety_config.get("decay_rate"),
+        viewport_size=list(env.viewport_size) if hasattr(env, "viewport_size") else None,
+        predators_enabled=env.predator.enabled,
+        num_predators=env.predator.count if env.predator.enabled else None,
+        predator_speed=env.predator.speed if env.predator.enabled else None,
+        predator_detection_radius=env.predator.detection_radius if env.predator.enabled else None,
+        predator_kill_radius=env.predator.kill_radius if env.predator.enabled else None,
+        predator_damage_radius=env.predator.damage_radius if env.predator.enabled else None,
+        predator_gradient_decay=env.predator.gradient_decay_constant
+        if env.predator.enabled
+        else None,
+        predator_gradient_strength=env.predator.gradient_strength if env.predator.enabled else None,
     )
 
 
@@ -538,7 +526,7 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
 
 def capture_experiment_metadata(
     config_path: Path,
-    env: DynamicForagingEnvironment | StaticEnvironment,
+    env: DynamicForagingEnvironment,
     brain_type: str,
     config: dict,
     all_results: list[SimulationResult],
@@ -554,7 +542,7 @@ def capture_experiment_metadata(
     ----------
     config_path : Path
         Path to configuration file.
-    env : DynamicForagingEnvironment | StaticEnvironment
+    env : DynamicForagingEnvironment
         Environment instance.
     brain_type : str
         Brain type string.

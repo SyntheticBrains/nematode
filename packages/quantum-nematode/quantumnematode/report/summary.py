@@ -1,6 +1,6 @@
 """Reporting module for Quantum Nematode simulation results."""
 
-from quantumnematode.env import DynamicForagingEnvironment, EnvironmentType, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment
 from quantumnematode.logging_config import (
     logger,
 )
@@ -11,9 +11,9 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
     metrics: PerformanceMetrics,
     session_id: str,
     num_runs: int,
-    max_steps: int,
+    max_steps: int,  # noqa: ARG001
     all_results: list[SimulationResult],
-    env_type: EnvironmentType,
+    env_type: DynamicForagingEnvironment,  # noqa: ARG001
 ) -> None:
     """
     Print a summary of the simulation results.
@@ -30,8 +30,8 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         The maximum number of steps allowed per run.
     all_results : list[SimulationResult]
         A list of simulation results.
-    env_type : EnvironmentType
-        The type of environment used in the simulation.
+    env_type : DynamicForagingEnvironment
+        The environment used in the simulation.
     """
     total_runs_done = len(all_results)
 
@@ -39,26 +39,7 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         logger.warning("No simulation results to summarize.")
         return
 
-    average_efficiency_score = None
-    improvement_rate = None
-
-    if isinstance(env_type, StaticEnvironment):
-        success_rate = sum(1 for result in all_results if result.steps < max_steps) / num_runs * 100
-
-        # Calculate average efficiency score for maze environment, filtering out None values
-        efficiency_scores = [
-            result.efficiency_score for result in all_results if result.efficiency_score is not None
-        ]
-        if efficiency_scores:
-            average_efficiency_score = sum(efficiency_scores) / len(efficiency_scores)
-
-        # Calculate improvement metric (percentage of steps reduced)
-        if len(all_results) >= 2:  # noqa: PLR2004
-            improvement_rate = (
-                (all_results[0].steps - all_results[-1].steps) / all_results[0].steps * 100
-            )
-    elif isinstance(env_type, DynamicForagingEnvironment):
-        success_rate = sum(result.success for result in all_results) / num_runs * 100
+    success_rate = sum(result.success for result in all_results) / num_runs * 100
 
     # Build output lines once - use fixed-width formatting for alignment
     output_lines = [""]
@@ -81,8 +62,6 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if result.foods_collected is not None and result.foods_available is not None:
             foods_info = f"Eaten: {result.foods_collected}/{result.foods_available:<6} "
             additional_info += foods_info
-        if result.efficiency_score is not None:
-            additional_info += f"Efficiency: {result.efficiency_score:<10.4f} "
         if result.average_distance_efficiency is not None:
             additional_info += f"Avg Dist Eff: {result.average_distance_efficiency:<10.4f} "
 
@@ -157,11 +136,6 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         )
 
     output_lines.append(f"Success rate: {success_rate:.2f}%")
-
-    if average_efficiency_score is not None:
-        output_lines.append(f"Average efficiency score: {average_efficiency_score:.2f}")
-    if improvement_rate is not None:
-        output_lines.append(f"Improvement metric (steps): {improvement_rate:.2f}%")
 
     # Print to console
     for line in output_lines:

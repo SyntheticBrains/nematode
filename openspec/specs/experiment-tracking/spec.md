@@ -51,13 +51,6 @@ The system SHALL store experiment metadata as JSON files and provide query capab
 - **AND** the file SHALL be written atomically to prevent corruption
 - **AND** the experiments directory SHALL be created if it doesn't exist
 
-#### Scenario: Query Experiments by Environment Type
-
-- **GIVEN** multiple experiments are stored with different environment types
-- **WHEN** a user queries for experiments with `environment_type="dynamic"`
-- **THEN** only experiments using dynamic foraging environments SHALL be returned
-- **AND** experiments SHALL be sorted by timestamp (most recent first)
-
 #### Scenario: Query Experiments by Brain Type
 
 - **GIVEN** multiple experiments are stored with different brain architectures

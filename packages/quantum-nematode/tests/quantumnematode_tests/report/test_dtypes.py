@@ -23,7 +23,6 @@ class TestSimulationResult:
             path=[(0, 0), (1, 1), (2, 2)],
             total_reward=50.0,
             last_total_reward=45.0,
-            efficiency_score=0.85,
             termination_reason=TerminationReason.GOAL_REACHED,
             success=True,
         )
@@ -33,7 +32,6 @@ class TestSimulationResult:
         assert len(result.path) == 3
         assert result.total_reward == 50.0
         assert result.last_total_reward == 45.0
-        assert result.efficiency_score == 0.85
         assert result.termination_reason == TerminationReason.GOAL_REACHED
         assert result.success is True
         assert result.foods_collected is None
@@ -46,7 +44,6 @@ class TestSimulationResult:
             path=[],
             total_reward=0.0,
             last_total_reward=0.0,
-            efficiency_score=0.0,
             termination_reason=TerminationReason.MAX_STEPS,
             success=False,
         )
@@ -63,7 +60,6 @@ class TestSimulationResult:
             path=[(0, 0)],
             total_reward=-10.5,
             last_total_reward=-15.0,
-            efficiency_score=0.2,
             termination_reason=TerminationReason.STARVED,
             success=False,
         )
@@ -89,7 +85,6 @@ class TestSimulationResult:
             path=[(0, 0), (1, 1)],
             total_reward=50.0,
             last_total_reward=45.0,
-            efficiency_score=0.85,
             termination_reason=TerminationReason.COMPLETED_ALL_FOOD,
             success=True,
             foods_collected=5,
@@ -317,22 +312,6 @@ class TestTrackingData:
 
 class TestPerformanceMetrics:
     """Test PerformanceMetrics data model."""
-
-    def test_create_static_maze_metrics(self):
-        """Test creating metrics for static maze environment (no foraging fields)."""
-        metrics = PerformanceMetrics(
-            success_rate=0.75,
-            average_steps=50.5,
-            average_reward=100.0,
-        )
-
-        assert metrics.success_rate == 0.75
-        assert metrics.average_steps == 50.5
-        assert metrics.average_reward == 100.0
-        # Foraging fields should be None for static environments
-        assert metrics.foraging_efficiency is None
-        assert metrics.average_distance_efficiency is None
-        assert metrics.average_foods_collected is None
 
     def test_create_dynamic_foraging_metrics(self):
         """Test creating metrics for dynamic foraging environment."""

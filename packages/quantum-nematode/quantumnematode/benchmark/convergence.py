@@ -433,7 +433,7 @@ def calculate_composite_score(  # noqa: PLR0913
     success_rate : float
         Post-convergence success rate (0.0 to 1.0).
     distance_efficiency : float | None
-        Average distance efficiency in successful runs (None for static environments).
+        Average distance efficiency in successful runs (None for no food collected).
         Range: 0.0 to 1.0, where 1.0 means perfect optimal navigation.
     runs_to_convergence : int | None
         Number of runs to reach convergence (None if never converged).
@@ -470,8 +470,7 @@ def calculate_composite_score(  # noqa: PLR0913
     norm_success = success_rate
 
     # Component 2: Distance efficiency (already normalized 0-1)
-    # Static environment (None): use success rate as efficiency proxy
-    norm_efficiency = distance_efficiency if distance_efficiency is not None else success_rate
+    norm_efficiency = distance_efficiency if distance_efficiency is not None else 0.0
 
     # Component 3: Learning speed (faster convergence = better)
     if runs_to_convergence is not None:
@@ -591,14 +590,12 @@ def analyze_convergence(
     stability = calculate_stability(results, convergence_run)
 
     # Step 5: Calculate composite score
-    # Use defaults for None values (but keep distance_efficiency as None for static environments)
+    # Use defaults for None values (but keep distance_efficiency as None for uncollected food)
     composite_score = calculate_composite_score(
         success_rate=post_metrics["success_rate"]
         if post_metrics["success_rate"] is not None
         else 0.0,
-        distance_efficiency=post_metrics[
-            "distance_efficiency"
-        ],  # Keep None for static environments
+        distance_efficiency=post_metrics["distance_efficiency"],
         runs_to_convergence=runs_to_convergence,
         variance=post_metrics["variance"] if post_metrics["variance"] is not None else 1.0,
         total_runs=total_runs,

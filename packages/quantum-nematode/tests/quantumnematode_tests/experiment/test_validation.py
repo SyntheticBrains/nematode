@@ -38,7 +38,7 @@ def base_experiment(reward_metadata: RewardMetadata) -> ExperimentMetadata:
         git_commit="def456",
         git_branch="main",
         git_dirty=False,
-        environment=EnvironmentMetadata(type="dynamic", grid_size=20, num_foods=10),
+        environment=EnvironmentMetadata(grid_size=20, num_foods=10),
         brain=BrainMetadata(type="ppo", learning_rate=0.001),
         reward=reward_metadata,
         learning_rate=LearningRateMetadata(
@@ -333,24 +333,11 @@ class TestValidateConfigConsistency:
         assert "brain type 'mlp'" in errors[0]
         assert "expected 'ppo'" in errors[0]
 
-    def test_inconsistent_environment_type(self, base_experiment):
-        """Test validation fails with different environment types."""
-        exp1 = create_experiment_with_seeds(base_experiment, "exp1", [1, 2, 3])
-        exp2 = create_experiment_with_seeds(base_experiment, "exp2", [4, 5, 6])
-        exp2.environment = EnvironmentMetadata(type="static", grid_size=20)
-        experiments = [exp1, exp2]
-
-        is_valid, errors = _validate_config_consistency(experiments)
-
-        assert is_valid is False
-        assert "environment type 'static'" in errors[0]
-        assert "expected 'dynamic'" in errors[0]
-
     def test_inconsistent_grid_size(self, base_experiment):
         """Test validation fails with different grid sizes."""
         exp1 = create_experiment_with_seeds(base_experiment, "exp1", [1, 2, 3])
         exp2 = create_experiment_with_seeds(base_experiment, "exp2", [4, 5, 6])
-        exp2.environment = EnvironmentMetadata(type="dynamic", grid_size=50, num_foods=10)
+        exp2.environment = EnvironmentMetadata(grid_size=50, num_foods=10)
         experiments = [exp1, exp2]
 
         is_valid, errors = _validate_config_consistency(experiments)
@@ -364,13 +351,13 @@ class TestValidateConfigConsistency:
         exp1 = create_experiment_with_seeds(base_experiment, "exp1", [1, 2, 3])
         exp2 = create_experiment_with_seeds(base_experiment, "exp2", [4, 5, 6])
         exp2.brain = BrainMetadata(type="mlp", learning_rate=0.001)
-        exp2.environment = EnvironmentMetadata(type="static", grid_size=50)
+        exp2.environment = EnvironmentMetadata(grid_size=50)
         experiments = [exp1, exp2]
 
         is_valid, errors = _validate_config_consistency(experiments)
 
         assert is_valid is False
-        assert len(errors) == 3  # brain type, env type, grid size
+        assert len(errors) == 2  # brain type, grid size
 
     def test_empty_experiments(self):
         """Test validation fails with no experiments."""

@@ -47,7 +47,7 @@ The system SHALL provide a curated benchmark submission workflow with validation
 
 ### Requirement: Benchmark Categorization
 
-The system SHALL automatically categorize benchmarks hierarchically by environment type (static/dynamic size) and brain architecture (quantum/classical).
+The system SHALL automatically categorize benchmarks hierarchically by brain architecture (quantum/classical) and scenario (foraging/predator or other).
 
 #### Scenario: Foraging Medium Quantum Category
 
@@ -55,13 +55,6 @@ The system SHALL automatically categorize benchmarks hierarchically by environme
 - **WHEN** the benchmark is saved
 - **THEN** the category SHALL be "foraging_medium/quantum"
 - **AND** the file SHALL be stored in `benchmarks/foraging_medium/quantum/{timestamp}.json`
-
-#### Scenario: Static Maze Classical Category
-
-- **GIVEN** a benchmark using MLP brain (classical) with static maze environment
-- **WHEN** the benchmark is saved
-- **THEN** the category SHALL be "static_maze/classical"
-- **AND** the file SHALL be stored in `benchmarks/static_maze/classical/{timestamp}.json`
 
 #### Scenario: Foraging Large Quantum Category
 

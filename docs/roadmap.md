@@ -108,9 +108,7 @@ ______________________________________________________________________
 
 #### Environments
 
-1. **StaticEnvironment**: Single-goal maze navigation (legacy benchmark)
-
-2. **DynamicForagingEnvironment**: Multi-food foraging with:
+1. **DynamicForagingEnvironment**: Multi-food foraging with:
 
    - Satiety-based homeostasis (hunger decays, food replenishes)
    - Gradient-based chemotaxis (exponential decay superposition)
@@ -118,7 +116,7 @@ ______________________________________________________________________
    - Distance efficiency tracking
    - Exploration rewards for novel cell visits
 
-3. **Predator Evasion** (added Nov 2025):
+2. **Predator Evasion** (added Nov 2025):
 
    - Multi-predator support with random movement
    - Detection radius and kill radius
@@ -129,7 +127,7 @@ ______________________________________________________________________
 
 #### Benchmarking & Tracking
 
-- 14 benchmark categories across static/dynamic, quantum/classical, with/without predators
+- 14 benchmark categories across quantum/classical, with/without predators
 - Automated experiment tracking with session IDs
 - Per-run and session-level metrics (success rate, steps, convergence run, stability)
 - CSV exports and matplotlib visualizations

@@ -298,7 +298,7 @@ class PerformanceBasedLearningRate:
     Implements a performance-based adaptive learning rate strategy.
 
     The learning rate dynamically adjusts based on the agent's performance metrics,
-    such as efficiency score or success rate. It increases when performance improves
+    such as success rate. It increases when performance improves
     and decreases when performance stagnates or worsens.
 
     Attributes
@@ -331,7 +331,7 @@ class PerformanceBasedLearningRate:
         Parameters
         ----------
         current_performance : float
-            The current performance metric (e.g., efficiency score or success rate).
+            The current performance metric (e.g., success rate).
 
         Returns
         -------

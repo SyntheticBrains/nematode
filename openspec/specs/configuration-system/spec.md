@@ -61,7 +61,7 @@ The system SHALL provide example configurations for common spiking brain use cas
 #### Scenario: Medium Network Configuration
 
 - **GIVEN** a need for standard experimental setup
-- **WHEN** loading spiking_static_medium.yml configuration
+- **WHEN** loading spiking_foraging_medium.yml configuration
 - **THEN** the system SHALL configure a balanced network
 - **AND** SHALL use parameters suitable for robust learning
 
@@ -80,17 +80,9 @@ The brain type validation SHALL include "spiking" as a valid option.
 
 The configuration system SHALL support a complete schema for dynamic foraging environment parameters.
 
-#### Scenario: Environment Type Selection
-
-- **GIVEN** a YAML configuration file with environment section
-- **WHEN** the configuration is loaded
-- **THEN** the system SHALL parse `environment_type` field
-- **AND** SHALL accept values: "static" (default), "dynamic"
-- **AND** SHALL select appropriate environment class based on type
-
 #### Scenario: Dynamic Environment Parameters
 
-- **GIVEN** a configuration with `environment_type: "dynamic"`
+- **GIVEN** a configuration
 - **WHEN** the configuration is parsed
 - **THEN** the system SHALL parse `grid_size` as tuple (width, height)
 - **AND** SHALL parse `foods_on_grid` (integer, default: grid_area / 50)

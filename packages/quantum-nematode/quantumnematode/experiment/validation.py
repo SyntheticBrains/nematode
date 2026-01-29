@@ -145,7 +145,6 @@ def _validate_config_consistency(
     errors = []
     first_exp = experiments[0]
     reference_brain_type = first_exp.brain.type
-    reference_env_type = first_exp.environment.type
     reference_grid_size = first_exp.environment.grid_size
 
     for exp in experiments[1:]:
@@ -153,11 +152,6 @@ def _validate_config_consistency(
             errors.append(
                 f"Experiment {exp.experiment_id} has brain type '{exp.brain.type}', "
                 f"expected '{reference_brain_type}'.",
-            )
-        if exp.environment.type != reference_env_type:
-            errors.append(
-                f"Experiment {exp.experiment_id} has environment type '{exp.environment.type}', "
-                f"expected '{reference_env_type}'.",
             )
         if exp.environment.grid_size != reference_grid_size:
             errors.append(
