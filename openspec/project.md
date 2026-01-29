@@ -33,7 +33,7 @@ Quantum Nematode is a research platform that simulates a simplified nematode (C.
 - **Workspace Structure**: UV workspace with packages/quantum-nematode as the core package
 - **Configuration-Driven**: YAML-based simulation configurations with environment-specific settings
 - **Quantum-Classical Hybrid**: Support for both quantum circuits and classical ML approaches
-- **Environment Abstraction**: Dual environment system (DynamicForagingEnvironment for multi-food foraging and StaticEnvironment for single-food)
+- **Environment Abstraction**: DynamicForagingEnvironment for multi-food foraging with predators and thermotaxis
 - **Executor Pattern**: Different execution backends (CPU, GPU, QPU)
 - **Tracking and Metrics**: Comprehensive per-run and session-level tracking with EpisodeTracker and TrackingData
 - **Data Export Pipeline**: Automated CSV exports and matplotlib plotting for foraging metrics

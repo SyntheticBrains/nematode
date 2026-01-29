@@ -35,7 +35,7 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
-from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment, StaticEnvironment
+from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment
 from quantumnematode.env.theme import Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
@@ -96,12 +96,10 @@ from quantumnematode.report.plots import (
 from quantumnematode.report.summary import summary
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
-    DynamicEnvironmentConfig,
     EnvironmentConfig,
     ManyworldsModeConfig,
     ParameterInitializerConfig,
     RewardConfig,
-    StaticEnvironmentConfig,
     configure_brain,
     configure_environment,
     configure_gradient_method,
@@ -326,10 +324,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         manyworlds_mode_config = configure_manyworlds_mode(config)
 
     # Get grid size from environment config for validation and logging
-    if environment_config.type == "dynamic":
-        grid_size = (environment_config.dynamic or DynamicEnvironmentConfig()).grid_size
-    else:
-        grid_size = (environment_config.static or StaticEnvironmentConfig()).grid_size
+    grid_size = environment_config.grid_size
 
     validate_simulation_parameters(grid_size, brain_type, qubits)
 
@@ -343,7 +338,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     logger.info(f"Max steps: {max_steps}")
     logger.info(f"Device: {device}")
     logger.info(f"Grid size: {grid_size}")
-    logger.info(f"Environment type: {environment_config.type}")
     logger.info(f"Brain type: {brain_type.value}")
     logger.info(f"Body length: {body_length}")
     logger.info(f"Qubits: {qubits}")
@@ -364,80 +358,60 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         perf_mgmt=perf_mgmt,
     )
 
-    # Create the environment based on configuration
-    env = None
-    if environment_config.type == "dynamic":
-        logger.info("Using dynamic foraging environment")
-        dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
+    # Create the environment
+    logger.info("Using dynamic foraging environment")
 
-        # Get foraging and predator configs (with automatic migration)
-        foraging_config = dynamic_config.get_foraging_config()
-        predator_config = dynamic_config.get_predator_config()
-        health_config = dynamic_config.get_health_config()
-        thermotaxis_config = dynamic_config.get_thermotaxis_config()
+    # Get foraging and predator configs (with automatic migration)
+    foraging_config = environment_config.get_foraging_config()
+    predator_config = environment_config.get_predator_config()
+    health_config = environment_config.get_health_config()
+    thermotaxis_config = environment_config.get_thermotaxis_config()
 
-        env = DynamicForagingEnvironment(
-            grid_size=dynamic_config.grid_size,
-            viewport_size=dynamic_config.viewport_size,
-            max_body_length=body_length,
-            theme=theme,
-            seed=simulation_seed,
-            foraging=foraging_config.to_params(),
-            predator=predator_config.to_params(),
-            health=health_config.to_params(),
-            thermotaxis=thermotaxis_config.to_params(),
+    env = DynamicForagingEnvironment(
+        grid_size=environment_config.grid_size,
+        viewport_size=environment_config.viewport_size,
+        max_body_length=body_length,
+        theme=theme,
+        seed=simulation_seed,
+        foraging=foraging_config.to_params(),
+        predator=predator_config.to_params(),
+        health=health_config.to_params(),
+        thermotaxis=thermotaxis_config.to_params(),
+    )
+    predator_info = ""
+    if predator_config.enabled:
+        predator_info = (
+            f", {predator_config.count} predators "
+            f"(detection_radius={predator_config.detection_radius}, "
+            f"kill_radius={predator_config.kill_radius}, "
+            f"damage_radius={predator_config.damage_radius})"
         )
-        predator_info = ""
-        if predator_config.enabled:
-            predator_info = (
-                f", {predator_config.count} predators "
-                f"(detection_radius={predator_config.detection_radius}, "
-                f"kill_radius={predator_config.kill_radius}, "
-                f"damage_radius={predator_config.damage_radius})"
-            )
-        health_info = ""
-        if health_config.enabled:
-            health_info = (
-                f", health (max_hp={health_config.max_hp}, "
-                f"predator_damage={health_config.predator_damage}, "
-                f"food_healing={health_config.food_healing})"
-            )
-        thermotaxis_info = ""
-        if thermotaxis_config.enabled:
-            thermotaxis_info = (
-                f", thermotaxis (Tc={thermotaxis_config.cultivation_temperature}°C, "
-                f"gradient={thermotaxis_config.gradient_strength}°C/cell)"
-            )
-        logger.info(
-            f"Dynamic environment: {dynamic_config.grid_size}x{dynamic_config.grid_size} grid, "
-            f"{foraging_config.foods_on_grid} foods on grid, "
-            f"target {foraging_config.target_foods_to_collect} to collect"
-            f"{predator_info}{health_info}{thermotaxis_info}",
+    health_info = ""
+    if health_config.enabled:
+        health_info = (
+            f", health (max_hp={health_config.max_hp}, "
+            f"predator_damage={health_config.predator_damage}, "
+            f"food_healing={health_config.food_healing})"
         )
-    else:
-        logger.info("Using static maze environment")
-        static_config = environment_config.static or StaticEnvironmentConfig()
-        env = StaticEnvironment(
-            grid_size=static_config.grid_size,
-            max_body_length=body_length,
-            theme=theme,
-            seed=simulation_seed,
+    thermotaxis_info = ""
+    if thermotaxis_config.enabled:
+        thermotaxis_info = (
+            f", thermotaxis (Tc={thermotaxis_config.cultivation_temperature}°C, "
+            f"gradient={thermotaxis_config.gradient_strength}°C/cell)"
         )
-        logger.info(
-            f"Static maze environment: {static_config.grid_size}x{static_config.grid_size} grid",
-        )
+    logger.info(
+        f"Dynamic environment: {environment_config.grid_size}x{environment_config.grid_size} grid, "
+        f"{foraging_config.foods_on_grid} foods on grid, "
+        f"target {foraging_config.target_foods_to_collect} to collect"
+        f"{predator_info}{health_info}{thermotaxis_info}",
+    )
 
-    # Update the agent to use the selected brain architecture and environment
-    # Check env capability directly to avoid config/env drift
     # Separated gradients can be enabled via environment config OR brain config (for spiking)
-    use_separated_gradients = False
-    if isinstance(env, DynamicForagingEnvironment):
-        dynamic_config = environment_config.dynamic or DynamicEnvironmentConfig()
-        use_separated_gradients = dynamic_config.use_separated_gradients
+    use_separated_gradients = environment_config.use_separated_gradients
 
-        # For spiking brain, also check brain config for use_separated_gradients
-        if isinstance(brain_config, SpikingBrainConfig) and brain_config.use_separated_gradients:
-            use_separated_gradients = True
+    # For spiking brain, also check brain config for use_separated_gradients
+    if isinstance(brain_config, SpikingBrainConfig) and brain_config.use_separated_gradients:
+        use_separated_gradients = True
 
     agent = QuantumNematodeAgent(
         brain=brain,
@@ -494,62 +468,36 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             # Log full initial environment state
             logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
-            if isinstance(agent.env, DynamicForagingEnvironment):
-                logger.info(f"Initial food positions: {agent.env.foods}")
-                logger.info(
-                    f"Foods on grid: {len(agent.env.foods)}/{agent.env.foraging.foods_on_grid}",
-                )
-                logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
+            logger.info(f"Initial food positions: {agent.env.foods}")
+            logger.info(
+                f"Foods on grid: {len(agent.env.foods)}/{agent.env.foraging.foods_on_grid}",
+            )
+            logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
-                # Log full environment render
-                logger.info("Initial environment state (full render):")
-                full_render = agent.env.render_full()
-                for line in full_render:
-                    logger.info(line)
-            elif isinstance(agent.env, StaticEnvironment):
-                logger.info(f"Goal position: {agent.env.goal}")
-
-                # Log full environment render
-                logger.info("Initial environment state (full render):")
-                full_render = agent.env.render()
-                for line in full_render:
-                    logger.info(line)
-
-            # Calculate the initial distance to the goal
-            if isinstance(agent.env, DynamicForagingEnvironment):
-                dist = agent.env.get_nearest_food_distance()
-                initial_distance = dist if dist is not None else 0
-            elif isinstance(agent.env, StaticEnvironment):
-                initial_distance = abs(agent.env.agent_pos[0] - agent.env.goal[0]) + abs(
-                    agent.env.agent_pos[1] - agent.env.goal[1],
-                )
-            else:
-                initial_distance = 0
+            # Log full environment render
+            logger.info("Initial environment state (full render):")
+            full_render = agent.env.render_full()
+            for line in full_render:
+                logger.info(line)
 
             render_text = "Session:\n--------\n"
             render_text += f"Run:\t\t{run_num}/{runs}\n"
 
-            wins = 0
-            match agent.env:
-                case DynamicForagingEnvironment():
-                    # NOTE: Total food calculation won't be accurate if we introduce different max
-                    # active foods per run
-                    wins = sum(result.success for result in all_results)
-                    render_text += f"Wins:\t\t{wins}/{runs}\n"
-                    total_foods_collected = sum(
-                        result.foods_collected
-                        for result in all_results
-                        if result.foods_collected is not None
-                    )
-                    total_foods_available = sum(
-                        result.foods_available
-                        for result in all_results
-                        if result.foods_available is not None
-                    )
-                    render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
-                case StaticEnvironment():
-                    wins = agent._metrics_tracker.success_count  # noqa: SLF001
-                    render_text += f"Wins:\t\t{wins}/{runs}\n"
+            # NOTE: Total food calculation won't be accurate if we introduce different max
+            # active foods per run
+            wins = sum(result.success for result in all_results)
+            render_text += f"Wins:\t\t{wins}/{runs}\n"
+            total_foods_collected = sum(
+                result.foods_collected
+                for result in all_results
+                if result.foods_collected is not None
+            )
+            total_foods_available = sum(
+                result.foods_available
+                for result in all_results
+                if result.foods_available is not None
+            )
+            render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
 
             if len(all_results) > 1:
                 # Running average steps per run
@@ -585,67 +533,46 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_max_steps += 1
 
             # Get environment specific data
-            efficiency_score = None
-            foods_collected_this_run = None
-            foods_available_this_run = None
-            satiety_remaining_this_run = None
-            average_distance_efficiency = None
-            satiety_history_this_run = None
-            predator_encounters_this_run = None
-            successful_evasions_this_run = None
-            died_to_predator_this_run = None
-            died_to_health_depletion_this_run = None
+            foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
+            foods_available_this_run = agent.env.foraging.target_foods_to_collect
+            satiety_remaining_this_run = agent.current_satiety
+            distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
+            average_distance_efficiency = (
+                sum(distance_efficiencies) / len(distance_efficiencies)
+                if distance_efficiencies
+                else 0.0
+            )
+            satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
+            predator_encounters_this_run = agent._episode_tracker.predator_encounters  # noqa: SLF001
+            successful_evasions_this_run = agent._episode_tracker.successful_evasions  # noqa: SLF001
+            died_to_predator_this_run = step_result.termination_reason == TerminationReason.PREDATOR
+            died_to_health_depletion_this_run = (
+                step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
+            )
             health_history_this_run = None
             temperature_history_this_run = None
-            match agent.env:
-                case StaticEnvironment():
-                    # Calculate efficiency score for the run
-                    efficiency_score = initial_distance - steps_taken
-                case DynamicForagingEnvironment():
-                    foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
-                    foods_available_this_run = agent.env.foraging.target_foods_to_collect
-                    satiety_remaining_this_run = agent.current_satiety
-                    distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
-                    average_distance_efficiency = (
-                        sum(distance_efficiencies) / len(distance_efficiencies)
-                        if distance_efficiencies
-                        else 0.0
-                    )
-                    satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
-                    predator_encounters_this_run = agent._episode_tracker.predator_encounters  # noqa: SLF001
-                    successful_evasions_this_run = agent._episode_tracker.successful_evasions  # noqa: SLF001
-                    died_to_predator_this_run = (
-                        step_result.termination_reason == TerminationReason.PREDATOR
-                    )
-                    died_to_health_depletion_this_run = (
-                        step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
-                    )
-                    # Copy health history if health system is enabled
-                    if agent.env.health.enabled:
-                        health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
-                    # Copy temperature history if thermotaxis is enabled
-                    if agent.env.thermotaxis.enabled:
-                        temperature_history_this_run = (
-                            agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
-                        )
-                    # Efficiency score not defined for dynamic environment
-                case _:
-                    pass
+            # Copy health history if health system is enabled
+            if agent.env.health.enabled:
+                health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
+            # Copy temperature history if thermotaxis is enabled
+            if agent.env.thermotaxis.enabled:
+                temperature_history_this_run = (
+                    agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
+                )
 
             # Calculate multi-objective scores
             survival_score_this_run = None
             temperature_comfort_score_this_run = None
 
-            if isinstance(agent.env, DynamicForagingEnvironment):
-                # Survival score: final_hp / max_hp
-                if agent.env.health.enabled and health_history_this_run:
-                    final_hp = health_history_this_run[-1]
-                    max_hp = agent.env.health.max_hp
-                    survival_score_this_run = final_hp / max_hp if max_hp > 0 else 0.0
+            # Survival score: final_hp / max_hp
+            if agent.env.health.enabled and health_history_this_run:
+                final_hp = health_history_this_run[-1]
+                max_hp = agent.env.health.max_hp
+                survival_score_this_run = final_hp / max_hp if max_hp > 0 else 0.0
 
-                # Temperature comfort score: fraction of time in comfort zone
-                if agent.env.thermotaxis.enabled and temperature_history_this_run:
-                    temperature_comfort_score_this_run = agent.env.get_temperature_comfort_score()
+            # Temperature comfort score: fraction of time in comfort zone
+            if agent.env.thermotaxis.enabled and temperature_history_this_run:
+                temperature_comfort_score_this_run = agent.env.get_temperature_comfort_score()
 
             result = SimulationResult(
                 run=run_num,
@@ -654,7 +581,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 path=step_result.agent_path,
                 total_reward=total_reward,
                 last_total_reward=agent._episode_tracker.rewards,  # noqa: SLF001
-                efficiency_score=efficiency_score,
+                efficiency_score=None,  # Only applicable for static environment (removed)
                 termination_reason=step_result.termination_reason,
                 success=success,
                 foods_collected=foods_collected_this_run,
@@ -696,21 +623,20 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
 
-            # Store episode tracking data for foraging environments
-            if isinstance(agent.env, DynamicForagingEnvironment):
-                tracking_data.episode_data[run_num] = EpisodeTrackingData(
-                    satiety_history=satiety_history_this_run.copy()
-                    if satiety_history_this_run
-                    else [],
-                    health_history=health_history_this_run.copy()
-                    if health_history_this_run
-                    else [],
-                    temperature_history=temperature_history_this_run.copy()
-                    if temperature_history_this_run
-                    else [],
-                    foods_collected=foods_collected_this_run or 0,
-                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
-                )
+            # Store episode tracking data
+            tracking_data.episode_data[run_num] = EpisodeTrackingData(
+                satiety_history=satiety_history_this_run.copy()
+                if satiety_history_this_run
+                else [],
+                health_history=health_history_this_run.copy()
+                if health_history_this_run
+                else [],
+                temperature_history=temperature_history_this_run.copy()
+                if temperature_history_this_run
+                else [],
+                foods_collected=foods_collected_this_run or 0,
+                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+            )
 
             if track_per_run:
                 plot_tracking_data_by_latest_run(

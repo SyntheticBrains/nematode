@@ -21,17 +21,14 @@ from quantumnematode.experiment.metadata import (
 # Centralized list of all valid benchmark categories
 # Used by multiple tests to avoid duplication and drift
 VALID_CATEGORIES = [
-    # Static maze categories
-    "static_maze_quantum",
-    "static_maze_classical",
-    # Foraging categories (dynamic without predators)
+    # Foraging categories (without predators)
     "foraging_small_quantum",
     "foraging_small_classical",
     "foraging_medium_quantum",
     "foraging_medium_classical",
     "foraging_large_quantum",
     "foraging_large_classical",
-    # Predator evasion categories (dynamic with predators)
+    # Predator evasion categories (with predators)
     "predator_small_quantum",
     "predator_small_classical",
     "predator_medium_quantum",
@@ -93,24 +90,6 @@ def create_test_experiment(env: EnvironmentMetadata, brain: BrainMetadata) -> Ex
 
 class TestDetermineBenchmarkCategory:
     """Test benchmark category determination."""
-
-    def test_static_maze_quantum(self):
-        """Test categorizing static maze with quantum brain."""
-        env = EnvironmentMetadata(type="static", grid_size=10)
-        brain = BrainMetadata(type="modular", qubits=4, learning_rate=0.01)
-        experiment = create_test_experiment(env, brain)
-
-        category = determine_benchmark_category(experiment)
-        assert category == "static_maze_quantum"
-
-    def test_static_maze_classical(self):
-        """Test categorizing static maze with classical brain."""
-        env = EnvironmentMetadata(type="static", grid_size=10)
-        brain = BrainMetadata(type="mlp", learning_rate=0.001)
-        experiment = create_test_experiment(env, brain)
-
-        category = determine_benchmark_category(experiment)
-        assert category == "static_maze_classical"
 
     def test_foraging_small_quantum(self):
         """Test categorizing small foraging environment with quantum brain."""
@@ -313,16 +292,6 @@ class TestDetermineBenchmarkCategory:
 class TestGetCategoryDirectory:
     """Test category directory path generation."""
 
-    def test_static_maze_quantum_dir(self):
-        """Test static maze quantum directory path."""
-        path = get_category_directory("static_maze_quantum")
-        assert path == "static_maze/quantum"
-
-    def test_static_maze_classical_dir(self):
-        """Test static maze classical directory path."""
-        path = get_category_directory("static_maze_classical")
-        assert path == "static_maze/classical"
-
     def test_foraging_small_quantum_dir(self):
         """Test foraging small quantum directory path."""
         path = get_category_directory("foraging_small_quantum")
@@ -344,8 +313,8 @@ class TestGetCategoryDirectory:
             get_category_directory("invalid")
 
     def test_all_valid_categories(self):
-        """Test all valid category combinations (14 total: 2 static + 6 dynamic + 6 predator)."""
-        assert len(VALID_CATEGORIES) == 14
+        """Test all valid category combinations (12 total: 6 foraging + 6 predator)."""
+        assert len(VALID_CATEGORIES) == 12
         for category in VALID_CATEGORIES:
             path = get_category_directory(category)
             env_category, brain_class = category.rsplit("_", 1)

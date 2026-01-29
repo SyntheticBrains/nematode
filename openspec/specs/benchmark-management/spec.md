@@ -56,13 +56,6 @@ The system SHALL automatically categorize benchmarks hierarchically by environme
 - **THEN** the category SHALL be "foraging_medium/quantum"
 - **AND** the file SHALL be stored in `benchmarks/foraging_medium/quantum/{timestamp}.json`
 
-#### Scenario: Static Maze Classical Category
-
-- **GIVEN** a benchmark using MLP brain (classical) with static maze environment
-- **WHEN** the benchmark is saved
-- **THEN** the category SHALL be "static_maze/classical"
-- **AND** the file SHALL be stored in `benchmarks/static_maze/classical/{timestamp}.json`
-
 #### Scenario: Foraging Large Quantum Category
 
 - **GIVEN** a benchmark using quantum brain with foraging large environment (100×100)

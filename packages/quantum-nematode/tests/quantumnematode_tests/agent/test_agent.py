@@ -9,7 +9,7 @@ from quantumnematode.agent import (
 )
 from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
 from quantumnematode.brain.modules import ModuleName
-from quantumnematode.env import DynamicForagingEnvironment, ForagingParams, StaticEnvironment
+from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 
 
 class TestSatietyConfig:
@@ -108,23 +108,15 @@ class TestQuantumNematodeAgentInitialization:
         )
         return ModularBrain(config=config, shots=50)
 
-    def test_agent_init_with_default_maze_env(self, modular_brain):
-        """Test agent initialization creates default maze environment."""
+    def test_agent_init_with_default_env(self, modular_brain):
+        """Test agent initialization creates default dynamic environment."""
         agent = QuantumNematodeAgent(brain=modular_brain)
 
         assert agent.brain is modular_brain
-        assert isinstance(agent.env, StaticEnvironment)
+        assert isinstance(agent.env, DynamicForagingEnvironment)
         assert agent._metrics_tracker.total_steps == 0
         assert len(agent.path) == 1  # Initial position
         assert agent._metrics_tracker.success_count == 0
-
-    def test_agent_init_with_custom_maze_env(self, modular_brain):
-        """Test agent initialization with custom maze environment."""
-        env = StaticEnvironment(grid_size=15, max_body_length=3)
-        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
-
-        assert agent.env is env
-        assert agent.env.grid_size == 15
 
     def test_agent_init_with_dynamic_env(self, modular_brain):
         """Test agent initialization with dynamic foraging environment."""
@@ -257,9 +249,13 @@ class TestQuantumNematodeAgentMetrics:
         )
         return ModularBrain(config=config, shots=50)
 
-    def test_calculate_metrics_static_env(self, modular_brain):
-        """Test metrics calculation for static maze environment."""
-        agent = QuantumNematodeAgent(brain=modular_brain)
+    def test_calculate_metrics_basic(self, modular_brain):
+        """Test basic metrics calculation."""
+        env = DynamicForagingEnvironment(
+            grid_size=30,
+            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
+        )
+        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
 
         # Simulate some successful runs
         agent._metrics_tracker.success_count = 7
@@ -272,13 +268,9 @@ class TestQuantumNematodeAgentMetrics:
         assert metrics.success_rate == 0.7  # 7 out of 10
         assert metrics.average_steps == 50.0  # 500 / 10
         assert metrics.average_reward == 10.0  # 100 / 10
-        # Static environment should not have foraging metrics
-        assert metrics.foraging_efficiency is None
-        assert metrics.average_distance_efficiency is None
-        assert metrics.average_foods_collected is None
 
-    def test_calculate_metrics_dynamic_env(self, modular_brain):
-        """Test metrics calculation for dynamic foraging environment."""
+    def test_calculate_metrics_with_foraging(self, modular_brain):
+        """Test metrics calculation with foraging data."""
         env = DynamicForagingEnvironment(
             grid_size=30,
             foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),

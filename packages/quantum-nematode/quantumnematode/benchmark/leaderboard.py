@@ -270,8 +270,6 @@ def generate_leaderboards() -> dict[str, str]:
         Dictionary mapping category to markdown table.
     """
     categories = [
-        "static_maze_quantum",
-        "static_maze_classical",
         "foraging_small_quantum",
         "foraging_small_classical",
         "foraging_medium_quantum",
@@ -305,13 +303,6 @@ def generate_benchmarks_doc() -> str:
     sections = []
 
     category_groups = [
-        (
-            "### Static Maze",
-            [
-                ("#### Quantum Architectures", "static_maze_quantum"),
-                ("#### Classical Architectures", "static_maze_classical"),
-            ],
-        ),
         (
             "### Foraging Small (≤20x20)",
             [
