@@ -127,7 +127,7 @@ ______________________________________________________________________
 
 #### Benchmarking & Tracking
 
-- 14 benchmark categories across static/dynamic, quantum/classical, with/without predators
+- 14 benchmark categories across quantum/classical, with/without predators
 - Automated experiment tracking with session IDs
 - Per-run and session-level metrics (success rate, steps, convergence run, stability)
 - CSV exports and matplotlib visualizations
