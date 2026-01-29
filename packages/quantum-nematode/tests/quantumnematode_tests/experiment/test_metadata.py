@@ -21,15 +21,6 @@ from quantumnematode.experiment.metadata import (
 class TestEnvironmentMetadata:
     """Test EnvironmentMetadata model."""
 
-    def test_create_static_environment(self):
-        """Test creating static environment metadata."""
-        env_meta = EnvironmentMetadata(type="static", grid_size=10)
-
-        assert env_meta.type == "static"
-        assert env_meta.grid_size == 10
-        assert env_meta.num_foods is None
-        assert env_meta.target_foods_to_collect is None
-
     def test_create_dynamic_environment(self):
         """Test creating dynamic environment metadata."""
         env_meta = EnvironmentMetadata(

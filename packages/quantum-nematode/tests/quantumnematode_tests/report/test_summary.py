@@ -21,7 +21,7 @@ class DummyLogger:
         self.infos.append(msg)
 
 
-def make_sim_result(run, steps, efficiency_score, path=None):
+def make_sim_result(run, steps, path=None):
     """
     Create a dummy SimulationResult for testing.
 
@@ -31,8 +31,6 @@ def make_sim_result(run, steps, efficiency_score, path=None):
         The run number.
     steps : int
         The number of steps taken in the simulation.
-    efficiency_score : float
-        The efficiency score of the simulation.
     path : list[tuple[int, int]], optional
         The path taken in the simulation, defaults to None.
 
@@ -46,7 +44,6 @@ def make_sim_result(run, steps, efficiency_score, path=None):
     return SimulationResult(
         run=run,
         steps=steps,
-        efficiency_score=efficiency_score,
         path=path,
         total_reward=0.0,
         last_total_reward=0.0,
@@ -59,9 +56,9 @@ def test_summary_print_and_logger(monkeypatch):
     """Test that the summary function prints and logs the expected output."""
     # Prepare dummy results
     results = [
-        make_sim_result(1, 100, 0.8),
-        make_sim_result(2, 80, 0.9),
-        make_sim_result(3, 60, 1.0),
+        make_sim_result(1, 100),
+        make_sim_result(2, 80),
+        make_sim_result(3, 60),
     ]
     metrics = PerformanceMetrics(
         success_rate=100.0,
@@ -99,7 +96,7 @@ def test_summary_print_and_logger(monkeypatch):
 
 def test_summary_logger_disabled(monkeypatch):
     """Test that the summary function does not log when the logger is disabled."""
-    results = [make_sim_result(1, 10, 0.5), make_sim_result(2, 5, 0.7)]
+    results = [make_sim_result(1, 10), make_sim_result(2, 5)]
     metrics = PerformanceMetrics(
         success_rate=100.0,
         average_steps=80.0,
