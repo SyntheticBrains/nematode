@@ -103,7 +103,6 @@ def _find_experiment_ids() -> list[str]:
 
 
 def list_experiments(
-    environment_type: str | None = None,
     brain_type: str | None = None,
     min_success_rate: float | None = None,
     since: datetime | None = None,
@@ -113,8 +112,6 @@ def list_experiments(
 
     Parameters
     ----------
-    environment_type : str | None, optional
-        Filter by environment type ("static" or "dynamic").
     brain_type : str | None, optional
         Filter by brain type.
     min_success_rate : float | None, optional
@@ -135,8 +132,6 @@ def list_experiments(
             metadata = load_experiment(experiment_id)
 
             # Apply filters
-            if environment_type and metadata.environment.type != environment_type:
-                continue
             if brain_type and metadata.brain.type != brain_type:
                 continue
             if min_success_rate is not None and metadata.results.success_rate < min_success_rate:
@@ -185,11 +180,6 @@ def compare_experiments(exp_id_1: str, exp_id_2: str) -> dict[str, Any]:
 
     # Compare configurations
     config_diff = {}
-    if exp1.environment.type != exp2.environment.type:
-        config_diff["environment_type"] = {
-            "exp1": exp1.environment.type,
-            "exp2": exp2.environment.type,
-        }
     if exp1.environment.grid_size != exp2.environment.grid_size:
         config_diff["grid_size"] = {
             "exp1": exp1.environment.grid_size,

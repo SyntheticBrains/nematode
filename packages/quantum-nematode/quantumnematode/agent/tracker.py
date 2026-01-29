@@ -99,7 +99,7 @@ class EpisodeTracker:
         ----------
         distance_efficiency : float | None, optional
             For dynamic environments, the ratio of optimal distance to actual
-            distance traveled. None for static environments.
+            distance traveled. None if no food collected.
         """
         self.data.foods_collected += 1
         if distance_efficiency is not None:

@@ -70,7 +70,6 @@ def extract_environment_metadata(
         Environment metadata.
     """
     return EnvironmentMetadata(
-        type="dynamic",
         grid_size=env.grid_size,
         num_foods=env.foraging.foods_on_grid,
         target_foods_to_collect=env.foraging.target_foods_to_collect,
