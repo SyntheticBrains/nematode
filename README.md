@@ -2,6 +2,7 @@
 
 [![Pre-commit](https://github.com/SyntheticBrains/nematode/workflows/Pre-commit/badge.svg)](https://github.com/SyntheticBrains/nematode/actions/workflows/pre-commit.yml)
 [![Tests](https://github.com/SyntheticBrains/nematode/workflows/Tests/badge.svg)](https://github.com/SyntheticBrains/nematode/actions/workflows/tests.yml)
+[![Nightly Tests](https://github.com/SyntheticBrains/nematode/workflows/Nightly%20Tests/badge.svg)](https://github.com/SyntheticBrains/nematode/actions/workflows/nightly-tests.yml)
 [![codecov](https://codecov.io/gh/SyntheticBrains/nematode/branch/main/graph/badge.svg)](https://codecov.io/gh/SyntheticBrains/nematode)
 
 <p align="center">

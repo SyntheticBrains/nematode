@@ -125,9 +125,37 @@ Each brain architecture follows a common interface defined in `quantumnematode.b
 
 ### Running Tests
 
+The project has three tiers of tests:
+
+#### Unit & Integration Tests (default)
+
+Run automatically on every commit (pre-commit hook) and PR:
+
 ```bash
 uv run pytest
 ```
+
+#### Smoke Tests
+
+End-to-end tests that run the actual entry-point scripts (`run_simulation.py`, `run_evolution.py`) with minimal episodes to verify they don't crash. Run on every PR via CI but excluded from pre-commit hooks to keep commits fast:
+
+```bash
+uv run pytest -m smoke -v
+```
+
+#### Nightly E2E Tests
+
+Full training sessions that assert success rates fall within established benchmark ranges (derived from experiment logbooks). Run automatically at 3 AM UTC daily via GitHub Actions and can be triggered manually from the Actions tab:
+
+```bash
+# Run all nightly tests (slow — full training sessions)
+uv run pytest -m nightly -v
+
+# Run a single config
+uv run pytest -m nightly -k "foraging_small" -v
+```
+
+Benchmark ranges are defined in `packages/quantum-nematode/tests/quantumnematode_tests/e2e_benchmarks.json`. When updating configs or training parameters, you may need to update these ranges based on new experiment results.
 
 ### Running Simulations
 
