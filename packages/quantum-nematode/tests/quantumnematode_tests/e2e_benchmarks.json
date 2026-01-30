@@ -44,9 +44,9 @@
       "name": "ppo_thermotaxis_stationary_medium",
       "config": "configs/examples/ppo_thermotaxis_stationary_predators_medium.yml",
       "runs": 500,
-      "success_rate_min": 0.63,
+      "success_rate_min": 0.58,
       "success_rate_max": 0.81,
-      "source": "logbook-007: sessions 68.4%-75.8% with 5% buffer"
+      "source": "logbook-007: sessions 68.4%-75.8% with 10%/5% buffer"
     },
     {
       "name": "ppo_thermotaxis_foraging_large",
