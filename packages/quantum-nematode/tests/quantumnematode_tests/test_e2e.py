@@ -56,7 +56,7 @@ def _parse_success_rate(work_dir: Path) -> float:
         raise FileNotFoundError(msg)
 
     # Find the timestamped session directory
-    session_dirs = list(exports_dir.iterdir())
+    session_dirs = sorted(exports_dir.iterdir(), key=lambda p: p.name)
     if not session_dirs:
         msg = f"No session directories found in {exports_dir}"
         raise FileNotFoundError(msg)
