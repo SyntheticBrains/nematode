@@ -20,6 +20,7 @@ import csv
 import json
 import subprocess
 import sys
+import warnings
 from pathlib import Path
 
 import pytest
@@ -135,8 +136,9 @@ def test_nightly_regression(benchmark: dict, tmp_path: Path) -> None:
     )
 
     if success_rate > expected_max:
-        # Not a failure, but worth noting
-        print(
-            f"NOTE: {benchmark['name']} success rate {success_rate:.1%} "
+        warnings.warn(
+            f"{benchmark['name']} success rate {success_rate:.1%} "
             f"exceeds ceiling {expected_max:.1%} — consider updating benchmark.",
+            UserWarning,
+            stacklevel=1,
         )
