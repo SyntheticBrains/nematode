@@ -12,7 +12,7 @@ context: |
   - Python 3.12 (strictly >=3.12,<3.13)
   - Quantum: Qiskit 1.0+, Qiskit-Aer (CPU/GPU sim), Qiskit-IBMRuntime (QPU)
   - Classical ML: PyTorch 2.7+ (MLP, PPO, Spiking brains)
-  - Config: Pydantic 2.11.4+, PyYAML
+  - Config: Pydantic 2.11.4+, PyYAML 6.0+
   - Tooling: uv (workspace), Ruff (ALL rules), Pyright (strict), pytest, pre-commit
   - Viz: Matplotlib 3.10+, Rich 13.0+
   - Optimization: CMA 4.0+ (evolutionary), custom gradient methods (PSR)
