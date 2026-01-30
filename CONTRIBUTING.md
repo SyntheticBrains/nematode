@@ -125,12 +125,6 @@ Each brain architecture follows a common interface defined in `quantumnematode.b
 
 ### Running Tests
 
-```bash
-uv run pytest
-```
-
-### Test Tiers
-
 The project has three tiers of tests:
 
 #### Unit & Integration Tests (default)
