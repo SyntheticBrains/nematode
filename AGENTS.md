@@ -6,11 +6,14 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 
 ## Tech Stack
 
-- Python 3.12 (strictly enforced)
-- Quantum: Qiskit 1.0+, Qiskit-Aer
+- Python 3.12 (strictly >=3.12,\<3.13)
+- Quantum: Qiskit 1.0+, Qiskit-Aer 0.17+, Qiskit-IBMRuntime 0.40+ (QPU)
 - Classical ML: PyTorch 2.7+
-- Config: Pydantic 2.11+, PyYAML
+- Config: Pydantic 2.11.4+, PyYAML
+- Viz: Matplotlib 3.10+, Rich 13.0+
+- Optimization: CMA 4.0+ (evolutionary), custom gradient methods (PSR)
 - Tooling: uv, Ruff, Pyright, pytest, pre-commit
+- Docker with NVIDIA Container Toolkit for GPU support
 
 ## Common Commands
 

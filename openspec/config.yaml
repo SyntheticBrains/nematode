@@ -12,7 +12,7 @@ context: |
   - Python 3.12 (strictly >=3.12,<3.13)
   - Quantum: Qiskit 1.0+, Qiskit-Aer (CPU/GPU sim), Qiskit-IBMRuntime (QPU)
   - Classical ML: PyTorch 2.7+ (MLP, PPO, Spiking brains)
-  - Config: Pydantic 2.11+, PyYAML
+  - Config: Pydantic 2.11.4+, PyYAML
   - Tooling: uv (workspace), Ruff (ALL rules), Pyright (strict), pytest, pre-commit
   - Viz: Matplotlib 3.10+, Rich 13.0+
   - Optimization: CMA 4.0+ (evolutionary), custom gradient methods (PSR)
@@ -29,7 +29,8 @@ context: |
 
   ## Code Conventions
   - Ruff: ALL rules, ignore FIX002, PLC0415, TD002, TD003. Line length 100.
-  - Pyright: strict, error on missing imports and non-exhaustive match
+  - Pyright: selective error reporting (reportMissingImports, reportMatchNotExhaustive,
+    reportUnusedFunction, reportConstantRedefinition)
   - NumPy-style docstrings
   - Pydantic BaseModel for data structures
   - Explicit __all__ exports in modules
