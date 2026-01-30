@@ -1,0 +1,92 @@
+{
+  "configs": [
+    {
+      "name": "ppo_thermotaxis_foraging_small",
+      "config": "configs/examples/ppo_thermotaxis_foraging_small.yml",
+      "runs": 500,
+      "success_rate_min": 0.81,
+      "success_rate_max": 0.97,
+      "source": "logbook-007: sessions 86.2%-92.2% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_pursuit_small",
+      "config": "configs/examples/ppo_thermotaxis_pursuit_predators_small.yml",
+      "runs": 500,
+      "success_rate_min": 0.60,
+      "success_rate_max": 0.83,
+      "source": "logbook-007: sessions 64.8%-78.2% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_stationary_small",
+      "config": "configs/examples/ppo_thermotaxis_stationary_predators_small.yml",
+      "runs": 500,
+      "success_rate_min": 0.44,
+      "success_rate_max": 0.81,
+      "source": "logbook-007: sessions 48.6%-75.8% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_foraging_medium",
+      "config": "configs/examples/ppo_thermotaxis_foraging_medium.yml",
+      "runs": 500,
+      "success_rate_min": 0.76,
+      "success_rate_max": 0.91,
+      "source": "logbook-007: sessions 80.6%-86.0% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_pursuit_medium",
+      "config": "configs/examples/ppo_thermotaxis_pursuit_predators_medium.yml",
+      "runs": 500,
+      "success_rate_min": 0.61,
+      "success_rate_max": 0.86,
+      "source": "logbook-007: sessions 66.2%-81.4% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_stationary_medium",
+      "config": "configs/examples/ppo_thermotaxis_stationary_predators_medium.yml",
+      "runs": 500,
+      "success_rate_min": 0.63,
+      "success_rate_max": 0.81,
+      "source": "logbook-007: sessions 68.4%-75.8% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_foraging_large",
+      "config": "configs/examples/ppo_thermotaxis_foraging_large.yml",
+      "runs": 500,
+      "success_rate_min": 0.85,
+      "success_rate_max": 0.98,
+      "source": "logbook-007: sessions 90.0%-92.8% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_pursuit_large",
+      "config": "configs/examples/ppo_thermotaxis_pursuit_predators_large.yml",
+      "runs": 500,
+      "success_rate_min": 0.62,
+      "success_rate_max": 0.80,
+      "source": "logbook-007: sessions 66.8%-74.6% with 5% buffer"
+    },
+    {
+      "name": "ppo_thermotaxis_stationary_large",
+      "config": "configs/examples/ppo_thermotaxis_stationary_predators_large.yml",
+      "runs": 700,
+      "success_rate_min": 0.68,
+      "success_rate_max": 0.88,
+      "source": "logbook-007: sessions 73.0%-82.7% with 5% buffer"
+    },
+    {
+      "name": "ppo_foraging_small",
+      "config": "configs/examples/ppo_foraging_small.yml",
+      "runs": 200,
+      "success_rate_min": 0.89,
+      "success_rate_max": 1.0,
+      "source": "benchmarks/foraging_small/classical: sessions 94.0%-98.5% with 5% buffer"
+    },
+    {
+      "name": "ppo_predators_small",
+      "config": "configs/examples/ppo_predators_small.yml",
+      "runs": 200,
+      "success_rate_min": 0.72,
+      "success_rate_max": 0.92,
+      "source": "benchmarks/predator_small/classical: sessions 77.0%-87.0% with 5% buffer"
+    }
+  ]
+}

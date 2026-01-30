@@ -39,7 +39,7 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run pytest --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
