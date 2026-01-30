@@ -1,20 +1,60 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  ## Purpose
+  Quantum Nematode is a research platform simulating a simplified C. elegans
+  navigating dynamic foraging environments using quantum variational circuits
+  or classical neural networks. Focus areas: quantum ML advantages in foraging,
+  biological modeling (chemotaxis, homeostasis), hybrid quantum-classical
+  algorithms, and NISQ applications.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  ## Tech Stack
+  - Python 3.12 (strictly >=3.12,<3.13)
+  - Quantum: Qiskit 1.0+, Qiskit-Aer (CPU/GPU sim), Qiskit-IBMRuntime (QPU)
+  - Classical ML: PyTorch 2.7+ (MLP, PPO, Spiking brains)
+  - Config: Pydantic 2.11+, PyYAML
+  - Tooling: uv (workspace), Ruff (ALL rules), Pyright (strict), pytest, pre-commit
+  - Viz: Matplotlib 3.10+, Rich 13.0+
+  - Optimization: CMA 4.0+ (evolutionary), custom gradient methods (PSR)
+  - Docker with NVIDIA Container Toolkit for GPU support
+
+  ## Architecture
+  - UV workspace: packages/quantum-nematode is the core package
+  - 6 pluggable brain architectures: ModularBrain, QModularBrain, MLPBrain,
+    PPOBrain, QMLPBrain, SpikingBrain (in brain/arch/)
+  - DynamicForagingEnvironment: multi-food foraging with predators and thermotaxis
+  - Executor pattern: CPU, GPU, QPU backends
+  - YAML-driven simulation configs (configs/examples/)
+  - Comprehensive tracking: EpisodeTracker, experiment metadata, CSV/plot exports
+
+  ## Code Conventions
+  - Ruff: ALL rules, ignore FIX002, PLC0415, TD002, TD003. Line length 100.
+  - Pyright: strict, error on missing imports and non-exhaustive match
+  - NumPy-style docstrings
+  - Pydantic BaseModel for data structures
+  - Explicit __all__ exports in modules
+
+  ## Testing (3 tiers)
+  1. Unit/Integration: default pytest, runs on commits (pre-commit hook)
+  2. Smoke (@pytest.mark.smoke): CLI end-to-end, runs on PRs
+  3. Nightly (@pytest.mark.nightly): full training benchmarks, runs daily 3AM UTC
+
+  ## Domain Context
+  - C. elegans: chemotaxis, thermotaxis, tactile feedback, satiety management
+  - Quantum: variational circuits, parameter-shift rule, quantum feature encoding
+  - RL: REINFORCE, DQN, experience replay, PPO, reward shaping
+  - Spiking networks: LIF neurons, STDP learning, surrogate gradients
+  - Grid world: 2D dynamic foraging with viewport-based perception
+
+  ## Constraints
+  - IBM Quantum API key required for QPU execution
+  - NVIDIA Container Toolkit required for Docker GPU
+  - Quantum simulation is memory-intensive for larger circuits
+  - Private/research codebase (Do Not Upload classifier)
+  - Apache 2.0 license, GitHub: SyntheticBrains/nematode
+
+  ## External Dependencies
+  - IBM Quantum Platform (qiskit-ibm-runtime)
+  - Q-CTRL Fire Opal (quantum error suppression)
+  - Qiskit Aer (circuit simulation)
+  - Docker Hub (GPU-enabled containers)
