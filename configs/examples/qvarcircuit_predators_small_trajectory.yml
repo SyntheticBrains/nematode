@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Small Configuration with Trajectory Learning
 # Demonstrates trajectory learning feature for temporal credit assignment
-# Uses modular (quantum) brain architecture with episode-level REINFORCE
+# Uses QVarCircuit (quantum) brain architecture with episode-level REINFORCE
 
 max_steps: 500
 brain:

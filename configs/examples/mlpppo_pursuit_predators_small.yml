@@ -1,4 +1,4 @@
-# PPO with Pursuit Predators - Small Configuration
+# MLPPPO with Pursuit Predators - Small Configuration
 # Tests agent behavior against predators that actively chase when in detection range
 #
 # Key differences from random predators:

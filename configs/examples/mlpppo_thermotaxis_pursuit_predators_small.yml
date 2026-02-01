@@ -1,4 +1,4 @@
-# PPO with Thermotaxis + Pursuit Predators - Small Configuration
+# MLPPPO with Thermotaxis + Pursuit Predators - Small Configuration
 # Tests agent's ability to forage while evading active predators and maintaining temperature comfort
 #
 # This is the most challenging multi-objective task combining:

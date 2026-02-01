@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Medium Configuration
 # Standard predator evasion challenge in a 50x50 environment
-# Uses modular (quantum) brain architecture with chemotaxis module
+# Uses QVarCircuit (quantum) brain architecture with chemotaxis module
 # Agent learns approach-avoidance conflict: food attraction vs predator repulsion
 
 max_steps: 1000

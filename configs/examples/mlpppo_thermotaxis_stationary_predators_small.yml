@@ -1,4 +1,4 @@
-# PPO with Thermotaxis + Stationary Predators - Small Configuration
+# MLPPPO with Thermotaxis + Stationary Predators - Small Configuration
 # Tests agent's ability to forage while avoiding predators and maintaining temperature comfort
 #
 # This is a multi-objective task combining:

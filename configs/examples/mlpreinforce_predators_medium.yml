@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Medium Configuration
 # Curriculum level 2: Standard foraging with predator evasion
-# Uses MLP (classical neural network) brain architecture
+# Uses MLPREINFORCE (classical neural network) brain architecture
 
 max_steps: 1000
 brain:

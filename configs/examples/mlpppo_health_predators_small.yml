@@ -1,4 +1,4 @@
-# Health System Demo - PPO Brain
+# Health System Demo - MLPPPO Brain
 # Demonstrates HP-based survival mechanics as alternative to instant predator death.
 # Agent can survive multiple predator contacts and heal by collecting food.
 #

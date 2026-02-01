@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Small Finetune Configuration
 # Curriculum level 1: Easy foraging with predator evasion for finetuning
-# Uses modular (quantum) brain architecture
+# Uses QVarCircuit (quantum) brain architecture
 
 max_steps: 500
 brain:

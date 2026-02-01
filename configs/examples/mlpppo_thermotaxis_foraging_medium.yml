@@ -1,4 +1,4 @@
-# PPO with Thermotaxis + Foraging - Medium Configuration
+# MLPPPO with Thermotaxis + Foraging - Medium Configuration
 # Curriculum level 2: Standard foraging with temperature navigation challenge
 #
 # Thermotaxis adds a new sensory modality (AFD neurons) that encodes:

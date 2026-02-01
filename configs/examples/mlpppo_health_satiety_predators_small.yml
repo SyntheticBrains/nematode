@@ -1,4 +1,4 @@
-# Combined Health + Satiety System - PPO Brain
+# Combined Health + Satiety System - MLPPPO Brain
 # Demonstrates both survival mechanics operating together:
 # - HP tracks threat-based damage (predators)
 # - Satiety tracks time-based hunger (decays every step)

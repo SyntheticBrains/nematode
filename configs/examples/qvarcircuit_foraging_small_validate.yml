@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Small Validation Configuration
 # Curriculum level 1: Easy foraging scenario for validation
-# Uses modular (quantum) brain architecture
+# Uses QVarCircuit (quantum) brain architecture
 
 max_steps: 500
 brain:

@@ -1,4 +1,4 @@
-# PPO with Isothermal Environment - Small Configuration (Baseline)
+# MLPPPO with Isothermal Environment - Small Configuration (Baseline)
 # Uniform temperature across grid - tests pure foraging without temperature challenge
 #
 # This configuration serves as a control/baseline for thermotaxis experiments.

@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Medium Configuration
 # Curriculum level 2: Standard foraging scenario for robust learning
-# Uses Spiking (LIF neurons with surrogate gradient descent) brain architecture
+# Uses SpikingREINFORCE (LIF neurons with surrogate gradient descent) brain architecture
 
 max_steps: 1000
 
