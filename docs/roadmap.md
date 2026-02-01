@@ -2,9 +2,9 @@
 
 **Vision**: Map all behaviors of *Caenorhabditis elegans* through comparative architecture analysis, with focus on quantum computational approaches, to discover fundamental principles of biological intelligence and demonstrate quantum advantages in cognitively-relevant tasks.
 
-**Version**: 1.0
+**Version**: 2.0
 
-**Last Updated**: December 2025
+**Last Updated**: February 2026
 
 **Horizon**: 2025-2028 (8 phases + future directions, ~3.5 years)
 
@@ -26,7 +26,7 @@ ______________________________________________________________________
 04. [Phase Roadmap](#phase-roadmap)
     - [Phase 0: Foundation & Baselines](#phase-0-foundation--baselines-q4-2025---q1-2026)
     - [Phase 1: Sensory & Threat Complexity](#phase-1-sensory--threat-complexity-q1-q2-2026)
-    - [Phase 2: Architecture Analysis](#phase-2-architecture-analysis-q2-q3-2026)
+    - [Phase 2: Architecture Analysis & Standardization](#phase-2-architecture-analysis--standardization-q2-q3-2026)
     - [Phase 3: Learning & Memory](#phase-3-learning--memory-q3-q4-2026)
     - [Phase 4: Evolution & Adaptation](#phase-4-evolution--adaptation-q4-2026---q1-2027)
     - [Phase 5: Social Complexity](#phase-5-social-complexity-q1-q2-2027)
@@ -49,9 +49,9 @@ ______________________________________________________________________
 | Phase | Timeline | Focus | Key Deliverable |
 |-------|----------|-------|-----------------|
 | **0** | Q4 2025 - Q1 2026 | Foundation & Baselines | Validated optimization methods, SOTA baselines, first QPU run |
-| **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | Thermotaxis, enhanced predators, ablation toolkit |
-| **2** | Q2 - Q3 2026 | Architecture Analysis | Interpretability framework, first biological prediction tested |
-| **3** | Q3 - Q4 2026 | Learning & Memory | STAM/ITAM/LTAM, associative learning paradigms |
+| **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | Thermotaxis, enhanced predators, mechanosensation |
+| **2** | Q2 - Q3 2026 | Architecture Analysis & Standardization | Ablation toolkit, brain renaming, interpretability framework, first biological prediction tested |
+| **3** | Q3 - Q4 2026 | Learning & Memory | STAM/ITAM/LTAM, associative learning paradigms, oxygen sensing |
 | **4** | Q4 2026 - Q1 2027 | Evolution & Adaptation | Baldwin Effect, evolutionary dynamics comparison |
 | **5** | Q1 - Q2 2027 | Social Complexity | Multi-agent infrastructure, emergent behaviors |
 | **6** | Q2 - Q3 2027 | Quantum Frontiers | Advanced quantum algorithms, hardware deployment |
@@ -64,7 +64,7 @@ ______________________________________________________________________
 
 The Quantum Nematode project aims to achieve breakthrough discoveries at the intersection of quantum computing, neuroscience, and artificial intelligence by:
 
-1. **Comparative Architecture Analysis**: Systematically comparing quantum (ModularBrain, QModularBrain), classical (MLPBrain, QMLPBrain), and biologically-realistic (SpikingBrain) architectures across increasingly complex C. elegans behaviors
+1. **Comparative Architecture Analysis**: Systematically comparing quantum (QVarCircuitBrain, QQLearningBrain), classical (MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain), and biologically-realistic (SpikingReinforceBrain) architectures across increasingly complex C. elegans behaviors
 
 2. **Incremental Behavioral Coverage**: Progressively implementing sensory systems (chemotaxis ✓, thermotaxis, oxygen sensing, mechanosensation), survival behaviors (foraging ✓, predator evasion ✓, learning/memory), and social dynamics (cooperation, competition, communication)
 
@@ -88,23 +88,25 @@ ______________________________________________________________________
 
 ### Implemented Capabilities
 
-#### Brain Architectures (5 total)
+#### Brain Architectures (6 total)
 
 **Quantum Approaches:**
 
-1. **ModularBrain**: Quantum variational circuits with modular sensory processing, multi-layer entanglement, evolutionary optimization (CMA-ES validated), with parameter-shift rule gradients available for comparison
+1. **QVarCircuitBrain** (formerly ModularBrain): Quantum variational circuits with modular sensory processing, multi-layer entanglement, evolutionary optimization (CMA-ES validated), with parameter-shift rule gradients available for comparison
 
-2. **QModularBrain**: Hybrid quantum-classical Q-learning (early stage, incomplete TODOs)
+2. **QQLearningBrain** (formerly QModularBrain): Hybrid quantum-classical Q-learning (early stage, incomplete TODOs)
 
 **Classical Approaches:**
 
-3. **MLPBrain**: REINFORCE policy gradients with baseline subtraction, entropy regularization, learning rate scheduling
+3. **MLPReinforceBrain** (formerly MLPBrain): REINFORCE policy gradients with baseline subtraction, entropy regularization, learning rate scheduling
 
-4. **QMLPBrain**: Deep Q-Network (DQN) with experience replay
+4. **MLPDQNBrain** (formerly QMLPBrain): Deep Q-Network (DQN) with experience replay
+
+5. **MLPPPOBrain** (formerly PPOBrain): Proximal Policy Optimization with actor-critic architecture, clipped surrogate objective, Generalized Advantage Estimation (GAE)
 
 **Biologically-Realistic:**
 
-5. **SpikingBrain**: Leaky Integrate-and-Fire (LIF) neurons with **surrogate gradient descent**, REINFORCE policy gradients, backpropagation through time (BPTT), PyTorch autograd integration. Previous STDP implementation replaced due to fundamental learning failures.
+6. **SpikingReinforceBrain** (formerly SpikingBrain): Leaky Integrate-and-Fire (LIF) neurons with **surrogate gradient descent**, REINFORCE policy gradients, backpropagation through time (BPTT), PyTorch autograd integration. Previous STDP implementation replaced due to fundamental learning failures.
 
 #### Environments
 
@@ -137,21 +139,21 @@ ______________________________________________________________________
 
 **Static Maze:**
 
-- **Quantum (ModularBrain)**: 0.980 score (100% success, 34 steps, converge@20)
-- **Classical (MLPBrain)**: 0.960 score (100% success, 24 steps, converge@20)
-- **Spiking (SpikingBrain)**: 0.932 score (100% success, 67 steps, converge@34) - *surrogate gradients*
+- **Quantum (QVarCircuitBrain)**: 0.980 score (100% success, 34 steps, converge@20)
+- **Classical (MLPReinforceBrain)**: 0.960 score (100% success, 24 steps, converge@20)
+- **Spiking (SpikingReinforceBrain)**: 0.932 score (100% success, 67 steps, converge@34) - *surrogate gradients*
 
 **Dynamic Small (≤20x20):**
 
-- **Quantum (ModularBrain)**: 0.762 score (100% success, 207 steps, converge@20) - *CMA-ES evolution*
-- **Classical (MLPBrain)**: 0.822 score (100% success, 181 steps, converge@20)
-- **Spiking (SpikingBrain)**: 0.733 score (100% success, 267 steps, converge@22) - *surrogate gradients*
+- **Quantum (QVarCircuitBrain)**: 0.762 score (100% success, 207 steps, converge@20) - *CMA-ES evolution*
+- **Classical (MLPReinforceBrain)**: 0.822 score (100% success, 181 steps, converge@20)
+- **Spiking (SpikingReinforceBrain)**: 0.733 score (100% success, 267 steps, converge@22) - *surrogate gradients*
 
 **Dynamic Predator Small (≤20x20):**
 
-- **Quantum (ModularBrain)**: 0.675 score (95% success, 224 steps, converge@29) - *CMA-ES evolution*
-- **Classical (MLPBrain)**: 0.740 score (92% success, 199 steps, converge@30)
-- **Spiking (SpikingBrain)**: 0.556 score (63% success, 247 steps, converge@20) - *surrogate gradients*
+- **Quantum (QVarCircuitBrain)**: 0.675 score (95% success, 224 steps, converge@29) - *CMA-ES evolution*
+- **Classical (MLPReinforceBrain)**: 0.740 score (92% success, 199 steps, converge@30)
+- **Spiking (SpikingReinforceBrain)**: 0.556 score (63% success, 247 steps, converge@20) - *surrogate gradients*
 
 **Key Findings**:
 
@@ -163,8 +165,8 @@ ______________________________________________________________________
 
 **Architecture Gaps:**
 
-- QModularBrain incomplete (missing: tracking metrics, Qiskit runtime integration, parameter initialization)
-- MLPBrain loss calculation bug (flagged in codebase)
+- QQLearningBrain incomplete (missing: tracking metrics, Qiskit runtime integration, parameter initialization)
+- MLPReinforceBrain loss calculation bug (flagged in codebase)
 - No multi-brain ensemble or hierarchical decision systems
 - No transfer learning framework
 
@@ -202,13 +204,13 @@ ______________________________________________________________________
 
 **Critical Insight**: Gradient-based learning with parameter-shift rule shows high variance on quantum circuits due to statistical noise from finite shot counts in gradient estimation. This noise causes quantum circuits to converge to suboptimal local optima compared to gradient-free evolutionary methods.
 
-**Implication for Roadmap**: Evolution-based optimization (CMA-ES, Genetic Algorithms) is now the **validated baseline** for training quantum variational circuits. Gradient methods remain effective for classical networks (MLPBrain, QMLPBrain) but should not be assumed to work for quantum approaches without extensive validation.
+**Implication for Roadmap**: Evolution-based optimization (CMA-ES, Genetic Algorithms) is now the **validated baseline** for training quantum variational circuits. Gradient methods remain effective for classical networks (MLPReinforceBrain, MLPDQNBrain) but should not be assumed to work for quantum approaches without extensive validation.
 
 This breakthrough validates the adaptive, evidence-driven approach throughout this roadmap: methods are prioritized based on empirical results, not assumptions.
 
 ### Recent Breakthrough: Spiking Neural Network Rewrite (December 2025)
 
-**Key Finding**: Complete architectural rewrite of SpikingBrain from STDP to **surrogate gradient descent** enables successful learning for the first time.
+**Key Finding**: Complete architectural rewrite of SpikingReinforceBrain from STDP to **surrogate gradient descent** enables successful learning for the first time.
 
 **Previous Implementation Problems:**
 
@@ -219,13 +221,13 @@ This breakthrough validates the adaptive, evidence-driven approach throughout th
 **New Implementation (Surrogate Gradient Descent):**
 
 - **Differentiable spike function**: Smooth approximation enables backpropagation through spiking neurons
-- **REINFORCE policy gradients**: Same proven algorithm as MLPBrain with discounted returns and baseline subtraction
+- **REINFORCE policy gradients**: Same proven algorithm as MLPReinforceBrain with discounted returns and baseline subtraction
 - **LIF neurons preserved**: Maintains biological plausibility with Leaky Integrate-and-Fire dynamics
 - **PyTorch autograd integration**: Standard gradient-based optimization with gradient clipping
 
 **State-of-the-Art Alignment**: This approach matches modern neuromorphic research (SpikingJelly, snnTorch, Norse) which all use surrogate gradients for training spiking neural networks on complex tasks.
 
-**Implication for Roadmap**: SpikingBrain is now a viable architecture for comparative analysis. Gradient-based methods (with surrogate gradients) work for spiking networks, complementing the evolution-first approach for quantum architectures.
+**Implication for Roadmap**: SpikingReinforceBrain is now a viable architecture for comparative analysis. Gradient-based methods (with surrogate gradients) work for spiking networks, complementing the evolution-first approach for quantum architectures.
 
 ______________________________________________________________________
 
@@ -239,13 +241,13 @@ ______________________________________________________________________
 
 1. **Validated Optimization Baselines** (CRITICAL PRIORITY)
 
-   - **PRIMARY: Evolutionary optimization** for at least one quantum architecture (ModularBrain, QModularBrain)
+   - **PRIMARY: Evolutionary optimization** for at least one quantum architecture (QVarCircuitBrain, QQLearningBrain)
      - CMA-ES (validated: 88% success on predator tasks)
      - Genetic Algorithms (population-based search)
      - Compare variants: (μ, λ)-ES, Natural Evolution Strategies
-   - **SECONDARY: Gradient methods** for at least one of each classical and spiking architectures (MLPBrain, QMLPBrain, SpikingBrain)
+   - **SECONDARY: Gradient methods** for at least one of each classical and spiking architectures (MLPReinforceBrain, MLPDQNBrain, SpikingReinforceBrain)
      - REINFORCE, DQN (already implemented for classical)
-     - SpikingBrain: Surrogate gradient descent with REINFORCE (December 2025 rewrite)
+     - SpikingReinforceBrain: Surrogate gradient descent with REINFORCE (December 2025 rewrite)
      - Validate that gradients remain effective for non-quantum architectures
    - Systematic comparison across all benchmarked architectures with consistent evaluation protocol
    - Document which optimization methods work for which architecture types
@@ -272,13 +274,13 @@ ______________________________________________________________________
 
 5. **Technical Debt Resolution**
 
-   - Fix QModularBrain TODOs (tracking, Qiskit runtime, initialization)
-   - Fix MLPBrain loss calculation bug
+   - Fix QQLearningBrain TODOs (tracking, Qiskit runtime, initialization)
+   - Fix MLPReinforceBrain loss calculation bug
    - Code quality improvements (address remaining Ruff/Pyright warnings)
 
 6. **First Quantum Hardware Run**
 
-   - Deploy ModularBrain on IBM Quantum backend (simulator → real QPU)
+   - Deploy QVarCircuitBrain on IBM Quantum backend (simulator → real QPU)
    - Measure performance degradation from noise
    - Establish hardware deployment pipeline for ongoing testing
 
@@ -293,16 +295,16 @@ ______________________________________________________________________
 
 **Required (must complete before Phase 1):**
 
-- ✅ At least 1 quantum architecture (ModularBrain) achieves **>70% success** on at least 2 benchmark tasks using evolutionary optimization
-- ✅ At least 1 classical architecture (MLPBrain or QMLPBrain) benchmarked with gradient-based methods
+- ✅ At least 1 quantum architecture (QVarCircuitBrain) achieves **>70% success** on at least 2 benchmark tasks using evolutionary optimization
+- ✅ At least 1 classical architecture (MLPReinforceBrain or MLPDQNBrain) benchmarked with gradient-based methods
 - ✅ Classical SOTA baseline (PPO or SAC) achieves **>85% success** on foraging tasks
 - ✅ Clear documentation of which optimization methods work for which architectures
 - ✅ At least 1 real C. elegans behavioral dataset integrated for validation
 
 **Stretch (complete if time permits, can continue into Phase 1):**
 
-- ✅ ModularBrain successfully runs on IBM QPU hardware (simulator → real QPU)
-- ✅ SpikingBrain benchmarked alongside quantum and classical
+- ✅ QVarCircuitBrain successfully runs on IBM QPU hardware (simulator → real QPU)
+- ✅ SpikingReinforceBrain benchmarked alongside quantum and classical
 - ✅ All 5 brain architectures benchmarked on consistent evaluation protocol
 - ✅ At least 3 real C. elegans behavioral datasets integrated
 - ✅ Public benchmark site launched with ≥1 external submission
@@ -320,7 +322,7 @@ ______________________________________________________________________
 
 **Goal**: Enrich sensory input and predator behaviors to match C. elegans multi-modal perception and ecological complexity.
 
-**Pilot-Then-Focus Approach**: Start with chemotaxis (already implemented) + thermotaxis as the priority sensory pair. If architectures handle dual-modality well, add oxygen sensing and mechanosensation. For predators, start with stationary + pursuit types; add patrol and group hunting only if simpler predators work well. This avoids building complex sensory systems that architectures can't yet handle.
+**Pilot-Then-Focus Approach**: Start with chemotaxis (already implemented) + thermotaxis as the priority sensory pair. For predators, start with stationary + pursuit types; add patrol and group hunting only if simpler predators work well. Mechanosensation runs as a parallel track. Oxygen sensing deferred to Phase 3 where it pairs naturally with temporal sensing and memory systems.
 
 #### Deliverables
 
@@ -347,17 +349,8 @@ ______________________________________________________________________
    - Isothermal tracking behavior (move along preferred temperature contours)
    - Association learning: temperature ↔ food availability (high food at 20°C → prefer 20°C)
    - Integration with foraging: agents perceive food gradients + temperature gradients
-   - **Validation gate**: If thermotaxis works (>60% success), proceed to oxygen sensing
 
-4. **Oxygen Sensing System** [Conditional on thermotaxis success]
-
-   - Oxygen concentration gradient fields (5-12% optimal range)
-   - Hypoxia avoidance (\<5% O2) and hyperoxia avoidance (>12% O2)
-   - URX/AQR/PQR neuron simulation (detect high O2)
-   - BAG neuron simulation (detect low O2)
-   - Multi-objective: balance food quality vs. oxygen comfort
-
-5. **Mechanosensation (Touch Response)** [Parallel track: mechanistically simpler than gradient sensing]
+4. **Mechanosensation (Touch Response)** [Parallel track: mechanistically simpler than gradient sensing]
 
    - Obstacle collision detection (walls, barriers)
    - Gentle touch: triggers local exploration (increased turning)
@@ -366,77 +359,87 @@ ______________________________________________________________________
    - Integration with predator evasion: physical contact with predator = harsh touch → immediate escape
    - **Note**: Can be developed in parallel with thermotaxis as a fallback if gradient-based sensing proves difficult
 
-6. **Architecture Ablation Studies**
+#### Metrics Focus
+
+- **Generalization**: Transfer to unseen predator types, temperature ranges
+- **Biological fidelity**: Match C. elegans chemotaxis indices, thermotaxis precision, escape latencies
+
+#### Phase 1 Exit Criteria
+
+- ✅ Thermotaxis implemented and integrated with chemotaxis (dual-modality tasks)
+- ✅ Mechanosensation implemented (boundary + predator contact detection)
+- ✅ ≥2 predator behavior types (stationary + pursuit) implemented and tested
+- ✅ Health system option available and benchmarked
+- ✅ Biological validation: At least 1 behavior quantitatively matches C. elegans data (e.g., thermotaxis precision, escape latency)
+
+#### Go/No-Go Decision
+
+**GO if**: At least one architecture generalizes well across multiple sensory modalities (>60% success on ≥2 tasks).
+**PIVOT if**: No architecture generalizes → Focus on hybrid approaches combining architecture strengths, or specialize architectures for specific tasks.
+**STOP if**: Sensory complexity breaks all architectures → Simplify task suite or re-examine architecture fundamentals.
+
+______________________________________________________________________
+
+### Phase 2: Architecture Analysis & Standardization (Q2-Q3 2026)
+
+**Goal**: Move beyond "which architecture wins?" to "why do architectures work?" through systematic analysis, interpretability, and mechanism discovery. Also complete standardization work including brain architecture renaming and benchmarking improvements.
+
+#### Deliverables
+
+1. **Architecture Ablation Studies** [Moved from Phase 1]
 
    - Systematically remove components from each architecture (e.g., remove entanglement from quantum circuits, remove hidden layers from MLP)
    - Measure performance degradation: which features are critical?
    - Cross-architecture feature importance analysis
    - Identify minimal sufficient architectures for each task
 
-#### Metrics Focus
+2. **Brain Architecture Naming Migration**
 
-- **Generalization**: Transfer to unseen predator types, temperature ranges, oxygen levels
-- **Biological fidelity**: Match C. elegans chemotaxis indices, thermotaxis precision, escape latencies
-- **Architecture efficiency**: Which features are necessary vs. redundant?
+   - Complete migration to paradigm-prefix naming scheme (QVarCircuitBrain, MLPPPOBrain, etc.)
+   - Deprecate old names with backward-compatible aliases
+   - Update all configs, benchmarks, and documentation
+   - See [STANDARDIZATION.md](STANDARDIZATION.md) for framework decisions
 
-#### Phase 1 Exit Criteria
+3. **Benchmarking Improvements**
 
-- ✅ Thermotaxis implemented and integrated with chemotaxis (dual-modality tasks)
-- ✅ At least 1 additional sensory modality (oxygen or mechanosensation) if thermotaxis succeeds
-- ✅ ≥2 predator behavior types (stationary + pursuit) implemented and tested
-- ✅ Health system option available and benchmarked
-- ✅ Ablation toolkit operational with automated feature importance ranking
-- ✅ Performance profiles documented: where each architecture excels (e.g., "quantum best at multi-objective, classical best at single-objective")
-- ✅ Biological validation: At least 1 behavior quantitatively matches C. elegans data (e.g., thermotaxis precision, escape latency)
+   - Hierarchical benchmark categories (basic/foraging, survival/predator, thermotaxis/)
+   - Spiking as separate brain class alongside quantum/classical
+   - Statistical testing framework (confidence intervals, significance tests, effect sizes)
 
-#### Go/No-Go Decision
-
-**GO if**: At least one architecture generalizes well across multiple sensory modalities (>60% success on ≥3 tasks).
-**PIVOT if**: No architecture generalizes → Focus on hybrid approaches combining architecture strengths, or specialize architectures for specific tasks.
-**STOP if**: Sensory complexity breaks all architectures → Simplify task suite or re-examine architecture fundamentals.
-
-______________________________________________________________________
-
-### Phase 2: Architecture Analysis (Q2-Q3 2026)
-
-**Goal**: Move beyond "which architecture wins?" to "why do architectures work?" through systematic analysis, interpretability, and mechanism discovery.
-
-#### Deliverables
-
-1. **Interpretability Framework**
+4. **Interpretability Framework**
 
    - **Quantum**: Circuit visualization, gate importance analysis (parameter sensitivity), superposition state tracking
    - **Classical**: Attention maps (if using attention mechanisms), activation analysis, saliency maps (which inputs drive decisions?)
    - **Spiking**: Spike raster plots, connectivity analysis, neuron firing patterns, membrane potential dynamics, surrogate gradient flow visualization
    - Unified API: `architecture.interpret(state, action)` returns explanation
 
-2. **Feature Importance Across Architectures**
+5. **Feature Importance Across Architectures**
 
    - Which sensory inputs are most critical? (Chemotaxis gradient magnitude? Direction? Satiety level?)
    - How do architectures differ in feature reliance? (Does quantum use different cues than classical?)
    - Integrated Gradients, SHAP values, or similar for attribution
    - Cross-architecture comparison: "Quantum prioritizes gradient direction 60% vs. classical 40%"
 
-3. **Mechanism Discovery Protocol**
+6. **Mechanism Discovery Protocol**
 
    - Automated hypothesis generation from model analysis
    - Example: "Quantum model uses superposition to simultaneously explore approach/avoid strategies"
    - Translation to biological hypotheses: "Does C. elegans use [X] mechanism? Test with [Y] experiment"
    - Partnership with C. elegans labs to design validation experiments
 
-4. **First Biological Prediction Tested**
+7. **First Biological Prediction Tested**
 
    - Identify a novel prediction from model behavior (e.g., "optimal escape angle from predators is 135° based on quantum model")
    - Collaborate with neuroscience lab to test with real C. elegans
    - Publication: Model prediction → experimental validation loop
 
-5. **Comparative Analysis Methodology**
+8. **Comparative Analysis Methodology**
 
    - Statistical testing framework: confidence intervals, effect sizes (Cohen's d), significance tests (t-test, ANOVA, Bonferroni correction)
    - Benchmark visualizations: heatmaps, performance profiles, scaling curves
    - Reproducibility toolkit: containerized environments, seed management, deterministic benchmarks
 
-6. **Architecture Comparison Whitepaper**
+9. **Architecture Comparison Whitepaper**
 
    - Comprehensive analysis: When does each architecture excel? Why?
    - Computational cost comparison: parameters, FLOPs, wall-clock time, energy consumption
@@ -450,6 +453,9 @@ ______________________________________________________________________
 
 #### Phase 2 Exit Criteria
 
+- ✅ Ablation toolkit operational with automated feature importance ranking
+- ✅ Brain naming migration complete (all configs, benchmarks, docs updated)
+- ✅ Hierarchical benchmark categories operational with statistical testing
 - ✅ Interpretability toolkit operational for all architectures
 - ✅ Feature importance analysis reveals architecture-specific strategies (e.g., "quantum prioritizes gradient direction 60% vs. classical 40%")
 - ✅ Comparative framework published: preprint or conference paper
@@ -458,6 +464,7 @@ ______________________________________________________________________
 - ✅ ≥1 biological prediction tested and published in peer-reviewed journal
 - ✅ Statistical analysis framework integrated into all benchmarks (confidence intervals, significance tests)
 - ✅ Mechanism discovery protocol yields ≥3 testable biological hypotheses
+- ✅ Performance profiles documented: where each architecture excels (e.g., "quantum best at multi-objective, classical best at single-objective")
 
 #### Go/No-Go Decision
 
@@ -469,7 +476,7 @@ ______________________________________________________________________
 
 ### Phase 3: Learning & Memory (Q3-Q4 2026)
 
-**Goal**: Implement associative learning and memory systems matching C. elegans biological timescales and mechanisms.
+**Goal**: Implement associative learning and memory systems matching C. elegans biological timescales and mechanisms. Also add oxygen sensing, which pairs naturally with temporal sensing and memory infrastructure.
 
 **Pilot-Then-Focus Approach**: Start with Short-Term Associative Memory (STAM) as the foundation. If STAM demonstrates value (improves performance over static policies), extend to ITAM and LTAM. This avoids over-engineering memory systems before validating the core concept.
 
@@ -526,7 +533,16 @@ ______________________________________________________________________
    - Dopaminergic neurons: Reward signaling, motivation
    - Serotonergic neurons: Modulate learning intensity
 
-8. **Biological Accuracy Revisit: Temporal Sensory Systems**
+8. **Oxygen Sensing System** [Moved from Phase 1: pairs with temporal sensing and memory]
+
+   - Oxygen concentration gradient fields (5-12% optimal range)
+   - Hypoxia avoidance (\<5% O2) and hyperoxia avoidance (>12% O2)
+   - URX/AQR/PQR neuron simulation (detect high O2)
+   - BAG neuron simulation (detect low O2)
+   - Multi-objective: balance food quality vs. oxygen comfort
+   - Temporal oxygen sensing using STAM memory buffers (dO2/dt)
+
+9. **Biological Accuracy Revisit: Temporal Sensory Systems**
 
    > **Note**: Once memory systems are operational, revisit the biological accuracy of sensory modalities implemented in Phase 1 and earlier. Current implementations use spatial gradient sensing (computationally equivalent for stateless brains), but real C. elegans uses temporal sensing for several modalities:
    >
@@ -552,6 +568,7 @@ ______________________________________________________________________
 - ✅ Meta-learning demonstrates improvement over static policies (agents that learn perform better than fixed policies)
 - ✅ Memory persistence across sessions demonstrated (save/load memory traces work correctly)
 - ✅ Quantum vs. classical memory comparison reveals mechanistic differences
+- ✅ Oxygen sensing implemented with temporal sensing using memory infrastructure (if STAM proves viable)
 
 #### Go/No-Go Decision
 
@@ -811,7 +828,7 @@ ______________________________________________________________________
 
 2. **Neuromorphic Hardware Deployment**
 
-   - **Intel Loihi**: Deploy SpikingBrain (LIF neurons with surrogate-gradient-trained weights) on neuromorphic chip
+   - **Intel Loihi**: Deploy SpikingReinforceBrain (LIF neurons with surrogate-gradient-trained weights) on neuromorphic chip
    - Event-driven computation efficiency: Compare power consumption (Joules per decision)
    - Spike-timing precision: Does hardware spike timing affect inference quality?
    - Comparison: Neuromorphic vs. GPU vs. CPU vs. QPU (energy, latency, throughput)
@@ -854,7 +871,7 @@ ______________________________________________________________________
 #### Phase 7 Exit Criteria
 
 - ✅ 200×200 environments operational with 100+ foods and 10+ predators
-- ✅ SpikingBrain deployed on Intel Loihi with energy efficiency analysis (Joules per decision vs. GPU/CPU)
+- ✅ SpikingReinforceBrain deployed on Intel Loihi with energy efficiency analysis (Joules per decision vs. GPU/CPU)
 - ✅ [If quantum path continues from Phase 6] QPU energy efficiency comparison included
 - ✅ Embodied robot successfully demonstrates at least 1 C. elegans behavior (chemotaxis, predator evasion, or foraging)
 - ✅ WormBot controlled by optimized policy with successful sim-to-real transfer (>50% sim performance)
@@ -1018,7 +1035,7 @@ Throughout all phases, the following validation activities occur continuously:
 
 **Objective**: Regularly benchmark on real quantum devices to track hardware progress and algorithm robustness.
 
-- **Phase 0**: First successful QPU run (ModularBrain on IBM Quantum)
+- **Phase 0**: First successful QPU run (QVarCircuitBrain on IBM Quantum)
 - **Phase 1-4**: Monthly benchmarks on available backends (track noise, fidelity, queue times)
 - **Phase 5-6**: Weekly benchmarks as algorithm complexity increases
 - **Phase 6**: Daily benchmarks during intensive quantum algorithm development
@@ -1302,13 +1319,13 @@ The following items are tracked as ongoing maintenance, not blocking new phases:
 
 ### High Priority (Fix in Phase 0)
 
-1. **QModularBrain Completion**
+1. **QQLearningBrain Completion**
 
    - Implement tracking metrics (episode data collection)
    - Add Qiskit runtime integration (for real hardware)
    - Fix parameter initialization (currently hardcoded)
 
-2. **MLPBrain Loss Bug**
+2. **MLPReinforceBrain Loss Bug**
 
    - Investigate loss calculation (flagged in codebase)
    - Fix incorrect loss computation in later sessions
@@ -1316,7 +1333,7 @@ The following items are tracked as ongoing maintenance, not blocking new phases:
 
 3. **Grid Size Hardcoding**
 
-   - QModularBrain: Grid size hardcoded to 10 instead of derived from environment
+   - QQLearningBrain: Grid size hardcoded to 10 instead of derived from environment
    - Fix: Read grid size from environment config
 
 ### Medium Priority (Address by Phase 3)
