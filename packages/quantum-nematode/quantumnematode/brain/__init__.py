@@ -1,8 +1,8 @@
 """Module for quantum brain."""
 
-from .arch.mlp import MLPBrain
-from .arch.modular import ModularBrain
-from .arch.spiking import SpikingBrain
+from .arch.mlpreinforce import MLPReinforceBrain
+from .arch.qvarcircuit import QVarCircuitBrain
+from .arch.spikingreinforce import SpikingReinforceBrain
 from .modules import (
     SENSORY_MODULES,
     ModuleName,
@@ -12,10 +12,10 @@ from .modules import (
 
 __all__ = [
     "SENSORY_MODULES",
-    "MLPBrain",
-    "ModularBrain",
+    "MLPReinforceBrain",
     "ModuleName",
-    "SpikingBrain",
+    "QVarCircuitBrain",
+    "SpikingReinforceBrain",
     "extract_classical_features",
     "get_classical_feature_dimension",
 ]

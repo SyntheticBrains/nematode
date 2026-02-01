@@ -7,7 +7,7 @@ import yaml
 from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.modular import ModularBrain
+from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 
 
@@ -24,9 +24,9 @@ class TestPresetConfigurations:
         ("config_file", "expected_brain", "expected_env_type"),
         [
             # Foraging configs
-            ("modular_foraging_small.yml", "qvarcircuit", "dynamic"),
-            ("modular_foraging_medium.yml", "qvarcircuit", "dynamic"),
-            ("modular_foraging_large.yml", "qvarcircuit", "dynamic"),
+            ("qvarcircuit_foraging_small.yml", "qvarcircuit", "dynamic"),
+            ("qvarcircuit_foraging_medium.yml", "qvarcircuit", "dynamic"),
+            ("qvarcircuit_foraging_large.yml", "qvarcircuit", "dynamic"),
         ],
     )
     def test_config_loads_correctly(
@@ -95,9 +95,9 @@ class TestPresetConfigurations:
         ("config_file", "expected_shots"),
         [
             # Quantum modular architectures
-            ("modular_foraging_small.yml", 3000),
-            ("modular_foraging_medium.yml", 3000),
-            ("modular_foraging_large.yml", 3000),
+            ("qvarcircuit_foraging_small.yml", 3000),
+            ("qvarcircuit_foraging_medium.yml", 3000),
+            ("qvarcircuit_foraging_large.yml", 3000),
             # Note: qmlp is Q-learning MLP, not quantum - it doesn't use shots
         ],
     )
@@ -143,16 +143,16 @@ class TestDynamicEnvironmentWithBrain:
     @pytest.fixture
     def modular_brain(self):
         """Create a simple modular brain for testing."""
-        from quantumnematode.brain.arch.modular import ModularBrainConfig
+        from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrainConfig
         from quantumnematode.brain.modules import ModuleName
 
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={
                 ModuleName.CHEMOTAXIS: [0, 1],
             },
         )
-        return ModularBrain(
+        return QVarCircuitBrain(
             config=config,
             shots=50,
             device=DeviceType.CPU,

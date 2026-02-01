@@ -13,7 +13,10 @@ from quantumnematode.brain.arch._spiking_layers import (
     SurrogateGradientSpike,
 )
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.spiking import SpikingBrain, SpikingBrainConfig
+from quantumnematode.brain.arch.spikingreinforce import (
+    SpikingReinforceBrain,
+    SpikingReinforceBrainConfig,
+)
 from quantumnematode.env import Direction
 
 
@@ -218,12 +221,12 @@ class TestSpikingPolicyNetwork:
         assert net.population_encoder is not None
 
 
-class TestSpikingBrainConfig:
+class TestSpikingReinforceBrainConfig:
     """Test cases for spiking brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = SpikingBrainConfig()
+        config = SpikingReinforceBrainConfig()
 
         # Network topology
         assert config.hidden_size == 128
@@ -247,7 +250,7 @@ class TestSpikingBrainConfig:
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=64,
             num_timesteps=30,
             tau_m=10.0,
@@ -260,13 +263,13 @@ class TestSpikingBrainConfig:
         assert config.learning_rate == 0.01
 
 
-class TestSpikingBrain:
+class TestSpikingReinforceBrain:
     """Test cases for the spiking neural network brain."""
 
     @pytest.fixture
     def config(self):
         """Create a test configuration."""
-        return SpikingBrainConfig(
+        return SpikingReinforceBrainConfig(
             hidden_size=8,
             num_timesteps=10,
             num_hidden_layers=2,
@@ -276,7 +279,7 @@ class TestSpikingBrain:
     @pytest.fixture
     def brain(self, config):
         """Create a test spiking brain."""
-        return SpikingBrain(
+        return SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -460,13 +463,18 @@ class TestSpikingBrain:
         assert Action.STAY in action_set
 
 
-class TestSpikingBrainIntegration:
+class TestSpikingReinforceBrainIntegration:
     """Integration tests for spiking brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10)
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = SpikingReinforceBrainConfig(hidden_size=8, num_timesteps=10)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # Simulate multiple steps in an episode
         episode_rewards = []
@@ -501,8 +509,13 @@ class TestSpikingBrainIntegration:
 
     def test_gradient_updates_with_positive_rewards(self):
         """Test that network learns from positive rewards."""
-        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10, learning_rate=0.1)
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = SpikingReinforceBrainConfig(hidden_size=8, num_timesteps=10, learning_rate=0.1)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # Get initial parameters
         initial_params = [p.clone() for p in brain.policy.parameters()]
@@ -532,10 +545,20 @@ class TestSpikingBrainIntegration:
     def test_deterministic_behavior_with_seed(self):
         """Test that brain behavior is deterministic when using fixed random seed."""
         # Create two identical brains with same seed via config
-        config = SpikingBrainConfig(hidden_size=4, num_timesteps=10, seed=42)
+        config = SpikingReinforceBrainConfig(hidden_size=4, num_timesteps=10, seed=42)
 
-        brain1 = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
-        brain2 = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain1 = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+        brain2 = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # Should have identical initial parameters
         for p1, p2 in zip(brain1.policy.parameters(), brain2.policy.parameters(), strict=False):
@@ -547,8 +570,17 @@ class TestWeightInitialization:
 
     def test_orthogonal_initialization(self):
         """Test orthogonal weight initialization."""
-        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10, weight_init="orthogonal")
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = SpikingReinforceBrainConfig(
+            hidden_size=8,
+            num_timesteps=10,
+            weight_init="orthogonal",
+        )
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # Check that weights (not biases) are initialized to non-zero values
         for name, param in brain.policy.named_parameters():
@@ -557,8 +589,13 @@ class TestWeightInitialization:
 
     def test_kaiming_initialization(self):
         """Test Kaiming weight initialization."""
-        config = SpikingBrainConfig(hidden_size=8, num_timesteps=10, weight_init="kaiming")
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = SpikingReinforceBrainConfig(hidden_size=8, num_timesteps=10, weight_init="kaiming")
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # Check that weights (not biases) are initialized to non-zero values
         for name, param in brain.policy.named_parameters():
@@ -571,13 +608,18 @@ class TestIntraEpisodeUpdates:
 
     def test_update_frequency_triggers_updates(self):
         """Test that update_frequency triggers gradient updates during episode."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=8,
             num_timesteps=10,
             update_frequency=3,  # Update every 3 steps
             learning_rate=0.01,
         )
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -604,13 +646,18 @@ class TestIntraEpisodeUpdates:
 
     def test_no_update_frequency_waits_for_episode_end(self):
         """Test that without update_frequency, updates only happen at episode end."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=8,
             num_timesteps=10,
             update_frequency=0,  # Disabled - episode-end only
             learning_rate=0.01,
         )
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -652,12 +699,17 @@ class TestMinActionProb:
 
     def test_min_action_prob_enforces_floor(self):
         """Test that min_action_prob prevents action probabilities from going below floor."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=8,
             num_timesteps=10,
             min_action_prob=0.01,
         )
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -675,12 +727,17 @@ class TestMinActionProb:
 
     def test_min_action_prob_zero_allows_any_probability(self):
         """Test that min_action_prob=0 allows probabilities to be any value."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=8,
             num_timesteps=10,
             min_action_prob=0.0,
         )
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # Brain should work without errors
         params = BrainParams(
@@ -698,14 +755,19 @@ class TestPopulationCodingIntegration:
 
     def test_brain_with_population_coding(self):
         """Test spiking brain with population coding enabled."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             population_coding=True,
             neurons_per_feature=8,
             population_sigma=0.25,
         )
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -725,13 +787,18 @@ class TestSeparatedGradients:
 
     def test_separated_gradients_preprocessing(self):
         """Test that separated gradients produces 4-feature output."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             use_separated_gradients=True,
         )
         # Input dim should be 4 for separated gradients
-        brain = SpikingBrain(config=config, input_dim=4, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=4,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             gradient_strength=0.5,  # Combined (unused when separated)
@@ -756,12 +823,17 @@ class TestSeparatedGradients:
 
     def test_separated_gradients_run_brain(self):
         """Test that brain with separated gradients can run and produce actions."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             use_separated_gradients=True,
         )
-        brain = SpikingBrain(config=config, input_dim=4, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=4,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             food_gradient_strength=0.8,
@@ -778,12 +850,17 @@ class TestSeparatedGradients:
 
     def test_combined_gradients_still_works(self):
         """Test that combined gradient mode (default) still works."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             use_separated_gradients=False,  # Default
         )
-        brain = SpikingBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=2,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -801,12 +878,17 @@ class TestSeparatedGradients:
 
     def test_separated_gradients_handles_none_values(self):
         """Test that separated gradients handles None values gracefully."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             use_separated_gradients=True,
         )
-        brain = SpikingBrain(config=config, input_dim=4, num_actions=4, device=DeviceType.CPU)
+        brain = SpikingReinforceBrain(
+            config=config,
+            input_dim=4,
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
 
         # All gradient values None
         params = BrainParams(
@@ -960,12 +1042,12 @@ class TestClippingParameters:
 
     def test_return_clip_applied(self):
         """Test that return_clip limits extreme returns."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             return_clip=10.0,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -983,12 +1065,12 @@ class TestClippingParameters:
 
     def test_advantage_clip_applied(self):
         """Test that advantage_clip limits extreme advantages."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             advantage_clip=2.0,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1000,13 +1082,13 @@ class TestClippingParameters:
 
     def test_clips_disabled_when_zero(self):
         """Test that clipping is disabled when set to 0."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             return_clip=0.0,
             advantage_clip=0.0,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1022,14 +1104,14 @@ class TestExplorationDecay:
 
     def test_logit_clamp_decay(self):
         """Test that logit clamp decays from initial to final value."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             exploration_logit_clamp=2.0,
             exploration_logit_clamp_final=5.0,
             exploration_decay_episodes=100,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1042,14 +1124,14 @@ class TestExplorationDecay:
 
     def test_noise_std_decay(self):
         """Test that noise std decays from initial to final value."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             exploration_noise_std=0.3,
             exploration_noise_std_final=0.05,
             exploration_decay_episodes=100,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1061,14 +1143,14 @@ class TestExplorationDecay:
 
     def test_temperature_decay(self):
         """Test that temperature decays from initial to final value."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             exploration_temperature=1.5,
             exploration_temperature_final=1.0,
             exploration_decay_episodes=100,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1080,14 +1162,14 @@ class TestExplorationDecay:
 
     def test_no_decay_when_episodes_zero(self):
         """Test that no decay occurs when decay_episodes is 0."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             exploration_logit_clamp=2.0,
             exploration_logit_clamp_final=5.0,
             exploration_decay_episodes=0,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1103,12 +1185,12 @@ class TestProbabilityFloorHelper:
 
     def test_floor_applied(self):
         """Test that probability floor is applied correctly."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             min_action_prob=0.05,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1129,12 +1211,12 @@ class TestProbabilityFloorHelper:
 
     def test_no_floor_when_disabled(self):
         """Test that no floor is applied when min_action_prob is 0."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             min_action_prob=0.0,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -1149,12 +1231,12 @@ class TestProbabilityFloorHelper:
 
     def test_renormalization(self):
         """Test that probabilities are renormalized after clamping."""
-        config = SpikingBrainConfig(
+        config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
             min_action_prob=0.1,
         )
-        brain = SpikingBrain(
+        brain = SpikingReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,

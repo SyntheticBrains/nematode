@@ -90,7 +90,7 @@ Scripts:
 
 Configs:
 
-- `configs/examples/ppo_thermotaxis_*.yml` - Multiple scale/predator variants
+- `configs/examples/mlpppo_thermotaxis_*.yml` - Multiple scale/predator variants
 
 **Dependencies:**
 

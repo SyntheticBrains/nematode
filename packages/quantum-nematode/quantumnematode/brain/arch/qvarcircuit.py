@@ -188,8 +188,8 @@ class EpisodeBuffer:
         return len(self.rewards)
 
 
-class ModularBrainConfig(BrainConfig):
-    """Configuration for the ModularBrain architecture."""
+class QVarCircuitBrainConfig(BrainConfig):
+    """Configuration for the QVarCircuitBrain architecture."""
 
     l2_reg: float = DEFAULT_L2_REG  # L2 regularization strength
     large_gradient_threshold: float = (
@@ -228,7 +228,7 @@ class ModularBrainConfig(BrainConfig):
     )
 
 
-class ModularBrain(QuantumBrain):
+class QVarCircuitBrain(QuantumBrain):
     """
     Modular quantum brain architecture.
 
@@ -239,7 +239,7 @@ class ModularBrain(QuantumBrain):
 
     def __init__(  # noqa: PLR0913, PLR0915
         self,
-        config: ModularBrainConfig,
+        config: QVarCircuitBrainConfig,
         shots: int = DEFAULT_SHOTS,
         device: DeviceType = DeviceType.CPU,
         learning_rate: ConstantLearningRate | DynamicLearningRate | None = None,
@@ -254,10 +254,10 @@ class ModularBrain(QuantumBrain):
         perf_mgmt: "RunnableQiskitFunction | None" = None,
     ) -> None:
         """
-        Initialize the ModularBrain.
+        Initialize the QVarCircuitBrain.
 
         Args:
-            config: Configuration for the ModularBrain architecture.
+            config: Configuration for the QVarCircuitBrain architecture.
             shots: Number of shots for simulation.
             device: Device string for AerSimulator or real QPU backend.
             learning_rate: Learning rate strategy (default is dynamic).
@@ -275,7 +275,7 @@ class ModularBrain(QuantumBrain):
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
-        logger.info(f"ModularBrain using seed: {self.seed}")
+        logger.info(f"QVarCircuitBrain using seed: {self.seed}")
 
         self.num_qubits: int = num_qubits
         self.modules: dict[ModuleName, list[int]] = config.modules or deepcopy(DEFAULT_MODULES)
@@ -971,19 +971,19 @@ class ModularBrain(QuantumBrain):
 
         return qc
 
-    def copy(self) -> "ModularBrain":
+    def copy(self) -> "QVarCircuitBrain":
         """
-        Create a deep copy of the ModularBrain instance.
+        Create a deep copy of the QVarCircuitBrain instance.
 
         Returns
         -------
-            ModularBrain: A new instance with the same state.
+            QVarCircuitBrain: A new instance with the same state.
         """
         # Create a config copy with the resolved seed to ensure reproducibility
-        config_with_seed = ModularBrainConfig(
+        config_with_seed = QVarCircuitBrainConfig(
             **{**self.config.model_dump(), "seed": self.seed},
         )
-        new_brain = ModularBrain(
+        new_brain = QVarCircuitBrain(
             config=config_with_seed,
             shots=self.shots,
             device=self.device,
@@ -1330,7 +1330,7 @@ class ModularBrain(QuantumBrain):
         """
         Compute gradients based on measurement counts, reward, and action.
 
-        This method is not implemented for ModularBrain. Use parameter_shift_gradients instead.
+        This method is not implemented for QVarCircuitBrain. Use parameter_shift_gradients instead.
 
         Args:
             counts: Measurement counts from the quantum circuit.
@@ -1339,10 +1339,10 @@ class ModularBrain(QuantumBrain):
 
         Raises
         ------
-            NotImplementedError: This method is not implemented for ModularBrain.
+            NotImplementedError: This method is not implemented for QVarCircuitBrain.
         """
         error_message = (
-            "compute_gradients is not implemented for ModularBrain. "
+            "compute_gradients is not implemented for QVarCircuitBrain. "
             "Use parameter_shift_gradients instead."
         )
         logger.error(error_message)
@@ -1433,6 +1433,6 @@ class ModularBrain(QuantumBrain):
         return counts.get(state, 0) / total
 
 
-# Canonical name (preferred)
-QVarCircuitBrain = ModularBrain
-QVarCircuitBrainConfig = ModularBrainConfig
+# Deprecated aliases (backward compatibility)
+ModularBrain = QVarCircuitBrain
+ModularBrainConfig = QVarCircuitBrainConfig

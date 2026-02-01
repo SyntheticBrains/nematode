@@ -7,7 +7,7 @@ from quantumnematode.agent import (
     RewardConfig,
     SatietyConfig,
 )
-from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
+from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 
@@ -102,11 +102,11 @@ class TestQuantumNematodeAgentInitialization:
     @pytest.fixture
     def modular_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
     def test_agent_init_with_default_env(self, modular_brain):
         """Test agent initialization creates default dynamic environment."""
@@ -159,11 +159,11 @@ class TestQuantumNematodeAgentGoalDistance:
     @pytest.fixture
     def modular_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
 
 class TestQuantumNematodeAgentReset:
@@ -172,11 +172,11 @@ class TestQuantumNematodeAgentReset:
     @pytest.fixture
     def modular_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
     def test_reset_environment_maze(self, modular_brain):
         """Test resetting maze environment."""
@@ -243,11 +243,11 @@ class TestQuantumNematodeAgentMetrics:
     @pytest.fixture
     def modular_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
     def test_calculate_metrics_basic(self, modular_brain):
         """Test basic metrics calculation."""

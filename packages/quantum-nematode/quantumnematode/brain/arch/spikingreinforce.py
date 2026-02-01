@@ -83,8 +83,8 @@ DEFAULT_EXPLORATION_TEMPERATURE_FINAL = 1.0  # Final temperature
 DEFAULT_EXPLORATION_DECAY_EPISODES = 30  # Episodes over which to decay exploration
 
 
-class SpikingBrainConfig(BrainConfig):
-    """Configuration for the SpikingBrain architecture."""
+class SpikingReinforceBrainConfig(BrainConfig):
+    """Configuration for the SpikingReinforceBrain architecture."""
 
     # Network topology
     hidden_size: int = DEFAULT_HIDDEN_SIZE
@@ -170,7 +170,7 @@ class SpikingBrainConfig(BrainConfig):
     use_separated_gradients: bool = False
 
 
-class SpikingBrain(ClassicalBrain):
+class SpikingReinforceBrain(ClassicalBrain):
     """
     Spiking neural network brain with surrogate gradient descent.
 
@@ -180,7 +180,7 @@ class SpikingBrain(ClassicalBrain):
 
     Parameters
     ----------
-    config : SpikingBrainConfig
+    config : SpikingReinforceBrainConfig
         Configuration for network architecture and learning
     input_dim : int
         Dimension of input features (typically 2: gradient strength, relative angle)
@@ -213,7 +213,7 @@ class SpikingBrain(ClassicalBrain):
 
     def __init__(
         self,
-        config: SpikingBrainConfig,
+        config: SpikingReinforceBrainConfig,
         input_dim: int,
         num_actions: int,
         device: DeviceType = DeviceType.CPU,
@@ -225,7 +225,7 @@ class SpikingBrain(ClassicalBrain):
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
         set_global_seed(self.seed)  # Set global numpy/torch seeds
-        logger.info(f"SpikingBrain using seed: {self.seed}")
+        logger.info(f"SpikingReinforceBrain using seed: {self.seed}")
 
         self.config = config
         self.input_dim = input_dim
@@ -297,7 +297,7 @@ class SpikingBrain(ClassicalBrain):
 
         # Log parameter count
         total_params = sum(p.numel() for p in self.policy.parameters() if p.requires_grad)
-        logger.info(f"SpikingBrain initialized with {total_params:,} trainable parameters")
+        logger.info(f"SpikingReinforceBrain initialized with {total_params:,} trainable parameters")
 
     @property
     def action_set(self) -> list[Action]:
@@ -516,7 +516,8 @@ class SpikingBrain(ClassicalBrain):
         self.latest_data.probability = probability
 
         logger.debug(
-            f"SpikingBrain selected action {selected_action} with probability {probability:.3f}",
+            f"SpikingReinforceBrain selected action {selected_action} "
+            f"with probability {probability:.3f}",
         )
 
         return [action_data]
@@ -881,7 +882,7 @@ class SpikingBrain(ClassicalBrain):
             self.history_data.rewards.append(reward)
 
     def prepare_episode(self) -> None:
-        """Prepare for a new episode (no-op for SpikingBrain)."""
+        """Prepare for a new episode (no-op for SpikingReinforceBrain)."""
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
         """
@@ -1047,20 +1048,20 @@ class SpikingBrain(ClassicalBrain):
                 torch.nn.init.zeros_(self.policy.output_layer.bias)
             logger.info("Output layer: Orthogonal initialization (gain=0.5)")
 
-    def copy(self) -> "SpikingBrain":
+    def copy(self) -> "SpikingReinforceBrain":
         """
         Create a copy of the brain.
 
         Returns
         -------
-        SpikingBrain
-            New SpikingBrain instance with copied network parameters
+        SpikingReinforceBrain
+            New SpikingReinforceBrain instance with copied network parameters
         """
         # Create a config copy with the resolved seed to ensure reproducibility
-        config_with_seed = SpikingBrainConfig(
+        config_with_seed = SpikingReinforceBrainConfig(
             **{**self.config.model_dump(), "seed": self.seed},
         )
-        new_brain = SpikingBrain(
+        new_brain = SpikingReinforceBrain(
             config=config_with_seed,
             input_dim=self.input_dim,
             num_actions=self.num_actions,
@@ -1081,6 +1082,6 @@ class SpikingBrain(ClassicalBrain):
         return new_brain
 
 
-# Canonical name (preferred)
-SpikingReinforceBrain = SpikingBrain
-SpikingReinforceBrainConfig = SpikingBrainConfig
+# Deprecated aliases (backward compatibility)
+SpikingBrain = SpikingReinforceBrain
+SpikingBrainConfig = SpikingReinforceBrainConfig

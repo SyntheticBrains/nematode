@@ -286,7 +286,7 @@ ______________________________________________________________________
 
 ### 7.4 Baseline Configuration
 
-- [x] Create pure isothermal thermotaxis config (`ppo_thermotaxis_isothermal_small.yml`) ✅
+- [x] Create pure isothermal thermotaxis config (`mlpppo_thermotaxis_isothermal_small.yml`) ✅
   - Uniform temperature (gradient_strength=0) for baseline comparison
 
 **Validation**: Multi-objective scores computed and tracked correctly ✅
@@ -313,7 +313,7 @@ ______________________________________________________________________
 
 **Validation**: Food distribution biased toward safe zones ✅
 
-- Config: `safe_zone_food_bias: 0.8` in `ppo_thermotaxis_foraging_large.yml`
+- Config: `safe_zone_food_bias: 0.8` in `mlpppo_thermotaxis_foraging_large.yml`
 - Expected: ~80% of food in COMFORT/DISCOMFORT zones, ~20% anywhere
 
 ______________________________________________________________________
@@ -402,9 +402,9 @@ ______________________________________________________________________
 
 ### 11.1 Example Configs
 
-- [x] Create `configs/examples/ppo_thermotaxis_foraging_small.yml` ✅ *(implemented in add-thermotaxis-system)*
-- [x] Create `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
-- [x] Create `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/mlpppo_thermotaxis_foraging_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/mlpppo_thermotaxis_stationary_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
+- [x] Create `configs/examples/mlpppo_thermotaxis_pursuit_predators_small.yml` ✅ *(implemented in add-thermotaxis-system)*
 - [x] Create `configs/examples/ppo_health_predators_small.yml`
 - [x] Create `configs/examples/ppo_health_satiety_predators_small.yml`
 - [x] Create `configs/examples/ppo_pursuit_predators_small.yml`

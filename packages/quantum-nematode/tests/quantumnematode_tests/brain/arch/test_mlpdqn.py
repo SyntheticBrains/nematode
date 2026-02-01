@@ -6,16 +6,16 @@ import torch
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.qmlp import QMLPBrain, QMLPBrainConfig
+from quantumnematode.brain.arch.mlpdqn import MLPDQNBrain, MLPDQNBrainConfig
 from quantumnematode.env import Direction
 
 
-class TestQMLPBrainConfig:
+class TestMLPDQNBrainConfig:
     """Test cases for Q-learning MLP brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QMLPBrainConfig()
+        config = MLPDQNBrainConfig()
 
         assert config.hidden_dim == 64
         assert config.learning_rate == 0.001
@@ -30,7 +30,7 @@ class TestQMLPBrainConfig:
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = QMLPBrainConfig(
+        config = MLPDQNBrainConfig(
             hidden_dim=128,
             learning_rate=0.01,
             epsilon=0.2,
@@ -45,13 +45,13 @@ class TestQMLPBrainConfig:
         assert config.buffer_size == 5000
 
 
-class TestQMLPBrain:
+class TestMLPDQNBrain:
     """Test cases for the Q-learning MLP brain architecture."""
 
     @pytest.fixture
     def config(self):
         """Create a test configuration."""
-        return QMLPBrainConfig(
+        return MLPDQNBrainConfig(
             hidden_dim=32,
             learning_rate=0.001,
             num_hidden_layers=2,
@@ -62,7 +62,7 @@ class TestQMLPBrain:
     @pytest.fixture
     def brain(self, config):
         """Create a test Q-MLP brain."""
-        return QMLPBrain(
+        return MLPDQNBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -297,18 +297,18 @@ class TestQMLPBrain:
             brain.copy()
 
 
-class TestQMLPBrainIntegration:
+class TestMLPDQNBrainIntegration:
     """Integration tests for Q-learning MLP brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = QMLPBrainConfig(
+        config = MLPDQNBrainConfig(
             hidden_dim=16,
             learning_rate=0.001,
             buffer_size=100,
             batch_size=16,
         )
-        brain = QMLPBrain(
+        brain = MLPDQNBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -344,8 +344,8 @@ class TestQMLPBrainIntegration:
 
     def test_training_vs_evaluation_mode(self):
         """Test behavior differences between training and evaluation."""
-        config = QMLPBrainConfig(hidden_dim=16, epsilon=0.5)
-        brain = QMLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = MLPDQNBrainConfig(hidden_dim=16, epsilon=0.5)
+        brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -368,14 +368,14 @@ class TestQMLPBrainIntegration:
 
     def test_q_value_convergence(self):
         """Test that Q-values converge with consistent rewards."""
-        config = QMLPBrainConfig(
+        config = MLPDQNBrainConfig(
             hidden_dim=16,
             learning_rate=0.01,
             buffer_size=200,
             batch_size=16,
             epsilon=0.1,
         )
-        brain = QMLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.8, gradient_direction=0.5)
 
@@ -394,8 +394,8 @@ class TestQMLPBrainIntegration:
 
     def test_experience_replay_buffer_limit(self):
         """Test that experience buffer respects max size."""
-        config = QMLPBrainConfig(buffer_size=50, batch_size=16)
-        brain = QMLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = MLPDQNBrainConfig(buffer_size=50, batch_size=16)
+        brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -409,8 +409,8 @@ class TestQMLPBrainIntegration:
 
     def test_gradient_clipping(self):
         """Test that gradients are clipped to prevent instability."""
-        config = QMLPBrainConfig(hidden_dim=16, learning_rate=0.1, buffer_size=50, batch_size=16)
-        brain = QMLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = MLPDQNBrainConfig(hidden_dim=16, learning_rate=0.1, buffer_size=50, batch_size=16)
+        brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 

@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
+from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.evolutionary import (
@@ -202,8 +202,8 @@ def load_init_params(init_params_path: str, param_keys: list[str]) -> list[float
 def create_brain_from_config(
     config_path: str,
     param_array: list[float] | None = None,
-) -> ModularBrain:
-    """Create a ModularBrain from config, optionally with specific parameters.
+) -> QVarCircuitBrain:
+    """Create a QVarCircuitBrain from config, optionally with specific parameters.
 
     Args:
         config_path: Path to YAML config file.
@@ -211,7 +211,7 @@ def create_brain_from_config(
 
     Returns
     -------
-        Configured ModularBrain instance.
+        Configured QVarCircuitBrain instance.
     """
     config = load_simulation_config(config_path)
 
@@ -219,13 +219,13 @@ def create_brain_from_config(
     brain_config = configure_brain(config)
     logger.debug(f"Initializing brain config: {brain_config}")
 
-    # Ensure we have a ModularBrainConfig
-    if not isinstance(brain_config, ModularBrainConfig):
-        msg = f"Evolution requires ModularBrain, got {type(brain_config).__name__}"
+    # Ensure we have a QVarCircuitBrainConfig
+    if not isinstance(brain_config, QVarCircuitBrainConfig):
+        msg = f"Evolution requires QVarCircuitBrain, got {type(brain_config).__name__}"
         raise TypeError(msg)
 
     # Create brain with no learning (we're using evolution)
-    brain = ModularBrain(
+    brain = QVarCircuitBrain(
         config=brain_config,
         device=DeviceType.CPU,
         shots=config.shots or 1024,
@@ -279,7 +279,7 @@ def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
 
 
 def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
-    brain: ModularBrain,
+    brain: QVarCircuitBrain,
     env: DynamicForagingEnvironment,
     max_steps: int,
     initial_satiety: float = 200.0,

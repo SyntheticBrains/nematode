@@ -6,16 +6,16 @@ import torch
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.ppo import PPOBrain, PPOBrainConfig, RolloutBuffer
+from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig, RolloutBuffer
 from quantumnematode.env import Direction
 
 
-class TestPPOBrainConfig:
+class TestMLPPPOBrainConfig:
     """Test cases for PPO brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = PPOBrainConfig()
+        config = MLPPPOBrainConfig()
 
         assert config.actor_hidden_dim == 64
         assert config.critic_hidden_dim == 64
@@ -33,7 +33,7 @@ class TestPPOBrainConfig:
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             actor_hidden_dim=128,
             critic_hidden_dim=128,
             num_hidden_layers=3,
@@ -183,7 +183,7 @@ class TestPPOBrain:
     @pytest.fixture
     def config(self):
         """Create a test configuration."""
-        return PPOBrainConfig(
+        return MLPPPOBrainConfig(
             actor_hidden_dim=32,
             critic_hidden_dim=32,
             num_hidden_layers=2,
@@ -196,7 +196,7 @@ class TestPPOBrain:
     @pytest.fixture
     def brain(self, config):
         """Create a test PPO brain."""
-        return PPOBrain(
+        return MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -414,7 +414,7 @@ class TestPPOBrainIntegration:
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=0.01,
@@ -422,7 +422,7 @@ class TestPPOBrainIntegration:
             num_epochs=2,
             num_minibatches=2,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -458,7 +458,7 @@ class TestPPOBrainIntegration:
 
     def test_multiple_episodes(self):
         """Test running multiple episodes."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=0.001,
@@ -466,7 +466,7 @@ class TestPPOBrainIntegration:
             num_epochs=2,
             num_minibatches=2,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -497,7 +497,7 @@ class TestPPOBrainIntegration:
 
     def test_gradient_clipping(self):
         """Test that gradient clipping is applied."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=1.0,  # Very high LR to potentially cause large gradients
@@ -506,7 +506,7 @@ class TestPPOBrainIntegration:
             num_epochs=1,
             num_minibatches=2,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -528,14 +528,14 @@ class TestPPOBrainIntegration:
 
     def test_deterministic_action_selection(self):
         """Test that action selection is deterministic with same seed."""
-        config = PPOBrainConfig(actor_hidden_dim=16, critic_hidden_dim=16)
+        config = MLPPPOBrainConfig(actor_hidden_dim=16, critic_hidden_dim=16)
 
         # Create two brains with same weights
         torch.manual_seed(42)
-        brain1 = PPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain1 = MLPPPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         torch.manual_seed(42)
-        brain2 = PPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain2 = MLPPPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -551,7 +551,7 @@ class TestPPOBrainIntegration:
 
     def test_value_estimates_remain_finite_with_learning(self):
         """Test that value estimates remain finite during training."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             actor_hidden_dim=32,
             critic_hidden_dim=32,
             learning_rate=0.01,
@@ -559,7 +559,7 @@ class TestPPOBrainIntegration:
             num_epochs=4,
             num_minibatches=4,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -588,8 +588,8 @@ class TestLRScheduling:
 
     def test_lr_scheduling_disabled_by_default(self):
         """Test that LR scheduling is disabled when no warmup episodes set."""
-        config = PPOBrainConfig(learning_rate=0.001)
-        brain = PPOBrain(
+        config = MLPPPOBrainConfig(learning_rate=0.001)
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -601,12 +601,12 @@ class TestLRScheduling:
 
     def test_lr_warmup_enabled(self):
         """Test that LR warmup can be enabled via config."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_warmup_start=0.0001,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -620,12 +620,12 @@ class TestLRScheduling:
 
     def test_lr_warmup_default_start(self):
         """Test that lr_warmup_start defaults to 10% of base LR."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             learning_rate=0.001,
             lr_warmup_episodes=50,
             # lr_warmup_start not set
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -636,12 +636,12 @@ class TestLRScheduling:
 
     def test_lr_warmup_progression(self):
         """Test that LR increases linearly during warmup phase."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             learning_rate=0.001,
             lr_warmup_episodes=100,
             lr_warmup_start=0.0001,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -667,14 +667,14 @@ class TestLRScheduling:
 
     def test_lr_decay_after_warmup(self):
         """Test that LR decays after warmup when decay is configured."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_warmup_start=0.0001,
             lr_decay_episodes=200,
             lr_decay_end=0.0001,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -704,13 +704,13 @@ class TestLRScheduling:
 
     def test_lr_decay_default_end(self):
         """Test that lr_decay_end defaults to 10% of base LR."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_decay_episodes=100,
             # lr_decay_end not set
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -721,12 +721,12 @@ class TestLRScheduling:
 
     def test_update_learning_rate_modifies_optimizer(self):
         """Test that _update_learning_rate actually updates the optimizer."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             learning_rate=0.001,
             lr_warmup_episodes=100,
             lr_warmup_start=0.0001,
         )
-        brain = PPOBrain(
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -748,8 +748,8 @@ class TestLRScheduling:
 
     def test_lr_scheduling_no_update_when_disabled(self):
         """Test that _update_learning_rate does nothing when scheduling disabled."""
-        config = PPOBrainConfig(learning_rate=0.001)
-        brain = PPOBrain(
+        config = MLPPPOBrainConfig(learning_rate=0.001)
+        brain = MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -770,7 +770,7 @@ class TestPPOClipping:
     @pytest.fixture
     def brain(self):
         """Create a brain for clipping tests."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             clip_epsilon=0.2,
@@ -778,7 +778,7 @@ class TestPPOClipping:
             num_epochs=1,
             num_minibatches=2,
         )
-        return PPOBrain(
+        return MLPPPOBrain(
             config=config,
             input_dim=2,
             num_actions=4,
