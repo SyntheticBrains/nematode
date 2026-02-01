@@ -7,17 +7,17 @@ from qiskit import QuantumCircuit
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.qmodular import QModularBrain, QModularBrainConfig
+from quantumnematode.brain.arch.qqlearning import QQLearningBrain, QQLearningBrainConfig
 from quantumnematode.brain.modules import DEFAULT_MODULES, ModuleName
 from quantumnematode.env import Direction
 
 
-class TestQModularBrainConfig:
+class TestQQLearningBrainConfig:
     """Test cases for quantum modular Q-learning brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QModularBrainConfig()
+        config = QQLearningBrainConfig()
 
         assert config.modules == DEFAULT_MODULES
         assert config.num_layers == 2
@@ -41,7 +41,7 @@ class TestQModularBrainConfig:
         custom_modules = {
             ModuleName.CHEMOTAXIS: [0, 1],
         }
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules=custom_modules,
             num_layers=3,
             buffer_size=1000,
@@ -56,13 +56,13 @@ class TestQModularBrainConfig:
         assert config.seed == 42
 
 
-class TestQModularBrain:
+class TestQQLearningBrain:
     """Test cases for the quantum modular Q-learning brain architecture."""
 
     @pytest.fixture
     def config(self):
         """Create a test configuration with minimal qubits."""
-        return QModularBrainConfig(
+        return QQLearningBrainConfig(
             modules={
                 ModuleName.CHEMOTAXIS: [0, 1],
             },
@@ -75,7 +75,7 @@ class TestQModularBrain:
     @pytest.fixture
     def brain(self, config):
         """Create a test quantum modular Q-learning brain."""
-        return QModularBrain(
+        return QQLearningBrain(
             config=config,
             shots=50,
             device=DeviceType.CPU,
@@ -443,19 +443,19 @@ class TestQModularBrain:
         assert brain.parameter_values != copied_brain.parameter_values
 
 
-class TestQModularBrainIntegration:
+class TestQQLearningBrainIntegration:
     """Integration tests for quantum modular Q-learning brain."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
             seed=42,
         )
-        brain = QModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
         rng = np.random.default_rng(42)
 
@@ -483,14 +483,14 @@ class TestQModularBrainIntegration:
 
     def test_q_guidance_progression(self):
         """Test that Q-guidance weight increases with experience."""
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=200,
             batch_size=16,
             seed=42,
         )
-        brain = QModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.6, gradient_direction=0.3)
 
@@ -514,19 +514,19 @@ class TestQModularBrainIntegration:
 
     def test_deterministic_behavior_with_seed(self):
         """Test that behavior is deterministic with fixed seed."""
-        config1 = QModularBrainConfig(
+        config1 = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             seed=42,
         )
-        brain1 = QModularBrain(config=config1, shots=50, device=DeviceType.CPU)
+        brain1 = QQLearningBrain(config=config1, shots=50, device=DeviceType.CPU)
 
-        config2 = QModularBrainConfig(
+        config2 = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             seed=42,
         )
-        brain2 = QModularBrain(config=config2, shots=50, device=DeviceType.CPU)
+        brain2 = QQLearningBrain(config=config2, shots=50, device=DeviceType.CPU)
 
         # Should have identical quantum parameters
         for key in brain1.parameter_values:
@@ -534,14 +534,14 @@ class TestQModularBrainIntegration:
 
     def test_adaptive_learning(self):
         """Test adaptive learning with multiple passes when struggling."""
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
             negative_reward_threshold=-0.01,
         )
-        brain = QModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -560,16 +560,16 @@ class TestQModularBrainIntegration:
         assert brain.update_count >= 0
 
 
-class TestQModularBrainEdgeCases:
+class TestQQLearningBrainEdgeCases:
     """Test edge cases and error handling."""
 
     def test_empty_experience_buffer(self):
         """Test learning with empty buffer."""
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        brain = QModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
         # Should not crash
         brain.learn_from_experience()
@@ -577,13 +577,13 @@ class TestQModularBrainEdgeCases:
 
     def test_terminal_state_handling(self):
         """Test handling of terminal states in learning."""
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
         )
-        brain = QModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
         rng = np.random.default_rng(42)
         state = rng.standard_normal(2**brain.num_qubits + 4)
@@ -610,13 +610,13 @@ class TestQModularBrainEdgeCases:
 
     def test_gradient_clipping(self):
         """Test gradient clipping for stability."""
-        config = QModularBrainConfig(
+        config = QQLearningBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
         )
-        brain = QModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
         rng = np.random.default_rng(42)
         state = rng.standard_normal(2**brain.num_qubits + 4)

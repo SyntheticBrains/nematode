@@ -6,16 +6,16 @@ import torch
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.mlp import MLPBrain, MLPBrainConfig
+from quantumnematode.brain.arch.mlpreinforce import MLPReinforceBrain, MLPReinforceBrainConfig
 from quantumnematode.env import Direction
 
 
-class TestMLPBrainConfig:
+class TestMLPReinforceBrainConfig:
     """Test cases for MLP brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MLPBrainConfig()
+        config = MLPReinforceBrainConfig()
 
         assert config.baseline == 0.0
         assert config.baseline_alpha == 0.05
@@ -29,7 +29,7 @@ class TestMLPBrainConfig:
 
     def test_custom_config(self):
         """Test custom configuration values."""
-        config = MLPBrainConfig(
+        config = MLPReinforceBrainConfig(
             hidden_dim=128,
             learning_rate=0.001,
             gamma=0.95,
@@ -42,13 +42,13 @@ class TestMLPBrainConfig:
         assert config.num_hidden_layers == 3
 
 
-class TestMLPBrain:
+class TestMLPReinforceBrain:
     """Test cases for the MLP brain architecture."""
 
     @pytest.fixture
     def config(self):
         """Create a test configuration."""
-        return MLPBrainConfig(
+        return MLPReinforceBrainConfig(
             hidden_dim=32,
             learning_rate=0.01,
             num_hidden_layers=2,
@@ -57,7 +57,7 @@ class TestMLPBrain:
     @pytest.fixture
     def brain(self, config):
         """Create a test MLP brain."""
-        return MLPBrain(
+        return MLPReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -203,7 +203,7 @@ class TestMLPBrain:
 
     def test_post_process_episode(self, brain):
         """Test episode post-processing."""
-        # post_process_episode is a no-op for MLPBrain
+        # post_process_episode is a no-op for MLPReinforceBrain
         brain.post_process_episode()
         # Just verify it doesn't crash
 
@@ -227,13 +227,13 @@ class TestMLPBrain:
             brain.copy()
 
 
-class TestMLPBrainIntegration:
+class TestMLPReinforceBrainIntegration:
     """Integration tests for MLP brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = MLPBrainConfig(hidden_dim=16, learning_rate=0.01)
-        brain = MLPBrain(
+        config = MLPReinforceBrainConfig(hidden_dim=16, learning_rate=0.01)
+        brain = MLPReinforceBrain(
             config=config,
             input_dim=2,
             num_actions=4,
@@ -270,8 +270,8 @@ class TestMLPBrainIntegration:
 
     def test_training_vs_evaluation_mode(self):
         """Test behavior differences between training and evaluation."""
-        config = MLPBrainConfig(hidden_dim=16)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = MLPReinforceBrainConfig(hidden_dim=16)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -289,8 +289,8 @@ class TestMLPBrainIntegration:
 
     def test_baseline_updates(self):
         """Test that baseline is updated during learning."""
-        config = MLPBrainConfig(baseline=0.0, baseline_alpha=0.1)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = MLPReinforceBrainConfig(baseline=0.0, baseline_alpha=0.1)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -307,8 +307,8 @@ class TestMLPBrainIntegration:
 
     def test_exploration_noise(self):
         """Test that exploration noise is added during training."""
-        config = MLPBrainConfig(hidden_dim=16)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        config = MLPReinforceBrainConfig(hidden_dim=16)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 

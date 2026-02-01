@@ -1,5 +1,5 @@
 """
-Quantum Modular Q-Learning Brain (QModularBrain).
+Quantum Modular Q-Learning Brain (QQLearningBrain).
 
 This hybrid quantum-classical implementation combines:
 - Quantum circuit feature extraction from the modular brain
@@ -73,8 +73,8 @@ if TYPE_CHECKING:
     )
 
 
-class QModularBrainConfig(BrainConfig):
-    """Configuration for the QModularBrain architecture."""
+class QQLearningBrainConfig(BrainConfig):
+    """Configuration for the QQLearningBrain architecture."""
 
     modules: dict[ModuleName, list[int]] = (
         DEFAULT_MODULES  # Mapping of module names to qubit indices
@@ -103,7 +103,7 @@ class QModularBrainConfig(BrainConfig):
     )
 
 
-class QModularBrain:
+class QQLearningBrain:
     """
     Quantum Modular Brain using Q-Learning with Experience Replay.
 
@@ -112,7 +112,7 @@ class QModularBrain:
 
     def __init__(  # noqa: PLR0913
         self,
-        config: QModularBrainConfig,
+        config: QQLearningBrainConfig,
         shots: int = 1024,
         device: DeviceType = DeviceType.CPU,
         learning_rate: DynamicLearningRate | None = None,
@@ -126,7 +126,7 @@ class QModularBrain:
         batch_size: int = DEFAULT_BATCH_SIZE,
         target_update_freq: int = DEFAULT_TARGET_UPDATE_FREQUENCY,
     ) -> None:
-        """Initialize the QModularBrain."""
+        """Initialize the QQLearningBrain."""
         # TODO: Add tracking metrics
         # TODO: Implement Qiskit runtime and Qiskit Functions
         # TODO: Use or remove LR
@@ -179,7 +179,7 @@ class QModularBrain:
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
         self.quantum_seed = self.seed  # Preserve for quantum parameter initialization
-        logger.info(f"QModularBrain using seed: {self.seed}")
+        logger.info(f"QQLearningBrain using seed: {self.seed}")
 
         # Initialize quantum parameters and Q-networks
         self._initialize_quantum_parameters()
@@ -190,7 +190,7 @@ class QModularBrain:
         self.step_count = 0
 
         logger.info(
-            f"QModularBrain initialized with {self.num_qubits} qubits, "
+            f"QQLearningBrain initialized with {self.num_qubits} qubits, "
             f"{len(self.action_set)} actions",
         )
 
@@ -742,7 +742,7 @@ class QModularBrain:
         # Reserved for future brain-internal memory mechanisms
 
     def prepare_episode(self) -> None:
-        """Prepare for a new episode (no-op for QModularBrain)."""
+        """Prepare for a new episode (no-op for QQLearningBrain)."""
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
         """Post-process the brain's state after each episode."""
@@ -755,14 +755,14 @@ class QModularBrain:
         default_params = {module: {"rx": 0.0, "ry": 0.0, "rz": 0.0} for module in self.modules}
         return self.build_quantum_circuit(default_params)
 
-    def copy(self) -> QModularBrain:
+    def copy(self) -> QQLearningBrain:
         """Create a copy of the brain."""
         # TODO: Copy entire state
         # Create a config copy with the resolved seed to ensure reproducibility
-        config_with_seed = QModularBrainConfig(
+        config_with_seed = QQLearningBrainConfig(
             **{**self.config.model_dump(), "seed": self.seed},
         )
-        new_brain = QModularBrain(
+        new_brain = QQLearningBrain(
             config=config_with_seed,
             shots=self.shots,
             device=self.device,
@@ -775,6 +775,6 @@ class QModularBrain:
         return new_brain
 
 
-# Canonical name (preferred)
-QQLearningBrain = QModularBrain
-QQLearningBrainConfig = QModularBrainConfig
+# Deprecated aliases (backward compatibility)
+QModularBrain = QQLearningBrain
+QModularBrainConfig = QQLearningBrainConfig

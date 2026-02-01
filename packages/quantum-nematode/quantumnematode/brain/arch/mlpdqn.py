@@ -44,7 +44,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 
-class QMLPBrainConfig(BrainConfig):
+class MLPDQNBrainConfig(BrainConfig):
     """Configuration for the Q-learning MLP Brain architecture."""
 
     hidden_dim: int = 64
@@ -59,7 +59,7 @@ class QMLPBrainConfig(BrainConfig):
     batch_size: int = 32  # Batch size for training
 
 
-class QMLPBrain(ClassicalBrain):
+class MLPDQNBrain(ClassicalBrain):
     """
     Q-learning based MLP brain architecture.
 
@@ -68,7 +68,7 @@ class QMLPBrain(ClassicalBrain):
 
     def __init__(  # noqa: PLR0913
         self,
-        config: QMLPBrainConfig,
+        config: MLPDQNBrainConfig,
         input_dim: int,
         num_actions: int,
         device: DeviceType = DeviceType.CPU,
@@ -81,7 +81,7 @@ class QMLPBrain(ClassicalBrain):
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
         set_global_seed(self.seed)  # Set global numpy/torch seeds
-        logger.info(f"QMLPBrain using seed: {self.seed}")
+        logger.info(f"MLPDQNBrain using seed: {self.seed}")
 
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -167,7 +167,7 @@ class QMLPBrain(ClassicalBrain):
                         f"(PyTorch default)",
                     )
 
-        logger.info("QMLPBrain parameter initialization complete:")
+        logger.info("MLPDQNBrain parameter initialization complete:")
         logger.info(f"  Total parameters: {param_count:,}")
         logger.info("  Parameter details:")
         for detail in param_details:
@@ -356,7 +356,7 @@ class QMLPBrain(ClassicalBrain):
         return
 
     def prepare_episode(self) -> None:
-        """Prepare for a new episode (no-op for QMLPBrain)."""
+        """Prepare for a new episode (no-op for MLPDQNBrain)."""
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:  # noqa: ARG002
         """Post-process the brain's state after each episode."""
@@ -368,7 +368,7 @@ class QMLPBrain(ClassicalBrain):
         error_msg = "Q-MLPBrain does not have a quantum circuit."
         raise NotImplementedError(error_msg)
 
-    def copy(self) -> "QMLPBrain":
+    def copy(self) -> "MLPDQNBrain":
         """Not implemented."""
         error_msg = "Q-MLPBrain does not support copying."
         raise NotImplementedError(error_msg)
@@ -383,6 +383,6 @@ class QMLPBrain(ClassicalBrain):
         self._action_set = actions
 
 
-# Canonical name (preferred)
-MLPDQNBrain = QMLPBrain
-MLPDQNBrainConfig = QMLPBrainConfig
+# Deprecated aliases (backward compatibility)
+QMLPBrain = MLPDQNBrain
+QMLPBrainConfig = MLPDQNBrainConfig

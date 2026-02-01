@@ -9,19 +9,19 @@ from qiskit import QuantumCircuit
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
+from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from quantumnematode.brain.modules import DEFAULT_MODULES, ModuleName
 from quantumnematode.env import Direction
 from quantumnematode.initializers.random_initializer import RandomSmallUniformInitializer
 from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 
-class TestModularBrainConfig:
+class TestQVarCircuitBrainConfig:
     """Test cases for modular quantum brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = ModularBrainConfig()
+        config = QVarCircuitBrainConfig()
 
         assert config.l2_reg == 0.005
         assert config.large_gradient_threshold == 0.1
@@ -38,7 +38,7 @@ class TestModularBrainConfig:
         custom_modules = {
             ModuleName.CHEMOTAXIS: [0, 1],
         }
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=3,
             modules=custom_modules,
             l2_reg=0.01,
@@ -49,13 +49,13 @@ class TestModularBrainConfig:
         assert config.l2_reg == 0.01
 
 
-class TestModularBrain:
+class TestQVarCircuitBrain:
     """Test cases for the modular quantum brain architecture."""
 
     @pytest.fixture
     def config(self):
         """Create a test configuration with minimal qubits."""
-        return ModularBrainConfig(
+        return QVarCircuitBrainConfig(
             num_layers=1,
             modules={
                 ModuleName.CHEMOTAXIS: [0, 1],
@@ -65,7 +65,7 @@ class TestModularBrain:
     @pytest.fixture
     def brain(self, config):
         """Create a test modular brain."""
-        return ModularBrain(
+        return QVarCircuitBrain(
             config=config,
             shots=100,
             device=DeviceType.CPU,
@@ -286,18 +286,18 @@ class TestModularBrain:
         assert brain.parameter_values[next(iter(brain.parameter_values.keys()))] == 0.123
 
 
-class TestModularBrainIntegration:
+class TestQVarCircuitBrainIntegration:
     """Integration tests for modular quantum brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={
                 ModuleName.CHEMOTAXIS: [0, 1],
             },
         )
-        brain = ModularBrain(
+        brain = QVarCircuitBrain(
             config=config,
             shots=50,
             device=DeviceType.CPU,
@@ -334,14 +334,14 @@ class TestModularBrainIntegration:
 
     def test_learning_rate_boost(self):
         """Test learning rate boost mechanism."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             lr_boost=True,
             low_reward_threshold=-0.25,
             low_reward_window=5,
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -355,11 +355,11 @@ class TestModularBrainIntegration:
 
     def test_momentum_updates(self):
         """Test momentum-based parameter updates."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
@@ -373,12 +373,12 @@ class TestModularBrainIntegration:
 
     def test_l2_regularization(self):
         """Test L2 regularization in parameter updates."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             l2_reg=0.1,  # High regularization
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
         # Set large parameter values
         for key in brain.parameter_values:
@@ -396,11 +396,11 @@ class TestModularBrainIntegration:
     @patch.dict(os.environ, {"IBM_QUANTUM_BACKEND": "test_backend"})
     def test_qpu_backend_name(self):
         """Test QPU backend name retrieval."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0]},
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.QPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.QPU)
 
         # Mock the backend
         mock_backend = MagicMock()
@@ -412,13 +412,13 @@ class TestModularBrainIntegration:
 
     def test_custom_parameter_initializer(self):
         """Test using custom parameter initializer."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
         )
 
         initializer = RandomSmallUniformInitializer()
-        brain = ModularBrain(
+        brain = QVarCircuitBrain(
             config=config,
             shots=50,
             device=DeviceType.CPU,
@@ -438,7 +438,7 @@ class TestTrajectoryLearning:
     @pytest.fixture
     def trajectory_config(self):
         """Create a test configuration with trajectory learning enabled."""
-        return ModularBrainConfig(
+        return QVarCircuitBrainConfig(
             num_layers=1,
             modules={
                 ModuleName.CHEMOTAXIS: [0, 1],
@@ -450,7 +450,7 @@ class TestTrajectoryLearning:
     @pytest.fixture
     def trajectory_brain(self, trajectory_config):
         """Create a test modular brain with trajectory learning."""
-        return ModularBrain(
+        return QVarCircuitBrain(
             config=trajectory_config,
             shots=100,
             device=DeviceType.CPU,
@@ -546,12 +546,12 @@ class TestTrajectoryLearning:
 
     def test_backward_compatibility_single_step(self):
         """Test backward compatibility when trajectory learning is disabled."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             use_trajectory_learning=False,  # Disabled
         )
-        brain = ModularBrain(config=config, shots=100, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=100, device=DeviceType.CPU)
 
         assert brain.use_trajectory_learning is False
         assert brain.episode_buffer is None
@@ -649,7 +649,7 @@ class TestTrajectoryLearning:
         action = actions[0]
 
         # Manually create buffer data
-        from quantumnematode.brain.arch.modular import EpisodeBuffer
+        from quantumnematode.brain.arch.qvarcircuit import EpisodeBuffer
 
         buffer = EpisodeBuffer()
         for i in range(3):
@@ -672,7 +672,7 @@ class TestTrajectoryLearning:
 
     def test_trajectory_gradient_length_mismatch(self, trajectory_brain):
         """Test error handling when returns length doesn't match buffer."""
-        from quantumnematode.brain.arch.modular import EpisodeBuffer
+        from quantumnematode.brain.arch.qvarcircuit import EpisodeBuffer
 
         params = BrainParams(gradient_strength=0.6, gradient_direction=0.3)
         actions = trajectory_brain.run_brain(
@@ -699,7 +699,7 @@ class TestTrajectoryLearning:
 
     def test_trajectory_gradient_empty_buffer(self, trajectory_brain):
         """Test error handling with empty episode buffer."""
-        from quantumnematode.brain.arch.modular import EpisodeBuffer
+        from quantumnematode.brain.arch.qvarcircuit import EpisodeBuffer
 
         buffer = EpisodeBuffer()
         returns = []
@@ -708,16 +708,16 @@ class TestTrajectoryLearning:
             trajectory_brain.trajectory_parameter_shift_gradients(buffer, returns)
 
 
-class TestModularBrainEdgeCases:
+class TestQVarCircuitBrainEdgeCases:
     """Test edge cases and error handling."""
 
     def test_empty_counts(self):
         """Test handling of empty measurement counts."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0]},
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
         # Empty counts should raise error
         with pytest.raises(ValueError, match="No valid actions found"):
@@ -725,11 +725,11 @@ class TestModularBrainEdgeCases:
 
     def test_invalid_counts(self):
         """Test handling of invalid measurement counts."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0]},
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
         # Counts with invalid bitstrings
         invalid_counts = {"invalid": 10, "not_binary": 20}
@@ -739,11 +739,11 @@ class TestModularBrainEdgeCases:
 
     def test_zero_reward(self):
         """Test handling of zero reward."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
         )
-        brain = ModularBrain(config=config, shots=50, device=DeviceType.CPU)
+        brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 

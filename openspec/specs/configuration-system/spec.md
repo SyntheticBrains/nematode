@@ -61,7 +61,7 @@ The system SHALL provide example configurations for common spiking brain use cas
 #### Scenario: Medium Network Configuration
 
 - **GIVEN** a need for standard experimental setup
-- **WHEN** loading spiking_foraging_medium.yml configuration
+- **WHEN** loading spikingreinforce_foraging_medium.yml configuration
 - **THEN** the system SHALL configure a balanced network
 - **AND** SHALL use parameters suitable for robust learning
 
@@ -354,7 +354,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 
 #### Scenario: Predator-Enabled Small Environment Example
 
-- **GIVEN** an example configuration file `configs/examples/mlp_predators_small.yml`
+- **GIVEN** an example configuration file `configs/examples/mlpreinforce_predators_small.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
   - 20×20 grid with predators enabled
@@ -365,7 +365,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 
 #### Scenario: Predator-Enabled Large Environment Example
 
-- **GIVEN** an example configuration file `configs/examples/modular_predators_large.yml`
+- **GIVEN** an example configuration file `configs/examples/qvarcircuit_predators_large.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
   - 100×100 grid with 5 predators for advanced difficulty

@@ -263,7 +263,7 @@ ______________________________________________________________________
 
 ```bash
 python scripts/run_ablation.py \
-  --config configs/examples/modular_foraging_small.yml \
+  --config configs/examples/qvarcircuit_foraging_small.yml \
   --ablate-modules chemotaxis thermotaxis nociception \
   --ablate-entanglement \
   --runs 50 \

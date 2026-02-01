@@ -7,7 +7,7 @@ from quantumnematode.agent import (
     SatietyConfig,
 )
 from quantumnematode.agent.runners import ManyworldsEpisodeRunner, StandardEpisodeRunner
-from quantumnematode.brain.arch import MLPBrain, MLPBrainConfig
+from quantumnematode.brain.arch import MLPReinforceBrain, MLPReinforceBrainConfig
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 from quantumnematode.env.env import HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.env.temperature import TemperatureZone
@@ -29,8 +29,8 @@ class TestStandardEpisodeRunnerIntegration:
     def test_run_episode_returns_path_and_termination(self):
         """Test running episode returns path and termination reason."""
         # Create real components
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -57,8 +57,8 @@ class TestStandardEpisodeRunnerIntegration:
     def test_run_episode_dynamic_foraging(self):
         """Test running episode in dynamic foraging environment."""
         # Create real components
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -84,8 +84,8 @@ class TestStandardEpisodeRunnerIntegration:
 
     def test_run_episode_updates_agent_state(self):
         """Test that running episode updates agent state correctly."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -106,8 +106,8 @@ class TestStandardEpisodeRunnerIntegration:
 
     def test_runner_delegates_correctly(self):
         """Test that agent correctly delegates to StandardEpisodeRunner."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -142,8 +142,8 @@ class TestManyworldsEpisodeRunnerIntegration:
 
     def test_runner_initialization(self):
         """Test that agent creates manyworlds runner correctly."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -157,8 +157,8 @@ class TestManyworldsEpisodeRunnerIntegration:
 
     def test_manyworlds_config_parameter(self):
         """Test that manyworlds runner accepts config parameter."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -183,8 +183,8 @@ class TestRunnerComponentIntegration:
 
     def test_standard_runner_uses_food_handler(self):
         """Test that StandardEpisodeRunner uses FoodConsumptionHandler."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -207,8 +207,8 @@ class TestRunnerComponentIntegration:
 
     def test_standard_runner_uses_satiety_manager(self):
         """Test that StandardEpisodeRunner uses SatietyManager."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -234,8 +234,8 @@ class TestRunnerComponentIntegration:
 
     def test_runner_helper_methods_accessible(self):
         """Test that runners can access agent helper methods."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=3),
@@ -275,8 +275,8 @@ class TestPredatorCollisionTermination:
 
     def test_predator_instant_death_terminates_episode(self):
         """Test that predator collision without health system causes instant death."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Create environment with predator that has kill_radius=1
         # (agent moves first in the step loop, so kill_radius=0 would miss)
@@ -302,8 +302,8 @@ class TestPredatorCollisionTermination:
 
     def test_predator_with_health_system_applies_damage(self):
         """Test that predator collision with health system applies damage."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         env = DynamicForagingEnvironment(
             grid_size=10,
@@ -327,8 +327,8 @@ class TestPredatorCollisionTermination:
 
     def test_health_depletion_terminates_episode(self):
         """Test that HP reaching zero terminates episode with HEALTH_DEPLETED."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Low HP and high damage = quick death
         env = DynamicForagingEnvironment(
@@ -358,8 +358,8 @@ class TestStarvationTermination:
 
     def test_starvation_terminates_episode(self):
         """Test that running out of satiety terminates episode."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         env = DynamicForagingEnvironment(
             grid_size=20,  # Large grid so agent won't find food easily
@@ -388,8 +388,8 @@ class TestGoalCompletionTermination:
 
     def test_food_collection_victory(self):
         """Test that collecting target foods terminates with COMPLETED_ALL_FOOD."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Small environment with easy food collection
         env = DynamicForagingEnvironment(
@@ -421,8 +421,8 @@ class TestHealthHistoryTracking:
 
     def test_health_history_recorded_when_enabled(self):
         """Test that health history is recorded when health system is enabled."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         env = DynamicForagingEnvironment(
             grid_size=10,
@@ -448,8 +448,8 @@ class TestThermotaxisIntegration:
 
     def test_temperature_effects_applied_during_episode(self):
         """Test that temperature zone effects are applied during episode when enabled."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Create environment with thermotaxis enabled and strong gradient
         # Agent starts in a danger zone to ensure we can detect effects
@@ -481,8 +481,8 @@ class TestThermotaxisIntegration:
 
     def test_temperature_comfort_score_tracked(self):
         """Test that temperature comfort score is tracked during episode."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Environment at comfortable temperature
         env = DynamicForagingEnvironment(
@@ -510,8 +510,8 @@ class TestThermotaxisIntegration:
 
     def test_temperature_lethal_zone_causes_death(self):
         """Test that extreme temperatures can cause death through health depletion."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Lethal temperature environment with high damage
         env = DynamicForagingEnvironment(
@@ -538,8 +538,8 @@ class TestThermotaxisIntegration:
 
     def test_temperature_hp_damage_applies_penalty(self):
         """Test that temperature HP damage triggers penalty_health_damage penalty."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Environment in danger zone (causes HP damage)
         env = DynamicForagingEnvironment(
@@ -576,10 +576,10 @@ class TestThermotaxisIntegration:
 
     def test_temperature_hp_damage_penalty_applied_when_damage_taken(self):
         """Test that HP damage penalty is applied per-step when taking damage."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
 
         # Run 1: Low HP damage (danger zone)
-        brain1 = MLPBrain(config=config, input_dim=2, num_actions=4)
+        brain1 = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env1 = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
@@ -600,7 +600,7 @@ class TestThermotaxisIntegration:
         reward_low_damage = agent1._episode_tracker.rewards
 
         # Run 2: High HP damage (lethal zone)
-        brain2 = MLPBrain(config=config, input_dim=2, num_actions=4)
+        brain2 = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
         env2 = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
@@ -629,8 +629,8 @@ class TestBraveForagingBonus:
 
     def test_brave_foraging_bonus_config_in_discomfort_zone(self):
         """Test that reward_discomfort_food parameter is accessible and usable."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Environment in hot discomfort zone (25-30°C with cultivation at 20°C)
         env = DynamicForagingEnvironment(
@@ -674,8 +674,8 @@ class TestBraveForagingBonus:
 
     def test_brave_bonus_not_applied_in_comfort_zone(self):
         """Test that brave bonus is only applied in discomfort zones, not comfort."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Environment at comfort temperature - no brave bonus should apply
         env = DynamicForagingEnvironment(
@@ -715,8 +715,8 @@ class TestBraveForagingBonus:
 
     def test_brave_bonus_not_applied_in_danger_zone(self):
         """Test that brave bonus is only for discomfort, not danger zones."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Environment in danger zone - no brave bonus (too dangerous to reward)
         env = DynamicForagingEnvironment(
@@ -755,8 +755,8 @@ class TestBraveForagingBonus:
 
     def test_brave_bonus_disabled_when_zero(self):
         """Test that brave bonus is not applied when reward_discomfort_food is 0."""
-        config = MLPBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
-        brain = MLPBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
+        brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
         # Environment in discomfort zone but with brave bonus disabled
         env = DynamicForagingEnvironment(

@@ -67,14 +67,14 @@ DEFAULT_MAX_GRAD_NORM = 0.5
 EPISODE_LOG_INTERVAL = 25
 
 
-class PPOBrainConfig(BrainConfig):
-    """Configuration for the PPOBrain architecture.
+class MLPPPOBrainConfig(BrainConfig):
+    """Configuration for the MLPPPOBrain architecture.
 
     Supports two modes for input feature extraction:
 
     1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
        - Set `sensory_modules=None` (default)
-       - Requires explicit `input_dim=2` when creating PPOBrain
+       - Requires explicit `input_dim=2` when creating MLPPPOBrain
 
     2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
        - Set `sensory_modules` to a list of ModuleName values
@@ -83,7 +83,7 @@ class PPOBrainConfig(BrainConfig):
        - `input_dim` is auto-computed as `len(sensory_modules) * 2`
 
     Example unified mode config:
-        >>> config = PPOBrainConfig(
+        >>> config = MLPPPOBrainConfig(
         ...     sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         ... )
         >>> # input_dim will be 4 (2 modules * 2 features each)
@@ -257,7 +257,7 @@ class RolloutBuffer:
             }
 
 
-class PPOBrain(ClassicalBrain):
+class MLPPPOBrain(ClassicalBrain):
     """
     Proximal Policy Optimization (PPO) brain architecture.
 
@@ -267,7 +267,7 @@ class PPOBrain(ClassicalBrain):
 
     def __init__(  # noqa: PLR0913, PLR0915
         self,
-        config: PPOBrainConfig,
+        config: MLPPPOBrainConfig,
         input_dim: int | None = None,
         num_actions: int = 4,
         device: DeviceType = DeviceType.CPU,
@@ -281,7 +281,7 @@ class PPOBrain(ClassicalBrain):
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
         set_global_seed(self.seed)  # Set global numpy/torch seeds
-        logger.info(f"PPOBrain using seed: {self.seed}")
+        logger.info(f"MLPPPOBrain using seed: {self.seed}")
 
         # Store sensory modules for feature extraction
         self.sensory_modules = config.sensory_modules
@@ -418,7 +418,7 @@ class PPOBrain(ClassicalBrain):
         for param in self.critic.parameters():
             param_count += param.numel()
 
-        logger.info(f"PPOBrain initialized with {param_count:,} total parameters")
+        logger.info(f"MLPPPOBrain initialized with {param_count:,} total parameters")
         if parameter_initializer is not None:
             logger.info("Custom parameter initializer provided but using orthogonal init")
 
@@ -694,7 +694,7 @@ class PPOBrain(ClassicalBrain):
             )
 
     def update_memory(self, reward: float | None = None) -> None:
-        """No-op for PPOBrain."""
+        """No-op for MLPPPOBrain."""
 
     def prepare_episode(self) -> None:
         """Prepare for a new episode."""
@@ -713,9 +713,9 @@ class PPOBrain(ClassicalBrain):
         # Reset tracking
         self._current_episode_rewards.clear()
 
-    def copy(self) -> "PPOBrain":
-        """PPOBrain does not support copying."""
-        error_msg = "PPOBrain does not support copying. Use deepcopy if needed."
+    def copy(self) -> "MLPPPOBrain":
+        """MLPPPOBrain does not support copying."""
+        error_msg = "MLPPPOBrain does not support copying. Use deepcopy if needed."
         raise NotImplementedError(error_msg)
 
     @property
@@ -728,8 +728,8 @@ class PPOBrain(ClassicalBrain):
         self._action_set = actions
 
     def build_brain(self) -> None:
-        """Not applicable to PPOBrain."""
-        error_msg = "PPOBrain does not have a quantum circuit."
+        """Not applicable to MLPPPOBrain."""
+        error_msg = "MLPPPOBrain does not have a quantum circuit."
         raise NotImplementedError(error_msg)
 
     def update_parameters(
@@ -742,6 +742,6 @@ class PPOBrain(ClassicalBrain):
         """Not used - PPO uses its own optimizer."""
 
 
-# Canonical name (preferred)
-MLPPPOBrain = PPOBrain
-MLPPPOBrainConfig = PPOBrainConfig
+# Deprecated aliases (backward compatibility)
+PPOBrain = MLPPPOBrain
+PPOBrainConfig = MLPPPOBrainConfig

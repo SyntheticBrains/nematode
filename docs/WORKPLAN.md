@@ -29,7 +29,9 @@ Rename all brain architectures to use paradigm prefix + algorithm naming.
 - [x] Migrate ~47 config files in `configs/examples/`
 - [x] Update `benchmark/categorization.py`
 - [x] Update AGENTS.md, README.md references
-- [ ] Rename config files from old brain names to new brain names
+- [x] Rename config files from old brain names to new brain names
+- [x] Rename brain .py files to canonical names
+- [x] Rename actual class definitions to canonical names (old names as deprecated aliases)
 - [x] Update OpenSpec `add-ablation-toolkit` brain name references
 
 ### Stream 2: Roadmap Phase Restructuring

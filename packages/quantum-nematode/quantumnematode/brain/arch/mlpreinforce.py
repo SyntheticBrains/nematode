@@ -51,8 +51,8 @@ DEFAULT_BASELINE_ALPHA = 0.05
 DEFAULT_GAMMA = 0.99
 
 
-class MLPBrainConfig(BrainConfig):
-    """Configuration for the MLPBrain architecture."""
+class MLPReinforceBrainConfig(BrainConfig):
+    """Configuration for the MLPReinforceBrain architecture."""
 
     baseline: float = DEFAULT_BASELINE
     baseline_alpha: float = DEFAULT_BASELINE_ALPHA
@@ -65,7 +65,7 @@ class MLPBrainConfig(BrainConfig):
     num_hidden_layers: int = DEFAULT_NUM_HIDDEN_LAYERS
 
 
-class MLPBrain(ClassicalBrain):
+class MLPReinforceBrain(ClassicalBrain):
     """
     Classical multi-layer perceptron (MLP) brain architecture.
 
@@ -74,7 +74,7 @@ class MLPBrain(ClassicalBrain):
 
     def __init__(  # noqa: PLR0913
         self,
-        config: MLPBrainConfig,
+        config: MLPReinforceBrainConfig,
         input_dim: int,
         num_actions: int,
         device: DeviceType = DeviceType.CPU,
@@ -89,7 +89,7 @@ class MLPBrain(ClassicalBrain):
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
         set_global_seed(self.seed)  # Set global numpy/torch seeds
-        logger.info(f"MLPBrain using seed: {self.seed}")
+        logger.info(f"MLPReinforceBrain using seed: {self.seed}")
 
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
@@ -181,7 +181,7 @@ class MLPBrain(ClassicalBrain):
                         f"(PyTorch default)",
                     )
 
-        logger.info("MLPBrain parameter initialization complete:")
+        logger.info("MLPReinforceBrain parameter initialization complete:")
         logger.info(f"  Total parameters: {param_count:,}")
         logger.info("  Parameter details:")
         for detail in param_details:
@@ -242,10 +242,10 @@ class MLPBrain(ClassicalBrain):
         """
         Build the brain architecture.
 
-        This method is not applicable to MLPBrain as it does not have a quantum circuit.
+        This method is not applicable to MLPReinforceBrain as it does not have a quantum circuit.
         """
         error_msg = (
-            "MLPBrain does not have a quantum circuit. "
+            "MLPReinforceBrain does not have a quantum circuit. "
             "This method is not applicable to classical architectures."
         )
         raise NotImplementedError(error_msg)
@@ -324,7 +324,7 @@ class MLPBrain(ClassicalBrain):
         """
         Update the parameters of the policy network.
 
-        This method is not used in MLPBrain as it uses PyTorch autograd.
+        This method is not used in MLPReinforceBrain as it uses PyTorch autograd.
         """
 
     def compute_discounted_return(self, rewards: list[float], gamma: float = 0.99) -> float:
@@ -461,23 +461,23 @@ class MLPBrain(ClassicalBrain):
         self,
         reward: float | None = None,  # noqa: ARG002
     ) -> None:
-        """No-op for MLPBrain."""
+        """No-op for MLPReinforceBrain."""
         return
 
     def prepare_episode(self) -> None:
-        """Prepare for a new episode (no-op for MLPBrain)."""
+        """Prepare for a new episode (no-op for MLPReinforceBrain)."""
 
     def post_process_episode(self, *, episode_success: bool | None = None) -> None:
         """Post-process the brain's state after each episode."""
 
-    def copy(self) -> "MLPBrain":
+    def copy(self) -> "MLPReinforceBrain":
         """
-        Create a copy of the MLPBrain instance.
+        Create a copy of the MLPReinforceBrain instance.
 
-        MLPBrain does not support copying as it is a simple neural network.
+        MLPReinforceBrain does not support copying as it is a simple neural network.
         Use deepcopy if needed.
         """
-        error_msg = "MLPBrain does not support copying. Use deepcopy if needed."
+        error_msg = "MLPReinforceBrain does not support copying. Use deepcopy if needed."
         raise NotImplementedError(error_msg)
 
     @property
@@ -490,6 +490,6 @@ class MLPBrain(ClassicalBrain):
         self._action_set = actions
 
 
-# Canonical name (preferred)
-MLPReinforceBrain = MLPBrain
-MLPReinforceBrainConfig = MLPBrainConfig
+# Deprecated aliases (backward compatibility)
+MLPBrain = MLPReinforceBrain
+MLPBrainConfig = MLPReinforceBrainConfig

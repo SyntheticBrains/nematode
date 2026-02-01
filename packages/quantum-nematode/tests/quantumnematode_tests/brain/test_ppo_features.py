@@ -1,36 +1,36 @@
-"""Tests for PPOBrain unified feature extraction integration."""
+"""Tests for MLPPPOBrain unified feature extraction integration."""
 
 import numpy as np
 import pytest
 from quantumnematode.brain.arch import BrainParams
-from quantumnematode.brain.arch.ppo import PPOBrain, PPOBrainConfig
+from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
 
 
 class TestPPOBrainLegacyMode:
-    """Test PPOBrain in legacy mode (backward compatibility)."""
+    """Test MLPPPOBrain in legacy mode (backward compatibility)."""
 
     def test_legacy_mode_default_input_dim(self):
         """Test that legacy mode defaults to 2 features."""
-        config = PPOBrainConfig()
-        brain = PPOBrain(config=config)
+        config = MLPPPOBrainConfig()
+        brain = MLPPPOBrain(config=config)
 
         assert brain.input_dim == 2
         assert brain.sensory_modules is None
 
     def test_legacy_mode_explicit_input_dim(self):
         """Test that explicit input_dim is respected in legacy mode."""
-        config = PPOBrainConfig()
-        brain = PPOBrain(config=config, input_dim=5)
+        config = MLPPPOBrainConfig()
+        brain = MLPPPOBrain(config=config, input_dim=5)
 
         assert brain.input_dim == 5
         assert brain.sensory_modules is None
 
     def test_legacy_preprocess_output_shape(self):
         """Test that legacy preprocessing returns 2 features."""
-        config = PPOBrainConfig()
-        brain = PPOBrain(config=config)
+        config = MLPPPOBrainConfig()
+        brain = MLPPPOBrain(config=config)
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -45,8 +45,8 @@ class TestPPOBrainLegacyMode:
 
     def test_legacy_preprocess_values(self):
         """Test that legacy preprocessing computes correct values."""
-        config = PPOBrainConfig()
-        brain = PPOBrain(config=config)
+        config = MLPPPOBrainConfig()
+        brain = MLPPPOBrain(config=config)
 
         params = BrainParams(
             gradient_strength=0.8,
@@ -63,14 +63,14 @@ class TestPPOBrainLegacyMode:
 
 
 class TestPPOBrainUnifiedMode:
-    """Test PPOBrain in unified sensory mode with classical feature extraction."""
+    """Test MLPPPOBrain in unified sensory mode with classical feature extraction."""
 
     def test_unified_mode_auto_computes_input_dim(self):
         """Test that input_dim is auto-computed from modules."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # 2 modules * 2 features each = 4 (classical extraction: [strength, angle])
         assert brain.input_dim == 4
@@ -78,30 +78,30 @@ class TestPPOBrainUnifiedMode:
 
     def test_unified_mode_single_module(self):
         """Test unified mode with single module."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.CHEMOTAXIS],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # 1 module * 2 features = 2 (classical: [strength, angle])
         assert brain.input_dim == 2
 
     def test_unified_mode_overrides_explicit_input_dim(self):
         """Test that sensory_modules overrides explicit input_dim."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.CHEMOTAXIS],
         )
         # Explicitly pass wrong input_dim - should be overridden
-        brain = PPOBrain(config=config, input_dim=10)
+        brain = MLPPPOBrain(config=config, input_dim=10)
 
         assert brain.input_dim == 2  # Overridden by modules (1 * 2 features)
 
     def test_unified_preprocess_output_shape(self):
         """Test that unified preprocessing returns correct shape."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.CHEMOTAXIS, ModuleName.PROPRIOCEPTION],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -117,10 +117,10 @@ class TestPPOBrainUnifiedMode:
 
     def test_unified_preprocess_uses_modules(self):
         """Test that unified preprocessing uses specified modules."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.NOCICEPTION],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         params = BrainParams(
             predator_gradient_strength=0.9,
@@ -137,10 +137,10 @@ class TestPPOBrainUnifiedMode:
 
     def test_unified_preprocess_semantic_ranges(self):
         """Test that classical features preserve semantic ranges."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # No food signal - strength should be 0, not -1
         params_no_food = BrainParams(
@@ -163,14 +163,14 @@ class TestPPOBrainUnifiedMode:
 
 
 class TestPPOBrainRunWithUnifiedFeatures:
-    """Test PPOBrain execution with unified features."""
+    """Test MLPPPOBrain execution with unified features."""
 
     def test_run_brain_with_unified_features(self):
         """Test that run_brain works with unified feature extraction."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
-        brain = PPOBrain(config=config, num_actions=4)
+        brain = MLPPPOBrain(config=config, num_actions=4)
 
         params = BrainParams(
             gradient_strength=0.5,
@@ -188,8 +188,8 @@ class TestPPOBrainRunWithUnifiedFeatures:
 
     def test_run_brain_legacy_mode_still_works(self):
         """Test that run_brain still works in legacy mode."""
-        config = PPOBrainConfig()
-        brain = PPOBrain(config=config, input_dim=2, num_actions=4)
+        config = MLPPPOBrainConfig()
+        brain = MLPPPOBrain(config=config, input_dim=2, num_actions=4)
 
         params = BrainParams(
             gradient_strength=0.7,
@@ -204,14 +204,14 @@ class TestPPOBrainRunWithUnifiedFeatures:
 
 
 class TestPPOBrainWithScientificModuleNames:
-    """Test PPOBrain with scientific module names."""
+    """Test MLPPPOBrain with scientific module names."""
 
     def test_food_chemotaxis_module(self):
         """Test using FOOD_CHEMOTAXIS (scientific name)."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # 1 module * 2 features = 2 (classical: [strength, angle])
         assert brain.input_dim == 2
@@ -229,20 +229,20 @@ class TestPPOBrainWithScientificModuleNames:
 
     def test_nociception_module(self):
         """Test using NOCICEPTION (scientific name)."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.NOCICEPTION],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # 1 module * 2 features = 2
         assert brain.input_dim == 2
 
     def test_mechanosensation_module(self):
         """Test using MECHANOSENSATION module."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[ModuleName.MECHANOSENSATION],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # 1 module * 2 features = 2 (classical: [boundary, predator] for mechano)
         assert brain.input_dim == 2
@@ -261,7 +261,7 @@ class TestPPOBrainWithScientificModuleNames:
 
     def test_multi_sensory_config(self):
         """Test with multiple sensory modules for multi-objective scenarios."""
-        config = PPOBrainConfig(
+        config = MLPPPOBrainConfig(
             sensory_modules=[
                 ModuleName.CHEMOTAXIS,
                 ModuleName.FOOD_CHEMOTAXIS,
@@ -269,7 +269,7 @@ class TestPPOBrainWithScientificModuleNames:
                 ModuleName.MECHANOSENSATION,
             ],
         )
-        brain = PPOBrain(config=config)
+        brain = MLPPPOBrain(config=config)
 
         # 4 modules * 2 features = 8 (classical extraction)
         assert brain.input_dim == 8
