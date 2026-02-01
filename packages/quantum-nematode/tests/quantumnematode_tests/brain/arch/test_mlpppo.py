@@ -1,4 +1,4 @@
-"""Unit tests for the PPO brain architecture."""
+"""Unit tests for the MLPPPO brain architecture."""
 
 import numpy as np
 import pytest
@@ -178,7 +178,7 @@ class TestRolloutBuffer:
 
 
 class TestMLPPPOBrain:
-    """Test cases for the MLP PPO brain architecture."""
+    """Test cases for the MLPPPO brain architecture."""
 
     @pytest.fixture
     def config(self):

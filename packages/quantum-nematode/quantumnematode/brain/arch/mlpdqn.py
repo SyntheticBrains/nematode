@@ -1,5 +1,5 @@
 """
-Q-Learning Multi-Layer Perceptron (QMLP) Brain Architecture.
+Q-Learning Multi-Layer Perceptron (MLPDQN) Brain Architecture.
 
 This architecture implements a Deep Q-Network (DQN) approach using a classical
 multi-layer perceptron to learn optimal action-value functions for navigation tasks.
@@ -16,7 +16,7 @@ Architecture:
 - Hidden: Configurable MLP layers with ReLU activation
 - Output: Q-values for each possible action (forward, left, right, stay)
 
-The QMLP brain learns by:
+The MLPDQN brain learns by:
 1. Observing current state and selecting action via epsilon-greedy policy
 2. Storing experience (state, action, reward, next_state) in replay buffer
 3. Sampling random batch from buffer for learning
@@ -151,7 +151,7 @@ class MLPDQNBrain(ClassicalBrain):
                 if parameter_initializer is not None:
                     # NOTE: This is a placeholder for future custom initialization logic
                     logger.info(
-                        f"Custom parameter initialization not fully implemented for QMLP {name}",
+                        f"Custom parameter initialization not fully implemented for MLPDQN {name}",
                     )
                     # Keep PyTorch default for now, but log that custom initializer was provided
                     param_details.append(
@@ -352,7 +352,7 @@ class MLPDQNBrain(ClassicalBrain):
         self,
         reward: float | None = None,  # noqa: ARG002
     ) -> None:
-        """No-op for Q-MLP."""
+        """No-op for MLPDQNBrain."""
         return
 
     def prepare_episode(self) -> None:
@@ -364,7 +364,7 @@ class MLPDQNBrain(ClassicalBrain):
         return
 
     def build_brain(self):  # noqa: ANN201
-        """Not applicable to Q-MLP brain."""
+        """Not applicable to MLPDQNBrain."""
         error_msg = "MLPDQNBrain does not have a quantum circuit."
         raise NotImplementedError(error_msg)
 

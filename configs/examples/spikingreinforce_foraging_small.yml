@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Small Configuration
 # Curriculum level 1: Easy foraging scenario for initial training
-# Uses SpikingREINFORCE (LIF neurons with surrogate gradient descent) brain architecture
+# Uses SpikingReinforce (LIF neurons with surrogate gradient descent) brain architecture
 
 max_steps: 500
 
