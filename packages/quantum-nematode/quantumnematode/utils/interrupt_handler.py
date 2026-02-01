@@ -139,7 +139,7 @@ def manage_simulation_halt(  # noqa: PLR0913
                 )
                 print("Circuit details are only available for QuantumBrain architectures.")
         else:
-            logger.error("Invalid choice. Please enter a number between 1 and 4.")
+            logger.error("Invalid choice. Please enter a number between 0 and 2.")
 
 
 def prompt_interrupt() -> str:
