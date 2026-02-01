@@ -44,7 +44,7 @@ Create or modify a configuration file in `configs/examples/`:
 # configs/examples/my_brain_foraging_medium.yml
 max_steps: 1000
 brain:
-  name: ppo  # or mlp, modular, spiking, etc.
+  name: mlpppo  # or mlpreinforce, qvarcircuit, spikingreinforce, etc.
   config:
     hidden_dim: 128
     # ... your hyperparameters
@@ -127,7 +127,7 @@ Expected output:
 ✓ Submission is VALID.
 
 Summary:
-  brain_type: ppo
+  brain_type: mlpppo
   category: foraging_small/classical
   total_sessions: 10
   total_runs: 500
@@ -193,9 +193,9 @@ Brief description of your approach, hyperparameter choices, and any novel techni
 {
   "submission_id": "20251228_123456",
   "timestamp": "2025-12-28T12:34:56Z",
-  "brain_type": "ppo",
+  "brain_type": "mlpppo",
   "brain_config": {
-    "type": "ppo",
+    "type": "mlpppo",
     "hidden_dim": 128,
     "learning_rate": 0.0003
   },
