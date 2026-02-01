@@ -388,7 +388,7 @@ class TestViewportCalculations:
         # Viewport should be (20, 20) to (30, 30) - centered on agent
 
         # Access the _render_grid method to get viewport
-        viewport = env._get_viewport_bounds()
+        viewport = env.get_viewport_bounds()
         grid = env._render_grid(env.foods, viewport=viewport)
 
         # Grid should be 11x11 (viewport size)
@@ -407,7 +407,7 @@ class TestViewportCalculations:
         )
 
         # Should clamp to grid boundaries - viewport will be smaller
-        viewport = env._get_viewport_bounds()
+        viewport = env.get_viewport_bounds()
         grid = env._render_grid(env.foods, viewport=viewport)
 
         # At position (2,2) with viewport 11x11, we're near edge
@@ -428,7 +428,7 @@ class TestViewportCalculations:
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
 
-        viewport = env._get_viewport_bounds()
+        viewport = env.get_viewport_bounds()
         grid = env._render_grid(env.foods, viewport=viewport)
 
         # At corner, viewport will be clamped to grid size

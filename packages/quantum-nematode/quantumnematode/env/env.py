@@ -1787,7 +1787,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.steps_in_comfort_zone = 0
         self.total_thermotaxis_steps = 0
 
-    def _get_viewport_bounds(self) -> tuple[int, int, int, int]:
+    def get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """
         Calculate viewport bounds centered on the agent.
 
@@ -1808,7 +1808,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def render(self) -> list[str]:
         """Render the viewport centered on the agent."""
-        viewport = self._get_viewport_bounds()
+        viewport = self.get_viewport_bounds()
         grid = self._render_grid(self.foods, viewport=viewport)
 
         # Add predators to grid if enabled

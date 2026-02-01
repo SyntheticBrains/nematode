@@ -22,6 +22,7 @@ from quantumnematode.report.dtypes import PerformanceMetrics
 if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
     from quantumnematode.agent.runners import EpisodeResult
+    from quantumnematode.env.pygame_renderer import PygameRenderer
 
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
@@ -447,6 +448,11 @@ class QuantumNematodeAgent:
         show_last_frame_only : bool, optional
             Whether to clear screen before rendering, by default False.
         """
+        # Pygame rendering for PIXEL theme
+        if self.env.theme == Theme.PIXEL:
+            self._render_step_pygame(max_steps)
+            return
+
         # Clear screen if showing last frame only
         if show_last_frame_only:
             if os.name == "nt":  # For Windows
@@ -485,6 +491,45 @@ class QuantumNematodeAgent:
             if temperature is not None:
                 zone_name = zone.value.upper().replace("_", " ") if zone else "UNKNOWN"
                 print(f"Temp:\t\t{temperature:.2f}°C ({zone_name})")  # noqa: T201
+
+    def _get_pygame_renderer(self) -> PygameRenderer:
+        """Lazily initialize and return the Pygame renderer."""
+        if not hasattr(self, "_pygame_renderer") or self._pygame_renderer is None:
+            from quantumnematode.env.pygame_renderer import PygameRenderer
+
+            self._pygame_renderer = PygameRenderer(
+                viewport_size=self.env.viewport_size,
+            )
+        return self._pygame_renderer
+
+    def _render_step_pygame(self, max_steps: int) -> None:
+        """Render the current step using the Pygame renderer."""
+        renderer = self._get_pygame_renderer()
+        if renderer.closed:
+            return
+
+        temperature: float | None = None
+        zone_name: str | None = None
+        if self.env.thermotaxis.enabled:
+            temperature = self.env.get_temperature()
+            zone = self.env.get_temperature_zone()
+            if zone is not None:
+                zone_name = zone.value.upper().replace("_", " ")
+
+        renderer.render_frame(
+            env=self.env,
+            step=self._episode_tracker.steps,
+            max_steps=max_steps,
+            foods_collected=self._episode_tracker.foods_collected,
+            target_foods=self.env.foraging.target_foods_to_collect,
+            health=self.env.agent_hp,
+            max_health=self.env.health.max_hp,
+            satiety=self.current_satiety,
+            max_satiety=self.max_satiety,
+            in_danger=self.env.is_agent_in_danger() if self.env.predator.enabled else False,
+            temperature=temperature,
+            zone_name=zone_name,
+        )
 
     def calculate_reward(
         self,

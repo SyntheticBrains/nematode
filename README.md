@@ -59,13 +59,13 @@ Install the project (choose one based on your needs):
 
 ```bash
 # For CPU simulation (recommended for beginners)
-uv sync --extra cpu --extra torch
+uv sync --extra cpu --extra pixel --extra torch
 
 # For quantum hardware access (requires IBM Quantum account)
-uv sync --extra qpu
+uv sync --extra qpu --extra pixel
 
 # For GPU acceleration (local installation)
-uv sync --extra gpu --extra torch
+uv sync --extra gpu --extra pixel --extra torch
 
 # For GPU acceleration (Docker with NVIDIA GPU support)
 docker compose up --build
