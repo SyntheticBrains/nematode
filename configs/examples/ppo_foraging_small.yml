@@ -4,7 +4,7 @@
 
 max_steps: 500
 brain:
-  name: ppo
+  name: mlpppo
   config:
     actor_hidden_dim: 64
     critic_hidden_dim: 64
