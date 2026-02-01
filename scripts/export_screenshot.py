@@ -12,15 +12,15 @@ Default output: docs/assets/images/pixel_theme.png
 
 from __future__ import annotations
 
-import os
 import sys
-
-# Use dummy video driver so no window actually appears
-os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
 def main(output_path: str = "docs/assets/images/pixel_theme.png") -> None:
     """Render a single representative frame and save it as PNG."""
+    import os
+
+    # Use dummy video driver so no window actually appears
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     import pygame
     from quantumnematode.brain.actions import Action
     from quantumnematode.env.env import (
