@@ -1,7 +1,7 @@
 """Load and configure simulation settings from a YAML file."""
 
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import yaml
 from pydantic import BaseModel
@@ -71,6 +71,10 @@ from quantumnematode.optimizers.learning_rate import (
     LearningRateMethod,
     PerformanceBasedLearningRate,
 )
+
+if TYPE_CHECKING:
+    from quantumnematode.env import DynamicForagingEnvironment
+    from quantumnematode.env.theme import Theme
 
 BrainConfigType = (
     QVarCircuitBrainConfig
@@ -810,3 +814,50 @@ def configure_environment(config: SimulationConfig) -> EnvironmentConfig:
         EnvironmentConfig: The configured environment object.
     """
     return config.environment or EnvironmentConfig()
+
+
+def create_env_from_config(
+    env_config: EnvironmentConfig,
+    *,
+    seed: int | None = None,
+    max_body_length: int | None = None,
+    theme: "Theme | None" = None,
+) -> "DynamicForagingEnvironment":
+    """Create a DynamicForagingEnvironment from an EnvironmentConfig.
+
+    This is a convenience factory for creating environments from parsed
+    configuration, usable from scripts, notebooks, or tests.
+
+    Args:
+        env_config: Parsed environment configuration.
+        seed: Optional seed for environment RNG.
+        max_body_length: Optional max body length for the agent.
+        theme: Optional rendering theme.
+
+    Returns
+    -------
+        Configured DynamicForagingEnvironment instance.
+    """
+    from quantumnematode.env import DynamicForagingEnvironment
+
+    foraging_config = env_config.get_foraging_config()
+    predator_config = env_config.get_predator_config()
+    health_config = env_config.get_health_config()
+    thermotaxis_config = env_config.get_thermotaxis_config()
+
+    kwargs: dict = {
+        "grid_size": env_config.grid_size,
+        "viewport_size": env_config.viewport_size,
+        "foraging": foraging_config.to_params(),
+        "predator": predator_config.to_params(),
+        "health": health_config.to_params(),
+        "thermotaxis": thermotaxis_config.to_params(),
+    }
+    if seed is not None:
+        kwargs["seed"] = seed
+    if max_body_length is not None:
+        kwargs["max_body_length"] = max_body_length
+    if theme is not None:
+        kwargs["theme"] = theme
+
+    return DynamicForagingEnvironment(**kwargs)
