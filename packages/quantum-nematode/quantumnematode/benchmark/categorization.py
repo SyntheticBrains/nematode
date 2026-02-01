@@ -2,6 +2,11 @@
 
 from quantumnematode.experiment.metadata import ExperimentMetadata
 
+# Quantum brain type identifiers (canonical + deprecated names)
+QUANTUM_BRAIN_IDS: frozenset[str] = frozenset(
+    {"qvarcircuit", "qqlearning", "modular", "qmodular"},
+)
+
 
 def is_quantum_brain(brain_type: str) -> bool:
     """Check if brain type is quantum-based.
@@ -16,8 +21,7 @@ def is_quantum_brain(brain_type: str) -> bool:
     bool
         True if quantum brain, False if classical.
     """
-    quantum_brains = {"modular", "qmodular", "qvarcircuit", "qqlearning"}
-    return brain_type in quantum_brains
+    return brain_type in QUANTUM_BRAIN_IDS
 
 
 def get_environment_category(
