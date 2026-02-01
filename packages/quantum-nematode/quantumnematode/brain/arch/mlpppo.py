@@ -17,7 +17,7 @@ Architecture:
 - Critic: MLP producing value estimate (single scalar)
 - Output: Action selection from categorical distribution
 
-The PPO brain learns by:
+The MLP PPO brain learns by:
 1. Collecting rollout_buffer_size steps of experience
 2. Computing GAE advantages using value estimates
 3. Performing num_epochs of minibatch updates
@@ -74,7 +74,7 @@ class MLPPPOBrainConfig(BrainConfig):
 
     1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
        - Set `sensory_modules=None` (default)
-       - Requires explicit `input_dim=2` when creating MLPPPOBrain
+       - If `input_dim` is omitted, MLPPPOBrain defaults to 2 in legacy mode
 
     2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
        - Set `sensory_modules` to a list of ModuleName values

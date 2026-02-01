@@ -11,7 +11,7 @@ from quantumnematode.env import Direction
 
 
 class TestMLPPPOBrainConfig:
-    """Test cases for PPO brain configuration."""
+    """Test cases for MLP PPO brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
@@ -178,7 +178,7 @@ class TestRolloutBuffer:
 
 
 class TestPPOBrain:
-    """Test cases for the PPO brain architecture."""
+    """Test cases for the MLP PPO brain architecture."""
 
     @pytest.fixture
     def config(self):
@@ -195,7 +195,7 @@ class TestPPOBrain:
 
     @pytest.fixture
     def brain(self, config):
-        """Create a test PPO brain."""
+        """Create a test MLP PPO brain."""
         return MLPPPOBrain(
             config=config,
             input_dim=2,
@@ -204,7 +204,7 @@ class TestPPOBrain:
         )
 
     def test_brain_initialization(self, brain, config):
-        """Test PPO brain initialization."""
+        """Test MLP PPO brain initialization."""
         assert brain.input_dim == 2
         assert brain.num_actions == 4
         assert brain.gamma == config.gamma
@@ -410,7 +410,7 @@ class TestPPOBrain:
 
 
 class TestPPOBrainIntegration:
-    """Integration tests for PPO brain with full simulation workflow."""
+    """Integration tests for MLP PPO brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""

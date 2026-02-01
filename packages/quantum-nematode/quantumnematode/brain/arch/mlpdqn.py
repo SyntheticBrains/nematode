@@ -365,12 +365,12 @@ class MLPDQNBrain(ClassicalBrain):
 
     def build_brain(self):  # noqa: ANN201
         """Not applicable to Q-MLP brain."""
-        error_msg = "Q-MLPBrain does not have a quantum circuit."
+        error_msg = "MLPDQNBrain does not have a quantum circuit."
         raise NotImplementedError(error_msg)
 
     def copy(self) -> "MLPDQNBrain":
         """Not implemented."""
-        error_msg = "Q-MLPBrain does not support copying."
+        error_msg = "MLPDQNBrain does not support copying."
         raise NotImplementedError(error_msg)
 
     @property
