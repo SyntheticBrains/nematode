@@ -450,7 +450,7 @@ class QuantumNematodeAgent:
         """
         # Pygame rendering for PIXEL theme
         if self.env.theme == Theme.PIXEL:
-            self._render_step_pygame(max_steps)
+            self._render_step_pygame(max_steps, render_text=render_text)
             return
 
         # Clear screen if showing last frame only
@@ -509,7 +509,11 @@ class QuantumNematodeAgent:
             return self._pygame_renderer.closed
         return False
 
-    def _render_step_pygame(self, max_steps: int) -> None:
+    def _render_step_pygame(
+        self,
+        max_steps: int,
+        render_text: str | None = None,
+    ) -> None:
         """Render the current step using the Pygame renderer."""
         renderer = self._get_pygame_renderer()
         if renderer.closed:
@@ -536,6 +540,7 @@ class QuantumNematodeAgent:
             in_danger=self.env.is_agent_in_danger() if self.env.predator.enabled else False,
             temperature=temperature,
             zone_name=zone_name,
+            session_text=render_text,
         )
 
     def calculate_reward(
