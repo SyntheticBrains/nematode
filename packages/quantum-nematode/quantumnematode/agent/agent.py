@@ -495,11 +495,18 @@ class QuantumNematodeAgent:
     def _get_pygame_renderer(self) -> PygameRenderer:
         """Lazily initialize and return the Pygame renderer."""
         if not hasattr(self, "_pygame_renderer") or self._pygame_renderer is None:
-            from quantumnematode.env.pygame_renderer import PygameRenderer
+            try:
+                from quantumnematode.env.pygame_renderer import PygameRenderer
 
-            self._pygame_renderer = PygameRenderer(
-                viewport_size=self.env.viewport_size,
-            )
+                self._pygame_renderer = PygameRenderer(
+                    viewport_size=self.env.viewport_size,
+                )
+            except Exception as exc:  # pragma: no cover
+                msg = (
+                    "PIXEL theme requires pygame with an available video backend. "
+                    "Use --theme ascii for headless environments."
+                )
+                raise RuntimeError(msg) from exc
         return self._pygame_renderer
 
     @property
