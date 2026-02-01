@@ -4,7 +4,7 @@ Renders the simulation in a Pygame window with layered surfaces:
 1. Background (soil)
 2. Temperature zone overlays
 3. Toxic zone overlays
-4. Entities (food, predators, nematode)
+4. Entities (food, predators, nematode) - drawn with transparency so zones show through
 5. UI status bar
 """
 
@@ -12,19 +12,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from quantumnematode.env.sprites import CELL_SIZE, create_sprites, create_zone_overlay
+from quantumnematode.env.sprites import (
+    CELL_SIZE,
+    create_sprites,
+    create_zone_overlay,
+    draw_body_segment,
+)
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.env.env import DynamicForagingEnvironment, Viewport
 
-# Status bar height in pixels
-STATUS_BAR_HEIGHT = 80
-STATUS_FONT_SIZE = 16
+# Status bar configuration
+STATUS_BAR_HEIGHT = 120
+STATUS_FONT_SIZE = 14
 STATUS_BG_COLOR = (30, 25, 22)
 STATUS_TEXT_COLOR = (200, 200, 200)
 STATUS_DANGER_COLOR = (220, 60, 40)
 STATUS_SAFE_COLOR = (80, 200, 80)
+STATUS_PADDING = 8
 
 # Window title
 WINDOW_TITLE = "Quantum Nematode - Pixel Theme"
@@ -95,7 +101,7 @@ class PygameRenderer:
         """Process Pygame events. Returns False if window was closed."""
         for event in self._pg.event.get():
             if event.type == self._pg.QUIT:
-                self._closed = True
+                self.close()
                 return False
         return True
 
@@ -123,6 +129,9 @@ class PygameRenderer:
             return
 
         viewport = env.get_viewport_bounds()
+
+        # Clear screen
+        self._screen.fill(STATUS_BG_COLOR)
 
         self._render_background(viewport)
         self._render_temperature_zones(env, viewport)
@@ -171,7 +180,7 @@ class PygameRenderer:
         env: DynamicForagingEnvironment,
         viewport: Viewport,
     ) -> None:
-        """Render temperature zone overlays."""
+        """Render temperature zone overlays on all cells."""
         if not env.thermotaxis.enabled or env.temperature_field is None:
             return
 
@@ -244,7 +253,10 @@ class PygameRenderer:
         env: DynamicForagingEnvironment,
         viewport: Viewport,
     ) -> None:
-        """Render food, predators, nematode body, and head."""
+        """Render food, predators, nematode body, and head.
+
+        Entity sprites use SRCALPHA so zone overlays show through.
+        """
         min_x, min_y, max_x, max_y = viewport
 
         def _in_view(x: int, y: int) -> bool:
@@ -260,12 +272,8 @@ class PygameRenderer:
         # Predators
         self._render_predator_sprites(env, viewport, _in_view)
 
-        # Body segments
-        body_sprite = self._sprites["body"]
-        for seg in env.body:
-            if _in_view(seg[0], seg[1]):
-                px, py = self._cell_to_pixel(seg[0], seg[1], viewport)
-                self._screen.blit(body_sprite, (px, py))
+        # Body segments with connectors
+        self._render_nematode_body(env, viewport, _in_view)
 
         # Head (drawn last so it's on top)
         agent_x, agent_y = env.agent_pos[0], env.agent_pos[1]
@@ -277,6 +285,45 @@ class PygameRenderer:
             head_sprite = self._sprites[head_key]
             px, py = self._cell_to_pixel(agent_x, agent_y, viewport)
             self._screen.blit(head_sprite, (px, py))
+
+    def _render_nematode_body(
+        self,
+        env: DynamicForagingEnvironment,
+        viewport: Viewport,
+        in_view_fn: Any,  # noqa: ANN401
+    ) -> None:
+        """Render nematode body segments with connectors between neighbors."""
+        body = env.body
+        if not body:
+            return
+
+        # Build a set of all nematode positions (body + head) for neighbor lookup
+        head_pos = (env.agent_pos[0], env.agent_pos[1])
+        body_positions = {(seg[0], seg[1]) for seg in body}
+        all_positions = body_positions | {head_pos}
+
+        for i, seg in enumerate(body):
+            sx, sy = seg[0], seg[1]
+            if not in_view_fn(sx, sy):
+                continue
+
+            px, py = self._cell_to_pixel(sx, sy, viewport)
+            is_tail = i == len(body) - 1
+
+            # Note: grid y-up, pygame y-down. "up" in grid = "up" visually
+            # but pixel y decreases. _cell_to_pixel handles inversion, so
+            # connect_up means neighbor at (sx, sy+1) in grid coords.
+            draw_body_segment(
+                self._pg,
+                self._screen,
+                px,
+                py,
+                connect_up=(sx, sy + 1) in all_positions,
+                connect_down=(sx, sy - 1) in all_positions,
+                connect_left=(sx - 1, sy) in all_positions,
+                connect_right=(sx + 1, sy) in all_positions,
+                is_tail=is_tail,
+            )
 
     def _render_predator_sprites(
         self,
@@ -325,24 +372,26 @@ class PygameRenderer:
             (0, bar_y, self._width, STATUS_BAR_HEIGHT),
         )
 
-        lines = [
-            f"Step: {step}/{max_steps}   Food: {foods_collected}/{target_foods}   "
-            f"HP: {health:.0f}/{max_health:.0f}   Satiety: {satiety:.0f}/{max_satiety:.0f}",
+        # Build status lines - one item per line
+        lines: list[tuple[str, tuple[int, int, int]]] = [
+            (f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR),
+            (f"Food: {foods_collected}/{target_foods}", STATUS_TEXT_COLOR),
+            (f"HP: {health:.0f}/{max_health:.0f}", STATUS_TEXT_COLOR),
+            (f"Satiety: {satiety:.0f}/{max_satiety:.0f}", STATUS_TEXT_COLOR),
         ]
 
-        status_parts = []
-        status_parts.append("IN DANGER" if in_danger else "SAFE")
+        danger_text = "IN DANGER" if in_danger else "SAFE"
+        danger_color = STATUS_DANGER_COLOR if in_danger else STATUS_SAFE_COLOR
+        lines.append((f"Status: {danger_text}", danger_color))
 
         if temperature is not None and zone_name:
-            status_parts.append(f"Temp: {temperature:.1f}C ({zone_name})")
-
-        lines.append("  ".join(status_parts))
+            lines.append((f"Temp: {temperature:.1f}C ({zone_name})", STATUS_TEXT_COLOR))
 
         antialias = True
-        for i, line in enumerate(lines):
-            color = STATUS_DANGER_COLOR if (i == 1 and in_danger) else STATUS_TEXT_COLOR
-            text_surf = self._font.render(line, antialias, color)
-            self._screen.blit(text_surf, (8, bar_y + 6 + i * (STATUS_FONT_SIZE + 4)))
+        line_height = STATUS_FONT_SIZE + 2
+        for i, (text, color) in enumerate(lines):
+            text_surf = self._font.render(text, antialias, color)
+            self._screen.blit(text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height))
 
     def close(self) -> None:
         """Clean up Pygame resources."""
