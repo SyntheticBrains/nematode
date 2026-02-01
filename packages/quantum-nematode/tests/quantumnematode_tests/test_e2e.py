@@ -114,6 +114,8 @@ def test_nightly_regression(benchmark: dict, tmp_path: Path) -> None:
             "12345",
             "--log-level",
             "NONE",
+            "--theme",
+            "ascii",
         ],
         check=False,
         cwd=str(tmp_path),
