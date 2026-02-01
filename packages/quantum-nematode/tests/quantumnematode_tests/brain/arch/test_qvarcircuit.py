@@ -1,4 +1,4 @@
-"""Unit tests for the modular quantum brain architecture."""
+"""Unit tests for the QVarCircuit quantum brain architecture."""
 
 import os
 from unittest.mock import MagicMock, patch

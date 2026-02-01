@@ -141,7 +141,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
     @pytest.fixture
-    def modular_brain(self):
+    def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
         from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrainConfig
         from quantumnematode.brain.modules import ModuleName
@@ -158,7 +158,7 @@ class TestDynamicEnvironmentWithBrain:
             device=DeviceType.CPU,
         )
 
-    def test_agent_initialization_with_dynamic_env(self, dynamic_env_small, modular_brain):
+    def test_agent_initialization_with_dynamic_env(self, dynamic_env_small, qvarcircuit_brain):
         """Test agent initialization with dynamic foraging environment."""
         from quantumnematode.agent import SatietyConfig
 
@@ -169,7 +169,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=dynamic_env_small,
             satiety_config=satiety_config,
         )
@@ -179,7 +179,7 @@ class TestDynamicEnvironmentWithBrain:
         assert agent._metrics_tracker.foods_collected == 0
         assert isinstance(agent.env, DynamicForagingEnvironment)
 
-    def test_food_consumption_workflow(self, dynamic_env_small, modular_brain):
+    def test_food_consumption_workflow(self, dynamic_env_small, qvarcircuit_brain):
         """Test complete food consumption workflow."""
         from quantumnematode.agent import SatietyConfig
 
@@ -190,7 +190,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=dynamic_env_small,
             satiety_config=satiety_config,
         )
@@ -224,7 +224,7 @@ class TestDynamicEnvironmentWithBrain:
                 # Verify food was removed from original position
                 assert consumed not in agent.env.foods
 
-    def test_satiety_decay(self, dynamic_env_small, modular_brain):
+    def test_satiety_decay(self, dynamic_env_small, qvarcircuit_brain):
         """Test satiety decay over steps."""
         from quantumnematode.agent import SatietyConfig
 
@@ -235,7 +235,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=dynamic_env_small,
             satiety_config=satiety_config,
         )

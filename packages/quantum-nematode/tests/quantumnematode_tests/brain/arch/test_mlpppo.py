@@ -177,7 +177,7 @@ class TestRolloutBuffer:
             assert batch["states"].shape[0] == 4  # 8 / 2 minibatches
 
 
-class TestPPOBrain:
+class TestMLPPPOBrain:
     """Test cases for the MLP PPO brain architecture."""
 
     @pytest.fixture
@@ -409,7 +409,7 @@ class TestPPOBrain:
             brain.copy()
 
 
-class TestPPOBrainIntegration:
+class TestMLPPPOBrainIntegration:
     """Integration tests for MLP PPO brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
@@ -764,7 +764,7 @@ class TestLRScheduling:
         assert brain.optimizer.param_groups[0]["lr"] == original_lr
 
 
-class TestPPOClipping:
+class TestMLPPPOClipping:
     """Tests specifically for PPO clipping mechanism."""
 
     @pytest.fixture

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This specification defines the YAML-based configuration system for the Quantum Nematode simulation platform. It governs how brain architectures (modular, qmodular, mlp, qmlp, ppo, spiking), environment parameters, and learning hyperparameters are specified, validated, and loaded. The configuration system ensures all parameters fall within valid ranges, applies sensible defaults for optional settings, and provides example configurations for common use cases. This spec is intended for developers extending the platform with new brain types or environment features.
+This specification defines the YAML-based configuration system for the Quantum Nematode simulation platform. It governs how brain architectures (qvarcircuit, qqlearning, mlpreinforce, mlpppo, mlpdqn, spikingreinforce; legacy aliases: modular, qmodular, mlp, qmlp, ppo, spiking), environment parameters, and learning hyperparameters are specified, validated, and loaded. The configuration system ensures all parameters fall within valid ranges, applies sensible defaults for optional settings, and provides example configurations for common use cases. This spec is intended for developers extending the platform with new brain types or environment features.
 
 ## Requirements
 
@@ -73,8 +73,8 @@ The brain type validation SHALL include "spiking" as a valid option.
 
 - **GIVEN** configuration specifies brain type
 - **WHEN** validation occurs
-- **THEN** "spiking" SHALL be accepted as valid
-- **AND** existing "modular", "qmodular", "mlp", "qmlp" types are also valid
+- **THEN** "spikingreinforce" SHALL be accepted as valid (legacy alias: "spiking")
+- **AND** existing "qvarcircuit", "qqlearning", "mlpreinforce", "mlpppo", "mlpdqn" types are also valid (legacy aliases: "modular", "qmodular", "mlp", "qmlp")
 
 ### Requirement: Dynamic Environment Configuration Schema
 
@@ -369,7 +369,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
   - 100×100 grid with 5 predators for advanced difficulty
-  - ModularBrain configuration with predator support
+  - QVarCircuitBrain configuration with predator support
   - Commented explanations of predator mechanics
   - Both foraging and predator subsections fully configured
 
