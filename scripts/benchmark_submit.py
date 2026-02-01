@@ -144,8 +144,7 @@ def determine_category(experiment: ExperimentMetadata) -> str:
 
     # Determine brain category using explicit mapping
     try:
-        _new_to_old = {v: k for k, v in BRAIN_NAME_ALIASES.items()}
-        resolved_name = _new_to_old.get(brain.type, brain.type)
+        resolved_name = BRAIN_NAME_ALIASES.get(brain.type, brain.type)
         brain_type_enum = BrainType(resolved_name)
         brain_category = "quantum" if brain_type_enum in QUANTUM_BRAIN_TYPES else "classical"
     except ValueError:
