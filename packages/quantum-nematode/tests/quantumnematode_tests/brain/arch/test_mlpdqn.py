@@ -49,7 +49,7 @@ class TestMLPDQNBrain:
     """Test cases for the Q-learning MLP brain architecture."""
 
     @pytest.fixture
-    def config(self):
+    def config(self) -> MLPDQNBrainConfig:
         """Create a test configuration."""
         return MLPDQNBrainConfig(
             hidden_dim=32,
@@ -60,7 +60,7 @@ class TestMLPDQNBrain:
         )
 
     @pytest.fixture
-    def brain(self, config):
+    def brain(self, config) -> MLPDQNBrain:
         """Create a test Q-MLP brain."""
         return MLPDQNBrain(
             config=config,

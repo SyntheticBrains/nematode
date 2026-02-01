@@ -9,7 +9,11 @@ from qiskit import QuantumCircuit
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
+from quantumnematode.brain.arch.qvarcircuit import (
+    EpisodeBuffer,
+    QVarCircuitBrain,
+    QVarCircuitBrainConfig,
+)
 from quantumnematode.brain.modules import DEFAULT_MODULES, ModuleName
 from quantumnematode.env import Direction
 from quantumnematode.initializers.random_initializer import RandomSmallUniformInitializer
@@ -53,7 +57,7 @@ class TestQVarCircuitBrain:
     """Test cases for the QVarCircuit quantum brain architecture."""
 
     @pytest.fixture
-    def config(self):
+    def config(self) -> QVarCircuitBrainConfig:
         """Create a test configuration with minimal qubits."""
         return QVarCircuitBrainConfig(
             num_layers=1,
@@ -63,7 +67,7 @@ class TestQVarCircuitBrain:
         )
 
     @pytest.fixture
-    def brain(self, config):
+    def brain(self, config) -> QVarCircuitBrain:
         """Create a test QVarCircuit brain."""
         return QVarCircuitBrain(
             config=config,
@@ -649,8 +653,6 @@ class TestTrajectoryLearning:
         action = actions[0]
 
         # Manually create buffer data
-        from quantumnematode.brain.arch.qvarcircuit import EpisodeBuffer
-
         buffer = EpisodeBuffer()
         for i in range(3):
             buffer.append(
@@ -672,8 +674,6 @@ class TestTrajectoryLearning:
 
     def test_trajectory_gradient_length_mismatch(self, trajectory_brain):
         """Test error handling when returns length doesn't match buffer."""
-        from quantumnematode.brain.arch.qvarcircuit import EpisodeBuffer
-
         params = BrainParams(gradient_strength=0.6, gradient_direction=0.3)
         actions = trajectory_brain.run_brain(
             params,
@@ -699,8 +699,6 @@ class TestTrajectoryLearning:
 
     def test_trajectory_gradient_empty_buffer(self, trajectory_brain):
         """Test error handling with empty episode buffer."""
-        from quantumnematode.brain.arch.qvarcircuit import EpisodeBuffer
-
         buffer = EpisodeBuffer()
         returns = []
 

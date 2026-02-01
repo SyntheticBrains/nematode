@@ -60,7 +60,7 @@ class TestQQLearningBrain:
     """Test cases for the quantum modular Q-learning brain architecture."""
 
     @pytest.fixture
-    def config(self):
+    def config(self) -> QQLearningBrainConfig:
         """Create a test configuration with minimal qubits."""
         return QQLearningBrainConfig(
             modules={
@@ -73,7 +73,7 @@ class TestQQLearningBrain:
         )
 
     @pytest.fixture
-    def brain(self, config):
+    def brain(self, config) -> QQLearningBrain:
         """Create a test quantum modular Q-learning brain."""
         return QQLearningBrain(
             config=config,

@@ -181,7 +181,7 @@ class TestMLPPPOBrain:
     """Test cases for the MLPPPO brain architecture."""
 
     @pytest.fixture
-    def config(self):
+    def config(self) -> MLPPPOBrainConfig:
         """Create a test configuration."""
         return MLPPPOBrainConfig(
             actor_hidden_dim=32,
@@ -194,7 +194,7 @@ class TestMLPPPOBrain:
         )
 
     @pytest.fixture
-    def brain(self, config):
+    def brain(self, config: MLPPPOBrainConfig) -> MLPPPOBrain:
         """Create a test MLP PPO brain."""
         return MLPPPOBrain(
             config=config,

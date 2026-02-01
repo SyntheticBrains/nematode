@@ -46,7 +46,7 @@ class TestMLPReinforceBrain:
     """Test cases for the MLP brain architecture."""
 
     @pytest.fixture
-    def config(self):
+    def config(self) -> MLPReinforceBrainConfig:
         """Create a test configuration."""
         return MLPReinforceBrainConfig(
             hidden_dim=32,
@@ -55,7 +55,7 @@ class TestMLPReinforceBrain:
         )
 
     @pytest.fixture
-    def brain(self, config):
+    def brain(self, config) -> MLPReinforceBrain:
         """Create a test MLP brain."""
         return MLPReinforceBrain(
             config=config,

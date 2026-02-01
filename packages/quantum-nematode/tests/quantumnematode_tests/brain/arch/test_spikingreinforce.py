@@ -267,7 +267,7 @@ class TestSpikingReinforceBrain:
     """Test cases for the spiking neural network brain."""
 
     @pytest.fixture
-    def config(self):
+    def config(self) -> SpikingReinforceBrainConfig:
         """Create a test configuration."""
         return SpikingReinforceBrainConfig(
             hidden_size=8,
@@ -277,7 +277,7 @@ class TestSpikingReinforceBrain:
         )
 
     @pytest.fixture
-    def brain(self, config):
+    def brain(self, config) -> SpikingReinforceBrain:
         """Create a test spiking brain."""
         return SpikingReinforceBrain(
             config=config,
