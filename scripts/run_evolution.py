@@ -443,13 +443,18 @@ def evaluate_fitness(  # noqa: PLR0913
     successes = 0
 
     for ep in range(episodes):
+        episode_seed: int | None = None
         # Seed RNGs for reproducibility when base_seed is provided
         if base_seed is not None:
             episode_seed = derive_episode_seed(base_seed, gen, candidate_idx, ep)
             np.random.seed(episode_seed)  # noqa: NPY002
             random.seed(episode_seed)
 
-        env = create_env_from_config(env_config)
+        env = create_env_from_config(
+            env_config,
+            seed=episode_seed,
+            max_body_length=config.body_length,
+        )
         if run_episode(
             brain,
             env,
