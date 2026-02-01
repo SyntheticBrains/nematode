@@ -46,17 +46,28 @@ def manage_simulation_halt(  # noqa: PLR0913
     Provides options to exit, output partial results and plots,
     or print circuit details.
 
-    Args:
-        max_steps: Maximum number of steps for the simulation.
-        brain_type: Type of brain architecture used.
-        qubits: Number of qubits used.
-        timestamp: Timestamp for the current session.
-        agent: The simulation agent.
-        all_results: List of results for each run.
-        total_runs_done: Total runs completed so far.
-        tracking_data: Data tracked during the simulation.
-        plot_dir: Directory where plots will be saved.
-        plot_results_fn: Optional callable for plotting results.
+    Parameters
+    ----------
+    max_steps : int
+        Maximum number of steps for the simulation.
+    brain_type : BrainType
+        Type of brain architecture used.
+    qubits : int
+        Number of qubits used.
+    timestamp : str
+        Timestamp for the current session.
+    agent : QuantumNematodeAgent
+        The simulation agent.
+    all_results : list of SimulationResult
+        List of results for each run.
+    total_runs_done : int
+        Total runs completed so far.
+    tracking_data : TrackingData
+        Data tracked during the simulation.
+    plot_dir : Path
+        Directory where plots will be saved.
+    plot_results_fn : callable or None, optional
+        Callable for plotting results.
     """
     data_dir = Path.cwd() / "exports" / timestamp / "session" / "data"
     while True:
@@ -147,7 +158,9 @@ def prompt_interrupt() -> str:
 
     Returns
     -------
-        User choice: 'y' (save & exit), 'n' (exit without saving), 'c' (continue).
+    str
+        User choice: ``'y'`` (save & exit), ``'n'`` (exit without saving),
+        ``'c'`` (continue).
     """
     print("\n" + "=" * 60)
     print("INTERRUPTED - What would you like to do?")

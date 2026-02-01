@@ -828,15 +828,21 @@ def create_env_from_config(
     This is a convenience factory for creating environments from parsed
     configuration, usable from scripts, notebooks, or tests.
 
-    Args:
-        env_config: Parsed environment configuration.
-        seed: Optional seed for environment RNG.
-        max_body_length: Optional max body length for the agent.
-        theme: Optional rendering theme.
+    Parameters
+    ----------
+    env_config : EnvironmentConfig
+        Parsed environment configuration.
+    seed : int or None, optional
+        Seed for environment RNG.
+    max_body_length : int or None, optional
+        Max body length for the agent. Defaults to 6.
+    theme : Theme or None, optional
+        Rendering theme. Defaults to ``Theme.ASCII``.
 
     Returns
     -------
-        Configured DynamicForagingEnvironment instance.
+    DynamicForagingEnvironment
+        Configured environment instance.
     """
     from quantumnematode.env import DynamicForagingEnvironment
     from quantumnematode.env.theme import Theme as ThemeEnum
