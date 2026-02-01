@@ -1161,7 +1161,7 @@ class TestExplorationDecay:
         assert brain.config.exploration_temperature_final == 1.0
 
     def test_no_decay_when_episodes_zero(self):
-        """Test that no decay occurs when decay_episodes is 0."""
+        """Test that final exploration values apply immediately when decay_episodes is 0."""
         config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
@@ -1176,7 +1176,7 @@ class TestExplorationDecay:
             device=DeviceType.CPU,
         )
 
-        # With decay_episodes=0, should use initial value
+        # With decay_episodes=0, final exploration values are used immediately
         assert brain.config.exploration_decay_episodes == 0
 
 
