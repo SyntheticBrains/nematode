@@ -33,7 +33,10 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
   - `experiment/` — Experiment tracking and benchmarking
   - `optimizers/` — Learning algorithms (PSR, CMA-ES)
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
-- `configs/examples/` — YAML config files ({brain}_{environment}_{size}[{extra}].yml)
+- `configs/examples/` — YAML config files (`[{prefix}_]{brain}_{environment}_{size}[_{postfix}].yml`)
+  - Prefixes: `evolution` (for evolutionary optimization configs)
+  - Postfixes: `sensory` (unified sensory modules), `finetune`, etc.
+  - Example: `evolution_qvarcircuit_foraging_small.yml`, `mlpppo_predators_small.yml`
 - `tests/` — Three-tier testing (unit, smoke, nightly)
 - `benchmarks/` — Submitted benchmark results
 - `openspec/` — Spec-driven development framework
