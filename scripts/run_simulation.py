@@ -526,14 +526,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             elif step_result.termination_reason == TerminationReason.INTERRUPTED:
                 total_interrupted += 1
 
-            # If Pygame window was closed, stop all remaining runs
-            if agent.pygame_renderer_closed:
-                logger.info(
-                    f"Pygame window closed - stopping simulation after run {run_num}/{runs}.",
-                )
-                total_runs_done = run_num
-                break
-
             # Get environment specific data
             foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
             foods_available_this_run = agent.env.foraging.target_foods_to_collect
@@ -601,6 +593,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 temperature_comfort_score=temperature_comfort_score_this_run,
             )
             all_results.append(result)
+
+            # If Pygame window was closed, stop all remaining runs
+            if agent.pygame_renderer_closed:
+                logger.info(
+                    f"Pygame window closed - stopping simulation after run {run_num}/{runs}.",
+                )
+                total_runs_done = run_num
+                break
 
             # Log run outcome clearly
             outcome_msg = f"Run {run_num}/{runs} completed in {steps_taken} steps - "
