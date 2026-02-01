@@ -92,21 +92,21 @@ ______________________________________________________________________
 
 **Quantum Approaches:**
 
-1. **QVarCircuitBrain** (formerly QVarCircuitBrain): Quantum variational circuits with modular sensory processing, multi-layer entanglement, evolutionary optimization (CMA-ES validated), with parameter-shift rule gradients available for comparison
+1. **QVarCircuitBrain** (formerly ModularBrain): Quantum variational circuits with modular sensory processing, multi-layer entanglement, evolutionary optimization (CMA-ES validated), with parameter-shift rule gradients available for comparison
 
-2. **QQLearningBrain** (formerly QQVarCircuitBrain): Hybrid quantum-classical Q-learning (early stage, incomplete TODOs)
+2. **QQLearningBrain** (formerly QModularBrain): Hybrid quantum-classical Q-learning (early stage, incomplete TODOs)
 
 **Classical Approaches:**
 
 3. **MLPReinforceBrain** (formerly MLPBrain): REINFORCE policy gradients with baseline subtraction, entropy regularization, learning rate scheduling
 
-4. **MLPDQNBrain** (formerly QMLPReinforceBrain): Deep Q-Network (DQN) with experience replay
+4. **MLPDQNBrain** (formerly QMLPBrain): Deep Q-Network (DQN) with experience replay
 
 5. **MLPPPOBrain** (formerly PPOBrain): Proximal Policy Optimization with actor-critic architecture, clipped surrogate objective, Generalized Advantage Estimation (GAE)
 
 **Biologically-Realistic:**
 
-6. **SpikingReinforceBrain** (formerly SpikingReinforceBrain): Leaky Integrate-and-Fire (LIF) neurons with **surrogate gradient descent**, REINFORCE policy gradients, backpropagation through time (BPTT), PyTorch autograd integration. Previous STDP implementation replaced due to fundamental learning failures.
+6. **SpikingReinforceBrain** (formerly SpikingBrain): Leaky Integrate-and-Fire (LIF) neurons with **surrogate gradient descent**, REINFORCE policy gradients, backpropagation through time (BPTT), PyTorch autograd integration. Previous STDP implementation replaced due to fundamental learning failures.
 
 #### Environments
 
