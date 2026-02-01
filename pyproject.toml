@@ -97,6 +97,10 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
   "PLR2004",  # CLI scripts can have magic values
   "E501",  # CLI scripts can have slightly longer lines for readability
 ]
+"**/utils/interrupt_handler.py" = [
+  "T201",  # Interactive prompts use print for user output
+  "PLR2004",  # Menu choice constants
+]
 "packages/quantum-nematode/quantumnematode/benchmark/categorization.py" = [
   "PLR2004",  # Grid size thresholds are domain-specific magic values
 ]
