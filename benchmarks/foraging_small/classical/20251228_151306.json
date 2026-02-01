@@ -1,9 +1,9 @@
 {
   "submission_id": "20251228_151306",
   "timestamp": "2025-12-28T15:13:06.861880+00:00",
-  "brain_type": "ppo",
+  "brain_type": "mlpppo",
   "brain_config": {
-    "type": "ppo"
+    "type": "mlpppo"
   },
   "environment": {
     "type": "dynamic",

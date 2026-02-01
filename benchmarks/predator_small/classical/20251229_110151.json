@@ -1,9 +1,9 @@
 {
   "submission_id": "20251229_110151",
   "timestamp": "2025-12-29T11:01:51.594022+00:00",
-  "brain_type": "mlp",
+  "brain_type": "mlpreinforce",
   "brain_config": {
-    "type": "mlp"
+    "type": "mlpreinforce"
   },
   "environment": {
     "type": "dynamic",
