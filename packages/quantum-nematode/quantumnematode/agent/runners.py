@@ -516,7 +516,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             termination_reason=TerminationReason.STARVED,
         ), reward
 
-    def run(  # noqa: C901, PLR0912, PLR0915
+    def run(  # noqa: C901, PLR0911, PLR0912, PLR0915
         self,
         agent: QuantumNematodeAgent,
         reward_config: RewardConfig,
@@ -690,6 +690,20 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             # Render current step
             agent._render_step(max_steps, render_text, show_last_frame_only=show_last_frame_only)
+
+            # Handle Pygame window close - terminate episode early
+            if agent.pygame_renderer_closed:
+                logger.info("Pygame window closed by user - terminating episode.")
+                return self._terminate_episode(
+                    agent,
+                    params,
+                    reward,
+                    success=False,
+                    termination_reason=TerminationReason.INTERRUPTED,
+                    learn=False,
+                    update_memory=False,
+                    food_history=(agent.food_history if agent.food_history else None),
+                )
 
             # Handle max steps reached
             if agent._episode_tracker.steps >= max_steps:

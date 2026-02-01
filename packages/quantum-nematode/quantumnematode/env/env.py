@@ -1787,7 +1787,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.steps_in_comfort_zone = 0
         self.total_thermotaxis_steps = 0
 
-    def _get_viewport_bounds(self) -> tuple[int, int, int, int]:
+    def get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """
         Calculate viewport bounds centered on the agent.
 
@@ -1808,7 +1808,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def render(self) -> list[str]:
         """Render the viewport centered on the agent."""
-        viewport = self._get_viewport_bounds()
+        viewport = self.get_viewport_bounds()
         grid = self._render_grid(self.foods, viewport=viewport)
 
         # Add predators to grid if enabled
@@ -1817,15 +1817,29 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return self._render_grid_to_strings(grid, viewport=viewport)
 
-    def render_full(self) -> list[str]:
-        """Render the entire environment (for logging/debugging)."""
-        grid = self._render_grid(self.foods)
+    def render_full(self, *, theme_override: Theme | None = None) -> list[str]:
+        """Render the entire environment (for logging/debugging).
 
-        # Add predators to grid if enabled
-        if self.predator.enabled:
-            self._render_predators(grid, viewport=None)
+        Parameters
+        ----------
+        theme_override : Theme | None
+            If provided, temporarily use this theme for rendering.
+            Useful when the active theme (e.g. PIXEL) has no meaningful
+            text representation.
+        """
+        original_theme = self.theme
+        if theme_override is not None:
+            self.theme = theme_override
+        try:
+            grid = self._render_grid(self.foods)
 
-        return self._render_grid_to_strings(grid, viewport=None)
+            # Add predators to grid if enabled
+            if self.predator.enabled:
+                self._render_predators(grid, viewport=None)
+
+            return self._render_grid_to_strings(grid, viewport=None)
+        finally:
+            self.theme = original_theme
 
     def _get_predator_symbol(
         self,
