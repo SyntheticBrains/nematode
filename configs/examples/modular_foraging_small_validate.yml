@@ -4,7 +4,7 @@
 
 max_steps: 500
 brain:
-  name: modular
+  name: qvarcircuit
   config:
     modules:
       chemotaxis: [0, 1]

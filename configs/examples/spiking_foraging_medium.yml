@@ -5,7 +5,7 @@
 max_steps: 1000
 
 brain:
-  name: spiking
+  name: spikingreinforce
   config:
     # Network architecture
     hidden_size: 256
