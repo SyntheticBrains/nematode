@@ -1,0 +1,85 @@
+# Health System Demo - MLPPPO Brain
+# Demonstrates HP-based survival mechanics as alternative to instant predator death.
+# Agent can survive multiple predator contacts and heal by collecting food.
+#
+# Key features:
+# - Health system ENABLED: predator contact deals 20 HP damage instead of instant death
+# - Food restores 5 HP per food collected
+# - Agent dies when HP reaches 0 (HEALTH_DEPLETED termination)
+# - Satiety system DISABLED: no time-based hunger (simpler learning objective)
+#
+# Balanced for learning: 25x25 grid with 5 predators, 8 foods, collect 15 to win
+# Agent can take 5 hits before death, food heals 0.25 hits worth (5 HP)
+
+max_steps: 600
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    # Core PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.1
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  # Health system rewards
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 10000.0  # Effectively infinite
+  satiety_decay_rate: 0.0
+  satiety_gain_per_food: 0.0
+
+environment:
+  grid_size: 25
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 8
+    target_foods_to_collect: 15
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 5
+    speed: 1.0
+    movement_pattern: random
+    detection_radius: 8
+    kill_radius: 0
+    gradient_decay_constant: 12.0
+    gradient_strength: 1.0
+
+  # Health configuration
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 5.0

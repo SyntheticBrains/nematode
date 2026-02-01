@@ -38,7 +38,7 @@ The December 2025 experiments demonstrated that evolutionary optimization signif
 
 ```yaml
 brain:
-  name: modular
+  name: qvarcircuit  # formerly 'modular'
   config:
     # No learning_rate needed - uses evolution
 
@@ -49,7 +49,7 @@ optimization:
   max_generations: 500
 ```
 
-### Classical Neural Networks (MLPBrain)
+### Classical Neural Networks (MLPReinforceBrain)
 
 #### Recommended: REINFORCE with baseline
 
@@ -71,7 +71,7 @@ The standard REINFORCE algorithm with a learned baseline works well for classica
 
 ```yaml
 brain:
-  name: mlp
+  name: mlpreinforce  # formerly 'mlp'
   config:
     hidden_dim: 64
     num_hidden_layers: 2
@@ -85,7 +85,7 @@ gradient:
   method: clip
 ```
 
-### PPO Brain (PPOBrain)
+### PPO Brain (MLPPPOBrain)
 
 #### Recommended: Clipped surrogate objective
 
@@ -102,7 +102,7 @@ PPO uses the clipped surrogate objective with GAE for advantage estimation. Dece
 
 ```yaml
 brain:
-  name: ppo
+  name: mlpppo  # formerly 'ppo'
   config:
     actor_hidden_dim: 64
     critic_hidden_dim: 64
@@ -117,7 +117,7 @@ brain:
     max_grad_norm: 0.5
 ```
 
-### Spiking Neural Networks (SpikingBrain)
+### Spiking Neural Networks (SpikingReinforceBrain)
 
 #### Recommended: Surrogate gradients + REINFORCE
 
@@ -132,7 +132,7 @@ Spiking networks require special handling due to non-differentiable spike functi
 
 ```yaml
 brain:
-  name: spiking
+  name: spikingreinforce  # formerly 'spiking'
   config:
     hidden_size: 64
     num_steps: 10
@@ -149,7 +149,7 @@ brain:
 Use this decision tree to choose an optimization method:
 
 ```text
-Is the brain quantum-based (ModularBrain, QModularBrain)?
+Is the brain quantum-based (QVarCircuitBrain, QQLearningBrain)?
 ├── YES → Use CMA-ES
 │         - Evolution handles shot noise naturally
 │         - Avoids barren plateaus

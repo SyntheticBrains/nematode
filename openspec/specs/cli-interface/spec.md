@@ -32,7 +32,7 @@ The CLI SHALL support loading spiking brain configurations through existing conf
 #### Scenario: Spiking Configuration Loading
 
 - **GIVEN** a YAML configuration file with spiking brain parameters
-- **WHEN** loaded via `--config spiking_foraging_medium.yml`
+- **WHEN** loaded via `--config spikingreinforce_foraging_medium.yml`
 - **THEN** the CLI SHALL parse the configuration
 - **AND** SHALL validate spiking-specific parameters
 - **AND** SHALL initialize the spiking brain with specified parameters

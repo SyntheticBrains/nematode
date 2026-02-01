@@ -12,13 +12,14 @@ from quantumnematode.agent import (
     SatietyConfig,
 )
 from quantumnematode.brain.arch import (
-    MLPBrainConfig,
-    ModularBrainConfig,
-    PPOBrainConfig,
-    QMLPBrainConfig,
-    QModularBrainConfig,
-    SpikingBrainConfig,
+    MLPDQNBrainConfig,
+    MLPPPOBrainConfig,
+    MLPReinforceBrainConfig,
+    QQLearningBrainConfig,
+    QVarCircuitBrainConfig,
+    SpikingReinforceBrainConfig,
 )
+from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
 from quantumnematode.brain.modules import Modules
 from quantumnematode.dtypes import TemperatureSpot
 from quantumnematode.env.env import (
@@ -72,12 +73,12 @@ from quantumnematode.optimizers.learning_rate import (
 )
 
 BrainConfigType = (
-    ModularBrainConfig
-    | MLPBrainConfig
-    | PPOBrainConfig
-    | QMLPBrainConfig
-    | QModularBrainConfig
-    | SpikingBrainConfig
+    QVarCircuitBrainConfig
+    | MLPReinforceBrainConfig
+    | MLPPPOBrainConfig
+    | MLPDQNBrainConfig
+    | QQLearningBrainConfig
+    | SpikingReinforceBrainConfig
 )
 
 # Type alias for predator movement patterns
@@ -467,109 +468,105 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
         logger.error(error_message)
         raise ValueError(error_message)
 
-    match config.brain.name:
-        case "modular":
+    # Resolve deprecated names to canonical names
+    brain_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
+
+    match brain_name:
+        case "qvarcircuit":
             if config.brain.config is None:
-                return ModularBrainConfig()
-            if isinstance(config.brain.config, ModularBrainConfig):
+                return QVarCircuitBrainConfig()
+            if isinstance(config.brain.config, QVarCircuitBrainConfig):
                 return config.brain.config
-            # Handle case where YAML parsed as wrong type - reconstruct as ModularBrainConfig
             if hasattr(config.brain.config, "__dict__"):
-                return ModularBrainConfig(**config.brain.config.__dict__)
+                return QVarCircuitBrainConfig(**config.brain.config.__dict__)
             error_message = (
-                "Invalid brain configuration for 'modular' brain type. "
-                f"Expected ModularBrainConfig, got {type(config.brain.config)}."
+                "Invalid brain configuration for 'qvarcircuit' brain type. "
+                f"Expected QVarCircuitBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
-        case "qmodular":
+        case "qqlearning":
             if config.brain.config is None:
-                return QModularBrainConfig()
-            if isinstance(config.brain.config, QModularBrainConfig):
+                return QQLearningBrainConfig()
+            if isinstance(config.brain.config, QQLearningBrainConfig):
                 return config.brain.config
-            # Handle case where YAML parsed as wrong type - reconstruct as QModularBrainConfig
             if hasattr(config.brain.config, "__dict__"):
-                # Filter only attributes that exist in QModularBrainConfig
                 config_dict = {}
-                for field_name in QModularBrainConfig.model_fields:
+                for field_name in QQLearningBrainConfig.model_fields:
                     if hasattr(config.brain.config, field_name):
                         config_dict[field_name] = getattr(config.brain.config, field_name)
-                return QModularBrainConfig(**config_dict)
+                return QQLearningBrainConfig(**config_dict)
             error_message = (
-                "Invalid brain configuration for 'qmodular' brain type. "
-                f"Expected QModularBrainConfig, got {type(config.brain.config)}."
+                "Invalid brain configuration for 'qqlearning' brain type. "
+                f"Expected QQLearningBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
-        case "mlp":
+        case "mlpreinforce":
             if config.brain.config is None:
-                return MLPBrainConfig()
-            if isinstance(config.brain.config, MLPBrainConfig):
+                return MLPReinforceBrainConfig()
+            if isinstance(config.brain.config, MLPReinforceBrainConfig):
                 return config.brain.config
-            # Handle case where YAML parsed as wrong type - reconstruct as MLPBrainConfig
             if hasattr(config.brain.config, "__dict__"):
                 config_dict = {}
-                for field_name in MLPBrainConfig.model_fields:
+                for field_name in MLPReinforceBrainConfig.model_fields:
                     if hasattr(config.brain.config, field_name):
                         config_dict[field_name] = getattr(config.brain.config, field_name)
-                return MLPBrainConfig(**config_dict)
+                return MLPReinforceBrainConfig(**config_dict)
             error_message = (
-                "Invalid brain configuration for 'mlp' brain type. "
-                f"Expected MLPBrainConfig, got {type(config.brain.config)}."
+                "Invalid brain configuration for 'mlpreinforce' brain type. "
+                f"Expected MLPReinforceBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
-        case "ppo":
+        case "mlpppo":
             if config.brain.config is None:
-                return PPOBrainConfig()
-            if isinstance(config.brain.config, PPOBrainConfig):
+                return MLPPPOBrainConfig()
+            if isinstance(config.brain.config, MLPPPOBrainConfig):
                 return config.brain.config
-            # Handle case where YAML parsed as wrong type - reconstruct as PPOBrainConfig
             if hasattr(config.brain.config, "__dict__"):
                 config_dict = {}
-                for field_name in PPOBrainConfig.model_fields:
+                for field_name in MLPPPOBrainConfig.model_fields:
                     if hasattr(config.brain.config, field_name):
                         config_dict[field_name] = getattr(config.brain.config, field_name)
-                return PPOBrainConfig(**config_dict)
+                return MLPPPOBrainConfig(**config_dict)
             error_message = (
-                "Invalid brain configuration for 'ppo' brain type. "
-                f"Expected PPOBrainConfig, got {type(config.brain.config)}."
+                "Invalid brain configuration for 'mlpppo' brain type. "
+                f"Expected MLPPPOBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
-        case "qmlp":
+        case "mlpdqn":
             if config.brain.config is None:
-                return QMLPBrainConfig()
-            if isinstance(config.brain.config, QMLPBrainConfig):
+                return MLPDQNBrainConfig()
+            if isinstance(config.brain.config, MLPDQNBrainConfig):
                 return config.brain.config
-            # Handle case where YAML parsed as wrong type - reconstruct as QMLPBrainConfig
             if hasattr(config.brain.config, "__dict__"):
                 config_dict = {}
-                for field_name in QMLPBrainConfig.model_fields:
+                for field_name in MLPDQNBrainConfig.model_fields:
                     if hasattr(config.brain.config, field_name):
                         config_dict[field_name] = getattr(config.brain.config, field_name)
-                return QMLPBrainConfig(**config_dict)
+                return MLPDQNBrainConfig(**config_dict)
             error_message = (
-                "Invalid brain configuration for 'qmlp' brain type. "
-                f"Expected QMLPBrainConfig, got {type(config.brain.config)}."
+                "Invalid brain configuration for 'mlpdqn' brain type. "
+                f"Expected MLPDQNBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)
-        case "spiking":
+        case "spikingreinforce":
             if config.brain.config is None:
-                return SpikingBrainConfig()
-            if isinstance(config.brain.config, SpikingBrainConfig):
+                return SpikingReinforceBrainConfig()
+            if isinstance(config.brain.config, SpikingReinforceBrainConfig):
                 return config.brain.config
-            # Handle case where YAML parsed as wrong type - reconstruct as SpikingBrainConfig
             if hasattr(config.brain.config, "__dict__"):
                 config_dict = {}
-                for field_name in SpikingBrainConfig.model_fields:
+                for field_name in SpikingReinforceBrainConfig.model_fields:
                     if hasattr(config.brain.config, field_name):
                         config_dict[field_name] = getattr(config.brain.config, field_name)
-                return SpikingBrainConfig(**config_dict)
+                return SpikingReinforceBrainConfig(**config_dict)
             error_message = (
-                "Invalid brain configuration for 'spiking' brain type. "
-                f"Expected SpikingBrainConfig, got {type(config.brain.config)}."
+                "Invalid brain configuration for 'spikingreinforce' brain type. "
+                f"Expected SpikingReinforceBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)

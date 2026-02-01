@@ -23,13 +23,13 @@ SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 
 
 SIMULATION_CONFIGS = [
-    "ppo_foraging_small.yml",
-    "mlp_foraging_small.yml",
-    "spiking_foraging_small.yml",
-    "modular_foraging_small_validate.yml",
-    "modular_predators_small_validate.yml",
-    "ppo_thermotaxis_foraging_small.yml",
-    "ppo_predators_small.yml",
+    "mlpppo_foraging_small.yml",
+    "mlpreinforce_foraging_small.yml",
+    "spikingreinforce_foraging_small.yml",
+    "qvarcircuit_foraging_small_validate.yml",
+    "qvarcircuit_predators_small_validate.yml",
+    "mlpppo_thermotaxis_foraging_small.yml",
+    "mlpppo_predators_small.yml",
 ]
 
 
@@ -73,7 +73,7 @@ def test_run_simulation_smoke(config_name: str, tmp_path: Path) -> None:
 @pytest.mark.smoke
 def test_run_evolution_smoke(tmp_path: Path) -> None:
     """Verify run_evolution.py exits cleanly with minimal parameters."""
-    config_path = CONFIGS_DIR / "evolution_modular_foraging_small.yml"
+    config_path = CONFIGS_DIR / "evolution_qvarcircuit_foraging_small.yml"
     assert config_path.exists(), f"Config not found: {config_path}"
 
     result = subprocess.run(  # noqa: S603

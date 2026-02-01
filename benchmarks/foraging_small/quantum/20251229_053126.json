@@ -1,9 +1,9 @@
 {
   "submission_id": "20251229_053126",
   "timestamp": "2025-12-29T05:31:26.644381+00:00",
-  "brain_type": "modular",
+  "brain_type": "qvarcircuit",
   "brain_config": {
-    "type": "modular"
+    "type": "qvarcircuit"
   },
   "environment": {
     "type": "dynamic",

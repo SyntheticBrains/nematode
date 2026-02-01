@@ -1,0 +1,74 @@
+# Dynamic Foraging with Predators - Medium Configuration
+# Standard predator evasion challenge in a 50x50 environment
+# Uses QVarCircuit (quantum) brain architecture with chemotaxis module
+# Agent learns approach-avoidance conflict: food attraction vs predator repulsion
+
+max_steps: 1000
+brain:
+  name: qvarcircuit
+  config:
+    modules:
+      chemotaxis: [0, 1]
+    num_layers: 2
+    min_gradient_magnitude: 1e-4
+    l2_reg: 0.0005
+    noise_std: 0.003
+    param_clip: true
+    param_modulo: true
+    lr_boost: false
+
+shots: 3000
+body_length: 2
+qubits: 2
+
+learning_rate:
+  method: dynamic
+  parameters:
+    initial_learning_rate: 0.015
+    decay_type: exponential
+    decay_rate: 0.001
+    min_lr: 0.001
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0.1
+  penalty_starvation: 2.0
+  penalty_predator_death: 2.0
+  penalty_predator_proximity: 0.1
+  stuck_position_threshold: 3
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 500.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 50
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 20
+    target_foods_to_collect: 30
+    min_food_distance: 5
+    agent_exclusion_radius: 10
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 3
+    speed: 1.0
+    movement_pattern: random
+    detection_radius: 8
+    kill_radius: 0
+    gradient_decay_constant: 12.0
+    gradient_strength: 1.0
+
+gradient:
+  method: norm_clip
+  max_norm: 0.5
