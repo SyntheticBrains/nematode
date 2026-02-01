@@ -19,6 +19,7 @@ Usage:
     rng = get_rng(seed)
 """
 
+import hashlib
 import secrets
 
 import numpy as np
@@ -126,6 +127,31 @@ def derive_run_seed(base_seed: int, run_index: int) -> int:
     # Use a simple but effective combination
     # Adding run_index ensures uniqueness, modulo ensures valid range
     return (base_seed + run_index) % MAX_SEED
+
+
+def derive_episode_seed(base_seed: int, gen: int, candidate_idx: int, episode: int) -> int:
+    """Derive a deterministic seed for a specific episode.
+
+    Uses BLAKE2b hash of (base_seed, gen, candidate_idx, episode) to produce
+    independent, reproducible seeds for each episode evaluation.
+
+    Note: We use hashlib.blake2b instead of Python's hash() because hash()
+    is salted (randomized per process since Python 3.3), which would break
+    reproducibility across multiprocessing workers and separate runs.
+
+    Args:
+        base_seed: Base seed from --seed argument.
+        gen: Generation number.
+        candidate_idx: Index of candidate in population.
+        episode: Episode number within evaluation.
+
+    Returns
+    -------
+        Deterministic seed in valid range for numpy.
+    """
+    payload = f"{base_seed}:{gen}:{candidate_idx}:{episode}".encode()
+    digest = hashlib.blake2b(payload, digest_size=8).digest()
+    return int.from_bytes(digest, byteorder="little") & 0xFFFF_FFFF
 
 
 def register_seed(name: str, seed: int) -> None:

@@ -2,6 +2,7 @@
 
 from quantumnematode.utils.seeding import (
     clear_seed_registry,
+    derive_episode_seed,
     derive_run_seed,
     ensure_seed,
     generate_seed,
@@ -13,6 +14,7 @@ from quantumnematode.utils.seeding import (
 
 __all__ = [
     "clear_seed_registry",
+    "derive_episode_seed",
     "derive_run_seed",
     "ensure_seed",
     "generate_seed",

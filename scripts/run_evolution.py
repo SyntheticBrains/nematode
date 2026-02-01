@@ -13,9 +13,9 @@ Example usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import logging
+import math
 import pickle
 import random
 import signal
@@ -29,7 +29,6 @@ import numpy as np
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
-from quantumnematode.env import DynamicForagingEnvironment
 from quantumnematode.logging_config import logger
 from quantumnematode.optimizers.evolutionary import (
     CMAESOptimizer,
@@ -38,14 +37,17 @@ from quantumnematode.optimizers.evolutionary import (
 )
 from quantumnematode.utils.config_loader import (
     configure_brain,
+    configure_environment,
     configure_satiety,
+    create_env_from_config,
     load_simulation_config,
 )
+from quantumnematode.utils.interrupt_handler import prompt_interrupt
+from quantumnematode.utils.seeding import derive_episode_seed
 
 if TYPE_CHECKING:
+    from quantumnematode.env import DynamicForagingEnvironment
     from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
-
-import math
 
 DEFAULT_GENERATIONS = 50
 DEFAULT_POPULATION_SIZE = 20
@@ -243,41 +245,6 @@ def create_brain_from_config(
     return brain
 
 
-def create_env_from_config(config_path: str) -> DynamicForagingEnvironment:
-    """Create environment from config.
-
-    Args:
-        config_path: Path to YAML config file.
-
-    Returns
-    -------
-        Configured DynamicForagingEnvironment instance.
-    """
-    config = load_simulation_config(config_path)
-
-    # Extract environment config
-    env_config = config.environment
-    if env_config is None:
-        msg = "Environment config is required"
-        raise ValueError(msg)
-
-    logger.debug(f"Initializing environment config: {env_config}")
-
-    foraging_config = env_config.get_foraging_config()
-    predator_config = env_config.get_predator_config()
-    health_config = env_config.get_health_config()
-    thermotaxis_config = env_config.get_thermotaxis_config()
-
-    return DynamicForagingEnvironment(
-        grid_size=env_config.grid_size,
-        foraging=foraging_config.to_params(),
-        viewport_size=env_config.viewport_size,
-        predator=predator_config.to_params(),
-        health=health_config.to_params(),
-        thermotaxis=thermotaxis_config.to_params(),
-    )
-
-
 def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
     brain: QVarCircuitBrain,
     env: DynamicForagingEnvironment,
@@ -431,32 +398,6 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
         brain.post_process_episode(episode_success=success)
 
 
-def _derive_episode_seed(base_seed: int, gen: int, candidate_idx: int, episode: int) -> int:
-    """Derive a deterministic seed for a specific episode.
-
-    Uses BLAKE2b hash of (base_seed, gen, candidate_idx, episode) to produce
-    independent, reproducible seeds for each episode evaluation.
-
-    Note: We use hashlib.blake2b instead of Python's hash() because hash()
-    is salted (randomized per process since Python 3.3), which would break
-    reproducibility across multiprocessing workers and separate runs.
-
-    Args:
-        base_seed: Base seed from --seed argument.
-        gen: Generation number.
-        candidate_idx: Index of candidate in population.
-        episode: Episode number within evaluation.
-
-    Returns
-    -------
-        Deterministic seed in valid range for numpy.
-    """
-    # Stable hash independent of PYTHONHASHSEED and process
-    payload = f"{base_seed}:{gen}:{candidate_idx}:{episode}".encode()
-    digest = hashlib.blake2b(payload, digest_size=8).digest()
-    return int.from_bytes(digest, byteorder="little") & 0xFFFF_FFFF
-
-
 def evaluate_fitness(  # noqa: PLR0913
     param_array: list[float],
     config_path: str,
@@ -489,6 +430,7 @@ def evaluate_fitness(  # noqa: PLR0913
     brain = create_brain_from_config(config_path, param_array)
     config = load_simulation_config(config_path)
     satiety_config = configure_satiety(config)
+    env_config = configure_environment(config)
 
     # Get max_steps from config
     max_steps = config.max_steps or 500
@@ -501,13 +443,18 @@ def evaluate_fitness(  # noqa: PLR0913
     successes = 0
 
     for ep in range(episodes):
+        episode_seed: int | None = None
         # Seed RNGs for reproducibility when base_seed is provided
         if base_seed is not None:
-            episode_seed = _derive_episode_seed(base_seed, gen, candidate_idx, ep)
+            episode_seed = derive_episode_seed(base_seed, gen, candidate_idx, ep)
             np.random.seed(episode_seed)  # noqa: NPY002
             random.seed(episode_seed)
 
-        env = create_env_from_config(config_path)
+        env = create_env_from_config(
+            env_config,
+            seed=episode_seed,
+            max_body_length=config.body_length,
+        )
         if run_episode(
             brain,
             env,
@@ -542,32 +489,6 @@ def _init_worker(log_level: int) -> None:
     worker_logger.setLevel(log_level)
     for handler in worker_logger.handlers:
         handler.setLevel(log_level)
-
-
-def _prompt_interrupt() -> str:
-    """Prompt user for action after keyboard interrupt.
-
-    Returns
-    -------
-        User choice: 'y' (save & exit), 'n' (exit without saving), 'c' (continue).
-    """
-    print("\n" + "=" * 60)
-    print("INTERRUPTED - What would you like to do?")
-    print("  [y] Save checkpoint and exit (default)")
-    print("  [n] Exit without saving")
-    print("  [c] Continue running")
-    print("=" * 60)
-
-    try:
-        choice = input("Choice [y/n/c]: ").strip().lower()
-        if choice in ("y", "n", "c", ""):
-            return choice if choice else "y"
-        print(f"Invalid choice '{choice}', defaulting to save & exit")
-        return "y"  # noqa: TRY300
-    except (EOFError, KeyboardInterrupt):
-        # Second interrupt or EOF - force exit without saving
-        print("\nForce exit requested")
-        return "n"
 
 
 def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -657,7 +578,7 @@ def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     pool = None  # Mark as terminated so finally block doesn't try again
 
                 logger.warning(f"Interrupted during generation {gen + 1}")
-                choice = _prompt_interrupt()
+                choice = prompt_interrupt()
 
                 if choice == "c":
                     # Recreate pool for continuing

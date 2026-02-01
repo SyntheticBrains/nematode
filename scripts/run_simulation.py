@@ -5,11 +5,9 @@
 import argparse
 import logging
 import shutil
-import sys
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
@@ -18,12 +16,10 @@ from quantumnematode.agent import (
     SatietyConfig,
 )
 from quantumnematode.brain.arch import (
-    Brain,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
     QQLearningBrainConfig,
-    QuantumBrain,
     QVarCircuitBrainConfig,
     SpikingReinforceBrainConfig,
 )
@@ -36,7 +32,7 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
-from quantumnematode.env import MIN_GRID_SIZE, DynamicForagingEnvironment
+from quantumnematode.env import MIN_GRID_SIZE
 from quantumnematode.env.theme import Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
@@ -46,10 +42,8 @@ from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
 )
 from quantumnematode.optimizers.learning_rate import (
-    AdamLearningRate,
     ConstantLearningRate,
     DynamicLearningRate,
-    PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
     export_convergence_metrics_to_csv,
@@ -94,6 +88,7 @@ from quantumnematode.report.plots import (
     plot_tracking_data_by_session,
 )
 from quantumnematode.report.summary import summary
+from quantumnematode.utils.brain_factory import setup_brain_model
 from quantumnematode.utils.config_loader import (
     BrainContainerConfig,
     EnvironmentConfig,
@@ -108,16 +103,14 @@ from quantumnematode.utils.config_loader import (
     configure_parameter_initializer,
     configure_reward,
     configure_satiety,
-    create_parameter_initializer_instance,
+    create_env_from_config,
     load_simulation_config,
 )
+from quantumnematode.utils.interrupt_handler import manage_simulation_halt
 from quantumnematode.utils.seeding import derive_run_seed, ensure_seed, get_rng, set_global_seed
 
 DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
-
-if TYPE_CHECKING:
-    from qiskit_serverless.core.function import RunnableQiskitFunction
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -361,22 +354,16 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Create the environment
     logger.info("Using dynamic foraging environment")
 
-    # Get foraging and predator configs (with automatic migration)
     foraging_config = environment_config.get_foraging_config()
     predator_config = environment_config.get_predator_config()
     health_config = environment_config.get_health_config()
     thermotaxis_config = environment_config.get_thermotaxis_config()
 
-    env = DynamicForagingEnvironment(
-        grid_size=environment_config.grid_size,
-        viewport_size=environment_config.viewport_size,
+    env = create_env_from_config(
+        environment_config,
+        seed=simulation_seed,
         max_body_length=body_length,
         theme=theme,
-        seed=simulation_seed,
-        foraging=foraging_config.to_params(),
-        predator=predator_config.to_params(),
-        health=health_config.to_params(),
-        thermotaxis=thermotaxis_config.to_params(),
     )
     predator_info = ""
     if predator_config.enabled:
@@ -672,6 +659,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_runs_done=total_runs_done,
             tracking_data=tracking_data,
             plot_dir=plot_dir,
+            plot_results_fn=plot_results,
         )
 
     # Calculate and log performance metrics
@@ -968,320 +956,6 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
         )
         logger.error(error_message)
         raise ValueError(error_message)
-
-
-def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
-    brain_type: BrainType,
-    brain_config: QVarCircuitBrainConfig
-    | MLPReinforceBrainConfig
-    | MLPPPOBrainConfig
-    | MLPDQNBrainConfig
-    | QQLearningBrainConfig
-    | SpikingReinforceBrainConfig,
-    shots: int,
-    qubits: int,  # noqa: ARG001
-    device: DeviceType,
-    learning_rate: ConstantLearningRate
-    | DynamicLearningRate
-    | AdamLearningRate
-    | PerformanceBasedLearningRate,
-    gradient_method: GradientCalculationMethod,
-    gradient_max_norm: float | None,
-    parameter_initializer_config: ParameterInitializerConfig,
-    perf_mgmt: "RunnableQiskitFunction | None" = None,
-) -> Brain:
-    """
-    Set up the brain model based on the specified brain type.
-
-    Args:
-        brain_type (str): The type of brain architecture to use.
-        brain_config (BrainConfig): Configuration for the brain architecture.
-        shots (int): The number of shots for quantum circuit execution.
-        qubits (int): The number of qubits to use (only applicable for quantum brain architectures).
-        device (str): The device to use for simulation ("CPU" or "GPU").
-        learning_rate (ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate):
-            The learning rate configuration for the brain. Note: modular/qmodular brains
-            only support ConstantLearningRate and DynamicLearningRate.
-        gradient_method: The gradient calculation method.
-        parameter_initializer_config: Configuration for parameter initialization.
-        perf_mgmt: Q-CTRL performance management function instance.
-
-    Returns
-    -------
-        Brain: An instance of the selected brain model.
-
-    Raises
-    ------
-        ValueError: If an unknown brain type is provided.
-    """
-    if brain_type in (BrainType.QVARCIRCUIT, BrainType.MODULAR):
-        if not isinstance(brain_config, QVarCircuitBrainConfig):
-            error_message = (
-                "The 'qvarcircuit' brain architecture requires a QVarCircuitBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        if not isinstance(learning_rate, (DynamicLearningRate, ConstantLearningRate)):
-            error_message = (
-                "The 'qvarcircuit' brain architecture requires a DynamicLearningRate or ConstantLearningRate. "
-                f"Provided learning rate type: {type(learning_rate)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain
-
-        # Create parameter initializer instance from config
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = QVarCircuitBrain(
-            config=brain_config,
-            device=device,
-            shots=shots,
-            learning_rate=learning_rate,
-            parameter_initializer=parameter_initializer,
-            gradient_method=gradient_method,
-            gradient_max_norm=gradient_max_norm,
-            perf_mgmt=perf_mgmt,
-        )
-    elif brain_type in (BrainType.QQLEARNING, BrainType.QMODULAR):
-        if not isinstance(brain_config, QQLearningBrainConfig):
-            error_message = (
-                "The 'qqlearning' brain architecture requires a QQLearningBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        if not isinstance(learning_rate, DynamicLearningRate):
-            error_message = (
-                "The 'qqlearning' brain architecture requires a DynamicLearningRate. "
-                f"Provided learning rate type: {type(learning_rate)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        from quantumnematode.brain.arch.qqlearning import QQLearningBrain
-
-        # Create parameter initializer instance from config
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = QQLearningBrain(
-            config=brain_config,
-            device=device,
-            shots=shots,
-            learning_rate=learning_rate,
-            parameter_initializer=parameter_initializer,
-        )
-
-    elif brain_type in (BrainType.MLP_REINFORCE, BrainType.MLP):
-        from quantumnematode.brain.arch.mlpreinforce import MLPReinforceBrain
-
-        if not isinstance(brain_config, MLPReinforceBrainConfig):
-            error_message = (
-                "The 'mlpreinforce' brain architecture requires an MLPReinforceBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        # Create parameter initializer instance from config
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = MLPReinforceBrain(
-            config=brain_config,
-            input_dim=2,
-            num_actions=4,
-            lr_scheduler=True,
-            device=device,
-            parameter_initializer=parameter_initializer,
-        )
-    elif brain_type in (BrainType.MLP_PPO, BrainType.PPO):
-        from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
-
-        if not isinstance(brain_config, MLPPPOBrainConfig):
-            error_message = (
-                "The 'mlpppo' brain architecture requires a MLPPPOBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        # Create parameter initializer instance from config
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = MLPPPOBrain(
-            config=brain_config,
-            input_dim=2,
-            num_actions=4,
-            device=device,
-            parameter_initializer=parameter_initializer,
-        )
-    elif brain_type in (BrainType.MLP_DQN, BrainType.QMLP):
-        from quantumnematode.brain.arch.mlpdqn import MLPDQNBrain
-
-        if not isinstance(brain_config, MLPDQNBrainConfig):
-            error_message = (
-                "The 'mlpdqn' brain architecture requires a MLPDQNBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        # Create parameter initializer instance from config
-        parameter_initializer = create_parameter_initializer_instance(parameter_initializer_config)
-
-        brain = MLPDQNBrain(
-            config=brain_config,
-            input_dim=2,
-            num_actions=4,
-            device=device,
-            parameter_initializer=parameter_initializer,
-        )
-    elif brain_type in (BrainType.SPIKING_REINFORCE, BrainType.SPIKING):
-        from quantumnematode.brain.arch.spikingreinforce import SpikingReinforceBrain
-
-        if not isinstance(brain_config, SpikingReinforceBrainConfig):
-            error_message = (
-                "The 'spikingreinforce' brain architecture requires a SpikingReinforceBrainConfig. "
-                f"Provided brain config type: {type(brain_config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-
-        # Determine input dimension based on separated gradients config
-        # 2 features for combined gradient, 4 features for separated food/predator gradients
-        input_dim = 4 if brain_config.use_separated_gradients else 2
-
-        brain = SpikingReinforceBrain(
-            config=brain_config,
-            input_dim=input_dim,
-            num_actions=4,
-            device=device,
-        )
-    else:
-        error_message = f"Unknown brain type: {brain_type}"
-        logger.error(error_message)
-        raise ValueError(error_message)
-
-    return brain
-
-
-def manage_simulation_halt(  # noqa: PLR0913
-    max_steps: int,
-    brain_type: BrainType,
-    qubits: int,
-    timestamp: str,
-    agent: QuantumNematodeAgent,
-    all_results: list[SimulationResult],
-    total_runs_done: int,
-    tracking_data: TrackingData,
-    plot_dir: Path,
-) -> None:
-    """
-    Handle simulation halt triggered by a KeyboardInterrupt.
-
-    This function provides options to the user to either exit the simulation,
-    output partial results and plots, or print circuit details.
-
-    Args:
-        max_steps (int): Maximum number of steps for the simulation.
-        brain_type (str): Type of brain architecture used in the simulation.
-        qubits (int): Number of qubits used in the simulation.
-        timestamp (str): Timestamp for the current session.
-        agent (QuantumNematodeAgent): The simulation agent.
-        all_results (list[SimulationResult]):
-            List of results for each run.
-        total_runs_done (int): Total number of runs completed so far.
-        tracking_data TrackingData: Data tracked during the simulation for plotting.
-        plot_dir (Path): Directory where plots will be saved.
-    """
-    data_dir = Path.cwd() / "exports" / timestamp / "session" / "data"
-    while True:
-        prompt_intro_message = (
-            "KeyboardInterrupt detected. The simulation has halted. "
-            "You can choose to exit or output the results up to this point."
-        )
-        logger.warning(prompt_intro_message)
-        print(prompt_intro_message)
-        print("0. Exit")
-        print("1. Output the summary, plots, and tracking until this point in time.")
-        print("2. Print the circuit's details.")
-
-        try:
-            choice = int(input("Enter your choice (0-2): "))
-        except ValueError:
-            logger.error("Invalid input. Please enter a number between 0 and 2.")
-            continue
-        except KeyboardInterrupt:
-            continue
-
-        if choice == 0:
-            logger.info("Exiting the session.")
-            sys.exit(0)
-        elif choice == 1:
-            logger.info("Generating partial results and plots.")
-            metrics = agent.calculate_metrics(total_runs=total_runs_done)
-
-            # Generate partial summary
-            summary(
-                metrics=metrics,
-                session_id=timestamp,
-                num_runs=total_runs_done,
-                max_steps=max_steps,
-                all_results=all_results,
-                env_type=agent.env,
-            )
-
-            # Generate plots with current timestamp
-            file_prefix = f"{total_runs_done}_"
-            plot_results(
-                all_results=all_results,
-                metrics=metrics,
-                file_prefix=file_prefix,
-                plot_dir=plot_dir,
-            )
-            plot_tracking_data_by_session(
-                tracking_data=tracking_data,
-                plot_dir=plot_dir,
-                brain_type=brain_type,
-                qubits=qubits,
-                file_prefix=file_prefix,
-            )
-
-            # Export partial results to CSV
-            export_simulation_results_to_csv(
-                all_results=all_results,
-                data_dir=data_dir,
-                file_prefix=file_prefix,
-            )
-            export_performance_metrics_to_csv(
-                metrics=metrics,
-                data_dir=data_dir,
-                file_prefix=file_prefix,
-            )
-            export_tracking_data_to_csv(
-                tracking_data=tracking_data,
-                brain_type=brain_type,
-                data_dir=data_dir,
-                qubits=qubits,
-                file_prefix=file_prefix,
-            )
-        elif choice == 2:
-            logger.info("Printing circuit details.")
-            if isinstance(agent.brain, QuantumBrain):
-                circuit = agent.brain.inspect_circuit()
-                logger.info(f"Circuit details:\n{circuit}")
-                print(circuit)
-            else:
-                logger.error(
-                    "Circuit details are only available for QuantumBrain architectures.",
-                )
-                print("Circuit details are only available for QuantumBrain architectures.")
-        else:
-            logger.error("Invalid choice. Please enter a number between 1 and 4.")
 
 
 def plot_results(  # noqa: C901, PLR0912, PLR0915
