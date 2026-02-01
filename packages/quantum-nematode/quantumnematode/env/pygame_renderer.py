@@ -30,6 +30,7 @@ STATUS_BG_COLOR = (30, 25, 22)
 STATUS_TEXT_COLOR = (200, 200, 200)
 STATUS_DANGER_COLOR = (220, 60, 40)
 STATUS_SAFE_COLOR = (80, 200, 80)
+STATUS_SESSION_COLOR = (170, 170, 220)
 STATUS_PADDING = 8
 
 # Window title
@@ -87,6 +88,7 @@ class PygameRenderer:
             self._zone_overlays[name] = create_zone_overlay(pygame, name)
 
         self._closed = False
+        self._last_status_line_count = 0
         logger.info(
             f"PygameRenderer initialized: {self._width}x{self._height} "
             f"({viewport_size[0]}x{viewport_size[1]} cells @ {cell_size}px)",
@@ -96,6 +98,17 @@ class PygameRenderer:
     def closed(self) -> bool:
         """Whether the window has been closed."""
         return self._closed
+
+    def _resize_if_needed(self, line_count: int) -> None:
+        """Resize the window if the status bar needs more space."""
+        if line_count <= self._last_status_line_count:
+            return
+        self._last_status_line_count = line_count
+        line_height = STATUS_FONT_SIZE + 2
+        needed_height = line_count * line_height + 8
+        if needed_height > STATUS_BAR_HEIGHT:
+            self._height = self._viewport_size[1] * self._cell_size + needed_height
+            self._screen = self._pg.display.set_mode((self._width, self._height))
 
     def pump_events(self) -> bool:
         """Process Pygame events. Returns False if window was closed."""
@@ -120,6 +133,7 @@ class PygameRenderer:
         in_danger: bool = False,
         temperature: float | None = None,
         zone_name: str | None = None,
+        session_text: str | None = None,
     ) -> None:
         """Render one complete frame."""
         if self._closed:
@@ -127,6 +141,20 @@ class PygameRenderer:
 
         if not self.pump_events():
             return
+
+        # Estimate total status lines and resize window if needed
+        session_lines = 0
+        if session_text:
+            session_lines = (
+                sum(
+                    1
+                    for line in session_text.strip().splitlines()
+                    if line.strip() and not line.strip().startswith("--")
+                )
+                + 1
+            )  # +1 for separator
+        # 7 = max run-level lines (title, step, food, hp, satiety, status, temp)
+        self._resize_if_needed(session_lines + 7)
 
         viewport = env.get_viewport_bounds()
 
@@ -149,6 +177,7 @@ class PygameRenderer:
             in_danger=in_danger,
             temperature=temperature,
             zone_name=zone_name,
+            session_text=session_text,
         )
 
         self._pg.display.flip()
@@ -363,6 +392,7 @@ class PygameRenderer:
         in_danger: bool,
         temperature: float | None,
         zone_name: str | None,
+        session_text: str | None = None,
     ) -> None:
         """Render status information below the grid."""
         bar_y = self._viewport_size[1] * self._cell_size
@@ -372,13 +402,23 @@ class PygameRenderer:
             (0, bar_y, self._width, STATUS_BAR_HEIGHT),
         )
 
-        # Build status lines - one item per line
-        lines: list[tuple[str, tuple[int, int, int]]] = [
-            (f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR),
-            (f"Food: {foods_collected}/{target_foods}", STATUS_TEXT_COLOR),
-            (f"HP: {health:.0f}/{max_health:.0f}", STATUS_TEXT_COLOR),
-            (f"Satiety: {satiety:.0f}/{max_satiety:.0f}", STATUS_TEXT_COLOR),
-        ]
+        lines: list[tuple[str, tuple[int, int, int]]] = []
+
+        # Session-level info from render_text
+        if session_text:
+            for raw_line in session_text.strip().splitlines():
+                stripped = raw_line.strip()
+                if stripped and not stripped.startswith("--"):
+                    lines.append((stripped, STATUS_SESSION_COLOR))
+            # Separator
+            lines.append(("", STATUS_TEXT_COLOR))
+
+        # Run-level info
+        lines.append(("Run:", STATUS_TEXT_COLOR))
+        lines.append((f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR))
+        lines.append((f"Food: {foods_collected}/{target_foods}", STATUS_TEXT_COLOR))
+        lines.append((f"HP: {health:.0f}/{max_health:.0f}", STATUS_TEXT_COLOR))
+        lines.append((f"Satiety: {satiety:.0f}/{max_satiety:.0f}", STATUS_TEXT_COLOR))
 
         danger_text = "IN DANGER" if in_danger else "SAFE"
         danger_color = STATUS_DANGER_COLOR if in_danger else STATUS_SAFE_COLOR
@@ -387,11 +427,12 @@ class PygameRenderer:
         if temperature is not None and zone_name:
             lines.append((f"Temp: {temperature:.1f}C ({zone_name})", STATUS_TEXT_COLOR))
 
-        antialias = True
         line_height = STATUS_FONT_SIZE + 2
+        antialias = True
         for i, (text, color) in enumerate(lines):
-            text_surf = self._font.render(text, antialias, color)
-            self._screen.blit(text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height))
+            if text:
+                text_surf = self._font.render(text, antialias, color)
+                self._screen.blit(text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height))
 
     def close(self) -> None:
         """Clean up Pygame resources."""
