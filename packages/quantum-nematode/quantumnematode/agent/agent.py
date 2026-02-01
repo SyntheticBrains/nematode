@@ -502,6 +502,13 @@ class QuantumNematodeAgent:
             )
         return self._pygame_renderer
 
+    @property
+    def pygame_renderer_closed(self) -> bool:
+        """Whether the Pygame renderer window has been closed by the user."""
+        if hasattr(self, "_pygame_renderer") and self._pygame_renderer is not None:
+            return self._pygame_renderer.closed
+        return False
+
     def _render_step_pygame(self, max_steps: int) -> None:
         """Render the current step using the Pygame renderer."""
         renderer = self._get_pygame_renderer()

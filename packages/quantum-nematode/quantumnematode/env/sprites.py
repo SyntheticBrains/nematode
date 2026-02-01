@@ -20,6 +20,7 @@ NEMATODE_HEAD_OUTLINE = (180, 155, 120)
 NEMATODE_PHARYNX_COLOR = (200, 170, 130)
 NEMATODE_BODY_COLOR = (210, 185, 150)
 NEMATODE_BODY_OUTLINE = (170, 145, 110)
+NEMATODE_BODY_HIGHLIGHT = (225, 205, 175)
 NEMATODE_EYE_COLOR = (60, 60, 60)
 
 # Food -- bacterial colony (E. coli / OP50 lawn)
@@ -58,6 +59,10 @@ ZONE_TOXIC = (140, 60, 180, 80)
 
 CELL_SIZE = 32
 
+# Body segment radius and connector half-width
+_BODY_RADIUS = 7
+_CONNECTOR_HALF_W = 5
+
 
 def create_sprites(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     """Create all sprites and return them in a dict.
@@ -79,7 +84,6 @@ def create_sprites(pg: Any) -> dict[str, Any]:  # noqa: ANN401
     sprites["predator_random"] = _make_predator_random(pg)
     sprites["predator_stationary"] = _make_predator_stationary(pg)
     sprites["predator_pursuit"] = _make_predator_pursuit(pg)
-    sprites["body"] = _make_body(pg)
 
     # Directional head sprites
     for direction in ("up", "down", "left", "right"):
@@ -107,8 +111,8 @@ def _make_soil(pg: Any) -> Any:  # noqa: ANN401
 
 
 def _make_food(pg: Any) -> Any:  # noqa: ANN401
-    """Bacterial colony -- green clustered dots on soil."""
-    surf = _make_soil(pg).copy()
+    """Bacterial colony -- green clustered dots on transparent surface."""
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     c = CELL_SIZE // 2
     pg.draw.circle(surf, FOOD_COLOR, (c, c), 10)
     pg.draw.circle(surf, FOOD_HIGHLIGHT, (c - 3, c - 3), 5)
@@ -120,51 +124,114 @@ def _make_food(pg: Any) -> Any:  # noqa: ANN401
 
 
 def _make_head(pg: Any, direction: str) -> Any:  # noqa: ANN401
-    """Nematode head with pharynx bulb, facing *direction*."""
-    surf = _make_soil(pg).copy()
+    """Nematode head with pharynx bulb, facing *direction*.
+
+    Drawn on a transparent surface so zone overlays show through.
+    """
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     c = CELL_SIZE // 2
 
     if direction == "up":
+        # Tapered head shape pointing up
         pg.draw.ellipse(surf, NEMATODE_HEAD_COLOR, (c - 7, c - 10, 14, 20))
         pg.draw.ellipse(surf, NEMATODE_HEAD_OUTLINE, (c - 7, c - 10, 14, 20), 1)
-        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 5, c - 2, 10, 10))
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 3, c - 6), 2)
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 3, c - 6), 2)
+        # Pharynx bulb (posterior)
+        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 5, c, 10, 8))
+        # Nose tip highlight
+        pg.draw.ellipse(surf, NEMATODE_BODY_HIGHLIGHT, (c - 3, c - 9, 6, 4))
+        # Eyes (amphid sensory organs)
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 3, c - 5), 2)
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 3, c - 5), 2)
+        # Connector stub toward body (down)
+        hw = _CONNECTOR_HALF_W
+        pg.draw.rect(surf, NEMATODE_BODY_COLOR, (c - hw, c + 8, hw * 2, 8))
     elif direction == "down":
         pg.draw.ellipse(surf, NEMATODE_HEAD_COLOR, (c - 7, c - 10, 14, 20))
         pg.draw.ellipse(surf, NEMATODE_HEAD_OUTLINE, (c - 7, c - 10, 14, 20), 1)
-        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 5, c - 8, 10, 10))
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 3, c + 6), 2)
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 3, c + 6), 2)
+        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 5, c - 8, 10, 8))
+        pg.draw.ellipse(surf, NEMATODE_BODY_HIGHLIGHT, (c - 3, c + 5, 6, 4))
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 3, c + 5), 2)
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 3, c + 5), 2)
+        hw = _CONNECTOR_HALF_W
+        pg.draw.rect(surf, NEMATODE_BODY_COLOR, (c - hw, 0, hw * 2, 8))
     elif direction == "left":
         pg.draw.ellipse(surf, NEMATODE_HEAD_COLOR, (c - 10, c - 7, 20, 14))
         pg.draw.ellipse(surf, NEMATODE_HEAD_OUTLINE, (c - 10, c - 7, 20, 14), 1)
-        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 2, c - 5, 10, 10))
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 6, c - 3), 2)
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 6, c + 3), 2)
+        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c, c - 5, 8, 10))
+        pg.draw.ellipse(surf, NEMATODE_BODY_HIGHLIGHT, (c - 9, c - 3, 4, 6))
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 5, c - 3), 2)
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c - 5, c + 3), 2)
+        hw = _CONNECTOR_HALF_W
+        pg.draw.rect(surf, NEMATODE_BODY_COLOR, (c + 8, c - hw, 8, hw * 2))
     else:  # right
         pg.draw.ellipse(surf, NEMATODE_HEAD_COLOR, (c - 10, c - 7, 20, 14))
         pg.draw.ellipse(surf, NEMATODE_HEAD_OUTLINE, (c - 10, c - 7, 20, 14), 1)
-        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 8, c - 5, 10, 10))
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 6, c - 3), 2)
-        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 6, c + 3), 2)
+        pg.draw.ellipse(surf, NEMATODE_PHARYNX_COLOR, (c - 8, c - 5, 8, 10))
+        pg.draw.ellipse(surf, NEMATODE_BODY_HIGHLIGHT, (c + 5, c - 3, 4, 6))
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 5, c - 3), 2)
+        pg.draw.circle(surf, NEMATODE_EYE_COLOR, (c + 5, c + 3), 2)
+        hw = _CONNECTOR_HALF_W
+        pg.draw.rect(surf, NEMATODE_BODY_COLOR, (0, c - hw, 8, hw * 2))
 
     return surf
 
 
-def _make_body(pg: Any) -> Any:  # noqa: ANN401
-    """Nematode body segment -- rounded cream/tan segment."""
-    surf = _make_soil(pg).copy()
+def draw_body_segment(  # noqa: PLR0913
+    pg: Any,  # noqa: ANN401
+    surface: Any,  # noqa: ANN401
+    px: int,
+    py: int,
+    *,
+    connect_up: bool = False,
+    connect_down: bool = False,
+    connect_left: bool = False,
+    connect_right: bool = False,
+    is_tail: bool = False,
+) -> None:
+    """Draw a body segment at pixel position with connectors to neighbors.
+
+    Parameters
+    ----------
+    pg : module
+        The pygame module.
+    surface : pygame.Surface
+        Target surface to draw on.
+    px, py : int
+        Top-left pixel position of the cell.
+    connect_up/down/left/right : bool
+        Whether to draw a connector bar in that direction.
+    is_tail : bool
+        If True, draw a tapered tail tip instead of a full circle.
+    """
     c = CELL_SIZE // 2
-    pg.draw.circle(surf, NEMATODE_BODY_COLOR, (c, c), 8)
-    pg.draw.circle(surf, NEMATODE_BODY_OUTLINE, (c, c), 8, 1)
-    pg.draw.circle(surf, NEMATODE_HEAD_COLOR, (c - 2, c - 2), 4)
-    return surf
+    cx, cy = px + c, py + c
+    hw = _CONNECTOR_HALF_W
+
+    # Draw connector bars first (behind the circle)
+    if connect_up:
+        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (cx - hw, py, hw * 2, c))
+    if connect_down:
+        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (cx - hw, cy, hw * 2, c))
+    if connect_left:
+        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (px, cy - hw, c, hw * 2))
+    if connect_right:
+        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (cx, cy - hw, c, hw * 2))
+
+    # Draw the central segment
+    if is_tail:
+        radius = _BODY_RADIUS - 2
+        pg.draw.circle(surface, NEMATODE_BODY_COLOR, (cx, cy), radius)
+        pg.draw.circle(surface, NEMATODE_BODY_OUTLINE, (cx, cy), radius, 1)
+    else:
+        pg.draw.circle(surface, NEMATODE_BODY_COLOR, (cx, cy), _BODY_RADIUS)
+        pg.draw.circle(surface, NEMATODE_BODY_OUTLINE, (cx, cy), _BODY_RADIUS, 1)
+        # Highlight
+        pg.draw.circle(surface, NEMATODE_BODY_HIGHLIGHT, (cx - 2, cy - 2), 3)
 
 
 def _make_predator_random(pg: Any) -> Any:  # noqa: ANN401
     """Nematode-trapping fungal hyphae -- branching purple tendrils."""
-    surf = _make_soil(pg).copy()
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     c = CELL_SIZE // 2
     pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c + 10), (c, c - 10), 2)
     pg.draw.line(surf, PREDATOR_RANDOM_COLOR, (c, c - 4), (c + 8, c - 10), 2)
@@ -185,7 +252,7 @@ def _make_predator_random(pg: Any) -> Any:  # noqa: ANN401
 
 def _make_predator_stationary(pg: Any) -> Any:  # noqa: ANN401
     """Fungal constricting ring trap -- circular ring structure."""
-    surf = _make_soil(pg).copy()
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     c = CELL_SIZE // 2
     pg.draw.circle(surf, PREDATOR_STATIONARY_COLOR, (c, c), 12, 3)
     pg.draw.circle(surf, PREDATOR_STATIONARY_RING, (c, c), 7, 2)
@@ -206,7 +273,7 @@ def _make_predator_stationary(pg: Any) -> Any:  # noqa: ANN401
 
 def _make_predator_pursuit(pg: Any) -> Any:  # noqa: ANN401
     """Predatory mite -- small arachnid shape in orange-red."""
-    surf = _make_soil(pg).copy()
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
     c = CELL_SIZE // 2
     pg.draw.ellipse(surf, PREDATOR_PURSUIT_COLOR, (c - 6, c - 8, 12, 16))
     pg.draw.circle(surf, PREDATOR_PURSUIT_HIGHLIGHT, (c, c - 10), 5)

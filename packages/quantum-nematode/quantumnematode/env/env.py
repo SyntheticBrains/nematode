@@ -1817,15 +1817,29 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return self._render_grid_to_strings(grid, viewport=viewport)
 
-    def render_full(self) -> list[str]:
-        """Render the entire environment (for logging/debugging)."""
-        grid = self._render_grid(self.foods)
+    def render_full(self, *, theme_override: Theme | None = None) -> list[str]:
+        """Render the entire environment (for logging/debugging).
 
-        # Add predators to grid if enabled
-        if self.predator.enabled:
-            self._render_predators(grid, viewport=None)
+        Parameters
+        ----------
+        theme_override : Theme | None
+            If provided, temporarily use this theme for rendering.
+            Useful when the active theme (e.g. PIXEL) has no meaningful
+            text representation.
+        """
+        original_theme = self.theme
+        if theme_override is not None:
+            self.theme = theme_override
+        try:
+            grid = self._render_grid(self.foods)
 
-        return self._render_grid_to_strings(grid, viewport=None)
+            # Add predators to grid if enabled
+            if self.predator.enabled:
+                self._render_predators(grid, viewport=None)
+
+            return self._render_grid_to_strings(grid, viewport=None)
+        finally:
+            self.theme = original_theme
 
     def _get_predator_symbol(
         self,
