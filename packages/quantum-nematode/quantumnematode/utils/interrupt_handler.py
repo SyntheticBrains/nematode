@@ -86,6 +86,9 @@ def manage_simulation_halt(  # noqa: PLR0913
         except ValueError:
             logger.error("Invalid input. Please enter a number between 0 and 2.")
             continue
+        except EOFError:
+            logger.warning("No input available; exiting.")
+            sys.exit(0)
         except KeyboardInterrupt:
             continue
 
