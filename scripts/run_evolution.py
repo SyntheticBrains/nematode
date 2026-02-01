@@ -245,21 +245,6 @@ def create_brain_from_config(
     return brain
 
 
-def _create_env_for_evolution(config_path: str) -> DynamicForagingEnvironment:
-    """Create environment from config path for evolution evaluation.
-
-    Args:
-        config_path: Path to YAML config file.
-
-    Returns
-    -------
-        Configured DynamicForagingEnvironment instance.
-    """
-    config = load_simulation_config(config_path)
-    env_config = configure_environment(config)
-    return create_env_from_config(env_config)
-
-
 def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
     brain: QVarCircuitBrain,
     env: DynamicForagingEnvironment,
@@ -445,6 +430,7 @@ def evaluate_fitness(  # noqa: PLR0913
     brain = create_brain_from_config(config_path, param_array)
     config = load_simulation_config(config_path)
     satiety_config = configure_satiety(config)
+    env_config = configure_environment(config)
 
     # Get max_steps from config
     max_steps = config.max_steps or 500
@@ -463,7 +449,7 @@ def evaluate_fitness(  # noqa: PLR0913
             np.random.seed(episode_seed)  # noqa: NPY002
             random.seed(episode_seed)
 
-        env = _create_env_for_evolution(config_path)
+        env = create_env_from_config(env_config)
         if run_episode(
             brain,
             env,
