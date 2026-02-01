@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --extra cpu --extra qpu --extra torch --dev
+          uv sync --extra cpu --extra pixel --extra qpu --extra torch --dev
 
       - name: Run pre-commit hooks
         uses: pre-commit/action@v3.0.1
