@@ -165,7 +165,7 @@ ______________________________________________________________________
 
 **Architecture Gaps:**
 
-- QQVarCircuitBrain incomplete (missing: tracking metrics, Qiskit runtime integration, parameter initialization)
+- QQLearningBrain incomplete (missing: tracking metrics, Qiskit runtime integration, parameter initialization)
 - MLPReinforceBrain loss calculation bug (flagged in codebase)
 - No multi-brain ensemble or hierarchical decision systems
 - No transfer learning framework
@@ -241,7 +241,7 @@ ______________________________________________________________________
 
 1. **Validated Optimization Baselines** (CRITICAL PRIORITY)
 
-   - **PRIMARY: Evolutionary optimization** for at least one quantum architecture (QVarCircuitBrain, QQVarCircuitBrain)
+   - **PRIMARY: Evolutionary optimization** for at least one quantum architecture (QVarCircuitBrain, QQLearningBrain)
      - CMA-ES (validated: 88% success on predator tasks)
      - Genetic Algorithms (population-based search)
      - Compare variants: (μ, λ)-ES, Natural Evolution Strategies
@@ -274,7 +274,7 @@ ______________________________________________________________________
 
 5. **Technical Debt Resolution**
 
-   - Fix QQVarCircuitBrain TODOs (tracking, Qiskit runtime, initialization)
+   - Fix QQLearningBrain TODOs (tracking, Qiskit runtime, initialization)
    - Fix MLPReinforceBrain loss calculation bug
    - Code quality improvements (address remaining Ruff/Pyright warnings)
 
@@ -1319,7 +1319,7 @@ The following items are tracked as ongoing maintenance, not blocking new phases:
 
 ### High Priority (Fix in Phase 0)
 
-1. **QQVarCircuitBrain Completion**
+1. **QQLearningBrain Completion**
 
    - Implement tracking metrics (episode data collection)
    - Add Qiskit runtime integration (for real hardware)
@@ -1333,7 +1333,7 @@ The following items are tracked as ongoing maintenance, not blocking new phases:
 
 3. **Grid Size Hardcoding**
 
-   - QQVarCircuitBrain: Grid size hardcoded to 10 instead of derived from environment
+   - QQLearningBrain: Grid size hardcoded to 10 instead of derived from environment
    - Fix: Read grid size from environment config
 
 ### Medium Priority (Address by Phase 3)
