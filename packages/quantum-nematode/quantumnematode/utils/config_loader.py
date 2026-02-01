@@ -467,7 +467,18 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
         logger.error(error_message)
         raise ValueError(error_message)
 
-    match config.brain.name:
+    # Resolve canonical name (new names map to old internal names for now)
+    _new_to_old = {
+        "qvarcircuit": "modular",
+        "qqlearning": "qmodular",
+        "mlpreinforce": "mlp",
+        "mlpdqn": "qmlp",
+        "mlpppo": "ppo",
+        "spikingreinforce": "spiking",
+    }
+    brain_name = _new_to_old.get(config.brain.name, config.brain.name)
+
+    match brain_name:
         case "modular":
             if config.brain.config is None:
                 return ModularBrainConfig()

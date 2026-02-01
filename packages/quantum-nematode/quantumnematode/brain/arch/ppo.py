@@ -740,3 +740,8 @@ class PPOBrain(ClassicalBrain):
         **kwargs: object,
     ) -> None:
         """Not used - PPO uses its own optimizer."""
+
+
+# Canonical name (preferred)
+MLPPPOBrain = PPOBrain
+MLPPPOBrainConfig = PPOBrainConfig

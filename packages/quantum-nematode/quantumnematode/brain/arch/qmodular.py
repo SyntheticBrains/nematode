@@ -773,3 +773,8 @@ class QModularBrain:
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
         return new_brain
+
+
+# Canonical name (preferred)
+QQLearningBrain = QModularBrain
+QQLearningBrainConfig = QModularBrainConfig
