@@ -7,7 +7,7 @@ from quantumnematode.agent import (
     RewardConfig,
     SatietyConfig,
 )
-from quantumnematode.brain.arch.modular import ModularBrain, ModularBrainConfig
+from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 
@@ -100,36 +100,36 @@ class TestQuantumNematodeAgentInitialization:
     """Test QuantumNematodeAgent initialization."""
 
     @pytest.fixture
-    def modular_brain(self):
+    def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
-    def test_agent_init_with_default_env(self, modular_brain):
+    def test_agent_init_with_default_env(self, qvarcircuit_brain):
         """Test agent initialization creates default dynamic environment."""
-        agent = QuantumNematodeAgent(brain=modular_brain)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain)
 
-        assert agent.brain is modular_brain
+        assert agent.brain is qvarcircuit_brain
         assert isinstance(agent.env, DynamicForagingEnvironment)
         assert agent._metrics_tracker.total_steps == 0
         assert len(agent.path) == 1  # Initial position
         assert agent._metrics_tracker.success_count == 0
 
-    def test_agent_init_with_dynamic_env(self, modular_brain):
+    def test_agent_init_with_dynamic_env(self, qvarcircuit_brain):
         """Test agent initialization with dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
             foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
         )
-        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain, env=env)
 
         assert isinstance(agent.env, DynamicForagingEnvironment)
         assert agent.env.grid_size == 30
 
-    def test_agent_init_with_satiety_config(self, modular_brain):
+    def test_agent_init_with_satiety_config(self, qvarcircuit_brain):
         """Test agent initialization with custom satiety config."""
         satiety_config = SatietyConfig(
             initial_satiety=200.0,
@@ -137,7 +137,7 @@ class TestQuantumNematodeAgentInitialization:
             satiety_gain_per_food=0.4,
         )
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             satiety_config=satiety_config,
         )
 
@@ -145,9 +145,9 @@ class TestQuantumNematodeAgentInitialization:
         assert agent.max_satiety == 200.0
         assert agent.satiety_config.satiety_decay_rate == 1.5
 
-    def test_agent_path_initialization(self, modular_brain):
+    def test_agent_path_initialization(self, qvarcircuit_brain):
         """Test that agent path is initialized with starting position."""
-        agent = QuantumNematodeAgent(brain=modular_brain)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain)
 
         assert len(agent.path) > 0
         assert agent.path[0] == tuple(agent.env.agent_pos)
@@ -157,30 +157,30 @@ class TestQuantumNematodeAgentGoalDistance:
     """Test agent goal distance calculation."""
 
     @pytest.fixture
-    def modular_brain(self):
+    def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
 
 class TestQuantumNematodeAgentReset:
     """Test agent reset functionality."""
 
     @pytest.fixture
-    def modular_brain(self):
+    def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
-    def test_reset_environment_maze(self, modular_brain):
+    def test_reset_environment_maze(self, qvarcircuit_brain):
         """Test resetting maze environment."""
-        agent = QuantumNematodeAgent(brain=modular_brain)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain)
 
         # Modify agent state
         for _ in range(3):
@@ -196,7 +196,7 @@ class TestQuantumNematodeAgentReset:
         assert len(agent.path) == 1
         assert agent._metrics_tracker.success_count == 5  # Success count should not be reset
 
-    def test_reset_environment_dynamic(self, modular_brain):
+    def test_reset_environment_dynamic(self, qvarcircuit_brain):
         """Test resetting dynamic foraging environment."""
         env = DynamicForagingEnvironment(
             grid_size=30,
@@ -204,7 +204,7 @@ class TestQuantumNematodeAgentReset:
         )
         satiety_config = SatietyConfig(initial_satiety=100.0)
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=env,
             satiety_config=satiety_config,
         )
@@ -222,9 +222,9 @@ class TestQuantumNematodeAgentReset:
         # Foods collected should be reset
         assert agent._metrics_tracker.foods_collected == 0
 
-    def test_reset_brain(self, modular_brain):
+    def test_reset_brain(self, qvarcircuit_brain):
         """Test resetting brain history data."""
-        agent = QuantumNematodeAgent(brain=modular_brain)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain)
 
         # Add some history data
         agent.brain.history_data.rewards.append(10.0)
@@ -241,21 +241,21 @@ class TestQuantumNematodeAgentMetrics:
     """Test agent metrics calculation."""
 
     @pytest.fixture
-    def modular_brain(self):
+    def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             modules={ModuleName.CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
-        return ModularBrain(config=config, shots=50)
+        return QVarCircuitBrain(config=config, shots=50)
 
-    def test_calculate_metrics_basic(self, modular_brain):
+    def test_calculate_metrics_basic(self, qvarcircuit_brain):
         """Test basic metrics calculation."""
         env = DynamicForagingEnvironment(
             grid_size=30,
             foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
         )
-        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain, env=env)
 
         # Simulate some successful runs
         agent._metrics_tracker.success_count = 7
@@ -269,13 +269,13 @@ class TestQuantumNematodeAgentMetrics:
         assert metrics.average_steps == 50.0  # 500 / 10
         assert metrics.average_reward == 10.0  # 100 / 10
 
-    def test_calculate_metrics_with_foraging(self, modular_brain):
+    def test_calculate_metrics_with_foraging(self, qvarcircuit_brain):
         """Test metrics calculation with foraging data."""
         env = DynamicForagingEnvironment(
             grid_size=30,
             foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=8),
         )
-        agent = QuantumNematodeAgent(brain=modular_brain, env=env)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain, env=env)
 
         # Simulate some data
         agent._metrics_tracker.success_count = 3  # All runs successful
@@ -296,9 +296,9 @@ class TestQuantumNematodeAgentMetrics:
         assert metrics.average_distance_efficiency == pytest.approx(0.877, rel=0.01)
         assert metrics.average_foods_collected == 9.0  # 27 / 3
 
-    def test_calculate_metrics_no_data(self, modular_brain):
+    def test_calculate_metrics_no_data(self, qvarcircuit_brain):
         """Test metrics calculation with minimal data."""
-        agent = QuantumNematodeAgent(brain=modular_brain)
+        agent = QuantumNematodeAgent(brain=qvarcircuit_brain)
 
         # Initialize with some minimal data
         agent._metrics_tracker.total_steps = 0

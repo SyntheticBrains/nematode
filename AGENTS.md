@@ -27,13 +27,16 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 ## Key Directories
 
 - `packages/quantum-nematode/quantumnematode/` — Main source code
-  - `brain/arch/` — 6 brain architectures (modular, qmodular, mlp, ppo, qmlp, spiking)
+  - `brain/arch/` — 6 brain architectures (qvarcircuit, qqlearning, mlpreinforce, mlpppo, mlpdqn, spikingreinforce)
   - `env/` — Environment simulation
   - `agent/` — Agent orchestration, rewards, metrics
   - `experiment/` — Experiment tracking and benchmarking
   - `optimizers/` — Learning algorithms (PSR, CMA-ES)
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
-- `configs/examples/` — YAML config files ({brain}_{environment}_{size}.yml)
+- `configs/examples/` — YAML config files (`[{prefix}_]{brain}_{environment}_{size}[_{postfix}].yml`)
+  - Prefixes: `evolution` (for evolutionary optimization configs)
+  - Postfixes: `sensory` (unified sensory modules), `finetune`, etc.
+  - Example: `evolution_qvarcircuit_foraging_small.yml`, `mlpppo_predators_small.yml`
 - `tests/` — Three-tier testing (unit, smoke, nightly)
 - `benchmarks/` — Submitted benchmark results
 - `openspec/` — Spec-driven development framework

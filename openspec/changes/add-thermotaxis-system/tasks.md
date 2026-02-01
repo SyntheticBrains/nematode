@@ -145,15 +145,15 @@ ______________________________________________________________________
 
 ### 4.1 Thermotaxis Benchmark Configs
 
-- [x] Create `configs/examples/ppo_thermotaxis_foraging_small.yml`
+- [x] Create `configs/examples/mlpppo_thermotaxis_foraging_small.yml`
   - 20x20 grid, food collection goal
   - Thermotaxis enabled with linear gradient
   - Health system enabled
   - sensory_modules: [food_chemotaxis, thermotaxis]
-- [x] Create `configs/examples/ppo_thermotaxis_stationary_predators_small.yml`
+- [x] Create `configs/examples/mlpppo_thermotaxis_stationary_predators_small.yml`
   - Multi-objective: food + stationary predators + temperature
   - sensory_modules: [food_chemotaxis, nociception, mechanosensation, thermotaxis]
-- [x] Create `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml`
+- [x] Create `configs/examples/mlpppo_thermotaxis_pursuit_predators_small.yml`
   - Multi-objective: food + pursuit predators + temperature
   - sensory_modules: [food_chemotaxis, nociception, mechanosensation, thermotaxis]
 - [x] Create `configs/examples/thermotaxis_isothermal_small.yml`
@@ -378,9 +378,9 @@ This section documents all files touched during thermotaxis implementation to se
 
 | File | Purpose |
 |------|---------|
-| `configs/examples/ppo_thermotaxis_foraging_small.yml` | Basic thermotaxis + food foraging |
-| `configs/examples/ppo_thermotaxis_stationary_predators_small.yml` | Thermotaxis + stationary predators |
-| `configs/examples/ppo_thermotaxis_pursuit_predators_small.yml` | Thermotaxis + pursuit predators |
+| `configs/examples/mlpppo_thermotaxis_foraging_small.yml` | Basic thermotaxis + food foraging |
+| `configs/examples/mlpppo_thermotaxis_stationary_predators_small.yml` | Thermotaxis + stationary predators |
+| `configs/examples/mlpppo_thermotaxis_pursuit_predators_small.yml` | Thermotaxis + pursuit predators |
 
 ### Pattern for Adding New Sensory Systems (e.g., Aerotaxis)
 

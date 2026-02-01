@@ -16,7 +16,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
 - ✅ **Predator Evasion**: Multi-objective learning with random-moving predators and gradient-based danger perception
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
-- ✅ **Classical ML Alternatives**: MLP, PPO, Q-learning, and spiking neural network brain architectures
+- ✅ **Classical ML Alternatives**: REINFORCE, PPO, DQN, and spiking neural network brain architectures
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
 - ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
@@ -27,22 +27,22 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 Choose from multiple brain architectures for your nematode:
 
-- **ModularBrain**: Quantum variational circuit with modular sensory processing
-- **QModularBrain**: Hybrid quantum-classical Q-learning with experience replay
-- **MLPBrain**: Classical multi-layer perceptron with policy gradients (REINFORCE)
-- **PPOBrain**: Classical actor-critic with Proximal Policy Optimization (clipped objective, GAE)
-- **QMLPBrain**: Classical MLP with Deep Q-Network (DQN) learning
-- **SpikingBrain**: Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
+- **QVarCircuitBrain** (qvarcircuit): Quantum variational circuit with modular sensory processing
+- **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
+- **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
+- **MLPPPOBrain** (mlpppo): Classical actor-critic with Proximal Policy Optimization (clipped objective, GAE)
+- **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
+- **SpikingReinforceBrain** (spikingreinforce): Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
 
 Select the brain architecture when running simulations:
 
 ```bash
-python scripts/run_simulation.py --brain modular    # Quantum (default)
-python scripts/run_simulation.py --brain qmodular  # Hybrid quantum-classical
-python scripts/run_simulation.py --brain mlp       # Classical policy gradient
-python scripts/run_simulation.py --brain ppo       # Classical actor-critic (PPO)
-python scripts/run_simulation.py --brain qmlp      # Classical Q-learning
-python scripts/run_simulation.py --brain spiking   # Biologically realistic
+python scripts/run_simulation.py --brain qvarcircuit       # Quantum (default)
+python scripts/run_simulation.py --brain qqlearning        # Hybrid quantum-classical
+python scripts/run_simulation.py --brain mlpreinforce      # Classical policy gradient
+python scripts/run_simulation.py --brain mlpppo            # Classical actor-critic (PPO)
+python scripts/run_simulation.py --brain mlpdqn            # Classical Q-learning
+python scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic
 ```
 
 ## 🚀 Quick Start
@@ -87,30 +87,30 @@ cp .env.template .env
 **Command Line Examples:**
 
 ```bash
-# Dynamic foraging with quantum modular brain (recommended)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_foraging_medium.yml --theme emoji
+# Dynamic foraging with quantum variational circuit brain (recommended)
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/qvarcircuit_foraging_medium.yml --theme emoji
 
-# Dynamic foraging and predator evasion with quantum modular brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/modular_predators_medium.yml --theme emoji
+# Dynamic foraging and predator evasion with quantum variational circuit brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/qvarcircuit_predators_medium.yml --theme emoji
 
 # Dynamic foraging with classical MLP brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_foraging_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlpreinforce_foraging_medium.yml --theme emoji
 
 # Spiking neural network brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spiking_foraging_small.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spikingreinforce_foraging_small.yml --theme emoji
 
 # Quantum hardware (IBM QPU) with dynamic foraging
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_foraging_small.yml --theme emoji --device qpu
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/qvarcircuit_foraging_small.yml --theme emoji --device qpu
 
 # Many-worlds quantum simulation
-uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/modular_foraging_small.yml --theme emoji --manyworlds
+uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/qvarcircuit_foraging_small.yml --theme emoji --manyworlds
 ```
 
 **Docker GPU Examples:**
 
 ```bash
 # Run dynamic foraging with MLP brain and GPU acceleration
-docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlp_foraging_medium.yml --theme emoji
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlpreinforce_foraging_medium.yml --theme emoji
 
 # Interactive Docker shell for development
 docker-compose exec quantum-nematode bash
@@ -209,27 +209,27 @@ uv run scripts/benchmark_submit.py regenerate
 
 | Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
 |---|---|---|---|---|---|---|---|---|
-| ppo | 0.835 ± 0.007 | 96.7% ± 1.3% | 0.93 ± 0.01 | 0.95 ± 0.05 | 0.47 ± 0.02 | 12 | @chrisjz | 2025-12-28 |
-| mlp | 0.810 ± 0.014 | 95.1% ± 1.9% | 0.91 ± 0.02 | 0.99 ± 0.03 | 0.39 ± 0.04 | 12 | @chrisjz | 2025-12-29 |
+| mlpppo | 0.835 ± 0.007 | 96.7% ± 1.3% | 0.93 ± 0.01 | 0.95 ± 0.05 | 0.47 ± 0.02 | 12 | @chrisjz | 2025-12-28 |
+| mlpreinforce | 0.810 ± 0.014 | 95.1% ± 1.9% | 0.91 ± 0.02 | 0.99 ± 0.03 | 0.39 ± 0.04 | 12 | @chrisjz | 2025-12-29 |
 
 #### Foraging Small - Quantum
 
 | Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
 |---|---|---|---|---|---|---|---|---|
-| modular | 0.835 ± 0.006 | 99.8% ± 0.6% | 0.80 ± 0.00 | 0.99 ± 0.04 | 0.46 ± 0.01 | 12 | @chrisjz | 2025-12-29 |
+| qvarcircuit | 0.835 ± 0.006 | 99.8% ± 0.6% | 0.80 ± 0.00 | 0.99 ± 0.04 | 0.46 ± 0.01 | 12 | @chrisjz | 2025-12-29 |
 
 #### Predator Small - Classical
 
 | Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
 |---|---|---|---|---|---|---|---|---|
-| ppo | 0.728 ± 0.029 | 83.3% ± 2.9% | 0.92 ± 0.02 | 0.62 ± 0.05 | 0.51 ± 0.02 | 12 | @chrisjz | 2025-12-29 |
-| mlp | 0.624 ± 0.123 | 73.4% ± 10.9% | 0.84 ± 0.09 | 0.52 ± 0.19 | 0.39 ± 0.07 | 12 | @chrisjz | 2025-12-29 |
+| mlpppo | 0.728 ± 0.029 | 83.3% ± 2.9% | 0.92 ± 0.02 | 0.62 ± 0.05 | 0.51 ± 0.02 | 12 | @chrisjz | 2025-12-29 |
+| mlpreinforce | 0.624 ± 0.123 | 73.4% ± 10.9% | 0.84 ± 0.09 | 0.52 ± 0.19 | 0.39 ± 0.07 | 12 | @chrisjz | 2025-12-29 |
 
 #### Predator Small - Quantum
 
 | Brain | Score | Success Rate | Learning Speed | Stability | Distance Efficiency | Sessions | Contributor | Date |
 |---|---|---|---|---|---|---|---|---|
-| modular | 0.611 ± 0.054 | 76.1% ± 2.1% | 0.93 ± 0.04 | 0.47 ± 0.04 | 0.45 ± 0.01 | 12 | @chrisjz | 2025-12-29 |
+| qvarcircuit | 0.611 ± 0.054 | 76.1% ± 2.1% | 0.93 ± 0.04 | 0.47 ± 0.04 | 0.45 ± 0.01 | 12 | @chrisjz | 2025-12-29 |
 
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 

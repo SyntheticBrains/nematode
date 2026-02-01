@@ -7,7 +7,7 @@ import yaml
 from quantumnematode.agent import QuantumNematodeAgent
 from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.modular import ModularBrain
+from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
 
 
@@ -24,9 +24,9 @@ class TestPresetConfigurations:
         ("config_file", "expected_brain", "expected_env_type"),
         [
             # Foraging configs
-            ("modular_foraging_small.yml", "modular", "dynamic"),
-            ("modular_foraging_medium.yml", "modular", "dynamic"),
-            ("modular_foraging_large.yml", "modular", "dynamic"),
+            ("qvarcircuit_foraging_small.yml", "qvarcircuit", "dynamic"),
+            ("qvarcircuit_foraging_medium.yml", "qvarcircuit", "dynamic"),
+            ("qvarcircuit_foraging_large.yml", "qvarcircuit", "dynamic"),
         ],
     )
     def test_config_loads_correctly(
@@ -94,10 +94,10 @@ class TestPresetConfigurations:
     @pytest.mark.parametrize(
         ("config_file", "expected_shots"),
         [
-            # Quantum modular architectures
-            ("modular_foraging_small.yml", 3000),
-            ("modular_foraging_medium.yml", 3000),
-            ("modular_foraging_large.yml", 3000),
+            # Quantum QVarCircuit architectures
+            ("qvarcircuit_foraging_small.yml", 3000),
+            ("qvarcircuit_foraging_medium.yml", 3000),
+            ("qvarcircuit_foraging_large.yml", 3000),
             # Note: qmlp is Q-learning MLP, not quantum - it doesn't use shots
         ],
     )
@@ -115,7 +115,7 @@ class TestPresetConfigurations:
         )
 
         # Verify qubits parameter exists
-        assert "qubits" in config, f"Missing 'qubits' parameter in modular config {config_file}"
+        assert "qubits" in config, f"Missing 'qubits' parameter in quantum config {config_file}"
 
 
 class TestDynamicEnvironmentWithBrain:
@@ -141,24 +141,24 @@ class TestDynamicEnvironmentWithBrain:
         )
 
     @pytest.fixture
-    def modular_brain(self):
-        """Create a simple modular brain for testing."""
-        from quantumnematode.brain.arch.modular import ModularBrainConfig
+    def qvarcircuit_brain(self):
+        """Create a simple QVarCircuit brain for testing."""
+        from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrainConfig
         from quantumnematode.brain.modules import ModuleName
 
-        config = ModularBrainConfig(
+        config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={
                 ModuleName.CHEMOTAXIS: [0, 1],
             },
         )
-        return ModularBrain(
+        return QVarCircuitBrain(
             config=config,
             shots=50,
             device=DeviceType.CPU,
         )
 
-    def test_agent_initialization_with_dynamic_env(self, dynamic_env_small, modular_brain):
+    def test_agent_initialization_with_dynamic_env(self, dynamic_env_small, qvarcircuit_brain):
         """Test agent initialization with dynamic foraging environment."""
         from quantumnematode.agent import SatietyConfig
 
@@ -169,7 +169,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=dynamic_env_small,
             satiety_config=satiety_config,
         )
@@ -179,7 +179,7 @@ class TestDynamicEnvironmentWithBrain:
         assert agent._metrics_tracker.foods_collected == 0
         assert isinstance(agent.env, DynamicForagingEnvironment)
 
-    def test_food_consumption_workflow(self, dynamic_env_small, modular_brain):
+    def test_food_consumption_workflow(self, dynamic_env_small, qvarcircuit_brain):
         """Test complete food consumption workflow."""
         from quantumnematode.agent import SatietyConfig
 
@@ -190,7 +190,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=dynamic_env_small,
             satiety_config=satiety_config,
         )
@@ -224,7 +224,7 @@ class TestDynamicEnvironmentWithBrain:
                 # Verify food was removed from original position
                 assert consumed not in agent.env.foods
 
-    def test_satiety_decay(self, dynamic_env_small, modular_brain):
+    def test_satiety_decay(self, dynamic_env_small, qvarcircuit_brain):
         """Test satiety decay over steps."""
         from quantumnematode.agent import SatietyConfig
 
@@ -235,7 +235,7 @@ class TestDynamicEnvironmentWithBrain:
         )
 
         agent = QuantumNematodeAgent(
-            brain=modular_brain,
+            brain=qvarcircuit_brain,
             env=dynamic_env_small,
             satiety_config=satiety_config,
         )

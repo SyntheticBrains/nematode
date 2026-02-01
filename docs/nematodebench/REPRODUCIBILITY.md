@@ -11,7 +11,7 @@ The system automatically generates and tracks seeds:
 ```bash
 # Run with automatic seed generation
 uv run scripts/run_simulation.py \
-    --config configs/examples/ppo_foraging_small.yml \
+    --config configs/examples/mlpppo_foraging_small.yml \
     --track-experiment \
     --runs 50
 ```
@@ -21,7 +21,7 @@ Or specify an explicit seed:
 ```bash
 # Run with explicit seed (for reproduction)
 uv run scripts/run_simulation.py \
-    --config configs/examples/ppo_foraging_small.yml \
+    --config configs/examples/mlpppo_foraging_small.yml \
     --track-experiment \
     --seed 12345 \
     --runs 50
