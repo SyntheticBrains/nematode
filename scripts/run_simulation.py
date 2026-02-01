@@ -33,7 +33,7 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.env import MIN_GRID_SIZE
-from quantumnematode.env.theme import Theme
+from quantumnematode.env.theme import DEFAULT_THEME, Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
     logger,
@@ -163,8 +163,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--theme",
         type=str,
-        default=Theme.ASCII.value,
+        default=DEFAULT_THEME.value,
         choices=[
+            Theme.PIXEL.value,
             Theme.ASCII.value,
             Theme.EMOJI.value,
             Theme.UNICODE.value,
@@ -172,8 +173,8 @@ def parse_arguments() -> argparse.Namespace:
             Theme.RICH.value,
             Theme.EMOJI_RICH.value,
         ],
-        help="Maze rendering theme: 'ascii' (default), "
-        "'emoji', 'unicode', 'colored_ascii', 'rich', or 'emoji_rich'.",
+        help="Maze rendering theme: 'pixel' (default), "
+        "'ascii', 'emoji', 'unicode', 'colored_ascii', 'rich', or 'emoji_rich'.",
     )
     parser.add_argument(
         "--optimize",
@@ -464,9 +465,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
             logger.info(f"Initial satiety: {agent.current_satiety}/{agent.max_satiety}")
 
-            # Log full environment render
+            # Log full environment render (use EMOJI for PIXEL since it has no text output)
             logger.info("Initial environment state (full render):")
-            full_render = agent.env.render_full()
+            log_theme = Theme.EMOJI if theme == Theme.PIXEL else None
+            full_render = agent.env.render_full(theme_override=log_theme)
             for line in full_render:
                 logger.info(line)
 
@@ -521,6 +523,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_health_depleted += 1
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 total_max_steps += 1
+            elif step_result.termination_reason == TerminationReason.INTERRUPTED:
+                total_interrupted += 1
 
             # Get environment specific data
             foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
@@ -589,6 +593,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 temperature_comfort_score=temperature_comfort_score_this_run,
             )
             all_results.append(result)
+
+            # If Pygame window was closed, stop all remaining runs
+            if agent.pygame_renderer_closed:
+                logger.info(
+                    f"Pygame window closed - stopping simulation after run {run_num}/{runs}.",
+                )
+                total_runs_done = run_num
+                break
 
             # Log run outcome clearly
             outcome_msg = f"Run {run_num}/{runs} completed in {steps_taken} steps - "
@@ -682,12 +694,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         env_type=agent.env,
     )
 
-    # Generate plots after the simulation
-    plot_results(all_results=all_results, metrics=metrics, plot_dir=plot_dir)
-
-    # Export data to CSV files
-    export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
-    export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+    # Generate plots and exports after the simulation (skip if no results)
+    if all_results:
+        plot_results(all_results=all_results, metrics=metrics, plot_dir=plot_dir)
+        export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
+        export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+    else:
+        logger.warning("No completed runs - skipping plots and data export.")
 
     # Export foraging-specific data (if dynamic environment)
     foraging_results = [r for r in all_results if r.foods_collected is not None]

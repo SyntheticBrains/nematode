@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/SyntheticBrains/nematode/branch/main/graph/badge.svg)](https://codecov.io/gh/SyntheticBrains/nematode)
 
 <p align="center">
-  <img src="./docs/assets/images/demo-dynamic.gif" alt="nematode simulation demo" />
+  <img src="./docs/assets/images/demo.gif" alt="nematode simulation demo" />
 </p>
 
 This project simulates a simplified nematode (C. elegans) navigating dynamic foraging environments to find food while managing satiety, using either a **quantum variational circuit** or a **classical neural network** as its decision-making brain. It leverages [Qiskit](https://qiskit.org) to simulate quantum behavior and integrates classical logic for realistic foraging dynamics.
@@ -59,13 +59,13 @@ Install the project (choose one based on your needs):
 
 ```bash
 # For CPU simulation (recommended for beginners)
-uv sync --extra cpu --extra torch
+uv sync --extra cpu --extra pixel --extra torch
 
 # For quantum hardware access (requires IBM Quantum account)
-uv sync --extra qpu
+uv sync --extra qpu --extra pixel
 
 # For GPU acceleration (local installation)
-uv sync --extra gpu --extra torch
+uv sync --extra gpu --extra pixel --extra torch
 
 # For GPU acceleration (Docker with NVIDIA GPU support)
 docker compose up --build
@@ -233,35 +233,44 @@ uv run scripts/benchmark_submit.py regenerate
 
 See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guidelines.
 
-## 📊 Example Output
+## 📊 Simulation Visualization
 
-The simulation provides real-time visualization of the nematode's navigation:
+The default Pixel theme renders the simulation in a Pygame window with biologically accurate sprites inspired by real *C. elegans* ecology:
+
+![Pixel Theme](docs/assets/images/pixel_theme.png)
+
+### Entities
+
+| Entity | Visual | Biological Basis |
+|--------|--------|-----------------|
+| **Nematode head** | Translucent rounded head with pharynx bulb, directional facing | *C. elegans* head morphology |
+| **Nematode body** | Connected tan/cream segments with tapered tail | *C. elegans* body coloring |
+| **Food** | Green clustered dots | *E. coli* / OP50 bacterial lawns |
+| **Random predator** | Purple branching tendrils | Nematode-trapping fungi (*Arthrobotrys oligospora*) |
+| **Stationary predator** | Purple ring/net structure with toxic zone | Constricting ring traps (*Drechslerella*) |
+| **Pursuit predator** | Orange-red arachnid shape | Predatory mites |
+
+### Environment Layers
+
+| Layer | Description |
+|-------|-------------|
+| **Soil** | Dark earth background with subtle texture |
+| **Temperature zones** | Blue (cold) through neutral to red/orange (hot) overlays based on thermal gradient |
+| **Toxic zones** | Purple overlay around stationary predators indicating damage radius |
+
+### Status Bar
+
+The status bar displays session-level information (run progress, cumulative wins, total food eaten, average steps) and run-level information (current step, food collected, health, satiety, danger status, temperature zone).
+
+### Alternative Themes
+
+Console-based themes (ASCII, Emoji, Rich, etc.) are also available for headless or CI environments. Set `--theme` when running the simulation to switch between them.
+
+### Session Summary
+
+After all runs complete, a summary report is printed to the console:
 
 ```text
-🟧 🟧 🟧 🟧 🟧 🟧 🟨 🟨 🟨 ⬜️
-🟧 🟧 🟧 🟧 🟧 🟨 🟨 🟨 ⬜️ ⬜️
-🟧 🟧 🟧 🟧 🟨 🟨 🟨 ⬜️ ⬜️ ⬜️
-🟥 🟧 🦠 🟨 🟨 🟨 ⬜️ ⬜️ ⬜️ ⬜️
-🟥 🟧 🔼 🟨 🟨 ⬜️ ⬜️ ⬜️ ⬜️ 🟩
-🟥 🟧 🟤 🟨 ⬜️ ⬜️ ⬜️ ⬜️ 🟩 🟩
-🟥 🟧 🟤 ⬜️ ⬜️ ⬜️ ⬜️ 🟩 🟩 🟩
-🟥 🟥 ⬜️ ⬜️ ⬜️ ⬜️ 🟩 🟩 🟩 🟦
-🟥 🟥 ⬜️ ⬜️ ⬜️ 🟩 🟩 🟩 🟦 🟦
-🟥 🟥 ⬜️ ⬜️ 🟩 🟩 🟩 🟦 🟦 🟦
-
-Run:          10/50
-Steps(Avg):   180.5
-Step:         45/500
-Wins:         6
-Temp:         32.5°C (danger hot)
-
-Session ID: 20260101_000000
-All runs completed:
-
-Run: 1   Status: FAILED  Reason: starved              Steps: 398    Reward:   -9.43  Health: 36.0   Eaten: 1/10   Dist Eff: 0.30
-...
-Run: 50  Status: SUCCESS Reason: completed_all_food   Steps: 202    Reward:   11.61  Health: 65.0   Eaten: 10/10  Dist Eff: 0.43
-
 Total runs completed: 50
 Successful runs: 30 (60.0%)
 Failed runs - Starved: 2 (4.0%)
@@ -275,18 +284,6 @@ Average survival score: 0.72
 Average temperature comfort: 0.68
 Success rate: 60.00%
 ```
-
-Where:
-
-- 🔼 = Agent's head (🔼/🔽/◀️/▶️ with direction)
-- 🟤 = Agent's trail/body
-- 🦠 = Food
-- 🕷️ = Predator (random), ☠️ = Stationary predator, 🦂 = Pursuit predator
-- ⬜️ = Empty (comfort zone)
-- 🟦 = Lethal cold zone, 🟩 = Cold zone, 🟨 = Warm zone, 🟧 = Hot zone, 🟥 = Lethal hot zone
-- 🟪 = Toxic zone (stationary predator damage radius)
-
-When predators are enabled, the status line shows "IN DANGER" when the agent is within a predator's detection radius. Temperature zones visualize the thermal gradient that affects agent health.
 
 ## 🧰 Built With
 
