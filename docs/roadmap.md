@@ -204,7 +204,7 @@ ______________________________________________________________________
 
 **Critical Insight**: Gradient-based learning with parameter-shift rule shows high variance on quantum circuits due to statistical noise from finite shot counts in gradient estimation. This noise causes quantum circuits to converge to suboptimal local optima compared to gradient-free evolutionary methods.
 
-**Implication for Roadmap**: Evolution-based optimization (CMA-ES, Genetic Algorithms) is now the **validated baseline** for training quantum variational circuits. Gradient methods remain effective for classical networks (MLPReinforceBrain, QMLPReinforceBrain) but should not be assumed to work for quantum approaches without extensive validation.
+**Implication for Roadmap**: Evolution-based optimization (CMA-ES, Genetic Algorithms) is now the **validated baseline** for training quantum variational circuits. Gradient methods remain effective for classical networks (MLPReinforceBrain, MLPDQNBrain) but should not be assumed to work for quantum approaches without extensive validation.
 
 This breakthrough validates the adaptive, evidence-driven approach throughout this roadmap: methods are prioritized based on empirical results, not assumptions.
 
@@ -245,7 +245,7 @@ ______________________________________________________________________
      - CMA-ES (validated: 88% success on predator tasks)
      - Genetic Algorithms (population-based search)
      - Compare variants: (μ, λ)-ES, Natural Evolution Strategies
-   - **SECONDARY: Gradient methods** for at least one of each classical and spiking architectures (MLPReinforceBrain, QMLPReinforceBrain, SpikingReinforceBrain)
+   - **SECONDARY: Gradient methods** for at least one of each classical and spiking architectures (MLPReinforceBrain, MLPDQNBrain, SpikingReinforceBrain)
      - REINFORCE, DQN (already implemented for classical)
      - SpikingReinforceBrain: Surrogate gradient descent with REINFORCE (December 2025 rewrite)
      - Validate that gradients remain effective for non-quantum architectures
@@ -296,7 +296,7 @@ ______________________________________________________________________
 **Required (must complete before Phase 1):**
 
 - ✅ At least 1 quantum architecture (QVarCircuitBrain) achieves **>70% success** on at least 2 benchmark tasks using evolutionary optimization
-- ✅ At least 1 classical architecture (MLPReinforceBrain or QMLPReinforceBrain) benchmarked with gradient-based methods
+- ✅ At least 1 classical architecture (MLPReinforceBrain or MLPDQNBrain) benchmarked with gradient-based methods
 - ✅ Classical SOTA baseline (PPO or SAC) achieves **>85% success** on foraging tasks
 - ✅ Clear documentation of which optimization methods work for which architectures
 - ✅ At least 1 real C. elegans behavioral dataset integrated for validation
