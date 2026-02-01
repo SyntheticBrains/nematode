@@ -94,7 +94,7 @@ class TestPresetConfigurations:
     @pytest.mark.parametrize(
         ("config_file", "expected_shots"),
         [
-            # Quantum modular architectures
+            # Quantum QVarCircuit architectures
             ("qvarcircuit_foraging_small.yml", 3000),
             ("qvarcircuit_foraging_medium.yml", 3000),
             ("qvarcircuit_foraging_large.yml", 3000),
@@ -115,7 +115,7 @@ class TestPresetConfigurations:
         )
 
         # Verify qubits parameter exists
-        assert "qubits" in config, f"Missing 'qubits' parameter in modular config {config_file}"
+        assert "qubits" in config, f"Missing 'qubits' parameter in quantum config {config_file}"
 
 
 class TestDynamicEnvironmentWithBrain:
@@ -142,7 +142,7 @@ class TestDynamicEnvironmentWithBrain:
 
     @pytest.fixture
     def qvarcircuit_brain(self):
-        """Create a simple modular brain for testing."""
+        """Create a simple QVarCircuit brain for testing."""
         from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrainConfig
         from quantumnematode.brain.modules import ModuleName
 

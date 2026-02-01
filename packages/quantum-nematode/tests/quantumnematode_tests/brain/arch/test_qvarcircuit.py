@@ -17,7 +17,7 @@ from quantumnematode.optimizers.learning_rate import DynamicLearningRate
 
 
 class TestQVarCircuitBrainConfig:
-    """Test cases for modular quantum brain configuration."""
+    """Test cases for QVarCircuit quantum brain configuration."""
 
     def test_default_config(self):
         """Test default configuration values."""
@@ -50,7 +50,7 @@ class TestQVarCircuitBrainConfig:
 
 
 class TestQVarCircuitBrain:
-    """Test cases for the modular quantum brain architecture."""
+    """Test cases for the QVarCircuit quantum brain architecture."""
 
     @pytest.fixture
     def config(self):
@@ -64,7 +64,7 @@ class TestQVarCircuitBrain:
 
     @pytest.fixture
     def brain(self, config):
-        """Create a test modular brain."""
+        """Create a test QVarCircuit brain."""
         return QVarCircuitBrain(
             config=config,
             shots=100,
@@ -72,7 +72,7 @@ class TestQVarCircuitBrain:
         )
 
     def test_brain_initialization(self, brain, config):
-        """Test modular brain initialization."""
+        """Test QVarCircuit brain initialization."""
         assert brain.config == config
         assert brain.num_qubits == 2
         assert brain.modules == config.modules
@@ -287,7 +287,7 @@ class TestQVarCircuitBrain:
 
 
 class TestQVarCircuitBrainIntegration:
-    """Integration tests for modular quantum brain with full simulation workflow."""
+    """Integration tests for QVarCircuit quantum brain with full simulation workflow."""
 
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
@@ -449,7 +449,7 @@ class TestTrajectoryLearning:
 
     @pytest.fixture
     def trajectory_brain(self, trajectory_config):
-        """Create a test modular brain with trajectory learning."""
+        """Create a test QVarCircuit brain with trajectory learning."""
         return QVarCircuitBrain(
             config=trajectory_config,
             shots=100,
