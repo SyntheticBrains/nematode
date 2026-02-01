@@ -839,25 +839,21 @@ def create_env_from_config(
         Configured DynamicForagingEnvironment instance.
     """
     from quantumnematode.env import DynamicForagingEnvironment
+    from quantumnematode.env.theme import Theme as ThemeEnum
 
     foraging_config = env_config.get_foraging_config()
     predator_config = env_config.get_predator_config()
     health_config = env_config.get_health_config()
     thermotaxis_config = env_config.get_thermotaxis_config()
 
-    kwargs: dict = {
-        "grid_size": env_config.grid_size,
-        "viewport_size": env_config.viewport_size,
-        "foraging": foraging_config.to_params(),
-        "predator": predator_config.to_params(),
-        "health": health_config.to_params(),
-        "thermotaxis": thermotaxis_config.to_params(),
-    }
-    if seed is not None:
-        kwargs["seed"] = seed
-    if max_body_length is not None:
-        kwargs["max_body_length"] = max_body_length
-    if theme is not None:
-        kwargs["theme"] = theme
-
-    return DynamicForagingEnvironment(**kwargs)
+    return DynamicForagingEnvironment(
+        grid_size=env_config.grid_size,
+        viewport_size=env_config.viewport_size,
+        max_body_length=max_body_length if max_body_length is not None else 6,
+        theme=theme if theme is not None else ThemeEnum.ASCII,
+        seed=seed,
+        foraging=foraging_config.to_params(),
+        predator=predator_config.to_params(),
+        health=health_config.to_params(),
+        thermotaxis=thermotaxis_config.to_params(),
+    )
