@@ -33,7 +33,7 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.env import MIN_GRID_SIZE
-from quantumnematode.env.theme import Theme
+from quantumnematode.env.theme import DEFAULT_THEME, Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
     logger,
@@ -163,8 +163,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--theme",
         type=str,
-        default=Theme.ASCII.value,
+        default=DEFAULT_THEME.value,
         choices=[
+            Theme.PIXEL.value,
             Theme.ASCII.value,
             Theme.EMOJI.value,
             Theme.UNICODE.value,
@@ -172,8 +173,8 @@ def parse_arguments() -> argparse.Namespace:
             Theme.RICH.value,
             Theme.EMOJI_RICH.value,
         ],
-        help="Maze rendering theme: 'ascii' (default), "
-        "'emoji', 'unicode', 'colored_ascii', 'rich', or 'emoji_rich'.",
+        help="Maze rendering theme: 'pixel' (default), "
+        "'ascii', 'emoji', 'unicode', 'colored_ascii', 'rich', or 'emoji_rich'.",
     )
     parser.add_argument(
         "--optimize",

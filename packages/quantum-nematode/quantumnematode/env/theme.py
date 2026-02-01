@@ -14,9 +14,10 @@ class Theme(str, Enum):
     COLORED_ASCII = "colored_ascii"
     RICH = "rich"
     EMOJI_RICH = "emoji_rich"
+    PIXEL = "pixel"
 
 
-DEFAULT_THEME = Theme.ASCII
+DEFAULT_THEME = Theme.PIXEL
 
 
 class ThemeSymbolSet(BaseModel):
@@ -236,5 +237,18 @@ THEME_SYMBOLS = {
         predator=" 🕷️",
         predator_stationary=" ☠️",
         predator_pursuit="🦂",
+    ),
+    # PIXEL theme uses Pygame renderer; symbols are placeholders for fallback only
+    Theme.PIXEL: ThemeSymbolSet(
+        goal="*",
+        body="O",
+        up="^",
+        down="v",
+        left="<",
+        right=">",
+        empty=".",
+        predator="#",
+        predator_stationary="X",
+        predator_pursuit="@",
     ),
 }

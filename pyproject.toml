@@ -52,6 +52,9 @@ torch = [
 qpu = [
   "quantum-nematode[qpu]",
 ]
+pixel = [
+  "quantum-nematode[pixel]",
+]
 
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
