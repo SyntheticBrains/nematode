@@ -1431,3 +1431,8 @@ class ModularBrain(QuantumBrain):
             return 0.0
 
         return counts.get(state, 0) / total
+
+
+# Canonical name (preferred)
+QVarCircuitBrain = ModularBrain
+QVarCircuitBrainConfig = ModularBrainConfig

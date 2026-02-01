@@ -16,7 +16,7 @@ def is_quantum_brain(brain_type: str) -> bool:
     bool
         True if quantum brain, False if classical.
     """
-    quantum_brains = {"modular", "qmodular"}
+    quantum_brains = {"modular", "qmodular", "qvarcircuit", "qqlearning"}
     return brain_type in quantum_brains
 
 

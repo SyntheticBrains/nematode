@@ -24,9 +24,9 @@ class TestPresetConfigurations:
         ("config_file", "expected_brain", "expected_env_type"),
         [
             # Foraging configs
-            ("modular_foraging_small.yml", "modular", "dynamic"),
-            ("modular_foraging_medium.yml", "modular", "dynamic"),
-            ("modular_foraging_large.yml", "modular", "dynamic"),
+            ("modular_foraging_small.yml", "qvarcircuit", "dynamic"),
+            ("modular_foraging_medium.yml", "qvarcircuit", "dynamic"),
+            ("modular_foraging_large.yml", "qvarcircuit", "dynamic"),
         ],
     )
     def test_config_loads_correctly(

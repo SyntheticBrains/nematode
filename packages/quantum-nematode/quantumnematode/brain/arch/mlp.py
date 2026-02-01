@@ -488,3 +488,8 @@ class MLPBrain(ClassicalBrain):
     @action_set.setter
     def action_set(self, actions: list[Action]) -> None:
         self._action_set = actions
+
+
+# Canonical name (preferred)
+MLPReinforceBrain = MLPBrain
+MLPReinforceBrainConfig = MLPBrainConfig

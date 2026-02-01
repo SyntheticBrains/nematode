@@ -1,12 +1,17 @@
 """Module for quantum brain architectures."""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
-from .mlp import MLPBrain, MLPBrainConfig
-from .modular import ModularBrain, ModularBrainConfig
-from .ppo import PPOBrain, PPOBrainConfig
-from .qmlp import QMLPBrain, QMLPBrainConfig
-from .qmodular import QModularBrain, QModularBrainConfig
-from .spiking import SpikingBrain, SpikingBrainConfig
+from .mlp import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
+from .modular import ModularBrain, ModularBrainConfig, QVarCircuitBrain, QVarCircuitBrainConfig
+from .ppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
+from .qmlp import MLPDQNBrain, MLPDQNBrainConfig, QMLPBrain, QMLPBrainConfig
+from .qmodular import QModularBrain, QModularBrainConfig, QQLearningBrain, QQLearningBrainConfig
+from .spiking import (
+    SpikingBrain,
+    SpikingBrainConfig,
+    SpikingReinforceBrain,
+    SpikingReinforceBrainConfig,
+)
 
 __all__ = [
     "Brain",
@@ -15,6 +20,12 @@ __all__ = [
     "ClassicalBrain",
     "MLPBrain",
     "MLPBrainConfig",
+    "MLPDQNBrain",
+    "MLPDQNBrainConfig",
+    "MLPPPOBrain",
+    "MLPPPOBrainConfig",
+    "MLPReinforceBrain",
+    "MLPReinforceBrainConfig",
     "ModularBrain",
     "ModularBrainConfig",
     "PPOBrain",
@@ -23,7 +34,13 @@ __all__ = [
     "QMLPBrainConfig",
     "QModularBrain",
     "QModularBrainConfig",
+    "QQLearningBrain",
+    "QQLearningBrainConfig",
+    "QVarCircuitBrain",
+    "QVarCircuitBrainConfig",
     "QuantumBrain",
     "SpikingBrain",
     "SpikingBrainConfig",
+    "SpikingReinforceBrain",
+    "SpikingReinforceBrainConfig",
 ]

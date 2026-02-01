@@ -20,7 +20,7 @@ from quantumnematode.benchmark import (
     update_leaderboard,
     update_readme,
 )
-from quantumnematode.brain.arch.dtypes import QUANTUM_BRAIN_TYPES, BrainType
+from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES, QUANTUM_BRAIN_TYPES, BrainType
 from quantumnematode.experiment import (
     MIN_SESSIONS_REQUIRED,
     AggregateMetrics,
@@ -144,7 +144,9 @@ def determine_category(experiment: ExperimentMetadata) -> str:
 
     # Determine brain category using explicit mapping
     try:
-        brain_type_enum = BrainType(brain.type)
+        _new_to_old = {v: k for k, v in BRAIN_NAME_ALIASES.items()}
+        resolved_name = _new_to_old.get(brain.type, brain.type)
+        brain_type_enum = BrainType(resolved_name)
         brain_category = "quantum" if brain_type_enum in QUANTUM_BRAIN_TYPES else "classical"
     except ValueError:
         # Unknown brain type - default to classical with warning

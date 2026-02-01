@@ -1079,3 +1079,8 @@ class SpikingBrain(ClassicalBrain):
         new_brain.episode_count = self.episode_count
 
         return new_brain
+
+
+# Canonical name (preferred)
+SpikingReinforceBrain = SpikingBrain
+SpikingReinforceBrainConfig = SpikingBrainConfig

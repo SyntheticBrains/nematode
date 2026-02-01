@@ -7,8 +7,23 @@ from pydantic import BaseModel
 
 
 class BrainType(Enum):
-    """Different types of brains."""
+    """Different types of brains.
 
+    Naming convention: {Paradigm}{Architecture}_{Algorithm}
+    - Q prefix = quantum
+    - MLP prefix = classical multi-layer perceptron
+    - Spiking prefix = spiking neural network
+    """
+
+    # New canonical names
+    QVARCIRCUIT = "qvarcircuit"
+    QQLEARNING = "qqlearning"
+    MLP_REINFORCE = "mlpreinforce"
+    MLP_DQN = "mlpdqn"
+    MLP_PPO = "mlpppo"
+    SPIKING_REINFORCE = "spikingreinforce"
+
+    # Deprecated aliases (kept for backward compatibility)
     MODULAR = "modular"
     QMODULAR = "qmodular"
     MLP = "mlp"
@@ -41,6 +56,13 @@ class BrainConfig(BaseModel):
 
 
 BRAIN_TYPES = Literal[
+    BrainType.QVARCIRCUIT,
+    BrainType.QQLEARNING,
+    BrainType.MLP_REINFORCE,
+    BrainType.MLP_DQN,
+    BrainType.MLP_PPO,
+    BrainType.SPIKING_REINFORCE,
+    # Deprecated aliases
     BrainType.MODULAR,
     BrainType.QMODULAR,
     BrainType.MLP,
@@ -48,15 +70,36 @@ BRAIN_TYPES = Literal[
     BrainType.PPO,
     BrainType.SPIKING,
 ]
-QUANTUM_BRAIN_TYPES: set[BrainType] = {BrainType.MODULAR, BrainType.QMODULAR}
+QUANTUM_BRAIN_TYPES: set[BrainType] = {
+    BrainType.QVARCIRCUIT,
+    BrainType.QQLEARNING,
+    BrainType.MODULAR,
+    BrainType.QMODULAR,
+}
 CLASSICAL_BRAIN_TYPES: set[BrainType] = {
+    BrainType.MLP_REINFORCE,
+    BrainType.MLP_DQN,
+    BrainType.MLP_PPO,
     BrainType.MLP,
     BrainType.QMLP,
     BrainType.PPO,
+}
+SPIKING_BRAIN_TYPES: set[BrainType] = {
+    BrainType.SPIKING_REINFORCE,
     BrainType.SPIKING,
 }
 
+# Map deprecated names to canonical names
+BRAIN_NAME_ALIASES: dict[str, str] = {
+    "modular": "qvarcircuit",
+    "qmodular": "qqlearning",
+    "mlp": "mlpreinforce",
+    "qmlp": "mlpdqn",
+    "ppo": "mlpppo",
+    "spiking": "spikingreinforce",
+}
+
 # Defaults
-DEFAULT_BRAIN_TYPE = BrainType.MODULAR
+DEFAULT_BRAIN_TYPE = BrainType.QVARCIRCUIT
 DEFAULT_QUBITS = 2
 DEFAULT_SHOTS = 1024

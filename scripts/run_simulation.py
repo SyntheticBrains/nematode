@@ -28,6 +28,7 @@ from quantumnematode.brain.arch import (
     SpikingBrainConfig,
 )
 from quantumnematode.brain.arch.dtypes import (
+    BRAIN_NAME_ALIASES,
     DEFAULT_BRAIN_TYPE,
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
@@ -247,17 +248,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     optimize_quantum_performance = args.optimize
 
     match brain_type:
-        case BrainType.MODULAR:
+        case BrainType.MODULAR | BrainType.QVARCIRCUIT:
             brain_config = ModularBrainConfig(seed=simulation_seed)
-        case BrainType.MLP:
+        case BrainType.MLP | BrainType.MLP_REINFORCE:
             brain_config = MLPBrainConfig(seed=simulation_seed)
-        case BrainType.PPO:
+        case BrainType.PPO | BrainType.MLP_PPO:
             brain_config = PPOBrainConfig(seed=simulation_seed)
-        case BrainType.QMLP:
+        case BrainType.QMLP | BrainType.MLP_DQN:
             brain_config = QMLPBrainConfig(seed=simulation_seed)
-        case BrainType.QMODULAR:
+        case BrainType.QMODULAR | BrainType.QQLEARNING:
             brain_config = QModularBrainConfig(seed=simulation_seed)
-        case BrainType.SPIKING:
+        case BrainType.SPIKING | BrainType.SPIKING_REINFORCE:
             brain_config = SpikingBrainConfig(seed=simulation_seed)
 
     # Authenticate and setup Q-CTRL if needed
@@ -291,11 +292,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Always update brain config with the resolved simulation seed
         brain_config = brain_config.model_copy(update={"seed": simulation_seed})
 
-        brain_type = (
-            BrainType(config.brain.name)
-            if config.brain is not None and isinstance(config.brain, BrainContainerConfig)
-            else brain_type
-        )
+        if config.brain is not None and isinstance(config.brain, BrainContainerConfig):
+            # Resolve new canonical names to old internal names for BrainType
+            _new_to_old = {v: k for k, v in BRAIN_NAME_ALIASES.items()}
+            resolved_name = _new_to_old.get(config.brain.name, config.brain.name)
+            brain_type = BrainType(resolved_name)
+
         max_steps = config.max_steps if config.max_steps is not None else max_steps
         shots = config.shots if config.shots is not None else shots
         body_length = config.body_length if config.body_length is not None else body_length
