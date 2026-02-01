@@ -50,7 +50,7 @@ Rename all brain architectures to use paradigm prefix + algorithm naming.
 
 - [ ] Complete `add-multi-sensory-environment` remaining tasks (hierarchical benchmark naming + docs)
 - [ ] Complete `add-thermotaxis-system` remaining tasks (hierarchical benchmarks, biological validation, docs)
-- [ ] Update `add-ablation-toolkit` proposal with new brain names + Phase 2 placement
+- [x] Update `add-ablation-toolkit` proposal with new brain names + Phase 2 placement
 - [ ] Archive `add-multi-sensory-environment`
 - [ ] Archive `add-thermotaxis-system`
 

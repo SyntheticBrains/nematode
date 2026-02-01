@@ -1,5 +1,7 @@
 # Change: Add Ablation Toolkit
 
+> **Note (February 2026)**: This change has been moved from Phase 1 to Phase 2 (Architecture Analysis & Standardization). Brain architecture names have been updated to the new naming convention. See [WORKPLAN.md](../../../docs/WORKPLAN.md) for current status.
+
 ## Why
 
 Phase 1 introduces multiple sensory modalities and architectural components. To understand which features are critical for performance, we need systematic ablation studies - removing components one at a time and measuring performance degradation.
@@ -10,7 +12,7 @@ This toolkit enables:
 2. Understanding differences between quantum and classical architectures
 3. Finding minimal sufficient architectures for each behavior
 4. Generating interpretable insights for research publications
-5. Meeting Phase 1 exit criteria: "Ablation toolkit operational with automated feature importance ranking"
+5. Meeting Phase 2 exit criteria: "Ablation toolkit operational with automated feature importance ranking"
 
 ## What Changes
 
@@ -23,27 +25,27 @@ Create a systematic ablation study framework:
 - Compute performance degradation metrics
 - Generate automated reports
 
-### 2. ModularBrain Ablation
+### 2. QVarCircuitBrain Ablation
 
-Support module removal for quantum ModularBrain:
+Support module removal for quantum QVarCircuitBrain (formerly ModularBrain):
 
 - Zero out specific module qubits (set rotation angles to 0)
 - Remove entanglement layers
 - Reduce circuit depth (fewer layers)
 - Track which qubits/modules are ablated
 
-### 3. PPOBrain Ablation
+### 3. MLPPPOBrain Ablation
 
-Support component removal for classical PPOBrain:
+Support component removal for classical MLPPPOBrain (formerly PPOBrain):
 
 - Bypass hidden layers (direct input-to-output)
 - Remove critic network (policy-only)
 - Reduce hidden layer size
 - Zero out specific input features
 
-### 4. PPOBrain Sensory Configuration Ablation
+### 4. MLPPPOBrain Sensory Configuration Ablation
 
-Support sensory module configuration variations for PPOBrain:
+Support sensory module configuration variations for MLPPPOBrain:
 
 - **Legacy vs Unified Mode**: Compare 2-feature legacy preprocessing against unified modular features
 - **Sensory Module Subsets**: Test individual modules and combinations (e.g., food_chemotaxis only, nociception only, both)
@@ -97,7 +99,7 @@ Generate markdown reports:
 
 **Dependencies:**
 
-- Can be developed **in parallel** with other Phase 1 proposals
+- Planned for Phase 2 (Architecture Analysis & Standardization)
 - Uses existing brain architectures (no modifications required)
 - Benefits from but doesn't require multi-sensory environment
 
