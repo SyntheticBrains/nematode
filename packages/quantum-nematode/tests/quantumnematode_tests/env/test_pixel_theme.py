@@ -202,6 +202,122 @@ class TestPygameRenderer:
         # Should not raise
         renderer.render_frame(MagicMock())
 
+    def test_render_frame_full_pipeline(self) -> None:
+        """Render a full frame with food, predators, body, and status bar."""
+        from quantumnematode.brain.actions import Action
+        from quantumnematode.env.env import (
+            DynamicForagingEnvironment,
+            ForagingParams,
+            HealthParams,
+            Predator,
+            PredatorParams,
+            PredatorType,
+            ThermotaxisParams,
+        )
+        from quantumnematode.env.pygame_renderer import PygameRenderer
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            viewport_size=(5, 5),
+            max_body_length=4,
+            theme=Theme.PIXEL,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            seed=42,
+            foraging=ForagingParams(foods_on_grid=2, target_foods_to_collect=5),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.STATIONARY,
+                damage_radius=1,
+            ),
+            health=HealthParams(enabled=True, max_hp=100.0),
+            thermotaxis=ThermotaxisParams(
+                enabled=True,
+                cultivation_temperature=20.0,
+                base_temperature=20.0,
+                gradient_strength=0.3,
+                gradient_direction=45.0,
+                hot_spots=[(12, 12, 25.0)],
+                cold_spots=[(8, 8, 15.0)],
+                comfort_delta=3.0,
+                discomfort_delta=6.0,
+                danger_delta=10.0,
+            ),
+        )
+
+        # Walk to create body segments
+        for action in [Action.FORWARD, Action.FORWARD, Action.LEFT, Action.FORWARD]:
+            env.move_agent(action)
+
+        # Place predators in viewport
+        ax, ay = env.agent_pos[0], env.agent_pos[1]
+        env.predators = [
+            Predator(
+                position=(ax + 1, ay + 1),
+                predator_type=PredatorType.STATIONARY,
+                speed=0.0,
+                detection_radius=5,
+                damage_radius=1,
+            ),
+            Predator(
+                position=(ax - 1, ay),
+                predator_type=PredatorType.RANDOM,
+                speed=1.0,
+                detection_radius=5,
+                damage_radius=0,
+            ),
+            Predator(
+                position=(ax, ay - 1),
+                predator_type=PredatorType.PURSUIT,
+                speed=1.0,
+                detection_radius=5,
+                damage_radius=0,
+            ),
+        ]
+        env.foods = [(ax + 1, ay), (ax - 1, ay + 1)]
+
+        renderer = PygameRenderer(viewport_size=env.viewport_size, cell_size=16)
+        try:
+            temperature = env.get_temperature()
+            zone = env.get_temperature_zone()
+            zone_name = zone.value.upper().replace("_", " ") if zone else None
+
+            renderer.render_frame(
+                env=env,
+                step=10,
+                max_steps=100,
+                foods_collected=1,
+                target_foods=5,
+                health=80.0,
+                max_health=100.0,
+                satiety=50.0,
+                max_satiety=100.0,
+                in_danger=True,
+                temperature=temperature,
+                zone_name=zone_name,
+                session_text="Session:\nRun:\t\t1/5\nWins:\t\t0/5\n",
+            )
+
+            # Render a second frame with more session lines to test resize
+            renderer.render_frame(
+                env=env,
+                step=11,
+                max_steps=100,
+                foods_collected=1,
+                target_foods=5,
+                health=75.0,
+                max_health=100.0,
+                satiety=45.0,
+                max_satiety=100.0,
+                in_danger=False,
+                temperature=temperature,
+                zone_name=zone_name,
+                session_text="Session:\nRun:\t\t1/5\nWins:\t\t0/5\nEaten:\t\t3/10\nSteps(Avg):\t50.0/1\n",
+            )
+        finally:
+            renderer.close()
+
 
 # ---------------------------------------------------------------------------
 # Status bar session text parsing
