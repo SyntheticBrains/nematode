@@ -101,11 +101,11 @@ def _make_soil(pg: Any) -> Any:  # noqa: ANN401
     """Dark earth/soil background tile with subtle texture."""
     surf = pg.Surface((CELL_SIZE, CELL_SIZE))
     surf.fill(SOIL_COLOR)
-    # Subtle speckle texture
-    _rng.seed(42)  # deterministic texture
+    # Subtle speckle texture (local RNG to avoid mutating global state)
+    rng = _rng.Random(42)  # noqa: S311
     for _ in range(12):
-        x = _rng.randint(0, CELL_SIZE - 2)  # noqa: S311
-        y = _rng.randint(0, CELL_SIZE - 2)  # noqa: S311
+        x = rng.randint(0, CELL_SIZE - 2)
+        y = rng.randint(0, CELL_SIZE - 2)
         pg.draw.rect(surf, SOIL_VARIATION, (x, y, 2, 2))
     return surf
 
