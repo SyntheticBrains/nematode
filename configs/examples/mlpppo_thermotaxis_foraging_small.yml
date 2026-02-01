@@ -1,4 +1,4 @@
-# PPO with Thermotaxis + Foraging - Small Configuration
+# MLPPPO with Thermotaxis + Foraging - Small Configuration
 # Tests agent's ability to forage while maintaining temperature comfort
 #
 # Thermotaxis adds a new sensory modality (AFD neurons) that encodes:

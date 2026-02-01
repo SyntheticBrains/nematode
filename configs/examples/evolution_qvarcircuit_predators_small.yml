@@ -1,5 +1,5 @@
 # Evolutionary Optimization - Small Environment with Predators
-# Based on modular_predators_small.yml
+# Based on qvarcircuit_predators_small.yml
 # Tests evolution on predator avoidance where gradient methods struggle
 
 max_steps: 500

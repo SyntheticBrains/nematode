@@ -1,4 +1,4 @@
-# PPO with Thermotaxis + Stationary Predators - Medium Configuration
+# MLPPPO with Thermotaxis + Stationary Predators - Medium Configuration
 # Curriculum level 2: Standard foraging with predator avoidance and temperature navigation
 #
 # This is a multi-objective task combining:

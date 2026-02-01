@@ -1,4 +1,4 @@
-# PPO with Stationary Predators + Unified Sensory Modules - Small Configuration
+# MLPPPO with Stationary Predators + Unified Sensory Modules - Small Configuration
 # Compares unified modular feature extraction vs legacy 2-feature preprocessing
 #
 # Key differences from ppo_stationary_predators_small.yml:

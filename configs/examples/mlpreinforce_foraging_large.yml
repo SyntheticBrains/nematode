@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Large Configuration
 # Curriculum level 3: Challenging large-scale foraging scenario
-# Uses MLP (classical neural network) brain architecture
+# Uses MLPREINFORCE (classical neural network) brain architecture
 
 max_steps: 2000
 brain:

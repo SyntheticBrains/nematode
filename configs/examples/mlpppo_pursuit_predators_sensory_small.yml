@@ -1,4 +1,4 @@
-# PPO with Pursuit Predators + Unified Sensory Modules - Tuned Configuration
+# MLPPPO with Pursuit Predators + Unified Sensory Modules - Tuned Configuration
 # Tests agent behavior against predators that actively chase when in detection range
 #
 # Based on tuned stationary predators config with pursuit-specific adjustments:

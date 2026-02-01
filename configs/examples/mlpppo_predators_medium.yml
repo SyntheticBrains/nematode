@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Medium Configuration
 # Curriculum level 2: Standard foraging with predator evasion
-# Uses PPO (Proximal Policy Optimization) brain architecture
+# Uses MLPPPO (MLP with Proximal Policy Optimization) brain architecture
 # Multi-objective learning: find food while avoiding predators
 
 max_steps: 1000

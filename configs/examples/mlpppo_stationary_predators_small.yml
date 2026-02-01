@@ -1,4 +1,4 @@
-# PPO with Stationary Predators (Toxic Zones) - Small Configuration
+# MLPPPO with Stationary Predators (Toxic Zones) - Small Configuration
 # Tests agent behavior against fixed hazard zones with larger damage radius
 #
 # Key differences from moving predators:

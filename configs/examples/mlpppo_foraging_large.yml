@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Large Configuration
 # Curriculum level 3: Challenging large-scale foraging scenario
-# Uses PPO (Proximal Policy Optimization) brain architecture
+# Uses MLPPPO (Proximal Policy Optimization) brain architecture
 
 max_steps: 2000
 brain:

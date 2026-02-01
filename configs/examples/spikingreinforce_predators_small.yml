@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Small Configuration
 # Curriculum level 1: Easy predator evasion in a 20x20 environment
-# Uses Spiking (LIF neurons with surrogate gradient descent) brain architecture
+# Uses SpikingREINFORCE (LIF neurons with surrogate gradient descent) brain architecture
 # Multi-objective learning: find food while avoiding predators
 
 max_steps: 500

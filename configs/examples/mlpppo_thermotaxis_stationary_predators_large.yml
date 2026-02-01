@@ -1,4 +1,4 @@
-# PPO with Thermotaxis + Stationary Predators - Large Configuration
+# MLPPPO with Thermotaxis + Stationary Predators - Large Configuration
 # Curriculum level 3: Challenging large-scale predator avoidance with scattered temperature zones
 #
 # This is a multi-objective task combining:

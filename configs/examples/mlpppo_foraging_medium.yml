@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Medium Configuration
 # Curriculum level 2: Standard foraging scenario for robust learning
-# Uses PPO (Proximal Policy Optimization) brain architecture
+# Uses MLPPPO (Proximal Policy Optimization) brain architecture
 
 max_steps: 1000
 brain:

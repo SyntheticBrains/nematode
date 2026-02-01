@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Large Configuration
 # Advanced predator evasion challenge in a 100x100 environment
-# Uses MLP (classical neural network) brain architecture
+# Uses MLPREINFORCE (classical neural network) brain architecture
 # High difficulty: large space, many predators, complex multi-objective optimization
 
 max_steps: 2000

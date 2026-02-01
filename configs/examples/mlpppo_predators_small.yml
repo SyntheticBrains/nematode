@@ -1,6 +1,6 @@
 # Dynamic Foraging with Predators - Small Configuration
 # Introduces predator evasion challenge in an easy 20x20 environment
-# Uses PPO (Proximal Policy Optimization) brain architecture
+# Uses MLPPPO (MLP with Proximal Policy Optimization) brain architecture
 # Multi-objective learning: find food while avoiding predators
 
 max_steps: 500

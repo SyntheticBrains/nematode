@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Small Configuration
 # Curriculum level 1: Easy foraging scenario for initial training
-# Uses modular (quantum) brain architecture
+# Uses QVarCircuit (quantum) brain architecture
 
 max_steps: 500
 brain:

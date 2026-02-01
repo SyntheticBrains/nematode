@@ -1,6 +1,6 @@
 # Evolutionary Optimization - Foraging Only (No Predators)
 # Simpler environment to verify evolution works before adding predators
-# Based on modular_foraging_small.yml
+# Based on qvarcircuit_foraging_small.yml
 
 max_steps: 500
 brain:
