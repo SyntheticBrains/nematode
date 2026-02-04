@@ -7,6 +7,7 @@ from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qrc import QRCBrain, QRCBrainConfig
+from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
 
 
@@ -48,6 +49,22 @@ class TestQRCBrainConfig:
         assert config.shots == 512
         assert config.gamma == 0.95
         assert config.learning_rate == 0.005
+
+    def test_config_sensory_modules_default(self):
+        """Test that sensory_modules defaults to None (legacy mode)."""
+        config = QRCBrainConfig()
+        assert config.sensory_modules is None
+
+    def test_config_with_sensory_modules(self):
+        """Test configuration with sensory modules."""
+        config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+
+        assert config.sensory_modules is not None
+        assert len(config.sensory_modules) == 2
+        assert ModuleName.FOOD_CHEMOTAXIS in config.sensory_modules
+        assert ModuleName.NOCICEPTION in config.sensory_modules
 
     def test_validation_num_reservoir_qubits(self):
         """Test validation for num_reservoir_qubits."""
@@ -190,10 +207,12 @@ class TestQRCBrainReservoirCircuit:
 
         angles_different = False
         for instr1, instr2 in zip(circuit1.data, circuit2.data, strict=False):
-            if instr1.operation.name in ("rx", "ry", "rz"):
-                if not np.isclose(float(instr1.operation.params[0]), float(instr2.operation.params[0])):
-                    angles_different = True
-                    break
+            if instr1.operation.name in ("rx", "ry", "rz") and not np.isclose(
+                float(instr1.operation.params[0]),
+                float(instr2.operation.params[0]),
+            ):
+                angles_different = True
+                break
 
         assert angles_different, "Different seeds should produce different rotation angles"
 
@@ -251,6 +270,76 @@ class TestQRCBrainInputEncoding:
         first_ry = ry_gates[0]
         expected_angle = 0.5 * np.pi
         assert np.isclose(float(first_ry.operation.params[0]), expected_angle, atol=1e-6)
+
+
+class TestQRCBrainSensoryModules:
+    """Test cases for sensory modules feature extraction."""
+
+    def test_brain_with_sensory_modules_input_dim(self):
+        """Test that input_dim is computed from sensory modules."""
+        config = QRCBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=2,
+            shots=100,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QRCBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        # Each module contributes 2 features [strength, angle]
+        assert brain.input_dim == 4
+        assert brain.sensory_modules is not None
+        assert len(brain.sensory_modules) == 2
+
+    def test_preprocess_with_sensory_modules(self):
+        """Test preprocessing with sensory modules uses extract_classical_features."""
+        config = QRCBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=2,
+            shots=100,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QRCBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            food_gradient_strength=0.7,
+            food_gradient_direction=1.0,
+            predator_gradient_strength=0.3,
+            predator_gradient_direction=-0.5,
+            agent_direction=Direction.UP,
+        )
+
+        features = brain.preprocess(params)
+
+        assert isinstance(features, np.ndarray)
+        assert len(features) == 4  # 2 modules * 2 features each
+        assert features.dtype == np.float32
+        # Features should be in expected ranges
+        assert 0.0 <= features[0] <= 1.0  # food strength [0, 1]
+        assert -1.0 <= features[1] <= 1.0  # food angle [-1, 1]
+        assert 0.0 <= features[2] <= 1.0  # predator strength [0, 1]
+        assert -1.0 <= features[3] <= 1.0  # predator angle [-1, 1]
+
+    def test_legacy_mode_when_no_sensory_modules(self):
+        """Test that brain uses legacy preprocessing when sensory_modules is None."""
+        config = QRCBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=2,
+            shots=100,
+            # No sensory_modules - legacy mode
+        )
+        brain = QRCBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        assert brain.sensory_modules is None
+        assert brain.input_dim == 2  # Legacy mode: gradient_strength + relative_angle
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_direction=Direction.UP,
+        )
+        features = brain.preprocess(params)
+
+        assert len(features) == 2
 
 
 class TestQRCBrainReadoutNetwork:
@@ -393,10 +482,7 @@ class TestQRCBrainCopy:
     def test_copy_independence(self, brain):
         """Test that copy is independent - modifying copy doesn't affect original."""
         # Get original weights
-        original_weights = {
-            name: param.clone()
-            for name, param in brain.readout.named_parameters()
-        }
+        original_weights = {name: param.clone() for name, param in brain.readout.named_parameters()}
 
         # Create copy
         brain_copy = brain.copy()

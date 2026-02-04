@@ -2,6 +2,10 @@
 # Introduces predator evasion challenge in an easy 20x20 environment
 # Uses QRC (Quantum Reservoir Computing) brain architecture
 # Multi-objective learning: find food while avoiding predators
+#
+# Uses unified sensory modules for separated gradients:
+# - food_chemotaxis: attraction to food sources
+# - nociception: aversive response to predator proximity
 
 max_steps: 500
 brain:
@@ -16,6 +20,9 @@ brain:
     gamma: 0.99
     learning_rate: 0.001
     baseline_alpha: 0.05
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
 
 body_length: 2
 
@@ -40,6 +47,7 @@ satiety:
 environment:
   grid_size: 20
   viewport_size: [11, 11]
+  use_separated_gradients: true
 
   foraging:
     foods_on_grid: 5

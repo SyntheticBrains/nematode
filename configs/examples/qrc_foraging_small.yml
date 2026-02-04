@@ -2,6 +2,9 @@
 # Curriculum level 1: Easy foraging scenario for initial training
 # Uses QRC (Quantum Reservoir Computing) brain architecture
 # Fixed quantum reservoir with trainable classical readout
+#
+# Note: Uses legacy 2-feature mode (gradient_strength, relative_angle).
+# For multi-sensory scenarios (predators, thermotaxis), use sensory_modules.
 
 max_steps: 500
 brain:
