@@ -1,0 +1,51 @@
+# Dynamic Foraging Environment - Small Configuration
+# Curriculum level 1: Easy foraging scenario for initial training
+# Uses QRC (Quantum Reservoir Computing) brain architecture
+# Fixed quantum reservoir with trainable classical readout
+
+max_steps: 500
+brain:
+  name: qrc
+  config:
+    num_reservoir_qubits: 8
+    reservoir_depth: 3
+    reservoir_seed: 42
+    readout_hidden: 32
+    readout_type: mlp
+    shots: 1024
+    gamma: 0.99
+    learning_rate: 0.001
+    baseline_alpha: 0.05
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+gradient:
+  method: clip
