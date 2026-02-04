@@ -386,64 +386,79 @@ ______________________________________________________________________
 
 #### Deliverables
 
-1. **Architecture Ablation Studies** [Moved from Phase 1]
+01. **Architecture Ablation Studies** [Moved from Phase 1]
 
-   - Systematically remove components from each architecture (e.g., remove entanglement from quantum circuits, remove hidden layers from MLP)
-   - Measure performance degradation: which features are critical?
-   - Cross-architecture feature importance analysis
-   - Identify minimal sufficient architectures for each task
+    - Systematically remove components from each architecture (e.g., remove entanglement from quantum circuits, remove hidden layers from MLP)
+    - Measure performance degradation: which features are critical?
+    - Cross-architecture feature importance analysis
+    - Identify minimal sufficient architectures for each task
 
-2. **Brain Architecture Naming Migration**
+02. **Brain Architecture Naming Migration**
 
-   - Complete migration to paradigm-prefix naming scheme (QVarCircuitBrain, MLPPPOBrain, etc.)
-   - Deprecate old names with backward-compatible aliases
-   - Update all configs, benchmarks, and documentation
-   - See [STANDARDIZATION.md](STANDARDIZATION.md) for framework decisions
+    - Complete migration to paradigm-prefix naming scheme (QVarCircuitBrain, MLPPPOBrain, etc.)
+    - Deprecate old names with backward-compatible aliases
+    - Update all configs, benchmarks, and documentation
+    - See [STANDARDIZATION.md](STANDARDIZATION.md) for framework decisions
 
-3. **Benchmarking Improvements**
+03. **Benchmarking Improvements**
 
-   - Hierarchical benchmark categories (basic/foraging, survival/predator, thermotaxis/)
-   - Spiking as separate brain class alongside quantum/classical
-   - Statistical testing framework (confidence intervals, significance tests, effect sizes)
+    - Hierarchical benchmark categories (basic/foraging, survival/predator, thermotaxis/)
+    - Spiking as separate brain class alongside quantum/classical
+    - Statistical testing framework (confidence intervals, significance tests, effect sizes)
 
-4. **Interpretability Framework**
+04. **Interpretability Framework**
 
-   - **Quantum**: Circuit visualization, gate importance analysis (parameter sensitivity), superposition state tracking
-   - **Classical**: Attention maps (if using attention mechanisms), activation analysis, saliency maps (which inputs drive decisions?)
-   - **Spiking**: Spike raster plots, connectivity analysis, neuron firing patterns, membrane potential dynamics, surrogate gradient flow visualization
-   - Unified API: `architecture.interpret(state, action)` returns explanation
+    - **Quantum**: Circuit visualization, gate importance analysis (parameter sensitivity), superposition state tracking
+    - **Classical**: Attention maps (if using attention mechanisms), activation analysis, saliency maps (which inputs drive decisions?)
+    - **Spiking**: Spike raster plots, connectivity analysis, neuron firing patterns, membrane potential dynamics, surrogate gradient flow visualization
+    - Unified API: `architecture.interpret(state, action)` returns explanation
 
-5. **Feature Importance Across Architectures**
+05. **Feature Importance Across Architectures**
 
-   - Which sensory inputs are most critical? (Chemotaxis gradient magnitude? Direction? Satiety level?)
-   - How do architectures differ in feature reliance? (Does quantum use different cues than classical?)
-   - Integrated Gradients, SHAP values, or similar for attribution
-   - Cross-architecture comparison: "Quantum prioritizes gradient direction 60% vs. classical 40%"
+    - Which sensory inputs are most critical? (Chemotaxis gradient magnitude? Direction? Satiety level?)
+    - How do architectures differ in feature reliance? (Does quantum use different cues than classical?)
+    - Integrated Gradients, SHAP values, or similar for attribution
+    - Cross-architecture comparison: "Quantum prioritizes gradient direction 60% vs. classical 40%"
 
-6. **Mechanism Discovery Protocol**
+06. **Mechanism Discovery Protocol**
 
-   - Automated hypothesis generation from model analysis
-   - Example: "Quantum model uses superposition to simultaneously explore approach/avoid strategies"
-   - Translation to biological hypotheses: "Does C. elegans use [X] mechanism? Test with [Y] experiment"
-   - Partnership with C. elegans labs to design validation experiments
+    - Automated hypothesis generation from model analysis
+    - Example: "Quantum model uses superposition to simultaneously explore approach/avoid strategies"
+    - Translation to biological hypotheses: "Does C. elegans use [X] mechanism? Test with [Y] experiment"
+    - Partnership with C. elegans labs to design validation experiments
 
-7. **First Biological Prediction Tested**
+07. **First Biological Prediction Tested**
 
-   - Identify a novel prediction from model behavior (e.g., "optimal escape angle from predators is 135° based on quantum model")
-   - Collaborate with neuroscience lab to test with real C. elegans
-   - Publication: Model prediction → experimental validation loop
+    - Identify a novel prediction from model behavior (e.g., "optimal escape angle from predators is 135° based on quantum model")
+    - Collaborate with neuroscience lab to test with real C. elegans
+    - Publication: Model prediction → experimental validation loop
 
-8. **Comparative Analysis Methodology**
+08. **Comparative Analysis Methodology**
 
-   - Statistical testing framework: confidence intervals, effect sizes (Cohen's d), significance tests (t-test, ANOVA, Bonferroni correction)
-   - Benchmark visualizations: heatmaps, performance profiles, scaling curves
-   - Reproducibility toolkit: containerized environments, seed management, deterministic benchmarks
+    - Statistical testing framework: confidence intervals, effect sizes (Cohen's d), significance tests (t-test, ANOVA, Bonferroni correction)
+    - Benchmark visualizations: heatmaps, performance profiles, scaling curves
+    - Reproducibility toolkit: containerized environments, seed management, deterministic benchmarks
 
-9. **Architecture Comparison Whitepaper**
+09. **Architecture Comparison Whitepaper**
 
-   - Comprehensive analysis: When does each architecture excel? Why?
-   - Computational cost comparison: parameters, FLOPs, wall-clock time, energy consumption
-   - Scalability analysis: how performance changes with environment complexity (grid size, food count, predator count)
+    - Comprehensive analysis: When does each architecture excel? Why?
+    - Computational cost comparison: parameters, FLOPs, wall-clock time, energy consumption
+    - Scalability analysis: how performance changes with environment complexity (grid size, food count, predator count)
+
+10. **Novel Quantum Architectures**
+
+    - **QRCBrain**: Quantum Reservoir Computing with fixed reservoir + classical readout (avoids barren plateaus by design)
+    - **QSNNBrain**: Quantum Spiking Neural Network with QLIF neurons and local learning rules
+    - **HybridQuantumBrain**: Hierarchical architecture combining QSNN/QRC reflexes with VQC planning cortex
+    - **Data re-uploading enhancement**: Add multi-layer data encoding to QVarCircuitBrain for increased expressivity
+    - See [docs/research/quantum-architectures.md](research/quantum-architectures.md) for detailed implementation specifications
+
+11. **Quantum Architecture Benchmarking**
+
+    - Compare QRC, QSNN, HybridQuantum against existing quantum/classical/spiking baselines
+    - Reflex metrics: evasion latency, collision rate, thermotaxis slope following
+    - Strategic metrics: food intake vs risk tradeoff, long-horizon reward
+    - Hierarchical evaluation: fusion efficiency (improvement over best individual component)
 
 #### Metrics Focus
 
@@ -465,6 +480,8 @@ ______________________________________________________________________
 - ✅ Statistical analysis framework integrated into all benchmarks (confidence intervals, significance tests)
 - ✅ Mechanism discovery protocol yields ≥3 testable biological hypotheses
 - ✅ Performance profiles documented: where each architecture excels (e.g., "quantum best at multi-objective, classical best at single-objective")
+- ✅ ≥2 novel quantum architectures (QRC, QSNN) implemented and benchmarked
+- ✅ HybridQuantumBrain demonstrates fusion of reflex + planning layers
 
 #### Go/No-Go Decision
 
@@ -751,6 +768,8 @@ ______________________________________________________________________
    - **Quantum Approximate Optimization Algorithm (QAOA)**: Explore whether multi-objective foraging can be framed as combinatorial optimization (research-level question)
    - **Quantum Neural Networks (QNN)**: Data reuploading circuits, hybrid quantum-classical architectures
    - **Quantum Reinforcement Learning**: Quantum policy representations, exploration of quantum-enhanced value estimation
+   - **Quantum Natural Gradient (QNG) variants**: Momentum-QNG, Conjugate QNG (CQNG) with dynamic hyperparameters, QNG with geodesic corrections for faster convergence
+   - **Quantum kernel methods**: Quantum Policy Gradient in RKHS, sparse non-parametric policies with tunable expressiveness
 
 2. **Quantum Error Mitigation**
 
