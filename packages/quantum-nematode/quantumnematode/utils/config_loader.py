@@ -16,6 +16,7 @@ from quantumnematode.brain.arch import (
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
     QQLearningBrainConfig,
+    QRCBrainConfig,
     QVarCircuitBrainConfig,
     SpikingReinforceBrainConfig,
 )
@@ -82,6 +83,7 @@ BrainConfigType = (
     | MLPPPOBrainConfig
     | MLPDQNBrainConfig
     | QQLearningBrainConfig
+    | QRCBrainConfig
     | SpikingReinforceBrainConfig
 )
 
@@ -571,6 +573,23 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
             error_message = (
                 "Invalid brain configuration for 'spikingreinforce' brain type. "
                 f"Expected SpikingReinforceBrainConfig, got {type(config.brain.config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+        case "qrc":
+            if config.brain.config is None:
+                return QRCBrainConfig()
+            if isinstance(config.brain.config, QRCBrainConfig):
+                return config.brain.config
+            if hasattr(config.brain.config, "__dict__"):
+                config_dict = {}
+                for field_name in QRCBrainConfig.model_fields:
+                    if hasattr(config.brain.config, field_name):
+                        config_dict[field_name] = getattr(config.brain.config, field_name)
+                return QRCBrainConfig(**config_dict)
+            error_message = (
+                "Invalid brain configuration for 'qrc' brain type. "
+                f"Expected QRCBrainConfig, got {type(config.brain.config)}."
             )
             logger.error(error_message)
             raise ValueError(error_message)

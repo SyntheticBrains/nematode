@@ -5,6 +5,7 @@ from .mlpdqn import MLPDQNBrain, MLPDQNBrainConfig, QMLPBrain, QMLPBrainConfig
 from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
 from .mlpreinforce import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
 from .qqlearning import QModularBrain, QModularBrainConfig, QQLearningBrain, QQLearningBrainConfig
+from .qrc import QRCBrain, QRCBrainConfig
 from .qvarcircuit import ModularBrain, ModularBrainConfig, QVarCircuitBrain, QVarCircuitBrainConfig
 from .spikingreinforce import (
     SpikingBrain,
@@ -36,6 +37,8 @@ __all__ = [
     "QModularBrainConfig",
     "QQLearningBrain",
     "QQLearningBrainConfig",
+    "QRCBrain",
+    "QRCBrainConfig",
     "QVarCircuitBrain",
     "QVarCircuitBrainConfig",
     "QuantumBrain",
