@@ -104,3 +104,50 @@ The existing brain architecture follows a Protocol pattern with `Brain`, `Quantu
 
 **[Trade-off] No evolutionary optimization support**
 → Acceptable: QRC's value proposition is avoiding gradient issues entirely. If gradients work well (expected for classical readout), evolution is unnecessary.
+
+______________________________________________________________________
+
+## Post-Implementation Notes (2026-02-05)
+
+The following changes were made during performance investigation (see Logbook 008):
+
+### Architecture Changes
+
+**Data Re-uploading (Decision 4 updated)**
+
+The original design encoded inputs once before the reservoir. Investigation revealed this was insufficient—the input signal was scrambled by the reservoir layers. The implementation now uses **data re-uploading**: input features are encoded before EACH reservoir layer, interleaved with the reservoir dynamics.
+
+```text
+Original:  Input_enc → [Reservoir_layer × depth] → Measure
+Current:   H → [Input_enc → Reservoir_layer] × depth → Measure
+```
+
+**Structured Rotations (Decision 2 updated)**
+
+Random rotation angles were reduced from [0, 2π] to [0, π/2] to reduce input signal scrambling.
+
+### New Configuration Parameters
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `entropy_coef` | 0.01 | Entropy regularization for exploration |
+| `baseline_alpha` | 0.05 | Smoothing factor for baseline running average |
+
+### Updated Defaults (in example configs)
+
+| Parameter | Original | Updated | Rationale |
+|-----------|----------|---------|-----------|
+| `num_reservoir_qubits` | 8 | 4 | Reduce output dimensionality (256 → 16) |
+| `readout_hidden` | 32 | 64 | Increased capacity |
+| `learning_rate` | 0.001 | 0.01 | Weak gradients need larger steps |
+
+### Readout Network Improvements
+
+- Added **orthogonal weight initialization** for better gradient flow
+- Added **episode_probs buffer** for entropy calculation in policy loss
+
+### Investigation Outcome
+
+Despite these enhancements, QRCBrain achieved **0% success rate** across 1600+ runs on foraging tasks. Root cause: the fixed random reservoir doesn't create discriminative representations for chemotaxis—different inputs produce similar reservoir states. See Logbook 008 for full analysis.
+
+The architecture may be better suited for time-series prediction or tasks with richer input signals.

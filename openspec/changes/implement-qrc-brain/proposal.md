@@ -30,3 +30,7 @@ The current QVarCircuitBrain suffers from barren-plateau-like behavior where par
 - **Configs**: New `qrc_foraging_small.yml` and `qrc_predators_small.yml` example configs
 - **Tests**: Unit tests for reservoir circuit generation, readout training, integration tests for full episodes
 - **Benchmarks**: New benchmark categories for QRC performance comparison
+
+## Post-Implementation Notes
+
+Implementation complete with additional enhancements (data re-uploading, entropy regularization, orthogonal init). Performance evaluation showed 0% success on foraging tasks—the fixed reservoir doesn't create discriminative representations for chemotaxis. See Logbook 008 for full analysis. Architecture may suit time-series or richer-input tasks.
