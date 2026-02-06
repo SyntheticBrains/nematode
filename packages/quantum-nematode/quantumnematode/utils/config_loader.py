@@ -90,6 +90,67 @@ BrainConfigType = (
 # Type alias for predator movement patterns
 MovementPattern = Literal["random", "stationary", "pursuit"]
 
+# Mapping of brain names to their config classes
+BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = {
+    "qvarcircuit": QVarCircuitBrainConfig,
+    "qqlearning": QQLearningBrainConfig,
+    "mlpreinforce": MLPReinforceBrainConfig,
+    "mlpppo": MLPPPOBrainConfig,
+    "mlpdqn": MLPDQNBrainConfig,
+    "spikingreinforce": SpikingReinforceBrainConfig,
+    "qrc": QRCBrainConfig,
+}
+
+
+def _resolve_brain_config[T: BrainConfigType](
+    raw_config: BrainConfigType | None,
+    config_cls: type[T],
+    brain_name: str,
+) -> T:
+    """Resolve a raw brain config to the expected config class.
+
+    Handles three cases:
+    1. None -> return default config
+    2. Already correct type -> return as-is
+    3. Dict-like object -> extract matching fields and construct
+
+    Parameters
+    ----------
+    raw_config
+        The raw configuration from YAML parsing.
+    config_cls
+        The expected Pydantic config class.
+    brain_name
+        The brain type name (for error messages).
+
+    Returns
+    -------
+    T
+        The resolved configuration instance.
+
+    Raises
+    ------
+    ValueError
+        If the raw_config cannot be converted to the expected type.
+    """
+    if raw_config is None:
+        return config_cls()
+    if isinstance(raw_config, config_cls):
+        return raw_config
+    if hasattr(raw_config, "__dict__"):
+        config_dict = {
+            field_name: getattr(raw_config, field_name)
+            for field_name in config_cls.model_fields
+            if hasattr(raw_config, field_name)
+        }
+        return config_cls(**config_dict)
+    error_message = (
+        f"Invalid brain configuration for '{brain_name}' brain type. "
+        f"Expected {config_cls.__name__}, got {type(raw_config)}."
+    )
+    logger.error(error_message)
+    raise ValueError(error_message)
+
 
 class BrainContainerConfig(BaseModel):
     """Configuration for the brain architecture."""
@@ -450,7 +511,7 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
         return SimulationConfig(**data)
 
 
-def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
+def configure_brain(
     config: SimulationConfig,
 ) -> BrainConfigType:
     """
@@ -477,126 +538,13 @@ def configure_brain(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # Resolve deprecated names to canonical names
     brain_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
 
-    match brain_name:
-        case "qvarcircuit":
-            if config.brain.config is None:
-                return QVarCircuitBrainConfig()
-            if isinstance(config.brain.config, QVarCircuitBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                return QVarCircuitBrainConfig(**config.brain.config.__dict__)
-            error_message = (
-                "Invalid brain configuration for 'qvarcircuit' brain type. "
-                f"Expected QVarCircuitBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case "qqlearning":
-            if config.brain.config is None:
-                return QQLearningBrainConfig()
-            if isinstance(config.brain.config, QQLearningBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                config_dict = {}
-                for field_name in QQLearningBrainConfig.model_fields:
-                    if hasattr(config.brain.config, field_name):
-                        config_dict[field_name] = getattr(config.brain.config, field_name)
-                return QQLearningBrainConfig(**config_dict)
-            error_message = (
-                "Invalid brain configuration for 'qqlearning' brain type. "
-                f"Expected QQLearningBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case "mlpreinforce":
-            if config.brain.config is None:
-                return MLPReinforceBrainConfig()
-            if isinstance(config.brain.config, MLPReinforceBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                config_dict = {}
-                for field_name in MLPReinforceBrainConfig.model_fields:
-                    if hasattr(config.brain.config, field_name):
-                        config_dict[field_name] = getattr(config.brain.config, field_name)
-                return MLPReinforceBrainConfig(**config_dict)
-            error_message = (
-                "Invalid brain configuration for 'mlpreinforce' brain type. "
-                f"Expected MLPReinforceBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case "mlpppo":
-            if config.brain.config is None:
-                return MLPPPOBrainConfig()
-            if isinstance(config.brain.config, MLPPPOBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                config_dict = {}
-                for field_name in MLPPPOBrainConfig.model_fields:
-                    if hasattr(config.brain.config, field_name):
-                        config_dict[field_name] = getattr(config.brain.config, field_name)
-                return MLPPPOBrainConfig(**config_dict)
-            error_message = (
-                "Invalid brain configuration for 'mlpppo' brain type. "
-                f"Expected MLPPPOBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case "mlpdqn":
-            if config.brain.config is None:
-                return MLPDQNBrainConfig()
-            if isinstance(config.brain.config, MLPDQNBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                config_dict = {}
-                for field_name in MLPDQNBrainConfig.model_fields:
-                    if hasattr(config.brain.config, field_name):
-                        config_dict[field_name] = getattr(config.brain.config, field_name)
-                return MLPDQNBrainConfig(**config_dict)
-            error_message = (
-                "Invalid brain configuration for 'mlpdqn' brain type. "
-                f"Expected MLPDQNBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case "spikingreinforce":
-            if config.brain.config is None:
-                return SpikingReinforceBrainConfig()
-            if isinstance(config.brain.config, SpikingReinforceBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                config_dict = {}
-                for field_name in SpikingReinforceBrainConfig.model_fields:
-                    if hasattr(config.brain.config, field_name):
-                        config_dict[field_name] = getattr(config.brain.config, field_name)
-                return SpikingReinforceBrainConfig(**config_dict)
-            error_message = (
-                "Invalid brain configuration for 'spikingreinforce' brain type. "
-                f"Expected SpikingReinforceBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case "qrc":
-            if config.brain.config is None:
-                return QRCBrainConfig()
-            if isinstance(config.brain.config, QRCBrainConfig):
-                return config.brain.config
-            if hasattr(config.brain.config, "__dict__"):
-                config_dict = {}
-                for field_name in QRCBrainConfig.model_fields:
-                    if hasattr(config.brain.config, field_name):
-                        config_dict[field_name] = getattr(config.brain.config, field_name)
-                return QRCBrainConfig(**config_dict)
-            error_message = (
-                "Invalid brain configuration for 'qrc' brain type. "
-                f"Expected QRCBrainConfig, got {type(config.brain.config)}."
-            )
-            logger.error(error_message)
-            raise ValueError(error_message)
-        case _:
-            error_message = f"Unknown brain type: {config.brain.name}."
-            logger.error(error_message)
-            raise ValueError(error_message)
+    if brain_name not in BRAIN_CONFIG_MAP:
+        error_message = f"Unknown brain type: {config.brain.name}."
+        logger.error(error_message)
+        raise ValueError(error_message)
+
+    config_cls = BRAIN_CONFIG_MAP[brain_name]
+    return _resolve_brain_config(config.brain.config, config_cls, brain_name)
 
 
 def configure_learning_rate(
