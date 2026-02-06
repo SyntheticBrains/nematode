@@ -706,11 +706,8 @@ class QRCBrain(ClassicalBrain):
                 returns_tensor.std() + 1e-8
             )
 
-        # Update baseline (moving average of returns)
-        mean_return = returns_tensor.mean().item()
-        self.baseline = (
-            1 - self.baseline_alpha
-        ) * self.baseline + self.baseline_alpha * mean_return
+        # Update baseline (moving average of raw returns, before normalization)
+        self.baseline = (1 - self.baseline_alpha) * self.baseline + self.baseline_alpha * raw_mean
 
         # Compute advantages
         advantages = returns_tensor - self.baseline
@@ -768,7 +765,7 @@ class QRCBrain(ClassicalBrain):
             f"total_loss={total_loss.item():.4f}, "
             f"grad_norm_before={grad_norm_before:.4f}, "
             f"grad_norm_after={grad_norm_after:.4f}, "
-            f"mean_return={mean_return:.4f}, "
+            f"raw_mean_return={raw_mean:.4f}, "
             f"baseline={self.baseline:.4f}",
         )
 
