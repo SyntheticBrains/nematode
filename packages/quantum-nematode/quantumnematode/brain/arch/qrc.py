@@ -837,4 +837,10 @@ class QRCBrain(ClassicalBrain):
     @action_set.setter
     def action_set(self, actions: list[Action]) -> None:
         """Set the list of available actions."""
+        if len(actions) != self.num_actions:
+            msg = (
+                f"Cannot set action_set of length {len(actions)}: "
+                f"readout network expects {self.num_actions} actions"
+            )
+            raise ValueError(msg)
         self._action_set = actions
