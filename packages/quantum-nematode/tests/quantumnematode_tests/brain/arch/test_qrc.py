@@ -178,10 +178,11 @@ class TestQRCBrainReservoirCircuit:
         # Compare gate parameters (excluding measurements)
         data1 = [i for i in circuit1.data if i.operation.name != "measure"]
         data2 = [i for i in circuit2.data if i.operation.name != "measure"]
-        for instr1, instr2 in zip(data1, data2, strict=False):
+        assert len(data1) == len(data2), "Circuits should have same number of gates"
+        for instr1, instr2 in zip(data1, data2, strict=True):
             assert instr1.operation.name == instr2.operation.name
             if hasattr(instr1.operation, "params") and instr1.operation.params:
-                for p1, p2 in zip(instr1.operation.params, instr2.operation.params, strict=False):
+                for p1, p2 in zip(instr1.operation.params, instr2.operation.params, strict=True):
                     assert np.isclose(float(p1), float(p2))
 
         # Same input should produce similar outputs (probabilistic, so test multiple times)
@@ -527,10 +528,11 @@ class TestQRCBrainCopy:
         data1 = [i for i in orig_circuit.data if i.operation.name != "measure"]
         data2 = [i for i in copy_circuit.data if i.operation.name != "measure"]
 
-        for instr1, instr2 in zip(data1, data2, strict=False):
+        assert len(data1) == len(data2), "Circuits should have same number of gates"
+        for instr1, instr2 in zip(data1, data2, strict=True):
             assert instr1.operation.name == instr2.operation.name
             if hasattr(instr1.operation, "params") and instr1.operation.params:
-                for p1, p2 in zip(instr1.operation.params, instr2.operation.params, strict=False):
+                for p1, p2 in zip(instr1.operation.params, instr2.operation.params, strict=True):
                     assert np.isclose(float(p1), float(p2))
 
     def test_copy_preserves_baseline(self, brain):
