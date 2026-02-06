@@ -18,6 +18,7 @@ class BrainType(Enum):
     # New canonical names
     QVARCIRCUIT = "qvarcircuit"
     QQLEARNING = "qqlearning"
+    QRC = "qrc"
     MLP_REINFORCE = "mlpreinforce"
     MLP_DQN = "mlpdqn"
     MLP_PPO = "mlpppo"
@@ -58,6 +59,7 @@ class BrainConfig(BaseModel):
 BRAIN_TYPES = Literal[
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
+    BrainType.QRC,
     BrainType.MLP_REINFORCE,
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
@@ -77,6 +79,7 @@ QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QMODULAR,
 }
 CLASSICAL_BRAIN_TYPES: set[BrainType] = {
+    BrainType.QRC,
     BrainType.MLP_REINFORCE,
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
