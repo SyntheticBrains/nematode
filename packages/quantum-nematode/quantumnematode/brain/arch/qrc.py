@@ -709,16 +709,13 @@ class QRCBrain(ClassicalBrain):
             f"raw_return_mean={raw_mean:.4f}, raw_return_std={raw_std:.4f}",
         )
 
-        if len(returns_tensor) > 1:
-            returns_tensor = (returns_tensor - returns_tensor.mean()) / (
-                returns_tensor.std() + 1e-8
-            )
-
-        # Update baseline (moving average of raw returns, before normalization)
+        # Update baseline (moving average of raw returns)
         self.baseline = (1 - self.baseline_alpha) * self.baseline + self.baseline_alpha * raw_mean
 
-        # Compute advantages
+        # Compute advantages = returns - baseline, then normalize for variance reduction
         advantages = returns_tensor - self.baseline
+        if len(advantages) > 1:
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Compute policy loss: L = -Σ log_prob(a_t) · G_t
         policy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
