@@ -103,33 +103,122 @@ ______________________________________________________________________
 
 ## QSNN Evaluation
 
-**Status**: Planned
+**Status**: Evaluated (0% success, same as QRC)
 
-### Proposed Architecture
+### Architecture
 
 ```text
-Input → Quantum LIF Neurons → Spike-based Readout → Actions
-        [|ψ⟩ = membrane potential]  [STDP-like learning]
+Sensors → QLIF (sensory) → QLIF (hidden) → QLIF (motor) → Actions
+          [RY(θ_membrane + input) → RX(θ_leak) → Measure]
 ```
 
-Design considerations:
+Key design choices (based on Brand & Petruccione 2024):
 
-- Leaky Integrate-and-Fire (LIF) with quantum membrane state
-- Local learning rules (avoid barren plateaus)
-- Alignment with biological spiking (SpikingReinforceBrain exists)
+- **QLIF neurons**: Quantum Leaky Integrate-and-Fire with minimal 2-gate circuit
+- **Network topology**: 6 sensory → 4 hidden → 4-5 motor neurons
+- **Local learning**: 3-factor Hebbian rule (pre × post × reward)
+- **Trainable parameters**: Membrane potential (θ_membrane), weight matrices (W_sh, W_hm)
+- **Spike encoding**: Continuous inputs → spike probabilities via sigmoid
+
+### QLIF Neuron Circuit
+
+```python
+# Minimal circuit per Brand & Petruccione (2024)
+|0⟩ → RY(θ_membrane + weighted_input) → RX(θ_leak) → Measure
+
+# θ_membrane: trainable membrane potential parameter
+# weighted_input: sum(w_ij * spike_j) for all presynaptic neurons
+# θ_leak: leak rate = (1 - membrane_tau) * π
+```
+
+### Local Learning Rule (3-Factor Hebbian)
+
+```python
+# Eligibility trace accumulation
+eligibility += pre_spike × post_spike
+
+# Weight update (end of episode)
+Δw = learning_rate × eligibility × total_reward
+
+# Advantages:
+# - Local: only uses info available at synapse
+# - No global backprop → avoids barren plateaus
+# - Reward-modulated → learns from sparse signals
+```
+
+### Configuration
+
+```yaml
+brain:
+  name: qsnn
+  config:
+    num_sensory_neurons: 6
+    num_hidden_neurons: 4
+    num_motor_neurons: 4
+    membrane_tau: 0.9           # Leak time constant
+    threshold: 0.5              # Spike threshold
+    refractory_period: 2        # Steps after spike
+    use_local_learning: true    # 3-factor Hebbian
+    shots: 1024
+    gamma: 0.99
+    learning_rate: 0.01
+    entropy_coef: 0.01
+    weight_clip: 5.0
+```
 
 ### Hypothesis
 
-QSNN may outperform QRC because:
+QSNN should outperform QRC because:
 
-1. Trainable quantum parameters (vs fixed reservoir)
-2. Local learning rules avoid vanishing gradients
-3. Spike timing provides richer temporal signal
-4. Biological alignment with C. elegans neuroscience
+1. **Trainable quantum parameters** (vs fixed reservoir)
+2. **Local learning rules** avoid vanishing gradients and barren plateaus
+3. **Spike timing** provides richer temporal signal
+4. **Biological alignment** with C. elegans neuroscience
 
 ### Experiments
 
-*To be conducted*
+| Session | Config | Episodes | Success | CI | Avg Foods | Notes |
+|---------|--------|----------|---------|-----|-----------|-------|
+| 20260206_122703 | qsnn_foraging_small.yml | 200 | 0% | -0.154 | 1.24 | Baseline run |
+
+### Results Summary
+
+QSNN achieves 0% success rate on foraging after 200 episodes, same as QRC. Key observations:
+
+1. **Negative chemotaxis** (-0.154): Moving away from food, same pathological behavior as QRC
+2. **Low food collection**: Only 1.24 foods per episode on average (need 10 to win)
+3. **Learning not visible**: No improvement trend over 200 episodes
+
+### Root Cause Analysis
+
+Unlike QRC where the fixed reservoir was the problem, QSNN has trainable parameters but:
+
+1. **Learning rate may be too low**: Local Hebbian learning with lr=0.01 may be too slow
+2. **Eligibility traces decay**: Episode-level updates dilute learning signal
+3. **Spike encoding may be suboptimal**: Sigmoid on raw features may not preserve gradient info
+4. **Network too small**: 6→4→4 neurons may lack capacity for navigation
+
+### Potential Improvements
+
+1. **Higher learning rate** (0.1 or higher) for faster weight updates
+2. **Per-step learning** instead of episode-level (reduce eligibility decay)
+3. **Different spike encoding** (e.g., rate coding with multiple timesteps)
+4. **Larger network** (more hidden neurons)
+5. **Hybrid approach**: Add classical value function for reward prediction
+
+### Comparison with Classical Spiking
+
+SpikingReinforceBrain (classical) achieves 73.3% on foraging with surrogate gradients. QSNN's local learning:
+
+- Avoids backprop through quantum circuits (good for barren plateaus)
+- But may be too weak a learning signal for this task
+- Classical spiking uses dense gradient information that QSNN lacks
+
+### File Locations
+
+- QSNN implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnn.py`
+- QSNN tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnn.py`
+- QSNN configs: `configs/examples/qsnn_*.yml`
 
 ______________________________________________________________________
 
@@ -139,12 +228,12 @@ ______________________________________________________________________
 
 QVarCircuit uses trainable rotation angles in a variational ansatz. Prior results show it achieves ~30-40% success on foraging with gradient-based learning.
 
-| Metric | QRC | QVarCircuit |
-|--------|-----|-------------|
-| Success Rate | 0% | 30-40% |
-| Chemotaxis | -0.13 to -0.23 | ~0.1-0.3 |
-| Trainable Params | Readout only | Quantum + Readout |
-| Gradient Issue | Weak signal | Barren plateaus |
+| Metric | QRC | QSNN | QVarCircuit |
+|--------|-----|------|-------------|
+| Success Rate | 0% | 0% | 30-40% |
+| Chemotaxis | -0.13 to -0.23 | -0.15 | ~0.1-0.3 |
+| Trainable Params | Readout only | Weights + θ | Quantum + Readout |
+| Gradient Issue | Weak signal | Weak local learning | Barren plateaus |
 
 ______________________________________________________________________
 
@@ -155,8 +244,8 @@ ______________________________________________________________________
 | Architecture | Trainable | Gradient Issue | Best Success | Viable? |
 |--------------|-----------|----------------|--------------|---------|
 | QRC | Readout only | Weak signal, no convergence | 0% | ❌ No |
+| QSNN | Local Hebbian | Learning signal too weak | 0% | ❌ No (as implemented) |
 | QVarCircuit | Full circuit | Barren plateaus | ~40% | ⚠️ Marginal |
-| QSNN | Local rules | TBD | TBD | ? |
 
 ### Key Learnings
 
@@ -169,7 +258,9 @@ ______________________________________________________________________
 
 ## Next Steps
 
-- [ ] Implement QSNNBrain with QLIF neurons
+- [x] Implement QSNNBrain with QLIF neurons
+- [x] Run QSNN benchmark (200 episodes on foraging) - 0% success
+- [ ] Tune QSNN hyperparameters (higher LR, larger network)
 - [ ] Compare QSNN vs SpikingReinforceBrain (classical spiking)
 - [ ] Evaluate QVarCircuit with actor-critic (lower variance)
 - [ ] Consider hybrid approaches (quantum reflex + classical planning)

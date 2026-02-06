@@ -19,6 +19,7 @@ class BrainType(Enum):
     QVARCIRCUIT = "qvarcircuit"
     QQLEARNING = "qqlearning"
     QRC = "qrc"
+    QSNN = "qsnn"
     MLP_REINFORCE = "mlpreinforce"
     MLP_DQN = "mlpdqn"
     MLP_PPO = "mlpppo"
@@ -60,6 +61,7 @@ BRAIN_TYPES = Literal[
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
     BrainType.QRC,
+    BrainType.QSNN,
     BrainType.MLP_REINFORCE,
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
@@ -75,6 +77,7 @@ BRAIN_TYPES = Literal[
 QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
+    BrainType.QSNN,
     BrainType.MODULAR,
     BrainType.QMODULAR,
 }
