@@ -138,11 +138,22 @@ def _resolve_brain_config[T: BrainConfigType](
     if isinstance(raw_config, config_cls):
         return raw_config
     if hasattr(raw_config, "__dict__"):
+        # Extract fields that exist in both raw_config and target config class
         config_dict = {
             field_name: getattr(raw_config, field_name)
             for field_name in config_cls.model_fields
             if hasattr(raw_config, field_name)
         }
+        # Warn about any fields in raw_config that are not in the target config class
+        raw_fields = set(raw_config.__dict__.keys())
+        expected_fields = set(config_cls.model_fields.keys())
+        dropped_fields = raw_fields - expected_fields
+        if dropped_fields:
+            logger.warning(
+                f"Configuration for '{brain_name}' brain: ignoring unrecognized fields "
+                f"{sorted(dropped_fields)}. Expected fields: {sorted(expected_fields)}. "
+                f"This may indicate a misconfigured brain type.",
+            )
         return config_cls(**config_dict)
     error_message = (
         f"Invalid brain configuration for '{brain_name}' brain type. "
