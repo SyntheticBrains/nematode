@@ -10,15 +10,16 @@ max_steps: 500
 brain:
   name: qrc
   config:
-    num_reservoir_qubits: 8
+    num_reservoir_qubits: 4
     reservoir_depth: 3
     reservoir_seed: 42
-    readout_hidden: 32
+    readout_hidden: 64
     readout_type: mlp
     shots: 1024
     gamma: 0.99
-    learning_rate: 0.001
-    baseline_alpha: 0.05
+    learning_rate: 0.01
+    baseline_alpha: 0.1
+    entropy_coef: 0.005
 
 body_length: 2
 
@@ -29,7 +30,7 @@ reward:
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0
-  penalty_starvation: 10.0
+  penalty_starvation: 2.0
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
 

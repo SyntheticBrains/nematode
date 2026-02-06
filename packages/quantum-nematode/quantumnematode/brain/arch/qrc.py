@@ -63,6 +63,7 @@ DEFAULT_SHOTS = 1024
 DEFAULT_GAMMA = 0.99
 DEFAULT_LEARNING_RATE = 0.001
 DEFAULT_BASELINE_ALPHA = 0.05
+DEFAULT_ENTROPY_COEF = 0.01
 
 # Validation constants
 MIN_RESERVOIR_QUBITS = 2
@@ -111,6 +112,8 @@ class QRCBrainConfig(BrainConfig):
         Learning rate for readout network optimizer (default 0.001).
     baseline_alpha : float
         Smoothing factor for baseline running average (default 0.05).
+    entropy_coef : float
+        Entropy regularization coefficient for exploration (default 0.01).
     sensory_modules : list[ModuleName] | None
         List of sensory modules for feature extraction (default None = legacy mode).
     """
@@ -150,6 +153,10 @@ class QRCBrainConfig(BrainConfig):
     baseline_alpha: float = Field(
         default=DEFAULT_BASELINE_ALPHA,
         description="Smoothing factor for baseline running average.",
+    )
+    entropy_coef: float = Field(
+        default=DEFAULT_ENTROPY_COEF,
+        description="Entropy regularization coefficient for exploration.",
     )
 
     # Unified sensory feature extraction (optional)
@@ -276,8 +283,9 @@ class QRCBrain(ClassicalBrain):
         self.reservoir_seed = config.reservoir_seed
         self.shots = config.shots
 
-        # Build fixed reservoir circuit
-        self._reservoir_circuit = self._build_reservoir_circuit()
+        # Note: Reservoir circuit is now built dynamically with data re-uploading
+        # in _encode_inputs(), so we don't pre-build it here.
+        self._reservoir_circuit = None  # Kept for API compatibility
         self._backend = None
 
         # Build readout network
@@ -294,12 +302,14 @@ class QRCBrain(ClassicalBrain):
         self.gamma = config.gamma
         self.baseline = 0.0
         self.baseline_alpha = config.baseline_alpha
+        self.entropy_coef = config.entropy_coef
 
         # Episode buffers for REINFORCE
         self.episode_states: list[np.ndarray] = []
         self.episode_actions: list[int] = []
         self.episode_rewards: list[float] = []
         self.episode_log_probs: list[torch.Tensor] = []
+        self.episode_probs: list[torch.Tensor] = []  # For entropy calculation
 
         # Current action probabilities
         self.current_probabilities: np.ndarray | None = None
@@ -370,13 +380,24 @@ class QRCBrain(ClassicalBrain):
             The readout network.
         """
         if readout_type == "mlp":
-            return nn.Sequential(
+            network = nn.Sequential(
                 nn.Linear(self.reservoir_output_dim, hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, self.num_actions),
             )
-        # Linear readout
-        return nn.Linear(self.reservoir_output_dim, self.num_actions)
+        else:
+            # Linear readout
+            network = nn.Linear(self.reservoir_output_dim, self.num_actions)
+
+        # Initialize weights for better gradient flow
+        for module in network.modules():
+            if isinstance(module, nn.Linear):
+                # Orthogonal initialization for better learning dynamics
+                nn.init.orthogonal_(module.weight, gain=1.0)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
+        return network
 
     def _get_backend(self):  # noqa: ANN202
         """Get or create the Qiskit Aer backend for circuit execution."""
@@ -395,29 +416,62 @@ class QRCBrain(ClassicalBrain):
         return self._backend
 
     def _encode_inputs(self, features: np.ndarray) -> QuantumCircuit:
-        """Encode sensory features as RY rotations on reservoir qubits.
+        """Encode sensory features using data re-uploading pattern.
+
+        Uses **data re-uploading**: the input features are encoded before EACH
+        reservoir layer, not just once at the beginning. This creates a richer
+        representation because the input signal is interleaved with the reservoir
+        dynamics rather than being scrambled once.
+
+        Structure: H → [Input_enc → Reservoir_layer] x depth → Measure
 
         Parameters
         ----------
         features : np.ndarray
-            Input features to encode (gradient_strength, relative_angle).
+            Input features to encode (e.g., [gradient_strength, relative_angle]).
 
         Returns
         -------
         QuantumCircuit
-            Complete circuit with input encoding followed by reservoir.
+            Complete circuit with interleaved input encoding and reservoir layers.
         """
         qc = QuantumCircuit(self.num_qubits, self.num_qubits)
 
-        # Encode features as RY rotations (cycling through qubits)
-        for i, feature in enumerate(features):
-            qubit_idx = i % self.num_qubits
-            # θ = v * π for feature value v
-            angle = float(feature) * np.pi
-            qc.ry(angle, qubit_idx)
+        # Use seeded RNG for reproducible random rotations
+        reservoir_rng = np.random.default_rng(self.reservoir_seed)
 
-        # Append the fixed reservoir circuit
-        qc.compose(self._reservoir_circuit, inplace=True)
+        # Initial Hadamard layer
+        for q in range(self.num_qubits):
+            qc.h(q)
+
+        # Data re-uploading: encode inputs before each reservoir layer
+        for _layer in range(self.reservoir_depth):
+            # Input encoding: dense encoding across all qubits
+            for i, feature in enumerate(features):
+                angle = float(feature) * np.pi
+                for q in range(self.num_qubits):
+                    if i % 2 == 0:
+                        # Even-indexed features (e.g., gradient_strength): RY (amplitude)
+                        qc.ry(angle, q)
+                    else:
+                        # Odd-indexed features (e.g., relative_angle): RZ (phase)
+                        qc.rz(angle, q)
+
+            # Reservoir layer: structured rotations (fractional angles)
+            # Use fixed angles based on qubit index and layer for reproducibility
+            # This creates structure that preserves input signal better than random
+            for q in range(self.num_qubits):
+                # Use seeded random but bounded angles for some variation
+                rx_angle = reservoir_rng.uniform(0, np.pi / 2)  # Max π/2 instead of 2π
+                ry_angle = reservoir_rng.uniform(0, np.pi / 2)
+                rz_angle = reservoir_rng.uniform(0, np.pi / 2)
+                qc.rx(rx_angle, q)
+                qc.ry(ry_angle, q)
+                qc.rz(rz_angle, q)
+
+            # Entangling layer: CZ in circular topology
+            for q in range(self.num_qubits):
+                qc.cz(q, (q + 1) % self.num_qubits)
 
         # Add measurements
         qc.measure(range(self.num_qubits), range(self.num_qubits))
@@ -454,6 +508,15 @@ class QRCBrain(ClassicalBrain):
             # Convert bitstring to index (Qiskit uses little-endian)
             idx = int(bitstring, 2)
             probs[idx] = count / self.shots
+
+        # Debug: Track reservoir output statistics (sample every 50 steps)
+        if len(self.episode_states) % 50 == 0:
+            logger.debug(
+                f"QRC reservoir: features={features}, "
+                f"probs_entropy={-np.sum(probs * np.log(probs + 1e-8)):.4f}, "
+                f"probs_max={np.max(probs):.4f}, "
+                f"probs_nonzero={np.sum(probs > 0.01)}",  # noqa: PLR2004
+            )
 
         return probs
 
@@ -561,6 +624,13 @@ class QRCBrain(ClassicalBrain):
         probs = torch.softmax(logits, dim=-1)
         probs_np = probs.detach().cpu().numpy()
 
+        # Debug: Log action probabilities (sample every 50 steps)
+        if len(self.episode_states) % 50 == 0:
+            logger.debug(
+                f"QRC action probs: {probs_np}, "
+                f"logits_range=[{logits.min().item():.3f}, {logits.max().item():.3f}]",
+            )
+
         # Sample action from categorical distribution
         action_idx = self.rng.choice(self.num_actions, p=probs_np)
         action_name = self.action_set[action_idx]
@@ -579,6 +649,7 @@ class QRCBrain(ClassicalBrain):
         self.episode_states.append(reservoir_state)
         self.episode_actions.append(action_idx)
         self.episode_log_probs.append(log_prob)
+        self.episode_probs.append(probs)  # Store full probs for entropy
 
         self.current_probabilities = probs_np
         self.latest_data.probability = float(probs_np[action_idx])
@@ -609,14 +680,27 @@ class QRCBrain(ClassicalBrain):
         self.episode_rewards.append(reward)
         self.history_data.rewards.append(reward)
 
+        logger.debug(
+            f"QRC learn: episode_done={episode_done}, "
+            f"rewards_len={len(self.episode_rewards)}, "
+            f"states_len={len(self.episode_states)}, "
+            f"actions_len={len(self.episode_actions)}, "
+            f"log_probs_len={len(self.episode_log_probs)}",
+        )
+
         # Only update at episode end
         if episode_done and len(self.episode_rewards) > 0:
+            logger.info(
+                f"QRC performing policy update: {len(self.episode_rewards)} rewards, "
+                f"{len(self.episode_states)} states",
+            )
             self._perform_policy_update()
             self._reset_episode_buffer()
 
-    def _perform_policy_update(self) -> None:
+    def _perform_policy_update(self) -> None:  # noqa: C901
         """Perform the REINFORCE policy gradient update."""
         if len(self.episode_states) == 0:
+            logger.warning("QRC _perform_policy_update: episode_states is empty, skipping update")
             return
 
         # Ensure all lists have the same length
@@ -625,14 +709,19 @@ class QRCBrain(ClassicalBrain):
             len(self.episode_actions),
             len(self.episode_rewards),
             len(self.episode_log_probs),
+            len(self.episode_probs),
         )
 
         if min_length == 0:
+            logger.warning("QRC _perform_policy_update: min_length is 0, skipping update")
             return
+
+        logger.debug(f"QRC _perform_policy_update: min_length={min_length}")
 
         # Truncate to same length
         rewards = self.episode_rewards[:min_length]
         log_probs = self.episode_log_probs[:min_length]
+        probs_list = self.episode_probs[:min_length]
 
         # Compute discounted returns: G_t = r_t + gamma * G_{t+1}
         returns = []
@@ -643,6 +732,15 @@ class QRCBrain(ClassicalBrain):
 
         # Convert to tensor and normalize for variance reduction
         returns_tensor = torch.tensor(returns, dtype=torch.float32, device=self.device)
+        raw_mean = returns_tensor.mean().item()
+        raw_std = returns_tensor.std().item()
+
+        logger.debug(
+            f"QRC rewards: sum={sum(rewards):.2f}, "
+            f"min={min(rewards):.2f}, max={max(rewards):.2f}, "
+            f"raw_return_mean={raw_mean:.4f}, raw_return_std={raw_std:.4f}",
+        )
+
         if len(returns_tensor) > 1:
             returns_tensor = (returns_tensor - returns_tensor.mean()) / (
                 returns_tensor.std() + 1e-8
@@ -659,18 +757,41 @@ class QRCBrain(ClassicalBrain):
 
         # Compute policy loss: L = -Σ log_prob(a_t) · G_t
         policy_loss = torch.tensor(0.0, device=self.device, requires_grad=True)
+        entropy_sum = torch.tensor(0.0, device=self.device, requires_grad=True)
         for t in range(len(log_probs)):
             policy_loss = policy_loss - log_probs[t] * advantages[t]
+            # Entropy: H(π) = -Σ π(a) log π(a)
+            entropy_sum = entropy_sum - torch.sum(
+                probs_list[t] * torch.log(probs_list[t] + 1e-8),
+            )
 
         # Average over episode length
-        total_loss = policy_loss / len(log_probs)
+        avg_policy_loss = policy_loss / len(log_probs)
+        avg_entropy = entropy_sum / len(log_probs)
+
+        # Total loss: policy loss - entropy bonus (entropy bonus encourages exploration)
+        total_loss = avg_policy_loss - self.entropy_coef * avg_entropy
 
         # Backpropagate through readout only
         self.optimizer.zero_grad()
         total_loss.backward()
 
+        # Debug: Check gradients before clipping
+        grad_norm_before = 0.0
+        for param in self.readout.parameters():
+            if param.grad is not None:
+                grad_norm_before += param.grad.data.norm(2).item() ** 2
+        grad_norm_before = grad_norm_before**0.5
+
         # Gradient clipping
         torch.nn.utils.clip_grad_norm_(self.readout.parameters(), max_norm=1.0)
+
+        # Debug: Check gradients after clipping
+        grad_norm_after = 0.0
+        for param in self.readout.parameters():
+            if param.grad is not None:
+                grad_norm_after += param.grad.data.norm(2).item() ** 2
+        grad_norm_after = grad_norm_after**0.5
 
         self.optimizer.step()
 
@@ -679,12 +800,25 @@ class QRCBrain(ClassicalBrain):
         if self.latest_data.loss is not None:
             self.history_data.losses.append(self.latest_data.loss)
 
+        # Debug logging
+        logger.info(
+            f"QRC policy update complete: "
+            f"policy_loss={avg_policy_loss.item():.4f}, "
+            f"entropy={avg_entropy.item():.4f}, "
+            f"total_loss={total_loss.item():.4f}, "
+            f"grad_norm_before={grad_norm_before:.4f}, "
+            f"grad_norm_after={grad_norm_after:.4f}, "
+            f"mean_return={mean_return:.4f}, "
+            f"baseline={self.baseline:.4f}",
+        )
+
     def _reset_episode_buffer(self) -> None:
         """Reset episode buffers for next episode."""
         self.episode_states.clear()
         self.episode_actions.clear()
         self.episode_rewards.clear()
         self.episode_log_probs.clear()
+        self.episode_probs.clear()
 
     def update_memory(self, reward: float | None = None) -> None:
         """Update internal memory (no-op for QRCBrain)."""
