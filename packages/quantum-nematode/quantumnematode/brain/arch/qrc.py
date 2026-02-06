@@ -320,46 +320,6 @@ class QRCBrain(ClassicalBrain):
             f"{config.readout_type} readout ({self.reservoir_output_dim} -> {num_actions})",
         )
 
-    def _build_reservoir_circuit(self) -> QuantumCircuit:
-        """Build the fixed quantum reservoir circuit.
-
-        The reservoir circuit consists of:
-        1. Hadamard gates on all qubits for initial superposition
-        2. For each layer:
-           - Random RX, RY, RZ rotations on each qubit (angles from seeded RNG)
-           - CZ entangling gates in circular topology
-
-        Returns
-        -------
-        QuantumCircuit
-            The fixed reservoir circuit (without input encoding).
-        """
-        qc = QuantumCircuit(self.num_qubits)
-
-        # Use seeded RNG for reproducible random rotations
-        reservoir_rng = np.random.default_rng(self.reservoir_seed)
-
-        # Initial Hadamard layer
-        for q in range(self.num_qubits):
-            qc.h(q)
-
-        # Build layers
-        for _layer in range(self.reservoir_depth):
-            # Random RX, RY, RZ rotations on each qubit
-            for q in range(self.num_qubits):
-                rx_angle = reservoir_rng.uniform(0, 2 * np.pi)
-                ry_angle = reservoir_rng.uniform(0, 2 * np.pi)
-                rz_angle = reservoir_rng.uniform(0, 2 * np.pi)
-                qc.rx(rx_angle, q)
-                qc.ry(ry_angle, q)
-                qc.rz(rz_angle, q)
-
-            # CZ entangling gates in circular topology
-            for q in range(self.num_qubits):
-                qc.cz(q, (q + 1) % self.num_qubits)
-
-        return qc
-
     def _build_readout_network(
         self,
         readout_type: str,
