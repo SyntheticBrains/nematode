@@ -95,7 +95,7 @@ The QRCBrain SHALL implement a trainable classical readout network that maps res
 - **THEN** the system SHALL create a two-layer neural network
 - **AND** SHALL have input dimension equal to 2^num_qubits
 - **AND** SHALL have hidden dimension equal to `readout_hidden` (default 32)
-- **AND** SHALL have output dimension equal to the number of actions (5)
+- **AND** SHALL have output dimension equal to `num_actions` as provided to `QRCBrain.__init__`
 - **AND** SHALL use ReLU activation between layers
 
 #### Scenario: Linear Readout Architecture
@@ -103,7 +103,7 @@ The QRCBrain SHALL implement a trainable classical readout network that maps res
 - **WHEN** the readout_type is "linear"
 - **THEN** the system SHALL create a single linear layer
 - **AND** SHALL have input dimension equal to 2^num_qubits
-- **AND** SHALL have output dimension equal to the number of actions (5)
+- **AND** SHALL have output dimension equal to `num_actions` as provided to `QRCBrain.__init__`
 
 ### Requirement: REINFORCE Learning for Readout
 
