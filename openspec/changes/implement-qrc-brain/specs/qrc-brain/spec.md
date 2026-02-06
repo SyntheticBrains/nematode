@@ -13,9 +13,10 @@ The system SHALL support a Quantum Reservoir Computing brain architecture that u
 #### Scenario: QRC Brain Instantiation
 
 - **WHEN** a QRCBrain is instantiated with default configuration
-- **THEN** the system SHALL create a fixed quantum reservoir circuit with 8 qubits and 3 entangling layers
-- **AND** SHALL create a trainable MLP readout network with 32 hidden units
+- **THEN** the system SHALL create a quantum reservoir with configurable qubits (default 8, recommended 4 for efficiency) and 3 entangling layers
+- **AND** SHALL create a trainable MLP readout network with configurable hidden units (default 32)
 - **AND** SHALL initialize the reservoir with a deterministic seed for reproducibility
+- **AND** SHALL use orthogonal weight initialization for better gradient flow
 
 #### Scenario: CLI Brain Selection
 
@@ -31,9 +32,10 @@ The QRCBrain SHALL implement a fixed quantum reservoir that generates diverse fe
 
 - **WHEN** a QRCBrain constructs its reservoir circuit
 - **THEN** the system SHALL apply Hadamard gates to all qubits for initial superposition
-- **AND** SHALL apply random RX, RY, RZ rotations to each qubit per layer (angles determined by seed)
+- **AND** SHALL use data re-uploading pattern: interleave input encoding with reservoir layers
+- **AND** SHALL apply random RX, RY, RZ rotations to each qubit per layer (angles in [0, π/2], determined by seed)
 - **AND** SHALL apply CZ entangling gates in a circular topology between adjacent qubits
-- **AND** SHALL repeat the rotation and entangling pattern for the configured number of layers
+- **AND** SHALL repeat the [input encoding → rotation → entangling] pattern for the configured number of layers
 
 #### Scenario: Reservoir Reproducibility
 
@@ -56,14 +58,15 @@ The QRCBrain SHALL encode sensory inputs from BrainParams into the quantum reser
 - **WHEN** the QRCBrain receives a BrainParams input
 - **THEN** the system SHALL compute gradient strength normalized to [0, 1]
 - **AND** SHALL compute relative angle normalized to [-1, 1]
-- **AND** SHALL encode each feature as an RY rotation on reservoir qubits (cycling through qubits)
-- **AND** SHALL apply input rotations before the fixed reservoir circuit
+- **AND** SHALL encode features using data re-uploading: input is encoded before EACH reservoir layer
+- **AND** SHALL encode even-indexed features (e.g., gradient_strength) as RY rotations on ALL qubits
+- **AND** SHALL encode odd-indexed features (e.g., relative_angle) as RZ rotations on ALL qubits
 
 #### Scenario: Input Scaling
 
-- **WHEN** encoding a feature value `v` to qubit `q`
+- **WHEN** encoding a feature value `v`
 - **THEN** the system SHALL apply rotation angle `θ = v * π`
-- **AND** SHALL map feature index `i` to qubit `i % num_qubits`
+- **AND** SHALL apply the rotation to ALL reservoir qubits (dense encoding)
 
 ### Requirement: Reservoir State Extraction
 
@@ -111,8 +114,11 @@ The QRCBrain SHALL train the classical readout using REINFORCE policy gradients,
 - **WHEN** an episode completes with a sequence of (state, action, reward) tuples
 - **THEN** the system SHALL compute discounted returns: `G_t = r_t + γ·G_{t+1}`
 - **AND** SHALL normalize returns for variance reduction
-- **AND** SHALL compute policy loss: `L = -Σ log_prob(a_t) · G_t`
+- **AND** SHALL compute policy loss: `L = -Σ log_prob(a_t) · (G_t - baseline)`
+- **AND** SHALL compute entropy bonus: `H = -Σ π(a) log π(a)` for exploration
+- **AND** SHALL compute total loss: `L_total = L_policy - entropy_coef * H`
 - **AND** SHALL backpropagate through the readout network only
+- **AND** SHALL apply gradient clipping (max_norm=1.0)
 - **AND** SHALL update readout parameters using Adam optimizer
 
 #### Scenario: Action Selection
@@ -155,6 +161,8 @@ The configuration system SHALL support QRC-specific parameters via Pydantic Base
 - **AND** SHALL accept `readout_hidden` (int, default 32)
 - **AND** SHALL accept `readout_type` (literal "mlp" | "linear", default "mlp")
 - **AND** SHALL accept `shots` (int, default 1024)
+- **AND** SHALL accept `entropy_coef` (float, default 0.01) for exploration regularization
+- **AND** SHALL accept `baseline_alpha` (float, default 0.05) for baseline smoothing
 - **AND** SHALL accept standard learning parameters (gamma, learning_rate)
 
 #### Scenario: Configuration Validation

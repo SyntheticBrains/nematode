@@ -27,6 +27,8 @@ The QRCBrain SHALL support the brain copying interface required for certain simu
 
 - **WHEN** `qrc_brain.copy()` is called
 - **THEN** the system SHALL return an independent copy of the QRCBrain
-- **AND** the copy SHALL have the same reservoir circuit (references same fixed circuit)
+- **AND** the copy SHALL produce identical reservoir circuits for the same input (same seed, same structure)
 - **AND** the copy SHALL have independent readout network weights
 - **AND** modifications to the copy's readout SHALL NOT affect the original
+
+Note: With data re-uploading, circuits are built dynamically per input rather than stored as a fixed circuit reference.
