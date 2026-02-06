@@ -768,7 +768,7 @@ ______________________________________________________________________
 5. **Barren Plateau Mitigation**
 
    - arXiv:2411.08238v3 (2025). "Neural-network Generated Quantum State Mitigates Barren Plateau."
-   - arXiv:2501.xxxxx (2025). "Investigating and mitigating barren plateaus: a survey."
+   - arXiv:2407.17706 (2024). "Investigating and Mitigating Barren Plateaus in Variational Quantum Circuits: A Survey."
 
 6. **QNG Variants**
 
