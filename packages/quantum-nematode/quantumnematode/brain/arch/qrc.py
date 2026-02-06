@@ -250,6 +250,14 @@ class QRCBrain(ClassicalBrain):
         self.device = torch.device(device.value)
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS
 
+        # Validate action_set length matches num_actions
+        if self.num_actions != len(self._action_set):
+            msg = (
+                f"num_actions ({self.num_actions}) does not match "
+                f"action_set length ({len(self._action_set)})"
+            )
+            raise ValueError(msg)
+
         # Initialize seeding for reproducibility
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
