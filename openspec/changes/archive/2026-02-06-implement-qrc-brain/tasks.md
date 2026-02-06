@@ -1,6 +1,6 @@
 ## 1. Configuration Schema
 
-- [x] 1.1 Create `QRCBrainConfig` Pydantic model in `brain/config.py` with fields: `num_reservoir_qubits` (default 8), `reservoir_depth` (default 3), `reservoir_seed` (default 42), `readout_hidden` (default 32), `readout_type` (literal "mlp" | "linear", default "mlp"), `shots` (default 1024), `gamma`, `learning_rate`
+- [x] 1.1 Create `QRCBrainConfig` Pydantic model in `brain/arch/qrc.py` with fields: `num_reservoir_qubits` (default 8), `reservoir_depth` (default 3), `reservoir_seed` (default 42), `readout_hidden` (default 32), `readout_type` (literal "mlp" | "linear", default "mlp"), `shots` (default 1024), `gamma`, `learning_rate`
 - [x] 1.2 Add validators: `num_reservoir_qubits` >= 2, `reservoir_depth` >= 1, `readout_hidden` >= 1, `shots` >= 100
 
 ## 2. Core QRCBrain Implementation
@@ -33,7 +33,7 @@
 
 ## 6. Brain Factory Integration
 
-- [x] 6.1 Add "qrc" case to brain factory in `brain/brain_factory.py`
+- [x] 6.1 Add "qrc" case to brain factory in `utils/brain_factory.py`
 - [x] 6.2 Validate QRCBrainConfig schema when brain type is "qrc"
 - [x] 6.3 Add "qrc" to CLI brain type choices in argument parser
 
