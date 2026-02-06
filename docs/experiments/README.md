@@ -48,6 +48,7 @@ This project has complementary systems for tracking experiments:
 | 005 | [Health System Predator Scaling](logbooks/005-health-system-predator-scaling.md) | completed | Health system enables better evasion learning via survival + richer rewards |
 | 006 | [Unified Sensory Modules](logbooks/006-unified-sensory-modules.md) | completed | Biologically-inspired 4-feature architecture matches legacy 2-feature performance |
 | 007 | [PPO Thermotaxis Baselines](logbooks/007-ppo-thermotaxis-baselines.md) | completed | PPO baselines for 9 thermotaxis configs (3 sizes × 3 tasks), 84-98% post-conv |
+| 008 | [Quantum Brain Evaluation](logbooks/008-quantum-brain-evaluation.md) | in_progress | QRC failed (0% success), evaluating QSNN and other quantum architectures |
 
 ## How to Use Logbooks
 
