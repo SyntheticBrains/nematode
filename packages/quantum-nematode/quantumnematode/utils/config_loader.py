@@ -145,7 +145,11 @@ def _resolve_brain_config[T: BrainConfigType](
             if hasattr(raw_config, field_name)
         }
         # Warn about any fields in raw_config that are not in the target config class
-        raw_fields = set(raw_config.__dict__.keys())
+        # Prefer model_fields for Pydantic models, fall back to __dict__ for generic objects
+        if hasattr(raw_config, "model_fields"):
+            raw_fields = set(raw_config.model_fields.keys())
+        else:
+            raw_fields = set(raw_config.__dict__.keys())
         expected_fields = set(config_cls.model_fields.keys())
         dropped_fields = raw_fields - expected_fields
         if dropped_fields:
