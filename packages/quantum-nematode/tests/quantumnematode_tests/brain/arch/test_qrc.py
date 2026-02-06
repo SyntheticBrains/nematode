@@ -116,29 +116,35 @@ class TestQRCBrainReservoirCircuit:
         )
 
     def test_reservoir_circuit_structure(self, brain):
-        """Verify Hadamard + rotation + CZ structure in reservoir circuit."""
-        circuit = brain._reservoir_circuit
+        """Verify Hadamard + data re-uploading + rotation + CZ structure in circuit."""
+        # With data re-uploading, the circuit is built dynamically with inputs
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        circuit = brain._encode_inputs(features)
 
         # Check circuit has correct number of qubits
         assert circuit.num_qubits == brain.num_qubits
 
-        # Extract gate names
-        gate_names = [instruction.operation.name for instruction in circuit.data]
+        # Extract gate names (excluding measurements)
+        gate_names = [
+            instruction.operation.name
+            for instruction in circuit.data
+            if instruction.operation.name != "measure"
+        ]
 
         # Should have Hadamard gates at the beginning
         h_count = gate_names.count("h")
         assert h_count == brain.num_qubits, "Should have H gate on each qubit"
 
-        # Should have rotation gates (rx, ry, rz)
+        # Should have rotation gates (rx, ry, rz) from reservoir layers
         rx_count = gate_names.count("rx")
-        ry_count = gate_names.count("ry")
-        rz_count = gate_names.count("rz")
 
-        # Each layer has one rx, ry, rz per qubit
-        expected_rotations_per_type = brain.num_qubits * brain.reservoir_depth
-        assert rx_count == expected_rotations_per_type
-        assert ry_count == expected_rotations_per_type
-        assert rz_count == expected_rotations_per_type
+        # With data re-uploading:
+        # - Each layer has: input encoding (RY + RZ per qubit) + reservoir (RX + RY + RZ per qubit)
+        # - For 2 features: RY (feature 0) and RZ (feature 1) on each qubit per layer
+        # - Reservoir: RX, RY, RZ on each qubit per layer
+        # So RX count = num_qubits * reservoir_depth (only from reservoir)
+        expected_rx = brain.num_qubits * brain.reservoir_depth
+        assert rx_count == expected_rx, f"Expected {expected_rx} RX gates, got {rx_count}"
 
         # Should have CZ gates for entanglement
         cz_count = gate_names.count("cz")
@@ -164,19 +170,21 @@ class TestQRCBrainReservoirCircuit:
         brain1 = QRCBrain(config=config1, num_actions=4, device=DeviceType.CPU)
         brain2 = QRCBrain(config=config2, num_actions=4, device=DeviceType.CPU)
 
-        # Circuits should be identical
-        circuit1 = brain1._reservoir_circuit
-        circuit2 = brain2._reservoir_circuit
+        # With data re-uploading, circuits are built dynamically with inputs
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        circuit1 = brain1._encode_inputs(features)
+        circuit2 = brain2._encode_inputs(features)
 
-        # Compare gate parameters
-        for instr1, instr2 in zip(circuit1.data, circuit2.data, strict=False):
+        # Compare gate parameters (excluding measurements)
+        data1 = [i for i in circuit1.data if i.operation.name != "measure"]
+        data2 = [i for i in circuit2.data if i.operation.name != "measure"]
+        for instr1, instr2 in zip(data1, data2, strict=False):
             assert instr1.operation.name == instr2.operation.name
             if hasattr(instr1.operation, "params") and instr1.operation.params:
                 for p1, p2 in zip(instr1.operation.params, instr2.operation.params, strict=False):
                     assert np.isclose(float(p1), float(p2))
 
         # Same input should produce similar outputs (probabilistic, so test multiple times)
-        features = np.array([0.5, 0.3], dtype=np.float32)
         state1 = brain1._extract_reservoir_state(features)
         state2 = brain2._extract_reservoir_state(features)
 
@@ -201,18 +209,23 @@ class TestQRCBrainReservoirCircuit:
         brain1 = QRCBrain(config=config1, num_actions=4, device=DeviceType.CPU)
         brain2 = QRCBrain(config=config2, num_actions=4, device=DeviceType.CPU)
 
-        # Compare rotation angles - they should be different
-        circuit1 = brain1._reservoir_circuit
-        circuit2 = brain2._reservoir_circuit
+        # With data re-uploading, circuits are built dynamically with inputs
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        circuit1 = brain1._encode_inputs(features)
+        circuit2 = brain2._encode_inputs(features)
 
-        angles_different = False
-        for instr1, instr2 in zip(circuit1.data, circuit2.data, strict=False):
-            if instr1.operation.name in ("rx", "ry", "rz") and not np.isclose(
-                float(instr1.operation.params[0]),
-                float(instr2.operation.params[0]),
-            ):
-                angles_different = True
-                break
+        # Filter to only the rx gates (from reservoir layers, not input encoding)
+        rx_angles_1 = [
+            float(i.operation.params[0]) for i in circuit1.data if i.operation.name == "rx"
+        ]
+        rx_angles_2 = [
+            float(i.operation.params[0]) for i in circuit2.data if i.operation.name == "rx"
+        ]
+
+        # Check that at least some angles are different
+        angles_different = any(
+            not np.isclose(a1, a2) for a1, a2 in zip(rx_angles_1, rx_angles_2, strict=False)
+        )
 
         assert angles_different, "Different seeds should produce different rotation angles"
 
@@ -499,17 +512,22 @@ class TestQRCBrainCopy:
             )
 
     def test_copy_shares_reservoir(self, brain):
-        """Test that copy shares the same reservoir circuit."""
+        """Test that copy produces identical reservoir circuits for same input."""
         brain_copy = brain.copy()
 
-        # Both should have the same reservoir circuit structure
-        # (same gates, same angles - the reservoir is fixed)
-        orig_circuit = brain._reservoir_circuit
-        copy_circuit = brain_copy._reservoir_circuit
+        # With data re-uploading, circuits are built dynamically with inputs
+        # Both should produce identical circuits for the same input
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        orig_circuit = brain._encode_inputs(features)
+        copy_circuit = brain_copy._encode_inputs(features)
 
         assert orig_circuit.num_qubits == copy_circuit.num_qubits
 
-        for instr1, instr2 in zip(orig_circuit.data, copy_circuit.data, strict=False):
+        # Filter out measurements for comparison
+        data1 = [i for i in orig_circuit.data if i.operation.name != "measure"]
+        data2 = [i for i in copy_circuit.data if i.operation.name != "measure"]
+
+        for instr1, instr2 in zip(data1, data2, strict=False):
             assert instr1.operation.name == instr2.operation.name
             if hasattr(instr1.operation, "params") and instr1.operation.params:
                 for p1, p2 in zip(instr1.operation.params, instr2.operation.params, strict=False):
