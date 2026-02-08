@@ -496,7 +496,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_steps_all_runs = (
                     sum([result.steps for result in all_results]) / total_runs_done + 1
                 )
-                render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{total_runs_done + 1}\n"
+                render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{max_steps}\n"
 
             step_result = agent.run_episode(
                 reward_config=reward_config,
