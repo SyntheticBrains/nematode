@@ -1,7 +1,7 @@
 # Dynamic Foraging with Predators - Small Configuration
 # Introduces predator evasion challenge in an easy 20x20 environment
 # Uses QSNN (Quantum Spiking Neural Network) brain architecture
-# Multi-objective learning: find food while avoiding predators
+# Surrogate gradient learning (REINFORCE + QLIFSurrogateSpike backprop)
 #
 # Uses unified sensory modules for separated gradients:
 # - food_chemotaxis: attraction to food sources
@@ -12,17 +12,19 @@ brain:
   name: qsnn
   config:
     num_sensory_neurons: 6
-    num_hidden_neurons: 4
+    num_hidden_neurons: 8
     num_motor_neurons: 4
     membrane_tau: 0.9
     threshold: 0.5
-    refractory_period: 2
-    use_local_learning: true
+    refractory_period: 0
+    use_local_learning: false
     shots: 1024
     gamma: 0.99
     learning_rate: 0.01
-    entropy_coef: 0.01
+    entropy_coef: 0.02
     weight_clip: 5.0
+    update_interval: 20
+    num_integration_steps: 10
     sensory_modules:
       - food_chemotaxis
       - nociception
