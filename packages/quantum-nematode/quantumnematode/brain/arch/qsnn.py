@@ -94,11 +94,10 @@ WEIGHT_DECAY_FACTOR = 0.01
 # Weight initialization scale. With 6 sensory neurons and scale=0.15, typical
 # weighted_input ~ N(0, 6*0.0225) = N(0, 0.135), std≈0.37. This produces
 # tanh(0.37)*π ≈ 1.10 rad peak RY angles, giving spike probs 0.05-0.35 —
-# enough differentiation for REINFORCE without the gradient amplification
-# instability seen at 0.3 (R12m: 1/4 sessions succeeded, 3/4 collapsed via
-# entropy collapse or explosion). Scale 0.1 was too flat (R12l: 53-156 eps
-# to converge); 0.15 is a compromise that breaks the flat landscape while
-# keeping gradient noise bounded.
+# enough differentiation for REINFORCE without gradient amplification
+# instability. Scale 0.1 is too flat (slow convergence); 0.3 is too
+# aggressive (entropy collapse/explosion). 0.15 breaks symmetry without
+# destabilizing.
 WEIGHT_INIT_SCALE = 0.15
 
 # Eligibility trace normalization — caps the Frobenius norm of eligibility traces
@@ -138,9 +137,8 @@ LOGIT_SCALE = 20.0
 # Exploration decay: number of episodes over which exploration decreases.
 # Epsilon and temperature decay linearly from initial to final values over
 # this many episodes, allowing more exploitation as the policy matures.
-# R12n failed sessions collapsed between episodes 18-32, right as the
-# 30-episode decay completed. Extending to 80 keeps epsilon=0.1 during
-# the critical window when premature policy commitment is most dangerous.
+# 80 episodes keeps epsilon high during the critical early window when
+# premature policy commitment is most dangerous.
 EXPLORATION_DECAY_EPISODES = 80
 
 # Learning rate decay: number of episodes over which LR decays via cosine
@@ -151,10 +149,9 @@ LR_DECAY_EPISODES = 200
 # Minimum LR as a fraction of the initial LR. With lr=0.01 and factor=0.1,
 # the LR decays from 0.01 to 0.001 over LR_DECAY_EPISODES episodes.
 # This prevents late-episode weight perturbation that causes catastrophic
-# forgetting in converged policies (observed in R12f/R12g sessions).
-# R12p showed 0.05 (min LR=0.0005) is catastrophically too low — 3/4 sessions
-# at 0% success, because cosine annealing reaches sub-0.001 LR by episode 100,
-# starving gradient signal during the critical mid-training refinement phase.
+# forgetting in converged policies. Note: 0.05 (min LR=0.0005) is too low —
+# cosine annealing reaches sub-0.001 LR by episode ~100, starving gradient
+# signal during mid-training refinement. 0.1 is the minimum viable floor.
 LR_MIN_FACTOR = 0.1
 
 # Multi-timestep integration: number of QLIF timesteps per decision.
@@ -167,24 +164,21 @@ DEFAULT_NUM_INTEGRATION_STEPS = 10
 
 # Adaptive entropy bonus: when mean episode entropy drops below this threshold,
 # entropy_coef is scaled up to push the policy back toward exploration.
-# 0.5 nats ≈ 36% of max entropy for 4 actions (ln(4)≈1.386). Sessions that
-# collapse below this in R12h never recover; adaptive scaling rescues them.
+# 0.5 nats ≈ 36% of max entropy for 4 actions (ln(4)≈1.386).
 ENTROPY_FLOOR = 0.5
 
 # Maximum multiplier for entropy_coef when entropy is critically low.
 # When entropy → 0, effective entropy_coef = base * ENTROPY_BOOST_MAX.
-# With base entropy_coef=0.02, max effective = 0.02 * 20.0 = 0.40.
-# R12n showed the 5x boost (max 0.10) was 10-100x too weak to counter
-# the REINFORCE gradient (~1.0) during premature policy commitment.
-# 20x produces 0.40, competitive with the policy gradient force.
+# With base entropy_coef=0.02, max effective = 0.02 * 20.0 = 0.40,
+# which is competitive with the REINFORCE policy gradient force (~1.0)
+# and sufficient to counter premature policy commitment.
 ENTROPY_BOOST_MAX = 20.0
 
 # Entropy ceiling: when entropy exceeds this fraction of max entropy,
 # suppress entropy bonus to let the policy gradient sharpen the policy.
 # With 4 actions, max entropy = ln(4) ≈ 1.386, so ceiling at 0.95 * 1.386
-# ≈ 1.317 nats. This prevents the entropy explosion failure mode (R12m
-# session 105845: policy drifted to uniform random, entropy → 1.0 normalized,
-# and never recovered because entropy bonus kept pushing toward uniformity).
+# ≈ 1.317 nats. This prevents entropy explosion where the policy drifts
+# to uniform random and never recovers.
 ENTROPY_CEILING_FRACTION = 0.95
 
 
@@ -520,15 +514,9 @@ class QSNNBrain(ClassicalBrain):
 
     def _init_network_weights(self) -> None:
         """Initialize trainable weight matrices and neuron parameters."""
-        # Random Gaussian init with moderate scale (0.15) to break the flat
-        # action landscape without amplifying gradient noise. With 6 sensory
-        # neurons, weighted_input std ≈ 0.37, pushing RY angles into the
-        # 0.3-1.1 rad range. Combined with theta_hidden=π/4, this gives spike
-        # probs 0.05-0.35 — enough for REINFORCE to differentiate actions.
-        # R12l (scale=0.1): too flat → 53-156 eps dead zone.
-        # R12m (scale=0.3): too aggressive → 3/4 sessions collapsed (entropy
-        # collapse or explosion from amplified gradient noise).
-        # 0.15 is the compromise: breaks symmetry without destabilizing.
+        # Random Gaussian init with moderate scale. Combined with theta_hidden=π/4,
+        # this gives spike probs 0.05-0.35 — enough for REINFORCE to differentiate
+        # actions while keeping gradient noise bounded.
         self.W_sh = (
             torch.randn(
                 self.num_sensory,
@@ -550,12 +538,8 @@ class QSNNBrain(ClassicalBrain):
         # Trainable membrane potential parameters per neuron.
         # Theta=π/4 provides a moderate "warm start": hidden neurons begin at
         # P(spike) ≈ sin²(π/8) ≈ 0.15, with surrogate gradient at ~60% of peak.
-        # This gives meaningful but not maximal gradient sensitivity from step 1,
-        # avoiding both the flat-landscape problem (theta=0, R12l: 53-156 eps to
-        # converge) and the entropy collapse problem (theta=π/2, R12i: collapse
-        # to 0.13 within 30-50 eps). Combined with WEIGHT_INIT_SCALE=0.15,
-        # weighted inputs push RY angles into the 0.3-1.1 rad range where spike
-        # probs are 0.05-0.35, creating natural action differentiation.
+        # This gives meaningful gradient sensitivity from step 1 without causing
+        # entropy collapse (which happens at θ=π/2) or flat landscapes (at θ=0).
         # Motor thetas stay at zero to avoid biasing initial action preferences.
         self.theta_hidden = torch.full(
             (self.num_hidden,),
@@ -1296,7 +1280,7 @@ class QSNNBrain(ClassicalBrain):
           to push the policy back toward exploration (prevents collapse).
         - Ceiling: when entropy exceeds ENTROPY_CEILING_FRACTION of max,
           suppress entropy bonus so policy gradient can sharpen the policy
-          (prevents drift to uniform random, R12m session 105845).
+          (prevents drift to uniform random).
         """
         max_entropy = np.log(self.num_actions)
         entropy_ceiling = ENTROPY_CEILING_FRACTION * max_entropy
