@@ -10,6 +10,7 @@ from quantumnematode.brain.arch.qsnn import (
     DEFAULT_NUM_INTEGRATION_STEPS,
     DEFAULT_SURROGATE_ALPHA,
     ENTROPY_BOOST_MAX,
+    ENTROPY_CEILING_FRACTION,
     ENTROPY_FLOOR,
     EXPLORATION_DECAY_EPISODES,
     EXPLORATION_EPSILON,
@@ -1308,16 +1309,16 @@ class TestQSNNWeightInitialization:
         )
         brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        # With randn * 0.1, element-wise std should be ~0.1
+        # With randn * 0.15, element-wise std should be ~0.15
         # Check overall Frobenius norm is in a reasonable range
         w_sh_norm = torch.norm(brain.W_sh.detach()).item()
         w_hm_norm = torch.norm(brain.W_hm.detach()).item()
 
-        # For a (6,8) matrix with std=0.1, expected Frobenius norm ~= sqrt(48)*0.1 ≈ 0.69
-        # For a (8,4) matrix with std=0.1, expected Frobenius norm ~= sqrt(32)*0.1 ≈ 0.57
+        # For a (6,8) matrix with std=0.15, expected Frobenius norm ~= sqrt(48)*0.15 ≈ 1.04
+        # For a (8,4) matrix with std=0.15, expected Frobenius norm ~= sqrt(32)*0.15 ≈ 0.85
         # Allow generous bounds (3x) since it's random
-        assert 0 < w_sh_norm < 3.0, f"W_sh norm {w_sh_norm} should be small"
-        assert 0 < w_hm_norm < 3.0, f"W_hm norm {w_hm_norm} should be small"
+        assert 0 < w_sh_norm < 4.0, f"W_sh norm {w_sh_norm} should be moderate"
+        assert 0 < w_hm_norm < 4.0, f"W_hm norm {w_hm_norm} should be moderate"
 
     def test_weight_columns_have_varied_norms(self):
         """Test that random Gaussian init produces columns with varied norms (symmetry breaking)."""
@@ -1338,8 +1339,8 @@ class TestQSNNWeightInitialization:
             f"but max/min ratio is only {ratio:.4f}"
         )
 
-    def test_theta_hidden_initialized_at_zero(self):
-        """Test that theta_hidden is initialized at zero for gradual warm-up."""
+    def test_theta_hidden_initialized_at_pi_over_4(self):
+        """Test that theta_hidden is initialized at pi/4 for moderate warm start."""
         config = QSNNBrainConfig(
             num_sensory_neurons=6,
             num_hidden_neurons=8,
@@ -1348,10 +1349,9 @@ class TestQSNNWeightInitialization:
         )
         brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        expected = torch.zeros(8)
+        expected = torch.full((8,), np.pi / 4)
         assert torch.allclose(brain.theta_hidden.detach(), expected, atol=1e-6), (
-            f"theta_hidden should be initialized to zero, "
-            f"got {brain.theta_hidden.detach()}"
+            f"theta_hidden should be initialized to pi/4, got {brain.theta_hidden.detach()}"
         )
 
     def test_theta_motor_initialized_at_zero(self):
@@ -1381,8 +1381,7 @@ class TestQSNNWeightInitialization:
 
         col_div = brain._compute_column_diversity()
         assert col_div > 0.01, (
-            f"Column diversity should be positive at init with random weights, "
-            f"got {col_div:.6f}"
+            f"Column diversity should be positive at init with random weights, got {col_div:.6f}"
         )
 
 
@@ -1403,9 +1402,10 @@ class TestAdaptiveEntropyBonus:
         return QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_entropy_constants_defined(self):
-        """Test that ENTROPY_FLOOR and ENTROPY_BOOST_MAX have expected values."""
+        """Test that entropy regulation constants have expected values."""
         assert ENTROPY_FLOOR == 0.5
-        assert ENTROPY_BOOST_MAX == 5.0
+        assert ENTROPY_BOOST_MAX == 20.0
+        assert ENTROPY_CEILING_FRACTION == 0.95
 
     def test_no_boost_when_entropy_above_floor(self, brain):
         """Test that entropy_coef is unchanged when entropy is above the floor."""
@@ -1433,7 +1433,7 @@ class TestAdaptiveEntropyBonus:
         entropy_val = ENTROPY_FLOOR / 2
         ratio = 1.0 - entropy_val / ENTROPY_FLOOR
         scale = 1.0 + ratio * (ENTROPY_BOOST_MAX - 1.0)
-        assert np.isclose(scale, 3.0, atol=1e-6)  # 1 + 0.5 * 4 = 3.0
+        assert np.isclose(scale, 10.5, atol=1e-6)  # 1 + 0.5 * 19 = 10.5
 
         # At zero: max boost
         entropy_val = 0.0
@@ -1441,15 +1441,44 @@ class TestAdaptiveEntropyBonus:
         scale = 1.0 + ratio * (ENTROPY_BOOST_MAX - 1.0)
         assert np.isclose(scale, ENTROPY_BOOST_MAX, atol=1e-6)
 
-    def test_above_floor_scale_is_one(self):
-        """Test that entropy above the floor always gives scale=1.0."""
-        for entropy_val in [ENTROPY_FLOOR, 0.8, 1.0, 1.386]:
+    def test_above_floor_below_ceiling_scale_is_one(self):
+        """Test that entropy between floor and ceiling gives scale=1.0."""
+        max_entropy = np.log(4)
+        ceiling = ENTROPY_CEILING_FRACTION * max_entropy
+        for entropy_val in [ENTROPY_FLOOR, 0.8, 1.0, ceiling]:
             if entropy_val < ENTROPY_FLOOR:
                 ratio = 1.0 - entropy_val / ENTROPY_FLOOR
-                scale = 1.0 + ratio * 4.0
+                scale = 1.0 + ratio * (ENTROPY_BOOST_MAX - 1.0)
+            elif entropy_val > ceiling:
+                ratio = (entropy_val - ceiling) / (max_entropy - ceiling)
+                scale = max(0.0, 1.0 - ratio)
             else:
                 scale = 1.0
             assert scale == 1.0, f"Scale should be 1.0 for entropy={entropy_val}"
+
+    def test_entropy_ceiling_formula(self):
+        """Test the entropy ceiling scaling formula directly."""
+        num_actions = 4
+        max_entropy = np.log(num_actions)
+        ceiling = ENTROPY_CEILING_FRACTION * max_entropy
+
+        # At the ceiling: no suppression (scale=1.0)
+        entropy_val = ceiling
+        ratio = (entropy_val - ceiling) / (max_entropy - ceiling)
+        scale = max(0.0, 1.0 - ratio)
+        assert np.isclose(scale, 1.0, atol=1e-6)
+
+        # Halfway between ceiling and max: scale=0.5
+        entropy_val = ceiling + (max_entropy - ceiling) / 2
+        ratio = (entropy_val - ceiling) / (max_entropy - ceiling)
+        scale = max(0.0, 1.0 - ratio)
+        assert np.isclose(scale, 0.5, atol=1e-6)
+
+        # At max entropy: scale=0.0 (full suppression)
+        entropy_val = max_entropy
+        ratio = (entropy_val - ceiling) / (max_entropy - ceiling)
+        scale = max(0.0, 1.0 - ratio)
+        assert np.isclose(scale, 0.0, atol=1e-6)
 
 
 class TestMultiTimestepIntegration:

@@ -77,7 +77,7 @@ DEFAULT_SHOTS = 1024
 DEFAULT_GAMMA = 0.99
 DEFAULT_LEARNING_RATE = 0.1
 DEFAULT_ENTROPY_COEF = 0.01
-DEFAULT_WEIGHT_CLIP = 5.0
+DEFAULT_WEIGHT_CLIP = 3.0
 DEFAULT_UPDATE_INTERVAL = 20
 
 # Validation constants
@@ -91,8 +91,15 @@ MIN_SHOTS = 100
 # episodes without fighting against the learning signal.
 WEIGHT_DECAY_FACTOR = 0.01
 
-# Weight initialization scale (small to keep RY angles in meaningful range)
-WEIGHT_INIT_SCALE = 0.1
+# Weight initialization scale. With 6 sensory neurons and scale=0.15, typical
+# weighted_input ~ N(0, 6*0.0225) = N(0, 0.135), std≈0.37. This produces
+# tanh(0.37)*π ≈ 1.10 rad peak RY angles, giving spike probs 0.05-0.35 —
+# enough differentiation for REINFORCE without the gradient amplification
+# instability seen at 0.3 (R12m: 1/4 sessions succeeded, 3/4 collapsed via
+# entropy collapse or explosion). Scale 0.1 was too flat (R12l: 53-156 eps
+# to converge); 0.15 is a compromise that breaks the flat landscape while
+# keeping gradient noise bounded.
+WEIGHT_INIT_SCALE = 0.15
 
 # Eligibility trace normalization — caps the Frobenius norm of eligibility traces
 # before multiplying by lr * advantage. This bounds the maximum weight delta per
@@ -131,7 +138,10 @@ LOGIT_SCALE = 20.0
 # Exploration decay: number of episodes over which exploration decreases.
 # Epsilon and temperature decay linearly from initial to final values over
 # this many episodes, allowing more exploitation as the policy matures.
-EXPLORATION_DECAY_EPISODES = 30
+# R12n failed sessions collapsed between episodes 18-32, right as the
+# 30-episode decay completed. Extending to 80 keeps epsilon=0.1 during
+# the critical window when premature policy commitment is most dangerous.
+EXPLORATION_DECAY_EPISODES = 80
 
 # Learning rate decay: number of episodes over which LR decays via cosine
 # annealing. After this many episodes, LR reaches its minimum value.
@@ -142,6 +152,9 @@ LR_DECAY_EPISODES = 200
 # the LR decays from 0.01 to 0.001 over LR_DECAY_EPISODES episodes.
 # This prevents late-episode weight perturbation that causes catastrophic
 # forgetting in converged policies (observed in R12f/R12g sessions).
+# R12p showed 0.05 (min LR=0.0005) is catastrophically too low — 3/4 sessions
+# at 0% success, because cosine annealing reaches sub-0.001 LR by episode 100,
+# starving gradient signal during the critical mid-training refinement phase.
 LR_MIN_FACTOR = 0.1
 
 # Multi-timestep integration: number of QLIF timesteps per decision.
@@ -160,8 +173,19 @@ ENTROPY_FLOOR = 0.5
 
 # Maximum multiplier for entropy_coef when entropy is critically low.
 # When entropy → 0, effective entropy_coef = base * ENTROPY_BOOST_MAX.
-# With base entropy_coef=0.02, max effective = 0.02 * 5.0 = 0.10.
-ENTROPY_BOOST_MAX = 5.0
+# With base entropy_coef=0.02, max effective = 0.02 * 20.0 = 0.40.
+# R12n showed the 5x boost (max 0.10) was 10-100x too weak to counter
+# the REINFORCE gradient (~1.0) during premature policy commitment.
+# 20x produces 0.40, competitive with the policy gradient force.
+ENTROPY_BOOST_MAX = 20.0
+
+# Entropy ceiling: when entropy exceeds this fraction of max entropy,
+# suppress entropy bonus to let the policy gradient sharpen the policy.
+# With 4 actions, max entropy = ln(4) ≈ 1.386, so ceiling at 0.95 * 1.386
+# ≈ 1.317 nats. This prevents the entropy explosion failure mode (R12m
+# session 105845: policy drifted to uniform random, entropy → 1.0 normalized,
+# and never recovered because entropy bonus kept pushing toward uniformity).
+ENTROPY_CEILING_FRACTION = 0.95
 
 
 class QLIFSurrogateSpike(torch.autograd.Function):
@@ -496,33 +520,48 @@ class QSNNBrain(ClassicalBrain):
 
     def _init_network_weights(self) -> None:
         """Initialize trainable weight matrices and neuron parameters."""
-        # Random Gaussian init with small scale to keep weighted inputs
-        # in tanh's linear region. Random magnitudes provide natural symmetry
-        # breaking — each column has different norm, so hidden neurons produce
-        # varied spike probabilities from step 1. This lets REINFORCE shape
-        # the policy immediately. (R12i/R12j showed orthogonal init creates
-        # a symmetry trap: uniform column norms → identical spike probs →
-        # 25-episode dead zone where entropy is locked at maximum.)
-        self.W_sh = torch.randn(
-            self.num_sensory,
-            self.num_hidden,
-            device=self.device,
-        ) * WEIGHT_INIT_SCALE
+        # Random Gaussian init with moderate scale (0.15) to break the flat
+        # action landscape without amplifying gradient noise. With 6 sensory
+        # neurons, weighted_input std ≈ 0.37, pushing RY angles into the
+        # 0.3-1.1 rad range. Combined with theta_hidden=π/4, this gives spike
+        # probs 0.05-0.35 — enough for REINFORCE to differentiate actions.
+        # R12l (scale=0.1): too flat → 53-156 eps dead zone.
+        # R12m (scale=0.3): too aggressive → 3/4 sessions collapsed (entropy
+        # collapse or explosion from amplified gradient noise).
+        # 0.15 is the compromise: breaks symmetry without destabilizing.
+        self.W_sh = (
+            torch.randn(
+                self.num_sensory,
+                self.num_hidden,
+                device=self.device,
+            )
+            * WEIGHT_INIT_SCALE
+        )
 
-        self.W_hm = torch.randn(
-            self.num_hidden,
-            self.num_motor,
-            device=self.device,
-        ) * WEIGHT_INIT_SCALE
+        self.W_hm = (
+            torch.randn(
+                self.num_hidden,
+                self.num_motor,
+                device=self.device,
+            )
+            * WEIGHT_INIT_SCALE
+        )
 
         # Trainable membrane potential parameters per neuron.
-        # Theta=0 provides a natural "cold start": hidden neurons begin near
-        # P(spike)≈0, so early gradients are small and ramp up as weights grow.
-        # This prevents premature policy commitment and entropy collapse.
-        # (R12i showed theta=π/2 causes catastrophic entropy collapse →0.13
-        # within 30-50 episodes due to maximum gradient sensitivity from step 1.)
+        # Theta=π/4 provides a moderate "warm start": hidden neurons begin at
+        # P(spike) ≈ sin²(π/8) ≈ 0.15, with surrogate gradient at ~60% of peak.
+        # This gives meaningful but not maximal gradient sensitivity from step 1,
+        # avoiding both the flat-landscape problem (theta=0, R12l: 53-156 eps to
+        # converge) and the entropy collapse problem (theta=π/2, R12i: collapse
+        # to 0.13 within 30-50 eps). Combined with WEIGHT_INIT_SCALE=0.15,
+        # weighted inputs push RY angles into the 0.3-1.1 rad range where spike
+        # probs are 0.05-0.35, creating natural action differentiation.
         # Motor thetas stay at zero to avoid biasing initial action preferences.
-        self.theta_hidden = torch.zeros(self.num_hidden, device=self.device)
+        self.theta_hidden = torch.full(
+            (self.num_hidden,),
+            np.pi / 4,
+            device=self.device,
+        )
         self.theta_motor = torch.zeros(self.num_motor, device=self.device)
 
         # Surrogate gradient mode: enable autograd and create optimizer
@@ -1231,27 +1270,10 @@ class QSNNBrain(ClassicalBrain):
             entropies.append(entropy)
 
         # Compute policy loss: REINFORCE with adaptive entropy bonus.
-        # When entropy drops below ENTROPY_FLOOR, scale entropy_coef up
-        # proportionally to push the policy back toward exploration. This
-        # rescues sessions from the entropy collapse death spiral (R12h
-        # analysis: 50% of sessions collapse and never recover).
         log_probs = torch.stack(log_probs_list)
         mean_entropy = torch.stack(entropies).mean()
-        entropy_val = mean_entropy.item()
-        if entropy_val < ENTROPY_FLOOR:
-            # Linear ramp: boost from 1.0x at floor to ENTROPY_BOOST_MAX x at 0
-            ratio = 1.0 - entropy_val / ENTROPY_FLOOR
-            entropy_scale = 1.0 + ratio * (ENTROPY_BOOST_MAX - 1.0)
-        else:
-            entropy_scale = 1.0
-        effective_entropy_coef = self.entropy_coef * entropy_scale
+        effective_entropy_coef = self._adaptive_entropy_coef(mean_entropy.item())
         policy_loss = -(log_probs * advantages).mean() - effective_entropy_coef * mean_entropy
-
-        if entropy_scale > 1.0:
-            logger.debug(
-                f"QSNN adaptive entropy: entropy={entropy_val:.4f} < floor={ENTROPY_FLOOR}, "
-                f"scale={entropy_scale:.2f}x, effective_coef={effective_entropy_coef:.4f}",
-            )
 
         # Backpropagation
         self.optimizer.zero_grad()
@@ -1265,6 +1287,37 @@ class QSNNBrain(ClassicalBrain):
             raw_mean,
             returns_tensor,
         )
+
+    def _adaptive_entropy_coef(self, entropy_val: float) -> float:
+        """Compute effective entropy coefficient with two-sided regulation.
+
+        Two-sided entropy regulation:
+        - Floor: when entropy drops below ENTROPY_FLOOR, scale entropy_coef up
+          to push the policy back toward exploration (prevents collapse).
+        - Ceiling: when entropy exceeds ENTROPY_CEILING_FRACTION of max,
+          suppress entropy bonus so policy gradient can sharpen the policy
+          (prevents drift to uniform random, R12m session 105845).
+        """
+        max_entropy = np.log(self.num_actions)
+        entropy_ceiling = ENTROPY_CEILING_FRACTION * max_entropy
+        if entropy_val < ENTROPY_FLOOR:
+            ratio = 1.0 - entropy_val / ENTROPY_FLOOR
+            entropy_scale = 1.0 + ratio * (ENTROPY_BOOST_MAX - 1.0)
+        elif entropy_val > entropy_ceiling:
+            ratio = (entropy_val - entropy_ceiling) / (max_entropy - entropy_ceiling)
+            entropy_scale = max(0.0, 1.0 - ratio)
+        else:
+            entropy_scale = 1.0
+        effective_coef = self.entropy_coef * entropy_scale
+        if entropy_scale != 1.0:
+            side = "FLOOR" if entropy_scale > 1.0 else "CEILING"
+            threshold = ENTROPY_FLOOR if entropy_scale > 1.0 else entropy_ceiling
+            logger.debug(
+                f"QSNN adaptive entropy {side}: entropy={entropy_val:.4f}, "
+                f"threshold={threshold:.4f}, scale={entropy_scale:.2f}x, "
+                f"effective_coef={effective_coef:.4f}",
+            )
+        return effective_coef
 
     def _apply_gradients_and_log(
         self,
