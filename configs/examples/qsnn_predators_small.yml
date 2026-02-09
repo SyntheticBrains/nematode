@@ -22,7 +22,7 @@ brain:
     gamma: 0.99
     learning_rate: 0.01
     entropy_coef: 0.02
-    weight_clip: 5.0
+    weight_clip: 3.0
     update_interval: 20
     num_integration_steps: 10
     sensory_modules:
