@@ -1,8 +1,8 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `in_progress`
+**Status**: `in_progress` — QSNN standalone approach halted; transitioning to QSNN-PPO hybrid
 
-**Branch**: `feature/add-qrc-brain`
+**Branch**: `feature/add-qsnn-brain`
 
 **Date Started**: 2026-02-05
 
@@ -129,7 +129,7 @@ ______________________________________________________________________
 
 ## QSNN Evaluation
 
-**Status**: Foraging baseline established (73.9%), predator evaluation Round P0 complete (14.5% avg)
+**Status**: Foraging baseline 73.9% (matches classical SNN). Predator evaluation complete: 25.1% best avg on random predators (16 rounds, 64 sessions). Approach halted — transitioning to QSNN-PPO hybrid.
 
 ### Architecture
 
@@ -310,7 +310,7 @@ After 12 rounds of tuning the 3-factor Hebbian learning rule (Rounds 0-11), the 
 - Updating all W_hm columns causes correlated collapse (all columns converge to same direction)
 - Updating only the chosen action's column causes starvation collapse (unchosen columns atrophy)
 
-The local learning signal is simply too weak for this task. Dense gradient information via surrogate gradients was required. See [008-appendix-qsnn-optimization.md](008-appendix-qsnn-optimization.md) for the full optimization history.
+The local learning signal is simply too weak for this task. Dense gradient information via surrogate gradients was required. See [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md) for the full optimization history.
 
 ### File Locations
 
@@ -321,6 +321,86 @@ The local learning signal is simply too weak for this task. Dense gradient infor
 ______________________________________________________________________
 
 ## QSNN Predator Evasion Evaluation
+
+**Status**: Complete — 16 rounds, 64 sessions. Best: 25.1% avg / 74.3% post-convergence on random predators, 1.25% on pursuit predators. Approach halted.
+
+### Task
+
+Multi-objective RL: collect 10 foods while surviving predators on 20x20 grid. Two phases tested:
+
+- **Random predators** (10 rounds, 40 sessions): speed 1.0, detection_radius 8, 2 predators
+- **Pursuit predators** (6 rounds, 24 sessions): speed 0.5, detection_radius 6, movement_pattern pursuit, health system enabled
+
+Uses separated sensory modules (`food_chemotaxis` + `nociception`) for gradient input.
+
+### Results Summary
+
+#### Random Predators — Top Results
+
+| Round | Key Change | Success | Convergence | Key Finding |
+|-------|-----------|---------|-------------|-------------|
+| P2c | Weight clip 3.0→2.0 + 300 episodes | **22.3%** | 2-3/4 | **Best avg.** 74.3% post-convergence (best session) |
+| P2d | entropy_coef 0.05→0.08 | **25.1%** | **3-4/4** | **Best reliability.** Proximity penalty didn't help evasion |
+| P3a | PPO clipping + logit_scale 20→5 | 11.6% | 1/4 | Fixed action death and stay-lock |
+
+#### Pursuit Predators — Top Results
+
+| Round | Key Change | Success | Convergence | Key Finding |
+|-------|-----------|---------|-------------|-------------|
+| PP8 | Holistic param overhaul (16 hidden) | **1.25%** | 0/4 | **First-ever pursuit success** (1 session, 5%) |
+| PP9 | Stabilise learning (adv clip, degen skip) | 0% | 0/4 | PP8 was lucky seed, not reproducible |
+
+#### Best Session Details
+
+| Session | Task | Success | Post-Conv | Avg Foods | Evasion | CI |
+|---------|------|---------|-----------|-----------|---------|-----|
+| 20260210_064304 | Random | 48.3% | **74.3%** | 6.84 | 86.5% | +0.410 |
+| 20260213_150444 | Pursuit | 5.0% | — | 2.14 | 47.8% | — |
+
+### Comparison with Classical Baselines
+
+| Metric | QSNN Best (Random) | QSNN Avg (Random) | SpikingReinforce\* | MLP PPO (Pursuit) |
+|--------|---------------------|---------------------|--------------------|-------------------|
+| Success Rate | 48.3% | 25.1% (P2d) | 61% | 93.5% |
+| Post-Conv Success | 74.3% | — | 62.8% | — |
+| Evasion Rate | 86.5% | ~88% | ~95% | — |
+| Parameters | 94 | 94 | 131K | 34,949 |
+| Session Reliability | 2-3/4 (P2c) | 3-4/4 (P2d) | ~1/10 | ~4/4 |
+
+\* SpikingReinforce best session only; ~9/10 sessions fail catastrophically.
+
+QSNN's best post-convergence (74.3%) **exceeds** SpikingReinforce's (62.8%) with 1,400x fewer parameters. But average success and pursuit predator performance remain far below classical baselines.
+
+### Key Findings
+
+1. **Per-encounter evasion never improved through training** across all 64 sessions (P0–PP9). The ~88% random / ~35% pursuit evasion rates are essentially innate from the nociception module, not learned behavior. This is the fundamental limitation.
+
+2. **Cumulative predator risk caps success**: At 88% per-encounter evasion and ~7 encounters/episode: P(survive all) ≈ 0.88^7 ≈ 40%. Even a perfectly food-efficient agent faces this ceiling.
+
+3. **Weight explosion → entropy collapse** was the dominant failure pattern. Solved by weight clipping (P2c), which made collapse recoverable rather than terminal.
+
+4. **Intra-episode REINFORCE** (P2b) was the most impactful code change. Episode-end updates dilute the death signal to noise (25x weaker); 20-step windows keep it actionable.
+
+5. **Fan-in-aware tanh scaling** (PP7) fixed the true root cause of gradient death in wider networks: `tanh(w*x)` saturates when `fan_in * avg_spike * |w| > ~2`. The fix `tanh(w*x / sqrt(fan_in))` keeps gradients alive regardless of layer width.
+
+6. **Pursuit predators exposed fundamental capacity limits**: 94-param actor with single-pass REINFORCE vs MLP PPO's 34,949 params and 40 gradient passes — a combined ~15,000x gap. Classical critic attempts (PP4/PP5) failed completely.
+
+### Architecture Limitations Identified
+
+After 16 rounds across both predator types, the evidence points to structural limitations:
+
+1. **No value function**: Vanilla REINFORCE with 20-step windows has enormous variance. The critic approach failed due to insufficient capacity.
+2. **Separated gradient inputs**: The QSNN never learned to use nociception for directional evasion. SpikingReinforce also 0% with separated gradients (logbook 003).
+3. **Network capacity**: 94-212 params for dual-objective task vs MLP PPO's 34,949.
+4. **Learning efficiency**: 1-3 gradient passes per window vs MLP PPO's 40.
+
+### Conclusion
+
+The standalone QSNN approach has been exhaustively explored. The architecture achieves 73.9% on foraging (matching classical SNN) but cannot reliably solve predator evasion. The next step is the **QSNN-PPO hybrid** — keeping the QSNN actor (which works for foraging) and adding a proper classical critic with GAE advantages and full PPO training loop. See [quantum-architectures.md](../../research/quantum-architectures.md) for the hybrid architecture design.
+
+For the full round-by-round optimization history, see [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md).
+
+______________________________________________________________________
 
 ## QVarCircuitBrain Comparison
 
@@ -420,29 +500,27 @@ Success
 
 1. **Fixed reservoirs don't work**: Random quantum circuits don't preserve input structure (QRC: 0%)
 2. **Local Hebbian learning is insufficient**: Despite 12 rounds of tuning, the learning signal is too weak for RL tasks
-3. **Surrogate gradients unlock quantum SNNs**: Using classical surrogate backward pass with quantum forward pass achieves classical parity
+3. **Surrogate gradients unlock quantum SNNs**: Using classical surrogate backward pass with quantum forward pass achieves classical parity on foraging
 4. **Multi-timestep integration is essential**: Averaging across timesteps reduces quantum shot noise enough for stable REINFORCE training
 5. **Adaptive entropy regulation prevents failure modes**: Two-sided regulation (floor + ceiling) eliminates both entropy collapse and explosion
 6. **Parameter efficiency**: QSNN achieves 73.9% with 92 parameters vs SpikingReinforce's 131K (1,400x fewer)
 7. **Training reliability matters**: SpikingReinforce's 73.3% headline number is misleading — only ~1 in 10 sessions converges, with the rest collapsing catastrophically. QSNN converges in 4/4 sessions (100%), making it a more practical architecture despite similar peak performance
+8. **Standalone QSNN cannot solve multi-objective tasks**: Despite 16 rounds and 64 sessions of predator optimization, per-encounter evasion never improved through training. The architecture learns foraging but not evasion — a hybrid approach is needed
+9. **Fan-in-aware scaling is critical for wider networks**: `tanh(w*x / sqrt(fan_in))` prevents gradient death that otherwise occurs when layer width exceeds ~10 neurons
 
 ______________________________________________________________________
 
 ## Next Steps
 
 - [x] Implement QSNNBrain with QLIF neurons
-- [x] Run QSNN benchmark (200 episodes on foraging) - 0% success (Hebbian)
+- [x] Run QSNN benchmark (200 episodes on foraging) — 0% success (Hebbian)
 - [x] Tune QSNN hyperparameters (17 rounds of optimization)
 - [x] Add surrogate gradient learning mode
 - [x] Achieve classical SNN parity on foraging (73.9% vs 73.3%)
-- [x] Evaluate QSNN on predator evasion with multi-sensory config — Round P0: 14.5% avg (0–44%), 1/4 converge
-- [x] Round P1: Sensory fix + entropy + reward rebalancing — REGRESSION to 1.25% (proximity penalty too aggressive)
-- [x] Round P2a: Fix proximity penalty, match gradient decay, LR schedule — 0% success, config tuning exhausted
-- [x] Round P2b: Add intra-episode REINFORCE — 3.0% avg success, improved over P2a but no convergence. Weight explosion → entropy collapse is new bottleneck
-- [x] Round P2c: Weight clip 3.0→2.0 + 300 episodes — **22.3% avg, 74.3% post-convergence (best), 2-3/4 converge. Surpasses SpikingReinforce post-convergence (62.8%) with 1,400x fewer params**
-- [ ] Round P2d: Evasion shaping (proximity 0.05→0.15) + entropy stabilization (0.05→0.08) — targeting evasion ceiling and 0% failure sessions
-- [ ] Compare QSNN vs SpikingReinforceBrain on predator tasks (comprehensive comparison)
-- [ ] Evaluate QVarCircuit with actor-critic (lower variance)
+- [x] Evaluate QSNN on random predator evasion (10 rounds, 40 sessions) — best: 25.1% avg (P2d), 74.3% post-convergence best session (P2c)
+- [x] Evaluate QSNN on pursuit predator evasion (6 rounds, 24 sessions) — best: 1.25% avg (PP8), approach exhausted
+- [x] Halt standalone QSNN predator approach — architecture limitation confirmed
+- [ ] Implement QSNN-PPO hybrid (QSNN actor + classical critic with GAE + PPO training loop) — see [quantum-architectures.md](../../research/quantum-architectures.md)
 
 ______________________________________________________________________
 
@@ -469,21 +547,25 @@ ______________________________________________________________________
 
 Full session results and config: `artifacts/logbooks/008/qsnn_foraging_small/`
 
-### QSNN Predator Sessions (Round P0)
+### QSNN Best Predator Sessions
 
-| Session | Success | Post-Conv | Notes |
-|---------|---------|-----------|-------|
-| 20260209_101857 | 0% | N/A | Starvation-dominated, food-seeking improved but insufficient |
-| 20260209_101904 | 44% | 72.1% | Best session, converged ep 140, outperforms SpikingReinforce post-conv |
-| 20260209_101910 | 14% | ~50% (last 20) | Late learner, still improving at ep 200 |
-| 20260209_101915 | 0% | N/A | Entropy collapse, negative CI (-0.287) |
+| Session | Task | Success | Post-Conv | Key Finding |
+|---------|------|---------|-----------|-------------|
+| 20260210_064304 | Random (P2c) | **48.3%** | **74.3%** | Best overall result, 1,400x fewer params than SpikingReinforce |
+| 20260210_111144 | Random (P2d) | 35.3% | — | Best reliability round (3-4/4 converge) |
+| 20260213_150444 | Pursuit (PP8) | 5.0% | — | First and only pursuit predator success |
 
-### Appendix
+Full predator session references (64 sessions across 16 rounds): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
 
-For the full QSNN optimization history (17 rounds, key decisions, failure analysis), see:
-[008-appendix-qsnn-optimization.md](008-appendix-qsnn-optimization.md)
+### Appendices
+
+- QSNN foraging optimization history (17 rounds): [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md)
+- QSNN predator optimization history (16 rounds, 64 sessions): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
 
 ### File Locations
 
 - QRC implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qrc.py`
 - QRC configs: `configs/examples/qrc_*.yml`
+- QSNN implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnn.py`
+- QSNN tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnn.py`
+- QSNN configs: `configs/examples/qsnn_*.yml`
