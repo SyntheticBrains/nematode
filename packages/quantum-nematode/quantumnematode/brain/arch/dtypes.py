@@ -19,13 +19,14 @@ class BrainType(Enum):
     QVARCIRCUIT = "qvarcircuit"
     QQLEARNING = "qqlearning"
     QRC = "qrc"
-    QSNN = "qsnn"
+    QSNN_REINFORCE = "qsnnreinforce"
     MLP_REINFORCE = "mlpreinforce"
     MLP_DQN = "mlpdqn"
     MLP_PPO = "mlpppo"
     SPIKING_REINFORCE = "spikingreinforce"
 
     # Deprecated aliases (kept for backward compatibility)
+    QSNN = "qsnn"
     MODULAR = "modular"
     QMODULAR = "qmodular"
     MLP = "mlp"
@@ -61,12 +62,13 @@ BRAIN_TYPES = Literal[
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
     BrainType.QRC,
-    BrainType.QSNN,
+    BrainType.QSNN_REINFORCE,
     BrainType.MLP_REINFORCE,
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
     BrainType.SPIKING_REINFORCE,
     # Deprecated aliases
+    BrainType.QSNN,
     BrainType.MODULAR,
     BrainType.QMODULAR,
     BrainType.MLP,
@@ -77,6 +79,7 @@ BRAIN_TYPES = Literal[
 QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
+    BrainType.QSNN_REINFORCE,
     BrainType.QSNN,
     BrainType.MODULAR,
     BrainType.QMODULAR,
@@ -97,6 +100,7 @@ SPIKING_BRAIN_TYPES: set[BrainType] = {
 
 # Map deprecated names to canonical names
 BRAIN_NAME_ALIASES: dict[str, str] = {
+    "qsnn": "qsnnreinforce",
     "modular": "qvarcircuit",
     "qmodular": "qqlearning",
     "mlp": "mlpreinforce",

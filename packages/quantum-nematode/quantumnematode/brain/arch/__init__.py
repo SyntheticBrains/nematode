@@ -6,7 +6,7 @@ from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
 from .mlpreinforce import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
 from .qqlearning import QModularBrain, QModularBrainConfig, QQLearningBrain, QQLearningBrainConfig
 from .qrc import QRCBrain, QRCBrainConfig
-from .qsnn import QSNNBrain, QSNNBrainConfig
+from .qsnnreinforce import QSNNReinforceBrain, QSNNReinforceBrainConfig
 from .qvarcircuit import ModularBrain, ModularBrainConfig, QVarCircuitBrain, QVarCircuitBrainConfig
 from .spikingreinforce import (
     SpikingBrain,
@@ -14,6 +14,10 @@ from .spikingreinforce import (
     SpikingReinforceBrain,
     SpikingReinforceBrainConfig,
 )
+
+# Backward compatibility aliases
+QSNNBrain = QSNNReinforceBrain
+QSNNBrainConfig = QSNNReinforceBrainConfig
 
 __all__ = [
     "Brain",
@@ -42,6 +46,8 @@ __all__ = [
     "QRCBrainConfig",
     "QSNNBrain",
     "QSNNBrainConfig",
+    "QSNNReinforceBrain",
+    "QSNNReinforceBrainConfig",
     "QVarCircuitBrain",
     "QVarCircuitBrainConfig",
     "QuantumBrain",

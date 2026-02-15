@@ -189,7 +189,7 @@ LOGIT_SCALE = 5.0
 # Exploration decay: default number of episodes over which exploration decreases.
 # Epsilon and temperature decay linearly from initial to final values over
 # this many episodes, allowing more exploitation as the policy matures.
-# Configurable per-task via QSNNBrainConfig.exploration_decay_episodes.
+# Configurable per-task via QSNNReinforceBrainConfig.exploration_decay_episodes.
 EXPLORATION_DECAY_EPISODES = 80
 
 # Learning rate decay: number of episodes over which LR decays via cosine
@@ -315,8 +315,8 @@ class CriticMLP(nn.Module):
         return self.network(x).squeeze(-1)
 
 
-class QSNNBrainConfig(BrainConfig):
-    """Configuration for the QSNNBrain architecture.
+class QSNNReinforceBrainConfig(BrainConfig):
+    """Configuration for the QSNNReinforceBrain architecture.
 
     Supports two modes for input feature extraction:
 
@@ -573,7 +573,7 @@ class QSNNBrainConfig(BrainConfig):
         return v
 
 
-class QSNNBrain(ClassicalBrain):
+class QSNNReinforceBrain(ClassicalBrain):
     """
     Quantum Spiking Neural Network brain architecture.
 
@@ -583,16 +583,16 @@ class QSNNBrain(ClassicalBrain):
 
     def __init__(
         self,
-        config: QSNNBrainConfig,
+        config: QSNNReinforceBrainConfig,
         num_actions: int = 4,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] | None = None,
     ) -> None:
-        """Initialize the QSNNBrain.
+        """Initialize the QSNNReinforceBrain.
 
         Parameters
         ----------
-        config : QSNNBrainConfig
+        config : QSNNReinforceBrainConfig
             Configuration for the QSNN brain architecture.
         num_actions : int
             Number of available actions (default 4: forward, left, right, backward).
@@ -620,7 +620,7 @@ class QSNNBrain(ClassicalBrain):
         self.seed = ensure_seed(config.seed)
         self.rng = get_rng(self.seed)
         set_global_seed(self.seed)
-        logger.info(f"QSNNBrain using seed: {self.seed}")
+        logger.info(f"QSNNReinforceBrain using seed: {self.seed}")
 
         # Store sensory modules for feature extraction
         self.sensory_modules = config.sensory_modules
@@ -689,7 +689,8 @@ class QSNNBrain(ClassicalBrain):
         self._init_episode_state()
 
         logger.info(
-            f"QSNNBrain initialized: {self.num_sensory}->{self.num_hidden}->{self.num_motor} "
+            f"QSNNReinforceBrain initialized: "
+            f"{self.num_sensory}->{self.num_hidden}->{self.num_motor} "
             f"neurons, membrane_tau={self.membrane_tau}, threshold={self.threshold}, "
             f"use_local_learning={self.use_local_learning}, "
             f"num_integration_steps={self.num_integration_steps}",
@@ -2320,7 +2321,7 @@ class QSNNBrain(ClassicalBrain):
             self._reset_episode()
 
     def update_memory(self, reward: float | None = None) -> None:
-        """Update internal memory (no-op for QSNNBrain)."""
+        """Update internal memory (no-op for QSNNReinforceBrain)."""
 
     def prepare_episode(self) -> None:
         """Prepare for a new episode."""
@@ -2352,19 +2353,19 @@ class QSNNBrain(ClassicalBrain):
         # Reset step counter
         self._step_count = 0
 
-    def copy(self) -> QSNNBrain:
-        """Create an independent copy of the QSNNBrain.
+    def copy(self) -> QSNNReinforceBrain:
+        """Create an independent copy of the QSNNReinforceBrain.
 
         Returns
         -------
-        QSNNBrain
+        QSNNReinforceBrain
             Independent copy of this brain.
         """
-        config_copy = QSNNBrainConfig(
+        config_copy = QSNNReinforceBrainConfig(
             **{**self.config.model_dump(), "seed": self.seed},
         )
 
-        new_brain = QSNNBrain(
+        new_brain = QSNNReinforceBrain(
             config=config_copy,
             num_actions=self.num_actions,
             device=DeviceType(self.device.type),
