@@ -64,6 +64,7 @@ Config: Same as foraging R12o (6→8→4, 92 params) with predator penalties add
 | **Average** | **14.5%** | **2.93** | **+0.057** | **46.1%** | **39.3%** | **91.1%** | **1/4** |
 
 Key observations:
+
 - Extreme seed variance (0–44%). Session 101904 post-convergence: **72.1% success** (outperforms SpikingReinforce's 62.8% post-convergence)
 - Per-encounter evasion consistently strong (89–94%) from nociception module, but cumulative risk (0.91^7 ≈ 50%) caps episode success
 - Convergence 2.5x slower than foraging (ep 140 vs ep 45–63)
@@ -86,6 +87,7 @@ Changes: num_sensory 6→4, num_hidden 8→10, entropy_coef 0.02→0.05, penalty
 **Root cause of regression**: `penalty_predator_proximity=0.3` overwhelmed food reward signal. With detection_radius=8 on 20x20 grid, ~50-60% of cells trigger the -0.3/step penalty, accumulating ~-75/episode vs +20 max food reward. 3/4 sessions learned negative chemotaxis ("avoid everything"). The entropy_coef increase (0.02→0.05) was the one positive change — prevented permanent entropy collapse.
 
 **Pre-P1 investigation also identified:**
+
 1. Sensory neuron duplication bias: num_sensory=6 with 4 features gives food 4/6 neurons, predator 2/6
 2. Episode-end-only REINFORCE dilutes death signal (gamma=0.99 over 500 steps → death at step 200 reaches step 1 as -0.67, indistinguishable from noise after normalization)
 

@@ -79,7 +79,7 @@
 ## 9. Documentation & Verification
 
 - [x] 9.1 Update `docs/experiments/logbooks/008-quantum-brain-evaluation.md` with QSNN foraging results
-- [x] 9.2 Create `docs/experiments/logbooks/008-appendix-qsnn-optimization.md` with optimization history
+- [x] 9.2 Create `docs/experiments/logbooks/008-appendix-qsnn-foraging-optimization.md` with optimization history
 - [x] 9.3 Run smoke test with foraging config
 - [x] 9.4 Run all 100 unit tests passing
 - [x] 9.5 Benchmark: 73.9% success on foraging (4x200 episodes), matches SpikingReinforceBrain (73.3%)

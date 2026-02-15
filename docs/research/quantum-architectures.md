@@ -2,25 +2,33 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
+**Last Updated**: 2026-02-14
 
 ______________________________________________________________________
 
 ## Table of Contents
 
 01. [Executive Summary](#executive-summary)
-02. [QSNN Brain Specification](#qsnn-brain-specification)
-03. [QRC Brain Specification](#qrc-brain-specification)
-04. [HybridQuantum Brain Architecture](#hybridquantum-brain-architecture)
-05. [Data Re-Uploading Enhancement](#data-re-uploading-enhancement)
-06. [Training Curriculum](#c6-training-curriculum)
-07. [Optimizer Variants](#optimizer-variants)
-08. [Barren Plateau Mitigation](#barren-plateau-mitigation)
-09. [Benchmarking Plan](#benchmarking-plan)
-10. [Research References](#research-references)
+02. [Current Results & Lessons Learned](#current-results--lessons-learned)
+03. [QSNN Brain Specification](#qsnn-brain-specification)
+04. [QRC Brain Specification](#qrc-brain-specification)
+05. [QSNN-PPO Hybrid (Recommended Next Step)](#qsnn-ppo-hybrid-recommended-next-step)
+06. [PPO-Q Style PQC Actor](#ppo-q-style-pqc-actor)
+07. [HybridQuantum Brain Architecture](#hybridquantum-brain-architecture)
+08. [Data Re-Uploading Enhancement](#data-re-uploading-enhancement)
+09. [Optimizer Variants](#optimizer-variants)
+10. [Barren Plateau Mitigation](#barren-plateau-mitigation)
+11. [External Research Survey (2024-2026)](#external-research-survey-2024-2026)
+12. [Benchmarking Plan](#benchmarking-plan)
+13. [Research References](#research-references)
 
 ______________________________________________________________________
 
 ## Executive Summary
+
+### Goal
+
+Find a quantum or hybrid quantum architecture that can match or surpass classical architectures for multi-objective learning in the nematode simulation: foraging, predator evasion, thermotaxis navigation, and future advanced environments. The architecture must support **gradient-based online learning** (not just evolutionary/offline optimization).
 
 ### Why New Architectures?
 
@@ -28,20 +36,128 @@ The current QVarCircuitBrain achieves 88% success with CMA-ES evolutionary optim
 
 - Parameter-shift gradients showing barren-plateau-like behavior
 - High sensitivity to initial parameters
-- Gradient-based learning only achieving 22.5% success
+- Gradient-based learning only achieving ~40% success
+- Only evaluated up to random predators (not pursuit predators)
+- CMA-ES does not support online/live learning
 
-### Proposed Solution: Hierarchical Quantum Nervous System
+### Current Landscape
 
 ```text
-Sensors → QSNN Actor (fast reflexes) → Action logits
-                    ↑
-          VQC/QRC Cortex (slow planning, every N steps)
-                    ↓
-             Options / Gating / Priors
+GRADIENT-BASED ONLINE LEARNING EFFECTIVENESS
+═══════════════════════════════════════════════════════════════════════════
+
+Architecture                      Foraging   Pursuit Pred   Training Method         Viable?
+──────────────────────────────────────────────────────────────────────────────────────────────
+QRC                               0%         0%             REINFORCE (readout)     NO
+QSNN (Hebbian)                    0%         N/A            3-factor local          NO
+QVarCircuit (parameter-shift)     ~40%       Not tested     Parameter-shift SGD     MARGINAL
+──────────────────────────────────────────────────────────────────────────────────────────────
+QSNN (Surrogate gradient)         73.9%      0% (60 sess)   Quantum fwd + surr bwd  PARTIAL
+QVarCircuit (CMA-ES)              99.8%      76.1%*         Evolutionary            NOT ONLINE
+──────────────────────────────────────────────────────────────────────────────────────────────
+SpikingReinforceBrain             73.3%†     ~61%†          Surrogate grad (class)  UNRELIABLE
+MLPReinforceBrain                 95.1%      73.4%          REINFORCE (classical)   YES
+MLPPPOBrain                       96.7%      83.3%          PPO (classical)         YES (SOTA)
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+* QVarCircuit predator result is on random predators only, with CMA-ES (not gradient-based)
+† SpikingReinforce numbers from best session only; ~90% of sessions fail catastrophically
 ```
 
-**QSNN = spinal cord** (predator evasion, thermotaxis following, collision response)
-**VQC/QRC = cortex** (high-level options, strategic gating signals)
+### Key Finding: QSNN's Surrogate Gradient Approach
+
+QSNN achieves 73.9% on foraging with 92 parameters and **100% session reliability** (4/4 sessions converge) — matching SpikingReinforce's 73.3% with 131K params at only ~10% reliability. The surrogate gradient approach (quantum forward pass, classical sigmoid backward) sidesteps barren plateaus while maintaining dense gradient signals. This is QSNN's core proven strength.
+
+However, QSNN fails completely on pursuit predators (0% across 60 sessions) due to:
+
+1. No critic/value function (high REINFORCE variance)
+2. Insufficient capacity for dual-objective learning (92-212 params)
+3. No temporal credit assignment for evasion sequences
+4. Unbounded weight growth without regularization
+
+### Proposed Architecture Directions (Ranked)
+
+```text
+Priority 1: QSNN-PPO Hybrid
+  Keep QSNN actor (proven surrogate gradients), add classical critic + PPO algorithm.
+  Smallest delta from working code. Directly addresses root causes of predator failure.
+
+Priority 2: PPO-Q Style PQC Actor
+  Replace actor with parameterized quantum circuit (PQC) wrapped in classical
+  pre/post-processing. Clean architecture from recent literature.
+
+Priority 3: Hierarchical Hybrid
+  QSNN reflex layer + classical cortex for strategic modulation.
+  Biologically inspired but highest implementation complexity.
+```
+
+______________________________________________________________________
+
+## Current Results & Lessons Learned
+
+### Architecture Evaluation Summary
+
+#### QVarCircuit (Modular Variational Quantum Circuit)
+
+- **Training**: Parameter-shift rule gradients with momentum SGD; also supports CMA-ES
+- **Foraging**: 99.8% (CMA-ES), ~40% (gradient-based)
+- **Predators**: 76.1% on random predators (CMA-ES only), not tested on pursuit predators
+- **Verdict**: Strong with evolutionary optimization but gradient-based learning is limited by barren-plateau-like behavior. Parameter-shift rule requires 2N circuit evaluations per gradient step, which is computationally expensive and produces weak gradients.
+
+#### QSNN (Quantum Spiking Neural Network)
+
+- **Training**: Surrogate gradient REINFORCE (quantum forward, classical backward)
+- **Foraging**: 73.9% success, **100% session reliability** (4/4), 92 params
+- **Predators (random)**: 22.3% avg, best session 48.3% post-convergence
+- **Predators (pursuit)**: 0% across 60 sessions (24 on pursuit specifically)
+- **Strengths**: Avoids barren plateaus via surrogate gradients; 1,400x parameter efficiency vs classical spiking; provably reliable session convergence on single-objective tasks
+- **Weaknesses**: No critic (high REINFORCE variance); 92-212 params insufficient for multi-objective; per-encounter evasion rate never improved through training; unbounded weight growth
+
+**Key technical findings from 13 rounds of QSNN predator experiments:**
+
+1. **Hebbian local learning failed** (0% success) — learning signal magnitude ~0.001 per update, insufficient for RL tasks
+2. **Surrogate gradients work** — sigmoid surrogate at RY transition point (pi/2) provides ~1,000x stronger gradients than Hebbian, enabling 73.9% foraging
+3. **Fan-in-aware tanh scaling essential** — `tanh(w*x / sqrt(fan_in))` prevents gradient death when hidden layer width increases. Without it, gradients die within 10-20 episodes
+4. **Multi-timestep integration critical** — averaging 10 quantum measurements per decision reduces shot noise 10x (5 timesteps: 52.6% → 10 timesteps: 73.9% on foraging)
+5. **Adaptive entropy regulation** — two-sided system (floor boost + ceiling suppress) prevents both entropy collapse and entropy lock at maximum
+6. **Weight growth is unbounded** — W_sh and W_hm norms grow 3-6x over 200 episodes with no plateau, progressively re-saturating tanh despite fan-in scaling
+7. **Entropy ceiling suppresses early exploration** — `entropy_ceiling_fraction=0.95` zeroes entropy_coef in the first ~30 episodes, enabling premature direction-lock
+
+#### QRC (Quantum Reservoir Computing)
+
+- **Training**: REINFORCE on classical readout only (fixed quantum reservoir)
+- **Foraging**: 0% across 1,600+ runs
+- **Root cause**: Non-discriminative representations — fixed random reservoir angles produce similar measurement distributions for different sensory inputs. The readout network learns the WRONG behavior (negative chemotaxis = away from food).
+- **Verdict**: Not viable for spatial navigation tasks. May have potential for time-series forecasting where temporal structure provides richer signal.
+
+#### Classical Baselines — Why They Succeed
+
+**MLP PPO** (83.3% on pursuit predators, ~17K params):
+
+- Actor-critic with GAE provides dense per-step advantage estimates
+- PPO clipping prevents catastrophic policy updates
+- 20 epochs × 2 minibatches = 40 gradient passes per 512-step buffer
+- Orthogonal weight initialization for stable learning
+- Classical gradients do not suffer from barren plateaus
+
+**SpikingReinforce** (61% best session, 131K params):
+
+- Temporal dynamics via 100 LIF timesteps per decision
+- Intra-episode updates every 20 steps (denser credit assignment than QSNN)
+- High variance: ~90% of sessions fail catastrophically (vs QSNN's 0% failure on foraging)
+
+### The Fundamental Gaps
+
+To match classical baselines on multi-objective predator tasks, a quantum architecture needs:
+
+| Requirement | MLP PPO (classical) | QSNN (current) | Gap |
+|---|---|---|---|
+| **Parameters** | ~17K | 212 | 80x |
+| **Gradient passes per buffer** | 40 | 2 | 20x |
+| **Value function** | Classical critic with GAE | None (REINFORCE only) | Missing |
+| **Temporal credit assignment** | Per-step via TD(λ) | Per-window (uniform) | Missing |
+| **Policy stability** | PPO clipping (ε=0.2) | Partial (advantage_clip) | Incomplete |
+| **Weight regularization** | Implicit (optimizer) | Per-element clip only | Weak |
 
 ______________________________________________________________________
 
@@ -51,7 +167,9 @@ ______________________________________________________________________
 
 Quantum Spiking Neural Networks combine quantum computing with neuromorphic principles for reflex-like sensorimotor control.
 
-**Key Advantage**: Local learning rules avoid global backpropagation, potentially circumventing barren plateaus.
+**Key Advantage**: Surrogate gradient learning (quantum forward pass, classical backward pass) avoids barren plateaus while maintaining dense gradient signals. Experimentally verified: 73.9% foraging success with 92 parameters and 100% session reliability.
+
+**Key Limitation**: The architecture lacks a value function, making it unsuitable for high-variance multi-objective tasks when trained with vanilla REINFORCE.
 
 ### A.2 Architecture
 
@@ -72,6 +190,24 @@ Where:
 - θ_leak: leak rate parameter (1 - decay_rate)
 - input: weighted sum of incoming spikes
 ```
+
+#### Actual Implementation (as built)
+
+The implemented QSNN uses a 3-layer feedforward spiking architecture with fan-in-aware scaling:
+
+```text
+Sensory (8 QLIF) → Hidden (16 QLIF) → Motor (4 QLIF)
+  W_sh: 8×16          W_hm: 16×4
+  (128 params)        (64 params)
+  θ_h: 16 params      θ_m: 4 params
+  Total: 212 params
+
+ry_angle = θ + tanh(w·x / sqrt(fan_in)) × π    # Fan-in scaling prevents gradient death
+spike_prob = P(measure |1⟩)                      # Quantum measurement
+surrogate_grad = sigmoid(α × (ry_angle - π/2))  # Classical backward pass
+```
+
+Each decision requires 10 integration steps (multi-timestep averaging), each running the quantum circuit for all neurons. With 1,024 shots per circuit, this provides 10,240 effective samples per decision for noise reduction.
 
 #### Network Structure
 
@@ -201,7 +337,9 @@ def firing_to_action(self, motor_probs: np.ndarray) -> np.ndarray:
 
 ### A.7 Learning Rules
 
-#### Option A: Local Learning (Preferred for avoiding barren plateaus)
+#### Option A: Local Learning (tested, failed)
+
+Three-factor Hebbian learning was tested extensively (17 rounds) and produced 0% success. The learning signal magnitude (~0.001 per update) is insufficient for RL tasks. This approach is not recommended.
 
 ```python
 def local_learning_update(self, pre_spike, post_spike, reward):
@@ -216,15 +354,31 @@ def local_learning_update(self, pre_spike, post_spike, reward):
     self.weights += delta_w
 ```
 
-#### Option B: Surrogate Gradient (for comparison)
+#### Option B: Surrogate Gradient (proven, recommended)
 
-Same as SpikingReinforceBrain - use smooth surrogate for spike derivative:
+The surrogate gradient approach is the proven winner. The quantum circuit runs the forward pass, but the backward pass uses a classical sigmoid surrogate centered at the RY quantum transition point (pi/2):
 
 ```python
-def surrogate_gradient(membrane_potential, threshold):
-    """Smooth approximation of spike gradient."""
-    return 1.0 / (1.0 + np.abs(membrane_potential - threshold) * 10) ** 2
+class QLIFSurrogateSpike(torch.autograd.Function):
+    """Custom autograd for quantum-classical hybrid gradient."""
+
+    @staticmethod
+    def forward(ctx, ry_angle, quantum_spike_prob, alpha):
+        ctx.save_for_backward(ry_angle)
+        ctx.alpha = alpha
+        return quantum_spike_prob  # Actual quantum measurement
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        ry_angle, = ctx.saved_tensors
+        alpha = ctx.alpha
+        # Sigmoid surrogate centered at pi/2 (quantum transition point)
+        sig = torch.sigmoid(alpha * (ry_angle - math.pi / 2))
+        surrogate_grad = alpha * sig * (1 - sig)
+        return grad_output * surrogate_grad, None, None
 ```
+
+This provides ~1,000x stronger gradient signal than Hebbian learning while avoiding the barren plateau issues of parameter-shift gradients.
 
 ______________________________________________________________________
 
@@ -234,7 +388,7 @@ ______________________________________________________________________
 
 Quantum Reservoir Computing uses a fixed (random) quantum reservoir with only a classical readout layer trained. This **inherently avoids barren plateaus** since reservoir parameters are never optimized.
 
-**Best for**: Fast sensorimotor reflexes, pattern recognition, temporal dynamics
+**Experimental Result**: QRC was tested across 1,600+ runs on foraging and achieved 0% success. The fixed random reservoir produces non-discriminative representations — different sensory inputs yield similar measurement distributions. The readout network consistently learned the wrong behavior (negative chemotaxis = moving away from food). **Not recommended for spatial navigation tasks.**
 
 ### B.2 Architecture
 
@@ -354,15 +508,215 @@ def train_step(self, brain_params, action, reward):
     self.readout_optimizer.step()
 ```
 
+### B.8 Why QRC Failed — Lessons Learned
+
+Across 17 experimental sessions, QRC consistently failed due to:
+
+1. **Non-discriminative representations**: Reservoir output entropy stayed at ~2.4/2.77 bits maximum — the reservoir does not produce meaningfully different outputs for different inputs
+2. **Wrong behavior learned**: Readout network entropy dropped to 1.36 (indicating learning DID occur), but the policy learned negative chemotaxis (moving AWAY from food)
+3. **Weak gradients**: Gradient norms of 0.02-0.14 — too small for effective REINFORCE learning
+4. **Root cause**: Random reservoir angles have no task-relevant structure. The reservoir must be either (a) trained (defeating the barren-plateau-avoidance purpose) or (b) structurally designed for the task
+
+**Potential revival path**: Structured reservoir (angles derived from task structure, not random), or use as temporal feature extractor in a hybrid architecture where spatial features come from a different source.
+
+______________________________________________________________________
+
+## QSNN-PPO Hybrid (Recommended Next Step)
+
+### Overview
+
+Keep the QSNN actor (proven surrogate gradients, barren-plateau-free) and add the components that make classical PPO effective: a classical critic for value estimation and the PPO training algorithm for stable multi-epoch updates.
+
+This directly addresses the three diagnosed root causes of QSNN's predator failure:
+
+1. **No critic** → Add classical MLP critic with GAE advantages
+2. **High REINFORCE variance** → PPO clipped surrogate objective
+3. **Insufficient gradient passes** → Multi-epoch updates (infrastructure already exists)
+
+### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                       QSNN-PPO Hybrid                       │
+│                                                             │
+│  Sensory Input (food_chemotaxis + nociception = 8 features) │
+│       │                                                     │
+│       ├────────────────────────────┐                        │
+│       ▼                            ▼                        │
+│  ┌────────────────────────┐  ┌───────────────────────┐      │
+│  │  QSNN Actor (existing) │  │  Classical Critic     │      │
+│  │  8 sensory → 16 hidden │  │  (NEW)                │      │
+│  │  → 4 motor QLIF        │  │                       │      │
+│  │                        │  │  Input: raw sensory   │      │
+│  │  Surrogate gradient    │  │  (8-dim) + QSNN       │      │
+│  │  REINFORCE backbone    │  │  hidden spike rates   │      │
+│  │                        │  │  (16-dim) = 24-dim    │      │
+│  │  ~212 quantum params   │  │                       │      │
+│  └──────────┬─────────────┘  │  Linear(24, 64) +     │      │
+│             │                │  ReLU → Linear(64,    │      │
+│             ▼                │  64) + ReLU →         │      │
+│      Action selection        │  Linear(64, 1) = V(s) │      │
+│      (Categorical)           │                       │      │
+│                              │  ~5K classical params │      │
+│                              └──────────┬────────────┘      │
+│                                         │                   │
+│                                         ▼                   │
+│                                    GAE Advantages           │
+│                                         │                   │
+│  Training Loop:                         │                   │
+│  ┌──────────────────────────────────────┘                   │
+│  │                                                          │
+│  │  1. Collect rollout buffer (512 steps)                   │
+│  │  2. Compute GAE advantages using critic V(s)             │
+│  │  3. For each epoch (4 epochs):                           │
+│  │     a. Recompute QSNN forward (quantum on epoch 0,       │
+│  │        cached spike probs on epochs 1+)                  │
+│  │     b. PPO clipped surrogate loss on actor               │
+│  │     c. MSE/Huber loss on critic                          │
+│  │     d. Step both optimizers                              │
+│  │  4. Clear buffer, repeat                                 │
+│  │                                                          │
+│  │  Total: ~5.2K params (212 quantum + 5K classical)        │
+│  │  Gradient passes: 4 per buffer (vs QSNN's 1)             │
+│  └──────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why This Could Work
+
+1. **Proven QSNN foundation**: Surrogate gradients avoid barren plateaus. 100% session reliability on foraging. The quantum forward / classical backward approach is the architecture's core strength.
+
+2. **Classical critic fills the gap**: The critic provides per-step V(s) estimates for GAE advantages — the single most important missing component for multi-objective learning. MLP PPO's success (83.3% on pursuit predators) is primarily due to its critic, not its actor complexity.
+
+3. **Hidden spike rates as critic input**: Feeding the critic the QSNN's 16-dim hidden spike rates (after quantum measurement) gives it access to the QSNN's learned internal representation. This is a 24-dim input (16 hidden + 8 raw sensory) — 6x richer than the previous failed critic attempt which only saw 4 raw features.
+
+4. **Multi-epoch infrastructure exists**: QSNN already supports `num_reinforce_epochs` with quantum output caching. Adapting this for PPO epochs is straightforward.
+
+5. **PPO clipping partially exists**: The `clip_epsilon` config field and advantage clipping are already in the QSNN codebase.
+
+### Why Previous Critic Attempts Failed
+
+The QSNN-AC approach was tried and failed (0% across 8 sessions). The failures had specific, fixable causes:
+
+- **Bug: gradient death from tanh saturation** — fan-in scaling had not been implemented yet, so weight gradients died within 10-20 episodes. The critic was training against a brain that couldn't learn.
+- **Bug: weight clamping inside epoch loop** — weights were clamped 3x per window instead of once, destroying gradient information.
+- **Bug: reward normalization active during AC mode** — made critic targets non-stationary.
+- **Design flaw: critic only saw 4-dim raw input** — the critic had no access to the QSNN's internal state, making it impossible to track the value landscape.
+
+All of these bugs have since been fixed. A properly designed QSNN-PPO with hidden spike rate inputs to the critic is an untested configuration.
+
+### Key Design Decisions
+
+1. **Critic input**: 24-dim (8 raw sensory + 16 hidden spike rates). The hidden spike rates are detached from the autograd graph (no gradient flow from critic through quantum circuit).
+
+2. **Rollout buffer**: 512 steps (matching MLP PPO's predator config). Stores states, actions, log_probs, rewards, values, hidden_spike_rates.
+
+3. **GAE computation**: Standard GAE with λ=0.95, γ=0.99. Advantages normalized per-buffer.
+
+4. **Actor loss**: PPO clipped surrogate using QSNN's existing surrogate gradient backward pass. Ratio = exp(new_log_prob - old_log_prob), clipped to [1-ε, 1+ε].
+
+5. **Critic loss**: Huber loss (robust to extreme death penalties of -10.0).
+
+6. **Weight regularization**: Add L2 weight decay (λ=0.001) to address the unbounded weight growth problem observed in all QSNN predator experiments.
+
+### Expected Impact
+
+| Metric | QSNN (current) | QSNN-PPO (expected) | MLP PPO (target) |
+|---|---|---|---|
+| Pursuit predator success | 0% | 20-50% | 83.3% |
+| Session reliability | 0/4 (predators) | 2-3/4 | ~95% |
+| Gradient passes per buffer | 2 | 8 (4 epochs × 2) | 40 |
+| Temporal credit assignment | Per-window REINFORCE | Per-step GAE | Per-step GAE |
+| Parameters | 212 | ~5,200 | ~17,000 |
+
+______________________________________________________________________
+
+## PPO-Q Style PQC Actor
+
+### Overview
+
+Based on the PPO-Q paper (arXiv:2501.07085, Jan 2025), which demonstrated competitive results on 8 RL environments including BipedalWalker using only 2-4 qubits. This replaces the QSNN actor entirely with a parameterized quantum circuit (PQC) wrapped in classical pre/post-processing networks.
+
+### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    PPO-Q Style Actor                        │
+│                                                             │
+│  Sensory Input (8 features)                                 │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌──────────────────────────────┐                           │
+│  │ Classical Pre-Encoder         │                          │
+│  │ Linear(8 → 6), Tanh rescale  │  ~54 params               │
+│  └──────────┬───────────────────┘                           │
+│             ▼                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  PQC Actor (6 qubits, 3 data-re-uploading layers)    │   │
+│  │                                                      │   │
+│  │  For each re-upload layer:                           │   │
+│  │    RY(data_i) on each qubit    (data encoding)       │   │
+│  │    RX(θ), RY(θ), RZ(θ) on each qubit (trainable)     │   │
+│  │    CZ entanglement (nearest-neighbor)                │   │
+│  │                                                      │   │
+│  │  Measure all 6 qubits → 6 expectation values         │   │
+│  │                                                      │   │
+│  │  3 layers × 6 qubits × 3 gates = 54 quantum params   │   │
+│  │  + 6 final measurement scaling params                │   │
+│  │  Total: ~60 quantum params                           │   │
+│  └──────────┬───────────────────────────────────────────┘   │
+│             ▼                                               │
+│  ┌──────────────────────────────┐                           │
+│  │ Classical Post-Processor     │                           │
+│  │ Linear(6 → 4), action logits │  ~28 params               │
+│  └──────────┬───────────────────┘                           │
+│             ▼                                               │
+│      Softmax → Action (Categorical)                         │
+│                                                             │
+│  Classical Critic: same as QSNN-PPO (MLP, ~5K params)       │
+│  Training: Standard PPO with parameter-shift or adjoint     │
+│  Total: ~142 quantum + ~5K classical ≈ 5.1K params          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why This Could Work
+
+- **Data re-uploading** keeps the circuit shallow (3 layers) while providing universal approximation capability. Coelho et al. (2024) showed re-uploading improves both performance and trainability of VQC-based RL agents.
+- **6 qubits with nearest-neighbor CZ** is shallow enough to likely avoid barren plateaus (the safe zone in the literature is O(log n) depth).
+- **Classical pre/post-processing** handles dimensionality adaptation efficiently. The quantum circuit focuses on feature transformation, not input/output formatting.
+- **PPO-Q demonstrated real results** on BipedalWalker, which is more complex than CartPole-level benchmarks.
+
+### Key Risks
+
+1. **Barren plateaus remain possible** — even with shallow circuits, the parameter-shift rule produces weak gradients. The Cerezo et al. (2025) Nature Comms result suggests shallow circuits avoiding BPs may be classically simulable.
+2. **No existing codebase** — this would be built from scratch, unlike QSNN-PPO which builds on existing infrastructure.
+3. **No surrogate gradient shortcut** — unlike QSNN, this architecture must use parameter-shift or adjoint differentiation through the quantum circuit, which is computationally expensive (2N circuit evaluations per gradient step for N parameters).
+
+### Comparison with QSNN-PPO
+
+| Aspect | QSNN-PPO | PPO-Q Style |
+|---|---|---|
+| Quantum core | QLIF spiking neurons | PQC with re-uploading |
+| Gradient method | Surrogate (cheap) | Parameter-shift (expensive) |
+| Barren plateau risk | None (proven) | Low but possible |
+| Existing code | ~80% exists | From scratch |
+| Biological analogy | Spiking neural network | Variational circuit |
+| Temporal dynamics | Native (spiking) | None (feedforward) |
+
 ______________________________________________________________________
 
 ## HybridQuantum Brain Architecture
 
 ### C.1 Overview
 
-Combines QSNN (fast reflexes) with VQC/QRC (slow planning) in a hierarchical architecture mimicking biological spinal cord / cortex separation.
+Combines QSNN (fast reflexes) with a planning module (slow strategic decisions) in a hierarchical architecture mimicking biological spinal cord / cortex separation.
 
-### C.2 Architecture Diagram
+Two variations are considered:
+
+- **Variation A (Original)**: Fully quantum — QSNN reflex + VQC/QRC cortex
+- **Variation B (Pragmatic)**: Quantum reflex + classical cortex — leverages QSNN's proven strengths while using classical MLP for the strategic layer where gradient-based learning is most critical
+
+### C.2a Architecture Diagram (Variation A — Fully Quantum)
 
 ```text
                           ┌─────────────────────────────────────┐
@@ -388,19 +742,62 @@ Combines QSNN (fast reflexes) with VQC/QRC (slow planning) in a hierarchical arc
        └─────────────┘            └─────────────────┘
 ```
 
+### C.2b Architecture Diagram (Variation B — Quantum Reflex + Classical Cortex)
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│           Hierarchical Hybrid Brain (Variation B)           │
+│                                                             │
+│  Sensory Input                                              │
+│       │                                                     │
+│       ├──────────────────────────┐                          │
+│       ▼                          ▼                          │
+│  ┌────────────────────┐   ┌──────────────────────────┐      │
+│  │ QSNN Reflex Layer  │   │ Classical Cortex (MLP)   │      │
+│  │ (runs every step)  │   │ (runs every N steps)     │      │
+│  │                    │   │                          │      │
+│  │ 8→16→4 QLIF        │   │ MLP: 8→64→64             │      │
+│  │ Surrogate gradient │   │ Outputs:                 │      │
+│  │ 10 integration     │   │ - 4 action biases        │      │
+│  │ steps              │   │ - mode signal            │      │
+│  │                    │   │   (forage/evade/explore) │      │
+│  │ ~212 quantum params│   │ ~5K classical params     │      │
+│  └──────────┬─────────┘   └───────────┬──────────────┘      │
+│             │                         │                     │
+│             ▼                         ▼                     │
+│  ┌───────────────────────────────────────────────┐          │
+│  │  Fusion: QSNN_logits + cortex_bias            │          │
+│  │  mode=forage: boost food-directed actions     │          │
+│  │  mode=evade: boost threat-away actions        │          │
+│  │  mode=explore: boost entropy                  │          │
+│  └────────────────────┬──────────────────────────┘          │
+│                       ▼                                     │
+│                Final action selection                       │
+│                                                             │
+│  Training Curriculum:                                       │
+│  Phase 1: Train QSNN on foraging only (proven: 73.9%)       │
+│  Phase 2: Freeze QSNN, train cortex with PPO                │
+│  Phase 3: Fine-tune jointly (low LR)                        │
+│                                                             │
+│  Total: ~5.2K params (212 quantum + 5K classical)           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Variation B rationale**: The original design used a VQC/QRC cortex, but experimental results show that gradient-based learning through variational quantum circuits is limited by barren plateaus. The cortex needs to learn strategic switching between objectives — this is exactly where classical MLPs excel. Using a classical cortex where it matters (strategic decisions) and a quantum reflex layer where QSNN is proven (fast sensorimotor responses) plays to each paradigm's strengths.
+
 ### C.3 Configuration
 
 ```python
 class HybridQuantumBrainConfig(BrainConfig):
     name: Literal["hybrid_quantum"] = "hybrid_quantum"
 
-    # Reflex layer (QSNN or QRC)
+    # Reflex layer (QSNN)
     reflex_type: Literal["qsnn", "qrc"] = "qsnn"
     reflex_config: QSNNBrainConfig | QRCBrainConfig
 
-    # Cortex layer (VQC or QRC)
-    cortex_type: Literal["vqc", "qrc"] = "vqc"
-    cortex_config: QVarCircuitBrainConfig | QRCBrainConfig
+    # Cortex layer (VQC, QRC, or classical MLP)
+    cortex_type: Literal["vqc", "qrc", "mlp"] = "mlp"
+    cortex_config: QVarCircuitBrainConfig | QRCBrainConfig | dict
 
     # Integration
     cortex_update_frequency: int = 10        # Run cortex every N steps
@@ -483,22 +880,25 @@ Three-stage training pipeline:
 ```text
 Stage 1: Train QSNN reflexes alone
   - Dense reward shaping
-  - PPO / REINFORCE / Local learning
-  - Tasks: predator evasion, collision response, thermotaxis following
-  - Exit criteria: >80% survival rate on predator tasks
+  - Surrogate gradient REINFORCE (proven approach)
+  - Tasks: foraging (73.9% success established)
+  - Exit criteria: >70% success rate on foraging task
 
-Stage 2: Freeze QSNN, train cortex planner
+Stage 2: Freeze QSNN, train cortex
   - QSNN weights frozen
-  - Train cortex with CMA-ES (proven effective)
-  - Tasks: foraging with strategic tradeoffs
-  - Exit criteria: >70% on multi-objective benchmarks
+  - Train cortex with PPO (classical gradient-based, not CMA-ES)
+  - Tasks: multi-objective (foraging + predator evasion)
+  - Cortex learns WHEN to prioritize food vs evasion
+  - Exit criteria: >40% on pursuit predator multi-objective task
 
-Stage 3: Optional fine-tuning
+Stage 3: Optional joint fine-tuning
   - Unfreeze both modules
-  - Low learning rate joint training
-  - QNG or policy gradients
+  - Low learning rate (0.1x Stage 2)
+  - PPO with shared advantages
   - Exit criteria: improvement over Stage 2
 ```
+
+**Note**: The original proposal used CMA-ES for Stage 2. Given the project's focus on gradient-based online learning, PPO is now recommended instead. CMA-ES does not support live/online learning.
 
 ______________________________________________________________________
 
@@ -507,6 +907,8 @@ ______________________________________________________________________
 ### D.1 Concept
 
 Data re-uploading encodes classical inputs multiple times into the quantum circuit, interleaved with trainable gates. This dramatically increases expressivity without adding qubits.
+
+Recent empirical evidence (Coelho et al., 2024) shows that data re-uploading improves both **performance** and **trainability** of VQC-based RL agents, and that gradient magnitudes remain substantial throughout training when combined with Deep Q-Learning's moving targets.
 
 ### D.2 Implementation
 
@@ -624,6 +1026,18 @@ ______________________________________________________________________
 
 ## Barren Plateau Mitigation
 
+### F.0 The Trainability-Advantage Dilemma
+
+A fundamental theoretical tension exists between trainability and quantum advantage (Cerezo et al., Nature Communications, 2025):
+
+> Many commonly used models whose loss landscapes avoid barren plateaus can also be classically simulated. This means trainability and quantum advantage may be fundamentally in tension for variational quantum circuits.
+
+**Practical implications for this project:**
+
+- Shallow circuits (O(log n) depth) with local measurements avoid barren plateaus but may not provide genuine quantum advantage over classical networks of equivalent size
+- Deep, expressive circuits that cannot be classically simulated likely hit barren plateaus, preventing gradient-based training
+- **QSNN's surrogate gradient approach may sidestep this dilemma** — the quantum circuit provides the forward dynamics (genuine quantum measurement), while the backward pass is classical (no barren plateau). Whether this constitutes "quantum advantage" depends on whether the quantum measurement distribution provides information that a classical sigmoid cannot
+
 ### F.1 Neural Network-Generated Initialization
 
 Use a classical neural network to generate good initial parameters:
@@ -675,11 +1089,106 @@ def lie_algebraic_initialization(circuit_structure: dict) -> np.ndarray:
     return np.array(params)
 ```
 
+### F.4 Strategies Proven Effective in This Project
+
+Based on QSNN experimental results:
+
+1. **Surrogate gradient bypass**: Use quantum circuits for forward pass only; compute backward pass with classical surrogates. Avoids parameter-shift rule entirely. Gradient magnitude ~1,000x larger than Hebbian, ~100x larger than parameter-shift on equivalent circuits.
+
+2. **Fan-in-aware scaling**: `tanh(w*x / sqrt(fan_in))` keeps tanh in responsive regime regardless of layer width. Without this, gradient death occurs within 10-20 episodes for hidden layers wider than ~10 neurons.
+
+3. **Multi-timestep averaging**: Running 10 quantum integration steps per decision reduces shot noise by ~sqrt(10). Critical for stable learning — 5 timesteps: 52.6% vs 10 timesteps: 73.9% on foraging.
+
+4. **Adaptive entropy regulation**: Two-sided system with floor boost and ceiling suppress prevents both entropy collapse and entropy lock. Required for policy crystallization on harder tasks.
+
+______________________________________________________________________
+
+## External Research Survey (2024-2026)
+
+### State of Quantum RL with Gradient-Based Online Learning
+
+No published work as of February 2026 demonstrates quantum RL with gradient-based online learning matching classical baselines on tasks approaching the complexity of multi-objective predator pursuit in a grid world. The most relevant findings:
+
+### PPO-Q (arXiv:2501.07085, Jan 2025)
+
+Hybrid quantum-classical PPO with pre-encoding NN + PQC + post-processing NN. Used 2-4 qubits, 1-3 variational layers, 32-152 total actor parameters.
+
+- **Results**: "Comparable performance" to classical PPO on 8 environments including BipedalWalker
+- **Tested on real hardware**: Dongling superconducting chip (105 qubits)
+- **Limitation**: All tested environments are single-objective
+- **Relevance**: Architecture template for the PPO-Q Style PQC Actor proposal above
+
+### hDQNN-TD3 (arXiv:2503.09119, Mar 2025)
+
+10-qubit, 10-layer PQC embedded in classical TD3. Uses a classical "tangential DNN" (qtDNN) to locally approximate the PQC for backpropagation, avoiding gradient flow through the quantum circuit entirely.
+
+- **Results**: 6,011 return on Humanoid-v4 (best seed), vs 5,306 classical TD3
+- **Catch**: High seed-to-seed variance; qtDNN requires 2^(N+1) neurons, scaling exponentially with qubit count
+- **Relevance**: Demonstrates that avoiding quantum backpropagation (similar to QSNN's surrogate approach) enables competitive results
+
+### Quantum Advantage Actor-Critic (arXiv:2401.07043, Jan 2024)
+
+Pure quantum actor-critic with VQC for both actor and critic.
+
+- **Results**: Pure quantum A2C **failed completely** on CartPole — could not learn across any runs. Average gradients: approximately -0.000056 (vanishing). Hybrid HA2C (VQC + classical post-processing) succeeded.
+- **Relevance**: Strong evidence that pure quantum actor-critic is not viable. Classical scaffolding is essential.
+
+### VQC-Based RL with Data Re-uploading (Springer, 2024)
+
+Data re-uploading in VQC-based Deep Q-Learning.
+
+- **Results**: Re-uploading improves both performance and trainability. Gradient magnitudes remain substantial due to DQL's moving targets. Increasing qubit count does NOT lead to exponential gradient vanishing.
+- **Relevance**: Strongest evidence that data re-uploading + DQL can maintain gradient health. May not transfer to policy gradient methods.
+
+### Dissecting QRL (arXiv:2511.17112, Nov 2025)
+
+Systematic evaluation of QRL components using SimplyQRL framework.
+
+- **Key findings**:
+  - Data re-uploading helps trainability but effectiveness depends on embedding style
+  - Entanglement can **hurt** — stronger entanglement "can degrade optimization" and cause complete learning failure
+  - Output reuse consistently improves hybrid agents
+  - "Trainability in hybrid QRL arises from a delicate balance of interdependent components"
+
+### Benchmarking QRL (ICML 2025, arXiv:2502.04909)
+
+Most rigorous QRL evaluation to date, tested on gridworld environments.
+
+- **Conclusion**: Previous claims of QRL superiority are "based on insufficient statistical evaluation." "It is still uncertain if QRL can show any advantage over classical RL beyond artificial problem formulations."
+- **Relevance**: Directly relevant — tested on gridworld environments similar to our nematode simulation.
+
+### Barren Plateau Trainability Dilemma (Nature Communications, 2025)
+
+Cerezo et al. establish that many models whose loss landscapes avoid barren plateaus can also be classically simulated.
+
+- **Implication**: There may be a fundamental trade-off between trainability and quantum advantage for variational quantum circuits
+- **Relevance**: Reinforces the value of QSNN's surrogate gradient approach, which sidesteps this dilemma by using quantum measurement for dynamics and classical computation for gradients
+
+### Hybrid QRL in Latent Spaces (Springer, 2025)
+
+Classical autoencoder compresses high-dimensional observations to a low-dimensional latent space tailored for a quantum agent.
+
+- **Relevance**: Addresses the input dimensionality problem — quantum circuits work with few inputs, but multi-objective tasks require rich state representations. A classical encoder could compress grid world state into quantum-friendly representation.
+
 ______________________________________________________________________
 
 ## Benchmarking Plan
 
-### G.1 New Benchmark Categories
+### G.1 Current Benchmark Results
+
+| Architecture | Foraging | Predator (random) | Predator (pursuit) | Training Method |
+|---|---|---|---|---|
+| QVarCircuit (CMA-ES) | 99.8% ± 0.6% | 76.1% ± 2.1% | Not tested | Evolutionary |
+| QVarCircuit (gradient) | ~40% | Not tested | Not tested | Parameter-shift |
+| QSNN (surrogate) | 73.9% | 22.3% avg | 0% (60 sessions) | Surrogate gradient |
+| QRC | 0% | 0% | Not tested | REINFORCE (readout) |
+| MLPReinforce | 95.1% ± 1.9% | 73.4% ± 10.9% | Not tested | REINFORCE |
+| MLPPPOBrain | 96.7% ± 1.3% | 83.3% ± 2.9% | 83.3% ± 2.9% | PPO |
+| SpikingReinforce | 73.3%\* | ~61%\* | Not tested | Surrogate gradient |
+
+\*Best session only; ~90% of sessions fail
+
+### G.2 New Benchmark Categories
 
 Add to existing benchmark system:
 
@@ -711,17 +1220,6 @@ hybrid_quantum_predator_small:
   metrics: [survival_rate, strategic_score, reflex_accuracy]
 ```
 
-### G.2 Comparison Matrix
-
-| Architecture | Foraging | Predator | Thermotaxis | Multi-Objective |
-|--------------|----------|----------|-------------|-----------------|
-| QVarCircuit (CMA-ES) | 0.762 | 0.675 | TBD | TBD |
-| QSNN (local) | TBD | TBD | TBD | TBD |
-| QRC | TBD | TBD | TBD | TBD |
-| HybridQuantum | TBD | TBD | TBD | TBD |
-| SpikingReinforce | 0.733 | 0.556 | TBD | TBD |
-| MLPReinforce | 0.822 | 0.740 | TBD | TBD |
-
 ### G.3 Evaluation Metrics
 
 **Reflex Performance** (QSNN focus):
@@ -747,86 +1245,80 @@ ______________________________________________________________________
 
 ### Primary Papers
 
-1. **QLIF Neurons**
+01. **QLIF Neurons**
 
-   - Brand, D., & Petruccione, F. (2024). "A quantum leaky integrate-and-fire spiking neuron and network." *npj Quantum Information*.
-   - [Paper Link](https://www.nature.com/articles/s41534-024-00921-x)
+    - Brand, D., & Petruccione, F. (2024). "A quantum leaky integrate-and-fire spiking neuron and network." *npj Quantum Information*.
+    - [Paper Link](https://www.nature.com/articles/s41534-024-00921-x)
 
-2. **Stochastic QSNN with Memory**
+02. **Stochastic QSNN with Memory**
 
-   - arXiv:2506.21324 (2025). "Stochastic Quantum Spiking Neural Networks with Quantum Memory and Local Learning."
+    - arXiv:2506.21324 (2025). "Stochastic Quantum Spiking Neural Networks with Quantum Memory and Local Learning."
 
-3. **QRC Fundamentals**
+03. **QRC Fundamentals**
 
-   - arXiv:2602.03522 (2025). "QRC-Lab: An Educational Toolbox for Quantum Reservoir Computing."
-   - [QuEra Tutorials](https://github.com/QuEraComputing/QRC-tutorials/)
+    - arXiv:2602.03522 (2025). "QRC-Lab: An Educational Toolbox for Quantum Reservoir Computing."
+    - [QuEra Tutorials](https://github.com/QuEraComputing/QRC-tutorials/)
 
-4. **Data Re-uploading**
+04. **Data Re-uploading**
 
-   - Pérez-Salinas, A., et al. "Data re-uploading for a universal quantum classifier."
+    - Pérez-Salinas, A., et al. "Data re-uploading for a universal quantum classifier."
+    - Coelho, R., et al. (2024). "VQC-based reinforcement learning with data re-uploading: performance and trainability." *Quantum Machine Intelligence*.
 
-5. **Barren Plateau Mitigation**
+05. **Barren Plateau Mitigation**
 
-   - arXiv:2411.08238v3 (2025). "Neural-network Generated Quantum State Mitigates Barren Plateau."
-   - arXiv:2407.17706 (2024). "Investigating and Mitigating Barren Plateaus in Variational Quantum Circuits: A Survey."
+    - arXiv:2411.08238v3 (2025). "Neural-network Generated Quantum State Mitigates Barren Plateau."
+    - arXiv:2407.17706 (2024). "Investigating and Mitigating Barren Plateaus in Variational Quantum Circuits: A Survey."
+    - Cerezo, M., et al. (2025). "Does provable absence of barren plateaus imply classical simulability?" *Nature Communications*.
+    - Larocca, M., et al. (2024). "A Lie algebraic theory of barren plateaus." *Nature Communications*.
 
-6. **QNG Variants**
+06. **QNG Variants**
 
-   - arXiv:2501.05847 (2025). "Modified conjugate quantum natural gradient."
-   - arXiv:2409.03638 (2024). "Quantum Natural Gradient with Geodesic Corrections."
+    - arXiv:2501.05847 (2025). "Modified conjugate quantum natural gradient."
+    - arXiv:2409.03638 (2024). "Quantum Natural Gradient with Geodesic Corrections."
 
-7. **Hybrid Architectures**
+07. **Hybrid Architectures**
 
-   - arXiv:2408.03884v2 (2024). "Quantum Computing and Neuromorphic Computing for Multi-Agent RL."
+    - arXiv:2408.03884v2 (2024). "Quantum Computing and Neuromorphic Computing for Multi-Agent RL."
+
+08. **Quantum RL with PPO**
+
+    - arXiv:2501.07085 (2025). "PPO-Q: Proximal Policy Optimization with Parametrized Quantum Policies or Values."
+    - [GitHub: BAQIS-Quantum/PPO-Q](https://github.com/BAQIS-Quantum/PPO-Q)
+
+09. **Hybrid Deep Quantum RL**
+
+    - arXiv:2503.09119 (2025). "Training Hybrid Deep Quantum Neural Network for Efficient Reinforcement Learning."
+
+10. **Quantum Actor-Critic**
+
+    - arXiv:2401.07043 (2024). "Quantum Advantage Actor-Critic for Reinforcement Learning."
+
+11. **QRL Benchmarking**
+
+    - arXiv:2502.04909 (2025). "Benchmarking Quantum Reinforcement Learning." Accepted at ICML 2025.
+    - arXiv:2511.17112 (2025). "Dissecting Quantum Reinforcement Learning: A Systematic Evaluation of Key Components."
+
+12. **QRL in Latent Spaces**
+
+    - "Hybrid quantum-classical reinforcement learning in latent observation spaces." *Quantum Machine Intelligence* (2025).
 
 ### Frameworks
 
 - **PennyLane**: [pennylane.ai](https://pennylane.ai) - Differentiable quantum programming
 - **Qiskit Machine Learning**: [qiskit.org/machine-learning](https://qiskit.org/machine-learning)
 - **BrainCog**: [brain-cog.network](https://www.brain-cog.network) - QSSNN tutorials
-
-______________________________________________________________________
-
-## Implementation Timeline (Suggested)
-
-### Phase 2 Integration (Q2-Q3 2026)
-
-**Sprint 1** (2 weeks): QRC Brain
-
-- Implement fixed reservoir circuit
-- Classical readout training
-- Basic benchmarks
-
-**Sprint 2** (2 weeks): QSNN Brain
-
-- QLIF neuron implementation
-- Local learning rules
-- Reflex task benchmarks
-
-**Sprint 3** (2 weeks): Data Re-uploading
-
-- Add to QVarCircuitBrain
-- Compare expressivity vs depth
-- Ablation studies
-
-**Sprint 4** (2 weeks): HybridQuantum Brain
-
-- Integrate QSNN + VQC/QRC
-- Implement fusion strategies
-- Training curriculum
-
-**Sprint 5** (2 weeks): Comprehensive Benchmarking
-
-- All architectures on all tasks
-- Statistical analysis
-- Documentation and comparison paper
+- **SimplyQRL**: Modular benchmarking library for hybrid QRL (2026)
+- **CleanQRL**: Lightweight single-file QRL implementations (2025)
 
 ______________________________________________________________________
 
 ## Open Questions
 
-1. **QSNN vs QRC for reflexes**: Which is faster/more accurate for predator evasion?
-2. **Optimal cortex update frequency**: Every 5, 10, or 20 timesteps?
-3. **Fusion strategy effectiveness**: Option conditioning vs logit gating?
-4. **Hardware deployment**: Which architecture maps best to real QPU?
-5. **Transfer learning**: Can trained cortex transfer to new environments?
+1. **QSNN-PPO viability**: Can adding a classical critic + PPO algorithm to QSNN break through the 0% pursuit predator ceiling? The architecture's proven surrogate gradient approach should still work, but the critic integration is untested with the current (bug-fixed) codebase.
+2. **Surrogate gradient vs parameter-shift**: QSNN's surrogate gradient provides ~1,000x stronger signals than parameter-shift. Is this approach transferable to other quantum circuit architectures, or is it specific to the QLIF neuron structure?
+3. **Weight regularization**: All QSNN predator experiments show unbounded weight growth (3-6x over 200 episodes). Will L2 weight decay solve this, or does the architecture need a fundamentally different regularization approach?
+4. **Trainability-advantage trade-off**: Given Cerezo et al. (2025), does QSNN's surrogate gradient approach constitute genuine quantum advantage, or is the quantum measurement functionally equivalent to a classical sigmoid?
+5. **Optimal cortex update frequency**: For the hierarchical hybrid, every 5, 10, or 20 timesteps?
+6. **Fusion strategy effectiveness**: Option conditioning vs logit gating for hierarchical hybrid?
+7. **Hardware deployment**: Which architecture maps best to real QPU for eventual hardware validation?
+8. **Multi-objective scaling**: Can any quantum architecture handle 3+ simultaneous objectives (forage + evade + thermotaxis + mechanosensation)?
