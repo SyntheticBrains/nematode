@@ -137,6 +137,8 @@ DEFAULT_NUM_REINFORCE_EPOCHS = 1
 DEFAULT_CRITIC_HIDDEN_DIM = 64
 DEFAULT_CRITIC_NUM_LAYERS = 2
 DEFAULT_CRITIC_LR = 0.003
+DEFAULT_CRITIC_EPOCHS = 5
+DEFAULT_CRITIC_GRAD_CLIP = 5.0
 DEFAULT_GAE_LAMBDA = 0.95
 DEFAULT_VALUE_LOSS_COEF = 0.5
 
@@ -409,6 +411,14 @@ class QSNNReinforceBrainConfig(BrainConfig):
     critic_lr: float = Field(
         default=DEFAULT_CRITIC_LR,
         description="Learning rate for the critic optimizer (no cosine decay).",
+    )
+    critic_epochs: int = Field(
+        default=DEFAULT_CRITIC_EPOCHS,
+        description="Number of gradient steps per critic update window.",
+    )
+    critic_grad_clip: float = Field(
+        default=DEFAULT_CRITIC_GRAD_CLIP,
+        description="Max gradient norm for critic (separate from actor's surrogate clip).",
     )
     gae_lambda: float = Field(
         default=DEFAULT_GAE_LAMBDA,
@@ -1433,6 +1443,9 @@ class QSNNReinforceBrain(ClassicalBrain):
     def _update_critic(self, target_returns: torch.Tensor) -> None:
         """Update critic MLP via Huber loss against target returns.
 
+        Performs multiple gradient steps per call (configured by critic_epochs)
+        to allow the critic to converge on each batch of returns.
+
         Parameters
         ----------
         target_returns : torch.Tensor
@@ -1443,28 +1456,31 @@ class QSNNReinforceBrain(ClassicalBrain):
 
         num_steps = len(self.episode_features)
         critic_input = self._build_critic_input_batch(num_steps)
-        predicted = self.critic(critic_input)
         # Huber loss (smooth L1) is robust to extreme target returns from death penalties.
         # MSE amplifies outliers quadratically; Huber is linear for |error| > 1.0,
         # capping gradient magnitude and preventing critic destabilization.
         target = target_returns.detach()
-        value_loss = torch.nn.functional.smooth_l1_loss(predicted, target)
+        grad_clip = self.config.critic_grad_clip
+        value_loss = torch.tensor(0.0)
 
-        self.critic_optimizer.zero_grad()
-        value_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=SURROGATE_GRAD_CLIP)
-        self.critic_optimizer.step()
+        for _ in range(self.config.critic_epochs):
+            predicted = self.critic(critic_input)
+            value_loss = torch.nn.functional.smooth_l1_loss(predicted, target)
+            self.critic_optimizer.zero_grad()
+            value_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=grad_clip)
+            self.critic_optimizer.step()
 
-        # Compute explained variance: 1 - Var(target - pred) / Var(target)
+        # Compute explained variance on UPDATED critic predictions
         with torch.no_grad():
-            pred_detached = predicted.detach()
+            updated_predicted = self.critic(critic_input)
             target_var = target.var()
-            explained_var = (1.0 - (target - pred_detached).var() / (target_var + 1e-8)).item()
+            explained_var = (1.0 - (target - updated_predicted).var() / (target_var + 1e-8)).item()
 
         logger.info(
             f"QSNN critic: value_loss={value_loss.item():.4f}, "
-            f"critic_pred_mean={pred_detached.mean().item():.4f}, "
-            f"critic_pred_std={pred_detached.std().item():.4f}, "
+            f"critic_pred_mean={updated_predicted.mean().item():.4f}, "
+            f"critic_pred_std={updated_predicted.std().item():.4f}, "
             f"target_return_mean={target.mean().item():.4f}, "
             f"explained_variance={explained_var:.4f}",
         )
@@ -1819,7 +1835,7 @@ class QSNNReinforceBrain(ClassicalBrain):
             f"theta_m_norm={torch.norm(self.theta_motor).item():.3f}",
         )
 
-    def run_brain(
+    def run_brain(  # noqa: PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,  # noqa: ARG002
@@ -1855,11 +1871,12 @@ class QSNNReinforceBrain(ClassicalBrain):
         # the update was deferred until this run_brain() call so we can compute
         # V(s_{N+1}) — the value of the current (new) state as GAE bootstrap.
         if self._pending_critic_update and self.use_critic and self.critic is not None:
+            # Run forward pass FIRST so _last_avg_hidden_spikes reflects the
+            # current state (N+1), producing a consistent critic input for the
+            # bootstrap value estimate. Without this, the bootstrap uses stale
+            # hidden spikes from state N, corrupting GAE return targets.
+            motor_probs = self._multi_timestep(features)
             with torch.no_grad():
-                # Use last available hidden spikes for bootstrap (from previous step).
-                # The forward pass for this new state hasn't run yet, so exact hidden
-                # spikes are unavailable. This is a standard approximation for GAE
-                # bootstrap at window boundaries.
                 bootstrap_in = np.concatenate([features, self._last_avg_hidden_spikes])
                 bootstrap_t = torch.tensor(
                     bootstrap_in,
@@ -1876,10 +1893,10 @@ class QSNNReinforceBrain(ClassicalBrain):
             self.episode_hidden_spikes.clear()
             self._cached_spike_probs = []
             self._pending_critic_update = False
-
-        # Execute QSNN timestep(s) to get motor firing probabilities.
-        # Multi-timestep integration averages out quantum shot noise.
-        motor_probs = self._multi_timestep(features)
+        else:
+            # Execute QSNN timestep(s) to get motor firing probabilities.
+            # Multi-timestep integration averages out quantum shot noise.
+            motor_probs = self._multi_timestep(features)
 
         # Convert spike probabilities [0,1] to action logits
         # Shift from [0,1] to centered range, then scale to create spread
