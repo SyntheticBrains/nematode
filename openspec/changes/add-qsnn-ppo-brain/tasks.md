@@ -3,7 +3,7 @@
 - [x] 1.1 Add `QSNN_PPO = "qsnnppo"` to `BrainType` enum in `brain/arch/dtypes.py`
 - [x] 1.2 Add `BrainType.QSNN_PPO` to `QUANTUM_BRAIN_TYPES` and `BRAIN_TYPES`
 - [x] 1.3 Create `QSNNPPOBrainConfig` Pydantic model with QLIF network, PPO, optimizer, critic, and schedule parameters
-- [x] 1.4 Add config field validators (neurons >= 1, membrane_tau in (0,1], threshold in (0,1), shots >= 100)
+- [x] 1.4 Add config field validators (neurons >= 1, membrane_tau in (0,1\], threshold in (0,1), shots >= 100)
 - [x] 1.5 Import and export `QSNNPPOBrain`, `QSNNPPOBrainConfig` in `brain/arch/__init__.py`
 - [x] 1.6 Add `"qsnnppo": QSNNPPOBrainConfig` to `BRAIN_CONFIG_MAP` in `utils/config_loader.py`
 - [x] 1.7 Add `QSNNPPOBrainConfig` to `BrainConfigType` union in `utils/config_loader.py`

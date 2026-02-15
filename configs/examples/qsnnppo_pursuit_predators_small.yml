@@ -23,20 +23,21 @@ brain:
     logit_scale: 5.0
     weight_clip: 3.0
     theta_motor_max_norm: 2.0
+    theta_hidden_min_norm: 0.5
 
     # PPO hyperparameters
     gamma: 0.99
     gae_lambda: 0.95
     clip_epsilon: 0.2
-    entropy_coef: 0.02
+    entropy_coef: 0.08
     value_loss_coef: 0.5
-    num_epochs: 4
+    num_epochs: 2
     num_minibatches: 4
-    rollout_buffer_size: 512
+    rollout_buffer_size: 256
     max_grad_norm: 0.5
 
     # Learning rates
-    actor_lr: 0.01
+    actor_lr: 0.003
     critic_lr: 0.001
     actor_weight_decay: 0.001
 

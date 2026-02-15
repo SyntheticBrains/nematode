@@ -90,13 +90,13 @@ DEFAULT_SHOTS = 1024
 DEFAULT_GAMMA = 0.99
 DEFAULT_GAE_LAMBDA = 0.95
 DEFAULT_CLIP_EPSILON = 0.2
-DEFAULT_ENTROPY_COEF = 0.01
+DEFAULT_ENTROPY_COEF = 0.08
 DEFAULT_VALUE_LOSS_COEF = 0.5
-DEFAULT_NUM_EPOCHS = 4
+DEFAULT_NUM_EPOCHS = 2
 DEFAULT_NUM_MINIBATCHES = 4
-DEFAULT_ROLLOUT_BUFFER_SIZE = 512
+DEFAULT_ROLLOUT_BUFFER_SIZE = 256
 DEFAULT_MAX_GRAD_NORM = 0.5
-DEFAULT_ACTOR_LR = 0.01
+DEFAULT_ACTOR_LR = 0.003
 DEFAULT_CRITIC_LR = 0.001
 DEFAULT_CRITIC_HIDDEN_DIM = 64
 DEFAULT_CRITIC_NUM_LAYERS = 2
@@ -104,6 +104,7 @@ DEFAULT_NUM_INTEGRATION_STEPS = 10
 DEFAULT_WEIGHT_CLIP = 3.0
 DEFAULT_THETA_MOTOR_MAX_NORM = 2.0
 DEFAULT_ACTOR_WEIGHT_DECAY = 0.001
+DEFAULT_THETA_HIDDEN_MIN_NORM = 0.5
 
 # Validation constants
 MIN_SENSORY_NEURONS = 1
@@ -372,6 +373,10 @@ class QSNNPPOBrainConfig(BrainConfig):
     theta_motor_max_norm: float = Field(
         default=DEFAULT_THETA_MOTOR_MAX_NORM,
         description="Max L2 norm for theta_motor vector.",
+    )
+    theta_hidden_min_norm: float = Field(
+        default=DEFAULT_THETA_HIDDEN_MIN_NORM,
+        description="Min L2 norm for theta_hidden vector (prevents representational collapse).",
     )
 
     # PPO hyperparameters
@@ -973,7 +978,12 @@ class QSNNPPOBrain(ClassicalBrain):
         *,
         episode_done: bool = False,
     ) -> None:
-        """Add experience to rollout buffer and trigger PPO update when full."""
+        """Add experience to rollout buffer and trigger PPO update when full.
+
+        The buffer accumulates across episodes until full, then triggers
+        a PPO update and resets. This ensures PPO always has enough data
+        for stable advantage estimates and minibatch updates.
+        """
         self.history_data.rewards.append(reward)
 
         # Add to buffer
@@ -988,10 +998,8 @@ class QSNNPPOBrain(ClassicalBrain):
                 hidden_spike_rates=self._pending_hidden_spikes,
             )
 
-        # PPO update when buffer is full or episode ends with enough data
-        if self.buffer.is_full() or (
-            episode_done and len(self.buffer) >= self.config.num_minibatches
-        ):
+        # PPO update only when buffer is full
+        if self.buffer.is_full():
             self._perform_ppo_update()
             self.buffer.reset()
 
@@ -1018,12 +1026,20 @@ class QSNNPPOBrain(ClassicalBrain):
             self.config.gae_lambda,
         )
 
+        buffer_len = len(self.buffer)
+
         # Multi-epoch PPO update with quantum caching
         # Epoch 0: run quantum circuits and cache spike probs
         # Epochs 1+: reuse cached spike probs, recompute ry_angles
         total_policy_loss = 0.0
         total_value_loss = 0.0
         total_entropy = 0.0
+        total_clip_fraction = 0.0
+        total_approx_kl = 0.0
+        total_grad_sh = 0.0
+        total_grad_hm = 0.0
+        total_grad_th = 0.0
+        total_grad_tm = 0.0
         num_updates = 0
 
         for epoch in range(self.config.num_epochs):
@@ -1129,6 +1145,15 @@ class QSNNPPOBrain(ClassicalBrain):
                 )
                 policy_loss = -torch.min(surr1, surr2).mean()
 
+                # Track clip fraction
+                with torch.no_grad():
+                    clip_frac = (
+                        (torch.abs(ratio - 1.0) > self.config.clip_epsilon).float().mean().item()
+                    )
+                    total_clip_fraction += clip_frac
+                    approx_kl = (batch["old_log_probs"] - new_log_probs).mean().item()
+                    total_approx_kl += approx_kl
+
                 # Value loss (Huber for robustness to extreme penalties)
                 value_loss = torch.nn.functional.smooth_l1_loss(
                     values,
@@ -1147,6 +1172,26 @@ class QSNNPPOBrain(ClassicalBrain):
                     self.theta_hidden,
                     self.theta_motor,
                 ]
+
+                # Capture pre-clip gradient norms
+                with torch.no_grad():
+                    grad_sh = torch.norm(self.W_sh.grad).item() if self.W_sh.grad is not None else 0
+                    grad_hm = torch.norm(self.W_hm.grad).item() if self.W_hm.grad is not None else 0
+                    grad_th = (
+                        torch.norm(self.theta_hidden.grad).item()
+                        if self.theta_hidden.grad is not None
+                        else 0
+                    )
+                    grad_tm = (
+                        torch.norm(self.theta_motor.grad).item()
+                        if self.theta_motor.grad is not None
+                        else 0
+                    )
+                    total_grad_sh += grad_sh
+                    total_grad_hm += grad_hm
+                    total_grad_th += grad_th
+                    total_grad_tm += grad_tm
+
                 torch.nn.utils.clip_grad_norm_(
                     actor_params,
                     self.config.max_grad_norm,
@@ -1168,7 +1213,7 @@ class QSNNPPOBrain(ClassicalBrain):
                 total_entropy += mean_entropy.item()
                 num_updates += 1
 
-        # Post-update: clamp weights and theta motor norm
+        # Post-update: clamp weights and theta norms
         self._clamp_weights()
 
         # Logging
@@ -1179,19 +1224,29 @@ class QSNNPPOBrain(ClassicalBrain):
             self.latest_data.loss = avg_policy
 
             actor_lr = self.actor_optimizer.param_groups[0]["lr"]
-            logger.debug(
+            adv_mean = advantages.mean().item()
+            adv_std = advantages.std().item()
+            logger.info(
                 f"QSNN-PPO update: policy_loss={avg_policy:.4f}, "
                 f"value_loss={avg_value:.4f}, entropy={avg_entropy:.4f}, "
+                f"clip_frac={total_clip_fraction / num_updates:.3f}, "
+                f"approx_kl={total_approx_kl / num_updates:.4f}, "
+                f"grad_sh={total_grad_sh / num_updates:.4f}, "
+                f"grad_hm={total_grad_hm / num_updates:.4f}, "
+                f"grad_th={total_grad_th / num_updates:.4f}, "
+                f"grad_tm={total_grad_tm / num_updates:.4f}, "
                 f"W_sh_norm={torch.norm(self.W_sh).item():.4f}, "
                 f"W_hm_norm={torch.norm(self.W_hm).item():.4f}, "
                 f"theta_h_norm={torch.norm(self.theta_hidden).item():.4f}, "
                 f"theta_m_norm={torch.norm(self.theta_motor).item():.4f}, "
+                f"adv_mean={adv_mean:.4f}, adv_std={adv_std:.4f}, "
+                f"buffer_size={buffer_len}, "
                 f"actor_lr={actor_lr:.6f}, "
                 f"episode={self._episode_count}",
             )
 
     def _clamp_weights(self) -> None:
-        """Clamp actor weights and theta motor norm."""
+        """Clamp actor weights, theta motor max norm, and theta hidden min norm."""
         with torch.no_grad():
             for p in [self.W_sh, self.W_hm, self.theta_hidden, self.theta_motor]:
                 p.clamp_(-self.config.weight_clip, self.config.weight_clip)
@@ -1199,6 +1254,11 @@ class QSNNPPOBrain(ClassicalBrain):
             tm_norm = torch.norm(self.theta_motor)
             if tm_norm > self.config.theta_motor_max_norm:
                 self.theta_motor.mul_(self.config.theta_motor_max_norm / tm_norm)
+
+            # Prevent theta_hidden collapse (preserves hidden layer capacity)
+            th_norm = torch.norm(self.theta_hidden)
+            if th_norm < self.config.theta_hidden_min_norm and th_norm > 0:
+                self.theta_hidden.mul_(self.config.theta_hidden_min_norm / th_norm)
 
     # ──────────────────────────────────────────────────────────────────
     # Episode Lifecycle
