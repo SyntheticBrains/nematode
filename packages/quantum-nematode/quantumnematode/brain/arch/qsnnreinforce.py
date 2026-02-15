@@ -45,17 +45,27 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import torch
 from pydantic import Field, field_validator
-from qiskit import QuantumCircuit
 from torch import nn
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._qlif_layers import (
+    DEFAULT_SURROGATE_ALPHA,  # noqa: F401  # re-exported
+    LOGIT_SCALE,
+    WEIGHT_INIT_SCALE,
+    QLIFSurrogateSpike,  # noqa: F401  # re-exported
+    build_qlif_circuit,  # noqa: F401  # re-exported
+    encode_sensory_spikes,
+    execute_qlif_layer,
+    execute_qlif_layer_differentiable,
+    execute_qlif_layer_differentiable_cached,
+    get_qiskit_backend,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
@@ -63,7 +73,6 @@ from quantumnematode.brain.modules import (
     get_classical_feature_dimension,
 )
 from quantumnematode.env import Direction
-from quantumnematode.errors import ERROR_MISSING_IMPORT_QISKIT_AER
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -142,15 +151,6 @@ MIN_SHOTS = 100
 # episodes without fighting against the learning signal.
 WEIGHT_DECAY_FACTOR = 0.01
 
-# Weight initialization scale. With 6 sensory neurons and scale=0.15, typical
-# weighted_input ~ N(0, 6*0.0225) = N(0, 0.135), std≈0.37. This produces
-# tanh(0.37)*π ≈ 1.10 rad peak RY angles, giving spike probs 0.05-0.35 —
-# enough differentiation for REINFORCE without gradient amplification
-# instability. Scale 0.1 is too flat (slow convergence); 0.3 is too
-# aggressive (entropy collapse/explosion). 0.15 breaks symmetry without
-# destabilizing.
-WEIGHT_INIT_SCALE = 0.15
-
 # Eligibility trace normalization — caps the Frobenius norm of eligibility traces
 # before multiplying by lr * advantage. This bounds the maximum weight delta per
 # update to approximately lr * MAX_ELIGIBILITY_NORM * |advantage|.
@@ -164,12 +164,6 @@ MAX_ELIGIBILITY_NORM = 1.0
 # With epsilon=0.1 and 4 actions, minimum per-action probability = 2.5%.
 EXPLORATION_EPSILON = 0.1
 
-# Surrogate gradient sharpness parameter (alpha).
-# Controls how closely the sigmoid surrogate approximates the Heaviside step.
-# Higher = sharper but noisier gradients. 1.0 matches SpikingReinforceBrain's
-# proven setting; smoother gradients reduce noise from quantum shot variance.
-DEFAULT_SURROGATE_ALPHA = 1.0
-
 # Gradient clipping max norm for surrogate gradient mode.
 # Prevents large gradient spikes from destabilizing training.
 SURROGATE_GRAD_CLIP = 1.0
@@ -178,13 +172,6 @@ SURROGATE_GRAD_CLIP = 1.0
 # Prevents outlier returns from producing catastrophically large policy updates.
 # SpikingReinforceBrain uses 2.0; this caps normalized advantages to [-2, +2].
 ADVANTAGE_CLIP = 2.0
-
-# Logit scaling factor for converting spike probabilities to action logits.
-# Maps spike probs in [0,1] to logits via (prob - 0.5) * scale.
-# Higher values create sharper action differentiation from small spike differences.
-# 5.0 provides meaningful separation while keeping minority actions viable.
-# (Previously 20.0, which caused permanent action death in predator sessions.)
-LOGIT_SCALE = 5.0
 
 # Exploration decay: default number of episodes over which exploration decreases.
 # Epsilon and temperature decay linearly from initial to final values over
@@ -231,72 +218,6 @@ ENTROPY_BOOST_MAX = 20.0
 # ≈ 1.317 nats. This prevents entropy explosion where the policy drifts
 # to uniform random and never recovers.
 ENTROPY_CEILING_FRACTION = 0.95
-
-
-class QLIFSurrogateSpike(torch.autograd.Function):
-    """Custom autograd function for QLIF neuron surrogate gradients.
-
-    Forward pass uses the actual quantum-measured spike probability (from QLIF
-    circuit execution). Backward pass uses a sigmoid surrogate gradient, which
-    approximates how the spike probability changes with the RY angle.
-
-    The QLIF circuit computes: |0> -> RY(ry_angle) -> RX(leak) -> Measure
-    where ry_angle = theta + tanh(w·x / sqrt(fan_in)) * pi. The fan-in
-    scaling keeps tanh in its responsive regime regardless of layer width.
-    The surrogate approximates d(spike_prob)/d(ry_angle), and autograd
-    chains through to both theta and weights via d(ry_angle)/d(theta) = 1
-    and d(ry_angle)/d(w) = pi * sech²(w·x / sqrt(fan_in)) * x / sqrt(fan_in).
-    """
-
-    @staticmethod
-    def forward(  # type: ignore[override]
-        ctx: Any,  # noqa: ANN401
-        ry_angle: torch.Tensor,
-        quantum_spike_prob: float,
-        alpha: float = DEFAULT_SURROGATE_ALPHA,
-    ) -> torch.Tensor:
-        """Forward pass: return quantum spike probability as a differentiable tensor.
-
-        Parameters
-        ----------
-        ctx : torch.autograd.Function context
-            Autograd context for saving tensors.
-        ry_angle : torch.Tensor
-            The RY rotation angle (theta + tanh(w·x)*pi), scalar tensor with grad.
-            This is the primary differentiable input connecting both theta and weights.
-        quantum_spike_prob : float
-            The spike probability measured from the quantum circuit.
-        alpha : float
-            Surrogate gradient sharpness parameter.
-        """
-        ctx.save_for_backward(
-            ry_angle,
-            torch.tensor(alpha, device=ry_angle.device),
-        )
-        return torch.tensor(
-            quantum_spike_prob,
-            dtype=torch.float32,
-            device=ry_angle.device,
-        )
-
-    @staticmethod
-    def backward(  # type: ignore[override]
-        ctx: Any,  # noqa: ANN401
-        grad_output: torch.Tensor,
-    ) -> tuple[torch.Tensor, None, None]:
-        """Backward pass: sigmoid surrogate gradient.
-
-        Approximates d(spike_prob)/d(ry_angle) using a sigmoid derivative.
-        The sigmoid is centered at pi/2 (where spike probability transitions
-        from low to high for the RY gate).
-        """
-        ry_angle, alpha = ctx.saved_tensors
-        # Sigmoid surrogate centered at pi/2 (the RY transition point)
-        # For RY(angle): P(1) ~ sin²(angle/2), which transitions at angle=pi/2
-        shifted = alpha * (ry_angle - torch.pi / 2)
-        sigma = torch.sigmoid(shifted)
-        grad_surrogate = alpha * sigma * (1 - sigma)
-        return grad_output * grad_surrogate, None, None
 
 
 class CriticMLP(nn.Module):
@@ -810,59 +731,11 @@ class QSNNReinforceBrain(ClassicalBrain):
     def _get_backend(self):  # noqa: ANN202
         """Get or create the Qiskit Aer backend for circuit execution."""
         if self._backend is None:
-            try:
-                from qiskit_aer import AerSimulator
-            except ImportError as err:
-                error_message = ERROR_MISSING_IMPORT_QISKIT_AER
-                logger.error(error_message)
-                raise ImportError(error_message) from err
-
-            self._backend = AerSimulator(
-                device="CPU",
-                seed_simulator=self.seed,
+            self._backend = get_qiskit_backend(
+                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
+                seed=self.seed,
             )
         return self._backend
-
-    def _build_qlif_circuit(
-        self,
-        weighted_input: float,
-        theta_membrane: float,
-    ) -> QuantumCircuit:
-        """Build a QLIF neuron circuit.
-
-        The minimal 2-gate QLIF circuit from Brand & Petruccione (2024):
-        |0⟩ → RY(θ_membrane + weighted_input) → RX(θ_leak) → Measure
-
-        Parameters
-        ----------
-        weighted_input : float
-            Pre-scaled weighted input (sum(w_ij * spike_j) / sqrt(fan_in)).
-            Fan-in scaling is applied by callers to keep tanh in its
-            responsive regime regardless of layer width.
-        theta_membrane : float
-            Trainable membrane potential parameter.
-
-        Returns
-        -------
-        QuantumCircuit
-            The QLIF neuron circuit.
-        """
-        qc = QuantumCircuit(1, 1)
-
-        # RY encodes membrane potential + weighted input
-        # tanh bounds the weighted input to [-1, 1] before scaling by pi,
-        # preventing angle wrapping through multiple cycles (hash function behavior)
-        normalized_input = float(np.tanh(weighted_input))
-        ry_angle = float(theta_membrane + normalized_input * np.pi)
-        qc.ry(ry_angle, 0)
-
-        # RX implements leak
-        qc.rx(self.leak_angle, 0)
-
-        # Measure
-        qc.measure(0, 0)
-
-        return qc
 
     def _execute_qlif_layer(
         self,
@@ -873,61 +746,19 @@ class QSNNReinforceBrain(ClassicalBrain):
     ) -> tuple[np.ndarray, np.ndarray]:
         """Execute a layer of QLIF neurons.
 
-        Parameters
-        ----------
-        pre_spikes : np.ndarray
-            Spike probabilities from presynaptic layer, shape (num_pre,).
-        weights : torch.Tensor
-            Weight matrix, shape (num_pre, num_post).
-        theta_membrane : torch.Tensor
-            Membrane potential parameters, shape (num_post,).
-        refractory_state : np.ndarray
-            Refractory countdown per neuron, shape (num_post,).
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            (spike_probs, updated_refractory_state) for the layer.
+        Delegates to :func:`_qlif_layers.execute_qlif_layer`.
         """
-        num_post = weights.shape[1]
-        spike_probs = np.zeros(num_post)
-        backend = self._get_backend()
-
-        # Convert weights to numpy for computation
-        weights_np = weights.detach().cpu().numpy()
-        theta_np = theta_membrane.detach().cpu().numpy()
-
-        for j in range(num_post):
-            # Check refractory period
-            if refractory_state[j] > 0:
-                refractory_state[j] -= 1
-                spike_probs[j] = 0.0
-                continue
-
-            # Compute weighted input: sum(w_ij * spike_i)
-            weighted_input = np.dot(pre_spikes, weights_np[:, j])
-
-            # Scale by 1/sqrt(fan_in) to keep tanh in responsive regime
-            # regardless of layer width. Without this, tanh saturates when
-            # fan_in * avg_spike * |w| > ~2, killing weight gradients.
-            fan_in_scale = np.sqrt(weights_np.shape[0])
-            scaled_input = weighted_input / fan_in_scale
-
-            # Build and execute QLIF circuit
-            qc = self._build_qlif_circuit(scaled_input, theta_np[j])
-            job = backend.run(qc, shots=self.shots)
-            result = job.result()
-            counts = result.get_counts()
-
-            # Firing probability = P(measure |1⟩)
-            spike_prob = counts.get("1", 0) / self.shots
-            spike_probs[j] = spike_prob
-
-            # Update refractory state if fired (using threshold for discrete spike decision)
-            if spike_prob > self.threshold:
-                refractory_state[j] = self.refractory_period
-
-        return spike_probs, refractory_state
+        return execute_qlif_layer(
+            pre_spikes,
+            weights,
+            theta_membrane,
+            refractory_state,
+            backend=self._get_backend(),
+            shots=self.shots,
+            threshold=self.threshold,
+            refractory_period=self.refractory_period,
+            leak_angle=self.leak_angle,
+        )
 
     def _execute_qlif_layer_differentiable(
         self,
@@ -938,78 +769,20 @@ class QSNNReinforceBrain(ClassicalBrain):
     ) -> tuple[torch.Tensor, np.ndarray]:
         """Execute a QLIF layer with surrogate gradient support.
 
-        Same quantum circuit execution as _execute_qlif_layer(), but wraps
-        the result in QLIFSurrogateSpike so that gradients flow back through
-        the weight matrix via the sigmoid surrogate.
-
-        Parameters
-        ----------
-        pre_spikes : torch.Tensor
-            Spike probabilities from presynaptic layer, shape (num_pre,).
-        weights : torch.Tensor
-            Weight matrix with requires_grad=True, shape (num_pre, num_post).
-        theta_membrane : torch.Tensor
-            Membrane potential parameters with requires_grad=True, shape (num_post,).
-        refractory_state : np.ndarray
-            Refractory countdown per neuron, shape (num_post,).
-
-        Returns
-        -------
-        tuple[torch.Tensor, np.ndarray]
-            (spike_probs_tensor, updated_refractory_state) — spike probs
-            are torch tensors with grad_fn for backprop.
+        Delegates to :func:`_qlif_layers.execute_qlif_layer_differentiable`.
         """
-        num_post = weights.shape[1]
-        spike_probs_list: list[torch.Tensor] = []
-        backend = self._get_backend()
-
-        for j in range(num_post):
-            if refractory_state[j] > 0:
-                refractory_state[j] -= 1
-                # Zero spike with gradient connection through weights
-                spike_probs_list.append(
-                    torch.zeros(1, device=self.device, dtype=torch.float32).squeeze(),
-                )
-                continue
-
-            # Differentiable weighted input (in autograd graph)
-            weighted_input = torch.dot(pre_spikes, weights[:, j])
-
-            # Fan-in-aware scaling: divide by sqrt(fan_in) to keep tanh in
-            # responsive regime regardless of layer width. Without this,
-            # sech^2(weighted_input) vanishes when fan_in * avg_spike * |w| > ~2,
-            # killing weight gradients while theta gradients survive (d(ry)/d(theta)=1).
-            fan_in_scale = (weights.shape[0]) ** 0.5
-            scaled_input = weighted_input / fan_in_scale
-
-            # Differentiable RY angle: theta + tanh(w·x / sqrt(fan_in)) * pi
-            # Both theta_membrane[j] and scaled_input are in the autograd graph,
-            # so gradients flow to both weights AND theta parameters.
-            ry_angle = theta_membrane[j] + torch.tanh(scaled_input) * torch.pi
-
-            # Execute quantum circuit for forward spike probability (detached)
-            wi_np = float(scaled_input.detach().cpu())
-            qc = self._build_qlif_circuit(wi_np, float(theta_membrane[j].detach().cpu()))
-            job = backend.run(qc, shots=self.shots)
-            result = job.result()
-            counts = result.get_counts()
-            quantum_spike_prob = counts.get("1", 0) / self.shots
-
-            # Wrap in surrogate gradient function — gradient flows through ry_angle
-            # to both theta and weights
-            spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
-                ry_angle,
-                quantum_spike_prob,
-                DEFAULT_SURROGATE_ALPHA,
-            )
-            spike_probs_list.append(spike_prob)
-
-            # Update refractory state
-            if quantum_spike_prob > self.threshold:
-                refractory_state[j] = self.refractory_period
-
-        spike_probs = torch.stack(spike_probs_list)
-        return spike_probs, refractory_state
+        return execute_qlif_layer_differentiable(
+            pre_spikes,
+            weights,
+            theta_membrane,
+            refractory_state,
+            backend=self._get_backend(),
+            shots=self.shots,
+            threshold=self.threshold,
+            refractory_period=self.refractory_period,
+            leak_angle=self.leak_angle,
+            device=self.device,
+        )
 
     def _execute_qlif_layer_differentiable_cached(
         self,
@@ -1021,93 +794,25 @@ class QSNNReinforceBrain(ClassicalBrain):
     ) -> tuple[torch.Tensor, np.ndarray]:
         """Execute a QLIF layer using cached spike probabilities.
 
-        Same as _execute_qlif_layer_differentiable() but skips quantum circuit
-        execution, using pre-cached spike probabilities from epoch 0 instead.
-        The ry_angle is recomputed from current (updated) weights so surrogate
-        gradients reflect the latest parameters.
-
-        Parameters
-        ----------
-        pre_spikes : torch.Tensor
-            Spike probabilities from presynaptic layer, shape (num_pre,).
-        weights : torch.Tensor
-            Weight matrix with requires_grad=True, shape (num_pre, num_post).
-        theta_membrane : torch.Tensor
-            Membrane potential parameters with requires_grad=True, shape (num_post,).
-        refractory_state : np.ndarray
-            Refractory countdown per neuron, shape (num_post,).
-        cached_spike_probs : list[float]
-            Pre-cached quantum spike probabilities for each neuron in this layer.
-
-        Returns
-        -------
-        tuple[torch.Tensor, np.ndarray]
-            (spike_probs_tensor, updated_refractory_state).
+        Delegates to :func:`_qlif_layers.execute_qlif_layer_differentiable_cached`.
         """
-        num_post = weights.shape[1]
-        spike_probs_list: list[torch.Tensor] = []
-
-        for j in range(num_post):
-            if refractory_state[j] > 0:
-                refractory_state[j] -= 1
-                spike_probs_list.append(
-                    torch.zeros(1, device=self.device, dtype=torch.float32).squeeze(),
-                )
-                continue
-
-            # Recompute ry_angle from current weights (differentiable)
-            weighted_input = torch.dot(pre_spikes, weights[:, j])
-            fan_in_scale = (weights.shape[0]) ** 0.5
-            scaled_input = weighted_input / fan_in_scale
-            ry_angle = theta_membrane[j] + torch.tanh(scaled_input) * torch.pi
-
-            # Use cached quantum spike probability instead of running circuit
-            quantum_spike_prob = cached_spike_probs[j]
-
-            spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
-                ry_angle,
-                quantum_spike_prob,
-                DEFAULT_SURROGATE_ALPHA,
-            )
-            spike_probs_list.append(spike_prob)
-
-            if quantum_spike_prob > self.threshold:
-                refractory_state[j] = self.refractory_period
-
-        spike_probs = torch.stack(spike_probs_list)
-        return spike_probs, refractory_state
+        return execute_qlif_layer_differentiable_cached(
+            pre_spikes,
+            weights,
+            theta_membrane,
+            refractory_state,
+            cached_spike_probs=cached_spike_probs,
+            threshold=self.threshold,
+            refractory_period=self.refractory_period,
+            device=self.device,
+        )
 
     def _encode_sensory_spikes(self, features: np.ndarray) -> np.ndarray:
         """Encode sensory features as spike probabilities.
 
-        Uses sigmoid function with scaling to convert continuous features
-        to spike probabilities in [0, 1].
-
-        Parameters
-        ----------
-        features : np.ndarray
-            Input features from preprocessing.
-
-        Returns
-        -------
-        np.ndarray
-            Spike probabilities for sensory neurons.
+        Delegates to :func:`_qlif_layers.encode_sensory_spikes`.
         """
-        # Map features to sensory neurons
-        # If we have more neurons than features, replicate/interpolate
-        num_features = len(features)
-        sensory_spikes = np.zeros(self.num_sensory)
-
-        for i in range(self.num_sensory):
-            # Cycle through features if we have more neurons than features
-            feature_idx = i % num_features
-            feature_val = features[feature_idx]
-
-            # Sigmoid with scaling: sigmoid(feature * 5.0)
-            # This maps [0,1] inputs to roughly [0.5, 0.99] probabilities
-            sensory_spikes[i] = 1.0 / (1.0 + np.exp(-feature_val * 5.0))
-
-        return sensory_spikes
+        return encode_sensory_spikes(features, self.num_sensory)
 
     def _timestep(self, features: np.ndarray) -> np.ndarray:
         """Execute one timestep of QSNN dynamics.
