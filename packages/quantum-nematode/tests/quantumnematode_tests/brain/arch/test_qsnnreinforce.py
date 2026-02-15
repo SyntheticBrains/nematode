@@ -2471,8 +2471,9 @@ class TestQSNNCritic:
         theta_h_before = brain.theta_hidden.clone().detach()
         theta_m_before = brain.theta_motor.clone().detach()
 
-        # Populate features and call _update_critic
+        # Populate features and hidden spikes, then call _update_critic
         brain.episode_features = [np.array([0.5, 0.3]), np.array([0.2, 0.8])]
+        brain.episode_hidden_spikes = [np.array([0.1, 0.4]), np.array([0.3, 0.6])]
         target_returns = torch.tensor([1.0, 2.0])
         brain._update_critic(target_returns)
 
@@ -2654,9 +2655,11 @@ class TestQSNNCritic:
         # input_dim should be 4 (2 modules x 2 features each)
         assert brain.input_dim == 4
         assert brain.critic is not None
+        # critic_input_dim = input_dim + num_hidden = 4 + 4 = 8
+        assert brain._critic_input_dim == 8
 
-        # Verify critic accepts 4-dim input
-        x = torch.randn(4)
+        # Verify critic accepts enriched input (features + hidden spikes)
+        x = torch.randn(brain._critic_input_dim)
         out = brain.critic(x)
         assert out.shape == ()
 
@@ -2877,6 +2880,153 @@ class TestQSNNCritic:
         # Reset episode should clear the flag
         brain._reset_episode()
         assert brain._pending_critic_update is False
+
+    def test_critic_input_dim_includes_hidden(self):
+        """Test critic input dimension is input_dim + num_hidden."""
+        config = QSNNReinforceBrainConfig(
+            num_sensory_neurons=4,
+            num_hidden_neurons=8,
+            num_motor_neurons=4,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION,
+            ],
+        )
+        brain = QSNNReinforceBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # input_dim = 4 (2 modules x 2 features each), critic input = 4 + 8 = 12
+        assert brain.input_dim == 4
+        assert brain._critic_input_dim == 4 + 8
+        # Verify critic's first layer accepts the enriched input
+        assert brain.critic is not None
+        first_layer = next(iter(brain.critic.network))
+        assert first_layer.in_features == 12
+
+    def test_critic_orthogonal_initialization(self):
+        """Test CriticMLP uses orthogonal weight init and zero biases."""
+        critic = CriticMLP(input_dim=8, hidden_dim=32, num_layers=2)
+        for module in critic.network:
+            if isinstance(module, torch.nn.Linear):
+                # Biases should be zero
+                assert torch.allclose(
+                    module.bias,
+                    torch.zeros_like(module.bias),
+                ), "Bias should be initialized to zero"
+                # Check orthogonality: W @ W^T should be approximately diagonal
+                # (scaled identity for non-square matrices)
+                w = module.weight
+                product = w @ w.T if w.shape[0] <= w.shape[1] else w.T @ w
+                off_diag = product - torch.diag(torch.diag(product))
+                assert torch.allclose(
+                    off_diag,
+                    torch.zeros_like(off_diag),
+                    atol=1e-5,
+                ), "Weights should be approximately orthogonal"
+
+    def test_hidden_spikes_stored_in_episode_buffer(self):
+        """Test hidden spike rates are stored during run_brain with critic."""
+        config = QSNNReinforceBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=4,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_hidden_spikes) == 1
+        assert brain.episode_hidden_spikes[0].shape == (4,)
+        assert all(np.isfinite(brain.episode_hidden_spikes[0]))
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_hidden_spikes) == 2
+
+    def test_hidden_spikes_not_stored_when_critic_disabled(self):
+        """Test hidden spike rates buffer stays empty when critic disabled."""
+        config = QSNNReinforceBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=4,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+        )
+        brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_hidden_spikes) == 0
+
+    def test_critic_input_concatenation(self):
+        """Test critic input batch is features + hidden spikes concatenated."""
+        config = QSNNReinforceBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # Manually populate buffers
+        brain.episode_features = [np.array([0.5, 0.3]), np.array([0.2, 0.8])]
+        brain.episode_hidden_spikes = [np.array([0.1, 0.2, 0.3]), np.array([0.4, 0.5, 0.6])]
+
+        critic_input = brain._build_critic_input_batch(2)
+        assert critic_input.shape == (2, 5)  # 2 features + 3 hidden
+        # First row: [0.5, 0.3, 0.1, 0.2, 0.3]
+        expected_row0 = torch.tensor([0.5, 0.3, 0.1, 0.2, 0.3])
+        assert torch.allclose(critic_input[0], expected_row0)
+
+    def test_explained_variance_computation(self):
+        """Test explained variance is logged during critic update."""
+        config = QSNNReinforceBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # Populate buffers manually
+        brain.episode_features = [np.array([0.5, 0.3])] * 5
+        brain.episode_hidden_spikes = [np.array([0.1, 0.2])] * 5
+        target_returns = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+
+        # Should not raise — this exercises the explained variance code path
+        brain._update_critic(target_returns)
+
+    def test_copy_preserves_enriched_critic_input_dim(self):
+        """Test copy() creates critic with correct enriched input dim."""
+        config = QSNNReinforceBrainConfig(
+            num_sensory_neurons=4,
+            num_hidden_neurons=8,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION,
+            ],
+        )
+        brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        # input_dim = 4 (2 modules x 2 features), critic_input_dim = 4 + 8 = 12
+        assert brain._critic_input_dim == 4 + 8
+        copy = brain.copy()
+
+        assert copy._critic_input_dim == 4 + 8
+        assert copy.critic is not None
+        first_layer = next(iter(copy.critic.network))
+        assert first_layer.in_features == 12
 
 
 class TestMultiEpochReinforce:
