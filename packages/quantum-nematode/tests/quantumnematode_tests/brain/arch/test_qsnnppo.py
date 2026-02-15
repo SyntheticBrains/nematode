@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 import torch
-
 from quantumnematode.brain.actions import ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
@@ -15,7 +14,6 @@ from quantumnematode.brain.arch.qsnnppo import (
 )
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
-
 
 # ──────────────────────────────────────────────────────────────────────
 # Config Tests
@@ -187,7 +185,9 @@ class TestQSNNRolloutBuffer:
             )
 
         returns, advantages = buffer.compute_returns_and_advantages(
-            last_value=0.0, gamma=0.99, gae_lambda=0.95,
+            last_value=0.0,
+            gamma=0.99,
+            gae_lambda=0.95,
         )
 
         assert returns.shape == (5,)
@@ -208,12 +208,14 @@ class TestQSNNRolloutBuffer:
         )
 
         returns, advantages = buffer.compute_returns_and_advantages(
-            last_value=0.0, gamma=0.99, gae_lambda=0.95,
+            last_value=0.0,
+            gamma=0.99,
+            gae_lambda=0.95,
         )
 
         # With value=0.5, reward=1.0, done=True, last_value=0.0:
         # delta = 1.0 + 0.99 * 0.0 * 0.0 - 0.5 = 0.5
-        # advantage = 0.5
+        # advantage equals 0.5
         assert torch.isclose(advantages[0], torch.tensor(0.5))
 
     def test_get_minibatches(self, buffer: QSNNRolloutBuffer):
@@ -230,7 +232,9 @@ class TestQSNNRolloutBuffer:
             )
 
         returns, advantages = buffer.compute_returns_and_advantages(
-            last_value=0.0, gamma=0.99, gae_lambda=0.95,
+            last_value=0.0,
+            gamma=0.99,
+            gae_lambda=0.95,
         )
 
         minibatches = list(buffer.get_minibatches(2, returns, advantages))
@@ -257,14 +261,13 @@ class TestQSNNRolloutBuffer:
             )
 
         returns, advantages = buffer.compute_returns_and_advantages(
-            last_value=0.0, gamma=0.99, gae_lambda=0.95,
+            last_value=0.0,
+            gamma=0.99,
+            gae_lambda=0.95,
         )
 
-        # Collect all advantages from minibatches
-        all_advs = []
-        for batch in buffer.get_minibatches(1, returns, advantages):
-            all_advs.append(batch["advantages"])
-
+        # Collect all advantages from minibatches using list comprehension
+        all_advs = [batch["advantages"] for batch in buffer.get_minibatches(1, returns, advantages)]
         combined = torch.cat(all_advs)
         # Should be approximately zero-mean, unit-variance
         assert abs(combined.mean().item()) < 0.1
@@ -495,8 +498,12 @@ class TestQSNNPPOBrainPreprocess:
     def test_critic_input_construction(self, brain: QSNNPPOBrain):
         """Test critic input concatenates features and hidden spikes."""
         features = np.array([0.5, 0.3], dtype=np.float32)
-        hidden_spikes = np.random.default_rng(42).random(brain.num_hidden).astype(
-            np.float32,
+        hidden_spikes = (
+            np.random.default_rng(42)
+            .random(brain.num_hidden)
+            .astype(
+                np.float32,
+            )
         )
 
         critic_input = brain._get_critic_input(features, hidden_spikes)
@@ -504,7 +511,8 @@ class TestQSNNPPOBrainPreprocess:
         assert critic_input.shape == (expected_dim,)
         # First elements should be features, rest hidden spikes
         assert torch.isclose(
-            critic_input[0], torch.tensor(0.5, dtype=torch.float32),
+            critic_input[0],
+            torch.tensor(0.5, dtype=torch.float32),
         )
 
 
@@ -628,7 +636,7 @@ class TestQSNNPPOBrainLearning:
             agent_direction=Direction.UP,
         )
 
-        for step in range(brain.config.rollout_buffer_size):
+        for _step in range(brain.config.rollout_buffer_size):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=0.1, episode_done=False)
 
@@ -661,7 +669,7 @@ class TestQSNNPPOBrainLearning:
         initial_w_sh = brain.W_sh.clone().detach()
 
         # Fill buffer to trigger update
-        for step in range(brain.config.rollout_buffer_size):
+        for _step in range(brain.config.rollout_buffer_size):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=1.0, episode_done=False)
 
@@ -676,19 +684,19 @@ class TestQSNNPPOBrainLearning:
             agent_direction=Direction.UP,
         )
 
-        initial_critic_params = [
-            p.clone().detach() for p in brain.critic.parameters()
-        ]
+        initial_critic_params = [p.clone().detach() for p in brain.critic.parameters()]
 
         # Fill buffer to trigger update
-        for step in range(brain.config.rollout_buffer_size):
+        for _step in range(brain.config.rollout_buffer_size):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=1.0, episode_done=False)
 
         # At least some critic params should have changed
         changed = False
         for old_p, new_p in zip(
-            initial_critic_params, brain.critic.parameters(), strict=True,
+            initial_critic_params,
+            brain.critic.parameters(),
+            strict=True,
         ):
             if not torch.allclose(old_p, new_p, atol=1e-6):
                 changed = True
@@ -802,7 +810,7 @@ class TestQSNNPPOBrainEpisode:
             agent_direction=Direction.UP,
         )
 
-        for episode in range(3):
+        for _episode in range(3):
             brain.prepare_episode()
             for step in range(4):
                 brain.run_brain(params, top_only=True, top_randomize=True)
