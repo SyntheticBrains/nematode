@@ -1,4 +1,4 @@
-# qsnn-brain Specification
+# qsnn-reinforce-brain Specification
 
 ## Purpose
 
