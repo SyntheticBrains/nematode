@@ -1,6 +1,6 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `in_progress` — QSNN standalone approach halted; transitioning to QSNN-PPO hybrid
+**Status**: `in_progress` — QSNN-PPO halted (architectural incompatibility with surrogate gradients); evaluating QSNNReinforce A2C
 
 **Branch**: `feature/add-qsnn-brain`
 
@@ -314,9 +314,9 @@ The local learning signal is simply too weak for this task. Dense gradient infor
 
 ### File Locations
 
-- QSNN implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnn.py`
-- QSNN tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnn.py`
-- QSNN configs: `configs/examples/qsnn_*.yml`
+- QSNN implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnnreinforce.py`
+- QSNN tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnnreinforce.py`
+- QSNN configs: `configs/examples/qsnnreinforce_*.yml`
 
 ______________________________________________________________________
 
@@ -402,6 +402,64 @@ For the full round-by-round optimization history, see [008-appendix-qsnn-predato
 
 ______________________________________________________________________
 
+## QSNN-PPO Hybrid Evaluation
+
+**Status**: Complete — 4 rounds, 16 sessions. Halted: PPO fundamentally incompatible with surrogate gradient spiking networks.
+
+### Architecture
+
+QSNN actor (212 quantum params, QLIF circuits with surrogate gradients) + classical MLP critic (5,569 params) + PPO clipped surrogate with quantum caching. Total ~5.8K params.
+
+```text
+Sensory Input (8 features) → QSNN Actor (8→16→4 QLIF, surrogate gradient)
+                            → Classical Critic (24-dim → 64 → 64 → 1)
+Training: PPO with rollout buffer, GAE advantages, multi-epoch quantum caching
+```
+
+### Task
+
+Same pursuit predator environment as QSNN standalone: 2 predators (speed 0.5, detection_radius 6), health system (max_hp 100, predator_damage 20), 20x20 grid, food_chemotaxis + nociception sensory modules.
+
+### Results Summary
+
+| Round | Key Changes | Success | Avg Food | Avg Steps | Evasion | Key Finding |
+|-------|-----------|---------|----------|-----------|---------|-------------|
+| PPO-0 | Initial architecture | 0% | 0.52 | 111.3 | 43.5% | Buffer never fills; entropy collapse cycles; theta_hidden collapse |
+| PPO-1 | Cross-ep buffer, entropy=0.08, LR=0.003 | 0% | 0.56 | 99.5 | 35.1% | **100% policy_loss=0** — PPO completely inert |
+| PPO-2 | logit_scale=20, entropy decay, theta_motor init | 0% | 0.48 | 87.5 | 25.1% | Motor spike probs at 0.02 (not 0.5) — wrong hypothesis corrected |
+| PPO-3 | theta_hidden=pi/2, theta_motor=linspace(pi/4,3pi/4) | 0% | 0.77 | 105.8 | 42.5% | Motor probs fixed (0.15-0.91) but **policy_loss still 0** |
+
+**Best single episode**: Session 085951, Episode 50 — 7 food, 500 steps (max), reward +31.31. Driven by entropy gradient, not policy learning.
+
+### Root Cause: Architectural Incompatibility
+
+PPO requires the forward pass to produce parameter-dependent action probabilities for importance sampling (`ratio = exp(new_log_prob - old_log_prob)`). The QLIF surrogate gradient approach produces:
+
+- **Forward pass**: Returns quantum-measured spike probability — a **constant** independent of current weights
+- **Backward pass**: Computes gradient via classical sigmoid surrogate — parameter-dependent
+
+During PPO re-evaluation, `QLIFSurrogateSpike.forward()` returns the cached quantum measurement, so `pi_new(a|s) == pi_old(a|s)` always, `ratio == 1.0` always, `policy_loss == 0` always. This is **irreconcilable** without replacing the quantum forward pass with a classical analytical approximation, which would strip the architecture of its quantum character.
+
+REINFORCE only needs `d(log_prob)/d(theta)` (the backward pass gradient), which the surrogate provides correctly. This is why QSNNReinforce works but QSNN-PPO cannot.
+
+### Key Discoveries
+
+1. **Motor spike probability suppression** (PPO-2): QLIF motor neurons were barely firing (spike prob ~0.02) due to small theta_motor init. Fixed in PPO-3 with `theta_motor = linspace(pi/4, 3*pi/4)`.
+
+2. **theta_hidden init matters**: `pi/2` places hidden neurons at maximum sensitivity point (`sin²(pi/4) = 0.5`). Prior init at `pi/4` produced spike probs ~0.15.
+
+3. **Entropy gradient provides weak learning**: Even with zero policy_loss, the entropy bonus is differentiable through surrogate gradients. This drove the late-episode food improvements in PPO-3 but is far too slow for convergence.
+
+4. **PPO infrastructure is reusable**: The critic MLP, GAE computation, and training loop code informed the QSNNReinforce A2C implementation.
+
+### Conclusion
+
+**PPO is fundamentally incompatible with surrogate gradient spiking networks.** After 4 rounds (16 sessions, 1,000 episodes), every session produced 0% success with 100% of PPO updates having policy_loss=0. The correct path is actor-critic variance reduction on top of REINFORCE (A2C), which preserves the quantum circuit in both passes. Development shifted to QSNNReinforce A2C.
+
+For the full round-by-round optimization history, see [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md).
+
+______________________________________________________________________
+
 ## QVarCircuitBrain Comparison
 
 **Status**: Existing baseline
@@ -428,6 +486,7 @@ ______________________________________________________________________
 |--------------|-----------|-------------------|--------------|---------|
 | QRC | Readout only | REINFORCE on readout | 0% | No |
 | QSNN (Hebbian) | Weights + θ | 3-factor local Hebbian | 0% | No |
+| QSNN-PPO | QSNN actor + MLP critic | Surrogate + PPO (incompatible) | 0% | **No** |
 | **QSNN (Surrogate)** | **Weights + θ** | **Quantum forward + sigmoid surrogate backward** | **73.9%** | **Yes** |
 | QVarCircuit (gradient) | Full circuit | Parameter-shift rule | ~40% | Marginal |
 | QVarCircuit (CMA-ES) | Full circuit | Evolutionary | 88% | Yes (but not gradient-based) |
@@ -440,19 +499,21 @@ Architecture                  Success Rate
 ────────────────────────────────────────────────────────────────────────────
 QRC (fixed reservoir)         ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   ❌
 QSNN Hebbian                  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   ❌
+QSNN-PPO Hybrid               ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   ❌†
 QVarCircuit (param-shift)     ████████████████░░░░░░░░░░░░░░░░░░░░░░░  ~40% ⚠️
 QSNN Surrogate                ██████████████████████████████░░░░░░░░░  73.9% ✓
 QVarCircuit (CMA-ES)          ███████████████████████████████████░░░░  88%   ✓*
 ────────────────────────────────────────────────────────────────────────────
-SpikingReinforce (classical)  █████████████████████████████░░░░░░░░░░  73.3%† (ref)
+SpikingReinforce (classical)  █████████████████████████████░░░░░░░░░░  73.3%‡ (ref)
 
 * CMA-ES is evolutionary, not gradient-based
-† SpikingReinforce best session only; ~9/10 sessions fail (~10% reliability)
+† QSNN-PPO: PPO incompatible with surrogate gradients (policy_loss=0 always)
+‡ SpikingReinforce best session only; ~9/10 sessions fail (~10% reliability)
   QSNN achieves 73.9% with 100% session reliability (4/4 converge)
 
 KEY INSIGHT: QSNN Surrogate is the first quantum architecture to match a
 classical baseline using gradient-based learning (no evolution needed).
-It also surpasses SpikingReinforce in training reliability.
+PPO cannot be combined with surrogate gradients — use REINFORCE/A2C instead.
 ═══════════════════════════════════════════════════════════════════════════
 ```
 
@@ -498,15 +559,17 @@ Success
 
 ### Key Learnings
 
-1. **Fixed reservoirs don't work**: Random quantum circuits don't preserve input structure (QRC: 0%)
-2. **Local Hebbian learning is insufficient**: Despite 12 rounds of tuning, the learning signal is too weak for RL tasks
-3. **Surrogate gradients unlock quantum SNNs**: Using classical surrogate backward pass with quantum forward pass achieves classical parity on foraging
-4. **Multi-timestep integration is essential**: Averaging across timesteps reduces quantum shot noise enough for stable REINFORCE training
-5. **Adaptive entropy regulation prevents failure modes**: Two-sided regulation (floor + ceiling) eliminates both entropy collapse and explosion
-6. **Parameter efficiency**: QSNN achieves 73.9% with 92 parameters vs SpikingReinforce's 131K (1,400x fewer)
-7. **Training reliability matters**: SpikingReinforce's 73.3% headline number is misleading — only ~1 in 10 sessions converges, with the rest collapsing catastrophically. QSNN converges in 4/4 sessions (100%), making it a more practical architecture despite similar peak performance
-8. **Standalone QSNN cannot solve multi-objective tasks**: Despite 16 rounds and 64 sessions of predator optimization, per-encounter evasion never improved through training. The architecture learns foraging but not evasion — a hybrid approach is needed
-9. **Fan-in-aware scaling is critical for wider networks**: `tanh(w*x / sqrt(fan_in))` prevents gradient death that otherwise occurs when layer width exceeds ~10 neurons
+01. **Fixed reservoirs don't work**: Random quantum circuits don't preserve input structure (QRC: 0%)
+02. **Local Hebbian learning is insufficient**: Despite 12 rounds of tuning, the learning signal is too weak for RL tasks
+03. **Surrogate gradients unlock quantum SNNs**: Using classical surrogate backward pass with quantum forward pass achieves classical parity on foraging
+04. **Multi-timestep integration is essential**: Averaging across timesteps reduces quantum shot noise enough for stable REINFORCE training
+05. **Adaptive entropy regulation prevents failure modes**: Two-sided regulation (floor + ceiling) eliminates both entropy collapse and explosion
+06. **Parameter efficiency**: QSNN achieves 73.9% with 92 parameters vs SpikingReinforce's 131K (1,400x fewer)
+07. **Training reliability matters**: SpikingReinforce's 73.3% headline number is misleading — only ~1 in 10 sessions converges, with the rest collapsing catastrophically. QSNN converges in 4/4 sessions (100%), making it a more practical architecture despite similar peak performance
+08. **Standalone QSNN cannot solve multi-objective tasks**: Despite 16 rounds and 64 sessions of predator optimization, per-encounter evasion never improved through training. The architecture learns foraging but not evasion — a hybrid approach is needed
+09. **Fan-in-aware scaling is critical for wider networks**: `tanh(w*x / sqrt(fan_in))` prevents gradient death that otherwise occurs when layer width exceeds ~10 neurons
+10. **PPO is incompatible with surrogate gradient spiking networks**: The QLIFSurrogateSpike forward pass returns a constant (quantum measurement), making PPO's importance sampling ratio always 1.0. REINFORCE-based methods (which only need backward-pass gradients) are the correct algorithm family for QSNN
+11. **theta_motor init near pi/2 is critical**: Motor neurons initialised with small theta (~0) produce spike probs ~0.02, effectively dead. Initialising in `linspace(pi/4, 3*pi/4)` places neurons in the responsive range (spike probs 0.15-0.85)
 
 ______________________________________________________________________
 
@@ -520,7 +583,10 @@ ______________________________________________________________________
 - [x] Evaluate QSNN on random predator evasion (10 rounds, 40 sessions) — best: 25.1% avg (P2d), 74.3% post-convergence best session (P2c)
 - [x] Evaluate QSNN on pursuit predator evasion (6 rounds, 24 sessions) — best: 1.25% avg (PP8), approach exhausted
 - [x] Halt standalone QSNN predator approach — architecture limitation confirmed
-- [ ] Implement QSNN-PPO hybrid (QSNN actor + classical critic with GAE + PPO training loop) — see [quantum-architectures.md](../../research/quantum-architectures.md)
+- [x] Implement QSNN-PPO hybrid (QSNN actor + classical critic with GAE + PPO training loop) — 4 rounds, 16 sessions
+- [x] Halt QSNN-PPO — PPO incompatible with surrogate gradients (policy_loss=0 in 100% of updates)
+- [x] Implement QSNNReinforce A2C (actor-critic variance reduction on REINFORCE backbone)
+- [ ] Evaluate QSNNReinforce A2C on pursuit predators — in progress (A2C-0 complete, A2C-1 running)
 
 ______________________________________________________________________
 
@@ -557,15 +623,30 @@ Full session results and config: `artifacts/logbooks/008/qsnn_foraging_small/`
 
 Full predator session references (64 sessions across 16 rounds): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
 
+### QSNN-PPO Sessions
+
+| Round | Sessions | Result |
+|-------|----------|--------|
+| PPO-0 | 20260215_040128-040155 | 0%, buffer never fills, entropy collapse cycles |
+| PPO-1 | 20260215_063301-063319 | 0%, 100% policy_loss=0 (PPO completely inert) |
+| PPO-2 | 20260215_082646-082702 | 0%, motor spike probs at 0.02 (wrong hypothesis corrected) |
+| PPO-3 | 20260215_085929-085951 | 0%, motor probs fixed but policy_loss still 0 (root cause identified) |
+
+Full QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
+
 ### Appendices
 
 - QSNN foraging optimization history (17 rounds): [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md)
 - QSNN predator optimization history (16 rounds, 64 sessions): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
+- QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
 
 ### File Locations
 
 - QRC implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qrc.py`
 - QRC configs: `configs/examples/qrc_*.yml`
-- QSNN implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnn.py`
-- QSNN tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnn.py`
-- QSNN configs: `configs/examples/qsnn_*.yml`
+- QSNN implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnnreinforce.py`
+- QSNN tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnnreinforce.py`
+- QSNN configs: `configs/examples/qsnnreinforce_*.yml`
+- QSNN-PPO implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qsnnppo.py`
+- QSNN-PPO tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qsnnppo.py`
+- QSNN-PPO configs: `configs/examples/qsnnppo_*.yml`
