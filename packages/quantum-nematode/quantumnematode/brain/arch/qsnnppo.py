@@ -214,17 +214,13 @@ class QSNNRolloutBuffer:
                 next_value = self.values[t + 1]
                 next_non_terminal = 1.0 - float(self.dones[t])
 
-            delta = (
-                self.rewards[t]
-                + gamma * next_value * next_non_terminal
-                - self.values[t]
-            )
-            advantages[t] = last_gae = (
-                delta + gamma * gae_lambda * next_non_terminal * last_gae
-            )
+            delta = self.rewards[t] + gamma * next_value * next_non_terminal - self.values[t]
+            advantages[t] = last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
 
         values_t = torch.tensor(
-            self.values, dtype=torch.float32, device=self.device,
+            self.values,
+            dtype=torch.float32,
+            device=self.device,
         )
         returns = advantages + values_t
         return returns, advantages
@@ -252,7 +248,9 @@ class QSNNRolloutBuffer:
 
         actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
         old_log_probs = torch.tensor(
-            self.log_probs, dtype=torch.float32, device=self.device,
+            self.log_probs,
+            dtype=torch.float32,
+            device=self.device,
         )
 
         # Normalize advantages
@@ -543,9 +541,7 @@ class QSNNPPOBrain(ClassicalBrain):
         self.config = config
         self.num_actions = num_actions
         self.device = torch.device(device.value)
-        self._action_set = (
-            action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
-        )
+        self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
         if self.num_actions != len(self._action_set):
             msg = (
@@ -624,7 +620,9 @@ class QSNNPPOBrain(ClassicalBrain):
 
         # Rollout buffer
         self.buffer = QSNNRolloutBuffer(
-            config.rollout_buffer_size, self.device, rng=self.rng,
+            config.rollout_buffer_size,
+            self.device,
+            rng=self.rng,
         )
 
         # State tracking
@@ -661,15 +659,15 @@ class QSNNPPOBrain(ClassicalBrain):
     def _init_actor_weights(self) -> None:
         """Initialize QSNN actor weight matrices and theta parameters."""
         self.W_sh = (
-            torch.randn(self.num_sensory, self.num_hidden, device=self.device)
-            * WEIGHT_INIT_SCALE
+            torch.randn(self.num_sensory, self.num_hidden, device=self.device) * WEIGHT_INIT_SCALE
         )
         self.W_hm = (
-            torch.randn(self.num_hidden, self.num_motor, device=self.device)
-            * WEIGHT_INIT_SCALE
+            torch.randn(self.num_hidden, self.num_motor, device=self.device) * WEIGHT_INIT_SCALE
         )
         self.theta_hidden = torch.full(
-            (self.num_hidden,), np.pi / 4, device=self.device,
+            (self.num_hidden,),
+            np.pi / 4,
+            device=self.device,
         )
         self.theta_motor = torch.zeros(self.num_motor, device=self.device)
 
@@ -687,9 +685,7 @@ class QSNNPPOBrain(ClassicalBrain):
         """Get or create the Qiskit Aer backend."""
         if self._backend is None:
             self._backend = get_qiskit_backend(
-                DeviceType(self.device.type)
-                if hasattr(self.device, "type")
-                else DeviceType.CPU,
+                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
                 seed=self.seed,
             )
         return self._backend
@@ -716,16 +712,24 @@ class QSNNPPOBrain(ClassicalBrain):
             sensory_spikes = encode_sensory_spikes(features, self.num_sensory)
 
             hidden_spikes, self.refractory_hidden = execute_qlif_layer(
-                sensory_spikes, self.W_sh, self.theta_hidden,
-                self.refractory_hidden, backend=self._get_backend(),
-                shots=self.shots, threshold=self.threshold,
+                sensory_spikes,
+                self.W_sh,
+                self.theta_hidden,
+                self.refractory_hidden,
+                backend=self._get_backend(),
+                shots=self.shots,
+                threshold=self.threshold,
                 refractory_period=self.refractory_period,
                 leak_angle=self.leak_angle,
             )
             motor_spikes, self.refractory_motor = execute_qlif_layer(
-                hidden_spikes, self.W_hm, self.theta_motor,
-                self.refractory_motor, backend=self._get_backend(),
-                shots=self.shots, threshold=self.threshold,
+                hidden_spikes,
+                self.W_hm,
+                self.theta_motor,
+                self.refractory_motor,
+                backend=self._get_backend(),
+                shots=self.shots,
+                threshold=self.threshold,
                 refractory_period=self.refractory_period,
                 leak_angle=self.leak_angle,
             )
@@ -756,31 +760,39 @@ class QSNNPPOBrain(ClassicalBrain):
         for _ in range(self.num_integration_steps):
             sensory_spikes = encode_sensory_spikes(features, self.num_sensory)
             sensory_tensor = torch.tensor(
-                sensory_spikes, dtype=torch.float32, device=self.device,
+                sensory_spikes,
+                dtype=torch.float32,
+                device=self.device,
             )
 
-            hidden_spikes, self.refractory_hidden = (
-                execute_qlif_layer_differentiable(
-                    sensory_tensor, self.W_sh, self.theta_hidden,
-                    self.refractory_hidden, backend=self._get_backend(),
-                    shots=self.shots, threshold=self.threshold,
-                    refractory_period=self.refractory_period,
-                    leak_angle=self.leak_angle, device=self.device,
-                )
+            hidden_spikes, self.refractory_hidden = execute_qlif_layer_differentiable(
+                sensory_tensor,
+                self.W_sh,
+                self.theta_hidden,
+                self.refractory_hidden,
+                backend=self._get_backend(),
+                shots=self.shots,
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                leak_angle=self.leak_angle,
+                device=self.device,
             )
             step_cache: dict[str, list[float]] = {
                 "hidden": hidden_spikes.detach().cpu().tolist(),
             }
             hidden_acc += hidden_spikes.detach().cpu().numpy()
 
-            motor_spikes, self.refractory_motor = (
-                execute_qlif_layer_differentiable(
-                    hidden_spikes, self.W_hm, self.theta_motor,
-                    self.refractory_motor, backend=self._get_backend(),
-                    shots=self.shots, threshold=self.threshold,
-                    refractory_period=self.refractory_period,
-                    leak_angle=self.leak_angle, device=self.device,
-                )
+            motor_spikes, self.refractory_motor = execute_qlif_layer_differentiable(
+                hidden_spikes,
+                self.W_hm,
+                self.theta_motor,
+                self.refractory_motor,
+                backend=self._get_backend(),
+                shots=self.shots,
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                leak_angle=self.leak_angle,
+                device=self.device,
             )
             step_cache["motor"] = motor_spikes.detach().cpu().tolist()
 
@@ -809,29 +821,31 @@ class QSNNPPOBrain(ClassicalBrain):
         for step_idx in range(self.num_integration_steps):
             sensory_spikes = encode_sensory_spikes(features, self.num_sensory)
             sensory_tensor = torch.tensor(
-                sensory_spikes, dtype=torch.float32, device=self.device,
+                sensory_spikes,
+                dtype=torch.float32,
+                device=self.device,
             )
 
-            hidden_spikes, self.refractory_hidden = (
-                execute_qlif_layer_differentiable_cached(
-                    sensory_tensor, self.W_sh, self.theta_hidden,
-                    self.refractory_hidden,
-                    cached_spike_probs=cached_timestep[step_idx]["hidden"],
-                    threshold=self.threshold,
-                    refractory_period=self.refractory_period,
-                    device=self.device,
-                )
+            hidden_spikes, self.refractory_hidden = execute_qlif_layer_differentiable_cached(
+                sensory_tensor,
+                self.W_sh,
+                self.theta_hidden,
+                self.refractory_hidden,
+                cached_spike_probs=cached_timestep[step_idx]["hidden"],
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                device=self.device,
             )
 
-            motor_spikes, self.refractory_motor = (
-                execute_qlif_layer_differentiable_cached(
-                    hidden_spikes, self.W_hm, self.theta_motor,
-                    self.refractory_motor,
-                    cached_spike_probs=cached_timestep[step_idx]["motor"],
-                    threshold=self.threshold,
-                    refractory_period=self.refractory_period,
-                    device=self.device,
-                )
+            motor_spikes, self.refractory_motor = execute_qlif_layer_differentiable_cached(
+                hidden_spikes,
+                self.W_hm,
+                self.theta_motor,
+                self.refractory_motor,
+                cached_spike_probs=cached_timestep[step_idx]["motor"],
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                device=self.device,
             )
 
             motor_acc = motor_acc + motor_spikes
@@ -861,11 +875,10 @@ class QSNNPPOBrain(ClassicalBrain):
             Direction.RIGHT: 0.0,
         }
         agent_facing_angle = direction_map.get(
-            params.agent_direction or Direction.UP, np.pi / 2,
+            params.agent_direction or Direction.UP,
+            np.pi / 2,
         )
-        relative_angle = (
-            (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        )
+        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
         rel_angle_norm = relative_angle / np.pi
 
         return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
@@ -878,7 +891,9 @@ class QSNNPPOBrain(ClassicalBrain):
         """Build critic input from raw features and hidden spike rates."""
         critic_features = np.concatenate([features, hidden_spikes])
         return torch.tensor(
-            critic_features, dtype=torch.float32, device=self.device,
+            critic_features,
+            dtype=torch.float32,
+            device=self.device,
         )
 
     # ──────────────────────────────────────────────────────────────────
@@ -989,7 +1004,8 @@ class QSNNPPOBrain(ClassicalBrain):
         if self._pending_features is not None:
             with torch.no_grad():
                 critic_input = self._get_critic_input(
-                    self._pending_features, self._pending_hidden_spikes,
+                    self._pending_features,
+                    self._pending_hidden_spikes,
                 )
                 last_value = self.critic(critic_input).item()
         else:
@@ -997,7 +1013,9 @@ class QSNNPPOBrain(ClassicalBrain):
 
         # GAE computation
         returns, advantages = self.buffer.compute_returns_and_advantages(
-            last_value, self.config.gamma, self.config.gae_lambda,
+            last_value,
+            self.config.gamma,
+            self.config.gae_lambda,
         )
 
         # Multi-epoch PPO update with quantum caching
@@ -1016,17 +1034,18 @@ class QSNNPPOBrain(ClassicalBrain):
                     step_cache: list[dict[str, list[float]]] = []
                     self.refractory_hidden.fill(0)
                     self.refractory_motor.fill(0)
-                    motor_spikes, _hidden = (
-                        self._multi_timestep_differentiable_caching(
-                            self.buffer.features[t], step_cache,
-                        )
+                    motor_spikes, _hidden = self._multi_timestep_differentiable_caching(
+                        self.buffer.features[t],
+                        step_cache,
                     )
                     self.buffer.spike_caches.append(step_cache)
                     # Don't need the result tensors here; they'll be
                     # recomputed per-minibatch below
 
             for batch in self.buffer.get_minibatches(
-                self.config.num_minibatches, returns, advantages,
+                self.config.num_minibatches,
+                returns,
+                advantages,
             ):
                 # Per-step forward passes (quantum circuits are not batchable)
                 log_probs_list: list[torch.Tensor] = []
@@ -1046,10 +1065,9 @@ class QSNNPPOBrain(ClassicalBrain):
                     if epoch == 0 and self.config.num_epochs == 1:
                         # Single-epoch mode: no caching needed
                         step_cache_single: list[dict[str, list[float]]] = []
-                        motor_spikes, _hidden_np = (
-                            self._multi_timestep_differentiable_caching(
-                                features, step_cache_single,
-                            )
+                        motor_spikes, _hidden_np = self._multi_timestep_differentiable_caching(
+                            features,
+                            step_cache_single,
                         )
                         # Store cache for potential future use
                         if len(self.buffer.spike_caches) <= idx:
@@ -1061,12 +1079,14 @@ class QSNNPPOBrain(ClassicalBrain):
                         # Multi-epoch, epoch 0: use already-cached data
                         # (cached in the pre-pass above)
                         motor_spikes = self._multi_timestep_differentiable_cached(
-                            features, self.buffer.spike_caches[idx],
+                            features,
+                            self.buffer.spike_caches[idx],
                         )
                     else:
                         # Epochs 1+: reuse cached spike probs
                         motor_spikes = self._multi_timestep_differentiable_cached(
-                            features, self.buffer.spike_caches[idx],
+                            features,
+                            self.buffer.spike_caches[idx],
                         )
 
                     # Convert to action probabilities
@@ -1085,7 +1105,8 @@ class QSNNPPOBrain(ClassicalBrain):
                     # Critic forward pass
                     hidden_for_critic = self.buffer.hidden_spike_rates[idx]
                     critic_input = self._get_critic_input(
-                        features, hidden_for_critic,
+                        features,
+                        hidden_for_critic,
                     )
                     value = self.critic(critic_input)
                     values_list.append(value)
@@ -1110,7 +1131,8 @@ class QSNNPPOBrain(ClassicalBrain):
 
                 # Value loss (Huber for robustness to extreme penalties)
                 value_loss = torch.nn.functional.smooth_l1_loss(
-                    values, batch["returns"],
+                    values,
+                    batch["returns"],
                 )
 
                 # Combined loss for actor
@@ -1120,10 +1142,14 @@ class QSNNPPOBrain(ClassicalBrain):
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
                 actor_params = [
-                    self.W_sh, self.W_hm, self.theta_hidden, self.theta_motor,
+                    self.W_sh,
+                    self.W_hm,
+                    self.theta_hidden,
+                    self.theta_motor,
                 ]
                 torch.nn.utils.clip_grad_norm_(
-                    actor_params, self.config.max_grad_norm,
+                    actor_params,
+                    self.config.max_grad_norm,
                 )
                 self.actor_optimizer.step()
 
@@ -1132,7 +1158,8 @@ class QSNNPPOBrain(ClassicalBrain):
                 self.critic_optimizer.zero_grad()
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(
-                    self.critic.parameters(), self.config.max_grad_norm,
+                    self.critic.parameters(),
+                    self.config.max_grad_norm,
                 )
                 self.critic_optimizer.step()
 
