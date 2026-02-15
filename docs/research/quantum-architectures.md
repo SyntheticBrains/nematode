@@ -12,7 +12,7 @@ ______________________________________________________________________
 02. [Current Results & Lessons Learned](#current-results--lessons-learned)
 03. [QSNN Brain Specification](#qsnn-brain-specification)
 04. [QRC Brain Specification](#qrc-brain-specification)
-05. [QSNN-PPO Hybrid (Recommended Next Step)](#qsnn-ppo-hybrid-recommended-next-step)
+05. [QSNN-PPO Hybrid](#qsnn-ppo-hybrid)
 06. [PPO-Q Style PQC Actor](#ppo-q-style-pqc-actor)
 07. [HybridQuantum Brain Architecture](#hybridquantum-brain-architecture)
 08. [Data Re-Uploading Enhancement](#data-re-uploading-enhancement)
@@ -50,18 +50,21 @@ Architecture                      Foraging   Pursuit Pred   Training Method     
 ──────────────────────────────────────────────────────────────────────────────────────────────
 QRC                               0%         0%             REINFORCE (readout)     NO
 QSNN (Hebbian)                    0%         N/A            3-factor local          NO
+QSNN-PPO Hybrid                   N/A        0% (16 sess)   Surr grad + PPO         NO†
 QVarCircuit (parameter-shift)     ~40%       Not tested     Parameter-shift SGD     MARGINAL
 ──────────────────────────────────────────────────────────────────────────────────────────────
 QSNN (Surrogate gradient)         73.9%      0% (60 sess)   Quantum fwd + surr bwd  PARTIAL
+QSNNReinforce A2C                 N/A        In progress    Surr grad + A2C critic  EVALUATING
 QVarCircuit (CMA-ES)              99.8%      76.1%*         Evolutionary            NOT ONLINE
 ──────────────────────────────────────────────────────────────────────────────────────────────
-SpikingReinforceBrain             73.3%†     ~61%†          Surrogate grad (class)  UNRELIABLE
+SpikingReinforceBrain             73.3%‡     ~61%‡          Surrogate grad (class)  UNRELIABLE
 MLPReinforceBrain                 95.1%      73.4%          REINFORCE (classical)   YES
 MLPPPOBrain                       96.7%      83.3%          PPO (classical)         YES (SOTA)
 ──────────────────────────────────────────────────────────────────────────────────────────────
 
 * QVarCircuit predator result is on random predators only, with CMA-ES (not gradient-based)
-† SpikingReinforce numbers from best session only; ~90% of sessions fail catastrophically
+† QSNN-PPO: PPO incompatible with surrogate gradients — policy_loss=0 in 100% of updates
+‡ SpikingReinforce numbers from best session only; ~90% of sessions fail catastrophically
 ```
 
 ### Key Finding: QSNN's Surrogate Gradient Approach
@@ -75,12 +78,15 @@ However, QSNN fails completely on pursuit predators (0% across 60 sessions) due 
 3. No temporal credit assignment for evasion sequences
 4. Unbounded weight growth without regularization
 
+**QSNN-PPO was implemented to address these gaps but failed** — PPO is incompatible with surrogate gradients (see QSNN-PPO section). The current approach is **QSNNReinforce A2C**: adding a classical critic for GAE advantage estimation to the existing REINFORCE backbone, which preserves the quantum circuit in both forward and backward passes.
+
 ### Proposed Architecture Directions (Ranked)
 
 ```text
-Priority 1: QSNN-PPO Hybrid
-  Keep QSNN actor (proven surrogate gradients), add classical critic + PPO algorithm.
-  Smallest delta from working code. Directly addresses root causes of predator failure.
+Priority 1: QSNNReinforce A2C (IN PROGRESS)
+  Add classical critic with GAE advantages to existing QSNNReinforce backbone.
+  Preserves quantum forward+backward pass. Addresses high REINFORCE variance.
+  QSNN-PPO was tried first but PPO is incompatible with surrogate gradients.
 
 Priority 2: PPO-Q Style PQC Actor
   Replace actor with parameterized quantum circuit (PQC) wrapped in classical
@@ -521,17 +527,17 @@ Across 17 experimental sessions, QRC consistently failed due to:
 
 ______________________________________________________________________
 
-## QSNN-PPO Hybrid (Recommended Next Step)
+## QSNN-PPO Hybrid
+
+**Status**: Implemented and evaluated across 4 rounds (16 sessions, 1,000 episodes). **HALTED** — PPO is fundamentally incompatible with surrogate gradient spiking networks.
 
 ### Overview
 
-Keep the QSNN actor (proven surrogate gradients, barren-plateau-free) and add the components that make classical PPO effective: a classical critic for value estimation and the PPO training algorithm for stable multi-epoch updates.
-
-This directly addresses the three diagnosed root causes of QSNN's predator failure:
+Paired the QSNN actor (proven surrogate gradients, barren-plateau-free) with a classical critic for value estimation and the PPO training algorithm. Designed to address the three diagnosed root causes of QSNN's predator failure:
 
 1. **No critic** → Add classical MLP critic with GAE advantages
 2. **High REINFORCE variance** → PPO clipped surrogate objective
-3. **Insufficient gradient passes** → Multi-epoch updates (infrastructure already exists)
+3. **Insufficient gradient passes** → Multi-epoch updates with quantum caching
 
 ### Architecture
 
@@ -619,15 +625,50 @@ All of these bugs have since been fixed. A properly designed QSNN-PPO with hidde
 
 6. **Weight regularization**: Add L2 weight decay (λ=0.001) to address the unbounded weight growth problem observed in all QSNN predator experiments.
 
-### Expected Impact
+### Experimental Results (4 Rounds, 16 Sessions)
 
-| Metric | QSNN (current) | QSNN-PPO (expected) | MLP PPO (target) |
-|---|---|---|---|
-| Pursuit predator success | 0% | 20-50% | 83.3% |
-| Session reliability | 0/4 (predators) | 2-3/4 | ~95% |
-| Gradient passes per buffer | 2 | 8 (4 epochs × 2) | 40 |
-| Temporal credit assignment | Per-window REINFORCE | Per-step GAE | Per-step GAE |
-| Parameters | 212 | ~5,200 | ~17,000 |
+| Round | Key Changes | Success | Avg Food | Evasion | Key Finding |
+|-------|-----------|---------|----------|---------|-------------|
+| PPO-0 | Initial architecture | 0% | 0.52 | 43.5% | Buffer never fills; entropy collapse; theta_h collapse |
+| PPO-1 | Cross-ep buffer, entropy=0.08, LR=0.003 | 0% | 0.56 | 35.1% | 100% policy_loss=0 — PPO completely inert |
+| PPO-2 | logit_scale=20, entropy decay, motor init | 0% | 0.48 | 25.1% | Motor spike probs at 0.02 not 0.5 |
+| PPO-3 | theta_h=pi/2, theta_m=linspace(pi/4,3pi/4) | 0% | 0.77 | 42.5% | Motor probs fixed but policy_loss still 0 |
+
+### Why QSNN-PPO Failed: Architectural Incompatibility
+
+PPO requires the forward pass to produce **parameter-dependent** action probabilities for importance sampling (`ratio = exp(log_pi_new - log_pi_old)`). The QLIF surrogate gradient approach produces:
+
+- **Forward pass**: Returns quantum-measured spike probability — a **constant** independent of current weights
+- **Backward pass**: Computes gradient via classical sigmoid surrogate — parameter-dependent
+
+During PPO re-evaluation, `QLIFSurrogateSpike.forward()` returns the cached quantum measurement, so `pi_new(a|s) == pi_old(a|s)` always, `ratio == 1.0` always, `policy_loss == 0` always. This is irreconcilable without replacing the quantum forward pass with a classical approximation.
+
+**REINFORCE works** because it only needs `d(log_prob)/d(theta)` (the backward pass gradient), not a re-evaluated forward pass.
+
+### Actual Impact vs Expected
+
+| Metric | Expected | Actual |
+|---|---|---|
+| Pursuit predator success | 20-50% | **0%** (16 sessions) |
+| Session reliability | 2-3/4 | **0/16** |
+| Policy learning | Non-zero policy gradient | **policy_loss=0 in 100% of 600+ updates** |
+
+### Key Technical Discoveries
+
+1. **Motor spike probability suppression**: QLIF motor neurons with small theta_motor produce spike probs ~0.02 (barely firing). Init near `pi/2` is critical — `linspace(pi/4, 3*pi/4)` places neurons in responsive range (0.15-0.85).
+2. **theta_hidden init matters**: `pi/2` gives maximum sensitivity (`sin²(pi/4) = 0.5`). Prior init at `pi/4` produced probs ~0.15.
+3. **Entropy gradient provides weak learning**: Even with zero policy_loss, entropy regularisation is differentiable through surrogate gradients, creating slow exploration-driven improvement.
+
+### Pivot: QSNNReinforce A2C
+
+The correct approach is **actor-critic variance reduction on top of REINFORCE (A2C)**, which:
+
+- Preserves the quantum circuit in both forward and backward passes
+- Uses a classical critic for advantage estimation (same as PPO)
+- Addresses QSNN's known weakness (high REINFORCE variance)
+- Builds on QSNNReinforce's proven 67% foraging success
+
+This is now implemented and under evaluation. See logbook 008 for current status.
 
 ______________________________________________________________________
 
@@ -1314,11 +1355,11 @@ ______________________________________________________________________
 
 ## Open Questions
 
-1. **QSNN-PPO viability**: Can adding a classical critic + PPO algorithm to QSNN break through the 0% pursuit predator ceiling? The architecture's proven surrogate gradient approach should still work, but the critic integration is untested with the current (bug-fixed) codebase.
-2. **Surrogate gradient vs parameter-shift**: QSNN's surrogate gradient provides ~1,000x stronger signals than parameter-shift. Is this approach transferable to other quantum circuit architectures, or is it specific to the QLIF neuron structure?
-3. **Weight regularization**: All QSNN predator experiments show unbounded weight growth (3-6x over 200 episodes). Will L2 weight decay solve this, or does the architecture need a fundamentally different regularization approach?
-4. **Trainability-advantage trade-off**: Given Cerezo et al. (2025), does QSNN's surrogate gradient approach constitute genuine quantum advantage, or is the quantum measurement functionally equivalent to a classical sigmoid?
-5. **Optimal cortex update frequency**: For the hierarchical hybrid, every 5, 10, or 20 timesteps?
-6. **Fusion strategy effectiveness**: Option conditioning vs logit gating for hierarchical hybrid?
+1. ~~**QSNN-PPO viability**~~: **ANSWERED — NO.** PPO is fundamentally incompatible with surrogate gradient spiking networks. The forward pass returns a constant (quantum measurement), making PPO's importance sampling ratio always 1.0. policy_loss=0 in 100% of 600+ updates across 16 sessions. Only REINFORCE-family methods work with surrogate gradients.
+2. **QSNNReinforce A2C viability**: Can a classical critic with GAE advantages improve QSNNReinforce on pursuit predators? A2C-0 (4 sessions, 50 episodes) showed critic not learning (explained_variance ~0). A2C-1 (200 episodes, simplified critic) in progress.
+3. **Surrogate gradient algorithm compatibility**: Surrogate gradients are **backward-only** — the forward pass is stochastic. This is compatible with REINFORCE (needs backward gradient only) and A2C (critic trained separately) but NOT with PPO/TRPO (need forward-pass importance sampling). Is this a general principle for all surrogate gradient SNN architectures?
+4. **Surrogate gradient vs parameter-shift**: QSNN's surrogate gradient provides ~1,000x stronger signals than parameter-shift. Is this approach transferable to other quantum circuit architectures, or is it specific to the QLIF neuron structure?
+5. **Weight regularization**: All QSNN predator experiments show unbounded weight growth (3-6x over 200 episodes). Will L2 weight decay solve this, or does the architecture need a fundamentally different regularization approach?
+6. **Trainability-advantage trade-off**: Given Cerezo et al. (2025), does QSNN's surrogate gradient approach constitute genuine quantum advantage, or is the quantum measurement functionally equivalent to a classical sigmoid?
 7. **Hardware deployment**: Which architecture maps best to real QPU for eventual hardware validation?
 8. **Multi-objective scaling**: Can any quantum architecture handle 3+ simultaneous objectives (forage + evade + thermotaxis + mechanosensation)?
