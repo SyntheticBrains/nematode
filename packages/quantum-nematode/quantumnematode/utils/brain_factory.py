@@ -15,6 +15,7 @@ from quantumnematode.brain.arch import (
     MLPReinforceBrainConfig,
     QQLearningBrainConfig,
     QRCBrainConfig,
+    QSNNPPOBrainConfig,
     QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
     SpikingReinforceBrainConfig,
@@ -45,6 +46,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | MLPDQNBrainConfig
     | QQLearningBrainConfig
     | QRCBrainConfig
+    | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
     | SpikingReinforceBrainConfig,
     shots: int,
@@ -250,6 +252,22 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = QSNNReinforceBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.QSNN_PPO:
+        from quantumnematode.brain.arch.qsnnppo import QSNNPPOBrain
+
+        if not isinstance(brain_config, QSNNPPOBrainConfig):
+            error_message = (
+                "The 'qsnnppo' brain architecture requires a QSNNPPOBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QSNNPPOBrain(
             config=brain_config,
             num_actions=4,
             device=device,
