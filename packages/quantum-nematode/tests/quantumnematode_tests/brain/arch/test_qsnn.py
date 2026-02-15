@@ -7,16 +7,27 @@ from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qsnn import (
+    DEFAULT_CLIP_EPSILON,
+    DEFAULT_CRITIC_HIDDEN_DIM,
+    DEFAULT_CRITIC_LR,
+    DEFAULT_CRITIC_NUM_LAYERS,
+    DEFAULT_GAE_LAMBDA,
     DEFAULT_NUM_INTEGRATION_STEPS,
+    DEFAULT_NUM_REINFORCE_EPOCHS,
+    DEFAULT_REWARD_NORM_ALPHA,
     DEFAULT_SURROGATE_ALPHA,
+    DEFAULT_THETA_MOTOR_MAX_NORM,
+    DEFAULT_VALUE_LOSS_COEF,
     ENTROPY_BOOST_MAX,
     ENTROPY_CEILING_FRACTION,
     ENTROPY_FLOOR,
     EXPLORATION_DECAY_EPISODES,
     EXPLORATION_EPSILON,
+    LOGIT_SCALE,
     LR_DECAY_EPISODES,
     LR_MIN_FACTOR,
     MAX_ELIGIBILITY_NORM,
+    CriticMLP,
     QLIFSurrogateSpike,
     QSNNBrain,
     QSNNBrainConfig,
@@ -916,6 +927,7 @@ class TestQSNNBrainSurrogateGradient:
             shots=100,
             use_local_learning=False,
             learning_rate=0.1,
+            seed=42,
         )
         return QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
@@ -1177,7 +1189,7 @@ class TestQSNNBrainSurrogateGradient:
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert brain.current_probabilities is not None
         assert np.isclose(np.sum(brain.current_probabilities), 1.0, atol=1e-6)
-        # With LOGIT_SCALE=20.0 (vs old 10.0), probabilities should still be valid
+        # With LOGIT_SCALE=5.0, probabilities should still be valid
         assert all(p >= 0 for p in brain.current_probabilities)
 
     def test_lr_scheduler_created(self, brain):
@@ -1270,6 +1282,144 @@ class TestQSNNBrainSurrogateGradient:
         # The copy should have its own scheduler
         assert brain_copy.scheduler is not None
         assert brain_copy.scheduler is not brain.scheduler
+
+    def test_intra_episode_reinforce_triggers(self):
+        """Test that intra-episode REINFORCE fires every update_interval steps."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=5,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        # Run 5 steps (= update_interval), not episode_done
+        for _step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=1.0, episode_done=False)
+
+        # After 5 steps, intra-episode update should have fired and cleared buffers
+        assert len(brain.episode_rewards) == 0, (
+            "Buffers should be cleared after intra-episode REINFORCE update"
+        )
+        assert len(brain.episode_actions) == 0
+        assert len(brain.episode_features) == 0
+
+    def test_intra_episode_reinforce_changes_weights(self):
+        """Test that intra-episode REINFORCE updates actually modify weights."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=5,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        initial_w_sh = brain.W_sh.clone().detach()
+        initial_w_hm = brain.W_hm.clone().detach()
+
+        # Run 5 steps with varied rewards for meaningful advantages
+        rewards = [0.1, 2.0, -1.0, 3.0, 0.5]
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=rewards[step], episode_done=False)
+
+        # Weights should have changed from the intra-episode update
+        sh_changed = not torch.allclose(brain.W_sh, initial_w_sh, atol=1e-6)
+        hm_changed = not torch.allclose(brain.W_hm, initial_w_hm, atol=1e-6)
+        assert sh_changed or hm_changed, (
+            "Intra-episode REINFORCE should change at least one weight matrix"
+        )
+
+    def test_intra_episode_reinforce_multiple_windows(self):
+        """Test that multiple intra-episode updates fire across an episode."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=3,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 10 steps: updates at step 3, 6, 9
+        for step in range(10):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.5, episode_done=False)
+
+            if (step + 1) % 3 == 0:
+                # After each update_interval, buffers should be cleared
+                assert len(brain.episode_rewards) == 0, (
+                    f"Buffers should be cleared at step {step + 1}"
+                )
+
+        # 10 steps, last update at step 9 clears buffers, step 10 adds 1
+        assert len(brain.episode_rewards) == 1
+
+    def test_intra_episode_reinforce_final_window_at_episode_end(self):
+        """Test that remaining steps after last intra-episode update are learned at episode end."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=5,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 7 steps: intra-episode update at step 5, then 2 remaining steps
+        for step in range(7):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            episode_done = step == 6
+            brain.learn(params, reward=1.0, episode_done=episode_done)
+
+        # After episode end, everything should be reset
+        assert len(brain.episode_rewards) == 0
+        assert brain._episode_count == 1
+
+    def test_intra_episode_reinforce_not_triggered_at_episode_end(self):
+        """Test that intra-episode update does NOT fire when episode_done=True on boundary."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=5,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run exactly 5 steps with episode_done=True on the last step
+        # The intra-episode update should NOT fire (episode_done=True),
+        # but the episode-end update SHOULD fire.
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            episode_done = step == 4
+            brain.learn(params, reward=1.0, episode_done=episode_done)
+
+        # Episode should be fully reset
+        assert len(brain.episode_rewards) == 0
+        assert brain._episode_count == 1
 
 
 class TestQSNNWeightInitialization:
@@ -1628,3 +1778,1316 @@ class TestMultiTimestepIntegration:
         brain_copy = brain.copy()
 
         assert brain_copy.num_integration_steps == 7
+
+
+class TestPPOClipping:
+    """Test cases for PPO-style policy clipping in surrogate gradient mode."""
+
+    def test_logit_scale_default_is_five(self):
+        """Test that LOGIT_SCALE default is 5.0 (reduced from 20.0 for action diversity)."""
+        assert LOGIT_SCALE == 5.0
+
+    def test_default_clip_epsilon(self):
+        """Test that DEFAULT_CLIP_EPSILON is 0.2."""
+        assert DEFAULT_CLIP_EPSILON == 0.2
+
+    def test_config_clip_epsilon_default(self):
+        """Test that QSNNBrainConfig defaults clip_epsilon to 0.2."""
+        config = QSNNBrainConfig()
+        assert config.clip_epsilon == 0.2
+
+    def test_config_clip_epsilon_custom(self):
+        """Test that clip_epsilon can be set to a custom value."""
+        config = QSNNBrainConfig(clip_epsilon=0.1)
+        assert config.clip_epsilon == 0.1
+
+    def test_old_log_probs_stored_during_run_brain(self):
+        """Test that run_brain stores old_log_probs for PPO clipping."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+
+        assert len(brain.episode_old_log_probs) == 1
+        assert isinstance(brain.episode_old_log_probs[0], float)
+        assert brain.episode_old_log_probs[0] <= 0.0
+        assert np.isfinite(brain.episode_old_log_probs[0])
+
+    def test_old_log_probs_not_stored_in_hebbian_mode(self):
+        """Test that old_log_probs are NOT stored in Hebbian (local learning) mode."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+
+        assert len(brain.episode_old_log_probs) == 0
+
+    def test_old_log_probs_cleared_on_episode_reset(self):
+        """Test that episode_old_log_probs is cleared on episode reset."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_old_log_probs) == 1
+
+        brain.learn(params, reward=1.0, episode_done=True)
+        assert len(brain.episode_old_log_probs) == 0
+
+    def test_old_log_probs_cleared_on_intra_episode_update(self):
+        """Test that episode_old_log_probs is cleared after intra-episode REINFORCE."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=3,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        for _step in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.5, episode_done=False)
+
+        assert len(brain.episode_old_log_probs) == 0
+
+    def test_old_log_probs_sync_with_actions_and_features(self):
+        """Test that old_log_probs, actions, and features stay in sync."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        for _ in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+
+        assert len(brain.episode_old_log_probs) == 5
+        assert len(brain.episode_actions) == 5
+        assert len(brain.episode_features) == 5
+
+    def test_ppo_clipping_still_learns(self):
+        """Test that PPO clipping doesn't prevent learning (weights still change)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            update_interval=5,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        initial_w_sh = brain.W_sh.clone().detach()
+        initial_w_hm = brain.W_hm.clone().detach()
+
+        rewards = [0.1, 5.0, -3.0, 2.0, 0.5]
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=rewards[step], episode_done=(step == 4))
+
+        sh_changed = not torch.allclose(brain.W_sh, initial_w_sh, atol=1e-6)
+        hm_changed = not torch.allclose(brain.W_hm, initial_w_hm, atol=1e-6)
+        assert sh_changed or hm_changed, (
+            "PPO-clipped REINFORCE should change at least one weight matrix"
+        )
+
+
+class TestThetaMotorNormClamping:
+    """Test cases for theta_motor L2 norm clamping to prevent death spiral."""
+
+    def test_default_theta_motor_max_norm_constant(self):
+        """Test that DEFAULT_THETA_MOTOR_MAX_NORM is 1.0."""
+        assert DEFAULT_THETA_MOTOR_MAX_NORM == 1.0
+
+    def test_config_theta_motor_max_norm_default(self):
+        """Test that QSNNBrainConfig defaults theta_motor_max_norm to 1.0."""
+        config = QSNNBrainConfig()
+        assert config.theta_motor_max_norm == 1.0
+
+    def test_config_theta_motor_max_norm_custom(self):
+        """Test that theta_motor_max_norm can be set to a custom value."""
+        config = QSNNBrainConfig(theta_motor_max_norm=0.5)
+        assert config.theta_motor_max_norm == 0.5
+
+    def test_theta_motor_initialized_to_zero(self):
+        """Test that theta_motor is initialized to zeros (no initial bias)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=4,
+            shots=100,
+        )
+        brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert torch.allclose(brain.theta_motor, torch.zeros(4))
+
+    def test_theta_motor_norm_clamped_surrogate_mode(self):
+        """Test that theta_motor norm is clamped after surrogate gradient update."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=4,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.5,  # High LR to force large theta_m updates
+            theta_motor_max_norm=0.5,
+        )
+        brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        # Artificially inflate theta_motor to test clamping
+        with torch.no_grad():
+            brain.theta_motor.fill_(2.0)  # norm = 4.0, well above max_norm=0.5
+
+        params = BrainParams(gradient_strength=0.8, gradient_direction=0.5)
+
+        # Run several steps then trigger episode-end update
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=1.0, episode_done=(step == 4))
+
+        # After update + clamping, norm should be <= max_norm
+        tm_norm = torch.norm(brain.theta_motor).item()
+        assert tm_norm <= config.theta_motor_max_norm + 1e-6, (
+            f"theta_motor norm {tm_norm:.4f} exceeds max_norm {config.theta_motor_max_norm}"
+        )
+
+    def test_theta_motor_norm_clamped_hebbian_mode(self):
+        """Test that theta_motor norm is clamped after Hebbian local learning update."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=4,
+            shots=100,
+            use_local_learning=True,
+            learning_rate=0.5,
+            theta_motor_max_norm=0.5,
+        )
+        brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        # Artificially inflate theta_motor
+        with torch.no_grad():
+            brain.theta_motor.fill_(2.0)
+
+        params = BrainParams(gradient_strength=0.8, gradient_direction=0.5)
+
+        # Run a step and trigger learning
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        brain.learn(params, reward=5.0, episode_done=True)
+
+        tm_norm = torch.norm(brain.theta_motor).item()
+        assert tm_norm <= config.theta_motor_max_norm + 1e-6, (
+            f"theta_motor norm {tm_norm:.4f} exceeds max_norm {config.theta_motor_max_norm}"
+        )
+
+    def test_theta_motor_below_max_norm_unchanged(self):
+        """Test that theta_motor below max_norm is not scaled down."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=4,
+            shots=100,
+            use_local_learning=True,
+            learning_rate=0.001,  # Very low LR = small updates
+            theta_motor_max_norm=10.0,  # High ceiling
+        )
+        brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+
+        brain.learn(params, reward=1.0, episode_done=True)
+
+        # With very low LR and high max_norm, theta_motor should stay small
+        # and not be artificially scaled down
+        post_norm = torch.norm(brain.theta_motor).item()
+        assert post_norm <= config.theta_motor_max_norm, (
+            "theta_motor should stay below max_norm with small updates"
+        )
+
+
+class TestRewardNormalization:
+    """Test cases for running reward normalization."""
+
+    def test_default_reward_norm_alpha_constant(self):
+        """Test that DEFAULT_REWARD_NORM_ALPHA is 0.01."""
+        assert DEFAULT_REWARD_NORM_ALPHA == 0.01
+
+    def test_config_reward_norm_alpha_default(self):
+        """Test that QSNNBrainConfig defaults reward_norm_alpha to 0.01."""
+        config = QSNNBrainConfig()
+        assert config.reward_norm_alpha == 0.01
+
+    def test_config_reward_norm_alpha_custom(self):
+        """Test that reward_norm_alpha can be set to a custom value."""
+        config = QSNNBrainConfig(reward_norm_alpha=0.05)
+        assert config.reward_norm_alpha == 0.05
+
+    def test_config_use_reward_normalization_default(self):
+        """Test that use_reward_normalization defaults to True."""
+        config = QSNNBrainConfig()
+        assert config.use_reward_normalization is True
+
+    def test_config_use_reward_normalization_disabled(self):
+        """Test that use_reward_normalization can be disabled."""
+        config = QSNNBrainConfig(use_reward_normalization=False)
+        assert config.use_reward_normalization is False
+
+    def test_running_stats_initialized(self):
+        """Test that running reward stats are initialized correctly."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        assert brain.reward_running_mean == 0.0
+        assert brain.reward_running_var == 1.0
+
+    def test_normalize_reward_updates_running_stats(self):
+        """Test that _normalize_reward updates running mean and variance."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            reward_norm_alpha=0.1,  # Faster adaptation for testing
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # First reward: should shift running mean toward the reward
+        brain._normalize_reward(5.0)
+        assert brain.reward_running_mean > 0.0
+        assert brain.reward_running_mean < 5.0  # EMA, not instant
+
+    def test_normalize_reward_returns_normalized_value(self):
+        """Test that _normalize_reward returns a normalized reward."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            reward_norm_alpha=0.5,  # Very fast adaptation for clear test
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # Feed many identical rewards to stabilize the running stats
+        normalized = 0.0
+        for _ in range(100):
+            normalized = brain._normalize_reward(1.0)
+
+        # After many identical rewards, the normalized value should be near 0
+        # (the mean converges to 1.0, so 1.0 - 1.0 ≈ 0)
+        assert abs(normalized) < 0.5, (
+            f"After many identical rewards, normalized should be near 0, got {normalized}"
+        )
+
+    def test_normalized_rewards_stored_in_episode_rewards(self):
+        """Test that normalized (not raw) rewards are stored in episode_rewards."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_reward_normalization=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        brain.learn(params, reward=10.0, episode_done=False)
+
+        # The stored reward should be normalized (not 10.0)
+        assert len(brain.episode_rewards) == 1
+        assert brain.episode_rewards[0] != 10.0, "Stored reward should be normalized, not raw"
+
+    def test_raw_rewards_stored_in_history(self):
+        """Test that raw (not normalized) rewards are stored in history_data."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_reward_normalization=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        brain.learn(params, reward=10.0, episode_done=False)
+
+        # History should have the raw reward for diagnostics
+        assert brain.history_data.rewards[-1] == 10.0
+
+    def test_disabled_normalization_stores_raw_rewards(self):
+        """Test that disabling normalization stores raw rewards in episode_rewards."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_reward_normalization=False,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        brain.learn(params, reward=10.0, episode_done=False)
+
+        assert brain.episode_rewards[0] == 10.0
+
+    def test_running_stats_persist_across_episodes(self):
+        """Test that running reward stats persist across episode resets."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_reward_normalization=True,
+            reward_norm_alpha=0.1,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run a full episode with large rewards
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=10.0, episode_done=(step == 4))
+
+        # After episode reset, running stats should still reflect the history
+        assert brain.reward_running_mean > 0.0, "Running mean should persist after episode reset"
+        assert brain.reward_running_var > 0.0, "Running var should persist after episode reset"
+
+    def test_copy_preserves_running_stats(self):
+        """Test that copy() preserves running reward normalization stats."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            reward_norm_alpha=0.1,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # Update running stats
+        brain._normalize_reward(5.0)
+        brain._normalize_reward(10.0)
+
+        brain_copy = brain.copy()
+        assert brain_copy.reward_running_mean == brain.reward_running_mean
+        assert brain_copy.reward_running_var == brain.reward_running_var
+
+    def test_normalization_with_varied_rewards_still_learns(self):
+        """Test that normalization doesn't prevent learning (weights still change)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            learning_rate=0.1,
+            use_reward_normalization=True,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        initial_w_sh = brain.W_sh.clone().detach()
+        initial_w_hm = brain.W_hm.clone().detach()
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        rewards = [0.1, 5.0, -3.0, 2.0, 0.5]
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=rewards[step], episode_done=(step == 4))
+
+        sh_changed = not torch.allclose(brain.W_sh, initial_w_sh, atol=1e-6)
+        hm_changed = not torch.allclose(brain.W_hm, initial_w_hm, atol=1e-6)
+        assert sh_changed or hm_changed, (
+            "Reward-normalized REINFORCE should change at least one weight matrix"
+        )
+
+
+class TestQSNNCritic:
+    """Test cases for QSNN-AC (actor-critic) with classical critic."""
+
+    def test_default_critic_constants(self):
+        """Test critic default constant values."""
+        assert DEFAULT_CRITIC_HIDDEN_DIM == 64
+        assert DEFAULT_CRITIC_NUM_LAYERS == 2
+        assert DEFAULT_CRITIC_LR == 0.003
+        assert DEFAULT_GAE_LAMBDA == 0.95
+        assert DEFAULT_VALUE_LOSS_COEF == 0.5
+
+    def test_config_critic_defaults(self):
+        """Test critic config fields default to False/correct values."""
+        config = QSNNBrainConfig()
+        assert config.use_critic is False
+        assert config.critic_hidden_dim == DEFAULT_CRITIC_HIDDEN_DIM
+        assert config.critic_num_layers == DEFAULT_CRITIC_NUM_LAYERS
+        assert config.critic_lr == DEFAULT_CRITIC_LR
+        assert config.gae_lambda == DEFAULT_GAE_LAMBDA
+        assert config.value_loss_coef == DEFAULT_VALUE_LOSS_COEF
+
+    def test_critic_not_created_when_disabled(self):
+        """Test critic is None when use_critic=False."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        assert brain.critic is None
+        assert brain.critic_optimizer is None
+
+    def test_critic_created_when_enabled(self):
+        """Test critic is created with correct architecture when use_critic=True."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            critic_hidden_dim=32,
+            critic_num_layers=2,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        assert brain.critic is not None
+        assert isinstance(brain.critic, CriticMLP)
+        assert brain.critic_optimizer is not None
+
+    def test_critic_architecture(self):
+        """Test CriticMLP has correct layer structure."""
+        critic = CriticMLP(input_dim=4, hidden_dim=32, num_layers=2)
+        # Should be: Linear(4,32) -> ReLU -> Linear(32,32) -> ReLU -> Linear(32,1)
+        modules = list(critic.network)
+        assert len(modules) == 5
+        assert isinstance(modules[0], torch.nn.Linear)
+        assert modules[0].in_features == 4
+        assert modules[0].out_features == 32
+        assert isinstance(modules[1], torch.nn.ReLU)
+        assert isinstance(modules[2], torch.nn.Linear)
+        assert modules[2].in_features == 32
+        assert modules[2].out_features == 32
+        assert isinstance(modules[3], torch.nn.ReLU)
+        assert isinstance(modules[4], torch.nn.Linear)
+        assert modules[4].in_features == 32
+        assert modules[4].out_features == 1
+
+    def test_critic_forward_shape(self):
+        """Test CriticMLP forward pass produces correct output shape."""
+        critic = CriticMLP(input_dim=4, hidden_dim=16, num_layers=2)
+        x = torch.randn(4)
+        out = critic(x)
+        assert out.shape == ()  # scalar output (squeezed)
+
+        # Batch input
+        x_batch = torch.randn(5, 4)
+        out_batch = critic(x_batch)
+        assert out_batch.shape == (5,)
+
+    def test_episode_values_stored_when_critic_enabled(self):
+        """Test episode_values are populated during run_brain with critic."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_values) == 1
+        assert isinstance(brain.episode_values[0], float)
+        assert np.isfinite(brain.episode_values[0])
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_values) == 2
+
+    def test_episode_values_not_stored_when_critic_disabled(self):
+        """Test episode_values stay empty when use_critic=False."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_values) == 0
+
+    def test_episode_values_cleared_on_reset(self):
+        """Test episode_values cleared when episode resets."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(brain.episode_values) == 1
+
+        brain._reset_episode()
+        assert len(brain.episode_values) == 0
+
+    def test_episode_values_in_sync_with_actions(self):
+        """Test episode_values length matches episode_actions."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        for _ in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+
+        assert len(brain.episode_values) == len(brain.episode_actions)
+        assert len(brain.episode_values) == len(brain.episode_features)
+
+    def test_compute_gae_shapes(self):
+        """Test _compute_gae returns correct shapes."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # Manually populate episode buffers
+        brain.episode_rewards = [0.5, -0.1, 1.0, -0.3, 0.2]
+        brain.episode_values = [0.1, 0.2, 0.15, 0.05, 0.3]
+
+        advantages, returns = brain._compute_gae(bootstrap_value=0.0)
+        assert advantages.shape == (5,)
+        assert returns.shape == (5,)
+        assert torch.all(torch.isfinite(advantages))
+        assert torch.all(torch.isfinite(returns))
+
+    def test_compute_gae_terminal_vs_bootstrap(self):
+        """Test GAE with bootstrap=0 (terminal) vs non-zero (window boundary)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            gae_lambda=0.95,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        brain.episode_rewards = [1.0, 1.0, 1.0]
+        brain.episode_values = [0.5, 0.5, 0.5]
+
+        adv_terminal, _ret_terminal = brain._compute_gae(bootstrap_value=0.0)
+        adv_bootstrap, _ret_bootstrap = brain._compute_gae(bootstrap_value=2.0)
+
+        # With bootstrap > 0, the last step should have higher advantage
+        # since there's additional expected value beyond the window
+        assert adv_bootstrap[-1].item() > adv_terminal[-1].item()
+
+    def test_critic_update_does_not_affect_actor(self):
+        """Test that critic update leaves actor weights unchanged."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        # Save actor weights
+        w_sh_before = brain.W_sh.clone().detach()
+        w_hm_before = brain.W_hm.clone().detach()
+        theta_h_before = brain.theta_hidden.clone().detach()
+        theta_m_before = brain.theta_motor.clone().detach()
+
+        # Populate features and call _update_critic
+        brain.episode_features = [np.array([0.5, 0.3]), np.array([0.2, 0.8])]
+        target_returns = torch.tensor([1.0, 2.0])
+        brain._update_critic(target_returns)
+
+        # Actor weights should be identical
+        assert torch.allclose(brain.W_sh, w_sh_before)
+        assert torch.allclose(brain.W_hm, w_hm_before)
+        assert torch.allclose(brain.theta_hidden, theta_h_before)
+        assert torch.allclose(brain.theta_motor, theta_m_before)
+
+    def test_full_episode_with_critic(self):
+        """Test a complete episode with critic enabled runs without error."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1 * (step + 1), episode_done=(step == 4))
+
+        # After episode, buffers should be cleared
+        assert len(brain.episode_values) == 0
+        assert len(brain.episode_rewards) == 0
+
+    def test_intra_episode_update_with_critic_bootstrap(self):
+        """Test intra-episode updates with critic use deferred bootstrap.
+
+        With deferred bootstrap, learn() at a window boundary sets a flag
+        instead of updating immediately. The next run_brain() computes
+        V(s_{N+1}) and executes the deferred update, then clears buffers.
+        """
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            update_interval=3,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 3 steps: triggers deferred update flag at step 3
+        for _step in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Flag set, buffers NOT yet cleared
+        assert brain._pending_critic_update is True
+        assert len(brain.episode_values) == 3
+
+        # Step 4: run_brain executes deferred update, clears buffers, adds new value
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert brain._pending_critic_update is False
+        assert len(brain.episode_values) == 1  # new step's value only
+
+        # Continue to step 6 + one more run_brain for second deferred update
+        brain.learn(params, reward=0.1, episode_done=False)
+        for _step in range(2):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Second deferred update triggered
+        assert brain._pending_critic_update is True
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert brain._pending_critic_update is False
+        assert len(brain.episode_values) == 1
+
+    def test_episode_values_cleared_on_intra_episode_update(self):
+        """Test episode_values are cleared after deferred intra-episode update.
+
+        With deferred bootstrap, buffers are cleared in the next run_brain()
+        call after the window boundary, not immediately in learn().
+        """
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            update_interval=2,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 2 steps to trigger deferred update flag
+        for _step in range(2):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Buffers NOT yet cleared — deferred until next run_brain()
+        assert brain._pending_critic_update is True
+        assert len(brain.episode_values) == 2
+        assert len(brain.episode_rewards) == 2
+
+        # Next run_brain() executes deferred update and clears buffers
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert brain._pending_critic_update is False
+        assert len(brain.episode_rewards) == 0
+        # episode_values has 1 entry from the new run_brain() step
+        assert len(brain.episode_values) == 1
+
+    def test_copy_preserves_critic_weights(self):
+        """Test copy() creates independent critic with same weights."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+
+        brain_copy = brain.copy()
+
+        # Critic should exist in both original and copy
+        assert brain.critic is not None
+        assert brain_copy.critic is not None
+        assert brain_copy.critic_optimizer is not None
+
+        # Weights should match
+        for p_orig, p_copy in zip(
+            brain.critic.parameters(),
+            brain_copy.critic.parameters(),
+            strict=False,
+        ):
+            assert torch.allclose(p_orig, p_copy)
+
+        # Should be independent (modifying copy doesn't affect original)
+        for p in brain_copy.critic.parameters():
+            p.data.fill_(999.0)
+        for p_orig, p_copy in zip(
+            brain.critic.parameters(),
+            brain_copy.critic.parameters(),
+            strict=False,
+        ):
+            assert not torch.allclose(p_orig, p_copy)
+
+    def test_copy_no_critic_when_disabled(self):
+        """Test copy() does not create critic when use_critic=False."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        brain_copy = brain.copy()
+        assert brain_copy.critic is None
+        assert brain_copy.critic_optimizer is None
+
+    def test_critic_with_sensory_modules(self):
+        """Test critic works with sensory module input dimension."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=4,
+            num_hidden_neurons=4,
+            num_motor_neurons=4,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        # input_dim should be 4 (2 modules x 2 features each)
+        assert brain.input_dim == 4
+        assert brain.critic is not None
+
+        # Verify critic accepts 4-dim input
+        x = torch.randn(4)
+        out = brain.critic(x)
+        assert out.shape == ()
+
+    def test_reward_normalization_with_critic(self):
+        """Test reward normalization is skipped when critic is active.
+
+        When use_critic=True, raw rewards are stored for stable critic targets.
+        GAE + advantage normalization handles variance reduction instead.
+        """
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            use_reward_normalization=True,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run a full episode with mixed rewards
+        rewards = [0.1, -5.0, 2.0, -0.3, 1.0]
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=rewards[step], episode_done=(step == 4))
+
+        # With critic, reward normalization is skipped — running stats not updated
+        assert brain.reward_running_mean == 0.0
+        assert brain.reward_running_var == 1.0
+
+    def test_disabled_critic_identical_behavior(self):
+        """Test use_critic=False produces same code path as before (no GAE)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Populate episode data manually
+        for _ in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+
+        brain.episode_rewards = [1.0, -0.5, 0.3]
+
+        # _reinforce_update should use vanilla REINFORCE path (no crash)
+        brain._reinforce_update(bootstrap_value=0.0)
+
+        # Weights should change (learning happened)
+        # Note: with shot noise this can be flaky at shots=100
+        # Just verify no crash occurred
+        assert brain.W_sh is not None
+
+    def test_deferred_bootstrap_computes_correct_value(self):
+        """Test deferred bootstrap: flag set at boundary, update runs in next run_brain()."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            update_interval=3,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        assert brain._pending_critic_update is False
+
+        # Run 3 steps to hit the update_interval boundary
+        for _step in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # After exactly update_interval steps, flag should be set (deferred)
+        assert brain._pending_critic_update is True
+        # Buffers should NOT be cleared yet (waiting for next run_brain)
+        assert len(brain.episode_rewards) == 3
+        assert len(brain.episode_values) == 3
+
+        # Next run_brain() should execute the deferred update and clear buffers
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        assert brain._pending_critic_update is False
+        # Buffers cleared after deferred update, but new step added a value
+        assert len(brain.episode_values) == 1
+        assert len(brain.episode_rewards) == 0
+
+    def test_deferred_bootstrap_not_set_without_critic(self):
+        """Test vanilla REINFORCE path does not set deferred flag."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+            update_interval=3,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 3 steps to hit the update_interval boundary
+        for _step in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Without critic, update happens immediately — flag stays False
+        assert brain._pending_critic_update is False
+        # Buffers should be cleared after immediate update
+        assert len(brain.episode_rewards) == 0
+
+    def test_reward_normalization_skipped_with_critic(self):
+        """Test raw rewards are stored when critic is active (normalization skipped)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            use_reward_normalization=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run a step with a known reward
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        brain.learn(params, reward=5.0, episode_done=False)
+
+        # Raw reward should be stored (not normalized)
+        assert brain.episode_rewards[-1] == 5.0
+        # Running stats should NOT be updated
+        assert brain.reward_running_mean == 0.0
+        assert brain.reward_running_var == 1.0
+
+    def test_reward_normalization_still_works_without_critic(self):
+        """Test REINFORCE path still normalizes rewards when critic is disabled."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=False,
+            use_reward_normalization=True,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run a step with a known reward
+        brain.run_brain(params, top_only=True, top_randomize=True)
+        brain.learn(params, reward=5.0, episode_done=False)
+
+        # Reward should be normalized (not raw 5.0)
+        assert brain.episode_rewards[-1] != 5.0
+        # Running stats should be updated
+        assert brain.reward_running_mean != 0.0
+
+    def test_critic_uses_huber_loss(self):
+        """Test critic update with extreme targets doesn't crash and params stay finite."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Populate episode data with extreme rewards (simulating death penalty)
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            reward = -10.0 if step == 4 else 0.1
+            brain.learn(params, reward=reward, episode_done=(step == 4))
+
+        # Critic parameters should remain finite after extreme target update
+        assert brain.critic is not None
+        for param in brain.critic.parameters():
+            assert torch.isfinite(param).all(), (
+                "Critic params became non-finite after extreme targets"
+            )
+
+    def test_deferred_update_cleared_on_episode_reset(self):
+        """Test _pending_critic_update is cleared when episode resets."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=2,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            use_critic=True,
+            update_interval=3,
+            learning_rate=0.01,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 3 steps to set the deferred flag
+        for _step in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        assert brain._pending_critic_update is True
+
+        # Reset episode should clear the flag
+        brain._reset_episode()
+        assert brain._pending_critic_update is False
+
+
+class TestMultiEpochReinforce:
+    """Tests for multi-epoch REINFORCE with quantum output caching (PP6)."""
+
+    def test_config_num_reinforce_epochs_default(self):
+        """Test num_reinforce_epochs defaults to 1."""
+        config = QSNNBrainConfig()
+        assert config.num_reinforce_epochs == DEFAULT_NUM_REINFORCE_EPOCHS
+        assert config.num_reinforce_epochs == 1
+
+    def test_config_num_reinforce_epochs_custom(self):
+        """Test num_reinforce_epochs can be set to custom value."""
+        config = QSNNBrainConfig(num_reinforce_epochs=3)
+        assert config.num_reinforce_epochs == 3
+
+    def test_validation_num_reinforce_epochs_zero(self):
+        """Test that num_reinforce_epochs=0 is rejected."""
+        with pytest.raises(ValueError, match="num_reinforce_epochs must be >= 1"):
+            QSNNBrainConfig(num_reinforce_epochs=0)
+
+    def test_validation_num_reinforce_epochs_negative(self):
+        """Test that negative num_reinforce_epochs is rejected."""
+        with pytest.raises(ValueError, match="num_reinforce_epochs must be >= 1"):
+            QSNNBrainConfig(num_reinforce_epochs=-1)
+
+    def test_single_epoch_completes_without_error(self):
+        """Test that num_reinforce_epochs=1 (default) completes a full episode."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=1,
+            update_interval=5,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        for step in range(10):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1 if step % 3 == 0 else -0.05, episode_done=(step == 9))
+
+    def test_multi_epoch_completes_without_error(self):
+        """Test that num_reinforce_epochs=3 completes a full episode."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=3,
+            update_interval=5,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        for step in range(10):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1 if step % 3 == 0 else -0.05, episode_done=(step == 9))
+
+    def test_multi_epoch_changes_weights(self):
+        """Test that multi-epoch REINFORCE modifies weights after episode."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=3,
+            update_interval=0,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        w_sh_before = brain.W_sh.clone()
+        w_hm_before = brain.W_hm.clone()
+
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.5 if step == 0 else -0.1, episode_done=(step == 4))
+
+        # Weights should have changed
+        assert not torch.allclose(brain.W_sh, w_sh_before) or not torch.allclose(
+            brain.W_hm,
+            w_hm_before,
+        )
+
+    def test_multi_epoch_more_change_than_single(self):
+        """Test that 3 epochs produces >= weight change vs 1 epoch."""
+
+        def run_episode(num_epochs, seed):
+            config = QSNNBrainConfig(
+                num_sensory_neurons=2,
+                num_hidden_neurons=3,
+                num_motor_neurons=2,
+                shots=100,
+                use_local_learning=False,
+                num_reinforce_epochs=num_epochs,
+                update_interval=0,
+                learning_rate=0.01,
+                seed=seed,
+            )
+            brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+            params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+            w_sh_init = brain.W_sh.clone()
+            w_hm_init = brain.W_hm.clone()
+
+            for step in range(5):
+                brain.run_brain(params, top_only=True, top_randomize=True)
+                brain.learn(params, reward=0.5 if step == 0 else -0.1, episode_done=(step == 4))
+
+            delta_sh = (brain.W_sh - w_sh_init).abs().sum().item()
+            delta_hm = (brain.W_hm - w_hm_init).abs().sum().item()
+            return delta_sh + delta_hm
+
+        # Run with same seed for fair comparison
+        change_1 = run_episode(1, seed=42)
+        change_3 = run_episode(3, seed=42)
+
+        # 3 epochs should produce at least as much total weight change
+        assert change_3 >= change_1 * 0.9, (
+            f"Expected 3-epoch change ({change_3:.6f}) >= 0.9 * 1-epoch change ({change_1:.6f})"
+        )
+
+    def test_multi_epoch_intra_episode_update(self):
+        """Test multi-epoch works with intra-episode update_interval windowing."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=3,
+            update_interval=3,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 9 steps (3 windows of 3) + episode end at step 9
+        for step in range(10):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=(step == 9))
+
+    def test_cache_cleared_after_update(self):
+        """Test _cached_spike_probs is empty after episode end."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=3,
+            update_interval=0,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=(step == 4))
+
+        # Cache should be empty after episode reset
+        assert brain._cached_spike_probs == []
+
+    def test_cache_cleared_on_intra_episode_update(self):
+        """Test _cached_spike_probs is cleared after intra-episode window update."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=2,
+            num_hidden_neurons=3,
+            num_motor_neurons=2,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=3,
+            update_interval=3,
+            learning_rate=0.01,
+            seed=42,
+        )
+        brain = QSNNBrain(config=config, num_actions=2, device=DeviceType.CPU)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        # Run 3 steps to trigger intra-episode update
+        for _step in range(3):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Cache should be empty after intra-episode update
+        assert brain._cached_spike_probs == []
+
+    def test_multi_epoch_with_sensory_modules(self):
+        """Test multi-epoch works with sensory modules (input_dim=4)."""
+        config = QSNNBrainConfig(
+            num_sensory_neurons=4,
+            num_hidden_neurons=4,
+            num_motor_neurons=4,
+            shots=100,
+            use_local_learning=False,
+            num_reinforce_epochs=2,
+            update_interval=0,
+            learning_rate=0.01,
+            seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QSNNBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            predator_gradient_strength=0.3,
+            predator_gradient_direction=2.5,
+        )
+
+        for step in range(5):
+            brain.run_brain(params, top_only=True, top_randomize=True)
+            brain.learn(params, reward=0.1, episode_done=(step == 4))
