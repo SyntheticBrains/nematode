@@ -22,7 +22,7 @@ QSNN (Quantum Spiking Neural Network) addresses both problems: trainable quantum
 
 ### New Capabilities
 
-- `qsnn-brain`: Quantum Spiking Neural Network brain architecture with QLIF neurons, hybrid quantum-classical surrogate gradient learning, and adaptive entropy regulation
+- `qsnn-reinforce-brain`: Quantum Spiking Neural Network brain architecture with QLIF neurons, hybrid quantum-classical surrogate gradient learning, and adaptive entropy regulation
 
 ### Modified Capabilities
 
