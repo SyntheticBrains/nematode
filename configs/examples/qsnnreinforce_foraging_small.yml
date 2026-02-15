@@ -1,16 +1,17 @@
-# Dynamic Foraging with Random Predators - Small Configuration
-# Dual-objective: forage while evading randomly moving predators
-# Uses QSNN (Quantum Spiking Neural Network) brain architecture
-# Surrogate gradient learning (REINFORCE + QLIFSurrogateSpike backprop + PPO clipping)
+# Dynamic Foraging Environment - Small Configuration
+# Curriculum level 1: Easy foraging scenario for initial training
+# Uses QSNN REINFORCE (Quantum Spiking Neural Network) brain architecture
+# Surrogate gradient learning (REINFORCE + QLIFSurrogateSpike backprop)
 #
-# Sensory modules: food_chemotaxis (2 features), nociception (2 features)
+# Note: Uses legacy 2-feature mode (gradient_strength, relative_angle).
+# For multi-sensory scenarios (predators, thermotaxis), use sensory_modules.
 
 max_steps: 500
 brain:
-  name: qsnn
+  name: qsnnreinforce
   config:
-    num_sensory_neurons: 4
-    num_hidden_neurons: 10
+    num_sensory_neurons: 6
+    num_hidden_neurons: 8
     num_motor_neurons: 4
     membrane_tau: 0.9
     threshold: 0.5
@@ -19,17 +20,11 @@ brain:
     shots: 1024
     gamma: 0.99
     learning_rate: 0.01
-    entropy_coef: 0.08
-    weight_clip: 2.0
+    entropy_coef: 0.02
+    weight_clip: 3.0
     update_interval: 20
     num_integration_steps: 10
-    exploration_decay_episodes: 120
-    lr_decay_episodes: 400
-    lr_min_factor: 0.2
     logit_scale: 5.0
-    sensory_modules:
-      - food_chemotaxis
-      - nociception
 
 body_length: 2
 
@@ -41,8 +36,6 @@ reward:
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0
   penalty_starvation: 2.0
-  penalty_predator_death: 3.0
-  penalty_predator_proximity: 0.05
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
 
@@ -54,23 +47,12 @@ satiety:
 environment:
   grid_size: 20
   viewport_size: [11, 11]
-  use_separated_gradients: true
 
   foraging:
     foods_on_grid: 5
     target_foods_to_collect: 10
     min_food_distance: 3
     agent_exclusion_radius: 5
-    gradient_decay_constant: 8.0
-    gradient_strength: 1.0
-
-  predators:
-    enabled: true
-    count: 2
-    speed: 1.0
-    movement_pattern: random
-    detection_radius: 8
-    kill_radius: 0
     gradient_decay_constant: 8.0
     gradient_strength: 1.0
 
