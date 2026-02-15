@@ -36,9 +36,9 @@ class TestQSNNPPOBrainConfig:
         assert config.gamma == 0.99
         assert config.gae_lambda == 0.95
         assert config.clip_epsilon == 0.2
-        assert config.num_epochs == 4
+        assert config.num_epochs == 2
         assert config.num_minibatches == 4
-        assert config.rollout_buffer_size == 512
+        assert config.rollout_buffer_size == 256
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -643,8 +643,8 @@ class TestQSNNPPOBrainLearning:
         # Buffer should be cleared after PPO update
         assert len(brain.buffer) == 0
 
-    def test_episode_done_triggers_update(self, brain: QSNNPPOBrain):
-        """Test PPO update triggers on episode end with enough data."""
+    def test_episode_done_does_not_trigger_update(self, brain: QSNNPPOBrain):
+        """Test buffer persists across episodes until full."""
         params = BrainParams(
             gradient_strength=0.5,
             gradient_direction=1.0,
@@ -655,8 +655,8 @@ class TestQSNNPPOBrainLearning:
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=0.1, episode_done=(step == 4))
 
-        # Buffer should be cleared after episode-end update
-        assert len(brain.buffer) == 0
+        # Buffer should NOT be cleared -- accumulates across episodes
+        assert len(brain.buffer) == 5
 
     def test_ppo_update_changes_actor_weights(self, brain: QSNNPPOBrain):
         """Test PPO update modifies actor weights."""
@@ -723,6 +723,16 @@ class TestQSNNPPOBrainLearning:
 
         tm_norm = torch.norm(brain.theta_motor).item()
         assert tm_norm <= brain.config.theta_motor_max_norm + 1e-6
+
+    def test_theta_hidden_min_norm_clamping(self, brain: QSNNPPOBrain):
+        """Test theta_hidden L2 norm is preserved above min_norm."""
+        with torch.no_grad():
+            brain.theta_hidden.fill_(0.01)
+
+        brain._clamp_weights()
+
+        th_norm = torch.norm(brain.theta_hidden).item()
+        assert th_norm >= brain.config.theta_hidden_min_norm - 1e-6
 
     def test_rewards_stored_in_history(self, brain: QSNNPPOBrain):
         """Test rewards are recorded in history."""
