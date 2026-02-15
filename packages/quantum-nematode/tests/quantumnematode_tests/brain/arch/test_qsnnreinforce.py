@@ -5,6 +5,7 @@ import pytest
 import torch
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
+from quantumnematode.brain.arch._qlif_layers import build_qlif_circuit
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qsnnreinforce import (
     DEFAULT_CLIP_EPSILON,
@@ -162,7 +163,11 @@ class TestQSNNReinforceBrainQLIFCircuit:
 
     def test_qlif_circuit_structure(self, brain):
         """Verify QLIF circuit has correct structure: RY + RX + Measure."""
-        circuit = brain._build_qlif_circuit(weighted_input=0.5, theta_membrane=0.1)
+        circuit = build_qlif_circuit(
+            weighted_input=0.5,
+            theta_membrane=0.1,
+            leak_angle=brain.leak_angle,
+        )
 
         # Check circuit has 1 qubit and 1 classical bit
         assert circuit.num_qubits == 1
@@ -186,9 +191,10 @@ class TestQSNNReinforceBrainQLIFCircuit:
         weighted_input = 0.5
         theta_membrane = 0.2
 
-        circuit = brain._build_qlif_circuit(
+        circuit = build_qlif_circuit(
             weighted_input=weighted_input,
             theta_membrane=theta_membrane,
+            leak_angle=brain.leak_angle,
         )
 
         # Find RY and RX gates
@@ -217,9 +223,10 @@ class TestQSNNReinforceBrainQLIFCircuit:
         large_input = 50.0
         theta_membrane = 0.0
 
-        circuit = brain._build_qlif_circuit(
+        circuit = build_qlif_circuit(
             weighted_input=large_input,
             theta_membrane=theta_membrane,
+            leak_angle=brain.leak_angle,
         )
 
         ry_gate = None
@@ -235,7 +242,11 @@ class TestQSNNReinforceBrainQLIFCircuit:
 
     def test_qlif_circuit_measurement(self, brain):
         """Test QLIF circuit measurement produces valid probabilities."""
-        circuit = brain._build_qlif_circuit(weighted_input=0.5, theta_membrane=0.1)
+        circuit = build_qlif_circuit(
+            weighted_input=0.5,
+            theta_membrane=0.1,
+            leak_angle=brain.leak_angle,
+        )
 
         # Execute circuit
         backend = brain._get_backend()
