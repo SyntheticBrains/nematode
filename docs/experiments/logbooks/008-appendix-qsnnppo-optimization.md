@@ -96,7 +96,7 @@ brain:
 | 040155 | 0% | 0.25 | 5 | 98.2 | -13.72 | 41.6% | No |
 | **Avg** | **0%** | **0.52** | **6** | **111.3** | **-13.34** | **43.5%** | **No** |
 
-**Termination**: ~96% health_depleted, ~3% starved, <1% max_steps
+**Termination**: ~96% health_depleted, ~3% starved, \<1% max_steps
 
 ### Training Metrics Trajectory (Session 040128, representative)
 
