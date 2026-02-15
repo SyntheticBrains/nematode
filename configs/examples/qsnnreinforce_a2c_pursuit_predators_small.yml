@@ -35,10 +35,10 @@ brain:
 
     # Actor-Critic (A2C) configuration
     use_critic: true
-    critic_hidden_dim: 64
-    critic_num_layers: 2
-    critic_lr: 0.001
-    gae_lambda: 0.95
+    critic_hidden_dim: 32
+    critic_num_layers: 1
+    critic_lr: 0.0003
+    gae_lambda: 0.8
     value_loss_coef: 0.5
 
     sensory_modules:
