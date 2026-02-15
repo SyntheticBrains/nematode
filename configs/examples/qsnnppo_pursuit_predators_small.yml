@@ -20,9 +20,9 @@ brain:
     refractory_period: 0
     shots: 1024
     num_integration_steps: 10
-    logit_scale: 20.0
+    logit_scale: 5.0
     weight_clip: 3.0
-    theta_motor_max_norm: 2.0
+    theta_motor_max_norm: 5.0
     theta_hidden_min_norm: 2.0
 
     # PPO hyperparameters
@@ -31,7 +31,7 @@ brain:
     clip_epsilon: 0.2
     entropy_coef: 0.05
     entropy_coef_end: 0.005
-    entropy_decay_episodes: 100
+    entropy_decay_episodes: 200
     value_loss_coef: 0.5
     num_epochs: 2
     num_minibatches: 4

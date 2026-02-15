@@ -91,20 +91,20 @@ DEFAULT_GAE_LAMBDA = 0.95
 DEFAULT_CLIP_EPSILON = 0.2
 DEFAULT_ENTROPY_COEF = 0.05
 DEFAULT_ENTROPY_COEF_END = 0.005
-DEFAULT_ENTROPY_DECAY_EPISODES = 100
+DEFAULT_ENTROPY_DECAY_EPISODES = 200
 DEFAULT_VALUE_LOSS_COEF = 0.5
 DEFAULT_NUM_EPOCHS = 2
 DEFAULT_NUM_MINIBATCHES = 4
 DEFAULT_ROLLOUT_BUFFER_SIZE = 256
 DEFAULT_MAX_GRAD_NORM = 0.5
 DEFAULT_ACTOR_LR = 0.003
-DEFAULT_LOGIT_SCALE = 20.0
+DEFAULT_LOGIT_SCALE = 5.0
 DEFAULT_CRITIC_LR = 0.001
 DEFAULT_CRITIC_HIDDEN_DIM = 64
 DEFAULT_CRITIC_NUM_LAYERS = 2
 DEFAULT_NUM_INTEGRATION_STEPS = 10
 DEFAULT_WEIGHT_CLIP = 3.0
-DEFAULT_THETA_MOTOR_MAX_NORM = 2.0
+DEFAULT_THETA_MOTOR_MAX_NORM = 5.0
 DEFAULT_ACTOR_WEIGHT_DECAY = 0.0
 DEFAULT_THETA_HIDDEN_MIN_NORM = 2.0
 
@@ -681,10 +681,15 @@ class QSNNPPOBrain(ClassicalBrain):
         )
         self.theta_hidden = torch.full(
             (self.num_hidden,),
-            np.pi / 4,
+            np.pi / 2,
             device=self.device,
         )
-        self.theta_motor = torch.linspace(-0.3, 0.3, self.num_motor, device=self.device)
+        self.theta_motor = torch.linspace(
+            np.pi / 4,
+            3 * np.pi / 4,
+            self.num_motor,
+            device=self.device,
+        )
 
         # Enable gradients for surrogate gradient training
         self.W_sh.requires_grad_(True)  # noqa: FBT003

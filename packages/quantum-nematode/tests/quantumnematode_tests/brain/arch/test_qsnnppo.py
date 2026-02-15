@@ -41,8 +41,9 @@ class TestQSNNPPOBrainConfig:
         assert config.rollout_buffer_size == 256
         assert config.entropy_coef == 0.05
         assert config.entropy_coef_end == 0.005
-        assert config.entropy_decay_episodes == 100
-        assert config.logit_scale == 20.0
+        assert config.entropy_decay_episodes == 200
+        assert config.logit_scale == 5.0
+        assert config.theta_motor_max_norm == 5.0
         assert config.actor_weight_decay == 0.0
         assert config.theta_hidden_min_norm == 2.0
 
@@ -379,13 +380,13 @@ class TestQSNNPPOBrainInit:
         assert brain.theta_motor.requires_grad
 
     def test_theta_hidden_initial_value(self, brain: QSNNPPOBrain):
-        """Test theta_hidden initialized to pi/4."""
-        expected = torch.full((brain.num_hidden,), np.pi / 4)
+        """Test theta_hidden initialized to pi/2 (max sensitivity point)."""
+        expected = torch.full((brain.num_hidden,), np.pi / 2)
         assert torch.allclose(brain.theta_hidden.detach(), expected, atol=1e-6)
 
     def test_theta_motor_initial_value(self, brain: QSNNPPOBrain):
-        """Test theta_motor initialized with asymmetric linspace."""
-        expected = torch.linspace(-0.3, 0.3, brain.num_motor)
+        """Test theta_motor initialized in responsive spike prob range."""
+        expected = torch.linspace(np.pi / 4, 3 * np.pi / 4, brain.num_motor)
         assert torch.allclose(brain.theta_motor.detach(), expected, atol=1e-6)
 
     def test_critic_input_dim(self, brain: QSNNPPOBrain):
