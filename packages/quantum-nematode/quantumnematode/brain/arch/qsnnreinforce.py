@@ -231,6 +231,13 @@ class CriticMLP(nn.Module):
         layers.append(nn.Linear(hidden_dim, 1))
         self.network = nn.Sequential(*layers)
 
+        # Orthogonal initialization for stable value estimation
+        for module in self.network:
+            if isinstance(module, nn.Linear):
+                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0.0)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute state value estimate from input features."""
         return self.network(x).squeeze(-1)
@@ -580,21 +587,10 @@ class QSNNReinforceBrain(ClassicalBrain):
 
         # Classical critic for actor-critic mode (GAE advantages)
         self.use_critic = config.use_critic
+        self._critic_input_dim = self.input_dim + self.num_hidden
         self.critic: CriticMLP | None = None
         self.critic_optimizer: torch.optim.Adam | None = None
-
-        if self.use_critic:
-            self.critic = CriticMLP(
-                input_dim=self.input_dim,
-                hidden_dim=config.critic_hidden_dim,
-                num_layers=config.critic_num_layers,
-            ).to(self.device)
-            self.critic_optimizer = torch.optim.Adam(
-                self.critic.parameters(),
-                lr=config.critic_lr,
-            )
-            if self.use_local_learning:
-                logger.warning("use_critic=True has no effect with use_local_learning=True")
+        self._init_critic(config)
 
         # Step counter for intra-episode updates
         self._step_count = 0
@@ -616,6 +612,22 @@ class QSNNReinforceBrain(ClassicalBrain):
             f"use_local_learning={self.use_local_learning}, "
             f"num_integration_steps={self.num_integration_steps}",
         )
+
+    def _init_critic(self, config: QSNNReinforceBrainConfig) -> None:
+        """Initialize critic MLP and optimizer if actor-critic mode is enabled."""
+        if not self.use_critic:
+            return
+        self.critic = CriticMLP(
+            input_dim=self._critic_input_dim,
+            hidden_dim=config.critic_hidden_dim,
+            num_layers=config.critic_num_layers,
+        ).to(self.device)
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(),
+            lr=config.critic_lr,
+        )
+        if self.use_local_learning:
+            logger.warning("use_critic=True has no effect with use_local_learning=True")
 
     def _init_network_weights(self) -> None:
         """Initialize trainable weight matrices and neuron parameters."""
@@ -692,6 +704,9 @@ class QSNNReinforceBrain(ClassicalBrain):
         self._last_hidden_spikes = np.zeros(self.num_hidden)
         self._last_motor_spikes = np.zeros(self.num_motor)
 
+        # Averaged hidden spike rates across integration steps (for critic input)
+        self._last_avg_hidden_spikes = np.zeros(self.num_hidden)
+
         # Qiskit backend for circuit execution
         self._backend = None
 
@@ -702,6 +717,7 @@ class QSNNReinforceBrain(ClassicalBrain):
         self.episode_features: list[np.ndarray] = []
         self.episode_old_log_probs: list[float] = []
         self.episode_values: list[float] = []
+        self.episode_hidden_spikes: list[np.ndarray] = []
 
         # Deferred update flag for correct bootstrap computation in AC mode.
         # When a window boundary is hit in learn(), the update is deferred until
@@ -973,9 +989,12 @@ class QSNNReinforceBrain(ClassicalBrain):
             Averaged motor neuron firing probabilities.
         """
         motor_accumulator = np.zeros(self.num_motor)
+        hidden_accumulator = np.zeros(self.num_hidden)
         for _ in range(self.num_integration_steps):
             motor_spikes = self._timestep(features)
             motor_accumulator += motor_spikes
+            hidden_accumulator += self._last_hidden_spikes
+        self._last_avg_hidden_spikes = hidden_accumulator / self.num_integration_steps
         return motor_accumulator / self.num_integration_steps
 
     def _multi_timestep_differentiable(self, features: np.ndarray) -> torch.Tensor:
@@ -1390,8 +1409,29 @@ class QSNNReinforceBrain(ClassicalBrain):
         returns = advantages + values_t
         return advantages, returns
 
+    def _build_critic_input_batch(self, num_steps: int) -> torch.Tensor:
+        """Build critic input batch from features and hidden spike rates.
+
+        Concatenates raw sensory features with detached hidden spike rates
+        for each step in the episode buffer.
+
+        Parameters
+        ----------
+        num_steps : int
+            Number of steps to include from the episode buffer.
+
+        Returns
+        -------
+        torch.Tensor
+            Critic input batch of shape (num_steps, input_dim + num_hidden).
+        """
+        features = np.array(self.episode_features[:num_steps])
+        hidden = np.array(self.episode_hidden_spikes[:num_steps])
+        combined = np.concatenate([features, hidden], axis=1)
+        return torch.tensor(combined, dtype=torch.float32, device=self.device)
+
     def _update_critic(self, target_returns: torch.Tensor) -> None:
-        """Update critic MLP via MSE loss against target returns.
+        """Update critic MLP via Huber loss against target returns.
 
         Parameters
         ----------
@@ -1402,26 +1442,31 @@ class QSNNReinforceBrain(ClassicalBrain):
             return
 
         num_steps = len(self.episode_features)
-        features_batch = torch.tensor(
-            np.array(self.episode_features[:num_steps]),
-            dtype=torch.float32,
-            device=self.device,
-        )
-        predicted = self.critic(features_batch)
+        critic_input = self._build_critic_input_batch(num_steps)
+        predicted = self.critic(critic_input)
         # Huber loss (smooth L1) is robust to extreme target returns from death penalties.
         # MSE amplifies outliers quadratically; Huber is linear for |error| > 1.0,
         # capping gradient magnitude and preventing critic destabilization.
-        value_loss = torch.nn.functional.smooth_l1_loss(predicted, target_returns.detach())
+        target = target_returns.detach()
+        value_loss = torch.nn.functional.smooth_l1_loss(predicted, target)
 
         self.critic_optimizer.zero_grad()
         value_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=SURROGATE_GRAD_CLIP)
         self.critic_optimizer.step()
 
-        logger.debug(
+        # Compute explained variance: 1 - Var(target - pred) / Var(target)
+        with torch.no_grad():
+            pred_detached = predicted.detach()
+            target_var = target.var()
+            explained_var = (1.0 - (target - pred_detached).var() / (target_var + 1e-8)).item()
+
+        logger.info(
             f"QSNN critic: value_loss={value_loss.item():.4f}, "
-            f"pred_mean={predicted.mean().item():.4f}, "
-            f"target_mean={target_returns.mean().item():.4f}",
+            f"critic_pred_mean={pred_detached.mean().item():.4f}, "
+            f"critic_pred_std={pred_detached.std().item():.4f}, "
+            f"target_return_mean={target.mean().item():.4f}, "
+            f"explained_variance={explained_var:.4f}",
         )
 
     def _compute_reinforce_advantages(
@@ -1568,6 +1613,7 @@ class QSNNReinforceBrain(ClassicalBrain):
             self.episode_old_log_probs.clear()
             if self.use_critic:
                 self.episode_values.clear()
+                self.episode_hidden_spikes.clear()
             self._cached_spike_probs = []
             return
 
@@ -1810,18 +1856,24 @@ class QSNNReinforceBrain(ClassicalBrain):
         # V(s_{N+1}) — the value of the current (new) state as GAE bootstrap.
         if self._pending_critic_update and self.use_critic and self.critic is not None:
             with torch.no_grad():
-                bootstrap_features = torch.tensor(
-                    features,
+                # Use last available hidden spikes for bootstrap (from previous step).
+                # The forward pass for this new state hasn't run yet, so exact hidden
+                # spikes are unavailable. This is a standard approximation for GAE
+                # bootstrap at window boundaries.
+                bootstrap_in = np.concatenate([features, self._last_avg_hidden_spikes])
+                bootstrap_t = torch.tensor(
+                    bootstrap_in,
                     dtype=torch.float32,
                     device=self.device,
                 )
-                bootstrap_value = self.critic(bootstrap_features).item()
+                bootstrap_value = self.critic(bootstrap_t).item()
             self._reinforce_update(bootstrap_value=bootstrap_value)
             self.episode_rewards.clear()
             self.episode_actions.clear()
             self.episode_features.clear()
             self.episode_old_log_probs.clear()
             self.episode_values.clear()
+            self.episode_hidden_spikes.clear()
             self._cached_spike_probs = []
             self._pending_critic_update = False
 
@@ -1888,12 +1940,19 @@ class QSNNReinforceBrain(ClassicalBrain):
             self.episode_features.append(features)
             old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
             self.episode_old_log_probs.append(old_log_prob)
+            if self.use_critic:
+                self.episode_hidden_spikes.append(self._last_avg_hidden_spikes.copy())
 
         # Store critic value estimate for GAE computation
         if self.use_critic and self.critic is not None:
             with torch.no_grad():
-                features_t = torch.tensor(features, dtype=torch.float32, device=self.device)
-                value = self.critic(features_t).item()
+                critic_in = np.concatenate([features, self._last_avg_hidden_spikes])
+                critic_in_t = torch.tensor(
+                    critic_in,
+                    dtype=torch.float32,
+                    device=self.device,
+                )
+                value = self.critic(critic_in_t).item()
             self.episode_values.append(value)
 
         # Store for learning
@@ -1981,6 +2040,7 @@ class QSNNReinforceBrain(ClassicalBrain):
                 self.episode_features.clear()
                 self.episode_old_log_probs.clear()
                 self.episode_values.clear()
+                self.episode_hidden_spikes.clear()
                 self._cached_spike_probs = []
 
         if episode_done and len(self.episode_rewards) > 0:
@@ -2042,6 +2102,7 @@ class QSNNReinforceBrain(ClassicalBrain):
         self.episode_features.clear()
         self.episode_old_log_probs.clear()
         self.episode_values.clear()
+        self.episode_hidden_spikes.clear()
         self._pending_critic_update = False
         self._cached_spike_probs = []
 
@@ -2112,7 +2173,7 @@ class QSNNReinforceBrain(ClassicalBrain):
         # Copy critic if enabled
         if self.use_critic and self.critic is not None:
             new_brain.critic = CriticMLP(
-                input_dim=self.input_dim,
+                input_dim=self._critic_input_dim,
                 hidden_dim=self.config.critic_hidden_dim,
                 num_layers=self.config.critic_num_layers,
             ).to(self.device)
