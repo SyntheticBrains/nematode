@@ -24,6 +24,7 @@ brain:
     weight_clip: 3.0
     update_interval: 20
     num_integration_steps: 10
+    logit_scale: 5.0
 
 body_length: 2
 
