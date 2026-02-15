@@ -20,16 +20,18 @@ brain:
     refractory_period: 0
     shots: 1024
     num_integration_steps: 10
-    logit_scale: 5.0
+    logit_scale: 20.0
     weight_clip: 3.0
     theta_motor_max_norm: 2.0
-    theta_hidden_min_norm: 0.5
+    theta_hidden_min_norm: 2.0
 
     # PPO hyperparameters
     gamma: 0.99
     gae_lambda: 0.95
     clip_epsilon: 0.2
-    entropy_coef: 0.08
+    entropy_coef: 0.05
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 100
     value_loss_coef: 0.5
     num_epochs: 2
     num_minibatches: 4
@@ -39,7 +41,7 @@ brain:
     # Learning rates
     actor_lr: 0.003
     critic_lr: 0.001
-    actor_weight_decay: 0.001
+    actor_weight_decay: 0.0
 
     # Critic architecture
     critic_hidden_dim: 64
