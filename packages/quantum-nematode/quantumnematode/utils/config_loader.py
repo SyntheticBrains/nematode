@@ -17,6 +17,7 @@ from quantumnematode.brain.arch import (
     MLPReinforceBrainConfig,
     QQLearningBrainConfig,
     QRCBrainConfig,
+    QSNNPPOBrainConfig,
     QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
     SpikingReinforceBrainConfig,
@@ -85,6 +86,7 @@ BrainConfigType = (
     | MLPDQNBrainConfig
     | QQLearningBrainConfig
     | QRCBrainConfig
+    | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
     | SpikingReinforceBrainConfig
 )
@@ -101,6 +103,7 @@ BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = {
     "mlpdqn": MLPDQNBrainConfig,
     "spikingreinforce": SpikingReinforceBrainConfig,
     "qrc": QRCBrainConfig,
+    "qsnnppo": QSNNPPOBrainConfig,
     "qsnnreinforce": QSNNReinforceBrainConfig,
 }
 
