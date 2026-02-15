@@ -55,7 +55,6 @@ from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._qlif_layers import (
-    LOGIT_SCALE,
     WEIGHT_INIT_SCALE,
     encode_sensory_spikes,
     execute_qlif_layer,
@@ -90,21 +89,24 @@ DEFAULT_SHOTS = 1024
 DEFAULT_GAMMA = 0.99
 DEFAULT_GAE_LAMBDA = 0.95
 DEFAULT_CLIP_EPSILON = 0.2
-DEFAULT_ENTROPY_COEF = 0.08
+DEFAULT_ENTROPY_COEF = 0.05
+DEFAULT_ENTROPY_COEF_END = 0.005
+DEFAULT_ENTROPY_DECAY_EPISODES = 100
 DEFAULT_VALUE_LOSS_COEF = 0.5
 DEFAULT_NUM_EPOCHS = 2
 DEFAULT_NUM_MINIBATCHES = 4
 DEFAULT_ROLLOUT_BUFFER_SIZE = 256
 DEFAULT_MAX_GRAD_NORM = 0.5
 DEFAULT_ACTOR_LR = 0.003
+DEFAULT_LOGIT_SCALE = 20.0
 DEFAULT_CRITIC_LR = 0.001
 DEFAULT_CRITIC_HIDDEN_DIM = 64
 DEFAULT_CRITIC_NUM_LAYERS = 2
 DEFAULT_NUM_INTEGRATION_STEPS = 10
 DEFAULT_WEIGHT_CLIP = 3.0
 DEFAULT_THETA_MOTOR_MAX_NORM = 2.0
-DEFAULT_ACTOR_WEIGHT_DECAY = 0.001
-DEFAULT_THETA_HIDDEN_MIN_NORM = 0.5
+DEFAULT_ACTOR_WEIGHT_DECAY = 0.0
+DEFAULT_THETA_HIDDEN_MIN_NORM = 2.0
 
 # Validation constants
 MIN_SENSORY_NEURONS = 1
@@ -363,7 +365,7 @@ class QSNNPPOBrainConfig(BrainConfig):
         description="Number of QLIF timesteps per decision.",
     )
     logit_scale: float = Field(
-        default=LOGIT_SCALE,
+        default=DEFAULT_LOGIT_SCALE,
         description="Scaling factor for converting spike probabilities to action logits.",
     )
     weight_clip: float = Field(
@@ -394,7 +396,15 @@ class QSNNPPOBrainConfig(BrainConfig):
     )
     entropy_coef: float = Field(
         default=DEFAULT_ENTROPY_COEF,
-        description="Entropy regularization coefficient.",
+        description="Initial entropy regularization coefficient (decays to entropy_coef_end).",
+    )
+    entropy_coef_end: float = Field(
+        default=DEFAULT_ENTROPY_COEF_END,
+        description="Final entropy coefficient after decay.",
+    )
+    entropy_decay_episodes: int = Field(
+        default=DEFAULT_ENTROPY_DECAY_EPISODES,
+        description="Episodes over which entropy_coef linearly decays from start to end.",
     )
     value_loss_coef: float = Field(
         default=DEFAULT_VALUE_LOSS_COEF,
@@ -674,7 +684,7 @@ class QSNNPPOBrain(ClassicalBrain):
             np.pi / 4,
             device=self.device,
         )
-        self.theta_motor = torch.zeros(self.num_motor, device=self.device)
+        self.theta_motor = torch.linspace(-0.3, 0.3, self.num_motor, device=self.device)
 
         # Enable gradients for surrogate gradient training
         self.W_sh.requires_grad_(True)  # noqa: FBT003
@@ -1040,7 +1050,11 @@ class QSNNPPOBrain(ClassicalBrain):
         total_grad_hm = 0.0
         total_grad_th = 0.0
         total_grad_tm = 0.0
+        motor_spike_sum = np.zeros(self.num_motor)
+        motor_spike_count = 0
         num_updates = 0
+
+        entropy_coef = self._get_entropy_coef()
 
         for epoch in range(self.config.num_epochs):
             # On epoch 0, build spike caches for all buffer steps
@@ -1110,6 +1124,10 @@ class QSNNPPOBrain(ClassicalBrain):
                     logits = (motor_clipped - 0.5) * self.config.logit_scale
                     action_probs = torch.softmax(logits, dim=-1)
 
+                    # Track motor spike probs for diagnostics
+                    motor_spike_sum += motor_clipped.detach().cpu().numpy()
+                    motor_spike_count += 1
+
                     log_prob = torch.log(action_probs[action_idx] + 1e-8)
                     log_probs_list.append(log_prob)
 
@@ -1161,7 +1179,7 @@ class QSNNPPOBrain(ClassicalBrain):
                 )
 
                 # Combined loss for actor
-                actor_loss = policy_loss - self.config.entropy_coef * mean_entropy
+                actor_loss = policy_loss - entropy_coef * mean_entropy
 
                 # Actor backward and step
                 self.actor_optimizer.zero_grad()
@@ -1226,9 +1244,12 @@ class QSNNPPOBrain(ClassicalBrain):
             actor_lr = self.actor_optimizer.param_groups[0]["lr"]
             adv_mean = advantages.mean().item()
             adv_std = advantages.std().item()
+            motor_spike_mean = motor_spike_sum / max(motor_spike_count, 1)
+            motor_spike_str = np.array2string(motor_spike_mean, precision=4, separator=",")
             logger.info(
                 f"QSNN-PPO update: policy_loss={avg_policy:.4f}, "
                 f"value_loss={avg_value:.4f}, entropy={avg_entropy:.4f}, "
+                f"entropy_coef={entropy_coef:.4f}, "
                 f"clip_frac={total_clip_fraction / num_updates:.3f}, "
                 f"approx_kl={total_approx_kl / num_updates:.4f}, "
                 f"grad_sh={total_grad_sh / num_updates:.4f}, "
@@ -1239,11 +1260,21 @@ class QSNNPPOBrain(ClassicalBrain):
                 f"W_hm_norm={torch.norm(self.W_hm).item():.4f}, "
                 f"theta_h_norm={torch.norm(self.theta_hidden).item():.4f}, "
                 f"theta_m_norm={torch.norm(self.theta_motor).item():.4f}, "
+                f"motor_spike_probs={motor_spike_str}, "
                 f"adv_mean={adv_mean:.4f}, adv_std={adv_std:.4f}, "
                 f"buffer_size={buffer_len}, "
                 f"actor_lr={actor_lr:.6f}, "
                 f"episode={self._episode_count}",
             )
+
+    def _get_entropy_coef(self) -> float:
+        """Get current entropy coefficient with linear decay schedule."""
+        if self._episode_count >= self.config.entropy_decay_episodes:
+            return self.config.entropy_coef_end
+        progress = self._episode_count / self.config.entropy_decay_episodes
+        return self.config.entropy_coef + progress * (
+            self.config.entropy_coef_end - self.config.entropy_coef
+        )
 
     def _clamp_weights(self) -> None:
         """Clamp actor weights, theta motor max norm, and theta hidden min norm."""

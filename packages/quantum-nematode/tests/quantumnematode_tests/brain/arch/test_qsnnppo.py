@@ -39,6 +39,12 @@ class TestQSNNPPOBrainConfig:
         assert config.num_epochs == 2
         assert config.num_minibatches == 4
         assert config.rollout_buffer_size == 256
+        assert config.entropy_coef == 0.05
+        assert config.entropy_coef_end == 0.005
+        assert config.entropy_decay_episodes == 100
+        assert config.logit_scale == 20.0
+        assert config.actor_weight_decay == 0.0
+        assert config.theta_hidden_min_norm == 2.0
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -378,8 +384,8 @@ class TestQSNNPPOBrainInit:
         assert torch.allclose(brain.theta_hidden.detach(), expected, atol=1e-6)
 
     def test_theta_motor_initial_value(self, brain: QSNNPPOBrain):
-        """Test theta_motor initialized to zero."""
-        expected = torch.zeros(brain.num_motor)
+        """Test theta_motor initialized with asymmetric linspace."""
+        expected = torch.linspace(-0.3, 0.3, brain.num_motor)
         assert torch.allclose(brain.theta_motor.detach(), expected, atol=1e-6)
 
     def test_critic_input_dim(self, brain: QSNNPPOBrain):
@@ -733,6 +739,29 @@ class TestQSNNPPOBrainLearning:
 
         th_norm = torch.norm(brain.theta_hidden).item()
         assert th_norm >= brain.config.theta_hidden_min_norm - 1e-6
+
+    def test_entropy_coef_decay(self, brain: QSNNPPOBrain):
+        """Test entropy coefficient decays linearly over episodes."""
+        # At episode 0: should be entropy_coef (start)
+        brain._episode_count = 0
+        coef_start = brain._get_entropy_coef()
+        assert coef_start == pytest.approx(brain.config.entropy_coef)
+
+        # At halfway through decay: should be midpoint
+        brain._episode_count = brain.config.entropy_decay_episodes // 2
+        coef_mid = brain._get_entropy_coef()
+        expected_mid = (brain.config.entropy_coef + brain.config.entropy_coef_end) / 2
+        assert coef_mid == pytest.approx(expected_mid, abs=0.01)
+
+        # At or beyond decay episodes: should be entropy_coef_end
+        brain._episode_count = brain.config.entropy_decay_episodes
+        coef_end = brain._get_entropy_coef()
+        assert coef_end == pytest.approx(brain.config.entropy_coef_end)
+
+        # Well beyond: still at end
+        brain._episode_count = brain.config.entropy_decay_episodes * 2
+        coef_beyond = brain._get_entropy_coef()
+        assert coef_beyond == pytest.approx(brain.config.entropy_coef_end)
 
     def test_rewards_stored_in_history(self, brain: QSNNPPOBrain):
         """Test rewards are recorded in history."""
