@@ -12,6 +12,7 @@ from quantumnematode.agent import (
     SatietyConfig,
 )
 from quantumnematode.brain.arch import (
+    HybridQuantumBrainConfig,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
@@ -88,6 +89,7 @@ BrainConfigType = (
     | QRCBrainConfig
     | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
+    | HybridQuantumBrainConfig
     | SpikingReinforceBrainConfig
 )
 
@@ -105,6 +107,7 @@ BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = {
     "qrc": QRCBrainConfig,
     "qsnnppo": QSNNPPOBrainConfig,
     "qsnnreinforce": QSNNReinforceBrainConfig,
+    "hybridquantum": HybridQuantumBrainConfig,
 }
 
 
