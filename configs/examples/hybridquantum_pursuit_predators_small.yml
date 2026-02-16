@@ -4,7 +4,7 @@
 #
 # QSNN reflex params MUST match stage 1 config exactly (6/8/4 neurons,
 # legacy 2-feature mode) so that pre-trained weights load correctly.
-# The cortex gets its own sensory input via sensory_modules (8 features).
+# The cortex gets its own sensory input via sensory_modules (6 features).
 #
 # To use: update qsnn_weights_path to point to your stage 1 weights file.
 
@@ -42,7 +42,7 @@ brain:
     cortex_actor_lr: 0.001
     cortex_critic_lr: 0.001
     ppo_clip_epsilon: 0.2
-    ppo_epochs: 4
+    ppo_epochs: 12
     ppo_minibatches: 4
     ppo_buffer_size: 512
     gae_lambda: 0.95
@@ -50,11 +50,18 @@ brain:
     max_grad_norm: 0.5
     gamma: 0.99
 
-    # Sensory modules for cortex multi-objective input (8 features)
+    # Cortex LR schedule (warmup + decay)
+    cortex_lr_warmup_episodes: 50
+    cortex_lr_warmup_start: 0.0001
+    cortex_lr_decay_episodes: 200
+    cortex_lr_decay_end: 0.0001
+
+    # Sensory modules for cortex multi-objective input (6 features)
     # QSNN always uses legacy 2-feature mode regardless of this setting
     sensory_modules:
       - food_chemotaxis
       - nociception
+      - mechanosensation
 
 body_length: 2
 

@@ -611,6 +611,192 @@ class TestWeightPersistence:
         assert "theta_hidden" in loaded
         assert "theta_motor" in loaded
 
+    def test_save_and_load_cortex_round_trip(self, tmp_path, monkeypatch):
+        """Test cortex weights survive a save/load round trip."""
+        monkeypatch.chdir(tmp_path)
+        config = HybridQuantumBrainConfig(
+            training_stage=2,
+            shots=100,
+            num_qsnn_timesteps=1,
+            seed=42,
+        )
+        brain1 = HybridQuantumBrain(config=config, num_actions=4)
+        brain1._save_cortex_weights("test_session")
+
+        save_path = tmp_path / "exports" / "test_session" / "cortex_weights.pt"
+        assert save_path.exists()
+
+        # Load into new brain
+        config2 = HybridQuantumBrainConfig(
+            training_stage=3,
+            shots=100,
+            num_qsnn_timesteps=1,
+            cortex_weights_path=str(save_path),
+            seed=43,
+        )
+        brain2 = HybridQuantumBrain(config=config2, num_actions=4)
+
+        # Cortex actor/critic weights should match
+        for p1, p2 in zip(
+            brain1.cortex_actor.parameters(),
+            brain2.cortex_actor.parameters(),
+            strict=False,
+        ):
+            torch.testing.assert_close(p1, p2)
+        for p1, p2 in zip(
+            brain1.cortex_critic.parameters(),
+            brain2.cortex_critic.parameters(),
+            strict=False,
+        ):
+            torch.testing.assert_close(p1, p2)
+
+    def test_load_cortex_missing_file_raises(self):
+        """Test loading cortex from missing file raises FileNotFoundError."""
+        config = HybridQuantumBrainConfig(
+            training_stage=3,
+            shots=100,
+            num_qsnn_timesteps=1,
+            cortex_weights_path="/nonexistent/path/cortex_weights.pt",
+        )
+        with pytest.raises(FileNotFoundError):
+            HybridQuantumBrain(config=config, num_actions=4)
+
+    def test_cortex_auto_save_stage2(self, tmp_path, monkeypatch):
+        """Test cortex weights are auto-saved during stage 2 training."""
+        monkeypatch.chdir(tmp_path)
+        config = HybridQuantumBrainConfig(
+            training_stage=2,
+            shots=100,
+            num_qsnn_timesteps=1,
+            ppo_buffer_size=4,
+            ppo_minibatches=1,
+            ppo_epochs=1,
+            seed=42,
+        )
+        brain = HybridQuantumBrain(config=config, num_actions=4)
+        brain.set_session_id("auto_save_test")
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        for i in range(5):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.5, episode_done=(i == 4))
+
+        # Cortex weights should have been auto-saved
+        save_path = tmp_path / "exports" / "auto_save_test" / "cortex_weights.pt"
+        assert save_path.exists()
+
+
+class TestCortexLRScheduling:
+    """Test cortex learning rate warmup and decay."""
+
+    def test_lr_warmup(self):
+        """Test LR warmup from low to base value."""
+        config = HybridQuantumBrainConfig(
+            training_stage=2,
+            shots=100,
+            num_qsnn_timesteps=1,
+            cortex_actor_lr=0.001,
+            cortex_lr_warmup_episodes=10,
+            cortex_lr_warmup_start=0.0001,
+            seed=42,
+        )
+        brain = HybridQuantumBrain(config=config, num_actions=4)
+
+        # At episode 0, LR should be warmup_start
+        assert brain._get_cortex_lr() == pytest.approx(0.0001)
+
+        # Simulate 5 episodes
+        brain._episode_count = 5
+        expected_lr = 0.0001 + (0.001 - 0.0001) * 0.5
+        assert brain._get_cortex_lr() == pytest.approx(expected_lr)
+
+        # At episode 10, warmup done, LR should be base
+        brain._episode_count = 10
+        assert brain._get_cortex_lr() == pytest.approx(0.001)
+
+    def test_lr_decay(self):
+        """Test LR decay after warmup."""
+        config = HybridQuantumBrainConfig(
+            training_stage=2,
+            shots=100,
+            num_qsnn_timesteps=1,
+            cortex_actor_lr=0.001,
+            cortex_lr_warmup_episodes=10,
+            cortex_lr_warmup_start=0.0001,
+            cortex_lr_decay_episodes=20,
+            cortex_lr_decay_end=0.0001,
+            seed=42,
+        )
+        brain = HybridQuantumBrain(config=config, num_actions=4)
+
+        # At episode 10 (warmup done), LR should be base
+        brain._episode_count = 10
+        assert brain._get_cortex_lr() == pytest.approx(0.001)
+
+        # At episode 20 (halfway through decay), LR should be midpoint
+        brain._episode_count = 20
+        expected_lr = 0.001 + (0.0001 - 0.001) * 0.5
+        assert brain._get_cortex_lr() == pytest.approx(expected_lr)
+
+        # At episode 30 (decay done), LR should be decay_end
+        brain._episode_count = 30
+        assert brain._get_cortex_lr() == pytest.approx(0.0001)
+
+        # Beyond decay, LR stays at decay_end
+        brain._episode_count = 100
+        assert brain._get_cortex_lr() == pytest.approx(0.0001)
+
+    def test_no_lr_scheduling(self):
+        """Test that LR is flat when no scheduling configured."""
+        config = HybridQuantumBrainConfig(
+            training_stage=2,
+            shots=100,
+            num_qsnn_timesteps=1,
+            cortex_actor_lr=0.001,
+            seed=42,
+        )
+        brain = HybridQuantumBrain(config=config, num_actions=4)
+
+        assert not brain.cortex_lr_scheduling_enabled
+        brain._episode_count = 100
+        assert brain._get_cortex_lr() == pytest.approx(0.001)
+
+    def test_lr_update_changes_optimizer(self):
+        """Test that _update_cortex_learning_rate changes optimizer LR."""
+        config = HybridQuantumBrainConfig(
+            training_stage=2,
+            shots=100,
+            num_qsnn_timesteps=1,
+            cortex_actor_lr=0.001,
+            cortex_lr_warmup_episodes=10,
+            cortex_lr_warmup_start=0.0001,
+            seed=42,
+        )
+        brain = HybridQuantumBrain(config=config, num_actions=4)
+
+        # Initial LR should be warmup_start
+        actor_lr = brain.cortex_actor_optimizer.param_groups[0]["lr"]
+        assert actor_lr == pytest.approx(0.0001)
+
+        # After 10 episodes, update should set to base LR
+        brain._episode_count = 10
+        brain._update_cortex_learning_rate()
+        actor_lr = brain.cortex_actor_optimizer.param_groups[0]["lr"]
+        assert actor_lr == pytest.approx(0.001)
+
+    def test_config_with_lr_scheduling(self):
+        """Test config accepts LR scheduling parameters."""
+        config = HybridQuantumBrainConfig(
+            cortex_lr_warmup_episodes=50,
+            cortex_lr_warmup_start=0.0001,
+            cortex_lr_decay_episodes=200,
+            cortex_lr_decay_end=0.0001,
+        )
+        assert config.cortex_lr_warmup_episodes == 50
+        assert config.cortex_lr_warmup_start == 0.0001
+        assert config.cortex_lr_decay_episodes == 200
+        assert config.cortex_lr_decay_end == 0.0001
+
 
 class TestBrainCopy:
     """Test brain copy functionality."""

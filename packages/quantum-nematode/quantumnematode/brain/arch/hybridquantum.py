@@ -342,10 +342,33 @@ class HybridQuantumBrainConfig(BrainConfig):
         description="LR multiplier for QSNN in stage 3 (10x lower).",
     )
 
+    # Cortex LR scheduling (optional warmup + decay)
+    cortex_lr_warmup_episodes: int = Field(
+        default=0,
+        description="Episodes to linearly increase cortex LR from warmup_start to base LR. "
+        "0 = no warmup.",
+    )
+    cortex_lr_warmup_start: float | None = Field(
+        default=None,
+        description="Initial cortex LR during warmup. None = 0.1 * cortex_actor_lr.",
+    )
+    cortex_lr_decay_episodes: int | None = Field(
+        default=None,
+        description="Episodes after warmup to decay cortex LR to decay_end. None = no decay.",
+    )
+    cortex_lr_decay_end: float | None = Field(
+        default=None,
+        description="Final cortex LR after decay. None = 0.1 * cortex_actor_lr.",
+    )
+
     # Weight persistence
     qsnn_weights_path: str | None = Field(
         default=None,
         description="Path to pre-trained QSNN weights (.pt file) for stage 2/3.",
+    )
+    cortex_weights_path: str | None = Field(
+        default=None,
+        description="Path to pre-trained cortex weights (.pt file) for stage 3.",
     )
 
     # Sensory modules
@@ -636,6 +659,10 @@ class HybridQuantumBrain(ClassicalBrain):
                 "QSNN will use random initialization.",
             )
 
+        # Load pre-trained cortex weights if specified (stage 3)
+        if config.cortex_weights_path is not None:
+            self._load_cortex_weights()
+
         # Freeze QSNN in stage 2
         if self.training_stage == STAGE_CORTEX_ONLY:
             self._freeze_qsnn()
@@ -775,14 +802,54 @@ class HybridQuantumBrain(ClassicalBrain):
             eta_min=qsnn_lr * self.config.lr_min_factor,
         )
 
+        # Cortex LR scheduling state
+        self.cortex_base_lr = self.config.cortex_actor_lr
+        self.cortex_lr_warmup_episodes = self.config.cortex_lr_warmup_episodes
+        self.cortex_lr_warmup_start = self.config.cortex_lr_warmup_start or (
+            0.1 * self.config.cortex_actor_lr
+        )
+        self.cortex_lr_decay_episodes = self.config.cortex_lr_decay_episodes
+        self.cortex_lr_decay_end = self.config.cortex_lr_decay_end or (
+            0.1 * self.config.cortex_actor_lr
+        )
+        self.cortex_lr_scheduling_enabled = (
+            self.cortex_lr_warmup_episodes > 0 or self.cortex_lr_decay_episodes is not None
+        )
+
+        # Start at warmup LR if warmup is enabled
+        initial_actor_lr = (
+            self.cortex_lr_warmup_start
+            if self.cortex_lr_warmup_episodes > 0
+            else self.config.cortex_actor_lr
+        )
+        initial_critic_lr = (
+            self.cortex_lr_warmup_start
+            if self.cortex_lr_warmup_episodes > 0
+            else self.config.cortex_critic_lr
+        )
+
         self.cortex_actor_optimizer = torch.optim.Adam(
             self.cortex_actor.parameters(),
-            lr=self.config.cortex_actor_lr,
+            lr=initial_actor_lr,
         )
         self.cortex_critic_optimizer = torch.optim.Adam(
             self.cortex_critic.parameters(),
-            lr=self.config.cortex_critic_lr,
+            lr=initial_critic_lr,
         )
+
+        if self.cortex_lr_scheduling_enabled:
+            schedule_desc = []
+            if self.cortex_lr_warmup_episodes > 0:
+                schedule_desc.append(
+                    f"warmup {self.cortex_lr_warmup_start:.6f} -> {self.cortex_base_lr:.6f} "
+                    f"over {self.cortex_lr_warmup_episodes} episodes",
+                )
+            if self.cortex_lr_decay_episodes is not None:
+                schedule_desc.append(
+                    f"decay {self.cortex_base_lr:.6f} -> {self.cortex_lr_decay_end:.6f} "
+                    f"over {self.cortex_lr_decay_episodes} episodes",
+                )
+            logger.info(f"Cortex LR scheduling enabled: {', then '.join(schedule_desc)}")
 
     def _freeze_qsnn(self) -> None:
         """Freeze QSNN weights (stage 2)."""
@@ -791,6 +858,49 @@ class HybridQuantumBrain(ClassicalBrain):
         self.theta_hidden.requires_grad_(False)  # noqa: FBT003
         self.theta_motor.requires_grad_(False)  # noqa: FBT003
         logger.info("QSNN weights frozen for stage 2 training")
+
+    def _get_cortex_lr(self) -> float:
+        """Get the current cortex learning rate based on episode count.
+
+        Supports warmup followed by optional decay (mirrors MLP PPO LR scheduling).
+        """
+        if not self.cortex_lr_scheduling_enabled:
+            return self.cortex_base_lr
+
+        episode = self._episode_count
+
+        # Warmup phase
+        if episode < self.cortex_lr_warmup_episodes:
+            progress = episode / self.cortex_lr_warmup_episodes
+            return (
+                self.cortex_lr_warmup_start
+                + (self.cortex_base_lr - self.cortex_lr_warmup_start) * progress
+            )
+
+        # Decay phase (if enabled)
+        if self.cortex_lr_decay_episodes is not None:
+            decay_start_episode = self.cortex_lr_warmup_episodes
+            decay_episode = episode - decay_start_episode
+            if decay_episode < self.cortex_lr_decay_episodes:
+                progress = decay_episode / self.cortex_lr_decay_episodes
+                return (
+                    self.cortex_base_lr
+                    + (self.cortex_lr_decay_end - self.cortex_base_lr) * progress
+                )
+            return self.cortex_lr_decay_end
+
+        return self.cortex_base_lr
+
+    def _update_cortex_learning_rate(self) -> None:
+        """Update cortex optimizer learning rates based on current schedule."""
+        if not self.cortex_lr_scheduling_enabled:
+            return
+
+        new_lr = self._get_cortex_lr()
+        for param_group in self.cortex_actor_optimizer.param_groups:
+            param_group["lr"] = new_lr
+        for param_group in self.cortex_critic_optimizer.param_groups:
+            param_group["lr"] = new_lr
 
     def _init_episode_state(self) -> None:
         """Initialize REINFORCE episode tracking state."""
@@ -1173,7 +1283,7 @@ class HybridQuantumBrain(ClassicalBrain):
     # learn
     # ──────────────────────────────────────────────────────────────────
 
-    def learn(  # noqa: C901
+    def learn(  # noqa: C901, PLR0912
         self,
         params: BrainParams,  # noqa: ARG002
         reward: float,
@@ -1262,9 +1372,17 @@ class HybridQuantumBrain(ClassicalBrain):
             if self.training_stage in (STAGE_QSNN_ONLY, STAGE_JOINT):
                 self.qsnn_scheduler.step()
 
+            # Step cortex LR scheduler (stage 2 and 3)
+            if self.training_stage >= STAGE_CORTEX_ONLY:
+                self._update_cortex_learning_rate()
+
             # Auto-save QSNN weights when QSNN is being trained
             if self.training_stage in (STAGE_QSNN_ONLY, STAGE_JOINT):
                 self._save_qsnn_weights(self._session_id)
+
+            # Auto-save cortex weights when cortex is being trained
+            if self.training_stage >= STAGE_CORTEX_ONLY:
+                self._save_cortex_weights(self._session_id)
 
             self._reset_episode()
 
@@ -1471,6 +1589,7 @@ class HybridQuantumBrain(ClassicalBrain):
         total_policy_loss = 0.0
         total_value_loss = 0.0
         total_entropy_loss = 0.0
+        total_approx_kl = 0.0
         num_updates = 0
 
         for _ in range(self.config.ppo_epochs):
@@ -1495,7 +1614,12 @@ class HybridQuantumBrain(ClassicalBrain):
                 values = self.cortex_critic(batch["states"]).squeeze(-1)
 
                 # PPO clipped surrogate
-                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
+                log_ratio = new_log_probs - batch["old_log_probs"]
+                ratio = torch.exp(log_ratio)
+                # Approximate KL: mean((ratio - 1) - log_ratio) (Schulman's approx)
+                with torch.no_grad():
+                    approx_kl_batch = ((ratio - 1) - log_ratio).mean().item()
+                total_approx_kl += approx_kl_batch
                 surr1 = ratio * batch["advantages"]
                 surr2 = (
                     torch.clamp(
@@ -1545,20 +1669,13 @@ class HybridQuantumBrain(ClassicalBrain):
                 target_var = returns.var()
                 explained_var = (1.0 - (returns - predicted).var() / (target_var + 1e-8)).item()
 
-            approx_kl = (
-                0.5
-                * (
-                    torch.stack(self.ppo_buffer.log_probs).mean() - total_entropy_loss / num_updates
-                ).item()
-            )
-
             logger.info(
                 f"HybridQuantum cortex PPO: "
                 f"policy_loss={total_policy_loss / num_updates:.4f}, "
                 f"value_loss={total_value_loss / num_updates:.4f}, "
                 f"entropy={total_entropy_loss / num_updates:.4f}, "
                 f"explained_var={explained_var:.4f}, "
-                f"approx_kl={approx_kl:.4f}",
+                f"approx_kl={total_approx_kl / num_updates:.4f}",
             )
 
     # ──────────────────────────────────────────────────────────────────
@@ -1629,6 +1746,44 @@ class HybridQuantumBrain(ClassicalBrain):
             self.theta_motor.copy_(weights_dict["theta_motor"].to(self.device))
 
         logger.info(f"QSNN weights loaded from {weights_path}")
+
+    def _save_cortex_weights(self, session_id: str) -> None:
+        """Save cortex actor and critic weights to disk."""
+        export_dir = Path("exports") / session_id
+        export_dir.mkdir(parents=True, exist_ok=True)
+        save_path = export_dir / "cortex_weights.pt"
+
+        weights_dict = {
+            "cortex_actor": self.cortex_actor.state_dict(),
+            "cortex_critic": self.cortex_critic.state_dict(),
+        }
+        torch.save(weights_dict, save_path)
+        logger.info(f"Cortex weights saved to {save_path}")
+
+    def _load_cortex_weights(self) -> None:
+        """Load pre-trained cortex weights from disk."""
+        weights_path = self.config.cortex_weights_path
+        if weights_path is None:
+            return
+
+        path = Path(weights_path)
+        if not path.exists():
+            msg = f"Cortex weights file not found: {weights_path}"
+            raise FileNotFoundError(msg)
+
+        weights_dict = torch.load(path, weights_only=True)
+
+        if "cortex_actor" not in weights_dict:
+            msg = "Missing key 'cortex_actor' in cortex weights file"
+            raise ValueError(msg)
+        if "cortex_critic" not in weights_dict:
+            msg = "Missing key 'cortex_critic' in cortex weights file"
+            raise ValueError(msg)
+
+        self.cortex_actor.load_state_dict(weights_dict["cortex_actor"])
+        self.cortex_critic.load_state_dict(weights_dict["cortex_critic"])
+
+        logger.info(f"Cortex weights loaded from {weights_path}")
 
     # ──────────────────────────────────────────────────────────────────
     # Episode management
