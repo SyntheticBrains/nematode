@@ -44,6 +44,7 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -58,8 +59,6 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._qlif_layers import (
     LOGIT_SCALE,
     WEIGHT_INIT_SCALE,
-    QLIFSurrogateSpike,  # noqa: F401
-    build_qlif_circuit,  # noqa: F401
     encode_sensory_spikes,
     execute_qlif_layer,
     execute_qlif_layer_differentiable,
@@ -103,6 +102,7 @@ DEFAULT_NUM_REINFORCE_EPOCHS = 2
 DEFAULT_REINFORCE_WINDOW_SIZE = 20
 DEFAULT_GAMMA = 0.99
 DEFAULT_ADVANTAGE_CLIP = 2.0
+DEFAULT_CLIP_EPSILON = 0.2
 DEFAULT_EXPLORATION_EPSILON = 0.1
 DEFAULT_EXPLORATION_DECAY_EPISODES = 80
 DEFAULT_LR_MIN_FACTOR = 0.1
@@ -260,6 +260,10 @@ class HybridQuantumBrainConfig(BrainConfig):
     advantage_clip: float = Field(
         default=DEFAULT_ADVANTAGE_CLIP,
         description="Clamp normalized advantages to [-clip, +clip].",
+    )
+    clip_epsilon: float = Field(
+        default=DEFAULT_CLIP_EPSILON,
+        description="PPO-style clipping epsilon for REINFORCE policy ratio.",
     )
     exploration_epsilon: float = Field(
         default=DEFAULT_EXPLORATION_EPSILON,
@@ -646,9 +650,15 @@ class HybridQuantumBrain(ClassicalBrain):
         # REINFORCE episode buffers
         self._init_episode_state()
 
+        # Pending cortex data (set per-step in run_brain, consumed in learn)
+        self._has_pending_cortex_data = False
+
         # Counters
         self._step_count = 0
         self._episode_count = 0
+
+        # Session ID for weight saving (auto-generated, can be overridden)
+        self._session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
         # Qiskit backend (lazy)
         self._backend = None
@@ -1101,14 +1111,18 @@ class HybridQuantumBrain(ClassicalBrain):
             action_probs_t = torch.softmax(final_logits, dim=-1)
             action_probs = action_probs_t.detach().cpu().numpy()
 
-            # Store PPO data for cortex training
-            if self.training_stage >= STAGE_CORTEX_ONLY:
-                log_prob = torch.log(action_probs_t + 1e-8)
-                with torch.no_grad():
-                    value = self._cortex_value(sensory_t)
-                self._pending_cortex_state = features
-                self._pending_cortex_log_prob_dist = log_prob
-                self._pending_cortex_value = value
+            # Store PPO data for cortex training.
+            # Use cortex-only log_probs (from action_biases) so they match
+            # what _perform_ppo_update recomputes. The fused distribution
+            # drives action selection, but PPO trains the cortex policy.
+            cortex_logits = action_biases.detach()
+            cortex_probs = torch.softmax(cortex_logits, dim=-1)
+            cortex_log_probs = torch.log(cortex_probs + 1e-8)
+            with torch.no_grad():
+                value = self._cortex_value(sensory_t)
+            self._pending_cortex_state = features
+            self._pending_cortex_log_prob_dist = cortex_log_probs
+            self._pending_cortex_value = value
 
         # Sample action
         action_probs = np.clip(action_probs, 1e-8, 1.0)
@@ -1122,13 +1136,11 @@ class HybridQuantumBrain(ClassicalBrain):
             old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
             self.episode_old_log_probs.append(old_log_prob)
 
-        # Store cortex PPO log_prob for the chosen action
+        # Store cortex PPO chosen-action log_prob for the PPO buffer
         if self.training_stage >= STAGE_CORTEX_ONLY:
             self._pending_cortex_action = action_idx
-            if hasattr(self, "_pending_cortex_log_prob_dist"):
-                self._pending_cortex_chosen_log_prob = self._pending_cortex_log_prob_dist[
-                    action_idx
-                ]
+            self._pending_cortex_chosen_log_prob = self._pending_cortex_log_prob_dist[action_idx]
+            self._has_pending_cortex_data = True
 
         self.episode_actions.append(action_idx)
         self.current_probabilities = action_probs
@@ -1169,7 +1181,7 @@ class HybridQuantumBrain(ClassicalBrain):
         self._step_count += 1
 
         # Add to PPO buffer (stage 2 and 3)
-        if self.training_stage >= STAGE_CORTEX_ONLY and hasattr(self, "_pending_cortex_state"):
+        if self.training_stage >= STAGE_CORTEX_ONLY and self._has_pending_cortex_data:
             self.ppo_buffer.add(
                 state=self._pending_cortex_state,
                 action=self._pending_cortex_action,
@@ -1237,6 +1249,10 @@ class HybridQuantumBrain(ClassicalBrain):
             # Step QSNN LR scheduler (stage 1 and 3)
             if self.training_stage in (STAGE_QSNN_ONLY, STAGE_JOINT):
                 self.qsnn_scheduler.step()
+
+            # Auto-save QSNN weights when QSNN is being trained
+            if self.training_stage in (STAGE_QSNN_ONLY, STAGE_JOINT):
+                self._save_qsnn_weights(self._session_id)
 
             self._reset_episode()
 
@@ -1379,7 +1395,7 @@ class HybridQuantumBrain(ClassicalBrain):
         ratio = torch.exp(log_probs - old_log_probs_t)
         surr1 = ratio * advantages
         surr2 = (
-            torch.clamp(ratio, 1.0 - self.config.advantage_clip, 1.0 + self.config.advantage_clip)
+            torch.clamp(ratio, 1.0 - self.config.clip_epsilon, 1.0 + self.config.clip_epsilon)
             * advantages
         )
         policy_loss = -torch.min(surr1, surr2).mean() - effective_entropy_coef * mean_entropy
@@ -1423,7 +1439,7 @@ class HybridQuantumBrain(ClassicalBrain):
             return
 
         # Get last value for GAE
-        if hasattr(self, "_pending_cortex_state"):
+        if self._has_pending_cortex_data:
             with torch.no_grad():
                 sensory_t = torch.tensor(
                     self._pending_cortex_state,
@@ -1603,6 +1619,9 @@ class HybridQuantumBrain(ClassicalBrain):
         self._cached_spike_probs = []
         self._episode_qsnn_trusts.clear()
         self._episode_mode_probs.clear()
+
+        # Clear pending cortex data flag to prevent stale state leaking
+        self._has_pending_cortex_data = False
 
         # Reset QSNN refractory states
         self.refractory_hidden.fill(0)
