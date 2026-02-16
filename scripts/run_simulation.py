@@ -352,6 +352,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         perf_mgmt=perf_mgmt,
     )
 
+    # Pass session ID to brain for weight export alignment
+    set_session_id = getattr(brain, "set_session_id", None)
+    if callable(set_session_id):
+        set_session_id(timestamp)
+
     # Create the environment
     logger.info("Using dynamic foraging environment")
 

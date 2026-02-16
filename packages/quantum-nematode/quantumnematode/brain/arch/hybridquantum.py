@@ -657,7 +657,7 @@ class HybridQuantumBrain(ClassicalBrain):
         self._step_count = 0
         self._episode_count = 0
 
-        # Session ID for weight saving (auto-generated, can be overridden)
+        # Session ID for weight saving (set via set_session_id, fallback to timestamp)
         self._session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
         # Qiskit backend (lazy)
@@ -1548,6 +1548,18 @@ class HybridQuantumBrain(ClassicalBrain):
                 f"explained_var={explained_var:.4f}, "
                 f"approx_kl={approx_kl:.4f}",
             )
+
+    # ──────────────────────────────────────────────────────────────────
+    # Session management
+    # ──────────────────────────────────────────────────────────────────
+
+    def set_session_id(self, session_id: str) -> None:
+        """Set the session ID for weight saving.
+
+        Called by the simulation runner to align weight export paths
+        with the simulation's export directory.
+        """
+        self._session_id = session_id
 
     # ──────────────────────────────────────────────────────────────────
     # Weight persistence
