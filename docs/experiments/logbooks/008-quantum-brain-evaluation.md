@@ -1,6 +1,6 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `in_progress` — QSNN-PPO halted (architectural incompatibility with surrogate gradients); evaluating QSNNReinforce A2C
+**Status**: `in_progress` — QSNN-PPO halted; QSNNReinforce A2C halted (critic cannot learn V(s) in pursuit predator environment). Evaluating next approach.
 
 **Branch**: `feature/add-qsnn-brain`
 
@@ -460,6 +460,85 @@ For the full round-by-round optimization history, see [008-appendix-qsnnppo-opti
 
 ______________________________________________________________________
 
+## QSNNReinforce A2C Evaluation
+
+**Status**: Complete — 4 rounds, 16 sessions, 3,200 episodes. Halted: A2C critic cannot learn V(s) in this environment. All actor improvement driven by REINFORCE backbone.
+
+### Motivation
+
+After QSNN-PPO failed (PPO incompatible with surrogate gradients), A2C was the natural pivot: add a classical critic for GAE advantage estimation while preserving the REINFORCE backbone that works. A2C only needs backward-pass gradients for the actor (which the surrogate provides) and trains the critic separately — no importance sampling required.
+
+### Architecture
+
+```text
+QSNN Actor (212 params, unchanged)     Classical MLP Critic (353–5,569 params)
+8 sensory → 16 hidden → 4 motor QLIF   Input: sensory features ± hidden spike rates
+Surrogate gradient REINFORCE backbone  Huber loss, separate optimizer
+
+Training: REINFORCE with GAE advantages from critic
+1. Collect 20-step windows (intra-episode)
+2. Compute GAE advantages using critic V(s) estimates
+3. REINFORCE policy gradient with GAE advantages (2 actor epochs)
+4. Train critic on same window (5 gradient steps)
+```
+
+### Task
+
+Same pursuit predator environment: 2 predators (speed 0.5, detection_radius 6), health system (max_hp 100, predator_damage 20), 20x20 grid, food_chemotaxis + nociception sensory modules.
+
+### Results Summary
+
+| Round | Key Changes | Success | Avg Food | Q4 Food | EV (Q4) | Key Finding |
+|-------|-----------|---------|----------|---------|---------|-------------|
+| A2C-0 | Initial A2C (50 eps) | 0% | 0.62 | — | ~0 | Critic not learning; EV oscillates near zero |
+| A2C-1 | 200 eps, smaller critic, lower LR | 0.13% | 1.52 | 2.05 | -0.008 | Actor improves (REINFORCE); critic still fails; found 4 bugs |
+| A2C-2 | Bug fixes (multi-step, bootstrap, grad clip) | 0.63% | 1.32 | 2.28 | **-0.295** | Bugs fixed but EV worse; critic overfits 20-step windows |
+| A2C-3 | Sensory-only critic input | 0.50% | 1.50 | 2.05 | **-0.620** | Non-stationarity hypothesis disproved; A2C abandoned |
+
+**Best single episode**: Session 135025, Episode 167 — 10 food, 265 steps, reward +31.65.
+
+### Systematic Hypothesis Elimination
+
+The A2C investigation followed a rigorous hypothesis-testing methodology:
+
+| Round | Hypothesis | Intervention | Result |
+|-------|-----------|-------------|--------|
+| A2C-0→1 | Insufficient data, too much capacity | 4x episodes (50→200), smaller critic (5.4K→1.1K params) | Critic still fails (EV≈0) |
+| A2C-1→2 | Implementation bugs | Fixed 4 bugs: multi-step training, bootstrap ordering, grad clip, EV timing | Critic **worse** (EV -0.295) |
+| A2C-2→3 | Non-stationary hidden spike features | Removed hidden spikes from critic input (stationary 8-dim) | Critic **even worse** (EV -0.620) |
+
+After systematically eliminating every hypothesized cause, the root causes are fundamental to the environment:
+
+1. **Partial observability**: The critic sees local gradient features, not global state (position, HP, food count, predator positions). Return prediction is ill-posed.
+2. **Policy non-stationarity**: V(s) changes every time the actor updates. With 2 actor epochs per 20-step window, the critic can never converge.
+3. **High return variance**: Returns span [-20, +30] depending on stochastic predator encounters.
+4. **Short training windows**: 20-step windows with gamma=0.99 poorly approximate true discounted returns over 50-500 step episodes.
+
+### Actor Learning (Independent of Critic)
+
+The REINFORCE actor showed steady improvement across all rounds, entirely independent of the (non-functional) critic:
+
+| Quartile | A2C-1 Foods | A2C-2 Foods | A2C-3 Foods |
+|----------|-----------|-----------|-----------|
+| Q1 (ep 1-50) | 0.79 | 0.60 | 0.64 |
+| Q2 (ep 51-100) | 1.48 | 0.90 | 1.36 |
+| Q3 (ep 101-150) | 1.78 | 1.48 | 1.93 |
+| Q4 (ep 151-200) | 2.05 | 2.28 | 2.05 |
+
+Food collection improves 2-4x from Q1 to Q4 in every round. This plateau (~2.0 Q4 foods) represents the ceiling of what REINFORCE alone achieves in 200 episodes on pursuit predators.
+
+### Critic Harm (New Finding)
+
+A2C-3 revealed a new failure mode: **the critic actively degrades the actor** when EV is deeply negative. 2 of 4 sessions showed Q4 regression (performance peaks in Q3, declines in Q4). This pattern was not observed in vanilla REINFORCE runs, confirming that the critic's noisy GAE advantages can corrupt the policy gradient.
+
+### Conclusion
+
+**A2C is not viable for QSNNReinforce on pursuit predators.** After 4 rounds, the critic never achieved the 0.2 EV target and progressively worsened (0 → -0.008 → -0.295 → -0.620). All task performance improvements came from the REINFORCE backbone alone. The critic is at best deadweight and at worst harmful.
+
+For the full round-by-round optimization history, see [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md).
+
+______________________________________________________________________
+
 ## QVarCircuitBrain Comparison
 
 **Status**: Existing baseline
@@ -487,6 +566,7 @@ ______________________________________________________________________
 | QRC | Readout only | REINFORCE on readout | 0% | No |
 | QSNN (Hebbian) | Weights + θ | 3-factor local Hebbian | 0% | No |
 | QSNN-PPO | QSNN actor + MLP critic | Surrogate + PPO (incompatible) | 0% | **No** |
+| QSNNReinforce A2C | QSNN actor + MLP critic | Surrogate + A2C critic | 0.63% (pursuit) | **No** |
 | **QSNN (Surrogate)** | **Weights + θ** | **Quantum forward + sigmoid surrogate backward** | **73.9%** | **Yes** |
 | QVarCircuit (gradient) | Full circuit | Parameter-shift rule | ~40% | Marginal |
 | QVarCircuit (CMA-ES) | Full circuit | Evolutionary | 88% | Yes (but not gradient-based) |
@@ -500,6 +580,7 @@ Architecture                  Success Rate
 QRC (fixed reservoir)         ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   ❌
 QSNN Hebbian                  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   ❌
 QSNN-PPO Hybrid               ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0%   ❌†
+QSNNReinforce A2C             ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0.6% ❌‡‡
 QVarCircuit (param-shift)     ████████████████░░░░░░░░░░░░░░░░░░░░░░░  ~40% ⚠️
 QSNN Surrogate                ██████████████████████████████░░░░░░░░░  73.9% ✓
 QVarCircuit (CMA-ES)          ███████████████████████████████████░░░░  88%   ✓*
@@ -508,12 +589,14 @@ SpikingReinforce (classical)  ████████████████�
 
 * CMA-ES is evolutionary, not gradient-based
 † QSNN-PPO: PPO incompatible with surrogate gradients (policy_loss=0 always)
+‡‡ QSNNReinforce A2C: pursuit predator only; critic never learned (EV -0.620)
 ‡ SpikingReinforce best session only; ~9/10 sessions fail (~10% reliability)
   QSNN achieves 73.9% with 100% session reliability (4/4 converge)
 
 KEY INSIGHT: QSNN Surrogate is the first quantum architecture to match a
 classical baseline using gradient-based learning (no evolution needed).
-PPO cannot be combined with surrogate gradients — use REINFORCE/A2C instead.
+Neither PPO nor A2C can be combined with QSNN for multi-objective tasks —
+PPO fails (importance sampling), A2C fails (critic can't learn V(s)).
 ═══════════════════════════════════════════════════════════════════════════
 ```
 
@@ -570,6 +653,9 @@ Success
 09. **Fan-in-aware scaling is critical for wider networks**: `tanh(w*x / sqrt(fan_in))` prevents gradient death that otherwise occurs when layer width exceeds ~10 neurons
 10. **PPO is incompatible with surrogate gradient spiking networks**: The QLIFSurrogateSpike forward pass returns a constant (quantum measurement), making PPO's importance sampling ratio always 1.0. REINFORCE-based methods (which only need backward-pass gradients) are the correct algorithm family for QSNN
 11. **theta_motor init near pi/2 is critical**: Motor neurons initialised with small theta (~0) produce spike probs ~0.02, effectively dead. Initialising in `linspace(pi/4, 3*pi/4)` places neurons in the responsive range (spike probs 0.15-0.85)
+12. **A2C critic cannot learn V(s) with partial observations**: After 4 rounds (16 sessions), the classical critic never achieved meaningful explained variance on pursuit predators. Root causes: partial observability (critic sees local gradients, not global state), policy non-stationarity, high return variance, and short 20-step GAE windows. Systematically eliminated data quantity, capacity, bugs, and feature non-stationarity as causes.
+13. **The REINFORCE actor learns independently of the critic**: All food collection improvements (0.6→2.0 Q4 foods) across 4 A2C rounds were driven by the REINFORCE backbone, not critic-provided advantages. The critic was confirmed as non-functional deadweight.
+14. **A non-functional critic can actively harm learning**: When explained variance is deeply negative, GAE advantages inject noise into the policy gradient that is worse than normalized-returns REINFORCE. A2C-3 showed Q4 regression in 2/4 sessions — a pattern absent in vanilla REINFORCE runs.
 
 ______________________________________________________________________
 
@@ -586,7 +672,8 @@ ______________________________________________________________________
 - [x] Implement QSNN-PPO hybrid (QSNN actor + classical critic with GAE + PPO training loop) — 4 rounds, 16 sessions
 - [x] Halt QSNN-PPO — PPO incompatible with surrogate gradients (policy_loss=0 in 100% of updates)
 - [x] Implement QSNNReinforce A2C (actor-critic variance reduction on REINFORCE backbone)
-- [ ] Evaluate QSNNReinforce A2C on pursuit predators — in progress (A2C-0 complete, A2C-1 running)
+- [x] Evaluate QSNNReinforce A2C on pursuit predators — 4 rounds, 16 sessions, 3,200 episodes. Critic never learned (EV: 0 → -0.620). Approach halted.
+- [ ] Determine next approach for quantum multi-objective learning
 
 ______________________________________________________________________
 
@@ -634,11 +721,23 @@ Full predator session references (64 sessions across 16 rounds): [008-appendix-q
 
 Full QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
 
+### QSNNReinforce A2C Sessions
+
+| Round | Sessions | Episodes | Result |
+|-------|----------|----------|--------|
+| A2C-0 | 20260215_103816-103835 | 50 | 0%, critic EV ≈ 0, worse than vanilla REINFORCE |
+| A2C-1 | 20260215_121727-121748 | 200 | 0.13%, actor improves via REINFORCE, 4 critic bugs found |
+| A2C-2 | 20260215_135006-135025 | 200 | 0.63%, bugs fixed but EV worse (-0.295) |
+| A2C-3 | 20260215_221154-221213 | 200 | 0.50%, sensory-only critic, EV worst yet (-0.620) |
+
+Full QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md)
+
 ### Appendices
 
 - QSNN foraging optimization history (17 rounds): [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md)
 - QSNN predator optimization history (16 rounds, 64 sessions): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
 - QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
+- QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md)
 
 ### File Locations
 
