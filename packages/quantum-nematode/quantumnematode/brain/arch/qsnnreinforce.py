@@ -420,6 +420,11 @@ class QSNNReinforceBrainConfig(BrainConfig):
         default=DEFAULT_CRITIC_GRAD_CLIP,
         description="Max gradient norm for critic (separate from actor's surrogate clip).",
     )
+    critic_use_hidden_spikes: bool = Field(
+        default=True,
+        description="Include hidden spike rates in critic input. "
+        "When False, critic sees only raw sensory features (stationary input).",
+    )
     gae_lambda: float = Field(
         default=DEFAULT_GAE_LAMBDA,
         description="Lambda for GAE advantage estimation (higher = less biased).",
@@ -597,7 +602,10 @@ class QSNNReinforceBrain(ClassicalBrain):
 
         # Classical critic for actor-critic mode (GAE advantages)
         self.use_critic = config.use_critic
-        self._critic_input_dim = self.input_dim + self.num_hidden
+        self._critic_use_hidden_spikes = config.critic_use_hidden_spikes
+        self._critic_input_dim = (
+            self.input_dim + self.num_hidden if self._critic_use_hidden_spikes else self.input_dim
+        )
         self.critic: CriticMLP | None = None
         self.critic_optimizer: torch.optim.Adam | None = None
         self._init_critic(config)
@@ -1420,10 +1428,11 @@ class QSNNReinforceBrain(ClassicalBrain):
         return advantages, returns
 
     def _build_critic_input_batch(self, num_steps: int) -> torch.Tensor:
-        """Build critic input batch from features and hidden spike rates.
+        """Build critic input batch from features and optionally hidden spike rates.
 
-        Concatenates raw sensory features with detached hidden spike rates
-        for each step in the episode buffer.
+        When ``critic_use_hidden_spikes`` is True, concatenates raw sensory
+        features with detached hidden spike rates.  When False, uses only raw
+        sensory features (stationary input for the critic).
 
         Parameters
         ----------
@@ -1433,11 +1442,14 @@ class QSNNReinforceBrain(ClassicalBrain):
         Returns
         -------
         torch.Tensor
-            Critic input batch of shape (num_steps, input_dim + num_hidden).
+            Critic input batch of shape ``(num_steps, critic_input_dim)``.
         """
         features = np.array(self.episode_features[:num_steps])
-        hidden = np.array(self.episode_hidden_spikes[:num_steps])
-        combined = np.concatenate([features, hidden], axis=1)
+        if self._critic_use_hidden_spikes:
+            hidden = np.array(self.episode_hidden_spikes[:num_steps])
+            combined = np.concatenate([features, hidden], axis=1)
+        else:
+            combined = features
         return torch.tensor(combined, dtype=torch.float32, device=self.device)
 
     def _update_critic(self, target_returns: torch.Tensor) -> None:
@@ -1877,7 +1889,12 @@ class QSNNReinforceBrain(ClassicalBrain):
             # hidden spikes from state N, corrupting GAE return targets.
             motor_probs = self._multi_timestep(features)
             with torch.no_grad():
-                bootstrap_in = np.concatenate([features, self._last_avg_hidden_spikes])
+                if self._critic_use_hidden_spikes:
+                    bootstrap_in = np.concatenate(
+                        [features, self._last_avg_hidden_spikes],
+                    )
+                else:
+                    bootstrap_in = features
                 bootstrap_t = torch.tensor(
                     bootstrap_in,
                     dtype=torch.float32,
@@ -1957,13 +1974,18 @@ class QSNNReinforceBrain(ClassicalBrain):
             self.episode_features.append(features)
             old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
             self.episode_old_log_probs.append(old_log_prob)
-            if self.use_critic:
+            if self.use_critic and self._critic_use_hidden_spikes:
                 self.episode_hidden_spikes.append(self._last_avg_hidden_spikes.copy())
 
         # Store critic value estimate for GAE computation
         if self.use_critic and self.critic is not None:
             with torch.no_grad():
-                critic_in = np.concatenate([features, self._last_avg_hidden_spikes])
+                if self._critic_use_hidden_spikes:
+                    critic_in = np.concatenate(
+                        [features, self._last_avg_hidden_spikes],
+                    )
+                else:
+                    critic_in = features
                 critic_in_t = torch.tensor(
                     critic_in,
                     dtype=torch.float32,
