@@ -1030,11 +1030,8 @@ class HybridQuantumBrain(ClassicalBrain):
     # Preprocessing
     # ──────────────────────────────────────────────────────────────────
 
-    def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams to extract features."""
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-
+    def _preprocess_legacy(self, params: BrainParams) -> np.ndarray:
+        """Extract legacy 2-feature input (gradient_strength, relative_angle)."""
         grad_strength = float(params.gradient_strength or 0.0)
         grad_direction = float(params.gradient_direction or 0.0)
         direction_map = {
@@ -1047,6 +1044,20 @@ class HybridQuantumBrain(ClassicalBrain):
         relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
         rel_angle_norm = relative_angle / np.pi
         return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+
+    def preprocess(self, params: BrainParams) -> np.ndarray:
+        """Preprocess BrainParams to extract QSNN features (always legacy 2-feature)."""
+        return self._preprocess_legacy(params)
+
+    def _preprocess_cortex(self, params: BrainParams) -> np.ndarray:
+        """Preprocess BrainParams for cortex input.
+
+        Uses unified sensory modules when configured (multi-objective),
+        otherwise falls back to the same legacy 2-feature input as the QSNN.
+        """
+        if self.sensory_modules is not None:
+            return extract_classical_features(params, self.sensory_modules)
+        return self._preprocess_legacy(params)
 
     # ──────────────────────────────────────────────────────────────────
     # Exploration schedule
@@ -1072,10 +1083,10 @@ class HybridQuantumBrain(ClassicalBrain):
         top_randomize: bool,  # noqa: ARG002
     ) -> list[ActionData]:
         """Run hybrid brain and select an action."""
-        features = self.preprocess(params)
+        qsnn_features = self.preprocess(params)
 
         # QSNN forward pass (always runs regardless of stage)
-        motor_probs = self._multi_timestep(features)
+        motor_probs = self._multi_timestep(qsnn_features)
         motor_probs = np.clip(motor_probs, 1e-8, 1.0 - 1e-8)
         reflex_logits_np = (motor_probs - 0.5) * self.config.logit_scale
 
@@ -1089,8 +1100,9 @@ class HybridQuantumBrain(ClassicalBrain):
             uniform = np.ones(self.num_actions) / self.num_actions
             action_probs = (1 - epsilon) * softmax_probs + epsilon * uniform
         else:
-            # Stage 2/3: cortex fusion
-            sensory_t = torch.tensor(features, dtype=torch.float32, device=self.device)
+            # Stage 2/3: cortex gets its own features (may include predator info)
+            cortex_features = self._preprocess_cortex(params)
+            sensory_t = torch.tensor(cortex_features, dtype=torch.float32, device=self.device)
             reflex_logits_t = torch.tensor(
                 reflex_logits_np,
                 dtype=torch.float32,
@@ -1120,7 +1132,7 @@ class HybridQuantumBrain(ClassicalBrain):
             cortex_log_probs = torch.log(cortex_probs + 1e-8)
             with torch.no_grad():
                 value = self._cortex_value(sensory_t)
-            self._pending_cortex_state = features
+            self._pending_cortex_state = cortex_features
             self._pending_cortex_log_prob_dist = cortex_log_probs
             self._pending_cortex_value = value
 
@@ -1132,7 +1144,7 @@ class HybridQuantumBrain(ClassicalBrain):
 
         # Store REINFORCE data (stage 1 and 3)
         if self.training_stage in (STAGE_QSNN_ONLY, STAGE_JOINT):
-            self.episode_features.append(features)
+            self.episode_features.append(qsnn_features)
             old_log_prob = float(np.log(action_probs[action_idx] + 1e-8))
             self.episode_old_log_probs.append(old_log_prob)
 
