@@ -17,7 +17,7 @@ brain:
 
     # Path to pre-trained QSNN weights from stage 1
     # Update this path to your actual stage 1 output
-    qsnn_weights_path: exports/stage1/qsnn_weights.pt
+    qsnn_weights_path: artifacts/models/20260216_100512/qsnn_weights.pt
 
     # QSNN reflex params (must match stage 1 config exactly)
     num_sensory_neurons: 6
