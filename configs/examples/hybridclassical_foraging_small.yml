@@ -1,0 +1,71 @@
+# Hybrid Classical Brain - Stage 1: Reflex MLP Training
+# Classical ablation of HybridQuantum: replaces QSNN with a small MLP reflex.
+# Trains the classical reflex MLP on foraging using REINFORCE.
+# Uses legacy 2-feature mode (gradient_strength, relative_angle).
+# After training, reflex weights are saved to exports/<session>/reflex_weights.pt
+# for use in stage 2 (cortex PPO training).
+#
+# Environment, rewards, and hyperparameters are identical to
+# hybridquantum_foraging_small.yml to ensure a fair ablation comparison.
+
+max_steps: 500
+brain:
+  name: hybridclassical
+  config:
+    # Training stage: 1 = reflex MLP only
+    training_stage: 1
+
+    # Reflex MLP params (~116 params, comparable to QSNN's 92)
+    reflex_hidden_dim: 16
+    logit_scale: 5.0
+
+    # Reflex REINFORCE params (matching hybridquantum stage 1)
+    reflex_lr: 0.01
+    reflex_lr_decay_episodes: 200
+    num_reinforce_epochs: 2
+    reinforce_window_size: 20
+    gamma: 0.99
+    advantage_clip: 2.0
+    exploration_epsilon: 0.1
+    exploration_decay_episodes: 80
+    lr_min_factor: 0.1
+    entropy_coeff: 0.02
+    use_reward_normalization: true
+
+    # Cortex params (unused in stage 1, but required for init)
+    cortex_hidden_dim: 64
+    cortex_num_layers: 2
+    num_modes: 3
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 2.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+gradient:
+  method: clip
