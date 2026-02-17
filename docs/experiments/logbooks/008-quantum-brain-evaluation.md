@@ -567,6 +567,7 @@ Total: ~10K params (92 quantum + ~10K classical)
 ```
 
 Key design choices:
+
 - **QSNN reflex** for reactive foraging (proven 73.9% on foraging alone)
 - **Classical cortex** for strategic multi-objective behaviour (PPO with GAE)
 - **Mode-gated fusion**: cortex learns WHEN to trust QSNN (forage/evade/explore modes)
@@ -585,12 +586,12 @@ Key design choices:
 
 | Round | Stage | Sessions | Success | Post-Conv | Key Finding |
 |-------|-------|----------|---------|-----------|-------------|
-| 1 | 1 (QSNN only) | 4 × 200 eps | 91.0%* | 99.3%* | QSNN reflex validated for foraging |
+| 1 | 1 (QSNN only) | 4 × 200 eps | 91.0%\* | 99.3%\* | QSNN reflex validated for foraging |
 | 2 | 2 (cortex PPO) | 4 × 200 eps | 66.4% | 81.9% | Cortex learns foraging + evasion |
 | 3 | 2 (tuned) | 4 × 500 eps | 84.3% | 91.7% | LR schedule + 12 PPO epochs + mechanosensation |
 | 4 | 3 (joint) | 4 × 500 eps | **96.9%** | **96.9%** | **Best result; immediate convergence** |
 
-*Stage 1 best 3 of 4 sessions (1 outlier excluded).
+\*Stage 1 best 3 of 4 sessions (1 outlier excluded).
 
 ### Stage 3 Highlights (Round 4)
 
@@ -671,10 +672,10 @@ ______________________________________________________________________
 | QSNNReinforce A2C | QSNN actor + MLP critic | Surrogate + A2C critic | N/A | 0.63% | **No** |
 | QSNN (Surrogate) | Weights + θ | Quantum forward + surrogate backward | **73.9%** | 1.25% | Partial |
 | QVarCircuit (gradient) | Full circuit | Parameter-shift rule | ~40% | N/A | Marginal |
-| QVarCircuit (CMA-ES) | Full circuit | Evolutionary | 88% | 76.1%* | Yes (not online) |
+| QVarCircuit (CMA-ES) | Full circuit | Evolutionary | 88% | 76.1%\* | Yes (not online) |
 | **HybridQuantum** | **QSNN + cortex MLP** | **Surrogate REINFORCE + PPO** | **91.0%** | **96.9%** | **Yes** |
 
-*CMA-ES is evolutionary, not gradient-based.
+\*CMA-ES is evolutionary, not gradient-based.
 
 ```text
 QUANTUM ARCHITECTURE SUCCESS RATES (Best Post-Convergence, Gradient-Based)
