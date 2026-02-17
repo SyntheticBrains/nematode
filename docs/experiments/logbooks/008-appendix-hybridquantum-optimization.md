@@ -6,15 +6,15 @@ ______________________________________________________________________
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Optimization Summary](#optimization-summary)
-3. [Round 1: Stage 1 QSNN Reflex Training](#round-1-stage-1-qsnn-reflex-training)
-4. [Round 2: Stage 2 Cortex PPO Training](#round-2-stage-2-cortex-ppo-training)
-5. [Round 3: Stage 2 Tuned Cortex PPO](#round-3-stage-2-tuned-cortex-ppo)
-6. [Round 4: Stage 3 Joint Fine-Tune](#round-4-stage-3-joint-fine-tune)
-7. [Pre-Stage-2 Bug Fixes](#pre-stage-2-bug-fixes)
-8. [Fusion Strategy Analysis](#fusion-strategy-analysis)
-9. [QSNN Weight Drift Analysis (Stage 3)](#qsnn-weight-drift-analysis-stage-3)
+01. [Architecture Overview](#architecture-overview)
+02. [Optimization Summary](#optimization-summary)
+03. [Round 1: Stage 1 QSNN Reflex Training](#round-1-stage-1-qsnn-reflex-training)
+04. [Round 2: Stage 2 Cortex PPO Training](#round-2-stage-2-cortex-ppo-training)
+05. [Round 3: Stage 2 Tuned Cortex PPO](#round-3-stage-2-tuned-cortex-ppo)
+06. [Round 4: Stage 3 Joint Fine-Tune](#round-4-stage-3-joint-fine-tune)
+07. [Pre-Stage-2 Bug Fixes](#pre-stage-2-bug-fixes)
+08. [Fusion Strategy Analysis](#fusion-strategy-analysis)
+09. [QSNN Weight Drift Analysis (Stage 3)](#qsnn-weight-drift-analysis-stage-3)
 10. [Comparison with Classical Baselines](#comparison-with-classical-baselines)
 11. [Lessons Learned](#lessons-learned)
 12. [Session References](#session-references)
@@ -53,6 +53,7 @@ Classical Critic (separate MLP)
 ```
 
 **Three-stage curriculum:**
+
 - Stage 1: QSNN reflex only (REINFORCE on foraging)
 - Stage 2: Cortex PPO only (QSNN frozen, multi-objective environment)
 - Stage 3: Joint fine-tune (both components, QSNN with 10x lower LR)
@@ -65,12 +66,12 @@ ______________________________________________________________________
 
 | Round | Stage | Key Changes | Success | Post-Conv | Key Finding |
 |-------|-------|-----------|---------|-----------|-------------|
-| 1 | 1 | QSNN reflex on foraging | 91.0%* | 99.5%* | QSNN reflex validated; 1 of 4 sessions unstable |
+| 1 | 1 | QSNN reflex on foraging | 91.0%\* | 99.5%\* | QSNN reflex validated; 1 of 4 sessions unstable |
 | 2 | 2 | Cortex PPO, QSNN frozen | 66.4% | 81.9% | Cortex learns foraging + evasion; beats MLP PPO unified by +10.3 pts |
 | 3 | 2 | +LR schedule, +12 epochs, +mechano | 84.3% | 91.7% | Target ≥90% achieved; beats MLP PPO unified by +20.1 pts |
 | 4 | 3 | Joint fine-tune, both trainable | **96.9%** | **96.9%** | Best result; +25.3 pts over MLP PPO unified baseline |
 
-*Stage 1 best 3 of 4 sessions (1 outlier excluded).
+\*Stage 1 best 3 of 4 sessions (1 outlier excluded).
 
 **Outcome**: Three-stage curriculum fully validated. 96.9% post-convergence on pursuit predators with ~10K parameters (4.3x fewer than MLP PPO baseline).
 
@@ -185,6 +186,7 @@ ______________________________________________________________________
 ### Analysis
 
 **Stage 2 works.** All 4 sessions converged and achieved 74-87% post-convergence success. Zero predator deaths across all 800 episodes. Two distinct fusion strategies emerged:
+
 - **Cortex-dominant** (132604): trust drops to 0.151, cortex drives ~85% of decisions
 - **QSNN-collaborative** (132609/132614/132619): trust rises to 0.40-0.55
 
@@ -287,6 +289,7 @@ ______________________________________________________________________
 **Target ≥90% achieved.** All 4 sessions individually exceeded 90% post-convergence. Last 100 episodes averaged 97.0%.
 
 **Same two fusion strategies re-emerged**, now more pronounced:
+
 - Cortex-dominant (213406, 012722): trust 0.17-0.19, explore mode 47-66%
 - QSNN-collaborative (012729, 012735): trust 0.51-0.55, forage mode 51-55%
 
@@ -379,6 +382,7 @@ ______________________________________________________________________
 ### Training Loop Diagnostics
 
 Both training loops confirmed active in all sessions:
+
 - **REINFORCE**: 4,300-4,700 epoch-0 updates/session (~8.7-9.3 updates/episode × 2 epochs)
 - **PPO**: 500 updates/session (exactly 1 per episode)
 - No interference between optimizers (QSNN Adam separate from cortex actor/critic Adams)
@@ -416,6 +420,7 @@ Two bugs were found and fixed between Round 1 and Round 2:
 **Bug**: Stage 2 config initially used 8/16/4 QSNN neurons (matching standalone QSNN), but Stage 1 weights were trained with 6/8/4 neurons, causing shape mismatch on load.
 
 **Fix**: Aligned Stage 2 config to 6/8/4 neurons. Split preprocessing into dual paths:
+
 - QSNN: `_preprocess_legacy(params)` → gradient_strength, relative_angle (2 features)
 - Cortex: `_preprocess_cortex(params)` → `extract_classical_features(params, modules)` → features from sensory modules
 
@@ -428,6 +433,7 @@ Across all 12 Stage 2/3 sessions, two distinct fusion strategies emerged:
 ### Cortex-Dominant Strategy
 
 **Sessions**: 132604, 213406, 012722 (Stage 2 only)
+
 - QSNN trust: 0.15-0.19
 - Mode distribution: explore 47-66%, forage 17-19%, evade 17-34%
 - The cortex uses explore mode as a generic "I'll handle everything" mode
@@ -436,6 +442,7 @@ Across all 12 Stage 2/3 sessions, two distinct fusion strategies emerged:
 ### QSNN-Collaborative Strategy
 
 **Sessions**: 132609, 132614, 132619, 012729, 012735, 061309, 061317, 061323, 061329
+
 - QSNN trust: 0.40-0.59
 - Mode distribution: forage 51-59%, evade 21-32%, explore 13-24%
 - Cortex trusts QSNN for foraging, handles evasion itself
@@ -494,12 +501,12 @@ The hybrid brain now **exceeds** the "cheating" legacy MLP PPO baseline that use
 | Metric | Stage 1 R1 | Stage 2 R2 | Stage 2 R3 | **Stage 3 R4** | MLP PPO Unified |
 |--------|-----------|-----------|-----------|-------------|-----------------|
 | Task | Foraging | Pursuit | Pursuit | **Pursuit** | Pursuit |
-| Post-conv | 99.3%* | 81.9% | 91.7% | **96.9%** | 71.6% |
+| Post-conv | 99.3%\* | 81.9% | 91.7% | **96.9%** | 71.6% |
 | HP death rate | N/A | 33.4% | 15.7% | **3.1%** | 44.8% |
 | Evasion rate | N/A | 82.6% | 87.2% | **90.9%** | ~82% |
 | Trainable params | 92 | 9,572 | 9,736 | **9,828** | ~42K |
 
-*Stage 1 foraging-only (no predators).
+\*Stage 1 foraging-only (no predators).
 
 ______________________________________________________________________
 
