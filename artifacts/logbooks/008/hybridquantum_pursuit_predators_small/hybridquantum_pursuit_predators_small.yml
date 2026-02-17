@@ -1,0 +1,125 @@
+# Hybrid Quantum Brain - Stage 2: Cortex PPO Training
+# Loads pre-trained QSNN weights (frozen) and trains cortex PPO
+# for multi-objective behaviour (foraging + predator evasion).
+#
+# QSNN reflex params MUST match stage 1 config exactly (6/8/4 neurons,
+# legacy 2-feature mode) so that pre-trained weights load correctly.
+# The cortex gets its own sensory input via sensory_modules (6 features).
+#
+# Round 3 changes vs Round 2:
+# - ppo_epochs: 4 -> 12 (more gradient steps per buffer)
+# - LR warmup: 0.0001 -> 0.001 over 50 episodes
+# - LR decay: 0.001 -> 0.0001 over 200 episodes (starts after warmup)
+# - Added mechanosensation sensory module (boundary/predator contact)
+# - Cortex input: 4 -> 6 features (food_chemotaxis=2, nociception=2, mechanosensation=2)
+#
+# To use: update qsnn_weights_path to point to your stage 1 weights file.
+
+max_steps: 500
+brain:
+  name: hybridquantum
+  config:
+    # Training stage: 2 = cortex PPO only (QSNN frozen)
+    training_stage: 2
+
+    # Path to pre-trained QSNN weights from stage 1
+    # Update this path to your actual stage 1 output
+    qsnn_weights_path: artifacts/models/20260216_100512/qsnn_weights.pt
+
+    # QSNN reflex params (must match stage 1 config exactly)
+    num_sensory_neurons: 6
+    num_hidden_neurons: 8
+    num_motor_neurons: 4
+    membrane_tau: 0.9
+    threshold: 0.5
+    refractory_period: 0
+    shots: 1024
+    num_qsnn_timesteps: 10
+    surrogate_alpha: 1.0
+    logit_scale: 5.0
+    weight_clip: 3.0
+    theta_motor_max_norm: 1.0
+
+    # Cortex params
+    cortex_hidden_dim: 64
+    cortex_num_layers: 2
+    num_modes: 3
+
+    # Cortex PPO params
+    cortex_actor_lr: 0.001
+    cortex_critic_lr: 0.001
+    ppo_clip_epsilon: 0.2
+    ppo_epochs: 12
+    ppo_minibatches: 4
+    ppo_buffer_size: 512
+    gae_lambda: 0.95
+    entropy_coeff: 0.01
+    max_grad_norm: 0.5
+    gamma: 0.99
+
+    # Cortex LR schedule (warmup + decay)
+    cortex_lr_warmup_episodes: 50
+    cortex_lr_warmup_start: 0.0001
+    cortex_lr_decay_episodes: 200
+    cortex_lr_decay_end: 0.0001
+
+    # Sensory modules for cortex multi-objective input (6 features)
+    # QSNN always uses legacy 2-feature mode regardless of this setting
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    kill_radius: 0
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+gradient:
+  method: clip
