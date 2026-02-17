@@ -1,6 +1,7 @@
 """Module for quantum brain architectures."""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
+from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .mlpdqn import MLPDQNBrain, MLPDQNBrainConfig, QMLPBrain, QMLPBrainConfig
 from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
@@ -26,6 +27,8 @@ __all__ = [
     "BrainData",
     "BrainParams",
     "ClassicalBrain",
+    "HybridClassicalBrain",
+    "HybridClassicalBrainConfig",
     "HybridQuantumBrain",
     "HybridQuantumBrainConfig",
     "MLPBrain",

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from quantumnematode.brain.arch import (
     Brain,
+    HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
@@ -50,6 +51,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
     | HybridQuantumBrainConfig
+    | HybridClassicalBrainConfig
     | SpikingReinforceBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
@@ -270,6 +272,23 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = HybridQuantumBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.HYBRID_CLASSICAL:
+        from quantumnematode.brain.arch.hybridclassical import HybridClassicalBrain
+
+        if not isinstance(brain_config, HybridClassicalBrainConfig):
+            error_message = (
+                "The 'hybridclassical' brain architecture requires a "
+                "HybridClassicalBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = HybridClassicalBrain(
             config=brain_config,
             num_actions=4,
             device=device,
