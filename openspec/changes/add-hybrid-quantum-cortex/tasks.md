@@ -1,3 +1,10 @@
+## 0. Extract Shared Hybrid Brain Infrastructure (Prerequisite)
+
+- [ ] 0.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/_hybrid_common.py` with shared infrastructure extracted from `hybridquantum.py`: `_CortexRolloutBuffer` class, `_fuse()` mode-gated fusion, `_cortex_forward()` and `_cortex_value()` classical cortex forward passes, `_init_cortex()` MLP initialization with orthogonal init, `_get_cortex_lr()` and `_update_cortex_learning_rate()` LR scheduling, cortex weight persistence helpers, PPO update logic, shared constants/defaults
+- [ ] 0.2 Refactor `hybridquantum.py` to import shared code from `_hybrid_common.py` instead of defining it inline — verify all existing tests pass after refactor
+- [ ] 0.3 Refactor `hybridclassical.py` to import shared code from `_hybrid_common.py` instead of its duplicated copies — verify all existing tests pass after refactor
+- [ ] 0.4 Run full test suite (`uv run pytest`) and lint (`uv run pre-commit run -a`) to confirm no regressions from the extraction refactor
+
 ## 1. Brain Type Registration
 
 - [ ] 1.1 Add `HYBRID_QUANTUM_CORTEX = "hybridquantumcortex"` to the `BrainType` enum in `packages/quantum-nematode/quantumnematode/brain/arch/dtypes.py`
@@ -12,7 +19,7 @@
 
 ## 3. Core Brain Implementation
 
-- [ ] 3.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/hybridquantumcortex.py` with `HybridQuantumCortexBrain` class extending `ClassicalBrain`, using `hybridquantum.py` as the template (~70% reusable structure)
+- [ ] 3.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/hybridquantumcortex.py` with `HybridQuantumCortexBrain` class extending `ClassicalBrain`, importing shared infrastructure from `_hybrid_common.py` (rollout buffer, fusion, LR scheduling, weight persistence helpers)
 - [ ] 3.2 Implement QSNN reflex initialization (`_init_reflex_weights`) — identical to `HybridQuantumBrain._init_qsnn_weights()`: W_sh, W_hm, theta_hidden, theta_motor with `WEIGHT_INIT_SCALE`, `requires_grad_(True)`
 - [ ] 3.3 Implement grouped sensory QLIF cortex initialization (`_init_cortex_qsnn`): create per-group weight matrices `W_group[i]` with shape `(module_feature_dim, cortex_neurons_per_group)`, hidden weights `W_cortex_sh` with shape `(total_sensory_neurons, cortex_hidden_neurons)`, output weights `W_cortex_ho` with shape `(cortex_hidden_neurons, cortex_output_neurons)`, and theta parameters for hidden and output layers
 - [ ] 3.4 Implement classical critic initialization (`_init_critic`) — reuse the MLP pattern from `HybridQuantumBrain._init_cortex()` (critic portion): sensory_dim → hidden → hidden → 1, orthogonal init
@@ -29,15 +36,15 @@
 
 ## 5. Fusion and Action Selection
 
-- [ ] 5.1 Implement `_fuse()` — reuse HybridQuantumBrain's mode-gated fusion: `final_logits = reflex_logits * qsnn_trust + action_biases`, with trust from `softmax(mode_logits)[0]`
+- [ ] 5.1 Implement `_fuse()` — import from `_hybrid_common.py` mode-gated fusion: `final_logits = reflex_logits * qsnn_trust + action_biases`, with trust from `softmax(mode_logits)[0]`
 - [ ] 5.2 Implement `run_brain()`: preprocess reflex features (legacy 2-feature), preprocess cortex features (via `extract_classical_features` with `cortex_sensory_modules`), run reflex forward, run cortex forward (stage >= 2), fuse, select action with epsilon-greedy exploration
 - [ ] 5.3 Implement stage 1 bypass: use reflex logits directly, skip cortex forward pass entirely
 
 ## 6. Training: REINFORCE with GAE Advantages
 
-- [ ] 6.1 Implement reflex REINFORCE training (`_reflex_reinforce_update`) — reuse HybridQuantumBrain's `_reinforce_update()` with window-based intra-episode updates, multi-epoch quantum caching, adaptive entropy regulation, weight clamping
-- [ ] 6.2 Implement rollout buffer — reuse `_CortexRolloutBuffer` from hybridquantum.py for collecting (state, action, log_prob, reward, value, done) tuples
-- [ ] 6.3 Implement GAE advantage computation — reuse `_CortexRolloutBuffer.compute_returns_and_advantages()` from hybridquantum.py
+- [ ] 6.1 Implement reflex REINFORCE training (`_reflex_reinforce_update`) — reuse the REINFORCE update pattern from `hybridquantum.py` with window-based intra-episode updates, multi-epoch quantum caching, adaptive entropy regulation, weight clamping
+- [ ] 6.2 Implement rollout buffer — import `_CortexRolloutBuffer` from `_hybrid_common.py` for collecting (state, action, log_prob, reward, value, done) tuples
+- [ ] 6.3 Implement GAE advantage computation — use `_CortexRolloutBuffer.compute_returns_and_advantages()` from `_hybrid_common.py`
 - [ ] 6.4 Implement cortex REINFORCE+GAE update (`_cortex_reinforce_update`): re-run cortex QSNN forward pass (differentiable) for buffered states, compute log_probs and entropy, compute loss as `-log_prob * gae_advantage.detach() - entropy_coef * entropy`, backprop through surrogate gradients, clip gradients, step cortex optimizer
 - [ ] 6.5 Implement critic training update (`_critic_update`): Huber loss against target returns, gradient clipping, log explained variance
 - [ ] 6.6 Implement `use_gae_advantages=false` fallback: when disabled, use self-computed normalized discounted returns instead of critic GAE advantages for the cortex REINFORCE loss
