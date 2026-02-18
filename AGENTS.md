@@ -27,7 +27,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 ## Key Directories
 
 - `packages/quantum-nematode/quantumnematode/` — Main source code
-  - `brain/arch/` — 7 brain architectures (qvarcircuit, qqlearning, mlpreinforce, mlpppo, mlpdqn, spikingreinforce, qrc)
+  - `brain/arch/` — 11 brain architectures: qvarcircuit, qqlearning, qrc, qsnnreinforce, qsnnppo, hybridquantum, hybridclassical, mlpreinforce, mlpdqn, mlpppo, spikingreinforce
   - `env/` — Environment simulation
   - `agent/` — Agent orchestration, rewards, metrics
   - `experiment/` — Experiment tracking and benchmarking
