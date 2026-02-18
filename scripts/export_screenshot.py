@@ -137,7 +137,9 @@ def main(output_path: str = "docs/assets/images/pixel_theme.png") -> None:
     zone_name = zone.value.upper().replace("_", " ") if zone else None
 
     # Sample session text
-    session_text = "Session:\nRun:\t\t3/10\nWins:\t\t1/10\nEaten:\t\t12/30\nSteps(Avg):\t250.00/3\n"
+    session_text = (
+        "Session:\nRun:\t\t3/10\nWins:\t\t1/10\nEaten:\t\t12/30\nSteps(Avg):\t250.00/500\n"
+    )
 
     # Render one frame
     renderer.render_frame(
