@@ -588,9 +588,14 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         if self.cortex_sensory_modules is not None:
             self.cortex_input_dim = get_classical_feature_dimension(self.cortex_sensory_modules)
             self.num_cortex_groups = len(self.cortex_sensory_modules)
+            # TODO(stage4): Replace with per-module classical_dim lookup when adding
+            # thermotaxis (classical_dim=3). Currently all stage 1-3 modules have
+            # classical_dim=2, so this is safe until multi-sensory scaling.
+            self.features_per_module = 2
         else:
             self.cortex_input_dim = 2
             self.num_cortex_groups = 1
+            self.features_per_module = self.cortex_input_dim
 
         # Data tracking
         self.history_data = BrainHistoryData()
@@ -1115,9 +1120,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         cortex_features: np.ndarray,
     ) -> np.ndarray:
         """Execute per-group sensory QLIF layers (non-differentiable)."""
-        features_per_module = (
-            2 if self.cortex_sensory_modules is not None else self.cortex_input_dim
-        )
+        features_per_module = self.features_per_module
         group_outputs: list[np.ndarray] = []
 
         for i in range(self.num_cortex_groups):
@@ -1144,9 +1147,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         cortex_features: np.ndarray,
     ) -> torch.Tensor:
         """Execute per-group sensory QLIF layers with gradient tracking."""
-        features_per_module = (
-            2 if self.cortex_sensory_modules is not None else self.cortex_input_dim
-        )
+        features_per_module = self.features_per_module
         group_outputs: list[torch.Tensor] = []
 
         for i in range(self.num_cortex_groups):
@@ -1180,9 +1181,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         cache_out: dict[str, list[float]],
     ) -> torch.Tensor:
         """Execute per-group sensory QLIF layers with gradient tracking and caching."""
-        features_per_module = (
-            2 if self.cortex_sensory_modules is not None else self.cortex_input_dim
-        )
+        features_per_module = self.features_per_module
         group_outputs: list[torch.Tensor] = []
 
         for i in range(self.num_cortex_groups):
@@ -1217,9 +1216,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         cached: dict[str, list[float]],
     ) -> torch.Tensor:
         """Execute per-group sensory QLIF layers reusing cached spike probs."""
-        features_per_module = (
-            2 if self.cortex_sensory_modules is not None else self.cortex_input_dim
-        )
+        features_per_module = self.features_per_module
         group_outputs: list[torch.Tensor] = []
 
         for i in range(self.num_cortex_groups):
