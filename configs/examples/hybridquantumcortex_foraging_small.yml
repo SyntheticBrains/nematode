@@ -1,0 +1,81 @@
+# Hybrid Quantum Cortex Brain - Stage 1: QSNN Reflex Training
+# Trains the QSNN reflex layer on foraging using REINFORCE.
+# Uses legacy 2-feature mode (gradient_strength, relative_angle).
+# After training, reflex weights are saved to exports/<session>/reflex_weights.pt
+# for use in stage 2 (cortex REINFORCE+GAE training).
+#
+# This is identical to HybridQuantum stage 1 — the cortex QSNN is not
+# initialized or used in this stage.
+
+max_steps: 500
+brain:
+  name: hybridquantumcortex
+  config:
+    # Training stage: 1 = QSNN reflex only
+    training_stage: 1
+
+    # QSNN reflex params
+    num_sensory_neurons: 6
+    num_hidden_neurons: 8
+    num_motor_neurons: 4
+    membrane_tau: 0.9
+    threshold: 0.5
+    refractory_period: 0
+    shots: 1024
+    num_qsnn_timesteps: 10
+    surrogate_alpha: 1.0
+    logit_scale: 5.0
+    weight_clip: 3.0
+    theta_motor_max_norm: 1.0
+
+    # QSNN REINFORCE params
+    qsnn_lr: 0.01
+    qsnn_lr_decay_episodes: 200
+    num_reinforce_epochs: 2
+    reinforce_window_size: 20
+    gamma: 0.99
+    advantage_clip: 2.0
+    exploration_epsilon: 0.1
+    exploration_decay_episodes: 80
+    lr_min_factor: 0.1
+    entropy_coeff: 0.02
+    use_reward_normalization: true
+
+    # Cortex QSNN params (unused in stage 1 but needed for init)
+    cortex_neurons_per_group: 4
+    cortex_hidden_neurons: 12
+    cortex_output_neurons: 8
+    num_modes: 3
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 2.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+gradient:
+  method: clip
