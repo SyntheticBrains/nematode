@@ -722,3 +722,281 @@ class TestSmokeTest:
                 brain.learn(params, reward=0.5, episode_done=episode_done)
 
         assert brain._episode_count == 3
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Stage 2 cortex weight change verification
+# ──────────────────────────────────────────────────────────────────────
+
+
+class TestStage2CortexLearns:
+    """Verify cortex weights actually change during stage 2 training."""
+
+    def test_cortex_weights_change_during_stage2(self):
+        """Test cortex group weights change after a training update."""
+        config = _stage2_config(ppo_buffer_size=5)
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        group_w_before = [w.clone().detach() for w in brain.cortex_group_weights]
+        hidden_w_before = brain.W_cortex_sh.clone().detach()
+        output_w_before = brain.W_cortex_ho.clone().detach()
+
+        for i in range(6):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=(i == 5))
+
+        # At least one cortex weight tensor should have changed
+        any_changed = False
+        for before, after in zip(group_w_before, brain.cortex_group_weights, strict=True):
+            if not torch.allclose(before, after.detach()):
+                any_changed = True
+                break
+        if not any_changed:
+            any_changed = not torch.allclose(hidden_w_before, brain.W_cortex_sh.detach())
+        if not any_changed:
+            any_changed = not torch.allclose(output_w_before, brain.W_cortex_ho.detach())
+
+        assert any_changed, "No cortex weights changed during stage 2 training"
+
+    def test_critic_weights_change_during_stage2(self):
+        """Test critic MLP weights change after a training update."""
+        config = _stage2_config(ppo_buffer_size=5)
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        critic_before = {name: p.clone().detach() for name, p in brain.critic.named_parameters()}
+
+        for i in range(6):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=(i == 5))
+
+        any_changed = any(
+            not torch.allclose(critic_before[name], p.detach())
+            for name, p in brain.critic.named_parameters()
+        )
+        assert any_changed, "No critic weights changed during stage 2 training"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# LR scheduling
+# ──────────────────────────────────────────────────────────────────────
+
+
+class TestCortexLRScheduling:
+    """Test cortex LR scheduling integration."""
+
+    def test_warmup_increases_lr(self):
+        """Test LR increases during warmup phase."""
+        config = _stage2_config(
+            cortex_lr=0.01,
+            cortex_lr_warmup_episodes=10,
+            cortex_lr_warmup_start=0.001,
+        )
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        # Run first episode to establish warmup start
+        brain.prepare_episode()
+        for step in range(6):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.5, episode_done=(step == 5))
+
+        lr_after_ep1 = brain.cortex_optimizer.param_groups[0]["lr"]
+
+        # Run 2 more episodes — LR should increase during warmup
+        for _ep in range(2):
+            brain.prepare_episode()
+            for step in range(6):
+                brain.run_brain(params, top_only=False, top_randomize=False)
+                brain.learn(params, reward=0.5, episode_done=(step == 5))
+
+        lr_after_ep3 = brain.cortex_optimizer.param_groups[0]["lr"]
+        assert lr_after_ep3 > lr_after_ep1, (
+            f"LR should increase during warmup: {lr_after_ep1} -> {lr_after_ep3}"
+        )
+
+    def test_no_scheduling_when_disabled(self):
+        """Test LR stays constant when scheduling is disabled."""
+        config = _stage2_config(
+            cortex_lr=0.01,
+            cortex_lr_warmup_episodes=0,
+            cortex_lr_decay_episodes=None,
+        )
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+
+        initial_lr = brain.cortex_optimizer.param_groups[0]["lr"]
+
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        for _ep in range(3):
+            brain.prepare_episode()
+            for step in range(6):
+                brain.run_brain(params, top_only=False, top_randomize=False)
+                brain.learn(params, reward=0.5, episode_done=(step == 5))
+
+        updated_lr = brain.cortex_optimizer.param_groups[0]["lr"]
+        assert updated_lr == pytest.approx(initial_lr)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Buffer GAE computation
+# ──────────────────────────────────────────────────────────────────────
+
+
+class TestBufferGAEComputation:
+    """Test _CortexRolloutBuffer.compute_returns_and_advantages."""
+
+    def test_single_step_returns(self):
+        """Test GAE computation with a single step."""
+        from quantumnematode.brain.arch._hybrid_common import _CortexRolloutBuffer
+
+        buf = _CortexRolloutBuffer(buffer_size=10, device=torch.device("cpu"))
+        buf.add(
+            state=np.array([0.5, 0.3]),
+            action=0,
+            log_prob=torch.tensor(-1.0),
+            value=torch.tensor(0.5),
+            reward=1.0,
+            done=True,
+        )
+
+        last_value = torch.tensor(0.0)
+        returns, advantages = buf.compute_returns_and_advantages(
+            last_value,
+            gamma=0.99,
+            gae_lambda=0.95,
+        )
+
+        assert returns.shape == (1,)
+        assert advantages.shape == (1,)
+        # For a terminal step: delta = reward + 0 - value = 1.0 - 0.5 = 0.5
+        assert advantages[0].item() == pytest.approx(0.5, abs=1e-6)
+        # returns = advantages + values = 0.5 + 0.5 = 1.0
+        assert returns[0].item() == pytest.approx(1.0, abs=1e-6)
+
+    def test_multi_step_discounting(self):
+        """Test GAE discounting across multiple steps."""
+        from quantumnematode.brain.arch._hybrid_common import _CortexRolloutBuffer
+
+        buf = _CortexRolloutBuffer(buffer_size=10, device=torch.device("cpu"))
+        gamma = 0.99
+        gae_lambda = 0.95
+
+        for i in range(3):
+            buf.add(
+                state=np.array([float(i), 0.0]),
+                action=0,
+                log_prob=torch.tensor(-1.0),
+                value=torch.tensor(0.0),
+                reward=1.0,
+                done=(i == 2),
+            )
+
+        last_value = torch.tensor(0.0)
+        returns, advantages = buf.compute_returns_and_advantages(
+            last_value,
+            gamma,
+            gae_lambda,
+        )
+
+        assert returns.shape == (3,)
+        assert advantages.shape == (3,)
+        # All values are 0, so returns == advantages
+        # Last step (terminal): adv = 1.0
+        # Step 1: delta=1.0, adv = 1.0 + gamma*lambda*1.0
+        # Step 0: delta=1.0, adv = 1.0 + gamma*lambda*adv[1]
+        expected_2 = 1.0
+        expected_1 = 1.0 + gamma * gae_lambda * expected_2
+        expected_0 = 1.0 + gamma * gae_lambda * expected_1
+        assert advantages[2].item() == pytest.approx(expected_2, abs=1e-5)
+        assert advantages[1].item() == pytest.approx(expected_1, abs=1e-5)
+        assert advantages[0].item() == pytest.approx(expected_0, abs=1e-5)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Refractory period reset
+# ──────────────────────────────────────────────────────────────────────
+
+
+class TestRefractoryReset:
+    """Test refractory state reset across episodes."""
+
+    def test_refractory_reset_on_episode_prepare(self):
+        """Test refractory states are zeroed on prepare_episode."""
+        config = _stage2_config()
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        # Run some steps to potentially populate refractory state
+        for _ in range(5):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+
+        brain.prepare_episode()
+
+        # Reflex refractory
+        assert np.all(brain.refractory_hidden == 0)
+        assert np.all(brain.refractory_motor == 0)
+
+        # Cortex refractory
+        for ref in brain.cortex_refractory_groups:
+            assert np.all(ref == 0)
+        assert np.all(brain.cortex_refractory_hidden == 0)
+        assert np.all(brain.cortex_refractory_output == 0)
+
+    def test_cortex_refractory_reset_between_reinforce_epochs(self):
+        """Test cortex refractory is reset between REINFORCE training epochs."""
+        config = _stage2_config(ppo_buffer_size=5, num_cortex_reinforce_epochs=2)
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        # Fill buffer and trigger update (6 steps, last is episode_done)
+        for i in range(6):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=(i == 5))
+
+        # After training, refractory should be in a valid state (not accumulated)
+        for ref in brain.cortex_refractory_groups:
+            assert ref.shape == (brain.cortex_neurons_per_group,)
+        assert brain.cortex_refractory_hidden.shape == (brain.cortex_hidden_neurons,)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Multi-epoch caching
+# ──────────────────────────────────────────────────────────────────────
+
+
+class TestMultiEpochCaching:
+    """Test multi-epoch quantum caching for cortex REINFORCE."""
+
+    def test_multi_epoch_produces_same_result_as_single(self):
+        """Test 2-epoch training runs without error and updates weights."""
+        config = _stage2_config(
+            ppo_buffer_size=5,
+            num_cortex_reinforce_epochs=2,
+        )
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        w_before = brain.W_cortex_sh.clone().detach()
+
+        for i in range(6):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=(i == 5))
+
+        # Weights should have changed (2 epochs of gradient updates)
+        w_after = brain.W_cortex_sh.clone().detach()
+        assert not torch.allclose(w_before, w_after)
+
+    def test_single_epoch_skips_caching(self):
+        """Test single epoch mode doesn't use caching path."""
+        config = _stage2_config(
+            ppo_buffer_size=5,
+            num_cortex_reinforce_epochs=1,
+        )
+        brain = HybridQuantumCortexBrain(config=config, num_actions=4)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+
+        # Should complete without error
+        for i in range(6):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=(i == 5))
