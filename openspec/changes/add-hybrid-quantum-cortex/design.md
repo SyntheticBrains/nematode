@@ -145,6 +145,30 @@ W_cortex_ho: dense (12 hidden QLIF → 8 output QLIF)
 
 This keeps the fusion mechanism identical to HybridQuantum — the cortex still produces action biases and mode logits, just from QLIF neurons instead of an MLP.
 
+### Decision 7: Extract Shared Hybrid Brain Infrastructure
+
+**Choice**: Before building HybridQuantumCortexBrain, extract shared code from `hybridquantum.py` and `hybridclassical.py` into a new `_hybrid_common.py` module. Both existing brains will be refactored to import from the shared module, and the new brain will build on top of it.
+
+**What to extract** (~370 lines of duplicated code):
+
+- `_CortexRolloutBuffer` class (rollout storage, GAE computation, returns calculation)
+- `_fuse()` mode-gated fusion logic (`final_logits = reflex_logits * qsnn_trust + action_biases`)
+- `_cortex_forward()` and `_cortex_value()` classical cortex MLP forward passes
+- `_init_cortex()` classical cortex + critic MLP initialization with orthogonal init
+- `_get_cortex_lr()` and `_update_cortex_learning_rate()` LR scheduling
+- Cortex weight persistence (`_save_cortex_weights`, `_load_cortex_weights`)
+- PPO update logic (`_perform_ppo_update`)
+- Shared constants and defaults
+
+**Why extract first**: `hybridclassical.py` (1,489 lines) is a near-complete copy of `hybridquantum.py` (1,869 lines) with only the reflex layer changed. Adding a third copy would triple ~370 lines of identical infrastructure. Extracting first follows the existing project pattern (`_qlif_layers.py` already extracts shared QLIF infrastructure) and makes the new brain cleaner to implement.
+
+**Why not a base class**: A mixin or utility module is more flexible than a shared base class. The three hybrid brains have different reflex implementations (QSNN, classical MLP, QSNN) and different cortex types (classical MLP, classical MLP, QSNN). A base class would require complex template method patterns. A utility module lets each brain import only what it needs.
+
+**Alternatives considered**:
+
+- *Copy-paste from hybridquantum.py*: Creates a third copy of ~370 lines, making future maintenance error-prone. The existing duplication between hybridquantum.py and hybridclassical.py is already technical debt.
+- *Shared base class (AbstractHybridBrain)*: Over-constrains the architecture. The three brains have sufficiently different initialization and training flows that a shared base class would need many abstract methods and template method overrides.
+
 ## Risks / Trade-offs
 
 **REINFORCE + external GAE advantages is untested** → Start with pure REINFORCE (self-computed returns) for the cortex in initial experiments. Add GAE advantages incrementally once basic training works. The rollout buffer already computes GAE — switching the loss function is a config toggle.
