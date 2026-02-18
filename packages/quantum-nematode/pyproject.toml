@@ -95,6 +95,10 @@ addopts = [
     "--cov-report=xml",
     "--cov-report=html",
 ]
+markers = [
+    "smoke: Smoke tests that run entry-point scripts (excluded from pre-commit)",
+    "nightly: Nightly regression tests against benchmarks (slow)",
+]
 
 [tool.coverage.run]
 source = ["quantumnematode"]
