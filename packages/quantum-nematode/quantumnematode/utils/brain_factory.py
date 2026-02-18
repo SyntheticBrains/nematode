@@ -12,6 +12,7 @@ from quantumnematode.brain.arch import (
     Brain,
     HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
+    HybridQuantumCortexBrainConfig,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
@@ -51,6 +52,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
     | HybridQuantumBrainConfig
+    | HybridQuantumCortexBrainConfig
     | HybridClassicalBrainConfig
     | SpikingReinforceBrainConfig,
     shots: int,
@@ -272,6 +274,23 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = HybridQuantumBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.HYBRID_QUANTUM_CORTEX:
+        from quantumnematode.brain.arch.hybridquantumcortex import HybridQuantumCortexBrain
+
+        if not isinstance(brain_config, HybridQuantumCortexBrainConfig):
+            error_message = (
+                "The 'hybridquantumcortex' brain architecture requires a "
+                "HybridQuantumCortexBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = HybridQuantumCortexBrain(
             config=brain_config,
             num_actions=4,
             device=device,

@@ -3,6 +3,7 @@
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
+from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
 from .mlpdqn import MLPDQNBrain, MLPDQNBrainConfig, QMLPBrain, QMLPBrainConfig
 from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
 from .mlpreinforce import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
@@ -31,6 +32,8 @@ __all__ = [
     "HybridClassicalBrainConfig",
     "HybridQuantumBrain",
     "HybridQuantumBrainConfig",
+    "HybridQuantumCortexBrain",
+    "HybridQuantumCortexBrainConfig",
     "MLPBrain",
     "MLPBrainConfig",
     "MLPDQNBrain",
