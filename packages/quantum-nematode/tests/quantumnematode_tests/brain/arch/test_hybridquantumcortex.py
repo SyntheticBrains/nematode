@@ -136,6 +136,24 @@ class TestHybridQuantumCortexBrainConfig:
         with pytest.raises(ValueError, match="threshold must be in"):
             HybridQuantumCortexBrainConfig(threshold=0.0)
 
+    def test_validation_cortex_output_neurons_too_small(self):
+        """Test validation rejects cortex_output_neurons < num_motor + num_modes + 1."""
+        with pytest.raises(ValueError, match="cortex_output_neurons must be >="):
+            HybridQuantumCortexBrainConfig(
+                num_motor_neurons=4,
+                num_modes=3,
+                cortex_output_neurons=7,  # needs 4+3+1=8
+            )
+
+    def test_validation_cortex_output_neurons_exact_minimum(self):
+        """Test cortex_output_neurons == num_motor + num_modes + 1 is accepted."""
+        config = HybridQuantumCortexBrainConfig(
+            num_motor_neurons=4,
+            num_modes=3,
+            cortex_output_neurons=8,
+        )
+        assert config.cortex_output_neurons == 8
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Init and dimensions
