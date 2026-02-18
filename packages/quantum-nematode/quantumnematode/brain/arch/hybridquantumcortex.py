@@ -522,6 +522,18 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
             raise ValueError(msg)
         return self
 
+    @model_validator(mode="after")
+    def validate_cortex_output_neurons(self) -> HybridQuantumCortexBrainConfig:
+        """Validate cortex_output_neurons >= num_motor_neurons + num_modes + 1."""
+        required = self.num_motor_neurons + self.num_modes + 1
+        if self.cortex_output_neurons < required:
+            msg = (
+                f"cortex_output_neurons must be >= num_motor_neurons + num_modes + 1 "
+                f"({required}), got {self.cortex_output_neurons}"
+            )
+            raise ValueError(msg)
+        return self
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Brain Implementation
