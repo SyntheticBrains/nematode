@@ -1,6 +1,6 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `in_progress` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. Three-stage curriculum validated end-to-end. Next step is evaluations in more complex environments e.g. adding thermotaxis, stationary predators.
+**Status**: `in_progress` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. Three-stage curriculum validated end-to-end. HybridClassical ablation confirms QSNN is not the key performance driver — architecture + curriculum are what matter. QSNN retains value for biological fidelity and parameter efficiency. Next step is evaluations in more complex environments e.g. adding thermotaxis, stationary predators.
 
 **Branch**: `feature/add-qsnn-brain`
 
@@ -622,9 +622,9 @@ The hybrid brain beats the apples-to-apples MLP PPO baseline by +25.3 points and
 
 1. **Three-stage curriculum works**: Isolating QSNN, cortex, then joint fine-tune prevented interference and enabled incremental validation. Each stage improved on the previous.
 
-2. **QSNN reflex provides genuine value**: Sessions with higher QSNN trust show marginally better evasion and fewer HP deaths. The quantum reflex contributes complementary reactive behaviour, not noise.
+2. **QSNN reflex provides qualitative but not quantitative value**: The classical ablation (HybridClassical) achieves equivalent task performance (96.3% vs 96.9% mean post-conv), proving the QSNN is not the key ingredient. However, the QSNN earns ~1.5x more trust from the cortex (0.55 vs 0.37), achieves higher chemotaxis indices, and enables a collaborative strategy rather than the cortex-dominant strategy the classical reflex produces.
 
-3. **Mode gating acts as static trust**: The 3-mode design works as a learned mixing parameter rather than a dynamic per-step mode switch. Both cortex-dominant and QSNN-collaborative strategies achieve ≥90%, but Stage 3 consolidated all sessions into QSNN-collaborative.
+3. **Mode gating acts as static trust**: The 3-mode design works as a learned mixing parameter rather than a dynamic per-step mode switch. HybridQuantum converges to QSNN-collaborative (trust ~0.55, forage mode dominant), while HybridClassical converges to cortex-dominant (trust ~0.37, evade mode dominant) — fundamentally different strategies yielding equivalent performance.
 
 4. **W_hm is the "plastic" weight in joint fine-tune**: Hidden→motor weights grew +27.7% while sensory→hidden weights barely moved (+2.7%), indicating the QSNN's output mapping adapted while input encoding was preserved from Stage 1.
 
@@ -639,6 +639,92 @@ The hybrid brain beats the apples-to-apples MLP PPO baseline by +25.3 points and
 - Stage 3 config: `configs/examples/hybridquantum_pursuit_predators_small_finetune.yml`
 
 Full optimization history (4 rounds, 16 sessions): [008-appendix-hybridquantum-optimization.md](008-appendix-hybridquantum-optimization.md)
+
+______________________________________________________________________
+
+## HybridClassical Ablation Study
+
+**Status**: Complete — 12 sessions across 3 stages (4,200 episodes). Classical ablation confirms QSNN quantum reflex is not the key performance driver.
+
+### Purpose
+
+Isolate the QSNN quantum reflex contribution in the HybridQuantum brain. The HybridQuantum achieved 96.9% post-convergence, but we cannot determine whether that advantage comes from the QSNN itself, the three-stage curriculum, or the mode-gated fusion architecture. **HybridClassical** replaces the QSNN reflex (92 quantum params) with a small classical MLP reflex (~116 classical params), keeping everything else identical.
+
+### Architecture
+
+```text
+HybridQuantum (control)             HybridClassical (ablation)
+========================             ==========================
+QSNN Reflex (92 params)             Classical MLP Reflex (~116 params)
+  6→8→4 QLIF neurons                  Linear(2→16) + ReLU + Linear(16→4)
+  Quantum circuits + surrogates       + sigmoid output scaling
+        |                                   |
+        v                                   v
+  Mode-Gated Fusion (same)           Mode-Gated Fusion (same)
+        ^                                   ^
+        |                                   |
+  Classical Cortex (same)             Classical Cortex (same)
+  PPO training                        PPO training
+```
+
+### Results Summary
+
+| Stage | Sessions | Episodes | Success | Post-Conv | Key Finding |
+|-------|----------|----------|---------|-----------|-------------|
+| 1 (reflex only) | 4 × 200 | 800 | 97.0% | 99.6% | Faster convergence than QSNN (6.75 vs 18 eps) |
+| 2 (cortex PPO) | 4 × 500 | 2,000 | 92.0% | 94.5% | Competitive with quantum Stage 2 (94.5% vs 91.7%) |
+| 3 (joint fine-tune) | 4 × 500 | 2,000 | **96.1%** | **96.3%** | **Best session 97.8% exceeds quantum best 97.2%** |
+
+### Stage 3 Highlights
+
+| Session | Success | Post-Conv | Composite | Evasion | Notes |
+|---------|---------|-----------|-----------|---------|-------|
+| 000530 | **97.8%** | **97.8%** | **0.892** | 90.4% | Best overall — exceeds quantum best |
+| 000537 | 95.0% | 95.5% | 0.861 | 89.5% | |
+| 000543 | 96.2% | 96.5% | 0.871 | 90.4% | 164-ep success streak |
+| 000549 | 95.2% | 95.2% | 0.863 | 90.3% | |
+| **Mean** | **96.1%** | **96.3%** | **0.872** | **90.2%** | |
+
+### Final Ablation Comparison
+
+| Metric | HybridQuantum (QSNN) | HybridClassical (MLP) | Verdict |
+|--------|----------------------|----------------------|---------|
+| Stage 3 best post-conv | 97.2% | **97.8%** | Classical +0.6 pp |
+| Stage 3 mean post-conv | **96.9%** | 96.3% | Within noise |
+| Stage 3 best composite | 0.871 | **0.892** | Classical better |
+| Stage 1 chemotaxis index | higher | 0.411 (sub-biological) | Quantum more biological |
+| Reflex params | 92 | 116 | Quantum more compact |
+
+### Fusion Trust Analysis
+
+The two architectures adopt **fundamentally different strategies** that achieve equivalent task performance:
+
+| Metric | HybridClassical | HybridQuantum |
+|--------|----------------|---------------|
+| Late reflex trust | **0.37** (cortex-dominant) | **0.55** (collaborative) |
+| Dominant mode | **Evade** (~0.48) | **Forage** (~0.55) |
+
+The QSNN earns ~1.5x more trust than the classical MLP, yet task performance is equivalent — the classical cortex compensates by doing more itself.
+
+### Ablation Conclusion
+
+**The QSNN quantum reflex is not the key performance ingredient.** Performance is statistically indistinguishable between quantum and classical reflexes. What drives performance:
+
+1. The **three-stage curriculum** (pre-train reflex → cortex PPO → joint fine-tune)
+2. The **mode-gated fusion architecture** (reflex + cortex specialization)
+3. The **cortex PPO network** (handles multi-objective behaviour)
+
+**Where QSNN retains value**: biological fidelity (higher chemotaxis indices), parameter efficiency (92 vs 116 params), and scientific interest as a biologically plausible neural computation model.
+
+### File Locations
+
+- Implementation: `packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py`
+- Tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_hybridclassical.py`
+- Stage 1 config: `configs/examples/hybridclassical_foraging_small.yml`
+- Stage 2 config: `configs/examples/hybridclassical_pursuit_predators_small.yml`
+- Stage 3 config: `configs/examples/hybridclassical_pursuit_predators_small_finetune.yml`
+
+Full ablation experiment details (12 sessions, trust analysis): [008-appendix-hybridclassical-ablation.md](008-appendix-hybridclassical-ablation.md)
 
 ______________________________________________________________________
 
@@ -674,6 +760,7 @@ ______________________________________________________________________
 | QVarCircuit (gradient) | Full circuit | Parameter-shift rule | ~40% | N/A | Marginal |
 | QVarCircuit (CMA-ES) | Full circuit | Evolutionary | 88% | 76.1%\* | Yes (not online) |
 | **HybridQuantum** | **QSNN + cortex MLP** | **Surrogate REINFORCE + PPO** | **91.0%** | **96.9%** | **Yes** |
+| HybridClassical (ablation) | MLP reflex + cortex MLP | Backprop REINFORCE + PPO | 97.0% | 96.3% | Yes (control) |
 
 \*CMA-ES is evolutionary, not gradient-based.
 
@@ -691,6 +778,7 @@ QVarCircuit (param-shift)      ~40%        N/A             ~60       ⚠️
 QSNN Surrogate                 73.9%       1.25%           92        ✓ (forage)
 QVarCircuit (CMA-ES)           88%         76.1%           ~60       ✓*
 HybridQuantum                  91.0%       96.9%           ~10K      ✓✓
+HybridClassical (ablation)     97.0%       96.3%           ~10K      ✓ (control)
 ────────────────────────────────────────────────────────────────────────────
 MLPPPOBrain (classical)        96.7%       71.6%†† / 94.5% ~42K      (ref)
 
@@ -702,7 +790,9 @@ MLPPPOBrain (classical)        96.7%       71.6%†† / 94.5% ~42K      (ref)
 KEY INSIGHT: HybridQuantum is the first quantum architecture to SURPASS
 a classical baseline on a multi-objective task using gradient-based
 online learning. It beats MLP PPO unified by +25.3 points on pursuit
-predators with 4.3x fewer parameters.
+predators with 4.3x fewer parameters. However, classical ablation
+(HybridClassical) shows equivalent performance — the three-stage
+curriculum and mode-gated fusion drive the result, not the QSNN.
 ═══════════════════════════════════════════════════════════════════════════
 ```
 
@@ -770,6 +860,8 @@ classical parameters for strategic multi-objective learning.
 18. **Pre-trained initialisation eliminates convergence variance**: Stage 3 session variance was 0.8 pts vs Stage 2's 8.8 pts, because pre-trained weights remove seed-dependent convergence lottery.
 19. **Classical PPO critic works when given its own sensory input**: Unlike A2C where the critic shared the QSNN's features (and failed), the hybrid cortex critic receives independent sensory module features. Explained variance reached +0.29 (vs A2C's -0.620).
 20. **LR scheduling is essential for cortex PPO**: Warmup + cosine decay produced +9.8 pts improvement over flat LR in Stage 2.
+21. **QSNN quantum reflex is not the key performance driver**: HybridClassical ablation (classical MLP reflex, ~116 params) achieves 96.3% mean / 97.8% best post-convergence — statistically indistinguishable from HybridQuantum's 96.9%. The three-stage curriculum and mode-gated fusion architecture are what matter. The QSNN retains value for biological fidelity (higher chemotaxis indices) and parameter efficiency (92 vs 116 params).
+22. **Different reflexes produce different strategies at equivalent performance**: HybridQuantum's cortex trusts the QSNN (trust ~0.55, forage-mode dominant), while HybridClassical's cortex partially gates out the MLP reflex (trust ~0.37, evade-mode dominant). The cortex adapts its strategy to the quality of the reflex signal — compensating when the reflex is weaker.
 
 ______________________________________________________________________
 
@@ -792,6 +884,10 @@ ______________________________________________________________________
 - [x] Stage 2: Train cortex PPO with frozen QSNN — 8 sessions across 2 rounds, 81.9% → 91.7% post-convergence
 - [x] Stage 3: Joint fine-tune — 4 sessions, **96.9% post-convergence**, +25.3 pts over MLP PPO baseline
 - [x] Three-stage curriculum validated end-to-end — quantum multi-objective learning achieved
+- [x] Implement HybridClassical brain (classical ablation — MLP reflex replacing QSNN)
+- [x] Run HybridClassical 3-stage ablation — 12 sessions, 4,200 episodes
+- [x] Ablation conclusion: QSNN not key ingredient; curriculum + fusion architecture drive performance
+- [x] Fusion trust analysis: quantum trusted 1.5x more but performance equivalent
 
 ______________________________________________________________________
 
@@ -863,6 +959,26 @@ Full optimization history (4 rounds, 16 sessions): [008-appendix-hybridquantum-o
 
 Experiment results: `artifacts/logbooks/008/hybridquantum_foraging_small/`, `artifacts/logbooks/008/hybridquantum_pursuit_predators_small/`
 
+### HybridClassical Ablation Sessions
+
+| Stage | Sessions | Episodes | Config | Key Result |
+|-------|----------|----------|--------|------------|
+| 1 | 20260217_214132, 214138, 214143, 214148 | 200 | `hybridclassical_foraging_small.yml` | 97.0% foraging, 99.6% post-conv, all 4 sessions reliable |
+| 2 | 20260217_223325, 223331, 223336, 223340 | 500 | `hybridclassical_pursuit_predators_small.yml` | 94.5% post-conv, competitive with quantum |
+| 3 | 20260218_000530, 000537, 000543, 000549 | 500 | `hybridclassical_pursuit_predators_small_finetune.yml` | **96.3% post-conv mean, 97.8% best** — matches quantum |
+
+Best weights:
+
+| Component | Session | Path |
+|-----------|---------|------|
+| Reflex (Stage 1) | 214143 | `artifacts/models/20260217_214143/reflex_weights.pt` |
+| Cortex (Stage 2) | 223336 | `artifacts/models/20260217_223336/cortex_weights.pt` |
+| Both (Stage 3) | 000530 | `artifacts/models/20260218_000530/reflex_weights.pt` + `cortex_weights.pt` |
+
+Experiment results: `artifacts/logbooks/008/hybridclassical_foraging_small/`, `artifacts/logbooks/008/hybridclassical_pursuit_predators_small/`
+
+Full ablation details (12 sessions, trust analysis): [008-appendix-hybridclassical-ablation.md](008-appendix-hybridclassical-ablation.md)
+
 ### Appendices
 
 - QSNN foraging optimization history (17 rounds): [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md)
@@ -870,6 +986,7 @@ Experiment results: `artifacts/logbooks/008/hybridquantum_foraging_small/`, `art
 - QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
 - QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md)
 - HybridQuantum optimization history (4 rounds, 16 sessions): [008-appendix-hybridquantum-optimization.md](008-appendix-hybridquantum-optimization.md)
+- HybridClassical ablation (12 sessions, trust analysis): [008-appendix-hybridclassical-ablation.md](008-appendix-hybridclassical-ablation.md)
 
 ### File Locations
 
@@ -884,3 +1001,6 @@ Experiment results: `artifacts/logbooks/008/hybridquantum_foraging_small/`, `art
 - HybridQuantum implementation: `packages/quantum-nematode/quantumnematode/brain/arch/hybridquantum.py`
 - HybridQuantum tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_hybridquantum.py`
 - HybridQuantum configs: `configs/examples/hybridquantum_*.yml`
+- HybridClassical implementation: `packages/quantum-nematode/quantumnematode/brain/arch/hybridclassical.py`
+- HybridClassical tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_hybridclassical.py`
+- HybridClassical configs: `configs/examples/hybridclassical_*.yml`

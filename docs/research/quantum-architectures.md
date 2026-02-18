@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-18
 
 ______________________________________________________________________
 
@@ -58,6 +58,7 @@ QSNNReinforce A2C                 N/A        0.5% (16 sess) Surr grad + A2C crit
 QVarCircuit (CMA-ES)              99.8%      76.1%**        Evolutionary            NOT ONLINE
 ──────────────────────────────────────────────────────────────────────────────────────────────
 HybridQuantum                     91.0%      96.9%          Surr REINFORCE + PPO    YES (BEST)
+HybridClassical (ablation)        97.0%      96.3%          Backprop + PPO          YES (CONTROL)
 ──────────────────────────────────────────────────────────────────────────────────────────────
 SpikingReinforceBrain             73.3%§     ~61%§          Surrogate grad (class)  UNRELIABLE
 MLPReinforceBrain                 95.1%      73.4%          REINFORCE (classical)   YES
@@ -71,15 +72,21 @@ MLPPPOBrain                       96.7%      71.6%††/94.5%  PPO (classical) 
 †† MLP PPO unified sensory modules (apples-to-apples comparison); 94.5% uses pre-computed gradient
 ```
 
-### Key Finding: HybridQuantum Achieves SOTA on Multi-Objective Tasks
+### Key Finding: Architecture + Curriculum Drive Performance, Not QSNN
 
 The **HybridQuantum brain** is the first quantum architecture to surpass a classical baseline on a multi-objective RL task using gradient-based online learning. It combines the QSNN reflex layer (proven 73.9% foraging) with a classical cortex MLP (PPO) via mode-gated fusion, achieving **96.9% post-convergence on pursuit predators** — beating the apples-to-apples MLP PPO baseline by **+25.3 points** with **4.3x fewer parameters**.
+
+However, **classical ablation (HybridClassical)** — replacing the QSNN reflex with a small classical MLP reflex (~116 params) while keeping everything else identical — achieves **96.3% mean / 97.8% best post-convergence**, proving the QSNN quantum reflex is **not the key performance driver**. The three-stage curriculum and mode-gated fusion architecture are what matter.
 
 The architecture was validated through a three-stage curriculum:
 
 1. **Stage 1**: QSNN reflex on foraging (REINFORCE) — 91.0% success, 4 sessions
 2. **Stage 2**: Cortex PPO with frozen QSNN (pursuit predators) — 91.7% post-convergence, 8 sessions across 2 rounds
 3. **Stage 3**: Joint fine-tune (both trainable) — 96.9% post-convergence, 4 sessions, immediate convergence
+
+**Ablation insight**: The cortex adapts its strategy to the reflex quality. With the QSNN (trust ~0.55), the cortex delegates foraging to the reflex. With the classical MLP (trust ~0.37), the cortex handles more itself. Both strategies achieve equivalent performance.
+
+**Where QSNN retains value**: biological fidelity (higher chemotaxis indices closer to real C. elegans), parameter efficiency (92 vs 116 params), and as a scientifically interesting model of quantum neural computation.
 
 **QSNN's surrogate gradient approach** (quantum forward, classical backward) remains the core proven quantum technique. It sidesteps barren plateaus while providing dense gradient signals. However, standalone QSNN cannot solve multi-objective tasks (0% across 60 sessions on pursuit predators). The hybrid architecture resolves this by delegating strategic behaviour to the classical cortex while preserving the quantum reflex.
 
@@ -91,6 +98,12 @@ COMPLETED:
     4 rounds, 16 sessions, 4,200 episodes. 96.9% post-convergence.
     Beats MLP PPO unified by +25.3 pts. Three-stage curriculum validated.
     STATUS: SUCCESS — best quantum architecture for multi-objective tasks.
+
+  HybridClassical — Classical ablation of HybridQuantum.
+    MLP reflex (116 params) replacing QSNN reflex (92 params).
+    12 sessions, 4,200 episodes across 3 stages. 96.3% mean / 97.8% best.
+    Proves QSNN is NOT the key ingredient — curriculum + fusion drive perf.
+    STATUS: ABLATION COMPLETE — QSNN value is biological, not task perf.
 
   QSNNReinforce A2C — A2C critic cannot learn V(s) in pursuit predator env.
     4 rounds, 16 sessions. Critic EV: 0 → -0.008 → -0.295 → -0.620.
@@ -761,7 +774,7 @@ ______________________________________________________________________
 
 ### C.1 Overview
 
-**Status**: Implemented and validated. 96.9% post-convergence on pursuit predators across 4 rounds, 16 sessions. Best quantum architecture for multi-objective tasks.
+**Status**: Implemented and validated. 96.9% post-convergence on pursuit predators across 4 rounds, 16 sessions. Best quantum architecture for multi-objective tasks. **Classical ablation (HybridClassical)** confirms the architecture and curriculum drive performance, not the QSNN component specifically — a classical MLP reflex achieves 96.3% mean / 97.8% best post-conv.
 
 Combines QSNN (fast reflexes) with a classical cortex MLP (slow strategic decisions) in a hierarchical architecture mimicking biological spinal cord / cortex separation. **Variation B (Pragmatic)** was implemented and succeeded.
 
@@ -1243,6 +1256,7 @@ ______________________________________________________________________
 | QSNN (surrogate) | 73.9% | 22.3% avg | 0% (60 sessions) | Surrogate gradient |
 | QRC | 0% | 0% | Not tested | REINFORCE (readout) |
 | **HybridQuantum** | **91.0%** | Not tested | **96.9%** | **Surrogate + PPO** |
+| HybridClassical (ablation) | 97.0% | Not tested | 96.3% (mean) / 97.8% (best) | Backprop + PPO |
 | MLPReinforce | 95.1% ± 1.9% | 73.4% ± 10.9% | Not tested | REINFORCE |
 | MLPPPOBrain | 96.7% ± 1.3% | — | 71.6% (unified) / 94.5% (legacy) | PPO |
 | SpikingReinforce | 73.3%\* | ~61%\* | Not tested | Surrogate gradient |
@@ -1380,8 +1394,8 @@ ______________________________________________________________________
 03. ~~**Surrogate gradient algorithm compatibility**~~: **ANSWERED.** Surrogate gradients are backward-only. REINFORCE works directly; PPO/TRPO do not. A2C fails empirically. **However**, the HybridQuantum architecture resolves this by using REINFORCE for the QSNN component and PPO for a separate classical cortex — each algorithm applied to the component it's compatible with.
 04. **Surrogate gradient vs parameter-shift**: QSNN's surrogate gradient provides ~1,000x stronger signals than parameter-shift. Is this approach transferable to other quantum circuit architectures, or is it specific to the QLIF neuron structure?
 05. ~~**Weight regularization**~~: **PARTIALLY ANSWERED.** HybridQuantum Stage 3 showed W_hm growth of +27.7% over 500 episodes without performance degradation. The `weight_clip=3.0` per-element cap prevents individual weights from exploding. However, monotonic norm growth could be problematic for longer runs (>2,000 episodes). L2 regularization was not tested.
-06. **Trainability-advantage trade-off**: Given Cerezo et al. (2025), does QSNN's surrogate gradient approach constitute genuine quantum advantage, or is the quantum measurement functionally equivalent to a classical sigmoid?
+06. ~~**Trainability-advantage trade-off**~~: **PARTIALLY ANSWERED.** The HybridClassical ablation shows that a classical MLP reflex achieves equivalent task performance to the QSNN reflex (96.3% vs 96.9%). This suggests the quantum measurement may not provide meaningful task-performance advantage over a classical sigmoid in this architecture. However, the QSNN achieves higher biological fidelity (chemotaxis indices) and earns 1.5x more trust from the cortex, indicating it produces a qualitatively different signal. Whether this constitutes "quantum advantage" remains open — it may be advantage in biological plausibility rather than computational performance.
 07. **Hardware deployment**: Which architecture maps best to real QPU for eventual hardware validation? The HybridQuantum brain's QSNN component uses simple 2-gate QLIF circuits that should map well to near-term hardware.
 08. ~~**Multi-objective scaling**~~: **ANSWERED — YES.** HybridQuantum achieves 96.9% on a dual-objective task (forage + evade). The architecture handles foraging via QSNN reflex and evasion via cortex PPO. Whether it scales to 3+ objectives (adding thermotaxis, mechanosensation as objectives rather than just sensory inputs) is untested but architecturally straightforward — additional modes could be added to the mode gate.
 09. **Harder environments**: The small pursuit predator environment (20x20, 2 predators) is largely solved at 96.9%. Does the HybridQuantum architecture generalise to larger grids, more predators, or faster predators?
-10. **Mode gating dynamics**: In all 12 Stage 2/3 sessions, mode gating converged to a static trust parameter rather than dynamic per-step switching. Would a more structured mode switching mechanism (e.g., threshold-based, or conditioned on specific sensory signals) improve performance on harder environments?
+10. **Mode gating dynamics**: Mode gating converges to a static trust parameter in all sessions, but the **trust level depends on reflex quality**: HybridQuantum → 0.55 trust (collaborative, forage-dominant), HybridClassical → 0.37 trust (cortex-dominant, evade-dominant). The cortex adapts its strategy to the reflex signal strength. Would a more structured mode switching mechanism improve performance on harder environments?
