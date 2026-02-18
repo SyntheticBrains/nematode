@@ -40,8 +40,5 @@ htmlcov/
 .pytest_cache/
 
 # Claude
-.claude/*
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/nematode-*/
+.claude/
 CLAUDE.md
