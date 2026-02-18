@@ -1,0 +1,92 @@
+# Dynamic Foraging with Pursuit Predators - Small Configuration
+# Dual-objective: forage while evading predators that actively chase within detection range
+# Uses QSNN REINFORCE (Quantum Spiking Neural Network) brain architecture
+# Surrogate gradient learning (REINFORCE + QLIFSurrogateSpike backprop + PPO clipping)
+#
+# Environment: pursuit predators (count 2, speed 0.5, detection_radius 6)
+# Health system: max_hp 100, predator_damage 20, food_healing 10
+# Sensory modules: food_chemotaxis (4 features), nociception (4 features)
+
+max_steps: 500
+brain:
+  name: qsnnreinforce
+  config:
+    num_sensory_neurons: 8
+    num_hidden_neurons: 16
+    num_motor_neurons: 4
+    membrane_tau: 0.9
+    threshold: 0.5
+    refractory_period: 0
+    use_local_learning: false
+    shots: 1024
+    gamma: 0.99
+    learning_rate: 0.01
+    entropy_coef: 0.02
+    weight_clip: 3.0
+    update_interval: 20
+    num_integration_steps: 10
+    num_reinforce_epochs: 2
+    exploration_decay_episodes: 150
+    lr_decay_episodes: 400
+    lr_min_factor: 0.2
+    logit_scale: 5.0
+    advantage_clip: 2.0
+    theta_motor_max_norm: 2.0
+    use_critic: false
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    kill_radius: 0
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+gradient:
+  method: clip

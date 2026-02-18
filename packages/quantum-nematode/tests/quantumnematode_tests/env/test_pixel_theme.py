@@ -313,7 +313,7 @@ class TestPygameRenderer:
                 in_danger=False,
                 temperature=temperature,
                 zone_name=zone_name,
-                session_text="Session:\nRun:\t\t1/5\nWins:\t\t0/5\nEaten:\t\t3/10\nSteps(Avg):\t50.0/1\n",
+                session_text="Session:\nRun:\t\t1/5\nWins:\t\t0/5\nEaten:\t\t3/10\nSteps(Avg):\t50.0/100\n",
             )
         finally:
             renderer.close()

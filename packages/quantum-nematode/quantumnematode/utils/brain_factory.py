@@ -10,11 +10,15 @@ from typing import TYPE_CHECKING
 
 from quantumnematode.brain.arch import (
     Brain,
+    HybridClassicalBrainConfig,
+    HybridQuantumBrainConfig,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
     QQLearningBrainConfig,
     QRCBrainConfig,
+    QSNNPPOBrainConfig,
+    QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
     SpikingReinforceBrainConfig,
 )
@@ -44,6 +48,10 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | MLPDQNBrainConfig
     | QQLearningBrainConfig
     | QRCBrainConfig
+    | QSNNPPOBrainConfig
+    | QSNNReinforceBrainConfig
+    | HybridQuantumBrainConfig
+    | HybridClassicalBrainConfig
     | SpikingReinforceBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
@@ -232,6 +240,71 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = QRCBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type in (BrainType.QSNN_REINFORCE, BrainType.QSNN):
+        from quantumnematode.brain.arch.qsnnreinforce import QSNNReinforceBrain
+
+        if not isinstance(brain_config, QSNNReinforceBrainConfig):
+            error_message = (
+                "The 'qsnnreinforce' brain architecture requires a QSNNReinforceBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QSNNReinforceBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.HYBRID_QUANTUM:
+        from quantumnematode.brain.arch.hybridquantum import HybridQuantumBrain
+
+        if not isinstance(brain_config, HybridQuantumBrainConfig):
+            error_message = (
+                "The 'hybridquantum' brain architecture requires a HybridQuantumBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = HybridQuantumBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.HYBRID_CLASSICAL:
+        from quantumnematode.brain.arch.hybridclassical import HybridClassicalBrain
+
+        if not isinstance(brain_config, HybridClassicalBrainConfig):
+            error_message = (
+                "The 'hybridclassical' brain architecture requires a "
+                "HybridClassicalBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = HybridClassicalBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.QSNN_PPO:
+        from quantumnematode.brain.arch.qsnnppo import QSNNPPOBrain
+
+        if not isinstance(brain_config, QSNNPPOBrainConfig):
+            error_message = (
+                "The 'qsnnppo' brain architecture requires a QSNNPPOBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QSNNPPOBrain(
             config=brain_config,
             num_actions=4,
             device=device,
