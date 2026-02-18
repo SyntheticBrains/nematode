@@ -21,7 +21,7 @@ brain:
 
     # Path to pre-trained reflex weights from stage 1
     # Update this path to your actual stage 1 output
-    reflex_weights_path: exports/<session>/reflex_weights.pt
+    reflex_weights_path: exports/20260217_214143/reflex_weights.pt
 
     # Reflex MLP params (must match stage 1 config exactly)
     reflex_hidden_dim: 16

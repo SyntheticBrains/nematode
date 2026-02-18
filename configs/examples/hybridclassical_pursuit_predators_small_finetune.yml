@@ -21,8 +21,8 @@ brain:
     training_stage: 3
 
     # Paths to pre-trained weights
-    reflex_weights_path: exports/<session_stage1>/reflex_weights.pt
-    cortex_weights_path: exports/<session_stage2>/cortex_weights.pt
+    reflex_weights_path: artifacts/models/20260217_214143/reflex_weights.pt
+    cortex_weights_path: artifacts/models/20260217_223336/cortex_weights.pt
 
     # Reflex MLP params (must match stage 1 config exactly)
     reflex_hidden_dim: 16
