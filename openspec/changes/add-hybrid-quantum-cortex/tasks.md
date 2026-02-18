@@ -11,6 +11,7 @@
 - [ ] 1.2 Add `BrainType.HYBRID_QUANTUM_CORTEX` to the `QUANTUM_BRAIN_TYPES` set in `dtypes.py`
 - [ ] 1.3 Add `HybridQuantumCortexBrain` and `HybridQuantumCortexBrainConfig` to `__all__` in `packages/quantum-nematode/quantumnematode/brain/arch/__init__.py`
 - [ ] 1.4 Add factory dispatch for `BrainType.HYBRID_QUANTUM_CORTEX` in `packages/quantum-nematode/quantumnematode/utils/brain_factory.py` — follow the `HYBRID_QUANTUM` pattern (import, validate config type, instantiate brain)
+- [ ] 1.5 Add `HybridQuantumCortexBrainConfig` to `packages/quantum-nematode/quantumnematode/utils/config_loader.py`: import it, add to the `BrainConfigType` union, and add `"hybridquantumcortex": HybridQuantumCortexBrainConfig` entry to `BRAIN_CONFIG_MAP`
 
 ## 2. Configuration Schema
 
@@ -22,7 +23,7 @@
 - [ ] 3.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/hybridquantumcortex.py` with `HybridQuantumCortexBrain` class extending `ClassicalBrain`, importing shared infrastructure from `_hybrid_common.py` (rollout buffer, fusion, LR scheduling, weight persistence helpers)
 - [ ] 3.2 Implement QSNN reflex initialization (`_init_reflex_weights`) — identical to `HybridQuantumBrain._init_qsnn_weights()`: W_sh, W_hm, theta_hidden, theta_motor with `WEIGHT_INIT_SCALE`, `requires_grad_(True)`
 - [ ] 3.3 Implement grouped sensory QLIF cortex initialization (`_init_cortex_qsnn`): create per-group weight matrices `W_group[i]` with shape `(module_feature_dim, cortex_neurons_per_group)`, hidden weights `W_cortex_sh` with shape `(total_sensory_neurons, cortex_hidden_neurons)`, output weights `W_cortex_ho` with shape `(cortex_hidden_neurons, cortex_output_neurons)`, and theta parameters for hidden and output layers
-- [ ] 3.4 Implement classical critic initialization (`_init_critic`) — reuse the MLP pattern from `HybridQuantumBrain._init_cortex()` (critic portion): sensory_dim → hidden → hidden → 1, orthogonal init
+- [ ] 3.4 Implement classical critic initialization (`_init_critic`) — import the critic MLP initialization from `_hybrid_common.py` (sensory_dim → hidden → hidden → 1, orthogonal init with gain=sqrt(2), zero biases)
 - [ ] 3.5 Implement separate optimizer initialization (`_init_optimizers`): Adam for reflex params, Adam for cortex QSNN params (all group weights + hidden weights + output weights + thetas), Adam for critic params, with stage-dependent activity
 
 ## 4. Cortex QSNN Forward Pass

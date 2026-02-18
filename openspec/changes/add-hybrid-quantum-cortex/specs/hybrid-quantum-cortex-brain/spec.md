@@ -6,6 +6,31 @@ Define the requirements for the HybridQuantumCortex brain architecture that comb
 
 ## ADDED Requirements
 
+### Requirement: Shared Hybrid Brain Infrastructure
+
+The HybridQuantumCortexBrain SHALL reuse shared hybrid brain infrastructure from `_hybrid_common.py` rather than duplicating code from existing hybrid brain implementations.
+
+#### Scenario: Rollout Buffer Reuse
+
+- **WHEN** HybridQuantumCortexBrain collects experience during training (stage 2, 3, 4)
+- **THEN** it SHALL import and use `_CortexRolloutBuffer` from `_hybrid_common.py`
+- **AND** SHALL use the same GAE computation implementation as HybridQuantumBrain
+
+#### Scenario: Fusion Logic Reuse
+
+- **WHEN** HybridQuantumCortexBrain fuses reflex and cortex outputs
+- **THEN** it SHALL use the shared mode-gated fusion function from `_hybrid_common.py`
+
+#### Scenario: LR Scheduling Reuse
+
+- **WHEN** HybridQuantumCortexBrain adjusts cortex learning rates during training
+- **THEN** it SHALL use the shared LR scheduling functions from `_hybrid_common.py`
+
+#### Scenario: Shared Constants
+
+- **WHEN** HybridQuantumCortexBrain references default training hyperparameters
+- **THEN** it SHALL import shared constants from `_hybrid_common.py` (e.g., `DEFAULT_GAMMA`, `DEFAULT_GAE_LAMBDA`, `DEFAULT_PPO_BUFFER_SIZE`)
+
 ### Requirement: Hierarchical Dual-QSNN Architecture
 
 The HybridQuantumCortexBrain SHALL implement a two-QSNN hierarchical architecture combining a QSNN reflex layer with a QSNN cortex layer and a classical critic.
@@ -80,8 +105,11 @@ The HybridQuantumCortexBrain SHALL combine QSNN reflex logits with QSNN cortex o
 #### Scenario: Cortex Output Splitting
 
 - **WHEN** the QSNN cortex output layer produces spike probabilities
-- **THEN** the system SHALL convert spike probs to logits via `(spike_prob - 0.5) * logit_scale`
-- **AND** SHALL split into action biases (first `num_motor_neurons` values), mode logits (next `num_modes` values), and trust modulation (last value)
+- **THEN** the system SHALL map output neurons as follows:
+  - Neurons 0 to `num_motor_neurons - 1`: action bias logits via `(spike_prob - 0.5) * logit_scale`
+  - Neurons `num_motor_neurons` to `num_motor_neurons + num_modes - 1`: mode logits via `(spike_prob - 0.5) * mode_logit_scale`
+  - Last neuron (`num_motor_neurons + num_modes`): trust modulation via raw `spike_prob` (range [0, 1])
+- **AND** the trust modulation neuron SHALL provide a direct continuous-valued scaling factor for the fusion mechanism
 
 #### Scenario: Mode Gate Computation
 
@@ -235,9 +263,16 @@ The HybridQuantumCortexBrain SHALL support saving and loading weights for both Q
 - **THEN** the system SHALL save QSNN cortex weights (all group weights, hidden weights, output weights, theta parameters) to `exports/<session_id>/cortex_weights.pt`
 - **AND** SHALL save critic weights to `exports/<session_id>/critic_weights.pt`
 
+#### Scenario: Auto-Save All Weights After Stage 3 or 4
+
+- **WHEN** training completes and `training_stage` is 3 or 4
+- **THEN** the system SHALL save QSNN reflex weights to `exports/<session_id>/reflex_weights.pt`
+- **AND** SHALL save QSNN cortex weights to `exports/<session_id>/cortex_weights.pt`
+- **AND** SHALL save critic weights to `exports/<session_id>/critic_weights.pt`
+
 #### Scenario: Load Pre-Trained Weights
 
-- **WHEN** HybridQuantumCortexBrain is instantiated with `reflex_weights_path` or `cortex_weights_path`
+- **WHEN** HybridQuantumCortexBrain is instantiated with `reflex_weights_path`, `cortex_weights_path`, or `critic_weights_path`
 - **THEN** the system SHALL load the corresponding weight dict via `torch.load`
 - **AND** SHALL validate that loaded tensor shapes match the current configuration
 - **AND** SHALL raise a ValueError on shape mismatch with descriptive error message
@@ -357,7 +392,9 @@ The HybridQuantumCortexBrain SHALL implement the `ClassicalBrain` protocol for c
 #### Scenario: run_brain Interface
 
 - **WHEN** `run_brain()` is called with `BrainParams` and sensory data
-- **THEN** the system SHALL compute QSNN reflex logits via reflex network forward pass
+- **THEN** the system SHALL extract reflex features using legacy 2-feature preprocessing
+- **AND** SHALL extract cortex features via `extract_classical_features` with `cortex_sensory_modules` (if stage >= 2)
+- **AND** SHALL compute QSNN reflex logits via reflex network forward pass
 - **AND** SHALL compute QSNN cortex output via grouped sensory QLIF forward pass (if stage >= 2)
 - **AND** SHALL fuse reflex and cortex outputs via mode-gated fusion
 - **AND** SHALL return a list containing one ActionData
