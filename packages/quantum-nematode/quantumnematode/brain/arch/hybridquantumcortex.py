@@ -871,13 +871,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             eta_min=qsnn_lr * self.config.lr_min_factor,
         )
 
-        # Cortex optimizer
-        self.cortex_optimizer = torch.optim.Adam(
-            self._get_cortex_params(),
-            lr=self.config.cortex_lr,
-        )
-
-        # Cortex LR scheduling state
+        # Cortex LR scheduling state (must be set before optimizer creation)
         self.cortex_base_lr = self.config.cortex_lr
         self.cortex_lr_warmup_episodes = self.config.cortex_lr_warmup_episodes
         self.cortex_lr_warmup_start = self.config.cortex_lr_warmup_start or (
@@ -889,10 +883,28 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             self.cortex_lr_warmup_episodes > 0 or self.cortex_lr_decay_episodes is not None
         )
 
+        # Start at warmup LR if warmup is enabled (match HybridQuantum behaviour)
+        initial_cortex_lr = (
+            self.cortex_lr_warmup_start
+            if self.cortex_lr_warmup_episodes > 0
+            else self.config.cortex_lr
+        )
+        initial_critic_lr = (
+            self.cortex_lr_warmup_start
+            if self.cortex_lr_warmup_episodes > 0
+            else self.config.critic_lr
+        )
+
+        # Cortex optimizer
+        self.cortex_optimizer = torch.optim.Adam(
+            self._get_cortex_params(),
+            lr=initial_cortex_lr,
+        )
+
         # Critic optimizer
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(),
-            lr=self.config.critic_lr,
+            lr=initial_critic_lr,
         )
 
     def _freeze_reflex(self) -> None:
