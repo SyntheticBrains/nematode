@@ -1639,7 +1639,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
     # learn
     # ──────────────────────────────────────────────────────────────────
 
-    def learn(  # noqa: C901, PLR0912
+    def learn(  # noqa: C901, PLR0912, PLR0915
         self,
         params: BrainParams,  # noqa: ARG002
         reward: float,
@@ -1711,6 +1711,28 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 f"W_hm_norm={torch.norm(self.W_hm).item():.4f}",
             )
 
+            # Log action probability distribution (all stages)
+            if self.current_probabilities is not None:
+                probs = self.current_probabilities
+                action_entropy = float(
+                    -np.sum(probs * np.log(probs + 1e-10)),
+                )
+                logger.debug(
+                    f"HybridQuantumCortex action_probs: "
+                    f"dist=[{', '.join(f'{p:.4f}' for p in probs)}], "
+                    f"entropy={action_entropy:.4f}",
+                )
+
+            # Log exploration schedule (stage 1, 3, 4)
+            if self.training_stage != STAGE_CORTEX_ONLY:
+                epsilon, temperature = self._exploration_schedule()
+                reflex_lr = self.reflex_optimizer.param_groups[0]["lr"]
+                logger.debug(
+                    f"HybridQuantumCortex schedule: "
+                    f"reflex_lr={reflex_lr:.6f}, "
+                    f"epsilon={epsilon:.4f}, temperature={temperature:.4f}",
+                )
+
             # Final reflex REINFORCE update (stage 1, 3, 4)
             if self.training_stage != STAGE_CORTEX_ONLY:
                 self._reflex_reinforce_update()
@@ -1719,9 +1741,20 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             if self.training_stage >= STAGE_CORTEX_ONLY and self._episode_qsnn_trusts:
                 mean_trust = np.mean(self._episode_qsnn_trusts)
                 mode_means = np.mean(self._episode_mode_probs, axis=0).tolist()
+                trust_std = float(np.std(self._episode_qsnn_trusts))
                 logger.info(
                     f"HybridQuantumCortex fusion: qsnn_trust_mean={mean_trust:.4f}, "
+                    f"trust_std={trust_std:.4f}, "
                     f"mode_dist={[f'{m:.3f}' for m in mode_means]}",
+                )
+
+            # Log cortex LR (stage 2, 3, 4)
+            if self.training_stage >= STAGE_CORTEX_ONLY:
+                cortex_lr = self.cortex_optimizer.param_groups[0]["lr"]
+                critic_lr = self.critic_optimizer.param_groups[0]["lr"]
+                logger.debug(
+                    f"HybridQuantumCortex schedule: "
+                    f"cortex_lr={cortex_lr:.6f}, critic_lr={critic_lr:.6f}",
                 )
 
             self._episode_count += 1
@@ -1800,6 +1833,15 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             advantages,
             -self.config.advantage_clip,
             self.config.advantage_clip,
+        )
+
+        logger.debug(
+            f"HybridQuantumCortex reflex advantages: "
+            f"mean={advantages.mean().item():.4f}, "
+            f"std={advantages.std().item():.4f}, "
+            f"min={advantages.min().item():.4f}, "
+            f"max={advantages.max().item():.4f}, "
+            f"batch_size={len(advantages)}",
         )
 
         num_epochs = self.config.num_reinforce_epochs
@@ -1950,8 +1992,22 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         if len(buffer) < MIN_REINFORCE_BATCH_SIZE:
             return
 
+        logger.debug(
+            f"HybridQuantumCortex cortex update trigger: buffer_size={len(buffer)}",
+        )
+
         returns, advantages = self._compute_cortex_advantages()
         self._latest_returns = returns
+
+        logger.debug(
+            f"HybridQuantumCortex cortex advantages: "
+            f"mean={advantages.mean().item():.4f}, "
+            f"std={advantages.std().item():.4f}, "
+            f"min={advantages.min().item():.4f}, "
+            f"max={advantages.max().item():.4f}, "
+            f"returns_mean={returns.mean().item():.4f}, "
+            f"returns_std={returns.std().item():.4f}",
+        )
 
         states = buffer.states
         actions = buffer.actions
@@ -2058,20 +2114,24 @@ class HybridQuantumCortexBrain(ClassicalBrain):
 
         self.critic_optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(
+        critic_grad_norm = torch.nn.utils.clip_grad_norm_(
             self.critic.parameters(),
             max_norm=self.config.max_grad_norm,
         )
         self.critic_optimizer.step()
 
-        # Log explained variance
+        # Log explained variance and critic diagnostics
         target_var = returns.var()
         explained_var = (1.0 - (returns - predicted.detach()).var() / (target_var + 1e-8)).item()
 
+        pred_det = predicted.detach()
         logger.debug(
             f"HybridQuantumCortex critic: "
             f"value_loss={loss.item():.4f}, "
-            f"explained_variance={explained_var:.4f}",
+            f"explained_variance={explained_var:.4f}, "
+            f"grad_norm={critic_grad_norm.item():.4f}, "
+            f"predicted_mean={pred_det.mean().item():.4f}, "
+            f"predicted_std={pred_det.std().item():.4f}",
         )
 
     # ──────────────────────────────────────────────────────────────────
