@@ -219,6 +219,66 @@ def build_qlif_circuit(
     return qc
 
 
+def build_qlif_circuit_reupload(
+    weighted_input: float,
+    theta_membranes: list[float],
+    leak_angle: float,
+    reupload_rx_angles: list[float] | None = None,
+    reupload_rz_angles: list[float] | None = None,
+) -> QuantumCircuit:
+    """Build a multi-layer re-uploading QLIF neuron circuit.
+
+    Each layer applies RY(theta_l + tanh(w*x/sqrt(fan_in))*pi) -> RX(alpha_l) -> RZ(beta_l).
+    The final layer uses the original leak_angle for RX.
+
+    Parameters
+    ----------
+    weighted_input : float
+        Pre-scaled weighted input (sum(w_ij * spike_j) / sqrt(fan_in)).
+    theta_membranes : list[float]
+        Trainable membrane potential parameters, one per re-uploading layer.
+    leak_angle : float
+        Leak angle for the final layer's RX gate.
+    reupload_rx_angles : list[float] or None
+        RX angles for intermediate layers (len = num_layers - 1). Fixed params.
+        None = use pi/4 for all intermediate layers.
+    reupload_rz_angles : list[float] or None
+        RZ angles for intermediate layers (len = num_layers - 1). Fixed params.
+        None = use pi/6 for all intermediate layers.
+
+    Returns
+    -------
+    QuantumCircuit
+        The re-uploading QLIF neuron circuit.
+    """
+    num_layers = len(theta_membranes)
+    qc = QuantumCircuit(1, 1)
+    normalized_input = float(np.tanh(weighted_input))
+
+    for layer_idx in range(num_layers):
+        # Each layer re-uploads the data via RY
+        ry_angle = float(theta_membranes[layer_idx] + normalized_input * np.pi)
+        qc.ry(ry_angle, 0)
+
+        if layer_idx < num_layers - 1:
+            # Intermediate layers: RX + RZ with fixed angles
+            rx_angle = (
+                reupload_rx_angles[layer_idx] if reupload_rx_angles is not None else np.pi / 4
+            )
+            qc.rx(rx_angle, 0)
+
+            rz_angle = (
+                reupload_rz_angles[layer_idx] if reupload_rz_angles is not None else np.pi / 6
+            )
+            qc.rz(rz_angle, 0)
+        else:
+            # Final layer: RX leak (same as original QLIF)
+            qc.rx(leak_angle, 0)
+
+    qc.measure(0, 0)
+    return qc
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Layer Execution
 # ──────────────────────────────────────────────────────────────────────
@@ -470,6 +530,206 @@ def execute_qlif_layer_differentiable_cached(  # noqa: PLR0913
 
         spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
             ry_angle,
+            quantum_spike_prob,
+            alpha,
+        )
+        spike_probs_list.append(spike_prob)
+
+        if quantum_spike_prob > threshold:
+            refractory_state[j] = refractory_period
+
+    spike_probs = torch.stack(spike_probs_list)
+    return spike_probs, refractory_state
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Re-uploading Layer Execution
+# ──────────────────────────────────────────────────────────────────────
+
+
+def execute_qlif_layer_differentiable_reupload(  # noqa: PLR0913
+    pre_spikes: torch.Tensor,
+    weights: torch.Tensor,
+    theta_membranes: list[torch.Tensor],
+    refractory_state: np.ndarray,
+    backend: Any,  # noqa: ANN401
+    shots: int,
+    threshold: float,
+    refractory_period: int,
+    leak_angle: float,
+    device: torch.device,
+    alpha: float = DEFAULT_SURROGATE_ALPHA,
+    reupload_rx_angles: list[float] | None = None,
+    reupload_rz_angles: list[float] | None = None,
+) -> tuple[torch.Tensor, np.ndarray]:
+    """Execute a QLIF layer with data re-uploading and surrogate gradients.
+
+    Each neuron uses a multi-layer re-uploading circuit where the input data
+    is re-encoded at every layer. The composite ry_angle (sum of all layers)
+    is used for the surrogate gradient so all theta parameters receive gradients.
+
+    Parameters
+    ----------
+    pre_spikes : torch.Tensor
+        Spike probabilities from presynaptic layer, shape (num_pre,).
+    weights : torch.Tensor
+        Weight matrix with requires_grad=True, shape (num_pre, num_post).
+    theta_membranes : list[torch.Tensor]
+        Membrane potential parameters per re-uploading layer. Each has shape (num_post,).
+        Length = number of re-uploading layers.
+    refractory_state : np.ndarray
+        Refractory countdown per neuron, shape (num_post,).
+    backend : AerSimulator
+        Qiskit backend for circuit execution.
+    shots : int
+        Number of measurement shots per circuit.
+    threshold : float
+        Firing threshold for refractory period triggering.
+    refractory_period : int
+        Number of timesteps to remain refractory after firing.
+    leak_angle : float
+        Leak angle for the final layer's RX gate.
+    device : torch.device
+        Torch device for tensor creation.
+    alpha : float
+        Surrogate gradient sharpness parameter.
+    reupload_rx_angles : list[float] or None
+        Fixed RX angles for intermediate layers.
+    reupload_rz_angles : list[float] or None
+        Fixed RZ angles for intermediate layers.
+
+    Returns
+    -------
+    tuple[torch.Tensor, np.ndarray]
+        (spike_probs_tensor, updated_refractory_state).
+    """
+    num_post = weights.shape[1]
+    num_layers = len(theta_membranes)
+    spike_probs_list: list[torch.Tensor] = []
+
+    for j in range(num_post):
+        if refractory_state[j] > 0:
+            refractory_state[j] -= 1
+            spike_probs_list.append(
+                torch.zeros(1, device=device, dtype=torch.float32).squeeze(),
+            )
+            continue
+
+        # Differentiable weighted input (shared across re-uploading layers)
+        weighted_input = torch.dot(pre_spikes, weights[:, j])
+        fan_in_scale = (weights.shape[0]) ** 0.5
+        scaled_input = weighted_input / fan_in_scale
+
+        # Compute ry_angle for each layer, sum for composite surrogate angle
+        ry_angles: list[torch.Tensor] = []
+        theta_np_list: list[float] = []
+        for layer_idx in range(num_layers):
+            ry_angle_l = theta_membranes[layer_idx][j] + torch.tanh(scaled_input) * torch.pi
+            ry_angles.append(ry_angle_l)
+            theta_np_list.append(float(theta_membranes[layer_idx][j].detach().cpu()))
+
+        # Composite angle: mean of all layers' ry_angles (keeps centered near pi/2)
+        composite_ry_angle = torch.stack(ry_angles).mean()
+
+        # Execute re-uploading quantum circuit (detached)
+        wi_np = float(scaled_input.detach().cpu())
+        qc = build_qlif_circuit_reupload(
+            wi_np,
+            theta_np_list,
+            leak_angle,
+            reupload_rx_angles=reupload_rx_angles,
+            reupload_rz_angles=reupload_rz_angles,
+        )
+        job = backend.run(qc, shots=shots)
+        result = job.result()
+        counts = result.get_counts()
+        quantum_spike_prob = counts.get("1", 0) / shots
+
+        # Surrogate gradient using composite angle
+        spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
+            composite_ry_angle,
+            quantum_spike_prob,
+            alpha,
+        )
+        spike_probs_list.append(spike_prob)
+
+        if quantum_spike_prob > threshold:
+            refractory_state[j] = refractory_period
+
+    spike_probs = torch.stack(spike_probs_list)
+    return spike_probs, refractory_state
+
+
+def execute_qlif_layer_differentiable_cached_reupload(  # noqa: PLR0913
+    pre_spikes: torch.Tensor,
+    weights: torch.Tensor,
+    theta_membranes: list[torch.Tensor],
+    refractory_state: np.ndarray,
+    cached_spike_probs: list[float],
+    threshold: float,
+    refractory_period: int,
+    device: torch.device,
+    alpha: float = DEFAULT_SURROGATE_ALPHA,
+) -> tuple[torch.Tensor, np.ndarray]:
+    """Execute a re-uploading QLIF layer using cached spike probabilities.
+
+    Same as execute_qlif_layer_differentiable_reupload() but skips quantum
+    circuit execution, using pre-cached spike probabilities from epoch 0.
+
+    Parameters
+    ----------
+    pre_spikes : torch.Tensor
+        Spike probabilities from presynaptic layer, shape (num_pre,).
+    weights : torch.Tensor
+        Weight matrix with requires_grad=True, shape (num_pre, num_post).
+    theta_membranes : list[torch.Tensor]
+        Membrane potential parameters per re-uploading layer.
+    refractory_state : np.ndarray
+        Refractory countdown per neuron, shape (num_post,).
+    cached_spike_probs : list[float]
+        Pre-cached quantum spike probabilities for each neuron.
+    threshold : float
+        Firing threshold for refractory period triggering.
+    refractory_period : int
+        Number of timesteps to remain refractory after firing.
+    device : torch.device
+        Torch device for tensor creation.
+    alpha : float
+        Surrogate gradient sharpness parameter.
+
+    Returns
+    -------
+    tuple[torch.Tensor, np.ndarray]
+        (spike_probs_tensor, updated_refractory_state).
+    """
+    num_post = weights.shape[1]
+    num_layers = len(theta_membranes)
+    spike_probs_list: list[torch.Tensor] = []
+
+    for j in range(num_post):
+        if refractory_state[j] > 0:
+            refractory_state[j] -= 1
+            spike_probs_list.append(
+                torch.zeros(1, device=device, dtype=torch.float32).squeeze(),
+            )
+            continue
+
+        # Recompute composite ry_angle from current weights (differentiable)
+        weighted_input = torch.dot(pre_spikes, weights[:, j])
+        fan_in_scale = (weights.shape[0]) ** 0.5
+        scaled_input = weighted_input / fan_in_scale
+
+        ry_angles: list[torch.Tensor] = []
+        for layer_idx in range(num_layers):
+            ry_angle_l = theta_membranes[layer_idx][j] + torch.tanh(scaled_input) * torch.pi
+            ry_angles.append(ry_angle_l)
+
+        composite_ry_angle = torch.stack(ry_angles).mean()
+
+        quantum_spike_prob = cached_spike_probs[j]
+
+        spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
+            composite_ry_angle,
             quantum_spike_prob,
             alpha,
         )

@@ -68,6 +68,8 @@ from quantumnematode.brain.arch._qlif_layers import (
     execute_qlif_layer,
     execute_qlif_layer_differentiable,
     execute_qlif_layer_differentiable_cached,
+    execute_qlif_layer_differentiable_cached_reupload,
+    execute_qlif_layer_differentiable_reupload,
     get_qiskit_backend,
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
@@ -253,6 +255,10 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
         default=DEFAULT_NUM_MODES,
         description="Number of modes for gating (forage, evade, explore).",
     )
+    num_reupload_layers: int = Field(
+        default=1,
+        description="Re-uploading layers per QLIF neuron (1=standard, >1=data re-uploading).",
+    )
 
     # Training stage
     training_stage: int = Field(
@@ -354,6 +360,25 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
     use_gae_advantages: bool = Field(
         default=True,
         description="Use critic-provided GAE advantages (True) or pure REINFORCE returns (False).",
+    )
+
+    # Cortex adaptive alpha scheduling
+    cortex_alpha_start: float | None = Field(
+        default=None,
+        description="Initial surrogate alpha for cortex (None = use surrogate_alpha fixed).",
+    )
+    cortex_alpha_end: float | None = Field(
+        default=None,
+        description="Final surrogate alpha for cortex after warmup.",
+    )
+    cortex_alpha_warmup_episodes: int = Field(
+        default=100,
+        description="Episodes to linearly ramp cortex alpha from start to end.",
+    )
+    cortex_alpha_warmup_delay: int = Field(
+        default=0,
+        description="Episodes to delay before starting cortex alpha warmup. "
+        "Use to stagger alpha warmup after LR warmup completes.",
     )
 
     # Joint fine-tune
@@ -674,6 +699,20 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         self._step_count = 0
         self._episode_count = 0
 
+        # Adaptive cortex alpha scheduling
+        if config.cortex_alpha_start is not None and config.cortex_alpha_end is not None:
+            self._cortex_alpha_start = config.cortex_alpha_start
+            self._cortex_alpha_end = config.cortex_alpha_end
+            self._cortex_alpha_warmup = config.cortex_alpha_warmup_episodes
+            self._cortex_alpha_warmup_delay = config.cortex_alpha_warmup_delay
+            self._current_cortex_alpha = config.cortex_alpha_start
+        else:
+            self._cortex_alpha_start = None
+            self._cortex_alpha_end = None
+            self._cortex_alpha_warmup = 0
+            self._cortex_alpha_warmup_delay = 0
+            self._current_cortex_alpha = config.surrogate_alpha
+
         # Session ID for weight saving
         self._session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
@@ -802,6 +841,50 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         )
         self.theta_cortex_output.requires_grad_(True)  # noqa: FBT003
 
+        # Re-uploading: additional theta tensors for extra layers (layer 0 uses existing thetas)
+        self.num_reupload_layers = self.config.num_reupload_layers
+        self.cortex_reupload_group_thetas: list[list[torch.Tensor]] = []
+        self.cortex_reupload_hidden_thetas: list[torch.Tensor] = []
+        self.cortex_reupload_output_thetas: list[torch.Tensor] = []
+
+        if self.num_reupload_layers > 1:
+            # Additional thetas for layers 1..L-1 per group
+            for _ in range(self.num_cortex_groups):
+                group_extra: list[torch.Tensor] = []
+                for _ in range(self.num_reupload_layers - 1):
+                    t = torch.full(
+                        (self.cortex_neurons_per_group,),
+                        np.pi / 4,
+                        device=self.device,
+                    )
+                    t.requires_grad_(True)  # noqa: FBT003
+                    group_extra.append(t)
+                self.cortex_reupload_group_thetas.append(group_extra)
+
+            # Additional thetas for hidden layer
+            for _ in range(self.num_reupload_layers - 1):
+                t = torch.full(
+                    (self.cortex_hidden_neurons,),
+                    np.pi / 4,
+                    device=self.device,
+                )
+                t.requires_grad_(True)  # noqa: FBT003
+                self.cortex_reupload_hidden_thetas.append(t)
+
+            # Additional thetas for output layer
+            for _ in range(self.num_reupload_layers - 1):
+                t = torch.full(
+                    (self.cortex_output_neurons,),
+                    np.pi / 4,
+                    device=self.device,
+                )
+                t.requires_grad_(True)  # noqa: FBT003
+                self.cortex_reupload_output_thetas.append(t)
+
+            logger.info(
+                f"Data re-uploading enabled: {self.num_reupload_layers} layers per QLIF neuron",
+            )
+
         # Cortex refractory states
         self.cortex_refractory_groups: list[np.ndarray] = [
             np.zeros(self.cortex_neurons_per_group, dtype=np.int32)
@@ -821,6 +904,14 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         total += self.theta_cortex_hidden.numel()
         total += self.W_cortex_ho.numel()
         total += self.theta_cortex_output.numel()
+        # Re-uploading extra thetas
+        for group_extra in self.cortex_reupload_group_thetas:
+            for t in group_extra:
+                total += t.numel()
+        for t in self.cortex_reupload_hidden_thetas:
+            total += t.numel()
+        for t in self.cortex_reupload_output_thetas:
+            total += t.numel()
         return total
 
     def _get_cortex_params(self) -> list[torch.Tensor]:
@@ -836,6 +927,11 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 self.theta_cortex_output,
             ],
         )
+        # Re-uploading extra thetas
+        for group_extra in self.cortex_reupload_group_thetas:
+            params.extend(group_extra)
+        params.extend(self.cortex_reupload_hidden_thetas)
+        params.extend(self.cortex_reupload_output_thetas)
         return params
 
     # ──────────────────────────────────────────────────────────────────
@@ -1154,6 +1250,25 @@ class HybridQuantumCortexBrain(ClassicalBrain):
 
         return np.concatenate(group_outputs)
 
+    def _get_group_theta_membranes(self, group_idx: int) -> list[torch.Tensor]:
+        """Build theta_membranes list for a sensory group (re-uploading support)."""
+        thetas = [self.cortex_group_thetas[group_idx]]
+        if self.num_reupload_layers > 1:
+            thetas.extend(self.cortex_reupload_group_thetas[group_idx])
+        return thetas
+
+    def _get_hidden_theta_membranes(self) -> list[torch.Tensor]:
+        """Build theta_membranes list for hidden layer (re-uploading support)."""
+        thetas = [self.theta_cortex_hidden]
+        thetas.extend(self.cortex_reupload_hidden_thetas)
+        return thetas
+
+    def _get_output_theta_membranes(self) -> list[torch.Tensor]:
+        """Build theta_membranes list for output layer (re-uploading support)."""
+        thetas = [self.theta_cortex_output]
+        thetas.extend(self.cortex_reupload_output_thetas)
+        return thetas
+
     def _cortex_sensory_forward_differentiable(
         self,
         cortex_features: np.ndarray,
@@ -1171,18 +1286,36 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 device=self.device,
             )
 
-            group_spikes, self.cortex_refractory_groups[i] = execute_qlif_layer_differentiable(
-                sensory_tensor,
-                self.cortex_group_weights[i],
-                self.cortex_group_thetas[i],
-                self.cortex_refractory_groups[i],
-                backend=self._get_cortex_backend(),
-                shots=self.cortex_shots,
-                threshold=self.threshold,
-                refractory_period=self.refractory_period,
-                leak_angle=self.leak_angle,
-                device=self.device,
-            )
+            if self.num_reupload_layers > 1:
+                group_spikes, self.cortex_refractory_groups[i] = (
+                    execute_qlif_layer_differentiable_reupload(
+                        sensory_tensor,
+                        self.cortex_group_weights[i],
+                        self._get_group_theta_membranes(i),
+                        self.cortex_refractory_groups[i],
+                        backend=self._get_cortex_backend(),
+                        shots=self.cortex_shots,
+                        threshold=self.threshold,
+                        refractory_period=self.refractory_period,
+                        leak_angle=self.leak_angle,
+                        device=self.device,
+                        alpha=self._current_cortex_alpha,
+                    )
+                )
+            else:
+                group_spikes, self.cortex_refractory_groups[i] = execute_qlif_layer_differentiable(
+                    sensory_tensor,
+                    self.cortex_group_weights[i],
+                    self.cortex_group_thetas[i],
+                    self.cortex_refractory_groups[i],
+                    backend=self._get_cortex_backend(),
+                    shots=self.cortex_shots,
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    leak_angle=self.leak_angle,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
             group_outputs.append(group_spikes)
 
         return torch.cat(group_outputs)
@@ -1205,18 +1338,36 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 device=self.device,
             )
 
-            group_spikes, self.cortex_refractory_groups[i] = execute_qlif_layer_differentiable(
-                sensory_tensor,
-                self.cortex_group_weights[i],
-                self.cortex_group_thetas[i],
-                self.cortex_refractory_groups[i],
-                backend=self._get_cortex_backend(),
-                shots=self.cortex_shots,
-                threshold=self.threshold,
-                refractory_period=self.refractory_period,
-                leak_angle=self.leak_angle,
-                device=self.device,
-            )
+            if self.num_reupload_layers > 1:
+                group_spikes, self.cortex_refractory_groups[i] = (
+                    execute_qlif_layer_differentiable_reupload(
+                        sensory_tensor,
+                        self.cortex_group_weights[i],
+                        self._get_group_theta_membranes(i),
+                        self.cortex_refractory_groups[i],
+                        backend=self._get_cortex_backend(),
+                        shots=self.cortex_shots,
+                        threshold=self.threshold,
+                        refractory_period=self.refractory_period,
+                        leak_angle=self.leak_angle,
+                        device=self.device,
+                        alpha=self._current_cortex_alpha,
+                    )
+                )
+            else:
+                group_spikes, self.cortex_refractory_groups[i] = execute_qlif_layer_differentiable(
+                    sensory_tensor,
+                    self.cortex_group_weights[i],
+                    self.cortex_group_thetas[i],
+                    self.cortex_refractory_groups[i],
+                    backend=self._get_cortex_backend(),
+                    shots=self.cortex_shots,
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    leak_angle=self.leak_angle,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
             cache_out[f"group_{i}"] = group_spikes.detach().cpu().tolist()
             group_outputs.append(group_spikes)
 
@@ -1240,18 +1391,34 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 device=self.device,
             )
 
-            group_spikes, self.cortex_refractory_groups[i] = (
-                execute_qlif_layer_differentiable_cached(
-                    sensory_tensor,
-                    self.cortex_group_weights[i],
-                    self.cortex_group_thetas[i],
-                    self.cortex_refractory_groups[i],
-                    cached_spike_probs=cached[f"group_{i}"],
-                    threshold=self.threshold,
-                    refractory_period=self.refractory_period,
-                    device=self.device,
+            if self.num_reupload_layers > 1:
+                group_spikes, self.cortex_refractory_groups[i] = (
+                    execute_qlif_layer_differentiable_cached_reupload(
+                        sensory_tensor,
+                        self.cortex_group_weights[i],
+                        self._get_group_theta_membranes(i),
+                        self.cortex_refractory_groups[i],
+                        cached_spike_probs=cached[f"group_{i}"],
+                        threshold=self.threshold,
+                        refractory_period=self.refractory_period,
+                        device=self.device,
+                        alpha=self._current_cortex_alpha,
+                    )
                 )
-            )
+            else:
+                group_spikes, self.cortex_refractory_groups[i] = (
+                    execute_qlif_layer_differentiable_cached(
+                        sensory_tensor,
+                        self.cortex_group_weights[i],
+                        self.cortex_group_thetas[i],
+                        self.cortex_refractory_groups[i],
+                        cached_spike_probs=cached[f"group_{i}"],
+                        threshold=self.threshold,
+                        refractory_period=self.refractory_period,
+                        device=self.device,
+                        alpha=self._current_cortex_alpha,
+                    )
+                )
             group_outputs.append(group_spikes)
 
         return torch.cat(group_outputs)
@@ -1279,18 +1446,36 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         sensory_concat: torch.Tensor,
     ) -> torch.Tensor:
         """Execute shared hidden QLIF layer with gradient tracking."""
-        hidden_spikes, self.cortex_refractory_hidden = execute_qlif_layer_differentiable(
-            sensory_concat,
-            self.W_cortex_sh,
-            self.theta_cortex_hidden,
-            self.cortex_refractory_hidden,
-            backend=self._get_cortex_backend(),
-            shots=self.cortex_shots,
-            threshold=self.threshold,
-            refractory_period=self.refractory_period,
-            leak_angle=self.leak_angle,
-            device=self.device,
-        )
+        if self.num_reupload_layers > 1:
+            hidden_spikes, self.cortex_refractory_hidden = (
+                execute_qlif_layer_differentiable_reupload(
+                    sensory_concat,
+                    self.W_cortex_sh,
+                    self._get_hidden_theta_membranes(),
+                    self.cortex_refractory_hidden,
+                    backend=self._get_cortex_backend(),
+                    shots=self.cortex_shots,
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    leak_angle=self.leak_angle,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
+            )
+        else:
+            hidden_spikes, self.cortex_refractory_hidden = execute_qlif_layer_differentiable(
+                sensory_concat,
+                self.W_cortex_sh,
+                self.theta_cortex_hidden,
+                self.cortex_refractory_hidden,
+                backend=self._get_cortex_backend(),
+                shots=self.cortex_shots,
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                leak_angle=self.leak_angle,
+                device=self.device,
+                alpha=self._current_cortex_alpha,
+            )
         return hidden_spikes
 
     def _cortex_output_forward(
@@ -1316,18 +1501,36 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         hidden_spikes: torch.Tensor,
     ) -> torch.Tensor:
         """Execute output QLIF layer with gradient tracking."""
-        output_spikes, self.cortex_refractory_output = execute_qlif_layer_differentiable(
-            hidden_spikes,
-            self.W_cortex_ho,
-            self.theta_cortex_output,
-            self.cortex_refractory_output,
-            backend=self._get_cortex_backend(),
-            shots=self.cortex_shots,
-            threshold=self.threshold,
-            refractory_period=self.refractory_period,
-            leak_angle=self.leak_angle,
-            device=self.device,
-        )
+        if self.num_reupload_layers > 1:
+            output_spikes, self.cortex_refractory_output = (
+                execute_qlif_layer_differentiable_reupload(
+                    hidden_spikes,
+                    self.W_cortex_ho,
+                    self._get_output_theta_membranes(),
+                    self.cortex_refractory_output,
+                    backend=self._get_cortex_backend(),
+                    shots=self.cortex_shots,
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    leak_angle=self.leak_angle,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
+            )
+        else:
+            output_spikes, self.cortex_refractory_output = execute_qlif_layer_differentiable(
+                hidden_spikes,
+                self.W_cortex_ho,
+                self.theta_cortex_output,
+                self.cortex_refractory_output,
+                backend=self._get_cortex_backend(),
+                shots=self.cortex_shots,
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                leak_angle=self.leak_angle,
+                device=self.device,
+                alpha=self._current_cortex_alpha,
+            )
         return output_spikes
 
     def _cortex_timestep(self, cortex_features: np.ndarray) -> np.ndarray:
@@ -1375,32 +1578,68 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             cache_out,
         )
 
-        hidden_spikes, self.cortex_refractory_hidden = execute_qlif_layer_differentiable(
-            sensory_concat,
-            self.W_cortex_sh,
-            self.theta_cortex_hidden,
-            self.cortex_refractory_hidden,
-            backend=self._get_cortex_backend(),
-            shots=self.cortex_shots,
-            threshold=self.threshold,
-            refractory_period=self.refractory_period,
-            leak_angle=self.leak_angle,
-            device=self.device,
-        )
+        if self.num_reupload_layers > 1:
+            hidden_spikes, self.cortex_refractory_hidden = (
+                execute_qlif_layer_differentiable_reupload(
+                    sensory_concat,
+                    self.W_cortex_sh,
+                    self._get_hidden_theta_membranes(),
+                    self.cortex_refractory_hidden,
+                    backend=self._get_cortex_backend(),
+                    shots=self.cortex_shots,
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    leak_angle=self.leak_angle,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
+            )
+        else:
+            hidden_spikes, self.cortex_refractory_hidden = execute_qlif_layer_differentiable(
+                sensory_concat,
+                self.W_cortex_sh,
+                self.theta_cortex_hidden,
+                self.cortex_refractory_hidden,
+                backend=self._get_cortex_backend(),
+                shots=self.cortex_shots,
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                leak_angle=self.leak_angle,
+                device=self.device,
+                alpha=self._current_cortex_alpha,
+            )
         cache_out["hidden"] = hidden_spikes.detach().cpu().tolist()
 
-        output_spikes, self.cortex_refractory_output = execute_qlif_layer_differentiable(
-            hidden_spikes,
-            self.W_cortex_ho,
-            self.theta_cortex_output,
-            self.cortex_refractory_output,
-            backend=self._get_cortex_backend(),
-            shots=self.cortex_shots,
-            threshold=self.threshold,
-            refractory_period=self.refractory_period,
-            leak_angle=self.leak_angle,
-            device=self.device,
-        )
+        if self.num_reupload_layers > 1:
+            output_spikes, self.cortex_refractory_output = (
+                execute_qlif_layer_differentiable_reupload(
+                    hidden_spikes,
+                    self.W_cortex_ho,
+                    self._get_output_theta_membranes(),
+                    self.cortex_refractory_output,
+                    backend=self._get_cortex_backend(),
+                    shots=self.cortex_shots,
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    leak_angle=self.leak_angle,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
+            )
+        else:
+            output_spikes, self.cortex_refractory_output = execute_qlif_layer_differentiable(
+                hidden_spikes,
+                self.W_cortex_ho,
+                self.theta_cortex_output,
+                self.cortex_refractory_output,
+                backend=self._get_cortex_backend(),
+                shots=self.cortex_shots,
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                leak_angle=self.leak_angle,
+                device=self.device,
+                alpha=self._current_cortex_alpha,
+            )
         cache_out["output"] = output_spikes.detach().cpu().tolist()
 
         return output_spikes
@@ -1432,26 +1671,56 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             cached_step,
         )
 
-        hidden_spikes, self.cortex_refractory_hidden = execute_qlif_layer_differentiable_cached(
-            sensory_concat,
-            self.W_cortex_sh,
-            self.theta_cortex_hidden,
-            self.cortex_refractory_hidden,
-            cached_spike_probs=cached_step["hidden"],
-            threshold=self.threshold,
-            refractory_period=self.refractory_period,
-            device=self.device,
-        )
-        output_spikes, self.cortex_refractory_output = execute_qlif_layer_differentiable_cached(
-            hidden_spikes,
-            self.W_cortex_ho,
-            self.theta_cortex_output,
-            self.cortex_refractory_output,
-            cached_spike_probs=cached_step["output"],
-            threshold=self.threshold,
-            refractory_period=self.refractory_period,
-            device=self.device,
-        )
+        if self.num_reupload_layers > 1:
+            hidden_spikes, self.cortex_refractory_hidden = (
+                execute_qlif_layer_differentiable_cached_reupload(
+                    sensory_concat,
+                    self.W_cortex_sh,
+                    self._get_hidden_theta_membranes(),
+                    self.cortex_refractory_hidden,
+                    cached_spike_probs=cached_step["hidden"],
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
+            )
+            output_spikes, self.cortex_refractory_output = (
+                execute_qlif_layer_differentiable_cached_reupload(
+                    hidden_spikes,
+                    self.W_cortex_ho,
+                    self._get_output_theta_membranes(),
+                    self.cortex_refractory_output,
+                    cached_spike_probs=cached_step["output"],
+                    threshold=self.threshold,
+                    refractory_period=self.refractory_period,
+                    device=self.device,
+                    alpha=self._current_cortex_alpha,
+                )
+            )
+        else:
+            hidden_spikes, self.cortex_refractory_hidden = execute_qlif_layer_differentiable_cached(
+                sensory_concat,
+                self.W_cortex_sh,
+                self.theta_cortex_hidden,
+                self.cortex_refractory_hidden,
+                cached_spike_probs=cached_step["hidden"],
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                device=self.device,
+                alpha=self._current_cortex_alpha,
+            )
+            output_spikes, self.cortex_refractory_output = execute_qlif_layer_differentiable_cached(
+                hidden_spikes,
+                self.W_cortex_ho,
+                self.theta_cortex_output,
+                self.cortex_refractory_output,
+                cached_spike_probs=cached_step["output"],
+                threshold=self.threshold,
+                refractory_period=self.refractory_period,
+                device=self.device,
+                alpha=self._current_cortex_alpha,
+            )
         return output_spikes
 
     def _cortex_multi_timestep_differentiable_cached(
@@ -1766,7 +2035,8 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 critic_lr = self.critic_optimizer.param_groups[0]["lr"]
                 logger.debug(
                     f"HybridQuantumCortex schedule: "
-                    f"cortex_lr={cortex_lr:.6f}, critic_lr={critic_lr:.6f}",
+                    f"cortex_lr={cortex_lr:.6f}, critic_lr={critic_lr:.6f}, "
+                    f"cortex_alpha={self._current_cortex_alpha:.3f}",
                 )
 
             self._episode_count += 1
@@ -1778,6 +2048,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             # Step cortex LR scheduler (stage 2, 3, 4)
             if self.training_stage >= STAGE_CORTEX_ONLY:
                 self._update_cortex_learning_rate()
+                self._update_cortex_alpha()
 
             # Auto-save weights
             if self.training_stage != STAGE_CORTEX_ONLY:
@@ -1988,13 +2259,18 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             self.config.gae_lambda,
         )
 
-        if self.config.use_gae_advantages:
-            advantages = gae_advantages
-        else:
-            # Fallback: use normalized discounted returns
-            advantages = returns
-            if advantages.std() > NORM_EPS:
-                advantages = (advantages - advantages.mean()) / (advantages.std() + NORM_EPS)
+        advantages = gae_advantages if self.config.use_gae_advantages else returns
+
+        # Normalize advantages (centers signal regardless of critic quality)
+        if advantages.std() > NORM_EPS:
+            advantages = (advantages - advantages.mean()) / (advantages.std() + NORM_EPS)
+
+        # Clip advantages to prevent catastrophic updates
+        advantages = torch.clamp(
+            advantages,
+            -self.config.advantage_clip,
+            self.config.advantage_clip,
+        )
 
         return returns, advantages
 
@@ -2091,7 +2367,20 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                 f"grad_norm={grad_norm.item():.4f}",
             )
 
+        self._clamp_cortex_weights()
         self._log_cortex_weight_norms()
+
+    def _clamp_cortex_weights(self) -> None:
+        """Clamp QSNN cortex weights after REINFORCE update."""
+        with torch.no_grad():
+            for w in self.cortex_group_weights:
+                w.clamp_(-self.weight_clip, self.weight_clip)
+            for t in self.cortex_group_thetas:
+                t.clamp_(-self.weight_clip, self.weight_clip)
+            self.W_cortex_sh.clamp_(-self.weight_clip, self.weight_clip)
+            self.W_cortex_ho.clamp_(-self.weight_clip, self.weight_clip)
+            self.theta_cortex_hidden.clamp_(-self.weight_clip, self.weight_clip)
+            self.theta_cortex_output.clamp_(-self.weight_clip, self.weight_clip)
 
     def _log_cortex_weight_norms(self) -> None:
         """Log cortex weight norms for diagnostics."""
@@ -2144,6 +2433,24 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             f"grad_norm={critic_grad_norm.item():.4f}, "
             f"predicted_mean={pred_det.mean().item():.4f}, "
             f"predicted_std={pred_det.std().item():.4f}",
+        )
+
+    # ──────────────────────────────────────────────────────────────────
+    # Cortex alpha scheduling
+    # ──────────────────────────────────────────────────────────────────
+
+    def _update_cortex_alpha(self) -> None:
+        """Update cortex surrogate gradient alpha based on episode schedule."""
+        if self._cortex_alpha_start is None or self._cortex_alpha_end is None:
+            return
+        if self._cortex_alpha_warmup <= 0:
+            self._current_cortex_alpha = self._cortex_alpha_end
+            return
+        # Delay alpha warmup to avoid co-scheduling with LR warmup
+        delayed_ep = max(0, self._episode_count - self._cortex_alpha_warmup_delay)
+        t = min(delayed_ep / self._cortex_alpha_warmup, 1.0)
+        self._current_cortex_alpha = self._cortex_alpha_start + t * (
+            self._cortex_alpha_end - self._cortex_alpha_start
         )
 
     # ──────────────────────────────────────────────────────────────────
@@ -2235,6 +2542,15 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         weights_dict["W_cortex_ho"] = self.W_cortex_ho.detach().cpu()
         weights_dict["theta_cortex_output"] = self.theta_cortex_output.detach().cpu()
 
+        # Re-uploading extra thetas
+        for i, group_extra in enumerate(self.cortex_reupload_group_thetas):
+            for layer_idx, t in enumerate(group_extra):
+                weights_dict[f"reupload_theta_group_{i}_layer_{layer_idx}"] = t.detach().cpu()
+        for layer_idx, t in enumerate(self.cortex_reupload_hidden_thetas):
+            weights_dict[f"reupload_theta_hidden_layer_{layer_idx}"] = t.detach().cpu()
+        for layer_idx, t in enumerate(self.cortex_reupload_output_thetas):
+            weights_dict[f"reupload_theta_output_layer_{layer_idx}"] = t.detach().cpu()
+
         torch.save(weights_dict, save_path)
         logger.info(f"Cortex weights saved to {save_path}")
 
@@ -2289,7 +2605,25 @@ class HybridQuantumCortexBrain(ClassicalBrain):
                     raise ValueError(msg)
                 tensor.copy_(weights_dict[key].to(self.device))
 
+            self._load_reupload_thetas(weights_dict)
+
         logger.info(f"Cortex weights loaded from {weights_path}")
+
+    def _load_reupload_thetas(self, weights_dict: dict[str, torch.Tensor]) -> None:
+        """Load re-uploading extra thetas from weights dict (optional keys)."""
+        for i, group_extra in enumerate(self.cortex_reupload_group_thetas):
+            for layer_idx, t in enumerate(group_extra):
+                key = f"reupload_theta_group_{i}_layer_{layer_idx}"
+                if key in weights_dict:
+                    t.copy_(weights_dict[key].to(self.device))
+        for layer_idx, t in enumerate(self.cortex_reupload_hidden_thetas):
+            key = f"reupload_theta_hidden_layer_{layer_idx}"
+            if key in weights_dict:
+                t.copy_(weights_dict[key].to(self.device))
+        for layer_idx, t in enumerate(self.cortex_reupload_output_thetas):
+            key = f"reupload_theta_output_layer_{layer_idx}"
+            if key in weights_dict:
+                t.copy_(weights_dict[key].to(self.device))
 
     def _save_critic_weights(self, session_id: str) -> None:
         """Save critic weights to disk."""
@@ -2395,12 +2729,22 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             new_brain.W_cortex_ho.copy_(self.W_cortex_ho)
             new_brain.theta_cortex_output.copy_(self.theta_cortex_output)
 
+            # Copy re-uploading extra thetas
+            for i, group_extra in enumerate(self.cortex_reupload_group_thetas):
+                for layer_idx, t in enumerate(group_extra):
+                    new_brain.cortex_reupload_group_thetas[i][layer_idx].copy_(t)
+            for layer_idx, t in enumerate(self.cortex_reupload_hidden_thetas):
+                new_brain.cortex_reupload_hidden_thetas[layer_idx].copy_(t)
+            for layer_idx, t in enumerate(self.cortex_reupload_output_thetas):
+                new_brain.cortex_reupload_output_thetas[layer_idx].copy_(t)
+
         # Copy critic state dict
         new_brain.critic.load_state_dict(self.critic.state_dict())
 
         # Copy learning state
         new_brain.baseline = self.baseline
         new_brain._episode_count = self._episode_count
+        new_brain._current_cortex_alpha = self._current_cortex_alpha
         new_brain.reward_running_mean = self.reward_running_mean
         new_brain.reward_running_var = self.reward_running_var
 
