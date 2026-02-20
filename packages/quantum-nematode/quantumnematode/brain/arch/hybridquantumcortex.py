@@ -124,6 +124,7 @@ DEFAULT_PPO_BUFFER_SIZE = 512
 DEFAULT_GAE_LAMBDA = 0.95
 DEFAULT_ENTROPY_COEFF = 0.02
 DEFAULT_MAX_GRAD_NORM = 0.5
+DEFAULT_NUM_CRITIC_EPOCHS = 1
 DEFAULT_CORTEX_HIDDEN_DIM = 64
 DEFAULT_CORTEX_NUM_LAYERS = 2
 
@@ -337,9 +338,21 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
         default=DEFAULT_CRITIC_LR,
         description="Learning rate for classical critic.",
     )
+    critic_lr_independent: bool = Field(
+        default=False,
+        description=(
+            "If True, critic uses a constant LR (critic_lr) independent of cortex LR schedule."
+        ),
+    )
     num_cortex_reinforce_epochs: int = Field(
         default=DEFAULT_NUM_CORTEX_REINFORCE_EPOCHS,
         description="Number of REINFORCE epochs per cortex update.",
+    )
+    num_critic_epochs: int = Field(
+        default=DEFAULT_NUM_CRITIC_EPOCHS,
+        description=(
+            "Number of critic training epochs per update. More epochs help the critic converge."
+        ),
     )
     ppo_buffer_size: int = Field(
         default=DEFAULT_PPO_BUFFER_SIZE,
@@ -986,9 +999,13 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             else self.config.cortex_lr
         )
         initial_critic_lr = (
-            self.cortex_lr_warmup_start
-            if self.cortex_lr_warmup_episodes > 0
-            else self.config.critic_lr
+            self.config.critic_lr
+            if self.config.critic_lr_independent
+            else (
+                self.cortex_lr_warmup_start
+                if self.cortex_lr_warmup_episodes > 0
+                else self.config.critic_lr
+            )
         )
 
         # Cortex optimizer
@@ -2407,32 +2424,38 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         if returns is None:
             return
 
-        # Forward pass through critic
-        predicted = self.critic(states_t).squeeze(-1)
+        num_epochs = max(1, self.config.num_critic_epochs)
+        loss = torch.tensor(0.0)
+        critic_grad_norm = torch.tensor(0.0)
+        for _epoch in range(num_epochs):
+            # Forward pass through critic
+            predicted = self.critic(states_t).squeeze(-1)
 
-        # Huber loss
-        loss = torch.nn.functional.huber_loss(predicted, returns)
+            # Huber loss
+            loss = torch.nn.functional.huber_loss(predicted, returns)
 
-        self.critic_optimizer.zero_grad()
-        loss.backward()
-        critic_grad_norm = torch.nn.utils.clip_grad_norm_(
-            self.critic.parameters(),
-            max_norm=self.config.max_grad_norm,
-        )
-        self.critic_optimizer.step()
+            self.critic_optimizer.zero_grad()
+            loss.backward()
+            critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self.critic.parameters(),
+                max_norm=self.config.max_grad_norm,
+            )
+            self.critic_optimizer.step()
 
-        # Log explained variance and critic diagnostics
+        # Log explained variance and critic diagnostics (after final epoch)
+        with torch.no_grad():
+            predicted_final = self.critic(states_t).squeeze(-1)
         target_var = returns.var()
-        explained_var = (1.0 - (returns - predicted.detach()).var() / (target_var + 1e-8)).item()
+        explained_var = (1.0 - (returns - predicted_final).var() / (target_var + 1e-8)).item()
 
-        pred_det = predicted.detach()
         logger.debug(
             f"HybridQuantumCortex critic: "
             f"value_loss={loss.item():.4f}, "
             f"explained_variance={explained_var:.4f}, "
             f"grad_norm={critic_grad_norm.item():.4f}, "
-            f"predicted_mean={pred_det.mean().item():.4f}, "
-            f"predicted_std={pred_det.std().item():.4f}",
+            f"predicted_mean={predicted_final.mean().item():.4f}, "
+            f"predicted_std={predicted_final.std().item():.4f}, "
+            f"epochs={num_epochs}",
         )
 
     # ──────────────────────────────────────────────────────────────────
@@ -2469,6 +2492,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             decay_end=self.cortex_lr_decay_end,
             cortex_actor_optimizer=self.cortex_optimizer,
             cortex_critic_optimizer=self.critic_optimizer,
+            critic_lr_independent=self.config.critic_lr_independent,
         )
 
     # ──────────────────────────────────────────────────────────────────
