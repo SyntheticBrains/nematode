@@ -1756,18 +1756,19 @@ class TestMultiTimestepIntegration:
             use_local_learning=False,
             learning_rate=0.1,
             num_integration_steps=3,
+            seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
         initial_w_sh = brain.W_sh.clone().detach()
         initial_w_hm = brain.W_hm.clone().detach()
 
-        # Run a short episode with varied rewards
+        # Run a short episode with varied rewards for meaningful advantages
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
-        rewards = [0.1, 2.0, -1.0]
-        for step in range(3):
+        rewards = [0.1, 2.0, -1.0, 3.0, 0.5]
+        for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
-            brain.learn(params, reward=rewards[step], episode_done=(step == 2))
+            brain.learn(params, reward=rewards[step], episode_done=(step == 4))
 
         # Weights should change after surrogate gradient update
         sh_changed = not torch.allclose(brain.W_sh, initial_w_sh, atol=1e-6)
