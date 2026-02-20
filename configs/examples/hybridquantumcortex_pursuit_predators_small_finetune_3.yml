@@ -59,15 +59,17 @@ brain:
     cortex_sensory_modules:
       - food_chemotaxis
       - nociception
-      - mechanosensation
 
     # Cortex REINFORCE+GAE params (active in stage 3)
+    # 1 epoch only — multi-epoch is redundant due to caching (see stage 2b analysis)
     cortex_lr: 0.005
-    critic_lr: 0.0005
-    num_cortex_reinforce_epochs: 2
+    critic_lr: 0.001
+    critic_lr_independent: true
+    num_cortex_reinforce_epochs: 1
+    num_critic_epochs: 3
     ppo_buffer_size: 512
     gae_lambda: 0.95
-    entropy_coeff: 0.02
+    entropy_coeff: 0.10
     max_grad_norm: 0.5
     use_gae_advantages: true
 
@@ -76,6 +78,12 @@ brain:
     cortex_lr_warmup_start: 0.0005
     cortex_lr_decay_episodes: 100
     cortex_lr_decay_end: 0.0005
+
+    # Cortex adaptive alpha scheduling
+    cortex_alpha_start: 0.3
+    cortex_alpha_end: 2.0
+    cortex_alpha_warmup_episodes: 150
+    cortex_alpha_warmup_delay: 30
 
     # Critic MLP params
     critic_hidden_dim: 64

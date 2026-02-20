@@ -50,10 +50,13 @@ brain:
       - food_chemotaxis
       - nociception
 
-    # Cortex REINFORCE+GAE params (more epochs for better learning)
+    # Cortex REINFORCE+GAE params
+    # 1 epoch only — multi-epoch is redundant due to caching (see stage 2b analysis)
     cortex_lr: 0.005
     critic_lr: 0.001
-    num_cortex_reinforce_epochs: 6
+    critic_lr_independent: true
+    num_cortex_reinforce_epochs: 1
+    num_critic_epochs: 3
     ppo_buffer_size: 512
     gae_lambda: 0.95
     entropy_coeff: 0.10
@@ -64,12 +67,12 @@ brain:
     # Cortex LR schedule (warmup + decay)
     cortex_lr_warmup_episodes: 30
     cortex_lr_warmup_start: 0.001
-    cortex_lr_decay_episodes: 200
+    cortex_lr_decay_episodes: 150
     cortex_lr_decay_end: 0.001
 
     # Cortex adaptive alpha scheduling
     # Alpha warmup delayed past LR warmup to avoid double amplification
-    cortex_alpha_start: 0.5
+    cortex_alpha_start: 0.3
     cortex_alpha_end: 2.0
     cortex_alpha_warmup_episodes: 150
     cortex_alpha_warmup_delay: 30
@@ -87,7 +90,7 @@ reward:
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0
-  penalty_starvation: 10.0
+  penalty_starvation: 4.0
   penalty_predator_death: 10.0
   penalty_predator_proximity: 0.05
   stuck_position_threshold: 0
