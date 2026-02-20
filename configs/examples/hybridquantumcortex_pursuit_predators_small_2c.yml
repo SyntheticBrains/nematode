@@ -1,13 +1,18 @@
-# Hybrid Quantum Cortex Brain - Stage 2: QSNN Cortex + Critic Training
-# Loads pre-trained reflex weights (frozen) and trains the QSNN cortex
-# via REINFORCE with critic-provided GAE advantages for multi-objective
-# behaviour (foraging + predator evasion).
+# Hybrid Quantum Cortex Brain - Stage 2c: Cortex with 2 Fast Predators
+# Final step of the graduated cortex curriculum.
+# Trains cortex with 2 faster predators, reduced HP, increased damage.
+# Loads cortex weights from stage 2b (same 2 sensory groups).
 #
-# QSNN reflex params MUST match stage 1 config exactly (6/8/4 neurons,
-# legacy 2-feature mode) so that pre-trained weights load correctly.
-# The cortex QSNN gets its own sensory input via cortex_sensory_modules.
+# Key difficulty increases from 2b:
+#   - 2 predators (up from 1)
+#   - Speed 0.5 (up from 0.3)
+#   - max_hp 100 (down from 200)
+#   - predator_damage 20 (up from 15)
+#   - detection_radius 6 (up from 5)
 #
-# To use: update reflex_weights_path to point to your stage 1 weights file.
+# Curriculum: 2a (foraging) → 2b (1 predator, easy) → 2c (2 predators, full)
+#
+# To use: update reflex_weights_path and cortex_weights_path to your files.
 
 max_steps: 500
 brain:
@@ -17,8 +22,11 @@ brain:
     training_stage: 2
 
     # Path to pre-trained reflex weights from stage 1
-    # Update this path to your actual stage 1 output
     reflex_weights_path: artifacts/models/20260218_131409/reflex_weights.pt
+
+    # Path to pre-trained cortex weights from stage 2b (best session: 98.0%, composite 0.841)
+    # Same sensory groups (food_chemotaxis + nociception), so weights are compatible
+    cortex_weights_path: artifacts/models/20260220_014914/cortex_weights.pt
 
     # QSNN reflex params (must match stage 1 config exactly)
     num_sensory_neurons: 6
@@ -42,28 +50,37 @@ brain:
     cortex_shots: 100
     num_modes: 3
 
-    # Cortex sensory modules (3 modalities, 6 features total)
+    # Cortex sensory modules (same as 2b for weight compatibility)
     cortex_sensory_modules:
       - food_chemotaxis
       - nociception
-      - mechanosensation
 
     # Cortex REINFORCE+GAE params
-    cortex_lr: 0.01
+    # 1 epoch only — multi-epoch is redundant due to caching (see stage 2b analysis)
+    cortex_lr: 0.005
     critic_lr: 0.001
-    num_cortex_reinforce_epochs: 2
+    critic_lr_independent: true
+    num_cortex_reinforce_epochs: 1
+    num_critic_epochs: 3
     ppo_buffer_size: 512
     gae_lambda: 0.95
-    entropy_coeff: 0.02
+    entropy_coeff: 0.10
     max_grad_norm: 0.5
     use_gae_advantages: true
     gamma: 0.99
 
     # Cortex LR schedule (warmup + decay)
-    cortex_lr_warmup_episodes: 50
+    cortex_lr_warmup_episodes: 30
     cortex_lr_warmup_start: 0.001
-    cortex_lr_decay_episodes: 200
+    cortex_lr_decay_episodes: 150
     cortex_lr_decay_end: 0.001
+
+    # Cortex adaptive alpha scheduling
+    # Alpha warmup delayed past LR warmup to avoid double amplification
+    cortex_alpha_start: 0.3
+    cortex_alpha_end: 2.0
+    cortex_alpha_warmup_episodes: 150
+    cortex_alpha_warmup_delay: 30
 
     # Critic MLP params
     critic_hidden_dim: 64
@@ -78,12 +95,12 @@ reward:
   penalty_step: 0.005
   penalty_anti_dithering: 0.02
   penalty_stuck_position: 0
-  penalty_starvation: 10.0
+  penalty_starvation: 4.0
   penalty_predator_death: 10.0
-  penalty_predator_proximity: 0.15
+  penalty_predator_proximity: 0.05
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
-  penalty_health_damage: 0.5
+  penalty_health_damage: 0.3
   reward_health_gain: 0.1
 
 satiety:
