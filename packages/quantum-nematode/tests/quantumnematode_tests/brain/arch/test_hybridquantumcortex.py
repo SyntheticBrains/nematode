@@ -335,8 +335,9 @@ class TestActionSelection:
 class TestStageAwareTraining:
     """Test that correct components train per stage."""
 
-    def test_stage1_reflex_trains(self):
+    def test_stage1_reflex_trains(self, tmp_path, monkeypatch):
         """Test reflex weights change during stage 1 REINFORCE training."""
+        monkeypatch.chdir(tmp_path)
         config = _stage1_config(reinforce_window_size=5)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -350,8 +351,9 @@ class TestStageAwareTraining:
         w_sh_after = brain.W_sh.clone().detach()
         assert not torch.allclose(w_sh_before, w_sh_after)
 
-    def test_stage2_reflex_frozen(self):
+    def test_stage2_reflex_frozen(self, tmp_path, monkeypatch):
         """Test reflex weights remain unchanged during stage 2."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -365,8 +367,9 @@ class TestStageAwareTraining:
         w_sh_after = brain.W_sh.clone().detach()
         torch.testing.assert_close(w_sh_before, w_sh_after)
 
-    def test_stage3_all_train(self):
+    def test_stage3_all_train(self, tmp_path, monkeypatch):
         """Test both reflex and cortex weights change in stage 3."""
+        monkeypatch.chdir(tmp_path)
         config = HybridQuantumCortexBrainConfig(
             training_stage=3,
             shots=100,
@@ -530,8 +533,9 @@ class TestWeightPersistence:
 class TestReinforceGAE:
     """Test cortex REINFORCE+GAE training."""
 
-    def test_cortex_reinforce_runs_without_error(self):
+    def test_cortex_reinforce_runs_without_error(self, tmp_path, monkeypatch):
         """Test cortex REINFORCE+GAE update completes without error."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -540,8 +544,9 @@ class TestReinforceGAE:
             brain.run_brain(params, top_only=False, top_randomize=False)
             brain.learn(params, reward=0.5, episode_done=(i == 5))
 
-    def test_gae_fallback_to_pure_reinforce(self):
+    def test_gae_fallback_to_pure_reinforce(self, tmp_path, monkeypatch):
         """Test fallback to pure REINFORCE when use_gae_advantages=false."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(use_gae_advantages=False)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -675,8 +680,9 @@ class TestBrainCopy:
 class TestSmokeTest:
     """Smoke test: full end-to-end training session."""
 
-    def test_stage1_3_episode_session(self):
+    def test_stage1_3_episode_session(self, tmp_path, monkeypatch):
         """Run a 3-episode stage 1 training session end-to-end."""
+        monkeypatch.chdir(tmp_path)
         config = _stage1_config(
             reinforce_window_size=10,
             num_reinforce_epochs=1,
@@ -700,8 +706,9 @@ class TestSmokeTest:
 
         assert brain._episode_count == 3
 
-    def test_stage2_3_episode_session(self):
+    def test_stage2_3_episode_session(self, tmp_path, monkeypatch):
         """Run a 3-episode stage 2 training session end-to-end."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(
             num_cortex_reinforce_epochs=1,
         )
@@ -732,8 +739,9 @@ class TestSmokeTest:
 class TestStage2CortexLearns:
     """Verify cortex weights actually change during stage 2 training."""
 
-    def test_cortex_weights_change_during_stage2(self):
+    def test_cortex_weights_change_during_stage2(self, tmp_path, monkeypatch):
         """Test cortex group weights change after a training update."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(ppo_buffer_size=5)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -759,8 +767,9 @@ class TestStage2CortexLearns:
 
         assert any_changed, "No cortex weights changed during stage 2 training"
 
-    def test_critic_weights_change_during_stage2(self):
+    def test_critic_weights_change_during_stage2(self, tmp_path, monkeypatch):
         """Test critic MLP weights change after a training update."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(ppo_buffer_size=5)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -786,8 +795,9 @@ class TestStage2CortexLearns:
 class TestCortexLRScheduling:
     """Test cortex LR scheduling integration."""
 
-    def test_warmup_increases_lr(self):
+    def test_warmup_increases_lr(self, tmp_path, monkeypatch):
         """Test LR increases during warmup phase."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(
             cortex_lr=0.01,
             cortex_lr_warmup_episodes=10,
@@ -816,8 +826,9 @@ class TestCortexLRScheduling:
             f"LR should increase during warmup: {lr_after_ep1} -> {lr_after_ep3}"
         )
 
-    def test_no_scheduling_when_disabled(self):
+    def test_no_scheduling_when_disabled(self, tmp_path, monkeypatch):
         """Test LR stays constant when scheduling is disabled."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(
             cortex_lr=0.01,
             cortex_lr_warmup_episodes=0,
@@ -943,8 +954,9 @@ class TestRefractoryReset:
         assert np.all(brain.cortex_refractory_hidden == 0)
         assert np.all(brain.cortex_refractory_output == 0)
 
-    def test_cortex_refractory_reset_between_reinforce_epochs(self):
+    def test_cortex_refractory_reset_between_reinforce_epochs(self, tmp_path, monkeypatch):
         """Test cortex refractory is reset between REINFORCE training epochs."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(ppo_buffer_size=5, num_cortex_reinforce_epochs=2)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
         params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
@@ -968,8 +980,9 @@ class TestRefractoryReset:
 class TestMultiEpochCaching:
     """Test multi-epoch quantum caching for cortex REINFORCE."""
 
-    def test_multi_epoch_produces_same_result_as_single(self):
+    def test_multi_epoch_produces_same_result_as_single(self, tmp_path, monkeypatch):
         """Test 2-epoch training runs without error and updates weights."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(
             ppo_buffer_size=5,
             num_cortex_reinforce_epochs=2,
@@ -987,8 +1000,9 @@ class TestMultiEpochCaching:
         w_after = brain.W_cortex_sh.clone().detach()
         assert not torch.allclose(w_before, w_after)
 
-    def test_single_epoch_skips_caching(self):
+    def test_single_epoch_skips_caching(self, tmp_path, monkeypatch):
         """Test single epoch mode doesn't use caching path."""
+        monkeypatch.chdir(tmp_path)
         config = _stage2_config(
             ppo_buffer_size=5,
             num_cortex_reinforce_epochs=1,
