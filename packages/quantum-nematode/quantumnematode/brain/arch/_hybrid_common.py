@@ -403,8 +403,13 @@ def update_cortex_learning_rates(  # noqa: PLR0913
     decay_end: float,
     cortex_actor_optimizer: torch.optim.Optimizer,
     cortex_critic_optimizer: torch.optim.Optimizer,
+    critic_lr_independent: bool = False,
 ) -> None:
-    """Update cortex optimizer learning rates based on current schedule."""
+    """Update cortex optimizer learning rates based on current schedule.
+
+    If critic_lr_independent is True, only the actor optimizer is updated;
+    the critic keeps its own fixed learning rate.
+    """
     if not scheduling_enabled:
         return
 
@@ -419,8 +424,9 @@ def update_cortex_learning_rates(  # noqa: PLR0913
     )
     for param_group in cortex_actor_optimizer.param_groups:
         param_group["lr"] = new_lr
-    for param_group in cortex_critic_optimizer.param_groups:
-        param_group["lr"] = new_lr
+    if not critic_lr_independent:
+        for param_group in cortex_critic_optimizer.param_groups:
+            param_group["lr"] = new_lr
 
 
 # ──────────────────────────────────────────────────────────────────────
