@@ -17,9 +17,9 @@ brain:
     training_stage: 3
 
     # Paths to pre-trained weights
-    reflex_weights_path: artifacts/models/stage1/reflex_weights.pt
-    cortex_weights_path: artifacts/models/stage2/cortex_weights.pt
-    critic_weights_path: artifacts/models/stage2/critic_weights.pt
+    reflex_weights_path: artifacts/models/20260218_131409/reflex_weights.pt
+    cortex_weights_path: artifacts/models/20260220_101543/cortex_weights.pt
+    critic_weights_path: artifacts/models/20260220_101543/critic_weights.pt
 
     # QSNN reflex params (must match stage 1 config exactly)
     num_sensory_neurons: 6
