@@ -32,14 +32,14 @@ Choose from 12 brain architectures spanning quantum, classical, hybrid, and biol
 - **QVarCircuitBrain** (qvarcircuit): Quantum variational circuit with modular sensory processing and parameter-shift rule gradients
 - **QRCBrain** (qrc): Quantum reservoir computing with data re-uploading circuits and classical readout
 - **QSNNReinforceBrain** (qsnnreinforce): Quantum spiking neural network (QLIF neurons) with surrogate gradient REINFORCE
-- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training (experimental — architecturally incompatible)
+- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training (experimental — [architecturally incompatible](docs/experiments/logbooks/supporting/008/qsnnppo-optimization.md))
 - **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
 
 **Hybrid (Quantum + Classical):**
 
-- **HybridQuantumBrain** (hybridquantum): QSNN reflex + classical cortex MLP + classical critic with mode-gated fusion and 3-stage curriculum (96.9% on pursuit predators)
-- **HybridClassicalBrain** (hybridclassical): Classical ablation control for HybridQuantum — replaces QSNN reflex with small classical MLP (96.3% on pursuit predators)
-- **HybridQuantumCortexBrain** (hybridquantumcortex): QSNN reflex + QSNN cortex (grouped sensory QLIF) + classical critic with 4-stage curriculum (halted — 40.9% on 2-predator)
+- **HybridQuantumBrain** (hybridquantum): QSNN reflex + classical cortex MLP + classical critic with mode-gated fusion and 3-stage curriculum ([96.9%](docs/experiments/logbooks/supporting/008/hybridquantum-optimization.md) on pursuit predators)
+- **HybridClassicalBrain** (hybridclassical): Classical ablation control for HybridQuantum — replaces QSNN reflex with small classical MLP ([96.3%](docs/experiments/logbooks/supporting/008/hybridclassical-ablation.md) on pursuit predators)
+- **HybridQuantumCortexBrain** (hybridquantumcortex): QSNN reflex + QSNN cortex (grouped sensory QLIF) + classical critic with 4-stage curriculum ([halted](docs/experiments/logbooks/supporting/008/hybridquantumcortex-optimization.md) — [40.9%](docs/experiments/logbooks/supporting/008/hybridquantumcortex-optimization.md) on 2-predator)
 
 **Classical:**
 
@@ -50,6 +50,8 @@ Choose from 12 brain architectures spanning quantum, classical, hybrid, and biol
 **Biologically-Inspired:**
 
 - **SpikingReinforceBrain** (spikingreinforce): Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
+
+For full architecture comparison and benchmarks, see [quantum-architectures.md](docs/research/quantum-architectures.md) and [logbook 008](docs/experiments/logbooks/008-quantum-brain-evaluation.md).
 
 Select the brain architecture when running simulations:
 
