@@ -110,14 +110,31 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports multiple brain architectures:
+The project supports 12 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
-1. **ModularBrain**: Quantum variational circuit with modular design
-2. **QModularBrain**: Hybrid quantum-classical Q-learning
-3. **MLPBrain**: Classical MLP with policy gradients (REINFORCE)
-4. **PPOBrain**: Classical actor-critic with Proximal Policy Optimization
-5. **QMLPBrain**: Classical MLP with Q-learning
-6. **SpikingBrain**: Biologically realistic spiking neural network
+**Quantum:**
+
+1. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
+2. **QQLearningBrain** (`qqlearning`): Quantum Q-learning with variational circuits
+3. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
+4. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
+5. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
+
+**Hybrid (quantum + classical):**
+
+6. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture (96.9% on pursuit predators)
+7. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
+8. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
+
+**Classical:**
+
+09. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
+10. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
+11. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
+
+**Biologically-Inspired:**
+
+12. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
 
 Each brain architecture follows a common interface defined in `quantumnematode.brain.arch`.
 
@@ -164,21 +181,21 @@ Benchmark ranges are defined in `packages/quantum-nematode/tests/quantumnematode
 ##### Testing with Dynamic Foraging Environment
 
 ```bash
-# Quick test with small dynamic environment
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/qvarcircuit_foraging_small.yml --theme emoji
+# Best quantum brain (hybrid quantum)
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/hybridquantum_foraging_small.yml --theme emoji
 
-# Full test with medium environment
-uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/qvarcircuit_foraging_medium.yml --theme emoji
+# Best classical brain (MLP PPO)
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/mlpppo_foraging_small.yml --theme emoji
 ```
 
 ##### Testing with Predators in Dynamic Foraging Environment
 
 ```bash
-# Quick test with small dynamic environment and predators
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/qvarcircuit_predators_small.yml --theme emoji
+# Hybrid quantum on predator evasion
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/hybridquantum_pursuit_predators_small.yml --theme emoji
 
-# Full test with medium environment and predators
-uv run ./scripts/run_simulation.py --runs 50 --config ./configs/examples/qvarcircuit_predators_medium.yml --theme emoji
+# Spiking brain on predator evasion
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/examples/spikingreinforce_predators_small.yml --theme emoji
 ```
 
 ### Experiment Tracking and Benchmarks
@@ -340,7 +357,13 @@ docs/experiments/
 │   └── experiment.md            # Template for new logbooks
 └── logbooks/
     ├── 001-quantum-predator-optimization.md
-    └── 002-evolutionary-parameter-search.md
+    ├── 002-evolutionary-parameter-search.md
+    ├── 003-spiking-brain-optimization.md
+    ├── ...
+    ├── 008-quantum-brain-evaluation.md
+    └── supporting/              # Detailed appendix data per logbook
+        ├── 003/
+        └── 008/
 ```
 
 **Key distinction from auto-tracking:**
@@ -570,7 +593,6 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 
    - Multi-agent cooperative foraging
    - Competitive foraging scenarios
-   - Predator-prey dynamics
    - Continuous action spaces
 
 2. **Monitoring and Logging**
