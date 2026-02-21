@@ -1293,7 +1293,7 @@ Based on 200+ experiment sessions across 62 days of evaluation, combined with th
 │  │  Structured Quantum Reservoir (FIXED, not trained)   │   │
 │  │                                                      │   │
 │  │  8-12 qubits with C. elegans-inspired topology:      │   │
-│  │  - Gap junctions → CNOT connectivity                 │   │
+│  │  - Gap junctions → CZ connectivity (symmetric)       │   │
 │  │  - Chemical synapses → fixed RY/RZ rotations         │   │
 │  │  - Hub-and-spoke matching interneuron connectivity   │   │
 │  │                                                      │   │
@@ -1333,7 +1333,7 @@ Based on 200+ experiment sessions across 62 days of evaluation, combined with th
 
 #### Key Design Decisions
 
-1. **Reservoir circuit topology**: Use C. elegans sensory-interneuron connectivity as template. Gap junctions → CNOT gates (bidirectional coupling), chemical synapses → parameterized RY/RZ with angles derived from synapse strength ratios
+1. **Reservoir circuit topology**: Use C. elegans sensory-interneuron connectivity as template. Gap junctions → CZ gates (symmetric bidirectional coupling, matching gap junction symmetry), chemical synapses → parameterized RY/RZ with angles derived from synapse strength ratios
 2. **Feature extraction**: Per-qubit Z-expectations + pairwise ZZ-correlations (richer than full probability distribution, scales as O(N²) not O(2^N))
 3. **Readout**: MLP (2 hidden layers, 64 units) trained with PPO — uses proven classical training pipeline
 4. **Reservoir size**: 8-12 qubits matching sensory neuron count in the simulation
@@ -1503,7 +1503,7 @@ Per SQS neuron (2-3 qubits):
 #### Key Design Decisions
 
 1. **Entanglement topology**: Start with linear nearest-neighbor CNOT chain (hardware-friendly). Compare against all-to-all and C. elegans-inspired connectivity
-2. **qtDNN architecture**: MLP (N_params → 64 → 64 → N_params) trained to predict parameter-shift gradients. Calibrated every 50 episodes against true PSR gradients
+2. **qtDNN architecture**: MLP (N_params → 64 → 64 → N_params) trained to predict parameter-shift gradients. Calibrated every 50 episodes against true PSR gradients. **Note**: The original hDQNN-TD3 paper uses 2^(N+1) neurons (exponential in qubit count) for high-fidelity approximation. Our fixed-width architecture is a deliberate cost reduction — the decision gate's 0.5 correlation threshold (see below) serves as the empirical validation for whether this simplification retains sufficient gradient quality
 3. **Circuit depth**: Start shallow — 2 layers of `[RY(data) → CNOT(pairs) → RX(leak) → RZ(phase)]`. Data re-uploading between layers
 4. **Measurement strategy**: Measure all qubits (spike probabilities). Correlations between measured qubits encode entanglement effects
 
@@ -1835,7 +1835,7 @@ ______________________________________________________________________
     - Llodrà, G., Mujal, P., Zambrini, R., & Giorgi, G. L. (2025). "Quantum reservoir computing in atomic lattices." *Chaos, Solitons & Fractals*, 195, 116289. arXiv:2411.13401.
     - Ivaki, M. N., Lazarides, A., & Ala-Nissila, T. (2025). "Quantum reservoir computing on random regular graphs." *Physical Review A*, 112, 012622. arXiv:2409.03665.
     - Zhu, S., et al. (2025). "Minimalistic and scalable quantum reservoir computing enhanced with feedback." *npj Quantum Information*. DOI: 10.1038/s41534-025-01144-4.
-    - Martínez-Peña, R., et al. (2024). "Role of coherence in many-body quantum reservoir computing." *Communications Physics*, 7, 365. DOI: 10.1038/s42005-024-01859-4.
+    - Martínez-Peña, R., et al. (2024). "Role of coherence in many-body quantum reservoir computing." *Communications Physics*, 7, 369. DOI: 10.1038/s42005-024-01859-4.
 
 ### Frameworks
 
@@ -1862,7 +1862,7 @@ ______________________________________________________________________
 11. **Structured reservoir viability**: Can structured quantum reservoirs with C. elegans-inspired topology provide richer feature spaces than classical random features? If so, does the quantum feature space encode information that a classical feature extractor cannot?
 12. **Multi-qubit quantum memory**: Do multi-qubit SQS neurons with quantum memory (entanglement preserved across timesteps) provide measurably different computational capabilities than classical spiking neurons with standard recurrence?
 13. **qtDNN gradient approximation**: Can a classical tangential DNN (qtDNN) approximate entangled quantum circuit gradients accurately enough (correlation > 0.5 with true parameter-shift) to enable training circuits that would otherwise exhibit barren plateaus?
-14. **Trainability-advantage sweet spot**: Is the barren plateau-advantage dilemma a fundamental barrier, or can biological network topology constraints (sparse connectivity, small-world structure, modular organisation) provide a "sweet spot" of trainability + advantage that random architectures cannot access?
+14. **Trainability-advantage sweet spot**: Is the barren plateau-advantage dilemma a fundamental barrier, or can biological network topology constraints (sparse connectivity, small-world structure, modular organization) provide a "sweet spot" of trainability + advantage that random architectures cannot access?
 
 ### Proposed Next Steps: Bridging the Trainability-Advantage Gap
 
