@@ -12,17 +12,17 @@ repos:
       - id: mdformat
         args: [--number]
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.20.0
+    rev: v0.21.0
     hooks:
       - id: markdownlint-cli2
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.15.2
     hooks:
       - id: ruff-check
         args: [ --fix ]
       - id: ruff-format
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.405
+    rev: v1.1.408
     hooks:
       - id: pyright
         entry: uv run pyright
