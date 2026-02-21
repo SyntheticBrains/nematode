@@ -56,10 +56,10 @@ For full architecture comparison and benchmarks, see [quantum-architectures.md](
 Select the brain architecture when running simulations:
 
 ```bash
-python scripts/run_simulation.py --brain hybridquantum     # Best quantum (96.9% pursuit predators)
-python scripts/run_simulation.py --brain mlpppo            # Best classical (PPO actor-critic)
-python scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic (LIF spiking)
-python scripts/run_simulation.py --brain qvarcircuit       # Quantum variational circuit
+uv run ./scripts/run_simulation.py --brain hybridquantum     # Best quantum (96.9% pursuit predators)
+uv run ./scripts/run_simulation.py --brain mlpppo            # Best classical (PPO actor-critic)
+uv run ./scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic (LIF spiking)
+uv run ./scripts/run_simulation.py --brain qvarcircuit       # Quantum variational circuit
 ```
 
 ## 🚀 Quick Start
