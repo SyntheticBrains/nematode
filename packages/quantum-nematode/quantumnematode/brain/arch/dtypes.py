@@ -23,6 +23,7 @@ class BrainType(Enum):
     QSNN_PPO = "qsnnppo"
     HYBRID_QUANTUM = "hybridquantum"
     HYBRID_CLASSICAL = "hybridclassical"
+    HYBRID_QUANTUM_CORTEX = "hybridquantumcortex"
     MLP_REINFORCE = "mlpreinforce"
     MLP_DQN = "mlpdqn"
     MLP_PPO = "mlpppo"
@@ -69,6 +70,7 @@ BRAIN_TYPES = Literal[
     BrainType.QSNN_PPO,
     BrainType.HYBRID_QUANTUM,
     BrainType.HYBRID_CLASSICAL,
+    BrainType.HYBRID_QUANTUM_CORTEX,
     BrainType.MLP_REINFORCE,
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
@@ -88,6 +90,7 @@ QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QSNN_REINFORCE,
     BrainType.QSNN_PPO,
     BrainType.HYBRID_QUANTUM,
+    BrainType.HYBRID_QUANTUM_CORTEX,
     BrainType.QSNN,
     BrainType.MODULAR,
     BrainType.QMODULAR,

@@ -1,6 +1,6 @@
 # 008 Appendix: QSNNReinforce A2C Optimization History
 
-This appendix documents the QSNNReinforce A2C evaluation across 4 rounds (16 sessions, 3,200 episodes). For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For QSNN standalone predator history, see [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md). For QSNN-PPO history, see [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md).
+This appendix documents the QSNNReinforce A2C evaluation across 4 rounds (16 sessions, 3,200 episodes). For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For QSNN standalone predator history, see [qsnn-predator-optimization.md](qsnn-predator-optimization.md). For QSNN-PPO history, see [qsnnppo-optimization.md](qsnnppo-optimization.md).
 
 ______________________________________________________________________
 

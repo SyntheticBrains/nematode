@@ -1,6 +1,6 @@
 # 008 Appendix: QSNN Optimization History
 
-This appendix documents the QSNN optimization journey from 0% to 73.9% success on foraging. For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For predator optimization history, see [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md).
+This appendix documents the QSNN optimization journey from 0% to 73.9% success on foraging. For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For predator optimization history, see [qsnn-predator-optimization.md](qsnn-predator-optimization.md).
 
 ______________________________________________________________________
 

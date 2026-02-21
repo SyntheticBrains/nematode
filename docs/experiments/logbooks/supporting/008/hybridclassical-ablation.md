@@ -1,6 +1,6 @@
 # 008 Appendix: HybridClassical Ablation — QSNN Contribution Analysis
 
-This appendix documents the HybridClassical ablation experiment: a classical control for the HybridQuantum brain that replaces the QSNN quantum reflex (92 params) with a small classical MLP reflex (~116 params), keeping everything else identical. The purpose is to isolate the QSNN's contribution to HybridQuantum's 96.9% post-convergence on pursuit predators. For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../research/quantum-architectures.md).
+This appendix documents the HybridClassical ablation experiment: a classical control for the HybridQuantum brain that replaces the QSNN quantum reflex (92 params) with a small classical MLP reflex (~116 params), keeping everything else identical. The purpose is to isolate the QSNN's contribution to HybridQuantum's 96.9% post-convergence on pursuit predators. For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../../../research/quantum-architectures.md).
 
 ______________________________________________________________________
 

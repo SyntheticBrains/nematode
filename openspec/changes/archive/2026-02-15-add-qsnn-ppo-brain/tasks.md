@@ -98,6 +98,6 @@
 - [x] 8.1 Run initial QSNN-PPO sessions on pursuit predators config (PPO-0: 4 sessions, 200 episodes each)
 - [x] 8.2 Analyse results and compare against QSNN Reinforce baseline (4 rounds, 16 sessions total)
 - [x] 8.3 Tune hyperparameters based on training metrics (PPO-1 through PPO-3: cross-ep buffer, entropy decay, theta init)
-- [x] 8.4 Update logbook with QSNN-PPO results (008-quantum-brain-evaluation.md + 008-appendix-qsnnppo-optimization.md)
+- [x] 8.4 Update logbook with QSNN-PPO results (008-quantum-brain-evaluation.md + supporting/008/qsnnppo-optimization.md)
 
 **Outcome**: HALTED after 4 rounds. PPO fundamentally incompatible with surrogate gradient spiking networks (policy_loss=0 in 100% of updates). Development pivoted to QSNNReinforce A2C.

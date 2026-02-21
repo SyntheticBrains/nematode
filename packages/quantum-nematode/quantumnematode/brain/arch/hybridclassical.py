@@ -40,10 +40,8 @@ or does the hybrid architecture + curriculum explain the performance gains?"
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -53,18 +51,31 @@ from torch import nn
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._hybrid_common import (
+    _CortexRolloutBuffer,
+    _ReinforceUpdateStats,
+    adaptive_entropy_coef,
+    cortex_forward,
+    cortex_value,
+    exploration_schedule,
+    fuse,
+    get_cortex_lr,
+    init_cortex_mlps,
+    load_cortex_weights,
+    normalize_reward,
+    perform_ppo_update,
+    preprocess_legacy,
+    save_cortex_weights,
+    update_cortex_learning_rates,
+)
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 # ──────────────────────────────────────────────────────────────────────
 # Defaults
@@ -347,122 +358,6 @@ class HybridClassicalBrainConfig(BrainConfig):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Internal data structures
-# ──────────────────────────────────────────────────────────────────────
-
-
-@dataclass
-class _ReinforceUpdateStats:
-    """Bundled statistics for REINFORCE optimizer step logging."""
-
-    raw_mean: float
-    returns_tensor: torch.Tensor
-    epoch: int
-    num_epochs: int
-
-
-class _CortexRolloutBuffer:
-    """Rollout buffer for cortex PPO training."""
-
-    def __init__(
-        self,
-        buffer_size: int,
-        device: torch.device,
-        rng: np.random.Generator | None = None,
-    ) -> None:
-        self.buffer_size = buffer_size
-        self.device = device
-        self.rng = rng if rng is not None else np.random.default_rng()
-        self.reset()
-
-    def reset(self) -> None:
-        self.states: list[np.ndarray] = []
-        self.actions: list[int] = []
-        self.log_probs: list[torch.Tensor] = []
-        self.values: list[torch.Tensor] = []
-        self.rewards: list[float] = []
-        self.dones: list[bool] = []
-        self.position = 0
-
-    def add(  # noqa: PLR0913
-        self,
-        state: np.ndarray,
-        action: int,
-        log_prob: torch.Tensor,
-        value: torch.Tensor,
-        reward: float,
-        done: bool,  # noqa: FBT001
-    ) -> None:
-        self.states.append(state)
-        self.actions.append(action)
-        self.log_probs.append(log_prob.detach())
-        self.values.append(value.detach())
-        self.rewards.append(reward)
-        self.dones.append(done)
-        self.position += 1
-
-    def is_full(self) -> bool:
-        return self.position >= self.buffer_size
-
-    def __len__(self) -> int:
-        return self.position
-
-    def compute_returns_and_advantages(
-        self,
-        last_value: torch.Tensor,
-        gamma: float,
-        gae_lambda: float,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        advantages = torch.zeros(len(self), device=self.device)
-        last_gae = 0.0
-        values = torch.stack(self.values).reshape(-1)
-
-        for t in reversed(range(len(self))):
-            if t == len(self) - 1:
-                next_value = last_value.item()
-                next_non_terminal = 1.0 - float(self.dones[t])
-            else:
-                next_value = values[t + 1].item()
-                next_non_terminal = 1.0 - float(self.dones[t])
-
-            delta = self.rewards[t] + gamma * next_value * next_non_terminal - values[t].item()
-            advantages[t] = last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
-
-        returns = advantages + values
-        return returns, advantages
-
-    def get_minibatches(
-        self,
-        num_minibatches: int,
-        returns: torch.Tensor,
-        advantages: torch.Tensor,
-    ) -> Iterator[dict[str, torch.Tensor]]:
-        batch_size = len(self)
-        minibatch_size = batch_size // num_minibatches
-
-        states = torch.tensor(np.array(self.states), dtype=torch.float32, device=self.device)
-        actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
-        old_log_probs = torch.stack(self.log_probs)
-
-        if len(advantages) > 1:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        indices_np = self.rng.permutation(batch_size)
-        indices = torch.tensor(indices_np, device=self.device)
-
-        for start in range(0, batch_size, minibatch_size):
-            end = start + minibatch_size
-            mb_indices = indices[start:end]
-            yield {
-                "states": states[mb_indices],
-                "actions": actions[mb_indices],
-                "old_log_probs": old_log_probs[mb_indices],
-                "returns": returns[mb_indices],
-                "advantages": advantages[mb_indices],
-            }
-
-
-# ──────────────────────────────────────────────────────────────────────
 # Brain Implementation
 # ──────────────────────────────────────────────────────────────────────
 
@@ -624,43 +519,14 @@ class HybridClassicalBrain(ClassicalBrain):
 
     def _init_cortex(self) -> None:
         """Initialize cortex actor and critic MLPs."""
-        cortex_output_dim = self.num_motor + self.num_modes  # action biases + mode logits
-
-        # Actor: sensory -> hidden -> (action_biases + mode_logits)
-        actor_layers: list[nn.Module] = [
-            nn.Linear(self.input_dim, self.config.cortex_hidden_dim),
-            nn.ReLU(),
-        ]
-        for _ in range(self.config.cortex_num_layers - 1):
-            actor_layers += [
-                nn.Linear(self.config.cortex_hidden_dim, self.config.cortex_hidden_dim),
-                nn.ReLU(),
-            ]
-        actor_layers.append(nn.Linear(self.config.cortex_hidden_dim, cortex_output_dim))
-        self.cortex_actor = nn.Sequential(*actor_layers).to(self.device)
-
-        # Critic: sensory -> hidden -> V(s)
-        critic_layers: list[nn.Module] = [
-            nn.Linear(self.input_dim, self.config.cortex_hidden_dim),
-            nn.ReLU(),
-        ]
-        for _ in range(self.config.cortex_num_layers - 1):
-            critic_layers += [
-                nn.Linear(self.config.cortex_hidden_dim, self.config.cortex_hidden_dim),
-                nn.ReLU(),
-            ]
-        critic_layers.append(nn.Linear(self.config.cortex_hidden_dim, 1))
-        self.cortex_critic = nn.Sequential(*critic_layers).to(self.device)
-
-        # Orthogonal initialization
-        def init_weights(module: nn.Module) -> None:
-            if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
-                if module.bias is not None:
-                    nn.init.constant_(module.bias, 0.0)
-
-        self.cortex_actor.apply(init_weights)
-        self.cortex_critic.apply(init_weights)
+        self.cortex_actor, self.cortex_critic = init_cortex_mlps(
+            input_dim=self.input_dim,
+            cortex_hidden_dim=self.config.cortex_hidden_dim,
+            cortex_num_layers=self.config.cortex_num_layers,
+            num_motor=self.num_motor,
+            num_modes=self.num_modes,
+            device=self.device,
+        )
 
     def _init_optimizers(self) -> None:
         """Initialize separate optimizers for reflex and cortex."""
@@ -735,43 +601,29 @@ class HybridClassicalBrain(ClassicalBrain):
 
     def _get_cortex_lr(self) -> float:
         """Get the current cortex learning rate based on episode count."""
-        if not self.cortex_lr_scheduling_enabled:
-            return self.cortex_base_lr
-
-        episode = self._episode_count
-
-        # Warmup phase
-        if episode < self.cortex_lr_warmup_episodes:
-            progress = episode / self.cortex_lr_warmup_episodes
-            return (
-                self.cortex_lr_warmup_start
-                + (self.cortex_base_lr - self.cortex_lr_warmup_start) * progress
-            )
-
-        # Decay phase (if enabled)
-        if self.cortex_lr_decay_episodes is not None:
-            decay_start_episode = self.cortex_lr_warmup_episodes
-            decay_episode = episode - decay_start_episode
-            if decay_episode < self.cortex_lr_decay_episodes:
-                progress = decay_episode / self.cortex_lr_decay_episodes
-                return (
-                    self.cortex_base_lr
-                    + (self.cortex_lr_decay_end - self.cortex_base_lr) * progress
-                )
-            return self.cortex_lr_decay_end
-
-        return self.cortex_base_lr
+        return get_cortex_lr(
+            scheduling_enabled=self.cortex_lr_scheduling_enabled,
+            episode_count=self._episode_count,
+            base_lr=self.cortex_base_lr,
+            warmup_episodes=self.cortex_lr_warmup_episodes,
+            warmup_start=self.cortex_lr_warmup_start,
+            decay_episodes=self.cortex_lr_decay_episodes,
+            decay_end=self.cortex_lr_decay_end,
+        )
 
     def _update_cortex_learning_rate(self) -> None:
         """Update cortex optimizer learning rates based on current schedule."""
-        if not self.cortex_lr_scheduling_enabled:
-            return
-
-        new_lr = self._get_cortex_lr()
-        for param_group in self.cortex_actor_optimizer.param_groups:
-            param_group["lr"] = new_lr
-        for param_group in self.cortex_critic_optimizer.param_groups:
-            param_group["lr"] = new_lr
+        update_cortex_learning_rates(
+            scheduling_enabled=self.cortex_lr_scheduling_enabled,
+            episode_count=self._episode_count,
+            base_lr=self.cortex_base_lr,
+            warmup_episodes=self.cortex_lr_warmup_episodes,
+            warmup_start=self.cortex_lr_warmup_start,
+            decay_episodes=self.cortex_lr_decay_episodes,
+            decay_end=self.cortex_lr_decay_end,
+            cortex_actor_optimizer=self.cortex_actor_optimizer,
+            cortex_critic_optimizer=self.cortex_critic_optimizer,
+        )
 
     def _init_episode_state(self) -> None:
         """Initialize REINFORCE episode tracking state."""
@@ -814,14 +666,11 @@ class HybridClassicalBrain(ClassicalBrain):
 
     def _cortex_forward(self, sensory_input: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Run cortex actor forward pass, returning action biases and mode logits."""
-        cortex_out = self.cortex_actor(sensory_input)
-        action_biases = cortex_out[: self.num_motor]
-        mode_logits = cortex_out[self.num_motor :]
-        return action_biases, mode_logits
+        return cortex_forward(self.cortex_actor, sensory_input, self.num_motor)
 
     def _cortex_value(self, sensory_input: torch.Tensor) -> torch.Tensor:
         """Get critic value estimate from sensory input."""
-        return self.cortex_critic(sensory_input).squeeze(-1)
+        return cortex_value(self.cortex_critic, sensory_input)
 
     # ──────────────────────────────────────────────────────────────────
     # Fusion mechanism
@@ -837,10 +686,7 @@ class HybridClassicalBrain(ClassicalBrain):
 
         Returns (final_logits, reflex_trust, mode_probs).
         """
-        mode_probs = torch.softmax(mode_logits, dim=-1)
-        reflex_trust = mode_probs[0]  # forage mode trusts reflex
-        final_logits = reflex_logits * reflex_trust + action_biases
-        return final_logits, float(reflex_trust.item()), mode_probs
+        return fuse(reflex_logits, action_biases, mode_logits)
 
     # ──────────────────────────────────────────────────────────────────
     # Preprocessing
@@ -848,18 +694,7 @@ class HybridClassicalBrain(ClassicalBrain):
 
     def _preprocess_legacy(self, params: BrainParams) -> np.ndarray:
         """Extract legacy 2-feature input (gradient_strength, relative_angle)."""
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
-        return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+        return preprocess_legacy(params)
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Preprocess BrainParams to extract reflex features (always legacy 2-feature)."""
@@ -880,10 +715,11 @@ class HybridClassicalBrain(ClassicalBrain):
     # ──────────────────────────────────────────────────────────────────
 
     def _exploration_schedule(self) -> tuple[float, float]:
-        progress = min(1.0, self._episode_count / max(self.config.exploration_decay_episodes, 1))
-        current_epsilon = self.config.exploration_epsilon * (1.0 - progress * 0.7)
-        current_temperature = 1.5 - 0.5 * progress
-        return current_epsilon, current_temperature
+        return exploration_schedule(
+            self._episode_count,
+            self.config.exploration_epsilon,
+            self.config.exploration_decay_episodes,
+        )
 
     # ──────────────────────────────────────────────────────────────────
     # run_brain
@@ -1091,25 +927,23 @@ class HybridClassicalBrain(ClassicalBrain):
     # ──────────────────────────────────────────────────────────────────
 
     def _normalize_reward(self, reward: float) -> float:
-        alpha = self.config.reward_norm_alpha
-        self.reward_running_mean = (1 - alpha) * self.reward_running_mean + alpha * reward
-        diff = reward - self.reward_running_mean
-        self.reward_running_var = (1 - alpha) * self.reward_running_var + alpha * diff * diff
-        running_std = np.sqrt(self.reward_running_var)
-        return (reward - self.reward_running_mean) / (running_std + 1e-8)
+        result, self.reward_running_mean, self.reward_running_var = normalize_reward(
+            reward,
+            self.reward_running_mean,
+            self.reward_running_var,
+            self.config.reward_norm_alpha,
+        )
+        return result
 
     def _adaptive_entropy_coef(self, entropy_val: float) -> float:
-        max_entropy = np.log(self.num_actions)
-        entropy_ceiling = self.config.entropy_ceiling_fraction * max_entropy
-        if entropy_val < self.config.entropy_floor:
-            ratio = 1.0 - entropy_val / self.config.entropy_floor
-            entropy_scale = 1.0 + ratio * (self.config.entropy_boost_max - 1.0)
-        elif entropy_val > entropy_ceiling:
-            ratio = (entropy_val - entropy_ceiling) / (max_entropy - entropy_ceiling)
-            entropy_scale = max(0.0, 1.0 - ratio)
-        else:
-            entropy_scale = 1.0
-        return self.config.entropy_coeff * entropy_scale
+        return adaptive_entropy_coef(
+            entropy_val,
+            self.num_actions,
+            entropy_coeff=self.config.entropy_coeff,
+            entropy_floor=self.config.entropy_floor,
+            entropy_boost_max=self.config.entropy_boost_max,
+            entropy_ceiling_fraction=self.config.entropy_ceiling_fraction,
+        )
 
     def _reinforce_update(self) -> None:
         """REINFORCE policy gradient update for reflex MLP."""
@@ -1233,113 +1067,25 @@ class HybridClassicalBrain(ClassicalBrain):
 
     def _perform_ppo_update(self) -> None:
         """Perform PPO update using collected cortex experience."""
-        if len(self.ppo_buffer) == 0:
-            return
-
-        # Get last value for GAE
-        if self._has_pending_cortex_data:
-            with torch.no_grad():
-                sensory_t = torch.tensor(
-                    self._pending_cortex_state,
-                    dtype=torch.float32,
-                    device=self.device,
-                )
-                last_value = self._cortex_value(sensory_t)
-        else:
-            last_value = torch.tensor(0.0, device=self.device)
-
-        returns, advantages = self.ppo_buffer.compute_returns_and_advantages(
-            last_value,
-            self.gamma,
-            self.config.gae_lambda,
+        perform_ppo_update(
+            ppo_buffer=self.ppo_buffer,
+            cortex_actor=self.cortex_actor,
+            cortex_critic=self.cortex_critic,
+            cortex_actor_optimizer=self.cortex_actor_optimizer,
+            cortex_critic_optimizer=self.cortex_critic_optimizer,
+            num_motor=self.num_motor,
+            gamma=self.gamma,
+            gae_lambda=self.config.gae_lambda,
+            ppo_epochs=self.config.ppo_epochs,
+            ppo_minibatches=self.config.ppo_minibatches,
+            ppo_clip_epsilon=self.config.ppo_clip_epsilon,
+            entropy_coeff=self.config.entropy_coeff,
+            max_grad_norm=self.config.max_grad_norm,
+            device=self.device,
+            has_pending_cortex_data=self._has_pending_cortex_data,
+            pending_cortex_state=getattr(self, "_pending_cortex_state", None),
+            brain_name="HybridClassical",
         )
-
-        total_policy_loss = 0.0
-        total_value_loss = 0.0
-        total_entropy_loss = 0.0
-        total_approx_kl = 0.0
-        num_updates = 0
-
-        for _ in range(self.config.ppo_epochs):
-            for batch in self.ppo_buffer.get_minibatches(
-                self.config.ppo_minibatches,
-                returns,
-                advantages,
-            ):
-                cortex_out = self.cortex_actor(batch["states"])
-                logits = cortex_out[:, : self.num_motor]
-                probs = torch.softmax(logits, dim=-1)
-                dist = torch.distributions.Categorical(probs)
-
-                new_log_probs = dist.log_prob(batch["actions"])
-                entropy = dist.entropy().mean()
-
-                # Values
-                values = self.cortex_critic(batch["states"]).squeeze(-1)
-
-                # PPO clipped surrogate
-                log_ratio = new_log_probs - batch["old_log_probs"]
-                ratio = torch.exp(log_ratio)
-                with torch.no_grad():
-                    approx_kl_batch = ((ratio - 1) - log_ratio).mean().item()
-                total_approx_kl += approx_kl_batch
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(
-                        ratio,
-                        1 - self.config.ppo_clip_epsilon,
-                        1 + self.config.ppo_clip_epsilon,
-                    )
-                    * batch["advantages"]
-                )
-                policy_loss = -torch.min(surr1, surr2).mean()
-
-                # Value loss (Huber for robustness)
-                value_loss = nn.functional.smooth_l1_loss(values, batch["returns"])
-
-                # Combined loss
-                loss = policy_loss + 0.5 * value_loss - self.config.entropy_coeff * entropy
-
-                # Optimize actor
-                self.cortex_actor_optimizer.zero_grad()
-                self.cortex_critic_optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(
-                    self.cortex_actor.parameters(),
-                    self.config.max_grad_norm,
-                )
-                nn.utils.clip_grad_norm_(
-                    self.cortex_critic.parameters(),
-                    self.config.max_grad_norm,
-                )
-                self.cortex_actor_optimizer.step()
-                self.cortex_critic_optimizer.step()
-
-                total_policy_loss += policy_loss.item()
-                total_value_loss += value_loss.item()
-                total_entropy_loss += entropy.item()
-                num_updates += 1
-
-        if num_updates > 0:
-            # Compute explained variance
-            with torch.no_grad():
-                all_states = torch.tensor(
-                    np.array(self.ppo_buffer.states),
-                    dtype=torch.float32,
-                    device=self.device,
-                )
-                predicted = self.cortex_critic(all_states).squeeze(-1)
-                target_var = returns.var()
-                explained_var = (1.0 - (returns - predicted).var() / (target_var + 1e-8)).item()
-
-            logger.info(
-                f"HybridClassical cortex PPO: "
-                f"policy_loss={total_policy_loss / num_updates:.4f}, "
-                f"value_loss={total_value_loss / num_updates:.4f}, "
-                f"entropy={total_entropy_loss / num_updates:.4f}, "
-                f"explained_var={explained_var:.4f}, "
-                f"approx_kl={total_approx_kl / num_updates:.4f}",
-            )
 
     # ──────────────────────────────────────────────────────────────────
     # Session management
@@ -1378,41 +1124,24 @@ class HybridClassicalBrain(ClassicalBrain):
 
     def _save_cortex_weights(self, session_id: str) -> None:
         """Save cortex actor and critic weights to disk."""
-        export_dir = Path("exports") / session_id
-        export_dir.mkdir(parents=True, exist_ok=True)
-        save_path = export_dir / "cortex_weights.pt"
-
-        weights_dict = {
-            "cortex_actor": self.cortex_actor.state_dict(),
-            "cortex_critic": self.cortex_critic.state_dict(),
-        }
-        torch.save(weights_dict, save_path)
-        logger.info(f"Cortex weights saved to {save_path}")
+        save_cortex_weights(
+            self.cortex_actor,
+            self.cortex_critic,
+            session_id,
+            brain_name="HybridClassical",
+        )
 
     def _load_cortex_weights(self) -> None:
         """Load pre-trained cortex weights from disk."""
         weights_path = self.config.cortex_weights_path
         if weights_path is None:
             return
-
-        path = Path(weights_path)
-        if not path.exists():
-            msg = f"Cortex weights file not found: {weights_path}"
-            raise FileNotFoundError(msg)
-
-        weights_dict = torch.load(path, weights_only=True)
-
-        if "cortex_actor" not in weights_dict:
-            msg = "Missing key 'cortex_actor' in cortex weights file"
-            raise ValueError(msg)
-        if "cortex_critic" not in weights_dict:
-            msg = "Missing key 'cortex_critic' in cortex weights file"
-            raise ValueError(msg)
-
-        self.cortex_actor.load_state_dict(weights_dict["cortex_actor"])
-        self.cortex_critic.load_state_dict(weights_dict["cortex_critic"])
-
-        logger.info(f"Cortex weights loaded from {weights_path}")
+        load_cortex_weights(
+            self.cortex_actor,
+            self.cortex_critic,
+            weights_path,
+            brain_name="HybridClassical",
+        )
 
     # ──────────────────────────────────────────────────────────────────
     # Episode management
