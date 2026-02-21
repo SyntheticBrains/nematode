@@ -1346,7 +1346,7 @@ Based on 200+ experiment sessions across 62 days of evaluation, combined with th
 
 #### Falsification Criteria
 
-- Must achieve ≥80% foraging success (vs 82.5% QSNN baseline)
+- Must achieve ≥80% foraging success (QSNN surrogate baseline: 73.9%; HybridQuantum Stage 1 baseline: 91.0%)
 - Reservoir features must show statistically significant difference from random features (p < 0.01 on permutation test)
 - Must demonstrate that structured topology outperforms random topology on feature quality metric
 
