@@ -310,7 +310,7 @@ After 12 rounds of tuning the 3-factor Hebbian learning rule (Rounds 0-11), the 
 - Updating all W_hm columns causes correlated collapse (all columns converge to same direction)
 - Updating only the chosen action's column causes starvation collapse (unchosen columns atrophy)
 
-The local learning signal is simply too weak for this task. Dense gradient information via surrogate gradients was required. See [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md) for the full optimization history.
+The local learning signal is simply too weak for this task. Dense gradient information via surrogate gradients was required. See [qsnn-foraging-optimization.md](supporting/008/qsnn-foraging-optimization.md) for the full optimization history.
 
 ### File Locations
 
@@ -398,7 +398,7 @@ After 16 rounds across both predator types, the evidence points to structural li
 
 The standalone QSNN approach has been exhaustively explored. The architecture achieves 73.9% on foraging (matching classical SNN) but cannot reliably solve predator evasion. The next step is the **QSNN-PPO hybrid** — keeping the QSNN actor (which works for foraging) and adding a proper classical critic with GAE advantages and full PPO training loop. See [quantum-architectures.md](../../research/quantum-architectures.md) for the hybrid architecture design.
 
-For the full round-by-round optimization history, see [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md).
+For the full round-by-round optimization history, see [qsnn-predator-optimization.md](supporting/008/qsnn-predator-optimization.md).
 
 ______________________________________________________________________
 
@@ -456,7 +456,7 @@ REINFORCE only needs `d(log_prob)/d(theta)` (the backward pass gradient), which 
 
 **PPO is fundamentally incompatible with surrogate gradient spiking networks.** After 4 rounds (16 sessions, 1,000 episodes), every session produced 0% success with 100% of PPO updates having policy_loss=0. The correct path is actor-critic variance reduction on top of REINFORCE (A2C), which preserves the quantum circuit in both passes. Development shifted to QSNNReinforce A2C.
 
-For the full round-by-round optimization history, see [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md).
+For the full round-by-round optimization history, see [qsnnppo-optimization.md](supporting/008/qsnnppo-optimization.md).
 
 ______________________________________________________________________
 
@@ -535,7 +535,7 @@ A2C-3 revealed a new failure mode: **the critic actively degrades the actor** wh
 
 **A2C is not viable for QSNNReinforce on pursuit predators.** After 4 rounds, the critic never achieved the 0.2 EV target and progressively worsened (0 → -0.008 → -0.295 → -0.620). All task performance improvements came from the REINFORCE backbone alone. The critic is at best deadweight and at worst harmful.
 
-For the full round-by-round optimization history, see [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md).
+For the full round-by-round optimization history, see [qsnnreinforce-a2c-optimization.md](supporting/008/qsnnreinforce-a2c-optimization.md).
 
 ______________________________________________________________________
 
@@ -638,7 +638,7 @@ The hybrid brain beats the apples-to-apples MLP PPO baseline by +25.3 points and
 - Stage 2 config: `configs/examples/hybridquantum_pursuit_predators_small.yml`
 - Stage 3 config: `configs/examples/hybridquantum_pursuit_predators_small_finetune.yml`
 
-Full optimization history (4 rounds, 16 sessions): [008-appendix-hybridquantum-optimization.md](008-appendix-hybridquantum-optimization.md)
+Full optimization history (4 rounds, 16 sessions): [hybridquantum-optimization.md](supporting/008/hybridquantum-optimization.md)
 
 ______________________________________________________________________
 
@@ -724,7 +724,7 @@ The QSNN earns ~1.5x more trust than the classical MLP, yet task performance is 
 - Stage 2 config: `configs/examples/hybridclassical_pursuit_predators_small.yml`
 - Stage 3 config: `configs/examples/hybridclassical_pursuit_predators_small_finetune.yml`
 
-Full ablation experiment details (12 sessions, trust analysis): [008-appendix-hybridclassical-ablation.md](008-appendix-hybridclassical-ablation.md)
+Full ablation experiment details (12 sessions, trust analysis): [hybridclassical-ablation.md](supporting/008/hybridclassical-ablation.md)
 
 ______________________________________________________________________
 
@@ -933,7 +933,7 @@ Full session results and config: `artifacts/logbooks/008/qsnn_foraging_small/`
 | 20260210_111144 | Random (P2d) | 35.3% | — | Best reliability round (3-4/4 converge) |
 | 20260213_150444 | Pursuit (PP8) | 5.0% | — | First and only pursuit predator success |
 
-Full predator session references (64 sessions across 16 rounds): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
+Full predator session references (64 sessions across 16 rounds): [qsnn-predator-optimization.md](supporting/008/qsnn-predator-optimization.md)
 
 ### QSNN-PPO Sessions
 
@@ -944,7 +944,7 @@ Full predator session references (64 sessions across 16 rounds): [008-appendix-q
 | PPO-2 | 20260215_082646-082702 | 0%, motor spike probs at 0.02 (wrong hypothesis corrected) |
 | PPO-3 | 20260215_085929-085951 | 0%, motor probs fixed but policy_loss still 0 (root cause identified) |
 
-Full QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
+Full QSNN-PPO optimization history (4 rounds, 16 sessions): [qsnnppo-optimization.md](supporting/008/qsnnppo-optimization.md)
 
 ### QSNNReinforce A2C Sessions
 
@@ -955,7 +955,7 @@ Full QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnpp
 | A2C-2 | 20260215_135006-135025 | 200 | 0.63%, bugs fixed but EV worse (-0.295) |
 | A2C-3 | 20260215_221154-221213 | 200 | 0.50%, sensory-only critic, EV worst yet (-0.620) |
 
-Full QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md)
+Full QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [qsnnreinforce-a2c-optimization.md](supporting/008/qsnnreinforce-a2c-optimization.md)
 
 ### HybridQuantum Sessions
 
@@ -966,7 +966,7 @@ Full QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [008-append
 | 3 | 2 | 20260216_213406, 20260217_012722, 012729, 012735 | 500 | 91.7% post-conv; beats MLP PPO unified +20.1 pts |
 | 4 | 3 | 20260217_061309, 061317, 061323, 061329 | 500 | **96.9% post-conv**; beats MLP PPO unified +25.3 pts |
 
-Full optimization history (4 rounds, 16 sessions): [008-appendix-hybridquantum-optimization.md](008-appendix-hybridquantum-optimization.md)
+Full optimization history (4 rounds, 16 sessions): [hybridquantum-optimization.md](supporting/008/hybridquantum-optimization.md)
 
 Experiment results: `artifacts/logbooks/008/hybridquantum_foraging_small/`, `artifacts/logbooks/008/hybridquantum_pursuit_predators_small/`
 
@@ -988,7 +988,7 @@ Best weights:
 
 Experiment results: `artifacts/logbooks/008/hybridclassical_foraging_small/`, `artifacts/logbooks/008/hybridclassical_pursuit_predators_small/`
 
-Full ablation details (12 sessions, trust analysis): [008-appendix-hybridclassical-ablation.md](008-appendix-hybridclassical-ablation.md)
+Full ablation details (12 sessions, trust analysis): [hybridclassical-ablation.md](supporting/008/hybridclassical-ablation.md)
 
 ### HybridQuantumCortex Sessions
 
@@ -1010,19 +1010,19 @@ The HybridQuantumCortex replaces the classical cortex MLP (~5K params) with a QS
 
 **Outcome**: Architecture halted. The QSNN cortex under REINFORCE with surrogate gradients cannot push past ~40-45% on the 2-predator environment. The limitation is the training method (vanishing gradients, ineffective critic) not the architecture itself. Stage 2a-2b results prove the cortex architecture works on simpler tasks.
 
-Full optimization history (9 rounds, 32 sessions): [008-appendix-hybridquantumcortex-optimization.md](008-appendix-hybridquantumcortex-optimization.md)
+Full optimization history (9 rounds, 32 sessions): [hybridquantumcortex-optimization.md](supporting/008/hybridquantumcortex-optimization.md)
 
 Experiment results: `artifacts/logbooks/008/hybridquantumcortex_foraging_small/`, `artifacts/logbooks/008/hybridquantumcortex_pursuit_predators_small/`
 
 ### Appendices
 
-- QSNN foraging optimization history (17 rounds): [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md)
-- QSNN predator optimization history (16 rounds, 64 sessions): [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md)
-- QSNN-PPO optimization history (4 rounds, 16 sessions): [008-appendix-qsnnppo-optimization.md](008-appendix-qsnnppo-optimization.md)
-- QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [008-appendix-qsnnreinforce-a2c-optimization.md](008-appendix-qsnnreinforce-a2c-optimization.md)
-- HybridQuantum optimization history (4 rounds, 16 sessions): [008-appendix-hybridquantum-optimization.md](008-appendix-hybridquantum-optimization.md)
-- HybridClassical ablation (12 sessions, trust analysis): [008-appendix-hybridclassical-ablation.md](008-appendix-hybridclassical-ablation.md)
-- HybridQuantumCortex optimization history (9 rounds, 32 sessions): [008-appendix-hybridquantumcortex-optimization.md](008-appendix-hybridquantumcortex-optimization.md)
+- QSNN foraging optimization history (17 rounds): [qsnn-foraging-optimization.md](supporting/008/qsnn-foraging-optimization.md)
+- QSNN predator optimization history (16 rounds, 64 sessions): [qsnn-predator-optimization.md](supporting/008/qsnn-predator-optimization.md)
+- QSNN-PPO optimization history (4 rounds, 16 sessions): [qsnnppo-optimization.md](supporting/008/qsnnppo-optimization.md)
+- QSNNReinforce A2C optimization history (4 rounds, 16 sessions): [qsnnreinforce-a2c-optimization.md](supporting/008/qsnnreinforce-a2c-optimization.md)
+- HybridQuantum optimization history (4 rounds, 16 sessions): [hybridquantum-optimization.md](supporting/008/hybridquantum-optimization.md)
+- HybridClassical ablation (12 sessions, trust analysis): [hybridclassical-ablation.md](supporting/008/hybridclassical-ablation.md)
+- HybridQuantumCortex optimization history (9 rounds, 32 sessions): [hybridquantumcortex-optimization.md](supporting/008/hybridquantumcortex-optimization.md)
 
 ### File Locations
 

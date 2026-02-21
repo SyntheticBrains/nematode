@@ -1,6 +1,6 @@
 # 003 Appendix: Spiking Brain Experiment Details
 
-This appendix contains detailed experiment data, session tables, failed approaches, and implementation specifics for the spiking brain optimization experiment. For the main findings and conclusions, see [003-spiking-brain-optimization.md](003-spiking-brain-optimization.md).
+This appendix contains detailed experiment data, session tables, failed approaches, and implementation specifics for the spiking brain optimization experiment. For the main findings and conclusions, see [003-spiking-brain-optimization.md](../../003-spiking-brain-optimization.md).
 
 ______________________________________________________________________
 

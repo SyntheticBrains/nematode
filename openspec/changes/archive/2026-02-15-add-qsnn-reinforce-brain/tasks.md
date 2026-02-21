@@ -93,8 +93,8 @@
 ## 10. Documentation & Verification
 
 - [x] 10.1 Update `docs/experiments/logbooks/008-quantum-brain-evaluation.md` with QSNN foraging and predator results
-- [x] 10.2 Create `docs/experiments/logbooks/008-appendix-qsnn-foraging-optimization.md` with foraging optimization history
-- [x] 10.3 Create `docs/experiments/logbooks/008-appendix-qsnn-predator-optimization.md` with predator optimization history (16 rounds)
+- [x] 10.2 Create `docs/experiments/logbooks/supporting/008/qsnn-foraging-optimization.md` with foraging optimization history
+- [x] 10.3 Create `docs/experiments/logbooks/supporting/008/qsnn-predator-optimization.md` with predator optimization history (16 rounds)
 - [x] 10.4 Run all 175 unit tests passing
 - [x] 10.5 Benchmark: 67% success on foraging (4x200 episodes)
 

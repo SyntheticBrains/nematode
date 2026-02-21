@@ -1,6 +1,6 @@
 # 008 Appendix: QSNN-PPO Optimization History
 
-This appendix documents the QSNN-PPO hybrid architecture evaluation across 4 rounds (16 sessions, 1,000 episodes). For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For QSNN standalone predator history, see [008-appendix-qsnn-predator-optimization.md](008-appendix-qsnn-predator-optimization.md).
+This appendix documents the QSNN-PPO hybrid architecture evaluation across 4 rounds (16 sessions, 1,000 episodes). For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For QSNN standalone predator history, see [qsnn-predator-optimization.md](qsnn-predator-optimization.md).
 
 ______________________________________________________________________
 

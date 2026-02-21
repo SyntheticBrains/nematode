@@ -48,4 +48,4 @@ The HybridQuantum brain achieves 96.9% post-convergence on pursuit predators but
 
 **Comparison**: HybridQuantum (classical cortex MLP, PPO) achieves 96.9% on the same task. The PPO training method provides 40x more gradient passes per buffer than REINFORCE, which is the primary advantage.
 
-See: [008-appendix-hybridquantumcortex-optimization.md](../../docs/experiments/logbooks/008-appendix-hybridquantumcortex-optimization.md)
+See: [hybridquantumcortex-optimization.md](../../docs/experiments/logbooks/supporting/008/hybridquantumcortex-optimization.md)

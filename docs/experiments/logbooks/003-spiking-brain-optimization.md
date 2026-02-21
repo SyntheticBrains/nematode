@@ -67,7 +67,7 @@ Parameters: `τ_m=20.0`, `v_threshold=1.0`, `v_reset=0.0`, `v_rest=0.0`
 
 ### Configuration
 
-See [Appendix: Hyperparameter Reference](003-appendix-experiment-details.md#hyperparameter-reference) for complete configuration details.
+See [Appendix: Hyperparameter Reference](supporting/003/experiment-details.md#hyperparameter-reference) for complete configuration details.
 
 ## Results
 
@@ -103,7 +103,7 @@ Achieved **63% success rate** with composite score 0.556 (vs MLP's 0.740).
 
 Key breakthrough: **Slower LR decay** (0.01 → 0.005) more than doubled success rate from 28% to 63%. The original decay rate was too aggressive, causing the learning rate to bottom out before the network fully learned the task.
 
-See [Appendix: Experiment Sessions](003-appendix-experiment-details.md#predator-environment-experiments) for full session data.
+See [Appendix: Experiment Sessions](supporting/003/experiment-details.md#predator-environment-experiments) for full session data.
 
 ## Analysis
 
@@ -131,7 +131,7 @@ Two architectural experiments failed completely:
 
 2. **Dual-Stream Architecture** (0% success): Separate appetitive/aversive streams with gating failed even with fixed (perfect) gating. The fundamental issue is that isolated streams can't make coordinated decisions—each sees only partial context.
 
-See [Appendix: Failed Approaches](003-appendix-experiment-details.md#failed-approaches-detailed-analysis) for full analysis.
+See [Appendix: Failed Approaches](supporting/003/experiment-details.md#failed-approaches-detailed-analysis) for full analysis.
 
 ### Learning Dynamics
 
@@ -221,4 +221,4 @@ The surrogate gradient approach trades biological realism for task performance. 
 ### Appendix
 
 For detailed experiment data, session tables, failed approach analysis, and architecture diagrams, see:
-[003-appendix-experiment-details.md](003-appendix-experiment-details.md)
+[experiment-details.md](supporting/003/experiment-details.md)

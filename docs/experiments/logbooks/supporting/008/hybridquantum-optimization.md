@@ -1,6 +1,6 @@
 # 008 Appendix: HybridQuantum Brain Optimization History
 
-This appendix documents the Hierarchical Hybrid Quantum Brain evaluation across 4 rounds (16 sessions, 4,200 episodes) covering all 3 training stages. For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../research/quantum-architectures.md).
+This appendix documents the Hierarchical Hybrid Quantum Brain evaluation across 4 rounds (16 sessions, 4,200 episodes) covering all 3 training stages. For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../../../research/quantum-architectures.md).
 
 ______________________________________________________________________
 

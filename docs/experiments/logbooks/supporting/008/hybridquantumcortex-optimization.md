@@ -1,6 +1,6 @@
 # 008 Appendix: HybridQuantumCortex Brain Optimization History
 
-This appendix documents the HybridQuantumCortex evaluation across 9 rounds (32 sessions, 14,600 episodes) covering a graduated 4-stage curriculum. For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../research/quantum-architectures.md).
+This appendix documents the HybridQuantumCortex evaluation across 9 rounds (32 sessions, 14,600 episodes) covering a graduated 4-stage curriculum. For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../../../research/quantum-architectures.md).
 
 ______________________________________________________________________
 
