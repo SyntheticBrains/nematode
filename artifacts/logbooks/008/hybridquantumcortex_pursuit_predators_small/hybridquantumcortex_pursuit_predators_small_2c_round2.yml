@@ -1,0 +1,144 @@
+# Hybrid Quantum Cortex Brain - Stage 2c Round 2: Extended Cortex Training
+# Continues from the best Stage 2c session (101543, 48.4% overall / 64% last-50).
+# Reflex remains frozen (training_stage=2). Extends training to allow the cortex
+# to continue its upward trajectory (2c Round 1 was still improving at ep 500).
+#
+# Key differences from 2c Round 1:
+#   - Loads cortex/critic from best 2c session (101543) rather than 2b
+#   - 1000 max_steps (was 500) — doubled to reach the ~80-90% convergence plateau
+#   - No LR warmup: cortex already trained; start directly at the working rate
+#   - cortex_lr_decay_episodes: 300 (was 150) — spread decay over more episodes
+#   - cortex_alpha: starts at 2.0 (was 0.3) — cortex already at full influence
+#   - cortex_alpha_warmup_episodes: 1 (no warmup needed)
+#   - cortex_alpha_warmup_delay: 0 (no delay)
+#
+# Curriculum: 2a → 2b → 2c (Round 1) → 2c Round 2 (this config) → Stage 3 (TBD)
+#
+# To use: update cortex_weights_path/critic_weights_path if using a different seed.
+
+max_steps: 1000
+brain:
+  name: hybridquantumcortex
+  config:
+    # Training stage: 2 = cortex REINFORCE+GAE (reflex frozen)
+    training_stage: 2
+
+    # Pre-trained reflex from stage 1 (frozen throughout)
+    reflex_weights_path: artifacts/models/20260218_131409/reflex_weights.pt
+
+    # Pre-trained cortex + critic from best stage 2c session (101543)
+    # 48.4% overall, 64% last-50, still improving at ep 500
+    cortex_weights_path: artifacts/models/20260220_101543/cortex_weights.pt
+    critic_weights_path: artifacts/models/20260220_101543/critic_weights.pt
+
+    # QSNN reflex params (must match stage 1 config exactly — reflex is frozen)
+    num_sensory_neurons: 6
+    num_hidden_neurons: 8
+    num_motor_neurons: 4
+    membrane_tau: 0.9
+    threshold: 0.5
+    refractory_period: 0
+    shots: 1024
+    num_qsnn_timesteps: 10
+    surrogate_alpha: 1.0
+    logit_scale: 5.0
+    weight_clip: 3.0
+    theta_motor_max_norm: 1.0
+
+    # Cortex QSNN params (must match 2c exactly for weight compatibility)
+    cortex_neurons_per_group: 4
+    cortex_hidden_neurons: 12
+    cortex_output_neurons: 8
+    num_cortex_timesteps: 4
+    cortex_shots: 100
+    num_modes: 3
+
+    # Cortex sensory modules (same 2 groups as 2c for weight compatibility)
+    cortex_sensory_modules:
+      - food_chemotaxis
+      - nociception
+
+    # Cortex REINFORCE+GAE params (proven from 2c)
+    cortex_lr: 0.003
+    critic_lr: 0.001
+    critic_lr_independent: true
+    num_cortex_reinforce_epochs: 1
+    num_critic_epochs: 3
+    ppo_buffer_size: 512
+    gae_lambda: 0.95
+    entropy_coeff: 0.10
+    max_grad_norm: 0.5
+    use_gae_advantages: true
+    gamma: 0.99
+
+    # Cortex LR schedule: no warmup (weights already trained), extend decay
+    # Start directly at peak LR; decay over 300 episodes instead of 150
+    cortex_lr_warmup_episodes: 0
+    cortex_lr_warmup_start: 0.003
+    cortex_lr_decay_episodes: 300
+    cortex_lr_decay_end: 0.001
+
+    # Cortex adaptive alpha: already at full influence, no ramp needed
+    # cortex_alpha_warmup_episodes: 0 triggers the shortcut: alpha = end immediately
+    cortex_alpha_start: 2.0
+    cortex_alpha_end: 2.0
+    cortex_alpha_warmup_episodes: 0
+    cortex_alpha_warmup_delay: 0
+
+    # Critic MLP params (must match 2c for weight compatibility)
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 4.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.05
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.3
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    kill_radius: 0
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+gradient:
+  method: clip
