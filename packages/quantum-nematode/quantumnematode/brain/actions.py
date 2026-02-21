@@ -1,11 +1,11 @@
 """Data types for brains in Quantum Nematode."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class Action(str, Enum):  # pragma: no cover
+class Action(StrEnum):  # pragma: no cover
     """Actions that the agent can take."""
 
     FORWARD = "forward"
