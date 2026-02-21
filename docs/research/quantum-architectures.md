@@ -1245,11 +1245,11 @@ Classical autoencoder compresses high-dimensional observations to a low-dimensio
 
 - **Relevance**: Addresses the input dimensionality problem — quantum circuits work with few inputs, but multi-objective tasks require rich state representations. A classical encoder could compress grid world state into quantum-friendly representation.
 
-### SQDR-CNN: Surrogate Gradients + Data Re-uploading (arXiv:2512.03895, Dec 2025)
+### SQDR-CNN: Spiking-Quantum Data Re-uploading CNN (arXiv:2512.03895, Dec 2025)
 
-Quantum Surrogate-gradient with Data Re-uploading for hybrid CNN classification. Proves that surrogate gradients work end-to-end with multi-layer data re-uploading circuits, not just single-layer QLIF.
+Parameter-efficient hybrid spiking-quantum CNN with surrogate gradients and quantum data re-uploading. Proves that surrogate gradients work end-to-end with multi-layer data re-uploading circuits, not just single-layer QLIF.
 
-- **Results**: Competitive with classical CNNs on MNIST-family benchmarks using 4-8 qubits with 3-6 re-uploading layers
+- **Results**: Achieves 86% of top SNN baseline accuracy on MNIST-family benchmarks using 4-8 qubits with 3-6 re-uploading layers, with only 0.5% of the smallest SNN baseline's parameter count
 - **Key finding**: Surrogate gradient backward pass scales to deeper circuits without gradient degradation when combined with data re-uploading
 - **Relevance**: Validates our surrogate gradient approach for deeper quantum circuits. Could enable data re-uploading QLIF with more expressive multi-layer circuits
 
@@ -1817,7 +1817,7 @@ ______________________________________________________________________
 
 13. **SQDR-CNN (Surrogate Gradient + Data Re-uploading)**
 
-    - arXiv:2512.03895 (2025). "Quantum Surrogate-gradient with Data Re-uploading for Convolutional Neural Networks."
+    - arXiv:2512.03895 (2025). "Parameter efficient hybrid spiking-quantum convolutional neural network with surrogate gradient and quantum data-reupload."
 
 14. **QKAN-LSTM (Quantum Activations in Temporal Networks)**
 
