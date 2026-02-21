@@ -706,7 +706,7 @@ A2C was implemented to preserve REINFORCE's compatibility with surrogate gradien
 - Root causes: partial observability, policy non-stationarity, high return variance, short 20-step GAE windows
 - The critic actively **harmed** the actor in late training (Q4 regression in 2/4 A2C-3 sessions)
 
-**Conclusion**: Neither PPO nor A2C is viable with QSNN's surrogate gradient architecture for multi-objective pursuit predator tasks. See logbook 008 and [008-appendix-qsnnreinforce-a2c-optimization.md](../../experiments/logbooks/008-appendix-qsnnreinforce-a2c-optimization.md) for full results.
+**Conclusion**: Neither PPO nor A2C is viable with QSNN's surrogate gradient architecture for multi-objective pursuit predator tasks. See logbook 008 and [qsnnreinforce-a2c-optimization.md](../../experiments/logbooks/supporting/008/qsnnreinforce-a2c-optimization.md) for full results.
 
 ______________________________________________________________________
 

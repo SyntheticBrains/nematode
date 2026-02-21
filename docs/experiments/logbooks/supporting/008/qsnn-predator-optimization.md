@@ -1,6 +1,6 @@
 # 008 Appendix: QSNN Predator Optimization History
 
-This appendix documents the QSNN predator evasion optimization journey across two phases: random predators (Rounds P0–P3a, 10 rounds, 40 sessions) and pursuit predators (Rounds PP4–PP9, 6 rounds, 24 sessions). For main findings, see [008-quantum-brain-evaluation.md](008-quantum-brain-evaluation.md). For foraging optimization history, see [008-appendix-qsnn-foraging-optimization.md](008-appendix-qsnn-foraging-optimization.md).
+This appendix documents the QSNN predator evasion optimization journey across two phases: random predators (Rounds P0–P3a, 10 rounds, 40 sessions) and pursuit predators (Rounds PP4–PP9, 6 rounds, 24 sessions). For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For foraging optimization history, see [qsnn-foraging-optimization.md](qsnn-foraging-optimization.md).
 
 ______________________________________________________________________
 
