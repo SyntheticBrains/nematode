@@ -1458,7 +1458,7 @@ Per SQS neuron (2-3 qubits):
 │  │  Entangled QLIF Layer                                │   │
 │  │                                                      │   │
 │  │  8-16 QLIF neurons WITH entanglement:                │   │
-│  │  RY(θ + f(w·x)) → CNOT(pairs) → RX(leak) → Measure  │   │
+│  │  RY(θ + f(w·x)) → CNOT(pairs) → RX(leak) → Measure   │   │
 │  │                                                      │   │
 │  │  Key change: CNOT/CZ gates between neuron qubits     │   │
 │  │  (current QLIF has ZERO entanglement — all single-   │   │
