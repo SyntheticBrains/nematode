@@ -45,7 +45,7 @@ def get_qiskit_version() -> str:
         Qiskit version string.
     """
     qiskit_ver = get_package_version("qiskit")
-    return qiskit_ver if qiskit_ver else "unknown"
+    return qiskit_ver or "unknown"
 
 
 def get_torch_version() -> str | None:
