@@ -1827,10 +1827,6 @@ ______________________________________________________________________
 
     - "Structured quantum reservoir computing: advances in topology-aware feature extraction." *npj Quantum Information* (2025).
 
-16. **Stochastic Quantum Spiking Neural Networks**
-
-    - arXiv:2506.21324 (2025). "Stochastic Quantum Spiking Neural Networks with Quantum Memory and Local Learning."
-
 ### Frameworks
 
 - **PennyLane**: [pennylane.ai](https://pennylane.ai) - Differentiable quantum programming
