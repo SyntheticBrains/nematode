@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-02-22
 
 ______________________________________________________________________
 
@@ -61,6 +61,7 @@ QVarCircuit (CMA-ES)              99.8%      76.1%**        Evolutionary        
 ──────────────────────────────────────────────────────────────────────────────────────────────
 HybridQuantum                     91.0%      96.9%          Surr REINFORCE + PPO    YES (BEST)
 HybridClassical (ablation)        97.0%      96.3%          Backprop + PPO          YES (CONTROL)
+HybridQuantumCortex               88.8%      40.9%‡‡        Surr REINFORCE + GAE    PARTIAL
 ──────────────────────────────────────────────────────────────────────────────────────────────
 SpikingReinforceBrain             73.3%§     ~61%§          Surrogate grad (class)  UNRELIABLE
 MLPReinforceBrain                 95.1%      73.4%          REINFORCE (classical)   YES
@@ -72,6 +73,7 @@ MLPPPOBrain                       96.7%      71.6%††/94.5%  PPO (classical) 
 ‡ QSNNReinforce A2C: critic never learned V(s) (EV -0.620); all improvement from REINFORCE backbone
 § SpikingReinforce numbers from best session only; ~90% of sessions fail catastrophically
 †† MLP PPO unified sensory modules (apples-to-apples comparison); 94.5% uses pre-computed gradient
+‡‡ HybridQuantumCortex: 96.8% on 1-predator, 40.9% on 2-predator (9 rounds, 32 sessions); halted
 ```
 
 ### Key Finding: Architecture + Curriculum Drive Performance, Not QSNN
@@ -91,6 +93,8 @@ The architecture was validated through a three-stage curriculum:
 **Where QSNN retains value**: biological fidelity (higher chemotaxis indices closer to real C. elegans), parameter efficiency (92 vs 116 params), and as a scientifically interesting model of quantum neural computation.
 
 **QSNN's surrogate gradient approach** (quantum forward, classical backward) remains the core proven quantum technique. It sidesteps barren plateaus while providing dense gradient signals. However, standalone QSNN cannot solve multi-objective tasks (0% across 60 sessions on pursuit predators). The hybrid architecture resolves this by delegating strategic behaviour to the classical cortex while preserving the quantum reflex.
+
+**HybridQuantumCortex evaluation**: Replacing the classical cortex MLP with a QSNN cortex (~252 quantum params, ~11% quantum fraction) achieved strong results on simpler tasks (88.8% foraging, 96.8% 1-predator) but plateaued at ~40-45% on the 2-predator environment despite 9 rounds (32 sessions) of optimisation. The REINFORCE+surrogate gradient combination produces insufficient gradient signal for complex multi-objective tasks — vanishing gradients (norms 0.04-0.07 after LR decay), ineffective critic (EV ~0.10), and frozen mode distributions. Stage 3 joint fine-tune caused catastrophic forgetting (19.3%). Architecture halted — further quantum architecture exploration should pursue fundamentally different approaches (see H.1-H.4 proposals).
 
 ### Architecture Evaluation History
 
@@ -115,6 +119,14 @@ COMPLETED:
   QSNN-PPO — PPO incompatible with surrogate gradients (policy_loss=0 always).
     4 rounds, 16 sessions. Fundamental: forward pass returns constant.
     STATUS: HALTED — architectural incompatibility.
+
+  HybridQuantumCortex — QSNN cortex (grouped sensory QLIF) replacing classical cortex MLP.
+    ~252 quantum cortex params + ~92 reflex params = ~11% quantum fraction.
+    9 rounds, 32 sessions, 14,600 episodes across graduated curriculum (2a-2b-2c).
+    96.8% on 1-predator (Stage 2b), 88.8% foraging (Stage 2a R3).
+    Plateaued at ~40-45% on 2-predator environment. Zero predator deaths.
+    Stage 3 joint fine-tune caused catastrophic forgetting (19.3%).
+    STATUS: HALTED — REINFORCE+surrogate gradients ceiling at ~40-45% on hard tasks.
 
 NOT EVALUATED:
   PPO-Q Style PQC Actor — PQC wrapped in classical pre/post-processing.
