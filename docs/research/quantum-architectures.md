@@ -1604,7 +1604,7 @@ Per SQS neuron (2-3 qubits):
 
 - Must match classical LSTM performance on foraging (≥80% success)
 - Must show parameter reduction ≥30% for equivalent performance
-- Must demonstrate meaningful temporal memory: performance on sequential decision tasks > memoryless baseline (e.g., "find food, then return to nest" vs "find food")
+- Must demonstrate meaningful temporal memory: performance on tasks requiring recall of past observations > memoryless baseline (e.g., remembering predator location after it leaves viewport, or leveraging food gradient history for more efficient search). Note: a dedicated sequential task environment may need to be added to properly evaluate this criterion
 
 ### H.5 Multi-Objective & Sensory Extensibility
 
@@ -1633,7 +1633,8 @@ Week 3:    QRH results analysis + QKAN-QLIF (H.4) prototype
            - H.1 go/no-go decision
            - Begin QLIF-LSTM implementation
 
-Week 4-5:  Entangled QLIF + qtDNN (H.3) if H.1 succeeds
+Week 4-5:  Entangled QLIF + qtDNN (H.3) — regardless of H.1 outcome
+           (accelerate if H.1 failed; run in parallel if H.1 proceeding)
            - QKAN-QLIF (H.4) full evaluation
            - Entangled circuit design + qtDNN training
 
@@ -1750,7 +1751,11 @@ hybrid_quantum_predator_small:
 
 - Performance per parameter: Success rate / total parameter count, compared to classical LSTM equivalent
 - Gate activation richness: Entropy of gate activation distributions — quantum gates should show richer structure
+
+**Temporal Memory Capacity** (SQS-QLIF and QKAN-QLIF shared):
+
 - Memory capacity: Maximum sequence length that can be reliably recalled
+- Temporal credit assignment: Performance on tasks requiring decisions based on observations N steps ago
 
 **Quantum Advantage Metric** (all architectures):
 
