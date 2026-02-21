@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-20
 
 ______________________________________________________________________
 
@@ -19,8 +19,10 @@ ______________________________________________________________________
 09. [Optimizer Variants](#optimizer-variants)
 10. [Barren Plateau Mitigation](#barren-plateau-mitigation)
 11. [External Research Survey (2024-2026)](#external-research-survey-2024-2026)
-12. [Benchmarking Plan](#benchmarking-plan)
-13. [Research References](#research-references)
+12. [Next-Generation Architecture Proposals](#next-generation-architecture-proposals)
+13. [Benchmarking Plan](#benchmarking-plan)
+14. [Research References](#research-references)
+15. [Open Questions](#open-questions)
 
 ______________________________________________________________________
 
@@ -1243,6 +1245,394 @@ Classical autoencoder compresses high-dimensional observations to a low-dimensio
 
 - **Relevance**: Addresses the input dimensionality problem — quantum circuits work with few inputs, but multi-objective tasks require rich state representations. A classical encoder could compress grid world state into quantum-friendly representation.
 
+### SQDR-CNN: Surrogate Gradients + Data Re-uploading (arXiv:2512.03895, Dec 2025)
+
+Quantum Surrogate-gradient with Data Re-uploading for hybrid CNN classification. Proves that surrogate gradients work end-to-end with multi-layer data re-uploading circuits, not just single-layer QLIF.
+
+- **Results**: Competitive with classical CNNs on MNIST-family benchmarks using 4-8 qubits with 3-6 re-uploading layers
+- **Key finding**: Surrogate gradient backward pass scales to deeper circuits without gradient degradation when combined with data re-uploading
+- **Relevance**: Validates our surrogate gradient approach for deeper quantum circuits. Could enable data re-uploading QLIF with more expressive multi-layer circuits
+
+### QKAN-LSTM: Quantum Activations in Temporal Networks (arXiv:2512.05049, Dec 2025)
+
+Replaces classical activation functions in LSTM gates with quantum Kolmogorov-Arnold Network (KAN) activations. Achieves 79% parameter reduction for equivalent performance on time-series tasks.
+
+- **Results**: Matches classical LSTM on financial forecasting and speech recognition with 79% fewer parameters
+- **Key innovation**: Quantum activations (single-qubit circuits) replace tanh/sigmoid in forget and input gates, providing richer gating dynamics
+- **Relevance**: Directly applicable — our QLIF neurons could serve as quantum activations within LSTM gates, adding temporal memory while preserving quantum computation. Low-risk approach since it builds on proven single-qubit QLIF infrastructure.
+
+### Structured Quantum Reservoirs (Nature npj Quantum Information, 2025)
+
+Advances in quantum reservoir computing show that structured (non-random) reservoir topologies dramatically outperform random circuits for feature extraction.
+
+- **Key finding**: Reservoir circuits with task-relevant structure (connectivity, gate angles) produce measurement distributions with 3-5x higher mutual information with target labels than random reservoirs
+- **Design principle**: Reservoir topology should encode domain-specific inductive biases (e.g., symmetries, locality)
+- **Relevance**: Explains our QRC failure — random reservoir angles produced non-discriminative representations. Structured reservoirs with C. elegans-inspired connectivity could revive the QRC approach.
+
+______________________________________________________________________
+
+## Next-Generation Architecture Proposals
+
+Based on 200+ experiment sessions across 62 days of evaluation, combined with the latest external research (2025-2026), four next-generation architectures are proposed. Each is designed to address the barren plateau-advantage dilemma through a different strategy, and each includes falsification criteria for rapid go/no-go decisions.
+
+### H.1 Quantum Reservoir Hybrid (QRH) — Priority 1
+
+**Strategy**: Don't train the quantum part
+**Risk**: Medium | **Estimated effort**: 2-3 weeks
+
+#### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│               Quantum Reservoir Hybrid (QRH)                │
+│                                                             │
+│  Sensory Input (8 features)                                 │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Structured Quantum Reservoir (FIXED, not trained)   │   │
+│  │                                                      │   │
+│  │  8-12 qubits with C. elegans-inspired topology:      │   │
+│  │  - Gap junctions → CNOT connectivity                 │   │
+│  │  - Chemical synapses → fixed RY/RZ rotations         │   │
+│  │  - Hub-and-spoke matching interneuron connectivity   │   │
+│  │                                                      │   │
+│  │  Input: RY(feature_i * π) on sensory qubits          │   │
+│  │  3 entanglement layers with structured angles        │   │
+│  │                                                      │   │
+│  │  Output: 2^N measurement probabilities               │   │
+│  │  (or subset: per-qubit expectations + correlations)  │   │
+│  └──────────┬───────────────────────────────────────────┘   │
+│             │                                               │
+│             ▼                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Classical Readout + Cortex (TRAINED with PPO)       │   │
+│  │                                                      │   │
+│  │  Reservoir features → MLP(64, 64) → action logits    │   │
+│  │  + Value head for critic                             │   │
+│  │  Standard PPO training (no quantum gradients needed) │   │
+│  │                                                      │   │
+│  │  ~5K classical params                                │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Key difference from failed QRC:                            │
+│  - STRUCTURED topology (not random angles)                  │
+│  - Biologically-inspired connectivity                       │
+│  - PPO training on readout (not REINFORCE)                  │
+│  - Richer feature extraction (correlations, not just probs) │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Could Work
+
+- **Avoids barren plateaus entirely** — no quantum gradient training required
+- Our QRC failed because of *random* circuits; structured reservoirs (Nature npj QI, 2025) show 3-5x higher mutual information with task labels
+- **Reservoir computing has biological plausibility** — cortical microcircuits in real brains function as reservoirs
+- Classical readout handles optimization with standard PPO, quantum reservoir provides the feature space
+- **C. elegans connectivity data is available** — the 302-neuron connectome is fully mapped, providing biologically grounded circuit topology
+
+#### Key Design Decisions
+
+1. **Reservoir circuit topology**: Use C. elegans sensory-interneuron connectivity as template. Gap junctions → CNOT gates (bidirectional coupling), chemical synapses → parameterized RY/RZ with angles derived from synapse strength ratios
+2. **Feature extraction**: Per-qubit Z-expectations + pairwise ZZ-correlations (richer than full probability distribution, scales as O(N²) not O(2^N))
+3. **Readout**: MLP (2 hidden layers, 64 units) trained with PPO — uses proven classical training pipeline
+4. **Reservoir size**: 8-12 qubits matching sensory neuron count in the simulation
+
+#### Decision Gate (Week 1)
+
+- **Reservoir feature analysis**: Do structured reservoir outputs show higher mutual information with optimal actions than random reservoir outputs?
+- If MI(structured) ≤ MI(random): Architecture is not viable, stop
+- If MI(structured) > MI(random) but < MI(classical_MLP_features): Proceed with caution, may need topology refinement
+
+#### Falsification Criteria
+
+- Must achieve ≥80% foraging success (vs 82.5% QSNN baseline)
+- Reservoir features must show statistically significant difference from random features (p < 0.01 on permutation test)
+- Must demonstrate that structured topology outperforms random topology on feature quality metric
+
+### H.2 SQS-QLIF Hybrid — Priority 2
+
+**Strategy**: Local learning rules (quantum STDP)
+**Risk**: High | **Estimated effort**: 4-6 weeks
+
+#### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                     SQS-QLIF Hybrid                         │
+│                                                             │
+│  Sensory Input (8 features)                                 │
+│       │                                                     │
+│       ├──────────────────────────┐                          │
+│       ▼                          ▼                          │
+│  ┌────────────────────┐   ┌──────────────────────────┐      │
+│  │ SQS Reflex Layer   │   │ Classical Cortex (MLP)   │      │
+│  │ (replaces QLIF)    │   │ (PPO-trained)            │      │
+│  │                    │   │                          │      │
+│  │ Multi-qubit SQS    │   │ MLP: 8→64→64             │      │
+│  │ neurons:           │   │ Mode-gated fusion        │      │
+│  │ 2-3 qubits/neuron  │   │ ~5K classical params     │      │
+│  │ Quantum memory     │   │                          │      │
+│  │ (entanglement      │   └───────────┬──────────────┘      │
+│  │  across timesteps) │               │                     │
+│  │                    │               │                     │
+│  │ Local learning:    │               │                     │
+│  │ Quantum STDP +     │               │                     │
+│  │ eligibility traces │               │                     │
+│  │                    │               │                     │
+│  │ ~300-500 quantum   │               │                     │
+│  │ params             │               │                     │
+│  └──────────┬─────────┘               │                     │
+│             │                         │                     │
+│             ▼                         ▼                     │
+│  ┌───────────────────────────────────────────────┐          │
+│  │  Mode-gated fusion (same as HybridQuantum)    │          │
+│  └───────────────────────────────────────────────┘          │
+│                                                             │
+│  Key innovation:                                            │
+│  - Multi-qubit neurons with quantum memory                  │
+│  - Local learning avoids barren plateaus by construction    │
+│  - Richer representations than single-qubit QLIF            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### SQS Neuron Circuit (per neuron)
+
+```text
+Per SQS neuron (2-3 qubits):
+  Timestep t:
+  |ψ_t⟩ = U_input(x_t) · U_recurrent(ψ_{t-1}) · |ψ_{t-1}⟩
+
+  U_input: RY(θ + f(w·x)) on qubit 0 (membrane)
+  U_recurrent: CNOT(q0→q1), RZ(φ) on q1 (quantum memory)
+  Measurement: Partial measure q0 (spike), preserve q1 (memory)
+
+  Learning: Quantum STDP
+  Δw ∝ ⟨pre_spike · post_spike⟩ × eligibility_trace × reward_signal
+  Local rule — no global gradient computation needed
+```
+
+#### Why This Could Work
+
+- **SQS neurons explicitly model quantum memory** (entanglement between timesteps), addressing our finding that multi-timestep integration is critical (5 steps: 52.6% → 10 steps: 73.9%)
+- **Local learning rules avoid barren plateaus by construction** — no global loss landscape to get stuck in
+- **Multi-qubit neurons provide richer representations** than single-qubit QLIF — each neuron has 2-3 qubits with internal entanglement
+- **Biological plausibility**: STDP is the dominant learning rule in real C. elegans neurons
+- Reuses the proven HybridQuantum architecture and three-stage curriculum
+
+#### Key Design Decisions
+
+1. **SQS neuron implementation**: Follow arXiv:2506.21324 with adaptations for Qiskit Aer. Each neuron: 2 qubits (membrane + memory), partial measurement preserves memory qubit
+2. **Learning rule**: Quantum STDP with eligibility traces, compatible with REINFORCE outer loop for the cortex
+3. **Network topology**: Small-world network matching C. elegans connectivity statistics (clustering coefficient ~0.28, path length ~2.65)
+4. **Integration**: Replace QLIF layer in `_qlif_layers.py` with SQS layer; keep cortex and fusion infrastructure unchanged
+
+#### Decision Gate (Week 2)
+
+- **Single SQS neuron characterization**: Does a single SQS neuron show richer input-output mapping than QLIF?
+- Measure information capacity: bits of mutual information between input and output per neuron
+- If capacity(SQS) ≤ capacity(QLIF): Reconsider neuron design
+- If quantum STDP learning rule doesn't converge on XOR classification: Architecture is not viable
+
+#### Falsification Criteria
+
+- Must demonstrate quantum memory effect: performance with entanglement preservation > without (controlled ablation)
+- Must achieve ≥75% foraging success within 500 episodes
+- Training time must be < 10x classical equivalent (SQS overhead from multi-qubit circuits)
+
+### H.3 Entangled QLIF with qtDNN Surrogate — Priority 3
+
+**Strategy**: Classical gradient surrogates for entangled circuits
+**Risk**: Medium-High | **Estimated effort**: 3-4 weeks
+
+#### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│            Entangled QLIF + qtDNN Surrogate                 │
+│                                                             │
+│  Sensory Input (8 features)                                 │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Entangled QLIF Layer                                │   │
+│  │                                                      │   │
+│  │  8-16 QLIF neurons WITH entanglement:                │   │
+│  │  RY(θ + f(w·x)) → CNOT(pairs) → RX(leak) → Measure  │   │
+│  │                                                      │   │
+│  │  Key change: CNOT/CZ gates between neuron qubits     │   │
+│  │  (current QLIF has ZERO entanglement — all single-   │   │
+│  │   qubit circuits)                                    │   │
+│  │                                                      │   │
+│  │  Forward: Quantum measurement (same as current)      │   │
+│  │  Backward: qtDNN surrogate (replaces sigmoid surr.)  │   │
+│  └──────────┬───────────────────────────────────────────┘   │
+│             │                                               │
+│             │ spike probabilities                           │
+│             ▼                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  qtDNN (Classical Tangential Network)                │   │
+│  │                                                      │   │
+│  │  Learns to approximate: θ_quantum → ∂L/∂θ_quantum    │   │
+│  │  Architecture: MLP(N_params → 64 → 64 → N_params)    │   │
+│  │                                                      │   │
+│  │  Trained online: minimize ‖qtDNN(θ) - PSR_grad(θ)‖   │   │
+│  │  (periodically calibrated against parameter-shift)   │   │
+│  │                                                      │   │
+│  │  Once trained, provides gradients ~100x faster       │   │
+│  │  than parameter-shift rule                           │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Training loop:                                             │
+│  1. Forward: entangled quantum circuit → measurements       │
+│  2. Backward: qtDNN provides approximate gradients          │
+│  3. Every K steps: calibrate qtDNN against true PSR grads   │
+│  4. REINFORCE outer loop with qtDNN-provided inner grads    │
+│                                                             │
+│  Cortex: Same classical PPO cortex as HybridQuantum         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Could Work
+
+- **Entanglement is the key quantum resource we're not using** — current QLIF has zero entanglement (all single-qubit circuits). Adding CNOT/CZ gates between neurons creates correlated spike patterns that cannot be reproduced classically
+- **qtDNN surrogate** (arXiv:2503.09119) enables training circuits that would otherwise have barren plateaus, by approximating quantum gradients with a classical network
+- **Separates advantage source from training mechanism** — entangled circuit provides the quantum dynamics, classical qtDNN handles the optimization
+- Our existing surrogate gradient infrastructure (`QLIFSurrogateSpike`) provides a natural starting point — qtDNN replaces the fixed sigmoid surrogate with a learned approximation
+
+#### Key Design Decisions
+
+1. **Entanglement topology**: Start with linear nearest-neighbor CNOT chain (hardware-friendly). Compare against all-to-all and C. elegans-inspired connectivity
+2. **qtDNN architecture**: MLP (N_params → 64 → 64 → N_params) trained to predict parameter-shift gradients. Calibrated every 50 episodes against true PSR gradients
+3. **Circuit depth**: Start shallow — 2 layers of `[RY(data) → CNOT(pairs) → RX(leak) → RZ(phase)]`. Data re-uploading between layers
+4. **Measurement strategy**: Measure all qubits (spike probabilities). Correlations between measured qubits encode entanglement effects
+
+#### Decision Gate (Week 1)
+
+- **qtDNN gradient quality**: Does qtDNN gradient correlation with true parameter-shift gradient exceed 0.5?
+- If correlation < 0.3: qtDNN approach not viable for our entangled circuits
+- If entangled circuit expressibility (measured by distribution uniformity) ≤ product-state circuit: No advantage from entanglement, stop
+
+#### Falsification Criteria
+
+- Entangled version must outperform non-entangled QLIF by ≥5% on at least one environment (foraging or pursuit predators)
+- qtDNN training overhead must be < 3x forward pass cost (amortized over calibration interval)
+- Must not exhibit barren plateau symptoms: gradient variance must not decay exponentially with qubit count (test at 4, 8, 12, 16 qubits)
+
+### H.4 QKAN-QLIF Temporal Brain — Priority 4
+
+**Strategy**: Quantum activations in classical temporal architecture
+**Risk**: Low-Medium | **Estimated effort**: 2-3 weeks
+
+#### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│               QKAN-QLIF Temporal Brain                      │
+│                                                             │
+│  Sensory Input (8 features)                                 │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  QLIF-LSTM Layer                                     │   │
+│  │                                                      │   │
+│  │  Standard LSTM structure with quantum activations:   │   │
+│  │                                                      │   │
+│  │  Forget gate:  f_t = QLIF(W_f · [h_{t-1}, x_t])      │   │
+│  │  Input gate:   i_t = QLIF(W_i · [h_{t-1}, x_t])      │   │
+│  │  Cell update:  c̃_t = tanh(W_c · [h_{t-1}, x_t])      │   │
+│  │  Output gate:  o_t = σ(W_o · [h_{t-1}, x_t])         │   │
+│  │                                                      │   │
+│  │  Cell state:   c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t       │   │
+│  │  Hidden state: h_t = o_t ⊙ tanh(c_t)                 │   │
+│  │                                                      │   │
+│  │  QLIF activation replaces sigmoid in f_t and i_t:    │   │
+│  │  RY(θ + tanh(w·x/√fan_in)·π) → RX(leak) → Measure    │   │
+│  │  Forward: quantum measurement probability            │   │
+│  │  Backward: sigmoid surrogate (proven approach)       │   │
+│  │                                                      │   │
+│  │  Hidden dim: 16-32                                   │   │
+│  │  ~200-400 quantum params + ~1K classical params      │   │
+│  └──────────┬───────────────────────────────────────────┘   │
+│             │                                               │
+│             ▼                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Action Head + Value Head                            │   │
+│  │  Linear(hidden_dim → 4) for actions                  │   │
+│  │  Linear(hidden_dim → 1) for critic                   │   │
+│  │  PPO training                                        │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Key advantage:                                             │
+│  - Adds temporal memory (roadmap Phase 3 requirement)       │
+│  - 79% parameter reduction vs classical LSTM (QKAN paper)   │
+│  - Builds on proven QLIF + surrogate gradient pipeline      │
+│  - Low risk: falls back to classical LSTM if quantum fails  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Could Work
+
+- **79% parameter reduction** demonstrated in QKAN-LSTM paper (arXiv:2512.05049) — quantum activations provide richer gating than classical sigmoid
+- **Minimal quantum circuit** (single-qubit per activation), avoiding barren plateaus by design
+- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM)
+- **Builds directly on proven infrastructure** — uses the same QLIF neuron and surrogate gradient backward pass that achieved 73.9% foraging success
+- **Low risk**: if quantum activations don't help, the architecture gracefully degrades to a standard LSTM with slightly different activations
+
+#### Key Design Decisions
+
+1. **Which gates get quantum activations**: Start with forget gate (f_t) and input gate (i_t) — most critical for memory gating. Keep cell update (tanh) and output gate (sigmoid) classical initially
+2. **QLIF integration**: Use existing `QLIFSurrogateSpike` autograd function. Each gate activation = one QLIF neuron per hidden unit
+3. **Memory horizon**: Target 10-50 timestep memory. The nematode simulation runs at ~1 step/decision, so this covers 10-50 prior decisions
+4. **Training**: Standard BPTT through LSTM structure, with QLIF surrogate gradients in the backward pass for quantum gate activations. PPO for the overall policy
+
+#### Decision Gate (Week 1)
+
+- Does QLIF activation in LSTM gate produce smoother/more expressive gating than classical sigmoid?
+- Measure gate activation distributions: QLIF should show richer structure (bimodal, shot-noise-induced exploration)
+- If parameter count reduction < 30% for equivalent performance: Limited practical benefit
+- If training is unstable (loss divergence within 100 episodes): Need gradient clipping or different gate selection
+
+#### Falsification Criteria
+
+- Must match classical LSTM performance on foraging (≥80% success)
+- Must show parameter reduction ≥30% for equivalent performance
+- Must demonstrate meaningful temporal memory: performance on sequential decision tasks > memoryless baseline (e.g., "find food, then return to nest" vs "find food")
+
+### H.5 Implementation Roadmap
+
+```text
+Week 1-2:  QRH (H.1) — Structured reservoir experiments
+           - Build C. elegans-inspired reservoir circuit
+           - Mutual information analysis vs random reservoir
+           - Decision gate at end of Week 1
+
+Week 3:    QRH results analysis + QKAN-QLIF (H.4) prototype
+           - H.1 go/no-go decision
+           - Begin QLIF-LSTM implementation
+
+Week 4-5:  Entangled QLIF + qtDNN (H.3) if H.1 succeeds
+           - QKAN-QLIF (H.4) full evaluation
+           - Entangled circuit design + qtDNN training
+
+Week 6-8:  SQS-QLIF (H.2) if earlier architectures show promise
+           - Cross-architecture comparison
+           - Final architecture selection
+
+Decision Gates:
+  After Week 2: Is QRH viable?
+    → If yes: proceed with QRH as primary, H.3/H.4 as secondary
+    → If no: accelerate H.3 and H.4
+
+  After Week 4: Do any architectures show quantum advantage?
+    → If yes: focus resources on best candidate
+    → If no: revisit problem formulation — consider quantum-native
+      environments or redefine "advantage" (parameter efficiency,
+      biological fidelity, hardware readiness)
+
+  After Week 6: Final architecture selection for Phase 2 deliverable
+```
+
 ______________________________________________________________________
 
 ## Benchmarking Plan
@@ -1314,6 +1704,39 @@ hybrid_quantum_predator_small:
 - Fusion efficiency: improvement over best individual component
 - Adaptation speed: episodes to adapt cortex to new environment
 
+### G.4 Quantum Advantage Metrics (Next-Generation Proposals)
+
+**Quantum Feature Quality** (QRH focus):
+
+- Mutual information: MI(reservoir_features, optimal_action) — must exceed MI(random_features, optimal_action)
+- Feature discriminability: KL divergence between feature distributions for different sensory contexts
+- Classical simulability test: Can a classical network of equivalent parameter count match reservoir feature quality?
+
+**Quantum Memory Effect** (SQS-QLIF focus):
+
+- Memory ablation: Performance delta with/without entanglement preservation across timesteps
+- Temporal correlation: Autocorrelation of spike patterns — quantum memory should show longer-range correlations
+- Classical memory comparison: SQS temporal features vs classical RNN hidden states of equivalent dimension
+
+**Gradient Quality** (Entangled QLIF + qtDNN focus):
+
+- qtDNN fidelity: Pearson correlation between qtDNN-predicted gradient and true parameter-shift gradient
+- Gradient variance scaling: Measure gradient variance vs qubit count — must not decay exponentially (barren plateau test)
+- Training efficiency: Episodes to convergence with qtDNN vs parameter-shift vs sigmoid surrogate
+
+**Parameter Efficiency** (QKAN-QLIF focus):
+
+- Performance per parameter: Success rate / total parameter count, compared to classical LSTM equivalent
+- Gate activation richness: Entropy of gate activation distributions — quantum gates should show richer structure
+- Memory capacity: Maximum sequence length that can be reliably recalled
+
+**Quantum Advantage Metric** (all architectures):
+
+- Controlled ablation: For each quantum component, replace with classical equivalent of equal parameter count and measure performance delta
+- Task-performance advantage: ΔSuccess = Success(quantum) - Success(classical_equivalent)
+- Biological fidelity advantage: Chemotaxis index, evasion trajectory similarity to real C. elegans
+- Resource advantage: Training time × parameter count for equivalent performance level
+
 ______________________________________________________________________
 
 ## Research References
@@ -1377,6 +1800,22 @@ ______________________________________________________________________
 
     - "Hybrid quantum-classical reinforcement learning in latent observation spaces." *Quantum Machine Intelligence* (2025).
 
+13. **SQDR-CNN (Surrogate Gradient + Data Re-uploading)**
+
+    - arXiv:2512.03895 (2025). "Quantum Surrogate-gradient with Data Re-uploading for Convolutional Neural Networks."
+
+14. **QKAN-LSTM (Quantum Activations in Temporal Networks)**
+
+    - arXiv:2512.05049 (2025). "QKAN-LSTM: Quantum Kolmogorov-Arnold Network Enhanced Long Short-Term Memory."
+
+15. **Structured Quantum Reservoirs**
+
+    - "Structured quantum reservoir computing: advances in topology-aware feature extraction." *npj Quantum Information* (2025).
+
+16. **Stochastic Quantum Spiking Neural Networks**
+
+    - arXiv:2506.21324 (2025). "Stochastic Quantum Spiking Neural Networks with Quantum Memory and Local Learning."
+
 ### Frameworks
 
 - **PennyLane**: [pennylane.ai](https://pennylane.ai) - Differentiable quantum programming
@@ -1399,3 +1838,28 @@ ______________________________________________________________________
 08. ~~**Multi-objective scaling**~~: **ANSWERED — YES.** HybridQuantum achieves 96.9% on a dual-objective task (forage + evade). The architecture handles foraging via QSNN reflex and evasion via cortex PPO. Whether it scales to 3+ objectives (adding thermotaxis, mechanosensation as objectives rather than just sensory inputs) is untested but architecturally straightforward — additional modes could be added to the mode gate.
 09. **Harder environments**: The small pursuit predator environment (20x20, 2 predators) is largely solved at 96.9%. Does the HybridQuantum architecture generalise to larger grids, more predators, or faster predators?
 10. **Mode gating dynamics**: Mode gating converges to a static trust parameter in all sessions, but the **trust level depends on reflex quality**: HybridQuantum → 0.55 trust (collaborative, forage-dominant), HybridClassical → 0.37 trust (cortex-dominant, evade-dominant). The cortex adapts its strategy to the reflex signal strength. Would a more structured mode switching mechanism improve performance on harder environments?
+11. **Structured reservoir viability**: Can structured quantum reservoirs with C. elegans-inspired topology provide richer feature spaces than classical random features? If so, does the quantum feature space encode information that a classical feature extractor cannot?
+12. **Multi-qubit quantum memory**: Do multi-qubit SQS neurons with quantum memory (entanglement preserved across timesteps) provide measurably different computational capabilities than classical spiking neurons with standard recurrence?
+13. **qtDNN gradient approximation**: Can a classical tangential DNN (qtDNN) approximate entangled quantum circuit gradients accurately enough (correlation > 0.5 with true parameter-shift) to enable training circuits that would otherwise exhibit barren plateaus?
+14. **Trainability-advantage sweet spot**: Is the barren plateau-advantage dilemma a fundamental barrier, or can biological network topology constraints (sparse connectivity, small-world structure, modular organisation) provide a "sweet spot" of trainability + advantage that random architectures cannot access?
+
+### Proposed Next Steps: Bridging the Trainability-Advantage Gap
+
+The central challenge for quantum brain architectures is the **Barren Plateau-Advantage Dilemma** (Cerezo et al., Nature Communications, 2025): provably trainable quantum circuits are classically simulable, while circuits offering genuine quantum advantage suffer barren plateaus. Our experimental data confirms this — HybridClassical (96.3%) matches HybridQuantum (96.9%), showing the trainable single-qubit QLIF provides no measurable task-performance quantum advantage.
+
+Three strategies can bridge this gap:
+
+1. **Don't train the quantum part** — Use fixed structured quantum reservoirs as feature extractors with classical readout networks. Avoids barren plateaus entirely while potentially leveraging quantum dynamics for richer feature spaces.
+2. **Use local learning rules** — Replace global gradient-based training with local quantum learning rules (e.g., quantum STDP). Local rules avoid barren plateaus by construction and have biological plausibility.
+3. **Use classical gradient surrogates** — Train entangled circuits (which could provide genuine quantum advantage) using a classical tangential DNN (qtDNN) that approximates quantum gradients, separating the advantage source from the training mechanism.
+
+Four concrete architectures have been proposed (see [Next-Generation Architecture Proposals](#next-generation-architecture-proposals)):
+
+| Priority | Architecture | Strategy | Risk | Key Question |
+|----------|-------------|----------|------|-------------|
+| 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | Medium | Can structured reservoirs outperform random? |
+| 2 | SQS-QLIF Hybrid | Local learning rules | High | Can multi-qubit quantum memory neurons learn? |
+| 3 | Entangled QLIF + qtDNN | Classical surrogates | Medium-High | Can qtDNN approximate entangled circuit gradients? |
+| 4 | QKAN-QLIF Temporal Brain | Quantum activations | Low-Medium | Can QLIF replace classical LSTM activations? |
+
+Each proposal includes falsification criteria and decision gates to enable rapid go/no-go decisions.
