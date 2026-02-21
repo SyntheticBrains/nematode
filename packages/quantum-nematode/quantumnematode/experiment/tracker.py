@@ -501,7 +501,7 @@ def aggregate_results_metadata(all_results: list[SimulationResult]) -> ResultsMe
         learning_speed=convergence_metrics.learning_speed,
         learning_speed_episodes=convergence_metrics.learning_speed_episodes,
         stability=convergence_metrics.stability,
-        per_run_results=per_run_results if per_run_results else None,
+        per_run_results=per_run_results or None,
         # Multi-objective metrics (survival and temperature comfort)
         avg_survival_score=avg_survival_score,
         avg_temperature_comfort_score=avg_temperature_comfort_score,
