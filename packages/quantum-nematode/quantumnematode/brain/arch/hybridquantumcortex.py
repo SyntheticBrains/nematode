@@ -4,18 +4,23 @@ Hierarchical Hybrid Quantum Cortex Brain Architecture.
 Combines a QSNN reflex layer (QLIF neurons, REINFORCE training) with a QSNN
 cortex layer (grouped sensory QLIF neurons with shared hidden layer, REINFORCE
 with critic-provided GAE advantages) and a classical critic for multi-objective
-decision-making.
+decision-making. Optionally supports data re-uploading for increased circuit
+expressivity.
+
+Status: HALTED after 9 rounds (32 sessions, 14,600 episodes). The QSNN cortex
+under REINFORCE with surrogate gradients hit a ~40-45% ceiling on 2-predator
+pursuit. See logbook 008 for full evaluation.
 
 Architecture::
 
     Sensory Input (2-dim legacy)         Multi-sensory Input (8+ dim)
            |                                       |
            v                                       v
-    QSNN Reflex (unchanged)              QSNN Cortex (NEW)
-      S->H->M QLIF                         Grouped sensory QLIF
-      ~212 quantum params                    -> Shared hidden QLIF
-      Surrogate REINFORCE                    -> Output QLIF
-      Output: 4 reflex logits               ~350-500 quantum params
+    QSNN Reflex                          QSNN Cortex
+      S→H→M QLIF                           Grouped sensory QLIF
+      ~212 quantum params                    → Shared hidden QLIF
+      Surrogate REINFORCE                    → Output QLIF
+      Output: 4 reflex logits               ~252 quantum params
            |                                 Surrogate REINFORCE + GAE
            |                                       |
            v                                       v
@@ -24,13 +29,19 @@ Architecture::
            v
       Action Selection (4 actions)
 
-    Classical Critic: sensory_dim -> 64 -> 64 -> 1, Huber loss
+    Classical Critic: sensory_dim → 64 → 64 → 1, Huber loss
 
 Four-stage curriculum:
   1. QSNN reflex on foraging (REINFORCE)
   2. QSNN cortex + critic (reflex frozen, REINFORCE+GAE)
-  3. Joint fine-tune (both QSNNs + critic)
-  4. Multi-sensory scaling (same as 3, more modules)
+  3. Joint fine-tune (both QSNNs + critic) — caused catastrophic forgetting
+  4. Multi-sensory scaling (same as 3, more modules) — not reached
+
+Key results:
+  Stage 1: 82.5% mean (95.1% post-convergence) on foraging
+  Stage 2a: 88.8% mean on foraging (cortex exceeds reflex baseline)
+  Stage 2b: 96.8% mean on 1-predator (zero deaths)
+  Stage 2c: 40.9% mean on 2-predator (ceiling, halted)
 
 References
 ----------
