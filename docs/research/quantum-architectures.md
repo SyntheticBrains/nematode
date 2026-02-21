@@ -19,7 +19,7 @@ ______________________________________________________________________
 09. [Optimizer Variants](#optimizer-variants)
 10. [Barren Plateau Mitigation](#barren-plateau-mitigation)
 11. [External Research Survey (2024-2026)](#external-research-survey-2024-2026)
-12. [Next-Generation Architecture Proposals](#next-generation-architecture-proposals)
+12. [Next-Generation Architecture Proposals (H.1-H.6)](#next-generation-architecture-proposals)
 13. [Benchmarking Plan](#benchmarking-plan)
 14. [Research References](#research-references)
 15. [Open Questions](#open-questions)
@@ -1599,7 +1599,22 @@ Per SQS neuron (2-3 qubits):
 - Must show parameter reduction ≥30% for equivalent performance
 - Must demonstrate meaningful temporal memory: performance on sequential decision tasks > memoryless baseline (e.g., "find food, then return to nest" vs "find food")
 
-### H.5 Implementation Roadmap
+### H.5 Multi-Objective & Sensory Extensibility
+
+All four proposals are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities:
+
+| Architecture | Multi-Objective Mechanism | Sensory Extensibility |
+|---|---|---|
+| H.1 QRH | Classical PPO readout learns objective trade-offs (same as proven HybridQuantum cortex) | Add qubits or multiplex encoding; readout MLP scales naturally |
+| H.2 SQS-QLIF | Mode-gated fusion delegates objectives to reflex (fast) vs cortex (strategic) | Add SQS neurons to small-world network for new modalities |
+| H.3 Entangled QLIF + qtDNN | Entangled spike correlations encode active objective; cortex PPO handles switching | Add QLIF neurons + entanglement edges for new inputs |
+| H.4 QKAN-QLIF | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
+
+**Current sensory modules**: food_chemotaxis, nociception, thermotaxis, mechanosensation, proprioception
+
+**Planned future modalities** (roadmap Phase 4+): oxygen gradients (aerotaxis), osmolarity sensing, pheromone/social signalling, noxious chemical avoidance. These require only adding sensory modules in config and increasing the input feature dimension — no architectural changes to the quantum components.
+
+### H.6 Implementation Roadmap
 
 ```text
 Week 1-2:  QRH (H.1) — Structured reservoir experiments
