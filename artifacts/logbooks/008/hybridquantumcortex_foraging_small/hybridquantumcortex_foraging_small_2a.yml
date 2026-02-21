@@ -1,0 +1,108 @@
+# Hybrid Quantum Cortex Brain - Stage 2a: Cortex on Foraging Only
+# Trains the QSNN cortex on foraging without predators.
+# This is the first step of the graduated cortex curriculum:
+#   Stage 2a: foraging only (no predators) — cortex learns mode gating
+#   Stage 2b: 1 slow predator, doubled HP — cortex learns basic evasion
+#   Stage 2c: 2 pursuit predators, normal HP — full multi-objective
+#
+# QSNN reflex params MUST match stage 1 config exactly.
+# To use: update reflex_weights_path to point to your stage 1 weights file.
+
+max_steps: 500
+brain:
+  name: hybridquantumcortex
+  config:
+    # Training stage: 2 = cortex REINFORCE+GAE (reflex frozen)
+    training_stage: 2
+
+    # Path to pre-trained reflex weights from stage 1
+    # Update this path to your actual stage 1 output
+    reflex_weights_path: artifacts/models/20260218_131409/reflex_weights.pt
+
+    # QSNN reflex params (must match stage 1 config exactly)
+    num_sensory_neurons: 6
+    num_hidden_neurons: 8
+    num_motor_neurons: 4
+    membrane_tau: 0.9
+    threshold: 0.5
+    refractory_period: 0
+    shots: 1024
+    num_qsnn_timesteps: 10
+    surrogate_alpha: 1.0
+    logit_scale: 5.0
+    weight_clip: 3.0
+    theta_motor_max_norm: 1.0
+
+    # Cortex QSNN params
+    cortex_neurons_per_group: 4
+    cortex_hidden_neurons: 12
+    cortex_output_neurons: 8
+    num_cortex_timesteps: 4
+    cortex_shots: 100
+    num_modes: 3
+
+    # Cortex sensory modules — food_chemotaxis only for stage 2a
+    cortex_sensory_modules:
+      - food_chemotaxis
+
+    # Cortex REINFORCE+GAE params (more epochs for better learning)
+    cortex_lr: 0.005
+    critic_lr: 0.001
+    num_cortex_reinforce_epochs: 6
+    ppo_buffer_size: 512
+    gae_lambda: 0.95
+    entropy_coeff: 0.10
+    max_grad_norm: 0.5
+    use_gae_advantages: true
+    gamma: 0.99
+
+    # Cortex LR schedule (warmup + decay)
+    cortex_lr_warmup_episodes: 30
+    cortex_lr_warmup_start: 0.001
+    cortex_lr_decay_episodes: 150
+    cortex_lr_decay_end: 0.001
+
+    # Cortex adaptive alpha scheduling (broader gradients early)
+    # Alpha warmup delayed past LR warmup to avoid double amplification
+    cortex_alpha_start: 0.3
+    cortex_alpha_end: 2.0
+    cortex_alpha_warmup_episodes: 150
+    cortex_alpha_warmup_delay: 30
+
+    # Critic MLP params
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 2.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+gradient:
+  method: clip
