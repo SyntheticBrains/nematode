@@ -175,7 +175,7 @@ def prompt_interrupt() -> str:
     try:
         choice = input("Choice [y/n/c]: ").strip().lower()
         if choice in ("y", "n", "c", ""):
-            return choice if choice else "y"
+            return choice or "y"
         print(f"Invalid choice '{choice}', defaulting to save & exit")
         return "y"  # noqa: TRY300
     except (EOFError, KeyboardInterrupt):
