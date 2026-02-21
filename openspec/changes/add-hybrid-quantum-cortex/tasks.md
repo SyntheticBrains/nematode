@@ -80,3 +80,15 @@
 - [x] 10.4 Add tests for REINFORCE+GAE: verify loss computation with detached advantages, verify fallback to pure REINFORCE when `use_gae_advantages=false`
 - [x] 10.5 Add smoke test (mark with `@pytest.mark.smoke`): run 3-episode training session end-to-end on foraging config, verify brain produces valid actions and training step completes without error
 - [x] 10.6 Run full test suite (`uv run pytest`) and lint (`uv run pre-commit run -a`) to verify no regressions
+
+## 11. Experimental Evaluation (Post-Implementation)
+
+- [x] 11.1 Stage 1: QSNN reflex training on foraging — 4 sessions, 82.5% mean (95.1% post-conv). Reflex validated.
+- [x] 11.2 Stage 2 (original): Direct cortex training on 2-predator — 4 sessions, 3.1% catastrophic failure. Led to graduated curriculum.
+- [x] 11.3 Deep investigation: Found 3 critical bugs (missing advantage clipping, weight clamping, advantage normalization). Implemented graduated curriculum (2a/2b/2c).
+- [x] 11.4 Stage 2a: Cortex foraging — 12 sessions across 3 rounds (19.1% → 52.6% → 88.8%). Cortex exceeds reflex baseline.
+- [x] 11.5 Stage 2b: 1 pursuit predator — 4 sessions, 96.8% mean, zero predator deaths.
+- [x] 11.6 Stage 2c R1: 2 pursuit predators — 4 sessions, 39.8% mean, still improving at ep 500.
+- [x] 11.7 Stage 3: Joint fine-tune — 4 sessions, 19.3% catastrophic forgetting. Abandoned.
+- [x] 11.8 Stage 2c R2: Extended cortex-only — 4 sessions, 40.9% mean. Performance ceiling confirmed.
+- [x] 11.9 Architecture halted — REINFORCE+surrogate gradients ceiling at ~40-45% on 2-predator environment.

@@ -24,8 +24,28 @@ The HybridQuantum brain achieves 96.9% post-convergence on pursuit predators but
 
 ## Impact
 
-- **New files**: `hybridquantumcortex.py` (brain implementation), tests, 3-4 YAML configs (per curriculum stage)
+- **New files**: `hybridquantumcortex.py` (brain implementation), tests, 6 YAML configs (per curriculum stage/round)
 - **Modified files**: `dtypes.py` (BrainType enum), `__init__.py` (exports), brain factory (registration)
 - **Reused infrastructure**: `_qlif_layers.py` (QLIFSurrogateSpike, execute_qlif_layer_differentiable, encode_sensory_spikes — 100% reuse), `modules.py` (sensory module system — 100% reuse), `hybridquantum.py` (~70% reuse as template for rollout buffer, fusion, weight persistence, episode management)
 - **No breaking changes**: Existing architectures are unaffected
 - **Computational impact**: ~2-3x quantum circuit cost per decision vs HybridQuantum (two QSNN components instead of one)
+
+## Experimental Outcomes
+
+**Status: HALTED** — Architecture implemented and evaluated across 9 rounds (32 sessions, 14,600 episodes). Implementation is complete and functional, but the QSNN cortex under REINFORCE with surrogate gradients cannot match HybridQuantum's performance on the 2-predator environment.
+
+**Key results**:
+
+| Stage | Best Result | Finding |
+|-------|-------------|---------|
+| Stage 1 (reflex foraging) | 82.5% mean, 95.1% post-conv | QSNN reflex validated |
+| Stage 2a (cortex foraging) | 88.8% mean, 95.2% post-conv | Cortex exceeds reflex baseline (+6.3pp) |
+| Stage 2b (1 predator) | 96.8% mean, 97.2% post-conv | Zero deaths; zero starvation |
+| Stage 2c (2 predators) | 40.9% mean (best 42.8%) | ~40-45% ceiling; halted |
+| Stage 3 (joint fine-tune) | 19.3% mean (declining) | Catastrophic forgetting; abandoned |
+
+**Root causes for 2-predator ceiling**: Vanishing gradients after LR decay (norms 0.04-0.07), ineffective critic (EV ~0.10), frozen mode distributions, and insufficient gradient signal from REINFORCE with ~252 quantum parameters.
+
+**Comparison**: HybridQuantum (classical cortex MLP, PPO) achieves 96.9% on the same task. The PPO training method provides 40x more gradient passes per buffer than REINFORCE, which is the primary advantage.
+
+See: [008-appendix-hybridquantumcortex-optimization.md](../../docs/experiments/logbooks/008-appendix-hybridquantumcortex-optimization.md)

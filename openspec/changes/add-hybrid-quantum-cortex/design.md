@@ -183,10 +183,34 @@ This keeps the fusion mechanism identical to HybridQuantum — the cortex still 
 
 **Gradient interference between reflex and cortex REINFORCE** → In stage 3, both QSNN components train simultaneously with REINFORCE on the same final action probabilities. Use the proven mitigation: cortex QSNN trains with reduced LR (`joint_finetune_lr_factor = 0.1`), and gradients are clipped independently per component.
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **Cortex integration timesteps**: Should the cortex QSNN use the same number of integration timesteps as the reflex (10), or fewer (4-6) since it produces biases not primary logits? Fewer timesteps reduce circuit cost but increase shot noise.
+1. **Cortex integration timesteps**: Used same as reflex (10). RESOLVED — sufficient for stage 2a-2b performance but does not prevent the ~40-45% ceiling on 2-predator tasks.
 
-2. **Trust modulation neuron**: Is a dedicated QLIF neuron for trust modulation (output neuron 7) better than deriving trust purely from mode logits (current HybridQuantum approach)? The dedicated neuron gives the cortex a direct, continuous-valued trust signal rather than a softmax-derived one.
+2. **Trust modulation neuron**: Implemented as designed. Trust mean stabilised at ~0.29-0.32. RESOLVED — works as expected but mode distribution remains near-uniform (~[0.33, 0.33, 0.33]).
 
-3. **Stage 2 training algorithm**: Should stage 2 start with pure REINFORCE (proven safe, validated on foraging) and add GAE advantages only after basic learning is confirmed? Or go directly to REINFORCE+GAE since the infrastructure exists?
+3. **Stage 2 training algorithm**: Went directly to REINFORCE+GAE. RESOLVED — GAE advantages with near-zero critic EV are effectively noisy normalized returns, which proved sufficient for simpler tasks (88.8% foraging, 96.8% 1-predator).
+
+## Experimental Outcomes
+
+**Architecture halted after 9 rounds (32 sessions, 14,600 episodes).**
+
+### Risks that materialised
+
+| Risk | Outcome |
+|------|---------|
+| REINFORCE + external GAE advantages is untested | GAE advantages worked but critic EV never exceeded ~0.10. Effective baselines were noisy normalized returns. |
+| QSNN cortex may be too small (~400 params vs ~5K MLP) | Final cortex was ~252 params. Sufficient for foraging (88.8%) and 1-predator (96.8%) but hit gradient signal ceiling on 2-predator. |
+| Classical ablation may still show parity | Ablation not conducted — architecture halted before ablation stage due to ~40-45% ceiling on 2-predators. |
+| Gradient interference between reflex and cortex REINFORCE | Stage 3 joint fine-tune caused catastrophic forgetting (19.3%). Reflex REINFORCE at 24x update frequency destroyed foraging-tuned weights. |
+
+### Key design decisions validated
+
+- **Grouped sensory QLIF**: Worked well. Nociception group gained weight during predator training, confirming modality-specific processing.
+- **Graduated curriculum**: Essential. Direct 2-predator training failed catastrophically (3.1%). Foraging → 1 pred → 2 pred progression enabled incremental validation.
+- **REINFORCE with surrogate gradients**: Works for simpler tasks but gradient signal is too weak for hard multi-objective tasks. Vanishing gradients (norms 0.04-0.07) after LR decay, mode distributions frozen.
+
+### Key design decisions invalidated
+
+- **Stage 3 joint fine-tune**: Structurally incompatible with HybridQuantumCortex curriculum. Reflex trained only on foraging receives destructive predator-environment REINFORCE gradients. Unlike HybridQuantum (where reflex was already in predator context), this causes catastrophic forgetting.
+- **Cortex REINFORCE epochs > 1**: Multi-epoch REINFORCE produced identical outputs due to spike probability caching (epochs 1-5 duplicated epoch 0). Reduced to 1 epoch.
