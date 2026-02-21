@@ -25,24 +25,39 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from multiple brain architectures for your nematode:
+Choose from 12 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
-- **QVarCircuitBrain** (qvarcircuit): Quantum variational circuit with modular sensory processing
+**Quantum:**
+
+- **QVarCircuitBrain** (qvarcircuit): Quantum variational circuit with modular sensory processing and parameter-shift rule gradients
+- **QRCBrain** (qrc): Quantum reservoir computing with data re-uploading circuits and classical readout
+- **QSNNReinforceBrain** (qsnnreinforce): Quantum spiking neural network (QLIF neurons) with surrogate gradient REINFORCE
+- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training (experimental — architecturally incompatible)
 - **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
-- **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
+
+**Hybrid (Quantum + Classical):**
+
+- **HybridQuantumBrain** (hybridquantum): QSNN reflex + classical cortex MLP + classical critic with mode-gated fusion and 3-stage curriculum (96.9% on pursuit predators)
+- **HybridClassicalBrain** (hybridclassical): Classical ablation control for HybridQuantum — replaces QSNN reflex with small classical MLP (96.3% on pursuit predators)
+- **HybridQuantumCortexBrain** (hybridquantumcortex): QSNN reflex + QSNN cortex (grouped sensory QLIF) + classical critic with 4-stage curriculum (halted — 40.9% on 2-predator)
+
+**Classical:**
+
 - **MLPPPOBrain** (mlpppo): Classical actor-critic with Proximal Policy Optimization (clipped objective, GAE)
+- **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
+
+**Biologically-Inspired:**
+
 - **SpikingReinforceBrain** (spikingreinforce): Biologically realistic spiking neural network with LIF neurons and surrogate gradient learning
 
 Select the brain architecture when running simulations:
 
 ```bash
-python scripts/run_simulation.py --brain qvarcircuit       # Quantum (default)
-python scripts/run_simulation.py --brain qqlearning        # Hybrid quantum-classical
-python scripts/run_simulation.py --brain mlpreinforce      # Classical policy gradient
-python scripts/run_simulation.py --brain mlpppo            # Classical actor-critic (PPO)
-python scripts/run_simulation.py --brain mlpdqn            # Classical Q-learning
-python scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic
+python scripts/run_simulation.py --brain hybridquantum     # Best quantum (96.9% pursuit predators)
+python scripts/run_simulation.py --brain mlpppo            # Best classical (PPO actor-critic)
+python scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic (LIF spiking)
+python scripts/run_simulation.py --brain qvarcircuit       # Quantum variational circuit
 ```
 
 ## 🚀 Quick Start
@@ -87,23 +102,20 @@ cp .env.template .env
 **Command Line Examples:**
 
 ```bash
-# Dynamic foraging with quantum variational circuit brain (recommended)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/qvarcircuit_foraging_medium.yml --theme emoji
+# Hybrid quantum brain — QSNN reflex + classical cortex (best quantum: 96.9% on pursuit predators)
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/hybridquantum_foraging_small.yml --theme emoji
 
-# Dynamic foraging and predator evasion with quantum variational circuit brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/qvarcircuit_predators_medium.yml --theme emoji
+# Classical PPO brain (best classical: actor-critic with GAE)
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlpppo_foraging_medium.yml --theme emoji
 
-# Dynamic foraging with classical MLP brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlpreinforce_foraging_medium.yml --theme emoji
-
-# Spiking neural network brain
+# Spiking neural network brain (biologically realistic LIF neurons)
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spikingreinforce_foraging_small.yml --theme emoji
+
+# Quantum variational circuit brain
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/qvarcircuit_foraging_medium.yml --theme emoji
 
 # Quantum hardware (IBM QPU) with dynamic foraging
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/qvarcircuit_foraging_small.yml --theme emoji --device qpu
-
-# Many-worlds quantum simulation
-uv run ./scripts/run_simulation.py --log-level WARNING --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/qvarcircuit_foraging_small.yml --theme emoji --manyworlds
 ```
 
 **Docker GPU Examples:**
@@ -130,11 +142,13 @@ docker-compose exec quantum-nematode bash
 
 ### Quantum Learning Process
 
-For quantum brains, the learning process uses:
+The project supports multiple quantum learning approaches:
 
 - **Quantum Feature Encoding**: Environmental data encoded as qubit rotations
 - **Parameterized Quantum Circuits**: Trainable quantum gates for decision-making
-- **Parameter-Shift Rule**: Quantum gradient computation for optimization
+- **Surrogate Gradient Descent**: Differentiable QLIF (Quantum LIF) neurons enabling backpropagation through quantum spiking layers — used by the highest-performing hybrid architectures
+- **Parameter-Shift Rule**: Analytical quantum gradient computation for variational circuits
+- **Evolutionary Optimization**: CMA-ES and genetic algorithms as gradient-free alternatives
 - **Entanglement**: Quantum correlations between different sensory modules
 
 ### Spiking Neural Network
