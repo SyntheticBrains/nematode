@@ -1343,6 +1343,7 @@ Based on 200+ experiment sessions across 62 days of evaluation, combined with th
 - **Reservoir feature analysis**: Do structured reservoir outputs show higher mutual information with optimal actions than random reservoir outputs?
 - If MI(structured) ≤ MI(random): Architecture is not viable, stop
 - If MI(structured) > MI(random) but < MI(classical_MLP_features): Proceed with caution, may need topology refinement
+- If MI(structured) > MI(classical_MLP_features): Strong go-ahead — proceed with full PPO readout training
 
 #### Falsification Criteria
 
@@ -1399,13 +1400,21 @@ Based on 200+ experiment sessions across 62 days of evaluation, combined with th
 #### SQS Neuron Circuit (per neuron)
 
 ```text
-Per SQS neuron (2-3 qubits):
+Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
   Timestep t:
-  |ψ_t⟩ = U_input(x_t) · U_recurrent(ψ_{t-1}) · |ψ_{t-1}⟩
+  |ψ_t⟩ = U_readout · U_memory · U_input · |ψ_{t-1}⟩
 
-  U_input: RY(θ + f(w·x)) on qubit 0 (membrane)
-  U_recurrent: CNOT(q0→q1), RZ(φ) on q1 (quantum memory)
-  Measurement: Partial measure q0 (spike), preserve q1 (memory)
+  U_input:   RY(θ + f(w·x)) on q0           (membrane potential)
+  U_memory:  CZ(q0, q1), RZ(φ) on q1        (memory coupling — CZ is symmetric)
+  U_readout: CNOT(q0 → q_anc)               (copy spike to fresh ancilla)
+  Measurement: Measure q_anc (spike output), reset q0 for next timestep
+               q1 remains coherent (not entangled with measured qubit)
+
+  Note: Measuring q0 directly would collapse the entangled q0-q1 state,
+  destroying quantum memory. The ancilla-based readout decouples the spike
+  signal from the memory register, preserving q1's quantum coherence across
+  timesteps. Verify this matches arXiv:2506.21324's measurement scheme
+  during implementation.
 
   Learning: Quantum STDP
   Δw ∝ ⟨pre_spike · post_spike⟩ × eligibility_trace × reward_signal
@@ -1422,7 +1431,7 @@ Per SQS neuron (2-3 qubits):
 
 #### Key Design Decisions
 
-1. **SQS neuron implementation**: Follow arXiv:2506.21324 with adaptations for Qiskit Aer. Each neuron: 2 qubits (membrane + memory), partial measurement preserves memory qubit
+1. **SQS neuron implementation**: Follow arXiv:2506.21324 with adaptations for Qiskit Aer. Each neuron: 3 qubits (membrane + memory + readout ancilla). Ancilla-based measurement decouples spike readout from memory qubit to preserve quantum coherence across timesteps. Verify paper's measurement scheme during implementation — if the paper uses a different approach (e.g., weak measurement, mid-circuit reset), adapt accordingly
 2. **Learning rule**: Quantum STDP with eligibility traces, compatible with REINFORCE outer loop for the cortex
 3. **Network topology**: Small-world network matching C. elegans connectivity statistics (clustering coefficient ~0.28, path length ~2.65)
 4. **Integration**: Replace QLIF layer in `_qlif_layers.py` with SQS layer; keep cortex and fusion infrastructure unchanged
@@ -1624,6 +1633,10 @@ All four proposals are designed for multi-objective learning (foraging + predato
 ### H.6 Implementation Roadmap
 
 ```text
+Note: Scheduling follows risk level (lowest-risk architectures first to
+maximize early learnings), not priority order. Priority reflects expected
+scientific value if all risks were equal.
+
 Week 1-2:  QRH (H.1) — Structured reservoir experiments
            - Build C. elegans-inspired reservoir circuit
            - Mutual information analysis vs random reservoir
