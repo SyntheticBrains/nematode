@@ -1,11 +1,11 @@
 """Themes for the quantum nematode simulation."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class Theme(str, Enum):
+class Theme(StrEnum):
     """Simulation themes."""
 
     ASCII = "ascii"

@@ -289,12 +289,12 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
     github_username = args.github
     if not github_username and not args.no_prompt:
         github_input = input("GitHub username (optional, press Enter to skip): ").strip()
-        github_username = github_input if github_input else None
+        github_username = github_input or None
 
     notes = args.notes
     if not notes and not args.no_prompt:
         notes_input = input("Optimization notes (optional, press Enter to skip): ").strip()
-        notes = notes_input if notes_input else None
+        notes = notes_input or None
 
     # Generate submission ID early (needed for artifacts directory)
     submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")

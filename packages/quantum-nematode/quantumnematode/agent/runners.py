@@ -702,7 +702,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     termination_reason=TerminationReason.INTERRUPTED,
                     learn=False,
                     update_memory=False,
-                    food_history=(agent.food_history if agent.food_history else None),
+                    food_history=(agent.food_history or None),
                 )
 
             # Handle max steps reached
@@ -716,7 +716,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                     termination_reason=TerminationReason.MAX_STEPS,
                     learn=False,
                     update_memory=False,
-                    food_history=(agent.food_history if agent.food_history else None),
+                    food_history=(agent.food_history or None),
                 )
 
             # Handle all food collected
