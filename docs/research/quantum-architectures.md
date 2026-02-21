@@ -1253,13 +1253,13 @@ Parameter-efficient hybrid spiking-quantum CNN with surrogate gradients and quan
 - **Key finding**: Surrogate gradient backward pass scales to deeper circuits without gradient degradation when combined with data re-uploading
 - **Relevance**: Validates our surrogate gradient approach for deeper quantum circuits. Could enable data re-uploading QLIF with more expressive multi-layer circuits
 
-### QKAN-LSTM: Quantum Activations in Temporal Networks (arXiv:2512.05049, Dec 2025)
+### QKAN-LSTM: Quantum-Inspired Activations in Temporal Networks (arXiv:2512.05049, Dec 2025)
 
-Replaces classical activation functions in LSTM gates with quantum Kolmogorov-Arnold Network (KAN) activations. Achieves 79% parameter reduction for equivalent performance on time-series tasks.
+Replaces classical activation functions in LSTM gates with quantum-inspired Kolmogorov-Arnold Network (KAN) activations (DARUAN modules — single-qubit data re-uploading circuits executable on classical hardware without entanglement). Achieves 79% parameter reduction for equivalent performance on time-series tasks.
 
-- **Results**: Matches classical LSTM on financial forecasting and speech recognition with 79% fewer parameters
-- **Key innovation**: Quantum activations (single-qubit circuits) replace tanh/sigmoid in forget and input gates, providing richer gating dynamics
-- **Relevance**: Directly applicable — our QLIF neurons could serve as quantum activations within LSTM gates, adding temporal memory while preserving quantum computation. Low-risk approach since it builds on proven single-qubit QLIF infrastructure.
+- **Results**: Achieves 79% parameter reduction vs classical LSTM on physics simulation (Damped SHM, Bessel Function) and urban telecom forecasting benchmarks
+- **Key innovation**: Quantum-inspired variational activations (classically simulated single-qubit data re-uploading circuits) replace tanh/sigmoid in forget and input gates, providing richer Fourier spectral representation
+- **Relevance**: Partially applicable — demonstrates the LSTM gate activation replacement pattern and parameter efficiency gains. **Note**: QKAN-LSTM uses classical simulation of quantum-inspired circuits; deploying actual QLIF quantum circuits per gate activation would have substantially higher per-step cost (one circuit execution per hidden unit per gate per timestep). Quantum advantage over classical simulation is not established by this paper.
 
 ### Structured Quantum Reservoirs (Nature npj Quantum Information, 2025)
 
@@ -1565,19 +1565,26 @@ Per SQS neuron (2-3 qubits):
 │                                                             │
 │  Key advantage:                                             │
 │  - Adds temporal memory (roadmap Phase 3 requirement)       │
-│  - 79% parameter reduction vs classical LSTM (QKAN paper)   │
+│  - QKAN-LSTM showed 79% param reduction with quantum-       │
+│    inspired activations; actual QLIF may differ             │
 │  - Builds on proven QLIF + surrogate gradient pipeline      │
 │  - Low risk: falls back to classical LSTM if quantum fails  │
+│                                                             │
+│  Key cost consideration:                                    │
+│  - One quantum circuit per hidden unit per gate per step    │
+│  - Hidden dim 16, 2 quantum gates → 32 circuits/timestep   │
+│  - Mitigated by batched Aer execution + small circuits      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 #### Why This Could Work
 
-- **79% parameter reduction** demonstrated in QKAN-LSTM paper (arXiv:2512.05049) — quantum activations provide richer gating than classical sigmoid
+- **Architectural pattern validated**: QKAN-LSTM (arXiv:2512.05049) demonstrated 79% parameter reduction by replacing LSTM gate activations with quantum-inspired (classically simulated) variational circuits. Our H.4 extends this to *actual* QLIF quantum circuits — the parameter efficiency may differ, but the gate replacement pattern is proven
 - **Minimal quantum circuit** (single-qubit per activation), avoiding barren plateaus by design
 - **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM)
 - **Builds directly on proven infrastructure** — uses the same QLIF neuron and surrogate gradient backward pass that achieved 73.9% foraging success
 - **Low risk**: if quantum activations don't help, the architecture gracefully degrades to a standard LSTM with slightly different activations
+- **Computational cost caveat**: Unlike QKAN-LSTM's classical simulation, actual QLIF circuits require one quantum circuit execution per hidden unit per quantum gate per timestep (hidden_dim=16 × 2 gates = 32 circuits per step). Mitigated by batched Aer execution and minimal circuit depth (2 gates per QLIF)
 
 #### Key Design Decisions
 
@@ -1819,9 +1826,9 @@ ______________________________________________________________________
 
     - arXiv:2512.03895 (2025). "Parameter efficient hybrid spiking-quantum convolutional neural network with surrogate gradient and quantum data-reupload."
 
-14. **QKAN-LSTM (Quantum Activations in Temporal Networks)**
+14. **QKAN-LSTM (Quantum-Inspired Activations in Temporal Networks)**
 
-    - arXiv:2512.05049 (2025). "QKAN-LSTM: Quantum Kolmogorov-Arnold Network Enhanced Long Short-Term Memory."
+    - arXiv:2512.05049 (2025). "QKAN-LSTM: Quantum-inspired Kolmogorov-Arnold Long Short-term Memory."
 
 15. **Structured Quantum Reservoirs**
 
@@ -1871,6 +1878,6 @@ Four concrete architectures have been proposed (see [Next-Generation Architectur
 | 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | Medium | Can structured reservoirs outperform random? |
 | 2 | SQS-QLIF Hybrid | Local learning rules | High | Can multi-qubit quantum memory neurons learn? |
 | 3 | Entangled QLIF + qtDNN | Classical surrogates | Medium-High | Can qtDNN approximate entangled circuit gradients? |
-| 4 | QKAN-QLIF Temporal Brain | Quantum activations | Low-Medium | Can QLIF replace classical LSTM activations? |
+| 4 | QKAN-QLIF Temporal Brain | Actual quantum activations (inspired by QKAN-LSTM's classical pattern) | Low-Medium | Can actual QLIF circuits replace LSTM activations efficiently? |
 
 Each proposal includes falsification criteria and decision gates to enable rapid go/no-go decisions.
