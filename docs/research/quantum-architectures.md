@@ -1265,7 +1265,7 @@ Replaces classical activation functions in LSTM gates with quantum-inspired Kolm
 
 Multiple recent studies on quantum reservoir computing show that reservoir topology significantly affects performance, with structured (non-random) topologies outperforming random circuits.
 
-- **Key findings**: 1D chains with open boundaries consistently outperform random, periodic, and all-to-all topologies across benchmarks (Llodrà et al., "QRC in atomic lattices", *Materials Today Quantum*, 2025). Intermediate-regularity graphs outperform both fully random and fully connected networks (Ivaki et al., "QRC on random regular graphs", *Phys. Rev. A*, 2025). Higher-order observables (ZZ correlations) capture entanglement structure that single-qubit measurements miss.
+- **Key findings**: Homogeneous 1D Bose-Hubbard chains with open boundaries outperform periodic and all-to-all topologies — open boundaries break translational symmetry, generating diverse features without requiring disorder (Llodrà et al., "QRC in atomic lattices", *Chaos, Solitons & Fractals*, 2025). Intermediate-regularity graphs outperform both fully random and fully connected networks (Ivaki et al., "QRC on random regular graphs", *Phys. Rev. A*, 2025). Two-qubit correlations (ZZ observables) as readout features enhance performance over single-qubit measurements by accessing higher-dimensional Hilbert space structure (Martínez-Peña et al., "Role of coherence in many-body QRC", *Commun. Phys.*, 2024).
 - **Design principle**: Reservoir topology should encode domain-specific inductive biases (e.g., symmetries, locality). The optimal topology is task-dependent — no universal best structure exists.
 - **Relevance**: Explains our QRC failure — random reservoir angles produced non-discriminative representations. Structured reservoirs with C. elegans-inspired connectivity could revive the QRC approach. Quantitative advantage of structured vs random topology for RL feature extraction is an open question to be validated in H.1.
 
@@ -1832,9 +1832,10 @@ ______________________________________________________________________
 
 15. **Structured Quantum Reservoirs**
 
-    - Llodrà, G., Mujal, P., Zambrini, R., & Giorgi, G. L. (2025). "Quantum reservoir computing in atomic lattices." *Materials Today Quantum*. arXiv:2411.13401.
+    - Llodrà, G., Mujal, P., Zambrini, R., & Giorgi, G. L. (2025). "Quantum reservoir computing in atomic lattices." *Chaos, Solitons & Fractals*, 195, 116289. arXiv:2411.13401.
     - Ivaki, M. N., Lazarides, A., & Ala-Nissila, T. (2025). "Quantum reservoir computing on random regular graphs." *Physical Review A*, 112, 012622. arXiv:2409.03665.
     - Zhu, S., et al. (2025). "Minimalistic and scalable quantum reservoir computing enhanced with feedback." *npj Quantum Information*. DOI: 10.1038/s41534-025-01144-4.
+    - Martínez-Peña, R., et al. (2024). "Role of coherence in many-body quantum reservoir computing." *Communications Physics*, 7, 365. DOI: 10.1038/s42005-024-01859-4.
 
 ### Frameworks
 
