@@ -1,12 +1,12 @@
 """IBM quantum job status definitions and utilities."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import ClassVar
 
 from pydantic import BaseModel
 
 
-class IBMJobStatus(str, Enum):
+class IBMJobStatus(StrEnum):
     """
     Enumeration of IBM Quantum job statuses.
 

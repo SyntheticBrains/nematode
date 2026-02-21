@@ -521,7 +521,7 @@ class BaseEnvironment(ABC):
         self.rng = get_rng(self.seed)
 
         self.grid_size = grid_size
-        self.agent_pos = start_pos if start_pos else (1, 1)
+        self.agent_pos = start_pos or (1, 1)
         self.body = [tuple(self.agent_pos)] if max_body_length > 0 else []
         self.current_direction = Direction.UP
         self.theme = theme

@@ -1,6 +1,6 @@
 """Data types for reporting in Quantum Nematode."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -8,7 +8,7 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import AgentPath, FoodHistory
 
 
-class TerminationReason(str, Enum):
+class TerminationReason(StrEnum):
     """Reason why an episode terminated.
 
     Attributes
