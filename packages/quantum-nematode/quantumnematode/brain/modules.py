@@ -30,7 +30,7 @@ Module naming follows C. elegans neuroscience conventions:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -69,7 +69,7 @@ class CoreFeatures:
 # =============================================================================
 
 
-class ModuleName(str, Enum):
+class ModuleName(StrEnum):
     """Sensory module identifiers.
 
     Module names follow C. elegans neuroscience conventions where possible.

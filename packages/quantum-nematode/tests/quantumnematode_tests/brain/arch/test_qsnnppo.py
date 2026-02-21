@@ -214,7 +214,7 @@ class TestQSNNRolloutBuffer:
             hidden_spike_rates=np.zeros(2, dtype=np.float32),
         )
 
-        returns, advantages = buffer.compute_returns_and_advantages(
+        _returns, advantages = buffer.compute_returns_and_advantages(
             last_value=0.0,
             gamma=0.99,
             gae_lambda=0.95,
@@ -413,7 +413,7 @@ class TestQSNNPPOBrainInit:
             shots=100,
         )
         # Provide explicit action_set that doesn't match num_actions
-        with pytest.raises(ValueError, match="num_actions.*does not match"):
+        with pytest.raises(ValueError, match=r"num_actions.*does not match"):
             QSNNPPOBrain(
                 config=config,
                 num_actions=3,
