@@ -51,8 +51,9 @@
 
 ## 6. MI Decision Gate Script
 
+- [ ] 6.0 Add `scikit-learn` as project dependency (needed for `mutual_info_classif`)
 - [ ] 6.1 Create `scripts/qrh_mi_analysis.py` — oracle dataset generation using pre-trained MLPPPO
-- [ ] 6.2 Implement structured vs random reservoir feature extraction comparison
+- [ ] 6.2 Implement structured vs random vs classical MLP feature extraction comparison (three-way)
 - [ ] 6.3 Implement MI computation using `sklearn.feature_selection.mutual_info_classif`
 - [ ] 6.4 Implement permutation test (1000 permutations) for p-value significance
 - [ ] 6.5 Add CLI argument parsing and structured results output

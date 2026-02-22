@@ -134,7 +134,7 @@ All features lie in [-1, 1], well-suited for neural network input without normal
 ## Risks / Trade-offs
 
 **[Risk] Structured reservoir may still produce non-discriminative features**
-→ Mitigation: MI decision gate script (Week 1) compares structured vs random reservoir feature quality. If MI(structured) ≤ MI(random), stop before investing in PPO training.
+→ Mitigation: MI decision gate script (Week 1) compares structured reservoir, random reservoir, and classical MLP (raw input) feature quality using mutual information. If MI(structured) ≤ MI(random) or MI(structured) ≤ MI(classical), the structured topology adds no value. Three-way comparison prevents false confidence from both reservoir types being equally poor.
 
 **[Risk] C. elegans topology mapping may not transfer to the simulation's sensory space**
 → Mitigation: The simulation's sensory modules (food chemotaxis, nociception) map naturally to the C. elegans chemosensory circuit. The topology is biologically grounded, not arbitrary.
