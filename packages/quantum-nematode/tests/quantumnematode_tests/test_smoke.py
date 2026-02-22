@@ -30,6 +30,7 @@ SIMULATION_CONFIGS = [
     "qvarcircuit_predators_small_validate.yml",
     "mlpppo_thermotaxis_foraging_small.yml",
     "mlpppo_predators_small.yml",
+    "qrh_foraging_small.yml",
 ]
 
 
