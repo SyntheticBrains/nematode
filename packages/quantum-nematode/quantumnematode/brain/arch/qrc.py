@@ -37,11 +37,13 @@ import numpy as np
 import torch
 from pydantic import Field, field_validator
 from qiskit import QuantumCircuit
-from torch import nn, optim
+from torch import optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
+from quantumnematode.brain.arch._quantum_reservoir import build_readout_network
+from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend, run_circuit_shots
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,
@@ -49,7 +51,6 @@ from quantumnematode.brain.modules import (
     get_classical_feature_dimension,
 )
 from quantumnematode.env import Direction
-from quantumnematode.errors import ERROR_MISSING_IMPORT_QISKIT_AER
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -247,6 +248,7 @@ class QRCBrain(ClassicalBrain):
 
         self.config = config
         self.num_actions = num_actions
+        self._device_type = device
         self.device = torch.device(device.value)
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS
 
@@ -298,9 +300,11 @@ class QRCBrain(ClassicalBrain):
 
         # Build readout network
         self.reservoir_output_dim = 2**self.num_qubits
-        self.readout = self._build_readout_network(
-            config.readout_type,
-            config.readout_hidden,
+        self.readout = build_readout_network(
+            input_dim=self.reservoir_output_dim,
+            hidden_dim=config.readout_hidden,
+            output_dim=self.num_actions,
+            readout_type=config.readout_type,
         ).to(self.device)
 
         # Optimizer for readout network
@@ -328,59 +332,10 @@ class QRCBrain(ClassicalBrain):
             f"{config.readout_type} readout ({self.reservoir_output_dim} -> {num_actions})",
         )
 
-    def _build_readout_network(
-        self,
-        readout_type: str,
-        hidden_dim: int,
-    ) -> nn.Module:
-        """Build the classical readout network.
-
-        Parameters
-        ----------
-        readout_type : str
-            Type of readout: "mlp" or "linear".
-        hidden_dim : int
-            Number of hidden units for MLP readout.
-
-        Returns
-        -------
-        nn.Module
-            The readout network.
-        """
-        if readout_type == "mlp":
-            network = nn.Sequential(
-                nn.Linear(self.reservoir_output_dim, hidden_dim),
-                nn.ReLU(),
-                nn.Linear(hidden_dim, self.num_actions),
-            )
-        else:
-            # Linear readout
-            network = nn.Linear(self.reservoir_output_dim, self.num_actions)
-
-        # Initialize weights for better gradient flow
-        for module in network.modules():
-            if isinstance(module, nn.Linear):
-                # Orthogonal initialization for better learning dynamics
-                nn.init.orthogonal_(module.weight, gain=1.0)
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
-
-        return network
-
     def _get_backend(self):  # noqa: ANN202
         """Get or create the Qiskit Aer backend for circuit execution."""
         if self._backend is None:
-            try:
-                from qiskit_aer import AerSimulator
-            except ImportError as err:
-                error_message = ERROR_MISSING_IMPORT_QISKIT_AER
-                logger.error(error_message)
-                raise ImportError(error_message) from err
-
-            self._backend = AerSimulator(
-                device="CPU",
-                seed_simulator=self.seed,
-            )
+            self._backend = get_qiskit_backend(self._device_type, seed=self.seed)
         return self._backend
 
     def _encode_inputs(self, features: np.ndarray) -> QuantumCircuit:
@@ -462,20 +417,9 @@ class QRCBrain(ClassicalBrain):
         # Build circuit with input encoding
         qc = self._encode_inputs(features)
 
-        # Execute on backend
+        # Execute on backend and get probability distribution
         backend = self._get_backend()
-        job = backend.run(qc, shots=self.shots)
-        result = job.result()
-        counts = result.get_counts()
-
-        # Convert counts to probability distribution
-        num_states = 2**self.num_qubits
-        probs = np.zeros(num_states)
-
-        for bitstring, count in counts.items():
-            # Convert bitstring to index (Qiskit uses little-endian)
-            idx = int(bitstring, 2)
-            probs[idx] = count / self.shots
+        probs = run_circuit_shots(backend, qc, self.shots, self.num_qubits)
 
         # Debug: Track reservoir output statistics (sample every 50 steps)
         if len(self.episode_states) % 50 == 0:
@@ -811,7 +755,7 @@ class QRCBrain(ClassicalBrain):
         new_brain = QRCBrain(
             config=config_copy,
             num_actions=self.num_actions,
-            device=DeviceType(self.device.type),
+            device=self._device_type,
             action_set=self._action_set,
         )
 
