@@ -1006,6 +1006,7 @@ class QRHBrain(ClassicalBrain):
         if num_updates > 0:
             avg_loss = total_policy_loss / num_updates
             self.latest_data.loss = avg_loss
+            self.history_data.losses.append(avg_loss)
 
             logger.debug(
                 f"QRH PPO update: policy_loss={total_policy_loss / num_updates:.4f}, "
