@@ -15,16 +15,16 @@ brain:
     readout_hidden_dim: 64
     readout_num_layers: 2
 
-    # PPO hyperparameters
-    actor_lr: 0.0003
-    critic_lr: 0.0003
+    # PPO hyperparameters (aligned with MLPPPO proven settings)
+    actor_lr: 0.001
+    critic_lr: 0.001
     gamma: 0.99
     gae_lambda: 0.95
     ppo_clip_epsilon: 0.2
-    ppo_epochs: 4
+    ppo_epochs: 10
     ppo_minibatches: 4
-    ppo_buffer_size: 512
-    entropy_coeff: 0.01
+    ppo_buffer_size: 256
+    entropy_coeff: 0.02
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 

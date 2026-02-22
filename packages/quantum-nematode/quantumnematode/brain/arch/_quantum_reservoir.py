@@ -12,6 +12,7 @@ Functions
 
 from __future__ import annotations
 
+import numpy as np
 from torch import nn
 
 
@@ -60,7 +61,7 @@ def build_readout_network(
     # Initialize weights for better gradient flow
     for module in network.modules():
         if isinstance(module, nn.Linear):
-            nn.init.orthogonal_(module.weight, gain=1.0)
+            nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
 
