@@ -29,6 +29,9 @@ brain:
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
+    # Topology
+    use_random_topology: true
+
     # Unified sensory modules for multi-objective tasks
     sensory_modules:
       - food_chemotaxis
