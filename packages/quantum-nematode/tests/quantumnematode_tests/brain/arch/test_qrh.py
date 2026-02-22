@@ -42,6 +42,10 @@ class TestQRHBrainConfig:
         assert config.max_grad_norm == 0.5
         assert config.use_random_topology is False
         assert config.sensory_modules is None
+        assert config.lr_warmup_episodes == 0
+        assert config.lr_warmup_start is None
+        assert config.lr_decay_episodes is None
+        assert config.lr_decay_end is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -638,3 +642,128 @@ class TestQRHEpisodeBoundaries:
         features = brain.preprocess(params)
         assert len(features) == 2
         assert np.isfinite(features).all()
+
+
+class TestQRHLRScheduling:
+    """Test cases for learning rate scheduling."""
+
+    def test_lr_warmup_config(self):
+        """Test LR warmup config fields round-trip."""
+        config = QRHBrainConfig(
+            lr_warmup_episodes=30,
+            lr_warmup_start=0.00005,
+            lr_decay_episodes=100,
+            lr_decay_end=0.00001,
+        )
+        assert config.lr_warmup_episodes == 30
+        assert config.lr_warmup_start == 0.00005
+        assert config.lr_decay_episodes == 100
+        assert config.lr_decay_end == 0.00001
+
+    def test_lr_no_scheduling_by_default(self):
+        """LR should stay constant when warmup=0 and no decay."""
+        config = QRHBrainConfig(num_reservoir_qubits=2, actor_lr=0.001)
+        brain = QRHBrain(config=config, num_actions=4)
+        assert not brain.lr_scheduling_enabled
+        assert brain._get_current_lr() == 0.001
+
+        # After several episodes, LR should remain unchanged
+        for _ in range(10):
+            brain.post_process_episode()
+        assert brain._get_current_lr() == 0.001
+
+    def test_lr_warmup_progression(self):
+        """LR should ramp from warmup_start to base_lr over warmup_episodes."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=2,
+            actor_lr=0.001,
+            lr_warmup_episodes=10,
+            lr_warmup_start=0.0001,
+        )
+        brain = QRHBrain(config=config, num_actions=4)
+        assert brain.lr_scheduling_enabled
+
+        # Episode 0: should be at warmup_start
+        assert brain._get_current_lr() == pytest.approx(0.0001)
+
+        # Episode 5 (midpoint): should be halfway between warmup_start and base_lr
+        brain._episode_count = 5
+        assert brain._get_current_lr() == pytest.approx(0.00055)
+
+        # Episode 10 (end of warmup): should be at base_lr
+        brain._episode_count = 10
+        assert brain._get_current_lr() == pytest.approx(0.001)
+
+        # Episode 20 (past warmup, no decay): should stay at base_lr
+        brain._episode_count = 20
+        assert brain._get_current_lr() == pytest.approx(0.001)
+
+    def test_lr_warmup_then_decay(self):
+        """LR should warmup then decay when both are configured."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=2,
+            actor_lr=0.001,
+            lr_warmup_episodes=10,
+            lr_warmup_start=0.0001,
+            lr_decay_episodes=20,
+            lr_decay_end=0.0002,
+        )
+        brain = QRHBrain(config=config, num_actions=4)
+
+        # Episode 0: warmup start
+        assert brain._get_current_lr() == pytest.approx(0.0001)
+
+        # Episode 10: at base_lr (end of warmup, start of decay)
+        brain._episode_count = 10
+        assert brain._get_current_lr() == pytest.approx(0.001)
+
+        # Episode 20: halfway through decay
+        brain._episode_count = 20
+        expected = 0.001 + (0.0002 - 0.001) * 0.5  # 0.0006
+        assert brain._get_current_lr() == pytest.approx(expected)
+
+        # Episode 30: at decay end
+        brain._episode_count = 30
+        assert brain._get_current_lr() == pytest.approx(0.0002)
+
+        # Episode 50: stays at decay end
+        brain._episode_count = 50
+        assert brain._get_current_lr() == pytest.approx(0.0002)
+
+    def test_lr_scheduling_in_post_process(self):
+        """post_process_episode() should update optimizer LR."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=2,
+            actor_lr=0.001,
+            lr_warmup_episodes=10,
+            lr_warmup_start=0.0001,
+        )
+        brain = QRHBrain(config=config, num_actions=4)
+
+        # Initial LR should be warmup_start (episode 0)
+        # Note: optimizer starts at base_lr, first post_process sets to ep 1 LR
+        brain.post_process_episode()  # episode_count becomes 1
+        expected_lr = 0.0001 + (0.001 - 0.0001) * (1 / 10)  # 0.00019
+        actual_lr = brain.optimizer.param_groups[0]["lr"]
+        assert actual_lr == pytest.approx(expected_lr)
+
+    def test_lr_copy_preserves_scheduling(self):
+        """copy() should preserve LR scheduling config and episode count."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=2,
+            actor_lr=0.001,
+            lr_warmup_episodes=10,
+            lr_warmup_start=0.0001,
+        )
+        brain = QRHBrain(config=config, num_actions=4)
+
+        # Advance a few episodes
+        for _ in range(5):
+            brain.post_process_episode()
+
+        brain_copy = brain.copy()
+        assert brain_copy.lr_scheduling_enabled
+        assert brain_copy.lr_warmup_episodes == 10
+        assert brain_copy.lr_warmup_start == 0.0001
+        assert brain_copy._episode_count == 5
+        assert brain_copy._get_current_lr() == pytest.approx(brain._get_current_lr())
