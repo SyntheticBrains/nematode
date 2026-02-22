@@ -13,15 +13,16 @@ Key Features:
 - **Per-Qubit Input Encoding**: Only sensory qubits (ASEL/ASER) receive direct input;
   interneuron/command qubits receive signal exclusively through the topology, matching
   biological signal routing
-- **Z/ZZ Feature Extraction**: Per-qubit Z-expectations ⟨Z_i⟩ + pairwise ZZ-correlations
-  ⟨Z_i Z_j⟩ (36 features for 8 qubits) via exact statevector simulation
+- **X/Y/Z + ZZ Feature Extraction**: Per-qubit Pauli expectations ⟨X_i⟩, ⟨Y_i⟩, ⟨Z_i⟩
+  + pairwise ZZ-correlations ⟨Z_i Z_j⟩ (52 features for 8 qubits) via exact statevector
+  simulation. X/Y expectations capture phase information lost by Z-only measurement.
 - **PPO Actor-Critic Readout**: Separate actor and critic MLPs trained with clipped
   surrogate loss, GAE advantages, and entropy bonus
 - **No Barren Plateaus**: Reservoir is fixed (no quantum parameters trained)
 
 Architecture:
     Sensory Input → Per-Qubit Encoding → Structured Quantum Reservoir (FIXED)
-    → Z/ZZ Features → PPO Readout
+    → X/Y/Z + ZZ Features → PPO Readout
 
 The reservoir avoids barren plateaus entirely because no quantum parameters are
 trained. Only the classical actor-critic readout (~5K params) is optimized.
@@ -145,8 +146,8 @@ CHEMICAL_SYNAPSE_ROTATIONS: list[tuple[int, int, float, float]] = [
 
 
 def _compute_feature_dim(num_qubits: int) -> int:
-    """Compute QRH feature dimension: N + N(N-1)/2."""
-    return num_qubits + num_qubits * (num_qubits - 1) // 2
+    """Compute QRH feature dimension: 3N (X/Y/Z expectations) + N(N-1)/2 (ZZ correlations)."""
+    return 3 * num_qubits + num_qubits * (num_qubits - 1) // 2
 
 
 # =============================================================================
@@ -705,25 +706,28 @@ class QRHBrain(ClassicalBrain):
 
         # Statevector simulation (no measurement gates needed)
         sv = Statevector.from_instruction(qc)
-        probabilities = np.abs(sv.data) ** 2
 
-        return np.asarray(probabilities, dtype=np.float64)
+        return np.asarray(sv.data, dtype=np.complex128)
 
     # =========================================================================
     # Feature Extraction
     # =========================================================================
 
-    def _extract_features(self, probabilities: np.ndarray) -> np.ndarray:
-        """Extract Z-expectations and ZZ-correlations from statevector probabilities.
+    def _extract_features(self, statevector: np.ndarray) -> np.ndarray:  # noqa: C901
+        """Extract X/Y/Z expectations and ZZ correlations from the statevector.
 
-        Computes:
+        Computes from the full complex statevector amplitudes:
+        - ⟨X_i⟩ = Σ_k 2·Re(ψ_k* · ψ_{k⊕2^i}) for each qubit i
+        - ⟨Y_i⟩ = Σ_k 2·Im(ψ_{k⊕2^i}* · ψ_k) for each qubit i
         - ⟨Z_i⟩ = Σ_k (-1)^bit(k,i) |ψ_k|² for each qubit i
         - ⟨Z_i Z_j⟩ = Σ_k (-1)^(bit(k,i)+bit(k,j)) |ψ_k|² for each pair (i,j)
 
+        Output dimension: 3N + N(N-1)/2 = 52 for 8 qubits.
+
         Parameters
         ----------
-        probabilities : np.ndarray
-            Statevector probabilities |ψ_k|², shape (2^num_qubits,).
+        statevector : np.ndarray
+            Complex statevector amplitudes ψ_k, shape (2^num_qubits,).
 
         Returns
         -------
@@ -731,13 +735,37 @@ class QRHBrain(ClassicalBrain):
             Feature vector of shape (feature_dim,) with values in [-1, 1].
         """
         n = self.num_qubits
-        num_states = len(probabilities)
+        num_states = len(statevector)
+        probabilities = np.abs(statevector) ** 2
 
         # Pre-compute sign arrays for each qubit: sign[q][k] = (-1)^bit(k,q)
         signs = np.zeros((n, num_states))
         for q in range(n):
             for k in range(num_states):
                 signs[q, k] = 1.0 - 2.0 * ((k >> q) & 1)
+
+        # X-expectations: ⟨X_i⟩ = Σ_k 2·Re(ψ_k* · ψ_{k⊕2^i})
+        # For each qubit i, X flips bit i: ⟨X_i⟩ = 2·Re(Σ_{k: bit_i=0} ψ_k* · ψ_{k+2^i})
+        x_expectations = np.zeros(n)
+        for q in range(n):
+            mask = 1 << q
+            exp_val = 0.0
+            for k in range(num_states):
+                if (k & mask) == 0:
+                    exp_val += np.real(np.conj(statevector[k]) * statevector[k | mask])
+            x_expectations[q] = 2.0 * exp_val
+
+        # Y-expectations: ⟨Y_i⟩ = Σ_k 2·Im(ψ_{k⊕2^i}* · ψ_k) for bit_i=0
+        # Y|0⟩ = i|1⟩, Y|1⟩ = -i|0⟩
+        # ⟨Y_i⟩ = 2·Im(Σ_{k: bit_i=0} ψ_{k+2^i}* · ψ_k)
+        y_expectations = np.zeros(n)
+        for q in range(n):
+            mask = 1 << q
+            exp_val = 0.0
+            for k in range(num_states):
+                if (k & mask) == 0:
+                    exp_val += np.imag(np.conj(statevector[k | mask]) * statevector[k])
+            y_expectations[q] = 2.0 * exp_val
 
         # Z-expectations: ⟨Z_i⟩
         z_expectations = np.array([np.dot(signs[q], probabilities) for q in range(n)])
@@ -749,7 +777,14 @@ class QRHBrain(ClassicalBrain):
                 zz = np.dot(signs[i] * signs[j], probabilities)
                 zz_correlations.append(zz)
 
-        features = np.concatenate([z_expectations, np.array(zz_correlations)])
+        features = np.concatenate(
+            [
+                x_expectations,
+                y_expectations,
+                z_expectations,
+                np.array(zz_correlations),
+            ],
+        )
         return features.astype(np.float32)
 
     # =========================================================================
@@ -799,9 +834,9 @@ class QRHBrain(ClassicalBrain):
     # =========================================================================
 
     def _get_reservoir_features(self, sensory_features: np.ndarray) -> np.ndarray:
-        """Run sensory features through reservoir and extract Z/ZZ features."""
-        probabilities = self._encode_and_run(sensory_features)
-        return self._extract_features(probabilities)
+        """Run sensory features through reservoir and extract X/Y/Z + ZZ features."""
+        statevector = self._encode_and_run(sensory_features)
+        return self._extract_features(statevector)
 
     def run_brain(
         self,
