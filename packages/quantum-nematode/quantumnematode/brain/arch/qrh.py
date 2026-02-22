@@ -375,7 +375,7 @@ class _RolloutBuffer:
         advantages = torch.zeros(len(self), device=self.device)
         last_gae = 0.0
 
-        values = torch.stack(self.values).squeeze()
+        values = torch.stack(self.values).squeeze(-1)
 
         for t in reversed(range(len(self))):
             if t == len(self) - 1:
