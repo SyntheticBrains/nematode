@@ -995,6 +995,18 @@ class QRHBrain(ClassicalBrain):
             self.gae_lambda,
         )
 
+        # Skip PPO update if buffer is too small — tiny batches produce unreliable
+        # gradients with high value_loss variance, causing policy instability.
+        # Use 64 as floor, but never more than half the configured buffer size
+        # (so small-buffer configs in tests still work).
+        min_buffer_size = min(64, self.buffer.buffer_size // 2)
+        if len(self.buffer) < min_buffer_size:
+            logger.debug(
+                f"QRH skipping PPO update: buffer size {len(self.buffer)} < {min_buffer_size}",
+            )
+            self.buffer.reset()
+            return
+
         # PPO update loop
         total_policy_loss = 0.0
         total_value_loss = 0.0
