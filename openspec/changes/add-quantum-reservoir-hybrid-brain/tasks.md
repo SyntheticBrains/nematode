@@ -1,11 +1,11 @@
 ## 1. Shared Utility Extraction
 
-- [ ] 1.1 Create `brain/arch/_quantum_utils.py` with `get_qiskit_backend()` moved from `_qlif_layers.py`, plus `run_circuit_shots()` helper
-- [ ] 1.2 Update `_qlif_layers.py` to import and re-export `get_qiskit_backend` from `_quantum_utils` for backward compatibility
-- [ ] 1.3 Update `qrc.py` to import `get_qiskit_backend` from `_quantum_utils` instead of inline implementation
-- [ ] 1.4 Create `brain/arch/_quantum_reservoir.py` with `build_readout_network()` extracted from `qrc.py`
-- [ ] 1.5 Update `qrc.py` to use `build_readout_network()` from `_quantum_reservoir`
-- [ ] 1.6 Run full test suite to verify refactoring is backward-compatible: `uv run pytest`
+- [x] 1.1 Create `brain/arch/_quantum_utils.py` with `get_qiskit_backend()` moved from `_qlif_layers.py`, plus `run_circuit_shots()` helper
+- [x] 1.2 Update `_qlif_layers.py` to import and re-export `get_qiskit_backend` from `_quantum_utils` for backward compatibility
+- [x] 1.3 Update `qrc.py` to import `get_qiskit_backend` from `_quantum_utils` instead of inline implementation
+- [x] 1.4 Create `brain/arch/_quantum_reservoir.py` with `build_readout_network()` extracted from `qrc.py`
+- [x] 1.5 Update `qrc.py` to use `build_readout_network()` from `_quantum_reservoir`
+- [x] 1.6 Run full test suite to verify refactoring is backward-compatible: `uv run pytest`
 
 ## 2. Brain Type Registration
 
@@ -37,8 +37,8 @@
 
 ## 5. Tests
 
-- [ ] 5.1 Create `tests/.../brain/arch/test_quantum_utils.py` — tests for shared `get_qiskit_backend()` and `run_circuit_shots()`
-- [ ] 5.2 Create `tests/.../brain/arch/test_quantum_reservoir.py` — tests for shared `build_readout_network()`
+- [x] 5.1 Create `tests/.../brain/arch/test_quantum_utils.py` — tests for shared `get_qiskit_backend()` and `run_circuit_shots()`
+- [x] 5.2 Create `tests/.../brain/arch/test_quantum_reservoir.py` — tests for shared `build_readout_network()`
 - [ ] 5.3 Create `tests/.../brain/arch/test_qrh.py` — `TestQRHBrainConfig`: default config, custom values, all validators
 - [ ] 5.4 Add `TestQRHReservoirCircuit`: CZ gate presence, fixed rotations, seed reproducibility, structured vs random topology
 - [ ] 5.5 Add `TestQRHFeatureExtraction`: dimension (36 for 8q), Z range [-1,1], ZZ range [-1,1], input sensitivity, determinism
