@@ -212,7 +212,7 @@ class TestQRHReservoirCircuit:
 
 
 class TestQRHFeatureExtraction:
-    """Test cases for Z-expectation and ZZ-correlation feature extraction."""
+    """Test cases for X/Y/Z-expectation and ZZ-correlation feature extraction."""
 
     @pytest.fixture
     def brain(self) -> QRHBrain:
@@ -226,38 +226,56 @@ class TestQRHFeatureExtraction:
         return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_feature_dimension(self, brain):
-        """Feature dimension should be N + N(N-1)/2."""
+        """Feature dimension should be 3N + N(N-1)/2."""
         features = np.array([0.5, 0.3], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
-        # 4 qubits: 4 + 4*3/2 = 4 + 6 = 10
+        # 4 qubits: 3*4 + 4*3/2 = 12 + 6 = 18
         expected_dim = _compute_feature_dim(4)
-        assert expected_dim == 10
+        assert expected_dim == 18
         assert result.shape == (expected_dim,)
 
     def test_feature_dimension_8_qubits(self):
-        """Feature dimension for 8 qubits should be 36."""
-        assert _compute_feature_dim(8) == 36
+        """Feature dimension for 8 qubits should be 52."""
+        assert _compute_feature_dim(8) == 52
 
-    def test_z_expectations_range(self, brain):
-        """Z-expectations should be in [-1, 1]."""
+    def test_xyz_expectations_range(self, brain):
+        """X, Y, Z expectations should all be in [-1, 1]."""
         features = np.array([0.5, 0.3], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
-        # First N values are Z-expectations
-        z_expectations = result[: brain.num_qubits]
-        assert np.all(z_expectations >= -1.0 - 1e-8)
-        assert np.all(z_expectations <= 1.0 + 1e-8)
+        n = brain.num_qubits
+        x_expectations = result[:n]
+        y_expectations = result[n : 2 * n]
+        z_expectations = result[2 * n : 3 * n]
+
+        for name, exp in [("X", x_expectations), ("Y", y_expectations), ("Z", z_expectations)]:
+            assert np.all(exp >= -1.0 - 1e-6), f"{name} expectations below -1"
+            assert np.all(exp <= 1.0 + 1e-6), f"{name} expectations above 1"
 
     def test_zz_correlations_range(self, brain):
         """ZZ-correlations should be in [-1, 1]."""
         features = np.array([0.5, 0.3], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
-        # Values after first N are ZZ-correlations
-        zz_correlations = result[brain.num_qubits :]
-        assert np.all(zz_correlations >= -1.0 - 1e-8)
-        assert np.all(zz_correlations <= 1.0 + 1e-8)
+        # ZZ correlations start after 3N expectations
+        zz_correlations = result[3 * brain.num_qubits :]
+        assert np.all(zz_correlations >= -1.0 - 1e-6)
+        assert np.all(zz_correlations <= 1.0 + 1e-6)
+
+    def test_xy_expectations_nontrivial(self, brain):
+        """X and Y expectations should not all be zero for non-trivial states."""
+        features = np.array([0.8, -0.6], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+
+        n = brain.num_qubits
+        x_expectations = result[:n]
+        y_expectations = result[n : 2 * n]
+
+        # At least some X or Y expectations should be non-zero
+        assert not (
+            np.allclose(x_expectations, 0, atol=1e-6) and np.allclose(y_expectations, 0, atol=1e-6)
+        ), "X and Y expectations should capture phase information"
 
     def test_input_sensitivity(self):
         """Different inputs should produce different features (non-degeneracy)."""
