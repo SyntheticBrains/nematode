@@ -82,7 +82,9 @@ The QRHBrain SHALL extract per-qubit Z-expectations and pairwise ZZ-correlations
 
 - **WHEN** different sensory inputs are encoded into the reservoir
 - **THEN** the extracted features SHALL produce statistically different feature vectors
-- **AND** the structured topology SHALL produce higher mutual information between features and optimal actions than a random topology
+- **AND** different inputs SHALL NOT produce identical feature vectors (non-degeneracy)
+
+NOTE: The hypothesis that structured topology produces higher mutual information than random topology is validated by the MI decision gate script (`scripts/qrh_mi_analysis.py`), not by unit tests.
 
 ### Requirement: Statevector Simulation
 
@@ -114,8 +116,8 @@ The QRHBrain SHALL train the classical actor-critic readout using Proximal Polic
 - **AND** SHALL iterate over the buffer for the configured number of PPO epochs (default 4)
 - **AND** SHALL split each epoch into minibatches (default 4)
 - **AND** SHALL compute the clipped surrogate policy loss with clip_ε=0.2
-- **AND** SHALL compute value function loss (MSE)
-- **AND** SHALL compute entropy bonus for exploration
+- **AND** SHALL compute value function loss (MSE) weighted by `value_loss_coef` (default 0.5)
+- **AND** SHALL compute entropy bonus for exploration weighted by `entropy_coeff`
 - **AND** SHALL update actor and critic networks via separate Adam optimizers
 - **AND** SHALL apply gradient clipping (max_norm=0.5)
 
@@ -178,6 +180,7 @@ The configuration system SHALL support QRH-specific parameters via Pydantic Base
 - **AND** SHALL accept `ppo_buffer_size` (int, default 512)
 - **AND** SHALL accept `entropy_coeff` (float, default 0.01)
 - **AND** SHALL accept `max_grad_norm` (float, default 0.5)
+- **AND** SHALL accept `value_loss_coef` (float, default 0.5)
 - **AND** SHALL accept `use_random_topology` (bool, default False)
 - **AND** SHALL accept `sensory_modules` (list of ModuleName or None, default None)
 
