@@ -1056,6 +1056,10 @@ class QRHBrain(ClassicalBrain):
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = new_lr
 
+        logger.debug(
+            f"Episode {self._episode_count}: LR = {new_lr:.6f}",
+        )
+
     def _perform_ppo_update(self) -> None:
         """Perform PPO update using collected experience."""
         if len(self.buffer) == 0:
