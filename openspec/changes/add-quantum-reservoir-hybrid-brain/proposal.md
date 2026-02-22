@@ -30,7 +30,7 @@ The QRC brain (0% success across 1,600+ runs) failed because its **random** rese
 - **Code**: New `qrh.py` in `brain/arch/`, new shared modules `_quantum_utils.py` and `_quantum_reservoir.py`, updates to `brain_factory.py`, `config_loader.py`, `dtypes.py`, `__init__.py`; refactor `qrc.py` and `_qlif_layers.py` to use shared modules
 - **APIs**: Brain protocol compliance required (ClassicalBrain interface, ActionData/BrainData compatibility); no breaking changes to existing brains
 - **Dependencies**: Uses existing Qiskit infrastructure (QuantumCircuit, Statevector, AerSimulator) and PyTorch (actor-critic MLPs, PPO training); new optional dependency on sklearn for MI analysis script
-- **Configs**: New `qrh_foraging_small.yml` and `qrh_predators_small.yml` example configs
+- **Configs**: New `qrh_foraging_small.yml` and `qrh_pursuit_predators_small.yml` example configs
 - **Tests**: Unit tests for structured reservoir circuit, Z/ZZ feature extraction, PPO readout training, shared utility modules; smoke test for CLI end-to-end; tests for shared module refactoring (ensure QRC still passes)
 - **Benchmarks**: New benchmark entries for QRH in quantum category (foraging + predator environments)
 - **Documentation**: Update README.md (brain architecture list), CONTRIBUTING.md (architecture overview, example commands), AGENTS.md (brain list)
