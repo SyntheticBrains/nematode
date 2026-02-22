@@ -9,7 +9,10 @@ Z/ZZ feature extraction, and PPO training.
 Key Features:
 - **Structured Quantum Reservoir**: C. elegans connectome topology (ASEL/ASER → AIY →
   AIA → AVA) mapped to 8 qubits with gap junction CZ gates and chemical synapse
-  RY/RZ rotations
+  controlled rotations (CRY/CRZ)
+- **Per-Qubit Input Encoding**: Only sensory qubits (ASEL/ASER) receive direct input;
+  interneuron/command qubits receive signal exclusively through the topology, matching
+  biological signal routing
 - **Z/ZZ Feature Extraction**: Per-qubit Z-expectations ⟨Z_i⟩ + pairwise ZZ-correlations
   ⟨Z_i Z_j⟩ (36 features for 8 qubits) via exact statevector simulation
 - **PPO Actor-Critic Readout**: Separate actor and critic MLPs trained with clipped
@@ -17,7 +20,8 @@ Key Features:
 - **No Barren Plateaus**: Reservoir is fixed (no quantum parameters trained)
 
 Architecture:
-    Sensory Input → Structured Quantum Reservoir (FIXED) → Z/ZZ Features → PPO Readout
+    Sensory Input → Per-Qubit Encoding → Structured Quantum Reservoir (FIXED)
+    → Z/ZZ Features → PPO Readout
 
 The reservoir avoids barren plateaus entirely because no quantum parameters are
 trained. Only the classical actor-critic readout (~5K params) is optimized.
@@ -93,6 +97,16 @@ MIN_SHOTS = 100
 #   Qubits 2-3: AIYL/AIYR (first-layer interneurons — sensory integration)
 #   Qubits 4-5: AIAL/AIAR (second-layer interneurons — navigation command)
 #   Qubits 6-7: AVAL/AVAR (command interneurons — forward/reverse decision)
+#
+# Per-qubit input encoding:
+#   Only sensory qubits (0-1) receive direct feature encoding, matching the
+#   biological circuit where only ASE neurons sense the chemical gradient.
+#   Interneuron and command qubits receive signal only through the topology.
+#   ASEL (qubit 0) encodes gradient_strength via RY (on-response).
+#   ASER (qubit 1) encodes relative_angle via RZ (off-response / phase).
+
+# Sensory qubit indices — only these receive direct input encoding
+SENSORY_QUBITS: list[int] = [0, 1]
 
 # Gap junction CZ pairs (bidirectional electrical coupling):
 # - Bilateral pairs: left-right connections within each neuron class
@@ -108,7 +122,10 @@ GAP_JUNCTION_CZ_PAIRS: list[tuple[int, int]] = [
     (3, 5),  # AIYR → AIAR
 ]
 
-# Chemical synapse RY/RZ angles (directed signaling):
+# Chemical synapse CRY/CRZ angles (directed, conditional signaling):
+# Implemented as controlled rotations: the rotation on the target qubit is
+# conditioned on the control qubit's state, modeling how postsynaptic response
+# depends on presynaptic activity.
 # Angles normalized from published synaptic weight ratios (Cook et al. 2019).
 # Each tuple: (control_qubit, target_qubit, ry_angle, rz_angle)
 CHEMICAL_SYNAPSE_ROTATIONS: list[tuple[int, int, float, float]] = [
@@ -565,19 +582,21 @@ class QRHBrain(ClassicalBrain):
     def _build_structured_reservoir(self, qc: QuantumCircuit) -> None:
         """Apply structured C. elegans topology gates to the circuit.
 
-        Applies gap junction CZ gates and chemical synapse RY/RZ rotations
-        based on the connectome mapping.
+        Applies gap junction CZ gates and chemical synapse controlled rotations
+        (CRY/CRZ) based on the connectome mapping. Controlled rotations model
+        directed synaptic transmission where the postsynaptic response depends
+        on the presynaptic neuron's state.
         """
         # Gap junctions → CZ gates
         for q_a, q_b in GAP_JUNCTION_CZ_PAIRS:
             if q_a < self.num_qubits and q_b < self.num_qubits:
                 qc.cz(q_a, q_b)
 
-        # Chemical synapses → fixed RY/RZ rotations on target qubit
-        for _ctrl, target, ry_angle, rz_angle in CHEMICAL_SYNAPSE_ROTATIONS:
-            if target < self.num_qubits:
-                qc.ry(ry_angle, target)
-                qc.rz(rz_angle, target)
+        # Chemical synapses → controlled RY/RZ rotations (CRY/CRZ)
+        for ctrl, target, ry_angle, rz_angle in CHEMICAL_SYNAPSE_ROTATIONS:
+            if ctrl < self.num_qubits and target < self.num_qubits:
+                qc.cry(ry_angle, ctrl, target)
+                qc.crz(rz_angle, ctrl, target)
 
     def _generate_random_topology(
         self,
@@ -596,12 +615,13 @@ class QRHBrain(ClassicalBrain):
                 seen.add(pair)
                 random_cz.append(pair)
 
-        # Same number of rotation pairs as structured
+        # Same number of rotation pairs as structured (ctrl != target for CRY/CRZ)
         num_rot = len(CHEMICAL_SYNAPSE_ROTATIONS)
         random_rot: list[tuple[int, int, float, float]] = []
         for _ in range(num_rot):
-            ctrl = int(rng.integers(0, self.num_qubits))
-            target = int(rng.integers(0, self.num_qubits))
+            pair = rng.choice(self.num_qubits, size=2, replace=False)
+            ctrl = int(pair[0])
+            target = int(pair[1])
             ry = float(rng.uniform(-1.0, 1.0))
             rz = float(rng.uniform(-1.0, 1.0))
             random_rot.append((ctrl, target, ry, rz))
@@ -609,22 +629,33 @@ class QRHBrain(ClassicalBrain):
         return random_cz, random_rot
 
     def _build_random_reservoir(self, qc: QuantumCircuit) -> None:
-        """Apply random topology gates (for MI comparison)."""
+        """Apply random topology gates (for MI comparison).
+
+        Uses controlled rotations (CRY/CRZ) matching the structured reservoir,
+        ensuring a fair comparison of topology structure vs random connectivity.
+        """
         if self._random_cz_pairs is None or self._random_rotations is None:
             self._random_cz_pairs, self._random_rotations = self._generate_random_topology()
 
         for q_a, q_b in self._random_cz_pairs:
             qc.cz(q_a, q_b)
 
-        for _ctrl, target, ry_angle, rz_angle in self._random_rotations:
-            qc.ry(ry_angle, target)
-            qc.rz(rz_angle, target)
+        for ctrl, target, ry_angle, rz_angle in self._random_rotations:
+            qc.cry(ry_angle, ctrl, target)
+            qc.crz(rz_angle, ctrl, target)
 
     def _encode_and_run(self, features: np.ndarray) -> np.ndarray:
         """Build and execute the reservoir circuit, returning the statevector.
 
-        Constructs: H layer -> [input encoding -> reservoir topology] x depth
+        Constructs: H layer -> [per-qubit input encoding -> reservoir topology] x depth
         Uses Statevector simulation for exact feature computation.
+
+        Per-qubit encoding (matching C. elegans biology):
+        - Only sensory qubits (ASEL=0, ASER=1) receive direct input encoding
+        - ASEL gets feature 0 (gradient_strength) via RY — on-response
+        - ASER gets feature 1 (relative_angle) via RZ — off-response / phase
+        - Interneuron and command qubits receive signal only through topology
+        - Additional features (if any) are distributed across sensory qubits
 
         Parameters
         ----------
@@ -642,16 +673,29 @@ class QRHBrain(ClassicalBrain):
         for q in range(self.num_qubits):
             qc.h(q)
 
+        # Determine valid sensory qubits (those within qubit count)
+        valid_sensory = [q for q in SENSORY_QUBITS if q < self.num_qubits]
+
         # Data re-uploading: encode inputs before each reservoir layer
         for _layer in range(self.reservoir_depth):
-            # Input encoding: RY rotations for each feature across qubits
+            # Per-qubit asymmetric encoding on sensory qubits only
             for i, feature in enumerate(features):
-                angle = float(feature) * np.pi
-                for q in range(self.num_qubits):
+                if i < len(valid_sensory):
+                    # Assign each feature to its corresponding sensory qubit
+                    qubit = valid_sensory[i]
+                    angle = float(feature) * np.pi
                     if i % 2 == 0:
-                        qc.ry(angle, q)
+                        qc.ry(angle, qubit)  # Even features: RY (amplitude)
                     else:
-                        qc.rz(angle, q)
+                        qc.rz(angle, qubit)  # Odd features: RZ (phase)
+                else:
+                    # Extra features wrap around sensory qubits
+                    qubit = valid_sensory[i % len(valid_sensory)]
+                    angle = float(feature) * np.pi
+                    if i % 2 == 0:
+                        qc.ry(angle, qubit)
+                    else:
+                        qc.rz(angle, qubit)
 
             # Apply reservoir topology
             if self.use_random_topology:
