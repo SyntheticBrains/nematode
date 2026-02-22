@@ -28,6 +28,9 @@ brain:
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
+    # Topology
+    use_random_topology: false
+
 body_length: 2
 
 reward:
