@@ -7,6 +7,7 @@ from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qrh import (
+    SENSORY_QUBITS,
     QRHBrain,
     QRHBrainConfig,
     _compute_feature_dim,
@@ -119,35 +120,41 @@ class TestQRHReservoirCircuit:
 
     def test_cz_gates_present(self, brain):
         """Structured reservoir should contain CZ gates from gap junctions."""
-        features = np.array([0.5, 0.3], dtype=np.float32)
         from qiskit import QuantumCircuit
 
-        # Build circuit manually to inspect gates
         qc = QuantumCircuit(brain.num_qubits)
-        for q in range(brain.num_qubits):
-            qc.h(q)
-        for i, feature in enumerate(features):
-            angle = float(feature) * np.pi
-            for q in range(brain.num_qubits):
-                if i % 2 == 0:
-                    qc.ry(angle, q)
-                else:
-                    qc.rz(angle, q)
         brain._build_structured_reservoir(qc)
 
         gate_names = [instr.operation.name for instr in qc.data]
         assert "cz" in gate_names, "Structured reservoir should have CZ gates"
 
-    def test_fixed_rotations_present(self, brain):
-        """Structured reservoir should contain fixed RY/RZ from chemical synapses."""
+    def test_controlled_rotations_present(self, brain):
+        """Structured reservoir should contain CRY/CRZ from chemical synapses."""
         from qiskit import QuantumCircuit
 
         qc = QuantumCircuit(brain.num_qubits)
         brain._build_structured_reservoir(qc)
 
         gate_names = [instr.operation.name for instr in qc.data]
-        assert "ry" in gate_names, "Should have RY from chemical synapses"
-        assert "rz" in gate_names, "Should have RZ from chemical synapses"
+        assert "cry" in gate_names, "Should have CRY from chemical synapses"
+        assert "crz" in gate_names, "Should have CRZ from chemical synapses"
+
+    def test_per_qubit_encoding(self, brain):
+        """Input encoding should only target sensory qubits, not all qubits."""
+        features = np.array([0.8, -0.6], dtype=np.float32)
+        zero_features = np.array([0.0, 0.0], dtype=np.float32)
+
+        result_active = brain._get_reservoir_features(features)
+        result_zero = brain._get_reservoir_features(zero_features)
+
+        # Non-zero input should produce different features than zero input
+        assert not np.allclose(result_active, result_zero, atol=1e-4), (
+            "Per-qubit encoding should produce input-sensitive features"
+        )
+
+    def test_sensory_qubits_only(self):
+        """Verify SENSORY_QUBITS constant maps to ASEL/ASER (qubits 0, 1)."""
+        assert SENSORY_QUBITS == [0, 1]
 
     def test_seed_reproducibility(self):
         """Same seed should produce identical feature vectors."""
