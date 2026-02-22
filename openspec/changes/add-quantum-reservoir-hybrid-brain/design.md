@@ -90,9 +90,9 @@ All features lie in [-1, 1], well-suited for neural network input without normal
 
 ### Decision 5: PPO Training on Readout
 
-**Choice**: Self-contained PPO implementation following the `mlpppo.py` pattern
+**Choice**: Self-contained PPO implementation following the `mlpppo.py` pattern for structure (rollout buffer, GAE, clipped surrogate loss)
 
-**Rationale**: QRH's architecture is simpler than the hybrid brains — no reflex/cortex separation, no mode-gating, no curriculum stages. Using `mlpppo.py`'s self-contained PPO loop (single optimizer, MSE value loss, standard GAE) is cleaner than importing from `_hybrid_common.py` which carries mode-gating coupling.
+**Rationale**: QRH's architecture is simpler than the hybrid brains — no reflex/cortex separation, no mode-gating, no curriculum stages. Using `mlpppo.py`'s self-contained PPO loop (MSE value loss, standard GAE) is cleaner than importing from `_hybrid_common.py` which carries mode-gating coupling.
 
 **Key parameters** (matching proven HybridQuantum cortex training):
 
@@ -100,6 +100,8 @@ All features lie in [-1, 1], well-suited for neural network input without normal
 - GAE: γ=0.99, λ=0.95
 - PPO: clip_ε=0.2, entropy_coeff=0.01
 - Optimizer: Adam, LR=3e-4 (actor + critic separate)
+
+**NOTE**: `mlpppo.py` uses a single combined Adam optimizer for both actor and critic. QRH intentionally diverges here — it uses **separate optimizers** for actor and critic to support independent learning rates (`actor_lr`, `critic_lr`). This is the one structural difference from the `mlpppo.py` pattern.
 
 **Alternatives considered**:
 
