@@ -1,0 +1,79 @@
+# Dynamic Foraging with Predators - Small Configuration
+# Uses QRH (Quantum Reservoir Hybrid) brain architecture
+# Multi-objective learning: find food while avoiding predators
+# Uses unified sensory modules for multi-sensory input
+
+max_steps: 500
+brain:
+  name: qrh
+  config:
+    # Reservoir parameters
+    num_reservoir_qubits: 8
+    reservoir_depth: 3
+    reservoir_seed: 42
+
+    # Readout architecture (actor + critic)
+    readout_hidden_dim: 64
+    readout_num_layers: 2
+
+    # PPO hyperparameters
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    ppo_clip_epsilon: 0.2
+    ppo_epochs: 4
+    ppo_minibatches: 4
+    ppo_buffer_size: 512
+    entropy_coeff: 0.01
+    value_loss_coef: 0.5
+    max_grad_norm: 0.5
+
+    # Unified sensory modules for multi-objective tasks
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.1
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 1.0
+    movement_pattern: pursuit
+    detection_radius: 8
+    kill_radius: 0
+    gradient_decay_constant: 12.0
+    gradient_strength: 1.0
