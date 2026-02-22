@@ -16,8 +16,8 @@ Key Features:
 - **X/Y/Z + ZZ Feature Extraction**: Per-qubit Pauli expectations ⟨X_i⟩, ⟨Y_i⟩, ⟨Z_i⟩
   + pairwise ZZ-correlations ⟨Z_i Z_j⟩ (52 features for 8 qubits) via exact statevector
   simulation. X/Y expectations capture phase information lost by Z-only measurement.
-- **PPO Actor-Critic Readout**: Separate actor and critic MLPs trained with clipped
-  surrogate loss, GAE advantages, and entropy bonus
+- **PPO Actor-Critic Readout**: Actor and critic MLPs trained with combined PPO loss
+  (clipped surrogate + value loss + entropy bonus) via single optimizer
 - **No Barren Plateaus**: Reservoir is fixed (no quantum parameters trained)
 
 Architecture:
@@ -514,7 +514,7 @@ class QRHBrain(ClassicalBrain):
         self.reservoir_seed = config.reservoir_seed
         self.use_random_topology = config.use_random_topology
 
-        # Feature dimension: N + N(N-1)/2
+        # Feature dimension: 3N + N(N-1)/2
         self.feature_dim = _compute_feature_dim(self.num_qubits)
 
         # Build actor and critic readout networks using shared utility
@@ -534,9 +534,16 @@ class QRHBrain(ClassicalBrain):
             num_layers=config.readout_num_layers,
         ).to(self.device)
 
-        # Separate optimizers
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=config.actor_lr)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=config.critic_lr)
+        # Feature normalization (normalizes heterogeneous X/Y/Z/ZZ feature scales)
+        self.feature_norm = nn.LayerNorm(self.feature_dim).to(self.device)
+
+        # Single combined optimizer (matching MLPPPO pattern for stable training)
+        self.optimizer = optim.Adam(
+            list(self.actor.parameters())
+            + list(self.critic.parameters())
+            + list(self.feature_norm.parameters()),
+            lr=config.actor_lr,
+        )
 
         # PPO parameters
         self.gamma = config.gamma
@@ -875,8 +882,9 @@ class QRHBrain(ClassicalBrain):
         # Run through quantum reservoir and extract Z/ZZ features
         reservoir_features = self._get_reservoir_features(sensory_features)
 
-        # Forward through actor network
+        # Forward through actor network (with feature normalization)
         x = torch.tensor(reservoir_features, dtype=torch.float32, device=self.device)
+        x = self.feature_norm(x)
         logits = self.actor(x)
         value = self.critic(x)
 
@@ -993,11 +1001,20 @@ class QRHBrain(ClassicalBrain):
         total_entropy_loss = 0.0
         num_updates = 0
 
+        all_params = (
+            list(self.actor.parameters())
+            + list(self.critic.parameters())
+            + list(self.feature_norm.parameters())
+        )
+
         for _ in range(self.ppo_epochs):
             for batch in self.buffer.get_minibatches(self.ppo_minibatches, returns, advantages):
+                # Normalize features (same transform as forward pass)
+                normalized_states = self.feature_norm(batch["states"])
+
                 # Get new action probabilities and values
-                logits = self.actor(batch["states"])
-                values = self.critic(batch["states"]).squeeze(-1)
+                logits = self.actor(normalized_states)
+                values = self.critic(normalized_states).squeeze(-1)
 
                 probs = torch.softmax(logits, dim=-1)
                 dist = torch.distributions.Categorical(probs)
@@ -1019,19 +1036,15 @@ class QRHBrain(ClassicalBrain):
                 # Value loss
                 value_loss = nn.functional.mse_loss(values, batch["returns"])
 
-                # Separate optimization (actor)
-                actor_loss = policy_loss - self.entropy_coeff * entropy
-                self.actor_optimizer.zero_grad()
-                actor_loss.backward(retain_graph=True)
-                nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
-                self.actor_optimizer.step()
+                # Combined loss (matching MLPPPO pattern)
+                loss = (
+                    policy_loss + self.value_loss_coef * value_loss - self.entropy_coeff * entropy
+                )
 
-                # Separate optimization (critic)
-                critic_loss = self.value_loss_coef * value_loss
-                self.critic_optimizer.zero_grad()
-                critic_loss.backward()
-                nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
-                self.critic_optimizer.step()
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
+                self.optimizer.step()
 
                 total_policy_loss += policy_loss.item()
                 total_value_loss += value_loss.item()
@@ -1099,13 +1112,13 @@ class QRHBrain(ClassicalBrain):
             action_set=self._action_set,
         )
 
-        # Copy readout weights (independent)
+        # Copy network weights (independent)
         new_brain.actor.load_state_dict(deepcopy(self.actor.state_dict()))
         new_brain.critic.load_state_dict(deepcopy(self.critic.state_dict()))
+        new_brain.feature_norm.load_state_dict(deepcopy(self.feature_norm.state_dict()))
 
-        # Copy optimizer states
-        new_brain.actor_optimizer.load_state_dict(deepcopy(self.actor_optimizer.state_dict()))
-        new_brain.critic_optimizer.load_state_dict(deepcopy(self.critic_optimizer.state_dict()))
+        # Copy optimizer state
+        new_brain.optimizer.load_state_dict(deepcopy(self.optimizer.state_dict()))
 
         # Preserve episode counter
         new_brain._episode_count = self._episode_count
