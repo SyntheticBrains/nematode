@@ -409,16 +409,19 @@ def permutation_test(
 ) -> PermutationTestResult:
     """Run a permutation test comparing mean MI of two feature sets.
 
-    Tests H0: mean MI(structured) <= mean MI(random) via label shuffling.
+    Tests H0: mean MI(structured) = mean MI(random) via row-swap permutation.
+    For each permutation, each sample's feature row is randomly assigned to
+    group A or group B (regardless of its original source), and the MI delta
+    is recomputed. The p-value is the fraction of permuted deltas >= observed.
 
     Parameters
     ----------
     features_a : np.ndarray
-        Feature matrix for method A (structured).
+        Feature matrix for method A (structured), shape (n, d).
     features_b : np.ndarray
-        Feature matrix for method B (random).
+        Feature matrix for method B (random), shape (n, d).
     labels : np.ndarray
-        True action labels.
+        True action labels, shape (n,).
     num_permutations : int
         Number of permutations.
     seed : int
@@ -429,26 +432,31 @@ def permutation_test(
     PermutationTestResult
         Observed delta, p-value, and significance.
     """
+    n = len(labels)
+
     # Observed MI difference
     mi_a = mutual_info_classif(features_a, labels, discrete_features="auto", random_state=0)
     mi_b = mutual_info_classif(features_b, labels, discrete_features="auto", random_state=0)
     observed_delta = float(np.mean(mi_a) - np.mean(mi_b))
 
-    # Permutation distribution
     rng = np.random.default_rng(seed)
     count_ge = 0
 
     for _ in range(num_permutations):
-        shuffled_labels = rng.permutation(labels)
+        # Randomly assign each sample to group A or B
+        swap_mask = rng.random(n) < 0.5
+        perm_a = np.where(swap_mask[:, None], features_b, features_a)
+        perm_b = np.where(swap_mask[:, None], features_a, features_b)
+
         perm_mi_a = mutual_info_classif(
-            features_a,
-            shuffled_labels,
+            perm_a,
+            labels,
             discrete_features="auto",
             random_state=0,
         )
         perm_mi_b = mutual_info_classif(
-            features_b,
-            shuffled_labels,
+            perm_b,
+            labels,
             discrete_features="auto",
             random_state=0,
         )
@@ -667,8 +675,8 @@ def main() -> int:
     print(f"Generating {args.num_samples} synthetic observations...")
     params_list = generate_synthetic_brain_params(args.num_samples, rng)
 
-    # Step 2: Generate oracle labels using MLPPPO
-    print("Generating oracle action labels (MLPPPO greedy policy)...")
+    # Step 2: Generate oracle labels using rule-based gradient-following policy
+    print("Generating oracle action labels (gradient-following policy)...")
     labels = generate_oracle_labels(params_list, seed=args.seed)
     unique, counts = np.unique(labels, return_counts=True)
     print(f"  Label distribution: {dict(zip(unique, counts, strict=True))}")
