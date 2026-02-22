@@ -811,6 +811,17 @@ class QRHBrain(ClassicalBrain):
         probs_np = probs.detach().cpu().numpy()
         self.current_probabilities = probs_np
 
+        # Diagnostic logging (sampled)
+        if self.buffer.position % 50 == 0:
+            feat_min, feat_max = float(reservoir_features.min()), float(reservoir_features.max())
+            logits_np = logits.detach().cpu().numpy()
+            logger.debug(
+                f"QRH step {self.buffer.position}: "
+                f"features=[{feat_min:.3f}, {feat_max:.3f}], "
+                f"probs={probs_np}, logits=[{logits_np.min():.3f}, {logits_np.max():.3f}], "
+                f"value={value.item():.4f}",
+            )
+
         # Store for PPO buffer (will be committed when reward arrives in learn())
         self._pending_state = reservoir_features
         self._pending_action = action_idx
@@ -865,6 +876,10 @@ class QRHBrain(ClassicalBrain):
 
         # Trigger PPO update when buffer is full or episode ends with enough data
         if self.buffer.is_full() or (episode_done and len(self.buffer) >= self.ppo_minibatches):
+            logger.debug(
+                f"QRH PPO update triggered: buffer={len(self.buffer)}/{self.buffer.buffer_size}, "
+                f"episode_done={episode_done}",
+            )
             self._perform_ppo_update()
             self.buffer.reset()
 
@@ -962,7 +977,12 @@ class QRHBrain(ClassicalBrain):
         """No-op for QRHBrain."""
 
     def prepare_episode(self) -> None:
-        """Prepare for a new episode."""
+        """Prepare for a new episode by clearing pending state."""
+        self._pending_state = None
+        self._pending_action = None
+        self._pending_log_prob = None
+        self._pending_value = None
+        self.last_value = None
 
     def post_process_episode(
         self,
@@ -971,6 +991,11 @@ class QRHBrain(ClassicalBrain):
     ) -> None:
         """Post-process after each episode."""
         self._episode_count += 1
+        # Clear pending state to prevent cross-episode contamination
+        self._pending_state = None
+        self._pending_action = None
+        self._pending_log_prob = None
+        self._pending_value = None
 
     def copy(self) -> QRHBrain:
         """Create an independent copy of the QRHBrain.
@@ -1001,6 +1026,9 @@ class QRHBrain(ClassicalBrain):
         # Copy optimizer states
         new_brain.actor_optimizer.load_state_dict(deepcopy(self.actor_optimizer.state_dict()))
         new_brain.critic_optimizer.load_state_dict(deepcopy(self.critic_optimizer.state_dict()))
+
+        # Preserve episode counter
+        new_brain._episode_count = self._episode_count
 
         return new_brain
 
