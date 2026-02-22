@@ -472,6 +472,12 @@ class TestQRHBrainCopy:
         brain_copy = brain.copy()
         assert brain_copy.use_random_topology == brain.use_random_topology
 
+    def test_copy_preserves_episode_count(self, brain):
+        """Copy should preserve episode counter."""
+        brain._episode_count = 5
+        brain_copy = brain.copy()
+        assert brain_copy._episode_count == 5
+
 
 class TestQRHBrainSensoryModules:
     """Test cases for sensory module integration."""
@@ -535,3 +541,75 @@ class TestQRHBrainSensoryModules:
         assert isinstance(features, np.ndarray)
         assert len(features) == 4
         assert features.dtype == np.float32
+
+
+class TestQRHEpisodeBoundaries:
+    """Test cases for episode lifecycle and state management."""
+
+    @pytest.fixture
+    def brain(self) -> QRHBrain:
+        """Create a test QRH brain for episode boundary tests."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=3,
+            reservoir_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=16,
+            ppo_minibatches=2,
+        )
+        return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+    def test_prepare_episode_clears_pending_state(self, brain):
+        """prepare_episode() should clear all pending state."""
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=False)
+
+        assert brain._pending_state is not None
+
+        brain.prepare_episode()
+
+        assert brain._pending_state is None
+        assert brain._pending_action is None
+        assert brain._pending_log_prob is None
+        assert brain._pending_value is None
+        assert brain.last_value is None
+
+    def test_post_process_episode_clears_pending_state(self, brain):
+        """post_process_episode() should clear pending state and increment counter."""
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        brain.run_brain(params, top_only=True, top_randomize=False)
+
+        initial_count = brain._episode_count
+        brain.post_process_episode()
+
+        assert brain._episode_count == initial_count + 1
+        assert brain._pending_state is None
+        assert brain._pending_action is None
+
+    def test_multi_episode_no_cross_contamination(self, brain):
+        """Running multiple episodes should not leak state between them."""
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+
+        for _ep in range(3):
+            brain.prepare_episode()
+
+            for step in range(5):
+                brain.run_brain(params, top_only=True, top_randomize=False)
+                brain.learn(params, reward=0.1, episode_done=(step == 4))
+
+            brain.post_process_episode()
+
+        assert brain._episode_count == 3
+        assert brain._pending_state is None
+
+    def test_action_set_setter_validation(self, brain):
+        """Setting action_set with wrong length should raise ValueError."""
+        with pytest.raises(ValueError, match="Cannot set action_set of length"):
+            brain.action_set = [Action.FORWARD, Action.LEFT]  # Only 2, brain expects 4
+
+    def test_preprocess_with_none_values(self, brain):
+        """Preprocessing with None gradient values should not crash."""
+        params = BrainParams()
+        features = brain.preprocess(params)
+        assert len(features) == 2
+        assert np.isfinite(features).all()
