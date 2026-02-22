@@ -286,6 +286,29 @@ class QRHBrainConfig(BrainConfig):
         description="Use random topology for MI comparison (default: structured).",
     )
 
+    # Learning rate scheduling (optional)
+    # Supports warmup followed by optional decay for more stable early learning.
+    # - lr_warmup_episodes: Episodes to linearly increase LR from lr_warmup_start to actor_lr
+    # - lr_warmup_start: Initial LR during warmup (default: 10% of actor_lr)
+    # - lr_decay_episodes: Episodes after warmup to decay LR to lr_decay_end (None = no decay)
+    # - lr_decay_end: Final LR after decay (default: 10% of actor_lr)
+    lr_warmup_episodes: int = Field(
+        default=0,
+        description="Episodes to linearly increase LR (0 = no warmup).",
+    )
+    lr_warmup_start: float | None = Field(
+        default=None,
+        description="Initial LR during warmup (None = 10% of actor_lr).",
+    )
+    lr_decay_episodes: int | None = Field(
+        default=None,
+        description="Episodes after warmup to decay LR (None = no decay).",
+    )
+    lr_decay_end: float | None = Field(
+        default=None,
+        description="Final LR after decay (None = 10% of actor_lr).",
+    )
+
     # Unified sensory feature extraction
     sensory_modules: list[ModuleName] | None = Field(
         default=None,
@@ -544,6 +567,28 @@ class QRHBrain(ClassicalBrain):
             + list(self.feature_norm.parameters()),
             lr=config.actor_lr,
         )
+
+        # Learning rate scheduling
+        self.base_lr = config.actor_lr
+        self.lr_warmup_episodes = config.lr_warmup_episodes
+        self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.actor_lr)
+        self.lr_decay_episodes = config.lr_decay_episodes
+        self.lr_decay_end = config.lr_decay_end or (0.1 * config.actor_lr)
+        self.lr_scheduling_enabled = (
+            self.lr_warmup_episodes > 0 or self.lr_decay_episodes is not None
+        )
+        if self.lr_scheduling_enabled:
+            logger.info("QRH LR scheduling enabled:")
+            if self.lr_warmup_episodes > 0:
+                logger.info(
+                    f"  warmup {self.lr_warmup_start:.6f} -> {self.base_lr:.6f} "
+                    f"over {self.lr_warmup_episodes} episodes",
+                )
+            if self.lr_decay_episodes is not None:
+                logger.info(
+                    f"  decay {self.base_lr:.6f} -> {self.lr_decay_end:.6f} "
+                    f"over {self.lr_decay_episodes} episodes",
+                )
 
         # PPO parameters
         self.gamma = config.gamma
@@ -973,6 +1018,44 @@ class QRHBrain(ClassicalBrain):
         # Store for history
         self.history_data.rewards.append(reward)
 
+    def _get_current_lr(self) -> float:
+        """Get the current learning rate based on episode count.
+
+        Supports warmup followed by optional decay:
+        - During warmup: linearly increases from lr_warmup_start to base_lr
+        - After warmup (if decay enabled): linearly decreases from base_lr to lr_decay_end
+        - Otherwise: returns base_lr
+        """
+        if not self.lr_scheduling_enabled:
+            return self.base_lr
+
+        episode = self._episode_count
+
+        # Warmup phase
+        if episode < self.lr_warmup_episodes:
+            progress = episode / self.lr_warmup_episodes
+            return self.lr_warmup_start + (self.base_lr - self.lr_warmup_start) * progress
+
+        # Decay phase (if enabled)
+        if self.lr_decay_episodes is not None:
+            decay_start_episode = self.lr_warmup_episodes
+            decay_episode = episode - decay_start_episode
+            if decay_episode < self.lr_decay_episodes:
+                progress = decay_episode / self.lr_decay_episodes
+                return self.base_lr + (self.lr_decay_end - self.base_lr) * progress
+            return self.lr_decay_end
+
+        return self.base_lr
+
+    def _update_learning_rate(self) -> None:
+        """Update optimizer learning rate based on current schedule."""
+        if not self.lr_scheduling_enabled:
+            return
+
+        new_lr = self._get_current_lr()
+        for param_group in self.optimizer.param_groups:
+            param_group["lr"] = new_lr
+
     def _perform_ppo_update(self) -> None:
         """Perform PPO update using collected experience."""
         if len(self.buffer) == 0:
@@ -1096,6 +1179,10 @@ class QRHBrain(ClassicalBrain):
     ) -> None:
         """Post-process after each episode."""
         self._episode_count += 1
+
+        # Update learning rate based on schedule (if enabled)
+        self._update_learning_rate()
+
         # Clear pending state to prevent cross-episode contamination
         self._pending_state = None
         self._pending_action = None
