@@ -33,7 +33,7 @@
 ## 4. Configuration Files
 
 - [x] 4.1 Create `configs/examples/qrh_foraging_small.yml` — 8 qubits, grid 20, foraging environment
-- [x] 4.2 Create `configs/examples/qrh_predators_small.yml` — 8 qubits, pursuit predators, sensory_modules: [food_chemotaxis, nociception, mechanosensation]
+- [x] 4.2 Create `configs/examples/qrh_pursuit_predators_small.yml` — 8 qubits, pursuit predators, sensory_modules: [food_chemotaxis, nociception, mechanosensation]
 
 ## 5. Tests
 
