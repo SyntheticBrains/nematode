@@ -42,6 +42,7 @@ class TestQRHBrainConfig:
         assert config.max_grad_norm == 0.5
         assert config.use_random_topology is False
         assert config.sensory_modules is None
+        assert config.num_sensory_qubits is None
         assert config.lr_warmup_episodes == 0
         assert config.lr_warmup_start is None
         assert config.lr_decay_episodes is None
@@ -156,8 +157,16 @@ class TestQRHReservoirCircuit:
             "Per-qubit encoding should produce input-sensitive features"
         )
 
-    def test_sensory_qubits_only(self):
-        """Verify SENSORY_QUBITS constant maps to ASEL/ASER (qubits 0, 1)."""
+    def test_sensory_qubits_default(self):
+        """Default sensory qubits should be [0, 1] for legacy 2-feature mode."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.sensory_qubits == [0, 1]
+        # Module constant preserved for backward compatibility
         assert SENSORY_QUBITS == [0, 1]
 
     def test_seed_reproducibility(self):
@@ -766,4 +775,95 @@ class TestQRHLRScheduling:
         assert brain_copy.lr_warmup_episodes == 10
         assert brain_copy.lr_warmup_start == 0.0001
         assert brain_copy._episode_count == 5
+
+
+class TestQRHSensoryQubits:
+    """Test cases for configurable sensory qubit count."""
+
+    def test_sensory_qubits_auto_from_input_dim(self):
+        """With 4 input features, should auto-compute 4 sensory qubits."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=8,
+            reservoir_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.input_dim == 4
+        assert brain.sensory_qubits == [0, 1, 2, 3]
+
+    def test_sensory_qubits_explicit_override(self):
+        """Explicit num_sensory_qubits should override auto-computation."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=8,
+            reservoir_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            num_sensory_qubits=3,
+        )
+        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.sensory_qubits == [0, 1, 2]
+
+    def test_sensory_qubits_validation_exceeds_total(self):
+        """num_sensory_qubits > num_reservoir_qubits should raise ValueError."""
+        with pytest.raises(
+            ValueError,
+            match=r"num_sensory_qubits.*must be.*<= num_reservoir_qubits",
+        ):
+            QRHBrainConfig(num_reservoir_qubits=4, num_sensory_qubits=5)
+
+    def test_sensory_qubits_validation_zero(self):
+        """num_sensory_qubits < 1 should raise ValueError."""
+        with pytest.raises(ValueError, match="num_sensory_qubits must be >= 1"):
+            QRHBrainConfig(num_reservoir_qubits=4, num_sensory_qubits=0)
+
+    def test_sensory_qubits_capped_at_num_qubits(self):
+        """Auto-computed sensory qubits should not exceed total qubit count."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=3,
+            reservoir_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # input_dim=4 but only 3 qubits, so capped at 3
+        assert brain.sensory_qubits == [0, 1, 2]
+
+    def test_four_features_no_wrapping(self):
+        """With 4 sensory qubits, food-only and predator-only inputs differ."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=8,
+            reservoir_depth=2,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
+        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        # Food strong, predator absent vs food absent, predator strong
+        food_features = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        pred_features = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float32)
+
+        food_result = brain._get_reservoir_features(food_features)
+        pred_result = brain._get_reservoir_features(pred_features)
+
+        assert not np.allclose(food_result, pred_result, atol=1e-4), (
+            "Food-only and predator-only inputs should produce distinct reservoir "
+            "features when sensory qubits are separated"
+        )
+
+    def test_copy_preserves_sensory_qubits(self):
+        """Copy should preserve sensory qubit configuration."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=8,
+            reservoir_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            num_sensory_qubits=4,
+        )
+        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        brain_copy = brain.copy()
+        assert brain_copy.sensory_qubits == [0, 1, 2, 3]
         assert brain_copy._get_current_lr() == pytest.approx(brain._get_current_lr())
