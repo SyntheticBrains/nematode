@@ -54,6 +54,9 @@ brain:
       - food_chemotaxis
       - nociception
 
+    # Sensory qubits (4 features = 4 qubits for food/predator signal separation)
+    num_sensory_qubits: 4
+
 body_length: 2
 
 reward:

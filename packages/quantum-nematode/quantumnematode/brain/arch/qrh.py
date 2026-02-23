@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 import torch
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 from torch import nn, optim
@@ -315,6 +315,15 @@ class QRHBrainConfig(BrainConfig):
         description="Sensory modules for feature extraction (None = legacy mode).",
     )
 
+    # Configurable sensory qubit count
+    num_sensory_qubits: int | None = Field(
+        default=None,
+        description=(
+            "Number of sensory qubits for input encoding. "
+            "None = auto-compute as min(input_dim, num_reservoir_qubits)."
+        ),
+    )
+
     @field_validator("num_reservoir_qubits")
     @classmethod
     def validate_num_reservoir_qubits(cls, v: int) -> int:
@@ -350,6 +359,21 @@ class QRHBrainConfig(BrainConfig):
             msg = f"readout_hidden_dim must be >= {MIN_READOUT_HIDDEN_DIM}, got {v}"
             raise ValueError(msg)
         return v
+
+    @model_validator(mode="after")
+    def validate_sensory_qubit_count(self) -> QRHBrainConfig:
+        """Validate num_sensory_qubits bounds when explicitly set."""
+        if self.num_sensory_qubits is not None:
+            if self.num_sensory_qubits < 1:
+                msg = f"num_sensory_qubits must be >= 1, got {self.num_sensory_qubits}"
+                raise ValueError(msg)
+            if self.num_sensory_qubits > self.num_reservoir_qubits:
+                msg = (
+                    f"num_sensory_qubits ({self.num_sensory_qubits}) must be "
+                    f"<= num_reservoir_qubits ({self.num_reservoir_qubits})"
+                )
+                raise ValueError(msg)
+        return self
 
 
 # =============================================================================
@@ -537,6 +561,20 @@ class QRHBrain(ClassicalBrain):
         self.reservoir_seed = config.reservoir_seed
         self.use_random_topology = config.use_random_topology
 
+        # Compute sensory qubit indices for input encoding
+        if config.num_sensory_qubits is not None:
+            num_sensory = config.num_sensory_qubits
+        else:
+            num_sensory = min(self.input_dim, self.num_qubits)
+        self.sensory_qubits: list[int] = list(range(num_sensory))
+
+        if self.input_dim > len(self.sensory_qubits):
+            logger.warning(
+                f"QRH: input_dim={self.input_dim} > num_sensory_qubits="
+                f"{len(self.sensory_qubits)}. Features will wrap onto shared qubits. "
+                f"Consider increasing num_sensory_qubits or num_reservoir_qubits.",
+            )
+
         # Feature dimension: 3N + N(N-1)/2
         self.feature_dim = _compute_feature_dim(self.num_qubits)
 
@@ -622,9 +660,11 @@ class QRHBrain(ClassicalBrain):
             self._random_cz_pairs, self._random_rotations = self._generate_random_topology()
 
         logger.info(
-            f"QRHBrain initialized: {self.num_qubits} qubits, {self.reservoir_depth} layers, "
+            f"QRHBrain initialized: {self.num_qubits} qubits "
+            f"({len(self.sensory_qubits)} sensory), "
+            f"{self.reservoir_depth} layers, "
             f"{'random' if self.use_random_topology else 'structured'} topology, "
-            f"feature_dim={self.feature_dim}, "
+            f"feature_dim={self.feature_dim}, input_dim={self.input_dim}, "
             f"actor/critic ({config.readout_hidden_dim}x{config.readout_num_layers})",
         )
 
@@ -726,8 +766,8 @@ class QRHBrain(ClassicalBrain):
         for q in range(self.num_qubits):
             qc.h(q)
 
-        # Determine valid sensory qubits (those within qubit count)
-        valid_sensory = [q for q in SENSORY_QUBITS if q < self.num_qubits]
+        # Sensory qubits for input encoding (configured in __init__)
+        valid_sensory = self.sensory_qubits
 
         # Data re-uploading: encode inputs before each reservoir layer
         for _layer in range(self.reservoir_depth):
