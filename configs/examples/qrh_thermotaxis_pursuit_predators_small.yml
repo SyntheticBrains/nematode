@@ -1,5 +1,4 @@
 # QRH with Thermotaxis + Pursuit Predators - Small Configuration
-# Tests whether QRH can learn thermotaxis on a simpler grid before scaling up
 # Uses QRH (Quantum Reservoir Hybrid) brain architecture
 #
 # This combines all three objectives:
@@ -10,22 +9,24 @@
 # Based on proven QRH Predator R3 config (32.7% overall, 86% post-convergence)
 # with thermotaxis layer added from MLPPPO thermotaxis pursuit predator small config.
 #
-# Purpose: Isolate whether the lack of thermotaxis learning on the large grid
-# is due to the 1-interneuron-qubit bottleneck or the grid complexity.
-# If thermotaxis also fails here, the bottleneck is architectural (qubit count).
+# 10-qubit reservoir: 7 sensory qubits + 3 interneuron qubits.
+# Previous 8-qubit config (1 interneuron) caused catastrophic regression (0.55% success)
+# because the single interneuron qubit was insufficient for feature mixing.
+# 3 interneurons should restore sufficient ZZ correlation features.
 #
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)
 # - thermotaxis: 3 features (strength, angle, temp_deviation)
-# Total: 7 features -> 7 sensory qubits, 1 interneuron qubit
+# Total: 7 features -> 7 sensory qubits, 3 interneuron qubits
+# Feature dim: 3×10 + C(10,2) = 30 + 45 = 75
 
 max_steps: 500
 brain:
   name: qrh
   config:
-    # Reservoir parameters
-    num_reservoir_qubits: 8
+    # Reservoir parameters (10 qubits: 7 sensory + 3 interneuron)
+    num_reservoir_qubits: 10
     reservoir_depth: 3
     reservoir_seed: 42
 
@@ -59,7 +60,7 @@ brain:
       - nociception
       - thermotaxis
 
-    # Sensory qubits (7 features = 7 qubits, 1 interneuron qubit remaining)
+    # Sensory qubits (7 features = 7 qubits, 3 interneuron qubits remaining)
     num_sensory_qubits: 7
 
 body_length: 2
