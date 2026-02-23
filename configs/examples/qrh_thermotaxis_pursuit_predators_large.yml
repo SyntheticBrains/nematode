@@ -26,21 +26,22 @@
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)
 # - thermotaxis: 3 features (strength, angle, temp_deviation)
-# Total: 7 features -> 7 sensory qubits, 1 interneuron qubit
+# Total: 7 features -> 7 sensory qubits, 3 interneuron qubits
+# Feature dim: 3×10 + C(10,2) = 30 + 45 = 75
 #
-# No mechanosensation (would require 9 features = wrapping on 8 qubits)
+# No mechanosensation (would require 9 features = wrapping on 10 qubits)
 
 max_steps: 2000
 brain:
   name: qrh
   config:
-    # Reservoir parameters
-    num_reservoir_qubits: 8
+    # Reservoir parameters (10 qubits: 7 sensory + 3 interneuron)
+    num_reservoir_qubits: 10
     reservoir_depth: 3
     reservoir_seed: 42
 
-    # Readout architecture (actor + critic)
-    readout_hidden_dim: 64
+    # Readout architecture (actor + critic) — 128 to match 75-feature input
+    readout_hidden_dim: 128
     readout_num_layers: 2
 
     # PPO hyperparameters (proven QRH settings)
@@ -69,7 +70,7 @@ brain:
       - nociception
       - thermotaxis
 
-    # Sensory qubits (7 features = 7 qubits, 1 interneuron qubit remaining)
+    # Sensory qubits (7 features = 7 qubits, 3 interneuron qubits remaining)
     num_sensory_qubits: 7
 
 body_length: 2
