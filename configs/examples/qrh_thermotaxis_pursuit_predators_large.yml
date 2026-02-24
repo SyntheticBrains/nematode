@@ -53,13 +53,18 @@ brain:
     ppo_epochs: 6
     ppo_minibatches: 2
     ppo_buffer_size: 256
-    entropy_coeff: 0.02
+    entropy_coeff: 0.01
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
-    # LR warmup (extended to 50 episodes for harder task)
+    # LR schedule: warmup then linear decay to protect converged policies
+    # Ep 1-50: warmup 0.00005 → 0.0005
+    # Ep 50-450: linear decay 0.0005 → 0.0001
+    # Ep 450+: constant at 0.0001
     lr_warmup_episodes: 50
     lr_warmup_start: 0.00005
+    lr_decay_episodes: 400
+    lr_decay_end: 0.0001
 
     # Topology
     use_random_topology: true
@@ -84,7 +89,7 @@ reward:
   penalty_stuck_position: 0
   penalty_starvation: 10.0
   penalty_predator_death: 10.0
-  penalty_predator_proximity: 0.15
+  penalty_predator_proximity: 0.5
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
   penalty_health_damage: 0.3
