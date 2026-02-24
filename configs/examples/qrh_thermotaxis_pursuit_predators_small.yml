@@ -30,8 +30,8 @@ brain:
     reservoir_depth: 3
     reservoir_seed: 42
 
-    # Readout architecture (actor + critic) — 128 to match 75-feature input
-    readout_hidden_dim: 128
+    # Readout architecture (actor + critic)
+    readout_hidden_dim: 64
     readout_num_layers: 2
 
     # PPO hyperparameters (proven QRH Predator R3 settings)
