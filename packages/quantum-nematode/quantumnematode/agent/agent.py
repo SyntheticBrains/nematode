@@ -40,6 +40,7 @@ DEFAULT_REWARD_HEALTH_GAIN = 0.1  # Reward when healing (per healing event)
 DEFAULT_PENALTY_BOUNDARY_COLLISION = (
     0.0  # Penalty for touching grid boundary (disabled by default for backward compatibility)
 )
+DEFAULT_PENALTY_TEMPERATURE_PROXIMITY = 0.0  # Disabled by default for backward compat
 DEFAULT_REWARD_DISTANCE_SCALE = 0.3
 DEFAULT_REWARD_GOAL = 0.2
 DEFAULT_REWARD_EXPLORATION = 0.05
@@ -96,6 +97,10 @@ class RewardConfig(BaseModel):
     # Mechanosensation penalties
     penalty_boundary_collision: float = (
         DEFAULT_PENALTY_BOUNDARY_COLLISION  # Penalty per step touching grid boundary
+    )
+    # Temperature avoidance (distance-scaled, mirrors predator evasion structure)
+    penalty_temperature_proximity: float = (
+        DEFAULT_PENALTY_TEMPERATURE_PROXIMITY  # Scale factor for temp deviation-based reward
     )
 
 
