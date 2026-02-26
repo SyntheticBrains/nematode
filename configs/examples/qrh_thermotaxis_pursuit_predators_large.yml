@@ -14,6 +14,8 @@
 # Based on proven QRH Predator R3 config (32.7% overall, 86% post-convergence on small grid)
 # scaled to large environment matching MLPPPO thermotaxis pursuit predator large config.
 #
+# 10-qubit reservoir: 7 sensory qubits + 3 interneuron qubits.
+#
 # Temperature zone layout (aligned with MLPPPO large):
 # - Hot zones: right-center (75,50), top-left (25,75), top-right (80,80)
 # - Cold zones: bottom-left (25,25), bottom-right (75,25), top-center (50,85)
@@ -44,7 +46,7 @@ brain:
     readout_hidden_dim: 128
     readout_num_layers: 2
 
-    # PPO hyperparameters (proven QRH settings)
+    # PPO hyperparameters
     actor_lr: 0.0005
     critic_lr: 0.0005
     gamma: 0.99
