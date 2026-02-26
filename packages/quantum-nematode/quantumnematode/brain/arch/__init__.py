@@ -1,6 +1,7 @@
 """Module for quantum brain architectures."""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
+from ._reservoir_hybrid_base import ReservoirHybridBase, ReservoirHybridBaseConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
@@ -66,6 +67,8 @@ __all__ = [
     "QVarCircuitBrain",
     "QVarCircuitBrainConfig",
     "QuantumBrain",
+    "ReservoirHybridBase",
+    "ReservoirHybridBaseConfig",
     "SpikingBrain",
     "SpikingBrainConfig",
     "SpikingReinforceBrain",
