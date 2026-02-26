@@ -17,42 +17,42 @@
 
 ## 3. CRH Brain Implementation
 
-- [ ] 3.1 Create `brain/arch/crh.py` — module docstring, imports, and default/validation constants
-- [ ] 3.2 Define `FeatureChannel = Literal["raw", "cos_sin", "squared", "pairwise"]` type alias
-- [ ] 3.3 Implement `CRHBrainConfig(ReservoirHybridBaseConfig)` with ESN-specific fields: `num_reservoir_neurons`, `reservoir_depth`, `reservoir_seed`, `spectral_radius`, `input_connectivity`, `input_scale`, `feature_channels: list[FeatureChannel]`, `num_sensory_neurons`
-- [ ] 3.4 Add Pydantic validators for `feature_channels` (non-empty), `input_connectivity` (sparse/dense), `spectral_radius` (> 0), `num_reservoir_neurons` (>= 2), `num_sensory_neurons` (\<= `num_reservoir_neurons` when set)
-- [ ] 3.5 Implement `CRHBrain.__init__()` — W_in/W_res construction, spectral radius scaling, compute `feature_dim`, then call `super().__init__(config, feature_dim, ...)` which handles seeding, readout, optimizer, buffer (design Decision 7). Set `_brain_name = "CRH"`.
-- [ ] 3.6 Implement `_build_reservoir_matrices()` — W_in (sparse: zero rows for non-sensory neurons; dense: full matrix), W_res (random normal, eigenvalue-scaled to spectral_radius with epsilon guard for degenerate matrices)
-- [ ] 3.7 Implement `_get_reservoir_features(sensory_features)` — ESN forward pass: h_0 = tanh(W_in @ x), h_l = tanh(W_res @ h\_{l-1} + W_in @ x), then feature extraction
-- [ ] 3.8 Implement `_extract_features(activations)` — apply configured feature channels (raw, cos_sin, squared, pairwise) and concatenate
-- [ ] 3.9 Implement `_compute_feature_dim()` — sum dimensions from configured channels
-- [ ] 3.10 Implement `_create_copy_instance(config)` to construct a new `CRHBrain` (W_in/W_res are regenerated from seed in `__init__`)
+- [x] 3.1 Create `brain/arch/crh.py` — module docstring, imports, and default/validation constants
+- [x] 3.2 Define `FeatureChannel = Literal["raw", "cos_sin", "squared", "pairwise"]` type alias
+- [x] 3.3 Implement `CRHBrainConfig(ReservoirHybridBaseConfig)` with ESN-specific fields: `num_reservoir_neurons`, `reservoir_depth`, `reservoir_seed`, `spectral_radius`, `input_connectivity`, `input_scale`, `feature_channels: list[FeatureChannel]`, `num_sensory_neurons`
+- [x] 3.4 Add Pydantic validators for `feature_channels` (non-empty), `input_connectivity` (sparse/dense), `spectral_radius` (> 0), `num_reservoir_neurons` (>= 2), `num_sensory_neurons` (\<= `num_reservoir_neurons` when set)
+- [x] 3.5 Implement `CRHBrain.__init__()` — W_in/W_res construction, spectral radius scaling, compute `feature_dim`, then call `super().__init__(config, feature_dim, ...)` which handles seeding, readout, optimizer, buffer (design Decision 7). Set `_brain_name = "CRH"`.
+- [x] 3.6 Implement `_build_reservoir_matrices()` — W_in (sparse: zero rows for non-sensory neurons; dense: full matrix), W_res (random normal, eigenvalue-scaled to spectral_radius with epsilon guard for degenerate matrices)
+- [x] 3.7 Implement `_get_reservoir_features(sensory_features)` — ESN forward pass: h_0 = tanh(W_in @ x), h_l = tanh(W_res @ h\_{l-1} + W_in @ x), then feature extraction
+- [x] 3.8 Implement `_extract_features(activations)` — apply configured feature channels (raw, cos_sin, squared, pairwise) and concatenate
+- [x] 3.9 Implement `_compute_feature_dim()` — sum dimensions from configured channels
+- [x] 3.10 Implement `_create_copy_instance(config)` to construct a new `CRHBrain` (W_in/W_res are regenerated from seed in `__init__`)
 
 ## 4. Brain Type Registration
 
-- [ ] 4.1 Add `CRH = "crh"` to `BrainType` enum in `brain/arch/dtypes.py`; add `"crh"` to the `BRAIN_TYPES` Literal type alias; add `BrainType.CRH` to the `CLASSICAL_BRAIN_TYPES` set
-- [ ] 4.2 Add `CRHBrain`, `CRHBrainConfig`, `ReservoirHybridBase`, `ReservoirHybridBaseConfig` exports to `brain/arch/__init__.py`
-- [ ] 4.3 Add `CRHBrainConfig` to imports, union type, and `elif BrainType.CRH` branch in `utils/brain_factory.py`
-- [ ] 4.4 Add `CRHBrainConfig` to imports, `BrainConfigType` union, and `BRAIN_CONFIG_MAP` in `utils/config_loader.py`
+- [x] 4.1 Add `CRH = "crh"` to `BrainType` enum in `brain/arch/dtypes.py`; add `"crh"` to the `BRAIN_TYPES` Literal type alias; add `BrainType.CRH` to the `CLASSICAL_BRAIN_TYPES` set
+- [x] 4.2 Add `CRHBrain`, `CRHBrainConfig`, `ReservoirHybridBase`, `ReservoirHybridBaseConfig` exports to `brain/arch/__init__.py`
+- [x] 4.3 Add `CRHBrainConfig` to imports, union type, and `elif BrainType.CRH` branch in `utils/brain_factory.py`
+- [x] 4.4 Add `CRHBrainConfig` to imports, `BrainConfigType` union, and `BRAIN_CONFIG_MAP` in `utils/config_loader.py`
 
 ## 5. Configuration Files
 
-- [ ] 5.1 Create `configs/examples/crh_thermotaxis_pursuit_predators_large.yml` — ablation mode (N=10, sparse, [raw, cos_sin, pairwise], 75 features) matching QRH R9 environment config
-- [ ] 5.2 Create `configs/examples/crh_thermotaxis_pursuit_predators_large_standalone.yml` — standalone mode (tuned N, channels, dense input) for MLPPPO comparison
+- [x] 5.1 Create `configs/examples/crh_thermotaxis_pursuit_predators_large.yml` — ablation mode (N=10, sparse, [raw, cos_sin, pairwise], 75 features) matching QRH R9 environment config
+- [x] 5.2 Create `configs/examples/crh_thermotaxis_pursuit_predators_large_standalone.yml` — standalone mode (tuned N=14, all 4 channels, dense input) for MLPPPO comparison
 
 ## 6. Tests
 
 - [x] 6.1 Create `tests/.../brain/arch/test_reservoir_hybrid_base.py` — tests for base config defaults, base class instantiation (via QRH subclass), PPO buffer, shared methods (18 tests)
-- [ ] 6.2 Create `tests/.../brain/arch/test_crh.py` — `TestCRHBrainConfig`: default config, custom values, all validators (feature_channels, input_connectivity, spectral_radius)
-- [ ] 6.3 Add `TestCRHReservoir`: W_in/W_res shapes, spectral radius scaling, seed reproducibility, sparse vs dense connectivity
-- [ ] 6.4 Add `TestCRHFeatureExtraction`: dimension for each channel combo, raw range [-1,1], cos_sin range, pairwise range, ablation mode = 75 features
-- [ ] 6.5 Add `TestCRHBrainReadout`: actor output shape, critic output shape (inherited from base)
-- [ ] 6.6 Add `TestCRHBrainLearning`: `run_brain()` returns valid ActionData, PPO update changes weights, buffer management, full episode workflow
-- [ ] 6.7 Add `TestCRHBrainCopy`: copy independence, shared W_in/W_res values, independent readout weights
-- [ ] 6.8 Add `TestCRHBrainSensoryModules`: unified mode dimensions, legacy fallback
-- [ ] 6.9 Add CRH config to smoke test `SIMULATION_CONFIGS` list
+- [x] 6.2 Create `tests/.../brain/arch/test_crh.py` — `TestCRHBrainConfig`: default config, custom values, all validators (9 tests)
+- [x] 6.3 Add `TestCRHReservoir`: W_in/W_res shapes, spectral radius scaling, seed reproducibility, sparse vs dense connectivity (8 tests)
+- [x] 6.4 Add `TestCRHFeatureExtraction`: dimension for each channel combo, raw range [-1,1], cos_sin range, pairwise range, ablation mode = 75 features (12 tests)
+- [x] 6.5 Add `TestCRHBrainReadout`: actor output shape, critic output shape (2 tests)
+- [x] 6.6 Add `TestCRHBrainLearning`: `run_brain()` returns valid ActionData, PPO update changes weights, buffer management, full episode workflow (4 tests)
+- [x] 6.7 Add `TestCRHBrainCopy`: copy independence, shared W_in/W_res values, independent readout weights (5 tests)
+- [x] 6.8 Add `TestCRHBrainSensoryModules`: unified mode dimensions, legacy fallback, triple-objective (3 tests)
+- [x] 6.9 Add CRH config to smoke test `SIMULATION_CONFIGS` list — `crh_foraging_small.yml`
 - [x] 6.10 Run QRH regression: `/opt/homebrew/bin/uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrh.py -v` — 53 passed, zero modifications needed
-- [ ] 6.11 Run full test suite: `/opt/homebrew/bin/uv run pytest -m "not smoke and not nightly"` and `/opt/homebrew/bin/uv run pytest -m smoke -k crh -v`
+- [x] 6.11 Run full test suite: 1567 passed (42 new CRH + 18 base + 53 QRH unchanged); CRH smoke test: 1 passed
 
 ## 7. Documentation
 

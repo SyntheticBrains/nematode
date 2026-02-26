@@ -2,6 +2,7 @@
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
 from ._reservoir_hybrid_base import ReservoirHybridBase, ReservoirHybridBaseConfig
+from .crh import CRHBrain, CRHBrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
@@ -29,6 +30,8 @@ __all__ = [
     "Brain",
     "BrainData",
     "BrainParams",
+    "CRHBrain",
+    "CRHBrainConfig",
     "ClassicalBrain",
     "HybridClassicalBrain",
     "HybridClassicalBrainConfig",
