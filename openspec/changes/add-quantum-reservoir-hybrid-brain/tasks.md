@@ -76,4 +76,4 @@
 - [x] 8.1 Run lint: `/opt/homebrew/bin/uv run pre-commit run -a` — ruff check/format, mdformat, markdownlint all pass
 - [x] 8.2 Run full test suite: `/opt/homebrew/bin/uv run pytest` — 1507 passed
 - [x] 8.3 Run smoke tests: `/opt/homebrew/bin/uv run pytest -m smoke -k qrh -v` — 1 passed
-- [ ] 8.4 Manual smoke test: `/opt/homebrew/bin/uv run ./scripts/run_simulation.py --runs 2 --config ./configs/examples/qrh_foraging_small.yml`
+- [x] 8.4 Manual smoke test: `/opt/homebrew/bin/uv run ./scripts/run_simulation.py --runs 2 --config ./configs/examples/qrh_foraging_small.yml`
