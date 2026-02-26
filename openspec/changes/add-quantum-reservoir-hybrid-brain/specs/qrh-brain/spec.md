@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the requirements for the Quantum Reservoir Hybrid (QRH) brain architecture. QRH uses a fixed structured quantum reservoir with C. elegans-inspired topology to generate biologically-grounded feature representations, with a classical actor-critic readout trained via PPO. The structured topology and Z/ZZ feature extraction address the failure of QRC's random reservoir approach.
+Define the requirements for the Quantum Reservoir Hybrid (QRH) brain architecture. QRH uses a fixed structured quantum reservoir with C. elegans-inspired topology to generate biologically-grounded feature representations, with a classical actor-critic readout trained via PPO. The structured topology and X/Y/Z+ZZ feature extraction address the failure of QRC's random reservoir approach.
 
 ## ADDED Requirements
 
@@ -18,7 +18,7 @@ The system SHALL support a Quantum Reservoir Hybrid brain architecture that uses
 - **AND** SHALL create a classical critic MLP (64 hidden units, 2 layers) for value estimation
 - **AND** SHALL initialize the reservoir with a deterministic seed for reproducibility
 - **AND** SHALL use orthogonal weight initialization for the readout networks
-- **AND** SHALL compute a reservoir feature dimension of N + N(N-1)/2 (36 for 8 qubits)
+- **AND** SHALL compute a reservoir feature dimension of 3N + N(N-1)/2 (52 for 8 qubits, 75 for 10 qubits)
 
 #### Scenario: CLI Brain Selection
 
@@ -36,16 +36,16 @@ The QRHBrain SHALL implement a fixed quantum reservoir with C. elegans-inspired 
 - **WHEN** a QRHBrain constructs its reservoir circuit with `use_random_topology=False` (default)
 - **THEN** the system SHALL map the C. elegans sensory-interneuron subnetwork onto qubits: ASEL/ASER (qubits 0-1), AIYL/AIYR (qubits 2-3), AIAL/AIAR (qubits 4-5), AVAL/AVAR (qubits 6-7)
 - **AND** SHALL apply Hadamard gates to all qubits for initial superposition
-- **AND** SHALL use data re-uploading: encode input features as RY rotations before each reservoir layer
+- **AND** SHALL use data re-uploading: encode input features as RY/RZ rotations on sensory qubits before each reservoir layer
 - **AND** SHALL apply CZ gates for gap junction connections (bilateral neuron pairs + feedforward)
-- **AND** SHALL apply fixed RY/RZ rotations for chemical synapse connections with angles derived from connectome synaptic weights
+- **AND** SHALL apply controlled rotations (CRY/CRZ) for chemical synapse connections with angles derived from connectome synaptic weights (Cook et al. 2019)
 - **AND** SHALL repeat the [input encoding → CZ entanglement → fixed rotations] pattern for the configured number of layers
 
 #### Scenario: Random Reservoir Construction (MI Comparison)
 
 - **WHEN** a QRHBrain constructs its reservoir circuit with `use_random_topology=True`
 - **THEN** the system SHALL generate random CZ pairs with the same density as the structured topology
-- **AND** SHALL generate random RY/RZ rotation angles using the reservoir seed
+- **AND** SHALL generate random CRY/CRZ rotation angles using the reservoir seed
 - **AND** SHALL maintain the same data re-uploading and Hadamard initialization pattern
 
 #### Scenario: Reservoir Reproducibility
@@ -60,22 +60,23 @@ The QRHBrain SHALL implement a fixed quantum reservoir with C. elegans-inspired 
 - **THEN** the quantum reservoir circuit parameters SHALL remain unchanged
 - **AND** only the classical readout network parameters SHALL be updated
 
-### Requirement: Z-Expectation and ZZ-Correlation Feature Extraction
+### Requirement: X/Y/Z-Expectation and ZZ-Correlation Feature Extraction
 
-The QRHBrain SHALL extract per-qubit Z-expectations and pairwise ZZ-correlations from the quantum reservoir state, providing richer features than raw probability distributions.
+The QRHBrain SHALL extract per-qubit X/Y/Z-expectations and pairwise ZZ-correlations from the quantum reservoir state, providing richer features than raw probability distributions.
 
 #### Scenario: Feature Extraction from Statevector
 
 - **WHEN** the reservoir circuit is executed and the statevector |ψ⟩ is obtained
-- **THEN** the system SHALL compute per-qubit Z-expectations: ⟨Z_i⟩ = Σ_k (-1)^bit(k,i) |ψ_k|² for each qubit i
+- **THEN** the system SHALL compute per-qubit X/Y/Z-expectations from probability amplitudes (full Bloch sphere per qubit)
 - **AND** SHALL compute pairwise ZZ-correlations: ⟨Z_i Z_j⟩ = Σ_k (-1)^(bit(k,i)+bit(k,j)) |ψ_k|² for each pair (i,j) where i < j
-- **AND** SHALL concatenate Z-expectations and ZZ-correlations into a single feature vector
-- **AND** SHALL return a numpy array of shape (N + N(N-1)/2,) where N is the number of qubits
+- **AND** SHALL concatenate X-expectations, Y-expectations, Z-expectations, and ZZ-correlations into a single feature vector
+- **AND** SHALL return a numpy array of shape (3N + N(N-1)/2,) where N is the number of qubits
+- **AND** SHALL apply LayerNorm to normalize heterogeneous feature scales before the readout MLPs
 
 #### Scenario: Feature Value Range
 
-- **WHEN** feature extraction produces Z-expectations and ZZ-correlations
-- **THEN** all Z-expectation values SHALL be in the range [-1, 1]
+- **WHEN** feature extraction produces X/Y/Z-expectations and ZZ-correlations
+- **THEN** all expectation values SHALL be in the range [-1, 1]
 - **AND** all ZZ-correlation values SHALL be in the range [-1, 1]
 
 #### Scenario: Feature Sensitivity
@@ -118,7 +119,7 @@ The QRHBrain SHALL train the classical actor-critic readout using Proximal Polic
 - **AND** SHALL compute the clipped surrogate policy loss with clip_ε=0.2
 - **AND** SHALL compute value function loss (MSE) weighted by `value_loss_coef` (default 0.5)
 - **AND** SHALL compute entropy bonus for exploration weighted by `entropy_coeff`
-- **AND** SHALL update actor and critic networks via separate Adam optimizers
+- **AND** SHALL update actor, critic, and feature normalization via a single combined Adam optimizer
 - **AND** SHALL apply gradient clipping (max_norm=0.5)
 
 #### Scenario: Action Selection
@@ -182,6 +183,11 @@ The configuration system SHALL support QRH-specific parameters via Pydantic Base
 - **AND** SHALL accept `max_grad_norm` (float, default 0.5)
 - **AND** SHALL accept `value_loss_coef` (float, default 0.5)
 - **AND** SHALL accept `use_random_topology` (bool, default False)
+- **AND** SHALL accept `num_sensory_qubits` (int | None, default None) — auto-computed from `sensory_modules` if not set
+- **AND** SHALL accept `lr_warmup_episodes` (int, default 0) — number of episodes for LR warmup phase
+- **AND** SHALL accept `lr_warmup_start` (float | None, default None) — starting LR during warmup
+- **AND** SHALL accept `lr_decay_episodes` (int, default 0) — number of episodes for LR decay phase
+- **AND** SHALL accept `lr_decay_end` (float | None, default None) — ending LR after decay
 - **AND** SHALL accept `sensory_modules` (list of ModuleName or None, default None)
 
 #### Scenario: Configuration Validation

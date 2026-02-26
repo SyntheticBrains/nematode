@@ -56,9 +56,9 @@
 
 ## 7. Documentation
 
-- [ ] 7.1 Update `AGENTS.md` — add both `qrh` and `crh` to brain architecture list (QRH was never added to docs), update count from 12 to 14
-- [ ] 7.2 Update `README.md` — add both QRH and CRH to brain architecture section, update count from 12 to 14, add CLI examples
-- [ ] 7.3 Update `CONTRIBUTING.md` — add QRH under "Hybrid" and CRH under "Classical" in architecture list, update count from 12 to 14
+- [ ] 7.1 Update `AGENTS.md` — add `crh` to brain architecture list, update count from 13 to 14 (QRH already added)
+- [ ] 7.2 Update `README.md` — add CRH to brain architecture section, update count from 13 to 14, add CLI example
+- [ ] 7.3 Update `CONTRIBUTING.md` — add CRH under "Classical" in architecture list, update count from 13 to 14
 
 ## 8. Verification
 
