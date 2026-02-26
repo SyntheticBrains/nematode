@@ -25,14 +25,15 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from 12 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 13 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
 - **QVarCircuitBrain** (qvarcircuit): Quantum variational circuit with modular sensory processing and parameter-shift rule gradients
 - **QRCBrain** (qrc): Quantum reservoir computing with data re-uploading circuits and classical readout
+- **QRHBrain** (qrh): Quantum reservoir hybrid with C. elegans-inspired structured topology, X/Y/Z+ZZ feature extraction, and PPO-trained classical readout
 - **QSNNReinforceBrain** (qsnnreinforce): Quantum spiking neural network (QLIF neurons) with surrogate gradient REINFORCE
-- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training (experimental — [architecturally incompatible](docs/experiments/logbooks/supporting/008/qsnnppo-optimization.md))
+- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training
 - **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
 
 **Hybrid (Quantum + Classical):**

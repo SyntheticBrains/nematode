@@ -110,31 +110,32 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 12 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 13 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
 1. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
 2. **QQLearningBrain** (`qqlearning`): Quantum Q-learning with variational circuits
 3. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
-4. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
-5. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
+4. **QRHBrain** (`qrh`): Quantum reservoir hybrid — C. elegans topology, X/Y/Z+ZZ features, PPO readout
+5. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
+6. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
 
 **Hybrid (quantum + classical):**
 
-6. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture (96.9% on pursuit predators)
-7. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
-8. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
+7. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
+8. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
+9. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
 
 **Classical:**
 
-09. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
-10. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
-11. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
+10. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
+11. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
+12. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
 
 **Biologically-Inspired:**
 
-12. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+13. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
 
 Each brain architecture follows a common interface defined in `quantumnematode.brain.arch`.
 
