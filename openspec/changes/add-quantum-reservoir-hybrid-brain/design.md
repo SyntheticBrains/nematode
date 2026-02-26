@@ -3,7 +3,7 @@
 The QRC brain (added 2026-02-06) achieved 0% success across 1,600+ runs because its **random** reservoir topology produces non-discriminative representations. The QRH (Quantum Reservoir Hybrid) is the highest-priority next-generation architecture (proposal H.1 in `docs/research/quantum-architectures.md`), designed to fix QRC's three failure modes:
 
 1. **Random topology → non-discriminative features**: Replace with C. elegans connectome-inspired structured topology
-2. **Raw 2^N probability distribution → uninformative features**: Replace with Z-expectations + ZZ-correlations (O(N²) features)
+2. **Raw 2^N probability distribution → uninformative features**: Replace with X/Y/Z-expectations + ZZ-correlations (O(N²) features)
 3. **REINFORCE training → high variance**: Replace with PPO (actor-critic with GAE)
 
 The existing brain architecture follows a Protocol pattern (`Brain`, `QuantumBrain`, `ClassicalBrain`). QRC implements `ClassicalBrain` since only its readout is trained. Several utility functions are currently duplicated or misplaced — `get_qiskit_backend()` lives in `_qlif_layers.py` but is used by 5 brains and duplicated inline in QRC.
@@ -14,7 +14,7 @@ The existing brain architecture follows a Protocol pattern (`Brain`, `QuantumBra
 
 - Implement QRHBrain as a structured quantum reservoir with PPO-trained classical readout
 - C. elegans-inspired reservoir topology mapped from the sensory-interneuron subnetwork
-- Z-expectation and ZZ-correlation feature extraction (richer than raw probability distributions)
+- X/Y/Z-expectation and ZZ-correlation feature extraction (richer than raw probability distributions)
 - PPO training on the classical readout (actor-critic with GAE advantages)
 - Mutual information decision gate script for Week 1 go/no-go validation
 - Extract shared quantum utilities (`get_qiskit_backend`, readout network builder) into common modules
@@ -57,28 +57,30 @@ The existing brain architecture follows a Protocol pattern (`Brain`, `QuantumBra
 **Gate mapping**:
 
 - Gap junctions (bidirectional electrical coupling) → CZ gates: bilateral pairs (0-1, 2-3, 4-5, 6-7) + feedforward (2-4, 3-5)
-- Chemical synapses (directed signaling) → fixed RY/RZ rotations with angles normalized from published synaptic weight ratios
+- Chemical synapses (directed signaling) → controlled rotations (CRY/CRZ) where the postsynaptic response is conditioned on the presynaptic qubit state, with angles normalized from published synaptic weight ratios (Cook et al. 2019)
 
 **Configuration**: `use_random_topology=True` flag generates a random reservoir with identical CZ density and rotation count, enabling controlled MI comparison.
 
-### Decision 3: Feature Extraction — Z-expectations + ZZ-correlations
+### Decision 3: Feature Extraction — X/Y/Z-expectations + ZZ-correlations
 
-**Choice**: Per-qubit ⟨Z_i⟩ (N features) + pairwise ⟨Z_i Z_j⟩ (N(N-1)/2 features) = 36 features for 8 qubits
+**Choice**: Per-qubit ⟨X_i⟩, ⟨Y_i⟩, ⟨Z_i⟩ (3N features) + pairwise ⟨Z_i Z_j⟩ (N(N-1)/2 features) = 52 features for 8 qubits
 
-**Rationale**: QRC's 2^N probability distribution (256-dim for 8 qubits) is both high-dimensional and uninformative. Z-expectations capture per-qubit state, while ZZ-correlations capture entanglement-induced pairwise structure — the signature of quantum processing. This scales as O(N²) instead of O(2^N), and each feature has a clear physical interpretation.
+**Rationale**: QRC's 2^N probability distribution (256-dim for 8 qubits) is both high-dimensional and uninformative. X/Y/Z-expectations capture the full single-qubit Bloch sphere state, while ZZ-correlations capture entanglement-induced pairwise structure — the signature of quantum processing. This scales as O(N²) instead of O(2^N), and each feature has a clear physical interpretation.
 
 **Computation**: From the statevector |ψ⟩:
 
-- ⟨Z_i⟩ = Σ_k (-1)^bit(k,i) |ψ_k|²
+- ⟨X_i⟩, ⟨Y_i⟩, ⟨Z_i⟩ computed from probability amplitudes (full Bloch sphere per qubit)
 - ⟨Z_i Z_j⟩ = Σ_k (-1)^(bit(k,i)+bit(k,j)) |ψ_k|²
 
-All features lie in [-1, 1], well-suited for neural network input without normalization.
+All features lie in [-1, 1]. A LayerNorm layer normalizes the heterogeneous X/Y/Z/ZZ feature scales before the readout MLPs.
+
+**Feature dimension formula**: `3*N + N*(N-1)//2` — 52 for 8 qubits, 75 for 10 qubits.
 
 **Alternatives considered**:
 
 - Raw 2^N probabilities (QRC approach): Failed — non-discriminative, doesn't scale
-- Per-qubit Z-expectations only: Misses entanglement correlations, the key quantum feature
-- Full Pauli observable set (X, Y, Z + all pairs): 3N + 3N(N-1) features — over-complete, adds noise
+- Per-qubit Z-expectations only (N features): Misses X/Y phase information and entanglement correlations
+- Z-expectations + ZZ-correlations only (N + N(N-1)/2 = 36 for 8q): Originally designed, but X/Y expectations provide richer phase-space coverage at minimal additional cost
 
 ### Decision 4: Statevector Simulation
 
@@ -99,9 +101,9 @@ All features lie in [-1, 1], well-suited for neural network input without normal
 - Buffer: 512 steps, 4 epochs, 4 minibatches
 - GAE: γ=0.99, λ=0.95
 - PPO: clip_ε=0.2, entropy_coeff=0.01
-- Optimizer: Adam, LR=3e-4 (actor + critic separate)
+- Optimizer: Adam, LR=3e-4 (single combined optimizer for actor + critic + feature_norm)
 
-**NOTE**: `mlpppo.py` uses a single combined Adam optimizer for both actor and critic. QRH intentionally diverges here — it uses **separate optimizers** for actor and critic to support independent learning rates (`actor_lr`, `critic_lr`). This is the one structural difference from the `mlpppo.py` pattern.
+**NOTE**: The config retains separate `actor_lr` and `critic_lr` fields for flexibility, but the implementation uses a **single combined Adam optimizer** (matching the MLPPPO pattern) with `actor_lr` as the base rate. This proved more stable during training than the originally planned separate optimizers.
 
 **Alternatives considered**:
 
@@ -131,7 +133,7 @@ All features lie in [-1, 1], well-suited for neural network input without normal
 
 **Rationale**: Standard PPO actor-critic pattern. Using the shared `build_readout_network()` for both. Separate optimizers allow independent learning rates if needed.
 
-**Feature input dimension**: 36 for 8 qubits (8 Z-expectations + 28 ZZ-correlations).
+**Feature input dimension**: 52 for 8 qubits (24 X/Y/Z-expectations + 28 ZZ-correlations), 75 for 10 qubits (30 + 45).
 
 ## Risks / Trade-offs
 
