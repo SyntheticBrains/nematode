@@ -31,6 +31,7 @@ SIMULATION_CONFIGS = [
     "mlpppo_thermotaxis_foraging_small.yml",
     "mlpppo_predators_small.yml",
     "qrh_foraging_small.yml",
+    "crh_foraging_small.yml",
 ]
 
 
