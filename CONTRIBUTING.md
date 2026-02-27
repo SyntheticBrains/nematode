@@ -110,7 +110,7 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 13 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 14 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
@@ -129,13 +129,14 @@ The project supports 13 brain architectures across quantum, hybrid, classical, a
 
 **Classical:**
 
-10. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
-11. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
-12. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
+10. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
+11. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
+12. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
+13. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
 
 **Biologically-Inspired:**
 
-13. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+14. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
 
 Each brain architecture follows a common interface defined in `quantumnematode.brain.arch`.
 
