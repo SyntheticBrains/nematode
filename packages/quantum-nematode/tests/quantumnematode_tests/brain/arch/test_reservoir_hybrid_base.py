@@ -1,7 +1,7 @@
 """Unit tests for the ReservoirHybridBase and shared PPO infrastructure.
 
 Tests the base class config, rollout buffer, and shared methods using QRHBrain
-as the concrete subclass (CRH is not yet implemented).
+as the concrete subclass.
 """
 
 import numpy as np
