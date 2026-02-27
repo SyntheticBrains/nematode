@@ -54,15 +54,15 @@ brain:
     ppo_epochs: 10
     ppo_minibatches: 2
     ppo_buffer_size: 512
-    entropy_coeff: 0.015
+    entropy_coeff: 0.02
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
-    # LR schedule: identical to pursuit config / R9
+    # LR schedule: extended decay for stationary predators
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
-    lr_decay_episodes: 700
-    lr_decay_end: 0.0001
+    lr_decay_episodes: 1200
+    lr_decay_end: 0.00015
 
     # Topology
     use_random_topology: true
