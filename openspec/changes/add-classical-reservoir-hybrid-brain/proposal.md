@@ -13,7 +13,7 @@ Beyond ablation, CRH fills a unique cell in the benchmark suite — classical dy
 - Configurable feature extraction channels: `raw` (activations h), `cos_sin` (cos(pi*h), sin(pi*h)), `squared` (h^2), `pairwise` (h_i\*h_j for i\<j)
 - Two config profiles: ablation mode (N=10, sparse input, [raw, cos_sin, pairwise] -> 75 features matching QRH) and standalone mode (tunable N, channels, connectivity)
 - Integration with brain factory, configuration system, benchmarking infrastructure, and documentation
-- Example YAML configs for large pursuit predator environment (ablation + standalone)
+- Example YAML configs for large pursuit predator environment (ablation + standalone), large stationary predator environment (ablation), and small foraging smoke test
 
 ## Capabilities
 
@@ -31,7 +31,7 @@ Beyond ablation, CRH fills a unique cell in the benchmark suite — classical dy
 - **Code**: New `crh.py` in `brain/arch/`, new `_reservoir_hybrid_base.py` base class, refactored `qrh.py` to inherit from base, updates to `brain_factory.py`, `config_loader.py`, `dtypes.py`, `__init__.py`
 - **APIs**: Brain protocol compliance required (ClassicalBrain interface, ActionData/BrainData compatibility); no breaking changes to existing brains including QRH
 - **Dependencies**: Uses existing PyTorch (ESN matrices, actor-critic MLPs, PPO training); no new external dependencies
-- **Configs**: New `crh_thermotaxis_pursuit_predators_large.yml` (ablation) and `crh_thermotaxis_pursuit_predators_large_standalone.yml` (standalone) example configs
+- **Configs**: New `crh_thermotaxis_pursuit_predators_large.yml` (ablation), `crh_thermotaxis_pursuit_predators_large_standalone.yml` (standalone), `crh_thermotaxis_stationary_predators_large.yml` (stationary predator ablation for 2×2 comparison matrix), and `crh_foraging_small.yml` (smoke test)
 - **Tests**: Unit tests for ESN reservoir, classical feature extraction, base class PPO, QRH regression; smoke test for CLI end-to-end
 - **Benchmarks**: New benchmark entries for CRH in classical category (large pursuit predator environment)
 - **Documentation**: Update README.md, CONTRIBUTING.md, AGENTS.md (brain architecture list, count update)

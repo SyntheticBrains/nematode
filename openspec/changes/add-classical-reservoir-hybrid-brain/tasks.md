@@ -39,6 +39,7 @@
 
 - [x] 5.1 Create `configs/examples/crh_thermotaxis_pursuit_predators_large.yml` — ablation mode (N=10, sparse, [raw, cos_sin, pairwise], 75 features) matching QRH R9 environment config
 - [x] 5.2 Create `configs/examples/crh_thermotaxis_pursuit_predators_large_standalone.yml` — standalone mode (tuned N=14, all 4 channels, dense input) for MLPPPO comparison
+- [x] 5.3 Create `configs/examples/crh_thermotaxis_stationary_predators_large.yml` — stationary predator ablation mode matching QRH stationary config for 2×2 comparison matrix (QRH/CRH × pursuit/stationary)
 
 ## 6. Tests
 
@@ -56,13 +57,13 @@
 
 ## 7. Documentation
 
-- [ ] 7.1 Update `AGENTS.md` — add `crh` to brain architecture list, update count from 13 to 14 (QRH already added)
-- [ ] 7.2 Update `README.md` — add CRH to brain architecture section, update count from 13 to 14, add CLI example
-- [ ] 7.3 Update `CONTRIBUTING.md` — add CRH under "Classical" in architecture list, update count from 13 to 14
+- [x] 7.1 Update `AGENTS.md` — add `crh` to brain architecture list, update count from 13 to 14 (QRH already added)
+- [x] 7.2 Update `README.md` — add CRH to brain architecture section, update count from 13 to 14, add CLI example
+- [x] 7.3 Update `CONTRIBUTING.md` — add CRH under "Classical" in architecture list, update count from 13 to 14
 
 ## 8. Verification
 
-- [ ] 8.1 Run lint: `/opt/homebrew/bin/uv run pre-commit run -a`
-- [ ] 8.2 Run full test suite: `/opt/homebrew/bin/uv run pytest`
-- [ ] 8.3 Run smoke tests: `/opt/homebrew/bin/uv run pytest -m smoke -v`
-- [ ] 8.4 Manual smoke test: `/opt/homebrew/bin/uv run ./scripts/run_simulation.py --runs 2 --config ./configs/examples/crh_thermotaxis_pursuit_predators_large.yml`
+- [x] 8.1 Run lint: `/opt/homebrew/bin/uv run pre-commit run -a` — ruff check/format passed, yaml/toml/markdown passed (pyright/pytest hooks fail due to uv PATH in pre-commit sandbox — known infra issue)
+- [x] 8.2 Run full test suite: `/opt/homebrew/bin/uv run pytest` — 1590 passed, 85% coverage
+- [x] 8.3 Run smoke tests: `/opt/homebrew/bin/uv run pytest -m smoke -v` — 12 passed (including crh_foraging_small.yml)
+- [x] 8.4 Manual smoke test: `/opt/homebrew/bin/uv run ./scripts/run_simulation.py --runs 2 --config ./configs/examples/crh_thermotaxis_pursuit_predators_large.yml` — 2 runs completed, no crashes
