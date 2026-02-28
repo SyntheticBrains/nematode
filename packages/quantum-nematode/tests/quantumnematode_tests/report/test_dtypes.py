@@ -320,6 +320,8 @@ class TestTrackingData:
         assert len(tracking.brain_data) == 2
         assert isinstance(tracking.brain_data[0], BrainHistoryData)
         assert isinstance(tracking.brain_data[1], BrainDataSnapshot)
+        assert tracking.brain_data[0].rewards == [10.0]
+        assert tracking.brain_data[1].last_values["rewards"] == 15.0
 
     def test_tracking_data_partial_episode_data(self):
         """Test TrackingData where only some runs have episode data (mixed environments)."""
