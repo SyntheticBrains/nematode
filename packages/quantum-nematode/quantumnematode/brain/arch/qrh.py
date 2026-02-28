@@ -280,6 +280,20 @@ class QRHBrain(ReservoirHybridBase):
         if self.use_random_topology:
             self._random_cz_pairs, self._random_rotations = self._generate_random_topology()
 
+        # Pre-compute index arrays for vectorized feature extraction
+        num_states = 2**self.num_qubits
+        bits = np.arange(num_states, dtype=np.int64)
+        self._signs = np.array(
+            [1.0 - 2.0 * ((bits >> q) & 1) for q in range(self.num_qubits)],
+        )
+        self._low_indices: list[np.ndarray] = []
+        self._high_indices: list[np.ndarray] = []
+        for q in range(self.num_qubits):
+            mask = 1 << q
+            low = np.where((bits & mask) == 0)[0]
+            self._low_indices.append(low)
+            self._high_indices.append(low | mask)
+
         logger.info(
             f"QRHBrain initialized: {self.num_qubits} qubits "
             f"({len(self.sensory_qubits)} sensory), "
@@ -439,7 +453,7 @@ class QRHBrain(ReservoirHybridBase):
     # Feature Extraction
     # =========================================================================
 
-    def _extract_features(self, statevector: np.ndarray) -> np.ndarray:  # noqa: C901
+    def _extract_features(self, statevector: np.ndarray) -> np.ndarray:
         """Extract X/Y/Z expectations and ZZ correlations from the statevector.
 
         Computes from the full complex statevector amplitudes:
@@ -448,54 +462,44 @@ class QRHBrain(ReservoirHybridBase):
         - <Z_i> = sum_k (-1)^bit(k,i) |psi_k|^2 for each qubit i
         - <Z_i Z_j> = sum_k (-1)^(bit(k,i)+bit(k,j)) |psi_k|^2 for each pair (i,j)
 
+        Uses pre-computed index arrays (_low_indices, _high_indices, _signs)
+        from __init__ for vectorized numpy operations.
+
         Output dimension: 3N + N(N-1)/2 = 52 for 8 qubits.
         """
         n = self.num_qubits
-        num_states = len(statevector)
         probabilities = np.abs(statevector) ** 2
 
-        # Pre-compute sign arrays for each qubit: sign[q][k] = (-1)^bit(k,q)
-        signs = np.zeros((n, num_states))
+        # X-expectations: <X_q> = 2 * sum_{k: bit(k,q)=0} Re(psi_k* * psi_{k|2^q})
+        x_expectations = np.empty(n)
         for q in range(n):
-            for k in range(num_states):
-                signs[q, k] = 1.0 - 2.0 * ((k >> q) & 1)
+            low = self._low_indices[q]
+            high = self._high_indices[q]
+            x_expectations[q] = 2.0 * np.sum(
+                np.real(np.conj(statevector[low]) * statevector[high]),
+            )
 
-        # X-expectations
-        x_expectations = np.zeros(n)
+        # Y-expectations: <Y_q> = 2 * sum_{k: bit(k,q)=0} Im(psi_{k|2^q}* * psi_k)
+        y_expectations = np.empty(n)
         for q in range(n):
-            mask = 1 << q
-            exp_val = 0.0
-            for k in range(num_states):
-                if (k & mask) == 0:
-                    exp_val += np.real(np.conj(statevector[k]) * statevector[k | mask])
-            x_expectations[q] = 2.0 * exp_val
+            low = self._low_indices[q]
+            high = self._high_indices[q]
+            y_expectations[q] = 2.0 * np.sum(
+                np.imag(np.conj(statevector[high]) * statevector[low]),
+            )
 
-        # Y-expectations
-        y_expectations = np.zeros(n)
-        for q in range(n):
-            mask = 1 << q
-            exp_val = 0.0
-            for k in range(num_states):
-                if (k & mask) == 0:
-                    exp_val += np.imag(np.conj(statevector[k | mask]) * statevector[k])
-            y_expectations[q] = 2.0 * exp_val
-
-        # Z-expectations
-        z_expectations = np.array([np.dot(signs[q], probabilities) for q in range(n)])
+        # Z-expectations: <Z_q> = sum_k (-1)^bit(k,q) |psi_k|^2
+        z_expectations = self._signs @ probabilities
 
         # ZZ-correlations: <Z_i Z_j> for i < j
-        zz_correlations = []
+        zz_correlations = np.empty(n * (n - 1) // 2)
+        idx = 0
         for i in range(n):
             for j in range(i + 1, n):
-                zz = np.dot(signs[i] * signs[j], probabilities)
-                zz_correlations.append(zz)
+                zz_correlations[idx] = (self._signs[i] * self._signs[j]) @ probabilities
+                idx += 1
 
         features = np.concatenate(
-            [
-                x_expectations,
-                y_expectations,
-                z_expectations,
-                np.array(zz_correlations),
-            ],
+            [x_expectations, y_expectations, z_expectations, zz_correlations],
         )
         return features.astype(np.float32)
