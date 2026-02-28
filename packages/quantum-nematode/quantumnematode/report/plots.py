@@ -10,7 +10,7 @@ from quantumnematode.brain.arch.dtypes import BrainType
 from quantumnematode.logging_config import (
     logger,
 )
-from quantumnematode.report.dtypes import PerformanceMetrics, TrackingData
+from quantumnematode.report.dtypes import BrainDataSnapshot, PerformanceMetrics, TrackingData
 
 
 def plot_success_rate_over_time(  # pragma: no cover
@@ -227,18 +227,31 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
     if not runs:
         logger.warning("No runs found in tracking data. Skipping plots.")
         return
+    # Union of keys across all runs (some keys may only appear in later runs)
     first_run_data = tracking_data.brain_data[runs[0]]
-    keys = list(first_run_data.__dict__.keys())
+    if isinstance(first_run_data, BrainDataSnapshot):
+        key_set: set[str] = set()
+        for run in runs:
+            run_data = tracking_data.brain_data[run]
+            if isinstance(run_data, BrainDataSnapshot):
+                key_set.update(run_data.last_values.keys())
+        keys = sorted(key_set)
+    else:
+        keys = list(first_run_data.__dict__.keys())
 
     for key in keys:
         # Gather the last value for this key in each run
         last_values = []
         for run in runs:
-            v = getattr(tracking_data.brain_data[run], key, None)
-            if isinstance(v, list) and v:
-                last_values.append(v[-1])
+            run_data = tracking_data.brain_data[run]
+            if isinstance(run_data, BrainDataSnapshot):
+                last_values.append(run_data.last_values.get(key))
             else:
-                last_values.append(v)
+                v = getattr(run_data, key, None)
+                if isinstance(v, list) and v:
+                    last_values.append(v[-1])
+                else:
+                    last_values.append(v)
         # Skip if all values are None or empty
         if all(val is None for val in last_values):
             logger.warning(f"No data available for {key} across runs. Skipping plot.")
@@ -328,6 +341,12 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0912
 
     if current_run_data is None:
         logger.warning(f"No tracking data available for run {run}. Skipping plots.")
+        return
+
+    if isinstance(current_run_data, BrainDataSnapshot):
+        logger.warning(
+            f"Brain data for run {run} has been flushed to snapshot. Skipping per-run plots.",
+        )
         return
 
     for key, values in current_run_data.__dict__.items():

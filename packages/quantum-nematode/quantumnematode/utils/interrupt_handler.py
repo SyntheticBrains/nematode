@@ -128,6 +128,7 @@ def manage_simulation_halt(  # noqa: PLR0913
                 all_results=all_results,
                 data_dir=data_dir,
                 file_prefix=file_prefix,
+                skip_path_data=True,  # Path data already written incrementally
             )
             export_performance_metrics_to_csv(
                 metrics=metrics,
@@ -140,6 +141,7 @@ def manage_simulation_halt(  # noqa: PLR0913
                 data_dir=data_dir,
                 qubits=qubits,
                 file_prefix=file_prefix,
+                skip_detailed=True,  # Detailed data already written incrementally
             )
         elif choice == 2:
             logger.info("Printing circuit details.")

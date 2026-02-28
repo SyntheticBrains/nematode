@@ -1,6 +1,7 @@
 """Data types for reporting in Quantum Nematode."""
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -115,8 +116,28 @@ class SimulationResult(BaseModel):
     temperature_comfort_score: float | None = None
     """Fraction of time spent in comfort zone (0.0 to 1.0). None if thermotaxis disabled."""
 
+    # Scalar snapshots — populated before per-step data is flushed to save memory
+    path_length: int | None = None
+    """len(path) preserved after path is flushed."""
+    max_satiety: float | None = None
+    """max(satiety_history), used by satiety plot y-axis."""
+    final_health: float | None = None
+    """health_history[-1], used by health plot and summary."""
+    max_health: float | None = None
+    """max(health_history), used by health plot y-axis."""
+
 
 TrackingRunIndex = int
+
+
+class BrainDataSnapshot(BaseModel):
+    """Last-value snapshot of brain history data for a single run.
+
+    Replaces the full BrainHistoryData deep copy to save ~0.5 MB per episode.
+    Each key maps to the last value of the corresponding history list.
+    """
+
+    last_values: dict[str, Any] = Field(default_factory=dict)
 
 
 class EpisodeTrackingData(BaseModel):
@@ -157,13 +178,14 @@ class TrackingData(BaseModel):
 
     Attributes
     ----------
-    brain_data : dict[TrackingRunIndex, BrainHistoryData]
-        A dictionary mapping run indices to their corresponding brain history data.
+    brain_data : dict[TrackingRunIndex, BrainHistoryData | BrainDataSnapshot]
+        A dictionary mapping run indices to their corresponding brain history data
+        or a lightweight last-value snapshot (after per-step data is flushed).
     episode_data : dict[TrackingRunIndex, EpisodeTrackingData]
         A dictionary mapping run indices to episode tracking data (foraging environments).
     """
 
-    brain_data: dict[TrackingRunIndex, BrainHistoryData] = Field(
+    brain_data: dict[TrackingRunIndex, BrainHistoryData | BrainDataSnapshot] = Field(
         default_factory=dict,
         description="Brain tracking data for each run, indexed by run number",
     )
