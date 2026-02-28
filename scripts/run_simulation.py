@@ -677,8 +677,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 # Full deepcopy + episode data only needed for per-run plots/exports
                 tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
                 tracking_data.episode_data[run_num] = EpisodeTrackingData(
-                    satiety_history=satiety_history_this_run.copy() if satiety_history_this_run else [],
-                    health_history=health_history_this_run.copy() if health_history_this_run else [],
+                    satiety_history=satiety_history_this_run.copy()
+                    if satiety_history_this_run
+                    else [],
+                    health_history=health_history_this_run.copy()
+                    if health_history_this_run
+                    else [],
                     temperature_history=temperature_history_this_run.copy()
                     if temperature_history_this_run
                     else [],
@@ -934,7 +938,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
                 session_id=timestamp,
-                precomputed_chemotaxis=chemotaxis_metrics_per_run or None,
+                precomputed_chemotaxis=chemotaxis_metrics_per_run,
             )
 
             # Export convergence metrics to CSV (includes composite score and all convergence analysis)
