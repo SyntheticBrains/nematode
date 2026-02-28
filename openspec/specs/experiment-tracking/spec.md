@@ -98,7 +98,8 @@ The system SHALL integrate experiment tracking seamlessly with the existing simu
 - **WHEN** metadata capture and storage occurs
 - **THEN** the overhead SHALL be less than 100ms
 - **AND** the overhead SHALL not impact simulation performance
-- **AND** file I/O SHALL be performed after simulation completes
+- **AND** experiment metadata JSON file I/O SHALL be performed after simulation completes
+- **NOTE** This constraint applies to experiment metadata capture only; incremental CSV data exports (paths, detailed tracking) are written per-episode by design (see Per-Episode Data Lifecycle)
 
 ### Requirement: Git Context Capture
 
