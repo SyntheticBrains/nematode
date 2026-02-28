@@ -679,46 +679,38 @@ class IncrementalDetailedTrackingWriter:
             Full brain history data for this run.
         """
         if not self._initialized:
-            self._initialize(brain_history)
-
-        for key, writer in self._writers.items():
-            values = getattr(brain_history, key, [])
-            if not values or not isinstance(values, list):
-                continue
-            self._write_key_data(writer, key, run, values)
-
-    def _initialize(self, brain_history: BrainHistoryData) -> None:
-        """Lazily initialize CSV files based on the first run's data structure."""
-        detailed_dir = self._data_dir / "detailed"
-        detailed_dir.mkdir(parents=True, exist_ok=True)
+            (self._data_dir / "detailed").mkdir(parents=True, exist_ok=True)
+            self._initialized = True
 
         for key in vars(brain_history):
-            values = getattr(brain_history, key, None)
-            if not values or not isinstance(values, list):
+            values = getattr(brain_history, key, [])
+            if not isinstance(values, list) or not values:
                 continue
+            if key not in self._writers:
+                self._initialize_key_writer(key, values)
+            self._write_key_data(self._writers[key], key, run, values)
 
-            sample = values[0]
-            filepath = detailed_dir / f"{self._file_prefix}detailed_{key}.csv"
-            csvfile = filepath.open("w", newline="")
+    def _initialize_key_writer(self, key: str, values: list[Any]) -> None:
+        """Initialize a CSV writer for a single key when data first appears."""
+        sample = values[0]
+        filepath = self._data_dir / "detailed" / f"{self._file_prefix}detailed_{key}.csv"
+        csvfile = filepath.open("w", newline="")
 
-            if isinstance(sample, dict):
-                # Collect all param keys from the first run
-                param_keys: set[str] = set()
-                for v in values:
-                    if isinstance(v, dict):
-                        param_keys.update(v.keys())
-                fieldnames = ["run", "step", *sorted(param_keys)]
-            elif isinstance(sample, ActionData):
-                fieldnames = ["run", "step", "state", "action", "probability"]
-            else:
-                fieldnames = ["run", "step", key]
+        if isinstance(sample, dict):
+            param_keys: set[str] = set()
+            for v in values:
+                if isinstance(v, dict):
+                    param_keys.update(v.keys())
+            fieldnames = ["run", "step", *sorted(param_keys)]
+        elif isinstance(sample, ActionData):
+            fieldnames = ["run", "step", "state", "action", "probability"]
+        else:
+            fieldnames = ["run", "step", key]
 
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
-            writer.writeheader()
-            self._files[key] = csvfile
-            self._writers[key] = writer
-
-        self._initialized = True
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        self._files[key] = csvfile
+        self._writers[key] = writer
 
     def _write_key_data(
         self,
