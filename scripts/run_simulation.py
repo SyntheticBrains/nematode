@@ -428,6 +428,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     tracking_data = TrackingData()
 
     all_results: list[SimulationResult] = []
+    running_wins = 0
+    running_foods_collected = 0
+    running_foods_available = 0
+    running_total_steps = 0
 
     total_runs_done = 0
 
@@ -481,29 +485,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             render_text = "Session:\n--------\n"
             render_text += f"Run:\t\t{run_num}/{runs}\n"
+            render_text += f"Wins:\t\t{running_wins}/{runs}\n"
+            render_text += f"Eaten:\t\t{running_foods_collected}/{running_foods_available}\n"
 
-            # NOTE: Total food calculation won't be accurate if we introduce different max
-            # active foods per run
-            wins = sum(result.success for result in all_results)
-            render_text += f"Wins:\t\t{wins}/{runs}\n"
-            total_foods_collected = sum(
-                result.foods_collected
-                for result in all_results
-                if result.foods_collected is not None
-            )
-            total_foods_available = sum(
-                result.foods_available
-                for result in all_results
-                if result.foods_available is not None
-            )
-            render_text += f"Eaten:\t\t{total_foods_collected}/{total_foods_available}\n"
-
-            if len(all_results) > 1:
-                # Running average steps per run
-                total_steps_all_runs = (
-                    sum([result.steps for result in all_results]) / total_runs_done + 1
-                )
-                render_text += f"Steps(Avg):\t{total_steps_all_runs:.2f}/{max_steps}\n"
+            if total_runs_done > 1:
+                avg_steps = running_total_steps / total_runs_done
+                render_text += f"Steps(Avg):\t{avg_steps:.2f}/{max_steps}\n"
 
             step_result = agent.run_episode(
                 reward_config=reward_config,
@@ -600,6 +587,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 temperature_comfort_score=temperature_comfort_score_this_run,
             )
             all_results.append(result)
+            running_wins += int(result.success)
+            running_foods_collected += result.foods_collected or 0
+            running_foods_available += result.foods_available or 0
+            running_total_steps += result.steps
 
             # If Pygame window was closed, stop all remaining runs
             if agent.pygame_renderer_closed:
