@@ -409,7 +409,7 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
 
     # Calculate chemotaxis metrics for all runs with food history
     # Use pre-computed metrics if available (data may have been flushed from results)
-    if precomputed_chemotaxis:
+    if precomputed_chemotaxis is not None:
         all_metrics: list[ChemotaxisMetrics] = [m for _, m in precomputed_chemotaxis]
 
         if all_metrics:
