@@ -670,21 +670,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             total_runs_done += 1
 
-            # Full deepcopy needed temporarily for track_per_run (before flush)
-            tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
-
-            # Store full episode tracking data temporarily (for track_per_run)
-            tracking_data.episode_data[run_num] = EpisodeTrackingData(
-                satiety_history=satiety_history_this_run.copy() if satiety_history_this_run else [],
-                health_history=health_history_this_run.copy() if health_history_this_run else [],
-                temperature_history=temperature_history_this_run.copy()
-                if temperature_history_this_run
-                else [],
-                foods_collected=foods_collected_this_run or 0,
-                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
-            )
-
             if track_per_run:
+                # Full deepcopy + episode data only needed for per-run plots/exports
+                tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
+                tracking_data.episode_data[run_num] = EpisodeTrackingData(
+                    satiety_history=satiety_history_this_run.copy() if satiety_history_this_run else [],
+                    health_history=health_history_this_run.copy() if health_history_this_run else [],
+                    temperature_history=temperature_history_this_run.copy()
+                    if temperature_history_this_run
+                    else [],
+                    foods_collected=foods_collected_this_run or 0,
+                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                )
                 plot_tracking_data_by_latest_run(
                     tracking_data=tracking_data,
                     timestamp=timestamp,
