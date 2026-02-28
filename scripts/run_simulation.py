@@ -478,7 +478,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             message = "KeyboardInterrupt detected. Exiting the simulation."
             logger.info(message)
             print(message)
-            return
+        finally:
+            path_csv_file.close()
+            detailed_tracking_writer.close()
+        return
 
     try:
         for run in range(total_runs_done, runs):
@@ -744,9 +747,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     except KeyboardInterrupt:
         total_interrupted = runs - total_runs_done
-        # Close incremental writers before generating partial results
-        path_csv_file.close()
-        detailed_tracking_writer.close()
         manage_simulation_halt(
             max_steps=max_steps,
             brain_type=brain_type,
@@ -759,11 +759,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             plot_dir=plot_dir,
             plot_results_fn=plot_results,
         )
-
-    # Close incremental CSV writers (no-op if already closed in except block)
-    if not path_csv_file.closed:
-        path_csv_file.close()
-    detailed_tracking_writer.close()
+    finally:
+        # Ensure incremental writers are always closed (safe to call twice)
+        if not path_csv_file.closed:
+            path_csv_file.close()
+        detailed_tracking_writer.close()
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
