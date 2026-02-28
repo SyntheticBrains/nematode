@@ -56,9 +56,10 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         additional_info = " "
         if result.satiety_remaining is not None:
             additional_info += f"Satiety: {result.satiety_remaining:<6.1f} "
-        if result.health_history:
-            final_health = result.health_history[-1]
-            additional_info += f"Health: {final_health:<6.1f} "
+        if result.final_health is not None:
+            additional_info += f"Health: {result.final_health:<6.1f} "
+        elif result.health_history:
+            additional_info += f"Health: {result.health_history[-1]:<6.1f} "
         if result.foods_collected is not None and result.foods_available is not None:
             foods_info = f"Eaten: {result.foods_collected}/{result.foods_available:<6} "
             additional_info += foods_info
@@ -148,6 +149,7 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         # Verbose run results logging for debug level
         for result in all_results:
-            logger.debug(f"Run: {result.run:<3} Path: {result.path}")
+            path_info = result.path_length if result.path_length is not None else len(result.path)
+            logger.debug(f"Run: {result.run:<3} Path length: {path_info}")
 
         logger.info("Simulation completed.")
