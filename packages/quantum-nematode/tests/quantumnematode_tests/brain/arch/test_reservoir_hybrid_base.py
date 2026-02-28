@@ -40,6 +40,8 @@ class TestReservoirHybridBaseConfig:
         assert config.lr_warmup_start is None
         assert config.lr_decay_episodes is None
         assert config.lr_decay_end is None
+        assert config.entropy_coeff_end is None
+        assert config.entropy_decay_episodes is None
         assert config.sensory_modules is None
         assert config.seed is None
 
@@ -302,6 +304,56 @@ class TestReservoirHybridBaseViaQRH:
         brain._episode_count = 10
         lr_10 = brain._get_current_lr()
         assert lr_10 == pytest.approx(0.001, abs=1e-6)
+
+    def test_base_entropy_decay_disabled_by_default(self, brain):
+        """Entropy decay is disabled when entropy_coeff_end and entropy_decay_episodes are None."""
+        assert brain.entropy_coeff_end is None
+        assert brain.entropy_decay_episodes is None
+        # Returns static entropy_coeff when decay is disabled
+        assert brain._get_current_entropy_coeff() == brain.entropy_coeff
+
+    def test_base_entropy_decay_linear(self):
+        """Test linear entropy coefficient decay over episodes."""
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=1,
+            entropy_coeff=0.02,
+            entropy_coeff_end=0.005,
+            entropy_decay_episodes=100,
+            seed=42,
+        )
+        brain = QRHBrain(config)
+
+        # At episode 0: should be start value
+        assert brain._get_current_entropy_coeff() == pytest.approx(0.02, abs=1e-6)
+
+        # At episode 50 (midpoint): should be halfway
+        brain._episode_count = 50
+        expected_mid = 0.02 + 0.5 * (0.005 - 0.02)  # 0.0125
+        assert brain._get_current_entropy_coeff() == pytest.approx(expected_mid, abs=1e-6)
+
+        # At episode 100 (end): should be end value
+        brain._episode_count = 100
+        assert brain._get_current_entropy_coeff() == pytest.approx(0.005, abs=1e-6)
+
+        # Beyond decay episodes: should stay at end value
+        brain._episode_count = 200
+        assert brain._get_current_entropy_coeff() == pytest.approx(0.005, abs=1e-6)
+
+    def test_base_entropy_decay_partial_config(self):
+        """Entropy decay requires both end and episodes to be set."""
+        # Only entropy_coeff_end set, no decay episodes
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=1,
+            entropy_coeff=0.02,
+            entropy_coeff_end=0.005,
+            entropy_decay_episodes=None,
+            seed=42,
+        )
+        brain = QRHBrain(config)
+        # Should return static value since decay_episodes is None
+        assert brain._get_current_entropy_coeff() == pytest.approx(0.02, abs=1e-6)
 
     def test_base_action_set_property(self, brain):
         """Test action_set getter and setter."""
