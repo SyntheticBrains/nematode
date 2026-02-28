@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.report.dtypes import (
+    BrainDataSnapshot,
     EpisodeTrackingData,
     PerformanceMetrics,
     SimulationResult,
@@ -183,7 +184,9 @@ class TestTrackingData:
 
         assert len(tracking.brain_data) == 1
         assert 0 in tracking.brain_data
-        assert tracking.brain_data[0].rewards == [10.0]
+        brain_data_0 = tracking.brain_data[0]
+        assert isinstance(brain_data_0, BrainHistoryData)
+        assert brain_data_0.rewards == [10.0]
 
     def test_add_data_to_tracking(self):
         """Test adding data to TrackingData after creation."""
@@ -199,8 +202,12 @@ class TestTrackingData:
         tracking.brain_data[1] = brain_history2
 
         assert len(tracking.brain_data) == 2
-        assert tracking.brain_data[0].rewards == [10.0]
-        assert tracking.brain_data[1].rewards == [15.0]
+        bd0 = tracking.brain_data[0]
+        bd1 = tracking.brain_data[1]
+        assert isinstance(bd0, BrainHistoryData)
+        assert isinstance(bd1, BrainHistoryData)
+        assert bd0.rewards == [10.0]
+        assert bd1.rewards == [15.0]
 
     def test_tracking_data_type_annotation(self):
         """Test that tracking data properly validates types."""
@@ -239,7 +246,9 @@ class TestTrackingData:
 
         assert len(tracking.brain_data) == 1
         assert len(tracking.episode_data) == 1
-        assert tracking.brain_data[0].rewards == [10.0]
+        brain_data_0 = tracking.brain_data[0]
+        assert isinstance(brain_data_0, BrainHistoryData)
+        assert brain_data_0.rewards == [10.0]
         assert tracking.episode_data[0].foods_collected == 1
         assert len(tracking.episode_data[0].satiety_history) == 2
 
@@ -289,6 +298,30 @@ class TestTrackingData:
         assert len(tracking.episode_data) == 2
         assert tracking.episode_data[0].foods_collected == 3
         assert tracking.episode_data[1].foods_collected == 5
+
+    def test_tracking_data_accepts_brain_data_snapshot(self):
+        """Test TrackingData with BrainDataSnapshot in brain_data."""
+        snapshot = BrainDataSnapshot(last_values={"rewards": 10.0})
+        tracking = TrackingData(brain_data={0: snapshot})
+
+        assert len(tracking.brain_data) == 1
+        brain_data_0 = tracking.brain_data[0]
+        assert isinstance(brain_data_0, BrainDataSnapshot)
+        assert brain_data_0.last_values["rewards"] == 10.0
+
+    def test_tracking_data_mixed_brain_data_types(self):
+        """Test TrackingData with both BrainHistoryData and BrainDataSnapshot."""
+        brain_history = BrainHistoryData()
+        brain_history.rewards.append(10.0)
+        snapshot = BrainDataSnapshot(last_values={"rewards": 15.0})
+
+        tracking = TrackingData(brain_data={0: brain_history, 1: snapshot})
+
+        assert len(tracking.brain_data) == 2
+        assert isinstance(tracking.brain_data[0], BrainHistoryData)
+        assert isinstance(tracking.brain_data[1], BrainDataSnapshot)
+        assert tracking.brain_data[0].rewards == [10.0]
+        assert tracking.brain_data[1].last_values["rewards"] == 15.0
 
     def test_tracking_data_partial_episode_data(self):
         """Test TrackingData where only some runs have episode data (mixed environments)."""
