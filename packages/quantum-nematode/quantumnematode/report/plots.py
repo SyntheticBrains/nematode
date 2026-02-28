@@ -227,9 +227,15 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
     if not runs:
         logger.warning("No runs found in tracking data. Skipping plots.")
         return
+    # Union of keys across all runs (some keys may only appear in later runs)
     first_run_data = tracking_data.brain_data[runs[0]]
     if isinstance(first_run_data, BrainDataSnapshot):
-        keys = list(first_run_data.last_values.keys())
+        key_set: set[str] = set()
+        for run in runs:
+            run_data = tracking_data.brain_data[run]
+            if isinstance(run_data, BrainDataSnapshot):
+                key_set.update(run_data.last_values.keys())
+        keys = sorted(key_set)
     else:
         keys = list(first_run_data.__dict__.keys())
 

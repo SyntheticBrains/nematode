@@ -406,10 +406,16 @@ def export_tracking_data_to_csv(  # pragma: no cover  # noqa: PLR0913
         logger.warning("No runs found in tracking data. Skipping CSV export.")
         return
 
-    # Get the structure from the first run (handle BrainDataSnapshot)
+    # Get the union of keys across all runs (handle BrainDataSnapshot)
+    # Some keys may only appear in later runs (e.g. losses after first PPO update)
     first_run_data = tracking_data.brain_data[runs[0]]
     if isinstance(first_run_data, BrainDataSnapshot):
-        keys = list(first_run_data.last_values.keys())
+        key_set: set[str] = set()
+        for run in runs:
+            run_data = tracking_data.brain_data[run]
+            if isinstance(run_data, BrainDataSnapshot):
+                key_set.update(run_data.last_values.keys())
+        keys = sorted(key_set)
     else:
         keys = list(first_run_data.__dict__.keys())
 
