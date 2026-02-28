@@ -713,7 +713,7 @@ class IncrementalDetailedTrackingWriter:
             else:
                 fieldnames = ["run", "step", key]
 
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             self._files[key] = csvfile
             self._writers[key] = writer
