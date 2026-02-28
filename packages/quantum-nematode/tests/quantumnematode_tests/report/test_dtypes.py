@@ -183,7 +183,9 @@ class TestTrackingData:
 
         assert len(tracking.brain_data) == 1
         assert 0 in tracking.brain_data
-        assert tracking.brain_data[0].rewards == [10.0]
+        brain_data_0 = tracking.brain_data[0]
+        assert isinstance(brain_data_0, BrainHistoryData)
+        assert brain_data_0.rewards == [10.0]
 
     def test_add_data_to_tracking(self):
         """Test adding data to TrackingData after creation."""
@@ -199,8 +201,12 @@ class TestTrackingData:
         tracking.brain_data[1] = brain_history2
 
         assert len(tracking.brain_data) == 2
-        assert tracking.brain_data[0].rewards == [10.0]
-        assert tracking.brain_data[1].rewards == [15.0]
+        bd0 = tracking.brain_data[0]
+        bd1 = tracking.brain_data[1]
+        assert isinstance(bd0, BrainHistoryData)
+        assert isinstance(bd1, BrainHistoryData)
+        assert bd0.rewards == [10.0]
+        assert bd1.rewards == [15.0]
 
     def test_tracking_data_type_annotation(self):
         """Test that tracking data properly validates types."""
@@ -239,7 +245,9 @@ class TestTrackingData:
 
         assert len(tracking.brain_data) == 1
         assert len(tracking.episode_data) == 1
-        assert tracking.brain_data[0].rewards == [10.0]
+        brain_data_0 = tracking.brain_data[0]
+        assert isinstance(brain_data_0, BrainHistoryData)
+        assert brain_data_0.rewards == [10.0]
         assert tracking.episode_data[0].foods_collected == 1
         assert len(tracking.episode_data[0].satiety_history) == 2
 

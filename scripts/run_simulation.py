@@ -2,12 +2,18 @@
 
 """Run the Quantum Nematode simulation."""
 
+from __future__ import annotations
+
 import argparse
 import logging
 import shutil
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from quantumnematode.validation.chemotaxis import ChemotaxisMetrics
 
 from quantumnematode.agent import (
     DEFAULT_AGENT_BODY_LENGTH,
@@ -46,6 +52,8 @@ from quantumnematode.optimizers.learning_rate import (
     DynamicLearningRate,
 )
 from quantumnematode.report.csv_export import (
+    IncrementalDetailedTrackingWriter,
+    create_path_csv_writer,
     export_convergence_metrics_to_csv,
     export_distance_efficiencies_to_csv,
     export_foraging_results_to_csv,
@@ -56,8 +64,10 @@ from quantumnematode.report.csv_export import (
     export_run_data_to_csv,
     export_simulation_results_to_csv,
     export_tracking_data_to_csv,
+    write_path_data_row,
 )
 from quantumnematode.report.dtypes import (
+    BrainDataSnapshot,
     EpisodeTrackingData,
     PerformanceMetrics,
     SimulationResult,
@@ -442,6 +452,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     total_max_steps = 0
     total_interrupted = 0
 
+    # Incremental CSV writers — write heavy per-step data each episode, then flush from memory
+    data_dir.mkdir(parents=True, exist_ok=True)
+    path_csv_file, path_csv_writer = create_path_csv_writer(data_dir / "paths.csv")
+    detailed_tracking_writer = IncrementalDetailedTrackingWriter(data_dir)
+
+    # Pre-computed chemotaxis metrics (populated per-episode when --track-experiment is set)
+    track_experiment = args.track_experiment
+    chemotaxis_metrics_per_run: list[tuple[int, ChemotaxisMetrics]] = []
+
     if manyworlds_mode:
         try:
             agent.run_manyworlds_mode(
@@ -592,6 +611,32 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             running_foods_available += result.foods_available or 0
             running_total_steps += result.steps
 
+            # --- Incremental exports (before data flush) ---
+            # Write path data to CSV incrementally
+            write_path_data_row(path_csv_writer, result)
+
+            # Write detailed brain tracking data incrementally
+            detailed_tracking_writer.write_run(run_num, agent.brain.history_data)
+
+            # Compute chemotaxis metrics per-episode (before path/food_history flush)
+            if track_experiment and result.food_history:
+                from quantumnematode.validation.chemotaxis import (
+                    calculate_chemotaxis_metrics_stepwise,
+                )
+
+                positions = [(float(x), float(y)) for x, y in result.path]
+                food_history_float = [
+                    [(float(x), float(y)) for x, y in step_foods]
+                    for step_foods in result.food_history
+                ]
+                if food_history_float:
+                    cm = calculate_chemotaxis_metrics_stepwise(
+                        positions=positions,
+                        food_history=food_history_float,
+                        attractant_zone_radius=5.0,
+                    )
+                    chemotaxis_metrics_per_run.append((run_num, cm))
+
             # If Pygame window was closed, stop all remaining runs
             if agent.pygame_renderer_closed:
                 logger.info(
@@ -620,9 +665,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             total_runs_done += 1
 
+            # Full deepcopy needed temporarily for track_per_run (before flush)
             tracking_data.brain_data[run_num] = deepcopy(agent.brain.history_data)
 
-            # Store episode tracking data
+            # Store full episode tracking data temporarily (for track_per_run)
             tracking_data.episode_data[run_num] = EpisodeTrackingData(
                 satiety_history=satiety_history_this_run.copy() if satiety_history_this_run else [],
                 health_history=health_history_this_run.copy() if health_history_this_run else [],
@@ -645,6 +691,37 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     timestamp=timestamp,
                 )
 
+            # --- Extract scalar snapshots and flush heavy data ---
+            result.path_length = len(result.path)
+            if result.satiety_history:
+                result.max_satiety = max(result.satiety_history)
+            if result.health_history:
+                result.final_health = result.health_history[-1]
+                result.max_health = max(result.health_history)
+
+            # Replace full brain history with last-value snapshot
+            snapshot_last_values: dict[str, object] = {}
+            for attr_name in vars(agent.brain.history_data):
+                attr_val = getattr(agent.brain.history_data, attr_name)
+                if isinstance(attr_val, list) and attr_val:
+                    snapshot_last_values[attr_name] = attr_val[-1]
+            tracking_data.brain_data[run_num] = BrainDataSnapshot(
+                last_values=snapshot_last_values,
+            )
+
+            # Flush heavy per-step data from result
+            result.path = []
+            result.food_history = None
+            result.satiety_history = None
+            result.health_history = None
+            result.temperature_history = None
+
+            # Replace episode tracking data with lightweight version
+            tracking_data.episode_data[run_num] = EpisodeTrackingData(
+                foods_collected=foods_collected_this_run or 0,
+                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+            )
+
             if run_num < runs:
                 # Derive seed for next run and update environment before reset
                 # This ensures each run has unique but reproducible food/predator placements
@@ -659,6 +736,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     except KeyboardInterrupt:
         total_interrupted = runs - total_runs_done
+        # Close incremental writers before generating partial results
+        path_csv_file.close()
+        detailed_tracking_writer.close()
         manage_simulation_halt(
             max_steps=max_steps,
             brain_type=brain_type,
@@ -671,6 +751,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             plot_dir=plot_dir,
             plot_results_fn=plot_results,
         )
+
+    # Close incremental CSV writers (no-op if already closed in except block)
+    if not path_csv_file.closed:
+        path_csv_file.close()
+    detailed_tracking_writer.close()
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
@@ -695,7 +780,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Generate plots and exports after the simulation (skip if no results)
     if all_results:
         plot_results(all_results=all_results, metrics=metrics, plot_dir=plot_dir)
-        export_simulation_results_to_csv(all_results=all_results, data_dir=data_dir)
+        export_simulation_results_to_csv(
+            all_results=all_results,
+            data_dir=data_dir,
+            skip_path_data=True,
+        )
         export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
     else:
         logger.warning("No completed runs - skipping plots and data export.")
@@ -737,16 +826,16 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         qubits=qubits,
     )
 
-    # Export tracking data to CSV files
+    # Export tracking data to CSV files (detailed data already written incrementally)
     export_tracking_data_to_csv(
         tracking_data=tracking_data,
         brain_type=brain_type,
         data_dir=data_dir,
         qubits=qubits,
+        skip_detailed=True,
     )
 
     # Experiment tracking (opt-in)
-    track_experiment = args.track_experiment
     if track_experiment:
         try:
             # Capture experiment metadata
@@ -831,6 +920,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
                 session_id=timestamp,
+                precomputed_chemotaxis=chemotaxis_metrics_per_run or None,
             )
 
             # Export convergence metrics to CSV (includes composite score and all convergence analysis)
@@ -1067,9 +1157,12 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
         # Plot: Satiety at Episode End
         if satiety_remaining_list:
             max_satiety = max(satiety_remaining_list) if satiety_remaining_list else 100.0
-            # Get actual max satiety from first result's history if available
-            if foraging_results[0].satiety_history:
-                max_satiety = max(foraging_results[0].satiety_history)
+            # Get actual max satiety from snapshot or history
+            first_result = foraging_results[0]
+            if first_result.max_satiety is not None:
+                max_satiety = first_result.max_satiety
+            elif first_result.satiety_history:
+                max_satiety = max(first_result.satiety_history)
             plot_satiety_at_episode_end(
                 file_prefix,
                 foraging_runs,
@@ -1079,16 +1172,26 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
             )
 
         # Plot: Health at Episode End (for runs with health system enabled)
-        health_results = [r for r in foraging_results if r.health_history]
+        health_results = [
+            r for r in foraging_results if r.final_health is not None or r.health_history
+        ]
         if health_results:
             health_remaining_list = [
-                r.health_history[-1] for r in health_results if r.health_history
+                r.final_health
+                if r.final_health is not None
+                else (r.health_history[-1] if r.health_history else 0.0)
+                for r in health_results
+                if r.final_health is not None or r.health_history
             ]
             health_runs = [r.run for r in health_results]
-            # Get max health from first result's history
-            max_health = (
-                max(health_results[0].health_history) if health_results[0].health_history else 100.0
-            )
+            # Get max health from snapshot or history
+            first_health = health_results[0]
+            if first_health.max_health is not None:
+                max_health = first_health.max_health
+            elif first_health.health_history:
+                max_health = max(first_health.health_history)
+            else:
+                max_health = 100.0
             if health_remaining_list:
                 plot_health_at_episode_end(
                     file_prefix,
