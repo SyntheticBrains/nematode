@@ -461,6 +461,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     track_experiment = args.track_experiment
     chemotaxis_metrics_per_run: list[tuple[int, ChemotaxisMetrics]] = []
 
+    # Keep last run's per-step histories for session-level single-run plots
+    # (overwritten each iteration; only the final run's data survives to plot_results)
+    last_run_satiety_history: list[float] = []
+    last_run_health_history: list[float] = []
+
     if manyworlds_mode:
         try:
             agent.run_manyworlds_mode(
@@ -695,9 +700,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             result.path_length = len(result.path)
             if result.satiety_history:
                 result.max_satiety = max(result.satiety_history)
+                last_run_satiety_history = result.satiety_history.copy()
+            else:
+                last_run_satiety_history = []
             if result.health_history:
                 result.final_health = result.health_history[-1]
                 result.max_health = max(result.health_history)
+                last_run_health_history = result.health_history.copy()
+            else:
+                last_run_health_history = []
 
             # Replace full brain history with last-value snapshot
             snapshot_last_values: dict[str, object] = {}
@@ -779,7 +790,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     # Generate plots and exports after the simulation (skip if no results)
     if all_results:
-        plot_results(all_results=all_results, metrics=metrics, plot_dir=plot_dir)
+        plot_results(
+            all_results=all_results,
+            metrics=metrics,
+            plot_dir=plot_dir,
+            last_run_satiety_history=last_run_satiety_history,
+            last_run_health_history=last_run_health_history,
+        )
         export_simulation_results_to_csv(
             all_results=all_results,
             data_dir=data_dir,
@@ -1059,11 +1076,13 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
         raise ValueError(error_message)
 
 
-def plot_results(  # noqa: C901, PLR0912, PLR0915
+def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
     all_results: list[SimulationResult],
     metrics: PerformanceMetrics,
     plot_dir: Path,
     file_prefix: str = "",
+    last_run_satiety_history: list[float] | None = None,
+    last_run_health_history: list[float] | None = None,
 ) -> None:
     """
     Generate and save plots for the simulation results.
@@ -1309,29 +1328,28 @@ def plot_results(  # noqa: C901, PLR0912, PLR0915
                     deaths_in_predator,
                 )
 
-        # Plot: Satiety Progression for Single Run (if requested via --track-per-run)
-        # This is typically generated in the per-run tracking section, but we can add
-        # a sample run here for predator environments
-        # Get the last run's satiety history as an example
+        # Plot: Satiety Progression for Single Run (sample for predator environments)
         last_run = predator_results[-1]
-        if last_run.satiety_history:
-            max_satiety_pred = max(last_run.satiety_history)
+        satiety_hist = last_run.satiety_history or last_run_satiety_history
+        health_hist = last_run.health_history or last_run_health_history
+        if satiety_hist:
+            max_satiety_pred = max(satiety_hist)
             plot_satiety_progression_single_run(
                 file_prefix,
                 plot_dir,
                 last_run.run,
-                last_run.satiety_history,
+                satiety_hist,
                 max_satiety_pred,
             )
 
         # Plot: Health Progression for Single Run (for health-enabled environments)
-        if last_run.health_history:
-            max_health_pred = max(last_run.health_history)
+        if health_hist:
+            max_health_pred = max(health_hist)
             plot_health_progression_single_run(
                 file_prefix,
                 plot_dir,
                 last_run.run,
-                last_run.health_history,
+                health_hist,
                 max_health_pred,
             )
 

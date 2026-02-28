@@ -480,7 +480,7 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
             m.approach_frequency for m in post_conv_metrics
         ) / len(post_conv_metrics)
         post_convergence_path_efficiency = sum(m.path_efficiency for m in post_conv_metrics) / len(
-            post_conv_metrics
+            post_conv_metrics,
         )
 
         # Validation level based on post-convergence CI (trained behavior)
