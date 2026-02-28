@@ -507,7 +507,7 @@ class QuantumNematodeAgent:
             except Exception as exc:  # pragma: no cover
                 msg = (
                     "PIXEL theme requires pygame with an available video backend. "
-                    "Use --theme ascii for headless environments."
+                    "Use --theme headless (no rendering) or --theme ascii (text)."
                 )
                 raise RuntimeError(msg) from exc
         return self._pygame_renderer
