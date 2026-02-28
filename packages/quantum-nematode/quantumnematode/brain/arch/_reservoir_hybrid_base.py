@@ -149,6 +149,16 @@ class ReservoirHybridBaseConfig(BrainConfig):
         description="Final LR after decay (None = 10% of actor_lr).",
     )
 
+    # Entropy coefficient decay (optional)
+    entropy_coeff_end: float | None = Field(
+        default=None,
+        description="Final entropy coefficient after decay (None = no decay).",
+    )
+    entropy_decay_episodes: int | None = Field(
+        default=None,
+        description="Episodes over which entropy_coeff linearly decays to entropy_coeff_end.",
+    )
+
     # Unified sensory feature extraction
     sensory_modules: list[ModuleName] | None = Field(
         default=None,
@@ -417,6 +427,8 @@ class ReservoirHybridBase(ClassicalBrain):
         self.ppo_epochs = config.ppo_epochs
         self.ppo_minibatches = config.ppo_minibatches
         self.entropy_coeff = config.entropy_coeff
+        self.entropy_coeff_end = config.entropy_coeff_end
+        self.entropy_decay_episodes = config.entropy_decay_episodes
         self.value_loss_coef = config.value_loss_coef
         self.max_grad_norm = config.max_grad_norm
 
@@ -611,6 +623,15 @@ class ReservoirHybridBase(ClassicalBrain):
             f"Episode {self._episode_count}: LR = {new_lr:.6f}",
         )
 
+    def _get_current_entropy_coeff(self) -> float:
+        """Get current entropy coefficient with optional linear decay schedule."""
+        if self.entropy_decay_episodes is None or self.entropy_coeff_end is None:
+            return self.entropy_coeff
+        if self._episode_count >= self.entropy_decay_episodes:
+            return self.entropy_coeff_end
+        progress = self._episode_count / self.entropy_decay_episodes
+        return self.entropy_coeff + progress * (self.entropy_coeff_end - self.entropy_coeff)
+
     def _perform_ppo_update(self) -> None:
         """Perform PPO update using collected experience."""
         if len(self.buffer) == 0:
@@ -685,8 +706,11 @@ class ReservoirHybridBase(ClassicalBrain):
                 value_loss = nn.functional.mse_loss(values, batch["returns"])
 
                 # Combined loss
+                current_entropy_coeff = self._get_current_entropy_coeff()
                 loss = (
-                    policy_loss + self.value_loss_coef * value_loss - self.entropy_coeff * entropy
+                    policy_loss
+                    + self.value_loss_coef * value_loss
+                    - current_entropy_coeff * entropy
                 )
 
                 self.optimizer.zero_grad()
@@ -708,7 +732,8 @@ class ReservoirHybridBase(ClassicalBrain):
                 f"{self._brain_name} PPO update: "
                 f"policy_loss={total_policy_loss / num_updates:.4f}, "
                 f"value_loss={total_value_loss / num_updates:.4f}, "
-                f"entropy={total_entropy_loss / num_updates:.4f}",
+                f"entropy={total_entropy_loss / num_updates:.4f}, "
+                f"entropy_coeff={self._get_current_entropy_coeff():.5f}",
             )
 
     # =========================================================================
