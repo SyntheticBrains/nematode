@@ -468,41 +468,41 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         else:
             post_conv_metrics = []
 
-        if post_conv_metrics:
-            # Calculate post-convergence averages
-            post_convergence_chemotaxis_index = sum(
-                m.chemotaxis_index for m in post_conv_metrics
-            ) / len(post_conv_metrics)
-            post_convergence_time_in_attractant = sum(
-                m.time_in_attractant for m in post_conv_metrics
-            ) / len(post_conv_metrics)
-            post_convergence_approach_frequency = sum(
-                m.approach_frequency for m in post_conv_metrics
-            ) / len(post_conv_metrics)
-            post_convergence_path_efficiency = sum(
-                m.path_efficiency for m in post_conv_metrics
-            ) / len(post_conv_metrics)
+    if post_conv_metrics:
+        # Calculate post-convergence averages
+        post_convergence_chemotaxis_index = sum(
+            m.chemotaxis_index for m in post_conv_metrics
+        ) / len(post_conv_metrics)
+        post_convergence_time_in_attractant = sum(
+            m.time_in_attractant for m in post_conv_metrics
+        ) / len(post_conv_metrics)
+        post_convergence_approach_frequency = sum(
+            m.approach_frequency for m in post_conv_metrics
+        ) / len(post_conv_metrics)
+        post_convergence_path_efficiency = sum(m.path_efficiency for m in post_conv_metrics) / len(
+            post_conv_metrics
+        )
 
-            # Validation level based on post-convergence CI (trained behavior)
-            chemotaxis_validation_level = get_validation_level(
-                post_convergence_chemotaxis_index,
-            ).value
+        # Validation level based on post-convergence CI (trained behavior)
+        chemotaxis_validation_level = get_validation_level(
+            post_convergence_chemotaxis_index,
+        ).value
 
-            # Use benchmark to compare against biological literature
-            benchmark = ChemotaxisValidationBenchmark()
-            validation_stats = benchmark.validate_multiple_runs(post_conv_metrics)
-            if validation_stats["num_runs"] > 0:
-                # Get source information from a single validation
-                sample_result = benchmark.validate_agent(post_conv_metrics[0])
-                biological_ci_range = sample_result.biological_ci_range
-                biological_ci_typical = sample_result.biological_ci_typical
-                literature_source = sample_result.literature_source
-                # Check if post-convergence CI falls within biological range
-                matches_biology = (
-                    biological_ci_range[0]
-                    <= post_convergence_chemotaxis_index
-                    <= biological_ci_range[1]
-                )
+        # Use benchmark to compare against biological literature
+        benchmark = ChemotaxisValidationBenchmark()
+        validation_stats = benchmark.validate_multiple_runs(post_conv_metrics)
+        if validation_stats["num_runs"] > 0:
+            # Get source information from a single validation
+            sample_result = benchmark.validate_agent(post_conv_metrics[0])
+            biological_ci_range = sample_result.biological_ci_range
+            biological_ci_typical = sample_result.biological_ci_typical
+            literature_source = sample_result.literature_source
+            # Check if post-convergence CI falls within biological range
+            matches_biology = (
+                biological_ci_range[0]
+                <= post_convergence_chemotaxis_index
+                <= biological_ci_range[1]
+            )
 
     return ResultsMetadata(
         total_runs=total_runs,
