@@ -57,11 +57,15 @@ brain:
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
-    # LR schedule: matched to QRH
+    # LR schedule
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
-    lr_decay_episodes: 1200
+    lr_decay_episodes: 2400
     lr_decay_end: 0.00015
+
+    # Entropy decay
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 2400  # matched to LR decay schedule
 
     # Unified sensory modules for triple-objective task
     sensory_modules:
