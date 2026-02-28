@@ -7,9 +7,15 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from quantumnematode.brain.actions import ActionData
+from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch.dtypes import BrainType
 from quantumnematode.logging_config import logger
-from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TrackingData
+from quantumnematode.report.dtypes import (
+    BrainDataSnapshot,
+    PerformanceMetrics,
+    SimulationResult,
+    TrackingData,
+)
 
 if TYPE_CHECKING:
     from quantumnematode.experiment.metadata import ExperimentMetadata
@@ -19,6 +25,8 @@ def export_simulation_results_to_csv(  # pragma: no cover
     all_results: list[SimulationResult],
     data_dir: Path,
     file_prefix: str = "",
+    *,
+    skip_path_data: bool = False,
 ) -> None:
     """
     Export simulation results to CSV files.
@@ -27,6 +35,7 @@ def export_simulation_results_to_csv(  # pragma: no cover
         all_results (list[SimulationResult]): List of simulation results.
         data_dir (Path): Directory to save the CSV files.
         file_prefix (str): Prefix for the output file names.
+        skip_path_data (bool): Skip path data export (already written incrementally).
     """
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -36,8 +45,9 @@ def export_simulation_results_to_csv(  # pragma: no cover
     # Export run-specific metrics
     _export_run_metrics(all_results, data_dir, file_prefix)
 
-    # Export path data for each run
-    _export_path_data(all_results, data_dir, file_prefix)
+    # Export path data for each run (skip if already written incrementally)
+    if not skip_path_data:
+        _export_path_data(all_results, data_dir, file_prefix)
 
 
 def _export_main_results(
@@ -77,7 +87,9 @@ def _export_main_results(
                     "steps": result.steps,
                     "total_reward": result.total_reward,
                     "last_total_reward": result.last_total_reward,
-                    "path_length": len(result.path),
+                    "path_length": result.path_length
+                    if result.path_length is not None
+                    else len(result.path),
                     "termination_reason": result.termination_reason.value,
                     "success": result.success,
                     "foods_collected": result.foods_collected
@@ -186,6 +198,41 @@ def _export_path_data(
                         "y": y,
                     },
                 )
+
+
+def create_path_csv_writer(filepath: Path) -> tuple[Any, csv.DictWriter]:
+    """Open path CSV file and write header for incremental writing.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to the CSV file.
+
+    Returns
+    -------
+    tuple[Any, csv.DictWriter]
+        File handle and CSV writer. Caller must close the file handle.
+    """
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    csvfile = filepath.open("w", newline="")
+    fieldnames = ["run", "step", "x", "y"]
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    return csvfile, writer
+
+
+def write_path_data_row(writer: csv.DictWriter, result: SimulationResult) -> None:
+    """Write path data for a single run to an already-open CSV writer.
+
+    Parameters
+    ----------
+    writer : csv.DictWriter
+        CSV writer with path fieldnames.
+    result : SimulationResult
+        Simulation result containing path data.
+    """
+    for step, (x, y) in enumerate(result.path):
+        writer.writerow({"run": result.run, "step": step, "x": x, "y": y})
 
 
 def export_performance_metrics_to_csv(  # pragma: no cover
@@ -332,12 +379,14 @@ def export_convergence_metrics_to_csv(  # pragma: no cover
         )
 
 
-def export_tracking_data_to_csv(  # pragma: no cover
+def export_tracking_data_to_csv(  # pragma: no cover  # noqa: PLR0913
     tracking_data: TrackingData,
     brain_type: BrainType,
     data_dir: Path,
     qubits: int | None = None,
     file_prefix: str = "",
+    *,
+    skip_detailed: bool = False,
 ) -> None:
     """
     Export tracking data to CSV files.
@@ -348,6 +397,7 @@ def export_tracking_data_to_csv(  # pragma: no cover
         data_dir (Path): Directory to save the CSV files.
         qubits (int | None): Number of qubits if applicable.
         file_prefix (str): Prefix for the output file names.
+        skip_detailed (bool): Skip detailed step-by-step export (already written incrementally).
     """
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -356,9 +406,18 @@ def export_tracking_data_to_csv(  # pragma: no cover
         logger.warning("No runs found in tracking data. Skipping CSV export.")
         return
 
-    # Get the structure from the first run
+    # Get the union of keys across all runs (handle BrainDataSnapshot)
+    # Some keys may only appear in later runs (e.g. losses after first PPO update)
     first_run_data = tracking_data.brain_data[runs[0]]
-    keys = list(first_run_data.__dict__.keys())
+    if isinstance(first_run_data, BrainDataSnapshot):
+        key_set: set[str] = set()
+        for run in runs:
+            run_data = tracking_data.brain_data[run]
+            if isinstance(run_data, BrainDataSnapshot):
+                key_set.update(run_data.last_values.keys())
+        keys = sorted(key_set)
+    else:
+        keys = list(first_run_data.__dict__.keys())
 
     # Export session-level data (last value per run for each metric)
     _export_session_tracking_data(
@@ -371,8 +430,9 @@ def export_tracking_data_to_csv(  # pragma: no cover
         qubits,
     )
 
-    # Export step-by-step data for each run
-    _export_detailed_tracking_data(tracking_data, runs, keys, data_dir, file_prefix)
+    # Export step-by-step data for each run (skip if already written incrementally)
+    if not skip_detailed:
+        _export_detailed_tracking_data(tracking_data, runs, keys, data_dir, file_prefix)
 
 
 def _export_session_tracking_data(  # noqa: PLR0913
@@ -403,11 +463,14 @@ def _export_session_tracking_data(  # noqa: PLR0913
         last_values = []
         for run in runs:
             run_data = tracking_data.brain_data[run]
-            values = getattr(run_data, key, None)
-            if isinstance(values, list) and values:
-                last_values.append(values[-1])
+            if isinstance(run_data, BrainDataSnapshot):
+                last_values.append(run_data.last_values.get(key))
             else:
-                last_values.append(values)
+                values = getattr(run_data, key, None)
+                if isinstance(values, list) and values:
+                    last_values.append(values[-1])
+                else:
+                    last_values.append(values)
 
         # Skip if all values are None
         if all(val is None for val in last_values):
@@ -591,6 +654,104 @@ def _export_detailed_tracking_data(  # noqa: C901, PLR0912
                         )
 
 
+class IncrementalDetailedTrackingWriter:
+    """Writes detailed step-by-step brain tracking data incrementally per episode.
+
+    Opens one CSV file per brain history key on the first write_run() call,
+    then appends rows for each subsequent episode. Call close() when done.
+    """
+
+    def __init__(self, data_dir: Path, file_prefix: str = "") -> None:
+        self._data_dir = data_dir
+        self._file_prefix = file_prefix
+        self._files: dict[str, Any] = {}  # key -> file handle
+        self._writers: dict[str, csv.DictWriter] = {}  # key -> csv writer
+        self._initialized = False
+
+    def write_run(self, run: int, brain_history: BrainHistoryData) -> None:
+        """Write step-by-step data for one run.
+
+        Parameters
+        ----------
+        run : int
+            Run number.
+        brain_history : BrainHistoryData
+            Full brain history data for this run.
+        """
+        if not self._initialized:
+            (self._data_dir / "detailed").mkdir(parents=True, exist_ok=True)
+            self._initialized = True
+
+        for key in vars(brain_history):
+            values = getattr(brain_history, key, [])
+            if not isinstance(values, list) or not values:
+                continue
+            if key not in self._writers:
+                self._initialize_key_writer(key, values)
+            self._write_key_data(self._writers[key], key, run, values)
+
+    def _initialize_key_writer(self, key: str, values: list[Any]) -> None:
+        """Initialize a CSV writer for a single key when data first appears."""
+        sample = values[0]
+        filepath = self._data_dir / "detailed" / f"{self._file_prefix}detailed_{key}.csv"
+        csvfile = filepath.open("w", newline="")
+
+        if isinstance(sample, dict):
+            param_keys: set[str] = set()
+            for v in values:
+                if isinstance(v, dict):
+                    param_keys.update(v.keys())
+            fieldnames = ["run", "step", *sorted(param_keys)]
+        elif isinstance(sample, ActionData):
+            fieldnames = ["run", "step", "state", "action", "probability"]
+        else:
+            fieldnames = ["run", "step", key]
+
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        self._files[key] = csvfile
+        self._writers[key] = writer
+
+    def _write_key_data(
+        self,
+        writer: csv.DictWriter,
+        key: str,
+        run: int,
+        values: list[Any],
+    ) -> None:
+        """Write step-by-step rows for a single key."""
+        for step, value in enumerate(values):
+            if isinstance(value, dict):
+                row: dict[str, Any] = {"run": run, "step": step}
+                row.update(value)
+                writer.writerow(row)
+            elif isinstance(value, ActionData):
+                writer.writerow(
+                    {
+                        "run": run,
+                        "step": step,
+                        "state": value.state,
+                        "action": value.action,
+                        "probability": value.probability,
+                    },
+                )
+            else:
+                writer.writerow(
+                    {
+                        "run": run,
+                        "step": step,
+                        key: value if value is not None else np.nan,
+                    },
+                )
+
+    def close(self) -> None:
+        """Close all open file handles."""
+        for csvfile in self._files.values():
+            csvfile.close()
+        self._files.clear()
+        self._writers.clear()
+
+
 def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
     run: int,
@@ -610,6 +771,14 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     current_brain_run_data = tracking_data.brain_data.get(run, None)
     if current_brain_run_data is None:
         logger.warning(f"No brain tracking data available for run {run}. Skipping CSV export.")
+        return
+
+    # BrainDataSnapshot only has last values, not full step-by-step data
+    if isinstance(current_brain_run_data, BrainDataSnapshot):
+        logger.warning(
+            f"Brain data for run {run} has been flushed to snapshot. "
+            "Skipping per-run brain CSV export.",
+        )
         return
 
     for key, values in current_brain_run_data.__dict__.items():
