@@ -143,7 +143,7 @@ ______________________________________________________________________
 - [x] Add `precomputed_chemotaxis: list[tuple[int, ChemotaxisMetrics]] | None = None` parameter
 - [x] When provided, use pre-computed metrics instead of recomputing from `result.path`/`result.food_history`
 - [x] Maintain identical chemotaxis validation logic (convergence filtering, biological comparison)
-- [x] Ensure post-convergence validation block (`if post_conv_metrics:`) is reachable from both precomputed and fallback branches (not nested under either)
+- [x] Ensure post-convergence validation block (`if post_conv_metrics:`) is reachable from both pre-computed and fallback branches (not nested under either)
 
 **File:** `packages/quantum-nematode/quantumnematode/experiment/tracker.py` (lines 370-474)
 
