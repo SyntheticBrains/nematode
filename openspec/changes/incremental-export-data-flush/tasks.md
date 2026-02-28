@@ -169,8 +169,8 @@ ______________________________________________________________________
 
 - [x] `uv run pre-commit run -a` passes
 - [x] `uv run pytest -m "not smoke and not nightly"` passes (all unit/integration tests)
-- [ ] `uv run pytest -m smoke -v` passes (smoke tests run actual simulations)
-- [ ] Manual: run 50-episode simulation, diff CSV outputs against pre-change baseline
-- [ ] Manual: run with `--track-experiment`, confirm chemotaxis metrics match
-- [ ] Manual: run with `--track-per-run`, confirm per-run plots/exports work
-- [ ] Manual: `Ctrl-C` mid-simulation, verify partial results export correctly
+- [x] `uv run pytest -m smoke -v` passes (smoke tests run actual simulations)
+- [x] Manual: run 50-episode simulation, diff CSV outputs against pre-change baseline
+- [x] Manual: run with `--track-experiment`, confirm chemotaxis metrics match
+- [x] Manual: run with `--track-per-run`, confirm per-run plots/exports work
+- [x] Manual: `Ctrl-C` mid-simulation, verify partial results export correctly
