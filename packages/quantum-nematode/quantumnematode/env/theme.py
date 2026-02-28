@@ -15,6 +15,7 @@ class Theme(StrEnum):
     RICH = "rich"
     EMOJI_RICH = "emoji_rich"
     PIXEL = "pixel"
+    HEADLESS = "headless"
 
 
 DEFAULT_THEME = Theme.PIXEL
@@ -240,6 +241,19 @@ THEME_SYMBOLS = {
     ),
     # PIXEL theme uses Pygame renderer; symbols are placeholders for fallback only
     Theme.PIXEL: ThemeSymbolSet(
+        goal="*",
+        body="O",
+        up="^",
+        down="v",
+        left="<",
+        right=">",
+        empty=".",
+        predator="#",
+        predator_stationary="X",
+        predator_pursuit="@",
+    ),
+    # HEADLESS theme skips all rendering; symbols are placeholders only
+    Theme.HEADLESS: ThemeSymbolSet(
         goal="*",
         body="O",
         up="^",

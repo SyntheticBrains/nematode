@@ -448,6 +448,9 @@ class QuantumNematodeAgent:
         show_last_frame_only : bool, optional
             Whether to clear screen before rendering, by default False.
         """
+        if self.env.theme == Theme.HEADLESS:
+            return
+
         # Pygame rendering for PIXEL theme
         if self.env.theme == Theme.PIXEL:
             self._render_step_pygame(max_steps, render_text=render_text)
