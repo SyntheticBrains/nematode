@@ -53,7 +53,7 @@ def test_run_simulation_smoke(config_name: str, tmp_path: Path) -> None:
             "--log-level",
             "NONE",
             "--theme",
-            "ascii",
+            "headless",
         ],
         check=False,
         cwd=str(tmp_path),

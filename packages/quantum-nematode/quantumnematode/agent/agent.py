@@ -448,6 +448,9 @@ class QuantumNematodeAgent:
         show_last_frame_only : bool, optional
             Whether to clear screen before rendering, by default False.
         """
+        if self.env.theme == Theme.HEADLESS:
+            return
+
         # Pygame rendering for PIXEL theme
         if self.env.theme == Theme.PIXEL:
             self._render_step_pygame(max_steps, render_text=render_text)
@@ -504,7 +507,7 @@ class QuantumNematodeAgent:
             except Exception as exc:  # pragma: no cover
                 msg = (
                     "PIXEL theme requires pygame with an available video backend. "
-                    "Use --theme ascii for headless environments."
+                    "Use --theme headless (no rendering) or --theme ascii (text)."
                 )
                 raise RuntimeError(msg) from exc
         return self._pygame_renderer

@@ -280,7 +280,14 @@ The status bar displays session-level information (run progress, cumulative wins
 
 ### Alternative Themes
 
-Console-based themes (ASCII, Emoji, Rich, etc.) are also available for headless or CI environments. Set `--theme` when running the simulation to switch between them.
+Console-based themes (ASCII, Emoji, Rich, etc.) are available for terminal rendering. A dedicated `headless` theme skips all rendering entirely for maximum performance in batch training and CI:
+
+```bash
+# Headless mode — no rendering overhead, fastest for training
+uv run ./scripts/run_simulation.py --config ./configs/examples/mlpppo_foraging_small.yml --runs 50 --theme headless
+```
+
+Available themes: `pixel` (default), `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless`.
 
 ### Session Summary
 
