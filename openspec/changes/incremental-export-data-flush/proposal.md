@@ -57,7 +57,7 @@ Update all consumers that accessed per-step data to use snapshot fields with fal
 
 - `_export_main_results`: `len(result.path)` → `result.path_length`
 - `summary()`: `result.health_history[-1]` → `result.final_health`
-- `plot_results()`: `max(satiety_history)` → `result.max_satiety`, `health_history[-1]` → `result.final_health`, `max(health_history)` → `result.max_health`
+- `plot_results()`: `max(satiety_history)` → `result.max_satiety`, `health_history[-1]` → `result.final_health`, `max(health_history)` → `result.max_health`; single-run progression plots use last run's histories preserved before flush
 - `plot_tracking_data_by_session()`: handle `BrainDataSnapshot` type
 - `_export_session_tracking_data()`: handle `BrainDataSnapshot` type
 - `export_tracking_data_to_csv()`: key discovery from snapshot

@@ -111,6 +111,7 @@ ______________________________________________________________________
 - [x] Line 1072: `max(satiety_history)` → fallback to `result.max_satiety`
 - [x] Line 1085: `r.health_history[-1]` → fallback to `r.final_health`
 - [x] Line 1090: `max(health_history)` → fallback to `result.max_health`
+- [x] Single-run progression plots: preserve last run's `satiety_history` and `health_history` before flush, pass to `plot_results()` as fallback for predator-environment plots
 
 **File:** `scripts/run_simulation.py` (lines 1067-1091)
 
@@ -142,6 +143,7 @@ ______________________________________________________________________
 - [x] Add `precomputed_chemotaxis: list[tuple[int, ChemotaxisMetrics]] | None = None` parameter
 - [x] When provided, use pre-computed metrics instead of recomputing from `result.path`/`result.food_history`
 - [x] Maintain identical chemotaxis validation logic (convergence filtering, biological comparison)
+- [x] Ensure post-convergence validation block (`if post_conv_metrics:`) is reachable from both precomputed and fallback branches (not nested under either)
 
 **File:** `packages/quantum-nematode/quantumnematode/experiment/tracker.py` (lines 370-474)
 

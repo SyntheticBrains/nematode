@@ -35,6 +35,7 @@ SimulationResult per-step data (path, food_history, satiety_history, health_hist
 - **THEN** ChemotaxisMetrics SHALL be computed from that episode's path and food_history
 - **AND** the pre-computed metrics SHALL be passed to `aggregate_results_metadata` at session end
 - **AND** results SHALL be identical to batch computation
+- **AND** the post-convergence validation logic (biological comparison, validation level) SHALL execute regardless of whether metrics were pre-computed or computed from results
 
 ### Requirement: Post-Loop Consumer Snapshot Fallback
 
@@ -52,6 +53,13 @@ All post-loop consumers that previously accessed per-step data SHALL use snapsho
 - **WHEN** `plot_results()` generates satiety and health plots
 - **THEN** it SHALL use `result.max_satiety`, `result.final_health`, and `result.max_health` snapshots
 - **AND** plots SHALL be visually identical to pre-change output
+
+#### Scenario: Single-Run Progression Plots With Flushed Data
+
+- **GIVEN** all_results with flushed satiety_history and health_history
+- **WHEN** `plot_results()` generates single-run progression plots for predator environments
+- **THEN** it SHALL use the last run's per-step histories preserved from the main loop
+- **AND** the satiety and health progression plots SHALL be generated identically to pre-change output
 
 #### Scenario: Session Tracking Plots With BrainDataSnapshot
 
