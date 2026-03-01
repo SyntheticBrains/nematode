@@ -6,7 +6,7 @@ import torch
 from quantumnematode.brain.actions import Action
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch._reservoir_hybrid_base import ReservoirHybridBase
-from quantumnematode.brain.arch.crh import CRHBrain, CRHBrainConfig
+from quantumnematode.brain.arch.crh import CRHBrain, CRHBrainConfig, InputEncoding
 from quantumnematode.brain.modules import ModuleName
 
 # =============================================================================
@@ -29,6 +29,7 @@ class TestCRHBrainConfig:
         assert config.input_scale == 1.0
         assert config.feature_channels == ["raw", "cos_sin", "pairwise"]
         assert config.num_sensory_neurons is None
+        assert config.input_encoding == "linear"
 
         # Inherited base defaults
         assert config.readout_hidden_dim == 64
@@ -104,6 +105,21 @@ class TestCRHBrainConfig:
         """reservoir_depth must be >= 1."""
         with pytest.raises(ValueError, match="reservoir_depth"):
             CRHBrainConfig(reservoir_depth=0)
+
+    def test_validate_input_encoding_linear(self):
+        """input_encoding defaults to 'linear'."""
+        config = CRHBrainConfig()
+        assert config.input_encoding == "linear"
+
+    def test_validate_input_encoding_trig(self):
+        """input_encoding accepts 'trig'."""
+        config = CRHBrainConfig(input_encoding="trig")
+        assert config.input_encoding == "trig"
+
+    def test_validate_input_encoding_invalid(self):
+        """input_encoding rejects invalid values."""
+        with pytest.raises(ValueError, match="input_encoding"):
+            CRHBrainConfig(input_encoding="invalid")  # type: ignore[arg-type]
 
 
 # =============================================================================
@@ -584,3 +600,108 @@ class TestCRHBrainSensoryModules:
         assert brain.num_sensory == 7
         assert brain.feature_dim == 75  # 10 + 20 + 45
         assert brain.W_in.shape == (10, 7)
+
+
+# =============================================================================
+# TestCRHTrigEncoding
+# =============================================================================
+
+
+class TestCRHTrigEncoding:
+    """Test trigonometric input encoding for Domingo confound control."""
+
+    def _make_brain(self, input_encoding: InputEncoding = "trig", num_neurons: int = 10, **kwargs):
+        """Create a CRH brain with specified encoding."""
+        config = CRHBrainConfig(
+            num_reservoir_neurons=num_neurons,
+            reservoir_depth=2,
+            reservoir_seed=42,
+            feature_channels=["raw", "cos_sin", "pairwise"],
+            input_encoding=input_encoding,
+            ppo_buffer_size=16,
+            ppo_minibatches=2,
+            ppo_epochs=1,
+            seed=42,
+            **kwargs,
+        )
+        return CRHBrain(config)
+
+    def test_trig_encoding_w_in_shape(self):
+        """Trig encoding doubles W_in column dimension."""
+        brain = self._make_brain("trig")
+        # Default input_dim=2 (legacy mode), trig doubles to 4
+        assert brain.W_in.shape == (10, 4)
+        assert brain.w_in_dim == 4
+
+    def test_trig_encoding_w_in_shape_with_modules(self):
+        """Trig encoding doubles W_in with sensory modules (7 features -> 14)."""
+        brain = self._make_brain(
+            "trig",
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION,
+                ModuleName.THERMOTAXIS,
+            ],
+            num_sensory_neurons=7,
+        )
+        assert brain.input_dim == 7
+        assert brain.w_in_dim == 14
+        assert brain.W_in.shape == (10, 14)
+
+    def test_trig_encoding_feature_dim_unchanged(self):
+        """Trig encoding doesn't change output feature dimension (still 75)."""
+        brain_linear = self._make_brain("linear")
+        brain_trig = self._make_brain("trig")
+        assert brain_linear.feature_dim == brain_trig.feature_dim == 75
+
+    def test_trig_encoding_output_shape(self):
+        """_get_reservoir_features produces same-length features regardless of encoding."""
+        brain = self._make_brain("trig")
+        features = brain._get_reservoir_features(np.array([0.5, -0.3], dtype=np.float32))
+        assert features.shape == (75,)
+
+    def test_trig_encoding_different_from_linear(self):
+        """Trig encoding produces different features from linear for same input."""
+        brain_linear = self._make_brain("linear")
+        brain_trig = self._make_brain("trig")
+        x = np.array([0.5, -0.3], dtype=np.float32)
+        f_linear = brain_linear._get_reservoir_features(x)
+        f_trig = brain_trig._get_reservoir_features(x)
+        assert not np.allclose(f_linear, f_trig)
+
+    def test_trig_encoding_deterministic(self):
+        """Same input produces same output (stateless)."""
+        brain = self._make_brain("trig")
+        x = np.array([0.7, -0.2], dtype=np.float32)
+        f1 = brain._get_reservoir_features(x)
+        f2 = brain._get_reservoir_features(x)
+        np.testing.assert_array_equal(f1, f2)
+
+    def test_encode_input_trig_math(self):
+        """Verify _encode_input produces correct sin/cos expansion."""
+        brain = self._make_brain("trig")
+        x = np.array([0.5, -0.3], dtype=np.float64)
+        encoded = brain._encode_input(x)
+
+        expected = np.array(
+            [
+                np.sin(0.5 * np.pi),  # sin(0.5π) ≈ 1.0
+                np.sin(-0.3 * np.pi),  # sin(-0.3π) ≈ -0.809
+                np.cos(0.5 * np.pi),  # cos(0.5π) ≈ 0.0
+                np.cos(-0.3 * np.pi),  # cos(-0.3π) ≈ 0.588
+            ],
+        )
+        np.testing.assert_allclose(encoded, expected, atol=1e-10)
+
+    def test_encode_input_linear_passthrough(self):
+        """Linear encoding is identity."""
+        brain = self._make_brain("linear")
+        x = np.array([0.5, -0.3], dtype=np.float64)
+        encoded = brain._encode_input(x)
+        np.testing.assert_array_equal(encoded, x)
+
+    def test_linear_w_in_shape_unchanged(self):
+        """Linear encoding preserves original W_in shape."""
+        brain = self._make_brain("linear")
+        assert brain.W_in.shape == (10, 2)
+        assert brain.w_in_dim == 2

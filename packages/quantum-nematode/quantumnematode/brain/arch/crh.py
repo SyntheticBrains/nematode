@@ -73,6 +73,7 @@ SPECTRAL_RADIUS_EPSILON = 1e-10  # Guard for degenerate W_res matrices
 # =============================================================================
 
 FeatureChannel = Literal["raw", "cos_sin", "squared", "pairwise"]
+InputEncoding = Literal["linear", "trig"]
 
 
 # =============================================================================
@@ -123,6 +124,13 @@ class CRHBrainConfig(ReservoirHybridBaseConfig):
             "None = auto-compute as min(input_dim, num_reservoir_neurons)."
         ),
     )
+    input_encoding: InputEncoding = Field(
+        default="linear",
+        description=(
+            "Input encoding before W_in projection: "
+            "'linear' (raw features) or 'trig' (sin/cos pre-encoding matching QRH)."
+        ),
+    )
 
     @field_validator("num_reservoir_neurons")
     @classmethod
@@ -166,6 +174,15 @@ class CRHBrainConfig(ReservoirHybridBaseConfig):
         """Validate feature_channels is non-empty."""
         if not v:
             msg = "feature_channels must be non-empty"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("input_encoding")
+    @classmethod
+    def validate_input_encoding(cls, v: str) -> str:
+        """Validate input_encoding is 'linear' or 'trig'."""
+        if v not in {"linear", "trig"}:
+            msg = f"input_encoding must be 'linear' or 'trig', got '{v}'"
             raise ValueError(msg)
         return v
 
@@ -223,6 +240,7 @@ class CRHBrain(ReservoirHybridBase):
         self.input_connectivity = config.input_connectivity
         self.input_scale = config.input_scale
         self.feature_channels = config.feature_channels
+        self.input_encoding = config.input_encoding
 
         # Compute feature dimension before calling base init (Decision 7)
         feature_dim = self._compute_feature_dim()
@@ -230,6 +248,9 @@ class CRHBrain(ReservoirHybridBase):
         # Base class handles: seeding, sensory modules, input_dim, actor/critic,
         # LayerNorm, optimizer, LR scheduling, PPO params, buffer, state tracking
         super().__init__(config, feature_dim, num_actions, device, action_set)
+
+        # Compute effective W_in input dimension (trig encoding doubles it)
+        self.w_in_dim = 2 * self.input_dim if self.input_encoding == "trig" else self.input_dim
 
         # Compute sensory neuron count for input routing
         if config.num_sensory_neurons is not None:
@@ -246,8 +267,10 @@ class CRHBrain(ReservoirHybridBase):
             f"{self.reservoir_depth} layers, "
             f"spectral_radius={self.spectral_radius}, "
             f"connectivity={self.input_connectivity}, "
+            f"encoding={self.input_encoding}, "
             f"channels={self.feature_channels}, "
             f"feature_dim={self.feature_dim}, input_dim={self.input_dim}, "
+            f"w_in_dim={self.w_in_dim}, "
             f"actor/critic ({config.readout_hidden_dim}x{config.readout_num_layers})",
         )
 
@@ -271,8 +294,10 @@ class CRHBrain(ReservoirHybridBase):
 
     def _get_reservoir_features(self, sensory_features: np.ndarray) -> np.ndarray:
         """Run sensory features through ESN reservoir and extract features."""
+        # Apply input encoding before W_in projection
+        x = self._encode_input(sensory_features.astype(np.float64))
+
         # ESN forward pass: h_0 = tanh(W_in @ x)
-        x = sensory_features.astype(np.float64)
         h = np.tanh(self.W_in @ x)
 
         # Data re-uploading: h_l = tanh(W_res @ h_{l-1} + W_in @ x)
@@ -280,6 +305,17 @@ class CRHBrain(ReservoirHybridBase):
             h = np.tanh(self.W_res @ h + self.W_in @ x)
 
         return self._extract_features(h)
+
+    def _encode_input(self, x: np.ndarray) -> np.ndarray:
+        """Apply input encoding before W_in projection.
+
+        linear: pass through (identity).
+        trig: expand each feature f to [sin(f*π), cos(f*π)], matching QRH's
+              trigonometric gate encoding (Domingo confound control).
+        """
+        if self.input_encoding == "trig":
+            return np.concatenate([np.sin(np.pi * x), np.cos(np.pi * x)])
+        return x
 
     def _create_copy_instance(
         self,
@@ -300,7 +336,8 @@ class CRHBrain(ReservoirHybridBase):
     def _build_reservoir_matrices(self) -> tuple[np.ndarray, np.ndarray]:
         """Build W_in and W_res matrices deterministically from seed.
 
-        W_in: Input weight matrix (num_neurons, input_dim).
+        W_in: Input weight matrix (num_neurons, w_in_dim).
+            w_in_dim = input_dim for linear encoding, 2*input_dim for trig.
             - Dense: all entries drawn from Uniform[-input_scale, input_scale].
             - Sparse: same, but rows beyond num_sensory are zeroed out.
 
@@ -310,11 +347,11 @@ class CRHBrain(ReservoirHybridBase):
         """
         rng = np.random.default_rng(self.reservoir_seed)
 
-        # W_in: input weight matrix
+        # W_in: input weight matrix (uses w_in_dim which accounts for trig encoding)
         w_in = rng.uniform(
             -self.input_scale,
             self.input_scale,
-            size=(self.num_neurons, self.input_dim),
+            size=(self.num_neurons, self.w_in_dim),
         )
 
         # Sparse mode: zero out rows for non-sensory neurons
