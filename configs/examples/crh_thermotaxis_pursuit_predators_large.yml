@@ -2,6 +2,11 @@
 # Quantum ablation control: matches QRH R9 architecture with classical ESN reservoir
 # Uses CRH (Classical Reservoir Hybrid) brain architecture
 #
+# Domingo confound control: input_encoding=trig applies sin/cos pre-encoding
+# to match QRH's trigonometric gate encoding (RY/RZ(feature*π)), isolating
+# whether QRH's advantage comes from quantum dynamics or input encoding.
+# See Domingo et al. (2021) "Nonlinear input transformations are ubiquitous in QRC"
+#
 # This is the PRIMARY CRH config for three-way comparison:
 # - QRH vs CRH (quantum value): same feature dim, same PPO readout
 # - CRH vs MLPPPO (reservoir value): different architectures, same task
@@ -32,6 +37,7 @@ brain:
     spectral_radius: 0.9
     input_connectivity: sparse
     input_scale: 1.0
+    input_encoding: trig              # Domingo confound control: match QRH's trig encoding
 
     # Feature channels: ablation mode matching QRH's 75-feature output
     feature_channels:
