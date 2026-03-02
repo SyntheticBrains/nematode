@@ -14,6 +14,8 @@ Key Features:
   ablation-matched (75 features matching QRH) and standalone-optimized modes
 - **Sparse/Dense Input Connectivity**: Sparse mode routes input only to sensory
   neurons (matching QRH's sensory qubit pattern); dense routes to all neurons
+- **Input Encoding**: Linear (default) or trigonometric (sin/cos pre-encoding matching
+  QRH's RY/RZ gate encoding) for Domingo encoding confound control
 - **PPO Actor-Critic Readout**: Inherited from ReservoirHybridBase — identical
   training infrastructure as QRH
 - **Stateless**: No hidden state carried between run_brain() calls (matches QRH)

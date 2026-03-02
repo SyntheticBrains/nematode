@@ -1,31 +1,35 @@
 """
 Quantum Reservoir Hybrid (QRH) Brain Architecture.
 
-This architecture implements a structured quantum reservoir with C. elegans-inspired
-topology and a PPO-trained classical actor-critic readout. It addresses the failure of
-QRC's random reservoir (0% success) by using biologically-grounded topology, richer
-Z/ZZ feature extraction, and PPO training.
+This architecture implements a fixed quantum reservoir with configurable topology
+(structured or random) and a PPO-trained classical actor-critic readout. The reservoir
+generates rich feature representations via X/Y/Z Pauli expectations and pairwise ZZ
+correlations, while avoiding barren plateaus entirely (no quantum parameters trained).
+
+Evaluation showed random topology vastly outperforms C. elegans-inspired structured
+topology (86.8% vs 0-0.25% on foraging). The structured topology is retained for
+MI analysis and ablation studies but is not recommended for training.
 
 Key Features:
-- **Structured Quantum Reservoir**: C. elegans connectome topology (ASEL/ASER -> AIY ->
-  AIA -> AVA) mapped to 8 qubits with gap junction CZ gates and chemical synapse
-  controlled rotations (CRY/CRZ)
-- **Per-Qubit Input Encoding**: Only sensory qubits (ASEL/ASER) receive direct input;
-  interneuron/command qubits receive signal exclusively through the topology, matching
-  biological signal routing
+- **Configurable Quantum Reservoir**: Random topology (default for training) or
+  C. elegans connectome topology (for MI analysis / ablation). Both use CZ gates
+  and controlled rotations (CRY/CRZ) with equivalent gate density.
+- **Per-Qubit Input Encoding**: Sensory qubits receive direct input via RY/RZ gates;
+  remaining qubits receive signal exclusively through the topology.
 - **X/Y/Z + ZZ Feature Extraction**: Per-qubit Pauli expectations <X_i>, <Y_i>, <Z_i>
-  + pairwise ZZ-correlations <Z_i Z_j> (52 features for 8 qubits) via exact statevector
-  simulation. X/Y expectations capture phase information lost by Z-only measurement.
+  + pairwise ZZ-correlations <Z_i Z_j> (75 features for 10 qubits) via exact
+  statevector simulation. X/Y expectations capture phase information lost by Z-only
+  measurement.
 - **PPO Actor-Critic Readout**: Actor and critic MLPs trained with combined PPO loss
   (clipped surrogate + value loss + entropy bonus) via single optimizer
 - **No Barren Plateaus**: Reservoir is fixed (no quantum parameters trained)
 
 Architecture:
-    Sensory Input -> Per-Qubit Encoding -> Structured Quantum Reservoir (FIXED)
+    Sensory Input -> Per-Qubit Encoding -> Quantum Reservoir (FIXED)
     -> X/Y/Z + ZZ Features -> PPO Readout
 
 The reservoir avoids barren plateaus entirely because no quantum parameters are
-trained. Only the classical actor-critic readout (~5K params) is optimized.
+trained. Only the classical actor-critic readout (~10K params) is optimized.
 
 References
 ----------
@@ -233,9 +237,10 @@ class QRHBrainConfig(ReservoirHybridBaseConfig):
 class QRHBrain(ReservoirHybridBase):
     """Quantum Reservoir Hybrid brain architecture.
 
-    Uses a fixed structured quantum reservoir with C. elegans-inspired topology
-    to generate X/Y/Z+ZZ feature representations, with a PPO-trained classical
-    actor-critic readout.
+    Uses a fixed quantum reservoir (random or structured topology) to generate
+    X/Y/Z+ZZ feature representations, with a PPO-trained classical actor-critic
+    readout. Random topology is recommended for training; structured topology
+    (C. elegans-inspired) is available for MI analysis and ablation studies.
     """
 
     _brain_name = "QRH"
