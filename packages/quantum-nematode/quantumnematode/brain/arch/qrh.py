@@ -258,7 +258,7 @@ class QRHBrain(ReservoirHybridBase):
         self.reservoir_seed = config.reservoir_seed
         self.use_random_topology = config.use_random_topology
 
-        # Compute feature dimension before calling base init (Decision 7)
+        # Compute feature dimension before calling base init
         feature_dim = self._compute_feature_dim()
 
         # Base class handles: seeding, sensory modules, input_dim, actor/critic,
