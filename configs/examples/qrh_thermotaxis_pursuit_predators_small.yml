@@ -1,0 +1,131 @@
+# QRH with Thermotaxis + Pursuit Predators - Small Configuration
+# Uses QRH (Quantum Reservoir Hybrid) brain architecture
+#
+# This combines all three objectives:
+# - Food collection (chemotaxis)
+# - Active predator evasion (nociception)
+# - Temperature comfort (thermotaxis)
+#
+# 10-qubit reservoir: 7 sensory qubits + 3 interneuron qubits.
+# Previous 8-qubit config (1 interneuron) caused catastrophic regression (0.55% success)
+# because the single interneuron qubit was insufficient for feature mixing.
+# 3 interneurons should restore sufficient ZZ correlation features.
+#
+# Module feature breakdown:
+# - food_chemotaxis: 2 features (strength, angle)
+# - nociception: 2 features (strength, angle)
+# - thermotaxis: 3 features (strength, angle, temp_deviation)
+# Total: 7 features -> 7 sensory qubits, 3 interneuron qubits
+# Feature dim: 3×10 + C(10,2) = 30 + 45 = 75
+
+max_steps: 500
+brain:
+  name: qrh
+  config:
+    # Reservoir parameters (10 qubits: 7 sensory + 3 interneuron)
+    num_reservoir_qubits: 10
+    reservoir_depth: 3
+    reservoir_seed: 42
+
+    # Readout architecture (actor + critic)
+    readout_hidden_dim: 64
+    readout_num_layers: 2
+
+    # PPO hyperparameters (proven QRH Predator R3 settings)
+    actor_lr: 0.0005
+    critic_lr: 0.0005
+    gamma: 0.99
+    gae_lambda: 0.98
+    ppo_clip_epsilon: 0.2
+    ppo_epochs: 6
+    ppo_minibatches: 2
+    ppo_buffer_size: 256
+    entropy_coeff: 0.02
+    value_loss_coef: 0.5
+    max_grad_norm: 0.5
+
+    # LR warmup (ramp from 10% to full LR over first 30 episodes)
+    lr_warmup_episodes: 30
+    lr_warmup_start: 0.00005
+
+    # Topology
+    use_random_topology: true
+
+    # Unified sensory modules for triple-objective task
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - thermotaxis
+
+    # Sensory qubits (7 features = 7 qubits, 3 interneuron qubits remaining)
+    num_sensory_qubits: 7
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.0
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 5
+    kill_radius: 0
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 6.0
+    food_healing: 10.0
+
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0  # Temperature at grid center (spawn point)
+    gradient_direction: 0.0  # Temperature increases to the right
+    gradient_strength: 1.5   # 1.5°C per cell from center (range: 5°C to 35°C)
+    # Rewards/penalties
+    comfort_reward: 0.0
+    discomfort_penalty: 0.0
+    danger_penalty: -0.3
+    reward_discomfort_food: 0.0
+    # HP damage
+    danger_hp_damage: 2.0
+    lethal_hp_damage: 10.0
+    # Zone thresholds (relative to cultivation temp)
+    comfort_delta: 5.0       # Comfort: 15-25°C
+    discomfort_delta: 10.0   # Discomfort: 10-15°C or 25-30°C
+    danger_delta: 15.0       # Danger: 5-10°C or 30-35°C

@@ -17,6 +17,8 @@ The system SHALL support a Quantum Reservoir Computing brain architecture that u
 - **AND** SHALL create a trainable MLP readout network with configurable hidden units (default 32)
 - **AND** SHALL initialize the reservoir with a deterministic seed for reproducibility
 - **AND** SHALL use orthogonal weight initialization for better gradient flow
+- **AND** SHALL use the shared `get_qiskit_backend()` from `_quantum_utils.py` for Qiskit backend initialization
+- **AND** SHALL use the shared `build_readout_network()` from `_quantum_reservoir.py` for readout construction
 
 #### Scenario: CLI Brain Selection
 

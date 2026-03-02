@@ -6,6 +6,7 @@ import pytest
 from quantumnematode.agent import RewardConfig
 from quantumnematode.agent.reward_calculator import RewardCalculator
 from quantumnematode.env import DynamicForagingEnvironment
+from quantumnematode.env.temperature import TemperatureZone
 
 
 @pytest.fixture
@@ -138,106 +139,438 @@ class TestAntiDitheringPenalty:
         assert reward == pytest.approx(-0.01)
 
 
-class TestPredatorProximityPenalty:
-    """Test predator proximity penalty."""
+class TestPredatorEvasionReward:
+    """Test distance-scaled predator evasion reward.
 
-    def test_predator_proximity_penalty_applied(self):
-        """Test penalty when agent is within predator detection radius."""
-        config = RewardConfig(
-            penalty_step=0.01,
-            penalty_predator_proximity=0.1,
-        )
+    The evasion reward mirrors food distance reward structure:
+    - Moving AWAY from nearest predator: positive reward
+    - Moving TOWARD nearest predator: negative penalty
+    - Scale factor is penalty_predator_proximity (same config field as old flat penalty)
+    """
 
+    def _make_predator_env(self, agent_pos, predator_positions, *, in_danger=True):
+        """Create a mock env with predators at given positions."""
         env = Mock(spec=DynamicForagingEnvironment)
         env.reached_goal.return_value = False
-        env.agent_pos = [5, 5]
+        env.agent_pos = agent_pos
         env.get_nearest_food_distance = Mock(return_value=None)
-        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.visited_cells = {tuple(agent_pos)}
         env.predator = Mock()
         env.predator.enabled = True
-        env.is_agent_in_danger = Mock(return_value=True)  # Within detection radius
+        env.is_agent_in_danger = Mock(return_value=in_danger)
         env.wall_collision_occurred = False
 
+        # Create predator mocks
+        predators = []
+        for pos in predator_positions:
+            pred = Mock()
+            pred.position = pos
+            predators.append(pred)
+        env.predators = predators
+
+        # get_nearest_predator_distance returns Manhattan distance
+        if predator_positions:
+            env.get_nearest_predator_distance = Mock(
+                return_value=min(
+                    abs(agent_pos[0] - p[0]) + abs(agent_pos[1] - p[1]) for p in predator_positions
+                ),
+            )
+        else:
+            env.get_nearest_predator_distance = Mock(return_value=None)
+
+        return env
+
+    def test_evasion_reward_moving_away(self):
+        """Moving away from predator while in danger zone gives positive reward."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+        )
+        # Agent was at (5,5), now at (6,5). Predator at (3,5).
+        # prev_dist = |5-3| + |5-5| = 2, curr_dist = |6-3| + |5-5| = 3
+        # evasion_reward = 0.5 * (3 - 2) = +0.5
+        env = self._make_predator_env([6, 5], [(3, 5)])
         calculator = RewardCalculator(config)
-        path = [(5, 5)]
+        path = [(5, 5), (6, 5)]
 
         reward = calculator.calculate_reward(env, path)
 
-        # Proximity penalty: -0.1, Step penalty: -0.01
-        assert reward == pytest.approx(-0.11)
+        # Evasion reward: +0.5, Step penalty: -0.01
+        assert reward == pytest.approx(0.49)
 
-    def test_no_predator_proximity_penalty_when_safe(self):
-        """Test no penalty when agent is outside predator detection radius."""
+    def test_evasion_penalty_moving_closer(self):
+        """Moving toward predator while in danger zone gives negative penalty."""
         config = RewardConfig(
             penalty_step=0.01,
-            penalty_predator_proximity=0.1,
+            penalty_predator_proximity=0.5,
         )
-
-        env = Mock(spec=DynamicForagingEnvironment)
-        env.reached_goal.return_value = False
-        env.agent_pos = [5, 5]
-        env.get_nearest_food_distance = Mock(return_value=None)
-        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
-        env.predator = Mock()
-        env.predator.enabled = True
-        env.is_agent_in_danger = Mock(return_value=False)  # Outside detection radius
-        env.wall_collision_occurred = False
-
+        # Agent was at (6,5), now at (5,5). Predator at (3,5).
+        # prev_dist = |6-3| + |5-5| = 3, curr_dist = |5-3| + |5-5| = 2
+        # evasion_reward = 0.5 * (2 - 3) = -0.5
+        env = self._make_predator_env([5, 5], [(3, 5)])
         calculator = RewardCalculator(config)
-        path = [(5, 5)]
+        path = [(6, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Evasion penalty: -0.5, Step penalty: -0.01
+        assert reward == pytest.approx(-0.51)
+
+    def test_evasion_no_change_perpendicular_far(self):
+        """Moving perpendicular (same distance, beyond contact) gives zero evasion reward."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+        )
+        # Agent was at (5,2), now at (5,8). Predator at (2,5).
+        # prev_dist = |5-2| + |2-5| = 6, curr_dist = |5-2| + |8-5| = 6
+        # evasion_reward = 0.5 * (6 - 6) = 0.0, no contact penalty (dist > 1)
+        env = self._make_predator_env([5, 8], [(2, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 2), (5, 8)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Zero evasion reward, Step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_evasion_contact_penalty_at_distance_zero(self):
+        """Predator on same cell applies contact penalty even with no distance change."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+        )
+        # Agent was at (5,5), now at (5,5). Predator at (5,5). dist=0 both times.
+        # evasion_reward = 0.5 * (0 - 0) - 0.5 = -0.5
+        env = self._make_predator_env([5, 5], [(5, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Contact penalty: -0.5, Step penalty: -0.01
+        assert reward == pytest.approx(-0.51)
+
+    def test_evasion_contact_penalty_at_distance_one(self):
+        """Predator adjacent applies contact penalty even with no distance change."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+        )
+        # Agent was at (5,4), now at (5,6). Predator at (5,5).
+        # prev_dist = 1, curr_dist = 1. evasion = 0.5*(1-1) - 0.5 = -0.5
+        env = self._make_predator_env([5, 6], [(5, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 4), (5, 6)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Contact penalty: -0.5, Step penalty: -0.01
+        assert reward == pytest.approx(-0.51)
+
+    def test_evasion_outside_detection_not_applied(self):
+        """No evasion reward when agent is outside detection radius."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+        )
+        env = self._make_predator_env([50, 50], [(10, 10)], in_danger=False)
+        calculator = RewardCalculator(config)
+        path = [(49, 50), (50, 50)]
 
         reward = calculator.calculate_reward(env, path)
 
         # Only step penalty: -0.01
         assert reward == pytest.approx(-0.01)
 
-    def test_no_predator_proximity_penalty_when_disabled(self):
-        """Test no penalty when predators are disabled."""
+    def test_evasion_first_step_flat_fallback(self):
+        """First step in episode uses flat penalty fallback."""
         config = RewardConfig(
             penalty_step=0.01,
-            penalty_predator_proximity=0.1,
+            penalty_predator_proximity=0.5,
+        )
+        env = self._make_predator_env([5, 5], [(3, 5)])
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]  # Only 1 position — no previous to compare
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Flat fallback penalty: -0.5, Step penalty: -0.01
+        assert reward == pytest.approx(-0.51)
+
+    def test_no_evasion_when_predators_disabled(self):
+        """No evasion reward when predators are disabled."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
         )
 
         env = Mock(spec=DynamicForagingEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [5, 5]
         env.get_nearest_food_distance = Mock(return_value=None)
-        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.visited_cells = {(5, 5)}
         env.predator = Mock()
-        env.predator.enabled = False  # Predators disabled
+        env.predator.enabled = False
         env.wall_collision_occurred = False
 
         calculator = RewardCalculator(config)
-        path = [(5, 5)]
+        path = [(4, 5), (5, 5)]
 
         reward = calculator.calculate_reward(env, path)
 
         # Only step penalty: -0.01
         assert reward == pytest.approx(-0.01)
 
-    def test_predator_proximity_penalty_zero_disabled(self):
-        """Test that zero proximity penalty effectively disables the feature."""
+    def test_evasion_zero_scale_effectively_disabled(self):
+        """Zero penalty_predator_proximity effectively disables evasion reward."""
         config = RewardConfig(
             penalty_step=0.01,
-            penalty_predator_proximity=0.0,  # Disabled
+            penalty_predator_proximity=0.0,
         )
+        env = self._make_predator_env([5, 5], [(3, 5)])
+        calculator = RewardCalculator(config)
+        path = [(6, 5), (5, 5)]  # Moving toward predator
 
+        reward = calculator.calculate_reward(env, path)
+
+        # Zero evasion (0.0 * delta = 0.0), Step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_evasion_multiple_predators_uses_nearest(self):
+        """With multiple predators, evasion uses nearest predator distance."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_predator_proximity=0.5,
+        )
+        # Agent was at (5,5), now at (6,5). Predators at (3,5) and (50,50).
+        # Nearest: (3,5). prev_dist=2, curr_dist=3
+        # evasion_reward = 0.5 * (3 - 2) = +0.5
+        env = self._make_predator_env([6, 5], [(3, 5), (50, 50)])
+        calculator = RewardCalculator(config)
+        path = [(5, 5), (6, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Evasion reward: +0.5, Step penalty: -0.01
+        assert reward == pytest.approx(0.49)
+
+
+class TestTemperatureAvoidanceReward:
+    """Test distance-scaled temperature avoidance reward.
+
+    The temperature avoidance reward mirrors predator evasion structure:
+    - Moving TOWARD cultivation temperature (reducing deviation): positive reward
+    - Moving AWAY FROM cultivation temperature (increasing deviation): negative penalty
+    - Scale factor is penalty_temperature_proximity
+    - Only active outside comfort zone (discomfort/danger/lethal)
+    """
+
+    def _make_thermotaxis_env(
+        self,
+        agent_pos,
+        current_temp,
+        prev_temp,
+        zone,
+        *,
+        cultivation_temp=20.0,
+    ):
+        """Create a mock env with thermotaxis at given temperatures."""
+        env = Mock(spec=DynamicForagingEnvironment)
+        env.reached_goal.return_value = False
+        env.agent_pos = agent_pos
+        env.get_nearest_food_distance = Mock(return_value=None)
+        env.visited_cells = {tuple(agent_pos)}
+        env.predator = Mock()
+        env.predator.enabled = False
+        env.wall_collision_occurred = False
+
+        # Thermotaxis setup
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = True
+        env.thermotaxis.cultivation_temperature = cultivation_temp
+        env.get_temperature_zone = Mock(return_value=zone)
+
+        # Return different temperatures for current vs previous position
+        def get_temp_side_effect(position=None):
+            if position is None:
+                return current_temp
+            return prev_temp
+
+        env.get_temperature = Mock(side_effect=get_temp_side_effect)
+
+        return env
+
+    def test_temp_avoidance_reward_moving_toward_tc(self):
+        """Moving toward cultivation temp in discomfort zone gives positive reward."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
+        # Agent in discomfort zone. prev_temp=28, curr_temp=26. Tc=20.
+        # prev_dev=8, curr_dev=6. delta=-2. reward = 0.3 * 2 = +0.6
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=26.0,
+            prev_temp=28.0,
+            zone=TemperatureZone.DISCOMFORT_HOT,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Temp avoidance: +0.6, Step penalty: -0.01
+        assert reward == pytest.approx(0.59)
+
+    def test_temp_avoidance_penalty_moving_away_from_tc(self):
+        """Moving away from cultivation temp in discomfort zone gives negative penalty."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
+        # prev_temp=26, curr_temp=28. Tc=20.
+        # prev_dev=6, curr_dev=8. delta=+2. reward = 0.3 * -2 = -0.6
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=28.0,
+            prev_temp=26.0,
+            zone=TemperatureZone.DISCOMFORT_HOT,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Temp penalty: -0.6, Step penalty: -0.01
+        assert reward == pytest.approx(-0.61)
+
+    def test_temp_avoidance_no_change_isothermal(self):
+        """Same temperature both positions gives zero avoidance reward."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
+        # Same temp=32 both positions. dev=12 both. delta=0. reward=0.
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=32.0,
+            prev_temp=32.0,
+            zone=TemperatureZone.DANGER_HOT,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Zero temp reward, Step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_temp_avoidance_not_applied_in_comfort_zone(self):
+        """No avoidance reward when agent is in comfort zone."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=22.0,
+            prev_temp=24.0,
+            zone=TemperatureZone.COMFORT,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_temp_avoidance_not_applied_when_disabled(self):
+        """No avoidance reward when penalty_temperature_proximity is 0."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.0,
+        )
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=35.0,
+            prev_temp=30.0,
+            zone=TemperatureZone.DANGER_HOT,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_temp_avoidance_not_applied_without_thermotaxis(self):
+        """No avoidance reward when thermotaxis is disabled."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
         env = Mock(spec=DynamicForagingEnvironment)
         env.reached_goal.return_value = False
         env.agent_pos = [5, 5]
         env.get_nearest_food_distance = Mock(return_value=None)
-        env.visited_cells = {(5, 5)}  # Mark as visited to avoid exploration bonus
+        env.visited_cells = {(5, 5)}
         env.predator = Mock()
-        env.predator.enabled = True
-        env.is_agent_in_danger = Mock(return_value=True)
+        env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(config)
-        path = [(5, 5)]
+        path = [(4, 5), (5, 5)]
 
         reward = calculator.calculate_reward(env, path)
 
-        # Only step penalty: -0.01 (no proximity penalty)
+        # Only step penalty: -0.01
+        assert reward == pytest.approx(-0.01)
+
+    def test_temp_avoidance_cold_side(self):
+        """Works for cold deviation (absolute value handles both sides)."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
+        # Agent in discomfort cold. prev_temp=10, curr_temp=14. Tc=20.
+        # prev_dev=10, curr_dev=6. delta=-4. reward = 0.3 * 4 = +1.2
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=14.0,
+            prev_temp=10.0,
+            zone=TemperatureZone.DISCOMFORT_COLD,
+        )
+        calculator = RewardCalculator(config)
+        path = [(4, 5), (5, 5)]
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Temp avoidance: +1.2, Step penalty: -0.01
+        assert reward == pytest.approx(1.19)
+
+    def test_temp_avoidance_first_step_not_applied(self):
+        """First step (path length 1) skips avoidance reward."""
+        config = RewardConfig(
+            penalty_step=0.01,
+            penalty_temperature_proximity=0.3,
+        )
+        env = self._make_thermotaxis_env(
+            [5, 5],
+            current_temp=35.0,
+            prev_temp=30.0,
+            zone=TemperatureZone.DANGER_HOT,
+        )
+        calculator = RewardCalculator(config)
+        path = [(5, 5)]  # Only 1 position — no previous to compare
+
+        reward = calculator.calculate_reward(env, path)
+
+        # Only step penalty: -0.01
         assert reward == pytest.approx(-0.01)
 
 
