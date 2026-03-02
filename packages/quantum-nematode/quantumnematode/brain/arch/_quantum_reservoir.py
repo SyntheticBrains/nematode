@@ -31,7 +31,7 @@ def build_readout_network(
     Parameters
     ----------
     input_dim : int
-        Dimension of input features (e.g., 2^N for QRC, N+N(N-1)/2 for QRH).
+        Dimension of input features (e.g., 2^N for QRC, 3N+N(N-1)/2 for QRH).
     hidden_dim : int
         Number of hidden units per layer (used only for MLP readout).
     output_dim : int
@@ -55,8 +55,11 @@ def build_readout_network(
             prev_dim = hidden_dim
         layers.append(nn.Linear(prev_dim, output_dim))
         network: nn.Module = nn.Sequential(*layers)
-    else:
+    elif readout_type == "linear":
         network = nn.Linear(input_dim, output_dim)
+    else:
+        msg = f"readout_type must be 'mlp' or 'linear', got '{readout_type}'"
+        raise ValueError(msg)
 
     # Initialize weights for better gradient flow
     for module in network.modules():
