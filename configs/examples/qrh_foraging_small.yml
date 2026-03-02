@@ -1,6 +1,6 @@
 # Dynamic Foraging Environment - Small Configuration
 # Uses QRH (Quantum Reservoir Hybrid) brain architecture
-# Structured C. elegans-inspired quantum reservoir + PPO-trained classical readout
+# Random-topology quantum reservoir + PPO-trained classical readout
 
 max_steps: 500
 brain:
