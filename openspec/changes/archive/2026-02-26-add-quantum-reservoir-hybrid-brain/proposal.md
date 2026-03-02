@@ -6,7 +6,7 @@ The QRC brain (0% success across 1,600+ runs) failed because its **random** rese
 
 - Add new `QRHBrain` architecture implementing a structured quantum reservoir with C. elegans-inspired topology and PPO-trained classical readout
 - Structured quantum reservoir circuit: gap junctions → CZ gates (symmetric), chemical synapses → fixed RY/RZ rotations, mapped from the C. elegans sensory-interneuron subnetwork (ASEL/ASER → AIY → AIA → AVA) onto 8 qubits
-- Novel feature extraction: per-qubit Z-expectations (⟨Z_i⟩) + pairwise ZZ-correlations (⟨Z_i Z_j⟩) using statevector simulation, producing 36 features for 8 qubits (vs QRC's 256-dim raw probability distribution)
+- Novel feature extraction: per-qubit X/Y/Z Pauli expectations (⟨X_i⟩, ⟨Y_i⟩, ⟨Z_i⟩) + pairwise ZZ-correlations (⟨Z_i Z_j⟩) using statevector simulation, producing 52 features for 8 qubits (vs QRC's 256-dim raw probability distribution)
 - Classical actor-critic readout (MLP) trained with PPO (clipped surrogate objective, GAE advantages) — replacing QRC's REINFORCE training
 - Mutual information decision gate script for Week 1 go/no-go validation: structured vs random reservoir feature quality comparison
 - Extract shared quantum utilities from `_qlif_layers.py` into a new `_quantum_utils.py` module (`get_qiskit_backend()` used by 5 brains + duplicated in QRC)
@@ -18,7 +18,7 @@ The QRC brain (0% success across 1,600+ runs) failed because its **random** rese
 
 ### New Capabilities
 
-- `qrh-brain`: Quantum Reservoir Hybrid brain architecture with C. elegans-structured quantum reservoir, Z/ZZ feature extraction, and PPO-trained classical readout
+- `qrh-brain`: Quantum Reservoir Hybrid brain architecture with C. elegans-structured quantum reservoir, X/Y/Z+ZZ feature extraction, and PPO-trained classical readout
 
 ### Modified Capabilities
 

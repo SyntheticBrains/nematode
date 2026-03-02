@@ -88,7 +88,7 @@ All features lie in [-1, 1]. A LayerNorm layer normalizes the heterogeneous X/Y/
 
 **Rationale**: Z-expectations and ZZ-correlations are computed from probability amplitudes. Statevector simulation gives exact values in one execution, whereas shot-based measurement would require O(shots × observables) circuit executions. The `shots` config parameter is retained for future QPU deployment where statevector is unavailable.
 
-**Trade-off**: Statevector scales as O(2^N) memory, limiting to ~20 qubits. For 8-12 qubits this is negligible (~4KB-16KB).
+**Trade-off**: Statevector scales as O(2^N) memory, limiting to ~20 qubits. For 8-12 qubits this is still negligible (~4KB-64KB at complex128).
 
 ### Decision 5: PPO Training on Readout
 
@@ -131,7 +131,7 @@ All features lie in [-1, 1]. A LayerNorm layer normalizes the heterogeneous X/Y/
 
 **Choice**: Two separate MLPs — actor (features → action logits) and critic (features → value scalar), both 2-layer with 64 hidden units, orthogonal initialization
 
-**Rationale**: Standard PPO actor-critic pattern. Using the shared `build_readout_network()` for both. Separate optimizers allow independent learning rates if needed.
+**Rationale**: Standard PPO actor-critic pattern. Using the shared `build_readout_network()` for both. Separate actor/critic networks keep policy and value heads decoupled, while optimization uses a single combined Adam update (see Decision 5).
 
 **Feature input dimension**: 52 for 8 qubits (24 X/Y/Z-expectations + 28 ZZ-correlations), 75 for 10 qubits (30 + 45).
 

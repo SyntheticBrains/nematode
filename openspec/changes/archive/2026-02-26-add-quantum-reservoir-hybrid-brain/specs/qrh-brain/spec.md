@@ -168,7 +168,7 @@ The configuration system SHALL support QRH-specific parameters via Pydantic Base
 - **THEN** the system SHALL accept `num_reservoir_qubits` (int, default 8)
 - **AND** SHALL accept `reservoir_depth` (int, default 3)
 - **AND** SHALL accept `reservoir_seed` (int, default 42)
-- **AND** SHALL accept `shots` (int, default 1024)
+- **AND** SHALL accept `shots` (int, default 1024) — retained for future QPU compatibility; not used in statevector mode
 - **AND** SHALL accept `readout_hidden_dim` (int, default 64)
 - **AND** SHALL accept `readout_num_layers` (int, default 2)
 - **AND** SHALL accept `actor_lr` (float, default 0.0003)
@@ -195,7 +195,7 @@ The configuration system SHALL support QRH-specific parameters via Pydantic Base
 - **WHEN** validating QRHBrain configuration
 - **THEN** the system SHALL require `num_reservoir_qubits` >= 2
 - **AND** SHALL require `reservoir_depth` >= 1
-- **AND** SHALL require `shots` >= 100
+- **AND** SHALL require `shots` >= 100 (validated even in statevector mode for config portability to future QPU backends)
 - **AND** SHALL require `readout_hidden_dim` >= 1
 
 ### Requirement: Sensory Module Integration
