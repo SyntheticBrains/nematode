@@ -28,17 +28,15 @@ References
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 import torch
 from qiskit import QuantumCircuit
 
-from quantumnematode.errors import ERROR_MISSING_IMPORT_QISKIT_AER
-from quantumnematode.logging_config import logger
-
-if TYPE_CHECKING:
-    from quantumnematode.brain.arch.dtypes import DeviceType
+# Re-export from shared module for backward compatibility.
+# Canonical location: quantumnematode.brain.arch._quantum_utils
+from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend  # noqa: F401
 
 # ──────────────────────────────────────────────────────────────────────
 # Constants
@@ -132,42 +130,6 @@ class QLIFSurrogateSpike(torch.autograd.Function):
         sigma = torch.sigmoid(shifted)
         grad_surrogate = alpha * sigma * (1 - sigma)
         return grad_output * grad_surrogate, None, None
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Backend Helper
-# ──────────────────────────────────────────────────────────────────────
-
-
-def get_qiskit_backend(
-    device: DeviceType,  # noqa: ARG001  # reserved for future QPU routing
-    seed: int | None = None,
-) -> Any:  # noqa: ANN401
-    """Get or create a Qiskit Aer simulator backend.
-
-    Parameters
-    ----------
-    device : DeviceType
-        Device selection (currently always uses CPU simulator).
-    seed : int or None
-        Seed for the simulator for reproducibility.
-
-    Returns
-    -------
-    AerSimulator
-        Configured Qiskit Aer backend.
-    """
-    try:
-        from qiskit_aer import AerSimulator
-    except ImportError as err:
-        error_message = ERROR_MISSING_IMPORT_QISKIT_AER
-        logger.error(error_message)
-        raise ImportError(error_message) from err
-
-    return AerSimulator(
-        device="CPU",
-        seed_simulator=seed,
-    )
 
 
 # ──────────────────────────────────────────────────────────────────────

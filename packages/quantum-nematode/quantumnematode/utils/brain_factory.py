@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from quantumnematode.brain.arch import (
     Brain,
+    CRHBrainConfig,
     HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
     HybridQuantumCortexBrainConfig,
@@ -18,6 +19,7 @@ from quantumnematode.brain.arch import (
     MLPReinforceBrainConfig,
     QQLearningBrainConfig,
     QRCBrainConfig,
+    QRHBrainConfig,
     QSNNPPOBrainConfig,
     QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
@@ -49,6 +51,8 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | MLPDQNBrainConfig
     | QQLearningBrainConfig
     | QRCBrainConfig
+    | QRHBrainConfig
+    | CRHBrainConfig
     | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
     | HybridQuantumBrainConfig
@@ -242,6 +246,38 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = QRCBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.QRH:
+        from quantumnematode.brain.arch.qrh import QRHBrain
+
+        if not isinstance(brain_config, QRHBrainConfig):
+            error_message = (
+                "The 'qrh' brain architecture requires a QRHBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QRHBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.CRH:
+        from quantumnematode.brain.arch.crh import CRHBrain
+
+        if not isinstance(brain_config, CRHBrainConfig):
+            error_message = (
+                "The 'crh' brain architecture requires a CRHBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = CRHBrain(
             config=brain_config,
             num_actions=4,
             device=device,

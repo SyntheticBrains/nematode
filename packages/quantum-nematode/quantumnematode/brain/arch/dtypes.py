@@ -19,6 +19,7 @@ class BrainType(Enum):
     QVARCIRCUIT = "qvarcircuit"
     QQLEARNING = "qqlearning"
     QRC = "qrc"
+    QRH = "qrh"
     QSNN_REINFORCE = "qsnnreinforce"
     QSNN_PPO = "qsnnppo"
     HYBRID_QUANTUM = "hybridquantum"
@@ -28,6 +29,7 @@ class BrainType(Enum):
     MLP_DQN = "mlpdqn"
     MLP_PPO = "mlpppo"
     SPIKING_REINFORCE = "spikingreinforce"
+    CRH = "crh"
 
     # Deprecated aliases (kept for backward compatibility)
     QSNN = "qsnn"
@@ -66,6 +68,7 @@ BRAIN_TYPES = Literal[
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
     BrainType.QRC,
+    BrainType.QRH,
     BrainType.QSNN_REINFORCE,
     BrainType.QSNN_PPO,
     BrainType.HYBRID_QUANTUM,
@@ -75,6 +78,7 @@ BRAIN_TYPES = Literal[
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
     BrainType.SPIKING_REINFORCE,
+    BrainType.CRH,
     # Deprecated aliases
     BrainType.QSNN,
     BrainType.MODULAR,
@@ -87,6 +91,7 @@ BRAIN_TYPES = Literal[
 QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QVARCIRCUIT,
     BrainType.QQLEARNING,
+    BrainType.QRH,
     BrainType.QSNN_REINFORCE,
     BrainType.QSNN_PPO,
     BrainType.HYBRID_QUANTUM,
@@ -104,6 +109,7 @@ CLASSICAL_BRAIN_TYPES: set[BrainType] = {
     BrainType.MLP,
     BrainType.QMLP,
     BrainType.PPO,
+    BrainType.CRH,
 }
 SPIKING_BRAIN_TYPES: set[BrainType] = {
     BrainType.SPIKING_REINFORCE,

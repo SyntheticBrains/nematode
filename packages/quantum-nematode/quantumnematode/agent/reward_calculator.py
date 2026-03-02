@@ -93,13 +93,40 @@ class RewardCalculator:
         reward -= self.config.penalty_step
         logger.debug(f"[Penalty] Step penalty applied: {-self.config.penalty_step}.")
 
-        # Proximity penalty for being near predators
+        # Distance-scaled predator evasion: reward for moving away, penalize for closer
+        # Also applies a contact penalty when predator is on or adjacent to agent
         if env.predator.enabled and env.is_agent_in_danger():
-            proximity_penalty = self.config.penalty_predator_proximity
-            reward -= proximity_penalty
-            logger.debug(
-                f"[Penalty] Predator proximity penalty applied: {-proximity_penalty}",
-            )
+            curr_pred_dist = env.get_nearest_predator_distance()
+            if curr_pred_dist is not None and len(path) > 1:
+                prev_pos = path[-2]
+                prev_pred_distances = [
+                    abs(prev_pos[0] - pred.position[0]) + abs(prev_pos[1] - pred.position[1])
+                    for pred in env.predators
+                ]
+                prev_pred_dist = min(prev_pred_distances)
+                # Positive when moving AWAY (curr > prev), negative when CLOSER
+                evasion_reward = self.config.penalty_predator_proximity * (
+                    curr_pred_dist - prev_pred_dist
+                )
+                # Contact penalty: when predator is on or adjacent (dist ≤ 1),
+                # apply flat penalty so agent always has incentive to escape
+                if curr_pred_dist <= 1:
+                    evasion_reward -= self.config.penalty_predator_proximity
+                reward += evasion_reward
+                logger.debug(
+                    f"[Reward] Predator evasion reward: {evasion_reward:.3f} "
+                    f"(prev_dist={prev_pred_dist}, curr_dist={curr_pred_dist})",
+                )
+            else:
+                # Fallback: flat penalty for first step or edge cases
+                reward -= self.config.penalty_predator_proximity
+                logger.debug(
+                    f"[Penalty] Predator proximity penalty (flat fallback): "
+                    f"{-self.config.penalty_predator_proximity}",
+                )
+
+        # Distance-scaled temperature avoidance: reward for moving toward cultivation temp
+        reward += self._calculate_temperature_avoidance_reward(env, path)
 
         # Boundary collision penalty (mechanosensation)
         # Penalizes when agent attempts to move into a wall, not just for being at edge
@@ -201,3 +228,57 @@ class RewardCalculator:
             return exploration_bonus
 
         return 0.0
+
+    def _calculate_temperature_avoidance_reward(
+        self,
+        env: DynamicForagingEnvironment,
+        path: list[tuple[int, ...]],
+    ) -> float:
+        """Calculate distance-scaled temperature avoidance reward.
+
+        Rewards the agent for moving toward the cultivation temperature
+        (reducing absolute deviation) and penalizes moving away from it.
+        Only active outside the comfort zone.
+
+        Parameters
+        ----------
+        env : DynamicForagingEnvironment
+            The environment instance.
+        path : list[tuple[int, ...]]
+            The agent's path history.
+
+        Returns
+        -------
+        float
+            Temperature avoidance reward (positive for moving toward Tc).
+        """
+        from quantumnematode.env.temperature import TemperatureZone
+
+        if (
+            self.config.penalty_temperature_proximity <= 0
+            or not env.thermotaxis.enabled
+            or len(path) <= 1
+        ):
+            return 0.0
+
+        zone = env.get_temperature_zone()
+        if zone is None or zone == TemperatureZone.COMFORT:
+            return 0.0
+
+        curr_temp = env.get_temperature()
+        prev_pos = (path[-2][0], path[-2][1])
+        prev_temp = env.get_temperature(prev_pos)
+        if curr_temp is None or prev_temp is None:
+            return 0.0
+
+        cultivation_temp = env.thermotaxis.cultivation_temperature
+        curr_dev = abs(curr_temp - cultivation_temp)
+        prev_dev = abs(prev_temp - cultivation_temp)
+        # Negative deviation_delta = moving toward Tc (good)
+        temp_reward = self.config.penalty_temperature_proximity * -(curr_dev - prev_dev)
+        logger.debug(
+            f"[Reward] Temperature avoidance reward: {temp_reward:.3f} "
+            f"(prev_dev={prev_dev:.2f}, curr_dev={curr_dev:.2f}, "
+            f"zone={zone.value})",
+        )
+        return temp_reward
