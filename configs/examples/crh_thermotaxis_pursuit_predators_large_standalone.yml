@@ -12,8 +12,6 @@
 # Dense connectivity: all 14 neurons receive direct sensory input
 # (no sparse routing constraint from QRH ablation design)
 #
-# Environment config is identical to MLPPPO large pursuit predators config.
-#
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)

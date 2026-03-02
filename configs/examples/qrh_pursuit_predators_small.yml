@@ -2,19 +2,6 @@
 # Uses QRH (Quantum Reservoir Hybrid) brain architecture
 # Multi-objective learning: find food while avoiding predators
 # Uses unified sensory modules for multi-sensory input
-#
-# Based on proven QRH foraging config (Round 8: 86.8% success, 98% post-convergence)
-# with predator-specific adjustments matching MLPPPO pursuit predator sensory config.
-#
-# Key differences from foraging-only config:
-# - sensory_modules: food_chemotaxis + nociception (4 features, was 2 legacy)
-# - use_separated_gradients: true (required for per-module gradients)
-# - Predators: 2 pursuit, speed 0.5, detection_radius 5
-# - Higher satiety (300, decay 0.8) to offset predator disruption
-# - 6 foods on grid (was 5) to compensate for predator interference
-# - gae_lambda: 0.98 (was 0.95) for longer credit assignment with predator evasion
-# - penalty_predator_proximity: 0.15, penalty_predator_death: 10.0
-# - Health system enabled (predator damage + food healing)
 
 max_steps: 500
 brain:
@@ -29,7 +16,7 @@ brain:
     readout_hidden_dim: 64
     readout_num_layers: 2
 
-    # PPO hyperparameters (aligned with proven Round 8 foraging settings)
+    # PPO hyperparameters
     actor_lr: 0.0005
     critic_lr: 0.0005
     gamma: 0.99

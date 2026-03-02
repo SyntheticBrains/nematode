@@ -11,9 +11,6 @@
 # Temperature zones create dangerous areas that must be navigated while evading predators.
 # Agent must balance escaping predators vs avoiding dangerous temperature zones.
 #
-# Based on proven QRH Predator R3 config (32.7% overall, 86% post-convergence on small grid)
-# scaled to large environment matching MLPPPO thermotaxis pursuit predator large config.
-#
 # 10-qubit reservoir: 7 sensory qubits + 3 interneuron qubits.
 #
 # Temperature zone layout (aligned with MLPPPO large):
