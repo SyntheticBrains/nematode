@@ -25,14 +25,15 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from 12 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 14 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
 - **QVarCircuitBrain** (qvarcircuit): Quantum variational circuit with modular sensory processing and parameter-shift rule gradients
 - **QRCBrain** (qrc): Quantum reservoir computing with data re-uploading circuits and classical readout
+- **QRHBrain** (qrh): Quantum reservoir hybrid with C. elegans-inspired structured topology, X/Y/Z+ZZ feature extraction, and PPO-trained classical readout
 - **QSNNReinforceBrain** (qsnnreinforce): Quantum spiking neural network (QLIF neurons) with surrogate gradient REINFORCE
-- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training (experimental — [architecturally incompatible](docs/experiments/logbooks/supporting/008/qsnnppo-optimization.md))
+- **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training
 - **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
 
 **Hybrid (Quantum + Classical):**
@@ -43,6 +44,7 @@ Choose from 12 brain architectures spanning quantum, classical, hybrid, and biol
 
 **Classical:**
 
+- **CRHBrain** (crh): Classical reservoir hybrid — Echo State Network reservoir with configurable feature channels (raw, cos_sin, squared, pairwise) and PPO-trained classical readout; quantum ablation control for QRH
 - **MLPPPOBrain** (mlpppo): Classical actor-critic with Proximal Policy Optimization (clipped objective, GAE)
 - **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
@@ -58,6 +60,7 @@ Select the brain architecture when running simulations:
 ```bash
 uv run ./scripts/run_simulation.py --brain hybridquantum     # Best quantum (96.9% pursuit predators)
 uv run ./scripts/run_simulation.py --brain mlpppo            # Best classical (PPO actor-critic)
+uv run ./scripts/run_simulation.py --brain crh               # Classical reservoir hybrid (QRH ablation control)
 uv run ./scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic (LIF spiking)
 uv run ./scripts/run_simulation.py --brain qvarcircuit       # Quantum variational circuit
 ```
