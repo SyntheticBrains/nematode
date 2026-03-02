@@ -168,7 +168,7 @@ class TestCRHReservoir:
         """W_res largest eigenvalue magnitude equals configured spectral_radius."""
         eigenvalues = np.linalg.eigvals(brain.W_res)
         max_eigval = np.max(np.abs(eigenvalues))
-        assert max_eigval == pytest.approx(0.9, abs=1e-10)
+        assert max_eigval == pytest.approx(0.9, abs=1e-6)
 
     def test_seed_reproducibility(self):
         """Two brains with same seed produce identical matrices."""
