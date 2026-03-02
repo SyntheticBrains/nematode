@@ -1462,6 +1462,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 return True
         return False
 
+    def get_nearest_predator_distance(self) -> float | None:
+        """Return Manhattan distance to the nearest predator, or None if no predators."""
+        if not self.predator.enabled or not self.predators:
+            return None
+        agent_pos = self.agent_pos
+        return min(
+            abs(agent_pos[0] - pred.position[0]) + abs(agent_pos[1] - pred.position[1])
+            for pred in self.predators
+        )
+
     # --- Mechanosensation methods ---
 
     def move_agent(self, action: Action) -> None:

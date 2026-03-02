@@ -55,6 +55,9 @@ qpu = [
 pixel = [
   "quantum-nematode[pixel]",
 ]
+analysis = [
+  "quantum-nematode[analysis]",
+]
 
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
@@ -125,6 +128,9 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
   "BLE001",  # CLI error handling needs to catch broad exceptions
 ]
 "scripts/run_simulation.py" = [
+  "BLE001",  # CLI error handling needs to catch broad exceptions
+]
+"scripts/qrh_mi_analysis.py" = [
   "BLE001",  # CLI error handling needs to catch broad exceptions
 ]
 

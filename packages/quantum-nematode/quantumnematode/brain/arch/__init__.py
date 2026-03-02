@@ -1,6 +1,8 @@
 """Module for quantum brain architectures."""
 
 from ._brain import Brain, BrainData, BrainParams, ClassicalBrain, QuantumBrain
+from ._reservoir_hybrid_base import ReservoirHybridBase, ReservoirHybridBaseConfig
+from .crh import CRHBrain, CRHBrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
@@ -9,6 +11,7 @@ from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
 from .mlpreinforce import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
 from .qqlearning import QModularBrain, QModularBrainConfig, QQLearningBrain, QQLearningBrainConfig
 from .qrc import QRCBrain, QRCBrainConfig
+from .qrh import QRHBrain, QRHBrainConfig
 from .qsnnppo import QSNNPPOBrain, QSNNPPOBrainConfig
 from .qsnnreinforce import QSNNReinforceBrain, QSNNReinforceBrainConfig
 from .qvarcircuit import ModularBrain, ModularBrainConfig, QVarCircuitBrain, QVarCircuitBrainConfig
@@ -27,6 +30,8 @@ __all__ = [
     "Brain",
     "BrainData",
     "BrainParams",
+    "CRHBrain",
+    "CRHBrainConfig",
     "ClassicalBrain",
     "HybridClassicalBrain",
     "HybridClassicalBrainConfig",
@@ -54,6 +59,8 @@ __all__ = [
     "QQLearningBrainConfig",
     "QRCBrain",
     "QRCBrainConfig",
+    "QRHBrain",
+    "QRHBrainConfig",
     "QSNNBrain",
     "QSNNBrainConfig",
     "QSNNPPOBrain",
@@ -63,6 +70,8 @@ __all__ = [
     "QVarCircuitBrain",
     "QVarCircuitBrainConfig",
     "QuantumBrain",
+    "ReservoirHybridBase",
+    "ReservoirHybridBaseConfig",
     "SpikingBrain",
     "SpikingBrainConfig",
     "SpikingReinforceBrain",
