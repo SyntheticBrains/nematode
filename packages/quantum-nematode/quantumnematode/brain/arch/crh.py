@@ -161,6 +161,15 @@ class CRHBrainConfig(ReservoirHybridBaseConfig):
             raise ValueError(msg)
         return v
 
+    @field_validator("input_scale")
+    @classmethod
+    def validate_input_scale(cls, v: float) -> float:
+        """Validate input_scale > 0."""
+        if v <= 0:
+            msg = f"input_scale must be > 0, got {v}"
+            raise ValueError(msg)
+        return v
+
     @field_validator("input_connectivity")
     @classmethod
     def validate_input_connectivity(cls, v: str) -> str:

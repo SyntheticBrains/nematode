@@ -88,6 +88,14 @@ class TestCRHBrainConfig:
         with pytest.raises(ValueError, match="spectral_radius"):
             CRHBrainConfig(spectral_radius=-0.5)
 
+    def test_validate_input_scale_positive(self):
+        """input_scale must be > 0."""
+        with pytest.raises(ValueError, match="input_scale"):
+            CRHBrainConfig(input_scale=0.0)
+
+        with pytest.raises(ValueError, match="input_scale"):
+            CRHBrainConfig(input_scale=-0.5)
+
     def test_validate_num_reservoir_neurons_minimum(self):
         """num_reservoir_neurons must be >= 2."""
         with pytest.raises(ValueError, match="num_reservoir_neurons"):
