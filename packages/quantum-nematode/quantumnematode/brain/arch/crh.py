@@ -244,7 +244,7 @@ class CRHBrain(ReservoirHybridBase):
         self.feature_channels = config.feature_channels
         self.input_encoding = config.input_encoding
 
-        # Compute feature dimension before calling base init (Decision 7)
+        # Compute feature dimension before calling base init
         feature_dim = self._compute_feature_dim()
 
         # Base class handles: seeding, sensory modules, input_dim, actor/critic,
