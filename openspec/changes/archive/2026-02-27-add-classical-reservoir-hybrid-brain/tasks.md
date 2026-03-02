@@ -13,7 +13,7 @@
 - [x] 2.2 Refactor `QRHBrain` to inherit from `ReservoirHybridBase`, implementing `_get_reservoir_features()` and `_compute_feature_dim()` (refactor from module-level function to instance method using `self.num_qubits`). Set `_brain_name = "QRH"`. Compute `feature_dim` before calling `super().__init__(config, feature_dim, ...)`
 - [x] 2.3 Keep quantum-specific code in `qrh.py`: topology constants, `_build_structured_reservoir()`, `_build_random_reservoir()`, `_generate_random_topology()`, `_encode_and_run()`, `_extract_features()`
 - [x] 2.4 Implement `_create_copy_instance(config)` to construct a new `QRHBrain` (random topology is regenerated from seed in `__init__`)
-- [x] 2.5 Run full QRH test suite to verify zero behavioral changes: `/opt/homebrew/bin/uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrh.py -v`
+- [x] 2.5 Run full QRH test suite to verify zero behavioral changes: `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrh.py -v`
 
 ## 3. CRH Brain Implementation
 
@@ -52,7 +52,7 @@
 - [x] 6.7 Add `TestCRHBrainCopy`: copy independence, shared W_in/W_res values, independent readout weights (5 tests)
 - [x] 6.8 Add `TestCRHBrainSensoryModules`: unified mode dimensions, legacy fallback, triple-objective (3 tests)
 - [x] 6.9 Add CRH config to smoke test `SIMULATION_CONFIGS` list — `crh_foraging_small.yml`
-- [x] 6.10 Run QRH regression: `/opt/homebrew/bin/uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrh.py -v` — 53 passed, zero modifications needed
+- [x] 6.10 Run QRH regression: `uv run pytest packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrh.py -v` — 53 passed, zero modifications needed
 - [x] 6.11 Run full test suite: 1567 passed (42 new CRH + 18 base + 53 QRH unchanged); CRH smoke test: 1 passed
 
 ## 7. Documentation
@@ -63,7 +63,7 @@
 
 ## 8. Verification
 
-- [x] 8.1 Run lint: `/opt/homebrew/bin/uv run pre-commit run -a` — ruff check/format passed, yaml/toml/markdown passed (pyright/pytest hooks fail due to uv PATH in pre-commit sandbox — known infra issue)
-- [x] 8.2 Run full test suite: `/opt/homebrew/bin/uv run pytest` — 1590 passed, 85% coverage
-- [x] 8.3 Run smoke tests: `/opt/homebrew/bin/uv run pytest -m smoke -v` — 12 passed (including crh_foraging_small.yml)
-- [x] 8.4 Manual smoke test: `/opt/homebrew/bin/uv run ./scripts/run_simulation.py --runs 2 --config ./configs/examples/crh_thermotaxis_pursuit_predators_large.yml` — 2 runs completed, no crashes
+- [x] 8.1 Run lint: `uv run pre-commit run -a` — ruff check/format passed, yaml/toml/markdown passed (pyright/pytest hooks fail due to uv PATH in pre-commit sandbox — known infra issue)
+- [x] 8.2 Run full test suite: `uv run pytest` — 1590 passed, 85% coverage
+- [x] 8.3 Run smoke tests: `uv run pytest -m smoke -v` — 12 passed (including crh_foraging_small.yml)
+- [x] 8.4 Manual smoke test: `uv run ./scripts/run_simulation.py --runs 2 --config ./configs/examples/crh_thermotaxis_pursuit_predators_large.yml` — 2 runs completed, no crashes
