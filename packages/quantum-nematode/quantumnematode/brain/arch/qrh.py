@@ -39,6 +39,7 @@ References
 
 from __future__ import annotations
 
+import itertools
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -362,16 +363,18 @@ class QRHBrain(ReservoirHybridBase):
         """Generate random topology with same density as structured."""
         rng = np.random.default_rng(self.reservoir_seed)
 
-        # Same number of CZ pairs as structured
+        # Same number of CZ pairs as structured (clamped to available pairs)
+        all_pairs = list(itertools.combinations(range(self.num_qubits), 2))
+        max_pairs = len(all_pairs)
         num_cz = len(GAP_JUNCTION_CZ_PAIRS)
-        random_cz: list[tuple[int, int]] = []
-        seen: set[tuple[int, int]] = set()
-        while len(random_cz) < num_cz:
-            a, b = sorted(rng.choice(self.num_qubits, size=2, replace=False))
-            pair = (int(a), int(b))
-            if pair not in seen:
-                seen.add(pair)
-                random_cz.append(pair)
+        if num_cz > max_pairs:
+            logger.warning(
+                f"QRH: num_cz={num_cz} exceeds max unique pairs={max_pairs} "
+                f"for {self.num_qubits} qubits, clamping to {max_pairs}",
+            )
+            num_cz = max_pairs
+        chosen_indices = rng.choice(max_pairs, size=num_cz, replace=False)
+        random_cz = [all_pairs[i] for i in chosen_indices]
 
         # Same number of rotation pairs as structured (ctrl != target for CRY/CRZ)
         num_rot = len(CHEMICAL_SYNAPSE_ROTATIONS)
