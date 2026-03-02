@@ -18,8 +18,6 @@
 # - 7 sensory neurons receive direct input (food_chemotaxis + nociception + thermotaxis)
 # - 3 reservoir-only neurons receive signal exclusively through W_res
 #
-# Environment config is identical to QRH R9 large pursuit predators config.
-#
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)
@@ -49,7 +47,7 @@ brain:
     readout_hidden_dim: 128
     readout_num_layers: 2
 
-    # PPO hyperparameters (matched to QRH R9)
+    # PPO hyperparameters
     actor_lr: 0.0005
     critic_lr: 0.0005
     gamma: 0.99
@@ -62,7 +60,7 @@ brain:
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
-    # LR schedule: matched to QRH R9
+    # LR schedule
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
     lr_decay_episodes: 700

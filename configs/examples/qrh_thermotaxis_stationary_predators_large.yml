@@ -12,17 +12,6 @@
 # - Stationary predator avoidance (nociception) — toxic zones with damage_radius=4
 # - Scattered temperature zones (thermotaxis)
 #
-# Predator parameters adapted from mlpppo_thermotaxis_stationary_predators_large.yml:
-# - 5 stationary predators (more than pursuit because they're easier individually)
-# - damage_radius=4 creates Manhattan-distance toxic zones
-# - Tighter gradient decay (5.0 vs 12.0) — fixed positions need sharper local signal
-# - Slightly stronger gradient (1.2 vs 1.0) — compensates for lack of movement threat
-# - Lower per-tick damage (10.0 vs 15.0) — sustained exposure in zone is the threat
-#
-# Brain config is identical to qrh_thermotaxis_pursuit_predators_large.yml (R9).
-# Environment matches mlpppo_thermotaxis_stationary_predators_large.yml except
-# where QRH-specific tuning (reward values, health) carries over from pursuit config.
-#
 # 10-qubit reservoir: 7 sensory qubits + 3 interneuron qubits.
 #
 # Module feature breakdown:

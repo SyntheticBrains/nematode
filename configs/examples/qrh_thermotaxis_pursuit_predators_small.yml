@@ -6,9 +6,6 @@
 # - Active predator evasion (nociception)
 # - Temperature comfort (thermotaxis)
 #
-# Based on proven QRH Predator R3 config (32.7% overall, 86% post-convergence)
-# with thermotaxis layer added from MLPPPO thermotaxis pursuit predator small config.
-#
 # 10-qubit reservoir: 7 sensory qubits + 3 interneuron qubits.
 # Previous 8-qubit config (1 interneuron) caused catastrophic regression (0.55% success)
 # because the single interneuron qubit was insufficient for feature mixing.
