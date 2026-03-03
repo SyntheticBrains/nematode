@@ -417,15 +417,21 @@ class TestQRHBrainLearning:
         assert weights_changed, "PPO update should change actor weights"
 
     def test_buffer_management(self, brain):
-        """Buffer should reset after PPO update."""
+        """Buffer resets after mid-episode PPO update, which is deferred to next run_brain()."""
         params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
 
-        # Fill buffer
+        # Fill buffer mid-episode — update is deferred until next run_brain()
         for _step in range(brain.config.ppo_buffer_size):
             brain.run_brain(params, top_only=True, top_randomize=False)
             brain.learn(params, reward=0.1, episode_done=False)
 
-        # Buffer should be empty after update
+        # Buffer is full and deferred update is pending
+        assert brain._deferred_ppo_update is True
+        assert len(brain.buffer) == brain.config.ppo_buffer_size
+
+        # The next run_brain() executes the deferred update and resets the buffer
+        brain.run_brain(params, top_only=True, top_randomize=False)
+        assert brain._deferred_ppo_update is False
         assert len(brain.buffer) == 0
 
     def test_full_episode_workflow(self):

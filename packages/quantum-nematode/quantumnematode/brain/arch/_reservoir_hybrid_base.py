@@ -443,6 +443,7 @@ class ReservoirHybridBase(ClassicalBrain):
         self._pending_action: int | None = None
         self._pending_log_prob: torch.Tensor | None = None
         self._pending_value: torch.Tensor | None = None
+        self._deferred_ppo_update: bool = False
 
         # Episode tracking
         self._episode_count = 0
@@ -528,6 +529,17 @@ class ReservoirHybridBase(ClassicalBrain):
                 f"value={value.item():.4f}",
             )
 
+        # If a mid-episode buffer flush was deferred, perform the PPO update now that
+        # V(s_{t+1}) is available from this forward pass, then clear the buffer.
+        if self._deferred_ppo_update:
+            logger.debug(
+                f"{self._brain_name} executing deferred PPO update with correct "
+                f"V(s_{{t+1}})={value.item():.4f}",
+            )
+            self._perform_ppo_update(bootstrap_value=value)
+            self.buffer.reset()
+            self._deferred_ppo_update = False
+
         # Store for PPO buffer (committed when reward arrives in learn())
         self._pending_state = reservoir_features
         self._pending_action = action_idx
@@ -558,6 +570,18 @@ class ReservoirHybridBase(ClassicalBrain):
         episode_done: bool = False,
     ) -> None:
         """Add experience to buffer and perform PPO update when ready."""
+        # If the buffer is full and the episode is ending, flush the deferred segment
+        # BEFORE adding the new transition so we never write past the buffer capacity.
+        # This is the rare corner case where the buffer filled on the very last step.
+        if episode_done and self._deferred_ppo_update:
+            logger.debug(
+                f"{self._brain_name} flushing deferred PPO update at episode end: "
+                f"buffer={len(self.buffer)}/{self.buffer.buffer_size}",
+            )
+            self._perform_ppo_update()
+            self.buffer.reset()
+            self._deferred_ppo_update = False
+
         # Add to buffer if we have pending state
         if (
             self._pending_state is not None
@@ -574,15 +598,23 @@ class ReservoirHybridBase(ClassicalBrain):
                 done=episode_done,
             )
 
-        # Trigger PPO update when buffer is full or episode ends with enough data
-        if self.buffer.is_full() or (episode_done and len(self.buffer) >= self.ppo_minibatches):
+        # Trigger PPO update when buffer is full or episode ends with enough data.
+        # Mid-episode buffer flushes (is_full and not episode_done) are deferred to the
+        # next run_brain() call so that V(s_{t+1}) — the correct GAE bootstrap value —
+        # is available from the subsequent forward pass rather than using V(s_t).
+        if episode_done and len(self.buffer) >= self.ppo_minibatches:
             logger.debug(
-                f"{self._brain_name} PPO update triggered: "
-                f"buffer={len(self.buffer)}/{self.buffer.buffer_size}, "
-                f"episode_done={episode_done}",
+                f"{self._brain_name} PPO update triggered (episode done): "
+                f"buffer={len(self.buffer)}/{self.buffer.buffer_size}",
             )
             self._perform_ppo_update()
             self.buffer.reset()
+        elif self.buffer.is_full():
+            logger.debug(
+                f"{self._brain_name} buffer full mid-episode — deferring PPO update "
+                f"until next run_brain() to obtain correct V(s_{{t+1}}) bootstrap",
+            )
+            self._deferred_ppo_update = True
 
         # Store for history
         self.history_data.rewards.append(reward)
@@ -632,18 +664,33 @@ class ReservoirHybridBase(ClassicalBrain):
         progress = self._episode_count / self.entropy_decay_episodes
         return self.entropy_coeff + progress * (self.entropy_coeff_end - self.entropy_coeff)
 
-    def _perform_ppo_update(self) -> None:
-        """Perform PPO update using collected experience."""
+    def _perform_ppo_update(
+        self,
+        bootstrap_value: torch.Tensor | None = None,
+    ) -> None:
+        """Perform PPO update using collected experience.
+
+        Parameters
+        ----------
+        bootstrap_value : torch.Tensor | None
+            V(s_{t+1}) to use for GAE bootstrapping at non-terminal buffer boundaries.
+            When ``None``, falls back to ``self.last_value`` (used for terminal flushes
+            where the bootstrap is zeroed out by ``next_non_terminal`` anyway).
+        """
         if len(self.buffer) == 0:
             return
 
-        # Get last value for GAE computation
+        # Get last value for GAE computation.
+        # ``bootstrap_value`` is V(s_{t+1}), provided by the deferred-update path in
+        # run_brain(). For terminal episode flushes the done flag zeros out the bootstrap,
+        # so self.last_value (= V(s_t)) is equally correct there.
         last_value = (
-            self.last_value
-            if self.last_value is not None
-            else torch.tensor(
-                [0.0],
-                device=self.device,
+            bootstrap_value
+            if bootstrap_value is not None
+            else (
+                self.last_value
+                if self.last_value is not None
+                else torch.tensor([0.0], device=self.device)
             )
         )
 
@@ -750,6 +797,7 @@ class ReservoirHybridBase(ClassicalBrain):
         self._pending_log_prob = None
         self._pending_value = None
         self.last_value = None
+        self._deferred_ppo_update = False
 
     def post_process_episode(
         self,
