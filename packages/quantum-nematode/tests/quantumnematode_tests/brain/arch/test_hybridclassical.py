@@ -262,8 +262,9 @@ class TestFusionMechanism:
 class TestStageAwareTraining:
     """Test that correct optimizers are active per stage."""
 
-    def test_stage1_reflex_trains(self):
+    def test_stage1_reflex_trains(self, tmp_path, monkeypatch):
         """Test reflex weights change during stage 1 REINFORCE training."""
+        monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
             training_stage=1,
             reinforce_window_size=5,
@@ -289,8 +290,9 @@ class TestStageAwareTraining:
                 break
         assert changed
 
-    def test_stage2_reflex_frozen(self):
+    def test_stage2_reflex_frozen(self, tmp_path, monkeypatch):
         """Test reflex weights remain unchanged during stage 2 PPO training."""
+        monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
             training_stage=2,
             ppo_buffer_size=5,
@@ -317,8 +319,9 @@ class TestStageAwareTraining:
 class TestReinforceUpdate:
     """Test reflex REINFORCE update."""
 
-    def test_reinforce_runs_without_error(self):
+    def test_reinforce_runs_without_error(self, tmp_path, monkeypatch):
         """Test REINFORCE update completes without error."""
+        monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
             training_stage=1,
             reinforce_window_size=3,
@@ -336,8 +339,9 @@ class TestReinforceUpdate:
 class TestPPOBuffer:
     """Test cortex PPO rollout buffer."""
 
-    def test_buffer_fill_and_trigger(self):
+    def test_buffer_fill_and_trigger(self, tmp_path, monkeypatch):
         """Test PPO buffer fills and triggers update correctly."""
+        monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
             training_stage=2,
             ppo_buffer_size=4,
@@ -382,8 +386,9 @@ class TestPPOBuffer:
 class TestEpisodeReset:
     """Test episode boundary handling."""
 
-    def test_state_reset(self):
+    def test_state_reset(self, tmp_path, monkeypatch):
         """Test state and buffers are cleared after episode."""
+        monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
             training_stage=1,
             seed=42,
