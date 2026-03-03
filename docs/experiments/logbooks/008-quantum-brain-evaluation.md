@@ -911,7 +911,7 @@ ______________________________________________________________________
 │  ┌───────────────────────────────┴──────────────────────────────────┐       │
 │  │  QUANTUM RESERVOIR (FIXED — not trained)                         │       │
 │  │                                                                  │       │
-│  │  10 qubits, random topology (CZ + RY/RZ entangling gates)        │       │
+│  │  10 qubits, random topology (CZ entangling + RY/RZ rotations)    │       │
 │  │  3 reservoir layers, data re-uploading per layer                 │       │
 │  │  Statevector simulation (no shot noise)                          │       │
 │  │                                                                  │       │

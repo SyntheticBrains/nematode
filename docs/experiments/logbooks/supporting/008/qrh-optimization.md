@@ -57,8 +57,8 @@ ______________________________________________________________________
 |-------|------|-------------|----------|-----------|-------------|-----------|-------------|
 | **R9** | **Pursuit** | **QRH** | **1000** | **41.2%** | **53.3%** | **4/4** | **Best pursuit; 13× lower variance** |
 | R9 | Pursuit | CRH | 1000 | 31.8% | ~40% | 1/4 | QRH wins (+9.4pp) |
-| R10 | Pursuit | QRH (large grid) | 2000 | ~15% | ~20% | 0/4 | Large grid too hard with short training |
-| R11 | Stationary | QRH | 2000 | 21.4% | 31.3% | 0/4 | Baseline stationary |
+| R10 | Stationary | QRH | 1000 | 15.9% | 29.3% | 0/4 | Baseline stationary; LR decays before convergence |
+| R11 | Stationary | QRH | 2000 | 21.4% | 31.3% | 0/4 | Extended training; learning not yet plateaued |
 | R11 | Stationary | CRH | 2000 | 28.7% | 35.8% | 1/4 | CRH leads on stationary |
 | R12 | Stationary | QRH | 3000 | 30.2% | 38.2% | 1/4 | Extended training helps |
 | R12 | Stationary | CRH | 3000 | 33.9% | 44.0% | 2/4 | CRH still leads |
@@ -377,12 +377,14 @@ ______________________________________________________________________
 |-------|------|----------|----------|
 | R9 | QRH | 20260224_044427-044501 | 4×1000 |
 | R9 | CRH | 20260225_092747-092754 | 4×1000 |
+| R9-ext | CRH | 20260228_093931-093948 | 4×1500 |
 | R15 | CRH-trig | 20260301_210008-210021 | 4×1000 |
 
 ### Stationary Predator Sessions
 
 | Round | Arch | Sessions | Episodes |
 |-------|------|----------|----------|
+| R10 | QRH | 20260226_224841-224915 | 4×1000 |
 | R11 | QRH | 20260225_044427-044451 | 4×2000 |
 | R11 | CRH | 20260225_044427-044451 | 4×2000 |
 | R12 | QRH | 20260226_115741-115752 | 4×3000 |
@@ -400,6 +402,7 @@ Best session results and configs stored in `artifacts/logbooks/008/`:
 
 | Directory | Contents |
 |-----------|----------|
+| `qrh_foraging_small/` | QRH R8 foraging (4 JSON + 1 YML) |
 | `qrh_thermotaxis_pursuit_predators_large/` | QRH R9 pursuit (4 JSON + 1 YML) |
 | `qrh_thermotaxis_stationary_predators_large/` | QRH R14 stationary (4 JSON + 1 YML) |
 | `crh_thermotaxis_pursuit_predators_large/` | CRH R9 pursuit (4 JSON + 1 YML) |
