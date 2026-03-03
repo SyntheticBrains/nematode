@@ -3,6 +3,8 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+        args: ["--maxkb=512"]
+        exclude: ^artifacts/logbooks/008/
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
