@@ -1,6 +1,6 @@
 # 008 Appendix: QRH/CRH Optimization History
 
-This appendix documents the Quantum Reservoir Hybrid (QRH) and Classical Reservoir Hybrid (CRH) evaluation across 16 rounds (~96 sessions, ~30,000 episodes) covering foraging, pursuit predators, stationary predators, and ablation studies. For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../../../research/quantum-architectures.md).
+This appendix documents the Quantum Reservoir Hybrid (QRH) and Classical Reservoir Hybrid (CRH) evaluation across 16 rounds (96 sessions, ~30,000 episodes) covering foraging, pursuit predators, stationary predators, and ablation studies. For main findings, see [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md). For architecture design, see [quantum-architectures.md](../../../../research/quantum-architectures.md).
 
 ______________________________________________________________________
 
