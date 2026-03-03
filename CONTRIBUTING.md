@@ -22,7 +22,34 @@ git clone https://github.com/SyntheticBrains/nematode.git
 cd nematode
 ```
 
-### 3. Install Dependencies
+### 3. Install Git LFS
+
+This project uses [Git LFS](https://git-lfs.com) to store large binary files (model weights,
+evolution checkpoints, training logs).
+
+Install Git LFS:
+
+```bash
+# macOS
+brew install git-lfs
+
+# Ubuntu/Debian
+sudo apt-get install git-lfs
+```
+
+Then activate it once per machine:
+
+```bash
+git lfs install
+```
+
+Git LFS objects are fetched automatically on clone and pull. Verify LFS is working after cloning:
+
+```bash
+git lfs ls-files
+```
+
+### 4. Install Dependencies
 
 Choose the appropriate installation based on your development needs:
 
@@ -52,7 +79,7 @@ uv sync [OTHER_EXTRAS] --extra torch
 
 > ⚠️ **Note**: Only the `cpu` and `qpu` extras conflict and cannot be installed together.
 
-### 4. Environment Configuration
+### 5. Environment Configuration
 
 Copy the environment template and configure your settings:
 

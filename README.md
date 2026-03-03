@@ -69,10 +69,12 @@ uv run ./scripts/run_simulation.py --brain qvarcircuit       # Quantum variation
 
 ### 1. Install Dependencies
 
-Install [uv](https://github.com/astral-sh/uv) for dependency management:
+Install [uv](https://github.com/astral-sh/uv) for dependency management and
+[Git LFS](https://git-lfs.com) for large file storage:
 
 ```bash
-brew install uv
+brew install uv git-lfs
+git lfs install
 ```
 
 Install the project (choose one based on your needs):
