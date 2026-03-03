@@ -309,8 +309,9 @@ class TestFusionMechanism:
 class TestStageAwareTraining:
     """Test that correct optimizers are active per stage."""
 
-    def test_stage1_qsnn_trains(self):
+    def test_stage1_qsnn_trains(self, tmp_path, monkeypatch):
         """Test QSNN weights change during stage 1 REINFORCE training."""
+        monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
             training_stage=1,
             shots=100,
@@ -332,8 +333,9 @@ class TestStageAwareTraining:
         # QSNN weights should have changed (REINFORCE update)
         assert not torch.allclose(w_sh_before, w_sh_after)
 
-    def test_stage2_qsnn_frozen(self):
+    def test_stage2_qsnn_frozen(self, tmp_path, monkeypatch):
         """Test QSNN weights remain unchanged during stage 2 PPO training."""
+        monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
             training_stage=2,
             shots=100,
@@ -360,8 +362,9 @@ class TestStageAwareTraining:
 class TestReinforceUpdate:
     """Test QSNN REINFORCE update."""
 
-    def test_reinforce_runs_without_error(self):
+    def test_reinforce_runs_without_error(self, tmp_path, monkeypatch):
         """Test REINFORCE update completes without error."""
+        monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
             training_stage=1,
             shots=100,
@@ -381,8 +384,9 @@ class TestReinforceUpdate:
 class TestPPOBuffer:
     """Test cortex PPO rollout buffer."""
 
-    def test_buffer_fill_and_trigger(self):
+    def test_buffer_fill_and_trigger(self, tmp_path, monkeypatch):
         """Test PPO buffer fills and triggers update correctly."""
+        monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
             training_stage=2,
             shots=100,
@@ -429,8 +433,9 @@ class TestPPOBuffer:
 class TestEpisodeReset:
     """Test episode boundary handling."""
 
-    def test_qsnn_state_reset(self):
+    def test_qsnn_state_reset(self, tmp_path, monkeypatch):
         """Test QSNN state and buffers are cleared after episode."""
+        monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
             training_stage=1,
             shots=100,
