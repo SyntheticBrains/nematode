@@ -133,7 +133,7 @@ COMPLETED:
     STATUS: HALTED — REINFORCE+surrogate gradients ceiling at ~40-45% on hard tasks.
 
   QRH (H.1) — 10-qubit fixed quantum reservoir + PPO-trained readout.
-    16 rounds, ~96 sessions, ~30,000 episodes across foraging/pursuit/stationary.
+    16 rounds, 96 sessions, ~30,000 episodes across foraging/pursuit/stationary.
     86.8% foraging (98.0% post-conv, exceeds MLPPPO). 41.2% pursuit (4/4 converged).
     23.6% stationary (1/4 converged — CRH outperforms here).
     MI gate: structured topology NO-GO (random wins); random topology transforms 0%→77%.
@@ -142,7 +142,7 @@ COMPLETED:
     STATUS: EVALUATED — genuine quantum advantage on pursuit; task-dependent vs CRH.
 
   CRH — 10-neuron classical ESN reservoir (ablation control for QRH).
-    Same readout architecture and training as QRH. ~96 sessions.
+    Same readout architecture and training as QRH. 96 sessions.
     31.8% pursuit (1/4 converged), 29.9% stationary (3/4 converged).
     Outperforms QRH on stationary (+6.3pp) due to ESN consistency.
     STATUS: ABLATION COMPLETE — confirms task-dependent quantum advantage.
