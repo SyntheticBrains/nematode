@@ -370,3 +370,129 @@ class TestReservoirHybridBaseViaQRH:
         """update_memory is a no-op and doesn't raise."""
         brain.update_memory(reward=1.0)
         brain.update_memory(reward=None)
+
+    def test_deferred_ppo_update_flag_initialized(self, brain):
+        """Deferred PPO update flag starts as False."""
+        assert brain._deferred_ppo_update is False
+
+    def test_prepare_episode_resets_deferred_flag(self, brain):
+        """prepare_episode() clears any pending deferred PPO update."""
+        brain._deferred_ppo_update = True
+        brain.prepare_episode()
+        assert brain._deferred_ppo_update is False
+
+    def test_buffer_full_mid_episode_defers_update(self):
+        """Buffer filling mid-episode sets _deferred_ppo_update instead of updating."""
+        from quantumnematode.brain.arch import BrainParams
+
+        # Buffer size of 4 so we can fill it quickly
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=1,
+            ppo_buffer_size=4,
+            ppo_minibatches=2,
+            ppo_epochs=1,
+            seed=42,
+        )
+        brain = QRHBrain(config)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+
+        # Fill the buffer without triggering episode_done — this should defer, not update
+        for _ in range(brain.config.ppo_buffer_size):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        assert brain._deferred_ppo_update is True
+        # Buffer should still be full (not reset yet)
+        assert len(brain.buffer) == brain.config.ppo_buffer_size
+
+    def test_deferred_update_executes_on_next_run_brain(self):
+        """Deferred PPO update runs during next run_brain() with correct bootstrap value."""
+        from quantumnematode.brain.arch import BrainParams
+
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=1,
+            ppo_buffer_size=4,
+            ppo_minibatches=2,
+            ppo_epochs=1,
+            seed=42,
+        )
+        brain = QRHBrain(config)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+
+        # Fill buffer mid-episode to trigger deferred flag
+        for _ in range(brain.config.ppo_buffer_size):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        assert brain._deferred_ppo_update is True
+
+        # Next run_brain() should execute the deferred update and clear the buffer
+        brain.run_brain(params, top_only=False, top_randomize=False)
+
+        assert brain._deferred_ppo_update is False
+        # Buffer should be reset after the deferred update
+        assert len(brain.buffer) == 0
+
+    def test_deferred_update_flushed_when_episode_ends_before_next_run_brain(self):
+        """Deferred update is flushed cleanly if the episode ends before the next run_brain()."""
+        from quantumnematode.brain.arch import BrainParams
+
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=1,
+            ppo_buffer_size=4,
+            ppo_minibatches=2,
+            ppo_epochs=1,
+            seed=42,
+        )
+        brain = QRHBrain(config)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+
+        # Fill buffer mid-episode → deferred flag set, buffer is full
+        for _ in range(brain.config.ppo_buffer_size):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        assert brain._deferred_ppo_update is True
+
+        # Simulate the episode ending before the next run_brain(): call learn(episode_done=True)
+        # while the deferred flag is still set. The early-flush guard fires first (flushing
+        # the full buffer and resetting it), then the terminal transition is added (1 item).
+        # With only 1 item that's below ppo_minibatches=2, no terminal update fires.
+        # The key invariants: deferred flag is cleared and there is no buffer overflow.
+        brain.learn(params, reward=1.0, episode_done=True)
+
+        assert brain._deferred_ppo_update is False
+        # Buffer has exactly 1 item (the terminal transition), not buffer_size+1
+        assert len(brain.buffer) == 1
+
+        # A subsequent run_brain() can proceed normally — flag is clear, no deferred flush
+        brain.run_brain(params, top_only=False, top_randomize=False)
+        assert brain._deferred_ppo_update is False
+
+    def test_episode_done_triggers_immediate_update(self):
+        """Episode-end buffer flushes still trigger an immediate (non-deferred) update."""
+        from quantumnematode.brain.arch import BrainParams
+
+        config = QRHBrainConfig(
+            num_reservoir_qubits=4,
+            reservoir_depth=1,
+            ppo_buffer_size=16,
+            ppo_minibatches=2,
+            ppo_epochs=1,
+            seed=42,
+        )
+        brain = QRHBrain(config)
+        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+
+        # Run a few steps then end the episode
+        for i in range(4):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=1.0, episode_done=(i == 3))
+
+        # Immediate update on done — deferred flag should never have been set
+        assert brain._deferred_ppo_update is False
+        # Buffer should be reset after immediate update
+        assert len(brain.buffer) == 0
