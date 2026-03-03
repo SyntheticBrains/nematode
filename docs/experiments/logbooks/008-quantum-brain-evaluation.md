@@ -890,7 +890,7 @@ ______________________________________________________________________
 
 ## QRH Brain Evaluation (Quantum Reservoir Hybrid)
 
-**Status**: Complete — 16 rounds, 96 sessions, ~30,000 episodes across foraging, pursuit predators, and stationary predators. 87.8% foraging success (98.8% post-convergence), 41.2% pursuit predator success (4/4 converged), 23.6% stationary predator success. Classical ablation (CRH) and Domingo encoding confound control completed.
+**Status**: Complete — 16 rounds, 96 sessions, ~30,000 episodes across foraging, pursuit predators, and stationary predators. 86.8% foraging success (98.0% post-convergence, Best: R8), 41.2% pursuit predator success (4/4 converged), 23.6% stationary predator success. Classical ablation (CRH) and Domingo encoding confound control completed.
 
 ### Architecture
 
