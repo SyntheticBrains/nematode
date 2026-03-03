@@ -1309,7 +1309,7 @@ Based on 200+ experiment sessions across 62 days of evaluation, combined with th
 ### H.1 Quantum Reservoir Hybrid (QRH) — EVALUATED
 
 **Strategy**: Don't train the quantum part
-**Status**: **Completed** — 16 rounds, 56 sessions, 62,000+ episodes across 3 tasks
+**Status**: **Completed** — 16 rounds, 96 sessions, ~30,000 episodes across 3 tasks
 **Branch**: `feature/add-quantum-reservoir-hybrid-brain`
 
 #### Architecture (as implemented)
@@ -1387,7 +1387,7 @@ Both quantum reservoirs underperformed classical MLP features (mean MI 0.38, 64 
 
 4. **Domingo confound resolved.** CRH-trig encoding (matching QRH's trigonometric input encoding) HURT performance: 13.0% on pursuit (vs CRH 31.8%), 17.7% on stationary (vs CRH 29.9%). QRH's advantage is genuine quantum reservoir dynamics, not encoding artifacts.
 
-5. **LR warmup is critical.** 200-step linear warmup reduced convergence variance by 5×. Buffer guard (freezing training when buffer < 80% full) eliminated late-stage regression.
+5. **LR warmup is critical.** 200-step linear warmup reduced convergence variance by 5×. Buffer guard (`_perform_ppo_update()` discards short episode-end fragments below `min_buffer_size`) eliminated late-stage regression from noisy updates on sparse experience.
 
 6. **Task-dependent quantum advantage.** No architecture dominates all tasks. QRH's advantage is specific to pursuit predators (dynamic evasion); CRH wins on stationary predators (spatial memory).
 
@@ -1953,4 +1953,4 @@ Four architectures were proposed (see [Next-Generation Architecture Proposals](#
 | 3 | Entangled QLIF + qtDNN | Classical surrogates | Proposed | Can qtDNN approximate entangled circuit gradients? |
 | 4 | QKAN-QLIF Temporal Brain | Actual quantum activations (inspired by QKAN-LSTM's classical pattern) | Proposed | Can actual QLIF circuits replace LSTM activations efficiently? |
 
-H.1 evaluation (16 rounds, 56 sessions) demonstrated that the "don't train quantum" strategy successfully avoids barren plateaus and produces genuine quantum advantage on pursuit predator tasks. The remaining proposals include falsification criteria and decision gates to enable rapid go/no-go decisions.
+H.1 evaluation (16 rounds, 96 sessions) demonstrated that the "don't train quantum" strategy successfully avoids barren plateaus and produces genuine quantum advantage on pursuit predator tasks. The remaining proposals include falsification criteria and decision gates to enable rapid go/no-go decisions.
