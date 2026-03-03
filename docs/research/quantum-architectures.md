@@ -1387,7 +1387,7 @@ Both quantum reservoirs underperformed classical MLP features (mean MI 0.38, 64 
 
 4. **Domingo confound resolved.** CRH-trig encoding (matching QRH's trigonometric input encoding) HURT performance: 13.0% on pursuit (vs CRH 31.8%), 17.7% on stationary (vs CRH 29.9%). QRH's advantage is genuine quantum reservoir dynamics, not encoding artifacts.
 
-5. **LR warmup is critical.** 200-step linear warmup reduced convergence variance by 5×. Buffer guard (`_perform_ppo_update()` discards short episode-end fragments below `min_buffer_size`) eliminated late-stage regression from noisy updates on sparse experience.
+5. **LR warmup is critical.** 30-episode linear warmup reduced convergence variance by 5×. Buffer guard (`_perform_ppo_update()` discards short episode-end fragments below `min_buffer_size`) eliminated late-stage regression from noisy updates on sparse experience.
 
 6. **Task-dependent quantum advantage.** No architecture dominates all tasks. QRH's advantage is specific to pursuit predators (dynamic evasion); CRH wins on stationary predators (spatial memory).
 
