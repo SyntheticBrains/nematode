@@ -457,16 +457,20 @@ class TestReservoirHybridBaseViaQRH:
 
         assert brain._deferred_ppo_update is True
 
-        # Episode terminates: run_brain() fires the deferred update (buffer reset to 0),
-        # then learn(episode_done=True) adds 1 transition. With only 1 item that's below
-        # ppo_minibatches=2, so no terminal update fires and 1 item remains in the buffer.
+        # Simulate the episode ending before the next run_brain(): call learn(episode_done=True)
+        # while the deferred flag is still set. The early-flush guard fires first (flushing
+        # the full buffer and resetting it), then the terminal transition is added (1 item).
+        # With only 1 item that's below ppo_minibatches=2, no terminal update fires.
         # The key invariants: deferred flag is cleared and there is no buffer overflow.
-        brain.run_brain(params, top_only=False, top_randomize=False)  # triggers deferred update
         brain.learn(params, reward=1.0, episode_done=True)
 
         assert brain._deferred_ppo_update is False
         # Buffer has exactly 1 item (the terminal transition), not buffer_size+1
         assert len(brain.buffer) == 1
+
+        # A subsequent run_brain() can proceed normally — flag is clear, no deferred flush
+        brain.run_brain(params, top_only=False, top_randomize=False)
+        assert brain._deferred_ppo_update is False
 
     def test_episode_done_triggers_immediate_update(self):
         """Episode-end buffer flushes still trigger an immediate (non-deferred) update."""
