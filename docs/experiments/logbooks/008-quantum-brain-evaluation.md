@@ -1319,7 +1319,7 @@ Experiment results: `artifacts/logbooks/008/hybridquantumcortex_foraging_small/`
 | R9 | Pursuit | 20260224_044427-044501 | 4×1000 | **41.2% avg**, 4/4 converged, 13× lower variance than CRH |
 | R14 | Stationary | 20260226_084742-084759 | 4×3000 | 23.6% avg, 1/4 converged; CRH outperforms |
 
-Experiment results: `artifacts/logbooks/008/qrh_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qrh_thermotaxis_stationary_predators_large/`
+Experiment results: `artifacts/logbooks/008/qrh_foraging_small/`, `artifacts/logbooks/008/qrh_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qrh_thermotaxis_stationary_predators_large/`
 
 ### CRH Ablation Sessions
 
