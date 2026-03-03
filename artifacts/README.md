@@ -89,5 +89,6 @@ cp experiments/20251207_035803.json artifacts/experiments/20251207_035803/metada
 ## File Size Considerations
 
 - JSON/CSV files: Always acceptable
-- Checkpoint files (`.pkl`): Include only if needed for reproduction
-- Large model files: Consider Git LFS for files > 10MB
+- Checkpoint files (`.pkl`) and model weights (`.pt`): tracked via Git LFS automatically
+- Training logs (`.log`) and all JSON files in `artifacts/` and `benchmarks/`: tracked via Git LFS automatically
+- For other binary formats > 500 KB: add a matching rule to `.gitattributes` before committing

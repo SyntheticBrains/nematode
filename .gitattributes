@@ -1,6 +1,10 @@
 * text=auto
-artifacts/**/*.pt filter=lfs diff=lfs merge=lfs -text
-artifacts/**/*.pkl filter=lfs diff=lfs merge=lfs -text
-artifacts/**/*.json filter=lfs diff=lfs merge=lfs -text
-artifacts/**/*.log filter=lfs diff=lfs merge=lfs -text
+
+# Git LFS — binary artifacts
+artifacts/**/*.pt    filter=lfs diff=lfs merge=lfs -text
+artifacts/**/*.pkl   filter=lfs diff=lfs merge=lfs -text
+
+# Git LFS — large text/log artifacts
+artifacts/**/*.json  filter=lfs diff=lfs merge=lfs -text
+artifacts/**/*.log   filter=lfs diff=lfs merge=lfs -text
 benchmarks/**/*.json filter=lfs diff=lfs merge=lfs -text
