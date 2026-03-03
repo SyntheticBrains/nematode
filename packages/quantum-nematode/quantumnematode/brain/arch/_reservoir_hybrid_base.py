@@ -590,13 +590,28 @@ class ReservoirHybridBase(ClassicalBrain):
         # Mid-episode buffer flushes (is_full and not episode_done) are deferred to the
         # next run_brain() call so that V(s_{t+1}) — the correct GAE bootstrap value —
         # is available from the subsequent forward pass rather than using V(s_t).
-        if episode_done and len(self.buffer) >= self.ppo_minibatches:
-            logger.debug(
-                f"{self._brain_name} PPO update triggered (episode done): "
-                f"buffer={len(self.buffer)}/{self.buffer.buffer_size}",
-            )
-            self._perform_ppo_update()
-            self.buffer.reset()
+        if episode_done:
+            if self._deferred_ppo_update:
+                # The buffer filled on the previous step and its update was deferred.
+                # The episode ended before the next run_brain() could supply the correct
+                # V(s_{t+1}) bootstrap, so flush the segment now with self.last_value.
+                # This restores the pre-fix behaviour for this rare corner case (buffer
+                # fills on the very last step before episode termination).
+                logger.debug(
+                    f"{self._brain_name} flushing deferred PPO update at episode end: "
+                    f"buffer={len(self.buffer)}/{self.buffer.buffer_size}",
+                )
+                self._perform_ppo_update()
+                self.buffer.reset()
+                self._deferred_ppo_update = False
+
+            if len(self.buffer) >= self.ppo_minibatches:
+                logger.debug(
+                    f"{self._brain_name} PPO update triggered (episode done): "
+                    f"buffer={len(self.buffer)}/{self.buffer.buffer_size}",
+                )
+                self._perform_ppo_update()
+                self.buffer.reset()
         elif self.buffer.is_full():
             logger.debug(
                 f"{self._brain_name} buffer full mid-episode — deferring PPO update "
