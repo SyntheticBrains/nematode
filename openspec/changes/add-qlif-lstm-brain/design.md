@@ -64,7 +64,7 @@ The QLIF-LSTM brain introduces temporal memory by embedding QLIF quantum neurons
 
 **Decision:** Reuse `encode_sensory_spikes()` from `_qlif_layers.py` and `extract_classical_features()` from `modules.py`, matching QSNN-PPO's pattern.
 
-**Rationale:** Proven encoding pipeline. Default sensory modules: FOOD_CHEMOTAXIS (4 features) + NOCICEPTION (4 features) = 8 input features.
+**Rationale:** Proven encoding pipeline. Default sensory modules: FOOD_CHEMOTAXIS (2 features: strength, angle) + NOCICEPTION (2 features: strength, angle) = 4 input features.
 
 ### 7. Critic architecture
 

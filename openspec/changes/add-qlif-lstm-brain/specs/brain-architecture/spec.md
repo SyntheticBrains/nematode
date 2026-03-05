@@ -21,6 +21,11 @@ Extend the brain architecture system to support the QLIF-LSTM brain type.
 - **THEN** the config loader SHALL parse brain config using `QLIFLSTMBrainConfig`
 - **AND** SHALL support all QLIF-LSTM-specific fields
 
+#### Scenario: QLIF-LSTM Brain Factory Instantiation
+
+- **WHEN** the brain factory receives a `QLIFLSTMBrainConfig`
+- **THEN** the factory SHALL instantiate a `QLIFLSTMBrain` with the provided configuration
+
 ### Requirement: Module Exports
 
 #### Scenario: QLIF-LSTM Brain Exports

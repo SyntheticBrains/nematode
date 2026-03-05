@@ -28,6 +28,7 @@
 
 - [ ] 5.1 Add `from .qliflstm import QLIFLSTMBrain, QLIFLSTMBrainConfig` to `brain/arch/__init__.py` and update `__all__`
 - [ ] 5.2 Add `QLIFLSTMBrainConfig` to imports, `BrainConfigType` union, and `BRAIN_CONFIG_MAP` in `utils/config_loader.py`
+- [ ] 5.3 Add `QLIFLSTMBrainConfig` to `BrainConfigType` union and QLIF_LSTM handler in `utils/brain_factory.py`
 
 ## 6. Configuration Files
 

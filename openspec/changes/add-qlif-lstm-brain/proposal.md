@@ -28,6 +28,7 @@ The codebase has zero temporal architectures — every brain treats each simulat
 - **Modified:** `brain/arch/dtypes.py` (BrainType enum, QUANTUM_BRAIN_TYPES, BRAIN_TYPES)
 - **Modified:** `brain/arch/__init__.py` (imports + `__all__`)
 - **Modified:** `utils/config_loader.py` (BrainConfigType union, BRAIN_CONFIG_MAP, import)
+- **Modified:** `utils/brain_factory.py` (BrainConfigType union, QLIF_LSTM handler in setup_brain_model)
 - **New configs:** 4 YAML files in `configs/examples/`
 - **New test file:** `tests/quantumnematode_tests/brain/arch/test_qliflstm.py`
 - **Dependencies:** Reuses existing `_qlif_layers.py` (QLIFSurrogateSpike, build_qlif_circuit, get_qiskit_backend, encode_sensory_spikes) — no new external dependencies

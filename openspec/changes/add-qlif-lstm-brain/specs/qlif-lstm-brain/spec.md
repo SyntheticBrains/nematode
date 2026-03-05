@@ -218,7 +218,7 @@ The configuration system SHALL support QLIF-LSTM-specific parameters via Pydanti
 
 - **WHEN** a QLIFLSTMBrainConfig specifies sensory_modules
 - **THEN** the system SHALL configure the brain to use the specified sensory modules for feature extraction
-- **AND** the default SHALL be FOOD_CHEMOTAXIS and NOCICEPTION (8 features total)
+- **AND** the default SHALL be FOOD_CHEMOTAXIS and NOCICEPTION (4 features total: 2 per module)
 
 #### Scenario: YAML Config Loading
 
