@@ -39,7 +39,6 @@ class TestQLIFLSTMBrainConfig:
         assert config.entropy_decay_episodes == 200
         assert config.value_loss_coef == 0.5
         assert config.num_epochs == 2
-        assert config.num_minibatches == 4
         assert config.rollout_buffer_size == 256
         assert config.max_grad_norm == 0.5
         assert config.actor_lr == 0.003
@@ -48,7 +47,6 @@ class TestQLIFLSTMBrainConfig:
         assert config.critic_num_layers == 2
         assert config.bptt_chunk_length == 16
         assert config.use_quantum_gates is True
-        assert config.logit_scale == 5.0
 
     def test_custom_config(self):
         """Test custom configuration values."""

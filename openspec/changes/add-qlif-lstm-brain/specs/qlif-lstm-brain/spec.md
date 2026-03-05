@@ -204,7 +204,6 @@ The configuration system SHALL support QLIF-LSTM-specific parameters via Pydanti
   - entropy_decay_episodes: 200
   - value_loss_coef: 0.5
   - num_epochs: 2
-  - num_minibatches: 4
   - rollout_buffer_size: 256
   - max_grad_norm: 0.5
   - actor_lr: 0.003

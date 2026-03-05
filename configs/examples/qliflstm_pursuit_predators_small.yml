@@ -38,9 +38,6 @@ brain:
     critic_hidden_dim: 64
     critic_num_layers: 2
 
-    # Logit scaling
-    logit_scale: 5.0
-
     # Unified sensory modules for multi-objective tasks
     sensory_modules:
       - food_chemotaxis

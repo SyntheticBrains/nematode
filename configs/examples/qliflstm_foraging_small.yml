@@ -37,9 +37,6 @@ brain:
     critic_hidden_dim: 64
     critic_num_layers: 2
 
-    # Logit scaling
-    logit_scale: 5.0
-
 body_length: 2
 
 reward:

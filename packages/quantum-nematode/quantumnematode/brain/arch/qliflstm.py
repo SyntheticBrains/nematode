@@ -98,7 +98,6 @@ DEFAULT_ENTROPY_COEF_END = 0.005
 DEFAULT_ENTROPY_DECAY_EPISODES = 200
 DEFAULT_VALUE_LOSS_COEF = 0.5
 DEFAULT_NUM_EPOCHS = 2
-DEFAULT_NUM_MINIBATCHES = 4
 DEFAULT_ROLLOUT_BUFFER_SIZE = 256
 DEFAULT_MAX_GRAD_NORM = 0.5
 DEFAULT_ACTOR_LR = 0.003
@@ -106,7 +105,6 @@ DEFAULT_CRITIC_LR = 0.001
 DEFAULT_CRITIC_HIDDEN_DIM = 64
 DEFAULT_CRITIC_NUM_LAYERS = 2
 DEFAULT_BPTT_CHUNK_LENGTH = 16
-DEFAULT_LOGIT_SCALE = 5.0
 
 # Validation constants
 MIN_LSTM_HIDDEN_DIM = 2
@@ -549,10 +547,6 @@ class QLIFLSTMBrainConfig(BrainConfig):
         default=DEFAULT_NUM_EPOCHS,
         description="Number of PPO epochs per rollout.",
     )
-    num_minibatches: int = Field(
-        default=DEFAULT_NUM_MINIBATCHES,
-        description="Number of minibatches per epoch (unused — chunks replace minibatches).",
-    )
     max_grad_norm: float = Field(
         default=DEFAULT_MAX_GRAD_NORM,
         description="Maximum gradient norm for clipping.",
@@ -586,12 +580,6 @@ class QLIFLSTMBrainConfig(BrainConfig):
     critic_num_layers: int = Field(
         default=DEFAULT_CRITIC_NUM_LAYERS,
         description="Number of hidden layers in the critic MLP.",
-    )
-
-    # Logit scaling
-    logit_scale: float = Field(
-        default=DEFAULT_LOGIT_SCALE,
-        description="Scaling factor for converting h_t to action logits.",
     )
 
     # Ablation
