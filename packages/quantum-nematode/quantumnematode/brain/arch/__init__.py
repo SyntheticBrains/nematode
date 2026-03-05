@@ -9,6 +9,7 @@ from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBr
 from .mlpdqn import MLPDQNBrain, MLPDQNBrainConfig, QMLPBrain, QMLPBrainConfig
 from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
 from .mlpreinforce import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
+from .qliflstm import QLIFLSTMBrain, QLIFLSTMBrainConfig
 from .qqlearning import QModularBrain, QModularBrainConfig, QQLearningBrain, QQLearningBrainConfig
 from .qrc import QRCBrain, QRCBrainConfig
 from .qrh import QRHBrain, QRHBrainConfig
@@ -51,6 +52,8 @@ __all__ = [
     "ModularBrainConfig",
     "PPOBrain",
     "PPOBrainConfig",
+    "QLIFLSTMBrain",
+    "QLIFLSTMBrainConfig",
     "QMLPBrain",
     "QMLPBrainConfig",
     "QModularBrain",
