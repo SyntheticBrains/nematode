@@ -111,8 +111,6 @@ MIN_LSTM_HIDDEN_DIM = 2
 MIN_SHOTS = 100
 MIN_BPTT_CHUNK_LENGTH = 4
 
-EPISODE_LOG_INTERVAL = 25
-
 
 # ──────────────────────────────────────────────────────────────────────
 # Critic MLP
