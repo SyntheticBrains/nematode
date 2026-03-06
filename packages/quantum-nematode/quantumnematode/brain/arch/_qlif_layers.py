@@ -291,36 +291,36 @@ def execute_qlif_layer(  # noqa: PLR0913
     # Convert weights to numpy for computation
     weights_np = weights.detach().cpu().numpy()
     theta_np = theta_membrane.detach().cpu().numpy()
+    fan_in_scale = np.sqrt(weights_np.shape[0])
+
+    # Identify active (non-refractory) neurons and build circuits
+    active_indices: list[int] = []
+    circuits = []
+    scaled_inputs: list[float] = []
 
     for j in range(num_post):
-        # Check refractory period
         if refractory_state[j] > 0:
             refractory_state[j] -= 1
-            spike_probs[j] = 0.0
             continue
 
-        # Compute weighted input: sum(w_ij * spike_i)
         weighted_input = np.dot(pre_spikes, weights_np[:, j])
-
-        # Scale by 1/sqrt(fan_in) to keep tanh in responsive regime
-        # regardless of layer width. Without this, tanh saturates when
-        # fan_in * avg_spike * |w| > ~2, killing weight gradients.
-        fan_in_scale = np.sqrt(weights_np.shape[0])
         scaled_input = weighted_input / fan_in_scale
+        scaled_inputs.append(scaled_input)
+        active_indices.append(j)
+        circuits.append(build_qlif_circuit(scaled_input, theta_np[j], leak_angle))
 
-        # Build and execute QLIF circuit
-        qc = build_qlif_circuit(scaled_input, theta_np[j], leak_angle)
-        job = backend.run(qc, shots=shots)
+    # Batched execution: single backend.run() call for all active neurons
+    if circuits:
+        job = backend.run(circuits, shots=shots)
         result = job.result()
-        counts = result.get_counts()
 
-        # Firing probability = P(measure |1>)
-        spike_prob = counts.get("1", 0) / shots
-        spike_probs[j] = spike_prob
+        for ci, j in enumerate(active_indices):
+            counts = result.get_counts(ci)
+            spike_prob = counts.get("1", 0) / shots
+            spike_probs[j] = spike_prob
 
-        # Update refractory state if fired
-        if spike_prob > threshold:
-            refractory_state[j] = refractory_period
+            if spike_prob > threshold:
+                refractory_state[j] = refractory_period
 
     return spike_probs, refractory_state
 
@@ -376,51 +376,60 @@ def execute_qlif_layer_differentiable(  # noqa: PLR0913
         are torch tensors with grad_fn for backprop.
     """
     num_post = weights.shape[1]
-    spike_probs_list: list[torch.Tensor] = []
+    fan_in_scale = (weights.shape[0]) ** 0.5
+
+    # Separate active vs refractory neurons and build circuits for active ones
+    active_indices: list[int] = []
+    active_ry_angles: list[torch.Tensor] = []
+    circuits = []
+    spike_probs_list: list[torch.Tensor] = [
+        torch.zeros(1, device=device, dtype=torch.float32).squeeze(),
+    ] * num_post  # pre-fill with zeros
 
     for j in range(num_post):
         if refractory_state[j] > 0:
             refractory_state[j] -= 1
-            # Zero spike with gradient connection through weights
-            spike_probs_list.append(
-                torch.zeros(1, device=device, dtype=torch.float32).squeeze(),
-            )
             continue
 
         # Differentiable weighted input (in autograd graph)
         weighted_input = torch.dot(pre_spikes, weights[:, j])
-
-        # Fan-in-aware scaling: divide by sqrt(fan_in) to keep tanh in
-        # responsive regime regardless of layer width.
-        fan_in_scale = (weights.shape[0]) ** 0.5
         scaled_input = weighted_input / fan_in_scale
 
         # Differentiable RY angle: theta + tanh(w·x / sqrt(fan_in)) * pi
         ry_angle = theta_membrane[j] + torch.tanh(scaled_input) * torch.pi
+        active_ry_angles.append(ry_angle)
+        active_indices.append(j)
 
-        # Execute quantum circuit for forward spike probability (detached)
+        # Build quantum circuit (detached values)
         wi_np = float(scaled_input.detach().cpu())
-        qc = build_qlif_circuit(
-            wi_np,
-            float(theta_membrane[j].detach().cpu()),
-            leak_angle,
+        circuits.append(
+            build_qlif_circuit(
+                wi_np,
+                float(theta_membrane[j].detach().cpu()),
+                leak_angle,
+            ),
         )
-        job = backend.run(qc, shots=shots)
+
+    # Batched execution: single backend.run() call for all active neurons
+    if circuits:
+        job = backend.run(circuits, shots=shots)
         result = job.result()
-        counts = result.get_counts()
-        quantum_spike_prob = counts.get("1", 0) / shots
 
-        # Wrap in surrogate gradient function
-        spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
-            ry_angle,
-            quantum_spike_prob,
-            alpha,
-        )
-        spike_probs_list.append(spike_prob)
+        for ci, j in enumerate(active_indices):
+            counts = result.get_counts(ci)
+            quantum_spike_prob = counts.get("1", 0) / shots
 
-        # Update refractory state
-        if quantum_spike_prob > threshold:
-            refractory_state[j] = refractory_period
+            # Wrap in surrogate gradient function
+            spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
+                active_ry_angles[ci],
+                quantum_spike_prob,
+                alpha,
+            )
+            spike_probs_list[j] = spike_prob
+
+            # Update refractory state
+            if quantum_spike_prob > threshold:
+                refractory_state[j] = refractory_period
 
     spike_probs = torch.stack(spike_probs_list)
     return spike_probs, refractory_state
@@ -567,19 +576,23 @@ def execute_qlif_layer_differentiable_reupload(  # noqa: PLR0913
     """
     num_post = weights.shape[1]
     num_layers = len(theta_membranes)
-    spike_probs_list: list[torch.Tensor] = []
+    fan_in_scale = (weights.shape[0]) ** 0.5
+
+    # Separate active vs refractory neurons and build circuits for active ones
+    active_indices: list[int] = []
+    active_composite_angles: list[torch.Tensor] = []
+    circuits = []
+    spike_probs_list: list[torch.Tensor] = [
+        torch.zeros(1, device=device, dtype=torch.float32).squeeze(),
+    ] * num_post  # pre-fill with zeros
 
     for j in range(num_post):
         if refractory_state[j] > 0:
             refractory_state[j] -= 1
-            spike_probs_list.append(
-                torch.zeros(1, device=device, dtype=torch.float32).squeeze(),
-            )
             continue
 
         # Differentiable weighted input (shared across re-uploading layers)
         weighted_input = torch.dot(pre_spikes, weights[:, j])
-        fan_in_scale = (weights.shape[0]) ** 0.5
         scaled_input = weighted_input / fan_in_scale
 
         # Compute ry_angle for each layer, sum for composite surrogate angle
@@ -592,31 +605,40 @@ def execute_qlif_layer_differentiable_reupload(  # noqa: PLR0913
 
         # Composite angle: mean of all layers' ry_angles (keeps centered near pi/2)
         composite_ry_angle = torch.stack(ry_angles).mean()
+        active_composite_angles.append(composite_ry_angle)
+        active_indices.append(j)
 
-        # Execute re-uploading quantum circuit (detached)
+        # Build re-uploading quantum circuit (detached)
         wi_np = float(scaled_input.detach().cpu())
-        qc = build_qlif_circuit_reupload(
-            wi_np,
-            theta_np_list,
-            leak_angle,
-            reupload_rx_angles=reupload_rx_angles,
-            reupload_rz_angles=reupload_rz_angles,
+        circuits.append(
+            build_qlif_circuit_reupload(
+                wi_np,
+                theta_np_list,
+                leak_angle,
+                reupload_rx_angles=reupload_rx_angles,
+                reupload_rz_angles=reupload_rz_angles,
+            ),
         )
-        job = backend.run(qc, shots=shots)
+
+    # Batched execution: single backend.run() call for all active neurons
+    if circuits:
+        job = backend.run(circuits, shots=shots)
         result = job.result()
-        counts = result.get_counts()
-        quantum_spike_prob = counts.get("1", 0) / shots
 
-        # Surrogate gradient using composite angle
-        spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
-            composite_ry_angle,
-            quantum_spike_prob,
-            alpha,
-        )
-        spike_probs_list.append(spike_prob)
+        for ci, j in enumerate(active_indices):
+            counts = result.get_counts(ci)
+            quantum_spike_prob = counts.get("1", 0) / shots
 
-        if quantum_spike_prob > threshold:
-            refractory_state[j] = refractory_period
+            # Surrogate gradient using composite angle
+            spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
+                active_composite_angles[ci],
+                quantum_spike_prob,
+                alpha,
+            )
+            spike_probs_list[j] = spike_prob
+
+            if quantum_spike_prob > threshold:
+                refractory_state[j] = refractory_period
 
     spike_probs = torch.stack(spike_probs_list)
     return spike_probs, refractory_state

@@ -278,6 +278,10 @@ class QLIFLSTMCell(nn.Module):
         quantum measurement P(|1⟩), and the backward uses the sigmoid
         surrogate gradient.
 
+        Circuits are batched into a single ``backend.run()`` call for
+        performance (hidden_dim circuits per gate instead of hidden_dim
+        sequential calls).
+
         Parameters
         ----------
         linear_output : torch.Tensor
@@ -290,31 +294,32 @@ class QLIFLSTMCell(nn.Module):
         torch.Tensor
             Gate activations in [0, 1], shape (hidden_dim,).
         """
+        fan_in_scale = (self.W_f.in_features) ** 0.5
+
+        # Vectorized differentiable RY angles (kept on autograd graph)
+        scaled_inputs = linear_output / fan_in_scale
+        ry_angles = theta_membrane + torch.tanh(scaled_inputs) * torch.pi
+
+        # Build all circuits for this gate (detached values)
+        scaled_np = scaled_inputs.detach().cpu().numpy()
+        theta_np = theta_membrane.detach().cpu().numpy()
+        circuits = [
+            build_qlif_circuit(float(scaled_np[j]), float(theta_np[j]), self.leak_angle)
+            for j in range(self.hidden_dim)
+        ]
+
+        # Batched execution: single backend.run() call for all neurons
+        job = self._backend.run(circuits, shots=self.shots)
+        result = job.result()
+
+        # Extract spike probabilities from batched results
         gate_probs: list[torch.Tensor] = []
-
         for j in range(self.hidden_dim):
-            # Fan-in-aware scaling
-            fan_in_scale = (self.W_f.in_features) ** 0.5
-            scaled_input = linear_output[j] / fan_in_scale
-
-            # Differentiable RY angle
-            ry_angle = theta_membrane[j] + torch.tanh(scaled_input) * torch.pi
-
-            # Execute quantum circuit (detached values)
-            wi_np = float(scaled_input.detach().cpu())
-            qc = build_qlif_circuit(
-                wi_np,
-                float(theta_membrane[j].detach().cpu()),
-                self.leak_angle,
-            )
-            job = self._backend.run(qc, shots=self.shots)
-            result = job.result()
-            counts = result.get_counts()
+            counts = result.get_counts(j)
             quantum_spike_prob = counts.get("1", 0) / self.shots
 
-            # Wrap in surrogate gradient function
             spike_prob: torch.Tensor = QLIFSurrogateSpike.apply(  # type: ignore[assignment]
-                ry_angle,
+                ry_angles[j],
                 quantum_spike_prob,
             )
             gate_probs.append(spike_prob)
