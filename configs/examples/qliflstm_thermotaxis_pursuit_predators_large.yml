@@ -38,7 +38,7 @@ brain:
     gae_lambda: 0.95
     clip_epsilon: 0.2
     entropy_coef: 0.03
-    entropy_coef_end: 0.005
+    entropy_coef_end: 0.015
     entropy_decay_episodes: 500
     value_loss_coef: 0.5
     num_epochs: 3

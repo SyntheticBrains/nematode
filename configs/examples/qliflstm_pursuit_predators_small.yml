@@ -24,11 +24,11 @@ brain:
     gae_lambda: 0.98
     clip_epsilon: 0.2
     entropy_coef: 0.05
-    entropy_coef_end: 0.005
-    entropy_decay_episodes: 200
+    entropy_coef_end: 0.015
+    entropy_decay_episodes: 400
     value_loss_coef: 0.5
     num_epochs: 2
-    rollout_buffer_size: 256
+    rollout_buffer_size: 512
     max_grad_norm: 0.5
 
     # Recurrent PPO
