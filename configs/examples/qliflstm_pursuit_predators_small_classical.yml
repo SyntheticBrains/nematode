@@ -1,6 +1,6 @@
-# Dynamic Foraging with Pursuit Predators - Small Configuration
-# Uses QLIF-LSTM brain architecture (H.4 Stage 4b)
-# Custom LSTM cell with QLIF quantum gates + PPO with truncated BPTT
+# Dynamic Foraging with Pursuit Predators - Small Configuration (Classical Ablation)
+# Uses QLIF-LSTM brain architecture (H.4 Stage 4b) with classical sigmoid gates
+# Custom LSTM cell with classical sigmoid gates (use_quantum_gates: false) + PPO with truncated BPTT
 # Multi-objective: find food while avoiding pursuit predators
 # Uses unified sensory modules for multi-sensory input
 

@@ -1,7 +1,7 @@
-# Dynamic Foraging Environment - Small Configuration
-# Uses QLIF-LSTM brain architecture (H.4 Stage 4a)
-# Custom LSTM cell with QLIF quantum gates + PPO with truncated BPTT
-# Baseline foraging evaluation — first temporal architecture
+# Dynamic Foraging Environment - Small Configuration (Classical Ablation)
+# Uses QLIF-LSTM brain architecture (H.4 Stage 4a) with classical sigmoid gates
+# Custom LSTM cell with classical sigmoid gates (use_quantum_gates: false) + PPO with truncated BPTT
+# Baseline foraging evaluation — classical ablation of temporal architecture
 
 max_steps: 500
 brain:
