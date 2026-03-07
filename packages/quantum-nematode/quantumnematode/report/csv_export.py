@@ -2,7 +2,7 @@
 
 import csv
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import IO, TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -26,6 +26,7 @@ def export_simulation_results_to_csv(  # pragma: no cover
     data_dir: Path,
     file_prefix: str = "",
     *,
+    skip_main_results: bool = False,
     skip_path_data: bool = False,
 ) -> None:
     """
@@ -35,12 +36,14 @@ def export_simulation_results_to_csv(  # pragma: no cover
         all_results (list[SimulationResult]): List of simulation results.
         data_dir (Path): Directory to save the CSV files.
         file_prefix (str): Prefix for the output file names.
+        skip_main_results (bool): Skip main results export (already written incrementally).
         skip_path_data (bool): Skip path data export (already written incrementally).
     """
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # Export main simulation results
-    _export_main_results(all_results, data_dir, file_prefix)
+    # Export main simulation results (skip if already written incrementally)
+    if not skip_main_results:
+        _export_main_results(all_results, data_dir, file_prefix)
 
     # Export run-specific metrics
     _export_run_metrics(all_results, data_dir, file_prefix)
@@ -60,64 +63,11 @@ def _export_main_results(
     filepath = data_dir / filename
 
     with filepath.open("w", newline="") as csvfile:
-        fieldnames = [
-            "run",
-            "steps",
-            "total_reward",
-            "last_total_reward",
-            "path_length",
-            "termination_reason",
-            "success",
-            "foods_collected",
-            "foods_available",
-            "satiety_remaining",
-            "avg_distance_efficiency",
-            "predator_encounters",
-            "successful_evasions",
-            "died_to_predator",
-            "died_to_health_depletion",
-        ]
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer = csv.DictWriter(csvfile, fieldnames=_SIMULATION_RESULTS_FIELDNAMES)
         writer.writeheader()
 
         for result in all_results:
-            writer.writerow(
-                {
-                    "run": result.run,
-                    "steps": result.steps,
-                    "total_reward": result.total_reward,
-                    "last_total_reward": result.last_total_reward,
-                    "path_length": result.path_length
-                    if result.path_length is not None
-                    else len(result.path),
-                    "termination_reason": result.termination_reason.value,
-                    "success": result.success,
-                    "foods_collected": result.foods_collected
-                    if result.foods_collected is not None
-                    else np.nan,
-                    "foods_available": result.foods_available
-                    if result.foods_available is not None
-                    else np.nan,
-                    "satiety_remaining": result.satiety_remaining
-                    if result.satiety_remaining is not None
-                    else np.nan,
-                    "avg_distance_efficiency": result.average_distance_efficiency
-                    if result.average_distance_efficiency is not None
-                    else np.nan,
-                    "predator_encounters": result.predator_encounters
-                    if result.predator_encounters is not None
-                    else np.nan,
-                    "successful_evasions": result.successful_evasions
-                    if result.successful_evasions is not None
-                    else np.nan,
-                    "died_to_predator": result.died_to_predator
-                    if result.died_to_predator is not None
-                    else np.nan,
-                    "died_to_health_depletion": result.died_to_health_depletion
-                    if result.died_to_health_depletion is not None
-                    else np.nan,
-                },
-            )
+            writer.writerow(_simulation_result_to_row(result))
 
 
 def _export_run_metrics(
@@ -198,6 +148,102 @@ def _export_path_data(
                         "y": y,
                     },
                 )
+
+
+_SIMULATION_RESULTS_FIELDNAMES = [
+    "run",
+    "steps",
+    "total_reward",
+    "last_total_reward",
+    "path_length",
+    "termination_reason",
+    "success",
+    "foods_collected",
+    "foods_available",
+    "satiety_remaining",
+    "avg_distance_efficiency",
+    "predator_encounters",
+    "successful_evasions",
+    "died_to_predator",
+    "died_to_health_depletion",
+]
+
+
+def _simulation_result_to_row(result: SimulationResult) -> dict[str, object]:
+    """Convert a SimulationResult to a dict suitable for CSV writing."""
+    return {
+        "run": result.run,
+        "steps": result.steps,
+        "total_reward": result.total_reward,
+        "last_total_reward": result.last_total_reward,
+        "path_length": result.path_length if result.path_length is not None else len(result.path),
+        "termination_reason": result.termination_reason.value,
+        "success": result.success,
+        "foods_collected": result.foods_collected if result.foods_collected is not None else np.nan,
+        "foods_available": result.foods_available if result.foods_available is not None else np.nan,
+        "satiety_remaining": result.satiety_remaining
+        if result.satiety_remaining is not None
+        else np.nan,
+        "avg_distance_efficiency": result.average_distance_efficiency
+        if result.average_distance_efficiency is not None
+        else np.nan,
+        "predator_encounters": result.predator_encounters
+        if result.predator_encounters is not None
+        else np.nan,
+        "successful_evasions": result.successful_evasions
+        if result.successful_evasions is not None
+        else np.nan,
+        "died_to_predator": result.died_to_predator
+        if result.died_to_predator is not None
+        else np.nan,
+        "died_to_health_depletion": result.died_to_health_depletion
+        if result.died_to_health_depletion is not None
+        else np.nan,
+    }
+
+
+def create_simulation_results_csv_writer(
+    filepath: Path,
+) -> tuple[Any, csv.DictWriter]:
+    """Open simulation results CSV file and write header for incremental writing.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to the CSV file.
+
+    Returns
+    -------
+    tuple[Any, csv.DictWriter]
+        File handle and CSV writer. Caller must close the file handle.
+    """
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    csvfile = filepath.open("w", newline="")
+    writer = csv.DictWriter(csvfile, fieldnames=_SIMULATION_RESULTS_FIELDNAMES)
+    writer.writeheader()
+    csvfile.flush()
+    return csvfile, writer
+
+
+def write_simulation_result_row(
+    writer: csv.DictWriter,
+    result: SimulationResult,
+    csvfile: IO[str] | None = None,
+) -> None:
+    """Write a single simulation result row to an already-open CSV writer.
+
+    Parameters
+    ----------
+    writer : csv.DictWriter
+        CSV writer with simulation results fieldnames.
+    result : SimulationResult
+        Simulation result for one episode.
+    csvfile : file object, optional
+        File handle to flush after writing. If None, no flush is performed.
+    """
+    writer.writerow(_simulation_result_to_row(result))
+    if csvfile is not None:
+        csvfile.flush()
 
 
 def create_path_csv_writer(filepath: Path) -> tuple[Any, csv.DictWriter]:
