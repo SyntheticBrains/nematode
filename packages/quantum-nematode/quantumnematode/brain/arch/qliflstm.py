@@ -574,6 +574,14 @@ class QLIFLSTMBrainConfig(BrainConfig):
         default=DEFAULT_CRITIC_LR,
         description="Learning rate for critic MLP.",
     )
+    lr_decay_episodes: int | None = Field(
+        default=None,
+        description="Episodes over which LR decays to lr_decay_end (None = no decay).",
+    )
+    lr_decay_end: float | None = Field(
+        default=None,
+        description="Final LR after decay (None = 10% of actor_lr).",
+    )
 
     # Critic architecture
     critic_hidden_dim: int = Field(
@@ -712,6 +720,15 @@ class QLIFLSTMBrain(ClassicalBrain):
         # Qiskit backend (lazy init)
         self._backend = None
 
+        # Build networks, optimizers, buffer, and state
+        self._build_networks_and_state(config, num_actions)
+
+    def _build_networks_and_state(
+        self,
+        config: QLIFLSTMBrainConfig,
+        num_actions: int,
+    ) -> None:
+        """Initialize networks, optimizers, rollout buffer, and tracking state."""
         # QLIF-LSTM cell
         self.lstm_cell = QLIFLSTMCell(
             input_dim=self.input_dim,
@@ -749,6 +766,19 @@ class QLIFLSTMBrain(ClassicalBrain):
             self.critic.parameters(),
             lr=config.critic_lr,
         )
+
+        # LR decay scheduling
+        self.base_actor_lr = config.actor_lr
+        self.base_critic_lr = config.critic_lr
+        self.lr_decay_episodes = config.lr_decay_episodes
+        self.lr_decay_end = config.lr_decay_end or (0.1 * config.actor_lr)
+        self.lr_scheduling_enabled = config.lr_decay_episodes is not None
+
+        if self.lr_scheduling_enabled:
+            logger.info(
+                f"LR decay enabled: {self.base_actor_lr:.6f} -> {self.lr_decay_end:.6f} "
+                f"over {self.lr_decay_episodes} episodes",
+            )
 
         # Rollout buffer
         self.buffer = QLIFLSTMRolloutBuffer(
@@ -1124,6 +1154,29 @@ class QLIFLSTMBrain(ClassicalBrain):
             self.config.entropy_coef_end - self.config.entropy_coef
         )
 
+    def _get_current_lr(self) -> float:
+        """Get current learning rate based on episode count with linear decay."""
+        if not self.lr_scheduling_enabled or self.lr_decay_episodes is None:
+            return self.base_actor_lr
+
+        if self._episode_count < self.lr_decay_episodes:
+            progress = self._episode_count / self.lr_decay_episodes
+            return self.base_actor_lr + (self.lr_decay_end - self.base_actor_lr) * progress
+        return self.lr_decay_end
+
+    def _update_learning_rate(self) -> None:
+        """Update optimizer learning rates based on current schedule."""
+        if not self.lr_scheduling_enabled:
+            return
+
+        new_lr = self._get_current_lr()
+        for param_group in self.actor_optimizer.param_groups:
+            param_group["lr"] = new_lr
+        # Scale critic LR proportionally
+        critic_scale = self.base_critic_lr / self.base_actor_lr
+        for param_group in self.critic_optimizer.param_groups:
+            param_group["lr"] = new_lr * critic_scale
+
     # ──────────────────────────────────────────────────────────────────
     # Episode Lifecycle
     # ──────────────────────────────────────────────────────────────────
@@ -1145,6 +1198,7 @@ class QLIFLSTMBrain(ClassicalBrain):
     ) -> None:
         """Post-process after each episode."""
         self._episode_count += 1
+        self._update_learning_rate()
 
     def copy(self) -> Self:
         """Create a deep copy with fresh hidden states."""
