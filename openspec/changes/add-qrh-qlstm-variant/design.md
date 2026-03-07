@@ -50,11 +50,17 @@ The QRH-QLSTM variant replaces QRH's MLP readout with an QLIF-LSTM temporal read
 
 ### 2. Reservoir as feature extractor (delegation pattern)
 
-**Decision**: Instantiate the full QRH/CRH brain internally but only use its `_get_reservoir_features()` method. Do not call its `run_brain()` or `learn()`.
+**Decision**: Instantiate the full QRH/CRH brain internally but only use its `preprocess()` and `_get_reservoir_features()` methods. Do not call its `run_brain()` or `learn()`.
 
 **Rationale**: The reservoir setup code (topology generation, index precomputation, statevector simulation) is tightly coupled to the QRH/CRH brain classes. Extracting it into a separate module would require significant refactoring. Using the brain as a feature extractor is simpler and guaranteed to produce identical reservoir features.
 
 **Alternative considered**: Extract reservoir logic into a standalone `QuantumReservoir` class. Cleaner but requires refactoring QRH/CRH internals — higher risk, higher effort, no functional benefit for this change.
+
+**Trade-off accepted**: Instantiating the full QRH/CRH brain creates unused MLP actor/critic networks and optimizer from `ReservoirHybridBase.__init__`. This wastes ~10K parameters of memory but is negligible compared to the LSTM and reservoir. The alternative (refactoring the reservoir out of the base class) is higher risk with no functional benefit.
+
+**Sensory preprocessing**: Call `reservoir.preprocess(params)` to convert `BrainParams` to sensory features. The reservoir's `preprocess()` method handles sensory module dispatch via `extract_classical_features()` when `sensory_modules` is configured. The `sensory_modules` list from the QRH-QLSTM config must be passed through to the inner reservoir config so that `preprocess()` uses the correct modules.
+
+**Reservoir statelessness**: Both QRH and CRH reservoirs are stateless per call — they compute fresh output from current sensory input with no hidden state persistence between timesteps. QRH uses statevector simulation (pure function of input), and CRH's Echo State Network reinitializes hidden state each call. This means the LSTM is the sole temporal component in the composed architecture, which is the intended design.
 
 ### 3. LSTM input: reservoir features (not raw sensory)
 
@@ -128,7 +134,7 @@ CRHQLSTMBrain(ReservoirLSTMBase)
 
 **[High-dim LSTM input]** 52-75 reservoir features into a 64-dim LSTM creates large gate projection matrices (4 × Linear(128→64) = 32K params for gates alone). → Mitigation: This is comparable to QLIF-LSTM's current setup (57-dim input after actor fix). Monitor for slow convergence; if needed, add an optional linear projection layer to compress reservoir features before LSTM.
 
-**[Quantum execution cost]** QRH-QLSTM with `use_quantum_gates=true` has two quantum components: reservoir (statevector simulation) + QLIF gates (shot-based measurement). Training will be slower than either QRH or QLIF-LSTM alone. → Mitigation: Start with classical gate ablation (`use_quantum_gates=false`) for rapid iteration, same as QLIF-LSTM evaluation strategy.
+**[Quantum execution cost]** QRH-QLSTM with `use_quantum_gates=true` has two quantum components: reservoir (statevector simulation) + QLIF gates (shot-based measurement). Training will be slower than either QRH or QLIF-LSTM alone. → Mitigation: Start with classical gate ablation (`use_quantum_gates=false`) for rapid iteration. Evaluation should follow the classical-first strategy proven with QLIF-LSTM: tune hyperparameters with fast classical gates, then run quantum gates only on the best configuration.
 
 **[BPTT through frozen reservoir]** The reservoir features are computed fresh each timestep but gradients don't flow through the reservoir. The LSTM must learn purely from the readout side. → This is by design (reservoir is fixed) and matches how QRH's MLP readout trains. Not a risk, just a constraint.
 

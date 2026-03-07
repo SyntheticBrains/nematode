@@ -41,15 +41,15 @@
 
 **File:** same `qrh_qlstm.py`
 
-- [ ] Implement `run_brain(params) -> BrainData`:
-  1. Preprocess sensory input via reservoir's `preprocess()` method
-  2. Extract reservoir features via `reservoir._get_reservoir_features()`
+- [ ] Implement `run_brain(params, reward=None, input_data=None, *, top_only, top_randomize) -> list[ActionData]` matching `ClassicalBrain` protocol:
+  1. Preprocess sensory input via `reservoir.preprocess(params)`
+  2. Extract reservoir features via `reservoir._get_reservoir_features(sensory_features)`
   3. Apply LayerNorm to reservoir features
   4. Run QLIF-LSTM cell: `(normalized_features, h_t, c_t) -> (h_new, c_new)`
   5. Actor: `[reservoir_features, h_t] -> logits -> Categorical -> sample action`
   6. Critic: `[reservoir_features, h_t.detach()] -> value`
   7. Store transition in buffer (reservoir features, action, log_prob, value)
-  8. Return BrainData
+  8. Return `list[ActionData]`
 
 ### Step 5: Implement learn() and PPO update in ReservoirLSTMBase
 
@@ -58,7 +58,7 @@
 - [ ] Create rollout buffer class (adapted from `QLIFLSTMRolloutBuffer`):
   - Store: reservoir features, actions, log_probs, values, rewards, dones, chunk-boundary h/c states
   - `get_sequential_chunks()`: split into BPTT chunks with initial hidden states
-- [ ] Implement `learn(params, reward, episode_done)`:
+- [ ] Implement `learn(params, reward, *, episode_done)` matching `ClassicalBrain` protocol:
   1. Store reward/done in buffer
   2. If buffer full or episode done: compute GAE, run PPO update
 - [ ] Implement PPO update with truncated BPTT:
@@ -72,8 +72,8 @@
 **File:** same `qrh_qlstm.py`
 
 - [ ] `prepare_episode()`: reset h_t, c_t to zeros, clear pending state
-- [ ] `post_process_episode()`: increment episode count, update LR schedule
-- [ ] `update_memory()`: no-op
+- [ ] `post_process_episode(*, episode_success=None)`: increment episode count, update LR schedule
+- [ ] `update_memory(reward)`: no-op
 - [ ] `copy()`: deep copy with fresh hidden states and independent reservoir
 - [ ] LR scheduling: reuse `_get_current_lr()` and `_update_learning_rate()` pattern from QLIF-LSTM (warmup + decay)
 - [ ] Entropy decay: reuse `_get_entropy_coef()` pattern from QLIF-LSTM
@@ -85,13 +85,15 @@
 - [ ] `QRHQLSTMBrain(ReservoirLSTMBase)`:
   - `_create_reservoir()`: construct `QRHBrain(qrh_config)` from own config fields
   - `_compute_reservoir_feature_dim()`: `3N + N(N-1)/2` for N qubits
-  - Build a `QRHBrainConfig` from own fields to pass to QRHBrain constructor
+  - Build a `QRHBrainConfig` from own fields to pass to QRHBrain constructor (unused MLP readout params use defaults — accepted trade-off, see design decision 2)
+  - Pass `sensory_modules` through to the inner `QRHBrainConfig` so `preprocess()` uses the correct sensory modules
 - [ ] `CRHQLSTMBrain(ReservoirLSTMBase)`:
   - `_create_reservoir()`: construct `CRHBrain(crh_config)` from own config fields
   - `_compute_reservoir_feature_dim()`: delegate to CRH's feature channel computation
-  - Build a `CRHBrainConfig` from own fields to pass to CRHBrain constructor
+  - Build a `CRHBrainConfig` from own fields to pass to CRHBrain constructor (same trade-off as QRH)
+  - Pass `sensory_modules` through to the inner `CRHBrainConfig`
 
-### Step 8: Register in `__init__.py` and config_loader.py
+### Step 8: Register in `__init__.py`, config_loader.py, and brain_factory.py
 
 **Files:**
 
@@ -99,11 +101,15 @@
 
 - `packages/quantum-nematode/quantumnematode/utils/config_loader.py`
 
-- [ ] Add imports: `QRHQLSTMBrain`, `QRHQLSTMBrainConfig`, `CRHQLSTMBrain`, `CRHQLSTMBrainConfig`
+- `packages/quantum-nematode/quantumnematode/utils/brain_factory.py`
+
+- [ ] Add imports to `__init__.py`: `QRHQLSTMBrain`, `QRHQLSTMBrainConfig`, `CRHQLSTMBrain`, `CRHQLSTMBrainConfig`
 
 - [ ] Add to `__all__`
 
-- [ ] Add to `BRAIN_CONFIG_MAP`: `"qrhqlstm": QRHQLSTMBrainConfig`, `"crhqlstm": CRHQLSTMBrainConfig`
+- [ ] Add to `BRAIN_CONFIG_MAP` in config_loader.py: `"qrhqlstm": QRHQLSTMBrainConfig`, `"crhqlstm": CRHQLSTMBrainConfig`
+
+- [ ] Add `BrainType.QRH_QLSTM` and `BrainType.CRH_QLSTM` branches to `brain_factory.py`'s `create_brain()` function, following the existing pattern (import, isinstance check, constructor call with `config=brain_config, num_actions=4, device=device`)
 
 ### Step 9: Create evaluation config YAMLs
 
@@ -114,6 +120,7 @@
 - [ ] `crhqlstm_thermotaxis_stationary_predators_large.yml` — CRH-QLSTM on stationary predators (classical reservoir ablation)
 - [ ] `qrhqlstm_pursuit_predators_small.yml` — QRH-QLSTM on pursuit predators (regression test). Use same environment as `qrh_pursuit_predators_small.yml`.
 - [ ] `qrhqlstm_foraging_small.yml` — QRH-QLSTM on foraging (smoke test baseline)
+- [ ] `crhqlstm_foraging_small.yml` — CRH-QLSTM on foraging (smoke test baseline for CRH variant)
 
 ### Step 10: Create unit tests
 

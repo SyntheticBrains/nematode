@@ -26,7 +26,7 @@ QRH (Quantum Reservoir Hybrid) excels at pursuit predator evasion (+11pp over CR
 ## Impact
 
 - **New files**: `brain/arch/qrh_qlstm.py` (main implementation), evaluation config YAMLs, test file
-- **Modified files**: `brain/arch/dtypes.py` (new brain type), `brain/arch/__init__.py` (exports), `utils/config_loader.py` (config registration)
+- **Modified files**: `brain/arch/dtypes.py` (new brain type), `brain/arch/__init__.py` (exports), `utils/config_loader.py` (config registration), `utils/brain_factory.py` (brain instantiation)
 - **Dependencies**: Reuses `QLIFLSTMCell` from `qliflstm.py`, quantum reservoir from `qrh.py`, `ReservoirHybridBase` patterns from `_reservoir_hybrid_base.py`
 - **No breaking changes**: Existing QRH and QLIF-LSTM brains are unchanged
 - **Risk**: Recurrent PPO over quantum reservoir features is untested — the 52-dim reservoir output may be too high-dimensional for a 48-dim LSTM hidden state. May need to tune LSTM hidden dim upward or add a projection layer.

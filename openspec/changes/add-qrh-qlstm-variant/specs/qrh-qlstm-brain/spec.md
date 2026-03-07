@@ -127,7 +127,7 @@ The brain SHALL apply `LayerNorm` to reservoir features before feeding them to t
 
 ### Requirement: QRH-QLSTM brain lifecycle
 
-The brain SHALL implement the `ClassicalBrain` protocol: `run_brain()`, `learn()`, `prepare_episode()`, `post_process_episode()`, `copy()`, and `update_memory()`.
+The brain SHALL implement the `ClassicalBrain` protocol with the exact signatures: `run_brain(params, reward, input_data, *, top_only, top_randomize) -> list[ActionData]`, `learn(params, reward, *, episode_done) -> None`, `prepare_episode() -> None`, `post_process_episode(*, episode_success) -> None`, `copy() -> Brain`, and `update_memory(reward) -> None`.
 
 #### Scenario: Full episode lifecycle
 
