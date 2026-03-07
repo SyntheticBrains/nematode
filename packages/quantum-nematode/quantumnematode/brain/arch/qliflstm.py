@@ -883,6 +883,19 @@ class QLIFLSTMBrain(ClassicalBrain):
 
         return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
 
+    def _get_actor_input(
+        self,
+        features: np.ndarray,
+        h_state: torch.Tensor,
+    ) -> torch.Tensor:
+        """Build actor input from raw features and LSTM hidden state."""
+        features_t = torch.tensor(
+            features,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        return torch.cat([features_t, h_state])
+
     def _get_critic_input(
         self,
         features: np.ndarray,
@@ -932,9 +945,10 @@ class QLIFLSTMBrain(ClassicalBrain):
         self.h_t = h_new
         self.c_t = c_new
 
-        # Actor: compute action logits from hidden state
+        # Actor: compute action logits from [features, h_t]
         with torch.no_grad():
-            logits = self.actor_head(self.h_t)
+            actor_input = self._get_actor_input(features, self.h_t)
+            logits = self.actor_head(actor_input)
             action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
 
         # Sample action
@@ -1074,7 +1088,8 @@ class QLIFLSTMBrain(ClassicalBrain):
                     h, c = self.lstm_cell(x_t, h, c)
 
                     # Actor
-                    logits = self.actor_head(h)
+                    actor_input = self._get_actor_input(features, h)
+                    logits = self.actor_head(actor_input)
                     action_probs = torch.softmax(logits, dim=-1)
 
                     action_idx = chunk["actions"][step_idx].item()
