@@ -574,6 +574,14 @@ class QLIFLSTMBrainConfig(BrainConfig):
         default=DEFAULT_CRITIC_LR,
         description="Learning rate for critic MLP.",
     )
+    lr_warmup_episodes: int | None = Field(
+        default=None,
+        description="Episodes to warm up LR from lr_warmup_start to actor_lr (None = no warmup).",
+    )
+    lr_warmup_start: float | None = Field(
+        default=None,
+        description="Starting LR for warmup (None = 10% of actor_lr).",
+    )
     lr_decay_episodes: int | None = Field(
         default=None,
         description="Episodes over which LR decays to lr_decay_end (None = no decay).",
@@ -740,9 +748,12 @@ class QLIFLSTMBrain(ClassicalBrain):
             device=self.device,
         ).to(self.device)
 
-        # Actor head: maps h_t to action logits
+        # Actor head: maps [features, h_t] to action logits
+        # Raw features give direct access to current sensory signals (gradients, contact)
+        # while h_t provides temporal context from LSTM memory
+        actor_input_dim = self.input_dim + config.lstm_hidden_dim
         self.actor_head = nn.Linear(
-            config.lstm_hidden_dim,
+            actor_input_dim,
             num_actions,
         ).to(self.device)
         nn.init.orthogonal_(self.actor_head.weight, gain=0.01)
@@ -767,18 +778,30 @@ class QLIFLSTMBrain(ClassicalBrain):
             lr=config.critic_lr,
         )
 
-        # LR decay scheduling
+        # LR scheduling (warmup + decay)
         self.base_actor_lr = config.actor_lr
         self.base_critic_lr = config.critic_lr
+        self.lr_warmup_episodes = config.lr_warmup_episodes
+        self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.actor_lr)
         self.lr_decay_episodes = config.lr_decay_episodes
         self.lr_decay_end = config.lr_decay_end or (0.1 * config.actor_lr)
-        self.lr_scheduling_enabled = config.lr_decay_episodes is not None
+        self.lr_scheduling_enabled = (
+            config.lr_decay_episodes is not None or config.lr_warmup_episodes is not None
+        )
 
         if self.lr_scheduling_enabled:
-            logger.info(
-                f"LR decay enabled: {self.base_actor_lr:.6f} -> {self.lr_decay_end:.6f} "
-                f"over {self.lr_decay_episodes} episodes",
-            )
+            parts = []
+            if self.lr_warmup_episodes:
+                parts.append(
+                    f"warmup {self.lr_warmup_start:.6f} -> {self.base_actor_lr:.6f} "
+                    f"over {self.lr_warmup_episodes} eps",
+                )
+            if self.lr_decay_episodes:
+                parts.append(
+                    f"decay {self.base_actor_lr:.6f} -> {self.lr_decay_end:.6f} "
+                    f"over {self.lr_decay_episodes} eps",
+                )
+            logger.info(f"LR schedule: {', '.join(parts)}")
 
         # Rollout buffer
         self.buffer = QLIFLSTMRolloutBuffer(
@@ -1155,14 +1178,27 @@ class QLIFLSTMBrain(ClassicalBrain):
         )
 
     def _get_current_lr(self) -> float:
-        """Get current learning rate based on episode count with linear decay."""
-        if not self.lr_scheduling_enabled or self.lr_decay_episodes is None:
+        """Get current learning rate based on episode count with warmup + decay."""
+        if not self.lr_scheduling_enabled:
             return self.base_actor_lr
 
-        if self._episode_count < self.lr_decay_episodes:
-            progress = self._episode_count / self.lr_decay_episodes
-            return self.base_actor_lr + (self.lr_decay_end - self.base_actor_lr) * progress
-        return self.lr_decay_end
+        ep = self._episode_count
+
+        # Phase 1: Warmup
+        if self.lr_warmup_episodes and ep < self.lr_warmup_episodes:
+            progress = ep / self.lr_warmup_episodes
+            return self.lr_warmup_start + progress * (self.base_actor_lr - self.lr_warmup_start)
+
+        # Phase 2: Decay (offset by warmup duration)
+        if self.lr_decay_episodes is not None:
+            warmup = self.lr_warmup_episodes or 0
+            decay_ep = ep - warmup
+            if decay_ep < self.lr_decay_episodes:
+                progress = decay_ep / self.lr_decay_episodes
+                return self.base_actor_lr + progress * (self.lr_decay_end - self.base_actor_lr)
+            return self.lr_decay_end
+
+        return self.base_actor_lr
 
     def _update_learning_rate(self) -> None:
         """Update optimizer learning rates based on current schedule."""
