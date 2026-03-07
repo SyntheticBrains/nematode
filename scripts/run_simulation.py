@@ -54,6 +54,7 @@ from quantumnematode.optimizers.learning_rate import (
 from quantumnematode.report.csv_export import (
     IncrementalDetailedTrackingWriter,
     create_path_csv_writer,
+    create_simulation_results_csv_writer,
     export_convergence_metrics_to_csv,
     export_distance_efficiencies_to_csv,
     export_foraging_results_to_csv,
@@ -65,6 +66,7 @@ from quantumnematode.report.csv_export import (
     export_simulation_results_to_csv,
     export_tracking_data_to_csv,
     write_path_data_row,
+    write_simulation_result_row,
 )
 from quantumnematode.report.dtypes import (
     BrainDataSnapshot,
@@ -455,6 +457,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Incremental CSV writers — write heavy per-step data each episode, then flush from memory
     data_dir.mkdir(parents=True, exist_ok=True)
     path_csv_file, path_csv_writer = create_path_csv_writer(data_dir / "paths.csv")
+    sim_results_csv_file, sim_results_csv_writer = create_simulation_results_csv_writer(
+        data_dir / "simulation_results.csv",
+    )
     detailed_tracking_writer = IncrementalDetailedTrackingWriter(data_dir)
 
     # Pre-computed chemotaxis metrics (populated per-episode when --track-experiment is set)
@@ -480,6 +485,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             print(message)
         finally:
             path_csv_file.close()
+            sim_results_csv_file.close()
             detailed_tracking_writer.close()
         return
 
@@ -620,7 +626,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             running_total_steps += result.steps
 
             # --- Incremental exports (before data flush) ---
-            # Write path data to CSV incrementally
+            # Write simulation results and path data to CSV incrementally
+            write_simulation_result_row(sim_results_csv_writer, result, sim_results_csv_file)
             write_path_data_row(path_csv_writer, result)
 
             # Write detailed brain tracking data incrementally
@@ -767,6 +774,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Ensure incremental writers are always closed (safe to call twice)
         if not path_csv_file.closed:
             path_csv_file.close()
+        if not sim_results_csv_file.closed:
+            sim_results_csv_file.close()
         detailed_tracking_writer.close()
 
     # Calculate and log performance metrics
@@ -801,6 +810,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         export_simulation_results_to_csv(
             all_results=all_results,
             data_dir=data_dir,
+            skip_main_results=True,
             skip_path_data=True,
         )
         export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)

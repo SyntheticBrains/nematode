@@ -128,6 +128,7 @@ def manage_simulation_halt(  # noqa: PLR0913
                 all_results=all_results,
                 data_dir=data_dir,
                 file_prefix=file_prefix,
+                skip_main_results=True,  # Main results already written incrementally
                 skip_path_data=True,  # Path data already written incrementally
             )
             export_performance_metrics_to_csv(
