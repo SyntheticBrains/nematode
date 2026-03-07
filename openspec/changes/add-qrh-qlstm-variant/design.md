@@ -38,7 +38,7 @@ The QRH-QLSTM variant replaces QRH's MLP readout with an QLIF-LSTM temporal read
 
 **Decision**: Create a new `ReservoirLSTMBase` class that composes reservoir feature extraction with QLIF-LSTM readout, rather than subclassing `ReservoirHybridBase`.
 
-**Rationale**: `ReservoirHybridBase.__init__` builds MLP actor/critic networks and a minibatch PPO buffer. Overriding all of this would require bypassing most of the base class. Composition is cleaner — we import and call `_get_reservoir_features()` / `_encode_and_run()` + `_extract_features()` patterns from QRH/CRH directly.
+**Rationale**: `ReservoirHybridBase.__init__` builds MLP actor/critic networks and a minibatch PPO buffer. Overriding all of this would require bypassing most of the base class. Composition is cleaner — we instantiate the reservoir brain and call only `preprocess()` and `_get_reservoir_features()` on it.
 
 **Alternative considered**: Subclass `ReservoirHybridBase` and override `run_brain()`, `learn()`, `_perform_ppo_update()`. Rejected because the base class's `__init__` constructs MLP networks and optimizer that would be unused — wasteful and confusing.
 

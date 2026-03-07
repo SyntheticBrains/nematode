@@ -34,8 +34,8 @@
   - Abstract method: `_create_reservoir(config) -> ReservoirHybridBase`
   - Abstract method: `_compute_reservoir_feature_dim(config) -> int`
   - `__init__`: instantiate reservoir via `_create_reservoir()`, create `QLIFLSTMCell` (imported from `qliflstm.py`), create actor head (`nn.Linear(feature_dim + lstm_hidden_dim, num_actions)`), create critic MLP, create `LayerNorm(feature_dim)`, create optimizers (separate actor/critic), create rollout buffer, init LSTM hidden state
-  - Sensory preprocessing: reuse `extract_classical_features()` from `brain/modules.py`
-  - Reservoir feature extraction: call `reservoir._get_reservoir_features(sensory_features)` with `reservoir.preprocess(params)` for preprocessing
+  - Sensory preprocessing: delegate to `reservoir.preprocess(params)` which internally uses `extract_classical_features()` from `brain/modules.py`
+  - Reservoir feature extraction: call `reservoir._get_reservoir_features(sensory_features)` on the preprocessed output
 
 ### Step 4: Implement run_brain() in ReservoirLSTMBase
 
@@ -128,12 +128,12 @@
 
 - [ ] `test_qrh_qlstm_config_defaults` — verify config field defaults
 - [ ] `test_qrh_qlstm_brain_init` — verify brain initializes with default config (reservoir created, LSTM cell created, actor/critic built)
-- [ ] `test_qrh_qlstm_brain_run_brain` — verify run_brain() with mock BrainParams produces valid BrainData
+- [ ] `test_qrh_qlstm_brain_run_brain` — verify run_brain() with mock BrainParams produces valid list[ActionData]
 - [ ] `test_qrh_qlstm_brain_hidden_state_reset` — verify prepare_episode() zeros h_t/c_t
 - [ ] `test_qrh_qlstm_brain_learn` — verify learn() stores transitions and triggers PPO update when buffer full
 - [ ] `test_qrh_qlstm_classical_ablation` — verify `use_quantum_gates=False` produces valid outputs
 - [ ] `test_crh_qlstm_brain_init` — verify CRH variant initializes correctly
-- [ ] `test_crh_qlstm_brain_run_brain` — verify CRH variant produces valid BrainData
+- [ ] `test_crh_qlstm_brain_run_brain` — verify CRH variant produces valid list[ActionData]
 
 ### Step 11: Verification
 
