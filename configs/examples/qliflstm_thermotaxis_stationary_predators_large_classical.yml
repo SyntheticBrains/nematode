@@ -21,7 +21,7 @@ brain:
   name: qliflstm
   config:
     # LSTM architecture
-    lstm_hidden_dim: 96
+    lstm_hidden_dim: 48
 
     # QLIF gate parameters
     shots: 1024
@@ -70,7 +70,7 @@ reward:
   penalty_stuck_position: 0
   penalty_starvation: 10.0
   penalty_predator_death: 10.0
-  penalty_predator_proximity: 0.8
+  penalty_predator_proximity: 0.4
   penalty_temperature_proximity: 0.3
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
