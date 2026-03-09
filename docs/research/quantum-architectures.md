@@ -2069,7 +2069,7 @@ Four strategies were proposed to bridge this gap, with the first now evaluated:
 3. **Use classical gradient surrogates** — Train entangled circuits (which could provide genuine quantum advantage) using a classical tangential DNN (qtDNN) that approximates quantum gradients, separating the advantage source from the training mechanism.
 4. **Use quantum activations in classical temporal architecture** — Replace classical activation functions (sigmoid) with QLIF quantum measurements in LSTM gating. Avoids barren plateaus (single-qubit circuits) while adding temporal memory capability.
 
-Five architectures were proposed, with H.1 now completed. Priorities have been re-ordered based on experimental findings from H.1 and external research survey (March 2026):
+Four architectures were proposed, with H.1 now completed. Priorities have been re-ordered based on experimental findings from H.1 and external research survey (March 2026):
 
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|

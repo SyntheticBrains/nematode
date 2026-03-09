@@ -47,7 +47,7 @@ The QLIFLSTMCell SHALL implement a custom LSTM cell where forget and input gates
 #### Scenario: QLIF Gate Activation
 
 - **WHEN** computing a QLIF gate activation for `hidden_dim` neurons
-- **THEN** the system SHALL build one QLIF circuit per neuron via `build_qlif_circuit()` with that neuron's linear output as input
+- **THEN** the system SHALL scale each neuron's linear projection by `1 / sqrt(fan_in)` and pass the scaled value into `build_qlif_circuit()`, which applies the `tanh(scaled_input) * π` mapping to compute the RY angle
 - **AND** SHALL submit all circuits together in a single `backend.run()` call with configurable shots (default 1024)
 - **AND** SHALL read back one P(|1⟩) per submitted circuit, producing a one-to-one mapping between input neurons and returned probabilities
 - **AND** SHALL use `QLIFSurrogateSpike.apply()` per neuron to create differentiable outputs from the quantum measurements

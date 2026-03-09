@@ -568,10 +568,12 @@ class QLIFLSTMBrainConfig(BrainConfig):
     # Learning rates
     actor_lr: float = Field(
         default=DEFAULT_ACTOR_LR,
+        gt=0,
         description="Learning rate for actor (LSTM cell + actor head) parameters.",
     )
     critic_lr: float = Field(
         default=DEFAULT_CRITIC_LR,
+        gt=0,
         description="Learning rate for critic MLP.",
     )
     lr_warmup_episodes: int | None = Field(
