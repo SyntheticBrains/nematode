@@ -1177,7 +1177,7 @@ ______________________________________________________________________
 
 ## QLIF-LSTM Brain Evaluation (H.4 — Quantum LIF Long Short-Term Memory)
 
-**Status**: Complete — 12 rounds, ~60 sessions, ~22,000 episodes across foraging, pursuit predators, and stationary predators (classical + quantum). First temporal architecture in the codebase. Classical last-100 SR: 98% pursuit, 82% large pursuit, 37% stationary. Quantum gates provide no measurable advantage.
+**Status**: Complete — 12 rounds, ~66 sessions, ~36,000 episodes across foraging, pursuit predators, and stationary predators (classical + quantum). First temporal architecture in the codebase. Classical last-100 SR: 98% pursuit, 82% large pursuit, 37% stationary. Quantum gates provide no measurable advantage.
 
 ### Architecture
 
@@ -1341,7 +1341,7 @@ QLIF-LSTM classical achieves the highest late-session performance on pursuit pre
 - QLIF-LSTM tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qliflstm.py`
 - QLIF-LSTM configs: `configs/examples/qliflstm_*.yml`
 
-Full optimization history (12 rounds, ~60 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
+Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
 
 ______________________________________________________________________
 
@@ -1537,17 +1537,17 @@ Experiment results: `artifacts/logbooks/008/crh_thermotaxis_pursuit_predators_la
 
 | Round | Task | Sessions | Episodes | Result |
 |-------|------|----------|----------|--------|
-| R1 | Foraging (classical) | 20260305_140313-140321 | 4×500 | **86.25% avg**, 4/4 converged |
-| R1 | Foraging (quantum) | 20260305_141819-141831 | 4×500 | **85.63% avg**, equivalent to classical |
+| R1 | Foraging (classical) | 20260305_140313-140321 | 4×200 | **86.25% avg**, 4/4 converged |
+| R2 | Foraging (quantum) | 20260305_141819-141831 | 4×200 | **85.63% avg**, equivalent to classical |
 | R4 | Pursuit (classical) | 20260305_232259-232309 | 4×500 | **74.7% avg, 98% last-100** |
-| R4 | Pursuit (quantum) | 20260305_232312-232315 | 4×500 | **70.8% avg, 94.5% last-100** |
+| R4 | Pursuit (quantum) | 20260305_232312-232315 | 4×500 | **70.8% avg, 93.5% last-100** |
 | R4b | Pursuit validation | 20260306_045940-045946 | 2×500 | Entropy floor (0.015) validated |
-| R5 | Pursuit large (classical) | 20260306_081836-081846 | 4×1000 | **60.1% avg, 82% last-100** |
-| R5 | Pursuit large (quantum) | 20260306_112902-112910 | 4×1000 | **45.4% avg, 82% last-100** |
-| R11 | Stationary (classical) | 20260307_123010-123019 | 4×3000 | **37.0% avg** (ceiling) |
-| R11 | Stationary (quantum) | 20260307_132444-132457 | 4×3000 | **31.0% avg** |
+| R5 | Pursuit large (classical) | 20260306_081836-081846 | 4×500 | **60.1% avg, 82% last-100** |
+| R5 | Pursuit large (quantum) | 20260306_112902-112910 | 4×500 | **45.4% avg, 82% last-100** |
+| R10 | Stationary (classical) | 20260307_123010-123019 | 4×1000 | **37.0% avg** (ceiling) |
+| R10-Q | Stationary (quantum) | 20260307_132444-132457 | 4×500 | **31.0% avg** |
 
-Full optimization history (12 rounds, ~60 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
+Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
 
 Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifacts/logbooks/008/qliflstm_pursuit_predators_small/`, `artifacts/logbooks/008/qliflstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qliflstm_thermotaxis_stationary_predators_large/`
 
@@ -1561,7 +1561,7 @@ Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifact
 - HybridClassical ablation (12 sessions, trust analysis): [hybridclassical-ablation.md](supporting/008/hybridclassical-ablation.md)
 - HybridQuantumCortex optimization history (9 rounds, 32 sessions): [hybridquantumcortex-optimization.md](supporting/008/hybridquantumcortex-optimization.md)
 - QRH/CRH optimization history (16 rounds, 96 sessions): [qrh-optimization.md](supporting/008/qrh-optimization.md)
-- QLIF-LSTM optimization history (12 rounds, ~60 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
+- QLIF-LSTM optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
 
 ### File Locations
 

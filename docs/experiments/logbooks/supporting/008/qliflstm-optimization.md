@@ -2,7 +2,7 @@
 
 **Architecture**: Custom LSTM cell where forget and input gates use QLIF quantum neuron measurements (via surrogate gradients) instead of classical sigmoid activations, trained via recurrent PPO with chunk-based truncated BPTT. First temporal architecture in the codebase — provides within-episode memory (h_t, c_t persist across steps, reset between episodes).
 
-**Total**: 12 rounds, ~60 sessions, ~22,000 episodes across foraging, pursuit predators, and stationary predators (classical + quantum).
+**Total**: 12 rounds, ~66 sessions, ~36,000 episodes across foraging, pursuit predators, and stationary predators (classical + quantum).
 
 ______________________________________________________________________
 
@@ -179,7 +179,7 @@ ______________________________________________________________________
 
 **Task**: 100×100 grid, 5 stationary predators (speed=0, damage_radius=4, damage=10/tick), temperature zones, 4 sensory modules (9 features). The hardest task variant.
 
-### Systematic Tuning (6 rounds, 24 sessions)
+### Systematic Tuning (6 rounds, 28 sessions)
 
 | Round | Key Change | Last-100 SR | Peak R50 | Episodes | Sessions |
 |-------|--------|-------------|----------|----------|----------|
@@ -208,7 +208,7 @@ After R9's failure with larger LSTM, investigation revealed that the **actor hea
 
 The LSTM excels at temporal evasion (pursuit) but struggles with spatial memory (stationary). With only 9-dim sensory input and 11×11 viewport on a 100×100 grid, implicitly encoding 5 zone locations in 48 hidden dimensions is insufficient. MLP PPO (96.5% on same task) doesn't need spatial memory — it uses reactive gradient sensing.
 
-**Classical ceiling established**: ~37% sustained / ~48% peak after 6 rounds, 24 sessions.
+**Classical ceiling established**: ~37% sustained / ~48% peak after 6 rounds, 28 sessions.
 
 ______________________________________________________________________
 
@@ -277,7 +277,7 @@ ______________________________________________________________________
 
 ## Session Data
 
-All session JSONs and configs are archived in `artifacts/logbooks/008/`:
+Best-round session JSONs and configs are archived in `artifacts/logbooks/008/` (34 of ~66 total sessions; non-best rounds R3, R6-R9, R11 were not archived):
 
 | Directory | Round | Sessions | Config |
 |-----------|-------|----------|--------|
