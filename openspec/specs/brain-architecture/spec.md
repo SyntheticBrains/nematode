@@ -32,7 +32,7 @@ Extend the brain architecture system to support the CRH (Classical Reservoir Hyb
 - **WHEN** the brain type system is initialized
 - **THEN** `BrainType.QLIF_LSTM` SHALL exist with value `"qliflstm"` in the BrainType enum
 - **AND** QLIF_LSTM SHALL be included in `QUANTUM_BRAIN_TYPES`
-- **AND** `BrainType.QLIF_LSTM` SHALL be included in the `BRAIN_TYPES` Literal type alias
+- **AND** `"qliflstm"` SHALL be included in the `BRAIN_TYPES` Literal type alias
 
 #### Scenario: QLIF-LSTM Config Loading
 

@@ -46,11 +46,12 @@ The QLIFLSTMCell SHALL implement a custom LSTM cell where forget and input gates
 
 #### Scenario: QLIF Gate Activation
 
-- **WHEN** computing a QLIF gate activation for a single neuron
-- **THEN** the system SHALL build a QLIF circuit via `build_qlif_circuit()` with the neuron's linear output as input
-- **AND** SHALL execute the circuit on the Qiskit Aer simulator with configurable shots (default 1024)
-- **AND** SHALL use `QLIFSurrogateSpike.apply()` to create a differentiable output from the quantum measurement
-- **AND** the output SHALL be P(|1⟩) from the quantum measurement, bounded in [0, 1]
+- **WHEN** computing a QLIF gate activation for `hidden_dim` neurons
+- **THEN** the system SHALL build one QLIF circuit per neuron via `build_qlif_circuit()` with that neuron's linear output as input
+- **AND** SHALL submit all circuits together in a single `backend.run()` call with configurable shots (default 1024)
+- **AND** SHALL read back one P(|1⟩) per submitted circuit, producing a one-to-one mapping between input neurons and returned probabilities
+- **AND** SHALL use `QLIFSurrogateSpike.apply()` per neuron to create differentiable outputs from the quantum measurements
+- **AND** each output SHALL be P(|1⟩) bounded in [0, 1], returned as a tensor of shape `(hidden_dim,)`
 
 #### Scenario: Classical Ablation Mode
 
@@ -90,13 +91,14 @@ The QLIFLSTMBrain SHALL include a classical MLP critic that estimates state valu
 
 ### Requirement: Recurrent Rollout Buffer
 
-The QLIFLSTMBrain SHALL use a rollout buffer that stores LSTM hidden states at chunk boundaries for truncated BPTT during PPO updates.
+The QLIFLSTMBrain SHALL use a rollout buffer that stores per-step data including LSTM hidden states for truncated BPTT during PPO updates.
 
 #### Scenario: Buffer Storage
 
 - **WHEN** a step is added to the rollout buffer
 - **THEN** the system SHALL store features, action, log_prob, value, reward, and done flag
 - **AND** SHALL store the LSTM hidden state (h_t, c_t) at the time of collection
+- **AND** the chunk generator SHALL use only the hidden state at each chunk's first step as the initial (h_0, c_0) for truncated BPTT
 
 #### Scenario: Buffer Capacity
 

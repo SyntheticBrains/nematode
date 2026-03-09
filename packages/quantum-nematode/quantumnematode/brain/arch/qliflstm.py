@@ -782,9 +782,13 @@ class QLIFLSTMBrain(ClassicalBrain):
         self.base_actor_lr = config.actor_lr
         self.base_critic_lr = config.critic_lr
         self.lr_warmup_episodes = config.lr_warmup_episodes
-        self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.actor_lr)
+        self.lr_warmup_start = (
+            config.lr_warmup_start if config.lr_warmup_start is not None else 0.1 * config.actor_lr
+        )
         self.lr_decay_episodes = config.lr_decay_episodes
-        self.lr_decay_end = config.lr_decay_end or (0.1 * config.actor_lr)
+        self.lr_decay_end = (
+            config.lr_decay_end if config.lr_decay_end is not None else 0.1 * config.actor_lr
+        )
         self.lr_scheduling_enabled = (
             config.lr_decay_episodes is not None or config.lr_warmup_episodes is not None
         )
@@ -802,6 +806,7 @@ class QLIFLSTMBrain(ClassicalBrain):
                     f"over {self.lr_decay_episodes} eps",
                 )
             logger.info(f"LR schedule: {', '.join(parts)}")
+            self._update_learning_rate()
 
         # Rollout buffer
         self.buffer = QLIFLSTMRolloutBuffer(
