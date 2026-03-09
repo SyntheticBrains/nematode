@@ -183,6 +183,38 @@ class TestQLIFLSTMCell:
         # States should differ after different inputs
         assert not torch.allclose(h1, h2)
 
+    def test_quantum_cell_forward_and_backward(self):
+        """Smoke test: quantum gate path runs forward + backward without error."""
+        from quantumnematode.brain.arch._qlif_layers import get_qiskit_backend
+
+        backend = get_qiskit_backend(device=DeviceType.CPU)
+        cell = QLIFLSTMCell(
+            input_dim=2,
+            hidden_dim=2,
+            use_quantum_gates=True,
+            shots=100,
+            backend=backend,
+        )
+
+        x_t = torch.randn(2)
+        h_prev = torch.zeros(2)
+        c_prev = torch.zeros(2)
+
+        h_t, c_t = cell(x_t, h_prev, c_prev)
+
+        assert h_t.shape == (2,)
+        assert c_t.shape == (2,)
+        assert torch.all(torch.isfinite(h_t))
+        assert torch.all(torch.isfinite(c_t))
+
+        # Backward pass through surrogate gradients
+        loss = h_t.sum()
+        loss.backward()
+
+        # Verify gradients flowed through quantum surrogate path
+        assert cell.theta_forget.grad is not None
+        assert cell.theta_input.grad is not None
+
     def test_cell_four_linear_projections(self, classical_cell: QLIFLSTMCell):
         """Test cell has 4 separate linear projections."""
         assert hasattr(classical_cell, "W_f")
@@ -475,6 +507,43 @@ class TestQLIFLSTMBrain:
 
         # Buffer should have been cleared after PPO update
         assert len(brain.buffer) == 0
+
+    def test_learn_triggers_update_on_episode_done(
+        self,
+        brain: QLIFLSTMBrain,
+        params: BrainParams,
+    ):
+        """Test learn() triggers PPO update when episode done and buffer is full."""
+        # Fill buffer to exactly bptt_chunk_length (4 steps, less than buffer_size=8)
+        for _ in range(brain.config.bptt_chunk_length):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Buffer should still have data (not full, episode not done)
+        assert len(brain.buffer) == brain.config.bptt_chunk_length
+
+        # Now signal episode done — should trigger PPO update and clear buffer
+        brain.run_brain(params, top_only=False, top_randomize=False)
+        brain.learn(params, reward=0.1, episode_done=True)
+        assert len(brain.buffer) == 0
+
+    def test_learn_no_update_on_episode_done_insufficient_data(
+        self,
+        brain: QLIFLSTMBrain,
+        params: BrainParams,
+    ):
+        """Test learn() does NOT trigger PPO update when episode done but buffer < buffer_size."""
+        # Fill buffer with fewer steps than bptt_chunk_length (4).
+        # We need total steps strictly < bptt_chunk_length, so use bptt_chunk_length - 2
+        # steps in the loop + 1 final step = bptt_chunk_length - 1 total.
+        for _ in range(brain.config.bptt_chunk_length - 2):
+            brain.run_brain(params, top_only=False, top_randomize=False)
+            brain.learn(params, reward=0.1, episode_done=False)
+
+        # Signal episode done with insufficient data — buffer should NOT be cleared
+        brain.run_brain(params, top_only=False, top_randomize=False)
+        brain.learn(params, reward=0.1, episode_done=True)
+        assert len(brain.buffer) == brain.config.bptt_chunk_length - 1
 
     def test_prepare_episode_resets_hidden_state(self, brain: QLIFLSTMBrain, params: BrainParams):
         """Test prepare_episode() resets LSTM hidden state to zeros."""

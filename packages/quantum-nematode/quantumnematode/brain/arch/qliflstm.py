@@ -862,6 +862,14 @@ class QLIFLSTMBrain(ClassicalBrain):
         Two modes:
         1. **Unified sensory mode** (when sensory_modules is set)
         2. **Legacy mode** (default): gradient strength + relative angle
+
+        Returns
+        -------
+        np.ndarray
+            Feature vector (dtype=np.float32). In unified sensory mode, returns
+            the output of ``extract_classical_features(params, sensory_modules)``.
+            In legacy mode, returns a 2-element array ``[grad_strength,
+            rel_angle_norm]`` with gradient strength and normalized relative angle.
         """
         if self.sensory_modules is not None:
             return extract_classical_features(params, self.sensory_modules)

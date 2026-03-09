@@ -1,8 +1,8 @@
-# brain-architecture Specification (Delta)
+# brain-architecture Specification
 
 ## Purpose
 
-Extend the brain architecture system to support the CRH (Classical Reservoir Hybrid) brain type and the ReservoirHybridBase base class.
+Extend the brain architecture system to support the CRH (Classical Reservoir Hybrid) brain type with ReservoirHybridBase base class, and the QLIF-LSTM (Quantum LIF Long Short-Term Memory) brain type.
 
 ## MODIFIED Requirements
 

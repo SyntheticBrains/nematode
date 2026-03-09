@@ -21,9 +21,9 @@ The system SHALL support a QLIF-LSTM brain architecture that combines a custom L
 - **AND** SHALL initialize LSTM hidden state (h_t, c_t) as zero tensors
 - **AND** SHALL initialize the network with a deterministic seed for reproducibility
 
-#### Scenario: CLI Brain Selection
+#### Scenario: Config-Based Brain Selection
 
-- **WHEN** user executes `python scripts/run_simulation.py --brain qliflstm --config config.yml`
+- **WHEN** a YAML config specifies `brain.name: qliflstm` and the user runs the simulation
 - **THEN** the system SHALL initialize a QLIFLSTMBrain instance
 - **AND** the simulation SHALL proceed using the QLIF-LSTM cell for temporal processing and MLP critic for value estimation
 
