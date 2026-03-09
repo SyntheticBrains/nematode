@@ -151,8 +151,8 @@ The project supports 15 brain architectures across quantum, hybrid, classical, a
 
 **Hybrid (quantum + classical):**
 
-8. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
-9. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
+08. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
+09. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
 10. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
 
 **Classical:**
