@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-03-05
+**Last Updated**: 2026-03-10
 
 ______________________________________________________________________
 
@@ -1644,7 +1644,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 - **Brain-inspired QSNN-QLSTM precedent**: arXiv:2505.01735 (May 2025) demonstrated a two-stage architecture combining QSNN (sensory) + QLSTM (memory) that converged in **40 iterations vs 700 for classical ANN** with 108 vs 731 parameters on credit card fraud detection. Although not an RL task, the architecture pattern — quantum spiking sensory stage feeding into quantum temporal processing — maps directly to our QLIF-LSTM design
 - **Differentiable architecture search available**: DiffQAS-QLSTM (arXiv:2508.14955, August 2025) demonstrated end-to-end differentiable joint optimization of VQC parameters and circuit architecture selection for QLSTM. If manual gate selection underperforms, DiffQAS provides a principled alternative for finding optimal QLIF integration points
 - **Minimal quantum circuit** (single-qubit per activation), avoiding barren plateaus by design
-- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM). The codebase currently has **zero temporal/recurrent architectures** — every brain is stateless. This is the most significant architectural gap
+- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM). Prior to H.4, the codebase had **zero temporal/recurrent architectures** — every brain was stateless. H.4 (QLIFLSTMBrain) closes this gap as the first architecture with within-episode memory
 - **Builds directly on proven infrastructure** — uses the same QLIF neuron and surrogate gradient backward pass that achieved 73.9% foraging success
 - **Low risk**: if quantum activations don't help, the architecture gracefully degrades to a standard LSTM with slightly different activations — we still gain temporal memory infrastructure needed for Phase 3
 - **ICML 2025 benchmarking insight**: arXiv:2502.04909 found that most PQC-QRL approaches "may not greatly rely on their quantum components." H.4 is designed with this in mind — even if QLIF activations prove equivalent to classical sigmoid (as the HybridClassical ablation showed for QSNN reflex), the temporal architecture itself advances the project. The quantum hypothesis is a bonus, not the sole justification
@@ -1760,24 +1760,24 @@ COMPLETED:
     Task-dependent: CRH wins stationary. Structured topology falsified.
 
 NEXT:
-  Week 1-2:  QKAN-QLIF (H.4) Stage 4a — Core implementation
-             - Implement QLIF-LSTM module (QLIF activations in forget/input gates)
-             - Classical LSTM ablation control
-             - Foraging evaluation (small grid)
+  Week 1:    QKAN-QLIF (H.4) Stage 4a — Foraging evaluation
+             - QLIFLSTMBrain implementation complete (qliflstm brain type)
+             - Classical LSTM ablation control ready (use_quantum_gates: false)
+             - Run foraging evaluation (small grid) with quantum + classical configs
              - Decision gate: ≥80% foraging, parameter reduction ≥30%
 
-  Week 3:    QKAN-QLIF (H.4) Stage 4b — Predator evaluation
+  Week 2:    QKAN-QLIF (H.4) Stage 4b — Predator evaluation
              - Pursuit predators (small grid, 2 predators)
              - Stationary predators (small grid)
              - Classical LSTM ablation on same tasks
              - Decision gate: temporal memory improves evasion?
 
-  Week 4:    QKAN-QLIF (H.4) Stage 4c — Multi-environment evaluation
+  Week 3:    QKAN-QLIF (H.4) Stage 4c — Multi-environment evaluation
              - Thermotaxis + pursuit predators (large grid)
              - Thermotaxis + stationary predators (large grid)
              - Cross-architecture comparison (vs QRH, HybridQuantum, MLPPPO)
 
-  Week 5:    QKAN-QLIF (H.4) Stage 4d — QRH-QLSTM variant
+  Week 4:    QKAN-QLIF (H.4) Stage 4d — QRH-QLSTM variant
              - Replace QRH's MLP readout with QLIF-LSTM readout
              - CRH-LSTM classical ablation control
              - Test: resolves QRH stationary predator weakness?
@@ -2062,19 +2062,19 @@ ______________________________________________________________________
 
 The central challenge for quantum brain architectures is the **Barren Plateau-Advantage Dilemma** (Cerezo et al., Nature Communications, 2025): provably trainable quantum circuits are classically simulable, while circuits offering genuine quantum advantage suffer barren plateaus. Our experimental data confirms this — HybridClassical (96.3%) matches HybridQuantum (96.9%), showing the trainable single-qubit QLIF provides no measurable task-performance quantum advantage.
 
-Three strategies were proposed to bridge this gap, with the first now evaluated:
+Four strategies were proposed to bridge this gap, with the first now evaluated:
 
 1. **Don't train the quantum part** — ✅ **EVALUATED (H.1 QRH).** Fixed random quantum reservoirs as feature extractors with classical PPO readout. Avoids barren plateaus entirely. Result: genuine quantum advantage on pursuit predators (+9.4pp over classical ESN, confirmed not an encoding artifact), but classical ESN wins on stationary predators. Structured topology falsified; random topology works.
 2. **Use local learning rules** — Replace global gradient-based training with local quantum learning rules (e.g., quantum STDP). Local rules avoid barren plateaus by construction and have biological plausibility.
 3. **Use classical gradient surrogates** — Train entangled circuits (which could provide genuine quantum advantage) using a classical tangential DNN (qtDNN) that approximates quantum gradients, separating the advantage source from the training mechanism.
 4. **Use quantum activations in classical temporal architecture** — Replace classical activation functions (sigmoid) with QLIF quantum measurements in LSTM gating. Avoids barren plateaus (single-qubit circuits) while adding temporal memory capability.
 
-Five architectures were proposed, with H.1 now completed. Priorities have been re-ordered based on experimental findings from H.1 and external research survey (March 2026):
+Four architectures were proposed, with H.1 now completed. Priorities have been re-ordered based on experimental findings from H.1 and external research survey (March 2026):
 
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|
 | 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
-| **2 (next)** | **QKAN-QLIF Temporal Brain** | **Quantum activations in LSTM** | **Proposed → NEXT** | **Lowest risk (2-3 weeks), highest strategic value. Adds temporal memory infrastructure (Phase 3 requirement). Even if quantum activations don't help, classical LSTM fallback advances the project. QSNN-QLSTM precedent (arXiv:2505.01735): 40 vs 700 iterations. Includes QRH-QLSTM variant (Stage 4d) to address QRH's stationary predator weakness.** |
+| **2 (next)** | **QKAN-QLIF Temporal Brain** | **Quantum activations in LSTM** | **Proposed → NEXT** | **Lowest risk (3-5 weeks), highest strategic value. Adds temporal memory infrastructure (Phase 3 requirement). Even if quantum activations don't help, classical LSTM fallback advances the project. QSNN-QLSTM precedent (arXiv:2505.01735): 40 vs 700 iterations. Includes QRH-QLSTM variant (Stage 4d) to address QRH's stationary predator weakness.** |
 | 3 | Entangled QLIF + qtDNN | Classical surrogates | Proposed | Most promising path to genuine *trainable* quantum advantage. hDQNN-TD3 (arXiv:2503.09119) is the strongest QRL result in literature (+13% over TD3 on Humanoid-v4). Adds entanglement — the key quantum resource our QLIF doesn't use. |
 | 4 | SQS-QLIF Hybrid | Local learning rules | Proposed — deprioritised | Highest risk. Our Hebbian learning experiments (12 rounds, 0% success) showed local learning rules are too weak for RL. SQS paper (arXiv:2506.21324) tested on classification, not RL. Deferred until H.3/H.4 results inform whether quantum memory effects are worth pursuing with biologically-plausible neuron models. |
 

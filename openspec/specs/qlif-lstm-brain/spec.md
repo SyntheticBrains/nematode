@@ -6,7 +6,7 @@ Define the requirements for the QLIF-LSTM brain architecture. QLIF-LSTM is a qua
 
 The QLIF-LSTM cell reuses shared QLIF neuron infrastructure from `_qlif_layers.py`.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: QLIF-LSTM Brain Architecture
 
@@ -17,13 +17,13 @@ The system SHALL support a QLIF-LSTM brain architecture that combines a custom L
 - **WHEN** a QLIFLSTMBrain is instantiated with default configuration
 - **THEN** the system SHALL create a QLIFLSTMCell with configurable hidden dimension (default 32)
 - **AND** SHALL create a classical MLP critic accepting raw sensory features and detached LSTM hidden state
-- **AND** SHALL create an actor head (Linear layer) mapping LSTM hidden state to action logits
+- **AND** SHALL create an actor head (Linear layer) mapping concatenated [features, h_t] to action logits
 - **AND** SHALL initialize LSTM hidden state (h_t, c_t) as zero tensors
 - **AND** SHALL initialize the network with a deterministic seed for reproducibility
 
-#### Scenario: CLI Brain Selection
+#### Scenario: Config-Based Brain Selection
 
-- **WHEN** user executes `python scripts/run_simulation.py --brain qliflstm --config config.yml`
+- **WHEN** a YAML config specifies `brain.name: qliflstm` and the user runs the simulation
 - **THEN** the system SHALL initialize a QLIFLSTMBrain instance
 - **AND** the simulation SHALL proceed using the QLIF-LSTM cell for temporal processing and MLP critic for value estimation
 
@@ -46,11 +46,12 @@ The QLIFLSTMCell SHALL implement a custom LSTM cell where forget and input gates
 
 #### Scenario: QLIF Gate Activation
 
-- **WHEN** computing a QLIF gate activation for a single neuron
-- **THEN** the system SHALL build a QLIF circuit via `build_qlif_circuit()` with the neuron's linear output as input
-- **AND** SHALL execute the circuit on the Qiskit Aer simulator with configurable shots (default 1024)
-- **AND** SHALL use `QLIFSurrogateSpike.apply()` to create a differentiable output from the quantum measurement
-- **AND** the output SHALL be P(|1⟩) from the quantum measurement, bounded in [0, 1]
+- **WHEN** computing a QLIF gate activation for `hidden_dim` neurons
+- **THEN** the system SHALL scale each neuron's linear projection by `1 / sqrt(fan_in)` and pass the scaled value into `build_qlif_circuit()`, which applies the `tanh(scaled_input) * π` mapping to compute the RY angle
+- **AND** SHALL submit all circuits together in a single `backend.run()` call with configurable shots (default 1024)
+- **AND** SHALL read back one P(|1⟩) per submitted circuit, producing a one-to-one mapping between input neurons and returned probabilities
+- **AND** SHALL use `QLIFSurrogateSpike.apply()` per neuron to create differentiable outputs from the quantum measurements
+- **AND** each output SHALL be P(|1⟩) bounded in [0, 1], returned as a tensor of shape `(hidden_dim,)`
 
 #### Scenario: Classical Ablation Mode
 
@@ -90,13 +91,14 @@ The QLIFLSTMBrain SHALL include a classical MLP critic that estimates state valu
 
 ### Requirement: Recurrent Rollout Buffer
 
-The QLIFLSTMBrain SHALL use a rollout buffer that stores LSTM hidden states at chunk boundaries for truncated BPTT during PPO updates.
+The QLIFLSTMBrain SHALL use a rollout buffer that stores per-step data including LSTM hidden states for truncated BPTT during PPO updates.
 
 #### Scenario: Buffer Storage
 
 - **WHEN** a step is added to the rollout buffer
 - **THEN** the system SHALL store features, action, log_prob, value, reward, and done flag
 - **AND** SHALL store the LSTM hidden state (h_t, c_t) at the time of collection
+- **AND** the chunk generator SHALL use only the hidden state at each chunk's first step as the initial (h_0, c_0) for truncated BPTT
 
 #### Scenario: Buffer Capacity
 
@@ -106,9 +108,10 @@ The QLIFLSTMBrain SHALL use a rollout buffer that stores LSTM hidden states at c
 
 #### Scenario: Episode-End Flush
 
-- **WHEN** learn() is called with episode_done=True and the buffer has data
+- **WHEN** learn() is called with episode_done=True and the buffer has at least bptt_chunk_length steps
 - **THEN** the system SHALL trigger a PPO update with the current buffer contents
 - **AND** SHALL clear the buffer after the update
+- **AND** if the buffer has fewer than bptt_chunk_length steps, the buffer SHALL be retained (no update triggered)
 
 #### Scenario: GAE Advantage Computation
 
@@ -162,6 +165,23 @@ The QLIFLSTMBrain SHALL implement PPO with chunk-based truncated BPTT for recurr
 - **THEN** the system SHALL linearly decay entropy_coef from entropy_coef to entropy_coef_end over entropy_decay_episodes
 - **AND** SHALL clamp at entropy_coef_end after the decay period
 
+### Requirement: Learning Rate Scheduling
+
+The QLIFLSTMBrain SHALL support optional linear warmup and linear decay of learning rates.
+
+#### Scenario: LR Warmup
+
+- **WHEN** lr_warmup_episodes is configured (not None)
+- **THEN** the system SHALL linearly increase learning rate from lr_warmup_start to actor_lr over lr_warmup_episodes
+- **AND** lr_warmup_start SHALL default to 10% of actor_lr when not specified
+
+#### Scenario: LR Decay
+
+- **WHEN** lr_decay_episodes is configured (not None)
+- **THEN** the system SHALL linearly decrease learning rate from actor_lr to lr_decay_end after warmup completes
+- **AND** lr_decay_end SHALL default to 10% of actor_lr when not specified
+- **AND** SHALL clamp at lr_decay_end after the decay period
+
 ### Requirement: Episode Lifecycle
 
 The QLIFLSTMBrain SHALL support the standard episode lifecycle with LSTM state management.
@@ -212,12 +232,16 @@ The configuration system SHALL support QLIF-LSTM-specific parameters via Pydanti
   - critic_num_layers: 2
   - bptt_chunk_length: 16
   - use_quantum_gates: True
+  - lr_warmup_episodes: None
+  - lr_warmup_start: None
+  - lr_decay_episodes: None
+  - lr_decay_end: None
 
 #### Scenario: Sensory Module Configuration
 
 - **WHEN** a QLIFLSTMBrainConfig specifies sensory_modules
-- **THEN** the system SHALL configure the brain to use the specified sensory modules for feature extraction
-- **AND** the default SHALL be FOOD_CHEMOTAXIS and NOCICEPTION (4 features total: 2 per module)
+- **THEN** the system SHALL configure the brain to use the specified sensory modules via `extract_classical_features(params, sensory_modules)` for feature extraction
+- **AND** the default SHALL be None (legacy mode — `preprocess()` returns a 2-element array `[gradient_strength, rel_angle_norm]` extracted directly from BrainParams)
 
 #### Scenario: YAML Config Loading
 

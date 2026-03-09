@@ -56,7 +56,7 @@ from typing import TYPE_CHECKING, Self
 
 import numpy as np
 import torch
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from torch import nn
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -568,10 +568,12 @@ class QLIFLSTMBrainConfig(BrainConfig):
     # Learning rates
     actor_lr: float = Field(
         default=DEFAULT_ACTOR_LR,
+        gt=0,
         description="Learning rate for actor (LSTM cell + actor head) parameters.",
     )
     critic_lr: float = Field(
         default=DEFAULT_CRITIC_LR,
+        gt=0,
         description="Learning rate for critic MLP.",
     )
     lr_warmup_episodes: int | None = Field(
@@ -664,6 +666,17 @@ class QLIFLSTMBrainConfig(BrainConfig):
             raise ValueError(msg)
         return v
 
+    @model_validator(mode="after")
+    def validate_buffer_vs_chunk(self) -> Self:
+        """Validate rollout_buffer_size >= bptt_chunk_length."""
+        if self.rollout_buffer_size < self.bptt_chunk_length:
+            msg = (
+                f"rollout_buffer_size ({self.rollout_buffer_size}) must be >= "
+                f"bptt_chunk_length ({self.bptt_chunk_length})"
+            )
+            raise ValueError(msg)
+        return self
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Brain
@@ -689,6 +702,7 @@ class QLIFLSTMBrain(ClassicalBrain):
 
         self.config = config
         self.num_actions = num_actions
+        self._device_type = device
         self.device = torch.device(device.value)
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
@@ -778,13 +792,20 @@ class QLIFLSTMBrain(ClassicalBrain):
             lr=config.critic_lr,
         )
 
+        # Episode counter (must be set before LR scheduling)
+        self._episode_count = 0
+
         # LR scheduling (warmup + decay)
         self.base_actor_lr = config.actor_lr
         self.base_critic_lr = config.critic_lr
         self.lr_warmup_episodes = config.lr_warmup_episodes
-        self.lr_warmup_start = config.lr_warmup_start or (0.1 * config.actor_lr)
+        self.lr_warmup_start = (
+            config.lr_warmup_start if config.lr_warmup_start is not None else 0.1 * config.actor_lr
+        )
         self.lr_decay_episodes = config.lr_decay_episodes
-        self.lr_decay_end = config.lr_decay_end or (0.1 * config.actor_lr)
+        self.lr_decay_end = (
+            config.lr_decay_end if config.lr_decay_end is not None else 0.1 * config.actor_lr
+        )
         self.lr_scheduling_enabled = (
             config.lr_decay_episodes is not None or config.lr_warmup_episodes is not None
         )
@@ -802,6 +823,7 @@ class QLIFLSTMBrain(ClassicalBrain):
                     f"over {self.lr_decay_episodes} eps",
                 )
             logger.info(f"LR schedule: {', '.join(parts)}")
+            self._update_learning_rate()
 
         # Rollout buffer
         self.buffer = QLIFLSTMRolloutBuffer(
@@ -817,7 +839,6 @@ class QLIFLSTMBrain(ClassicalBrain):
         # State tracking
         self.training = True
         self.current_probabilities: np.ndarray | None = None
-        self._episode_count = 0
         self._step_count = 0
 
         # Pending step data (stored in run_brain, consumed in learn)
@@ -846,7 +867,7 @@ class QLIFLSTMBrain(ClassicalBrain):
         """Get or create the Qiskit Aer backend."""
         if self._backend is None:
             self._backend = get_qiskit_backend(
-                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
+                self._device_type,
                 seed=self.seed,
             )
             self.lstm_cell.set_backend(self._backend)
@@ -862,6 +883,14 @@ class QLIFLSTMBrain(ClassicalBrain):
         Two modes:
         1. **Unified sensory mode** (when sensory_modules is set)
         2. **Legacy mode** (default): gradient strength + relative angle
+
+        Returns
+        -------
+        np.ndarray
+            Feature vector (dtype=np.float32). In unified sensory mode, returns
+            the output of ``extract_classical_features(params, sensory_modules)``.
+            In legacy mode, returns a 2-element array ``[grad_strength,
+            rel_angle_norm]`` with gradient strength and normalized relative angle.
         """
         if self.sensory_modules is not None:
             return extract_classical_features(params, self.sensory_modules)
