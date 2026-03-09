@@ -789,6 +789,9 @@ class QLIFLSTMBrain(ClassicalBrain):
             lr=config.critic_lr,
         )
 
+        # Episode counter (must be set before LR scheduling)
+        self._episode_count = 0
+
         # LR scheduling (warmup + decay)
         self.base_actor_lr = config.actor_lr
         self.base_critic_lr = config.critic_lr
@@ -833,7 +836,6 @@ class QLIFLSTMBrain(ClassicalBrain):
         # State tracking
         self.training = True
         self.current_probabilities: np.ndarray | None = None
-        self._episode_count = 0
         self._step_count = 0
 
         # Pending step data (stored in run_brain, consumed in learn)
