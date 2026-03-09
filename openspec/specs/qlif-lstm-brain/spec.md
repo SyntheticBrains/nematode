@@ -108,9 +108,10 @@ The QLIFLSTMBrain SHALL use a rollout buffer that stores per-step data including
 
 #### Scenario: Episode-End Flush
 
-- **WHEN** learn() is called with episode_done=True and the buffer has data
+- **WHEN** learn() is called with episode_done=True and the buffer has at least bptt_chunk_length steps
 - **THEN** the system SHALL trigger a PPO update with the current buffer contents
 - **AND** SHALL clear the buffer after the update
+- **AND** if the buffer has fewer than bptt_chunk_length steps, the buffer SHALL be retained (no update triggered)
 
 #### Scenario: GAE Advantage Computation
 
@@ -239,8 +240,8 @@ The configuration system SHALL support QLIF-LSTM-specific parameters via Pydanti
 #### Scenario: Sensory Module Configuration
 
 - **WHEN** a QLIFLSTMBrainConfig specifies sensory_modules
-- **THEN** the system SHALL configure the brain to use the specified sensory modules for feature extraction
-- **AND** the default SHALL be None (legacy mode — uses extract_classical_features with BrainParams directly)
+- **THEN** the system SHALL configure the brain to use the specified sensory modules via `extract_classical_features(params, sensory_modules)` for feature extraction
+- **AND** the default SHALL be None (legacy mode — `preprocess()` returns a 2-element array `[gradient_strength, rel_angle_norm]` extracted directly from BrainParams)
 
 #### Scenario: YAML Config Loading
 

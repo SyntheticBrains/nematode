@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-03-05
+**Last Updated**: 2026-03-10
 
 ______________________________________________________________________
 
@@ -1644,7 +1644,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 - **Brain-inspired QSNN-QLSTM precedent**: arXiv:2505.01735 (May 2025) demonstrated a two-stage architecture combining QSNN (sensory) + QLSTM (memory) that converged in **40 iterations vs 700 for classical ANN** with 108 vs 731 parameters on credit card fraud detection. Although not an RL task, the architecture pattern — quantum spiking sensory stage feeding into quantum temporal processing — maps directly to our QLIF-LSTM design
 - **Differentiable architecture search available**: DiffQAS-QLSTM (arXiv:2508.14955, August 2025) demonstrated end-to-end differentiable joint optimization of VQC parameters and circuit architecture selection for QLSTM. If manual gate selection underperforms, DiffQAS provides a principled alternative for finding optimal QLIF integration points
 - **Minimal quantum circuit** (single-qubit per activation), avoiding barren plateaus by design
-- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM). The codebase currently has **zero temporal/recurrent architectures** — every brain is stateless. This is the most significant architectural gap
+- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM). Prior to H.4, the codebase had **zero temporal/recurrent architectures** — every brain was stateless. H.4 (QLIFLSTMBrain) closes this gap as the first architecture with within-episode memory
 - **Builds directly on proven infrastructure** — uses the same QLIF neuron and surrogate gradient backward pass that achieved 73.9% foraging success
 - **Low risk**: if quantum activations don't help, the architecture gracefully degrades to a standard LSTM with slightly different activations — we still gain temporal memory infrastructure needed for Phase 3
 - **ICML 2025 benchmarking insight**: arXiv:2502.04909 found that most PQC-QRL approaches "may not greatly rely on their quantum components." H.4 is designed with this in mind — even if QLIF activations prove equivalent to classical sigmoid (as the HybridClassical ablation showed for QSNN reflex), the temporal architecture itself advances the project. The quantum hypothesis is a bonus, not the sole justification
@@ -1760,24 +1760,24 @@ COMPLETED:
     Task-dependent: CRH wins stationary. Structured topology falsified.
 
 NEXT:
-  Week 1-2:  QKAN-QLIF (H.4) Stage 4a — Core implementation
-             - Implement QLIF-LSTM module (QLIF activations in forget/input gates)
-             - Classical LSTM ablation control
-             - Foraging evaluation (small grid)
+  Week 1:    QKAN-QLIF (H.4) Stage 4a — Foraging evaluation
+             - QLIFLSTMBrain implementation complete (qliflstm brain type)
+             - Classical LSTM ablation control ready (use_quantum_gates: false)
+             - Run foraging evaluation (small grid) with quantum + classical configs
              - Decision gate: ≥80% foraging, parameter reduction ≥30%
 
-  Week 3:    QKAN-QLIF (H.4) Stage 4b — Predator evaluation
+  Week 2:    QKAN-QLIF (H.4) Stage 4b — Predator evaluation
              - Pursuit predators (small grid, 2 predators)
              - Stationary predators (small grid)
              - Classical LSTM ablation on same tasks
              - Decision gate: temporal memory improves evasion?
 
-  Week 4:    QKAN-QLIF (H.4) Stage 4c — Multi-environment evaluation
+  Week 3:    QKAN-QLIF (H.4) Stage 4c — Multi-environment evaluation
              - Thermotaxis + pursuit predators (large grid)
              - Thermotaxis + stationary predators (large grid)
              - Cross-architecture comparison (vs QRH, HybridQuantum, MLPPPO)
 
-  Week 5:    QKAN-QLIF (H.4) Stage 4d — QRH-QLSTM variant
+  Week 4:    QKAN-QLIF (H.4) Stage 4d — QRH-QLSTM variant
              - Replace QRH's MLP readout with QLIF-LSTM readout
              - CRH-LSTM classical ablation control
              - Test: resolves QRH stationary predator weakness?

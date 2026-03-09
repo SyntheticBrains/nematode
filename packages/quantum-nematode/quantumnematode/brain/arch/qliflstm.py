@@ -56,7 +56,7 @@ from typing import TYPE_CHECKING, Self
 
 import numpy as np
 import torch
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from torch import nn
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -663,6 +663,17 @@ class QLIFLSTMBrainConfig(BrainConfig):
             msg = f"bptt_chunk_length must be >= {MIN_BPTT_CHUNK_LENGTH}, got {v}"
             raise ValueError(msg)
         return v
+
+    @model_validator(mode="after")
+    def validate_buffer_vs_chunk(self) -> Self:
+        """Validate rollout_buffer_size >= bptt_chunk_length."""
+        if self.rollout_buffer_size < self.bptt_chunk_length:
+            msg = (
+                f"rollout_buffer_size ({self.rollout_buffer_size}) must be >= "
+                f"bptt_chunk_length ({self.bptt_chunk_length})"
+            )
+            raise ValueError(msg)
+        return self
 
 
 # ──────────────────────────────────────────────────────────────────────
