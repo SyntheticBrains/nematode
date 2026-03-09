@@ -17,7 +17,7 @@ The system SHALL support a QLIF-LSTM brain architecture that combines a custom L
 - **WHEN** a QLIFLSTMBrain is instantiated with default configuration
 - **THEN** the system SHALL create a QLIFLSTMCell with configurable hidden dimension (default 32)
 - **AND** SHALL create a classical MLP critic accepting raw sensory features and detached LSTM hidden state
-- **AND** SHALL create an actor head (Linear layer) mapping LSTM hidden state to action logits
+- **AND** SHALL create an actor head (Linear layer) mapping concatenated [features, h_t] to action logits
 - **AND** SHALL initialize LSTM hidden state (h_t, c_t) as zero tensors
 - **AND** SHALL initialize the network with a deterministic seed for reproducibility
 
@@ -162,6 +162,23 @@ The QLIFLSTMBrain SHALL implement PPO with chunk-based truncated BPTT for recurr
 - **THEN** the system SHALL linearly decay entropy_coef from entropy_coef to entropy_coef_end over entropy_decay_episodes
 - **AND** SHALL clamp at entropy_coef_end after the decay period
 
+### Requirement: Learning Rate Scheduling
+
+The QLIFLSTMBrain SHALL support optional linear warmup and linear decay of learning rates.
+
+#### Scenario: LR Warmup
+
+- **WHEN** lr_warmup_episodes is configured (not None)
+- **THEN** the system SHALL linearly increase learning rate from lr_warmup_start to actor_lr over lr_warmup_episodes
+- **AND** lr_warmup_start SHALL default to 10% of actor_lr when not specified
+
+#### Scenario: LR Decay
+
+- **WHEN** lr_decay_episodes is configured (not None)
+- **THEN** the system SHALL linearly decrease learning rate from actor_lr to lr_decay_end after warmup completes
+- **AND** lr_decay_end SHALL default to 10% of actor_lr when not specified
+- **AND** SHALL clamp at lr_decay_end after the decay period
+
 ### Requirement: Episode Lifecycle
 
 The QLIFLSTMBrain SHALL support the standard episode lifecycle with LSTM state management.
@@ -212,12 +229,16 @@ The configuration system SHALL support QLIF-LSTM-specific parameters via Pydanti
   - critic_num_layers: 2
   - bptt_chunk_length: 16
   - use_quantum_gates: True
+  - lr_warmup_episodes: None
+  - lr_warmup_start: None
+  - lr_decay_episodes: None
+  - lr_decay_end: None
 
 #### Scenario: Sensory Module Configuration
 
 - **WHEN** a QLIFLSTMBrainConfig specifies sensory_modules
 - **THEN** the system SHALL configure the brain to use the specified sensory modules for feature extraction
-- **AND** the default SHALL be FOOD_CHEMOTAXIS and NOCICEPTION (4 features total: 2 per module)
+- **AND** the default SHALL be None (legacy mode — uses extract_classical_features with BrainParams directly)
 
 #### Scenario: YAML Config Loading
 
