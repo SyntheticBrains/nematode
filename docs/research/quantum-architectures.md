@@ -1580,7 +1580,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 - qtDNN training overhead must be < 3x forward pass cost (amortized over calibration interval)
 - Must not exhibit barren plateau symptoms: gradient variance must not decay exponentially with qubit count (test at 4, 8, 12, 16 qubits)
 
-### H.4 QKAN-QLIF Temporal Brain — Priority 2 (EVALUATED: Stages 4a-4c)
+### H.4 QLIF-LSTM Temporal Brain (QLIFLSTMBrain) — Priority 2 (EVALUATED: Stages 4a-4c)
 
 **Strategy**: Quantum activations in classical temporal architecture
 **Risk**: Low-Medium | **Actual effort**: ~3 weeks (Stages 4a-4c), Stage 4d pending
@@ -1589,7 +1589,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│               QKAN-QLIF Temporal Brain                      │
+│               QLIF-LSTM Temporal Brain                      │
 │                                                             │
 │  Sensory Input (8 features)                                 │
 │       │                                                     │
@@ -1633,7 +1633,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 │                                                             │
 │  Key cost consideration:                                    │
 │  - One quantum circuit per hidden unit per gate per step    │
-│  - Hidden dim 16, 2 quantum gates → 32 circuits/timestep   │
+│  - Hidden dim 16, 2 quantum gates → 32 circuits/timestep    │
 │  - Mitigated by batched Aer execution + small circuits      │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -1782,7 +1782,7 @@ All four proposals are designed for multi-objective learning (foraging + predato
 | H.1 QRH | Classical PPO readout learns objective trade-offs (same as proven HybridQuantum cortex) | Add qubits or multiplex encoding; readout MLP scales naturally |
 | H.2 SQS-QLIF | Mode-gated fusion delegates objectives to reflex (fast) vs cortex (strategic) | Add SQS neurons to small-world network for new modalities |
 | H.3 Entangled QLIF + qtDNN | Entangled spike correlations encode active objective; cortex PPO handles switching | Add QLIF neurons + entanglement edges for new inputs |
-| H.4 QKAN-QLIF | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
+| H.4 QLIF-LSTM | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
 | H.4d QRH-QLSTM | Quantum reservoir features + QLIF-LSTM temporal readout; combines H.1 + H.4 | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
 
 **Current sensory modules**: food_chemotaxis, nociception, thermotaxis, mechanosensation, proprioception
@@ -1949,12 +1949,12 @@ hybrid_quantum_predator_small:
 - Gradient variance scaling: Measure gradient variance vs qubit count — must not decay exponentially (barren plateau test)
 - Training efficiency: Episodes to convergence with qtDNN vs parameter-shift vs sigmoid surrogate
 
-**Parameter Efficiency** (QKAN-QLIF focus):
+**Parameter Efficiency** (QLIF-LSTM focus):
 
 - Performance per parameter: Success rate / total parameter count, compared to classical LSTM equivalent
 - Gate activation richness: Entropy of gate activation distributions — quantum gates should show richer structure
 
-**Temporal Memory Capacity** (SQS-QLIF and QKAN-QLIF shared):
+**Temporal Memory Capacity** (SQS-QLIF and QLIF-LSTM shared):
 
 - Memory capacity: Maximum sequence length that can be reliably recalled
 - Temporal credit assignment: Performance on tasks requiring decisions based on observations N steps ago
@@ -2112,7 +2112,7 @@ Four architectures were proposed, with H.1 and H.4 (Stages 4a-4c) now completed.
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|
 | 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
-| 2 | QKAN-QLIF Temporal Brain (H.4) | Quantum activations in LSTM | **EVALUATED (4a-4c)** | Classical LSTM: 98% last-100 pursuit predators (best temporal arch). Quantum gates: no measurable advantage on any task. Stationary predators: 37% ceiling. Stage 4d (QRH-QLSTM) pending. Temporal infrastructure is the valuable contribution, not quantum activations. |
+| 2 | QLIF-LSTM Temporal Brain (H.4) | Quantum activations in LSTM | **EVALUATED (4a-4c)** | Classical LSTM: 98% last-100 pursuit predators (best temporal arch). Quantum gates: no measurable advantage on any task. Stationary predators: 37% ceiling. Stage 4d (QRH-QLSTM) pending. Temporal infrastructure is the valuable contribution, not quantum activations. |
 | 3 | Entangled QLIF + qtDNN | Classical surrogates | Proposed | Most promising path to genuine *trainable* quantum advantage. hDQNN-TD3 (arXiv:2503.09119) is the strongest QRL result in literature (+13% over TD3 on Humanoid-v4). Adds entanglement — the key quantum resource our QLIF doesn't use. |
 | 4 | SQS-QLIF Hybrid | Local learning rules | Proposed — deprioritised | Highest risk. Our Hebbian learning experiments (12 rounds, 0% success) showed local learning rules are too weak for RL. SQS paper (arXiv:2506.21324) tested on classification, not RL. Deferred until H.3/H.4 results inform whether quantum memory effects are worth pursuing with biologically-plausible neuron models. |
 

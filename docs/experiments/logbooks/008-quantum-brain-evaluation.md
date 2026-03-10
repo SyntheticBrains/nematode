@@ -1540,12 +1540,12 @@ Experiment results: `artifacts/logbooks/008/crh_thermotaxis_pursuit_predators_la
 | R1 | Foraging (classical) | 20260305_140313-140321 | 4×200 | **86.25% avg**, 4/4 converged |
 | R2 | Foraging (quantum) | 20260305_141819-141831 | 4×200 | **85.63% avg**, equivalent to classical |
 | R4 | Pursuit (classical) | 20260305_232259-232309 | 4×500 | **74.7% avg, 98% last-100** |
-| R4 | Pursuit (quantum) | 20260305_232312-232315 | 4×500 | **70.8% avg, 93.5% last-100** |
+| R4 | Pursuit (quantum) | 20260305_232312-233816 | 4×500 | **70.8% avg, 93.5% last-100** |
 | R4b | Pursuit validation | 20260306_045940-045946 | 2×500 | Entropy floor (0.015) validated |
 | R5 | Pursuit large (classical) | 20260306_081836-081846 | 4×500 | **60.1% avg, 82% last-100** |
 | R5 | Pursuit large (quantum) | 20260306_112902-112910 | 4×500 | **45.4% avg, 82% last-100** |
-| R10 | Stationary (classical) | 20260307_123010-123019 | 4×1000 | **37.0% avg** (ceiling) |
-| R10-Q | Stationary (quantum) | 20260307_132444-132457 | 4×500 | **31.0% avg** |
+| R10 | Stationary (classical) | 20260307_123010-123019 | 4×1000 | **28.8% overall, 36.8% last-100** (ceiling) |
+| R10-Q | Stationary (quantum) | 20260307_132444-132457 | 4×500 | **21.1% overall, 30.5% last-100** |
 
 Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
 
