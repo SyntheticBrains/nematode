@@ -12,9 +12,9 @@
 
 ### Step 2: Create QRHQLSTMBrainConfig and CRHQLSTMBrainConfig
 
-**File:** `packages/quantum-nematode/quantumnematode/brain/arch/qrhqlstm.py` (new)
+**Files:** `packages/quantum-nematode/quantumnematode/brain/arch/qrhqlstm.py` (QRH config + brain), `packages/quantum-nematode/quantumnematode/brain/arch/crhqlstm.py` (CRH config + brain)
 
-- [x] Create `QRHQLSTMBrainConfig(BrainConfig)` with flat Pydantic fields:
+- [x] Create `QRHQLSTMBrainConfig(BrainConfig)` in `qrhqlstm.py` with flat Pydantic fields:
   - Reservoir: `num_reservoir_qubits` (8), `reservoir_depth` (3), `reservoir_seed` (42), `use_random_topology` (False), `num_sensory_qubits` (None)
   - LSTM: `lstm_hidden_dim` (64), `bptt_chunk_length` (32)
   - QLIF gates: `shots` (1024), `membrane_tau` (0.9), `refractory_period` (0), `use_quantum_gates` (True)
@@ -22,13 +22,13 @@
   - LR schedule: `lr_warmup_episodes` (None), `lr_warmup_start` (None), `lr_decay_episodes` (None), `lr_decay_end` (None)
   - Critic: `critic_hidden_dim` (128), `critic_num_layers` (2)
   - Sensory: `sensory_modules` (list)
-- [x] Create `CRHQLSTMBrainConfig(BrainConfig)` with CRH reservoir params:
+- [x] Create `CRHQLSTMBrainConfig(BrainConfig)` in `crhqlstm.py` with CRH reservoir params:
   - Reservoir: `num_reservoir_neurons` (10), `reservoir_depth` (3), `spectral_radius` (0.9), `input_connectivity` ("sparse"), `input_scale` (1.0), `feature_channels` (["raw", "cos_sin", "pairwise"]), `input_encoding` ("linear")
   - All other fields identical to QRHQLSTMBrainConfig
 
 ### Step 3: Create ReservoirLSTMBase abstract class
 
-**File:** same `qrhqlstm.py`
+**File:** `packages/quantum-nematode/quantumnematode/brain/arch/_reservoir_lstm_base.py` (new)
 
 - [x] Create `ReservoirLSTMBase(ClassicalBrain)` abstract class with:
   - Abstract method: `_create_reservoir(config) -> ReservoirHybridBase`
@@ -39,7 +39,7 @@
 
 ### Step 4: Implement run_brain() in ReservoirLSTMBase
 
-**File:** same `qrhqlstm.py`
+**File:** same `_reservoir_lstm_base.py`
 
 - [x] Implement `run_brain(params, reward=None, input_data=None, *, top_only, top_randomize) -> list[ActionData]` matching `ClassicalBrain` protocol:
   1. Preprocess sensory input via `reservoir.preprocess(params)`
@@ -53,7 +53,7 @@
 
 ### Step 5: Implement learn() and PPO update in ReservoirLSTMBase
 
-**File:** same `qrhqlstm.py`
+**File:** same `_reservoir_lstm_base.py`
 
 - [x] Create rollout buffer class (adapted from `QLIFLSTMRolloutBuffer`):
   - Store: reservoir features, actions, log_probs, values, rewards, dones, chunk-boundary h/c states
@@ -70,7 +70,7 @@
 
 ### Step 6: Implement episode lifecycle in ReservoirLSTMBase
 
-**File:** same `qrhqlstm.py`
+**File:** same `_reservoir_lstm_base.py`
 
 - [x] `prepare_episode()`: reset h_t, c_t to zeros, clear pending state
 - [x] `post_process_episode(*, episode_success=None)`: increment episode count, update LR schedule
@@ -81,14 +81,14 @@
 
 ### Step 7: Implement QRHQLSTMBrain and CRHQLSTMBrain subclasses
 
-**File:** same `qrhqlstm.py`
+**Files:** `qrhqlstm.py` and `crhqlstm.py` (each contains its config + brain class, mirroring the `qrh.py` / `crh.py` pattern)
 
-- [x] `QRHQLSTMBrain(ReservoirLSTMBase)`:
+- [x] `QRHQLSTMBrain(ReservoirLSTMBase)` in `qrhqlstm.py`:
   - `_create_reservoir()`: construct `QRHBrain(qrh_config)` from own config fields
   - `_compute_reservoir_feature_dim()`: `3N + N(N-1)/2` for N qubits
   - Build a `QRHBrainConfig` from own fields to pass to QRHBrain constructor (unused MLP readout params use defaults — accepted trade-off, see design decision 2)
   - Pass `sensory_modules` through to the inner `QRHBrainConfig` so `preprocess()` uses the correct sensory modules
-- [x] `CRHQLSTMBrain(ReservoirLSTMBase)`:
+- [x] `CRHQLSTMBrain(ReservoirLSTMBase)` in `crhqlstm.py`:
   - `_create_reservoir()`: construct `CRHBrain(crh_config)` from own config fields
   - `_compute_reservoir_feature_dim()`: delegate to CRH's feature channel computation
   - Build a `CRHBrainConfig` from own fields to pass to CRHBrain constructor (same trade-off as QRH)
@@ -104,7 +104,7 @@
 
 - `packages/quantum-nematode/quantumnematode/utils/brain_factory.py`
 
-- [ ] Add imports to `__init__.py`: `QRHQLSTMBrain`, `QRHQLSTMBrainConfig`, `CRHQLSTMBrain`, `CRHQLSTMBrainConfig`
+- [ ] Add imports to `__init__.py`: `QRHQLSTMBrain`, `QRHQLSTMBrainConfig` (from `qrhqlstm`), `CRHQLSTMBrain`, `CRHQLSTMBrainConfig` (from `crhqlstm`), `ReservoirLSTMBase` (from `_reservoir_lstm_base`)
 
 - [ ] Add to `__all__`
 
@@ -125,7 +125,7 @@
 
 ### Step 10: Create unit tests
 
-**File:** `tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py` (new)
+**Files:** `tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py`, `tests/quantumnematode_tests/brain/arch/test_crhqlstm.py`
 
 - [x] `test_qrhqlstm_config_defaults` — verify config field defaults
 - [x] `test_qrhqlstm_brain_init` — verify brain initializes with default config (reservoir created, LSTM cell created, actor/critic built)

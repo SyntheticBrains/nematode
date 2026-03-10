@@ -1,16 +1,11 @@
-"""Unit tests for the QRH-QLSTM and CRH-QLSTM brain architectures."""
+"""Unit tests for the QRH-QLSTM brain architecture."""
 
 import pytest
 import torch
 from quantumnematode.brain.actions import ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
-from quantumnematode.brain.arch.qrhqlstm import (
-    CRHQLSTMBrain,
-    CRHQLSTMBrainConfig,
-    QRHQLSTMBrain,
-    QRHQLSTMBrainConfig,
-)
+from quantumnematode.brain.arch.qrhqlstm import QRHQLSTMBrain, QRHQLSTMBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
 
@@ -72,21 +67,6 @@ class TestQRHQLSTMBrainConfig:
             QRHQLSTMBrainConfig(rollout_buffer_size=8, bptt_chunk_length=16)
 
 
-class TestCRHQLSTMBrainConfig:
-    """Test cases for CRH-QLSTM config."""
-
-    def test_default_config(self):
-        """Test default CRH-QLSTM configuration values."""
-        config = CRHQLSTMBrainConfig()
-        assert config.num_reservoir_neurons == 10
-        assert config.reservoir_depth == 3
-        assert config.spectral_radius == 0.9
-        assert config.input_connectivity == "sparse"
-        assert config.feature_channels == ["raw", "cos_sin", "pairwise"]
-        assert config.lstm_hidden_dim == 64
-        assert config.use_quantum_gates is True
-
-
 # ──────────────────────────────────────────────────────────────────────
 # Brain Type Registration Tests
 # ──────────────────────────────────────────────────────────────────────
@@ -101,16 +81,9 @@ class TestBrainTypeRegistration:
 
         assert BrainType.QRH_QLSTM in QUANTUM_BRAIN_TYPES
 
-    def test_crh_qlstm_in_classical_types(self):
-        """CRH-QLSTM should be in CLASSICAL_BRAIN_TYPES."""
-        from quantumnematode.brain.arch.dtypes import CLASSICAL_BRAIN_TYPES
-
-        assert BrainType.CRH_QLSTM in CLASSICAL_BRAIN_TYPES
-
-    def test_brain_type_values(self):
-        """Test brain type enum values."""
+    def test_brain_type_value(self):
+        """Test brain type enum value."""
         assert BrainType.QRH_QLSTM.value == "qrhqlstm"
-        assert BrainType.CRH_QLSTM.value == "crhqlstm"
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -257,65 +230,3 @@ class TestQRHQLSTMBrain:
         )
         result = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(result) == 1
-
-
-# ──────────────────────────────────────────────────────────────────────
-# CRH-QLSTM Brain Tests
-# ──────────────────────────────────────────────────────────────────────
-
-
-class TestCRHQLSTMBrain:
-    """Test cases for CRH-QLSTM brain."""
-
-    @pytest.fixture
-    def config(self) -> CRHQLSTMBrainConfig:
-        """Create a small test config."""
-        return CRHQLSTMBrainConfig(
-            num_reservoir_neurons=4,
-            lstm_hidden_dim=8,
-            use_quantum_gates=False,
-            rollout_buffer_size=8,
-            bptt_chunk_length=4,
-            num_epochs=1,
-            seed=42,
-        )
-
-    @pytest.fixture
-    def brain(self, config: CRHQLSTMBrainConfig) -> CRHQLSTMBrain:
-        """Create a test CRH-QLSTM brain."""
-        return CRHQLSTMBrain(config=config, num_actions=4, device=DeviceType.CPU)
-
-    @pytest.fixture
-    def params(self) -> BrainParams:
-        """Create test BrainParams."""
-        return BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
-            agent_direction=Direction.UP,
-        )
-
-    def test_initialization(self, brain: CRHQLSTMBrain):
-        """Test CRH-QLSTM brain initializes correctly."""
-        assert brain.num_actions == 4
-        assert brain.lstm_cell is not None
-        assert brain.actor_head is not None
-        assert brain.critic is not None
-        assert brain.h_t.shape == (8,)
-        assert brain.feature_dim > 0
-
-    def test_run_brain(self, brain: CRHQLSTMBrain, params: BrainParams):
-        """Test CRH-QLSTM run_brain produces valid action data."""
-        result = brain.run_brain(params, top_only=False, top_randomize=False)
-        assert len(result) == 1
-        assert isinstance(result[0], ActionData)
-        assert result[0].probability > 0
-
-    def test_full_episode_loop(self, brain: CRHQLSTMBrain, params: BrainParams):
-        """Test a complete episode loop for CRH-QLSTM."""
-        brain.prepare_episode()
-        for step in range(10):
-            brain.run_brain(params, top_only=False, top_randomize=False)
-            done = step == 9
-            brain.learn(params, reward=0.1, episode_done=done)
-        brain.post_process_episode()
-        assert brain._episode_count == 1

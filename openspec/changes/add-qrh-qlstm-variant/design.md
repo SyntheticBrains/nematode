@@ -42,7 +42,7 @@ The QRH-QLSTM variant replaces QRH's MLP readout with an QLIF-LSTM temporal read
 
 **Alternative considered**: Subclass `ReservoirHybridBase` and override `run_brain()`, `learn()`, `_perform_ppo_update()`. Rejected because the base class's `__init__` constructs MLP networks and optimizer that would be unused — wasteful and confusing.
 
-**Implementation**: `ReservoirLSTMBase` is a new abstract base in `qrhqlstm.py` that:
+**Implementation**: `ReservoirLSTMBase` is a new abstract base in `_reservoir_lstm_base.py` that:
 
 - Delegates reservoir computation to a reservoir instance (QRH or CRH brain used as a feature extractor only)
 - Owns the QLIF-LSTM cell, actor head, critic MLP, and recurrent PPO buffer
@@ -86,31 +86,40 @@ The QRH-QLSTM variant replaces QRH's MLP readout with an QLIF-LSTM temporal read
 
 ### 6. Shared base for QRH-QLSTM and CRH-QLSTM
 
-**Decision**: Create `ReservoirLSTMBase` abstract class with two concrete subclasses: `QRHQLSTMBrain` and `CRHQLSTMBrain`.
+**Decision**: Create `ReservoirLSTMBase` abstract class with two concrete subclasses: `QRHQLSTMBrain` and `CRHQLSTMBrain`, following the same file split pattern as `_reservoir_hybrid_base.py` / `qrh.py` / `crh.py`.
 
-**Rationale**: The two variants differ only in which reservoir they use. All LSTM readout, PPO training, and lifecycle code is identical. A shared base avoids duplication.
+**Rationale**: The two variants differ only in which reservoir they use. All LSTM readout, PPO training, and lifecycle code is identical. A shared base avoids duplication. Separating them into distinct files follows the established project convention for quantum/classical brain pairs (QRH/CRH, HybridQuantum/HybridClassical).
 
-**Structure**:
+**File structure**:
 
 ```text
-ReservoirLSTMBase (abstract)
-├── _create_reservoir() → abstract, returns reservoir brain instance
-├── _get_reservoir_features(sensory) → calls reservoir._get_reservoir_features()
-├── QLIFLSTMCell (LSTM readout)
-├── actor_head, critic MLP
-├── Recurrent PPO (truncated BPTT)
-└── Episode lifecycle (prepare_episode, learn, post_process_episode)
+_reservoir_lstm_base.py    ← shared abstract base + defaults
+├── ReservoirLSTMBase (abstract)
+│   ├── _create_reservoir() → abstract
+│   ├── _compute_reservoir_feature_dim() → abstract
+│   ├── QLIFLSTMCell (LSTM readout)
+│   ├── actor_head, critic MLP
+│   ├── Recurrent PPO (truncated BPTT)
+│   └── Episode lifecycle
 
-QRHQLSTMBrain(ReservoirLSTMBase)
-└── _create_reservoir() → QRHBrain(config)
+qrhqlstm.py               ← quantum reservoir variant
+├── QRHQLSTMBrainConfig(BrainConfig)
+└── QRHQLSTMBrain(ReservoirLSTMBase)
+    └── _create_reservoir() → QRHBrain(config)
 
-CRHQLSTMBrain(ReservoirLSTMBase)
-└── _create_reservoir() → CRHBrain(config)
+crhqlstm.py               ← classical reservoir variant
+├── CRHQLSTMBrainConfig(BrainConfig)
+└── CRHQLSTMBrain(ReservoirLSTMBase)
+    └── _create_reservoir() → CRHBrain(config)
 ```
+
+This mirrors the existing pattern:
+
+- `_reservoir_hybrid_base.py` → `qrh.py` + `crh.py`
 
 ### 7. Config structure
 
-**Decision**: `QRHQLSTMBrainConfig` contains both reservoir params (from `QRHBrainConfig`) and LSTM readout params. Uses Pydantic composition (flat fields, not nested configs).
+**Decision**: `QRHQLSTMBrainConfig` (in `qrhqlstm.py`) contains QRH reservoir params plus LSTM readout params. `CRHQLSTMBrainConfig` (in `crhqlstm.py`) mirrors this with CRH reservoir params. Each config lives alongside its brain class. Uses Pydantic composition (flat fields, not nested configs).
 
 **Key fields**:
 
@@ -122,7 +131,7 @@ CRHQLSTMBrain(ReservoirLSTMBase)
 - Critic: `critic_hidden_dim`, `critic_num_layers`
 - Sensory: `sensory_modules`
 
-`CRHQLSTMBrainConfig` mirrors this with CRH reservoir params (`num_reservoir_neurons`, `spectral_radius`, etc.).
+`CRHQLSTMBrainConfig` (in `crhqlstm.py`) mirrors this with CRH reservoir params (`num_reservoir_neurons`, `spectral_radius`, etc.).
 
 ### 8. Feature normalization
 
