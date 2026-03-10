@@ -70,6 +70,7 @@ from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._qlif_layers import get_qiskit_backend
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.arch.qliflstm import QLIFLSTMCell, QLIFLSTMCritic, QLIFLSTMRolloutBuffer
+from quantumnematode.brain.modules import ModuleName  # noqa: TC001
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -178,6 +179,12 @@ class ReservoirLSTMBaseConfig(BrainConfig):
         description="Critic hidden dim.",
     )
     critic_num_layers: int = Field(default=DEFAULT_CRITIC_NUM_LAYERS, description="Critic layers.")
+
+    # Sensory modules
+    sensory_modules: list[ModuleName] | None = Field(
+        default=None,
+        description="Sensory modules for feature extraction (None = legacy mode).",
+    )
 
     # Device
     device_type: DeviceType = Field(default=DeviceType.CPU, description="Device for computation.")

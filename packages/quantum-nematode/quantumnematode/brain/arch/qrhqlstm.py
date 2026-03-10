@@ -23,8 +23,6 @@ from quantumnematode.brain.arch.qrh import QRHBrain, QRHBrainConfig
 if TYPE_CHECKING:
     from typing import Any
 
-    from quantumnematode.brain.modules import ModuleName
-
 
 class QRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
     """Configuration for QRH-QLSTM: quantum reservoir + QLIF-LSTM readout.
@@ -43,12 +41,6 @@ class QRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
     num_sensory_qubits: int | None = Field(
         default=None,
         description="Number of sensory qubits (None = auto-compute).",
-    )
-
-    # Sensory modules
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="Sensory modules for feature extraction (None = legacy mode).",
     )
 
 

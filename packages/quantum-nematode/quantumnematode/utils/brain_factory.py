@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from quantumnematode.brain.arch import (
     Brain,
     CRHBrainConfig,
+    CRHQLSTMBrainConfig,
     HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
     HybridQuantumCortexBrainConfig,
@@ -21,6 +22,7 @@ from quantumnematode.brain.arch import (
     QQLearningBrainConfig,
     QRCBrainConfig,
     QRHBrainConfig,
+    QRHQLSTMBrainConfig,
     QSNNPPOBrainConfig,
     QSNNReinforceBrainConfig,
     QVarCircuitBrainConfig,
@@ -60,6 +62,8 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | HybridQuantumCortexBrainConfig
     | HybridClassicalBrainConfig
     | QLIFLSTMBrainConfig
+    | QRHQLSTMBrainConfig
+    | CRHQLSTMBrainConfig
     | SpikingReinforceBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
@@ -378,6 +382,38 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = QLIFLSTMBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.QRH_QLSTM:
+        from quantumnematode.brain.arch.qrhqlstm import QRHQLSTMBrain
+
+        if not isinstance(brain_config, QRHQLSTMBrainConfig):
+            error_message = (
+                "The 'qrhqlstm' brain architecture requires a QRHQLSTMBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QRHQLSTMBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.CRH_QLSTM:
+        from quantumnematode.brain.arch.crhqlstm import CRHQLSTMBrain
+
+        if not isinstance(brain_config, CRHQLSTMBrainConfig):
+            error_message = (
+                "The 'crhqlstm' brain architecture requires a CRHQLSTMBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = CRHQLSTMBrain(
             config=brain_config,
             num_actions=4,
             device=device,

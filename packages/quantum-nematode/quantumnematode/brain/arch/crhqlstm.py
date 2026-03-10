@@ -23,8 +23,6 @@ from quantumnematode.brain.arch.crh import CRHBrain, CRHBrainConfig
 if TYPE_CHECKING:
     from typing import Any
 
-    from quantumnematode.brain.modules import ModuleName
-
 # CRH-specific type aliases
 FeatureChannel = Literal["raw", "cos_sin", "squared", "pairwise"]
 InputEncoding = Literal["linear", "trig"]
@@ -48,12 +46,6 @@ class CRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
         description="Feature channels from ESN activations.",
     )
     input_encoding: InputEncoding = Field(default="linear", description="Input encoding mode.")
-
-    # Sensory modules
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="Sensory modules for feature extraction (None = legacy mode).",
-    )
 
 
 class CRHQLSTMBrain(ReservoirLSTMBase):
