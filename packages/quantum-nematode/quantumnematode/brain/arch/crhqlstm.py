@@ -10,7 +10,7 @@ documentation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from pydantic import Field
 
@@ -18,14 +18,10 @@ from quantumnematode.brain.arch._reservoir_lstm_base import (
     ReservoirLSTMBase,
     ReservoirLSTMBaseConfig,
 )
-from quantumnematode.brain.arch.crh import CRHBrain, CRHBrainConfig
+from quantumnematode.brain.arch.crh import CRHBrain, CRHBrainConfig, FeatureChannel, InputEncoding
 
 if TYPE_CHECKING:
     from typing import Any
-
-# CRH-specific type aliases
-FeatureChannel = Literal["raw", "cos_sin", "squared", "pairwise"]
-InputEncoding = Literal["linear", "trig"]
 
 
 class CRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
@@ -89,9 +85,23 @@ class CRHQLSTMBrain(ReservoirLSTMBase):
         self,
         config: ReservoirLSTMBaseConfig,
     ) -> int:
-        """Compute CRH feature dimension from configured channels."""
+        """Compute CRH feature dimension from configured channels.
+
+        Computed purely from config fields (not from reservoir instance)
+        so this method is safe to call independently of init ordering.
+        """
         if not isinstance(config, CRHQLSTMBrainConfig):
             msg = f"CRHQLSTMBrain requires CRHQLSTMBrainConfig, got {type(config).__name__}"
             raise TypeError(msg)
-        # Delegate to reservoir instance (it computes based on channels)
-        return self.reservoir._compute_feature_dim()  # noqa: SLF001
+        n = config.num_reservoir_neurons
+        dim = 0
+        for ch in config.feature_channels:
+            if ch == "raw":
+                dim += n
+            elif ch == "cos_sin":
+                dim += 2 * n
+            elif ch == "squared":
+                dim += n
+            elif ch == "pairwise":
+                dim += n * (n - 1) // 2
+        return dim

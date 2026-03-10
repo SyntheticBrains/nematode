@@ -463,21 +463,23 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
 
     def _get_actor_input(
         self,
-        features: np.ndarray,
+        features: torch.Tensor,
         h_state: torch.Tensor,
     ) -> torch.Tensor:
-        """Build actor input from reservoir features and LSTM hidden state."""
-        features_t = torch.tensor(features, dtype=torch.float32, device=self.device)
-        return torch.cat([features_t, h_state])
+        """Build actor input from normalized features and LSTM hidden state."""
+        return torch.cat([features, h_state])
 
     def _get_critic_input(
         self,
-        features: np.ndarray,
+        features: torch.Tensor,
         h_state: torch.Tensor,
     ) -> torch.Tensor:
-        """Build critic input from reservoir features and detached LSTM state."""
-        features_t = torch.tensor(features, dtype=torch.float32, device=self.device)
-        return torch.cat([features_t, h_state.detach()])
+        """Build critic input from normalized features and detached LSTM state.
+
+        Both features and h_state are detached so critic gradients don't flow
+        into the actor's LayerNorm or LSTM cell (separate optimizer).
+        """
+        return torch.cat([features.detach(), h_state.detach()])
 
     # ──────────────────────────────────────────────────────────────────
     # Brain Protocol
@@ -520,9 +522,9 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
         self.h_t = h_new
         self.c_t = c_new
 
-        # Actor: [reservoir_features, h_t] -> logits
+        # Actor: [normalized_features, h_t] -> logits
         with torch.no_grad():
-            actor_input = self._get_actor_input(reservoir_features, self.h_t)
+            actor_input = self._get_actor_input(normalized_features, self.h_t)
             logits = self.actor_head(actor_input)
             action_probs = torch.softmax(logits, dim=-1).cpu().numpy()
 
@@ -535,7 +537,7 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
 
         # Compute critic value
         with torch.no_grad():
-            critic_input = self._get_critic_input(reservoir_features, self.h_t)
+            critic_input = self._get_critic_input(normalized_features, self.h_t)
             value = self.critic(critic_input).item()
 
         # Store pending data for learn()
@@ -607,7 +609,13 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
         # Compute last value for GAE bootstrap
         if self._pending_features is not None:
             with torch.no_grad():
-                critic_input = self._get_critic_input(self._pending_features, self.h_t)
+                features_t = torch.tensor(
+                    self._pending_features,
+                    dtype=torch.float32,
+                    device=self.device,
+                )
+                normalized = self.feature_norm(features_t)
+                critic_input = self._get_critic_input(normalized, self.h_t)
                 last_value = self.critic(critic_input).item()
         else:
             last_value = 0.0
@@ -662,7 +670,7 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
                     h, c = self.lstm_cell(normalized, h, c)
 
                     # Actor
-                    actor_input = self._get_actor_input(features, h)
+                    actor_input = self._get_actor_input(normalized, h)
                     logits = self.actor_head(actor_input)
                     action_probs = torch.softmax(logits, dim=-1)
 
@@ -676,7 +684,7 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
                     entropies_list.append(entropy)
 
                     # Critic
-                    critic_input = self._get_critic_input(features, h)
+                    critic_input = self._get_critic_input(normalized, h)
                     value = self.critic(critic_input)
                     values_list.append(value)
 
@@ -746,6 +754,7 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
             avg_value = total_value_loss / num_updates
             avg_entropy = total_entropy / num_updates
             self.latest_data.loss = avg_policy
+            self.history_data.losses.append(avg_policy)
 
             logger.info(
                 f"{self._brain_name} PPO update: policy_loss={avg_policy:.4f}, "
