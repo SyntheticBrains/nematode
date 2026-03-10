@@ -1,0 +1,83 @@
+# Dynamic Foraging Environment - Small Configuration
+# Uses CRH-QLSTM (Classical Reservoir Hybrid + QLIF-LSTM temporal readout)
+# Smoke test baseline for CRH variant
+# Same environment as qrhqlstm_foraging_small.yml for comparison
+
+max_steps: 500
+brain:
+  name: crhqlstm
+  config:
+    # Reservoir parameters (CRH Echo State Network)
+    num_reservoir_neurons: 10
+    reservoir_depth: 3
+    reservoir_seed: 42
+    spectral_radius: 0.9
+    input_connectivity: sparse
+    input_scale: 1.0
+    feature_channels:
+      - raw
+      - cos_sin
+      - pairwise
+    input_encoding: linear
+
+    # LSTM readout
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 32
+
+    # QLIF gate parameters
+    shots: 1024
+    membrane_tau: 0.9
+    refractory_period: 0
+    use_quantum_gates: true
+
+    # PPO hyperparameters
+    actor_lr: 0.0005
+    critic_lr: 0.0005
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_epsilon: 0.2
+    entropy_coef: 0.02
+    entropy_coef_end: 0.008
+    entropy_decay_episodes: 500
+    value_loss_coef: 0.5
+    num_epochs: 6
+    rollout_buffer_size: 256
+    max_grad_norm: 0.5
+
+    # LR warmup
+    lr_warmup_episodes: 30
+    lr_warmup_start: 0.00005
+
+    # Critic
+    critic_hidden_dim: 64
+    critic_num_layers: 2
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0

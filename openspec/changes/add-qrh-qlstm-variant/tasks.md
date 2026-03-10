@@ -104,24 +104,24 @@
 
 - `packages/quantum-nematode/quantumnematode/utils/brain_factory.py`
 
-- [ ] Add imports to `__init__.py`: `QRHQLSTMBrain`, `QRHQLSTMBrainConfig` (from `qrhqlstm`), `CRHQLSTMBrain`, `CRHQLSTMBrainConfig` (from `crhqlstm`), `ReservoirLSTMBase` (from `_reservoir_lstm_base`)
+- [x] Add imports to `__init__.py`: `QRHQLSTMBrain`, `QRHQLSTMBrainConfig` (from `qrhqlstm`), `CRHQLSTMBrain`, `CRHQLSTMBrainConfig` (from `crhqlstm`), `ReservoirLSTMBase` (from `_reservoir_lstm_base`)
 
-- [ ] Add to `__all__`
+- [x] Add to `__all__`
 
-- [ ] Add to `BRAIN_CONFIG_MAP` in config_loader.py: `"qrhqlstm": QRHQLSTMBrainConfig`, `"crhqlstm": CRHQLSTMBrainConfig`
+- [x] Add to `BRAIN_CONFIG_MAP` in config_loader.py: `"qrhqlstm": QRHQLSTMBrainConfig`, `"crhqlstm": CRHQLSTMBrainConfig`
 
-- [ ] Add `BrainType.QRH_QLSTM` and `BrainType.CRH_QLSTM` branches to `brain_factory.py`'s `create_brain()` function, following the existing pattern (import, isinstance check, constructor call with `config=brain_config, num_actions=4, device=device`)
+- [x] Add `BrainType.QRH_QLSTM` and `BrainType.CRH_QLSTM` branches to `brain_factory.py`'s `create_brain()` function, following the existing pattern (import, isinstance check, constructor call with `config=brain_config, num_actions=4, device=device`)
 
 ### Step 9: Create evaluation config YAMLs
 
 **Directory:** `configs/examples/`
 
-- [ ] `qrhqlstm_thermotaxis_stationary_predators_large.yml` — QRH-QLSTM on stationary predators (primary test, quantum gates enabled). Use same environment as `qrh_thermotaxis_stationary_predators_large.yml`.
-- [ ] `qrhqlstm_thermotaxis_stationary_predators_large_classical.yml` — Same but `use_quantum_gates: false` (classical QLIF gate ablation)
-- [ ] `crhqlstm_thermotaxis_stationary_predators_large.yml` — CRH-QLSTM on stationary predators (classical reservoir ablation)
-- [ ] `qrhqlstm_pursuit_predators_small.yml` — QRH-QLSTM on pursuit predators (regression test). Use same environment as `qrh_pursuit_predators_small.yml`.
-- [ ] `qrhqlstm_foraging_small.yml` — QRH-QLSTM on foraging (smoke test baseline)
-- [ ] `crhqlstm_foraging_small.yml` — CRH-QLSTM on foraging (smoke test baseline for CRH variant)
+- [x] `qrhqlstm_thermotaxis_stationary_predators_large.yml` — QRH-QLSTM on stationary predators (primary test, quantum gates enabled). Use same environment as `qrh_thermotaxis_stationary_predators_large.yml`.
+- [x] `qrhqlstm_thermotaxis_stationary_predators_large_classical.yml` — Same but `use_quantum_gates: false` (classical QLIF gate ablation)
+- [x] `crhqlstm_thermotaxis_stationary_predators_large.yml` — CRH-QLSTM on stationary predators (classical reservoir ablation)
+- [x] `qrhqlstm_pursuit_predators_small.yml` — QRH-QLSTM on pursuit predators (regression test). Use same environment as `qrh_pursuit_predators_small.yml`.
+- [x] `qrhqlstm_foraging_small.yml` — QRH-QLSTM on foraging (smoke test baseline)
+- [x] `crhqlstm_foraging_small.yml` — CRH-QLSTM on foraging (smoke test baseline for CRH variant)
 
 ### Step 10: Create unit tests
 
@@ -138,8 +138,8 @@
 
 ### Step 11: Verification
 
-- [ ] Lint/type check: `uv run pre-commit run -a`
-- [ ] Smoke tests: `uv run pytest -m smoke -v` (all pass, including new configs)
-- [ ] Unit tests: `uv run pytest tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py -v`
-- [ ] Full test suite (skip nightly): `uv run pytest -m "not nightly"`
+- [x] Lint/type check: `uv run pre-commit run -a`
+- [x] Smoke tests: `uv run pytest -m smoke -v` (all pass, including new configs)
+- [x] Unit tests: `uv run pytest tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py -v`
+- [x] Full test suite (skip nightly): `uv run pytest -m "not nightly"`
 - [ ] Manual smoke run: `uv run ./scripts/run_simulation.py --config ./configs/examples/qrhqlstm_foraging_small.yml --episodes 3`
