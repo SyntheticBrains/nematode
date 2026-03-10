@@ -56,6 +56,7 @@ References
 from __future__ import annotations
 
 import abc
+import time
 from copy import deepcopy
 from typing import TYPE_CHECKING, Self
 
@@ -606,6 +607,8 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
         if len(self.buffer) == 0:
             return
 
+        ppo_start = time.monotonic()
+
         # Compute last value for GAE bootstrap
         if self._pending_features is not None:
             with torch.no_grad():
@@ -750,18 +753,22 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
 
         # Logging
         if num_updates > 0:
+            ppo_elapsed = time.monotonic() - ppo_start
             avg_policy = total_policy_loss / num_updates
             avg_value = total_value_loss / num_updates
             avg_entropy = total_entropy / num_updates
             self.latest_data.loss = avg_policy
             self.history_data.losses.append(avg_policy)
 
+            current_lr = self._get_current_lr()
             logger.info(
                 f"{self._brain_name} PPO update: policy_loss={avg_policy:.4f}, "
                 f"value_loss={avg_value:.4f}, entropy={avg_entropy:.4f}, "
                 f"entropy_coef={entropy_coef:.4f}, "
                 f"clip_frac={total_clip_fraction / num_updates:.3f}, "
                 f"buffer_size={buffer_len}, "
+                f"lr={current_lr:.6f}, "
+                f"ppo_time={ppo_elapsed:.1f}s, "
                 f"episode={self._episode_count}",
             )
 
@@ -832,6 +839,19 @@ class ReservoirLSTMBase(ClassicalBrain, abc.ABC):
         """Post-process after each episode."""
         self._episode_count += 1
         self._update_learning_rate()
+
+        # Per-episode summary
+        ep_rewards = self.history_data.rewards
+        if ep_rewards:
+            total_reward = sum(ep_rewards[-self._step_count :]) if self._step_count > 0 else 0.0
+            current_lr = self._get_current_lr()
+            logger.info(
+                f"{self._brain_name} episode {self._episode_count} summary: "
+                f"steps={self._step_count}, "
+                f"total_reward={total_reward:.2f}, "
+                f"buffer_len={len(self.buffer)}, "
+                f"lr={current_lr:.6f}",
+            )
 
     def copy(self) -> Self:
         """Create a deep copy with fresh hidden states."""
