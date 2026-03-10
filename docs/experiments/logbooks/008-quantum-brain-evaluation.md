@@ -1,8 +1,8 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `in_progress` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. HybridClassical ablation (96.3%) confirms architecture + curriculum drive performance, not QSNN. QRH (Quantum Reservoir Hybrid) achieves 98% post-convergence foraging, 41.2% pursuit predator success (4/4 converged), with Domingo encoding confound control confirming genuine quantum dynamics advantage. CRH (Classical Reservoir Hybrid) ablation shows task-dependent advantages: QRH wins pursuit (+9.4pp, 13× lower variance), CRH wins stationary (+6.3pp, 3/4 converged). Next: evaluate H.4 QKAN-QLIF.
+**Status**: `in_progress` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. HybridClassical ablation (96.3%) confirms architecture + curriculum drive performance, not QSNN. QRH (Quantum Reservoir Hybrid) achieves 98% post-convergence foraging, 41.2% pursuit predator success (4/4 converged), with Domingo encoding confound control confirming genuine quantum dynamics advantage. CRH (Classical Reservoir Hybrid) ablation shows task-dependent advantages: QRH wins pursuit (+9.4pp, 13× lower variance), CRH wins stationary (+6.3pp, 3/4 converged). QLIF-LSTM (H.4) evaluated: 98% classical last-100 on pursuit predators, but quantum gates provide no measurable advantage. Stationary predators remain a weakness (~37% ceiling). Next: QRH-QLSTM composition (Stage 4d).
 
-**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`
+**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`
 
 **Date Started**: 2026-02-05
 
@@ -763,6 +763,8 @@ ______________________________________________________________________
 | HybridClassical (ablation) | MLP reflex + cortex MLP | Backprop REINFORCE + PPO | 97.0% | 96.3% | Yes (control) |
 | **QRH** | **Readout only** | **PPO on readout** | **86.8% (98% post-conv)** | **41.2%** | **Partial** |
 | CRH (ablation) | Readout only | PPO on readout | N/A | 31.8% / 29.9%† | Partial (control) |
+| **QLIF-LSTM Classical** | **LSTM cell + readout** | **Recurrent PPO (BPTT)** | **86.25%** | **74.7% (98% last-100)** | **Yes** |
+| QLIF-LSTM Quantum | LSTM cell + readout | Recurrent PPO (BPTT) | 85.63% | 70.8% (94% last-100) | Yes (no Q advantage) |
 
 \*CMA-ES is evolutionary, not gradient-based.
 †CRH: 31.8% pursuit / 29.9% stationary (outperforms QRH on stationary).
@@ -784,6 +786,8 @@ QRH (quantum reservoir)        86.8%§      41.2%           ~10K      ✓ (forag
 CRH (classical reservoir)      N/A         31.8% / 29.9%‖  ~10K      ✓ (control)
 HybridQuantum                  91.0%       96.9%           ~10K      ✓✓
 HybridClassical (ablation)     97.0%       96.3%           ~10K      ✓ (control)
+QLIF-LSTM Classical            86.25%      74.7% (98%¶)    ~11K      ✓ (temporal)
+QLIF-LSTM Quantum              85.63%      70.8% (94%¶)    ~11K      ✓ (no Q adv)
 ────────────────────────────────────────────────────────────────────────────
 MLPPPOBrain (classical)        96.7%       71.6%†† / 94.5% ~42K      (ref)
 
@@ -792,6 +796,7 @@ MLPPPOBrain (classical)        96.7%       71.6%†† / 94.5% ~42K      (ref)
 * CMA-ES is evolutionary, not gradient-based
 § QRH: 98.0% post-convergence (exceeds MLPPPO); Domingo confound resolved
 ‖ CRH: pursuit 31.8% / stationary 29.9% (outperforms QRH on stationary)
+¶ QLIF-LSTM: last-100 SR on 500-ep sessions; first temporal architecture
 †† Unified sensory modules (apples-to-apples comparison)
 
 KEY INSIGHT: HybridQuantum is the first quantum architecture to SURPASS
@@ -806,6 +811,15 @@ that QRC failed to deliver. Random topology (not biological) is key.
 Post-convergence QRH (98%) exceeds MLPPPO (96.7%). Domingo encoding
 confound control confirms QRH's pursuit advantage is genuine quantum
 dynamics, not trigonometric input encoding.
+
+QLIF-LSTM is the first temporal (recurrent) architecture evaluated.
+The classical ablation achieves the highest last-100 SR on pursuit
+predators (98%) across all architectures, demonstrating genuine value
+of within-episode memory. However, quantum QLIF gates provide no
+measurable advantage over classical sigmoid — consistent across all
+tasks and training durations. Stationary predators remain a weakness
+(37% classical ceiling vs MLP PPO's 96.5%) due to the architecture's
+limited spatial memory capacity.
 ═══════════════════════════════════════════════════════════════════════════
 ```
 
@@ -885,6 +899,12 @@ classical parameters for strategic multi-objective learning.
 30. **LR warmup reduces convergence variance without improving mean speed**: 5× improvement in convergence range (16-episode range vs 72) by preventing both destructive early updates and lucky fast convergences. An unexpected bonus: eliminates buffer guard activations entirely.
 31. **Quantum vs classical reservoir advantage is task-dependent**: QRH excels on pursuit predators (4/4 converged, 13× lower variance) while CRH excels on stationary predators (3/4 converged, +6.3pp). The quantum reservoir provides better variance reduction for simpler tasks; the classical ESN provides more consistent dynamics for harder tasks requiring longer training.
 32. **LayerNorm interaction depends on feature structure**: LayerNorm hurts structured topology (erases meaningful hierarchy between sensory and interneuron qubits) but helps random topology (genuinely normalizes heterogeneous feature scales without removing information).
+33. **QLIF-LSTM temporal memory provides genuine value for pursuit predators**: The first temporal architecture achieves 98% classical last-100 SR on pursuit predators — the highest late-session performance across all architectures. Within-episode memory (h_t, c_t) enables temporal predator tracking that memoryless architectures cannot achieve.
+34. **Quantum QLIF gates provide no measurable advantage over classical sigmoid**: Across all QLIF-LSTM tasks and training durations (foraging, pursuit, stationary, large environments), classical sigmoid gates match or exceed quantum QLIF gates. The hypothesis that quantum measurement noise provides beneficial exploration stochasticity is not supported.
+35. **Temporal memory has task-specific limitations**: QLIF-LSTM excels at temporal evasion (pursuit predators: 98%) but struggles with spatial memory (stationary predators: 37% ceiling vs MLP PPO's 96.5%). The LSTM's 48-dim hidden state cannot implicitly encode 5 zone locations across a 100×100 grid from an 11×11 viewport.
+36. **Entropy floor prevents late-session quantum destabilisation**: `entropy_coef_end=0.015` eliminates entropy rebound observed with 0.005. Validated across pursuit and large environment configs.
+37. **Actor bottleneck: [features, h_t] outperforms h_t-only**: The actor needs direct access to current sensory signals alongside temporal context. Pure h_t bottleneck costs ~4pp on hard tasks.
+38. **Apparent quantum regularisation disappears with sufficient training**: In 200-episode sessions, quantum shows lower variance than classical. With 500+ episodes, classical has time to fully converge and this advantage disappears.
 
 ______________________________________________________________________
 
@@ -1155,6 +1175,176 @@ Added `input_encoding: "trig"` to CRH — applies sin(f×π), cos(f×π) to inpu
 
 ______________________________________________________________________
 
+## QLIF-LSTM Brain Evaluation (H.4 — Quantum LIF Long Short-Term Memory)
+
+**Status**: Complete — 12 rounds, ~66 sessions, ~36,000 episodes across foraging, pursuit predators, and stationary predators (classical + quantum). First temporal architecture in the codebase. Classical last-100 SR: 98% pursuit, 82% large pursuit, 37% stationary. Quantum gates provide no measurable advantage.
+
+### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│               QLIF-LSTM (H.4) — Quantum Temporal Brain                      │
+│      Custom LSTM Cell with QLIF Quantum Gates + Recurrent PPO               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Sensory Input (2-9 features)                                               │
+│  ┌────────────────────────────┐                                             │
+│  │ food_chemotaxis (2)        │                                             │
+│  │ nociception (2)            │  Via extract_classical_features()           │
+│  │ mechanosensation (2)       │  or preprocess() for legacy 2-input mode    │
+│  │ thermotaxis (3)            │                                             │
+│  └────────────┬───────────────┘                                             │
+│               │                                                             │
+│  ┌────────────┴───────────────────────────────────────────────────┐         │
+│  │  QLIF-LSTM CELL (core innovation)                              │         │
+│  │                                                                │         │
+│  │  z = [x_t, h_{t-1}]  (concatenation)                           │         │
+│  │                                                                │         │
+│  │  Forget gate: f_t = QLIF(W_f·z / √fan_in)  ← quantum P(|1⟩)    │         │
+│  │  Input gate:  i_t = QLIF(W_i·z / √fan_in)  ← quantum P(|1⟩)    │         │
+│  │  Cell cand:   ĉ_t = tanh(W_c·z)            ← classical         │         │
+│  │  Output gate: o_t = σ(W_o·z)               ← classical         │         │
+│  │                                                                │         │
+│  │  c_t = f_t * c_{t-1} + i_t * ĉ_t                               │         │
+│  │  h_t = o_t * tanh(c_t)                                         │         │
+│  │                                                                │         │
+│  │  QLIF circuit: |0⟩ → RY(θ + tanh(scaled_input)·π) → RX(leak)   │         │
+│  │  Surrogate gradient: sigmoid on RY angle for backward pass     │         │
+│  │  Batched execution: 1 circuit per neuron, single backend.run() │         │
+│  └────────────┬───────────────────────────────────────────────────┘         │
+│               │                                                             │
+│  ┌────────────┴───────────────────────────────────────────────────┐         │
+│  │  Actor: Linear([features, h_t] → 4 actions) + Categorical      │         │
+│  │  Critic: MLP([features, h_t.detach()] → V(s))                  │         │
+│  │  Training: Recurrent PPO with chunk-based truncated BPTT       │         │
+│  └────────────────────────────────────────────────────────────────┘         │
+│                                                                             │
+│  KEY INNOVATION: LSTM gates driven by quantum measurement P(|1⟩)            │
+│  instead of classical sigmoid. Temporal memory via h_t/c_t persists         │
+│  within episodes, resets between episodes.                                  │
+│                                                                             │
+│  Classical ablation: use_quantum_gates=false → sigmoid for gates            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+Key design choices:
+
+- **QLIF quantum gates**: Forget and input gates use quantum measurement P(|1⟩) from single-qubit QLIF circuits, with surrogate gradients for backpropagation
+- **Fan-in scaling**: Linear projections scaled by 1/√fan_in to keep tanh in responsive regime
+- **Recurrent PPO**: Chunk-based truncated BPTT with sequential chunks from rollout buffer
+- **Episode-scoped memory**: h_t/c_t persist within episodes, reset via `prepare_episode()`
+- **Classical ablation**: `use_quantum_gates: false` replaces QLIF with torch.sigmoid()
+
+### Configuration (Best — Pursuit Predators R4 + R4b entropy floor)
+
+```yaml
+brain:
+  name: qliflstm
+  config:
+    lstm_hidden_dim: 32
+    shots: 1024
+    membrane_tau: 0.9
+    gamma: 0.99
+    gae_lambda: 0.98
+    clip_epsilon: 0.2
+    entropy_coef: 0.05
+    entropy_coef_end: 0.015        # Higher floor prevents late-session destabilisation
+    entropy_decay_episodes: 400
+    value_loss_coef: 0.5
+    num_epochs: 2
+    rollout_buffer_size: 512
+    max_grad_norm: 0.5
+    actor_lr: 0.003
+    critic_lr: 0.001
+    bptt_chunk_length: 16
+    use_quantum_gates: true
+    sensory_modules: [food_chemotaxis, nociception]
+```
+
+### Results Summary
+
+#### Foraging (Best: R1 classical / R2 quantum, 200 episodes, 4+4 sessions)
+
+| Metric | Classical (R1) | Quantum (R2) | Winner |
+|--------|---------------|-------------|--------|
+| Success rate (avg) | **86.25%** | 85.63% | Equivalent |
+| Post-convergence | 99.85% | 99.85% | Tie |
+| Convergence run | 31.25 | 31.0 | Tie |
+| Distance efficiency | **0.403** | 0.372 | Classical |
+
+Both variants achieve near-perfect post-convergence performance. Quantum maintains higher entropy (~0.94-1.07 vs ~0.65-0.87 final) due to measurement noise. Task too simple to differentiate.
+
+#### Pursuit Predators (Best: R4, 500 episodes, 4+4 sessions)
+
+| Metric | Classical (R4) | Quantum (R4) | Winner |
+|--------|---------------|-------------|--------|
+| Success rate (avg) | **74.70%** | 70.80% | Classical (+3.9pp) |
+| Post-convergence | 92.40% | 90.78% | Classical |
+| **Last 100 SR** | **98%** | **94%** | **Classical (+4pp)** |
+| Per-encounter evasion | 83.45% | 84.00% | Equivalent |
+| SR std | **2.33%** | 4.70% | Classical |
+
+Strong performance from both variants. The QLIF-LSTM architecture demonstrably learns temporal predator evasion — 98% last-100 classical is the best result for this task among temporal architectures.
+
+#### Thermotaxis + Pursuit Predators Large (Best: R5, 500 episodes, 4+4 sessions)
+
+| Metric | Classical (R5) | Quantum (R5) | Winner |
+|--------|---------------|-------------|--------|
+| Success rate (avg) | **60.10%** | 45.35% | Classical (+14.8pp) |
+| Last 100 SR | 82.00% | 81.50% | Equivalent |
+| Convergence run | **182** | 256 | Classical (74 runs faster) |
+| SR std | 8.26% | **2.30%** | Quantum (3.6× lower) |
+| Evasion rate | **88.60%** | 84.68% | Classical |
+
+Classical converges faster, but late-session performance is equivalent. Quantum shows remarkably consistent convergence (2.30% std across 4 sessions). All 8 sessions learn the forage > evade > thermoregulate priority hierarchy.
+
+#### Stationary Predators Large (Best: R10 classical + quantum comparison, 500-1000 eps)
+
+| Metric | Classical (R10, 1000ep) | Quantum (500ep) | MLP PPO ref |
+|--------|------------------------|-----------------|-------------|
+| Last-100 SR | 36.8% | 30.5% | **96.5%** |
+| Peak R50 | 46.5% | 44.0% | — |
+| Health deaths | 70.8% | 77.6% | — |
+
+Both variants struggle on stationary predators. The LSTM temporal memory doesn't help with spatial zone avoidance — the 9-dim sensory input and 11×11 viewport are insufficient for encoding 5 zone locations across a 100×100 grid. MLP PPO's reactive gradient sensing is far more effective.
+
+### Key Findings
+
+1. **First temporal architecture in the codebase** — introduces within-episode memory (h_t, c_t), enabling temporal predator evasion that memoryless architectures cannot achieve.
+
+2. **Quantum gates provide no measurable advantage**: Across all tasks — foraging (≈0), pursuit small (-4pp), pursuit large (-15pp overall but ≈0 late), stationary (-2pp) — classical sigmoid gates match or exceed quantum QLIF gates.
+
+3. **Task-specific strengths and limitations**: Strong on pursuit predators (temporal evasion, 98% classical late), weak on stationary predators (spatial memory, 37% ceiling). The architecture is well-suited for temporal tasks but not spatial tasks.
+
+4. **Entropy floor is critical for quantum stability**: `entropy_coef_end=0.015` prevents late-session entropy rebound and policy destabilisation. Validated in R4b.
+
+5. **Actor [features, h_t] fix**: The actor needs direct sensory access alongside LSTM context. Pure h_t bottleneck limits performance by ~4pp on hard tasks.
+
+6. **Quantum variance reversal**: In short sessions (200ep), quantum shows lower variance than classical (regularisation benefit). This advantage disappears with sufficient training (500+ep) as classical converges fully.
+
+### Comparison with Other Architectures (Pursuit Predators)
+
+| Architecture | Best Post-Conv | Params | Training | Temporal? |
+|--------------|---------------|--------|----------|-----------|
+| **HybridQuantum** | **96.9%** | ~10K | 3-stage curriculum | No |
+| HybridClassical | 96.3% | ~10K | 3-stage curriculum | No |
+| **QLIF-LSTM Classical** | **98% last-100** | ~11K | Recurrent PPO | **Yes** |
+| QLIF-LSTM Quantum | 94% last-100 | ~11K | Recurrent PPO | **Yes** |
+| MLP PPO (unified) | 71.6% | ~42K | PPO | No |
+| QRH | 56.5% last-100 | ~10K | PPO | No |
+
+QLIF-LSTM classical achieves the highest late-session performance on pursuit predators across all architectures, demonstrating the value of temporal memory for predator evasion. However, HybridQuantum achieves higher overall success rate (96.9% vs 74.7%) due to much faster convergence from its pre-trained curriculum approach.
+
+### File Locations
+
+- QLIF-LSTM implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qliflstm.py`
+- QLIF-LSTM tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qliflstm.py`
+- QLIF-LSTM configs: `configs/examples/qliflstm_*.yml`
+
+Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
+
+______________________________________________________________________
+
 ## Next Steps
 
 - [x] Implement QSNNBrain with QLIF neurons
@@ -1196,6 +1386,16 @@ ______________________________________________________________________
 - [x] CRH stationary predators R14: 29.9%, 3/4 converged — CRH beats QRH on stationary
 - [x] Domingo encoding confound control (CRH-trig R15): trig encoding hurts CRH (-18.8pp pursuit); QRH advantage is genuine quantum dynamics
 - [x] Structured topology R16: 0.0% across 12,000 episodes — definitively falsified
+- [x] Implement QLIF-LSTM brain (H.4 — Quantum LIF LSTM with recurrent PPO)
+- [x] QLIF-LSTM Stage 4a: classical ablation foraging — 86.25%, 4/4 converged, PASS
+- [x] QLIF-LSTM Stage 4a-Q: quantum foraging — 85.63%, equivalent to classical, PASS
+- [x] QLIF-LSTM Stage 4b: pursuit predators 200ep — partial PASS, insufficient training
+- [x] QLIF-LSTM Stage 4b: pursuit predators 500ep — 74.7% classical, 70.8% quantum, **98% last-100 classical**, PASS
+- [x] QLIF-LSTM entropy floor validation — entropy_coef_end=0.015 prevents late destabilisation
+- [x] QLIF-LSTM Stage 4c: thermotaxis pursuit predators large — 60.1% classical (82% last-100), 45.4% quantum (82% last-100), PASS
+- [x] QLIF-LSTM Stage 4c: stationary predators — 37% classical ceiling, 31% quantum. 6 rounds tuning, actor [features, h_t] fix. FAIL vs MLP PPO (96.5%)
+- [x] QLIF-LSTM quantum comparison complete — quantum QLIF gates provide no measurable advantage on any task
+- [ ] QRH-QLSTM composition (Stage 4d) — combine QRH reservoir features with QLIF-LSTM temporal readout
 
 ______________________________________________________________________
 
@@ -1333,6 +1533,24 @@ Experiment results: `artifacts/logbooks/008/qrh_foraging_small/`, `artifacts/log
 
 Experiment results: `artifacts/logbooks/008/crh_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/crh_thermotaxis_stationary_predators_large/`, `artifacts/logbooks/008/crh_trig_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/crh_trig_thermotaxis_stationary_predators_large/`, `artifacts/logbooks/008/qrh_structured_thermotaxis_stationary_predators_large/`
 
+### QLIF-LSTM Best Sessions
+
+| Round | Task | Sessions | Episodes | Result |
+|-------|------|----------|----------|--------|
+| R1 | Foraging (classical) | 20260305_140313-140321 | 4×200 | **86.25% avg**, 4/4 converged |
+| R2 | Foraging (quantum) | 20260305_141819-141831 | 4×200 | **85.63% avg**, equivalent to classical |
+| R4 | Pursuit (classical) | 20260305_232259-232309 | 4×500 | **74.7% avg, 98% last-100** |
+| R4 | Pursuit (quantum) | 20260305_232312-233816 | 4×500 | **70.8% avg, 93.5% last-100** |
+| R4b | Pursuit validation | 20260306_045940-045946 | 2×500 | Entropy floor (0.015) validated |
+| R5 | Pursuit large (classical) | 20260306_081836-081846 | 4×500 | **60.1% avg, 82% last-100** |
+| R5 | Pursuit large (quantum) | 20260306_112902-112910 | 4×500 | **45.4% avg, 82% last-100** |
+| R10 | Stationary (classical) | 20260307_123010-123019 | 4×1000 | **28.8% overall, 36.8% last-100** (ceiling) |
+| R10-Q | Stationary (quantum) | 20260307_132444-132457 | 4×500 | **21.1% overall, 30.5% last-100** |
+
+Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
+
+Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifacts/logbooks/008/qliflstm_pursuit_predators_small/`, `artifacts/logbooks/008/qliflstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qliflstm_thermotaxis_stationary_predators_large/`
+
 ### Appendices
 
 - QSNN foraging optimization history (17 rounds): [qsnn-foraging-optimization.md](supporting/008/qsnn-foraging-optimization.md)
@@ -1343,6 +1561,7 @@ Experiment results: `artifacts/logbooks/008/crh_thermotaxis_pursuit_predators_la
 - HybridClassical ablation (12 sessions, trust analysis): [hybridclassical-ablation.md](supporting/008/hybridclassical-ablation.md)
 - HybridQuantumCortex optimization history (9 rounds, 32 sessions): [hybridquantumcortex-optimization.md](supporting/008/hybridquantumcortex-optimization.md)
 - QRH/CRH optimization history (16 rounds, 96 sessions): [qrh-optimization.md](supporting/008/qrh-optimization.md)
+- QLIF-LSTM optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
 
 ### File Locations
 
@@ -1369,3 +1588,6 @@ Experiment results: `artifacts/logbooks/008/crh_thermotaxis_pursuit_predators_la
 - CRH implementation: `packages/quantum-nematode/quantumnematode/brain/arch/crh.py`
 - CRH tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_crh.py`
 - CRH configs: `configs/examples/crh_*.yml`
+- QLIF-LSTM implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qliflstm.py`
+- QLIF-LSTM tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qliflstm.py`
+- QLIF-LSTM configs: `configs/examples/qliflstm_*.yml`
