@@ -1235,7 +1235,7 @@ Key design choices:
 - **Episode-scoped memory**: h_t/c_t persist within episodes, reset via `prepare_episode()`
 - **Classical ablation**: `use_quantum_gates: false` replaces QLIF with torch.sigmoid()
 
-### Configuration (Best — Pursuit Predators R4)
+### Configuration (Best — Pursuit Predators R4 + R4b entropy floor)
 
 ```yaml
 brain:

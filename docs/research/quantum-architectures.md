@@ -1619,8 +1619,9 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 │             ▼                                               │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │  Action Head + Value Head                            │   │
-│  │  Linear(hidden_dim → 4) for actions                  │   │
-│  │  Linear(hidden_dim → 1) for critic                   │   │
+│  │  Both consume [features, h_t] (sensory + temporal)   │   │
+│  │  Actor:  Linear(input_dim + hidden_dim → 4)          │   │
+│  │  Critic: MLP(input_dim + hidden_dim → 1)             │   │
 │  │  PPO training                                        │   │
 │  └──────────────────────────────────────────────────────┘   │
 │                                                             │
@@ -1659,7 +1660,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 
 #### Evaluation Stages
 
-Staged evaluation following the same environment progression used for QRH (H.1), with a QRH-QLSTM variant as final stage:
+Staged evaluation following the same environment progression used for QRH (H.1), with a QRH-LSTM temporal readout variant as final stage:
 
 ```text
 Stage 4a: Core Validation (Foraging)
@@ -1720,21 +1721,22 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 
 **After Stage 4d (Week 5)**:
 
-- Does QRH-QLSTM improve QRH's stationary predator weakness (≥5pp improvement)?
-- Does QRH-QLSTM maintain QRH's pursuit predator advantage (no regression)?
-- If both: QRH-QLSTM becomes the recommended quantum architecture for multi-objective tasks
+- Does QRH-LSTM improve QRH's stationary predator weakness (≥5pp improvement)?
+- Does QRH-LSTM maintain QRH's pursuit predator advantage (no regression)?
+- If both: QRH-LSTM becomes the recommended architecture for multi-objective tasks
 - If pursuit regression: temporal readout interferes with quantum reservoir dynamics — investigate
+- QRH-QLSTM ablation: does adding QLIF gates to the LSTM readout help? (expected: no, based on Stages 4a-4c)
 
 #### Falsification Criteria
 
 - Must match classical LSTM performance on foraging (≥80% success) — Stage 4a
 - Must show parameter reduction ≥30% for equivalent performance — Stage 4a
 - Must demonstrate meaningful temporal memory: performance on tasks requiring recall of past observations > memoryless baseline (e.g., remembering predator location after it leaves viewport, or leveraging food gradient history for more efficient search) — Stage 4b
-- QRH-QLSTM must improve stationary predator success ≥5pp over QRH-MLP without pursuit regression — Stage 4d
+- QRH-LSTM must improve stationary predator success ≥5pp over QRH-MLP without pursuit regression — Stage 4d
 
 #### Evaluation Results (Stages 4a-4c Complete)
 
-**Status**: Stages 4a-4c complete (12 rounds, ~66 sessions). Stage 4d (QRH-QLSTM) pending.
+**Status**: Stages 4a-4c complete (12 rounds, ~66 sessions). Stage 4d (QRH-LSTM primary + QRH-QLSTM ablation) pending.
 
 **Stage 4a — Foraging (PASS)**:
 
@@ -1760,7 +1762,7 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 - Stage 4b: ✅ PASS — 98% last-100 on pursuit predators; temporal memory confirmed beneficial
 - Stage 4b quantum: ❌ QLIF ≤ classical LSTM on all tasks → quantum activations provide no benefit in temporal context
 - Stage 4c: ⚠️ Pursuit scales well (82% last-100 on large grid), stationary predators remain weak (~37% ceiling vs MLP PPO 96.5%)
-- Stage 4d: ⬜ Pending — QRH-QLSTM composition
+- Stage 4d: ⬜ Pending — QRH-LSTM (primary) + QRH-QLSTM (ablation) composition
 
 **Falsification Criteria Assessment**:
 
@@ -1783,7 +1785,7 @@ All four proposals are designed for multi-objective learning (foraging + predato
 | H.2 SQS-QLIF | Mode-gated fusion delegates objectives to reflex (fast) vs cortex (strategic) | Add SQS neurons to small-world network for new modalities |
 | H.3 Entangled QLIF + qtDNN | Entangled spike correlations encode active objective; cortex PPO handles switching | Add QLIF neurons + entanglement edges for new inputs |
 | H.4 QLIF-LSTM | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
-| H.4d QRH-QLSTM | Quantum reservoir features + QLIF-LSTM temporal readout; combines H.1 + H.4 | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
+| H.4d QRH-LSTM (primary) | Quantum reservoir features + classical LSTM temporal readout; combines H.1 + H.4 | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
 
 **Current sensory modules**: food_chemotaxis, nociception, thermotaxis, mechanosensation, proprioception
 
@@ -1839,7 +1841,7 @@ Decision Gates:
     → Classical LSTM is best temporal architecture (98% last-100 pursuit)
     → Quantum activations provide no benefit in temporal context
     → Temporal infrastructure (LSTM + recurrent PPO) is valuable
-    → Stage 4d (QRH-QLSTM) still pending for composition test
+    → Stage 4d (QRH-LSTM primary + QRH-QLSTM ablation) still pending
 
   After Week 7 (H.3 complete): Entanglement verdict
     → If entangled QLIF > non-entangled: first genuine trainable
@@ -1851,7 +1853,7 @@ Decision Gates:
   After all evaluations: Final architecture selection for Phase 2
     → Best quantum architecture for multi-objective tasks
     → Best temporal architecture for Phase 3 memory systems
-    → May be the same architecture (QRH-QLSTM) or different
+    → May be the same architecture (QRH-LSTM) or different
 ```
 
 ______________________________________________________________________
@@ -1960,10 +1962,10 @@ hybrid_quantum_predator_small:
 - Temporal credit assignment: Performance on tasks requiring decisions based on observations N steps ago
 - LSTM gate dynamics: forget/input gate activation distributions over time (entropy, bimodality)
 
-**Temporal Readout Quality** (QRH-QLSTM focus, Stage 4d):
+**Temporal Readout Quality** (QRH-LSTM focus, Stage 4d):
 
-- Stationary predator improvement: ΔSuccess(QRH-QLSTM vs QRH-MLP) on stationary predators — target ≥5pp
-- Pursuit predator regression: ΔSuccess(QRH-QLSTM vs QRH-MLP) on pursuit predators — must be ≥ -2pp (no significant regression)
+- Stationary predator improvement: ΔSuccess(QRH-LSTM vs QRH-MLP) on stationary predators — target ≥5pp
+- Pursuit predator regression: ΔSuccess(QRH-LSTM vs QRH-MLP) on pursuit predators — must be ≥ -2pp (no significant regression)
 - Temporal feature utilisation: MI between LSTM hidden states and past observations (do hidden states encode history?)
 - Classical readout comparison: CRH-LSTM vs CRH-MLP — does temporal readout help classical reservoirs equally?
 - Convergence speed: episodes to convergence for temporal vs feedforward readout (temporal may need more episodes due to BPTT overhead)
@@ -2112,7 +2114,7 @@ Four architectures were proposed, with H.1 and H.4 (Stages 4a-4c) now completed.
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|
 | 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
-| 2 | QLIF-LSTM Temporal Brain (H.4) | Quantum activations in LSTM | **EVALUATED (4a-4c)** | Classical LSTM: 98% last-100 pursuit predators (best temporal arch). Quantum gates: no measurable advantage on any task. Stationary predators: 37% ceiling. Stage 4d (QRH-QLSTM) pending. Temporal infrastructure is the valuable contribution, not quantum activations. |
+| 2 | QLIF-LSTM Temporal Brain (H.4) | Quantum activations in LSTM | **EVALUATED (4a-4c)** | Classical LSTM: 98% last-100 pursuit predators (best temporal arch). Quantum gates: no measurable advantage on any task. Stationary predators: 37% ceiling. Stage 4d (QRH-LSTM primary + QRH-QLSTM ablation) pending. Temporal infrastructure is the valuable contribution, not quantum activations. |
 | 3 | Entangled QLIF + qtDNN | Classical surrogates | Proposed | Most promising path to genuine *trainable* quantum advantage. hDQNN-TD3 (arXiv:2503.09119) is the strongest QRL result in literature (+13% over TD3 on Humanoid-v4). Adds entanglement — the key quantum resource our QLIF doesn't use. |
 | 4 | SQS-QLIF Hybrid | Local learning rules | Proposed — deprioritised | Highest risk. Our Hebbian learning experiments (12 rounds, 0% success) showed local learning rules are too weak for RL. SQS paper (arXiv:2506.21324) tested on classification, not RL. Deferred until H.3/H.4 results inform whether quantum memory effects are worth pursuing with biologically-plausible neuron models. |
 
@@ -2121,7 +2123,7 @@ Four architectures were proposed, with H.1 and H.4 (Stages 4a-4c) now completed.
 1. **Classical LSTM temporal architecture validated** — 98% last-100 on pursuit predators, best result among temporal architectures
 2. **Quantum activations falsified** — QLIF gates provide no measurable advantage over classical sigmoid on any task (foraging, pursuit, stationary)
 3. **ICML 2025 prediction confirmed** — architecture provides value even without quantum advantage, as predicted by arXiv:2502.04909
-4. **QRH synergy still pending** — Stage 4d (QRH-QLSTM) will test whether temporal readout resolves QRH's stationary predator weakness
+4. **QRH synergy still pending** — Stage 4d (QRH-LSTM primary) will test whether temporal readout resolves QRH's stationary predator weakness
 5. **Stationary predators remain unsolved** — 37% ceiling despite 6 rounds of tuning; MLP PPO achieves 96.5%
 
 H.2 (SQS-QLIF) remains deprioritised because local learning rules (Hebbian/STDP) failed comprehensively in our experiments, and the SQS paper lacks RL validation.
