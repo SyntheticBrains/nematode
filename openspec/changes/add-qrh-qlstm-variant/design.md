@@ -42,7 +42,7 @@ The QRH-QLSTM variant replaces QRH's MLP readout with an QLIF-LSTM temporal read
 
 **Alternative considered**: Subclass `ReservoirHybridBase` and override `run_brain()`, `learn()`, `_perform_ppo_update()`. Rejected because the base class's `__init__` constructs MLP networks and optimizer that would be unused — wasteful and confusing.
 
-**Implementation**: `ReservoirLSTMBase` is a new abstract base in `qrh_qlstm.py` that:
+**Implementation**: `ReservoirLSTMBase` is a new abstract base in `qrhqlstm.py` that:
 
 - Delegates reservoir computation to a reservoir instance (QRH or CRH brain used as a feature extractor only)
 - Owns the QLIF-LSTM cell, actor head, critic MLP, and recurrent PPO buffer
