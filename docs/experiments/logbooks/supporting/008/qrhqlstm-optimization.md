@@ -2,7 +2,7 @@
 
 **Architecture**: Reservoir-LSTM composition — fixed reservoir (QRH quantum or CRH classical) as feature extractor + QLIF-LSTM temporal readout with recurrent PPO (chunk-based truncated BPTT). Tests whether composing QRH's rich reservoir features with QLIF-LSTM's temporal memory improves over either standalone architecture.
 
-**Total**: 15 rounds, 54 sessions, ~16,500 episodes across foraging, pursuit predators, and stationary predators (classical + quantum gates, QRH + CRH reservoirs).
+**Total**: 15 rounds, 54 sessions, 16,500 episodes across foraging, pursuit predators, and stationary predators (classical + quantum gates, QRH + CRH reservoirs).
 
 **Conclusion**: Reservoir-LSTM composition does not improve over simpler architectures. CRH-QLSTM excels on small pursuit predators (85.4%, best reservoir variant) but fails to scale to large grids. QRH-QLSTM fails on all multi-objective tasks. LSTM readout hurts QRH vs its simpler MLP readout.
 
@@ -129,7 +129,7 @@ ______________________________________________________________________
 | 20260311_111038 | 88.5% | 99.4% | Run 41 | ~0.9s |
 | **Mean** | **82.2%** | **92.7%** | **37.5** | **~0.9s** |
 
-**Quantum vs classical**: +3.1pp (quantum), ~170x faster with classical gates. Small but consistent quantum advantage on multi-objective tasks.
+**Quantum vs classical**: +3.2pp (quantum), ~170x faster with classical gates. Small but consistent quantum advantage on multi-objective tasks.
 
 ______________________________________________________________________
 
@@ -251,24 +251,30 @@ ______________________________________________________________________
 
 | Metric | QRH-MLP | QRH-LSTM | Delta |
 |--------|---------|----------|-------|
-| SR | 14.9% | 10.8% | **-4.2pp** |
+| SR | 14.9% | 10.8% | **-4.1pp** |
 
-**HYPOTHESIS REJECTED.** QRH-LSTM is 4.2pp *worse* than QRH-MLP, far from the +5pp target. LSTM temporal readout does NOT resolve QRH's multi-objective weakness.
+**HYPOTHESIS REJECTED.** QRH-LSTM is 4.1pp *worse* than QRH-MLP, far from the +5pp target. LSTM temporal readout does NOT resolve QRH's multi-objective weakness.
 
 ______________________________________________________________________
 
 ## Summary: Architecture Rankings by Environment
 
+Baseline results for QRH standalone (MLP), CRH standalone, and QLIF-LSTM are from earlier evaluation rounds in [008-quantum-brain-evaluation.md](../../008-quantum-brain-evaluation.md) (QRH/CRH R9-R14, QLIF-LSTM R4-R10).
+
 ### Small Pursuit Predators (20x20)
 
-| Rank | Model | SR | Conv Ep |
-|------|-------|-----|---------|
-| 1 | CRH-QLSTM Quantum | **85.4%** | 30 |
-| 2 | CRH-QLSTM Classical | 82.2% | 38 |
-| 3 | QLIF-LSTM Classical | 63.3% | 132 |
-| 4 | QLIF-LSTM Quantum | 57.6% | 143 |
-| 5 | QRH-LSTM Classical | 17.0% | 1/4 |
-| 6 | QRH-QLSTM Quantum | 15.2% | N |
+All reservoir-LSTM runs used 200 episodes. QLIF-LSTM results shown for both 200-ep (R3, apples-to-apples) and 500-ep (R4, best config).
+
+| Rank | Model | SR | Conv Ep | Episodes |
+|------|-------|-----|---------|----------|
+| 1 | CRH-QLSTM Quantum | **85.4%** | 30 | 200 |
+| 2 | CRH-QLSTM Classical | 82.2% | 38 | 200 |
+| 3 | QLIF-LSTM Classical (R4) | 74.7% | 146 | 500 |
+| 4 | QLIF-LSTM Quantum (R4) | 70.8% | 158 | 500 |
+| 5 | QLIF-LSTM Classical (R3) | 51.9% | 118 | 200 |
+| 6 | QLIF-LSTM Quantum (R3) | 47.3% | 114 | 200 |
+| 7 | QRH-LSTM Classical | 17.0% | 1/4 | 200 |
+| 8 | QRH-QLSTM Quantum | 15.2% | N | 200 |
 
 ### Large Thermotaxis + Pursuit Predators (100x100)
 
@@ -300,7 +306,7 @@ ______________________________________________________________________
 
 3. **QRH-QLSTM fails on all multi-objective tasks** — fixed quantum reservoir features are inadequate when evasion is added. The noise that merely slows foraging convergence becomes catastrophic with added objectives.
 
-4. **LSTM readout HURTS QRH performance** — QRH-LSTM is worse than QRH standalone MLP on every large-grid test (-24.9pp pursuit, -4.2pp stationary).
+4. **LSTM readout HURTS QRH performance** — QRH-LSTM is worse than QRH standalone MLP on every large-grid test (-24.9pp pursuit, -4.1pp stationary).
 
 5. **Quantum QLIF gates provide no meaningful advantage** — ~3pp on CRH pursuit predators (not worth 170x speed cost), within noise on QRH.
 

@@ -1349,7 +1349,7 @@ ______________________________________________________________________
 
 **Date**: 2026-03-10 – 2026-03-12
 
-**Scope**: 15 rounds, 54 sessions, ~16,500 episodes
+**Scope**: 15 rounds, 54 sessions, 16,500 episodes
 
 **Goal**: Test whether composing reservoir features (QRH quantum or CRH classical) with QLIF-LSTM temporal readout improves over either standalone architecture (Stage 4d).
 
@@ -1464,7 +1464,7 @@ CRH-QLSTM is the best reservoir-LSTM variant: +10.7pp over standalone QLIF-LSTM,
 | CRH-QLSTM Classical v2 | 38.8% | N | 50.1 |
 | QRH-LSTM Classical | 16.4% | N | — |
 
-CRH-QLSTM does not scale to large grids — 2x worse path efficiency than QLIF-LSTM (53 vs 25 steps/food). Reservoir feature expansion obscures gradient signals needed for long-range navigation.
+CRH-QLSTM does not scale to large grids — CRH-QLSTM Classical v2 has 2x worse path efficiency than QLIF-LSTM Classical (50.1 vs 25.3 steps/food). Reservoir feature expansion obscures gradient signals needed for long-range navigation.
 
 #### Thermotaxis + Stationary Predators Large (Phase 4b + Stage 4d, 500 episodes, 4 sessions)
 
@@ -1476,13 +1476,13 @@ CRH-QLSTM does not scale to large grids — 2x worse path efficiency than QLIF-L
 | CRH-QLSTM Classical | 14.0% |
 | QRH-LSTM Classical | **10.8%** |
 
-Stage 4d hypothesis **REJECTED**: QRH-LSTM is -4.2pp worse than QRH-MLP on stationary predators. LSTM temporal readout does NOT resolve QRH's multi-objective weakness.
+Stage 4d hypothesis **REJECTED**: QRH-LSTM is -4.1pp worse than QRH-MLP on stationary predators. LSTM temporal readout does NOT resolve QRH's multi-objective weakness.
 
 ### Key Findings
 
 1. **CRH-QLSTM excels on small pursuit predators** (85.4%) but fails to scale to large grids
 2. **QRH-QLSTM fails on all multi-objective tasks** — quantum reservoir noise becomes catastrophic with added objectives
-3. **LSTM readout HURTS QRH performance** — worse than QRH standalone MLP on every large-grid test (-24.9pp pursuit, -4.2pp stationary)
+3. **LSTM readout HURTS QRH performance** — worse than QRH standalone MLP on every large-grid test (-24.9pp pursuit, -4.1pp stationary)
 4. **Quantum QLIF gates provide ~3pp advantage** on CRH pursuit predators, but not worth 170x speed cost
 5. **Path efficiency gap is architectural, not hyperparameter** — confirmed by hyperparameter alignment experiment
 6. **Reservoir-LSTM composition does not improve over simpler architectures** at scale
@@ -1493,7 +1493,7 @@ Stage 4d hypothesis **REJECTED**: QRH-LSTM is -4.2pp worse than QRH-MLP on stati
 |-------|--------------|-----------------|--------------|
 | CRH-QLSTM Quantum | **85.4%** | — | Reservoir-LSTM |
 | CRH-QLSTM Classical | 82.2% | 38.8% | Reservoir-LSTM |
-| HybridQuantum Stage 3 | — | — | Curriculum fusion |
+| HybridQuantum Stage 3 | 96.9% | — | Curriculum fusion |
 | QLIF-LSTM Classical | 74.7% | **60.1%** | Standalone LSTM |
 | QRH standalone (MLP) | — | 41.3% | Reservoir-MLP |
 | CRH standalone | — | — | Reservoir-MLP |
@@ -1562,7 +1562,7 @@ ______________________________________________________________________
 - [x] QLIF-LSTM Stage 4c: thermotaxis pursuit predators large — 60.1% classical (82% last-100), 45.4% quantum (82% last-100), PASS
 - [x] QLIF-LSTM Stage 4c: stationary predators — 37% classical ceiling, 31% quantum. 6 rounds tuning, actor [features, h_t] fix. FAIL vs MLP PPO (96.5%)
 - [x] QLIF-LSTM quantum comparison complete — quantum QLIF gates provide no measurable advantage on any task
-- [x] QRH-QLSTM composition (Stage 4d) — 15 rounds, 54 sessions: CRH-QLSTM 85.4% small pursuit (best reservoir), but -21pp vs QLIF-LSTM at scale. LSTM hurts QRH (-4.2pp). Hypothesis REJECTED
+- [x] QRH-QLSTM composition (Stage 4d) — 15 rounds, 54 sessions: CRH-QLSTM 85.4% small pursuit (best reservoir), but -21pp vs QLIF-LSTM at scale. LSTM hurts QRH (-4.1pp). Hypothesis REJECTED
 
 ______________________________________________________________________
 
@@ -1730,6 +1730,7 @@ Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifact
 | Phase 3b | Pursuit (classical) | CRH-QLSTM | 20260311_111030-111038 | 4×200 | 82.2% avg, 92.7% post-conv |
 | Phase 3c | Pursuit (quantum) | QRH-QLSTM | 20260311_031223-031237 | 4×200 | 15.2% avg, FAIL |
 | Phase 4 | Pursuit large (classical) | CRH-QLSTM | 20260311_112537-112547 | 4×500 | 35.9% avg |
+| Phase 4 v2 | Pursuit large (classical) | CRH-QLSTM | 20260311_121622-121629 | 4×500 | **38.8% avg** (hyperparams aligned) |
 | Phase 4b | Stationary large (classical) | CRH-QLSTM | 20260311_124349-124358 | 4×500 | 14.0% avg |
 | Stage 4d | Pursuit small (classical) | QRH-LSTM | 20260311_220133-220145 | 4×200 | 17.0% avg |
 | Stage 4d | Pursuit large (classical) | QRH-LSTM | 20260311_221535-221547 | 4×500 | 16.4% avg |

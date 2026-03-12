@@ -1,5 +1,5 @@
 # Dynamic Foraging with Pursuit Predators - Small Configuration (Classical Gates)
-# Same as qrhqlstm_pursuit_predators_small.yml but with classical sigmoid gates
+# Classical-gate variant of qrhqlstm_pursuit_predators_small.yml
 # Classical QLIF gate ablation: use_quantum_gates=false
 # Stage 4d: QRH-QLSTM = QRH quantum reservoir + QLIF-LSTM readout (classical-gate mode)
 
