@@ -116,12 +116,22 @@
 
 **Directory:** `configs/examples/`
 
-- [x] `qrhqlstm_thermotaxis_stationary_predators_large.yml` — QRH-QLSTM on stationary predators (primary test, quantum gates enabled). Use same environment as `qrh_thermotaxis_stationary_predators_large.yml`.
+- [x] `qrhqlstm_thermotaxis_stationary_predators_large.yml` — QRH-QLSTM on stationary predators (primary test, quantum gates enabled)
 - [x] `qrhqlstm_thermotaxis_stationary_predators_large_classical.yml` — Same but `use_quantum_gates: false` (classical QLIF gate ablation)
 - [x] `crhqlstm_thermotaxis_stationary_predators_large.yml` — CRH-QLSTM on stationary predators (classical reservoir ablation)
-- [x] `qrhqlstm_pursuit_predators_small.yml` — QRH-QLSTM on pursuit predators (regression test). Use same environment as `qrh_pursuit_predators_small.yml`.
+- [x] `crhqlstm_thermotaxis_stationary_predators_large_classical.yml` — CRH-LSTM on stationary predators
+- [x] `qrhqlstm_pursuit_predators_small.yml` — QRH-QLSTM on pursuit predators (regression test)
+- [x] `qrhqlstm_pursuit_predators_small_classical.yml` — QRH-LSTM on pursuit predators
+- [x] `crhqlstm_pursuit_predators_small.yml` — CRH-QLSTM on pursuit predators
+- [x] `crhqlstm_pursuit_predators_small_classical.yml` — CRH-LSTM on pursuit predators
 - [x] `qrhqlstm_foraging_small.yml` — QRH-QLSTM on foraging (smoke test baseline)
+- [x] `qrhqlstm_foraging_small_classical.yml` — QRH-LSTM on foraging
 - [x] `crhqlstm_foraging_small.yml` — CRH-QLSTM on foraging (smoke test baseline for CRH variant)
+- [x] `crhqlstm_foraging_small_classical.yml` — CRH-LSTM on foraging
+- [x] `qrhqlstm_thermotaxis_pursuit_predators_large.yml` — QRH-QLSTM on thermo+pursuit large
+- [x] `qrhqlstm_thermotaxis_pursuit_predators_large_classical.yml` — QRH-LSTM on thermo+pursuit large
+- [x] `crhqlstm_thermotaxis_pursuit_predators_large.yml` — CRH-QLSTM on thermo+pursuit large
+- [x] `crhqlstm_thermotaxis_pursuit_predators_large_classical.yml` — CRH-LSTM on thermo+pursuit large
 
 ### Step 10: Create unit tests
 
@@ -142,4 +152,16 @@
 - [x] Smoke tests: `uv run pytest -m smoke -v` (all pass, including new configs)
 - [x] Unit tests: `uv run pytest tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py -v`
 - [x] Full test suite (skip nightly): `uv run pytest -m "not nightly"`
-- [ ] Manual smoke run: `uv run ./scripts/run_simulation.py --config ./configs/examples/qrhqlstm_foraging_small.yml --episodes 3`
+- [x] Manual smoke run: `uv run ./scripts/run_simulation.py --config ./configs/examples/qrhqlstm_foraging_small.yml --episodes 3`
+
+### Step 12: Evaluation (Stages 4a–4d)
+
+- [x] Stage 4a: Foraging baseline — QRH-QLSTM 100%, CRH-QLSTM 100% (both pass)
+- [x] Stage 4b: Pursuit predators small — QRH-QLSTM 25.3%, CRH-QLSTM 32.0% (both below QRH-MLP 36.5%)
+- [x] Stage 4c: Thermo+pursuit large — QRH-QLSTM 20.5%, CRH-QLSTM 25.5% (both below QRH-MLP 41.3%)
+- [x] Stage 4c: Thermo+stationary large — QRH-QLSTM 40.8%, CRH-QLSTM 49.8% (QRH-QLSTM below QRH-MLP 45.2%)
+- [x] Stage 4d: QRH-LSTM pursuit small — 17.0% (below QRH-MLP 36.5%)
+- [x] Stage 4d: QRH-LSTM thermo+pursuit large — 16.4% (below QRH-MLP 41.3%)
+- [x] Stage 4d: QRH-LSTM thermo+stationary large — 41.0% (below QRH-MLP 45.2%, hypothesis REJECTED)
+- [x] Update scratchpad with all evaluation results (58 sessions, ~15,400 episodes)
+- [x] Update `docs/research/quantum-architectures.md` with findings

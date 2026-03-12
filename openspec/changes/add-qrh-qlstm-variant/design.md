@@ -148,3 +148,15 @@ This mirrors the existing pattern:
 **[BPTT through frozen reservoir]** The reservoir features are computed fresh each timestep but gradients don't flow through the reservoir. The LSTM must learn purely from the readout side. → This is by design (reservoir is fixed) and matches how QRH's MLP readout trains. Not a risk, just a constraint.
 
 **[Code duplication]** The recurrent PPO buffer and training loop are copied from `qliflstm.py` rather than shared. → Acceptable for now. A future refactor could extract a shared `RecurrentPPOTrainer` utility, but premature abstraction before validation.
+
+## Evaluation Outcomes
+
+All design decisions held up during implementation and evaluation. Key observations:
+
+- **Decision 1 (composition over inheritance)** — Correct. The separate `ReservoirLSTMBase` cleanly isolated reservoir-LSTM behavior from the MLP-based `ReservoirHybridBase`.
+- **Decision 2 (reservoir as feature extractor)** — Correct. The delegation pattern worked, though the unused MLP parameters in the inner reservoir brain were as expected (negligible overhead).
+- **Decision 3 (LSTM input = reservoir features)** — The 75-dim reservoir feature input to a 64-dim LSTM was manageable but evaluation showed no benefit over the simpler MLP readout.
+- **Risk: high-dim LSTM input** — Did NOT cause convergence issues. The architecture trained reliably. The problem was architectural: LSTM temporal memory does not help when the reservoir is stateless and non-trainable.
+- **Risk: quantum execution cost** — Confirmed. QRH-QLSTM with quantum gates was slower but produced no measurable performance gain over classical gates.
+
+The 2×2 ablation matrix (quantum/classical reservoir × quantum/classical gates) was fully evaluated across 4 environment stages, providing definitive negative results for the composition hypothesis.
