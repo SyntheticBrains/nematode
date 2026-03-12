@@ -114,7 +114,7 @@ The brain SHALL support optional LR warmup and decay, following the same schedul
 #### Scenario: Warmup + decay schedule
 
 - **WHEN** both `lr_warmup_episodes` and `lr_decay_episodes` are configured
-- **THEN** LR SHALL warmup linearly for the specified episodes, then decay linearly, with critic LR maintaining the same ratio to actor LR
+- **THEN** LR SHALL warm up linearly for the specified episodes, then decay linearly, with critic LR maintaining the same ratio to actor LR
 
 #### Scenario: No scheduling
 
