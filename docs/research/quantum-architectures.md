@@ -147,6 +147,24 @@ COMPLETED:
     Outperforms QRH on stationary (+6.3pp) due to ESN consistency.
     STATUS: ABLATION COMPLETE — confirms task-dependent quantum advantage.
 
+  CRH-QLSTM — Classical ESN reservoir + QLIF-LSTM temporal readout.
+    12 sessions across foraging/pursuit/thermotaxis environments.
+    86.3% foraging classical, 85.1% foraging quantum (matches QLIF-LSTM baseline).
+    85.4% pursuit small (quantum gates) — best reservoir-LSTM result (+14.6pp vs QLIF-LSTM).
+    35.9% thermo+pursuit large, 14.0% thermo+stationary large — does not scale.
+    Feature expansion (7→75 dims) helps local evasion but hurts large-grid path efficiency
+    (53 steps/food vs QLIF-LSTM's 25). Confirmed architectural, not hyperparameter (v2 test).
+    STATUS: EVALUATED — strong on small pursuit predators, does not scale to large grids.
+
+  QRH-QLSTM / QRH-LSTM — Quantum reservoir + QLIF-LSTM or classical LSTM readout.
+    22 sessions across foraging/pursuit/thermotaxis environments.
+    66.6% foraging quantum (conv ~83, 2.7x slower than CRH-QLSTM).
+    15.2% pursuit small quantum, 17.0% pursuit small classical (BOTH FAILED).
+    Stage 4d: LSTM readout DEGRADES QRH vs MLP readout on all large-grid tasks
+    (16.4% thermo+pursuit vs QRH-MLP 41.3%, 10.8% thermo+stationary vs 14.9%).
+    Hypothesis rejected: temporal readout does not fix fixed reservoir limitations.
+    STATUS: EVALUATED — fixed quantum reservoir cannot support multi-objective tasks.
+
 NOT EVALUATED:
   PPO-Q Style PQC Actor — PQC wrapped in classical pre/post-processing.
     Uses parameter-shift, not surrogate gradients. Not pursued given
@@ -1736,7 +1754,7 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 
 #### Evaluation Results (Stages 4a-4c Complete)
 
-**Status**: Stages 4a-4c complete (12 rounds, ~66 sessions). Stage 4d (QRH-LSTM primary + QRH-QLSTM ablation) pending.
+**Status**: Stages 4a-4c complete (12 rounds, ~66 sessions). QRH-QLSTM/CRH-QLSTM reservoir-LSTM composition evaluated (22 sessions). Stage 4d (QRH-LSTM primary — classical gates) in progress.
 
 **Stage 4a — Foraging (PASS)**:
 
@@ -1762,7 +1780,7 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 - Stage 4b: ✅ PASS — 98% last-100 on pursuit predators; temporal memory confirmed beneficial
 - Stage 4b quantum: ❌ QLIF ≤ classical LSTM on all tasks → quantum activations provide no benefit in temporal context
 - Stage 4c: ⚠️ Pursuit scales well (82% last-100 on large grid), stationary predators remain weak (~37% ceiling vs MLP PPO 96.5%)
-- Stage 4d: ⬜ Pending — QRH-LSTM (primary) + QRH-QLSTM (ablation) composition
+- Stage 4d: ❌ FAILED — QRH-LSTM degrades QRH vs MLP readout (17% pursuit small, 16% thermo+pursuit, 11% thermo+stationary). Hypothesis rejected: LSTM does not resolve QRH's stationary predator weakness (-4.2pp vs target +5pp)
 
 **Falsification Criteria Assessment**:
 
@@ -1773,7 +1791,25 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 
 **Quantum Verdict**: QLIF quantum gates provide no measurable advantage over classical sigmoid on any evaluated task. The classical LSTM temporal architecture is the valuable contribution. This aligns with ICML 2025 finding (arXiv:2502.04909) that most PQC-QRL approaches don't rely on quantum components.
 
-Full evaluation data: [008-quantum-brain-evaluation.md](../../experiments/logbooks/008-quantum-brain-evaluation.md), [qliflstm-optimization.md](../../experiments/logbooks/supporting/008/qliflstm-optimization.md)
+**Reservoir-LSTM Composition Evaluation** (QRH-QLSTM + CRH-QLSTM, 22 sessions):
+
+Tested reservoir (QRH/CRH) + QLIF-LSTM readout as a composed architecture. Key findings:
+
+- **CRH-QLSTM dominates on small pursuit predators**: 85.4% SR (quantum gates), 82.2% (classical gates) — best result for any reservoir-LSTM variant, +14.6pp over standalone QLIF-LSTM. Reservoir temporal features provide clear evasion advantage at small scale.
+- **Does NOT scale to large (100×100) grids**: 35.9% thermo+pursuit (vs QLIF-LSTM 60.1%), 14.0% thermo+stationary (vs QLIF-LSTM 24.0%). Feature expansion (7→75 dims) hurts path efficiency (53 vs 25 steps/food). Confirmed architectural, not hyperparameter (v2 alignment test: 38.8%, no improvement).
+- **QRH-QLSTM collapses on multi-objective**: 15.2% on pursuit predators small (vs CRH-QLSTM 85.4%). Quantum reservoir noise that merely slows foraging convergence (2.7x) becomes catastrophic when evasion is added.
+- **Quantum QLIF gates**: Small ~3pp advantage on pursuit predators (85.4% vs 82.2%), no advantage on foraging. Consistent with standalone QLIF-LSTM findings.
+- **Architecture hierarchy on small pursuit predators**: CRH-QLSTM (85.4%) > QLIF-LSTM (57-63%) > QRH-QLSTM (15.2%)
+
+**Stage 4d Results** (QRH-LSTM = quantum reservoir + classical LSTM, 12 sessions):
+
+- **QRH-LSTM pursuit small**: 17.0% SR (vs QRH-MLP 41.2%) — LSTM readout *degrades* QRH performance
+- **QRH-LSTM thermo+pursuit large**: 16.4% SR (vs QRH-MLP 41.3%) — worst architecture on this task
+- **QRH-LSTM thermo+stationary large**: 10.8% SR (vs QRH-MLP 14.9%) — hypothesis REJECTED (-4.2pp vs target +5pp)
+- **Root cause**: LSTM overcomplicates the readout for QRH's noisy fixed features. The simple MLP readout outperforms LSTM on every task.
+- **Conclusion**: Temporal readout does NOT resolve QRH's multi-objective weakness. The bottleneck is the fixed quantum reservoir, not the readout architecture.
+
+Full evaluation data: [008-quantum-brain-evaluation.md](../../experiments/logbooks/008-quantum-brain-evaluation.md), [qliflstm-optimization.md](../../experiments/logbooks/supporting/008/qliflstm-optimization.md), [qrhqlstm_scratchpad.md](../../build/brains/qrhqlstm/qrhqlstm_scratchpad.md)
 
 ### H.5 Multi-Objective & Sensory Extensibility
 
@@ -1794,8 +1830,8 @@ All four proposals are designed for multi-objective learning (foraging + predato
 ### H.6 Implementation Roadmap
 
 ```text
-Updated March 2026 — H.1 (QRH) and H.4 Stages 4a-4c evaluation complete.
-Priorities revised based on 260+ sessions of experimental data.
+Updated March 2026 — H.1 (QRH), H.4 (Stages 4a-4d), and reservoir-LSTM compositions evaluated.
+Priorities revised based on 290+ sessions of experimental data.
 
 Scheduling follows risk level (lowest-risk first) combined with strategic
 value (temporal memory infrastructure needed for roadmap Phase 3).
@@ -1811,16 +1847,22 @@ COMPLETED:
     Stationary predators: 37% ceiling despite 6 rounds of tuning.
     Key innovations: fan-in scaling, entropy floor, actor [features, h_t].
 
-NEXT:
-  Stage 4d:  QRH-LSTM (primary) + QRH-QLSTM (ablation)
-             - Primary: QRH reservoir + classical LSTM readout (QRH-LSTM)
-               Uses classical sigmoid gates — the path validated in Stages 4a-4c.
-             - Ablation: QRH reservoir + QLIF-LSTM readout (QRH-QLSTM)
-               Uses QLIF quantum gates — included only to confirm the quantum
-               verdict holds in the composed QRH setting (expected: no advantage).
-             - CRH-LSTM classical ablation control (ESN reservoir + classical LSTM)
-             - Test: does temporal readout resolve QRH's stationary predator weakness?
+  CRH-QLSTM — CRH ESN reservoir + QLIF-LSTM readout, 22 sessions
+    85.4% pursuit small (best reservoir-LSTM). Does not scale to large grids
+    (35.9% thermo+pursuit vs QLIF-LSTM 60.1%). Feature expansion hurts path
+    efficiency at scale. Quantum gates: ~3pp advantage on pursuit, none on foraging.
 
+  QRH-QLSTM — QRH quantum reservoir + QLIF-LSTM readout, 10 sessions
+    66.6% foraging (conv ~83, 2.7x slower). 15.2% pursuit small (FAILED).
+    Quantum reservoir noise catastrophic for multi-objective tasks.
+
+  Stage 4d QRH-LSTM — QRH reservoir + classical LSTM readout, 12 sessions
+    LSTM readout DEGRADES QRH performance vs MLP readout on all tasks.
+    17% pursuit small, 16% thermo+pursuit large, 11% thermo+stationary large.
+    Hypothesis rejected: LSTM does not resolve QRH's stationary predator
+    weakness (-4.2pp vs target +5pp). Bottleneck is fixed reservoir, not readout.
+
+NEXT:
   Week 6-7:  Entangled QLIF + qtDNN (H.3)
              - Entangled QLIF circuit design (CNOT/CZ between neuron qubits)
              - qtDNN surrogate implementation and calibration
@@ -1841,7 +1883,12 @@ Decision Gates:
     → Classical LSTM is best temporal architecture (98% last-100 pursuit)
     → Quantum activations provide no benefit in temporal context
     → Temporal infrastructure (LSTM + recurrent PPO) is valuable
-    → Stage 4d (QRH-LSTM primary + QRH-QLSTM ablation) still pending
+    → Reservoir-LSTM compositions evaluated: CRH-QLSTM strong on small
+      pursuit (85.4%) but doesn't scale to large grids. QRH-QLSTM fails
+      on multi-objective (15.2%). Feature expansion hurts path efficiency.
+    → Stage 4d COMPLETE: QRH-LSTM FAILED. LSTM readout degrades QRH on
+      all tasks (17% pursuit, 16% thermo+pursuit, 11% thermo+stationary).
+      Hypothesis rejected: temporal readout cannot fix fixed reservoir.
 
   After Week 7 (H.3 complete): Entanglement verdict
     → If entangled QLIF > non-entangled: first genuine trainable
@@ -1853,7 +1900,8 @@ Decision Gates:
   After all evaluations: Final architecture selection for Phase 2
     → Best quantum architecture for multi-objective tasks
     → Best temporal architecture for Phase 3 memory systems
-    → May be the same architecture (QRH-LSTM) or different
+    → QRH-LSTM eliminated; QRH with MLP readout remains best quantum arch
+      for pursuit predators; standalone LSTM best temporal arch
 ```
 
 ______________________________________________________________________
@@ -1877,6 +1925,10 @@ ______________________________________________________________________
 | QLIF-LSTM (quantum) | 85.63% | — | 70.8% (93.5% last-100) | Recurrent PPO (BPTT) |
 | QRH (random topology) | 86.8% (98% post-conv) | — | 41.2% | PPO readout |
 | CRH (ESN ablation) | — | — | 31.8% | PPO readout |
+| **CRH-QLSTM (quantum)** | **85.1%** | — | **85.4% (95.8% post-conv)** | **Recurrent PPO (BPTT)** |
+| CRH-QLSTM (classical) | 86.3% | — | 82.2% (92.7% post-conv) | Recurrent PPO (BPTT) |
+| QRH-QLSTM (quantum) | 66.6% (97.9% post-conv) | — | 15.2% (FAILED) | Recurrent PPO (BPTT) |
+| QRH-QLSTM (classical) / QRH-LSTM | 62.9% (96.6% post-conv) | — | 17.0% (FAILED) | Recurrent PPO (BPTT) |
 
 \*Best session only; ~90% of sessions fail
 
@@ -2109,12 +2161,12 @@ Four strategies were proposed to bridge this gap, with two now evaluated:
 3. **Use classical gradient surrogates** — Train entangled circuits (which could provide genuine quantum advantage) using a classical tangential DNN (qtDNN) that approximates quantum gradients, separating the advantage source from the training mechanism.
 4. **Use quantum activations in classical temporal architecture** — ✅ **EVALUATED (H.4 QLIF-LSTM, Stages 4a-4c).** QLIF quantum measurements replace sigmoid in LSTM gates. Result: classical LSTM achieves 98% last-100 on pursuit predators (best temporal architecture), but quantum gates provide no measurable advantage on any task. Temporal memory infrastructure is the valuable contribution.
 
-Four architectures were proposed, with H.1 and H.4 (Stages 4a-4c) now completed. Priorities have been re-ordered based on experimental findings and external research survey (March 2026):
+Four architectures were proposed, with H.1 and H.4 (Stages 4a-4d) now completed. Priorities have been re-ordered based on experimental findings and external research survey (March 2026):
 
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|
 | 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
-| 2 | QLIF-LSTM Temporal Brain (H.4) | Quantum activations in LSTM | **EVALUATED (4a-4c)** | Classical LSTM: 98% last-100 pursuit predators (best temporal arch). Quantum gates: no measurable advantage on any task. Stationary predators: 37% ceiling. Stage 4d (QRH-LSTM primary + QRH-QLSTM ablation) pending. Temporal infrastructure is the valuable contribution, not quantum activations. |
+| 2 | QLIF-LSTM Temporal Brain (H.4) | Quantum activations in LSTM | **COMPLETED (4a-4d)** | Classical LSTM: 98% last-100 pursuit. Quantum gates: no advantage. CRH-QLSTM: 85.4% small pursuit but doesn't scale. Stage 4d: QRH-LSTM FAILED — LSTM degrades QRH vs MLP readout on all tasks. Hypothesis rejected. |
 | 3 | Entangled QLIF + qtDNN | Classical surrogates | Proposed | Most promising path to genuine *trainable* quantum advantage. hDQNN-TD3 (arXiv:2503.09119) is the strongest QRL result in literature (+13% over TD3 on Humanoid-v4). Adds entanglement — the key quantum resource our QLIF doesn't use. |
 | 4 | SQS-QLIF Hybrid | Local learning rules | Proposed — deprioritised | Highest risk. Our Hebbian learning experiments (12 rounds, 0% success) showed local learning rules are too weak for RL. SQS paper (arXiv:2506.21324) tested on classification, not RL. Deferred until H.3/H.4 results inform whether quantum memory effects are worth pursuing with biologically-plausible neuron models. |
 
@@ -2123,8 +2175,9 @@ Four architectures were proposed, with H.1 and H.4 (Stages 4a-4c) now completed.
 1. **Classical LSTM temporal architecture validated** — 98% last-100 on pursuit predators, best result among temporal architectures
 2. **Quantum activations falsified** — QLIF gates provide no measurable advantage over classical sigmoid on any task (foraging, pursuit, stationary)
 3. **ICML 2025 prediction confirmed** — architecture provides value even without quantum advantage, as predicted by arXiv:2502.04909
-4. **QRH synergy still pending** — Stage 4d (QRH-LSTM primary) will test whether temporal readout resolves QRH's stationary predator weakness
-5. **Stationary predators remain unsolved** — 37% ceiling despite 6 rounds of tuning; MLP PPO achieves 96.5%
+4. **Reservoir-LSTM compositions evaluated** — CRH-QLSTM excels on small pursuit (85.4%) but feature expansion (7→75 dims) hurts large-grid path efficiency. QRH-QLSTM collapses on multi-objective (15.2%)
+5. **Stationary predators remain unsolved** — 37% QLIF-LSTM ceiling, 14% CRH-QLSTM ceiling, 11% QRH-LSTM ceiling; MLP PPO achieves 96.5%
+6. **Stage 4d COMPLETE — FAILED** — QRH-LSTM degrades QRH vs MLP readout on all tasks (17% pursuit, 16% thermo+pursuit, 11% thermo+stationary). LSTM temporal readout cannot compensate for inadequate fixed reservoir features. Hypothesis rejected (-4.2pp vs target +5pp)
 
 H.2 (SQS-QLIF) remains deprioritised because local learning rules (Hebbian/STDP) failed comprehensively in our experiments, and the SQS paper lacks RL validation.
 
