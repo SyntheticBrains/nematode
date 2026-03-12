@@ -1345,6 +1345,171 @@ Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](
 
 ______________________________________________________________________
 
+## QRH-QLSTM / CRH-QLSTM Brain Evaluation
+
+**Date**: 2026-03-10 – 2026-03-12
+
+**Scope**: 15 rounds, 58 sessions, ~15,400 episodes
+
+**Goal**: Test whether composing reservoir features (QRH quantum or CRH classical) with QLIF-LSTM temporal readout improves over either standalone architecture (Stage 4d).
+
+### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              RESERVOIR-LSTM COMPOSITION (QRH-QLSTM / CRH-QLSTM)             │
+│       Fixed Reservoir Feature Extractor + QLIF-LSTM Temporal Readout        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Sensory Input (4-8 features)                                               │
+│       │                                                                     │
+│  ┌────┴─────────────────────────────────────────────────────────────┐       │
+│  │  RESERVOIR (FIXED — not trained)                                 │       │
+│  │                                                                  │       │
+│  │  QRH variant: 10-qubit quantum reservoir (random topology)       │       │
+│  │  CRH variant: 10-neuron classical ESN (spectral_radius=0.9)      │       │
+│  │                                                                  │       │
+│  │  Feature channels: raw (10) + cos_sin (20) + pairwise (45) = 75  │       │
+│  └──────────────────────┬───────────────────────────────────────────┘       │
+│                         │                                                   │
+│  ┌──────────────────────┴───────────────────────────────────────────┐       │
+│  │  QLIF-LSTM TEMPORAL READOUT (PPO-TRAINED)                        │       │
+│  │                                                                  │       │
+│  │  z = [reservoir_features, h_{t-1}]                               │       │
+│  │  Forget gate: f_t = QLIF(W_f·z) or sigmoid(W_f·z)                │       │
+│  │  Input gate:  i_t = QLIF(W_i·z) or sigmoid(W_i·z)                │       │
+│  │  Cell cand:   ĉ_t = tanh(W_c·z)                                  │       │
+│  │  Output gate: o_t = σ(W_o·z)                                     │       │
+│  │  c_t = f_t * c_{t-1} + i_t * ĉ_t                                 │       │
+│  │  h_t = o_t * tanh(c_t)                                           │       │
+│  │                                                                  │       │
+│  │  Actor: Linear([features, h_t] → 4 actions) + Categorical        │       │
+│  │  Critic: MLP([features, h_t.detach()] → V(s))                    │       │
+│  │  Training: Recurrent PPO with chunk-based truncated BPTT         │       │
+│  └──────────────────────────────────────────────────────────────────┘       │
+│                                                                             │
+│  VARIANTS:                                                                  │
+│    QRH-QLSTM: quantum reservoir + quantum QLIF gates (full quantum)         │
+│    CRH-QLSTM: classical ESN reservoir + quantum QLIF gates                  │
+│    QRH-LSTM:  quantum reservoir + classical sigmoid gates (ablation)        │
+│    CRH-LSTM:  classical reservoir + classical sigmoid gates (ablation)      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+Key design choices:
+
+- **Reservoir-LSTM composition**: Fixed reservoir provides rich 75-dim features; QLIF-LSTM adds within-episode temporal memory
+- **Shared base class**: `ReservoirLSTMBase` abstracts the LSTM readout + recurrent PPO; subclasses provide only reservoir creation and feature dim computation
+- **Classical ablation**: `use_quantum_gates: false` replaces QLIF circuits with torch.sigmoid() for both forget and input gates
+
+### Configuration (Best — CRH-QLSTM Pursuit Predators)
+
+```yaml
+brain:
+  name: crhqlstm
+  config:
+    num_reservoir_neurons: 10
+    reservoir_depth: 3
+    spectral_radius: 0.9
+    feature_channels: [raw, cos_sin, pairwise]
+    lstm_hidden_dim: 64
+    shots: 1024
+    membrane_tau: 0.9
+    gamma: 0.99
+    gae_lambda: 0.98
+    clip_epsilon: 0.2
+    entropy_coef: 0.02
+    entropy_coef_end: 0.008
+    entropy_decay_episodes: 100
+    value_loss_coef: 0.5
+    num_epochs: 2
+    rollout_buffer_size: 1024
+    max_grad_norm: 0.5
+    actor_lr: 0.0005
+    critic_lr: 0.0005
+    bptt_chunk_length: 32
+    use_quantum_gates: true
+    sensory_modules: [food_chemotaxis, nociception]
+```
+
+### Results Summary
+
+#### Foraging (Phase 1-2, 200 episodes, 4 sessions each variant)
+
+| Metric | QRH-QLSTM Classical | QRH-QLSTM Quantum | CRH-QLSTM Classical | CRH-QLSTM Quantum |
+|--------|---------------------|-------------------|---------------------|-------------------|
+| Success rate | 62.9% | 66.6% | **86.3%** | 85.1% |
+| Post-convergence | 96.6% | 97.9% | **99.3%** | 99.7% |
+| Convergence ep | 82.8 | 82.8 | **30.8** | 31.0 |
+
+CRH converges 2.7x faster than QRH. Quantum vs classical gates make negligible difference. Both pass Stage 4a.
+
+#### Pursuit Predators Small (Phase 3, 200 episodes, 4 sessions each)
+
+| Metric | CRH-QLSTM Quantum | CRH-QLSTM Classical | QRH-QLSTM Quantum | QLIF-LSTM Classical |
+|--------|-------------------|---------------------|-------------------|---------------------|
+| Success rate | **85.4%** | 82.2% | 15.2% | 74.7% |
+| Post-convergence | **95.8%** | 92.7% | — | 92.4% |
+| Convergence ep | **30.3** | 37.5 | — | 146.3 |
+| Evasion rate | **85.0%** | — | — | 75.4% |
+
+CRH-QLSTM is the best reservoir-LSTM variant: +10.7pp over standalone QLIF-LSTM, 4.8x faster convergence. QRH-QLSTM fails completely on multi-objective tasks.
+
+#### Thermotaxis + Pursuit Predators Large (Phase 4, 500 episodes, 4 sessions)
+
+| Model | SR | Conv | Steps/Food |
+|-------|----|------|------------|
+| QLIF-LSTM Classical | **60.1%** | **198** | **25.3** |
+| QRH standalone (MLP) | 41.3% | 793 | — |
+| CRH-QLSTM Classical v2 | 38.8% | N | 50.1 |
+| QRH-LSTM Classical | 16.4% | N | — |
+
+CRH-QLSTM does not scale to large grids — 2x worse path efficiency than QLIF-LSTM (53 vs 25 steps/food). Reservoir feature expansion obscures gradient signals needed for long-range navigation.
+
+#### Thermotaxis + Stationary Predators Large (Phase 4b + Stage 4d, 500 episodes, 4 sessions)
+
+| Model | SR |
+|-------|----|
+| QLIF-LSTM Classical | **24.0%** |
+| CRH standalone | 23.4% |
+| QRH standalone (MLP) | 14.9% |
+| CRH-QLSTM Classical | 14.0% |
+| QRH-LSTM Classical | **10.8%** |
+
+Stage 4d hypothesis **REJECTED**: QRH-LSTM is -4.2pp worse than QRH-MLP on stationary predators. LSTM temporal readout does NOT resolve QRH's multi-objective weakness.
+
+### Key Findings
+
+1. **CRH-QLSTM excels on small pursuit predators** (85.4%) but fails to scale to large grids
+2. **QRH-QLSTM fails on all multi-objective tasks** — quantum reservoir noise becomes catastrophic with added objectives
+3. **LSTM readout HURTS QRH performance** — worse than QRH standalone MLP on every large-grid test (-24.9pp pursuit, -4.2pp stationary)
+4. **Quantum QLIF gates provide ~3pp advantage** on CRH pursuit predators, but not worth 170x speed cost
+5. **Path efficiency gap is architectural, not hyperparameter** — confirmed by hyperparameter alignment experiment
+6. **Reservoir-LSTM composition does not improve over simpler architectures** at scale
+
+### Cross-Architecture Comparison (All Architectures, Pursuit Predators)
+
+| Model | Small (20x20) | Large (100x100) | Architecture |
+|-------|--------------|-----------------|--------------|
+| CRH-QLSTM Quantum | **85.4%** | 38.8% | Reservoir-LSTM |
+| HybridQuantum Stage 3 | — | — | Curriculum fusion |
+| QLIF-LSTM Classical | 74.7% | **60.1%** | Standalone LSTM |
+| QRH standalone (MLP) | — | 41.3% | Reservoir-MLP |
+| CRH standalone | — | — | Reservoir-MLP |
+| QRH-QLSTM Quantum | 15.2% | 16.4% | Reservoir-LSTM |
+
+### File Locations
+
+- QRH-QLSTM implementation: `packages/quantum-nematode/quantumnematode/brain/arch/qrhqlstm.py`
+- CRH-QLSTM implementation: `packages/quantum-nematode/quantumnematode/brain/arch/crhqlstm.py`
+- Reservoir-LSTM base: `packages/quantum-nematode/quantumnematode/brain/arch/_reservoir_lstm_base.py`
+- Tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py`, `test_crhqlstm.py`
+- Configs: `configs/examples/qrhqlstm_*.yml`, `configs/examples/crhqlstm_*.yml`
+
+Full optimization history (15 rounds, 58 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
+
+______________________________________________________________________
+
 ## Next Steps
 
 - [x] Implement QSNNBrain with QLIF neurons
@@ -1395,7 +1560,7 @@ ______________________________________________________________________
 - [x] QLIF-LSTM Stage 4c: thermotaxis pursuit predators large — 60.1% classical (82% last-100), 45.4% quantum (82% last-100), PASS
 - [x] QLIF-LSTM Stage 4c: stationary predators — 37% classical ceiling, 31% quantum. 6 rounds tuning, actor [features, h_t] fix. FAIL vs MLP PPO (96.5%)
 - [x] QLIF-LSTM quantum comparison complete — quantum QLIF gates provide no measurable advantage on any task
-- [ ] QRH-QLSTM composition (Stage 4d) — combine QRH reservoir features with QLIF-LSTM temporal readout
+- [x] QRH-QLSTM composition (Stage 4d) — 15 rounds, 58 sessions: CRH-QLSTM 85.4% small pursuit (best reservoir), but -21pp vs QLIF-LSTM at scale. LSTM hurts QRH (-4.2pp). Hypothesis REJECTED
 
 ______________________________________________________________________
 
@@ -1550,6 +1715,27 @@ Experiment results: `artifacts/logbooks/008/crh_thermotaxis_pursuit_predators_la
 Full optimization history (12 rounds, ~66 sessions): [qliflstm-optimization.md](supporting/008/qliflstm-optimization.md)
 
 Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifacts/logbooks/008/qliflstm_pursuit_predators_small/`, `artifacts/logbooks/008/qliflstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qliflstm_thermotaxis_stationary_predators_large/`
+
+### QRH-QLSTM / CRH-QLSTM Best Sessions
+
+| Phase | Task | Variant | Sessions | Episodes | Result |
+|-------|------|---------|----------|----------|--------|
+| Phase 1 | Foraging (classical) | QRH-QLSTM | 20260310_122324-122336 | 4×200 | 62.9% avg, 96.6% post-conv |
+| Phase 1 | Foraging (classical) | CRH-QLSTM | 20260310_122353-122401 | 4×200 | **86.3% avg**, 99.3% post-conv |
+| Phase 2 | Foraging (quantum) | QRH-QLSTM | 20260310_123914-123922 | 4×200 | 66.6% avg, 97.9% post-conv |
+| Phase 2 | Foraging (quantum) | CRH-QLSTM | 20260310_123944-123952 | 4×200 | 85.1% avg, 99.7% post-conv |
+| Phase 3 | Pursuit (quantum) | CRH-QLSTM | 20260311_015814-015828 | 4×200 | **85.4% avg**, 95.8% post-conv |
+| Phase 3b | Pursuit (classical) | CRH-QLSTM | 20260311_111030-111038 | 4×200 | 82.2% avg, 92.7% post-conv |
+| Phase 3c | Pursuit (quantum) | QRH-QLSTM | 20260311_031223-031237 | 4×200 | 15.2% avg, FAIL |
+| Phase 4 | Pursuit large (classical) | CRH-QLSTM | 20260311_112537-112547 | 4×500 | 35.9% avg |
+| Phase 4b | Stationary large (classical) | CRH-QLSTM | 20260311_124349-124358 | 4×500 | 14.0% avg |
+| Stage 4d | Pursuit small (classical) | QRH-LSTM | 20260311_220133-220145 | 4×200 | 17.0% avg |
+| Stage 4d | Pursuit large (classical) | QRH-LSTM | 20260311_221535-221547 | 4×500 | 16.4% avg |
+| Stage 4d | Stationary large (classical) | QRH-LSTM | 20260311_221821-221832 | 4×500 | 10.8% avg, hypothesis REJECTED |
+
+Full optimization history (15 rounds, 58 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
+
+Experiment results: `artifacts/logbooks/008/qrhqlstm_foraging_small/`, `artifacts/logbooks/008/qrhqlstm_pursuit_predators_small/`, `artifacts/logbooks/008/qrhqlstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qrhqlstm_thermotaxis_stationary_predators_large/`, `artifacts/logbooks/008/crhqlstm_foraging_small/`, `artifacts/logbooks/008/crhqlstm_pursuit_predators_small/`, `artifacts/logbooks/008/crhqlstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/crhqlstm_thermotaxis_stationary_predators_large/`
 
 ### Appendices
 
