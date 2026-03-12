@@ -25,7 +25,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from 15 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 17 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
@@ -36,6 +36,8 @@ Choose from 15 brain architectures spanning quantum, classical, hybrid, and biol
 - **QSNNPPOBrain** (qsnnppo): QLIF quantum spiking network with PPO training
 - **QLIFLSTMBrain** (qliflstm): Quantum-enhanced LSTM with QLIF gates for temporal memory, trained via recurrent PPO with chunk-based truncated BPTT
 - **QQLearningBrain** (qqlearning): Hybrid quantum-classical Q-learning with experience replay
+- **QRHQLSTMBrain** (qrhqlstm): QRH quantum reservoir with QLIF-LSTM temporal readout — reservoir feature extraction + recurrent PPO with truncated BPTT
+- **CRHQLSTMBrain** (crhqlstm): CRH classical reservoir with QLIF-LSTM temporal readout — classical reservoir ablation companion to QRH-QLSTM
 
 **Hybrid (Quantum + Classical):**
 
