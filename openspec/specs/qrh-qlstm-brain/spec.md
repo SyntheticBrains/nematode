@@ -89,8 +89,13 @@ The brain SHALL use truncated BPTT for PPO training. The rollout buffer SHALL st
 
 #### Scenario: Chunk-based BPTT
 
-- **WHEN** a PPO update is triggered (buffer full or episode done)
+- **WHEN** a PPO update is triggered (buffer full or episode done with at least `bptt_chunk_length` steps)
 - **THEN** the buffer SHALL be split into sequential chunks of `bptt_chunk_length` steps, each chunk SHALL be re-run through the LSTM from its stored initial hidden state, and PPO clipped surrogate loss SHALL be computed per chunk
+
+#### Scenario: Short terminal fragment guard
+
+- **WHEN** an episode ends and the buffer contains fewer than `bptt_chunk_length` steps
+- **THEN** no PPO update SHALL be triggered and the fragment SHALL be silently discarded (reset on next episode or buffer-full event)
 
 #### Scenario: Episode boundary handling
 
@@ -127,7 +132,7 @@ The brain SHALL apply `LayerNorm` to reservoir features before feeding them to t
 
 ### Requirement: QRH-QLSTM brain lifecycle
 
-The brain SHALL implement the `ClassicalBrain` protocol with the exact signatures: `run_brain(params, reward, input_data, *, top_only, top_randomize) -> list[ActionData]`, `learn(params, reward, *, episode_done) -> None`, `prepare_episode() -> None`, `post_process_episode(*, episode_success) -> None`, `copy() -> Brain`, and `update_memory(reward) -> None`.
+The brain SHALL implement the `ClassicalBrain` protocol with the exact signatures: `run_brain(params, reward=None, input_data=None, *, top_only, top_randomize) -> list[ActionData]`, `learn(params, reward, *, episode_done) -> None`, `prepare_episode() -> None`, `post_process_episode(*, episode_success=None) -> None`, `copy() -> Brain`, and `update_memory(reward) -> None`.
 
 #### Scenario: Full episode lifecycle
 

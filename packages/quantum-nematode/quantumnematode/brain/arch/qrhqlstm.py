@@ -10,8 +10,6 @@ documentation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from pydantic import Field
 
 from quantumnematode.brain.arch._reservoir_lstm_base import (
@@ -19,9 +17,6 @@ from quantumnematode.brain.arch._reservoir_lstm_base import (
     ReservoirLSTMBaseConfig,
 )
 from quantumnematode.brain.arch.qrh import QRHBrain, QRHBrainConfig
-
-if TYPE_CHECKING:
-    from typing import Any
 
 
 class QRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
@@ -56,7 +51,7 @@ class QRHQLSTMBrain(ReservoirLSTMBase):
     def _create_reservoir(
         self,
         config: ReservoirLSTMBaseConfig,
-    ) -> Any:  # noqa: ANN401
+    ) -> QRHBrain:
         """Create a QRH brain instance as feature extractor."""
         if not isinstance(config, QRHQLSTMBrainConfig):
             msg = f"QRHQLSTMBrain requires QRHQLSTMBrainConfig, got {type(config).__name__}"

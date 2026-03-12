@@ -183,6 +183,10 @@ class TestCRHQLSTMBrain:
         assert torch.allclose(copy.h_t, torch.zeros(8))
         assert torch.allclose(copy.c_t, torch.zeros(8))
         assert not torch.allclose(brain.h_t, torch.zeros(8))
+        # Deep copy: subcomponents must be distinct instances
+        assert copy.lstm_cell is not brain.lstm_cell
+        assert copy.actor_head is not brain.actor_head
+        assert copy.critic is not brain.critic
 
     def test_full_episode_loop(self, brain: CRHQLSTMBrain, params: BrainParams):
         """Test a complete episode loop for CRH-QLSTM."""
