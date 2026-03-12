@@ -2,7 +2,7 @@
 
 **Architecture**: Reservoir-LSTM composition — fixed reservoir (QRH quantum or CRH classical) as feature extractor + QLIF-LSTM temporal readout with recurrent PPO (chunk-based truncated BPTT). Tests whether composing QRH's rich reservoir features with QLIF-LSTM's temporal memory improves over either standalone architecture.
 
-**Total**: 15 rounds, 54 sessions, 16,500 episodes across foraging, pursuit predators, and stationary predators (classical + quantum gates, QRH + CRH reservoirs).
+**Total**: 15 rounds, 54 sessions, 16,500 episodes across foraging, pursuit predators, thermotaxis + pursuit predators, and thermotaxis + stationary predators (classical + quantum gates, QRH + CRH reservoirs).
 
 **Conclusion**: Reservoir-LSTM composition does not improve over simpler architectures. CRH-QLSTM excels on small pursuit predators (85.4%, best reservoir variant) but fails to scale to large grids. QRH-QLSTM fails on all multi-objective tasks. LSTM readout hurts QRH vs its simpler MLP readout.
 

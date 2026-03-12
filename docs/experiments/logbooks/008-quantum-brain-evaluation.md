@@ -1461,8 +1461,8 @@ CRH-QLSTM is the best reservoir-LSTM variant: +10.7pp over standalone QLIF-LSTM,
 |-------|----|------|------------|
 | QLIF-LSTM Classical | **60.1%** | **198** | **25.3** |
 | QRH standalone (MLP) | 41.3% | 793 | — |
-| CRH-QLSTM Classical v2 | 38.8% | N | 50.1 |
-| QRH-LSTM Classical | 16.4% | N | — |
+| CRH-QLSTM Classical v2 | 38.8% | — | 50.1 |
+| QRH-LSTM Classical | 16.4% | — | — |
 
 CRH-QLSTM does not scale to large grids — CRH-QLSTM Classical v2 has 2x worse path efficiency than QLIF-LSTM Classical (50.1 vs 25.3 steps/food). Reservoir feature expansion obscures gradient signals needed for long-range navigation.
 
