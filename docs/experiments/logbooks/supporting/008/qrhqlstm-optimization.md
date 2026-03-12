@@ -2,7 +2,7 @@
 
 **Architecture**: Reservoir-LSTM composition — fixed reservoir (QRH quantum or CRH classical) as feature extractor + QLIF-LSTM temporal readout with recurrent PPO (chunk-based truncated BPTT). Tests whether composing QRH's rich reservoir features with QLIF-LSTM's temporal memory improves over either standalone architecture.
 
-**Total**: 15 rounds, 58 sessions, ~15,400 episodes across foraging, pursuit predators, and stationary predators (classical + quantum gates, QRH + CRH reservoirs).
+**Total**: 15 rounds, 54 sessions, ~16,500 episodes across foraging, pursuit predators, and stationary predators (classical + quantum gates, QRH + CRH reservoirs).
 
 **Conclusion**: Reservoir-LSTM composition does not improve over simpler architectures. CRH-QLSTM excels on small pursuit predators (85.4%, best reservoir variant) but fails to scale to large grids. QRH-QLSTM fails on all multi-objective tasks. LSTM readout hurts QRH vs its simpler MLP readout.
 
@@ -12,7 +12,7 @@ ______________________________________________________________________
 
 **Purpose**: Validate reservoir+LSTM composition learns before investing in slow quantum runs.
 
-**Config**: `qrhqlstm_foraging_small_classical.yml` / `crhqlstm_foraging_small_classical.yml` — 200 episodes, 4 sessions each, lstm_hidden_dim=64, bptt_chunk_length=32, rollout_buffer_size=1024, actor_lr=0.0005, critic_lr=0.0005, entropy_coef=0.02→0.008, use_quantum_gates=false.
+**Config**: `qrhqlstm_foraging_small_classical.yml` / `crhqlstm_foraging_small_classical.yml` — 200 episodes, 4 sessions each, lstm_hidden_dim=64, bptt_chunk_length=32, rollout_buffer_size=256, actor_lr=0.0005, critic_lr=0.0005, entropy_coef=0.02→0.008, use_quantum_gates=false.
 
 **Environment**: 20x20 grid, 5 foods, target 10, no predators.
 
@@ -321,11 +321,11 @@ ______________________________________________________________________
 | Phase 3 | crhqlstm_pursuit_predators_small | 4 | 200 | 20260311_015814-015828 |
 | Phase 3b | crhqlstm_pursuit_predators_small_classical | 4 | 200 | 20260311_111030-111038 |
 | Phase 3c | qrhqlstm_pursuit_predators_small | 4 | 200 | 20260311_031223-031237 |
-| Phase 4 | crhqlstm_thermo_pursuit_large_classical | 4 | 500 | 20260311_112537-112547 |
-| Phase 4 v2 | crhqlstm_thermo_pursuit_large_classical | 4 | 500 | 20260311_121622-121629 |
-| Phase 4b | crhqlstm_thermo_stationary_large_classical | 4 | 500 | 20260311_124349-124358 |
-| Stage 4d | qrhqlstm_pursuit_small_classical | 4 | 200 | 20260311_220133-220145 |
-| Stage 4d | qrhqlstm_thermo_pursuit_large_classical | 4 | 500 | 20260311_221535-221547 |
-| Stage 4d | qrhqlstm_thermo_stationary_large_classical | 4 | 500 | 20260311_221821-221832 |
+| Phase 4 | crhqlstm_thermotaxis_pursuit_predators_large_classical | 4 | 500 | 20260311_112537-112547 |
+| Phase 4 v2 | crhqlstm_thermotaxis_pursuit_predators_large_classical | 4 | 500 | 20260311_121622-121629 |
+| Phase 4b | crhqlstm_thermotaxis_stationary_predators_large_classical | 4 | 500 | 20260311_124349-124358 |
+| Stage 4d | qrhqlstm_pursuit_predators_small_classical | 4 | 200 | 20260311_220133-220145 |
+| Stage 4d | qrhqlstm_thermotaxis_pursuit_predators_large_classical | 4 | 500 | 20260311_221535-221547 |
+| Stage 4d | qrhqlstm_thermotaxis_stationary_predators_large_classical | 4 | 500 | 20260311_221821-221832 |
 | Smoke | qrhqlstm_foraging_small | 1 | 50 | 20260310_104718 |
 | Smoke | crhqlstm_foraging_small | 1 | 50 | 20260310_104749 |

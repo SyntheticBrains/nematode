@@ -1,8 +1,8 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `in_progress` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. HybridClassical ablation (96.3%) confirms architecture + curriculum drive performance, not QSNN. QRH (Quantum Reservoir Hybrid) achieves 98% post-convergence foraging, 41.2% pursuit predator success (4/4 converged), with Domingo encoding confound control confirming genuine quantum dynamics advantage. CRH (Classical Reservoir Hybrid) ablation shows task-dependent advantages: QRH wins pursuit (+9.4pp, 13× lower variance), CRH wins stationary (+6.3pp, 3/4 converged). QLIF-LSTM (H.4) evaluated: 98% classical last-100 on pursuit predators, but quantum gates provide no measurable advantage. Stationary predators remain a weakness (~37% ceiling). Next: QRH-QLSTM composition (Stage 4d).
+**Status**: `stage_4d_complete` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. HybridClassical ablation (96.3%) confirms architecture + curriculum drive performance, not QSNN. QRH (Quantum Reservoir Hybrid) achieves 98% post-convergence foraging, 41.2% pursuit predator success (4/4 converged), with Domingo encoding confound control confirming genuine quantum dynamics advantage. CRH (Classical Reservoir Hybrid) ablation shows task-dependent advantages: QRH wins pursuit (+9.4pp, 13× lower variance), CRH wins stationary (+6.3pp, 3/4 converged). QLIF-LSTM (H.4) evaluated: 98% classical last-100 on pursuit predators, but quantum gates provide no measurable advantage. Stationary predators remain a weakness (~37% ceiling). QRH-QLSTM composition (Stage 4d) complete: CRH-QLSTM 85.4% on small pursuit (best reservoir variant), but LSTM readout hurts QRH at scale (-24.9pp vs MLP). Stage 4d hypothesis REJECTED.
 
-**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`
+**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`, `feat/add-qrh-qlstm-variant`
 
 **Date Started**: 2026-02-05
 
@@ -1349,7 +1349,7 @@ ______________________________________________________________________
 
 **Date**: 2026-03-10 – 2026-03-12
 
-**Scope**: 15 rounds, 58 sessions, ~15,400 episodes
+**Scope**: 15 rounds, 54 sessions, ~16,500 episodes
 
 **Goal**: Test whether composing reservoir features (QRH quantum or CRH classical) with QLIF-LSTM temporal readout improves over either standalone architecture (Stage 4d).
 
@@ -1366,10 +1366,10 @@ ______________________________________________________________________
 │  ┌────┴─────────────────────────────────────────────────────────────┐       │
 │  │  RESERVOIR (FIXED — not trained)                                 │       │
 │  │                                                                  │       │
-│  │  QRH variant: 10-qubit quantum reservoir (random topology)       │       │
+│  │  QRH variant: N-qubit quantum reservoir (random topology)         │       │
+│  │    Features: 3N + N(N-1)/2  (N=8 → 52-D, N=10 → 75-D)           │       │
 │  │  CRH variant: 10-neuron classical ESN (spectral_radius=0.9)      │       │
-│  │                                                                  │       │
-│  │  Feature channels: raw (10) + cos_sin (20) + pairwise (45) = 75  │       │
+│  │    Features: raw(10) + cos_sin(20) + pairwise(45) = 75-D         │       │
 │  └──────────────────────┬───────────────────────────────────────────┘       │
 │                         │                                                   │
 │  ┌──────────────────────┴───────────────────────────────────────────┐       │
@@ -1398,7 +1398,7 @@ ______________________________________________________________________
 
 Key design choices:
 
-- **Reservoir-LSTM composition**: Fixed reservoir provides rich 75-dim features; QLIF-LSTM adds within-episode temporal memory
+- **Reservoir-LSTM composition**: Fixed reservoir provides rich features (QRH: 3N+N(N-1)/2, e.g. 52-D for N=8; CRH: 75-D for N=10); QLIF-LSTM adds within-episode temporal memory
 - **Shared base class**: `ReservoirLSTMBase` abstracts the LSTM readout + recurrent PPO; subclasses provide only reservoir creation and feature dim computation
 - **Classical ablation**: `use_quantum_gates: false` replaces QLIF circuits with torch.sigmoid() for both forget and input gates
 
@@ -1491,12 +1491,14 @@ Stage 4d hypothesis **REJECTED**: QRH-LSTM is -4.2pp worse than QRH-MLP on stati
 
 | Model | Small (20x20) | Large (100x100) | Architecture |
 |-------|--------------|-----------------|--------------|
-| CRH-QLSTM Quantum | **85.4%** | 38.8% | Reservoir-LSTM |
+| CRH-QLSTM Quantum | **85.4%** | — | Reservoir-LSTM |
+| CRH-QLSTM Classical | 82.2% | 38.8% | Reservoir-LSTM |
 | HybridQuantum Stage 3 | — | — | Curriculum fusion |
 | QLIF-LSTM Classical | 74.7% | **60.1%** | Standalone LSTM |
 | QRH standalone (MLP) | — | 41.3% | Reservoir-MLP |
 | CRH standalone | — | — | Reservoir-MLP |
-| QRH-QLSTM Quantum | 15.2% | 16.4% | Reservoir-LSTM |
+| QRH-LSTM Classical | 17.0% | 16.4% | Reservoir-LSTM |
+| QRH-QLSTM Quantum | 15.2% | — | Reservoir-LSTM |
 
 ### File Locations
 
@@ -1506,7 +1508,7 @@ Stage 4d hypothesis **REJECTED**: QRH-LSTM is -4.2pp worse than QRH-MLP on stati
 - Tests: `packages/quantum-nematode/tests/quantumnematode_tests/brain/arch/test_qrhqlstm.py`, `test_crhqlstm.py`
 - Configs: `configs/examples/qrhqlstm_*.yml`, `configs/examples/crhqlstm_*.yml`
 
-Full optimization history (15 rounds, 58 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
+Full optimization history (15 rounds, 54 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
 
 ______________________________________________________________________
 
@@ -1560,7 +1562,7 @@ ______________________________________________________________________
 - [x] QLIF-LSTM Stage 4c: thermotaxis pursuit predators large — 60.1% classical (82% last-100), 45.4% quantum (82% last-100), PASS
 - [x] QLIF-LSTM Stage 4c: stationary predators — 37% classical ceiling, 31% quantum. 6 rounds tuning, actor [features, h_t] fix. FAIL vs MLP PPO (96.5%)
 - [x] QLIF-LSTM quantum comparison complete — quantum QLIF gates provide no measurable advantage on any task
-- [x] QRH-QLSTM composition (Stage 4d) — 15 rounds, 58 sessions: CRH-QLSTM 85.4% small pursuit (best reservoir), but -21pp vs QLIF-LSTM at scale. LSTM hurts QRH (-4.2pp). Hypothesis REJECTED
+- [x] QRH-QLSTM composition (Stage 4d) — 15 rounds, 54 sessions: CRH-QLSTM 85.4% small pursuit (best reservoir), but -21pp vs QLIF-LSTM at scale. LSTM hurts QRH (-4.2pp). Hypothesis REJECTED
 
 ______________________________________________________________________
 
@@ -1733,7 +1735,7 @@ Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifact
 | Stage 4d | Pursuit large (classical) | QRH-LSTM | 20260311_221535-221547 | 4×500 | 16.4% avg |
 | Stage 4d | Stationary large (classical) | QRH-LSTM | 20260311_221821-221832 | 4×500 | 10.8% avg, hypothesis REJECTED |
 
-Full optimization history (15 rounds, 58 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
+Full optimization history (15 rounds, 54 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
 
 Experiment results: `artifacts/logbooks/008/qrhqlstm_foraging_small/`, `artifacts/logbooks/008/qrhqlstm_pursuit_predators_small/`, `artifacts/logbooks/008/qrhqlstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qrhqlstm_thermotaxis_stationary_predators_large/`, `artifacts/logbooks/008/crhqlstm_foraging_small/`, `artifacts/logbooks/008/crhqlstm_pursuit_predators_small/`, `artifacts/logbooks/008/crhqlstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/crhqlstm_thermotaxis_stationary_predators_large/`
 
