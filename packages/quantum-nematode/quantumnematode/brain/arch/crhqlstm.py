@@ -10,7 +10,7 @@ documentation.
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from quantumnematode.brain.arch._reservoir_lstm_base import (
     ReservoirLSTMBase,
@@ -37,6 +37,15 @@ class CRHQLSTMBrainConfig(ReservoirLSTMBaseConfig):
         description="Feature channels from ESN activations.",
     )
     input_encoding: InputEncoding = Field(default="linear", description="Input encoding mode.")
+
+    @field_validator("feature_channels")
+    @classmethod
+    def validate_feature_channels(cls, v: list[FeatureChannel]) -> list[FeatureChannel]:
+        """Validate feature_channels is non-empty."""
+        if not v:
+            msg = "feature_channels must be non-empty"
+            raise ValueError(msg)
+        return v
 
 
 class CRHQLSTMBrain(ReservoirLSTMBase):

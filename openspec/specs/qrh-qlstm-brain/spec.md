@@ -81,7 +81,7 @@ The actor head SHALL receive `[reservoir_features, h_t]` as input and output act
 #### Scenario: Critic input composition
 
 - **WHEN** the critic estimates state value
-- **THEN** the input SHALL be the concatenation of current reservoir features and detached h_t (no gradients flowing through h_t to the LSTM from the critic)
+- **THEN** the input SHALL be the concatenation of detached reservoir features and detached h_t (no gradients flowing from the critic into either the LayerNorm or the LSTM cell)
 
 ### Requirement: QRH-QLSTM recurrent PPO training
 
