@@ -9,6 +9,7 @@ from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qef import (
+    MODALITY_PAIRED_CZ,
     QEFBrain,
     QEFBrainConfig,
     _compute_feature_dim,
@@ -188,6 +189,69 @@ class TestQEFFeatureExtraction:
 
         assert not np.allclose(result_a, result_b, atol=1e-4)
 
+    def test_feature_wrapping_more_features_than_qubits(self):
+        """Features should wrap when input_dim > num_qubits."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        # 5 features on 3 qubits: features 3,4 wrap to qubits 0,1
+        features = np.array([0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+
+        expected_dim = _compute_feature_dim(3)
+        assert result.shape == (expected_dim,)
+
+        # Should differ from using only the first 3 features (no wrapping)
+        features_truncated = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        result_truncated = brain._get_reservoir_features(features_truncated)
+        assert not np.allclose(result, result_truncated, atol=1e-6)
+
+    def test_minimum_qubits(self):
+        """Minimum qubit count (2) should work correctly."""
+        config = QEFBrainConfig(
+            num_qubits=2,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        features = np.array([0.5], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+
+        # 2 qubits: 3*2 + 2*1/2 = 6 + 1 = 7
+        assert _compute_feature_dim(2) == 7
+        assert result.shape == (7,)
+
+    def test_data_reuploading_depth_effect(self):
+        """Deeper circuits should produce different features than depth=1."""
+        config_d1 = QEFBrainConfig(
+            num_qubits=4,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        config_d3 = QEFBrainConfig(
+            num_qubits=4,
+            circuit_depth=3,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        brain_d1 = QEFBrain(config=config_d1, num_actions=4, device=DeviceType.CPU)
+        brain_d3 = QEFBrain(config=config_d3, num_actions=4, device=DeviceType.CPU)
+
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        result_d1 = brain_d1._get_reservoir_features(features)
+        result_d3 = brain_d3._get_reservoir_features(features)
+
+        assert result_d1.shape == result_d3.shape
+        assert not np.allclose(result_d1, result_d3, atol=1e-6)
+
 
 class TestQEFTopology:
     """Test cases for entanglement topology variations."""
@@ -210,6 +274,26 @@ class TestQEFTopology:
             readout_num_layers=1,
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+    def test_modality_paired_cz_pairs(self):
+        """Modality-paired topology should have the expected cross-modal CZ pairs."""
+        brain = self._make_brain("modality_paired")
+        expected_pairs = [(0, 2), (1, 3), (4, 6), (5, 7)]
+        assert brain._cz_pairs == expected_pairs
+        assert brain._cz_pairs == MODALITY_PAIRED_CZ
+
+    def test_modality_paired_filters_small_qubit_count(self):
+        """Modality-paired topology should filter pairs exceeding qubit count."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            entanglement_topology="modality_paired",
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # Only (0,2) survives — (1,3), (4,6), (5,7) all have indices >= 3
+        assert brain._cz_pairs == [(0, 2)]
 
     def test_different_topologies_produce_different_features(self):
         """Modality-paired, ring, and random topologies should produce different features."""
