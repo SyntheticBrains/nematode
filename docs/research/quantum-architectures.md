@@ -1697,10 +1697,10 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 - qtDNN training overhead must be < 3x forward pass cost (amortized over calibration interval)
 - Must not exhibit barren plateau symptoms: gradient variance must not decay exponentially with qubit count (test at 4, 8, 12, 16 qubits)
 
-### QA-4 QLIF-LSTM Temporal Brain (QLIFLSTMBrain) — Priority 2 (EVALUATED: Stages 4a-4c)
+### QA-4 QLIF-LSTM Temporal Brain (QLIFLSTMBrain) — Priority 2 (EVALUATED: Stages 4a-4d)
 
 **Strategy**: Quantum activations in classical temporal architecture
-**Risk**: Low-Medium | **Actual effort**: ~3 weeks (Stages 4a-4c), Stage 4d pending
+**Risk**: Low-Medium | **Actual effort**: ~3 weeks (Stages 4a-4d complete, Stage 4d FAILED)
 
 #### Architecture
 
@@ -1851,9 +1851,9 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 - Must demonstrate meaningful temporal memory: performance on tasks requiring recall of past observations > memoryless baseline (e.g., remembering predator location after it leaves viewport, or leveraging food gradient history for more efficient search) — Stage 4b
 - QRH-LSTM must improve stationary predator success ≥5pp over QRH-MLP without pursuit regression — Stage 4d
 
-#### Evaluation Results (Stages 4a-4c Complete)
+#### Evaluation Results (Stages 4a-4d Complete)
 
-**Status**: Stages 4a-4c complete (12 rounds, ~66 sessions). QRH-QLSTM/CRH-QLSTM reservoir-LSTM composition evaluated (22 sessions). Stage 4d (QRH-LSTM primary — classical gates) in progress.
+**Status**: Stages 4a-4d complete (12 rounds, ~66 sessions). QRH-QLSTM/CRH-QLSTM reservoir-LSTM composition evaluated (22 sessions). Stage 4d (QRH-LSTM primary — classical gates) FAILED — QRH-LSTM degrades QRH vs MLP readout.
 
 **Stage 4a — Foraging (PASS)**:
 
@@ -1908,7 +1908,7 @@ Tested reservoir (QRH/CRH) + QLIF-LSTM readout as a composed architecture. Key f
 - **Root cause**: LSTM overcomplicates the readout for QRH's noisy fixed features. The simple MLP readout outperforms LSTM on every task.
 - **Conclusion**: Temporal readout does NOT resolve QRH's multi-objective weakness. The bottleneck is the fixed quantum reservoir, not the readout architecture.
 
-Full evaluation data: [008-quantum-brain-evaluation.md](../../experiments/logbooks/008-quantum-brain-evaluation.md), [qliflstm-optimization.md](../../experiments/logbooks/supporting/008/qliflstm-optimization.md), [qrhqlstm_scratchpad.md](../../build/brains/qrhqlstm/qrhqlstm_scratchpad.md)
+Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/008-quantum-brain-evaluation.md), [qliflstm-optimization.md](../experiments/logbooks/supporting/008/qliflstm-optimization.md), [qrhqlstm-optimization.md](../experiments/logbooks/supporting/008/qrhqlstm-optimization.md)
 
 ### QA-5 Entangled Feature Extraction for Interaction Encoding — Priority 1 (NEXT)
 
@@ -2403,7 +2403,7 @@ ______________________________________________________________________
 
 03. **QRC Fundamentals**
 
-    - arXiv:2602.03522 (2025). "QRC-Lab: An Educational Toolbox for Quantum Reservoir Computing."
+    - arXiv:2602.03522 (2026). "QRC-Lab: An Educational Toolbox for Quantum Reservoir Computing."
     - [QuEra Tutorials](https://github.com/QuEraComputing/QRC-tutorials/)
 
 04. **Data Re-uploading**
