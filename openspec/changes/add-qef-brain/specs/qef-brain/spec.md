@@ -144,11 +144,14 @@ The QEFBrainConfig SHALL define quantum-specific fields with validation.
 - **AND** `entanglement_topology` SHALL default to `"modality_paired"`
 - **AND** `entanglement_enabled` SHALL default to True
 
-#### Scenario: Validation constraints
+#### Scenario: Validation rejects invalid num_qubits
 
 - **WHEN** `num_qubits` is less than 2
 - **THEN** a ValidationError SHALL be raised
-- **AND** **WHEN** `circuit_depth` is less than 1
+
+#### Scenario: Validation rejects invalid circuit_depth
+
+- **WHEN** `circuit_depth` is less than 1
 - **THEN** a ValidationError SHALL be raised
 
 #### Scenario: Trainable entanglement reserved

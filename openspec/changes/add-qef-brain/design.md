@@ -74,6 +74,8 @@ Initial H layer on all qubits for superposition. Exact statevector simulation vi
 
 Alternative considered: RY+RZ encoding (like QRH). Rejected — uniform RY is simpler and the entanglement topology is the variable under test, not the encoding scheme.
 
+Note: QRH topologies (both structured and random) use CZ + CRY/CRZ gates (6 CZ pairs + 8 controlled rotation pairs per layer). QEF intentionally uses CZ-only entanglement — no controlled rotations. This isolates the entanglement topology structure as the variable under test and avoids the question of what CRY/CRZ angles to assign for each topology. If CZ-only underperforms, adding controlled rotations is a straightforward extension.
+
 ### 7. Extend ReservoirHybridBase (not create new base class)
 
 QEF implements the same 3 abstract methods as QRH: `_get_reservoir_features()`, `_compute_feature_dim()`, `_create_copy_instance()`. All PPO infrastructure is inherited. This is the minimal-risk approach.
