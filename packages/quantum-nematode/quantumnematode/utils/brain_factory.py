@@ -18,6 +18,7 @@ from quantumnematode.brain.arch import (
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
+    QEFBrainConfig,
     QLIFLSTMBrainConfig,
     QQLearningBrainConfig,
     QRCBrainConfig,
@@ -55,6 +56,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | QQLearningBrainConfig
     | QRCBrainConfig
     | QRHBrainConfig
+    | QEFBrainConfig
     | CRHBrainConfig
     | QSNNPPOBrainConfig
     | QSNNReinforceBrainConfig
@@ -268,6 +270,22 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = QRHBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.QEF:
+        from quantumnematode.brain.arch.qef import QEFBrain
+
+        if not isinstance(brain_config, QEFBrainConfig):
+            error_message = (
+                "The 'qef' brain architecture requires a QEFBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = QEFBrain(
             config=brain_config,
             num_actions=4,
             device=device,

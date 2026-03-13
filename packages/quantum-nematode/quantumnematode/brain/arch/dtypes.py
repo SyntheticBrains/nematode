@@ -31,6 +31,7 @@ class BrainType(Enum):
     SPIKING_REINFORCE = "spikingreinforce"
     CRH = "crh"
     QLIF_LSTM = "qliflstm"
+    QEF = "qef"
     QRH_QLSTM = "qrhqlstm"
     CRH_QLSTM = "crhqlstm"
 
@@ -82,6 +83,7 @@ BRAIN_TYPES = Literal[
     BrainType.MLP_PPO,
     BrainType.SPIKING_REINFORCE,
     BrainType.CRH,
+    BrainType.QEF,
     BrainType.QLIF_LSTM,
     BrainType.QRH_QLSTM,
     BrainType.CRH_QLSTM,
@@ -102,6 +104,7 @@ QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QSNN_PPO,
     BrainType.HYBRID_QUANTUM,
     BrainType.HYBRID_QUANTUM_CORTEX,
+    BrainType.QEF,
     BrainType.QLIF_LSTM,
     BrainType.QRH_QLSTM,
     BrainType.QSNN,
