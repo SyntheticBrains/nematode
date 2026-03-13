@@ -224,8 +224,11 @@ def extract_qef_features(  # noqa: PLR0913
     topology: Literal["modality_paired", "ring", "random"],
     *,
     entanglement_enabled: bool,
+    encoding_mode: Literal["uniform", "sparse"] = "uniform",
+    gate_mode: Literal["cz", "cry_crz"] = "cz",
+    feature_mode: Literal["z_cossin", "xyz"] = "z_cossin",
 ) -> np.ndarray:
-    """Extract Z + ZZ + cos/sin features from a QEF circuit.
+    """Extract features from a QEF circuit.
 
     Parameters
     ----------
@@ -240,7 +243,13 @@ def extract_qef_features(  # noqa: PLR0913
     topology : str
         Entanglement topology ("modality_paired", "ring", "random").
     entanglement_enabled : bool
-        Whether to apply CZ entanglement gates.
+        Whether to apply entanglement gates.
+    encoding_mode : str
+        "uniform" (all qubits) or "sparse" (sensory qubits only).
+    gate_mode : str
+        "cz" (CZ-only) or "cry_crz" (parameterized controlled rotations).
+    feature_mode : str
+        "z_cossin" (Z+ZZ+cos/sin) or "xyz" (X+Y+Z+ZZ).
 
     Returns
     -------
@@ -254,6 +263,9 @@ def extract_qef_features(  # noqa: PLR0913
         circuit_seed=seed,
         entanglement_topology=topology,
         entanglement_enabled=entanglement_enabled,
+        encoding_mode=encoding_mode,
+        gate_mode=gate_mode,
+        feature_mode=feature_mode,
     )
     brain = QEFBrain(config=config)
 
@@ -622,6 +634,27 @@ def parse_arguments() -> argparse.Namespace:
         help="Output format: text (console), json (file), or both.",
     )
     parser.add_argument(
+        "--encoding-mode",
+        type=str,
+        default="uniform",
+        choices=["uniform", "sparse"],
+        help="Encoding strategy: 'uniform' (all qubits) or 'sparse' (sensory only).",
+    )
+    parser.add_argument(
+        "--gate-mode",
+        type=str,
+        default="cz",
+        choices=["cz", "cry_crz"],
+        help="Entanglement gates: 'cz' (CZ-only) or 'cry_crz' (controlled rotations).",
+    )
+    parser.add_argument(
+        "--feature-mode",
+        type=str,
+        default="z_cossin",
+        choices=["z_cossin", "xyz"],
+        help="Feature channels: 'z_cossin' (Z+ZZ+cos/sin) or 'xyz' (X+Y+Z+ZZ).",
+    )
+    parser.add_argument(
         "--skip-permutation",
         action="store_true",
         help="Skip the permutation test (faster, for development).",
@@ -632,6 +665,79 @@ def parse_arguments() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+
+def _extract_and_compute_mi(
+    args: argparse.Namespace,
+    params_list: list[BrainParams],
+    labels: np.ndarray,
+    results: AnalysisResults,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Extract features from all methods and compute MI.
+
+    Returns the three feature matrices for use in permutation tests.
+    """
+    mode_label = f"{args.encoding_mode},{args.gate_mode},{args.feature_mode}"
+    print(
+        f"Extracting QEF entangled features ({args.topology}, {mode_label}, "
+        f"{args.num_qubits}q, depth={args.circuit_depth})...",
+    )
+    entangled_features = extract_qef_features(
+        params_list,
+        args.num_qubits,
+        args.circuit_depth,
+        args.seed,
+        topology=args.topology,
+        entanglement_enabled=True,
+        encoding_mode=args.encoding_mode,
+        gate_mode=args.gate_mode,
+        feature_mode=args.feature_mode,
+    )
+    print(f"  Shape: {entangled_features.shape}")
+
+    print(
+        f"Extracting QEF separable features ({mode_label}, "
+        f"{args.num_qubits}q, depth={args.circuit_depth})...",
+    )
+    separable_features = extract_qef_features(
+        params_list,
+        args.num_qubits,
+        args.circuit_depth,
+        args.seed,
+        topology=args.topology,
+        entanglement_enabled=False,
+        encoding_mode=args.encoding_mode,
+        gate_mode=args.gate_mode,
+        feature_mode=args.feature_mode,
+    )
+    print(f"  Shape: {separable_features.shape}")
+
+    print(f"Extracting QRH random reservoir features ({args.num_qubits}q)...")
+    qrh_features = extract_qrh_random_features(
+        params_list,
+        args.num_qubits,
+        args.seed,
+    )
+    print(f"  Shape: {qrh_features.shape}")
+
+    print("Computing mutual information...")
+    entangled_mi = compute_mi(entangled_features, labels)
+    entangled_mi.method = f"entangled_{args.topology}"
+    results.entangled_mi = entangled_mi
+
+    separable_mi = compute_mi(separable_features, labels)
+    separable_mi.method = "separable"
+    results.separable_mi = separable_mi
+
+    qrh_mi = compute_mi(qrh_features, labels)
+    qrh_mi.method = "qrh_random"
+    results.qrh_random_mi = qrh_mi
+
+    print(f"  QEF Entangled mean MI:  {entangled_mi.mean_mi:.4f}")
+    print(f"  QEF Separable mean MI:  {separable_mi.mean_mi:.4f}")
+    print(f"  QRH Random mean MI:     {qrh_mi.mean_mi:.4f}")
+
+    return entangled_features, separable_features, qrh_features
 
 
 def main() -> int:
@@ -659,59 +765,13 @@ def main() -> int:
     unique, counts = np.unique(labels, return_counts=True)
     print(f"  Label distribution: {dict(zip(unique, counts, strict=True))}")
 
-    # Step 3: Extract features from all three methods
-    print(
-        f"Extracting QEF entangled features ({args.topology}, "
-        f"{args.num_qubits}q, depth={args.circuit_depth})...",
-    )
-    entangled_features = extract_qef_features(
+    # Steps 3-4: Extract features and compute MI
+    entangled_features, separable_features, qrh_features = _extract_and_compute_mi(
+        args,
         params_list,
-        args.num_qubits,
-        args.circuit_depth,
-        args.seed,
-        topology=args.topology,
-        entanglement_enabled=True,
+        labels,
+        results,
     )
-    print(f"  Shape: {entangled_features.shape}")
-
-    print(
-        f"Extracting QEF separable features ({args.num_qubits}q, depth={args.circuit_depth})...",
-    )
-    separable_features = extract_qef_features(
-        params_list,
-        args.num_qubits,
-        args.circuit_depth,
-        args.seed,
-        topology=args.topology,
-        entanglement_enabled=False,
-    )
-    print(f"  Shape: {separable_features.shape}")
-
-    print(f"Extracting QRH random reservoir features ({args.num_qubits}q)...")
-    qrh_features = extract_qrh_random_features(
-        params_list,
-        args.num_qubits,
-        args.seed,
-    )
-    print(f"  Shape: {qrh_features.shape}")
-
-    # Step 4: Compute MI for each method
-    print("Computing mutual information...")
-    entangled_mi = compute_mi(entangled_features, labels)
-    entangled_mi.method = f"entangled_{args.topology}"
-    results.entangled_mi = entangled_mi
-
-    separable_mi = compute_mi(separable_features, labels)
-    separable_mi.method = "separable"
-    results.separable_mi = separable_mi
-
-    qrh_mi = compute_mi(qrh_features, labels)
-    qrh_mi.method = "qrh_random"
-    results.qrh_random_mi = qrh_mi
-
-    print(f"  QEF Entangled mean MI:  {entangled_mi.mean_mi:.4f}")
-    print(f"  QEF Separable mean MI:  {separable_mi.mean_mi:.4f}")
-    print(f"  QRH Random mean MI:     {qrh_mi.mean_mi:.4f}")
 
     # Step 5: Permutation tests
     if not args.skip_permutation:
