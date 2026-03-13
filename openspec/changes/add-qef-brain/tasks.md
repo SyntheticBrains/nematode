@@ -9,6 +9,7 @@
 - [ ] 1.7 Implement `_extract_features(statevector)` — compute Z expectations, ZZ correlations, cos/sin of Z expectations using pre-computed index arrays
 - [ ] 1.8 Implement `_get_reservoir_features(sensory_features)` calling `_encode_and_run` then `_extract_features`
 - [ ] 1.9 Implement `_create_copy_instance(config)` for checkpoint/copy support
+- [ ] 1.10 Add initialization logging: num_qubits, entanglement_topology, entanglement_enabled, circuit_depth, feature_dim, input_dim
 
 ## 2. Brain Type Registration
 
@@ -19,17 +20,17 @@
 
 ## 3. Example YAML Configs
 
-- [ ] 3.1 Create `configs/examples/qef_foraging_small.yml` — basic foraging with modality_paired topology, sensory_modules: [food_chemotaxis, nociception]
-- [ ] 3.2 Create `configs/examples/qef_pursuit_predators_small.yml` — pursuit predators, modality_paired topology
-- [ ] 3.3 Create `configs/examples/qef_thermotaxis_pursuit_predators_large.yml` — thermotaxis + pursuit predators on large grid
-- [ ] 3.4 Create `configs/examples/qef_thermotaxis_stationary_predators_large.yml` — thermotaxis + stationary predators on large grid
-- [ ] 3.5 Create `configs/examples/qef_foraging_small_separable.yml` — separable ablation control (entanglement_enabled: false)
+- [ ] 3.1 Create `configs/examples/qef_foraging_small.yml` — 8 qubits, grid 20, modality_paired topology, sensory_modules: [food_chemotaxis, nociception] (4 features on 8 qubits)
+- [ ] 3.2 Create `configs/examples/qef_pursuit_predators_small.yml` — 8 qubits, grid 20, modality_paired topology, sensory_modules: [food_chemotaxis, nociception] (4 features on 8 qubits)
+- [ ] 3.3 Create `configs/examples/qef_thermotaxis_pursuit_predators_large.yml` — 8 qubits, grid 100, modality_paired topology, sensory_modules: [food_chemotaxis, nociception, thermotaxis] (7 features on 8 qubits), readout_hidden_dim: 64
+- [ ] 3.4 Create `configs/examples/qef_thermotaxis_stationary_predators_large.yml` — 8 qubits, grid 100, modality_paired topology, sensory_modules: [food_chemotaxis, nociception, thermotaxis] (7 features on 8 qubits), readout_hidden_dim: 64
+- [ ] 3.5 Create `configs/examples/qef_foraging_small_separable.yml` — same as 3.1 but with entanglement_enabled: false (separable ablation control)
 
 ## 4. Unit Tests
 
 - [ ] 4.1 Create `tests/quantumnematode_tests/brain/arch/test_qef.py` with TestQEFBrainConfig: default values, custom values, validation errors (num_qubits < 2, circuit_depth < 1), trainable_entanglement NotImplementedError
-- [ ] 4.2 Add TestQEFFeatureExtraction: feature dimension = 52 for 8 qubits, Z in [-1,1], ZZ in [-1,1], cos/sin in [-1,1], determinism (same input = same output)
-- [ ] 4.3 Add TestQEFTopology: modality_paired/ring/random produce different features for same input, separable vs entangled produce different features, separable has same feature dimension
+- [ ] 4.2 Add TestQEFFeatureExtraction: feature dimension = 52 for 8 qubits, Z in [-1,1], ZZ in [-1,1], cos/sin in [-1,1], determinism (same input = same output), feature vector ordering [z, zz, cos_z, sin_z]
+- [ ] 4.3 Add TestQEFTopology: modality_paired/ring/random produce different features for same input, separable vs entangled produce different features, separable has same feature dimension, unused qubits (input_dim < num_qubits) still participate in entanglement
 - [ ] 4.4 Add TestQEFBrainReadout: actor output shape (num_actions,), critic output shape (1,), run_brain returns valid ActionData
 - [ ] 4.5 Add TestQEFBrainLearning: PPO update changes weights, buffer management works across episodes
 - [ ] 4.6 Add TestQEFBrainCopy: copy has independent weights, copy preserves topology and config
@@ -38,16 +39,22 @@
 
 - [ ] 5.1 Add `"qef_foraging_small.yml"` to the smoke test config parametrize list
 
-## 6. Documentation
+## 6. MI Decision Gate Script
 
-- [ ] 6.1 Update `AGENTS.md` — add `qef` to brain architecture list in `brain/arch/`, update count from 17 to 18
-- [ ] 6.2 Update `README.md` — add QEF to brain architectures section, update "17 brain architectures" to 18
-- [ ] 6.3 Update `CONTRIBUTING.md` — add QEFBrain entry under brain architectures list, update "17 brain architectures" to 18
-- [ ] 6.4 Update `openspec/config.yaml` — add `qef` to brain architecture list
+- [ ] 6.1 Create `scripts/qef_mi_analysis.py` — adapt `scripts/qrh_mi_analysis.py` for QEF: compare MI(entangled_features, optimal_action) vs MI(separable_features, optimal_action) vs MI(qrh_random_features, optimal_action)
+- [ ] 6.2 Add CLI arguments for topology selection, num_samples, and output format
+- [ ] 6.3 Add permutation test (1000 permutations) for p-value significance on MI differences
 
-## 7. Validation
+## 7. Documentation
 
-- [ ] 7.1 Run `uv run pytest tests/quantumnematode_tests/brain/arch/test_qef.py -v` — all unit tests pass
-- [ ] 7.2 Run `uv run pre-commit run -a` — lint and format clean
-- [ ] 7.3 Run `uv run pytest -m smoke -v -k qef` — smoke test passes
-- [ ] 7.4 Run `uv run pytest` — full test suite passes (no regressions)
+- [ ] 7.1 Update `AGENTS.md` — add `qef` to brain architecture list in `brain/arch/`, update count from 17 to 18
+- [ ] 7.2 Update `README.md` — add QEF to brain architectures section, update "17 brain architectures" to 18
+- [ ] 7.3 Update `CONTRIBUTING.md` — add QEFBrain entry under brain architectures list, update "17 brain architectures" to 18
+- [ ] 7.4 Update `openspec/config.yaml` — add `qef` to brain architecture list
+
+## 8. Validation
+
+- [ ] 8.1 Run `uv run pytest tests/quantumnematode_tests/brain/arch/test_qef.py -v` — all unit tests pass
+- [ ] 8.2 Run `uv run pre-commit run -a` — lint and format clean
+- [ ] 8.3 Run `uv run pytest -m smoke -v -k qef` — smoke test passes
+- [ ] 8.4 Run `uv run pytest` — full test suite passes (no regressions)

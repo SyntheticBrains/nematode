@@ -87,3 +87,11 @@ QEF implements the same 3 abstract methods as QRH: `_get_reservoir_features()`, 
 **Modality-paired topology assumes specific qubit-feature ordering** → If sensory_modules are configured differently, the cross-modal CZ pairs may not match intended modality interactions. Mitigation: document the expected module ordering; validate in config.
 
 **Fixed entanglement may underperform random** → QRH's random reservoir already captures sufficient structure. Mitigation: this is exactly what the falsification criteria test — if fixed entangled ≤ QRH random, we stop.
+
+### 8. 8 qubits for all environments (including large)
+
+QRH uses 10 qubits for large environments (7 sensory + 3 interneuron). QEF uses 8 qubits for all configs because: (a) all qubits are sensory — with 7 features from 3 modules, 8 gives near-1:1 mapping with 1 qubit in superposition; (b) the modality-paired topology has 4 CZ pairs designed for 8 qubits — 10 would leave 2 qubits without topology assignment, diluting entanglement; (c) 8 qubits produce 52 features which is sufficient for the readout MLP. The readout_hidden_dim is set to 64 (not 128 as QRH large) since the feature count is lower (52 vs 75).
+
+### 9. MI decision gate script
+
+A `scripts/qef_mi_analysis.py` script adapted from `scripts/qrh_mi_analysis.py` compares MI(entangled_features, optimal_action) vs MI(separable_features, optimal_action) vs MI(qrh_random_features, optimal_action). This implements the Week 1 decision gate from the research doc: if entangled MI ≤ separable MI, try alternative topologies; if entangled MI ≤ QRH random MI, stop.

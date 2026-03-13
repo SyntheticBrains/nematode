@@ -20,6 +20,7 @@ The QEFBrain SHALL construct a parameterized quantum circuit with uniform RY enc
 - **WHEN** sensory features are encoded into the circuit
 - **THEN** the circuit SHALL apply RY(feature × π) to ALL qubits (not a sensory subset)
 - **AND** features SHALL be assigned to qubits in order (qubit index = feature index % num_qubits)
+- **AND** when input_dim < num_qubits, unencoded qubits SHALL remain in their H-initialized superposition state and SHALL still participate in entanglement topology
 
 #### Scenario: Data re-uploading
 
@@ -92,6 +93,11 @@ The QEFBrain SHALL extract Z expectations, ZZ correlations, and cos/sin features
 - **THEN** the brain SHALL compute 2N cos/sin features: cos(⟨Z_i⟩) and sin(⟨Z_i⟩) for each qubit
 - **AND** each cos/sin feature SHALL be in the range [-1, 1]
 
+#### Scenario: Feature vector ordering
+
+- **WHEN** features are extracted from a statevector of N qubits
+- **THEN** the feature vector SHALL be concatenated in the order: [z_0..z_N-1, zz_01..zz\_(N-1)N, cos_z_0..cos_z_N-1, sin_z_0..sin_z_N-1]
+
 #### Scenario: Total feature dimension
 
 - **WHEN** the brain is configured with N qubits
@@ -149,6 +155,15 @@ The QEFBrainConfig SHALL define quantum-specific fields with validation.
 
 - **WHEN** `trainable_entanglement` is set to True
 - **THEN** a NotImplementedError SHALL be raised during brain construction
+
+### Requirement: QEF Initialization Logging
+
+The QEFBrain SHALL log its configuration at initialization for experiment tracking.
+
+#### Scenario: Initialization log message
+
+- **WHEN** QEFBrain is instantiated
+- **THEN** it SHALL log: num_qubits, entanglement_topology, entanglement_enabled, circuit_depth, feature_dim, and input_dim
 
 ### Requirement: QEF Brain Copy
 
