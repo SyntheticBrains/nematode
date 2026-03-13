@@ -23,8 +23,8 @@ brain:
     feature_mode: xyz
 
     # Readout architecture (actor + critic)
-    readout_hidden_dim: 64
-    readout_num_layers: 2
+    readout_hidden_dim: 128
+    readout_num_layers: 3
 
     # PPO hyperparameters (tuned for 52-dim quantum features)
     actor_lr: 0.0005
@@ -32,7 +32,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.95
     ppo_clip_epsilon: 0.2
-    ppo_epochs: 6
+    ppo_epochs: 10
     ppo_minibatches: 2
     ppo_buffer_size: 256
     entropy_coeff: 0.02

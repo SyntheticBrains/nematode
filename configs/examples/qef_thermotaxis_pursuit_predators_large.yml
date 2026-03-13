@@ -32,9 +32,9 @@ brain:
     gate_mode: cry_crz
     feature_mode: xyz
 
-    # Readout architecture — 64 hidden dim for 52-feature input
-    readout_hidden_dim: 64
-    readout_num_layers: 2
+    # Readout architecture — 128 hidden dim for 52-feature input
+    readout_hidden_dim: 128
+    readout_num_layers: 3
 
     # PPO hyperparameters
     actor_lr: 0.0005
