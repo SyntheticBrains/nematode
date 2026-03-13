@@ -3,7 +3,7 @@
 # This is a control configuration for A/B comparison with entangled QEF.
 #
 # Identical to qef_foraging_small.yml except entanglement_enabled: false.
-# The circuit becomes a product-state (separable) PQC — no CZ gates applied.
+# The circuit becomes a product-state (separable) PQC — no CRY/CRZ gates applied.
 # All other processing (encoding, feature extraction, readout) is identical.
 #
 # 8-qubit circuit, NO entanglement (separable).
@@ -17,8 +17,10 @@ brain:
     num_qubits: 8
     circuit_depth: 2
     circuit_seed: 42
-    entanglement_topology: modality_paired
-    entanglement_enabled: false  # Separable ablation — no CZ gates
+    entanglement_topology: ring
+    entanglement_enabled: false  # Separable ablation — no CRY/CRZ gates
+    gate_mode: cry_crz
+    feature_mode: xyz
 
     # Readout architecture (actor + critic)
     readout_hidden_dim: 64

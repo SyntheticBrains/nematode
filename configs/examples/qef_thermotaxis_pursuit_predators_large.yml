@@ -8,7 +8,7 @@
 # - Scattered temperature zones (thermotaxis)
 #
 # 8-qubit circuit with modality-paired entanglement topology.
-# Cross-modal CZ gates: food↔nociception (0,2)(1,3), thermo↔mechano (4,6)(5,7).
+# Cross-modal CRY/CRZ gates: food↔nociception (0,2)(1,3), thermo↔mechano (4,6)(5,7).
 # With only 3 sensory modules, thermotaxis features map to qubits 4-6,
 # leaving qubit 7 in H-superposition.
 #
@@ -29,6 +29,8 @@ brain:
     circuit_seed: 42
     entanglement_topology: modality_paired
     entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
 
     # Readout architecture — 64 hidden dim for 52-feature input
     readout_hidden_dim: 64

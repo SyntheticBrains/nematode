@@ -1,8 +1,11 @@
 # Dynamic Foraging Environment - Small Configuration
 # Uses QEF (Quantum Entangled Features) brain architecture
-# Entangled PQC feature extractor + PPO-trained classical readout
+# Ring topology + CRY/CRZ gates + X/Y/Z+ZZ features + PPO readout
 #
-# 8-qubit circuit with modality-paired entanglement topology.
+# This is the GO configuration from MI decision gate analysis (Run 7):
+# Mean MI = 0.3008, beating QRH random (0.2387) by 26% (p=0.001).
+#
+# 8-qubit circuit with ring entanglement topology (8 CRY/CRZ pairs).
 # Default sensory input (food_chemotaxis only): 2 features on 8 qubits.
 # Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
 
@@ -14,8 +17,10 @@ brain:
     num_qubits: 8
     circuit_depth: 2
     circuit_seed: 42
-    entanglement_topology: modality_paired
+    entanglement_topology: ring
     entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
 
     # Readout architecture (actor + critic)
     readout_hidden_dim: 64

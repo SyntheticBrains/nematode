@@ -3,7 +3,7 @@
 # Multi-objective learning: find food while avoiding predators
 #
 # 8-qubit circuit with modality-paired entanglement topology.
-# Cross-modal CZ gates encode food↔nociception interactions.
+# Cross-modal CRY/CRZ gates encode food↔nociception interactions.
 #
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
@@ -21,6 +21,8 @@ brain:
     circuit_seed: 42
     entanglement_topology: modality_paired
     entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
 
     # Readout architecture (actor + critic)
     readout_hidden_dim: 64
