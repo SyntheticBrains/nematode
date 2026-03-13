@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-03-10
+**Last Updated**: 2026-03-13
 
 ______________________________________________________________________
 
@@ -19,10 +19,14 @@ ______________________________________________________________________
 09. [Optimizer Variants](#optimizer-variants)
 10. [Barren Plateau Mitigation](#barren-plateau-mitigation)
 11. [External Research Survey (2024-2026)](#external-research-survey-2024-2026)
-12. [Next-Generation Architecture Proposals (H.1-H.6)](#next-generation-architecture-proposals)
+12. [Next-Generation Architecture Proposals (QA-1 to QA-7)](#next-generation-architecture-proposals)
 13. [Benchmarking Plan](#benchmarking-plan)
 14. [Research References](#research-references)
 15. [Open Questions](#open-questions)
+
+> **Codename convention**: Architecture proposals use the **QA-N** prefix (Quantum Architecture).
+> Sections A-G retain their original letter prefixes for specification content (A=QSNN,
+> B=QRC, C=HybridQuantum, D=Data Re-uploading, E=Optimizers, F=Barren Plateaus, G=Benchmarks).
 
 ______________________________________________________________________
 
@@ -98,7 +102,7 @@ The architecture was validated through a three-stage curriculum:
 
 **QSNN's surrogate gradient approach** (quantum forward, classical backward) remains the core proven quantum technique. It sidesteps barren plateaus while providing dense gradient signals. However, standalone QSNN cannot solve multi-objective tasks (0% across 60 sessions on pursuit predators). The hybrid architecture resolves this by delegating strategic behaviour to the classical cortex while preserving the quantum reflex.
 
-**HybridQuantumCortex evaluation**: Replacing the classical cortex MLP with a QSNN cortex (~252 quantum params, ~11% quantum fraction) achieved strong results on simpler tasks (88.8% foraging, 96.8% 1-predator) but plateaued at ~40-45% on the 2-predator environment despite 9 rounds (32 sessions) of optimisation. The REINFORCE+surrogate gradient combination produces insufficient gradient signal for complex multi-objective tasks — vanishing gradients (norms 0.04-0.07 after LR decay), ineffective critic (EV ~0.10), and frozen mode distributions. Stage 3 joint fine-tune caused catastrophic forgetting (19.3%). Architecture halted — further quantum architecture exploration should pursue fundamentally different approaches (see H.1-H.4 proposals).
+**HybridQuantumCortex evaluation**: Replacing the classical cortex MLP with a QSNN cortex (~252 quantum params, ~11% quantum fraction) achieved strong results on simpler tasks (88.8% foraging, 96.8% 1-predator) but plateaued at ~40-45% on the 2-predator environment despite 9 rounds (32 sessions) of optimisation. The REINFORCE+surrogate gradient combination produces insufficient gradient signal for complex multi-objective tasks — vanishing gradients (norms 0.04-0.07 after LR decay), ineffective critic (EV ~0.10), and frozen mode distributions. Stage 3 joint fine-tune caused catastrophic forgetting (19.3%). Architecture halted — further quantum architecture exploration should pursue fundamentally different approaches (see QA-1-QA-4 proposals).
 
 ### Architecture Evaluation History
 
@@ -132,7 +136,7 @@ COMPLETED:
     Stage 3 joint fine-tune caused catastrophic forgetting (19.3%).
     STATUS: HALTED — REINFORCE+surrogate gradients ceiling at ~40-45% on hard tasks.
 
-  QRH (H.1) — 10-qubit fixed quantum reservoir + PPO-trained readout.
+  QRH (QA-1) — 10-qubit fixed quantum reservoir + PPO-trained readout.
     16 rounds, 96 sessions, ~30,000 episodes across foraging/pursuit/stationary.
     86.8% foraging (98.0% post-conv, exceeds MLPPPO). 41.2% pursuit (4/4 converged).
     23.6% stationary (1/4 converged — CRH outperforms here).
@@ -169,6 +173,22 @@ NOT EVALUATED:
   PPO-Q Style PQC Actor — PQC wrapped in classical pre/post-processing.
     Uses parameter-shift, not surrogate gradients. Not pursued given
     HybridQuantum's success.
+
+PROPOSED (added 2026-03-13 after deep research investigation):
+  QA-5 Entangled Feature Extraction — PRIORITY 1 (NEXT)
+    Entangled PQC feature extractor (8 qubits, CZ/CNOT) + classical PPO readout.
+    Extends QRH paradigm with purposeful entanglement for interaction encoding.
+    Motivated by arXiv:2603.10289 (entanglement in adversarial RL).
+
+  QA-6 QRH+ (Weak-Measurement Feedback) — PRIORITY 4
+    QRH reservoir enhanced with weak measurements + feedback for temporal memory.
+    Addresses QRH temporal bottleneck at reservoir level (not readout — Stage 4d
+    proved readout complexity is wrong fix). Motivated by arXiv:2503.17939.
+
+  QA-7 Quantum Plasticity Test — PRIORITY 2 (PARALLEL, low effort)
+    Tests PQC unitarity for anti-forgetting in sequential multi-objective training.
+    Not a new architecture — evaluation protocol on existing architectures.
+    Motivated by arXiv:2511.17228.
 ```
 
 ______________________________________________________________________
@@ -1316,15 +1336,94 @@ Multiple recent studies on quantum reservoir computing show that reservoir topol
 
 - **Key findings**: Homogeneous 1D Bose-Hubbard chains with open boundaries outperform periodic and all-to-all topologies — open boundaries break translational symmetry, generating diverse features without requiring disorder (Llodrà et al., "QRC in atomic lattices", *Chaos, Solitons & Fractals*, 2025). Intermediate-regularity graphs outperform both fully random and fully connected networks (Ivaki et al., "QRC on random regular graphs", *Phys. Rev. A*, 2025). Two-qubit correlations (ZZ observables) as readout features enhance performance over single-qubit measurements by accessing higher-dimensional Hilbert space structure (Martínez-Peña et al., "Role of coherence in many-body QRC", *Commun. Phys.*, 2024).
 - **Design principle**: Reservoir topology should encode domain-specific inductive biases (e.g., symmetries, locality). The optimal topology is task-dependent — no universal best structure exists.
-- **Relevance**: Originally motivated our QRH structured topology hypothesis. **However, H.1 evaluation falsified the transfer**: C. elegans-inspired structured topology achieved 0.0% success across 12,000 episodes (R16), while random topology achieved 86.8% foraging success. The literature finding that structured topologies outperform random does not transfer to RL feature extraction — bilateral symmetry creates near-degenerate features that collapse effective rank. Random topology with rich feature extraction (Z-expectations + ZZ-correlations + cos/sin) proved far more effective.
+- **Relevance**: Originally motivated our QRH structured topology hypothesis. **However, QA-1 evaluation falsified the transfer**: C. elegans-inspired structured topology achieved 0.0% success across 12,000 episodes (R16), while random topology achieved 86.8% foraging success. The literature finding that structured topologies outperform random does not transfer to RL feature extraction — bilateral symmetry creates near-degenerate features that collapse effective rank. Random topology with rich feature extraction (Z-expectations + ZZ-correlations + cos/sin) proved far more effective.
+
+### Entanglement in Adversarial RL (arXiv:2603.10289, Mar 2026)
+
+8-qubit PQC as feature extractor in PPO for Pong. Compares separable circuits vs fixed CZ entangling gates vs trainable IsingZZ gates.
+
+- **Key finding**: Entangled circuits consistently outperform separable counterparts at comparable parameter counts; match/exceed classical MLPs in low-capacity regimes. Representation similarity analysis shows entangled architectures develop structurally distinct features for modeling interacting variables.
+- **Critical insight**: The quantum advantage manifests in *feature extraction for interaction modeling*, not policy optimization. The entangled PQC encodes pairwise agent interactions that separable circuits cannot capture efficiently.
+- **Relevance**: Directly motivates QA-5 (Entangled Feature Extraction). Our predator-prey dynamics involve interacting agents — entanglement-based feature extraction for these interactions could provide genuine quantum advantage in our hardest environments.
+
+### Quantum Plasticity in Continual Learning (arXiv:2511.17228, Nov 2025)
+
+Demonstrates that quantum neural networks naturally overcome loss of plasticity in continual learning tasks. The unitary constraint confines optimization to a compact manifold.
+
+- **Key finding**: PQC-based networks maintain learning capability across sequential tasks where classical networks degrade. Validated across supervised learning, RL, and quantum datasets.
+- **Mechanism**: Unitarity acts as an implicit regularizer — weights cannot grow unboundedly (our QSNN predator experiments showed monotonic weight growth was a key failure mode). The optimization landscape remains well-conditioned across task boundaries.
+- **Relevance**: Reframes quantum advantage as an optimization landscape property (anti-forgetting), not computational speedup. Directly relevant to our multi-objective sequential training (foraging → evasion → thermotaxis). Motivates QA-7.
+
+### Feedback-Enhanced QRC with Weak Measurements (arXiv:2503.17939, Mar 2025)
+
+Weak measurements that preserve quantum coherence enable feedback loops in quantum reservoir computing, reinforcing nonlinearity and memory capacity.
+
+- **Key finding**: Outperforms conventional QRC on linear memory and nonlinear forecasting tasks. Feedback enhances temporal processing without destroying quantum coherence.
+- **Mechanism**: Weak measurements extract partial information without fully collapsing the quantum state. This allows the reservoir to maintain coherence across timesteps while still providing useful output.
+- **Relevance**: Directly addresses QRH's temporal memory limitation. Our QRH-LSTM (Stage 4d) failed because the LSTM readout was the wrong fix — the bottleneck is the reservoir itself lacking memory. Weak-measurement feedback enhances the reservoir's intrinsic temporal capacity, potentially fixing the stationary predator weakness without complicating the readout.
+
+### Barren Plateau Avoidance in Non-Simulable Circuits (arXiv:2507.06344, Jul 2025)
+
+Linear Clifford Encoder (LCE) — analytically proves barren plateaus can be avoided in regions where no classical surrogate is known to exist.
+
+- **Key finding**: Identifies a "transition zone" where gradients decay polynomially (trainable) but computational complexity is super-polynomial (not classically simulable). Uses proximity to Clifford circuits as a navigational tool.
+- **Relevance**: The most direct theoretical attack on the Cerezo et al. 2025 impossibility result. Currently theoretical — no deployed RL implementation. Monitor for practical implementations.
+
+### Controlled-Layer Architecture Trainability (arXiv:2112.15002, 2021, updated 2025)
+
+Proves that controlled-layer architectures maintain gradient norms bounded independently of qubit number and circuit depth.
+
+- **Key finding**: Careful circuit structure design (not just depth/width) determines trainability. Controlled architectures avoid barren plateaus where random circuits fail.
+- **Relevance**: Informs entangled circuit design for QA-3 and QA-5. Circuit topology choices (ring vs chain vs controlled) matter as much as depth.
+
+### Overparameterization Threshold in QNNs (arXiv:2109.11676, 2021)
+
+Critical parameter count M_c bounded by Lie algebra dimension of QNN generators. Below M_c: spurious local minima; above M_c: landscape becomes benign.
+
+- **Key finding**: Phase transition at overparameterization threshold. Sets minimum parameter count targets for any PQC architecture.
+- **Relevance**: When designing entangled circuits for QA-3/QA-5, ensure parameter count exceeds the Lie algebra dimension threshold to avoid spurious local minima.
+
+### Parametrized Quantum Policies for RL (arXiv:2103.05577, NeurIPS 2021)
+
+Jerbi et al. prove theoretical quantum advantage for specific RL environments under discrete logarithm hardness assumptions. First QRL paper to successfully train on OpenAI Gym benchmarks.
+
+- **Key finding**: Formal separation between classical and quantum policy gradient agents exists for specific environment structures. Quantum advantage requires the environment to have structure exploitable by quantum computation.
+- **Relevance**: Supports the view that quantum advantage in our project must come from environment-specific structure (predator-prey interactions, spatial symmetries) rather than generic quantum expressivity.
+
+### Embodied Fly Brain Emulation (eon.systems, 2026)
+
+Full *Drosophila* connectome (140K neurons, 50M synapses) with LIF model in embodied simulation. Recovers sensorimotor behaviors (feeding, grooming, foraging).
+
+- **Key architectural insight**: Sparse, low-dimensional readout layers work — the system maps from ~1,000 descending neurons to a handful of identified motor neurons. Simplified dynamics outperform morphological accuracy for basic sensorimotor recovery.
+- **Relevance**: Validates our QRH approach — rich quantum features (75-dim) through a simple MLP readout (not complex LSTM) is the right paradigm. QRH-LSTM's failure aligns: don't overcomplicate the readout. Also: connectome structure alone recovers substantial behaviors, suggesting circuit topology carries significant inductive bias.
+
+### LLM Neuroanatomy: Architecture Modification (dnhkng.github.io, 2026)
+
+Duplicating specific layer blocks in pre-trained transformers (Qwen2-72B layers 45-51) improves performance without changing a single weight parameter.
+
+- **Key insight**: Architecture IS a form of inductive bias; network structure encodes knowledge alongside weights. Middle layers form "indivisible processing units" — functional circuits that operate as complete units. Different task types have different optimal duplication zones.
+- **Application to quantum circuits**: Instead of only optimizing gate parameters, search over circuit topology — which qubits are entangled, gate ordering, circuit depth per section. A circuit topology search (e.g., CMA-ES over discrete topology encoding + continuous parameters) could find better reservoir or entangled circuit structures than purely random design.
+
+### Quantum Walks for Graph Exploration
+
+Quantum walks on graphs spread quadratically faster than classical random walks (provable hitting time speedup). The coin operator determines the walk's interference pattern.
+
+- **Relevance**: Grid navigation IS graph traversal. A quantum walk on the action space (4 actions = 2-qubit encoding) with a state-dependent coin operator could provide intrinsically quantum exploration distributions. The interference pattern naturally creates non-trivial action distributions that depend on sensory state — qualitatively different from epsilon-greedy or Boltzmann exploration.
+
+### MBQC for RL (Measurement-Based Quantum Computing)
+
+Cluster-state quantum computing where a highly entangled graph state is prepared and adaptive single-qubit measurements perform the computation. Measurement angles are the trainable parameters.
+
+- **Key insight**: Structurally similar to QRH (fixed quantum structure, trainable classical parameters) but with richer parameterization — adaptive measurements can implement any quantum computation. Recent work suggests MBQC on structured graph states may have better trainability than random PQCs because entanglement structure is fixed.
+- **Relevance**: Could slot into our architecture as a QRH replacement. Requires mid-circuit measurement support (Qiskit dynamic circuits). Higher implementation effort than other candidates but architecturally novel.
 
 ______________________________________________________________________
 
 ## Next-Generation Architecture Proposals
 
-Based on 200+ experiment sessions across 62 days of evaluation, combined with the latest external research (2025-2026), four next-generation architectures are proposed. Each is designed to address the barren plateau-advantage dilemma through a different strategy, and each includes falsification criteria for rapid go/no-go decisions.
+Based on 290+ experiment sessions across the evaluation campaign, combined with the latest external research (2024-2026), seven quantum architectures have been proposed. The first four (QA-1 through QA-4) have been evaluated; three new candidates (QA-5 through QA-7) were added in March 2026 based on a deep research investigation following QA-4 completion. Each includes falsification criteria for rapid go/no-go decisions.
 
-### H.1 Quantum Reservoir Hybrid (QRH) — EVALUATED
+### QA-1 Quantum Reservoir Hybrid (QRH) — EVALUATED
 
 **Strategy**: Don't train the quantum part
 **Status**: **Completed** — 16 rounds, 96 sessions, ~30,000 episodes across 3 tasks
@@ -1421,7 +1520,7 @@ Both quantum reservoirs underperformed classical MLP features (mean MI 0.38, 64 
 | Classical control | Not proposed | CRH implemented (10-neuron ESN) |
 | Domingo control | Not proposed | CRH-trig implemented (confound resolved) |
 
-### H.2 SQS-QLIF Hybrid — Priority 4 (Deprioritised)
+### QA-2 SQS-QLIF Hybrid — Priority 5 (Deprioritised)
 
 **Strategy**: Local learning rules (quantum STDP)
 **Risk**: High | **Estimated effort**: 4-6 weeks
@@ -1519,7 +1618,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 - Must achieve ≥75% foraging success within 500 episodes
 - Training time must be < 10x classical equivalent (SQS overhead from multi-qubit circuits)
 
-### H.3 Entangled QLIF with qtDNN Surrogate — Priority 3 (After H.4)
+### QA-3 Entangled QLIF with qtDNN Surrogate — Priority 3 (Conditional on QA-5)
 
 **Strategy**: Classical gradient surrogates for entangled circuits
 **Risk**: Medium-High | **Estimated effort**: 3-4 weeks
@@ -1598,10 +1697,10 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 - qtDNN training overhead must be < 3x forward pass cost (amortized over calibration interval)
 - Must not exhibit barren plateau symptoms: gradient variance must not decay exponentially with qubit count (test at 4, 8, 12, 16 qubits)
 
-### H.4 QLIF-LSTM Temporal Brain (QLIFLSTMBrain) — Priority 2 (EVALUATED: Stages 4a-4c)
+### QA-4 QLIF-LSTM Temporal Brain (QLIFLSTMBrain) — Priority 2 (EVALUATED: Stages 4a-4d)
 
 **Strategy**: Quantum activations in classical temporal architecture
-**Risk**: Low-Medium | **Actual effort**: ~3 weeks (Stages 4a-4c), Stage 4d pending
+**Risk**: Low-Medium | **Actual effort**: ~3 weeks (Stages 4a-4d complete, Stage 4d FAILED)
 
 #### Architecture
 
@@ -1659,14 +1758,14 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 
 #### Why This Could Work
 
-- **Architectural pattern validated**: QKAN-LSTM (arXiv:2512.05049) demonstrated 79% parameter reduction by replacing LSTM gate activations with quantum-inspired (classically simulated) variational circuits. Our H.4 extends this to *actual* QLIF quantum circuits — the parameter efficiency may differ, but the gate replacement pattern is proven
+- **Architectural pattern validated**: QKAN-LSTM (arXiv:2512.05049) demonstrated 79% parameter reduction by replacing LSTM gate activations with quantum-inspired (classically simulated) variational circuits. Our QA-4 extends this to *actual* QLIF quantum circuits — the parameter efficiency may differ, but the gate replacement pattern is proven
 - **Brain-inspired QSNN-QLSTM precedent**: arXiv:2505.01735 (May 2025) demonstrated a two-stage architecture combining QSNN (sensory) + QLSTM (memory) that converged in **40 iterations vs 700 for classical ANN** with 108 vs 731 parameters on credit card fraud detection. Although not an RL task, the architecture pattern — quantum spiking sensory stage feeding into quantum temporal processing — maps directly to our QLIF-LSTM design
 - **Differentiable architecture search available**: DiffQAS-QLSTM (arXiv:2508.14955, August 2025) demonstrated end-to-end differentiable joint optimization of VQC parameters and circuit architecture selection for QLSTM. If manual gate selection underperforms, DiffQAS provides a principled alternative for finding optimal QLIF integration points
 - **Minimal quantum circuit** (single-qubit per activation), avoiding barren plateaus by design
-- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM). Prior to H.4, the codebase had **zero temporal/recurrent architectures** — every brain was stateless. H.4 (QLIFLSTMBrain) closes this gap as the first architecture with within-episode memory
+- **Adds temporal memory** — addresses roadmap Phase 3 requirement for short-term/intermediate-term activity memory (STAM/ITAM). Prior to QA-4, the codebase had **zero temporal/recurrent architectures** — every brain was stateless. QA-4 (QLIFLSTMBrain) closes this gap as the first architecture with within-episode memory
 - **Builds directly on proven infrastructure** — uses the same QLIF neuron and surrogate gradient backward pass that achieved 73.9% foraging success
 - **Low risk**: if quantum activations don't help, the architecture gracefully degrades to a standard LSTM with slightly different activations — we still gain temporal memory infrastructure needed for Phase 3
-- **ICML 2025 benchmarking insight**: arXiv:2502.04909 found that most PQC-QRL approaches "may not greatly rely on their quantum components." H.4 is designed with this in mind — even if QLIF activations prove equivalent to classical sigmoid (as the HybridClassical ablation showed for QSNN reflex), the temporal architecture itself advances the project. The quantum hypothesis is a bonus, not the sole justification
+- **ICML 2025 benchmarking insight**: arXiv:2502.04909 found that most PQC-QRL approaches "may not greatly rely on their quantum components." QA-4 is designed with this in mind — even if QLIF activations prove equivalent to classical sigmoid (as the HybridClassical ablation showed for QSNN reflex), the temporal architecture itself advances the project. The quantum hypothesis is a bonus, not the sole justification
 - **Computational cost caveat**: Unlike QKAN-LSTM's classical simulation, actual QLIF circuits require one quantum circuit execution per hidden unit per quantum gate per timestep (hidden_dim=16 × 2 gates = 32 circuits per step). Mitigated by batched Aer execution and minimal circuit depth (2 gates per QLIF)
 
 #### Key Design Decisions
@@ -1678,7 +1777,7 @@ Per SQS neuron (3 qubits: q0=membrane, q1=memory, q_anc=readout ancilla):
 
 #### Evaluation Stages
 
-Staged evaluation following the same environment progression used for QRH (H.1), with a QRH-LSTM temporal readout variant as final stage:
+Staged evaluation following the same environment progression used for QRH (QA-1), with a QRH-LSTM temporal readout variant as final stage:
 
 ```text
 Stage 4a: Core Validation (Foraging)
@@ -1711,7 +1810,7 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
     weakness (where spatial memory matters) without regressing on pursuit
     (where quantum features already excel)
   - Key hypothesis: QRH-LSTM should beat QRH-MLP on stationary predators
-  - This is a composition of two proven components (QRH reservoir + H.4
+  - This is a composition of two proven components (QRH reservoir + QA-4
     temporal readout), not a new architecture
 ```
 
@@ -1728,7 +1827,7 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 
 - Does temporal memory improve predator evasion over feedforward baselines (QRH, MLPPPO)?
 - If QLIF-LSTM ≤ classical LSTM on all tasks: QLIF activations provide no quantum benefit in temporal context (proceed to 4c with classical LSTM only)
-- If QLIF-LSTM < feedforward baselines on all tasks: temporal architecture not beneficial for this domain (halt H.4, document negative result)
+- If QLIF-LSTM < feedforward baselines on all tasks: temporal architecture not beneficial for this domain (halt QA-4, document negative result)
 
 **After Stage 4c (Week 4)**:
 
@@ -1752,9 +1851,9 @@ Stage 4d: QRH-LSTM (primary) + QRH-QLSTM (ablation)
 - Must demonstrate meaningful temporal memory: performance on tasks requiring recall of past observations > memoryless baseline (e.g., remembering predator location after it leaves viewport, or leveraging food gradient history for more efficient search) — Stage 4b
 - QRH-LSTM must improve stationary predator success ≥5pp over QRH-MLP without pursuit regression — Stage 4d
 
-#### Evaluation Results (Stages 4a-4c Complete)
+#### Evaluation Results (Stages 4a-4d Complete)
 
-**Status**: Stages 4a-4c complete (12 rounds, ~66 sessions). QRH-QLSTM/CRH-QLSTM reservoir-LSTM composition evaluated (22 sessions). Stage 4d (QRH-LSTM primary — classical gates) in progress.
+**Status**: Stages 4a-4d complete (12 rounds, ~66 sessions). QRH-QLSTM/CRH-QLSTM reservoir-LSTM composition evaluated (22 sessions). Stage 4d (QRH-LSTM primary — classical gates) FAILED — QRH-LSTM degrades QRH vs MLP readout.
 
 **Stage 4a — Foraging (PASS)**:
 
@@ -1809,99 +1908,357 @@ Tested reservoir (QRH/CRH) + QLIF-LSTM readout as a composed architecture. Key f
 - **Root cause**: LSTM overcomplicates the readout for QRH's noisy fixed features. The simple MLP readout outperforms LSTM on every task.
 - **Conclusion**: Temporal readout does NOT resolve QRH's multi-objective weakness. The bottleneck is the fixed quantum reservoir, not the readout architecture.
 
-Full evaluation data: [008-quantum-brain-evaluation.md](../../experiments/logbooks/008-quantum-brain-evaluation.md), [qliflstm-optimization.md](../../experiments/logbooks/supporting/008/qliflstm-optimization.md), [qrhqlstm_scratchpad.md](../../build/brains/qrhqlstm/qrhqlstm_scratchpad.md)
+Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/008-quantum-brain-evaluation.md), [qliflstm-optimization.md](../experiments/logbooks/supporting/008/qliflstm-optimization.md), [qrhqlstm-optimization.md](../experiments/logbooks/supporting/008/qrhqlstm-optimization.md)
 
-### H.5 Multi-Objective & Sensory Extensibility
+### QA-5 Entangled Feature Extraction for Interaction Encoding — Priority 1 (NEXT)
 
-All four proposals are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities:
+**Strategy**: Entangled PQC as feature extractor (not policy), classical PPO for decision-making
+
+**Risk**: Low-Medium | **Estimated effort**: 2-3 weeks
+
+**Added**: 2026-03-13 based on arXiv:2603.10289 (entanglement in adversarial RL) and post-QA-4 investigation
+
+#### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│         Entangled Feature Extraction (QA-5)                 │
+│                                                             │
+│  Sensory Input (8 features)                                 │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Entangled PQC Feature Extractor (8 qubits)          │   │
+│  │                                                      │   │
+│  │  Input encoding: RY(feature × π) on each qubit       │   │
+│  │  Entanglement: CZ/CNOT between sensory-modality      │   │
+│  │    qubit pairs (food↔nociception, thermo↔mechano)    │   │
+│  │  Data re-uploading: 2-3 layers                       │   │
+│  │                                                      │   │
+│  │  Output features:                                    │   │
+│  │    raw:      8 per-qubit ⟨Z⟩ expectations            │   │
+│  │    pairwise: 28 ⟨ZZ⟩ two-qubit correlations          │   │
+│  │    cos_sin:  16 cos/sin of expectations              │   │
+│  │  Total: ~52 features                                 │   │
+│  │                                                      │   │
+│  │  Key difference from QRH:                            │   │
+│  │  - Entanglement encodes INTERACTIONS between         │   │
+│  │    sensory modalities (food-predator correlations)   │   │
+│  │  - Optional slow training of entanglement angles     │   │
+│  │    (or fixed like QRH for safety)                    │   │
+│  │  - Pairwise ZZ features capture predator-worm        │   │
+│  │    interaction dynamics that separable circuits miss │   │
+│  └──────────┬───────────────────────────────────────────┘   │
+│             │                                               │
+│             ▼                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Classical PPO Policy + Critic (~10K params)         │   │
+│  │                                                      │   │
+│  │  LayerNorm(52) → Actor: MLP(52→64→64→4)              │   │
+│  │                → Critic: MLP(52→64→64→1)             │   │
+│  │  Standard PPO with LR warmup + entropy decay         │   │
+│  │                                                      │   │
+│  │  Identical readout architecture to QRH               │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Classical ablation control:                                │
+│  - Separable PQC (same qubits, no entanglement)             │
+│  - Classical MLP feature extractor (8→52 with ReLU)         │
+│                                                             │
+│  WHY THIS COULD WORK:                                       │
+│  1. Extends QRH paradigm (quantum features + classical      │
+│     readout) — the approach with our only genuine Q adv.    │
+│  2. Entangled features encode predator-prey INTERACTIONS    │
+│     (arXiv:2603.10289 validates this in adversarial games)  │
+│  3. Separates quantum advantage (features) from training    │
+│     (classical PPO) — avoids barren plateau entirely        │
+│  4. Reuses all existing PPO readout infrastructure          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Could Work
+
+- **Entanglement encodes interactions**: arXiv:2603.10289 showed entangled circuits develop structurally distinct features for modeling interacting variables. Our predator-prey dynamics involve exactly this — relative positions, approach vectors, threat correlations between food and predator signals.
+- **Extends the paradigm that works**: QRH (fixed quantum → classical readout) produced our only genuine quantum advantage. QA-5 enhances this with purposeful entanglement structure instead of random reservoir angles.
+- **Avoids barren plateaus by construction**: If feature extractor is fixed (reservoir-like), no gradient through quantum circuit. If slowly trained, use local observables only (per Cerezo et al.).
+- **Low implementation risk**: Same PPO readout as QRH. Feature extractor is a standard PQC — straightforward Qiskit implementation.
+
+#### Key Design Decisions
+
+1. **Entanglement topology**: Start with modality-paired CZ gates (food_chem ↔ nociception, thermotaxis ↔ mechanosensation) to encode cross-modal interactions. Compare against ring CZ and random CZ.
+2. **Fixed vs trainable**: Start fixed (reservoir-like) for safety. If performance matches QRH, try slowly training entanglement angles with parameter-shift on local observables.
+3. **Feature channels**: Same 3-channel approach as QRH (raw + cos_sin + pairwise ZZ) for comparability.
+4. **Data re-uploading**: 2-3 layers to increase expressivity without excessive depth.
+
+#### Decision Gate (Week 1)
+
+- **Feature quality**: MI(entangled_features, optimal_action) > MI(separable_features, optimal_action)?
+- If entangled MI ≤ separable MI: Entanglement topology is wrong; try alternative topologies before abandoning.
+- If entangled MI ≤ QRH random MI: QRH's random reservoir already captures sufficient structure; stop.
+
+#### Falsification Criteria
+
+- Entangled features must outperform separable features by ≥5pp on pursuit predators
+- Must match or exceed QRH on foraging (≥85% success)
+- Classical MLP feature extractor control must be tested for ablation completeness
+- If fixed entangled PQC matches QRH: the entanglement topology encodes useful inductive bias (positive result even if not trainable quantum advantage)
+
+### QA-6 Weak-Measurement Feedback Reservoir (QRH+) — Priority 4 (After QA-5)
+
+**Strategy**: Enhance QRH reservoir with weak measurements and feedback for temporal memory
+
+**Risk**: Medium | **Estimated effort**: 2-3 weeks
+
+**Added**: 2026-03-13 based on arXiv:2503.17939 (feedback-enhanced QRC)
+
+#### Architecture
+
+```text
+┌───────────────────────────────────────────────────────────────┐
+│         Weak-Measurement Feedback QRH (QA-6 / QRH+)           │
+│                                                               │
+│  Sensory Input (7 features)                                   │
+│       │                                                       │
+│       ▼                                                       │
+│  ┌────────────────────────────────────────────────────────┐   │
+│  │  10-Qubit Quantum Reservoir with FEEDBACK              │   │
+│  │                                                        │   │
+│  │  Standard QRH reservoir layers (RY/RZ + CZ)            │   │
+│  │                                                        │   │
+│  │  NEW: Weak measurement after each reservoir layer      │   │
+│  │  - Partial measurement (ancilla-based or weak coupling │   │
+│  │    to meter qubit) extracts information WITHOUT fully  │   │
+│  │    collapsing the quantum state                        │   │
+│  │  - Measurement outcome fed back as rotation angle      │   │
+│  │    into next layer: RY(feedback × coupling_strength)   │   │
+│  │                                                        │   │
+│  │  Effect: Reservoir maintains coherence ACROSS layers   │   │
+│  │  while feedback reinforces nonlinear dynamics and      │   │
+│  │  builds temporal memory within the reservoir itself    │   │
+│  │                                                        │   │
+│  │  Output: Same 75-feature extraction as QRH             │   │
+│  └──────────┬─────────────────────────────────────────────┘   │
+│             │                                                 │
+│             ▼                                                 │
+│  Same classical PPO readout as QRH (~10K params)              │
+│                                                               │
+│  KEY DIFFERENCE FROM QRH-LSTM (Stage 4d, FAILED):             │
+│  - QRH-LSTM added temporal memory in the READOUT              │
+│    (wrong fix — bottleneck is the reservoir)                  │
+│  - QA-6 adds temporal memory in the RESERVOIR ITSELF          │
+│    via weak-measurement feedback loops                        │
+│  - Simple MLP readout preserved (validated by fly brain)      │
+└───────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Could Work
+
+- **Fixes the right bottleneck**: QRH-LSTM (Stage 4d) failed because the LSTM readout overcomplicated what should be simple — the bottleneck was the reservoir's lack of temporal memory, not the readout's. Weak-measurement feedback adds memory to the reservoir itself.
+- **Preserves quantum coherence**: Unlike projective measurement (which collapses the state), weak measurements extract partial information while maintaining coherence. This enables temporal correlations across reservoir layers.
+- **Proven in QRC literature**: arXiv:2503.17939 demonstrates improved memory capacity and nonlinear forecasting from feedback-enhanced QRC.
+- **Potentially fixes stationary predator weakness**: QRH's stationary predator failure (23.6%) may stem from the reservoir's inability to remember predator zone locations across timesteps. Feedback-enhanced memory could address this.
+
+#### Key Design Decisions
+
+1. **Weak measurement implementation**: Ancilla-based approach — CNOT from reservoir qubit to ancilla, measure ancilla, feed result back as conditional rotation. Preserves reservoir qubit coherence.
+2. **Feedback coupling strength**: Tunable parameter controlling how strongly measurement outcomes influence subsequent layers. Start weak (0.1π) and scan.
+3. **Feedback frequency**: Every reservoir layer vs every other layer.
+
+#### Decision Gate (Week 1)
+
+- **Memory capacity test**: Does QRH+ reservoir show higher memory capacity (measured via linear memory task) than standard QRH?
+- If memory capacity ≤ QRH: Weak measurement implementation is not preserving sufficient coherence; investigate.
+
+#### Falsification Criteria
+
+- Must improve stationary predator SR by ≥5pp over QRH-MLP without pursuit regression
+- Must maintain ≥85% foraging success
+- Memory capacity must measurably exceed standard QRH
+- If weak measurement + feedback shows no memory improvement: approach is not viable with Aer simulator (may require real hardware noise)
+
+### QA-7 Quantum Plasticity for Multi-Objective Continual Learning — Priority 2 (Parallel)
+
+**Strategy**: Exploit PQC unitarity for anti-forgetting in sequential multi-objective training
+**Risk**: Low | **Estimated effort**: 1-2 weeks
+**Added**: 2026-03-13 based on arXiv:2511.17228 (quantum plasticity)
+
+#### Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│         Quantum Plasticity Test (QA-7)                      │
+│                                                             │
+│  NOT a new brain architecture — a PROPERTY TEST on existing │
+│  quantum vs classical networks.                             │
+│                                                             │
+│  Test Protocol:                                             │
+│  1. Train PQC policy (e.g., QA-5 or QRH) on Objective A     │
+│     (foraging) for N episodes                               │
+│  2. Switch to Objective B (pursuit predators) for N eps     │
+│  3. Switch to Objective C (thermotaxis) for N eps           │
+│  4. Return to Objective A — measure forgetting              │
+│                                                             │
+│  Repeat with classical equivalent (same param count):       │
+│  - Classical MLP with same architecture as quantum readout  │
+│  - HybridClassical as quantum control                       │
+│                                                             │
+│  Metrics:                                                   │
+│  - Forward transfer: does prior learning help new task?     │
+│  - Backward forgetting: how much does task A degrade?       │
+│  - Plasticity retention: does learning rate on task C       │
+│    match task A (no plasticity loss)?                       │
+│                                                             │
+│  HYPOTHESIS: PQC policies will show ≤50% of classical       │
+│  forgetting due to unitary weight constraint preventing     │
+│  unbounded drift. This would constitute quantum advantage   │
+│  in OPTIMIZATION LANDSCAPE, not computational speedup.      │
+│                                                             │
+│  If confirmed, this reframes the quantum advantage story:   │
+│  quantum components may not win on single-task performance  │
+│  but enable more robust multi-objective learning dynamics.  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Could Work
+
+- **Theoretical backing**: arXiv:2511.17228 proves PQC unitarity prevents plasticity loss. Validated across RL and supervised tasks.
+- **Addresses our core challenge**: Multi-objective learning (foraging + evasion + thermotaxis) IS continual learning. Our three-stage curriculum exists precisely because joint training is fragile (HybridQuantumCortex Stage 3: catastrophic forgetting, 19.3%).
+- **Low implementation effort**: Uses existing architectures. Only requires a new evaluation protocol (sequential objective switching + forgetting measurement).
+- **Reframes quantum advantage**: Even if single-task quantum ≈ classical, superior multi-objective dynamics is a genuine advantage for our use case.
+
+#### Key Design Decisions
+
+1. **Test architectures**: QRH (fixed quantum + classical readout) vs HybridQuantum (QSNN reflex + classical cortex) vs pure classical baselines. Focus on whether the quantum component retains plasticity.
+2. **Objective sequence**: Foraging → pursuit predators → thermotaxis → return to foraging. Same environment configs used in prior evaluations for comparability.
+3. **Episodes per objective**: 200 (short enough to show forgetting, long enough for convergence).
+
+#### Decision Gate
+
+- Does PQC-based policy show ≤50% of classical network's backward forgetting after 3-objective sequential training?
+- If forgetting is equivalent: unitarity advantage does not manifest at our scale — may require more parameters or deeper circuits.
+
+#### Falsification Criteria
+
+- PQC must show measurably less forgetting than classical equivalent of same parameter count
+- Must maintain ≥70% of peak performance on task A after training on tasks B and C
+- Both quantum and classical must achieve ≥60% on each individual task (ensures meaningful learning before forgetting test)
+
+### Multi-Objective & Sensory Extensibility
+
+All QA proposals (QA-1 through QA-6) and the QA-7 property test are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities. QA-4d (QRH-LSTM) is a sub-variant of QA-4, evaluated in Stage 4d.
 
 | Architecture | Multi-Objective Mechanism | Sensory Extensibility |
 |---|---|---|
-| H.1 QRH | Classical PPO readout learns objective trade-offs (same as proven HybridQuantum cortex) | Add qubits or multiplex encoding; readout MLP scales naturally |
-| H.2 SQS-QLIF | Mode-gated fusion delegates objectives to reflex (fast) vs cortex (strategic) | Add SQS neurons to small-world network for new modalities |
-| H.3 Entangled QLIF + qtDNN | Entangled spike correlations encode active objective; cortex PPO handles switching | Add QLIF neurons + entanglement edges for new inputs |
-| H.4 QLIF-LSTM | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
-| H.4d QRH-LSTM (primary) | Quantum reservoir features + classical LSTM temporal readout; combines H.1 + H.4 | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
+| QA-1 QRH | Classical PPO readout learns objective trade-offs (same as proven HybridQuantum cortex) | Add qubits or multiplex encoding; readout MLP scales naturally |
+| QA-2 SQS-QLIF | Mode-gated fusion delegates objectives to reflex (fast) vs cortex (strategic) | Add SQS neurons to small-world network for new modalities |
+| QA-3 Entangled QLIF + qtDNN | Entangled spike correlations encode active objective; cortex PPO handles switching | Add QLIF neurons + entanglement edges for new inputs |
+| QA-4 QLIF-LSTM | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
+| ↳ QA-4 Stage 4d: QRH-LSTM | Quantum reservoir features + classical LSTM temporal readout; combines QA-1 + QA-4 (FAILED) | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
+| QA-5 Entangled Feature Extraction | Entangled features encode predator-worm interactions; classical PPO handles objectives | Add qubits per modality; entanglement topology extends naturally |
+| QA-6 QRH+ (Weak-Measurement Feedback) | Same as QRH but with reservoir-intrinsic temporal memory for objective context | Same as QRH + feedback coupling extends with qubits |
+| QA-7 Quantum Plasticity Test | PQC unitarity provides anti-forgetting for sequential multi-objective training | N/A — property test, not architecture |
 
 **Current sensory modules**: food_chemotaxis, nociception, thermotaxis, mechanosensation, proprioception
 
 **Planned future modalities** (roadmap Phase 4+): oxygen gradients (aerotaxis), osmolarity sensing, pheromone/social signalling, noxious chemical avoidance. These require only adding sensory modules in config and increasing the input feature dimension — no architectural changes to the quantum components.
 
-### H.6 Implementation Roadmap
+### Implementation Roadmap
 
 ```text
-Updated March 2026 — H.1 (QRH), H.4 (Stages 4a-4d), and reservoir-LSTM compositions evaluated.
-Priorities revised based on 290+ sessions of experimental data.
-
-Scheduling follows risk level (lowest-risk first) combined with strategic
-value (temporal memory infrastructure needed for roadmap Phase 3).
+Updated 2026-03-13 — QA-1 (QRH), QA-4 (Stages 4a-4d), and reservoir-LSTM
+compositions evaluated. Three new candidates (QA-5, QA-6, QA-7) added based
+on post-QA-4 deep research investigation. Priorities revised.
 
 COMPLETED:
-  H.1 QRH — 16 rounds, 96 sessions, ~30,000 episodes
+  QA-1 QRH — 16 rounds, 96 sessions, ~30,000 episodes
     Genuine quantum advantage on pursuit predators (+9.4pp over CRH).
     Task-dependent: CRH wins stationary. Structured topology falsified.
 
-  H.4 QLIF-LSTM (Stages 4a-4c) — 12 rounds, ~66 sessions
+  QA-4 QLIF-LSTM (Stages 4a-4d) — 12 rounds, ~66 sessions + 22 reservoir-LSTM sessions
     Classical LSTM: 98% last-100 on pursuit predators (best temporal arch).
     Quantum QLIF gates: no measurable advantage on any task.
     Stationary predators: 37% ceiling despite 6 rounds of tuning.
+    Stage 4d QRH-LSTM FAILED — LSTM degrades QRH vs MLP on all tasks.
     Key innovations: fan-in scaling, entropy floor, actor [features, h_t].
 
-  CRH-QLSTM — CRH ESN reservoir + QLIF-LSTM readout, 22 sessions
-    85.4% pursuit small (best reservoir-LSTM). Does not scale to large grids
-    (35.9% thermo+pursuit vs QLIF-LSTM 60.1%). Feature expansion hurts path
-    efficiency at scale. Quantum gates: ~3pp advantage on pursuit, none on foraging.
+NEXT (revised 2026-03-13 after deep research investigation):
+  Week 6-8:  QA-5 Entangled Feature Extraction (PRIORITY 1)
+             - Entangled PQC feature extractor (8 qubits, CZ/CNOT)
+             - Separable PQC + classical MLP ablation controls
+             - MI decision gate: entangled > separable features?
+             - Foraging + pursuit predator evaluation
+             - Rationale: extends QRH paradigm (our only genuine Q advantage)
+               with purposeful entanglement for interaction encoding.
+               Validated in adversarial RL (arXiv:2603.10289).
 
-  QRH-QLSTM — QRH quantum reservoir + QLIF-LSTM readout, 10 sessions
-    66.6% foraging (conv ~83, 2.7x slower). 15.2% pursuit small (FAILED).
-    Quantum reservoir noise catastrophic for multi-objective tasks.
+  Week 6-7:  QA-7 Quantum Plasticity Test (PARALLEL, low effort)
+             - Sequential multi-objective training protocol
+             - Measure forgetting: PQC vs classical equivalent
+             - Uses existing architectures — evaluation protocol only
+             - Rationale: reframes quantum advantage as optimization
+               landscape property. Low effort, high insight value.
 
-  Stage 4d QRH-LSTM — QRH reservoir + classical LSTM readout, 12 sessions
-    LSTM readout DEGRADES QRH performance vs MLP readout on all tasks.
-    17% pursuit small, 16% thermo+pursuit large, 11% thermo+stationary large.
-    Hypothesis rejected: LSTM does not resolve QRH's stationary predator
-    weakness (-4.2pp vs target +5pp). Bottleneck is fixed reservoir, not readout.
-
-NEXT:
-  Week 6-7:  Entangled QLIF + qtDNN (H.3)
+  Week 8-10: QA-3 Entangled QLIF + qtDNN (IF QA-5 validates entanglement)
              - Entangled QLIF circuit design (CNOT/CZ between neuron qubits)
              - qtDNN surrogate implementation and calibration
              - Decision gate: qtDNN gradient correlation > 0.5
-             - Foraging + predator evaluation
+             - Rationale: if QA-5 shows entangled features help, QA-3 tests
+               whether trainable entangled circuits add further value.
+               If QA-5 fails, QA-3 is deprioritised (entanglement doesn't
+               help even as features → unlikely to help as trainable circuits).
 
-  Week 8+:   SQS-QLIF (H.2) — conditional on H.3/H.4 results
-             - Only if local learning shows promise in H.3/H.4 context
-             - Or if H.3's entangled circuits reveal quantum memory effects
-               worth exploring with biologically-plausible neuron models
+  Week 9-11: QA-6 QRH+ Weak-Measurement Feedback (IF QA-5 succeeds)
+             - Weak measurement implementation in quantum reservoir
+             - Feedback loop coupling strength optimisation
+             - Stationary predator evaluation (target: +5pp over QRH)
+             - Rationale: addresses QRH's temporal memory bottleneck
+               at the reservoir level (not readout — Stage 4d proved
+               readout complexity is the wrong fix).
 
-Decision Gates:
+  Deprioritised:
+    QA-2 SQS-QLIF — Local learning rules failed in our experiments
+             (12 rounds Hebbian, 0% success). SQS paper lacks RL validation.
+             Revisit only if QA-5/QA-6 reveal quantum memory effects
+             worth pursuing with biologically-plausible neuron models.
+
+Decision Gates (completed):
   After Stage 4a: Does QLIF-LSTM work on foraging? → YES (86.25%)
     ✅ Proceeded through Stages 4b-4c. Quantum activations dropped
     (no advantage); classical LSTM retained for Phase 3 infrastructure.
 
-  After Stage 4c: Cross-architecture ranking (partial)
+  After Stage 4d: Cross-architecture ranking
     → Classical LSTM is best temporal architecture (98% last-100 pursuit)
     → Quantum activations provide no benefit in temporal context
-    → Temporal infrastructure (LSTM + recurrent PPO) is valuable
-    → Reservoir-LSTM compositions evaluated: CRH-QLSTM strong on small
-      pursuit (85.4%) but doesn't scale to large grids. QRH-QLSTM fails
-      on multi-objective (15.2%). Feature expansion hurts path efficiency.
-    → Stage 4d COMPLETE: QRH-LSTM FAILED. LSTM readout degrades QRH on
-      all tasks (17% pursuit, 16% thermo+pursuit, 11% thermo+stationary).
-      Hypothesis rejected: temporal readout cannot fix fixed reservoir.
+    → Reservoir-LSTM compositions: CRH-QLSTM strong on small pursuit
+      (85.4%) but doesn't scale. QRH-QLSTM/QRH-LSTM both FAILED.
+    → Temporal readout cannot fix fixed reservoir limitations.
 
-  After Week 7 (H.3 complete): Entanglement verdict
+Decision Gates (upcoming):
+  After QA-5 MI gate (Week 6): Entanglement feature verdict
+    → If entangled > separable features: proceed to full evaluation
+    → If entangled ≤ separable: try alternative topologies, then stop
+
+  After QA-5 evaluation (Week 8): Entanglement for RL verdict
+    → If entangled features > QRH on pursuit: genuine quantum advantage
+      via purposeful entanglement — proceed to QA-3 (trainable version)
+    → If equivalent: entanglement adds inductive bias but no advantage
+    → If worse: interaction encoding hypothesis falsified
+
+  After QA-7 (Week 7): Plasticity verdict
+    → If PQC forgetting ≤ 50% of classical: quantum landscape advantage
+      confirmed — reframes the quantum value proposition
+    → If equivalent: unitarity advantage doesn't manifest at our scale
+
+  After QA-3 (Week 10, conditional): Trainable entanglement verdict
     → If entangled QLIF > non-entangled: first genuine trainable
       quantum advantage — high-impact result
-    → If no: barren plateau-advantage dilemma confirmed empirically.
-      Publish as comprehensive negative result alongside QRH's
-      positive task-dependent finding
+    → If no: barren plateau-advantage dilemma confirmed empirically
 
-  After all evaluations: Final architecture selection for Phase 2
-    → Best quantum architecture for multi-objective tasks
+  Final architecture selection for Phase 2:
+    → Best quantum feature extractor for multi-objective tasks
     → Best temporal architecture for Phase 3 memory systems
-    → QRH-LSTM eliminated; QRH with MLP readout remains best quantum arch
-      for pursuit predators; standalone LSTM best temporal arch
+    → Quantum advantage characterisation (feature-level, landscape-level,
+      or task-dependent reservoir-level)
 ```
 
 ______________________________________________________________________
@@ -2046,7 +2403,7 @@ ______________________________________________________________________
 
 03. **QRC Fundamentals**
 
-    - arXiv:2602.03522 (2025). "QRC-Lab: An Educational Toolbox for Quantum Reservoir Computing."
+    - arXiv:2602.03522 (2026). "QRC-Lab: An Educational Toolbox for Quantum Reservoir Computing."
     - [QuEra Tutorials](https://github.com/QuEraComputing/QRC-tutorials/)
 
 04. **Data Re-uploading**
@@ -2123,6 +2480,46 @@ ______________________________________________________________________
 
     - arXiv:2511.10187 (2025). "Quantum Metric Encoder (QME) for offline RL." 116% average improvement over baselines in 100-sample regime on D4RL datasets. Relevant for data-scarce RL settings.
 
+20. **Entanglement in Adversarial RL** (Added March 2026)
+
+    - arXiv:2603.10289 (2026). Wang, Hymas, Quach. 8-qubit entangled PQC feature extractor in PPO for Pong. Entangled circuits outperform separable at equal params; develop structurally distinct features for modeling interacting variables. Motivates QA-5.
+
+21. **Quantum Plasticity in Continual Learning** (Added March 2026)
+
+    - arXiv:2511.17228 (2025). Chen & Zhang. "Intrinsic Preservation of Plasticity in Continual Quantum Learning." PQC unitarity prevents plasticity loss across sequential tasks. Validated in RL. Motivates QA-7.
+
+22. **Feedback-Enhanced QRC** (Added March 2026)
+
+    - arXiv:2503.17939 (2025). Monomi, Setoyama, Hasegawa. Weak measurements preserve coherence while enabling feedback in quantum reservoirs. Outperforms conventional QRC on temporal tasks. Motivates QA-6.
+
+23. **Barren Plateau Avoidance in Non-Simulable Circuits** (Added March 2026)
+
+    - arXiv:2507.06344 (2025). Meyer, Scala, Tacchino, Lucchi. Linear Clifford Encoder identifies "transition zone" with polynomial gradient decay and super-polynomial classical complexity. Most direct attack on Cerezo et al. impossibility.
+
+24. **Controlled-Layer Trainable QNNs** (Added March 2026)
+
+    - arXiv:2112.15002 (2021, updated 2025). Zhang et al. Controlled-layer architectures maintain gradient norms independent of qubit count and depth.
+
+25. **Overparameterization in QNNs** (Added March 2026)
+
+    - arXiv:2109.11676 (2021). Larocca et al. Critical parameter count M_c bounded by Lie algebra dimension; landscape becomes benign above threshold.
+
+26. **Parametrized Quantum Policies for RL** (Added March 2026)
+
+    - arXiv:2103.05577 (2021, NeurIPS). Jerbi et al. Proves theoretical quantum advantage for RL under discrete logarithm hardness. First QRL paper on OpenAI Gym.
+
+27. **Entanglement in Multi-Agent Coordination** (Added March 2026)
+
+    - arXiv:2602.08965 (2026). Gardiner, Romero, Tivnan, Dal Fabbro, Pappas. Shared entanglement enables MARL coordination exceeding classical shared randomness in Dec-POMDPs.
+
+28. **Embodied Fly Brain Emulation** (Added March 2026)
+
+    - eon.systems (2026). Full Drosophila connectome (140K neurons) in embodied LIF simulation. Key insight: sparse low-dimensional readout layers from rich internal dynamics. Validates QRH's simple MLP readout paradigm.
+
+29. **LLM Neuroanatomy** (Added March 2026)
+
+    - dnhkng.github.io (2026). Ng. Duplicating specific transformer layer blocks improves performance without weight changes. Architecture as inductive bias. Suggests circuit topology search for quantum architectures.
+
 ### Frameworks
 
 - **PennyLane**: [pennylane.ai](https://pennylane.ai) - Differentiable quantum programming
@@ -2148,37 +2545,52 @@ ______________________________________________________________________
 11. ~~**Structured reservoir viability**~~: **ANSWERED — NO (structured), PARTIALLY YES (random).** C. elegans-inspired structured topology failed catastrophically: 0.0% success across 12,000 episodes (R16). Bilateral symmetry creates near-degenerate left-right mirror features that collapse effective rank. MI analysis correctly predicted this (random MI > structured). **However**, random quantum reservoirs do provide richer feature spaces for specific tasks: QRH outperforms CRH on pursuit predators (+9.4pp, 13× lower variance, 4/4 vs 1/4 converged), and the Domingo confound control (CRH-trig) confirmed this advantage comes from genuine quantum dynamics, not encoding artifacts. The quantum feature space does encode information that the classical ESN cannot access — but the advantage is task-dependent (pursuit predators only, not stationary predators).
 12. **Multi-qubit quantum memory**: Do multi-qubit SQS neurons with quantum memory (entanglement preserved across timesteps) provide measurably different computational capabilities than classical spiking neurons with standard recurrence?
 13. **qtDNN gradient approximation**: Can a classical tangential DNN (qtDNN) approximate entangled quantum circuit gradients accurately enough (correlation > 0.5 with true parameter-shift) to enable training circuits that would otherwise exhibit barren plateaus?
-14. **Trainability-advantage sweet spot**: **PARTIALLY ANSWERED by QRH.** The QRH sidesteps the dilemma entirely by not training the quantum part — the reservoir is fixed, only the classical readout is trained with PPO. This avoids barren plateaus while still leveraging quantum dynamics for feature extraction. The result: task-dependent advantage (QRH wins on pursuit predators, CRH wins on stationary predators). Biological network topology constraints (C. elegans-inspired structured connectivity) did NOT provide a sweet spot — they were catastrophically worse than random topology. The remaining question is whether strategies 2-3 (local learning rules, classical gradient surrogates) can achieve trainability + advantage for multi-qubit entangled circuits.
+14. **Trainability-advantage sweet spot**: **PARTIALLY ANSWERED by QRH.** The QRH sidesteps the dilemma entirely by not training the quantum part — the reservoir is fixed, only the classical readout is trained with PPO. This avoids barren plateaus while still leveraging quantum dynamics for feature extraction. The result: task-dependent advantage (QRH wins on pursuit predators, CRH wins on stationary predators). Biological network topology constraints (C. elegans-inspired structured connectivity) did NOT provide a sweet spot — they were catastrophically worse than random topology. The remaining question is whether strategies 2-3 (local learning rules, classical gradient surrogates) can achieve trainability + advantage for multi-qubit entangled circuits. **New lead (2026-03-13)**: arXiv:2507.06344 identifies a theoretical "transition zone" with polynomial gradient decay and super-polynomial classical complexity — the first formal evidence that trainable non-simulable circuits may exist.
+15. **Entanglement for interaction encoding** (Added 2026-03-13): Does purposeful entanglement between sensory-modality qubits produce features that better capture predator-prey interaction dynamics than separable (non-entangled) circuits? arXiv:2603.10289 validates this in adversarial games; does it transfer to our multi-objective navigation tasks? This is the core hypothesis of QA-5.
+16. **Quantum advantage in optimization landscape** (Added 2026-03-13): Do PQC-based policies show measurably less catastrophic forgetting than classical equivalents of the same parameter count when trained sequentially on multiple objectives? arXiv:2511.17228 demonstrates this in general settings; does it manifest at our scale (~100-10K params)? If so, this constitutes a form of quantum advantage independent of single-task computational speedup. Core hypothesis of QA-7.
+17. **Weak-measurement feedback for reservoir memory** (Added 2026-03-13): Can weak measurements (partial state extraction without full collapse) add temporal memory to quantum reservoirs? arXiv:2503.17939 shows this for QRC benchmarks; would it fix QRH's stationary predator weakness where temporal memory matters? Core hypothesis of QA-6.
+18. **Entanglement context-dependence** (Added 2026-03-13): The "Dissecting QRL" paper (arXiv:2511.17112) shows entanglement can drastically reduce effectiveness depending on circuit template and post-processing. Which entanglement topologies help vs hurt in our specific setting? This is a critical risk factor for QA-3 and QA-5 — careful ablation (entangled vs separable) is mandatory.
 
 ### Proposed Next Steps: Bridging the Trainability-Advantage Gap
 
 The central challenge for quantum brain architectures is the **Barren Plateau-Advantage Dilemma** (Cerezo et al., Nature Communications, 2025): provably trainable quantum circuits are classically simulable, while circuits offering genuine quantum advantage suffer barren plateaus. Our experimental data confirms this — HybridClassical (96.3%) matches HybridQuantum (96.9%), showing the trainable single-qubit QLIF provides no measurable task-performance quantum advantage.
 
-Four strategies were proposed to bridge this gap, with two now evaluated:
+Six strategies have been identified to bridge this gap, with two evaluated and a third (entanglement for feature extraction) emerging as the most promising next step:
 
-1. **Don't train the quantum part** — ✅ **EVALUATED (H.1 QRH).** Fixed random quantum reservoirs as feature extractors with classical PPO readout. Avoids barren plateaus entirely. Result: genuine quantum advantage on pursuit predators (+9.4pp over classical ESN, confirmed not an encoding artifact), but classical ESN wins on stationary predators. Structured topology falsified; random topology works.
+1. **Don't train the quantum part** — ✅ **EVALUATED (QA-1 QRH).** Fixed random quantum reservoirs as feature extractors with classical PPO readout. Avoids barren plateaus entirely. Result: genuine quantum advantage on pursuit predators (+9.4pp over classical ESN, confirmed not an encoding artifact), but classical ESN wins on stationary predators. Structured topology falsified; random topology works.
 2. **Use local learning rules** — Replace global gradient-based training with local quantum learning rules (e.g., quantum STDP). Local rules avoid barren plateaus by construction and have biological plausibility.
 3. **Use classical gradient surrogates** — Train entangled circuits (which could provide genuine quantum advantage) using a classical tangential DNN (qtDNN) that approximates quantum gradients, separating the advantage source from the training mechanism.
-4. **Use quantum activations in classical temporal architecture** — ✅ **EVALUATED (H.4 QLIF-LSTM, Stages 4a-4c).** QLIF quantum measurements replace sigmoid in LSTM gates. Result: classical LSTM achieves 98% last-100 on pursuit predators (best temporal architecture), but quantum gates provide no measurable advantage on any task. Temporal memory infrastructure is the valuable contribution.
+4. **Use quantum activations in classical temporal architecture** — ✅ **EVALUATED (QA-4 QLIF-LSTM, Stages 4a-4d).** QLIF quantum measurements replace sigmoid in LSTM gates. Result: classical LSTM achieves 98% last-100 on pursuit predators (best temporal architecture), but quantum gates provide no measurable advantage on any task. Temporal memory infrastructure is the valuable contribution.
+5. **Use entanglement for interaction feature encoding** — (NEW, 2026-03-13) Use entangled PQC purely as feature extractor for agent-agent interaction dynamics. Classical PPO handles policy training. Avoids barren plateaus (quantum part can be fixed). Validated in adversarial game setting (arXiv:2603.10289).
+6. **Exploit PQC unitarity for multi-objective learning dynamics** — (NEW, 2026-03-13) PQC unitary constraints prevent plasticity loss and unbounded weight growth in continual/sequential learning (arXiv:2511.17228). Quantum advantage as optimization landscape property, not computational speedup.
 
-Four architectures were proposed, with H.1 and H.4 (Stages 4a-4d) now completed. Priorities have been re-ordered based on experimental findings and external research survey (March 2026):
+Seven architectures proposed. QA-1 and QA-4 completed; QA-5, QA-6, QA-7 added 2026-03-13 based on post-QA-4 deep research investigation. Priorities revised:
 
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|
-| 1 | Quantum Reservoir Hybrid (QRH) | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
-| 2 | QLIF-LSTM Temporal Brain (H.4) | Quantum activations in LSTM | **COMPLETED (4a-4d)** | Classical LSTM: 98% last-100 pursuit. Quantum gates: no advantage. CRH-QLSTM: 85.4% small pursuit but doesn't scale. Stage 4d: QRH-LSTM FAILED — LSTM degrades QRH vs MLP readout on all tasks. Hypothesis rejected. |
-| 3 | Entangled QLIF + qtDNN | Classical surrogates | Proposed | Most promising path to genuine *trainable* quantum advantage. hDQNN-TD3 (arXiv:2503.09119) is the strongest QRL result in literature (+13% over TD3 on Humanoid-v4). Adds entanglement — the key quantum resource our QLIF doesn't use. |
-| 4 | SQS-QLIF Hybrid | Local learning rules | Proposed — deprioritised | Highest risk. Our Hebbian learning experiments (12 rounds, 0% success) showed local learning rules are too weak for RL. SQS paper (arXiv:2506.21324) tested on classification, not RL. Deferred until H.3/H.4 results inform whether quantum memory effects are worth pursuing with biologically-plausible neuron models. |
+| — | QA-1 QRH | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
+| — | QA-4 QLIF-LSTM | Quantum activations in LSTM | **COMPLETED (4a-4d)** | Classical LSTM: 98% last-100 pursuit. Quantum gates: no advantage. Stage 4d: QRH-LSTM FAILED — LSTM degrades QRH vs MLP readout on all tasks. |
+| **1** | **QA-5 Entangled Feature Extraction** | **Entanglement for interaction encoding** | **NEXT** | Extends QRH paradigm (our only genuine Q advantage) with purposeful entanglement for predator-prey interaction features. Validated in adversarial RL (arXiv:2603.10289). Low-medium risk. |
+| **2** | **QA-7 Quantum Plasticity Test** | **PQC unitarity for anti-forgetting** | **PARALLEL** | Tests whether PQC policies show less catastrophic forgetting than classical equivalents in sequential multi-objective training. Low effort (evaluation protocol only). arXiv:2511.17228. |
+| 3 | QA-3 Entangled QLIF + qtDNN | Classical surrogates | Conditional on QA-5 | If QA-5 validates entanglement for features, QA-3 tests trainable entangled circuits. hDQNN-TD3 (arXiv:2503.09119) validated qtDNN concept. If QA-5 fails, QA-3 deprioritised. |
+| 4 | QA-6 QRH+ (Weak-Measurement Feedback) | Reservoir temporal memory | Conditional on QA-5 | Addresses QRH's temporal memory bottleneck at the reservoir level (arXiv:2503.17939). Stage 4d proved readout complexity is the wrong fix. |
+| 5 | QA-2 SQS-QLIF Hybrid | Local learning rules | Deprioritised | Highest risk. Hebbian learning failed (12 rounds, 0%). SQS paper lacks RL validation. Revisit only if QA-5/QA-6 reveal quantum memory effects worth pursuing. |
 
-**Priority change rationale**: H.4 was originally Priority 4 (lowest) but elevated to Priority 2 after H.1 evaluation. H.4 Stages 4a-4c are now complete (12 rounds, ~66 sessions), confirming the prediction that temporal infrastructure would be valuable even without quantum advantage. Key outcomes:
+**Priority rationale (2026-03-13 revision)**:
 
-1. **Classical LSTM temporal architecture validated** — 98% last-100 on pursuit predators, best result among temporal architectures
-2. **Quantum activations falsified** — QLIF gates provide no measurable advantage over classical sigmoid on any task (foraging, pursuit, stationary)
-3. **ICML 2025 prediction confirmed** — architecture provides value even without quantum advantage, as predicted by arXiv:2502.04909
-4. **Reservoir-LSTM compositions evaluated** — CRH-QLSTM excels on small pursuit (85.4%) but feature expansion (7→75 dims) hurts large-grid path efficiency. QRH-QLSTM collapses on multi-objective (15.2%)
-5. **Stationary predators remain unsolved** — 37% QLIF-LSTM ceiling, 14% CRH-QLSTM ceiling, 11% QRH-LSTM ceiling; MLP PPO achieves 96.5%
-6. **Stage 4d COMPLETE — FAILED** — QRH-LSTM degrades QRH vs MLP readout on all tasks (17% pursuit, 16% thermo+pursuit, 11% thermo+stationary). LSTM temporal readout cannot compensate for inadequate fixed reservoir features. Hypothesis rejected (-4.2pp vs target +5pp)
+QA-5 is prioritised because it extends the only paradigm that has demonstrated genuine quantum advantage in our project (QRH: fixed quantum features → classical readout), with purposeful entanglement informed by the latest research showing entangled features capture agent-agent interaction dynamics (arXiv:2603.10289). It has low-medium risk, clear falsification criteria, and reuses existing PPO infrastructure.
 
-H.2 (SQS-QLIF) remains deprioritised because local learning rules (Hebbian/STDP) failed comprehensively in our experiments, and the SQS paper lacks RL validation.
+QA-7 runs in parallel due to minimal effort (evaluation protocol only, no new architecture). If confirmed, it reframes the quantum advantage story — even without single-task performance gains, PQC policies may enable more robust multi-objective learning.
 
-H.1 evaluation (16 rounds, 96 sessions) demonstrated genuine quantum advantage on pursuit predators. H.4 evaluation (12 rounds, ~66 sessions) demonstrated that quantum activations in temporal architectures provide no benefit, but the classical temporal infrastructure is valuable. The remaining proposals (H.3, H.4d) include falsification criteria and decision gates.
+QA-3 is now conditional on QA-5's entanglement verdict: if entangled features don't help even as a feature extractor, they're unlikely to help as trainable circuits (and the qtDNN adds significant complexity). The "Dissecting QRL" paper (arXiv:2511.17112) also warns that entanglement is context-dependent and can hurt.
+
+QA-6 addresses a real bottleneck (QRH temporal memory) but requires novel measurement infrastructure (weak measurements).
+
+**Key completed outcomes**:
+
+1. **Classical LSTM temporal architecture validated** — 98% last-100 on pursuit predators (QA-4)
+2. **Quantum QLIF activations falsified** — no advantage on any task (QA-4)
+3. **Genuine quantum advantage confirmed** — QRH pursuit predators +9.4pp over CRH (QA-1)
+4. **Reservoir readout complexity is wrong fix** — Stage 4d QRH-LSTM failed on all tasks
+5. **Stationary predators remain unsolved** — 37% best ceiling across all architectures vs MLP PPO 96.5%
+6. **Entanglement is the key untested quantum resource** — all evaluated trainable circuits use single-qubit gates only
