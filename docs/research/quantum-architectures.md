@@ -2145,7 +2145,7 @@ Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/
 
 ### Multi-Objective & Sensory Extensibility
 
-All seven architectures (QA-1 through QA-7) are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities. QA-4d (QRH-LSTM) is listed as a sub-variant of QA-4, evaluated in Stage 4d.
+All QA proposals (QA-1 through QA-6) and the QA-7 property test are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities. QA-4d (QRH-LSTM) is a sub-variant of QA-4, evaluated in Stage 4d.
 
 | Architecture | Multi-Objective Mechanism | Sensory Extensibility |
 |---|---|---|
