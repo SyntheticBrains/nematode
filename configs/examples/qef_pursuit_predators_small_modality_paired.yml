@@ -1,21 +1,16 @@
-# Dynamic Foraging with Pursuit Predators - Small Configuration
-# Uses QEF (Quantum Entangled Features) brain architecture
-# Multi-objective learning: find food while avoiding predators
+# QEF with Modality-Paired Topology - Pursuit Predators
+# Variant: uses modality_paired entanglement (4 CZ pairs) instead of
+# ring (8 CZ pairs). Kept for comparison / ablation.
 #
-# 8-qubit circuit with ring entanglement topology (8 CZ pairs).
-# Ring connects (0,1)(1,2)(2,3)(3,4)(4,5)(5,6)(6,7)(7,0).
-# Ring outperforms modality_paired (+11.7pp overall, 2x faster convergence)
-# on pursuit predators.
+# Modality-paired CZ pairs: food↔nociception (0,2)(1,3)(4,6)(5,7)
+# Theoretically encodes cross-modal interactions, but ring outperforms
+# on pursuit predators (+11.7pp overall).
 #
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)
 # Total: 4 features on 8 qubits (4 qubits in H-superposition)
 # Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
-#
-# LR decay + entropy annealing stabilize post-convergence behavior.
-# Without decay, seed-dependent catastrophic forgetting was observed.
-# With decay, all seeds converge to 96-97% late-100.
 
 max_steps: 500
 brain:
@@ -25,7 +20,7 @@ brain:
     num_qubits: 8
     circuit_depth: 2
     circuit_seed: 42
-    entanglement_topology: ring
+    entanglement_topology: modality_paired
     entanglement_enabled: true
     gate_mode: cry_crz
     feature_mode: xyz

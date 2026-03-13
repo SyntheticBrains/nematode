@@ -1,21 +1,10 @@
-# Dynamic Foraging with Pursuit Predators - Small Configuration
-# Uses QEF (Quantum Entangled Features) brain architecture
-# Multi-objective learning: find food while avoiding predators
+# QEF Ring + Compact Readout - Pursuit Predators
+# Variant: uses smaller readout MLP (64×2, ~13K params) vs default (128×3, ~80K).
 #
-# 8-qubit circuit with ring entanglement topology (8 CZ pairs).
-# Ring connects (0,1)(1,2)(2,3)(3,4)(4,5)(5,6)(6,7)(7,0).
-# Ring outperforms modality_paired (+11.7pp overall, 2x faster convergence)
-# on pursuit predators.
-#
-# Module feature breakdown:
-# - food_chemotaxis: 2 features (strength, angle)
-# - nociception: 2 features (strength, angle)
-# Total: 4 features on 8 qubits (4 qubits in H-superposition)
-# Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
-#
-# LR decay + entropy annealing stabilize post-convergence behavior.
-# Without decay, seed-dependent catastrophic forgetting was observed.
-# With decay, all seeds converge to 96-97% late-100.
+# Tradeoff vs default (qef_pursuit_predators_small.yml):
+# - Slower convergence (ep 85 vs ep 62)
+# - Higher late-stage ceiling (L100 97.8% vs 96.5%)
+# - Better for longer training sessions (1000+ episodes)
 
 max_steps: 500
 brain:
@@ -30,9 +19,9 @@ brain:
     gate_mode: cry_crz
     feature_mode: xyz
 
-    # Readout architecture (actor + critic)
-    readout_hidden_dim: 128
-    readout_num_layers: 3
+    # Compact readout (matches MLP PPO capacity)
+    readout_hidden_dim: 64
+    readout_num_layers: 2
 
     # PPO hyperparameters
     actor_lr: 0.0005
