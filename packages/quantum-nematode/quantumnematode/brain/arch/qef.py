@@ -203,19 +203,14 @@ class QEFBrain(ReservoirHybridBase):
         # Pre-compute topology CZ pairs
         self._cz_pairs: list[tuple[int, int]] = self._build_topology_pairs()
 
-        # Pre-compute index arrays for vectorized feature extraction
+        # Pre-compute sign array for vectorized Z and ZZ extraction.
+        # _signs[q, k] = (-1)^bit(k, q) for computing <Z_q> = _signs[q] @ probs.
+        # QEF only needs Z/ZZ (not X/Y), so no low/high index arrays are needed.
         num_states = 2**self.num_qubits
         bits = np.arange(num_states, dtype=np.int64)
         self._signs = np.array(
             [1.0 - 2.0 * ((bits >> q) & 1) for q in range(self.num_qubits)],
         )
-        self._low_indices: list[np.ndarray] = []
-        self._high_indices: list[np.ndarray] = []
-        for q in range(self.num_qubits):
-            mask = 1 << q
-            low = np.where((bits & mask) == 0)[0]
-            self._low_indices.append(low)
-            self._high_indices.append(low | mask)
 
         logger.info(
             f"QEFBrain initialized: {self.num_qubits} qubits, "
