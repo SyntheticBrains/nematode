@@ -2145,7 +2145,7 @@ Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/
 
 ### Multi-Objective & Sensory Extensibility
 
-All seven proposals are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities:
+All seven architectures (QA-1 through QA-7) are designed for multi-objective learning (foraging + predator evasion + thermotaxis) and extensible to future sensory modalities. QA-4d (QRH-LSTM) is listed as a sub-variant of QA-4, evaluated in Stage 4d.
 
 | Architecture | Multi-Objective Mechanism | Sensory Extensibility |
 |---|---|---|
@@ -2153,7 +2153,7 @@ All seven proposals are designed for multi-objective learning (foraging + predat
 | QA-2 SQS-QLIF | Mode-gated fusion delegates objectives to reflex (fast) vs cortex (strategic) | Add SQS neurons to small-world network for new modalities |
 | QA-3 Entangled QLIF + qtDNN | Entangled spike correlations encode active objective; cortex PPO handles switching | Add QLIF neurons + entanglement edges for new inputs |
 | QA-4 QLIF-LSTM | LSTM memory tracks objective context over time; PPO trains end-to-end | Widen LSTM input dimension (standard approach) |
-| QA-4d QRH-LSTM (primary) | Quantum reservoir features + classical LSTM temporal readout; combines QA-1 + QA-4 | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
+| ↳ QA-4 Stage 4d: QRH-LSTM | Quantum reservoir features + classical LSTM temporal readout; combines QA-1 + QA-4 (FAILED) | Same as QRH (add qubits/encoding) + LSTM handles temporal integration |
 | QA-5 Entangled Feature Extraction | Entangled features encode predator-worm interactions; classical PPO handles objectives | Add qubits per modality; entanglement topology extends naturally |
 | QA-6 QRH+ (Weak-Measurement Feedback) | Same as QRH but with reservoir-intrinsic temporal memory for objective context | Same as QRH + feedback coupling extends with qubits |
 | QA-7 Quantum Plasticity Test | PQC unitarity provides anti-forgetting for sequential multi-objective training | N/A — property test, not architecture |
