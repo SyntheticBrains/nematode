@@ -252,6 +252,170 @@ class TestQEFFeatureExtraction:
         assert result_d1.shape == result_d3.shape
         assert not np.allclose(result_d1, result_d3, atol=1e-6)
 
+    def test_sparse_encoding_same_dimension(self):
+        """Sparse encoding should produce the same feature dimension as uniform."""
+        uniform = QEFBrain(
+            config=QEFBrainConfig(
+                num_qubits=8,
+                circuit_depth=1,
+                encoding_mode="uniform",
+                readout_hidden_dim=8,
+                readout_num_layers=1,
+            ),
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+        sparse = QEFBrain(
+            config=QEFBrainConfig(
+                num_qubits=8,
+                circuit_depth=1,
+                encoding_mode="sparse",
+                readout_hidden_dim=8,
+                readout_num_layers=1,
+            ),
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        uniform_out = uniform._get_reservoir_features(features)
+        sparse_out = sparse._get_reservoir_features(features)
+
+        assert uniform_out.shape == sparse_out.shape
+
+    def test_sparse_vs_uniform_differ(self):
+        """Sparse and uniform encoding should produce different features."""
+        uniform = QEFBrain(
+            config=QEFBrainConfig(
+                num_qubits=8,
+                circuit_depth=2,
+                encoding_mode="uniform",
+                readout_hidden_dim=8,
+                readout_num_layers=1,
+            ),
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+        sparse = QEFBrain(
+            config=QEFBrainConfig(
+                num_qubits=8,
+                circuit_depth=2,
+                encoding_mode="sparse",
+                readout_hidden_dim=8,
+                readout_num_layers=1,
+            ),
+            num_actions=4,
+            device=DeviceType.CPU,
+        )
+
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        uniform_out = uniform._get_reservoir_features(features)
+        sparse_out = sparse._get_reservoir_features(features)
+
+        assert not np.allclose(uniform_out, sparse_out, atol=1e-6)
+
+    def test_sparse_encoding_default_is_uniform(self):
+        """Default encoding_mode should be 'uniform'."""
+        config = QEFBrainConfig()
+        assert config.encoding_mode == "uniform"
+
+
+class TestQEFGateAndFeatureModes:
+    """Test cases for gate_mode (cz vs cry_crz) and feature_mode (z_cossin vs xyz)."""
+
+    def _make_brain(
+        self,
+        gate_mode: Literal["cz", "cry_crz"] = "cz",
+        feature_mode: Literal["z_cossin", "xyz"] = "z_cossin",
+        **kwargs,
+    ) -> QEFBrain:
+        config = QEFBrainConfig(
+            num_qubits=kwargs.get("num_qubits", 8),
+            circuit_depth=kwargs.get("circuit_depth", 2),
+            circuit_seed=kwargs.get("circuit_seed", 42),
+            entanglement_topology=kwargs.get("topology", "modality_paired"),
+            entanglement_enabled=kwargs.get("entanglement_enabled", True),
+            gate_mode=gate_mode,
+            feature_mode=feature_mode,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+    def test_default_modes(self):
+        """Default gate_mode and feature_mode should be cz and z_cossin."""
+        config = QEFBrainConfig()
+        assert config.gate_mode == "cz"
+        assert config.feature_mode == "z_cossin"
+
+    def test_cry_crz_differs_from_cz(self):
+        """CRY/CRZ gates should produce different features than CZ-only."""
+        cz_brain = self._make_brain(gate_mode="cz")
+        cry_brain = self._make_brain(gate_mode="cry_crz")
+
+        features = np.array([0.5, 0.3, 0.1, -0.2], dtype=np.float32)
+        cz_out = cz_brain._get_reservoir_features(features)
+        cry_out = cry_brain._get_reservoir_features(features)
+
+        assert cz_out.shape == cry_out.shape
+        assert not np.allclose(cz_out, cry_out, atol=1e-6)
+
+    def test_xyz_differs_from_z_cossin(self):
+        """XYZ features should differ from Z+cos/sin features."""
+        cossin_brain = self._make_brain(feature_mode="z_cossin")
+        xyz_brain = self._make_brain(feature_mode="xyz")
+
+        features = np.array([0.5, 0.3, 0.1, -0.2], dtype=np.float32)
+        cossin_out = cossin_brain._get_reservoir_features(features)
+        xyz_out = xyz_brain._get_reservoir_features(features)
+
+        # Same dimension (3N + N(N-1)/2 for both)
+        assert cossin_out.shape == xyz_out.shape
+        assert not np.allclose(cossin_out, xyz_out, atol=1e-6)
+
+    def test_xyz_feature_ranges(self):
+        """XYZ features should all be in [-1, 1]."""
+        brain = self._make_brain(feature_mode="xyz")
+        features = np.array([0.5, 0.3, 0.1, -0.2], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+
+        assert np.all(result >= -1.0 - 1e-6)
+        assert np.all(result <= 1.0 + 1e-6)
+
+    def test_cry_crz_with_xyz_combined(self):
+        """Combined CRY/CRZ + XYZ mode should differ from all other combinations."""
+        original = self._make_brain(gate_mode="cz", feature_mode="z_cossin")
+        combined = self._make_brain(gate_mode="cry_crz", feature_mode="xyz")
+
+        features = np.array([0.5, 0.3, 0.1, -0.2], dtype=np.float32)
+        orig_out = original._get_reservoir_features(features)
+        comb_out = combined._get_reservoir_features(features)
+
+        assert orig_out.shape == comb_out.shape
+        assert not np.allclose(orig_out, comb_out, atol=1e-6)
+
+    def test_cry_crz_separable_equals_cz_separable(self):
+        """With entanglement disabled, gate_mode should not matter (no gates applied)."""
+        cz_sep = self._make_brain(gate_mode="cz", entanglement_enabled=False)
+        cry_sep = self._make_brain(gate_mode="cry_crz", entanglement_enabled=False)
+
+        features = np.array([0.5, 0.3, 0.1, -0.2], dtype=np.float32)
+        cz_out = cz_sep._get_reservoir_features(features)
+        cry_out = cry_sep._get_reservoir_features(features)
+
+        np.testing.assert_array_almost_equal(cz_out, cry_out)
+
+    def test_cry_crz_deterministic(self):
+        """Same seed should produce identical CRY/CRZ angles."""
+        brain1 = self._make_brain(gate_mode="cry_crz", circuit_seed=42)
+        brain2 = self._make_brain(gate_mode="cry_crz", circuit_seed=42)
+
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        out1 = brain1._get_reservoir_features(features)
+        out2 = brain2._get_reservoir_features(features)
+
+        np.testing.assert_array_equal(out1, out2)
+
 
 class TestQEFTopology:
     """Test cases for entanglement topology variations."""

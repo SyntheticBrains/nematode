@@ -132,6 +132,31 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
             "separable (product-state) PQC for ablation experiments."
         ),
     )
+
+    encoding_mode: Literal["uniform", "sparse"] = Field(
+        default="uniform",
+        description=(
+            "Input encoding strategy: 'uniform' encodes all qubits via RY(feature*pi), "
+            "'sparse' encodes only the first input_dim qubits (like QRH) with "
+            "asymmetric RY/RZ, leaving remaining qubits in H-superposition."
+        ),
+    )
+    gate_mode: Literal["cz", "cry_crz"] = Field(
+        default="cz",
+        description=(
+            "Entanglement gate type: 'cz' uses CZ-only phase gates, "
+            "'cry_crz' uses parameterized controlled rotations (CRY/CRZ) "
+            "with seeded random angles, matching QRH's gate richness."
+        ),
+    )
+    feature_mode: Literal["z_cossin", "xyz"] = Field(
+        default="z_cossin",
+        description=(
+            "Feature extraction channels: 'z_cossin' uses Z + ZZ + cos/sin(Z) "
+            "(3N + N(N-1)/2 features), 'xyz' uses X + Y + Z + ZZ "
+            "(3N + N(N-1)/2 features, matching QRH)."
+        ),
+    )
     trainable_entanglement: bool = Field(
         default=False,
         description="Reserved for future work. Raises NotImplementedError if True.",
@@ -192,6 +217,9 @@ class QEFBrain(ReservoirHybridBase):
         self.circuit_seed = config.circuit_seed
         self.entanglement_topology = config.entanglement_topology
         self.entanglement_enabled = config.entanglement_enabled
+        self.encoding_mode = config.encoding_mode
+        self.gate_mode = config.gate_mode
+        self.feature_mode = config.feature_mode
 
         # Compute feature dimension before calling base init
         feature_dim = self._compute_feature_dim()
@@ -200,22 +228,49 @@ class QEFBrain(ReservoirHybridBase):
         # LayerNorm, optimizer, LR scheduling, PPO params, buffer, state tracking
         super().__init__(config, feature_dim, num_actions, device, action_set)
 
-        # Pre-compute topology CZ pairs
+        # For sparse encoding: compute sensory qubit indices (first input_dim qubits)
+        if self.encoding_mode == "sparse":
+            self._sensory_qubits = list(range(min(self.input_dim, self.num_qubits)))
+        else:
+            self._sensory_qubits = list(range(self.num_qubits))
+
+        # Pre-compute topology pairs and gate angles
         self._cz_pairs: list[tuple[int, int]] = self._build_topology_pairs()
+
+        # For cry_crz mode: pre-compute random rotation angles per CZ pair
+        if self.gate_mode == "cry_crz":
+            gate_rng = np.random.default_rng(self.circuit_seed)
+            self._cry_angles = gate_rng.uniform(0.1, np.pi, size=len(self._cz_pairs))
+            self._crz_angles = gate_rng.uniform(0.1, np.pi, size=len(self._cz_pairs))
+        else:
+            self._cry_angles = np.array([])
+            self._crz_angles = np.array([])
 
         # Pre-compute sign array for vectorized Z and ZZ extraction.
         # _signs[q, k] = (-1)^bit(k, q) for computing <Z_q> = _signs[q] @ probs.
-        # QEF only needs Z/ZZ (not X/Y), so no low/high index arrays are needed.
         num_states = 2**self.num_qubits
         bits = np.arange(num_states, dtype=np.int64)
         self._signs = np.array(
             [1.0 - 2.0 * ((bits >> q) & 1) for q in range(self.num_qubits)],
         )
 
+        # For xyz feature mode: pre-compute low/high index arrays for X/Y expectations.
+        # X/Y require off-diagonal statevector elements: pairs where bit q differs.
+        if self.feature_mode == "xyz":
+            self._low_indices: list[np.ndarray] = []
+            self._high_indices: list[np.ndarray] = []
+            for q in range(self.num_qubits):
+                mask = 1 << q
+                low = np.where((bits & mask) == 0)[0]
+                self._low_indices.append(low)
+                self._high_indices.append(low | mask)
+
         logger.info(
             f"QEFBrain initialized: {self.num_qubits} qubits, "
             f"topology={self.entanglement_topology}, "
             f"entanglement_enabled={self.entanglement_enabled}, "
+            f"encoding={self.encoding_mode}, gate={self.gate_mode}, "
+            f"features={self.feature_mode}, "
             f"circuit_depth={self.circuit_depth}, "
             f"feature_dim={self.feature_dim}, input_dim={self.input_dim}",
         )
@@ -287,25 +342,37 @@ class QEFBrain(ReservoirHybridBase):
     # =========================================================================
 
     def _apply_entanglement(self, qc: QuantumCircuit) -> None:
-        """Apply CZ entanglement gates per configured topology.
+        """Apply entanglement gates per configured topology and gate mode.
+
+        Gate modes:
+        - **cz**: CZ-only phase gates (original QEF).
+        - **cry_crz**: Parameterized controlled rotations (CRY + CRZ) with
+          seeded random angles, matching QRH's gate richness.
 
         Skipped entirely when entanglement_enabled is False (separable ablation).
         """
         if not self.entanglement_enabled:
             return
-        for q_a, q_b in self._cz_pairs:
-            qc.cz(q_a, q_b)
+        if self.gate_mode == "cry_crz":
+            for idx, (q_a, q_b) in enumerate(self._cz_pairs):
+                qc.cry(float(self._cry_angles[idx]), q_a, q_b)
+                qc.crz(float(self._crz_angles[idx]), q_a, q_b)
+        else:
+            for q_a, q_b in self._cz_pairs:
+                qc.cz(q_a, q_b)
 
     def _encode_and_run(self, features: np.ndarray) -> np.ndarray:
         """Build and execute the PQC, returning the statevector.
 
-        Constructs: H layer -> [RY(feature * pi) on all qubits + CZ topology] x depth
+        Constructs: H layer -> [encoding + CZ topology] x depth -> statevector.
         Uses Statevector simulation for exact feature computation.
 
-        All qubits receive input encoding via uniform RY gates. Features are assigned
-        to qubits in order (qubit index = feature index % num_qubits). When
-        input_dim < num_qubits, unencoded qubits remain in their H-initialized
-        superposition state and still participate in entanglement.
+        Encoding modes:
+        - **uniform**: RY(feature*pi) on ALL qubits (feature index % num_qubits).
+          Unencoded qubits remain in H-superposition.
+        - **sparse**: RY/RZ on sensory qubits only (first input_dim qubits).
+          Even features use RY, odd features use RZ (matching QRH pattern).
+          Non-sensory qubits receive signal only through entanglement.
         """
         qc = QuantumCircuit(self.num_qubits)
 
@@ -315,11 +382,22 @@ class QEFBrain(ReservoirHybridBase):
 
         # Data re-uploading: encode inputs before each entanglement layer
         for _layer in range(self.circuit_depth):
-            # Uniform RY encoding on all qubits with features
-            for i, feature in enumerate(features):
-                qubit = i % self.num_qubits
-                angle = float(feature) * np.pi
-                qc.ry(angle, qubit)
+            if self.encoding_mode == "sparse":
+                # Sparse: encode only on sensory qubits with asymmetric RY/RZ
+                sensory = self._sensory_qubits
+                for i, feature in enumerate(features):
+                    qubit = sensory[i % len(sensory)]
+                    angle = float(feature) * np.pi
+                    if i % 2 == 0:
+                        qc.ry(angle, qubit)
+                    else:
+                        qc.rz(angle, qubit)
+            else:
+                # Uniform: RY on all qubits
+                for i, feature in enumerate(features):
+                    qubit = i % self.num_qubits
+                    angle = float(feature) * np.pi
+                    qc.ry(angle, qubit)
 
             # Apply entanglement topology (skipped if entanglement_enabled=False)
             self._apply_entanglement(qc)
@@ -334,17 +412,15 @@ class QEFBrain(ReservoirHybridBase):
     # =========================================================================
 
     def _extract_features(self, statevector: np.ndarray) -> np.ndarray:
-        """Extract Z expectations, ZZ correlations, and cos/sin features from statevector.
+        """Extract features from statevector based on configured feature_mode.
 
-        Computes from the full complex statevector amplitudes:
-        - <Z_i> = sum_k (-1)^bit(k,i) |psi_k|^2 for each qubit i
-        - <Z_i Z_j> = sum_k (-1)^(bit(k,i)+bit(k,j)) |psi_k|^2 for each pair (i,j)
-        - cos(<Z_i>) and sin(<Z_i>) for each qubit i
+        Feature modes:
+        - **z_cossin** (default): Z + ZZ + cos/sin(Z) = 3N + N(N-1)/2 features.
+          Output: [z_0..z_N-1, zz_01..zz_(N-1)N, cos_z_0..cos_z_N-1, sin_z_0..sin_z_N-1]
+        - **xyz**: X + Y + Z + ZZ = 3N + N(N-1)/2 features (matching QRH).
+          Output: [x_0..x_N-1, y_0..y_N-1, z_0..z_N-1, zz_01..zz_(N-1)N]
 
-        Uses pre-computed index arrays (_signs) from __init__ for vectorized operations.
-
-        Output ordering: [z_0..z_N-1, zz_01..zz_(N-1)N, cos_z_0..cos_z_N-1, sin_z_0..sin_z_N-1]
-        Output dimension: 3N + N(N-1)/2 = 52 for 8 qubits.
+        Uses pre-computed index arrays from __init__ for vectorized operations.
         """
         n = self.num_qubits
         probabilities = np.abs(statevector) ** 2
@@ -360,11 +436,34 @@ class QEFBrain(ReservoirHybridBase):
                 zz_correlations[idx] = (self._signs[i] * self._signs[j]) @ probabilities
                 idx += 1
 
-        # cos/sin features from Z expectations
-        cos_z = np.cos(z_expectations)
-        sin_z = np.sin(z_expectations)
+        if self.feature_mode == "xyz":
+            # X-expectations: <X_q> = 2 Re(sum_{k: bit(k,q)=0} psi_k* psi_{k|2^q})
+            x_expectations = np.empty(n)
+            for q in range(n):
+                low = self._low_indices[q]
+                high = self._high_indices[q]
+                x_expectations[q] = 2.0 * np.sum(
+                    np.real(np.conj(statevector[low]) * statevector[high]),
+                )
 
-        features = np.concatenate(
-            [z_expectations, zz_correlations, cos_z, sin_z],
-        )
+            # Y-expectations: <Y_q> = 2 Im(sum_{k: bit(k,q)=0} psi_{k|2^q}* psi_k)
+            y_expectations = np.empty(n)
+            for q in range(n):
+                low = self._low_indices[q]
+                high = self._high_indices[q]
+                y_expectations[q] = 2.0 * np.sum(
+                    np.imag(np.conj(statevector[high]) * statevector[low]),
+                )
+
+            features = np.concatenate(
+                [x_expectations, y_expectations, z_expectations, zz_correlations],
+            )
+        else:
+            # cos/sin features from Z expectations
+            cos_z = np.cos(z_expectations)
+            sin_z = np.sin(z_expectations)
+
+            features = np.concatenate(
+                [z_expectations, zz_correlations, cos_z, sin_z],
+            )
         return features.astype(np.float32)
