@@ -2174,7 +2174,7 @@ COMPLETED:
     Genuine quantum advantage on pursuit predators (+9.4pp over CRH).
     Task-dependent: CRH wins stationary. Structured topology falsified.
 
-  QA-4 QLIF-LSTM (Stages 4a-4d) — 12 rounds, ~66 sessions + 22 reservoir-LSTM
+  QA-4 QLIF-LSTM (Stages 4a-4d) — 12 rounds, ~66 sessions + 22 reservoir-LSTM sessions
     Classical LSTM: 98% last-100 on pursuit predators (best temporal arch).
     Quantum QLIF gates: no measurable advantage on any task.
     Stationary predators: 37% ceiling despite 6 rounds of tuning.
