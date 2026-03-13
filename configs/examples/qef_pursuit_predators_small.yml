@@ -10,6 +10,11 @@
 # - nociception: 2 features (strength, angle)
 # Total: 4 features on 8 qubits (4 qubits in H-superposition)
 # Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
+#
+# LR decay + entropy annealing stabilize post-convergence behavior.
+# Without decay, seed-dependent catastrophic forgetting was observed
+# (Phase 4b: 94%→50% collapse). With decay, all seeds converge to
+# 96% late-100 with near-zero variance. See qef_scratchpad.md Phase 5.
 
 max_steps: 500
 brain:
@@ -44,6 +49,14 @@ brain:
     # LR warmup (ramp from 10% to full LR over first 30 episodes)
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
+
+    # LR decay (after warmup, decay over 300 episodes)
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
+
+    # Entropy annealing (reduce exploration as policy matures)
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 300
 
     # Unified sensory modules for multi-objective tasks
     sensory_modules:

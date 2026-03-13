@@ -55,6 +55,10 @@ brain:
     lr_decay_episodes: 700
     lr_decay_end: 0.0001
 
+    # Entropy annealing (stabilizes post-convergence behavior)
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 700
+
     # Unified sensory modules for triple-objective task
     sensory_modules:
       - food_chemotaxis
