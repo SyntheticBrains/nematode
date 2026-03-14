@@ -656,6 +656,126 @@ class TestQEFBrainLearning:
         assert len(brain.buffer) == 0
 
 
+class TestQEFHybridInput:
+    """Test cases for hybrid input mode (raw sensory + quantum features)."""
+
+    def _make_brain(self, *, hybrid: bool, num_qubits: int = 4) -> QEFBrain:
+        config = QEFBrainConfig(
+            num_qubits=num_qubits,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            hybrid_input=hybrid,
+        )
+        return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+    def test_config_default_false(self):
+        """hybrid_input should default to False."""
+        config = QEFBrainConfig()
+        assert config.hybrid_input is False
+
+    def test_feature_dim_non_hybrid(self):
+        """Non-hybrid feature dim should be quantum-only (3N + N(N-1)/2)."""
+        brain = self._make_brain(hybrid=False, num_qubits=4)
+        assert brain.feature_dim == _compute_feature_dim(4)  # 18
+
+    def test_feature_dim_hybrid(self):
+        """Hybrid feature dim should be input_dim + quantum_dim."""
+        brain = self._make_brain(hybrid=True, num_qubits=4)
+        quantum_dim = _compute_feature_dim(4)  # 18
+        expected = brain.input_dim + quantum_dim  # 2 + 18 = 20
+        assert brain.feature_dim == expected
+
+    def test_feature_dim_hybrid_with_sensory_modules(self):
+        """Hybrid with 3 sensory modules should have 7 + 52 = 59 features."""
+        config = QEFBrainConfig(
+            num_qubits=8,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            hybrid_input=True,
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION,
+                ModuleName.THERMOTAXIS,
+            ],
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.input_dim == 7
+        assert brain.feature_dim == 7 + 52  # 59
+
+    def test_hybrid_output_contains_raw_features(self):
+        """Hybrid output should start with raw sensory features."""
+        brain = self._make_brain(hybrid=True, num_qubits=4)
+        raw_features = np.array([0.5, 0.3], dtype=np.float32)
+        result = brain._get_reservoir_features(raw_features)
+
+        # First input_dim elements should be the raw features
+        np.testing.assert_array_equal(result[:2], raw_features)
+
+    def test_hybrid_output_contains_quantum_features(self):
+        """Hybrid output should contain quantum features after raw features."""
+        hybrid_brain = self._make_brain(hybrid=True, num_qubits=4)
+        non_hybrid_brain = self._make_brain(hybrid=False, num_qubits=4)
+
+        raw_features = np.array([0.5, 0.3], dtype=np.float32)
+        hybrid_result = hybrid_brain._get_reservoir_features(raw_features)
+        quantum_result = non_hybrid_brain._get_reservoir_features(raw_features)
+
+        # Quantum portion of hybrid should match non-hybrid output
+        np.testing.assert_array_equal(hybrid_result[2:], quantum_result)
+
+    def test_hybrid_vs_non_hybrid_different_dim(self):
+        """Hybrid and non-hybrid should produce different-sized feature vectors."""
+        hybrid_brain = self._make_brain(hybrid=True, num_qubits=4)
+        non_hybrid_brain = self._make_brain(hybrid=False, num_qubits=4)
+
+        raw_features = np.array([0.5, 0.3], dtype=np.float32)
+        hybrid_result = hybrid_brain._get_reservoir_features(raw_features)
+        non_hybrid_result = non_hybrid_brain._get_reservoir_features(raw_features)
+
+        assert len(hybrid_result) == len(non_hybrid_result) + 2
+
+    def test_hybrid_actor_critic_accept_correct_dim(self):
+        """Actor and critic networks should accept hybrid feature dimension."""
+        brain = self._make_brain(hybrid=True, num_qubits=4)
+        x = torch.randn(brain.feature_dim)
+        logits = brain.actor(x)
+        value = brain.critic(x)
+        assert logits.shape == (4,)
+        assert value.shape == (1,)
+
+    def test_hybrid_run_brain(self):
+        """run_brain should work with hybrid input."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            hybrid_input=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+
+        actions = brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(actions) == 1
+        assert isinstance(actions[0], ActionData)
+
+    def test_hybrid_copy_preserves_setting(self):
+        """Copy should preserve hybrid_input setting."""
+        brain = self._make_brain(hybrid=True, num_qubits=4)
+        brain_copy = brain.copy()
+        assert brain_copy.hybrid_input is True
+        assert brain_copy.feature_dim == brain.feature_dim
+
+
 class TestQEFBrainCopy:
     """Test cases for brain copying."""
 

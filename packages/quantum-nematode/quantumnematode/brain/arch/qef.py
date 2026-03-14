@@ -161,6 +161,14 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
         default=False,
         description="Reserved for future work. Raises NotImplementedError if True.",
     )
+    hybrid_input: bool = Field(
+        default=False,
+        description=(
+            "Enable hybrid input: concatenate raw sensory features with quantum "
+            "features before the readout MLP. Gives the network direct access to "
+            "actionable signals while still benefiting from quantum correlations."
+        ),
+    )
 
     @field_validator("num_qubits")
     @classmethod
@@ -220,6 +228,16 @@ class QEFBrain(ReservoirHybridBase):
         self.encoding_mode = config.encoding_mode
         self.gate_mode = config.gate_mode
         self.feature_mode = config.feature_mode
+        self.hybrid_input = config.hybrid_input
+
+        # Pre-compute input_dim for hybrid feature dim calculation
+        # (super().__init__ also computes this, but we need it earlier)
+        if config.sensory_modules is not None:
+            from quantumnematode.brain.modules import get_classical_feature_dimension
+
+            self._raw_input_dim = get_classical_feature_dimension(config.sensory_modules)
+        else:
+            self._raw_input_dim = 2
 
         # Compute feature dimension before calling base init
         feature_dim = self._compute_feature_dim()
@@ -272,7 +290,8 @@ class QEFBrain(ReservoirHybridBase):
             f"encoding={self.encoding_mode}, gate={self.gate_mode}, "
             f"features={self.feature_mode}, "
             f"circuit_depth={self.circuit_depth}, "
-            f"feature_dim={self.feature_dim}, input_dim={self.input_dim}",
+            f"feature_dim={self.feature_dim}, input_dim={self.input_dim}"
+            f"{', hybrid_input=True' if self.hybrid_input else ''}",
         )
 
     # =========================================================================
@@ -280,13 +299,23 @@ class QEFBrain(ReservoirHybridBase):
     # =========================================================================
 
     def _compute_feature_dim(self) -> int:
-        """Compute QEF feature dimension: 3N + N(N-1)/2."""
-        return _compute_feature_dim(self.num_qubits)
+        """Compute QEF feature dimension: 3N + N(N-1)/2, plus raw input_dim if hybrid."""
+        quantum_dim = _compute_feature_dim(self.num_qubits)
+        if self.hybrid_input:
+            return self._raw_input_dim + quantum_dim
+        return quantum_dim
 
     def _get_reservoir_features(self, sensory_features: np.ndarray) -> np.ndarray:
-        """Run sensory features through the PQC and extract Z + ZZ + cos/sin features."""
+        """Run sensory features through the PQC and extract Z + ZZ + cos/sin features.
+
+        If hybrid_input is enabled, concatenates raw sensory features with quantum
+        features to give the readout MLP direct access to actionable signals.
+        """
         statevector = self._encode_and_run(sensory_features)
-        return self._extract_features(statevector)
+        quantum_features = self._extract_features(statevector)
+        if self.hybrid_input:
+            return np.concatenate([sensory_features, quantum_features])
+        return quantum_features
 
     def _create_copy_instance(
         self,
