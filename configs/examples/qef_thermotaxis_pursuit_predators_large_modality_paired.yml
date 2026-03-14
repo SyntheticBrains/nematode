@@ -1,22 +1,17 @@
-# QEF with Thermotaxis + Stationary Predators - Large Configuration
-# Second multi-objective evaluation: stationary predators as toxic zones
-# Uses QEF (Quantum Entangled Features) brain architecture
+# QEF Modality-Paired with Thermotaxis + Pursuit Predators - Large Configuration
+# Variant: uses modality_paired entanglement (4 CZ pairs) instead of ring (8 CZ pairs).
+# Kept for comparison / ablation.
 #
-# This complements the pursuit predator evaluation by testing QEF on a
-# qualitatively different predator avoidance task:
-# - Pursuit predators: temporal evasion (dynamic threat, chase mechanics)
-# - Stationary predators: spatial avoidance (fixed toxic zones, larger damage radius)
-#
-# 8-qubit circuit with ring entanglement topology (8 CZ pairs).
-# Ring connects (0,1)(1,2)(2,3)(3,4)(4,5)(5,6)(6,7)(7,0).
-# Compact readout (64x2) — proven best on thermotaxis pursuit predators.
+# Modality-paired CZ pairs: food↔nociception (0,2)(1,3), thermo↔mechano (4,6)(5,7).
+# Theoretically encodes cross-modal interactions, but ring outperforms
+# on this task by +12.5pp L100.
 #
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)
 # - thermotaxis: 3 features (strength, angle, temp_deviation)
 # Total: 7 features on 8 qubits (1 qubit in H-superposition)
-# Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
+# Feature dim: 3x8 + C(8,2) = 24 + 28 = 52
 
 max_steps: 2000
 brain:
@@ -26,14 +21,14 @@ brain:
     num_qubits: 8
     circuit_depth: 2
     circuit_seed: 42
-    entanglement_topology: ring
+    entanglement_topology: modality_paired
     entanglement_enabled: true
     gate_mode: cry_crz
     feature_mode: xyz
 
-    # Compact readout — 64x2 outperforms 128x3 on thermotaxis (+5.0pp L100)
-    readout_hidden_dim: 64
-    readout_num_layers: 2
+    # Readout architecture — 128 hidden dim for 52-feature input
+    readout_hidden_dim: 128
+    readout_num_layers: 3
 
     # PPO hyperparameters
     actor_lr: 0.0005
@@ -48,15 +43,15 @@ brain:
     value_loss_coef: 0.5
     max_grad_norm: 0.5
 
-    # LR schedule
+    # LR schedule: extended decay for 1000-episode sessions
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
-    lr_decay_episodes: 1200
+    lr_decay_episodes: 700
     lr_decay_end: 0.0001
 
-    # Entropy decay
-    entropy_coeff_end: 0.008
-    entropy_decay_episodes: 1800
+    # Entropy annealing (stabilizes post-convergence behavior)
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 700
 
     # Unified sensory modules for triple-objective task
     sensory_modules:
@@ -102,19 +97,18 @@ environment:
 
   predators:
     enabled: true
-    count: 5
-    speed: 0.0
-    movement_pattern: stationary
-    detection_radius: 8
+    count: 4
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 10
     kill_radius: 0
-    damage_radius: 4
-    gradient_decay_constant: 5.0
-    gradient_strength: 1.2
+    gradient_decay_constant: 12.0
+    gradient_strength: 1.0
 
   health:
     enabled: true
     max_hp: 150.0
-    predator_damage: 10.0
+    predator_damage: 15.0
     food_healing: 15.0
 
   thermotaxis:
