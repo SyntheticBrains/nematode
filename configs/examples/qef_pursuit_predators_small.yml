@@ -29,10 +29,12 @@ brain:
     entanglement_enabled: true
     gate_mode: cry_crz
     feature_mode: xyz
+    hybrid_input: true
+    feature_gating: true
 
-    # Readout architecture (actor + critic)
-    readout_hidden_dim: 128
-    readout_num_layers: 3
+    # Compact readout with hybrid input (raw 4 + quantum 52 = 56-dim)
+    readout_hidden_dim: 64
+    readout_num_layers: 2
 
     # PPO hyperparameters
     actor_lr: 0.0005
