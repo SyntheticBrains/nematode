@@ -30,6 +30,7 @@ References
 """
 
 from collections.abc import Iterator
+from typing import Literal
 
 import numpy as np
 import torch
@@ -126,6 +127,14 @@ class MLPPPOBrainConfig(BrainConfig):
     lr_warmup_start: float | None = None  # None = 0.1 * learning_rate
     lr_decay_episodes: int | None = None  # None = no decay after warmup
     lr_decay_end: float | None = None  # None = 0.1 * learning_rate
+
+    # Feature expansion for ablation experiments
+    # - "none": raw sensory features only (default)
+    # - "polynomial": raw + all pairwise products (x_i * x_j for i < j)
+    # - "random_projection": raw + fixed random 7→52 projection (matches QEF feature dim)
+    feature_expansion: Literal["none", "polynomial", "random_projection"] = "none"
+    feature_expansion_dim: int = 52  # target expansion dim for random_projection
+    feature_expansion_seed: int = 42  # seed for reproducible random projection
 
 
 class RolloutBuffer:
@@ -310,6 +319,30 @@ class MLPPPOBrain(ClassicalBrain):
             self.input_dim = 2
             logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
 
+        # Feature expansion for ablation experiments
+        self._raw_input_dim = self.input_dim
+        self.feature_expansion = config.feature_expansion
+        if config.feature_expansion == "polynomial":
+            # Raw features + all pairwise products: N + N*(N-1)/2
+            n = self._raw_input_dim
+            poly_dim = n * (n - 1) // 2
+            self.input_dim = n + poly_dim
+            logger.info(
+                f"Polynomial feature expansion: {n} raw + {poly_dim} pairwise = "
+                f"{self.input_dim} total features",
+            )
+        elif config.feature_expansion == "random_projection":
+            # Raw features + fixed random projection to target dim
+            rng = np.random.default_rng(config.feature_expansion_seed)
+            self._projection_matrix = rng.standard_normal(
+                (self._raw_input_dim, config.feature_expansion_dim),
+            ).astype(np.float32) / np.sqrt(self._raw_input_dim)
+            self.input_dim = self._raw_input_dim + config.feature_expansion_dim
+            logger.info(
+                f"Random projection expansion: {self._raw_input_dim} raw + "
+                f"{config.feature_expansion_dim} projected = {self.input_dim} total features",
+            )
+
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
         self.num_actions = num_actions
@@ -439,24 +472,37 @@ class MLPPPOBrain(ClassicalBrain):
         """
         # Unified sensory mode: use classical feature extraction
         if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
+            raw_features = extract_classical_features(params, self.sensory_modules)
+        else:
+            # Legacy mode: 2-feature preprocessing
+            grad_strength = float(params.gradient_strength or 0.0)
+            grad_direction = float(params.gradient_direction or 0.0)
+            direction_map = {
+                Direction.UP: np.pi / 2,
+                Direction.DOWN: -np.pi / 2,
+                Direction.LEFT: np.pi,
+                Direction.RIGHT: 0.0,
+            }
+            agent_facing_angle = direction_map.get(
+                params.agent_direction or Direction.UP,
+                np.pi / 2,
+            )
+            relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
+            rel_angle_norm = relative_angle / np.pi
+            raw_features = np.array([grad_strength, rel_angle_norm], dtype=np.float32)
 
-        # Legacy mode: 2-feature preprocessing
-        grad_strength = float(params.gradient_strength or 0.0)
+        return self._apply_feature_expansion(raw_features)
 
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
-
-        features = [grad_strength, rel_angle_norm]
-        return np.array(features, dtype=np.float32)
+    def _apply_feature_expansion(self, raw_features: np.ndarray) -> np.ndarray:
+        """Apply feature expansion for ablation experiments."""
+        if self.feature_expansion == "polynomial":
+            n = len(raw_features)
+            pairs = [raw_features[i] * raw_features[j] for i in range(n) for j in range(i + 1, n)]
+            return np.concatenate([raw_features, np.array(pairs, dtype=np.float32)])
+        if self.feature_expansion == "random_projection":
+            projected = raw_features @ self._projection_matrix
+            return np.concatenate([raw_features, projected])
+        return raw_features
 
     def _get_current_lr(self) -> float:
         """Get the current learning rate based on episode count.
