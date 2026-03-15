@@ -190,15 +190,16 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
             "genuinely quantum three-body entanglement effects."
         ),
     )
-    feature_gating: Literal["none", "static", "context"] = Field(
+    feature_gating: Literal["none", "static", "context", "mixed"] = Field(
         default="none",
         description=(
             "Feature gating mode for quantum features: "
             "'none' = no gating, "
             "'static' = sigmoid(w) * quantum_features (learned per-dimension weights), "
             "'context' = sigmoid(MLP(raw_features)) * quantum_features "
-            "(input-dependent gating that selects quantum features based on current "
-            "sensory state)."
+            "(input-dependent gating based on current sensory state), "
+            "'mixed' = average of static + context gates — combines robust static "
+            "baseline with adaptive input-dependent modulation."
         ),
     )
     separate_critic: bool = Field(
@@ -353,10 +354,10 @@ class QEFBrain(ReservoirHybridBase):
         """Initialize optional feature gating and separate critic components."""
         quantum_dim = _compute_feature_dim(self.num_qubits, include_zzz=self.include_zzz)
 
-        if self.feature_gating == "static":
+        if self.feature_gating in ("static", "mixed"):
             self.gate_weights = nn.Parameter(torch.zeros(quantum_dim, device=self.device))
             self.optimizer.add_param_group({"params": [self.gate_weights]})
-        elif self.feature_gating == "context":
+        if self.feature_gating in ("context", "mixed"):
             # Context-dependent gating: raw_features → MLP → sigmoid → gate
             # Small MLP: raw_dim → 16 → quantum_dim
             self.gate_network = nn.Sequential(
@@ -380,10 +381,10 @@ class QEFBrain(ReservoirHybridBase):
             ).to(self.device)
             self.critic_norm = nn.LayerNorm(self._raw_input_dim).to(self.device)
             gating_params: list[torch.nn.Parameter] = []
-            if self.feature_gating == "static":
-                gating_params = [self.gate_weights]
-            elif self.feature_gating == "context":
-                gating_params = list(self.gate_network.parameters())
+            if self.feature_gating in ("static", "mixed"):
+                gating_params.append(self.gate_weights)
+            if self.feature_gating in ("context", "mixed"):
+                gating_params.extend(self.gate_network.parameters())
             self.optimizer = torch.optim.Adam(
                 list(self.actor.parameters())
                 + list(self.critic.parameters())
@@ -444,11 +445,15 @@ class QEFBrain(ReservoirHybridBase):
         return x * gate
 
     def _compute_gate(self, gate_input: torch.Tensor) -> torch.Tensor:
-        """Compute gate values from static weights or context network."""
+        """Compute gate values from static weights, context network, or both."""
         if self.feature_gating == "static":
             return torch.sigmoid(self.gate_weights)
-        # context mode
-        return torch.sigmoid(self.gate_network(gate_input))
+        if self.feature_gating == "context":
+            return torch.sigmoid(self.gate_network(gate_input))
+        # mixed: average of static + context gates
+        static_gate = torch.sigmoid(self.gate_weights)
+        context_gate = torch.sigmoid(self.gate_network(gate_input))
+        return (static_gate + context_gate) * 0.5
 
     def _get_critic_value(self, reservoir_features: torch.Tensor) -> torch.Tensor:
         """Compute critic value, using raw features if separate_critic is enabled."""
@@ -469,9 +474,9 @@ class QEFBrain(ReservoirHybridBase):
             + list(self.critic.parameters())
             + list(self.feature_norm.parameters())
         )
-        if self.feature_gating == "static":
+        if self.feature_gating in ("static", "mixed"):
             params.append(self.gate_weights)
-        elif self.feature_gating == "context":
+        if self.feature_gating in ("context", "mixed"):
             params.extend(self.gate_network.parameters())
         if self.separate_critic:
             params.extend(self.critic_norm.parameters())
