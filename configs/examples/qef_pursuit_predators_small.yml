@@ -30,7 +30,7 @@ brain:
     gate_mode: cry_crz
     feature_mode: xyz
     hybrid_input: true
-    feature_gating: true
+    feature_gating: context
 
     # Compact readout with hybrid input (raw 4 + quantum 52 = 56-dim)
     readout_hidden_dim: 64
