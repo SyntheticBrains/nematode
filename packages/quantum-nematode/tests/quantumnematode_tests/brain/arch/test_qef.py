@@ -780,9 +780,9 @@ class TestQEFFeatureGating:
     """Test cases for learnable feature gating."""
 
     def test_config_default_false(self):
-        """feature_gating should default to False."""
+        """feature_gating should default to 'none'."""
         config = QEFBrainConfig()
-        assert config.feature_gating is False
+        assert config.feature_gating == "none"
 
     def test_gating_changes_feature_dim(self):
         """Feature gating should not change feature dimension."""
@@ -790,7 +790,7 @@ class TestQEFFeatureGating:
             num_qubits=4,
             readout_hidden_dim=8,
             readout_num_layers=1,
-            feature_gating=True,
+            feature_gating="static",
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         assert brain.feature_dim == _compute_feature_dim(4)
@@ -801,7 +801,7 @@ class TestQEFFeatureGating:
             num_qubits=4,
             readout_hidden_dim=8,
             readout_num_layers=1,
-            feature_gating=True,
+            feature_gating="static",
             hybrid_input=True,
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
@@ -816,7 +816,7 @@ class TestQEFFeatureGating:
             readout_hidden_dim=8,
             readout_num_layers=1,
             ppo_buffer_size=8,
-            feature_gating=True,
+            feature_gating="static",
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
@@ -838,7 +838,7 @@ class TestQEFFeatureGating:
             ppo_buffer_size=8,
             ppo_minibatches=2,
             ppo_epochs=2,
-            feature_gating=True,
+            feature_gating="static",
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         initial_gates = brain.gate_weights.clone()
@@ -855,6 +855,98 @@ class TestQEFFeatureGating:
         assert not torch.allclose(brain.gate_weights, initial_gates), (
             "Gate weights should change during PPO update"
         )
+
+
+class TestQEFContextGating:
+    """Test cases for context-dependent feature gating."""
+
+    def test_context_gating_creates_network(self):
+        """Context gating should create a gate_network."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            feature_gating="context",
+            hybrid_input=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert hasattr(brain, "gate_network")
+
+    def test_context_gate_output_shape(self):
+        """Context gate should preserve feature_dim shape."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            feature_gating="context",
+            hybrid_input=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        x = torch.randn(brain.feature_dim)
+        gated = brain._apply_feature_gating(x)
+        assert gated.shape == x.shape
+
+    def test_context_gate_input_dependent(self):
+        """Different raw inputs should produce different gates."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            feature_gating="context",
+            hybrid_input=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # Use same quantum features but different raw features
+        quantum_part = torch.randn(brain.feature_dim - brain._raw_input_dim)
+        x1 = torch.cat([torch.tensor([1.0, 0.0]), quantum_part])
+        x2 = torch.cat([torch.tensor([0.0, 1.0]), quantum_part])
+        gated1 = brain._apply_feature_gating(x1)
+        gated2 = brain._apply_feature_gating(x2)
+        # Same quantum features but different raw → different gates → different output
+        assert not torch.allclose(gated1[brain._raw_input_dim :], gated2[brain._raw_input_dim :])
+
+    def test_context_gating_run_brain(self):
+        """run_brain should work with context gating."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            feature_gating="context",
+            hybrid_input=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+        actions = brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(actions) == 1
+
+    def test_context_gating_with_sensory_modules(self):
+        """Context gating should work with sensory modules (7-dim raw input)."""
+        config = QEFBrainConfig(
+            num_qubits=8,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            feature_gating="context",
+            hybrid_input=True,
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION,
+                ModuleName.THERMOTAXIS,
+            ],
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain._raw_input_dim == 7
+        assert brain.feature_dim == 7 + 52  # 59
+        x = torch.randn(brain.feature_dim)
+        gated = brain._apply_feature_gating(x)
+        assert gated.shape == (59,)
 
 
 class TestQEFSeparateCritic:
@@ -948,7 +1040,7 @@ class TestQEFSeparateCritic:
             readout_num_layers=1,
             ppo_buffer_size=8,
             hybrid_input=True,
-            feature_gating=True,
+            feature_gating="static",
             separate_critic=True,
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)

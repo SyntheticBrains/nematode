@@ -175,12 +175,15 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
             "actionable signals while still benefiting from quantum correlations."
         ),
     )
-    feature_gating: bool = Field(
-        default=False,
+    feature_gating: Literal["none", "static", "context"] = Field(
+        default="none",
         description=(
-            "Enable learnable feature gating on quantum features. Applies "
-            "sigmoid(w) * quantum_features to let the network suppress noisy "
-            "dimensions and amplify useful ones."
+            "Feature gating mode for quantum features: "
+            "'none' = no gating, "
+            "'static' = sigmoid(w) * quantum_features (learned per-dimension weights), "
+            "'context' = sigmoid(MLP(raw_features)) * quantum_features "
+            "(input-dependent gating that selects quantum features based on current "
+            "sensory state)."
         ),
     )
     separate_critic: bool = Field(
@@ -259,7 +262,7 @@ class QEFBrain(ReservoirHybridBase):
         self.gate_mode = config.gate_mode
         self.feature_mode = config.feature_mode
         self.hybrid_input = config.hybrid_input
-        self.feature_gating = config.feature_gating
+        self.feature_gating = config.feature_gating  # "none", "static", or "context"
         self.separate_critic = config.separate_critic
 
         # Pre-compute input_dim for hybrid feature dim calculation
@@ -326,15 +329,30 @@ class QEFBrain(ReservoirHybridBase):
             f"features={self.feature_mode}, "
             f"circuit_depth={self.circuit_depth}, "
             f"feature_dim={self.feature_dim}, input_dim={self.input_dim}"
-            f"{', hybrid_input=True' if self.hybrid_input else ''}",
+            f"{', hybrid_input=True' if self.hybrid_input else ''}"
+            f"{f', gating={self.feature_gating}' if self.feature_gating != 'none' else ''}",
         )
 
     def _init_gating_and_critic(self, config: QEFBrainConfig) -> None:
         """Initialize optional feature gating and separate critic components."""
-        if self.feature_gating:
-            quantum_dim = _compute_feature_dim(self.num_qubits)
+        quantum_dim = _compute_feature_dim(self.num_qubits)
+
+        if self.feature_gating == "static":
             self.gate_weights = nn.Parameter(torch.zeros(quantum_dim, device=self.device))
             self.optimizer.add_param_group({"params": [self.gate_weights]})
+        elif self.feature_gating == "context":
+            # Context-dependent gating: raw_features → MLP → sigmoid → gate
+            # Small MLP: raw_dim → 16 → quantum_dim
+            self.gate_network = nn.Sequential(
+                nn.Linear(self._raw_input_dim, 16),
+                nn.ReLU(),
+                nn.Linear(16, quantum_dim),
+            ).to(self.device)
+            # Initialize final layer bias to 0 (sigmoid(0)=0.5, neutral gate)
+            final_layer: nn.Linear = self.gate_network[-1]  # type: ignore[assignment]
+            nn.init.zeros_(final_layer.bias)
+            nn.init.xavier_normal_(final_layer.weight, gain=0.1)
+            self.optimizer.add_param_group({"params": self.gate_network.parameters()})
 
         if self.separate_critic:
             self.critic = build_readout_network(
@@ -345,12 +363,17 @@ class QEFBrain(ReservoirHybridBase):
                 num_layers=config.readout_num_layers,
             ).to(self.device)
             self.critic_norm = nn.LayerNorm(self._raw_input_dim).to(self.device)
+            gating_params: list[torch.nn.Parameter] = []
+            if self.feature_gating == "static":
+                gating_params = [self.gate_weights]
+            elif self.feature_gating == "context":
+                gating_params = list(self.gate_network.parameters())
             self.optimizer = torch.optim.Adam(
                 list(self.actor.parameters())
                 + list(self.critic.parameters())
                 + list(self.feature_norm.parameters())
                 + list(self.critic_norm.parameters())
-                + ([self.gate_weights] if self.feature_gating else []),
+                + gating_params,
                 lr=config.actor_lr,
             )
 
@@ -383,19 +406,33 @@ class QEFBrain(ReservoirHybridBase):
         return quantum_features
 
     def _apply_feature_gating(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply learnable sigmoid gating to quantum feature dimensions.
+        """Apply learnable gating to quantum feature dimensions.
 
-        For hybrid input, only gates the quantum portion (indices [raw_dim:]).
-        Raw features pass through unchanged.
+        Modes:
+        - 'static': sigmoid(w) * quantum_features (per-dimension learned weights)
+        - 'context': sigmoid(MLP(raw_features)) * quantum_features (input-dependent)
+
+        For hybrid input, only gates the quantum portion. Raw features pass through.
         """
-        if not self.feature_gating:
+        if self.feature_gating == "none":
             return x
-        gate = torch.sigmoid(self.gate_weights)
+
         if self.hybrid_input:
             raw = x[..., : self._raw_input_dim]
             quantum = x[..., self._raw_input_dim :]
+            gate = self._compute_gate(raw)
             return torch.cat([raw, quantum * gate], dim=-1)
+
+        # Non-hybrid: gate all features
+        gate = self._compute_gate(x)
         return x * gate
+
+    def _compute_gate(self, gate_input: torch.Tensor) -> torch.Tensor:
+        """Compute gate values from static weights or context network."""
+        if self.feature_gating == "static":
+            return torch.sigmoid(self.gate_weights)
+        # context mode
+        return torch.sigmoid(self.gate_network(gate_input))
 
     def _get_critic_value(self, reservoir_features: torch.Tensor) -> torch.Tensor:
         """Compute critic value, using raw features if separate_critic is enabled."""
@@ -409,9 +446,24 @@ class QEFBrain(ReservoirHybridBase):
             return self.critic(raw_x)
         return self.critic(reservoir_features)
 
+    def _collect_trainable_params(self) -> list[torch.nn.Parameter]:
+        """Collect all trainable parameters for gradient clipping in PPO update."""
+        params = (
+            list(self.actor.parameters())
+            + list(self.critic.parameters())
+            + list(self.feature_norm.parameters())
+        )
+        if self.feature_gating == "static":
+            params.append(self.gate_weights)
+        elif self.feature_gating == "context":
+            params.extend(self.gate_network.parameters())
+        if self.separate_critic:
+            params.extend(self.critic_norm.parameters())
+        return params
+
     def _needs_custom_forward(self) -> bool:
         """Check if custom forward pass is needed for gating or separate critic."""
-        return self.feature_gating or self.separate_critic
+        return self.feature_gating != "none" or self.separate_critic
 
     def run_brain(
         self,
@@ -526,13 +578,7 @@ class QEFBrain(ReservoirHybridBase):
         total_entropy_loss = 0.0
         num_updates = 0
 
-        all_params = (
-            list(self.actor.parameters())
-            + list(self.critic.parameters())
-            + list(self.feature_norm.parameters())
-            + ([self.gate_weights] if self.feature_gating else [])
-            + (list(self.critic_norm.parameters()) if self.separate_critic else [])
-        )
+        all_params = self._collect_trainable_params()
 
         for _ in range(self.ppo_epochs):
             for batch in self.buffer.get_minibatches(self.ppo_minibatches, returns, advantages):
