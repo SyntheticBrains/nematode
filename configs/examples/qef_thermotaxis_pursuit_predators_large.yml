@@ -30,6 +30,7 @@ brain:
     gate_mode: cry_crz
     feature_mode: xyz
     hybrid_input: true
+    feature_gating: true
 
     # Compact readout — 64x2 outperforms 128x3 on thermotaxis (+5.0pp L100)
     readout_hidden_dim: 64
