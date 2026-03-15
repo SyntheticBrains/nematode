@@ -776,6 +776,192 @@ class TestQEFHybridInput:
         assert brain_copy.feature_dim == brain.feature_dim
 
 
+class TestQEFFeatureGating:
+    """Test cases for learnable feature gating."""
+
+    def test_config_default_false(self):
+        """feature_gating should default to False."""
+        config = QEFBrainConfig()
+        assert config.feature_gating is False
+
+    def test_gating_changes_feature_dim(self):
+        """Feature gating should not change feature dimension."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            feature_gating=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.feature_dim == _compute_feature_dim(4)
+
+    def test_gating_with_hybrid(self):
+        """Feature gating + hybrid should work together."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            feature_gating=True,
+            hybrid_input=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.feature_dim == brain.input_dim + _compute_feature_dim(4)
+        assert hasattr(brain, "gate_weights")
+
+    def test_gating_run_brain(self):
+        """run_brain should work with feature gating."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            feature_gating=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+        actions = brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(actions) == 1
+
+    def test_gating_ppo_update(self):
+        """PPO update should work and update gate weights with feature gating."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            ppo_minibatches=2,
+            ppo_epochs=2,
+            feature_gating=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        initial_gates = brain.gate_weights.clone()
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_direction=Direction.UP,
+        )
+        for step in range(config.ppo_buffer_size):
+            brain.run_brain(params, top_only=True, top_randomize=False)
+            brain.learn(params, reward=0.5, episode_done=(step == config.ppo_buffer_size - 1))
+
+        assert not torch.allclose(brain.gate_weights, initial_gates), (
+            "Gate weights should change during PPO update"
+        )
+
+
+class TestQEFSeparateCritic:
+    """Test cases for separate critic input."""
+
+    def test_config_default_false(self):
+        """separate_critic should default to False."""
+        config = QEFBrainConfig()
+        assert config.separate_critic is False
+
+    def test_requires_hybrid_input(self):
+        """separate_critic should require hybrid_input."""
+        with pytest.raises(ValueError, match="separate_critic requires hybrid_input"):
+            QEFBrainConfig(separate_critic=True, hybrid_input=False)
+
+    def test_separate_critic_network_dim(self):
+        """Separate critic should have raw input dim, not feature dim."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            hybrid_input=True,
+            separate_critic=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # Critic input should be raw_input_dim (2 for legacy)
+        x_raw = torch.randn(brain._raw_input_dim)
+        value = brain.critic(x_raw)
+        assert value.shape == (1,)
+
+    def test_separate_critic_run_brain(self):
+        """run_brain should work with separate critic."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            hybrid_input=True,
+            separate_critic=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+        actions = brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(actions) == 1
+
+    def test_separate_critic_ppo_update(self):
+        """PPO update should work with separate critic."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            ppo_minibatches=2,
+            ppo_epochs=2,
+            hybrid_input=True,
+            separate_critic=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        initial_critic_weights = {
+            name: param.clone() for name, param in brain.critic.named_parameters()
+        }
+
+        params = BrainParams(
+            gradient_strength=0.5,
+            gradient_direction=1.0,
+            agent_direction=Direction.UP,
+        )
+        for step in range(config.ppo_buffer_size):
+            brain.run_brain(params, top_only=True, top_randomize=False)
+            brain.learn(params, reward=0.5, episode_done=(step == config.ppo_buffer_size - 1))
+
+        weights_changed = any(
+            not torch.allclose(param, initial_critic_weights[name])
+            for name, param in brain.critic.named_parameters()
+        )
+        assert weights_changed, "Separate critic weights should change during PPO update"
+
+    def test_all_features_combined(self):
+        """Hybrid + gating + separate critic should all work together."""
+        config = QEFBrainConfig(
+            num_qubits=3,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            ppo_buffer_size=8,
+            hybrid_input=True,
+            feature_gating=True,
+            separate_critic=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+        actions = brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(actions) == 1
+
+
 class TestQEFBrainCopy:
     """Test cases for brain copying."""
 
