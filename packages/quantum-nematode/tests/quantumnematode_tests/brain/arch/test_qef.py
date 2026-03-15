@@ -857,6 +857,123 @@ class TestQEFFeatureGating:
         )
 
 
+class TestQEFZZZCorrelations:
+    """Test cases for ZZZ three-body correlations."""
+
+    def test_config_default_false(self):
+        """include_zzz should default to False."""
+        config = QEFBrainConfig()
+        assert config.include_zzz is False
+
+    def test_feature_dim_without_zzz(self):
+        """Without ZZZ, feature dim should be 3N + N(N-1)/2."""
+        assert _compute_feature_dim(8) == 52
+        assert _compute_feature_dim(4) == 18
+
+    def test_feature_dim_with_zzz(self):
+        """With ZZZ, feature dim should add N(N-1)(N-2)/6."""
+        assert _compute_feature_dim(8, include_zzz=True) == 52 + 56  # 108
+        assert _compute_feature_dim(4, include_zzz=True) == 18 + 4  # 22
+
+    def test_zzz_output_shape(self):
+        """ZZZ should produce the correct feature vector length."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            include_zzz=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+        assert result.shape == (22,)  # 18 base + 4 ZZZ
+
+    def test_zzz_differs_from_no_zzz(self):
+        """ZZZ features should extend the base feature vector."""
+        config_no = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+        )
+        config_zzz = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            include_zzz=True,
+        )
+        brain_no = QEFBrain(config=config_no, num_actions=4, device=DeviceType.CPU)
+        brain_zzz = QEFBrain(config=config_zzz, num_actions=4, device=DeviceType.CPU)
+
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        result_no = brain_no._get_reservoir_features(features)
+        result_zzz = brain_zzz._get_reservoir_features(features)
+
+        # Base features should be identical
+        np.testing.assert_array_equal(result_zzz[:18], result_no)
+        # ZZZ portion should be non-trivial
+        assert len(result_zzz) == len(result_no) + 4
+
+    def test_zzz_correlations_range(self):
+        """ZZZ correlations should be in [-1, 1]."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            include_zzz=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+        zzz_part = result[18:]  # Last 4 features are ZZZ
+        assert np.all(zzz_part >= -1.0 - 1e-6)
+        assert np.all(zzz_part <= 1.0 + 1e-6)
+
+    def test_zzz_with_hybrid_input(self):
+        """ZZZ + hybrid should give raw_dim + quantum_dim(with ZZZ) features."""
+        config = QEFBrainConfig(
+            num_qubits=8,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            include_zzz=True,
+            hybrid_input=True,
+            sensory_modules=[
+                ModuleName.FOOD_CHEMOTAXIS,
+                ModuleName.NOCICEPTION,
+                ModuleName.THERMOTAXIS,
+            ],
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.feature_dim == 7 + 108  # 115
+
+    def test_zzz_with_gating(self):
+        """ZZZ + gating should gate all quantum features including ZZZ."""
+        config = QEFBrainConfig(
+            num_qubits=4,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            include_zzz=True,
+            hybrid_input=True,
+            feature_gating="static",
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # Gate weights should cover all quantum features (18 base + 4 ZZZ = 22)
+        assert brain.gate_weights.shape == (22,)
+
+    def test_zzz_8_qubits_count(self):
+        """8 qubits should produce C(8,3) = 56 ZZZ correlations."""
+        config = QEFBrainConfig(
+            num_qubits=8,
+            circuit_depth=1,
+            readout_hidden_dim=8,
+            readout_num_layers=1,
+            include_zzz=True,
+        )
+        brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        features = np.array([0.5, 0.3], dtype=np.float32)
+        result = brain._get_reservoir_features(features)
+        assert result.shape == (108,)  # 52 base + 56 ZZZ
+
+
 class TestQEFContextGating:
     """Test cases for context-dependent feature gating."""
 
