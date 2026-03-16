@@ -9,14 +9,15 @@
 #
 # 8-qubit circuit with ring entanglement topology (8 CZ pairs).
 # Ring connects (0,1)(1,2)(2,3)(3,4)(4,5)(5,6)(6,7)(7,0).
-# Compact readout (64x2) with hybrid input (raw 7 + quantum 52 = 59-dim).
+# Compact readout (64x2) with hybrid input (raw 7 + quantum 31 = 38-dim).
+# Uses cross-modal ZZ only (no intra-modal) and no cos/sin features.
 #
 # Module feature breakdown:
 # - food_chemotaxis: 2 features (strength, angle)
 # - nociception: 2 features (strength, angle)
 # - thermotaxis: 3 features (strength, angle, temp_deviation)
 # Total: 7 features on 8 qubits (1 qubit in H-superposition)
-# Feature dim: 7 (raw) + 3×8 + C(8,2) = 7 + 24 + 28 = 59
+# Feature dim: 7 (raw) + 8 Z + 23 cross-modal ZZ = 38
 
 max_steps: 2000
 brain:
@@ -31,7 +32,9 @@ brain:
     gate_mode: cry_crz
     feature_mode: xyz
     hybrid_input: true
-    feature_gating: mixed
+    zz_mode: cross_modal
+    include_cossin: false
+    feature_gating: static
 
     # Compact readout — 64x2 outperforms 128x3 on thermotaxis (+5.0pp L100)
     readout_hidden_dim: 64
