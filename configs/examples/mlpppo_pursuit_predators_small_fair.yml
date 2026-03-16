@@ -26,6 +26,17 @@ brain:
     max_grad_norm: 0.5
     normalize_advantages: true
 
+    # Sensory modules (matched to QEF — 2 modules)
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
+    # LR schedule (matched to QEF small PP decay window)
+    lr_warmup_episodes: 30
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
+
 body_length: 2
 
 reward:
