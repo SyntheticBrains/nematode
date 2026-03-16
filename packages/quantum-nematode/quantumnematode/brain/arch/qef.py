@@ -93,16 +93,64 @@ MODALITY_PAIRED_CZ: list[tuple[int, int]] = [
 ]
 
 
-def _compute_feature_dim(num_qubits: int, *, include_zzz: bool = False) -> int:
-    """Compute QEF feature dimension.
+def _get_cross_modal_pairs(num_qubits: int, input_dim: int) -> list[tuple[int, int]]:
+    """Get cross-modal ZZ pairs based on qubit-to-modality mapping.
 
-    Base: 3N (Z + cos_z + sin_z) + N(N-1)/2 (ZZ correlations).
-    With ZZZ: adds N(N-1)(N-2)/6 three-body correlations.
+    Assumes uniform encoding cycles features across qubits. Modalities are
+    determined by the sensory module structure (2 features per module for
+    food/nociception, 3 for thermotaxis).
     """
-    base = 3 * num_qubits + num_qubits * (num_qubits - 1) // 2
+    # Map each qubit to its modality index based on feature cycling
+    # Default: food(0,1), noci(2,3), thermo(4,5,6), wrap(7->food again)
+    module_sizes = [2, 2, 3] if input_dim >= 7 else [2, 2]  # noqa: PLR2004
+    modality: list[int] = []
+    mod_id = 0
+    size_idx = 0
+    remaining = module_sizes[0] if module_sizes else 1
+
+    for _ in range(num_qubits):
+        modality.append(mod_id)
+        remaining -= 1
+        if remaining == 0:
+            mod_id += 1
+            size_idx += 1
+            remaining = module_sizes[size_idx] if size_idx < len(module_sizes) else 999
+
+    return [
+        (i, j)
+        for i in range(num_qubits)
+        for j in range(i + 1, num_qubits)
+        if modality[i] != modality[j]
+    ]
+
+
+def _compute_feature_dim(
+    num_qubits: int,
+    *,
+    include_zzz: bool = False,
+    zz_mode: str = "all",
+    include_cossin: bool = True,
+    input_dim: int = 2,
+) -> int:
+    """Compute QEF feature dimension with configurable feature subsets."""
+    # Z expectations always included
+    dim = num_qubits
+
+    # ZZ correlations
+    if zz_mode == "cross_modal":
+        dim += len(_get_cross_modal_pairs(num_qubits, input_dim))
+    else:
+        dim += num_qubits * (num_qubits - 1) // 2
+
+    # cos/sin or X/Y features
+    if include_cossin:
+        dim += 2 * num_qubits
+
+    # ZZZ three-body
     if include_zzz:
-        base += num_qubits * (num_qubits - 1) * (num_qubits - 2) // 6
-    return base
+        dim += num_qubits * (num_qubits - 1) * (num_qubits - 2) // 6
+
+    return dim
 
 
 # =============================================================================
@@ -182,6 +230,25 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
             "actionable signals while still benefiting from quantum correlations."
         ),
     )
+    hybrid_polynomial: bool = Field(
+        default=False,
+        description=(
+            "Add classical pairwise polynomial features (x_i * x_j) to the hybrid "
+            "input alongside raw + quantum features. Requires hybrid_input=True."
+        ),
+    )
+    zz_mode: Literal["all", "cross_modal"] = Field(
+        default="all",
+        description=(
+            "ZZ correlation mode: 'all' computes all N(N-1)/2 pairwise correlations, "
+            "'cross_modal' computes only cross-modal pairs (food-noci, food-thermo, "
+            "noci-thermo) to reduce noise from intra-modal correlations."
+        ),
+    )
+    include_cossin: bool = Field(
+        default=True,
+        description="Include cos/sin(Z) features. Disable to reduce feature dimensionality.",
+    )
     include_zzz: bool = Field(
         default=False,
         description=(
@@ -230,10 +297,13 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
         return v
 
     @model_validator(mode="after")
-    def validate_separate_critic_requires_hybrid(self) -> QEFBrainConfig:
-        """separate_critic requires hybrid_input so raw features are in the state buffer."""
+    def validate_hybrid_dependencies(self) -> QEFBrainConfig:
+        """Validate that features requiring hybrid_input have it enabled."""
         if self.separate_critic and not self.hybrid_input:
             msg = "separate_critic requires hybrid_input=True"
+            raise ValueError(msg)
+        if self.hybrid_polynomial and not self.hybrid_input:
+            msg = "hybrid_polynomial requires hybrid_input=True"
             raise ValueError(msg)
         return self
 
@@ -278,6 +348,9 @@ class QEFBrain(ReservoirHybridBase):
         self.gate_mode = config.gate_mode
         self.feature_mode = config.feature_mode
         self.hybrid_input = config.hybrid_input
+        self.hybrid_polynomial = config.hybrid_polynomial
+        self.zz_mode = config.zz_mode
+        self.include_cossin = config.include_cossin
         self.include_zzz = config.include_zzz
         self.feature_gating = config.feature_gating  # "none", "static", or "context"
         self.separate_critic = config.separate_critic
@@ -352,7 +425,7 @@ class QEFBrain(ReservoirHybridBase):
 
     def _init_gating_and_critic(self, config: QEFBrainConfig) -> None:
         """Initialize optional feature gating and separate critic components."""
-        quantum_dim = _compute_feature_dim(self.num_qubits, include_zzz=self.include_zzz)
+        quantum_dim = self._quantum_feature_dim()
 
         if self.feature_gating in ("static", "mixed"):
             self.gate_weights = nn.Parameter(torch.zeros(quantum_dim, device=self.device))
@@ -398,11 +471,25 @@ class QEFBrain(ReservoirHybridBase):
     # Abstract method implementations
     # =========================================================================
 
+    def _quantum_feature_dim(self) -> int:
+        """Compute quantum-only feature dimension."""
+        return _compute_feature_dim(
+            self.num_qubits,
+            include_zzz=self.include_zzz,
+            zz_mode=self.zz_mode,
+            include_cossin=self.include_cossin,
+            input_dim=self._raw_input_dim,
+        )
+
     def _compute_feature_dim(self) -> int:
-        """Compute QEF feature dimension, optionally including ZZZ three-body correlations."""
-        quantum_dim = _compute_feature_dim(self.num_qubits, include_zzz=self.include_zzz)
+        """Compute QEF feature dimension, optionally including ZZZ and polynomial features."""
+        quantum_dim = self._quantum_feature_dim()
         if self.hybrid_input:
-            return self._raw_input_dim + quantum_dim
+            dim = self._raw_input_dim + quantum_dim
+            if self.hybrid_polynomial:
+                n = self._raw_input_dim
+                dim += n * (n - 1) // 2  # pairwise products
+            return dim
         return quantum_dim
 
     def _get_reservoir_features(self, sensory_features: np.ndarray) -> np.ndarray:
@@ -419,7 +506,19 @@ class QEFBrain(ReservoirHybridBase):
             self._last_raw_features = sensory_features.copy()
 
         if self.hybrid_input:
-            return np.concatenate([sensory_features, quantum_features])
+            parts = [sensory_features, quantum_features]
+            if self.hybrid_polynomial:
+                n = len(sensory_features)
+                poly = np.array(
+                    [
+                        sensory_features[i] * sensory_features[j]
+                        for i in range(n)
+                        for j in range(i + 1, n)
+                    ],
+                    dtype=np.float32,
+                )
+                parts.append(poly)
+            return np.concatenate(parts)
         return quantum_features
 
     def _apply_feature_gating(self, x: torch.Tensor) -> torch.Tensor:
@@ -436,9 +535,15 @@ class QEFBrain(ReservoirHybridBase):
 
         if self.hybrid_input:
             raw = x[..., : self._raw_input_dim]
-            quantum = x[..., self._raw_input_dim :]
+            quantum_dim = self._quantum_feature_dim()
+            quantum = x[..., self._raw_input_dim : self._raw_input_dim + quantum_dim]
             gate = self._compute_gate(raw)
-            return torch.cat([raw, quantum * gate], dim=-1)
+            parts = [raw, quantum * gate]
+            # Polynomial features (if present) pass through ungated
+            if self.hybrid_polynomial:
+                poly = x[..., self._raw_input_dim + quantum_dim :]
+                parts.append(poly)
+            return torch.cat(parts, dim=-1)
 
         # Non-hybrid: gate all features
         gate = self._compute_gate(x)
@@ -782,7 +887,7 @@ class QEFBrain(ReservoirHybridBase):
     # Feature Extraction
     # =========================================================================
 
-    def _extract_features(self, statevector: np.ndarray) -> np.ndarray:
+    def _extract_features(self, statevector: np.ndarray) -> np.ndarray:  # noqa: C901, PLR0912
         """Extract features from statevector based on configured feature_mode.
 
         Feature modes:
@@ -799,13 +904,14 @@ class QEFBrain(ReservoirHybridBase):
         # Z-expectations: <Z_q> = sum_k (-1)^bit(k,q) |psi_k|^2
         z_expectations = self._signs @ probabilities
 
-        # ZZ-correlations: <Z_i Z_j> for i < j
-        zz_correlations = np.empty(n * (n - 1) // 2)
-        idx = 0
-        for i in range(n):
-            for j in range(i + 1, n):
-                zz_correlations[idx] = (self._signs[i] * self._signs[j]) @ probabilities
-                idx += 1
+        # ZZ-correlations
+        if self.zz_mode == "cross_modal":
+            zz_pairs = _get_cross_modal_pairs(n, self._raw_input_dim)
+        else:
+            zz_pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
+        zz_correlations = np.empty(len(zz_pairs))
+        for idx, (i, j) in enumerate(zz_pairs):
+            zz_correlations[idx] = (self._signs[i] * self._signs[j]) @ probabilities
 
         # ZZZ three-body correlations: <Z_i Z_j Z_k> for i < j < k
         if self.include_zzz:
@@ -840,15 +946,15 @@ class QEFBrain(ReservoirHybridBase):
                     np.imag(np.conj(statevector[high]) * statevector[low]),
                 )
 
-            features = np.concatenate(
-                [x_expectations, y_expectations, z_expectations, zz_correlations, zzz_correlations],
-            )
+            parts = [x_expectations, y_expectations, z_expectations, zz_correlations]
+            if self.include_zzz:
+                parts.append(zzz_correlations)
+            features = np.concatenate(parts)
         else:
-            # cos/sin features from Z expectations
-            cos_z = np.cos(z_expectations)
-            sin_z = np.sin(z_expectations)
-
-            features = np.concatenate(
-                [z_expectations, zz_correlations, cos_z, sin_z, zzz_correlations],
-            )
+            parts = [z_expectations, zz_correlations]
+            if self.include_cossin:
+                parts.extend([np.cos(z_expectations), np.sin(z_expectations)])
+            if self.include_zzz:
+                parts.append(zzz_correlations)
+            features = np.concatenate(parts)
         return features.astype(np.float32)
