@@ -506,11 +506,13 @@ class QEFBrain(ReservoirHybridBase):
 
     def _quantum_feature_dim(self) -> int:
         """Compute quantum-only feature dimension."""
+        # xyz mode always emits X+Y (2N features) regardless of include_cossin
+        cossin = True if self.feature_mode == "xyz" else self.include_cossin
         return _compute_feature_dim(
             self.num_qubits,
             include_zzz=self.include_zzz,
             zz_mode=self.zz_mode,
-            include_cossin=self.include_cossin,
+            include_cossin=cossin,
             input_dim=self._raw_input_dim,
         )
 
@@ -856,14 +858,13 @@ class QEFBrain(ReservoirHybridBase):
         return [(i, (i + 1) % n) for i in range(n)]
 
     def _build_random_topology(self) -> list[tuple[int, int]]:
-        """Build seeded random CZ pairs with same count as modality-paired."""
+        """Build seeded random CZ pairs with same count as filtered modality-paired."""
         rng = np.random.default_rng(self.circuit_seed)
         all_pairs = list(itertools.combinations(range(self.num_qubits), 2))
-        # Same number of CZ pairs as modality_paired (4 for 8 qubits)
-        num_cz = len(MODALITY_PAIRED_CZ)
-        max_pairs = len(all_pairs)
-        num_cz = min(num_cz, max_pairs)
-        chosen_indices = rng.choice(max_pairs, size=num_cz, replace=False)
+        # Match the filtered modality-paired count (not the global constant)
+        filtered_mp = self._build_modality_paired_topology()
+        num_cz = min(len(filtered_mp), len(all_pairs))
+        chosen_indices = rng.choice(len(all_pairs), size=num_cz, replace=False)
         return [all_pairs[i] for i in chosen_indices]
 
     # =========================================================================

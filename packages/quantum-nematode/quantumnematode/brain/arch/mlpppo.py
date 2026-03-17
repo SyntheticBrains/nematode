@@ -132,7 +132,7 @@ class MLPPPOBrainConfig(BrainConfig):
     # - "none": raw sensory features only (default)
     # - "polynomial": raw + all pairwise products (x_i * x_j for i < j)
     # - "polynomial3": raw + pairwise + triple products (degree-3 polynomial)
-    # - "random_projection": raw + fixed random 7→52 projection (matches QEF feature dim)
+    # - "random_projection": raw + fixed random projection (7 raw + 52 projected = 59 total)
     feature_expansion: Literal["none", "polynomial", "polynomial3", "random_projection"] = "none"
     feature_expansion_dim: int = 52  # number of projected features to ADD (total = raw + this)
     feature_expansion_seed: int = 42  # seed for reproducible random projection
