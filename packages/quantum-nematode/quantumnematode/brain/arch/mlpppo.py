@@ -385,14 +385,15 @@ class MLPPPOBrain(ClassicalBrain):
         self._initialize_parameters(parameter_initializer)
 
         # Feature gating: learnable sigmoid gate on expanded features
-        if self._feature_gating and config.feature_expansion != "none":
+        if self._feature_gating:
+            if config.feature_expansion == "none":
+                msg = "feature_gating requires feature_expansion != 'none' (no features to gate)"
+                raise ValueError(msg)
             expansion_dim = self.input_dim - self._raw_input_dim
             self.gate_weights = nn.Parameter(
                 torch.zeros(expansion_dim, device=self.device),
             )
             logger.info(f"Feature gating enabled on {expansion_dim} expanded features")
-        else:
-            self._feature_gating = False
 
         # Single optimizer for both networks (+ gate weights if gating)
         params = list(self.actor.parameters()) + list(self.critic.parameters())

@@ -853,9 +853,20 @@ class QEFBrain(ReservoirHybridBase):
         ]
 
     def _build_ring_topology(self) -> list[tuple[int, int]]:
-        """Build ring CZ topology: (0,1), (1,2), ..., (N-2,N-1), (N-1,0)."""
+        """Build ring CZ topology: (0,1), (1,2), ..., (N-2,N-1), (N-1,0).
+
+        Deduplicates edges for small qubit counts (e.g., n=2 would produce
+        (0,1) and (1,0) which are the same undirected CZ gate).
+        """
         n = self.num_qubits
-        return [(i, (i + 1) % n) for i in range(n)]
+        seen: set[tuple[int, int]] = set()
+        pairs: list[tuple[int, int]] = []
+        for i in range(n):
+            edge = (min(i, (i + 1) % n), max(i, (i + 1) % n))
+            if edge not in seen:
+                seen.add(edge)
+                pairs.append(edge)
+        return pairs
 
     def _build_random_topology(self) -> list[tuple[int, int]]:
         """Build seeded random CZ pairs with same count as filtered modality-paired."""

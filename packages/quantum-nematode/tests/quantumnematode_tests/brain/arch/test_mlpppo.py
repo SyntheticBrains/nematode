@@ -971,16 +971,16 @@ class TestFeatureGating:
         ModuleName.THERMOTAXIS,
     ]
 
-    def test_gating_without_expansion_disabled(self):
-        """Gating with no expansion should silently disable."""
+    def test_gating_without_expansion_raises(self):
+        """Gating with no expansion should raise ValueError."""
         config = MLPPPOBrainConfig(
             feature_gating=True,
             feature_expansion="none",
             actor_hidden_dim=16,
             num_hidden_layers=2,
         )
-        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
-        assert brain._feature_gating is False
+        with pytest.raises(ValueError, match="feature_gating requires feature_expansion"):
+            MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_gating_creates_gate_weights(self):
         """Gating with expansion should create gate_weights parameter."""
