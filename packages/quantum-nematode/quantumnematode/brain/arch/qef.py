@@ -7,29 +7,35 @@ readout. Unlike QRH's random reservoir, QEF uses configurable entanglement topol
 (modality-paired, ring, random) to encode cross-modal sensory interactions.
 
 Key Features:
-- **Uniform RY Encoding**: All qubits receive sensory input via RY(feature * pi) gates,
-  maximizing information available for entanglement-driven correlations.
-- **Configurable Entanglement Topology**: Three CZ-based topologies — modality_paired
-  (default, maps food↔nociception and thermo↔mechano), ring, and seeded random.
-- **CZ-Only Entanglement**: Intentionally uses CZ gates only (no CRY/CRZ controlled
-  rotations as in QRH) to isolate entanglement topology structure as the variable
-  under test.
-- **Z + ZZ + cos/sin Feature Extraction**: Per-qubit Z expectations, pairwise ZZ
-  correlations, and cos/sin nonlinear transforms of Z expectations. cos/sin replaces
-  QRH's X/Y expectations because uniform RY encoding makes X/Y less informative.
-- **Separable Ablation Mode**: `entanglement_enabled=False` skips all CZ gates for
-  controlled A/B experiments isolating entanglement effects.
-- **PPO Actor-Critic Readout**: Inherited from ReservoirHybridBase (identical to QRH).
+- **Configurable Encoding**: Uniform RY (all qubits) or sparse RY/RZ (sensory qubits
+  only) via `encoding_mode`.
+- **Configurable Entanglement**: Three topologies (modality_paired, ring, random) with
+  CZ-only or CRY/CRZ gates via `gate_mode`. Ring topology is the evaluated default.
+- **Hybrid Input**: Optional concatenation of raw sensory features with quantum features
+  (`hybrid_input=True`), giving the readout direct access to actionable signals while
+  benefiting from quantum correlations.
+- **Feature Gating**: Learnable gating on quantum feature dimensions to suppress noise
+  and amplify useful correlations. Four modes: none, static (per-dimension weights),
+  context (input-dependent MLP gate), mixed (average of static + context).
+- **Configurable Feature Extraction**: Z expectations + ZZ correlations (all or
+  cross-modal only) + optional cos/sin or X/Y features + optional ZZZ three-body
+  correlations. Feature subset selection via `zz_mode`, `include_cossin`, `include_zzz`.
+- **Separable Ablation Mode**: `entanglement_enabled=False` skips all entanglement gates
+  for controlled A/B experiments.
+- **PPO Actor-Critic Readout**: Inherited from ReservoirHybridBase, with optional
+  overrides for feature gating and separate critic routing.
 
 Architecture:
-    Sensory Input -> Uniform RY Encoding on ALL Qubits
-    -> [RY + CZ Topology]^depth -> Statevector
-    -> Z + ZZ + cos/sin Features -> PPO Readout
+    Sensory Input -> Encoding on Qubits
+    -> [Encoding + Entanglement Topology]^depth -> Statevector
+    -> Feature Extraction (Z, ZZ, cos/sin, ZZZ)
+    -> [raw features | quantum features | poly features] (hybrid)
+    -> Feature Gating (optional)
+    -> PPO Readout (actor + critic)
 
-Feature dimension: 3N + N(N-1)/2 = 52 for 8 qubits
-  - N Z expectations
-  - N(N-1)/2 ZZ correlations
-  - 2N cos/sin features (cos(Z_i), sin(Z_i))
+Default feature dimension (8 qubits, all ZZ, with cos/sin): 3N + N(N-1)/2 = 52
+Hybrid feature dimension: raw_input_dim + quantum_dim (e.g., 7 + 52 = 59)
+Curated feature dimension (cross-modal ZZ, no cos/sin): N + cross_modal_pairs (e.g., 8 + 23 = 31)
 """
 
 from __future__ import annotations
