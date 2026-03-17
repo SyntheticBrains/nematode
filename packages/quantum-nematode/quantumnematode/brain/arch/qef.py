@@ -566,6 +566,9 @@ class QEFBrain(ReservoirHybridBase):
             return torch.cat(parts, dim=-1)
 
         # Non-hybrid: gate all features
+        # NOTE: context/mixed gating with hybrid_input=False is unsupported —
+        # the gate network expects _raw_input_dim but receives quantum features.
+        # No current config uses this path.
         gate = self._compute_gate(x)
         return x * gate
 
@@ -610,6 +613,10 @@ class QEFBrain(ReservoirHybridBase):
     def _needs_custom_forward(self) -> bool:
         """Check if custom forward pass is needed for gating or separate critic."""
         return self.feature_gating != "none" or self.separate_critic
+
+    # NOTE: run_brain and _perform_ppo_update are overridden with significant
+    # duplication from the base class. See GitHub issue #76 for planned refactoring
+    # to use hook methods instead of full overrides.
 
     def run_brain(
         self,
@@ -798,7 +805,13 @@ class QEFBrain(ReservoirHybridBase):
         self,
         config: ReservoirHybridBaseConfig,
     ) -> QEFBrain:
-        """Construct a fresh QEFBrain for the copy() method."""
+        """Construct a fresh QEFBrain for the copy() method.
+
+        NOTE: The base class copy() deep-copies actor, critic, feature_norm, and
+        optimizer, but does not copy gate_weights, gate_network, or critic_norm
+        state. These will be freshly initialized in the copy. This is acceptable
+        since copy() is only used for population-based methods which QEF doesn't use.
+        """
         return QEFBrain(
             config=config,  # type: ignore[arg-type]
             num_actions=self.num_actions,
