@@ -311,6 +311,12 @@ class QEFBrainConfig(ReservoirHybridBaseConfig):
         if self.hybrid_polynomial and not self.hybrid_input:
             msg = "hybrid_polynomial requires hybrid_input=True"
             raise ValueError(msg)
+        if self.feature_gating in ("context", "mixed") and not self.hybrid_input:
+            msg = (
+                f"feature_gating='{self.feature_gating}' requires hybrid_input=True "
+                "(the gate network expects raw sensory features as input)"
+            )
+            raise ValueError(msg)
         return self
 
 
@@ -571,10 +577,8 @@ class QEFBrain(ReservoirHybridBase):
                 parts.append(poly)
             return torch.cat(parts, dim=-1)
 
-        # Non-hybrid: gate all features
-        # NOTE: context/mixed gating with hybrid_input=False is unsupported —
-        # the gate network expects _raw_input_dim but receives quantum features.
-        # No current config uses this path.
+        # Non-hybrid: gate all features (static gating only — context/mixed
+        # require hybrid_input, enforced by config validation)
         gate = self._compute_gate(x)
         return x * gate
 

@@ -134,7 +134,7 @@ class MLPPPOBrainConfig(BrainConfig):
     # - "polynomial3": raw + pairwise + triple products (degree-3 polynomial)
     # - "random_projection": raw + fixed random 7→52 projection (matches QEF feature dim)
     feature_expansion: Literal["none", "polynomial", "polynomial3", "random_projection"] = "none"
-    feature_expansion_dim: int = 52  # target expansion dim for random_projection
+    feature_expansion_dim: int = 52  # number of projected features to ADD (total = raw + this)
     feature_expansion_seed: int = 42  # seed for reproducible random projection
     feature_gating: bool = False  # learnable sigmoid gate on expanded features
 
@@ -770,10 +770,10 @@ class MLPPPOBrain(ClassicalBrain):
                 # Optimize
                 self.optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(
-                    list(self.actor.parameters()) + list(self.critic.parameters()),
-                    self.max_grad_norm,
-                )
+                all_params = list(self.actor.parameters()) + list(self.critic.parameters())
+                if self._feature_gating:
+                    all_params.append(self.gate_weights)
+                nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
                 self.optimizer.step()
 
                 total_policy_loss += policy_loss.item()

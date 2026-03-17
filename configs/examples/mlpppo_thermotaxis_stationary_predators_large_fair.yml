@@ -4,8 +4,8 @@
 # Differences from mlpppo_thermotaxis_stationary_predators_large.yml:
 # - actor/critic: 64x2 (was 256x4) — matches QEF readout capacity
 # - sensory_modules: 3 modules (was 4) — no mechanosensation, matches QEF
-# - rollout_buffer_size: 1024 (was 1024) — matches QEF
-# - num_minibatches: 4 (was 4) — matches QEF
+# - rollout_buffer_size: 1024 — matches QEF
+# - num_minibatches: 4 — matches QEF
 # - entropy_coef: 0.015 (was 0.02) — matches QEF
 # - lr_decay_episodes: 1200 (was 300) — matches QEF stationary decay window
 # - penalty_predator_proximity: 0.4 (was 0.3) — matches QEF

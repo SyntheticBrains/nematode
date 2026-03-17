@@ -154,7 +154,7 @@ class TestQEFFeatureExtraction:
 
         # Extract segments
         z_part = result[:n]
-        _ = result[n : n + num_zz]  # zz_part — validates segment exists
+        _zz_part = result[n : n + num_zz]  # zz_part — validates segment exists
         cos_part = result[n + num_zz : n + num_zz + n]
         sin_part = result[n + num_zz + n :]
 
@@ -1078,6 +1078,13 @@ class TestQEFSeparateCritic:
         """separate_critic should require hybrid_input."""
         with pytest.raises(ValueError, match="separate_critic requires hybrid_input"):
             QEFBrainConfig(separate_critic=True, hybrid_input=False)
+
+    def test_context_gating_requires_hybrid_input(self):
+        """Context and mixed gating should require hybrid_input."""
+        with pytest.raises(ValueError, match="feature_gating='context' requires hybrid_input"):
+            QEFBrainConfig(feature_gating="context", hybrid_input=False)
+        with pytest.raises(ValueError, match="feature_gating='mixed' requires hybrid_input"):
+            QEFBrainConfig(feature_gating="mixed", hybrid_input=False)
 
     def test_separate_critic_network_dim(self):
         """Separate critic should have raw input dim, not feature dim."""
