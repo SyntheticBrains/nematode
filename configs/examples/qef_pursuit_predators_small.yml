@@ -1,18 +1,38 @@
 # Dynamic Foraging with Pursuit Predators - Small Configuration
-# Uses QRH (Quantum Reservoir Hybrid) brain architecture
+# Uses QEF (Quantum Entangled Features) brain architecture
 # Multi-objective learning: find food while avoiding predators
-# Uses unified sensory modules for multi-sensory input
+#
+# 8-qubit circuit with ring entanglement topology (8 CZ pairs).
+# Ring connects (0,1)(1,2)(2,3)(3,4)(4,5)(5,6)(6,7)(7,0).
+# Ring outperforms modality_paired (+11.7pp overall, 2x faster convergence)
+# on pursuit predators.
+#
+# Module feature breakdown:
+# - food_chemotaxis: 2 features (strength, angle)
+# - nociception: 2 features (strength, angle)
+# Total: 4 features on 8 qubits (4 qubits in H-superposition)
+# Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
+#
+# LR decay + entropy annealing stabilize post-convergence behavior.
+# Without decay, seed-dependent catastrophic forgetting was observed.
+# With decay, all seeds converge to 96-97% late-100.
 
 max_steps: 500
 brain:
-  name: qrh
+  name: qef
   config:
-    # Reservoir parameters
-    num_reservoir_qubits: 8
-    reservoir_depth: 3
-    reservoir_seed: 42
+    # Circuit parameters
+    num_qubits: 8
+    circuit_depth: 2
+    circuit_seed: 42
+    entanglement_topology: ring
+    entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
+    hybrid_input: true
+    feature_gating: context
 
-    # Readout architecture (actor + critic)
+    # Compact readout with hybrid input (raw 4 + quantum 52 = 56-dim)
     readout_hidden_dim: 64
     readout_num_layers: 2
 
@@ -22,7 +42,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.98
     ppo_clip_epsilon: 0.2
-    ppo_epochs: 6
+    ppo_epochs: 10
     ppo_minibatches: 2
     ppo_buffer_size: 256
     entropy_coeff: 0.02
@@ -33,16 +53,18 @@ brain:
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
 
-    # Topology
-    use_random_topology: true
+    # LR decay (after warmup, decay over 300 episodes)
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
+
+    # Entropy annealing (reduce exploration as policy matures)
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 300
 
     # Unified sensory modules for multi-objective tasks
     sensory_modules:
       - food_chemotaxis
       - nociception
-
-    # Sensory qubits (4 features = 4 qubits for food/predator signal separation)
-    num_sensory_qubits: 4
 
 body_length: 2
 

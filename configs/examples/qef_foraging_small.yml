@@ -1,0 +1,74 @@
+# Dynamic Foraging Environment - Small Configuration
+# Uses QEF (Quantum Entangled Features) brain architecture
+# Ring topology + CRY/CRZ gates + X/Y/Z+ZZ features + PPO readout
+#
+# This is the GO configuration from MI decision gate analysis (Run 7):
+# Mean MI = 0.3008, beating QRH random (0.2387) by 26% (p=0.001).
+#
+# 8-qubit circuit with ring entanglement topology (8 CRY/CRZ pairs).
+# Default sensory input (food_chemotaxis only): 2 features on 8 qubits.
+# Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
+
+max_steps: 500
+brain:
+  name: qef
+  config:
+    # Circuit parameters
+    num_qubits: 8
+    circuit_depth: 2
+    circuit_seed: 42
+    entanglement_topology: ring
+    entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
+
+    # Readout architecture (actor + critic)
+    readout_hidden_dim: 128
+    readout_num_layers: 3
+
+    # PPO hyperparameters (tuned for 52-dim quantum features)
+    actor_lr: 0.0005
+    critic_lr: 0.0005
+    gamma: 0.99
+    gae_lambda: 0.95
+    ppo_clip_epsilon: 0.2
+    ppo_epochs: 10
+    ppo_minibatches: 2
+    ppo_buffer_size: 256
+    entropy_coeff: 0.02
+    value_loss_coef: 0.5
+    max_grad_norm: 0.5
+
+    # LR warmup (ramp from 10% to full LR over first 30 episodes)
+    lr_warmup_episodes: 30
+    lr_warmup_start: 0.00005
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0

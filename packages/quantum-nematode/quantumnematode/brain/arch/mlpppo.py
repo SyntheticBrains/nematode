@@ -30,6 +30,7 @@ References
 """
 
 from collections.abc import Iterator
+from typing import Literal
 
 import numpy as np
 import torch
@@ -126,6 +127,16 @@ class MLPPPOBrainConfig(BrainConfig):
     lr_warmup_start: float | None = None  # None = 0.1 * learning_rate
     lr_decay_episodes: int | None = None  # None = no decay after warmup
     lr_decay_end: float | None = None  # None = 0.1 * learning_rate
+
+    # Feature expansion for ablation experiments
+    # - "none": raw sensory features only (default)
+    # - "polynomial": raw + all pairwise products (x_i * x_j for i < j)
+    # - "polynomial3": raw + pairwise + triple products (degree-3 polynomial)
+    # - "random_projection": raw + fixed random projection (7 raw + 52 projected = 59 total)
+    feature_expansion: Literal["none", "polynomial", "polynomial3", "random_projection"] = "none"
+    feature_expansion_dim: int = 52  # number of projected features to ADD (total = raw + this)
+    feature_expansion_seed: int = 42  # seed for reproducible random projection
+    feature_gating: bool = False  # learnable sigmoid gate on expanded features
 
 
 class RolloutBuffer:
@@ -310,6 +321,12 @@ class MLPPPOBrain(ClassicalBrain):
             self.input_dim = 2
             logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
 
+        # Feature expansion for ablation experiments
+        self._raw_input_dim = self.input_dim
+        self.feature_expansion = config.feature_expansion
+        self._feature_gating = config.feature_gating
+        self._init_feature_expansion(config)
+
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
         self.num_actions = num_actions
@@ -367,11 +384,22 @@ class MLPPPOBrain(ClassicalBrain):
         # Initialize parameters
         self._initialize_parameters(parameter_initializer)
 
-        # Single optimizer for both networks
-        self.optimizer = optim.Adam(
-            list(self.actor.parameters()) + list(self.critic.parameters()),
-            lr=config.learning_rate,
-        )
+        # Feature gating: learnable sigmoid gate on expanded features
+        if self._feature_gating:
+            if config.feature_expansion == "none":
+                msg = "feature_gating requires feature_expansion != 'none' (no features to gate)"
+                raise ValueError(msg)
+            expansion_dim = self.input_dim - self._raw_input_dim
+            self.gate_weights = nn.Parameter(
+                torch.zeros(expansion_dim, device=self.device),
+            )
+            logger.info(f"Feature gating enabled on {expansion_dim} expanded features")
+
+        # Single optimizer for both networks (+ gate weights if gating)
+        params = list(self.actor.parameters()) + list(self.critic.parameters())
+        if self._feature_gating:
+            params.append(self.gate_weights)
+        self.optimizer = optim.Adam(params, lr=config.learning_rate)
 
         # Rollout buffer (pass RNG for reproducible minibatch shuffling)
         self.buffer = RolloutBuffer(config.rollout_buffer_size, self.device, rng=self.rng)
@@ -385,6 +413,36 @@ class MLPPPOBrain(ClassicalBrain):
         # Episode tracking
         self._episode_count = 0
         self._current_episode_rewards: list[float] = []
+
+    def _init_feature_expansion(self, config: MLPPPOBrainConfig) -> None:
+        """Initialize feature expansion for ablation experiments."""
+        if config.feature_expansion == "polynomial":
+            n = self._raw_input_dim
+            poly_dim = n * (n - 1) // 2
+            self.input_dim = n + poly_dim
+            logger.info(
+                f"Polynomial feature expansion: {n} raw + {poly_dim} pairwise = "
+                f"{self.input_dim} total features",
+            )
+        elif config.feature_expansion == "polynomial3":
+            n = self._raw_input_dim
+            pair_dim = n * (n - 1) // 2
+            triple_dim = n * (n - 1) * (n - 2) // 6
+            self.input_dim = n + pair_dim + triple_dim
+            logger.info(
+                f"Degree-3 polynomial expansion: {n} raw + {pair_dim} pairwise + "
+                f"{triple_dim} triple = {self.input_dim} total features",
+            )
+        elif config.feature_expansion == "random_projection":
+            rng = np.random.default_rng(config.feature_expansion_seed)
+            self._projection_matrix = rng.standard_normal(
+                (self._raw_input_dim, config.feature_expansion_dim),
+            ).astype(np.float32) / np.sqrt(self._raw_input_dim)
+            self.input_dim = self._raw_input_dim + config.feature_expansion_dim
+            logger.info(
+                f"Random projection expansion: {self._raw_input_dim} raw + "
+                f"{config.feature_expansion_dim} projected = {self.input_dim} total features",
+            )
 
     def _build_network(
         self,
@@ -439,24 +497,56 @@ class MLPPPOBrain(ClassicalBrain):
         """
         # Unified sensory mode: use classical feature extraction
         if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
+            raw_features = extract_classical_features(params, self.sensory_modules)
+        else:
+            # Legacy mode: 2-feature preprocessing
+            grad_strength = float(params.gradient_strength or 0.0)
+            grad_direction = float(params.gradient_direction or 0.0)
+            direction_map = {
+                Direction.UP: np.pi / 2,
+                Direction.DOWN: -np.pi / 2,
+                Direction.LEFT: np.pi,
+                Direction.RIGHT: 0.0,
+            }
+            agent_facing_angle = direction_map.get(
+                params.agent_direction or Direction.UP,
+                np.pi / 2,
+            )
+            relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
+            rel_angle_norm = relative_angle / np.pi
+            raw_features = np.array([grad_strength, rel_angle_norm], dtype=np.float32)
 
-        # Legacy mode: 2-feature preprocessing
-        grad_strength = float(params.gradient_strength or 0.0)
+        return self._apply_feature_expansion(raw_features)
 
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
+    def _apply_feature_expansion(self, raw_features: np.ndarray) -> np.ndarray:
+        """Apply feature expansion for ablation experiments."""
+        if self.feature_expansion == "polynomial":
+            n = len(raw_features)
+            pairs = [raw_features[i] * raw_features[j] for i in range(n) for j in range(i + 1, n)]
+            expanded = np.concatenate([raw_features, np.array(pairs, dtype=np.float32)])
+        elif self.feature_expansion == "polynomial3":
+            n = len(raw_features)
+            pairs = [raw_features[i] * raw_features[j] for i in range(n) for j in range(i + 1, n)]
+            triples = [
+                raw_features[i] * raw_features[j] * raw_features[k]
+                for i in range(n)
+                for j in range(i + 1, n)
+                for k in range(j + 1, n)
+            ]
+            expanded = np.concatenate(
+                [
+                    raw_features,
+                    np.array(pairs, dtype=np.float32),
+                    np.array(triples, dtype=np.float32),
+                ],
+            )
+        elif self.feature_expansion == "random_projection":
+            projected = raw_features @ self._projection_matrix
+            expanded = np.concatenate([raw_features, projected])
+        else:
+            return raw_features
 
-        features = [grad_strength, rel_angle_norm]
-        return np.array(features, dtype=np.float32)
+        return expanded
 
     def _get_current_lr(self) -> float:
         """Get the current learning rate based on episode count.
@@ -496,13 +586,22 @@ class MLPPPOBrain(ClassicalBrain):
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = new_lr
 
+    def _apply_torch_gating(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply learnable sigmoid gating to expanded feature dimensions."""
+        if not self._feature_gating:
+            return x
+        gate = torch.sigmoid(self.gate_weights)
+        raw = x[..., : self._raw_input_dim]
+        expanded = x[..., self._raw_input_dim :]
+        return torch.cat([raw, expanded * gate], dim=-1)
+
     def forward_actor(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through actor network."""
-        return self.actor(x)
+        return self.actor(self._apply_torch_gating(x))
 
     def forward_critic(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through critic network."""
-        return self.critic(x)
+        return self.critic(self._apply_torch_gating(x))
 
     def get_action_and_value(
         self,
@@ -642,8 +741,9 @@ class MLPPPOBrain(ClassicalBrain):
         for _ in range(self.num_epochs):
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 # Get new action probabilities and values
-                logits = self.actor(batch["states"])
-                values = self.critic(batch["states"]).squeeze(-1)  # Keep batch dim
+                gated_states = self._apply_torch_gating(batch["states"])
+                logits = self.actor(gated_states)
+                values = self.critic(gated_states).squeeze(-1)  # Keep batch dim
 
                 probs = torch.softmax(logits, dim=-1)
                 dist = torch.distributions.Categorical(probs)
@@ -671,10 +771,10 @@ class MLPPPOBrain(ClassicalBrain):
                 # Optimize
                 self.optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(
-                    list(self.actor.parameters()) + list(self.critic.parameters()),
-                    self.max_grad_norm,
-                )
+                all_params = list(self.actor.parameters()) + list(self.critic.parameters())
+                if self._feature_gating:
+                    all_params.append(self.gate_weights)
+                nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
                 self.optimizer.step()
 
                 total_policy_loss += policy_loss.item()

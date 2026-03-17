@@ -137,36 +137,37 @@ convention = "numpy"
 
 ### Brain Architectures
 
-The project supports 17 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
+The project supports 18 brain architectures across quantum, hybrid, classical, and biologically-inspired categories:
 
 **Quantum:**
 
-1. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
-2. **QQLearningBrain** (`qqlearning`): Quantum Q-learning with variational circuits
-3. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
-4. **QRHBrain** (`qrh`): Quantum reservoir hybrid — C. elegans topology, X/Y/Z+ZZ features, PPO readout
-5. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
-6. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
-7. **QLIFLSTMBrain** (`qliflstm`): Quantum-enhanced LSTM with QLIF gates, recurrent PPO with truncated BPTT
-8. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
-9. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout (ablation companion to QRH-QLSTM)
+01. **QVarCircuitBrain** (`qvarcircuit`): Variational quantum circuit with modular design
+02. **QQLearningBrain** (`qqlearning`): Quantum Q-learning with variational circuits
+03. **QRCBrain** (`qrc`): Quantum reservoir computing with data re-uploading
+04. **QRHBrain** (`qrh`): Quantum reservoir hybrid — C. elegans topology, X/Y/Z+ZZ features, PPO readout
+05. **QSNNReinforceBrain** (`qsnnreinforce`): Quantum spiking neural network with REINFORCE
+06. **QSNNPPOBrain** (`qsnnppo`): Quantum spiking neural network with PPO
+07. **QLIFLSTMBrain** (`qliflstm`): Quantum-enhanced LSTM with QLIF gates, recurrent PPO with truncated BPTT
+08. **QRHQLSTMBrain** (`qrhqlstm`): QRH quantum reservoir + QLIF-LSTM temporal readout with recurrent PPO
+09. **CRHQLSTMBrain** (`crhqlstm`): CRH classical reservoir + QLIF-LSTM temporal readout (ablation companion to QRH-QLSTM)
+10. **QEFBrain** (`qef`): Quantum entangled features — configurable cross-modal entanglement topology, Z+ZZ+cos/sin features, PPO readout
 
 **Hybrid (quantum + classical):**
 
-10. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
-11. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
-12. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
+11. **HybridQuantumBrain** (`hybridquantum`): QSNN reflex + classical cortex + classical critic — best quantum architecture
+12. **HybridClassicalBrain** (`hybridclassical`): Classical ablation control for HybridQuantum
+13. **HybridQuantumCortexBrain** (`hybridquantumcortex`): QSNN reflex + QSNN cortex + classical critic — experimental (halted)
 
 **Classical:**
 
-13. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
-14. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
-15. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
-16. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
+14. **CRHBrain** (`crh`): Classical reservoir hybrid — ESN reservoir with configurable feature channels, PPO readout; quantum ablation control for QRH
+15. **MLPReinforceBrain** (`mlpreinforce`): MLP with policy gradients (REINFORCE)
+16. **MLPDQNBrain** (`mlpdqn`): MLP with Deep Q-Network
+17. **MLPPPOBrain** (`mlpppo`): MLP actor-critic with PPO — best classical architecture
 
 **Biologically-Inspired:**
 
-17. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
+18. **SpikingReinforceBrain** (`spikingreinforce`): LIF spiking neural network with surrogate gradients
 
 Each brain architecture follows a common interface defined in `quantumnematode.brain.arch`.
 

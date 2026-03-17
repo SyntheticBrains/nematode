@@ -1,18 +1,25 @@
-# Dynamic Foraging with Pursuit Predators - Small Configuration
-# Uses QRH (Quantum Reservoir Hybrid) brain architecture
-# Multi-objective learning: find food while avoiding predators
-# Uses unified sensory modules for multi-sensory input
+# QEF Ring + Compact Readout - Pursuit Predators
+# Variant: uses smaller readout MLP (64×2, ~13K params) vs default (128×3, ~80K).
+#
+# Tradeoff vs default (qef_pursuit_predators_small.yml):
+# - Slower convergence (ep 85 vs ep 62)
+# - Higher late-stage ceiling (L100 97.8% vs 96.5%)
+# - Better for longer training sessions (1000+ episodes)
 
 max_steps: 500
 brain:
-  name: qrh
+  name: qef
   config:
-    # Reservoir parameters
-    num_reservoir_qubits: 8
-    reservoir_depth: 3
-    reservoir_seed: 42
+    # Circuit parameters
+    num_qubits: 8
+    circuit_depth: 2
+    circuit_seed: 42
+    entanglement_topology: ring
+    entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
 
-    # Readout architecture (actor + critic)
+    # Compact readout (matches MLP PPO capacity)
     readout_hidden_dim: 64
     readout_num_layers: 2
 
@@ -22,7 +29,7 @@ brain:
     gamma: 0.99
     gae_lambda: 0.98
     ppo_clip_epsilon: 0.2
-    ppo_epochs: 6
+    ppo_epochs: 10
     ppo_minibatches: 2
     ppo_buffer_size: 256
     entropy_coeff: 0.02
@@ -33,16 +40,18 @@ brain:
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
 
-    # Topology
-    use_random_topology: true
+    # LR decay (after warmup, decay over 300 episodes)
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
+
+    # Entropy annealing (reduce exploration as policy matures)
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 300
 
     # Unified sensory modules for multi-objective tasks
     sensory_modules:
       - food_chemotaxis
       - nociception
-
-    # Sensory qubits (4 features = 4 qubits for food/predator signal separation)
-    num_sensory_qubits: 4
 
 body_length: 2
 

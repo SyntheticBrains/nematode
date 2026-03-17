@@ -15,9 +15,10 @@ context: |
 
   ## Architecture
   - UV workspace: packages/quantum-nematode is the core package
-  - 11 pluggable brain architectures in brain/arch/: qvarcircuit, qqlearning,
-    qrc, qsnnreinforce, qsnnppo, hybridquantum, hybridclassical, mlpreinforce,
-    mlpdqn, mlpppo, spikingreinforce
+  - 18 pluggable brain architectures in brain/arch/: qvarcircuit, qqlearning,
+    qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm,
+    hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn,
+    mlpppo, spikingreinforce
   - DynamicForagingEnvironment: multi-food foraging with predators and thermotaxis
   - Executor pattern: CPU, GPU, QPU backends
   - YAML-driven simulation configs (configs/examples/)

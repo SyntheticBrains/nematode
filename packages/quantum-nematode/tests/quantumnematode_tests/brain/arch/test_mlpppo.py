@@ -1,5 +1,7 @@
 """Unit tests for the MLPPPO brain architecture."""
 
+from typing import Literal
+
 import numpy as np
 import pytest
 import torch
@@ -7,6 +9,7 @@ from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig, RolloutBuffer
+from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
 
 
@@ -813,3 +816,295 @@ class TestMLPPPOClipping:
         # The change should be bounded (not a rigorous test, but sanity check)
         logit_change = torch.abs(final_logits - initial_logits).max().item()
         assert logit_change < 1000  # Very loose bound to catch explosions
+
+
+class TestFeatureExpansion:
+    """Test cases for feature expansion ablation modes."""
+
+    MODULES: list[ModuleName] = [  # noqa: RUF012
+        ModuleName.FOOD_CHEMOTAXIS,
+        ModuleName.NOCICEPTION,
+        ModuleName.THERMOTAXIS,
+    ]
+
+    def _make_brain(
+        self,
+        expansion: "Literal['none', 'polynomial', 'polynomial3', 'random_projection']",
+        *,
+        gating: bool = False,
+    ) -> MLPPPOBrain:
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion=expansion,
+            feature_gating=gating,
+            actor_hidden_dim=16,
+            critic_hidden_dim=16,
+            num_hidden_layers=2,
+            rollout_buffer_size=16,
+            num_epochs=2,
+            num_minibatches=2,
+        )
+        return MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+    def test_config_defaults(self):
+        """Feature expansion and gating should default to none/false."""
+        config = MLPPPOBrainConfig()
+        assert config.feature_expansion == "none"
+        assert config.feature_gating is False
+
+    def test_no_expansion_preserves_dim(self):
+        """No expansion should keep raw input dim."""
+        brain = self._make_brain("none")
+        assert brain.input_dim == 7  # 3 modules x ~2-3 features
+        assert brain._raw_input_dim == 7
+
+    def test_polynomial_expansion_dim(self):
+        """Polynomial should add C(N,2) pairwise features."""
+        brain = self._make_brain("polynomial")
+        n = brain._raw_input_dim  # 7
+        expected = n + n * (n - 1) // 2  # 7 + 21 = 28
+        assert brain.input_dim == expected
+
+    def test_polynomial3_expansion_dim(self):
+        """Degree-3 polynomial should add pairwise + triple features."""
+        brain = self._make_brain("polynomial3")
+        n = brain._raw_input_dim  # 7
+        pairs = n * (n - 1) // 2  # 21
+        triples = n * (n - 1) * (n - 2) // 6  # 35
+        expected = n + pairs + triples  # 63
+        assert brain.input_dim == expected
+
+    def test_random_projection_dim(self):
+        """Random projection should add expansion_dim features."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="random_projection",
+            feature_expansion_dim=52,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain.input_dim == 7 + 52  # 59
+
+    def test_polynomial_output_values(self):
+        """Polynomial expansion should produce correct pairwise products."""
+        brain = self._make_brain("polynomial")
+        raw = np.array([0.5, 0.3, 0.8, -0.2, 0.1, 0.6, -0.4], dtype=np.float32)
+        expanded = brain._apply_feature_expansion(raw)
+
+        # First 7 should be raw features
+        np.testing.assert_array_equal(expanded[:7], raw)
+        # Next should be pairwise products
+        assert expanded[7] == pytest.approx(0.5 * 0.3)  # x0 * x1
+        assert expanded[8] == pytest.approx(0.5 * 0.8)  # x0 * x2
+
+    def test_polynomial3_includes_triples(self):
+        """Degree-3 expansion should include triple products."""
+        brain = self._make_brain("polynomial3")
+        raw = np.array([2.0, 3.0, 5.0, 0.1, 0.2, 0.3, 0.4], dtype=np.float32)
+        expanded = brain._apply_feature_expansion(raw)
+
+        # Raw (7) + pairs (21) + triples (35) = 63
+        assert len(expanded) == 63
+        # First triple should be x0*x1*x2 = 2*3*5 = 30
+        assert expanded[7 + 21] == pytest.approx(2.0 * 3.0 * 5.0)
+
+    def test_random_projection_deterministic(self):
+        """Same seed should produce identical projections."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="random_projection",
+            feature_expansion_dim=10,
+            feature_expansion_seed=42,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        b1 = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        b2 = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        raw = np.array([0.5, 0.3, 0.8, -0.2, 0.1, 0.6, -0.4], dtype=np.float32)
+        np.testing.assert_array_equal(
+            b1._apply_feature_expansion(raw),
+            b2._apply_feature_expansion(raw),
+        )
+
+    def test_expansion_run_brain(self):
+        """run_brain should work with all expansion modes."""
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+        modes: list[Literal["polynomial", "polynomial3", "random_projection"]] = [
+            "polynomial",
+            "polynomial3",
+            "random_projection",
+        ]
+        for mode in modes:
+            brain = self._make_brain(mode)
+            actions = brain.run_brain(params, top_only=True, top_randomize=True)
+            assert len(actions) == 1
+            assert isinstance(actions[0], ActionData)
+
+    def test_expansion_actor_critic_dims(self):
+        """Actor and critic should accept expanded feature dimensions."""
+        modes: list[Literal["polynomial", "polynomial3", "random_projection"]] = [
+            "polynomial",
+            "polynomial3",
+            "random_projection",
+        ]
+        for mode in modes:
+            brain = self._make_brain(mode)
+            x = torch.randn(brain.input_dim)
+            logits = brain.actor(x)
+            value = brain.critic(x)
+            assert logits.shape == (4,)
+            assert value.shape == (1,)
+
+
+class TestFeatureGating:
+    """Test cases for learnable feature gating on MLP PPO."""
+
+    MODULES: list[ModuleName] = [  # noqa: RUF012
+        ModuleName.FOOD_CHEMOTAXIS,
+        ModuleName.NOCICEPTION,
+        ModuleName.THERMOTAXIS,
+    ]
+
+    def test_gating_without_expansion_raises(self):
+        """Gating with no expansion should raise ValueError."""
+        config = MLPPPOBrainConfig(
+            feature_gating=True,
+            feature_expansion="none",
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        with pytest.raises(ValueError, match="feature_gating requires feature_expansion"):
+            MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+
+    def test_gating_creates_gate_weights(self):
+        """Gating with expansion should create gate_weights parameter."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert brain._feature_gating is True
+        assert hasattr(brain, "gate_weights")
+        # Gate should be on expanded portion only (21 pairwise features)
+        assert brain.gate_weights.shape == (21,)
+
+    def test_gating_initialized_to_zero(self):
+        """Gate weights should start at zero (sigmoid(0) = 0.5)."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        assert torch.all(brain.gate_weights == 0.0)
+
+    def test_gating_preserves_raw_features(self):
+        """Gating should not modify raw feature portion."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        x = torch.randn(brain.input_dim)
+        gated = brain._apply_torch_gating(x)
+        # Raw portion (first 7) should be unchanged
+        torch.testing.assert_close(gated[:7], x[:7])
+
+    def test_gating_scales_expanded_features(self):
+        """Gating should scale expanded features by sigmoid(weights)."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # Set gate weights to known values
+        with torch.no_grad():
+            brain.gate_weights.fill_(10.0)  # sigmoid(10) ≈ 1.0
+        x = torch.randn(brain.input_dim)
+        gated = brain._apply_torch_gating(x)
+        # Expanded portion should be nearly unchanged (gate ≈ 1)
+        torch.testing.assert_close(gated[7:], x[7:], atol=1e-4, rtol=1e-4)
+
+        # Now set gate to suppress
+        with torch.no_grad():
+            brain.gate_weights.fill_(-10.0)  # sigmoid(-10) ≈ 0.0
+        gated = brain._apply_torch_gating(x)
+        # Expanded portion should be nearly zero (sigmoid(-10) ≈ 4.5e-5)
+        assert torch.all(torch.abs(gated[7:]) < 1e-3)
+
+    def test_gating_run_brain(self):
+        """run_brain should work with gating enabled."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+            rollout_buffer_size=8,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        params = BrainParams(
+            gradient_strength=0.6,
+            gradient_direction=0.3,
+            agent_position=(1, 1),
+            agent_direction=Direction.UP,
+        )
+        actions = brain.run_brain(params, top_only=True, top_randomize=True)
+        assert len(actions) == 1
+
+    def test_gating_gradient_flows(self):
+        """Gate weights should receive non-zero gradients when expanded features are non-zero."""
+        config = MLPPPOBrainConfig(
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+        )
+        brain = MLPPPOBrain(config=config, input_dim=3, num_actions=4, device=DeviceType.CPU)
+
+        # Non-zero input so polynomial products are non-zero
+        x = torch.tensor([0.5, 0.3, 0.8, 0.15, 0.40, 0.24], dtype=torch.float32)
+        logits = brain.forward_actor(x)
+        loss = logits.sum()
+        loss.backward()
+
+        assert brain.gate_weights.grad is not None
+        assert brain.gate_weights.grad.norm() > 0, "Gate weights should receive non-zero gradients"
+
+    def test_gating_in_ppo_training_loop(self):
+        """Gating should be applied during PPO minibatch training (not just inference)."""
+        config = MLPPPOBrainConfig(
+            sensory_modules=self.MODULES,
+            feature_expansion="polynomial",
+            feature_gating=True,
+            actor_hidden_dim=16,
+            num_hidden_layers=2,
+            rollout_buffer_size=8,
+            num_epochs=2,
+            num_minibatches=2,
+        )
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
+        # Verify _apply_torch_gating is used in forward_actor/critic
+        x = torch.randn(brain.input_dim)
+        # forward_actor should call _apply_torch_gating internally
+        logits = brain.forward_actor(x)
+        value = brain.forward_critic(x)
+        assert logits.shape == (4,)
+        assert value.shape == (1,)

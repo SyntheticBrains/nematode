@@ -1,48 +1,41 @@
-# Dynamic Foraging with Pursuit Predators - Small Configuration
-# Uses QRH (Quantum Reservoir Hybrid) brain architecture
-# Multi-objective learning: find food while avoiding predators
-# Uses unified sensory modules for multi-sensory input
+# MLPPPO with Pursuit Predators - Small Configuration (Fair Comparison)
+# Matches QEF/QRH predator environment settings for direct comparison.
+#
+# Differences from mlpppo_pursuit_predators_small.yml:
+# - predator_damage: 6.0 (was 20.0)
+# - detection_radius: 5 (was 6)
+# - penalty_health_damage: 0.3 (was 0.5)
+# - use_separated_gradients: true (was missing)
 
 max_steps: 500
 brain:
-  name: qrh
+  name: mlpppo
   config:
-    # Reservoir parameters
-    num_reservoir_qubits: 8
-    reservoir_depth: 3
-    reservoir_seed: 42
-
-    # Readout architecture (actor + critic)
-    readout_hidden_dim: 64
-    readout_num_layers: 2
-
-    # PPO hyperparameters
-    actor_lr: 0.0005
-    critic_lr: 0.0005
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
     gamma: 0.99
-    gae_lambda: 0.98
-    ppo_clip_epsilon: 0.2
-    ppo_epochs: 6
-    ppo_minibatches: 2
-    ppo_buffer_size: 256
-    entropy_coeff: 0.02
+    gae_lambda: 0.95
     value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
     max_grad_norm: 0.5
+    normalize_advantages: true
 
-    # LR warmup (ramp from 10% to full LR over first 30 episodes)
-    lr_warmup_episodes: 30
-    lr_warmup_start: 0.00005
-
-    # Topology
-    use_random_topology: true
-
-    # Unified sensory modules for multi-objective tasks
+    # Sensory modules (matched to QEF — 2 modules)
     sensory_modules:
       - food_chemotaxis
       - nociception
 
-    # Sensory qubits (4 features = 4 qubits for food/predator signal separation)
-    num_sensory_qubits: 4
+    # LR schedule (matched to QEF small PP decay window)
+    lr_warmup_episodes: 30
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
 
 body_length: 2
 
