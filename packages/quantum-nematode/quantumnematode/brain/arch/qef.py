@@ -392,6 +392,9 @@ class QEFBrain(ReservoirHybridBase):
             self._cry_angles = np.array([])
             self._crz_angles = np.array([])
 
+        # Pre-compute hot-path caches and initialize state
+        self._init_caches()
+
         # Pre-compute sign array for vectorized Z and ZZ extraction.
         # _signs[q, k] = (-1)^bit(k, q) for computing <Z_q> = _signs[q] @ probs.
         num_states = 2**self.num_qubits
@@ -421,6 +424,24 @@ class QEFBrain(ReservoirHybridBase):
             f"feature_dim={self.feature_dim}, input_dim={self.input_dim}"
             f"{', hybrid_input=True' if self.hybrid_input else ''}"
             f"{f', gating={self.feature_gating}' if self.feature_gating != 'none' else ''}",
+        )
+
+    def _init_caches(self) -> None:
+        """Pre-compute hot-path caches for feature extraction and gating."""
+        self._cached_quantum_dim = self._quantum_feature_dim()
+        if self.zz_mode == "cross_modal":
+            self._cached_zz_pairs = _get_cross_modal_pairs(
+                self.num_qubits,
+                self._raw_input_dim,
+            )
+        else:
+            self._cached_zz_pairs = [
+                (i, j) for i in range(self.num_qubits) for j in range(i + 1, self.num_qubits)
+            ]
+        # Initialize state for separate_critic (avoids AttributeError on first call)
+        self._last_raw_features: np.ndarray = np.zeros(
+            self._raw_input_dim,
+            dtype=np.float32,
         )
 
     def _init_gating_and_critic(self, config: QEFBrainConfig) -> None:
@@ -503,7 +524,7 @@ class QEFBrain(ReservoirHybridBase):
 
         # Store raw features for separate critic
         if self.separate_critic:
-            self._last_raw_features = sensory_features.copy()
+            self._last_raw_features = sensory_features
 
         if self.hybrid_input:
             parts = [sensory_features, quantum_features]
@@ -535,13 +556,12 @@ class QEFBrain(ReservoirHybridBase):
 
         if self.hybrid_input:
             raw = x[..., : self._raw_input_dim]
-            quantum_dim = self._quantum_feature_dim()
-            quantum = x[..., self._raw_input_dim : self._raw_input_dim + quantum_dim]
+            quantum = x[..., self._raw_input_dim : self._raw_input_dim + self._cached_quantum_dim]
             gate = self._compute_gate(raw)
             parts = [raw, quantum * gate]
             # Polynomial features (if present) pass through ungated
             if self.hybrid_polynomial:
-                poly = x[..., self._raw_input_dim + quantum_dim :]
+                poly = x[..., self._raw_input_dim + self._cached_quantum_dim :]
                 parts.append(poly)
             return torch.cat(parts, dim=-1)
 
@@ -682,6 +702,14 @@ class QEFBrain(ReservoirHybridBase):
         if len(self.buffer) == 0:
             return
 
+        min_buffer_size = min(64, self.buffer.buffer_size // 2)
+        if len(self.buffer) < min_buffer_size:
+            logger.debug(
+                f"{self._brain_name} skipping PPO update: "
+                f"buffer={len(self.buffer)}/{self.buffer.buffer_size} < min={min_buffer_size}",
+            )
+            return
+
         last_value = (
             bootstrap_value
             if bootstrap_value is not None
@@ -697,7 +725,7 @@ class QEFBrain(ReservoirHybridBase):
             self.gamma,
             self.gae_lambda,
         )
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        # Note: advantage normalization happens inside get_minibatches (base class)
 
         total_policy_loss = 0.0
         total_value_loss = 0.0
@@ -758,6 +786,8 @@ class QEFBrain(ReservoirHybridBase):
             avg_loss = total_policy_loss / num_updates
             avg_vloss = total_value_loss / num_updates
             avg_entropy = total_entropy_loss / num_updates
+            self.latest_data.loss = avg_loss
+            self.history_data.losses.append(avg_loss)
             logger.debug(
                 f"{self._brain_name} PPO update: "
                 f"policy_loss={avg_loss:.4f}, value_loss={avg_vloss:.4f}, "
@@ -904,11 +934,8 @@ class QEFBrain(ReservoirHybridBase):
         # Z-expectations: <Z_q> = sum_k (-1)^bit(k,q) |psi_k|^2
         z_expectations = self._signs @ probabilities
 
-        # ZZ-correlations
-        if self.zz_mode == "cross_modal":
-            zz_pairs = _get_cross_modal_pairs(n, self._raw_input_dim)
-        else:
-            zz_pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
+        # ZZ-correlations (using precomputed pairs from __init__)
+        zz_pairs = self._cached_zz_pairs
         zz_correlations = np.empty(len(zz_pairs))
         for idx, (i, j) in enumerate(zz_pairs):
             zz_correlations[idx] = (self._signs[i] * self._signs[j]) @ probabilities
