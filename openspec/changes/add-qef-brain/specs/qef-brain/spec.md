@@ -2,134 +2,149 @@
 
 ## Purpose
 
-Define the QEF (Quantum Entangled Features) brain architecture — an entangled PQC feature extractor with configurable cross-modal entanglement topology and classical PPO actor-critic readout.
+Define the QEF (Quantum Entangled Features) brain architecture — an entangled PQC feature extractor with configurable cross-modal entanglement topology, hybrid input, learnable feature gating, and classical PPO actor-critic readout.
 
 ## ADDED Requirements
 
 ### Requirement: QEF Circuit Construction
 
-The QEFBrain SHALL construct a parameterized quantum circuit with uniform RY encoding on all qubits and configurable entanglement topology.
+The QEFBrain SHALL construct a parameterized quantum circuit with configurable encoding and entanglement.
 
 #### Scenario: Initial superposition
 
 - **WHEN** `_encode_and_run()` is called with sensory features
 - **THEN** the circuit SHALL apply Hadamard gates to all `num_qubits` qubits before any encoding layers
 
-#### Scenario: Uniform RY encoding on all qubits
+#### Scenario: Uniform RY encoding (default)
 
-- **WHEN** sensory features are encoded into the circuit
-- **THEN** the circuit SHALL apply RY(feature × π) to ALL qubits (not a sensory subset)
+- **WHEN** `encoding_mode` is `"uniform"`
+- **THEN** the circuit SHALL apply RY(feature × π) to ALL qubits
 - **AND** features SHALL be assigned to qubits in order (qubit index = feature index % num_qubits)
-- **AND** when input_dim < num_qubits, unencoded qubits SHALL remain in their H-initialized superposition state and SHALL still participate in entanglement topology
+
+#### Scenario: Sparse encoding
+
+- **WHEN** `encoding_mode` is `"sparse"`
+- **THEN** the circuit SHALL apply RY/RZ only on the first input_dim qubits
+- **AND** remaining qubits SHALL remain in H-superposition as entanglement relays
 
 #### Scenario: Data re-uploading
 
 - **WHEN** `circuit_depth` is set to N
 - **THEN** the circuit SHALL repeat the encoding + entanglement layer N times
-- **AND** each layer SHALL re-encode the same sensory features
 
-#### Scenario: Statevector simulation
+#### Scenario: Gate mode
 
-- **WHEN** the circuit has been constructed
-- **THEN** the brain SHALL compute the exact statevector via `Statevector.from_instruction()`
-- **AND** SHALL NOT use shot-based measurement
+- **WHEN** `gate_mode` is `"cry_crz"`
+- **THEN** entanglement gates SHALL use CRY/CRZ with seeded random angles
+- **WHEN** `gate_mode` is `"cz"`
+- **THEN** entanglement gates SHALL use CZ-only
 
 ### Requirement: QEF Entanglement Topology
 
-The QEFBrain SHALL support three configurable entanglement topologies applied via CZ gates.
+The QEFBrain SHALL support three configurable entanglement topologies.
 
-#### Scenario: Modality-paired topology (default)
+#### Scenario: Modality-paired topology
 
 - **WHEN** `entanglement_topology` is `"modality_paired"`
-- **THEN** the circuit SHALL apply CZ gates between cross-modal qubit pairs: (0, 2), (1, 3), (4, 6), (5, 7)
-- **AND** these pairs SHALL encode food_chemotaxis ↔ nociception and thermotaxis ↔ mechanosensation interactions
+- **THEN** the circuit SHALL apply entanglement gates between cross-modal qubit pairs: (0, 2), (1, 3), (4, 6), (5, 7)
 
 #### Scenario: Ring topology
 
 - **WHEN** `entanglement_topology` is `"ring"`
-- **THEN** the circuit SHALL apply CZ gates in a ring: (0,1), (1,2), ..., (N-2, N-1), (N-1, 0)
+- **THEN** the circuit SHALL apply entanglement gates in a ring: (0,1), (1,2), ..., (N-2, N-1), (N-1, 0)
 
 #### Scenario: Random topology
 
 - **WHEN** `entanglement_topology` is `"random"`
-- **THEN** the circuit SHALL apply seeded random CZ pairs using `circuit_seed`
-- **AND** the number of CZ pairs SHALL equal the modality-paired count (4 for 8 qubits)
-- **AND** the same seed SHALL produce identical topology across runs
+- **THEN** the circuit SHALL apply seeded random pairs using `circuit_seed`
 
-### Requirement: QEF Separable Ablation
-
-The QEFBrain SHALL support a separable (no-entanglement) mode for controlled ablation experiments.
-
-#### Scenario: Entanglement disabled
+#### Scenario: Separable ablation
 
 - **WHEN** `entanglement_enabled` is False
-- **THEN** the circuit SHALL NOT apply any CZ gates
-- **AND** all other processing (encoding, feature extraction, readout) SHALL be identical to the entangled version
-
-#### Scenario: Entanglement enabled (default)
-
-- **WHEN** `entanglement_enabled` is True (default)
-- **THEN** the circuit SHALL apply CZ gates per the configured topology
+- **THEN** the circuit SHALL NOT apply any entanglement gates
 
 ### Requirement: QEF Feature Extraction
 
-The QEFBrain SHALL extract Z expectations, ZZ correlations, and cos/sin features from the statevector.
+The QEFBrain SHALL extract configurable feature sets from the statevector.
 
 #### Scenario: Z expectations
 
 - **WHEN** features are extracted from a statevector of N qubits
-- **THEN** the brain SHALL compute N per-qubit Z expectations: ⟨Z_i⟩ = Σ_k (-1)^bit(k,i) |ψ_k|²
-- **AND** each Z expectation SHALL be in the range [-1, 1]
+- **THEN** the brain SHALL compute N per-qubit Z expectations in [-1, 1]
 
-#### Scenario: ZZ pairwise correlations
+#### Scenario: ZZ pairwise correlations (all mode)
 
-- **WHEN** features are extracted from a statevector of N qubits
-- **THEN** the brain SHALL compute N(N-1)/2 pairwise ZZ correlations: ⟨Z_i Z_j⟩ for all i < j
-- **AND** each ZZ correlation SHALL be in the range [-1, 1]
+- **WHEN** `zz_mode` is `"all"`
+- **THEN** the brain SHALL compute N(N-1)/2 pairwise ZZ correlations for all i < j
+
+#### Scenario: ZZ cross-modal correlations
+
+- **WHEN** `zz_mode` is `"cross_modal"`
+- **THEN** the brain SHALL compute ZZ correlations only for cross-modal qubit pairs
+- **AND** `_get_cross_modal_pairs()` SHALL determine pairs based on sensory module structure
 
 #### Scenario: Cos/sin features
 
-- **WHEN** features are extracted from a statevector of N qubits
-- **THEN** the brain SHALL compute 2N cos/sin features: cos(⟨Z_i⟩) and sin(⟨Z_i⟩) for each qubit
-- **AND** each cos/sin feature SHALL be in the range [-1, 1]
+- **WHEN** `include_cossin` is True
+- **THEN** the brain SHALL compute 2N cos/sin features: cos(⟨Z_i⟩) and sin(⟨Z_i⟩)
+- **WHEN** `include_cossin` is False
+- **THEN** cos/sin features SHALL be omitted
 
-#### Scenario: Feature vector ordering
+#### Scenario: ZZZ three-body correlations
 
-- **WHEN** features are extracted from a statevector of N qubits
-- **THEN** the feature vector SHALL be concatenated in the order: [z_0..z_N-1, zz_01..zz\_(N-1)N, cos_z_0..cos_z_N-1, sin_z_0..sin_z_N-1]
-
-#### Scenario: Total feature dimension
-
-- **WHEN** the brain is configured with N qubits
-- **THEN** the total feature dimension SHALL be 3N + N(N-1)/2
-- **AND** for 8 qubits this SHALL equal 52
+- **WHEN** `include_zzz` is True
+- **THEN** the brain SHALL compute N(N-1)(N-2)/6 three-body ZZZ correlations
 
 #### Scenario: Feature determinism
 
 - **WHEN** the same sensory input is provided twice
 - **THEN** the extracted features SHALL be identical
 
-### Requirement: QEF PPO Readout
+### Requirement: QEF Hybrid Input
 
-The QEFBrain SHALL inherit PPO actor-critic readout from ReservoirHybridBase, identical to QRH.
+The QEFBrain SHALL support concatenating raw sensory features with quantum features.
 
-#### Scenario: Actor-critic architecture
+#### Scenario: Hybrid input enabled
 
-- **WHEN** QEFBrain is instantiated
-- **THEN** it SHALL create an actor MLP: feature_dim → hidden_dim → num_actions
-- **AND** SHALL create a critic MLP: feature_dim → hidden_dim → 1
-- **AND** SHALL apply LayerNorm to features before the readout networks
+- **WHEN** `hybrid_input` is True
+- **THEN** `_get_reservoir_features()` SHALL return `[raw_features, quantum_features]` concatenated
+- **AND** the feature dimension SHALL be `raw_input_dim + quantum_dim`
 
-#### Scenario: PPO training
+#### Scenario: Hybrid polynomial
 
-- **WHEN** the PPO buffer is full
-- **THEN** the brain SHALL perform PPO updates with clipped surrogate objective, value loss, and entropy bonus
-- **AND** SHALL use a single combined Adam optimizer for actor + critic + LayerNorm parameters
+- **WHEN** `hybrid_polynomial` is True
+- **THEN** classical pairwise products (x_i * x_j for i < j) SHALL be appended to the feature vector
 
-#### Scenario: Inherited configuration
+### Requirement: QEF Feature Gating
 
-- **WHEN** QEFBrainConfig is instantiated
-- **THEN** it SHALL support all ReservoirHybridBaseConfig fields: readout_hidden_dim, readout_num_layers, actor_lr, gamma, gae_lambda, ppo_clip_epsilon, ppo_epochs, ppo_minibatches, ppo_buffer_size, entropy_coeff, value_loss_coef, max_grad_norm, lr_warmup_episodes, lr_warmup_start, lr_decay_episodes, lr_decay_end, entropy_coeff_end, entropy_decay_episodes, sensory_modules
+The QEFBrain SHALL support learnable gating on quantum feature dimensions.
+
+#### Scenario: Static gating
+
+- **WHEN** `feature_gating` is `"static"`
+- **THEN** the brain SHALL apply `sigmoid(w) * quantum_features` with learned per-dimension weights
+
+#### Scenario: Context gating
+
+- **WHEN** `feature_gating` is `"context"`
+- **THEN** the brain SHALL apply `sigmoid(MLP(raw_features)) * quantum_features`
+- **AND** the gate MLP SHALL be `raw_dim → 16 → quantum_dim`
+
+#### Scenario: Mixed gating
+
+- **WHEN** `feature_gating` is `"mixed"`
+- **THEN** the brain SHALL apply `(static_gate + context_gate) / 2 * quantum_features`
+
+#### Scenario: Gating preserves raw features
+
+- **WHEN** hybrid_input is True and gating is active
+- **THEN** raw features SHALL pass through unchanged; only quantum features SHALL be gated
+
+#### Scenario: Gating in PPO training
+
+- **WHEN** gating is active
+- **THEN** `_perform_ppo_update()` SHALL apply gating to stored states during minibatch training
+- **AND** gate parameters SHALL be included in the optimizer and gradient clipping
 
 ### Requirement: QEF Configuration
 
@@ -138,42 +153,38 @@ The QEFBrainConfig SHALL define quantum-specific fields with validation.
 #### Scenario: Default configuration
 
 - **WHEN** QEFBrainConfig is instantiated with no arguments
-- **THEN** `num_qubits` SHALL default to 8
-- **AND** `circuit_depth` SHALL default to 2
-- **AND** `circuit_seed` SHALL default to 42
-- **AND** `entanglement_topology` SHALL default to `"modality_paired"`
-- **AND** `entanglement_enabled` SHALL default to True
+- **THEN** `num_qubits` SHALL default to 8, `circuit_depth` to 2, `circuit_seed` to 42
+- **AND** `entanglement_topology` SHALL default to `"modality_paired"`, `entanglement_enabled` to True
+- **AND** `hybrid_input` SHALL default to False, `feature_gating` to `"none"`
+- **AND** `include_zzz` SHALL default to False, `zz_mode` to `"all"`, `include_cossin` to True
 
-#### Scenario: Validation rejects invalid num_qubits
+#### Scenario: Validation
 
-- **WHEN** `num_qubits` is less than 2
-- **THEN** a ValidationError SHALL be raised
+- **WHEN** `num_qubits` < 2 or `circuit_depth` < 1 — ValidationError SHALL be raised
+- **WHEN** `separate_critic` is True without `hybrid_input` — ValidationError SHALL be raised
+- **WHEN** `hybrid_polynomial` is True without `hybrid_input` — ValidationError SHALL be raised
+- **WHEN** `trainable_entanglement` is True — NotImplementedError SHALL be raised
 
-#### Scenario: Validation rejects invalid circuit_depth
+### Requirement: Classical Ablation (MLP PPO Extensions)
 
-- **WHEN** `circuit_depth` is less than 1
-- **THEN** a ValidationError SHALL be raised
+MLPPPOBrain SHALL support feature expansion and gating for ablation experiments.
 
-#### Scenario: Trainable entanglement reserved
+#### Scenario: Polynomial expansion
 
-- **WHEN** `trainable_entanglement` is set to True
-- **THEN** a NotImplementedError SHALL be raised during brain construction
+- **WHEN** `feature_expansion` is `"polynomial"`
+- **THEN** `preprocess()` SHALL append all pairwise products (x_i * x_j for i < j)
 
-### Requirement: QEF Initialization Logging
+#### Scenario: Degree-3 polynomial expansion
 
-The QEFBrain SHALL log its configuration at initialization for experiment tracking.
+- **WHEN** `feature_expansion` is `"polynomial3"`
+- **THEN** `preprocess()` SHALL append pairwise AND triple products
 
-#### Scenario: Initialization log message
+#### Scenario: Random projection
 
-- **WHEN** QEFBrain is instantiated
-- **THEN** it SHALL log: num_qubits, entanglement_topology, entanglement_enabled, circuit_depth, feature_dim, and input_dim
+- **WHEN** `feature_expansion` is `"random_projection"`
+- **THEN** `preprocess()` SHALL append features from a fixed random projection matrix
 
-### Requirement: QEF Brain Copy
+#### Scenario: Feature gating on MLP PPO
 
-The QEFBrain SHALL support copy operations for checkpoint and population-based methods.
-
-#### Scenario: Independent copy
-
-- **WHEN** `_create_copy_instance()` is called
-- **THEN** the copy SHALL have independent weights and state
-- **AND** the copy SHALL share the same circuit topology and configuration
+- **WHEN** `feature_gating` is True and expansion is active
+- **THEN** `_apply_torch_gating()` SHALL apply sigmoid gate on expanded features during forward pass and PPO training

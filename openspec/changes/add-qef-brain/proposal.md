@@ -5,25 +5,32 @@ QRH is our only architecture with genuine quantum advantage (+9.4pp over classic
 ## What Changes
 
 - New brain architecture: `QEFBrain` (Quantum Entangled Features) — entangled PQC feature extractor with classical PPO readout
-- New config: `QEFBrainConfig` extending `ReservoirHybridBaseConfig` with entanglement topology selection, circuit depth, and separable ablation flag
+- New config: `QEFBrainConfig` extending `ReservoirHybridBaseConfig` with entanglement topology, circuit depth, encoding/gate/feature modes, hybrid input, feature gating, curated feature subsets
 - Registration in `BrainType` enum, `BRAIN_CONFIG_MAP`, `brain_factory`, and `arch/__init__`
-- Example YAML configs matching QRH evaluation environments: foraging small, pursuit predators small, thermotaxis + pursuit predators large, thermotaxis + stationary predators large, and separable ablation control
-- Unit tests following `test_qrh.py` structure
-- Smoke test integration
+- Example YAML configs for all evaluation environments with task-specific optimizations
+- Classical ablation infrastructure in MLP PPO (polynomial/random projection feature expansion + gating)
+- Comprehensive unit tests (78 QEF tests + 18 MLP PPO ablation tests)
+- 12-seed statistical validation across 3 tasks
 
 ## Capabilities
 
 ### New Capabilities
 
-- `qef-brain`: Quantum Entangled Features brain architecture — entangled PQC feature extractor (8 qubits, configurable entanglement topology, Z+ZZ+cos_sin features) with classical PPO actor-critic readout. Includes separable ablation mode and three topology options (modality-paired, ring, random).
+- `qef-brain`: Quantum Entangled Features brain architecture — entangled PQC feature extractor (8 qubits, configurable entanglement topology, hybrid input, learnable feature gating, curated feature subsets) with classical PPO actor-critic readout. Includes separable ablation mode and three topology options (modality-paired, ring, random).
+- `mlpppo-ablation`: Feature expansion (polynomial, polynomial3, random projection) and feature gating support in MLPPPOBrain for rigorous classical ablation testing.
 
 ### Modified Capabilities
 
 - `brain-architecture`: Add QEF to the brain type registry, config loader mapping, and factory instantiation
+- `mlpppo-brain`: Extended with feature_expansion, feature_gating, and related preprocessing
 
 ## Impact
 
-- **New files**: `brain/arch/qef.py`, `test_qef.py`, 5 example configs
-- **Modified files**: `dtypes.py` (BrainType enum + type sets), `__init__.py` (exports), `config_loader.py` (BRAIN_CONFIG_MAP + BrainConfigType union), `brain_factory.py` (factory case)
-- **Dependencies**: No new dependencies — uses existing Qiskit, numpy, PyTorch, Pydantic
-- **Risk**: Low — extends proven ReservoirHybridBase; no changes to existing brain architectures
+- **New files**: `brain/arch/qef.py`, `test_qef.py`, example configs
+- **Modified files**: `dtypes.py` (BrainType enum), `__init__.py` (exports), `config_loader.py` (BRAIN_CONFIG_MAP), `brain_factory.py` (factory case), `mlpppo.py` (feature expansion/gating)
+- **Dependencies**: No new dependencies
+- **Risk**: Low — extends proven ReservoirHybridBase; MLP PPO changes are additive config fields
+
+## Evaluation Outcome
+
+12-seed validation (~500+ runs) concluded: QEF is quantum-competitive but not quantum-advantageous. It matches classical approaches within ~1-3pp across all tasks but does not demonstrate statistically significant superiority. See `build/brains/qef/qef_scratchpad.md` for complete evaluation history and analysis.
