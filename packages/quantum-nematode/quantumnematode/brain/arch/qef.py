@@ -41,6 +41,7 @@ Curated feature dimension (cross-modal ZZ, no cos/sin): N + cross_modal_pairs (e
 from __future__ import annotations
 
 import itertools
+from copy import deepcopy
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -817,19 +818,31 @@ class QEFBrain(ReservoirHybridBase):
         self,
         config: ReservoirHybridBaseConfig,
     ) -> QEFBrain:
-        """Construct a fresh QEFBrain for the copy() method.
-
-        NOTE: The base class copy() deep-copies actor, critic, feature_norm, and
-        optimizer, but does not copy gate_weights, gate_network, or critic_norm
-        state. These will be freshly initialized in the copy. This is acceptable
-        since copy() is only used for population-based methods which QEF doesn't use.
-        """
+        """Construct a fresh QEFBrain for the copy() method."""
         return QEFBrain(
             config=config,  # type: ignore[arg-type]
             num_actions=self.num_actions,
             device=self._device_type,
             action_set=self._action_set,
         )
+
+    def copy(self) -> QEFBrain:
+        """Create an independent copy, including QEF-specific gating state."""
+        new_brain: QEFBrain = super().copy()  # type: ignore[assignment]
+
+        # Copy gating state not handled by base class
+        if self.feature_gating in ("static", "mixed"):
+            new_brain.gate_weights.data.copy_(self.gate_weights.data)
+        if self.feature_gating in ("context", "mixed"):
+            new_brain.gate_network.load_state_dict(
+                deepcopy(self.gate_network.state_dict()),
+            )
+        if self.separate_critic:
+            new_brain.critic_norm.load_state_dict(
+                deepcopy(self.critic_norm.state_dict()),
+            )
+
+        return new_brain
 
     # =========================================================================
     # Topology Construction
