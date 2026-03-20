@@ -29,5 +29,5 @@ QA-7 is the final quantum experiment before pivoting to environment enrichment. 
 - **Existing brains**: No changes — QRH, CRH, HybridQuantum, HybridClassical, MLP PPO used as-is
 - **Existing environment**: No changes — foraging, pursuit predator, and thermotaxis configs already exist
 - **Experiment tracking**: Minor extension to support objective-switch checkpointing
-- **Dependencies**: No new dependencies
+- **Dependencies**: `scipy` added to `pyproject.toml` for `scipy.stats.ttest_ind` (statistical comparison)
 - **Key threshold**: PQC must show ≤50% of classical network's backward forgetting to confirm the quantum plasticity hypothesis

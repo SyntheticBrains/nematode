@@ -14,9 +14,11 @@ The system SHALL provide a CLI script (`scripts/run_plasticity_test.py`) that ex
 
 - **WHEN** a user runs `scripts/run_plasticity_test.py --config configs/studies/plasticity/<arch>_plasticity.yml`
 - **THEN** the system SHALL train the brain on four phases in sequence: A (foraging) → B (pursuit predators) → C (thermotaxis+pursuit) → A' (foraging return)
+- **AND** all phases SHALL use the same grid size (100×100) to eliminate grid-size confounds in eval comparisons
 - **AND** each phase SHALL run for the number of training episodes specified in the config's `plasticity.training_episodes_per_phase` field
 - **AND** the brain's learned weights SHALL be preserved across all phase transitions without resetting
 - **AND** evaluation blocks SHALL be executed at each transition point
+- **AND** the script SHALL process a single architecture per invocation
 
 #### Scenario: Brain weight preservation across environment switch
 
@@ -39,22 +41,30 @@ The system SHALL execute fixed-length evaluation episodes at each phase transiti
 #### Scenario: Evaluation block execution
 
 - **WHEN** a phase transition occurs (e.g., end of phase A, before phase B begins)
-- **THEN** the system SHALL run the number of episodes specified in `plasticity.eval_episodes` on each relevant objective
-- **AND** the brain SHALL NOT update its weights during evaluation episodes
-- **AND** the brain's optimizer state (momentum buffers, step counters) SHALL be saved before evaluation and restored after
-- **AND** any experience replay buffers SHALL be cleared before and after evaluation
+- **THEN** the system SHALL run the number of episodes specified in `plasticity.eval_episodes` on each relevant objective per the evaluation matrix
+- **AND** the brain SHALL NOT update its weights during evaluation episodes (the eval runner SHALL skip all `learn()` and `post_process_episode()` calls on the brain)
+- **AND** the brain's optimizer `state_dict()` SHALL be saved before evaluation and restored after
+- **AND** PPO experience buffers SHALL be cleared via `buffer.reset()` before and after evaluation
 
-#### Scenario: Evaluation on objective A at all transition points
+#### Scenario: Full evaluation matrix
 
-- **WHEN** the protocol completes each phase
-- **THEN** the system SHALL evaluate the brain on objective A (foraging) to track backward forgetting
-- **AND** the evaluation points SHALL be: pre-training (random baseline), post-A, post-B, post-C, post-A'
-- **AND** each evaluation SHALL record mean success rate, mean reward, and mean steps across all eval episodes
+- **WHEN** the protocol runs evaluation blocks at each transition point
+- **THEN** the system SHALL evaluate the following objectives at each transition point:
+
+| Transition Point | Eval on A (foraging) | Eval on B (pursuit) | Eval on C (thermo+pursuit) |
+|---|---|---|---|
+| Pre-training (random baseline) | Yes | Yes | No |
+| Post-A (after foraging training) | Yes | Yes | No |
+| Post-B (after pursuit training) | Yes | Yes | No |
+| Post-C (after thermo+pursuit training) | Yes | No | Yes |
+| Post-A' (after foraging retraining) | Yes | No | No |
+
+- **AND** each evaluation block SHALL record mean success rate, mean reward, and mean steps across all eval episodes
 
 #### Scenario: Evaluation on current phase objective
 
 - **WHEN** a training phase completes
-- **THEN** the system SHALL evaluate the brain on that phase's objective
+- **THEN** the system SHALL evaluate the brain on that phase's objective as part of the evaluation matrix above
 - **AND** this provides the "task competence" metric for the phase just completed
 
 ### Requirement: Plasticity Metrics Computation
@@ -96,7 +106,7 @@ The system SHALL accept YAML configuration files that define brain architecture,
 
 - **WHEN** a plasticity config file is provided with brain config, plasticity protocol parameters, and per-phase environment configs
 - **THEN** the system SHALL validate that all required fields are present: `brain`, `plasticity.training_episodes_per_phase`, `plasticity.eval_episodes`, `plasticity.seeds`, and `plasticity.phases` (with at least 3 phases)
-- **AND** each phase entry SHALL contain `name` and `environment` fields
+- **AND** each phase entry SHALL contain `name`, `environment`, and `reward` fields
 
 #### Scenario: Per-phase environment and reward config
 
@@ -120,11 +130,11 @@ The system SHALL export plasticity test results to CSV files for post-hoc analys
 - **THEN** the system SHALL write an aggregate CSV containing: architecture name, per-metric mean ± std across seeds for BF, FT, PR, and per-phase eval scores
 - **AND** the CSV SHALL be written to `exports/{session_id}/plasticity/aggregate_metrics.csv`
 
-#### Scenario: Cross-architecture comparison CSV
+#### Scenario: Cross-architecture comparison
 
-- **WHEN** the user runs plasticity tests for multiple architectures
-- **THEN** the system SHALL support combining aggregate CSVs from multiple runs into a comparison table
-- **AND** the comparison SHALL include forgetting ratios and t-test p-values for quantum vs classical pairs
+- **WHEN** the user has completed plasticity tests for multiple architectures (separate invocations)
+- **THEN** the system SHALL provide a post-hoc comparison script or function that reads aggregate CSVs from multiple runs and produces a combined comparison table
+- **AND** the comparison SHALL include forgetting ratios and t-test p-values for quantum vs classical pairs (QRH vs CRH, HybridQuantum vs HybridClassical)
 
 ### Requirement: Brain Checkpoint Persistence
 
