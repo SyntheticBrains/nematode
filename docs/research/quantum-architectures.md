@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-03-20
 
 ______________________________________________________________________
 
@@ -65,6 +65,7 @@ QVarCircuit (CMA-ES)              99.8%      76.1%**        Evolutionary        
 ──────────────────────────────────────────────────────────────────────────────────────────────
 QRH (quantum reservoir)           86.8%§§    41.2%          PPO (readout only)      PARTIAL
 CRH (classical reservoir)         N/A        31.8%/29.9%‖   PPO (readout only)      PARTIAL (CTRL)
+QEF (entangled features)          N/A        93.0%/90.8%¶   PPO (hybrid+gating)     COMPETITIVE¶¶
 HybridQuantum                     91.0%      96.9%          Surr REINFORCE + PPO    YES (BEST)
 HybridClassical (ablation)        97.0%      96.3%          Backprop + PPO          YES (CONTROL)
 HybridQuantumCortex               88.8%      40.9%‡‡        Surr REINFORCE + GAE    PARTIAL
@@ -82,6 +83,8 @@ MLPPPOBrain                       96.7%      71.6%††/94.5%  PPO (classical) 
 ‖ CRH: pursuit 31.8% / stationary 29.9%; outperforms QRH on stationary predators (+6.3pp)
 †† MLP PPO unified sensory modules (apples-to-apples comparison); 94.5% uses pre-computed gradient
 ‡‡ HybridQuantumCortex: 96.8% on 1-predator, 40.9% on 2-predator (9 rounds, 32 sessions); halted
+¶ QEF: pursuit 93.0% L100 / stationary 90.8% L100 (12-seed validation, 1000 episodes)
+¶¶ QEF: quantum-competitive but no significant advantage. Trails MLP PPO on pursuit (-3.0pp, p=0.04)
 ```
 
 ### Key Finding: Architecture + Curriculum Drive Performance, Not QSNN
@@ -174,16 +177,23 @@ NOT EVALUATED:
     Uses parameter-shift, not surrogate gradients. Not pursued given
     HybridQuantum's success.
 
-PROPOSED (added 2026-03-13 after deep research investigation):
-  QA-5 Entangled Feature Extraction — PRIORITY 1 (NEXT)
-    Entangled PQC feature extractor (8 qubits, CZ/CNOT) + classical PPO readout.
-    Extends QRH paradigm with purposeful entanglement for interaction encoding.
-    Motivated by arXiv:2603.10289 (entanglement in adversarial RL).
+  QEF / QA-5 (Quantum Entangled Features) — 8-qubit PQC + hybrid input + feature gating + PPO readout.
+    24 phases, ~500+ runs, 12-seed statistical validation across 3 tasks.
+    Hybrid input (raw + quantum features) + learnable gating = key innovations.
+    Ring topology + CRY/CRZ gates + compact 64x2 readout.
+    12-seed results: 90.8% stationary, 93.0% pursuit, 98.2% small PP.
+    Classical ablation: A3 poly 93.8% stationary (best), MLP PPO 96.0% pursuit (best).
+    Gating asymmetry: helps quantum (+7.7pp), hurts classical (-4.0pp) on stationary.
+    STATUS: EVALUATED — quantum-competitive but no significant advantage (p>0.05 on all
+    tasks except pursuit where QEF trails at p=0.04). Architecture ceiling reached.
 
-  QA-6 QRH+ (Weak-Measurement Feedback) — PRIORITY 4
+PROPOSED:
+  QA-6 QRH+ (Weak-Measurement Feedback) — PRIORITY 1 (NEXT)
     QRH reservoir enhanced with weak measurements + feedback for temporal memory.
     Addresses QRH temporal bottleneck at reservoir level (not readout — Stage 4d
     proved readout complexity is wrong fix). Motivated by arXiv:2503.17939.
+    QEF evaluation suggests temporal memory could provide genuine advantage on
+    stationary predators where fixed positions must be learned through experience.
 
   QA-7 Quantum Plasticity Test — PRIORITY 2 (PARALLEL, low effort)
     Tests PQC unitarity for anti-forgetting in sequential multi-objective training.

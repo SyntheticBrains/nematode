@@ -1,0 +1,118 @@
+# Dynamic Foraging with Pursuit Predators - Small Configuration
+# Uses QEF (Quantum Entangled Features) brain architecture
+# Multi-objective learning: find food while avoiding predators
+#
+# 8-qubit circuit with ring entanglement topology (8 CZ pairs).
+# Ring connects (0,1)(1,2)(2,3)(3,4)(4,5)(5,6)(6,7)(7,0).
+# Ring outperforms modality_paired (+11.7pp overall, 2x faster convergence)
+# on pursuit predators.
+#
+# Module feature breakdown:
+# - food_chemotaxis: 2 features (strength, angle)
+# - nociception: 2 features (strength, angle)
+# Total: 4 features on 8 qubits (4 qubits in H-superposition)
+# Feature dim: 3×8 + C(8,2) = 24 + 28 = 52
+#
+# LR decay + entropy annealing stabilize post-convergence behavior.
+# Without decay, seed-dependent catastrophic forgetting was observed.
+# With decay, all seeds converge to 96-97% late-100.
+
+max_steps: 500
+brain:
+  name: qef
+  config:
+    # Circuit parameters
+    num_qubits: 8
+    circuit_depth: 2
+    circuit_seed: 42
+    entanglement_topology: ring
+    entanglement_enabled: true
+    gate_mode: cry_crz
+    feature_mode: xyz
+    hybrid_input: true
+    feature_gating: context
+
+    # Compact readout with hybrid input (raw 4 + quantum 52 = 56-dim)
+    readout_hidden_dim: 64
+    readout_num_layers: 2
+
+    # PPO hyperparameters
+    actor_lr: 0.0005
+    critic_lr: 0.0005
+    gamma: 0.99
+    gae_lambda: 0.98
+    ppo_clip_epsilon: 0.2
+    ppo_epochs: 10
+    ppo_minibatches: 2
+    ppo_buffer_size: 256
+    entropy_coeff: 0.02
+    value_loss_coef: 0.5
+    max_grad_norm: 0.5
+
+    # LR warmup (ramp from 10% to full LR over first 30 episodes)
+    lr_warmup_episodes: 30
+    lr_warmup_start: 0.00005
+
+    # LR decay (after warmup, decay over 300 episodes)
+    lr_decay_episodes: 300
+    lr_decay_end: 0.0001
+
+    # Entropy annealing (reduce exploration as policy matures)
+    entropy_coeff_end: 0.005
+    entropy_decay_episodes: 300
+
+    # Unified sensory modules for multi-objective tasks
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.3
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 5
+    kill_radius: 0
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    enabled: true
+    max_hp: 100.0
+    predator_damage: 6.0
+    food_healing: 10.0

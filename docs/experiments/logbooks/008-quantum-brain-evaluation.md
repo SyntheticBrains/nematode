@@ -1,8 +1,8 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `stage_4d_complete` — HybridQuantum brain achieves 96.9% post-convergence on pursuit predators (+25.3 pts over MLP PPO baseline) with 4.3x fewer parameters. HybridClassical ablation (96.3%) confirms architecture + curriculum drive performance, not QSNN. QRH (Quantum Reservoir Hybrid) achieves 98% post-convergence foraging, 41.2% pursuit predator success (4/4 converged), with Domingo encoding confound control confirming genuine quantum dynamics advantage. CRH (Classical Reservoir Hybrid) ablation shows task-dependent advantages: QRH wins pursuit (+9.4pp, 13× lower variance), CRH wins stationary (+6.3pp, 3/4 converged). QLIF-LSTM (H.4) evaluated: 98% classical last-100 on pursuit predators, but quantum gates provide no measurable advantage. Stationary predators remain a weakness (~37% ceiling). QRH-QLSTM composition (Stage 4d) complete: CRH-QLSTM 85.4% on small pursuit (best reservoir variant), but LSTM readout hurts QRH at scale (-24.9pp vs MLP). Stage 4d hypothesis REJECTED.
+**Status**: `qef_complete` — QEF (Quantum Entangled Features) evaluation complete: 24 phases, ~500+ runs, 12-seed validation. QEF is quantum-competitive but not quantum-advantageous — matches classical approaches within 1-3pp on all tasks but no statistically significant improvement. A3 polynomial features outperform on stationary (93.8% vs QEF 90.8%, p=0.08). MLP PPO outperforms on pursuit (96.0% vs QEF 93.0%, p=0.04). Previous status: HybridQuantum 96.9% pursuit, QRH genuine quantum dynamics on pursuit, QLIF-LSTM no quantum gate advantage, QRH-QLSTM REJECTED.
 
-**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`, `feat/add-qrh-qlstm-variant`
+**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`, `feat/add-qrh-qlstm-variant`, `feat/add-qef-brain`
 
 **Date Started**: 2026-02-05
 
@@ -1512,6 +1512,104 @@ Full optimization history (15 rounds, 54 sessions): [qrhqlstm-optimization.md](s
 
 ______________________________________________________________________
 
+## QEF Brain Evaluation (Quantum Entangled Features)
+
+### Architecture
+
+```text
+Sensory Input (7 features)
+    │
+    ├─── Raw Features (7-dim) ────────────────────────────┐
+    │                                                     │
+    ▼                                                     │
+┌──────────────────────────────────────────────┐          │
+│  8-Qubit PQC (depth 2, ring entanglement)    │          │
+│  H → [RY encoding + CRY/CRZ ring]^2 → |ψ⟩    │          │
+│  → Z + ZZ correlations (31-52 features)      │          │
+└──────────────────────────────────────────────┘          │
+    │                                                     │
+    ▼                                                     │
+┌──────────────────────────────────────────────┐          │
+│  Feature Gating (static/context/mixed)       │          │
+│  sigmoid(w) * quantum_features               │          │
+└──────────────────────────────────────────────┘          │
+    │                                                     │
+    ├─── Gated Quantum Features ──────────────────────────┤
+    │                                                     │
+    ▼                                                     ▼
+┌──────────────────────────────────────────────────────────┐
+│  PPO Actor-Critic Readout (64×2 MLP)                     │
+│  [raw | quantum | poly] → LayerNorm → Actor/Critic       │
+└──────────────────────────────────────────────────────────┘
+```
+
+QEF extends the QRH paradigm by replacing the random reservoir with purposeful cross-modal entanglement. Key innovations developed during evaluation: hybrid input (raw + quantum features), learnable feature gating, and cross-modal ZZ curation.
+
+### Configuration (Task-Specific)
+
+**Pursuit predators (large)**: hybrid + context gating, 59-dim input (7 raw + 52 quantum), bigbuf 1024
+**Stationary predators (large)**: hybrid + curated cross-modal ZZ + static gating, 38-dim input (7 raw + 31 quantum), bigbuf 1024
+**Pursuit predators (small)**: hybrid + context gating, 56-dim input (4 raw + 52 quantum)
+
+### Results Summary (12-Seed Validation)
+
+| Task | QEF L100 | MLP PPO L100 | A3 Poly L100 | QEF vs MLP | QEF vs Poly | Status |
+|------|---------|-------------|-------------|-----------|------------|--------|
+| Stationary (1000ep) | 90.8% ± 1.2% | 89.6% ± 0.8% | **93.8% ± 1.0%** | +1.2pp (ns) | -3.1pp (ns) | Competitive |
+| Pursuit large (1000ep) | 93.0% ± 1.3% | **96.0% ± 0.5%** | 94.8% ± 1.1% | -3.0pp (\*) | -1.8pp (ns) | Behind MLP |
+| Small PP (500ep) | 98.2% ± 0.6% | **98.6% ± 0.5%** | 97.0% ± 0.6% | -0.5pp (ns) | +1.2pp (ns) | Competitive |
+
+Paired t-tests with 12 seeds. (ns) = not significant at p\<0.05, (\*) = significant at p\<0.05.
+Additional: A3 Poly vs MLP PPO on stationary: +4.2pp, p=0.001 (\*\*). Full per-seed data in [appendix](supporting/008/qef-optimization.md#12-seed-statistical-validation).
+
+### Key Findings
+
+1. **No statistically significant quantum advantage on any task.** QEF does not significantly outperform either classical baseline at p\<0.05.
+2. **QEF significantly trails MLP PPO on pursuit** (-3.0pp, p=0.043). MLP PPO's simple 7-feature input with low variance (σ=1.6) outperforms QEF's 59-dim hybrid input with higher variance (σ=4.5).
+3. **A3 polynomial features are strongest on stationary** (93.8%), significantly beating MLP PPO (p=0.001). Classical polynomial features are most effective on the weak-signal task.
+4. **Entanglement is essential** — 0% success without it (separable ablation).
+5. **Gating interacts differently with quantum vs classical features**: On stationary, gating helps quantum (+7.7pp) but hurts classical (-4.0pp). On pursuit/small PP, gating helps both equally.
+6. **Feature curation helps on weak-signal tasks**: Cross-modal ZZ only (dropping intra-modal pairs and cos/sin) improved stationary from 91.0% to 92.2%.
+
+### Optimization Journey (24 Phases)
+
+| Phase | Key Change | Stationary L100 | Pursuit L100 | Finding |
+|-------|-----------|-----------------|-------------|---------|
+| 1-4 | MI analysis, topology/gate/feature modes | — | — | CRY/CRZ gates essential; xyz features better |
+| 5 | LR decay + entropy annealing | — | 96.0% (small PP) | Eliminates catastrophic forgetting |
+| 5b | Ring topology (vs modality-paired) | — | +12.5pp | Ring wins decisively |
+| 6 | Compact readout 64×2 | — | +5.0pp | Smaller network → higher ceiling |
+| 8 | Stationary evaluation | 69.7% | — | Weak nociception signal is the bottleneck |
+| 8c | Entropy fix + bigbuf | 75.5% | — | +5.8pp on stationary |
+| 9 | Hybrid input (raw + quantum) | 82.5% | 88.2% | Key innovation — fast convergence |
+| 10 | Feature gating (static) | 90.2% | 90.5% | +7.2pp stationary, +2.3pp pursuit |
+| 13 | Classical ablation | — | — | A3 poly = 88.2% stationary (buffer 512) |
+| 16 | Context gating | — | 95.7% | +5.2pp pursuit over static gating |
+| 19 | Mixed gating | 91.0% | — | +0.8pp stationary over static |
+| 21 | Fair comparison (matched buffer) | — | — | MLP PPO stationary jumps to 90.2% |
+| 23 | Curated cross-modal ZZ | 92.2% | — | +1.2pp from feature curation |
+| Final | 12-seed validation | 90.8% | 93.0% | No significant quantum advantage |
+
+### Conclusion
+
+QEF is **quantum-competitive but not quantum-advantageous**. It matches classical approaches within ~1-3pp across all tested environments using quantum-derived features but does not provide a statistically significant performance improvement. The architecture's value lies in demonstrating that entangled PQC features can serve as viable alternatives to classical features, and in the mechanistic finding that learned gating interacts fundamentally differently with quantum vs classical feature structures.
+
+The -3.1pp gap on stationary (vs A3 polynomial, p=0.081) appears structural — classical polynomial features have a self-silencing property on weak signals (products go to zero when either input is zero) that quantum ZZ correlations lack. The 8-qubit depth-2 circuit is also classically simulatable, limiting the theoretical basis for quantum advantage in this regime.
+
+**Recommended future directions**: QA-6 (weak-measurement feedback for temporal memory), higher-dimensional observation tasks, or multi-agent interaction environments where entanglement has stronger theoretical motivation.
+
+### File Locations
+
+- **Implementation**: `packages/quantum-nematode/quantumnematode/brain/arch/qef.py`
+- **Tests**: `tests/quantumnematode_tests/brain/arch/test_qef.py` (79 tests)
+- **MLP PPO ablation**: `packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py` (feature expansion + gating)
+- **MLP PPO tests**: `tests/quantumnematode_tests/brain/arch/test_mlpppo.py` (58 tests)
+- **Configs**: `configs/examples/qef_*.yml`, `configs/examples/mlpppo_*_fair.yml`
+- **Artifacts**: `artifacts/logbooks/008/qef_*`, `artifacts/logbooks/008/mlpppo_*_fair`
+- **Appendix**: [QEF optimization history](supporting/008/qef-optimization.md)
+
+______________________________________________________________________
+
 ## Next Steps
 
 - [x] Implement QSNNBrain with QLIF neurons
@@ -1563,6 +1661,12 @@ ______________________________________________________________________
 - [x] QLIF-LSTM Stage 4c: stationary predators — 37% classical ceiling, 31% quantum. 6 rounds tuning, actor [features, h_t] fix. FAIL vs MLP PPO (96.5%)
 - [x] QLIF-LSTM quantum comparison complete — quantum QLIF gates provide no measurable advantage on any task
 - [x] QRH-QLSTM composition (Stage 4d) — 15 rounds, 54 sessions: CRH-QLSTM 85.4% small pursuit (best reservoir), but -21pp vs QLIF-LSTM at scale. LSTM hurts QRH (-4.1pp). Hypothesis REJECTED
+- [x] Implement QEF brain (QA-5 — Quantum Entangled Features, 8-qubit PQC + PPO readout)
+- [x] QEF evaluation: 24 phases, ~500+ runs across 3 tasks (stationary, pursuit, small PP)
+- [x] Hybrid input + feature gating + curated features — systematic optimization
+- [x] Classical ablation: capacity-matched, polynomial, random projection, polynomial + gating
+- [x] 12-seed validation: QEF competitive but no significant quantum advantage (p>0.05 on all tasks except pursuit where QEF trails MLP PPO at p=0.04)
+- [x] QEF evaluation halted — architecture has reached ceiling in current simulation regime
 
 ______________________________________________________________________
 
