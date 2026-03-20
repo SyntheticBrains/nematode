@@ -41,7 +41,7 @@ ______________________________________________________________________
 |-------|-----------|-----------------|---------|
 | 1-4 | MI analysis, CRY/CRZ gates, xyz features | — | CZ-only insufficient; CRY/CRZ + xyz required |
 | 5 | LR decay + entropy annealing | 96.0% (small PP) | Eliminates catastrophic forgetting |
-| 5b | Ring topology | +12.5pp pursuit | Ring >> modality-paired (8 vs 4 CZ pairs) |
+| 5b | Ring topology | +11.7pp overall (small PP) | Ring >> modality-paired (8 vs 4 CZ pairs) |
 | 6 | Compact readout 64x2 | +5.0pp pursuit | Smaller network has higher L100 ceiling |
 | 7 | Depth 3, sparse encoding tested | — | Both hurt; depth 2 + uniform confirmed optimal |
 | 8 | Stationary evaluation + entropy/bigbuf tune | 75.5% stationary | Weak nociception signal is bottleneck |
