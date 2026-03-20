@@ -1,6 +1,6 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `qef_complete` — QEF (Quantum Entangled Features) evaluation complete: 24 phases, ~500+ runs, 12-seed validation. QEF is quantum-competitive but not quantum-advantageous — matches classical approaches within 1-3pp on all tasks but no statistically significant improvement. A3 polynomial features outperform on stationary (93.8% vs QEF 90.8%, p=0.08). MLP PPO outperforms on pursuit (96.0% vs QEF 93.0%, p=0.04). Previous status: HybridQuantum 96.9% pursuit, QRH genuine quantum dynamics on pursuit, QLIF-LSTM no quantum gate advantage, QRH-QLSTM REJECTED.
+**Status**: `pivoting` — QA-5 (QEF) complete. QA-6 deferred. QA-7 (Quantum Plasticity) is the final quantum experiment at current environment complexity before pivoting to environment enrichment (Phases 1-3). Strategic assessment (2026-03-20) concluded current environments (2-9D observations, 4 actions, ~10K states) are below quantum advantage thresholds. See [quantum-architectures.md Strategic Assessment](../../research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage). Previous: QEF quantum-competitive but not quantum-advantageous (24 phases, ~500+ runs, 12-seed validation). HybridQuantum 96.9% pursuit, QRH genuine quantum dynamics on pursuit, QLIF-LSTM no quantum gate advantage, QRH-QLSTM REJECTED.
 
 **Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`, `feat/add-qrh-qlstm-variant`, `feat/add-qef-brain`
 
@@ -1843,6 +1843,36 @@ Experiment results: `artifacts/logbooks/008/qliflstm_foraging_small/`, `artifact
 Full optimization history (15 rounds, 54 sessions): [qrhqlstm-optimization.md](supporting/008/qrhqlstm-optimization.md)
 
 Experiment results: `artifacts/logbooks/008/qrhqlstm_foraging_small/`, `artifacts/logbooks/008/qrhqlstm_pursuit_predators_small/`, `artifacts/logbooks/008/qrhqlstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/qrhqlstm_thermotaxis_stationary_predators_large/`, `artifacts/logbooks/008/crhqlstm_foraging_small/`, `artifacts/logbooks/008/crhqlstm_pursuit_predators_small/`, `artifacts/logbooks/008/crhqlstm_thermotaxis_pursuit_predators_large/`, `artifacts/logbooks/008/crhqlstm_thermotaxis_stationary_predators_large/`
+
+______________________________________________________________________
+
+## Strategic Pivot: Environment Enrichment Before Further Quantum Evaluation
+
+**Date**: 2026-03-20
+**Decision**: Defer QA-6 (QRH+ weak-measurement feedback). Promote QA-7 (Quantum Plasticity) as final quantum experiment at current environment complexity. After QA-7, pivot to environment enrichment (roadmap Phases 1-3).
+
+### Rationale
+
+After 290+ experiment sessions across 11+ quantum architectures (QRC, QSNN, QVarCircuit, QSNN-PPO, QSNNReinforce A2C, HybridQuantum, HybridClassical, HybridQuantumCortex, QRH, CRH, QLIF-LSTM, QRH-QLSTM, CRH-QLSTM, QRH-LSTM, QEF), the theoretical and empirical evidence converges: our current environment complexity is below the threshold for quantum advantage.
+
+**Key factors**:
+
+- **Observation space (2-9D)**: Dequantization results prove classical algorithms match quantum at this scale
+- **Action space (4 discrete)**: Quantum search advantages require >10^20 actions
+- **State space (~10K)**: Polynomial, not the exponential spaces where quantum excels
+- **Classical performance (94-98%)**: No headroom for quantum to demonstrate advantage
+- **Empirical**: Every trainable quantum component either fails or matches its classical ablation
+
+**QA-7 is the exception** because it tests a fundamentally different hypothesis — optimisation landscape properties (anti-forgetting via PQC unitarity), not computational performance. This is testable at current complexity since multi-objective sequential training is already our core challenge.
+
+### What Changes
+
+- **QA-6**: DEFERRED — even +5pp target yields ~28% absolute vs classical 90%+
+- **QA-3**: DEFERRED — QA-5 showed entangled features competitive but not advantageous; trainable entangled circuits unlikely to help
+- **QA-7**: PROMOTED to NEXT — final quantum experiment (OpenSpec: `add-quantum-plasticity-test`)
+- **Post QA-7**: Pivot to environment enrichment. Return to quantum evaluation when environments reach complexity thresholds (>30 input features, multi-agent, long non-Markovian horizons)
+
+Full analysis: [quantum-architectures.md Strategic Assessment](../../research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage)
 
 ### Appendices
 
