@@ -1560,6 +1560,7 @@ QEF extends the QRH paradigm by replacing the random reservoir with purposeful c
 | Small PP (500ep) | 98.2% ± 0.6% | **98.6% ± 0.5%** | 97.0% ± 0.6% | -0.5pp (ns) | +1.2pp (ns) | Competitive |
 
 Paired t-tests with 12 seeds. (ns) = not significant at p\<0.05, (\*) = significant at p\<0.05.
+Additional: A3 Poly vs MLP PPO on stationary: +4.2pp, p=0.001 (\*\*). Full per-seed data in [appendix](supporting/008/qef-optimization.md#12-seed-statistical-validation).
 
 ### Key Findings
 
@@ -1593,7 +1594,7 @@ Paired t-tests with 12 seeds. (ns) = not significant at p\<0.05, (\*) = signific
 
 QEF is **quantum-competitive but not quantum-advantageous**. It matches classical approaches within ~1-3pp across all tested environments using quantum-derived features but does not provide a statistically significant performance improvement. The architecture's value lies in demonstrating that entangled PQC features can serve as viable alternatives to classical features, and in the mechanistic finding that learned gating interacts fundamentally differently with quantum vs classical feature structures.
 
-The -2.0pp gap on stationary (vs A3 polynomial) appears structural — classical polynomial features have a self-silencing property on weak signals (products go to zero when either input is zero) that quantum ZZ correlations lack. The 8-qubit depth-2 circuit is also classically simulatable, limiting the theoretical basis for quantum advantage in this regime.
+The -3.1pp gap on stationary (vs A3 polynomial, p=0.081) appears structural — classical polynomial features have a self-silencing property on weak signals (products go to zero when either input is zero) that quantum ZZ correlations lack. The 8-qubit depth-2 circuit is also classically simulatable, limiting the theoretical basis for quantum advantage in this regime.
 
 **Recommended future directions**: QA-6 (weak-measurement feedback for temporal memory), higher-dimensional observation tasks, or multi-agent interaction environments where entanglement has stronger theoretical motivation.
 
