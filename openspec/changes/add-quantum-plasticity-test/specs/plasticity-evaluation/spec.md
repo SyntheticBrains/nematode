@@ -31,7 +31,7 @@ The system SHALL provide a CLI script (`scripts/run_plasticity_test.py`) that ex
 
 - **WHEN** the config specifies multiple seeds in `plasticity.seeds`
 - **THEN** the system SHALL execute the full four-phase protocol independently for each seed
-- **AND** each seed SHALL produce an independent brain initialisation
+- **AND** each seed SHALL construct a fresh brain instance via `setup_brain_model()` with the seed set in the brain config, producing an independent weight initialisation
 - **AND** results SHALL be aggregated across seeds with mean and standard deviation
 
 ### Requirement: Evaluation Blocks at Transition Points
@@ -42,9 +42,10 @@ The system SHALL execute fixed-length evaluation episodes at each phase transiti
 
 - **WHEN** a phase transition occurs (e.g., end of phase A, before phase B begins)
 - **THEN** the system SHALL run the number of episodes specified in `plasticity.eval_episodes` on each relevant objective per the evaluation matrix
-- **AND** the brain SHALL NOT update its weights during evaluation episodes (the eval runner SHALL skip all `learn()` and `post_process_episode()` calls on the brain)
-- **AND** the brain's optimizer `state_dict()` SHALL be saved before evaluation and restored after
-- **AND** PPO experience buffers SHALL be cleared via `buffer.reset()` before and after evaluation
+- **AND** before the eval block, the system SHALL save all brain `state_dict()`s (model parameters, optimizer state, normalisation layers) into an in-memory snapshot
+- **AND** eval episodes SHALL run through the standard agent episode loop (learning may occur internally)
+- **AND** after the eval block, the system SHALL restore all `state_dict()`s from the snapshot via `load_state_dict()` and clear any PPO buffers via `buffer.reset()`
+- **AND** after restore, the brain SHALL be in exactly the same state as before the eval block
 
 #### Scenario: Full evaluation matrix
 
@@ -86,10 +87,12 @@ The system SHALL compute backward forgetting, forward transfer, and plasticity r
 
 #### Scenario: Plasticity retention computation
 
-- **WHEN** evaluation results are available for objective A at post-A and post-A' transition points
-- **THEN** the system SHALL compute plasticity retention by comparing the convergence rate during phase A' (retraining on A) vs the original phase A
+- **WHEN** training episode metrics are available for phase A and phase A'
+- **THEN** the system SHALL compute plasticity retention by comparing convergence speed during phase A' (retraining) vs the original phase A
+- **AND** convergence SHALL be defined as the first episode where the trailing-20-episode mean success rate exceeds a configurable threshold (default: 60%, configurable via `plasticity.convergence_threshold`)
 - **AND** plasticity retention SHALL be expressed as: `PR = convergence_episodes_A / convergence_episodes_A'`
 - **AND** PR > 1.0 indicates the brain relearns faster than it originally learned (positive plasticity)
+- **AND** if a phase does not converge within `training_episodes_per_phase`, PR SHALL be reported as `N/A` for that seed and excluded from cross-seed aggregation
 
 #### Scenario: Quantum vs classical forgetting comparison
 
@@ -106,6 +109,7 @@ The system SHALL accept YAML configuration files that define brain architecture,
 
 - **WHEN** a plasticity config file is provided with brain config, plasticity protocol parameters, and per-phase environment configs
 - **THEN** the system SHALL validate that all required fields are present: `brain`, `plasticity.training_episodes_per_phase`, `plasticity.eval_episodes`, `plasticity.seeds`, and `plasticity.phases` (with at least 3 phases)
+- **AND** `plasticity.convergence_threshold` SHALL default to 0.6 if not specified
 - **AND** each phase entry SHALL contain `name`, `environment`, and `reward` fields
 
 #### Scenario: Per-phase environment and reward config
@@ -133,7 +137,8 @@ The system SHALL export plasticity test results to CSV files for post-hoc analys
 #### Scenario: Cross-architecture comparison
 
 - **WHEN** the user has completed plasticity tests for multiple architectures (separate invocations)
-- **THEN** the system SHALL provide a post-hoc comparison script or function that reads aggregate CSVs from multiple runs and produces a combined comparison table
+- **THEN** the system SHALL provide a post-hoc comparison script (`scripts/compare_plasticity_results.py`) that accepts aggregate CSV paths via `--results path1.csv path2.csv ...` CLI arguments
+- **AND** the script SHALL read the aggregate CSVs, match quantum/classical pairs by architecture name convention, and produce a combined comparison table
 - **AND** the comparison SHALL include forgetting ratios and t-test p-values for quantum vs classical pairs (QRH vs CRH, HybridQuantum vs HybridClassical)
 
 ### Requirement: Brain Checkpoint Persistence

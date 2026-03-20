@@ -50,15 +50,44 @@ The brain survives across phases because it is constructed once and passed by re
 
 For architectures with multiple components (HybridQuantum has reflex + cortex + critic), we use their existing `save_*_weights()` / `load_*_weights()` methods. For simpler architectures (QRH, CRH, MLP PPO), we save the full `state_dict()` of their PyTorch modules plus optimizer state into a single checkpoint dict.
 
-### 4. Eval mode mechanism
+### 4. Brain construction and seed handling
 
-**Decision**: The plasticity script controls eval mode externally by running episodes without calling `learn()` or `post_process_episode()` on the brain. No modifications to brain internals needed.
+**Decision**: Construct a fresh brain via `setup_brain_model()` for each seed. Brain reuse is only within a seed (across phases).
 
-**Rationale**: None of the 5 target brains implement an eval/train toggle. Rather than adding eval mode flags to each architecture (modifying existing code, violating the non-goal of no brain changes), the plasticity script's eval runner simply runs the agent episode loop in a "collect metrics only" mode — calling `run_brain()` for action selection but skipping all learning calls. Since the script controls the training loop, this is straightforward.
+**Rationale**: There is no generic `reset_weights(seed)` method on the `Brain` protocol. Weight initialisation is controlled by the seed in the `BrainConfig` (e.g., `QRHBrainConfig(seed=42)`), which feeds into `setup_brain_model()`. To get independent initialisations per seed, we must construct a new brain each time.
 
-Before eval: save optimizer `state_dict()` and clear PPO buffer via `buffer.reset()`. After eval: restore optimizer state and clear buffer again to prevent eval experience from leaking into training updates.
+The seed loop works as follows:
 
-### 5. Metric computation approach
+1. For each seed in `plasticity.seeds`:
+   a. Set `brain_config.seed = seed`
+   b. Call `setup_brain_model(brain_config, ...)` to create a fresh brain with that seed's random initialisation
+   c. Run the full 4-phase protocol with this brain
+   d. Collect per-seed metrics
+2. After all seeds: aggregate metrics across seeds
+
+This matches how `run_simulation.py` handles brain construction — the seed goes into the config, the factory produces a brain with deterministic initialisation.
+
+### 5. Eval mode mechanism
+
+**Decision**: Run eval episodes normally (letting any internal learning happen), but save all brain `state_dict()`s before eval and restore them after. The eval block is a "peek" at current performance that leaves no trace on the brain.
+
+**Rationale**: Simply skipping `learn()` calls is insufficient because learning triggers are architecture-specific and embedded at different points:
+
+- PPO-based brains (QRH, CRH, MLP PPO): learning happens inside `post_process_episode()` when the buffer is full
+- HybridQuantum: QSNN reflex learning triggers inside `run_brain()` itself via `_qsnn_learn()`
+- HybridClassical: similar inline learning in the reflex MLP
+
+Rather than understanding and intercepting every architecture's learning path, save/restore is robust across all architectures. The overhead of 50 episodes of "wasted" learning is negligible since we restore the full state afterwards.
+
+**Procedure**:
+
+1. Before eval: collect all `state_dict()`s from the brain's PyTorch modules (actor, critic, optimizer, any normalisation layers) into a dict
+2. Run eval episodes normally through the standard agent episode loop, collecting metrics
+3. After eval: restore all `state_dict()`s via `load_state_dict()`, and clear any PPO buffer via `buffer.reset()`
+
+This guarantees the brain is in exactly the same state after eval as before, regardless of what learning happened during eval episodes.
+
+### 6. Metric computation approach
 
 **Decision**: Run a fixed-length evaluation block (50 episodes) at each transition point using the eval mode above, then resume training.
 
@@ -74,7 +103,9 @@ Before eval: save optimizer `state_dict()` and clear PPO buffer via `buffer.rese
 | Post-C (after thermo+pursuit training) | Yes | — | Yes |
 | Post-A' (after foraging retraining) | Yes | — | — |
 
-Eval on A at every point tracks backward forgetting. Eval on B at pre-training and post-A measures forward transfer. Eval on C only at post-C (task competence). Eval on B/C at post-A' is omitted as it adds runtime without addressing the core hypothesis.
+Eval on A at every point tracks backward forgetting. Eval on B at pre-training, post-A, and post-B measures forward transfer and B-competence. Eval on C only at post-C (task competence). Eval on B/C at post-A' is omitted as it adds runtime without addressing the core hypothesis.
+
+Total: **9 eval blocks** per transition cycle (5 A-evals + 3 B-evals + 1 C-eval).
 
 **Key metrics**:
 
@@ -82,13 +113,13 @@ Eval on A at every point tracks backward forgetting. Eval on B at pre-training a
 - **Forward Transfer (FT)** = `post_A_eval_on_B - random_baseline_on_B` (does A-training help B?)
 - **Plasticity Retention (PR)** = `post_A'_convergence_rate / post_A_convergence_rate` (can it relearn A as fast?)
 
-### 6. Evaluation episodes per phase vs training episodes
+### 7. Evaluation episodes per phase vs training episodes
 
 **Decision**: 200 training episodes per objective, 50 evaluation episodes at each transition.
 
-**Rationale**: 200 episodes is sufficient for convergence on our environments based on prior experiments (QRH converges by episode ~100 on foraging, MLP PPO by ~50). 50 evaluation episodes provide a stable mean with reasonable variance. Total per seed: ~1250 episodes (200×4 training phases + 50×(5 A-evals + 2 B-evals + 1 C-eval) = 200×4 + 50×8 = 1200). Manageable for 5 architectures × 8 seeds = 40 runs.
+**Rationale**: 200 episodes is sufficient for convergence on our environments based on prior experiments (QRH converges by episode ~100 on foraging, MLP PPO by ~50). 50 evaluation episodes provide a stable mean with reasonable variance. Total per seed: ~1250 episodes (200×4 training phases + 50×9 eval blocks = 800 + 450 = 1250). Manageable for 5 architectures × 8 seeds = 40 runs.
 
-### 7. Objective sequence and grid size
+### 8. Objective sequence and grid size
 
 **Decision**: Foraging → Pursuit Predators → Thermotaxis+Pursuit → return to Foraging. All phases on 100×100 grid.
 
@@ -103,7 +134,7 @@ Eval on A at every point tracks backward forgetting. Eval on B at pre-training a
 
 **Alternative considered**: 20×20 for A/B and 100×100 for C. Rejected because eval-on-A scores at different transition points would not be directly comparable if the A-eval grid differs from the C-training grid (different absolute difficulty levels confound the forgetting measurement).
 
-### 8. Config structure
+### 9. Config structure
 
 **Decision**: One YAML config per architecture defining all four phases, rather than separate configs per phase. Each phase includes both environment and reward config.
 
@@ -135,13 +166,13 @@ plasticity:
       reward: { food_reward: 2.0, step_penalty: -0.01, ... }
 ```
 
-### 9. Single architecture per invocation
+### 10. Single architecture per invocation
 
 **Decision**: The plasticity script runs one architecture per invocation. Cross-architecture comparison is a separate post-hoc step.
 
 **Rationale**: Each architecture has different config requirements (HybridQuantum needs pre-trained weights, QRH has reservoir params, etc.). Running one at a time keeps the script simple and allows independent execution/parallelisation. The aggregate CSV from each run contains all the data needed for cross-architecture comparison. A lightweight post-hoc script (or manual analysis) combines the aggregate CSVs and computes forgetting ratios + t-tests.
 
-### 10. Statistical comparison
+### 11. Statistical comparison
 
 **Decision**: Per-architecture mean ± std across seeds, two-sample t-test between quantum and classical pairs (QRH vs CRH, HybridQuantum vs HybridClassical), plus MLP PPO as overall classical baseline.
 
@@ -151,10 +182,10 @@ plasticity:
 
 **[Risk] Some architectures may not converge within 200 episodes on 100×100 grids** → Mitigation: Prior benchmarks used 100×100 for pursuit/thermotaxis tasks. Foraging-only on 100×100 is untested but structurally simpler. Pre-test with 1 seed before running the full 8-seed campaign. If convergence is too slow, increase `training_episodes_per_phase` (the config makes this trivial to adjust).
 
-**[Risk] Evaluation episodes may interfere with training state (optimizer momentum, learning rate schedules)** → Mitigation: Save and restore optimizer `state_dict()` before/after eval blocks. Clear PPO `buffer.reset()` before eval and after eval to prevent eval experience from leaking into training updates.
+**[Risk] Evaluation episodes may interfere with training state (optimizer momentum, learning rate schedules)** → Mitigation: Save and restore ALL brain `state_dict()`s (model params + optimizer state) before/after eval blocks. Clear PPO buffer after restore. The brain is guaranteed to be in exactly the same state after eval as before.
 
 **[Risk] HybridQuantum's multi-stage training complicates the protocol** → Mitigation: Use HybridQuantum in Stage 3 (joint fine-tune) mode with pre-trained weights from existing artifacts. This way it behaves as a single unified model during the plasticity test, same as all other architectures.
 
 **[Risk] MLPPPOBrain.copy() raises NotImplementedError** → Mitigation: Don't use `brain.copy()` at all. Use disk-based checkpointing only (`torch.save` of state dicts). This works uniformly for all architectures.
 
-**[Trade-off] 50 eval episodes × 8 eval points adds ~33% overhead to total runtime** → Accepted: Clean measurement is worth the cost. Without eval blocks, training metrics conflate learning and forgetting dynamics.
+**[Trade-off] 50 eval episodes × 9 eval blocks adds ~36% overhead to total runtime** → Accepted: Clean measurement is worth the cost. Without eval blocks, training metrics conflate learning and forgetting dynamics.
