@@ -514,6 +514,33 @@ class ConfigSummary(BaseModel):
     predators_enabled: bool = False
 
 
+class PlasticityPhaseResult(BaseModel):
+    """Per-phase results in a plasticity evaluation."""
+
+    phase_name: str
+    mean_training_success_rate: float
+    eval_on_foraging: float | None = None
+    eval_on_pursuit: float | None = None
+    eval_on_thermotaxis: float | None = None
+
+
+class PlasticityMetadata(BaseModel):
+    """Metadata for a plasticity evaluation run."""
+
+    experiment_type: str = "plasticity_evaluation"
+    training_episodes_per_phase: int
+    eval_episodes: int
+    num_seeds: int
+    convergence_threshold: float
+    phase_results: list[PlasticityPhaseResult] = []
+    backward_forgetting_mean: float | None = None
+    backward_forgetting_std: float | None = None
+    forward_transfer_mean: float | None = None
+    forward_transfer_std: float | None = None
+    plasticity_retention_mean: float | None = None
+    plasticity_retention_std: float | None = None
+
+
 class ExperimentMetadata(BaseModel):
     """Complete metadata for a simulation experiment.
 
@@ -575,6 +602,7 @@ class ExperimentMetadata(BaseModel):
     system: SystemMetadata
     exports_path: str | None = None
     benchmark: BenchmarkMetadata | None = None
+    plasticity: PlasticityMetadata | None = None
 
     def to_dict(self, *, exclude_config_details: bool = True) -> dict[str, Any]:
         """Convert metadata to dictionary for JSON serialization.

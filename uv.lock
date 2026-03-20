@@ -1952,6 +1952,7 @@ dependencies = [
 [package.optional-dependencies]
 analysis = [
     { name = "scikit-learn" },
+    { name = "scipy" },
 ]
 cpu = [
     { name = "qiskit-aer" },
@@ -1986,6 +1987,7 @@ requires-dist = [
     { name = "qiskit-ibm-runtime", marker = "extra == 'qpu'", specifier = ">=0.40.1" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "scikit-learn", marker = "extra == 'analysis'", specifier = ">=1.5.0" },
+    { name = "scipy", marker = "extra == 'analysis'", specifier = ">=1.14.0" },
     { name = "torch", marker = "extra == 'torch'", specifier = ">=2.7.0" },
 ]
 provides-extras = ["cpu", "gpu", "torch", "qpu", "pixel", "analysis"]
