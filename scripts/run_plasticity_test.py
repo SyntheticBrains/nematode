@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -36,6 +37,7 @@ from quantumnematode.plasticity import (
     restore_brain_state,
     snapshot_brain_state,
 )
+from quantumnematode.plasticity.metrics import _get_eval_score
 from quantumnematode.plasticity.snapshot import save_checkpoint
 from quantumnematode.utils.brain_factory import setup_brain_model
 from quantumnematode.utils.config_loader import (
@@ -264,18 +266,6 @@ def run_eval_matrix(  # noqa: PLR0913
 # ---------------------------------------------------------------------------
 
 
-def _get_eval_score(
-    eval_results: list[EvalResult],
-    objective: str,
-    transition: str,
-) -> float | None:
-    """Find a specific eval result by objective and transition point."""
-    for r in eval_results:
-        if r.objective_name == objective and r.transition_point == transition:
-            return r.mean_success_rate
-    return None
-
-
 def write_seed_csv(
     seed_result: SeedResult,
     output_dir: Path,
@@ -497,13 +487,14 @@ def run_plasticity_protocol(config: PlasticityConfig) -> list[SeedResult]:
             f"\n[bold]Seed {seed_idx + 1}/{len(protocol.seeds)}: {seed}[/bold]",
         )
 
-        # Construct fresh brain for this seed
-        brain_config.seed = seed  # type: ignore[attr-defined]
+        # Construct fresh brain for this seed (deepcopy config to avoid mutation)
+        seed_brain_config = deepcopy(brain_config)
+        seed_brain_config.seed = seed  # type: ignore[attr-defined]
         set_global_seed(seed)
 
         brain = setup_brain_model(
             brain_type=brain_type,
-            brain_config=brain_config,
+            brain_config=seed_brain_config,
             shots=config.shots or 1024,
             qubits=config.qubits or 8,
             device=DeviceType.CPU,

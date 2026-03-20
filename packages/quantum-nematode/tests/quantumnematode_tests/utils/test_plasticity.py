@@ -9,7 +9,6 @@ Covers:
 from __future__ import annotations
 
 import pytest
-from quantumnematode.agent import RewardConfig
 from quantumnematode.plasticity import (
     EvalResult,
     PhaseTrainingResult,
@@ -110,6 +109,8 @@ class TestPlasticityConfig:
 
     def test_phase_reward_defaults(self) -> None:
         """Phase reward config defaults to RewardConfig() if not specified."""
+        from quantumnematode.agent import RewardConfig
+
         phase = PlasticityPhaseConfig(
             name="test",
             environment=EnvironmentConfig(),
@@ -170,14 +171,9 @@ class TestMetricsComputation:
         seed_result.eval_results = []
         compute_seed_metrics(seed_result, convergence_threshold=0.6)
 
-        # Phase A: first trailing-20 window that exceeds 0.6 is at episode 20
-        # (episodes 1-20: 0 false + 0 true... let me recalculate)
-        # Episodes 1-20: all False → 0%. Episode 21-40: mixed.
-        # Window [2..21]: 19 False + 1 True = 5%. Not yet.
-        # Window [13..32]: 8 False + 12 True = 60% → converge at episode 32
-        # Actually: trailing-20 at episode i includes episodes [i-19..i]
-        # At episode 32: episodes 13-32 = 8 False + 12 True = 60% → converges
-        # Phase A' converges at episode 20 (all True → 100%)
+        # Phase A: trailing-20 at index 31 = episodes[12..31] = 8 False + 12 True = 60%
+        # → converges at episode 32. Phase A' converges at episode 20 (all True).
+        # PR = 32/20 = 1.6 > 1.0 (A' relearns faster).
         assert seed_result.plasticity_retention is not None
         assert seed_result.plasticity_retention > 1.0  # A' converges faster
 

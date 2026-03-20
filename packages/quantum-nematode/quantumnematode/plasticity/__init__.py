@@ -2,7 +2,11 @@
 
 from quantumnematode.plasticity.dtypes import EvalResult, PhaseTrainingResult, SeedResult
 from quantumnematode.plasticity.metrics import compute_convergence_episode, compute_seed_metrics
-from quantumnematode.plasticity.snapshot import restore_brain_state, snapshot_brain_state
+from quantumnematode.plasticity.snapshot import (
+    restore_brain_state,
+    save_checkpoint,
+    snapshot_brain_state,
+)
 
 __all__ = [
     "EvalResult",
@@ -11,5 +15,6 @@ __all__ = [
     "compute_convergence_episode",
     "compute_seed_metrics",
     "restore_brain_state",
+    "save_checkpoint",
     "snapshot_brain_state",
 ]
