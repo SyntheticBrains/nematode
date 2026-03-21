@@ -348,107 +348,90 @@ Re-evaluate:
 
 ______________________________________________________________________
 
-### Phase 3: Learning & Memory (Q3-Q4 2026)
+### Phase 4: Multi-Agent Complexity
 
-**Goal**: Implement associative learning and memory systems matching C. elegans biological timescales and mechanisms. Also add oxygen sensing, which pairs naturally with temporal sensing and memory infrastructure.
+**Goal**: Create exponential state spaces through agent-agent interactions. This is where quantum game theory has the strongest theoretical backing for advantage, and where C. elegans social behaviors (aggregation, pheromone communication, alarm signaling) are well-documented.
 
-**Pilot-Then-Focus Approach**: Start with Short-Term Associative Memory (STAM) as the foundation. If STAM demonstrates value (improves performance over static policies), extend to ITAM and LTAM. This avoids over-engineering memory systems before validating the core concept.
+**Aspirational timeline**: Q3-Q4 2026
+
+**Prerequisites**: Phase 3 memory infrastructure (agents need to remember past interactions)
+
+#### Background
+
+C. elegans, while often considered solitary, exhibits sophisticated social behaviors:
+
+- **Social feeding**: Feeding rate increases near conspecifics (social facilitation)
+- **Aggregation**: Clustering on bacterial lawns mediated by ascaroside pheromones
+- **npr-1 variation**: Natural genetic variation determines solitary vs. social feeding behavior
+- **Alarm pheromones**: Injured worms release signals that repel nearby individuals
+- **Cooperative-like behaviors**: Worms following pheromone trails benefit from others' foraging discoveries
+- **Competition**: Limited food creates resource competition and dominance dynamics
+
+Multi-agent scenarios create exponential state spaces (state × number of agents), partial observability (each agent has local view), and strategic interactions — all identified as quantum advantage thresholds.
 
 #### Deliverables
 
-1. **Short-Term Associative Memory (STAM)** [Priority: Implement First]
+1. **Multi-Agent Infrastructure** [CRITICAL]
 
-   - Duration: Minutes to 30 minutes (timescale matches biology)
-   - Timescale modeling: Exponential decay parameters calibrated to match biological cAMP-mediated memory (~minutes)
-   - No protein synthesis required (immediate formation)
-   - Use cases: Remember recent food locations, recent predator encounters
-   - **Validation gate**: If STAM improves foraging efficiency by ≥10%, proceed to ITAM
+   - 2-10 independent agents in same environment
+   - Each agent has its own brain instance (can be different architectures)
+   - Agent-agent interaction tracking (proximity, collisions, food competition)
+   - Scalable: performance linear in agent count, not quadratic
 
-2. **Intermediate-Term Associative Memory (ITAM)** [Conditional on STAM success]
+2. **Pheromone Communication**
 
-   - Duration: 30 minutes to several hours
-   - Timescale modeling: Two-pathway decay model inspired by cAMP + CaMKII signaling dynamics
-   - Memory consolidation gate: Simulates protein synthesis requirement to extend beyond 30 min
-   - Use cases: Learn temperature-food associations over multiple foraging bouts
+   - **Aggregation pheromones**: Ascaroside-inspired chemical trails that attract nearby agents
+   - **Alarm pheromones**: Released on predator contact or HP loss, repel conspecifics
+   - **Food-marking trails**: Agents deposit chemical markers near food sources
+   - Diffusion dynamics: pheromones spread and decay over time (uses Phase 3 temporal infrastructure)
 
-3. **Long-Term Associative Memory (LTAM)** [Conditional on ITAM value]
+3. **Social Feeding**
 
-   - Duration: Hours to days (persist across multiple simulation sessions)
-   - Training paradigm: Spaced training (multiple sessions with intervals) vs. massed training (single long session)
-   - Biological inspiration: Timescales matched to protein synthesis + CREB-dependent consolidation in real C. elegans
-   - Memory traces stored to disk, reloaded in subsequent sessions
-   - Use cases: Persistent pathogen avoidance, learned temperature preferences
+   - Feeding rate enhancement when near other agents (social facilitation)
+   - Aggregation behavior: agents cluster on food patches
+   - npr-1 behavioral variation: configurable solitary vs. social phenotypes
 
-4. **Associative Learning Paradigms**
+4. **Competitive Foraging**
 
-   - **Classical conditioning**: Odor (CS) + food (US) → approach odor
-   - **Operant conditioning**: Action (e.g., turn left) → reward (food) → repeat action
-   - **Aversive learning**: Pathogen exposure → avoid pathogen
-   - **Context conditioning**: Temperature + food → prefer that temperature
-   - **Extinction learning**: Reward stops → unlearn association (forgetting)
+   - Zero-sum resource competition: limited food, agents compete for access
+   - Territorial behavior: agents defend food-rich zones
+   - Game-theoretic analysis: Nash equilibria, evolutionarily stable strategies
 
-5. **Memory Decay & Forgetting**
+5. **Collective Predator Response**
 
-   - Protein synthesis for proper memory decay (biology: forgetting is active process)
-   - Configurable decay rates: STAM decays in minutes, LTAM decays in days
-   - Interference: new learning can overwrite old memories
-
-6. **Theoretical Framework: Quantum-Inspired Memory Models**
-
-   - Mathematical models exploring whether quantum-inspired representations offer advantages for memory encoding
-   - Research question: Do quantum circuit representations capture memory uncertainty better than classical networks?
-   - Compare quantum vs. classical memory architectures on associative learning benchmarks
-   - Note: This explores computational advantages, not claims about quantum effects in biological neurons
-
-7. **Neural Circuits for Learning**
-
-   - RIM interneurons: Integrate chemosensory + mechanosensory for associative learning
-   - NMDA receptors (NMR-1): Required for context conditioning
-   - Dopaminergic neurons: Reward signaling, motivation
-   - Serotonergic neurons: Modulate learning intensity
-
-8. **Oxygen Sensing System** [Moved from Phase 1: pairs with temporal sensing and memory]
-
-   - Oxygen concentration gradient fields (5-12% optimal range)
-   - Hypoxia avoidance (\<5% O2) and hyperoxia avoidance (>12% O2)
-   - URX/AQR/PQR neuron simulation (detect high O2)
-   - BAG neuron simulation (detect low O2)
-   - Multi-objective: balance food quality vs. oxygen comfort
-   - Temporal oxygen sensing using STAM memory buffers (dO2/dt)
-
-9. **Biological Accuracy Revisit: Temporal Sensory Systems**
-
-   > **Note**: Once memory systems are operational, revisit the biological accuracy of sensory modalities implemented in Phase 1 and earlier. Current implementations use spatial gradient sensing (computationally equivalent for stateless brains), but real C. elegans uses temporal sensing for several modalities:
-   >
-   > - **Thermotaxis**: AFD neurons use temporal derivative (dT/dt) to detect temperature changes over time, not instantaneous spatial gradients
-   > - **Chemotaxis**: ASE neurons perform temporal concentration comparisons during head sweeps
-   > - **Oxygen sensing**: URX/BAG neurons integrate oxygen changes over time
-   >
-   > With STAM/ITAM memory systems available, implement biologically-accurate temporal sensing that compares current vs. recent sensory values. This would require memory buffers and temporal derivative computation, making it a natural extension of Phase 3 memory infrastructure.
-   >
-   > **Deliverable**: Temporal sensing module for thermotaxis (and optionally chemotaxis, aerotaxis) that uses memory to compute dT/dt, dC/dt gradients instead of spatial approximations.
+   - Coordinated evasion when one agent detects predator (via alarm pheromones)
+   - Information sharing about predator locations
+   - Collective aggregation as defense strategy
 
 #### Metrics Focus
 
-- **Memory timescales**: Match biological STAM (minutes), ITAM (hours), LTAM (days)
-- **Biological insight**: Do models reveal memory mechanisms? (e.g., role of protein synthesis, spaced training)
-- **Learning efficiency**: Sample complexity to learn associations (fewer trials = better)
+- **Emergent phenomena**: Identify behaviors not explicitly programmed (spontaneous aggregation, division of labor, communication strategies)
+- **Cooperation quantification**: Cooperation intensity, stability, efficiency gains over individual foraging
+- **State space explosion**: Quantify effective state space growth with agent count
+- **Classical ceiling**: Do classical approaches struggle with multi-agent coordination?
 
-#### Phase 3 Exit Criteria
+#### Phase 4 Exit Criteria
 
-- ✅ STAM implemented and validated (improves performance over static policies by ≥10%)
-- ✅ At least 1 additional memory timescale (ITAM or LTAM) if STAM proves valuable
-- ✅ ≥2 associative learning paradigms functional (classical conditioning + one other)
-- ✅ Meta-learning demonstrates improvement over static policies (agents that learn perform better than fixed policies)
-- ✅ Memory persistence across sessions demonstrated (save/load memory traces work correctly)
-- ✅ Quantum vs. classical memory comparison reveals mechanistic differences
-- ✅ Oxygen sensing implemented with temporal sensing using memory infrastructure (if STAM proves viable)
+- ✅ ≥5 agents running stably with independent brains
+- ✅ ≥1 emergent behavior documented (spontaneous aggregation, information sharing, etc.)
+- ✅ Pheromone communication functional (at least alarm + food-marking)
+- ✅ Classical approaches show measurable strain on coordination tasks (ceiling \<85% on hard multi-agent scenarios)
+
+#### Quantum Checkpoint (Phase 4)
+
+**Trigger**: Multi-agent operational with ≥5 agents, coordination metrics established.
+
+Evaluate:
+
+- **Quantum entangled strategy spaces**: Can quantum architectures represent correlated multi-agent strategies more efficiently?
+- **Quantum game theory approaches**: Do quantum-enhanced Nash equilibrium solvers outperform classical?
+- If classical ceiling drops below 85% on coordination tasks, launch targeted quantum evaluation campaign
 
 #### Go/No-Go Decision
 
-**GO if**: Learning and memory systems improve performance over static policies by ≥10%.
-**PIVOT if**: Learning doesn't improve performance → Focus on innate behavior repertoire mapping. Document "why learning didn't help" as interesting negative result.
-**STOP if**: Memory systems are too complex to implement reliably → Simplify to single timescale or remove temporal dynamics.
+**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR create genuinely hard coordination problems (classical \<85%).
+**PIVOT if**: Multi-agent complexity too high or unstable → Deepen single-agent complexity (richer sensing, longer horizons).
+**STOP if**: Infrastructure can't handle ≥3 agents → Re-architect for scalability before proceeding.
 
 ______________________________________________________________________
 
