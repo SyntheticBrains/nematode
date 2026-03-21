@@ -66,18 +66,26 @@ The system SHALL provide example configurations demonstrating temporal sensing m
 - **AND** SHALL use existing small environment parameters (20×20 grid, 5 foods, 500 steps)
 - **AND** SHALL include inline comments explaining the sensing mode and STAM parameters
 
-#### Scenario: Derivative Thermotaxis Example
+#### Scenario: Derivative Thermotaxis With Foraging Example
 
 - **WHEN** example config `mlpppo_thermotaxis_foraging_small_temporal.yml` is loaded
 - **THEN** it SHALL configure Mode B (derivative) thermotaxis with STAM enabled
 - **AND** chemotaxis SHALL also be configured in temporal or derivative mode
-- **AND** SHALL use existing small thermotaxis environment parameters
+- **AND** SHALL use existing small thermotaxis foraging environment parameters
 
-#### Scenario: Temporal Predators Example
+#### Scenario: Temporal Pursuit Predators Example
 
-- **WHEN** example config `mlpppo_predators_small_temporal.yml` is loaded
-- **THEN** it SHALL configure Mode A (temporal) nociception with STAM enabled
-- **AND** SHALL use existing small predator environment parameters
+- **WHEN** example config `mlpppo_pursuit_predators_small_temporal.yml` is loaded
+- **THEN** it SHALL configure Mode A (temporal) nociception and chemotaxis with STAM enabled
+- **AND** SHALL use pursuit predators (`movement_pattern: pursuit`)
+- **AND** SHALL use existing small pursuit predator environment parameters
+
+#### Scenario: Temporal Thermotaxis With Pursuit Predators Example
+
+- **WHEN** example config `mlpppo_thermotaxis_pursuit_predators_small_temporal.yml` is loaded
+- **THEN** it SHALL configure temporal sensing for all three modalities (chemotaxis, thermotaxis, nociception) with STAM enabled
+- **AND** SHALL use pursuit predators (`movement_pattern: pursuit`)
+- **AND** SHALL use existing small thermotaxis pursuit predator environment parameters
 
 ### Requirement: Complete Temporal Sensing Configuration Example
 
