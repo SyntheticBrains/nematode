@@ -480,6 +480,76 @@ class ReservoirHybridBase(ClassicalBrain):
         return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
 
     # =========================================================================
+    # Subclass Hooks
+    # =========================================================================
+
+    def _transform_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Transform raw reservoir features before normalization.
+
+        Called after converting reservoir features to a tensor and before
+        ``feature_norm``. Subclasses can override to apply learned gating or
+        other feature-level transformations. Default: identity (no-op).
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Raw reservoir feature tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Transformed feature tensor (same shape by default).
+        """
+        return x
+
+    def _compute_critic_value(
+        self,
+        x_normed: torch.Tensor,
+        raw_states: torch.Tensor | None = None,  # noqa: ARG002
+    ) -> torch.Tensor:
+        """Compute the critic (value) estimate.
+
+        Called with the normalized features during the forward pass.
+        Subclasses can override to route critic input differently
+        (e.g. using raw sensory features instead of reservoir features).
+        Default: ``self.critic(x_normed)``.
+
+        Parameters
+        ----------
+        x_normed : torch.Tensor
+            Normalized feature tensor (output of ``feature_norm``).
+        raw_states : torch.Tensor | None
+            Original pre-transform states, provided during PPO minibatch
+            updates. Subclasses that need the untransformed features for
+            critic computation (e.g. separate critic path) can use this.
+
+        Returns
+        -------
+        torch.Tensor
+            Scalar value estimate.
+        """
+        return self.critic(x_normed)
+
+    def _get_all_trainable_params(self) -> list[torch.nn.Parameter]:
+        """Return all trainable parameters for gradient clipping.
+
+        Called during the PPO update to collect parameters for
+        ``clip_grad_norm_``. Subclasses can override to include additional
+        parameters (e.g. gating weights, separate critic norm).
+        Default: actor + critic + feature_norm parameters.
+
+        Returns
+        -------
+        list[torch.nn.Parameter]
+            All parameters that should be gradient-clipped.
+        """
+        return (
+            list(self.actor.parameters())
+            + list(self.critic.parameters())
+            + list(self.feature_norm.parameters())
+        )
+
+    # =========================================================================
     # Action Selection
     # =========================================================================
 
@@ -504,9 +574,10 @@ class ReservoirHybridBase(ClassicalBrain):
 
         # Forward through actor network (with feature normalization)
         x = torch.tensor(reservoir_features, dtype=torch.float32, device=self.device)
-        x = self.feature_norm(x)
-        logits = self.actor(x)
-        value = self.critic(x)
+        x = self._transform_features(x)
+        x_normed = self.feature_norm(x)
+        logits = self.actor(x_normed)
+        value = self._compute_critic_value(x_normed)
 
         # Compute action distribution
         probs = torch.softmax(logits, dim=-1)
@@ -717,20 +788,21 @@ class ReservoirHybridBase(ClassicalBrain):
         total_entropy_loss = 0.0
         num_updates = 0
 
-        all_params = (
-            list(self.actor.parameters())
-            + list(self.critic.parameters())
-            + list(self.feature_norm.parameters())
-        )
+        all_params = self._get_all_trainable_params()
 
         for _ in range(self.ppo_epochs):
             for batch in self.buffer.get_minibatches(self.ppo_minibatches, returns, advantages):
-                # Normalize features (same transform as forward pass)
-                normalized_states = self.feature_norm(batch["states"])
+                # Apply feature transform and normalize (same as forward pass)
+                raw_states = batch["states"]
+                transformed_states = self._transform_features(raw_states)
+                normalized_states = self.feature_norm(transformed_states)
 
                 # Get new action probabilities and values
                 logits = self.actor(normalized_states)
-                values = self.critic(normalized_states).squeeze(-1)
+                values = self._compute_critic_value(
+                    normalized_states,
+                    raw_states=raw_states,
+                ).squeeze(-1)
 
                 probs = torch.softmax(logits, dim=-1)
                 dist = torch.distributions.Categorical(probs)

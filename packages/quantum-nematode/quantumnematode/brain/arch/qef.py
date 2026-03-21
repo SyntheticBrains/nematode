@@ -61,9 +61,7 @@ from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.brain.actions import Action
-    from quantumnematode.brain.arch import BrainParams
 
-from quantumnematode.brain.actions import ActionData
 
 # =============================================================================
 # Default Hyperparameters (quantum-specific)
@@ -596,25 +594,37 @@ class QEFBrain(ReservoirHybridBase):
         context_gate = torch.sigmoid(self.gate_network(gate_input))
         return (static_gate + context_gate) * 0.5
 
-    def _get_critic_value(self, reservoir_features: torch.Tensor) -> torch.Tensor:
-        """Compute critic value, using raw features if separate_critic is enabled."""
-        if self.separate_critic:
-            raw_x = torch.tensor(
-                self._last_raw_features,
-                dtype=torch.float32,
-                device=self.device,
-            )
-            raw_x = self.critic_norm(raw_x)
-            return self.critic(raw_x)
-        return self.critic(reservoir_features)
+    # =========================================================================
+    # ReservoirHybridBase Hook Overrides
+    # =========================================================================
 
-    def _collect_trainable_params(self) -> list[torch.nn.Parameter]:
-        """Collect all trainable parameters for gradient clipping in PPO update."""
-        params = (
-            list(self.actor.parameters())
-            + list(self.critic.parameters())
-            + list(self.feature_norm.parameters())
-        )
+    def _transform_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply learnable feature gating before normalization."""
+        return self._apply_feature_gating(x)
+
+    def _compute_critic_value(
+        self,
+        x_normed: torch.Tensor,
+        raw_states: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        """Route critic through raw features when separate_critic is enabled."""
+        if self.separate_critic:
+            if raw_states is not None:
+                # PPO minibatch path: extract raw portion from stored states
+                raw_x = raw_states[:, : self._raw_input_dim]
+            else:
+                # Forward pass path: use cached raw features from reservoir
+                raw_x = torch.tensor(
+                    self._last_raw_features,
+                    dtype=torch.float32,
+                    device=self.device,
+                )
+            return self.critic(self.critic_norm(raw_x))
+        return self.critic(x_normed)
+
+    def _get_all_trainable_params(self) -> list[torch.nn.Parameter]:
+        """Include gating and separate critic parameters for gradient clipping."""
+        params = super()._get_all_trainable_params()
         if self.feature_gating in ("static", "mixed"):
             params.append(self.gate_weights)
         if self.feature_gating in ("context", "mixed"):
@@ -622,197 +632,6 @@ class QEFBrain(ReservoirHybridBase):
         if self.separate_critic:
             params.extend(self.critic_norm.parameters())
         return params
-
-    def _needs_custom_forward(self) -> bool:
-        """Check if custom forward pass is needed for gating or separate critic."""
-        return self.feature_gating != "none" or self.separate_critic
-
-    # NOTE: run_brain and _perform_ppo_update are overridden with significant
-    # duplication from the base class. See GitHub issue #76 for planned refactoring
-    # to use hook methods instead of full overrides.
-
-    def run_brain(
-        self,
-        params: BrainParams,
-        reward: float | None = None,
-        input_data: list[float] | None = None,
-        *,
-        top_only: bool,
-        top_randomize: bool,
-    ) -> list[ActionData]:
-        """Override run_brain to support feature gating and separate critic."""
-        if not self._needs_custom_forward():
-            return super().run_brain(
-                params,
-                reward,
-                input_data,
-                top_only=top_only,
-                top_randomize=top_randomize,
-            )
-
-        sensory_features = self.preprocess(params)
-        reservoir_features = self._get_reservoir_features(sensory_features)
-
-        x = torch.tensor(reservoir_features, dtype=torch.float32, device=self.device)
-        x = self._apply_feature_gating(x)
-        x_normed = self.feature_norm(x)
-        logits = self.actor(x_normed)
-
-        # Critic: use raw features if separate_critic, otherwise same as actor
-        if self.separate_critic:
-            raw_x = torch.tensor(
-                self._last_raw_features,
-                dtype=torch.float32,
-                device=self.device,
-            )
-            value = self.critic(self.critic_norm(raw_x))
-        else:
-            value = self.critic(x_normed)
-
-        probs = torch.softmax(logits, dim=-1)
-        dist = torch.distributions.Categorical(probs)
-        action_idx = int(dist.sample().item())
-        log_prob = dist.log_prob(torch.tensor(action_idx, device=self.device))
-
-        action_name = self.action_set[action_idx]
-        probs_np = probs.detach().cpu().numpy()
-        self.current_probabilities = probs_np
-
-        if self.buffer.position % 50 == 0:
-            feat_min, feat_max = float(reservoir_features.min()), float(reservoir_features.max())
-            logits_np = logits.detach().cpu().numpy()
-            logger.debug(
-                f"{self._brain_name} step {self.buffer.position}: "
-                f"features=[{feat_min:.3f}, {feat_max:.3f}], "
-                f"probs={probs_np}, logits=[{logits_np.min():.3f}, {logits_np.max():.3f}], "
-                f"value={value.item():.4f}",
-            )
-
-        if self._deferred_ppo_update:
-            logger.debug(
-                f"{self._brain_name} executing deferred PPO update with correct "
-                f"V(s_{{t+1}})={value.item():.4f}",
-            )
-            self._perform_ppo_update(bootstrap_value=value)
-            self.buffer.reset()
-            self._deferred_ppo_update = False
-
-        self._pending_state = reservoir_features
-        self._pending_action = action_idx
-        self._pending_log_prob = log_prob
-        self._pending_value = value
-        self.last_value = value
-
-        self.latest_data.action = ActionData(
-            state=action_name,
-            action=action_name,
-            probability=probs_np[action_idx],
-        )
-        self.history_data.actions.append(self.latest_data.action)
-        self.history_data.probabilities.append(float(probs_np[action_idx]))
-
-        return [self.latest_data.action]
-
-    def _perform_ppo_update(self, bootstrap_value: torch.Tensor | None = None) -> None:
-        """Override PPO update to support feature gating and separate critic."""
-        if not self._needs_custom_forward():
-            super()._perform_ppo_update(bootstrap_value)
-            return
-
-        if len(self.buffer) == 0:
-            return
-
-        min_buffer_size = min(64, self.buffer.buffer_size // 2)
-        if len(self.buffer) < min_buffer_size:
-            logger.debug(
-                f"{self._brain_name} skipping PPO update: "
-                f"buffer={len(self.buffer)}/{self.buffer.buffer_size} < min={min_buffer_size}",
-            )
-            return
-
-        last_value = (
-            bootstrap_value
-            if bootstrap_value is not None
-            else (
-                self.last_value
-                if self.last_value is not None
-                else torch.tensor([0.0], device=self.device)
-            )
-        )
-
-        returns, advantages = self.buffer.compute_returns_and_advantages(
-            last_value,
-            self.gamma,
-            self.gae_lambda,
-        )
-        # Note: advantage normalization happens inside get_minibatches (base class)
-
-        total_policy_loss = 0.0
-        total_value_loss = 0.0
-        total_entropy_loss = 0.0
-        num_updates = 0
-
-        all_params = self._collect_trainable_params()
-
-        for _ in range(self.ppo_epochs):
-            for batch in self.buffer.get_minibatches(self.ppo_minibatches, returns, advantages):
-                states = batch["states"]
-
-                # Apply feature gating then normalize for actor
-                gated_states = self._apply_feature_gating(states)
-                normalized_states = self.feature_norm(gated_states)
-                logits = self.actor(normalized_states)
-
-                # Critic: raw features if separate, otherwise same as actor
-                if self.separate_critic:
-                    raw_states = states[:, : self._raw_input_dim]
-                    critic_input = self.critic_norm(raw_states)
-                    values = self.critic(critic_input).squeeze(-1)
-                else:
-                    values = self.critic(normalized_states).squeeze(-1)
-
-                probs = torch.softmax(logits, dim=-1)
-                dist = torch.distributions.Categorical(probs)
-                new_log_probs = dist.log_prob(batch["actions"])
-                entropy = dist.entropy().mean()
-
-                ratio = torch.exp(new_log_probs - batch["old_log_probs"])
-                surr1 = ratio * batch["advantages"]
-                surr2 = (
-                    torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
-                    * batch["advantages"]
-                )
-                policy_loss = -torch.min(surr1, surr2).mean()
-                value_loss = nn.functional.mse_loss(values, batch["returns"])
-
-                current_entropy_coeff = self._get_current_entropy_coeff()
-                loss = (
-                    policy_loss
-                    + self.value_loss_coef * value_loss
-                    - current_entropy_coeff * entropy
-                )
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
-                self.optimizer.step()
-
-                total_policy_loss += policy_loss.item()
-                total_value_loss += value_loss.item()
-                total_entropy_loss += entropy.item()
-                num_updates += 1
-
-        if num_updates > 0:
-            avg_loss = total_policy_loss / num_updates
-            avg_vloss = total_value_loss / num_updates
-            avg_entropy = total_entropy_loss / num_updates
-            self.latest_data.loss = avg_loss
-            self.history_data.losses.append(avg_loss)
-            logger.debug(
-                f"{self._brain_name} PPO update: "
-                f"policy_loss={avg_loss:.4f}, value_loss={avg_vloss:.4f}, "
-                f"entropy={avg_entropy:.4f}, updates={num_updates}",
-            )
 
     def _create_copy_instance(
         self,

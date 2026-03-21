@@ -58,6 +58,6 @@ Three tiers:
 2. **Smoke** (`@pytest.mark.smoke`) — CLI end-to-end, runs on PRs
 3. **Nightly** (`@pytest.mark.nightly`) — Full training benchmarks, runs daily
 
-Always run `uv run pytest` after changes. Run `uv run pre-commit run -a` before committing.
+Always run `uv run pytest -m "not nightly"` after changes. Run `uv run pre-commit run -a` before committing.
 
 <!-- markdownlint-disable MD025 -->
