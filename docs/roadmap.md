@@ -644,79 +644,53 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-### Phase 7: Scaling & Real-World (Q3-Q4 2027)
+### Phase 8: Integration & Comprehensive Evaluation
 
-> **Note**: This phase involves neuromorphic hardware deployment (Intel Loihi) and embodied robotics (WormBot). Neuromorphic expertise and robotics integration experience recommended before implementation.
+**Goal**: Full system integration and definitive quantum vs. classical comparison at maximum simulation complexity. Extract universal principles and scope future directions.
 
-**Goal**: Scale to large environments, deploy on neuromorphic hardware, validate with embodied robots, and achieve biological discoveries.
+**Aspirational timeline**: Late 2027+
 
 #### Deliverables
 
-1. **Large-Scale Environments**
+1. **Full Integration**
 
-   - 200×200+ grid support (vs. current 50×50 max)
-   - 100+ simultaneous food sources (vs. current ~20)
-   - 10+ concurrent predators (vs. current 1-3)
-   - Memory-efficient rendering (viewport-based, sparse representations)
-   - Distributed computation: Multi-GPU training, parallel environment execution
+   - All systems running together: temporal sensing + multi-agent + continuous physics + memory + evolution
+   - Unified configuration system for combined scenarios
+   - Performance at scale: 5+ agents in continuous 2D with temporal sensing, memory, and predators
 
-2. **Neuromorphic Hardware Deployment**
+2. **Definitive Quantum vs. Classical Comparison**
 
-   - **Intel Loihi**: Deploy SpikingReinforceBrain (LIF neurons with surrogate-gradient-trained weights) on neuromorphic chip
-   - Event-driven computation efficiency: Compare power consumption (Joules per decision)
-   - Spike-timing precision: Does hardware spike timing affect inference quality?
-   - Comparison: Neuromorphic vs. GPU vs. CPU vs. QPU (energy, latency, throughput)
-   - Note: Training done on GPU with surrogate gradients; inference on neuromorphic hardware
+   - Comprehensive evaluation at maximum complexity across all architecture families
+   - **If classical ceiling \<70%**: Full quantum architecture campaign v2 — systematic evaluation of QRH, QEF, HybridQuantum, connectome-quantum, and new architectures on enriched tasks
+   - **If classical still dominant**: Publish definitive characterisation: "Quantum advantage in biological RL requires complexity threshold X" — precise measurement of what's needed
+   - Either outcome is a valuable scientific contribution
 
-3. **WormBot Embodied Deployment**
+3. **Universal Principles Extraction**
 
-   - Export optimized policies → control WormBot hardware platform
-   - Real-world sensors: Physical chemical sensors (if available), contact sensors, IMU
-   - Sim-to-real transfer: Does simulation training transfer to physical robot?
-   - Embodied validation: Does robot behavior match simulation predictions?
+   - What computational principles emerge from the C. elegans deep dive?
+   - Identify domain-invariant insights: approach-avoidance conflicts, exploration-exploitation trade-offs, temporal credit assignment
+   - Mathematical formalisation of principles applicable beyond C. elegans
+   - Target: ≥3 universal principles documented and validated
 
-4. **Biological Discovery Validation**
+4. **Applied Directions** [Exploratory]
 
-   - Collaborate with C. elegans neuroscience labs
-   - Test ≥1 major prediction from model analysis (from Phase 2 or 3)
-   - Experimental design: Control vs. treatment, statistical power analysis
-   - Expected outcome: Model prediction confirmed → biological discovery
+   - Drug screening assays: Use simulation for compound screening (behavioral phenotyping)
+   - Neurodegeneration models: C. elegans models of Alzheimer's, Parkinson's (age-dependent behavioral changes)
+   - Brain-computer interfaces: Quantum-inspired neural decoding insights
 
-5. **Scalability Analysis**
+5. **Future Scoping**
 
-   - **Theoretical**: Complexity analysis (time/space vs. neuron count)
-   - **Empirical**: Benchmark on increasingly complex tasks (10×10 to 200×200 grids)
-   - **Architectural**: Demonstrate composability (modules, hierarchies)
-   - Path to larger systems: Demonstrate scaling principles from C. elegans (302 neurons) to larger invertebrates (Drosophila: ~100K neurons, honeybee: ~1M neurons) as intermediate steps
+   - Organism transfer proof-of-concept: Simplified Drosophila (~100K neurons) to test principle generality
+   - 3D physics aspiration: Define requirements for full 3D substrate simulation
+   - Clinical applications: Drug discovery, behavioral assay automation
+   - Clear roadmap for post-project research directions
 
-6. **Distributed Training Infrastructure**
+#### Phase 8 Exit Criteria
 
-   - Ray-based parallel experiment running
-   - Multi-GPU classical training (PyTorch DDP)
-   - Distributed quantum circuit evaluation (parallel Qiskit jobs)
-   - Cloud deployment: AWS, GCP, or Azure for large-scale benchmarks
-
-#### Metrics Focus
-
-- **Scalability**: Performance on 200×200 grids, 100+ foods, 10+ predators
-- **Real-world performance**: Sim-to-real transfer success rate
-- **Energy efficiency**: Joules per decision (neuromorphic vs. classical vs. quantum)
-
-#### Phase 7 Exit Criteria
-
-- ✅ 200×200 environments operational with 100+ foods and 10+ predators
-- ✅ SpikingReinforceBrain deployed on Intel Loihi with energy efficiency analysis (Joules per decision vs. GPU/CPU)
-- ✅ [If quantum path continues from Phase 6] QPU energy efficiency comparison included
-- ✅ Embodied robot successfully demonstrates at least 1 C. elegans behavior (chemotaxis, predator evasion, or foraging)
-- ✅ WormBot controlled by optimized policy with successful sim-to-real transfer (>50% sim performance)
-- ✅ Biological experiment collaboration yields quantitative validation (model prediction confirmed in peer-reviewed publication)
-- ✅ Scalability path to larger invertebrate models (~100K-1M neurons) documented with proof-of-concept demonstration
-
-#### Go/No-Go Decision
-
-**GO to Phase 8 if**: External validation successful (embodied robot works OR biological discovery confirmed).
-**PIVOT if**: Sim-to-real transfer fails → Focus on simulation-only insights, theoretical contributions. Still valuable without embodiment.
-**STOP if**: Scalability analysis shows fundamental barriers to larger systems → Document limits, focus on C. elegans-scale insights only.
+- ✅ Fully integrated simulation operational (all systems combined)
+- ✅ Definitive quantum vs. classical comparison at enriched complexity published
+- ✅ ≥3 universal principles documented with supporting evidence
+- ✅ Clear roadmap for post-project directions (organism transfer, 3D physics, clinical applications)
 
 ______________________________________________________________________
 
