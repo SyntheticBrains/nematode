@@ -1,13 +1,12 @@
 # Temporal Sensing - MLPPPO with Thermotaxis + Foraging - Small Configuration
-# Phase 3: Biologically-accurate sensing for both chemotaxis and thermotaxis
+# Phase 3: Biologically-accurate sensing (Mode A) for both chemotaxis and thermotaxis
 #
 # Sensing modes:
 #   - chemotaxis: temporal (Mode A) — scalar food concentration only
-#   - thermotaxis: derivative (Mode B) — temperature + dT/dt
-#     Models AFD neuron output: signals "warming" or "cooling" (~0.01°C sensitivity)
-#     No directional gradient — agent correlates movement with temp changes
+#   - thermotaxis: temporal (Mode A) — temperature scalar only (no dT/dt or direction)
+#     Agent must use STAM to infer temperature changes from movement history
 #
-# STAM auto-enabled by derivative mode
+# STAM enabled for temporal context
 
 max_steps: 500
 brain:
@@ -63,7 +62,7 @@ environment:
 
   sensing:
     chemotaxis_mode: temporal     # Mode A: scalar concentration only
-    thermotaxis_mode: derivative  # Mode B: temperature + dT/dt
+    thermotaxis_mode: temporal    # Mode A: temperature scalar only
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1
