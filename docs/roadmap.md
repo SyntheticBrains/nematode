@@ -1,12 +1,12 @@
 # Quantum Nematode Project Roadmap
 
-**Vision**: Map all behaviors of *Caenorhabditis elegans* through comparative architecture analysis, with focus on quantum computational approaches, to discover fundamental principles of biological intelligence and demonstrate quantum advantages in cognitively-relevant tasks.
+**Vision**: Build the highest-fidelity *Caenorhabditis elegans* behavioral simulation as a rigorous testbed for comparative architecture analysis, with two co-equal goals: (1) simulate the full behavioral repertoire of C. elegans with increasing biological fidelity, and (2) progressively cross complexity thresholds where quantum approaches may demonstrate genuine advantages over classical methods.
 
-**Version**: 2.0
+**Version**: 3.0
 
 **Last Updated**: March 2026
 
-**Horizon**: 2025-2028 (8 phases + future directions, ~3.5 years)
+**Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
 ______________________________________________________________________
 
