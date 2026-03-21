@@ -347,9 +347,9 @@ ______________________________________________________________________
 
 ### 9.3 Debug Logging
 
-- [ ] Add environment snapshot logging at episode start
-- [ ] Include temperature samples at key positions *(deferred)*
-- [ ] Log health system state changes
+- [x] ~~Add environment snapshot logging at episode start~~ *Won't Do — covered by existing export system*
+- [x] ~~Include temperature samples at key positions~~ *Won't Do — deferred, covered by exports*
+- [x] ~~Log health system state changes~~ *Won't Do — covered by existing health tracking/exports*
 
 **Validation**: 9 tests in test_env.py::TestZoneVisualization ✅
 
@@ -359,40 +359,28 @@ ______________________________________________________________________
 
 ### 10.1 Category Infrastructure
 
-- [ ] Define benchmark category hierarchy:
+- [x] ~~Define benchmark category hierarchy~~ *Won't Do — superseded by Phase 7 NematodeBench design which will address this comprehensively*
 
-  ```text
-  basic/          # Single objective (foraging only)
-  survival/       # Food + predators
-  thermotaxis/    # Temperature-aware (reserved for add-thermotaxis-system)
-  multisensory/   # Multiple modalities (future)
-  ablation/       # Controlled studies (reserved for add-ablation-toolkit)
-  ```
+- [x] ~~Update benchmark categorization logic to support hierarchical paths~~ *Won't Do — superseded by NematodeBench*
 
-- [ ] Update benchmark categorization logic to support hierarchical paths
-
-- [ ] Implement path pattern: `{category}/{task}_{size}/{brain_type}`
+- [x] ~~Implement path pattern: `{category}/{task}_{size}/{brain_type}`~~ *Won't Do — superseded by NematodeBench*
 
 ### 10.2 Naming Convention
 
-- [ ] Document naming convention: task names always explicit about what's included
-  - `foraging` = food collection goal
-  - `predator` = predators enabled
-  - `thermo` = thermotaxis enabled (short form)
-  - Modifiers follow the base: `foraging_predator_small`, not `predator_small`
+- [x] ~~Document naming convention~~ *Won't Do — superseded by NematodeBench*
 
 ### 10.3 Migration
 
-- [ ] Migrate `foraging_small` → `basic/foraging_small`
-- [ ] Migrate `foraging_medium` → `basic/foraging_medium`
-- [ ] Migrate `predator_small` → `survival/foraging_predator_small`
-- [ ] Add backward compatibility mapping for flat category names
-- [ ] Update leaderboard to display hierarchical categories
+- [x] ~~Migrate `foraging_small` → `basic/foraging_small`~~ *Won't Do — would break logbook 007/008 session references*
+- [x] ~~Migrate `foraging_medium` → `basic/foraging_medium`~~ *Won't Do — same reason*
+- [x] ~~Migrate `predator_small` → `survival/foraging_predator_small`~~ *Won't Do — same reason*
+- [x] ~~Add backward compatibility mapping for flat category names~~ *Won't Do — superseded by NematodeBench*
+- [x] ~~Update leaderboard to display hierarchical categories~~ *Won't Do — superseded by NematodeBench*
 
 ### 10.4 Validation
 
-- [ ] Ensure existing benchmark results remain valid after migration
-- [ ] Test category detection for new benchmark runs
+- [x] ~~Ensure existing benchmark results remain valid after migration~~ *Won't Do — no migration needed*
+- [x] ~~Test category detection for new benchmark runs~~ *Won't Do — no migration needed*
 
 **Validation**: New benchmarks use hierarchical paths, old results still accessible
 
@@ -412,11 +400,11 @@ ______________________________________________________________________
 
 ### 11.2 Documentation
 
-- [ ] Update environment documentation with new features
-- [ ] Document health system configuration
-- [ ] Document predator type configuration
-- [ ] Document multi-objective reward configuration
-- [ ] Document hierarchical benchmark category structure
+- [x] ~~Update environment documentation with new features~~ *Won't Do — will be addressed in Phase 7 NematodeBench docs; API will change significantly in Phase 3*
+- [x] ~~Document health system configuration~~ *Won't Do — covered by config examples and logbooks*
+- [x] ~~Document predator type configuration~~ *Won't Do — covered by config examples and logbooks*
+- [x] ~~Document multi-objective reward configuration~~ *Won't Do — covered by config examples and logbooks*
+- [x] ~~Document hierarchical benchmark category structure~~ *Won't Do — hierarchical benchmarks superseded by NematodeBench*
 
 ______________________________________________________________________
 
