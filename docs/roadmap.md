@@ -435,89 +435,68 @@ Evaluate:
 
 ______________________________________________________________________
 
-### Phase 4: Evolution & Adaptation (Q4 2026 - Q1 2027)
+### Phase 5: Evolution & Adaptation
 
-**Goal**: Implement breeding and evolutionary algorithms to evolve optimal learning strategies, comparing evolutionary dynamics across architectures.
+**Goal**: Evolve optimal learning strategies and study how learning guides evolution, including biologically-documented transgenerational memory.
 
-**Building on Phase 0**: This phase extends the evolutionary optimization foundations established in Phase 0 (CMA-ES for quantum training) to full genetic algorithm systems with crossover, mutation, and population dynamics.
+**Aspirational timeline**: Q4 2026 - Q1 2027
 
-**Pilot-Then-Focus Approach**: Start with lightweight pilots of 2-3 evolutionary approaches (hyperparameter evolution, Lamarckian, Baldwin Effect) using small populations and few generations. Based on pilot results, select 1-2 approaches for deep investigation. This prevents over-investment in approaches that don't work for our specific architectures.
+**Prerequisites**: Phase 4 multi-agent infrastructure (co-evolution requires populations)
+
+**Pilot-Then-Focus Approach**: Start with lightweight pilots of 2-3 evolutionary approaches using small populations and few generations. Based on pilot results, select 1-2 approaches for deep investigation.
 
 #### Deliverables
 
-1. **Hyperparameter Evolution (Simplest)** [Priority: Pilot First]
+1. **Hyperparameter Evolution** [Priority: Pilot First]
 
    - Genome = learning rates, layer sizes, circuit depths, reward weights
-   - Crossover: Blend parent hyperparameters (weighted average, uniform crossover)
-   - Mutation: Random perturbations (Gaussian noise, random resampling)
-   - Fitness metric: Final performance after fixed number of training episodes
-   - Selection: Tournament selection, rank-based, fitness-proportionate
+   - Tournament selection, fitness = final performance after fixed training episodes
    - Use case: Find optimal hyperparameter sets for each architecture
 
-2. **Lamarckian Evolution (Fast Convergence)** [Pilot alongside Hyperparameter]
+2. **Lamarckian Evolution** [Pilot alongside Hyperparameter]
 
-   - Each agent learns during lifetime (current RL approach)
-   - Genome = initial weights/parameters
+   - Offspring inherit learned weights (not biologically accurate but fast convergence)
    - Fitness = final performance after learning
-   - Offspring inherit learned weights (not biologically accurate but fast)
    - Use case: Rapidly evolve high-performing initial conditions
 
-3. **Baldwin Effect (Biologically Realistic)** [Conditional: if Lamarckian shows promise]
+3. **Baldwin Effect** [Conditional: if Lamarckian shows promise]
 
-   - Each agent learns during lifetime
-   - Genome = learning capacity (learning rates, architectural features)
-   - Fitness = final performance
    - Offspring inherit *ability to learn*, not learned weights
-   - Over generations: Learned behaviors become innate (genetic assimilation)
-   - Use case: Study how learning guides evolution
+   - Over generations: learned behaviors become innate (genetic assimilation)
+   - Biologically significant: study how learning guides evolution
 
-4. **Architecture Evolution (NEAT-style)** [Optional: based on pilot findings]
+4. **Co-Evolution (Predators + Prey)** [Benefits from Phase 4 multi-agent]
+
+   - Predators evolve hunting strategies while prey evolve evasion
+   - Red Queen dynamics: arms race between predator and prey
+   - Fitness: Prey = survival rate, Predators = kill rate
+
+5. **Transgenerational Memory** [NEW — biologically documented]
+
+   - Based on Posner et al. (2023): associative memories can be inherited across generations in C. elegans
+   - Epigenetic mechanisms: small RNAs and chromatin modifications
+   - Implementation: selected memory traces transfer to offspring (configurable heritability)
+   - Use case: Study how learned pathogen avoidance or temperature preferences persist across generations
+
+6. **Architecture Evolution (NEAT-style)** [Optional]
 
    - Genome = network topology + weights
-   - Crossover: Combine network structures, preserve innovations
-   - Mutation: Add/remove neurons, connections, quantum gates
-   - Speciation: Protect novel architectures from competition during early stages
+   - Speciation: protect novel architectures during early stages
    - Use case: Discover novel hybrid quantum-classical architectures
 
-5. **Co-Evolution (Predators + Prey)** [Optional: if basic evolution works well]
-
-   - Predators evolve hunting strategies simultaneously with prey evolving evasion
-   - Red Queen dynamics: Arms race between predator and prey
-   - Fitness: Prey = survival rate, Predators = kill rate
-   - Use case: Study evolutionary pressures shaping intelligence
-
-6. **Evolutionary Algorithm Comparisons**
-
-   - Benchmark against CMA-ES, genetic programming, evolution strategies
-   - Which EA works best for each architecture?
-
-7. **Generational Fitness Tracking**
-
-   - Visualize fitness curves over generations
-   - Track diversity (genotypic and phenotypic)
-   - Detect convergence, stagnation, speciation events
-   - Archive best genomes for reproduction
-
-#### Metrics Focus
-
-- **Evolution of learning strategies**: Do populations discover better learning algorithms?
-- **Convergence speed**: Generations to reach optimal performance
-- **Architectural innovation**: Do new architectures emerge from NEAT-style evolution?
-
-#### Phase 4 Exit Criteria
+#### Phase 5 Exit Criteria
 
 - ✅ ≥2 evolution approaches piloted with documented results
-- ✅ At least 1 approach selected for deep investigation based on pilot performance
-- ✅ Selected approach(es) produce novel behaviors not present in training set
-- ✅ Baldwin Effect or Lamarckian inheritance demonstrated (learned behaviors become innate over generations) OR documented why neither worked
-- ✅ Evolutionary dynamics comparison (quantum vs. classical) completed showing convergence rates and diversity
+- ✅ Baldwin Effect or Lamarckian inheritance demonstrated (learned behaviors become innate)
+- ✅ Co-evolution produces arms race dynamics with measurable escalation
+- ✅ Transgenerational memory functional (if biologically justified by pilot results)
 - ✅ Generational fitness tracking shows continuous improvement over ≥50 generations
 
 #### Go/No-Go Decision
 
 **GO if**: Evolution produces novel, high-performing behaviors OR demonstrates Baldwin Effect.
-**PIVOT if**: Evolution plateaus quickly → Focus on hand-designed architectures and learning algorithms. Document evolutionary limitations.
-**STOP if**: Evolutionary algorithms fail to converge or produce unstable results → Revisit fitness functions or population parameters.
+**PIVOT if**: Evolution plateaus quickly → Focus on hand-designed architectures. Document evolutionary limitations.
+**STOP if**: Evolutionary algorithms fail to converge → Revisit fitness functions or population parameters.
 
 ______________________________________________________________________
 
