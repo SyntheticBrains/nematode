@@ -754,43 +754,37 @@ This roadmap is designed to be **adaptive, not linear**. Each phase includes exp
 ### Decision Gate Principles
 
 1. **Evidence-driven**: Decisions based on experimental results, not assumptions
-2. **Fail fast**: If a key assumption fails (e.g., quantum advantage), pivot immediately rather than continuing down an unproductive path
+2. **Fail fast**: If a key assumption fails, pivot immediately rather than continuing unproductively
 3. **Multiple paths to impact**: Alternative success modes if primary hypotheses don't hold
 4. **Scientific rigor**: Better to publish "quantum didn't work but here's why" than to force false claims
+5. **Quantum checkpoints, not quantum phases**: Quantum re-evaluation is distributed across the roadmap, triggered by complexity milestones rather than calendar dates
 
 ### Potential Pivot Scenarios
 
-The roadmap includes multiple pivot points to maintain scientific value even if primary hypotheses fail:
+- **Scenario 1: Quantum shows no advantage even at high complexity** → The C. elegans simulation is still the most complete ever built. Publish comprehensive characterisation of complexity thresholds. Focus on biological insights and computational neuroscience impact.
+- **Scenario 2: Multi-agent complexity too high** → Deepen single-agent biological fidelity (continuous physics, connectome, richer sensing) instead.
+- **Scenario 3: Temporal sensing doesn't increase difficulty** → Classical RNNs handle temporal derivatives trivially. Skip to multi-agent as the primary complexity driver.
+- **Scenario 4: Connectome doesn't improve performance** → Valuable negative result: "Evolution's wiring is not optimal for RL." Publish and continue with unconstrained architectures.
+- **Scenario 5: Continuous physics too expensive** → Keep continuous action space but simplify physics. The action space expansion alone may create sufficient complexity.
+- **Scenario 6: External collaboration fails** → Focus on simulation-only insights. Use published C. elegans behavioral datasets for validation instead of lab partnerships.
 
-- **Scenario 1: Quantum shows no advantage** → Focus on spiking vs. classical architecture comparison. Publish comprehensive negative result: "Why Quantum Doesn't Help Biological Navigation: Lessons for Quantum ML"
-- **Scenario 2: Multi-agent complexity too high** → Deepen single-agent biological fidelity, longer-horizon planning, more complex sensory integration
-- **Scenario 3: Learning doesn't improve performance** → Focus on innate behavior repertoire mapping. Document evolutionary optimization of fixed policies.
-- **Scenario 4: Hardware too noisy** → Quantum-inspired classical algorithms (evolutionary optimization, variational methods applied to classical networks)
-- **Scenario 5: Scaling fails** → Deep dive into C. elegans-specific insights as tractable case study. Extract principles applicable at 302-neuron scale.
-- **Scenario 6: Sim-to-real transfer fails** → Focus on simulation-only theoretical insights, mathematical frameworks, computational principles
-- **Scenario 7: Universality doesn't hold** → C. elegans as deep case study in computational neuroscience, quantum ML benchmarking
-
-Each pivot maintains scientific value and publishable outcomes. The goal is impactful science, not forcing a predetermined narrative.
+Each pivot maintains scientific value and publishable outcomes.
 
 ### External Dependency Risk Mitigation
 
-Several critical deliverables depend on external partners. Fallback strategies:
-
 | Dependency | Risk | Mitigation |
 |------------|------|------------|
-| **Neuroscience lab collaboration** (Phases 2, 7) | Labs decline or slow response | Use published C. elegans behavioral datasets; partner with smaller labs or citizen science projects |
-| **IBM Quantum access** (Phase 0+) | Queue times, access limits, service changes | Maintain simulator-first development; explore IonQ/Rigetti as alternatives; budget for paid access |
-| **WormBot integration** (Phases 5-7) | Project inactive or incompatible | Develop minimal embodied testbed in-house; partner with swarm robotics labs as alternative |
-| **Intel Loihi access** (Phase 7) | Hardware access denied | Use SpiNNaker or software neuromorphic simulators; focus on algorithmic insights over hardware deployment |
+| **Neuroscience lab collaboration** (Phase 7) | Labs decline or slow response | Use published behavioral datasets; partner with smaller labs or citizen science projects |
+| **IBM Quantum access** (quantum checkpoints) | Queue times, access limits | Maintain simulator-first development; explore IonQ/Rigetti alternatives |
+| **OpenWorm integration** (Phase 7) | Project inactive or incompatible | Develop minimal integration in-house; focus on connectome data (publicly available) |
+| **External NematodeBench adoption** (Phase 7) | No uptake | Focus on internal research value; improve accessibility and documentation |
 
 ### Adaptive Execution
 
-- **Quarterly reviews**: Assess progress against exit criteria, adjust timelines and priorities
-- **Annual replanning**: Major roadmap revisions based on cumulative findings
-- **Continuous validation**: Biological experiments, hardware tests, external collaborations throughout all phases (not just at the end)
+- **Phase reviews**: Assess progress against exit criteria at each phase boundary
+- **Complexity dashboard updates**: Measure and record quantum advantage thresholds after each phase
+- **Quantum checkpoints**: Triggered by measured complexity milestones, not calendar dates
 - **Open science**: Public benchmarks and preprints enable community feedback and course correction
-
-This adaptive approach maximizes the probability of **publishable, impactful outcomes** regardless of whether quantum provides advantages, while maintaining the ambitious north star goal of mapping C. elegans behaviors and extracting universal principles of biological intelligence.
 
 ______________________________________________________________________
 
