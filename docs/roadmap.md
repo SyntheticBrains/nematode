@@ -500,151 +500,147 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-### Phase 5: Social Complexity (Q1-Q2 2027)
+### Phase 6: Continuous Physics & Connectome
 
-**Goal**: Implement multi-agent scenarios to study cooperation, competition, and emergent collective behaviors.
+**Goal**: Transition from grid-world to continuous 2D physics with realistic C. elegans locomotion, and introduce connectome-constrained architectures using the real 302-neuron wiring diagram. This is the largest single fidelity jump in the roadmap and creates the conditions for a major quantum re-evaluation.
 
-**Transition Buffer**: Phase 5 start is conditional on Phase 4 progress. If Phase 4 is on track by mid-Q4 2026, Phase 5 infrastructure work can begin in parallel. If Phase 4 requires extension, Phase 5 start shifts to Q2 2027.
+**Aspirational timeline**: Q1-Q3 2027
 
-**Dependency Note**: Conditional on Phase 2 showing sufficient single-agent competence, and Phase 3 (Learning & Memory) providing memory systems needed for social behaviors. C. elegans social behavior depends on learned associations; implementing memory first ensures social agents can remember past interactions.
+#### Background
 
-#### Deliverables
+**Continuous physics**: C. elegans moves via sinusoidal body undulations, with a rich locomotion repertoire: forward crawling, reversals, omega turns (deep ventral bends reorienting 180°), pirouettes, and speed modulation. Current discrete 4-direction grid movement captures none of this. Continuous 2D dramatically increases both action space (speed + turning angle) and state space (continuous coordinates + heading + velocity).
 
-1. **Multi-Agent Infrastructure**
-
-   - Multiple agents in same environment (2-10 agents)
-   - Independent brains (each agent has own architecture instance)
-   - Agent-agent interactions tracked (proximity, collisions, food competition)
-
-2. **Cooperative Foraging**
-
-   - **Social facilitation**: Feeding rate increases when near other agents (biological observation)
-   - **Pheromone communication**: Agents deposit chemical trails marking food locations
-   - **Shared food discovery**: When one agent finds food, others can follow pheromone trail
-   - **Collective exploration**: Distributed search patterns (each agent explores different region)
-   - **Emergent cooperation metrics**: food collection rate per agent with cooperation vs. alone
-
-3. **Competitive Foraging**
-
-   - **Zero-sum resource competition**: Limited food, agents compete for access
-   - **Territorial behavior**: Agents defend food-rich zones
-   - **Dominance hierarchies**: Stronger agents (better learners) access food first
-   - **Mate competition**: Simulated reproductive success as fitness metric
-   - **Game-theoretic analysis**: Nash equilibria, evolutionary stable strategies
-
-4. **Collective Behaviors**
-
-   - **Aggregation patterns**: C. elegans naturally clusters; can agents learn aggregation?
-   - **Collective predator response**: Multiple agents coordinate to evade or mob predators
-   - **Information sharing**: Do agents develop communication strategies (pheromone trails, proximity signaling)?
-   - **Swarm intelligence**: Emergent optimization (find food faster as group than individuals)
-
-5. **Mechanism Discovery from Emergent Behaviors**
-
-   - Identify unexpected collective phenomena
-   - Compare to swarm robotics literature (particle swarm optimization, ant colony optimization)
-   - Extract general principles: "Cooperation emerges when [X conditions]"
-
-6. **Architecture Comparisons in Multi-Agent Settings**
-
-   - Quantum vs. classical in cooperative settings: which learns cooperation faster?
-   - Mixed populations: quantum + classical agents competing
-   - Evolutionary dynamics: which architectures dominate over many generations?
-
-#### Metrics Focus
-
-- **Emergent phenomena**: Identify behaviors not explicitly programmed (e.g., spontaneous aggregation, division of labor)
-- **Cooperation quantification**: Measure cooperation intensity, stability, efficiency gains
-- **Biological insight**: Do simulated behaviors match C. elegans social behavior literature?
-
-#### Phase 5 Exit Criteria
-
-- ✅ Multi-agent infrastructure supports ≥10 simultaneous agents with stable performance
-- ✅ Cooperative, competitive, and collective behaviors all implemented and benchmarked
-- ✅ ≥1 emergent behavior discovered and documented (e.g., spontaneous aggregation, division of labor, information sharing)
-- ✅ Quantum vs. classical comparison in multi-agent settings completed
-- ✅ Mechanism discovery yields insights applicable to swarm robotics or social foraging theory
-
-#### Go/No-Go Decision
-
-**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR scale successfully to ≥5 agents.
-**PIVOT if**: Multi-agent complexity too high or unstable → Continue with single-agent complexity (deeper sensory integration, longer-horizon planning).
-**STOP if**: Infrastructure can't handle ≥3 agents → Re-architect for scalability before proceeding.
-
-______________________________________________________________________
-
-### Phase 6: Quantum Frontiers (Q2-Q3 2027)
-
-> **Note**: This phase involves advanced quantum computing concepts (VQC, QAOA, error mitigation, hardware deployment). The technical claims and feasibility assessments in this section should be reviewed by domain experts in quantum computing and quantum machine learning before implementation.
-
-**Goal**: Push boundaries of quantum algorithms, deploy on real hardware, and demonstrate quantum advantages on biologically-relevant tasks.
+**Connectome**: C. elegans has the only fully mapped connectome of any organism — 302 neurons connected by ~7,000 chemical synapses and ~900 gap junctions (Cook et al. 2019). This is the uniquely tractable advantage of choosing C. elegans. Using the real wiring diagram to constrain network architecture lets us ask: "Does biology's wiring learn better than arbitrary architectures?" and "Do quantum circuits on the real topology outperform classical ones?"
 
 #### Deliverables
 
-1. **Advanced Quantum Algorithms**
+1. **Continuous 2D Environment** [CRITICAL]
 
-   - **Variational Quantum Circuits (VQC)**: Continue developing parameterized quantum circuits optimized via evolution (building on Phase 0 success)
-   - **Quantum Approximate Optimization Algorithm (QAOA)**: Explore whether multi-objective foraging can be framed as combinatorial optimization (research-level question)
-   - **Quantum Neural Networks (QNN)**: Data reuploading circuits, hybrid quantum-classical architectures
-   - **Quantum Reinforcement Learning**: Quantum policy representations, exploration of quantum-enhanced value estimation
-   - **Quantum Natural Gradient (QNG) variants**: Momentum-QNG, Conjugate QNG (CQNG) with dynamic hyperparameters, QNG with geodesic corrections for faster convergence
-   - **Quantum kernel methods**: Quantum Policy Gradient in RKHS, sparse non-parametric policies with tunable expressiveness
+   - Replace discrete grid with continuous 2D coordinates
+   - Realistic C. elegans locomotion: sinusoidal crawling, reversals, omega turns, pirouettes
+   - Continuous action space: speed (0 to max) + turning angle (-π to π)
+   - Realistic spatial scales: ~1mm worm body on cm-scale plates
+   - Physics: basic 2D kinematics, optional viscous medium effects
 
-2. **Quantum Error Mitigation**
+2. **Realistic Sensory Physics**
 
-   - **Q-CTRL Fire Opal Integration**: Error suppression for NISQ devices
-   - **Zero-noise extrapolation**: Estimate noiseless results from noisy runs
-   - **Probabilistic error cancellation**: Mitigate gate errors
-   - **Noise-robust circuit design**: Shorter circuits, native gate sets, error-aware compilation
+   - Diffusion-based chemical gradients (Fick's law, not superposition approximation)
+   - Physical temperature fields with conduction
+   - Contact mechanics for mechanosensation (collision detection with continuous bodies)
+   - Realistic sensory ranges scaled to worm body length
 
-3. **Real Quantum Hardware Deployment**
+3. **Full 302-Neuron Connectome-Constrained Architecture** [CORE DELIVERABLE]
 
-   - **IBM Quantum**: Monthly benchmarks on ibm_sherbrooke, ibm_kyiv, or latest backends
-   - **IonQ**: Trapped-ion quantum computers (if accessible)
-   - **Hardware performance tracking**: Noise levels, gate fidelities, decoherence times
-   - **Hardware-specific optimization**: Topology-aware circuit mapping, qubit selection
+   - Import C. elegans wiring diagram (Cook et al. 2019 / WormAtlas)
+   - Build network where connections exist only where real synapses exist
+   - Weights are learned via RL; topology is biologically fixed
+   - Functional circuit modules: chemotaxis (AWC→AIY→RIB→motor), thermotaxis (AFD→AIY→AIZ→RIA), escape (ASH→AVA→motor)
+   - Compare connectome-constrained vs. unconstrained architectures on identical tasks
+   - Ablation: remove specific circuits and measure behavioral impact (matches biological lesion studies)
 
-4. **Theoretical Quantum Advantage Analysis**
+4. **Connectome + Quantum** [RESEARCH]
 
-   - Mathematical analysis: Identify structural features of foraging tasks that may benefit from quantum computation
-   - Explore potential advantages: Grover-like search in large state spaces, quantum parallelism for multi-objective optimization
-   - Note: Formal complexity-theoretic proofs (BQP vs. P) are unlikely for RL tasks, but empirical advantages may be demonstrable
-
-5. **Quantum-Classical Hybrid Ensembles**
-
-   - Voting ensembles: Quantum + classical models vote on actions
-   - Hierarchical decision-making: Quantum for strategy, classical for tactics (or vice versa)
-   - Adaptive switching: Use quantum when uncertain, classical when confident
-   - Meta-learning: Learn which model to trust in which context
-
-6. **Quantum Interpretability**
-
-   - Visualize quantum state evolution during decision-making
-   - Track entanglement entropy: How much are qubits correlated?
-   - Gate importance: Which quantum gates are critical for performance?
-   - Hypothesis: "Entanglement enables [X] computational capability"
+   - Build quantum circuit architectures (QSNN, variational) whose topology mirrors the real connectome
+   - Test whether biologically-constrained quantum circuits outperform:
+     - Unconstrained quantum circuits (arbitrary topology)
+     - Biologically-constrained classical circuits (same topology, classical dynamics)
+     - Unconstrained classical circuits (arbitrary MLP)
 
 #### Metrics Focus
 
-- **Quantum advantage**: Demonstrate quantum > classical on specific task with statistical significance
-- **Hardware viability**: Real QPU performance vs. simulation (noise gap)
-- **Error mitigation efficacy**: Performance improvement from error suppression
+- **Locomotion fidelity**: Match real C. elegans movement statistics (speed distribution, turn angle distribution, reversal frequency)
+- **Connectome advantage**: Performance gap between constrained and unconstrained architectures
+- **Continuous complexity**: Quantify state/action space expansion vs. grid-world
+- **Classical ceiling**: Does continuous action space + connectome create problems where classical approaches genuinely struggle?
 
 #### Phase 6 Exit Criteria
 
-- ✅ VQC and QAOA (if applicable) implemented and benchmarked on foraging tasks
-- ✅ Real quantum hardware deployment successful: Achieves **>50% of classical baseline performance** on at least 1 task
-- ✅ Quantum error mitigation (Fire Opal or similar) improves real hardware performance by ≥20%
-- ✅ Monthly IBM Quantum benchmarks operational (automated deployment and tracking pipeline)
-- ✅ At least 1 quantum advantage claim validated on physical QPU (not just simulation)
-- ✅ Quantum advantage demonstrated on ≥1 biologically-relevant task with p < 0.01 statistical significance OR compelling explanation of why quantum doesn't provide advantages
-- ✅ Theoretical framework published linking quantum computational principles to intelligent behavior
+- ✅ Continuous 2D environment operational with realistic locomotion (crawling, reversals, omega turns)
+- ✅ Full 302-neuron connectome architecture benchmarked on at least 3 tasks
+- ✅ Connectome-constrained vs. unconstrained comparison completed with statistical analysis
+- ✅ Action space is continuous (speed + turning angle, not discrete directions)
+- ✅ Locomotion statistics quantitatively compared to real C. elegans data
+
+#### Quantum Checkpoint (Phase 6) — MAJOR
+
+**Trigger**: Continuous environment + connectome operational, classical baselines established.
+
+This is the primary quantum re-evaluation point:
+
+- Continuous action/state space addresses the "action space too small" and "state space polynomial" limitations
+- Connectome complexity adds structural constraints that may favour quantum representations
+- High-dimensional continuous observations (>50D with temporal + multi-agent + continuous) address the "observation space too small" limitation
+
+**Action**: If any classical architecture drops below 70% on hard continuous tasks, launch **full quantum campaign v2** — systematic re-evaluation of QRH, QEF, HybridQuantum, and potentially new architectures designed for continuous domains.
 
 #### Go/No-Go Decision
 
-**GO if**: Quantum hardware achieves ≥50% classical performance OR reveals insights into quantum computation despite performance gaps.
-**PIVOT if**: Hardware too noisy for useful computation → Focus on quantum-inspired classical algorithms (variational methods, evolution strategies applied to classical nets).
-**STOP if**: No theoretical or empirical quantum advantage after extensive testing → Conclude quantum not suitable for this domain, publish comprehensive negative result.
+**GO if**: Continuous physics creates meaningfully harder problems AND connectome architectures show interesting properties.
+**PIVOT if**: Continuous physics doesn't increase difficulty → Classical approaches trivially handle continuous control. Focus on multi-agent + evolution as the primary complexity source.
+**STOP if**: Continuous physics too expensive computationally → Optimize or simplify (reduce physics fidelity while keeping continuous action space).
+
+______________________________________________________________________
+
+### Phase 7: Community, Validation & Publication
+
+**Goal**: Open-source launch, external validation, and publication campaign. Share the simulation, data, and findings with the research community.
+
+**Aspirational timeline**: Q2-Q4 2027
+
+**Note**: This phase runs partly in parallel with Phases 6-8 as publications and community building are ongoing activities.
+
+#### Deliverables
+
+1. **NematodeBench Public Launch** [CORE]
+
+   - Public benchmark suite with tasks spanning all complexity levels:
+     - Basic: chemotaxis, foraging (grid-world)
+     - Intermediate: thermotaxis, predator evasion, temporal sensing
+     - Advanced: multi-agent coordination, continuous locomotion
+   - Public leaderboard with standardized evaluation protocol
+   - Docker-based reproducibility (containerized environments, seed management)
+   - Submission guidelines and evaluation scripts
+   - Include the 300+ session quantum evaluation dataset as a baseline reference
+   - Target: Differentiated from standard RL benchmarks by biological grounding and validation targets
+
+2. **Publication Campaign**
+
+   - **Paper 1**: "Systematic Evaluation of Quantum Architectures for Biological Navigation: From Grid-World Parity to Enriched Environments" — The before/after contrast showing the 300+ session quantum campaign results at grid-world complexity, then what happens when environment complexity crosses thresholds. Valuable regardless of whether quantum shows advantage at higher complexity.
+   - **Paper 2**: "NematodeBench: A Biologically-Grounded Benchmark for Comparative Computational Neuroscience" — Benchmark paper introducing the task suite, biological validation methodology, and baseline results across architectures.
+   - **Paper 3**: "Connectome-Constrained Learning in C. elegans: Does Real Wiring Beat Arbitrary Architecture?" — Results from Phase 6 connectome experiments.
+   - Target venues: Nature Methods, NeurIPS, ICML, eLife, PNAS
+
+3. **External Collaboration**
+
+   - **C. elegans labs**: Biological prediction validation
+     - Target: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon)
+     - Deliverable: ≥1 model prediction tested with real C. elegans (escape latencies, thermotaxis precision, foraging efficiency)
+     - Collaboration model: We generate predictions → lab designs experiments → co-authored publication
+   - **Quantum hardware providers**: QPU benchmarks on enriched tasks
+     - IBM Quantum, Q-CTRL Fire Opal for error suppression
+     - Deploy best quantum architectures on real hardware with enriched tasks
+   - **OpenWorm**: Explore policy export → muscle control integration
+     - Test whether RL-trained policies can control OpenWorm's simulated body
+
+4. **Community Building**
+
+   - Documentation: API docs, tutorials, architecture guides
+   - Contribution guidelines: How to add new brain architectures, environments, sensory modules
+   - Example notebooks: Reproduce key results, extend benchmarks
+   - Target: ≥3 external research groups engaging with NematodeBench
+
+#### Phase 7 Exit Criteria
+
+- ✅ NematodeBench launched with ≥1 external submission
+- ✅ ≥1 paper submitted to peer-reviewed venue
+- ✅ ≥1 external collaboration established (lab partnership or quantum hardware access)
+- ✅ 300+ session quantum evaluation dataset publicly available
+- ✅ Documentation sufficient for external researchers to run experiments independently
+
+#### Go/No-Go Decision
+
+**GO if**: External interest demonstrated (submissions, citations, collaborations).
+**PIVOT if**: No external adoption → Focus on internal research value. Re-evaluate benchmark design and accessibility.
 
 ______________________________________________________________________
 
