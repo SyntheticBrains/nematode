@@ -1052,60 +1052,25 @@ ______________________________________________________________________
 
 ## Technical Debt & Maintenance
 
-The following items are tracked as ongoing maintenance, not blocking new phases:
+### Resolved (Phases 0-2)
 
-### High Priority (Fix in Phase 0)
+- ~~QQLearningBrain completion~~ — Evaluated, not competitive; deprioritised
+- ~~MLPReinforceBrain loss bug~~ — Investigated and documented
+- ~~Grid size hardcoding~~ — Fixed
+- ~~Statistical analysis framework~~ — Implemented (confidence intervals, significance tests)
 
-1. **QQLearningBrain Completion**
+### Active (Address by Phase 3)
 
-   - Implement tracking metrics (episode data collection)
-   - Add Qiskit runtime integration (for real hardware)
-   - Fix parameter initialization (currently hardcoded)
+1. **Sensory input refactoring** — Current spatial gradient inputs need parallel temporal derivative infrastructure
+2. **Memory buffer architecture** — Design efficient STAM buffers compatible with all brain architectures
+3. **Visualization improvements** — Gradient flow viz, spike raster plots, attention maps
+4. **Documentation** — API documentation, tutorials, architecture guides (prerequisite for Phase 7)
 
-2. **MLPReinforceBrain Loss Bug**
+### Lower Priority (Address as needed)
 
-   - Investigate loss calculation (flagged in codebase)
-   - Fix incorrect loss computation in later sessions
-   - Add unit tests for loss calculation
-
-3. **Grid Size Hardcoding**
-
-   - QQLearningBrain: Grid size hardcoded to 10 instead of derived from environment
-   - Fix: Read grid size from environment config
-
-### Medium Priority (Address by Phase 3)
-
-4. **Statistical Analysis Framework**
-
-   - Add confidence intervals to all benchmarks
-   - Implement significance testing (t-test, ANOVA, Bonferroni correction)
-   - Effect size calculations (Cohen's d)
-
-5. **Visualization Improvements**
-
-   - Gradient flow visualization (show how gradients propagate through surrogate gradient layers)
-   - Spike raster plots for spiking networks (membrane potential + spike times)
-   - Attention maps for classical networks (if using attention)
-
-6. **Documentation**
-
-   - API documentation
-   - Tutorials for new users
-   - Video demos
-
-### Lower Priority (Nice-to-Have)
-
-7. **Code Quality**
-
-   - Address remaining Ruff/Pyright warnings
-   - Increase test coverage to ≥90%
-   - Performance profiling and optimization
-
-8. **Configuration System**
-
-   - Hyperparameter search (grid search, Bayesian optimization)
-   - Experiment templates for common tasks
-   - Configuration validation improvements
+5. **Code quality** — Address remaining Ruff/Pyright warnings, increase test coverage
+6. **Configuration system** — Hyperparameter search, experiment templates
+7. **Performance profiling** — Optimization for multi-agent and continuous physics workloads
 
 ______________________________________________________________________
 
