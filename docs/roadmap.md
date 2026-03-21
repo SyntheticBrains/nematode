@@ -167,26 +167,21 @@ Environment complexity (2-9D observations, 4 discrete actions, ~10K effective st
 
 ### Known Gaps & Technical Debt
 
-**Architecture Gaps:**
+**Resolved from Phase 0:**
 
-- QQLearningBrain incomplete (missing: tracking metrics, Qiskit runtime integration, parameter initialization)
-- MLPReinforceBrain loss calculation bug (flagged in codebase)
-- No multi-brain ensemble or hierarchical decision systems
-- No transfer learning framework
+- ~~QQLearningBrain incomplete~~ — evaluated but not competitive; low priority
+- ~~No SOTA RL baselines~~ — PPO implemented and validated
+- ~~No real C. elegans behavioral datasets~~ — integrated for validation
 
-**Simulation Gaps:**
+**Remaining:**
 
 - No energy/metabolic model (satiety is abstract, not ATP-based)
-- No neuromodulation (dopamine/serotonin mentioned in docs but not simulated)
-- Limited environmental diversity (no temporal dynamics, food quality variations)
-- No thermotaxis, oxygen sensing, or mechanosensation implementations yet
-
-**Experimental Gaps:**
-
-- No SOTA RL baselines for comparison (PPO, SAC, TD3, DreamerV3)
-- No real C. elegans behavioral datasets for validation
-- Limited interpretability tools (no attention maps, gradient visualization, spike rasters)
-- No statistical analysis framework (confidence intervals, effect sizes, significance testing)
+- No neuromodulation (dopamine/serotonin mentioned but not simulated)
+- Limited environmental diversity (no temporal dynamics beyond thermotaxis)
+- Sensory inputs are spatial gradient lookups, not temporal derivatives (biologically inaccurate)
+- Single-agent only
+- Discrete grid-world (not continuous physics)
+- No connectome-constrained architectures
 
 ### Research Questions
 
