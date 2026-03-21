@@ -67,17 +67,20 @@ ______________________________________________________________________
 
 ## Executive Summary
 
-The Quantum Nematode project aims to achieve breakthrough discoveries at the intersection of quantum computing, neuroscience, and artificial intelligence by:
+The Quantum Nematode project pursues two co-equal goals at the intersection of quantum computing, neuroscience, and artificial intelligence:
 
-1. **Comparative Architecture Analysis**: Systematically comparing quantum (QVarCircuitBrain, QQLearningBrain), classical (MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain), and biologically-realistic (SpikingReinforceBrain) architectures across increasingly complex C. elegans behaviors
+**Goal 1 — Biological Simulation**: Build the deepest, most complete behavioral simulation of *C. elegans* ever created. Progressively implement all sensory systems, survival behaviors, learning and memory, social dynamics, and realistic physics — grounded in a fully mapped 302-neuron connectome.
 
-2. **Incremental Behavioral Coverage**: Progressively implementing sensory systems (chemotaxis ✓, thermotaxis, oxygen sensing, mechanosensation), survival behaviors (foraging ✓, predator evasion ✓, learning/memory), and social dynamics (cooperation, competition, communication)
+**Goal 2 — Quantum Architecture Analysis**: Systematically compare quantum, classical, and biologically-realistic architectures as environment complexity increases, identifying the precise conditions under which quantum approaches provide genuine advantages — or definitively characterising why they don't.
 
-3. **Theoretical Foundations**: Developing mathematical frameworks linking quantum computational principles to biological intelligence, generating testable hypotheses for experimental validation
+These goals are mutually reinforcing: biological fidelity creates the computational complexity needed to test quantum advantage hypotheses, while architecture analysis reveals which computational principles best capture biological intelligence.
 
-4. **External Validation**: Partnering with C. elegans neuroscience labs, deploying on real quantum hardware (IBM Quantum), and testing on embodied platforms (WormBot integration)
+### Key Differentiators
 
-5. **Universal Principles**: Extracting domain-invariant computational principles through transfer learning to other organisms (Drosophila, zebrafish) and domains (swarm robotics, multi-objective optimization)
+- **vs. OpenWorm**: Complementary focus on neural computation paradigms and behavioral optimization vs. cellular biophysics. Integration opportunity: optimized policies controlling OpenWorm's simulated muscles. Our connectome-constrained architectures (Phase 6) use the wiring diagram for RL-trained networks, not biophysical simulation.
+- **vs. Standard RL Benchmarks**: Biologically-grounded tasks with real organism validation; the only benchmark suite where tasks are derived from documented C. elegans behaviors with quantitative biological validation targets.
+- **vs. Quantum ML Research**: Embodied, ecologically-valid tasks requiring multi-objective optimization, temporal integration, and social dynamics — not toy gridworlds or random circuits. Systematic 300+ session evaluation campaign provides the most comprehensive quantum architecture comparison in biological RL to date.
+- **Unique position**: The only project combining real connectome topology + reinforcement learning + quantum architecture comparison. C. elegans is the only organism with a fully mapped connectome, making this uniquely tractable.
 
 **Key Differentiators** from existing work:
 
