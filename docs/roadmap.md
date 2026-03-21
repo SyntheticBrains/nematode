@@ -1076,20 +1076,22 @@ ______________________________________________________________________
 
 ## Conclusion
 
-This roadmap charts a 3.5-year adaptive path from current strong foundations to potential paradigm-shifting discoveries in quantum computational neuroscience and biological intelligence. The incremental, evidence-driven, phase-based approach ensures:
+This roadmap charts a milestone-based adaptive path from strong completed foundations (Phases 0-2) through progressively increasing biological fidelity toward the most complete C. elegans behavioral simulation available, while systematically testing quantum advantage hypotheses at each complexity milestone.
 
-1. **Scientific Rigor**: Each phase builds on validated results from previous phases
-2. **External Validation**: Continuous testing with real C. elegans, quantum hardware, and embodied robots
-3. **Theoretical Depth**: Not just empirical comparisons, but mathematical frameworks and universal principles
-4. **Practical Impact**: Open-source benchmarks, reproducible science, and technological applications
-5. **World-Class Ambition**: Explicitly targeting field-defining contributions and paradigm-shifting discoveries
+The dual-goal approach ensures scientific value regardless of quantum outcomes:
 
-The project's unique position at the intersection of quantum computing, neuroscience, and AI—grounded in a tractable biological organism (C. elegans) with a fully mapped connectome—provides unparalleled opportunities for breakthrough discoveries.
+1. **If quantum shows advantage at higher complexity**: Groundbreaking result demonstrating that biological fidelity creates the conditions for quantum computational advantage — a new research direction linking quantum computing to neuroscience.
 
-By systematically mapping C. elegans behaviors across multiple architectures, validating predictions with real biology, and extracting universal principles, this project aims to answer fundamental questions:
+2. **If quantum shows no advantage**: The simulation itself is a major contribution to computational neuroscience, and the comprehensive characterisation of complexity thresholds (from 300+ sessions at grid-world complexity through enriched environments) provides definitive guidance for the quantum ML field.
 
-- **When do quantum-inspired algorithms outperform classical approaches for modeling biological intelligence?** (Empirical benchmarks)
-- **What computational principles enable intelligent behavior?** (Theoretical frameworks)
-- **How do we build efficient systems that capture biological decision-making?** (Engineering insights)
+The project's unique position — the only effort combining real connectome topology + reinforcement learning + quantum architecture comparison, grounded in the only organism with a fully mapped nervous system — provides unparalleled opportunities for breakthrough discoveries.
 
-The roadmap is ambitious but achievable with disciplined execution, strategic partnerships, and commitment to open science. The adaptive decision gates ensure scientific value even if primary hypotheses fail: negative results are valuable when rigorously documented. Success at the Minimum Viable level would represent solid scientific contribution; Target Success would establish new research directions; Stretch Success would fundamentally advance our understanding of biological intelligence.
+Key principles:
+
+1. **Biological fidelity drives complexity**: Each phase makes the simulation more realistic AND creates harder computational problems
+2. **Quantum checkpoints, not quantum phases**: Re-evaluation is triggered by measured complexity milestones
+3. **C. elegans deep dive**: Stay with the only fully-mapped organism and go deeper than anyone else
+4. **Community and validation**: External collaboration and open-source adoption amplify impact
+5. **Adaptive execution**: Every phase has go/no-go gates; negative results are valuable when rigorous
+
+By the completion of Phase 8, this project will have either demonstrated quantum advantage on biologically-grounded tasks or provided the most comprehensive negative result in quantum RL — along with the deepest C. elegans behavioral simulation, connectome-constrained architectures, and universal computational principles extracted from a uniquely tractable biological system.
