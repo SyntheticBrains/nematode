@@ -730,20 +730,20 @@ A living metric tracking the five quantum advantage thresholds identified by the
 
 ______________________________________________________________________
 
-#### Phase 8 Exit Criteria
+## Biological Fidelity Ladder
 
-- ✅ Transfer to ≥2 new organisms (Drosophila, zebrafish, or honeybee) demonstrated with ≥50% performance
-- ✅ Domain transfer to ≥2 non-biological domains (swarm robotics, financial trading, network routing, etc.)
-- ✅ ≥3 universal principles extracted, formalized mathematically, and validated across multiple domains
-- ✅ Unified theory published in peer-reviewed venue
-- ✅ Quantum computational neuroscience recognized as research direction (workshop organized, special issue published, OR funding program established)
-- ✅ External adoption (tiered): Minimum ≥3 / Target ≥10 / Stretch ≥25 external research groups using project tools/benchmarks (verified through citations, GitHub forks, or contributions)
+Progressive realism across the roadmap phases:
 
-#### Go/No-Go Decision
+| Level | Phase | Fidelity Description |
+|-------|-------|---------------------|
+| **1** | 0-2 ✅ | Grid-world, spatial gradient sensing, stateless reflexes, single agent, discrete actions |
+| **2** | 3 | Temporal sensing (dT/dt, dC/dt, dO2/dt), short-term memory, non-Markovian decisions |
+| **3** | 4 | Multi-agent, pheromone communication, social dynamics, competitive/cooperative behaviors |
+| **4** | 5 | Evolved behaviors, transgenerational epigenetic memory, co-evolutionary arms races |
+| **5** | 6 | Continuous 2D physics, realistic locomotion, connectome-constrained 302-neuron architecture |
+| **6** | Future | 3D substrate (soil mechanics), full sensory suite, population dynamics, life cycle simulation |
 
-**SUCCESS (Phase complete) if**: Universal principles extracted AND recognized through publication in top-tier venue.
-**PARTIAL SUCCESS if**: Transfer works but principles are domain-specific → Still valuable contribution to computational neuroscience and quantum ML.
-**REFRAME if**: Universality doesn't hold → Focus on C. elegans-specific insights as deep case study. Publish comprehensive analysis of "when quantum works and why."
+Each level builds on the previous, with the entire stack running simultaneously in later phases. Level 5 represents the target state for this roadmap; Level 6 is aspirational for future work.
 
 ______________________________________________________________________
 
