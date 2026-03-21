@@ -123,59 +123,47 @@ Core quantum evaluation complete, remaining items folded into later phases:
 - **Novel architectures evaluated**: QRH, QEF, HybridQuantum, HybridClassical, QSNN, QRC, QSNN-PPO, QSNNReinforce A2C, HybridQuantumCortex, CRH, and variants
 - Remaining (folded into Phase 7): interpretability framework, mechanism discovery, biological predictions
 
+### Architecture Evaluation Results (Logbook 008)
 
-#### Environments
+The 300+ session campaign across 15 architecture variants produced the following landscape:
 
-1. **DynamicForagingEnvironment**: Multi-food foraging with:
+```text
+GRADIENT-BASED ONLINE LEARNING EFFECTIVENESS (March 2026)
+═══════════════════════════════════════════════════════════════════════════
 
-   - Satiety-based homeostasis (hunger decays, food replenishes)
-   - Gradient-based chemotaxis (exponential decay superposition)
-   - Viewport perception (no visual input, gradient-only)
-   - Distance efficiency tracking
-   - Exploration rewards for novel cell visits
+Architecture                      Foraging   Pursuit Pred   Viable?
+──────────────────────────────────────────────────────────────────────────
+QRC                               0%         0%             NO
+QSNN (Hebbian)                    0%         N/A            NO
+QSNN-PPO Hybrid                   N/A        0%             NO
+QVarCircuit (parameter-shift)     ~40%       Not tested     MARGINAL
+QSNN (Surrogate gradient)         73.9%      0%             PARTIAL
+QSNNReinforce A2C                 N/A        0.5%           NO
+QVarCircuit (CMA-ES)              99.8%      76.1%          NOT ONLINE
+QRH (quantum reservoir)           86.8%      41.2%          PARTIAL
+CRH (classical reservoir)         N/A        31.8%          PARTIAL (CTRL)
+QEF (entangled features)          N/A        93.0%          COMPETITIVE
+HybridQuantum                     91.0%      96.9%          YES (BEST)
+HybridClassical (ablation)        97.0%      96.3%          YES (CONTROL)
+SpikingReinforceBrain             73.3%      ~61%           UNRELIABLE
+MLPReinforceBrain                 95.1%      73.4%          YES
+MLPPPOBrain                       96.7%      94.5%          YES
+──────────────────────────────────────────────────────────────────────────
+```
 
-2. **Predator Evasion** (added Nov 2025):
+### Key Findings from Quantum Campaign
 
-   - Multi-predator support with random movement
-   - Detection radius and kill radius
-   - Unified gradient field: food attraction + predator repulsion
-   - Multi-objective learning: food collection vs. survival
-   - Proximity penalties and death penalties
-   - Predator metrics: encounters, evasions, survival rate
+1. **HybridQuantum achieved SOTA (96.9%)** but classical ablation matches (96.3%) — the three-stage curriculum and mode-gated fusion drive performance, not the quantum component
+2. **QRH shows genuine quantum advantage** on pursuit predators (+9.4pp, Domingo-confirmed) but at low absolute performance (41.2%)
+3. **QEF competitive but not advantageous** — 24-phase optimisation, no significant improvement (p>0.05 on all tasks)
+4. **QA-7 (Quantum Plasticity)**: Classical baselines show zero backward forgetting (11/12 seeds BF=0.0) — environment too simple for quantum anti-forgetting hypothesis
+5. **Every trainable quantum component matches classical**: QLIF gates = classical gates, QEF ≈ MLP PPO, HybridQuantum ≈ HybridClassical
 
-#### Benchmarking & Tracking
+### Strategic Conclusion
 
-- 14 benchmark categories across quantum/classical, with/without predators
-- Automated experiment tracking with session IDs
-- Per-run and session-level metrics (success rate, steps, convergence run, stability)
-- CSV exports and matplotlib visualizations
-- Leaderboard system with contributor attribution
+Environment complexity (2-9D observations, 4 discrete actions, ~10K effective states) is fundamentally below the threshold for quantum advantage. See [quantum-architectures.md Strategic Assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for full analysis.
 
-#### Current Performance Snapshot (December 2025)
-
-**Static Maze:**
-
-- **Quantum (QVarCircuitBrain)**: 0.980 score (100% success, 34 steps, converge@20)
-- **Classical (MLPReinforceBrain)**: 0.960 score (100% success, 24 steps, converge@20)
-- **Spiking (SpikingReinforceBrain)**: 0.932 score (100% success, 67 steps, converge@34) - *surrogate gradients*
-
-**Dynamic Small (≤20x20):**
-
-- **Quantum (QVarCircuitBrain)**: 0.762 score (100% success, 207 steps, converge@20) - *CMA-ES evolution*
-- **Classical (MLPReinforceBrain)**: 0.822 score (100% success, 181 steps, converge@20)
-- **Spiking (SpikingReinforceBrain)**: 0.733 score (100% success, 267 steps, converge@22) - *surrogate gradients*
-
-**Dynamic Predator Small (≤20x20):**
-
-- **Quantum (QVarCircuitBrain)**: 0.675 score (95% success, 224 steps, converge@29) - *CMA-ES evolution*
-- **Classical (MLPReinforceBrain)**: 0.740 score (92% success, 199 steps, converge@30)
-- **Spiking (SpikingReinforceBrain)**: 0.556 score (63% success, 247 steps, converge@20) - *surrogate gradients*
-
-**Key Findings**:
-
-1. **Quantum-classical gap nearly closed**: With evolutionary optimization (CMA-ES), quantum achieves 0.762 vs classical 0.822 on dynamic foraging
-2. **Spiking as a viable model**: Surrogate gradient approach achieving 0.733 on foraging tasks
-3. **Predator tasks remain challenging**: All architectures show lower scores due to multi-objective complexity
+**Path forward**: Advance biological fidelity to cross complexity thresholds, then re-evaluate quantum architectures at each milestone.
 
 ### Known Gaps & Technical Debt
 
