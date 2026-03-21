@@ -193,6 +193,24 @@ class StandardEpisodeRunner(EpisodeRunner):
             successful_evasions=agent._episode_tracker.successful_evasions,
             termination_reason=termination_reason,
         )
+        # Log temporal sensing diagnostics (once per episode, if STAM active)
+        if agent._stam is not None and len(agent._stam) > 0:
+            stam_state = agent._stam.get_memory_state()
+            food_deriv = agent._stam.compute_temporal_derivative(0)
+            temp_deriv = agent._stam.compute_temporal_derivative(1)
+            pred_deriv = agent._stam.compute_temporal_derivative(2)
+            logger.info(
+                f"Temporal sensing summary: "
+                f"STAM entries={len(agent._stam)}, "
+                f"weighted_means=[food={stam_state[0]:.3f}, "
+                f"temp={stam_state[1]:.3f}, "
+                f"pred={stam_state[2]:.3f}], "
+                f"derivatives=[food={food_deriv:.4f}, "
+                f"temp={temp_deriv:.4f}, "
+                f"pred={pred_deriv:.4f}], "
+                f"action_entropy={stam_state[8]:.3f}",
+            )
+
         resolved_food_history = agent.food_history if food_history is ... else food_history
         return EpisodeResult(
             agent_path=agent.path,
