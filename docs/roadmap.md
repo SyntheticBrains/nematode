@@ -819,107 +819,98 @@ ______________________________________________________________________
 
 The project tracks success across 6 primary dimensions:
 
-### 1. Generalization
+### 1. Biological Fidelity
 
-**Definition**: Performance on unseen environments, tasks, or organisms without retraining.
-
-**Metrics**:
-
-- Zero-shot transfer accuracy (% of original performance)
-- Fine-tuning efficiency (episodes needed to match original performance)
-- Cross-organism transfer (C. elegans → Drosophila → zebrafish)
-- Cross-domain transfer (foraging → robotics → finance)
-
-**Targets** (Minimum / Target / Stretch):
-
-- **Phase 1**: ≥50% / ≥70% / ≥85% performance on unseen predator types
-- **Phase 3**: ≥40% / ≥60% / ≥75% performance on novel associative learning tasks
-- **Phase 8**: ≥30% / ≥50% / ≥70% performance on new organisms without retraining
-
-### 2. Hardware Efficiency
-
-**Definition**: Computational resources required for training and inference.
+**Definition**: How accurately the simulation captures real C. elegans behavior.
 
 **Metrics**:
 
-- **Quantum**: Circuit depth, gate count, qubit count, shots per decision
-- **Classical**: Parameter count, FLOPs, memory (MB), training time (hours)
-- **Spiking**: Neuron count, synapse count, spike count, energy (Joules per decision)
-- **All**: Wall-clock time to convergence, GPU-hours, QPU-hours, total cost ($)
+- Biological fidelity level achieved (see [Biological Fidelity Ladder](#biological-fidelity-ladder))
+- Quantitative match to published C. elegans behavioral data (chemotaxis indices, escape latencies, aggregation patterns)
+- Number of biological predictions generated and tested
 
 **Targets**:
 
-- **Phase 2**: Identify minimal sufficient architectures (fewest parameters for target performance)
-- **Phase 6**: Quantum error mitigation reduces QPU resource usage by ≥20%
-- **Phase 7**: Neuromorphic deployment achieves ≥10× energy efficiency vs. GPU
+- **Phase 3**: Temporal sensing matches published dT/dt sensitivity data
+- **Phase 6**: Locomotion statistics match real C. elegans (speed, turn angle, reversal frequency)
+- **Phase 7**: ≥1 biological prediction tested experimentally
 
-### 3. Biological Insight
+### 2. Complexity Achievement
 
-**Definition**: Novel discoveries about C. elegans or general principles of biological intelligence.
+**Definition**: Progress toward quantum advantage complexity thresholds.
 
 **Metrics**:
 
-- Biological predictions generated (count)
-- Predictions tested experimentally (count)
-- Predictions confirmed (%, significance level)
-- Mechanistic insights (does model reveal "how" behavior emerges?)
-- Publications in neuroscience journals (count)
+- Complexity dashboard values (5 dimensions)
+- Classical ceiling on hardest tasks
+- State/action space dimensionality
 
 **Targets**:
 
-- **Phase 2**: ≥1 prediction tested and confirmed (p < 0.05)
-- **Phase 7**: ≥1 major biological discovery published in peer-reviewed journal (e.g., Nature, Science, eLife, PNAS, Current Biology)
-- **Phase 8**: ≥3 universal principles applicable to other organisms
+- **Phase 3**: Input dimensionality >15D, classical ceiling \<85%
+- **Phase 4**: Multi-agent ≥5, classical ceiling \<75%
+- **Phase 6**: Continuous action space, classical ceiling \<70%
+
+### 3. Architecture Insight
+
+**Definition**: Understanding of when and why architectures succeed or fail.
+
+**Metrics**:
+
+- Quantum advantage demonstrated (task count, effect size, significance)
+- Complexity threshold characterisation (precise boundaries)
+- Connectome advantage (constrained vs. unconstrained gap)
+
+**Targets**:
+
+- **Phase 6**: Connectome-constrained vs. unconstrained comparison with p < 0.05
+- **Phase 8**: Definitive quantum vs. classical comparison at maximum complexity
 
 ### 4. Sample Efficiency
 
-**Definition**: Episodes or timesteps required to achieve target performance.
+**Definition**: Episodes required to achieve target performance.
 
 **Metrics**:
 
-- Episodes to convergence (when variance < 5% for 10 consecutive runs)
-- Timesteps to first success (e.g., first food collected, first predator evaded)
-- Data efficiency (performance per 1000 timesteps)
+- Episodes to convergence
+- Performance per 1000 timesteps
+- Memory utilisation efficiency (STAM/ITAM/LTAM impact)
 
-**Targets** (Minimum / Target / Stretch):
+**Targets**:
 
-- **Phase 1**: Reduce convergence episodes by 15% / 30% / 50% through better algorithms
-- **Phase 3**: Memory systems reduce sample complexity by 20% / 50% / 70% (leverage past experience)
-- **Phase 4**: Evolved architectures converge in 50% fewer episodes than hand-designed
+- **Phase 3**: Memory systems reduce sample complexity by ≥20%
+- **Phase 5**: Evolved architectures converge in 50% fewer episodes than hand-designed
 
-### 5. Robustness
+### 5. Community Impact
+
+**Definition**: External adoption and scientific influence.
+
+**Metrics**:
+
+- NematodeBench external submissions
+- Citations to project publications
+- External research groups engaging
+- Open-source contributions (PRs from external researchers)
+
+**Targets**:
+
+- **Phase 7**: ≥3 external groups engaging, ≥1 paper submitted
+- **Phase 8**: ≥10 external groups, ≥100 citations
+
+### 6. Robustness
 
 **Definition**: Performance under noise, missing sensors, or adversarial conditions.
 
 **Metrics**:
 
 - Sensor dropout robustness (performance with 10%, 20%, 50% sensors disabled)
-- Noise robustness (performance with Gaussian noise on observations)
-- Adversarial robustness (performance under worst-case perturbations)
-- Hardware noise tolerance (QPU performance degradation vs. simulator)
+- Noise robustness (Gaussian noise on observations)
+- Hardware noise tolerance (QPU performance vs. simulator)
 
 **Targets**:
 
-- **Phase 2**: ≥80% performance with 20% sensor dropout
-- **Phase 6**: Quantum error mitigation maintains ≥70% of simulator performance on real QPU
-- **Phase 7**: Sim-to-real transfer maintains ≥60% of simulation performance
-
-### 6. Interpretability
-
-**Definition**: Ability to explain and understand model decisions.
-
-**Metrics**:
-
-- Human-understandable explanations (qualitative assessment)
-- Feature attribution accuracy (measured by feature ablation)
-- Hypothesis generation (count of testable hypotheses from model analysis)
-- Mechanistic alignment (does explanation match known biology?)
-
-**Targets**:
-
-- **Phase 2**: All target architectures have operational interpretability tools
-- **Phase 3**: Memory mechanisms interpretable and matched to biological substrates
-- **Phase 8**: Universal principles extractable from interpretability analysis
+- **Phase 3**: ≥80% performance with 20% sensor dropout
+- **Phase 6**: Connectome architecture graceful degradation under circuit ablation (matches biological lesion data)
 
 ______________________________________________________________________
 
