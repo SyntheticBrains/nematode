@@ -84,7 +84,9 @@ Extend the brain architecture system to support the CRH (Classical Reservoir Hyb
 - **WHEN** importing from `quantumnematode.brain.arch`
 - **THEN** `QEFBrain` and `QEFBrainConfig` SHALL be importable
 - **AND** SHALL be included in the `__all__` export list
+
 ## Requirements
+
 ### Requirement: Extended BrainParams for Multi-Sensory Input
 
 The BrainParams class SHALL include additional optional fields for Phase 1 sensory modalities, enabling brains to process temperature, health, and mechanosensory information.
@@ -280,4 +282,3 @@ The SimulationResult SHALL include optional per-objective scores for multi-senso
 - **THEN** base Phase 0 score components SHALL be weighted at 85%
 - **AND** multi-objective components SHALL be weighted at 15%
 - **AND** the formula SHALL be documented for reproducibility
-

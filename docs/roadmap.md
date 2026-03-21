@@ -125,10 +125,10 @@ Core quantum evaluation complete, remaining items folded into later phases:
 
 ### Architecture Evaluation Results (Logbook 008)
 
-The 300+ session campaign across 15 architecture variants produced the following landscape:
+The 300+ session campaign across 15 architecture variants produced the following landscape (snapshot as of March 2026 — see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md) for full details):
 
 ```text
-GRADIENT-BASED ONLINE LEARNING EFFECTIVENESS (March 2026)
+GRADIENT-BASED ONLINE LEARNING EFFECTIVENESS (March 2026 snapshot)
 ═══════════════════════════════════════════════════════════════════════════
 
 Architecture                      Foraging   Pursuit Pred   Viable?
@@ -226,7 +226,7 @@ ______________________________________________________________________
 
 See [Current State](#architecture-evaluation-results-logbook-008) for the full architecture landscape. Key outcomes:
 
-- 11+ quantum architectures systematically evaluated
+- 15 architecture variants systematically evaluated
 - Strategic conclusion: environment complexity below quantum advantage thresholds
 - Brain naming migration complete
 - Statistical framework operational
@@ -266,7 +266,9 @@ Phase 3 enforces **biological honesty**: the agent must only receive information
 
 This is how real C. elegans navigates: a "biased random walk" where the worm moves forward, detects whether concentration is increasing or decreasing (temporal comparison), then modulates its turning probability. It does not follow a pre-computed gradient vector — it learns to turn less when things improve and turn more when they worsen.
 
-**Non-gradient modalities** (mechanosensation, nociception) are already biologically honest — they provide binary contact signals that the agent actually experiences. These remain unchanged.
+**Mechanosensation** (boundary_contact, predator_contact) is already biologically honest — binary contact signals the agent actually experiences. These remain unchanged.
+
+**Nociception** currently provides `predator_gradient_strength` and `predator_gradient_direction` — the same spatial gradient oracle as chemotaxis. A real C. elegans cannot sense predator direction at distance; it detects predator-secreted chemicals (sulfolipids) via the same temporal comparison mechanism as chemotaxis. Nociception must receive the same honest-sensing treatment: scalar chemical concentration at current position, with the agent inferring predator direction from temporal changes. This is included in deliverable 1 alongside chemotaxis and thermotaxis.
 
 #### Deliverables
 
@@ -323,12 +325,17 @@ This is how real C. elegans navigates: a "biased random walk" where the worm mov
 
 #### Phase 3 Exit Criteria
 
-- ✅ Biologically honest sensing (Mode A or B) operational for thermotaxis and chemotaxis
+**Required (must complete before Phase 4):**
+
+- ✅ Biologically honest sensing (Mode A or B) operational for thermotaxis, chemotaxis, and nociception
 - ✅ STAM implemented with biologically-calibrated exponential decay rates
 - ✅ Oracle vs. honest performance gap quantified (expected: significant drop in success rate)
 - ✅ Classical approaches show measurable difficulty increase vs. oracle baseline (quantified)
-- ✅ ≥1 associative learning paradigm functional (classical conditioning or aversive learning)
+
+**Stretch (can continue into Phase 4):**
+
 - ✅ Oxygen sensing implemented with honest temporal sensing
+- ✅ ≥1 associative learning paradigm functional (classical conditioning or aversive learning)
 
 #### Quantum Checkpoint (Phase 3)
 
@@ -342,7 +349,7 @@ Re-evaluate:
 
 #### Go/No-Go Decision
 
-**GO if**: Temporal sensing creates measurably harder problems (classical ceiling drops ≥10 percentage points) AND STAM improves performance ≥10%.
+**GO if**: Temporal sensing creates measurably harder problems (classical ceiling drops by any statistically significant amount) AND STAM improves performance over stateless policies.
 **PIVOT if**: Temporal sensing doesn't change difficulty → Classical approaches may trivially handle temporal derivatives with simple RNNs. Focus on multi-agent complexity (Phase 4) as the primary difficulty driver.
 **STOP if**: STAM infrastructure too complex or unreliable → Simplify to fixed-length observation windows.
 
@@ -415,7 +422,7 @@ Multi-agent scenarios create exponential state spaces (state × number of agents
 - ✅ ≥5 agents running stably with independent brains
 - ✅ ≥1 emergent behavior documented (spontaneous aggregation, information sharing, etc.)
 - ✅ Pheromone communication functional (at least alarm + food-marking)
-- ✅ Classical approaches show measurable strain on coordination tasks (ceiling \<85% on hard multi-agent scenarios)
+- ✅ Classical approaches show measurable strain on coordination tasks (quantified difficulty increase vs. single-agent baseline)
 
 #### Quantum Checkpoint (Phase 4)
 
@@ -425,11 +432,11 @@ Evaluate:
 
 - **Quantum entangled strategy spaces**: Can quantum architectures represent correlated multi-agent strategies more efficiently?
 - **Quantum game theory approaches**: Do quantum-enhanced Nash equilibrium solvers outperform classical?
-- If classical ceiling drops below 85% on coordination tasks, launch targeted quantum evaluation campaign
+- If classical approaches show measurable difficulty on coordination tasks (aspirational: ceiling \<85%), launch targeted quantum evaluation campaign
 
 #### Go/No-Go Decision
 
-**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR create genuinely hard coordination problems (classical \<85%).
+**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR create measurably harder coordination problems.
 **PIVOT if**: Multi-agent complexity too high or unstable → Deepen single-agent complexity (richer sensing, longer horizons).
 **STOP if**: Infrastructure can't handle ≥3 agents → Re-architect for scalability before proceeding.
 
@@ -441,7 +448,7 @@ ______________________________________________________________________
 
 **Aspirational timeline**: Q4 2026 - Q1 2027
 
-**Prerequisites**: Phase 4 multi-agent infrastructure (co-evolution requires populations)
+**Prerequisites**: Phase 3 (memory infrastructure for transgenerational memory). Phase 4 multi-agent infrastructure required only for co-evolution (deliverable 4) — other deliverables can begin in parallel with Phase 4.
 
 **Pilot-Then-Focus Approach**: Start with lightweight pilots of 2-3 evolutionary approaches using small populations and few generations. Based on pilot results, select 1-2 approaches for deep investigation.
 
@@ -492,6 +499,10 @@ ______________________________________________________________________
 - ✅ Transgenerational memory functional (if biologically justified by pilot results)
 - ✅ Generational fitness tracking shows continuous improvement over ≥50 generations
 
+#### Quantum Note
+
+Phase 5 does not include a formal quantum checkpoint — evolution does not directly create new computational complexity in the way temporal sensing or multi-agent dynamics do. However, NEAT-style architecture evolution (deliverable 6) could discover novel quantum-classical hybrid topologies worth evaluating. If architecture evolution produces interesting quantum circuit structures, these should be flagged for evaluation at the Phase 6 checkpoint.
+
 #### Go/No-Go Decision
 
 **GO if**: Evolution produces novel, high-performing behaviors OR demonstrates Baldwin Effect.
@@ -538,7 +549,14 @@ ______________________________________________________________________
    - Compare connectome-constrained vs. unconstrained architectures on identical tasks
    - Ablation: remove specific circuits and measure behavioral impact (matches biological lesion studies)
 
-4. **Connectome + Quantum** [RESEARCH]
+4. **Architecture Adaptation for Continuous Control**
+
+   - Existing brain architectures (MLPPPOBrain, QVarCircuitBrain, HybridQuantum, QRH, etc.) were designed for discrete 4-action grid-worlds
+   - Continuous action space (speed + turning angle) requires actor-critic variants with continuous action heads (e.g., Gaussian policy for PPO, continuous-output quantum circuits)
+   - Adaptation strategy: extend PPO with continuous action head first (well-understood), then adapt quantum architectures
+   - Benchmark discrete-trained vs. continuous-native architectures to quantify the impact of action space expansion
+
+5. **Connectome + Quantum** [RESEARCH]
 
    - Build quantum circuit architectures (QSNN, variational) whose topology mirrors the real connectome
    - Test whether biologically-constrained quantum circuits outperform:
@@ -587,7 +605,7 @@ ______________________________________________________________________
 
 **Aspirational timeline**: Q2-Q4 2027
 
-**Note**: This phase runs partly in parallel with Phases 6-8 as publications and community building are ongoing activities.
+**Note**: This phase runs partly in parallel with Phases 6-8. Community infrastructure (NematodeBench, docs, Docker) can begin before Phase 6 completes. Paper 1 (quantum evaluation) and Paper 2 (benchmark) can be drafted early. Paper 3 (connectome) depends on Phase 6 results. External collaboration outreach can begin at any time.
 
 #### Deliverables
 
@@ -726,7 +744,7 @@ A living metric tracking the five quantum advantage thresholds identified by the
 | **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Full non-Markovian | Very long non-Markovian dependencies |
 | **Classical ceiling** | 94-98% | Target \<85% | Target \<75% | Target \<70% | \<70% on challenging tasks |
 
-**Update protocol**: After each phase's classical baselines are established, update this dashboard with measured values. Quantum checkpoints activate when thresholds are crossed.
+**Update protocol**: After each phase's classical baselines are established, update this dashboard with **measured** values (replacing the targets). Quantum checkpoints activate when thresholds are crossed. Classical ceiling targets are aspirational — the key criterion is measurable difficulty increase, not hitting a specific number.
 
 ______________________________________________________________________
 
@@ -847,9 +865,9 @@ The project tracks success across 6 primary dimensions:
 
 **Targets**:
 
-- **Phase 3**: Input dimensionality >15D, classical ceiling \<85%
-- **Phase 4**: Multi-agent ≥5, classical ceiling \<75%
-- **Phase 6**: Continuous action space, classical ceiling \<70%
+- **Phase 3**: Input dimensionality >15D, classical ceiling measurably lower than Phase 2 baseline (aspirational: \<85%)
+- **Phase 4**: Multi-agent ≥5, classical ceiling measurably lower than Phase 3 (aspirational: \<75%)
+- **Phase 6**: Continuous action space, classical ceiling measurably lower than Phase 4 (aspirational: \<70%)
 
 ### 3. Architecture Insight
 
