@@ -18,9 +18,10 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 ## Common Commands
 
 - Install: `uv sync --extra cpu --extra torch`
-- Test (unit/integration): `uv run pytest`
-- Test (smoke): `uv run pytest -m smoke -v`
-- Test (nightly E2E): `uv run pytest -m nightly -v`
+- Test (default, excludes nightly): `uv run pytest -m "not nightly"`
+- Test (smoke only): `uv run pytest -m smoke -v`
+- Test (nightly E2E only): `uv run pytest -m nightly -v`
+- Test (all, including nightly): `uv run pytest`
 - Lint/format: `uv run pre-commit run -a`
 - Run simulation: `uv run ./scripts/run_simulation.py --config ./configs/examples/<config>.yml`
 
