@@ -330,7 +330,7 @@ class MLPPPOBrain(ClassicalBrain):
         self.history_data = BrainHistoryData()
         self.latest_data = BrainData()
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set
 
         # Store config

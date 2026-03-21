@@ -61,6 +61,17 @@ class DeviceType(Enum):
     GPU = "gpu"
     QPU = "qpu"
 
+    def to_torch_device_str(self) -> str:
+        """Return a string accepted by ``torch.device()``.
+
+        PyTorch only recognises ``"cpu"`` and ``"cuda"``.  ``GPU`` maps to
+        ``"cuda"``; ``QPU`` maps to ``"cpu"`` because quantum circuits run on
+        Qiskit backends, not PyTorch.
+        """
+        if self is DeviceType.GPU:
+            return "cuda"
+        return "cpu"
+
 
 class BrainConfig(BaseModel):
     """Configuration for the brain architecture."""

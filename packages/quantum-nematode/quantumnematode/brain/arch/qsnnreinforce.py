@@ -548,7 +548,7 @@ class QSNNReinforceBrain(ClassicalBrain):
 
         self.config = config
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
         # Validate action_set length matches num_actions
