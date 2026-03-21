@@ -254,23 +254,43 @@ Real C. elegans uses temporal sensing for most modalities:
 - **Chemotaxis**: ASE neurons perform temporal concentration comparisons during head sweeps — the worm moves forward, senses concentration change over time, then adjusts.
 - **Oxygen sensing**: URX/BAG neurons integrate oxygen changes over time.
 
-Our current implementation provides spatial gradient information directly (gradient magnitude + direction), which is computationally convenient but biologically inaccurate. Switching to temporal derivatives fundamentally changes the computational problem: agents must maintain memory and integrate signals over time, creating non-Markovian decision dependencies.
+Our current implementation provides spatial gradient information directly (gradient magnitude + direction), which is computationally convenient but **constitutes environmental cheating**. The environment computes central differences by sampling adjacent cells (T(x+1,y) - T(x-1,y))/2 and superposition of exponential decay functions from all food sources — information a ~1mm worm at position (x,y) cannot access. Switching to biologically honest sensing fundamentally changes the computational problem: agents must maintain memory, integrate signals over time, and infer gradient direction from their own movement history.
+
+#### Anti-Cheating Principle
+
+Phase 3 enforces **biological honesty**: the agent must only receive information available through its actual sensory neurons. For gradient-based modalities (chemotaxis, thermotaxis, aerotaxis), this means:
+
+- **The agent receives only the scalar value at its current position** (concentration, temperature, O2 level)
+- **The agent receives its own proprioceptive state** (heading, recent movement)
+- **The agent must infer gradient direction** by correlating how scalar values change with its own movement over time
+
+This is how real C. elegans navigates: a "biased random walk" where the worm moves forward, detects whether concentration is increasing or decreasing (temporal comparison), then modulates its turning probability. It does not follow a pre-computed gradient vector — it learns to turn less when things improve and turn more when they worsen.
+
+**Non-gradient modalities** (mechanosensation, nociception) are already biologically honest — they provide binary contact signals that the agent actually experiences. These remain unchanged.
 
 #### Deliverables
 
-1. **Temporal Gradient Sensing** [CRITICAL]
+1. **Biologically Honest Sensory Inputs** [CRITICAL]
 
-   - Replace spatial gradient inputs (gradient_x, gradient_y) with temporal derivatives (dT/dt, dC/dt) computed from sensory history buffers
-   - Agent receives current temperature/concentration at its position + rate of change over recent steps
-   - Configurable: toggle between spatial (legacy) and temporal (biologically accurate) sensing modes
-   - Biologically calibrated: AFD sensitivity ~0.01°C changes, ASE concentration comparisons over ~1-second head sweep timescales
+   Two sensing modes, both replacing the current spatial gradient oracle:
 
-2. **Short-Term Associative Memory (STAM)** [CRITICAL — prerequisite for temporal sensing]
+   - **Mode A — Raw scalar + memory (most biologically honest)**: Agent receives only the scalar reading at its current position (temperature in °C, chemical concentration, O2 level). No gradient information of any kind. The brain must use STAM memory buffers to store recent readings and learn temporal integration entirely on its own — discovering that "I moved forward and concentration increased, so food is probably ahead" from raw experience. This is the hardest mode and the most scientifically interesting.
+
+   - **Mode B — Pre-computed temporal derivative (biologically plausible)**: Agent receives the scalar reading + dC/dt or dT/dt (rate of change over recent steps). This models what sensory neurons actually output — AFD neurons signal "warming" or "cooling", not "gradient points north-east". Still much harder than spatial gradients because there is no directional information — only "things are getting better/worse". The agent must correlate its movement direction (from proprioception) with whether values improved to infer where to go.
+
+   - **Legacy mode**: Spatial gradients remain available for backward compatibility and as a comparison baseline, but are explicitly labelled as "oracle sensing" in configs and documentation.
+
+   - Biologically calibrated: AFD sensitivity ~0.01°C changes, ASE concentration comparisons over ~1-second head sweep timescales.
+
+   - Configurable per modality: each sensory module can independently use Mode A, B, or legacy.
+
+2. **Short-Term Associative Memory (STAM)** [CRITICAL — prerequisite for Mode A sensing]
 
    - Exponential-decay memory buffers for recent sensory history (biological timescale: minutes to ~30 minutes)
+   - Stores recent scalar readings, recent positions, recent actions — the raw material for temporal integration
    - No protein synthesis required (immediate formation, matches biological STAM)
    - Molecular basis: cAMP and calcium signaling pathways
-   - Use cases: Remember recent food locations, recent predator encounters, recent temperature readings
+   - Use cases: Remember recent sensory readings (for temporal derivative computation in Mode A), recent food/predator encounters, build spatial map from temporal experience
    - Integration with all brain architectures: memory state appended to observation vector
 
 3. **Oxygen Sensing** [Pairs with temporal infrastructure]
@@ -295,18 +315,20 @@ Our current implementation provides spatial gradient information directly (gradi
 
 #### Metrics Focus
 
-- **Temporal integration**: Do agents learn to use temporal derivatives effectively?
+- **Oracle vs. honest comparison**: Quantify the performance gap between spatial gradient (oracle) and biologically honest sensing modes. This gap IS the measure of how much we were cheating.
+- **Mode A vs. Mode B**: Does pre-computing dT/dt (Mode B) substantially help versus raw scalars (Mode A)? If so, the temporal derivative is a key computational primitive.
+- **Temporal integration**: Do agents learn to correlate movement direction with value changes?
 - **Memory utilisation**: Does STAM improve performance over stateless policies?
-- **Biological fidelity**: Match C. elegans thermotaxis precision, chemotaxis temporal comparisons
-- **Classical ceiling change**: Does temporal sensing lower classical success rates (creating headroom for quantum)?
+- **Classical ceiling change**: Does honest sensing lower classical success rates (creating headroom for quantum)?
 
 #### Phase 3 Exit Criteria
 
-- ✅ Temporal sensing operational for thermotaxis (dT/dt) and chemotaxis (dC/dt)
+- ✅ Biologically honest sensing (Mode A or B) operational for thermotaxis and chemotaxis
 - ✅ STAM implemented with biologically-calibrated exponential decay rates
-- ✅ Classical approaches show measurable difficulty increase vs. spatial-gradient baseline (quantified)
+- ✅ Oracle vs. honest performance gap quantified (expected: significant drop in success rate)
+- ✅ Classical approaches show measurable difficulty increase vs. oracle baseline (quantified)
 - ✅ ≥1 associative learning paradigm functional (classical conditioning or aversive learning)
-- ✅ Oxygen sensing implemented with temporal integration
+- ✅ Oxygen sensing implemented with honest temporal sensing
 
 #### Quantum Checkpoint (Phase 3)
 
