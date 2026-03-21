@@ -88,29 +88,41 @@ Demonstrate that progressively increasing biological fidelity in C. elegans simu
 
 ______________________________________________________________________
 
-## Current State (Baseline)
+## Current State
 
-### Implemented Capabilities
+### Completed Phases Summary
 
-#### Brain Architectures (6 total)
+#### Phase 0 (Foundation & Baselines) — COMPLETE
 
-**Quantum Approaches:**
+All required and stretch exit criteria met:
 
-1. **QVarCircuitBrain** (formerly ModularBrain): Quantum variational circuits with modular sensory processing, multi-layer entanglement, evolutionary optimization (CMA-ES validated), with parameter-shift rule gradients available for comparison
+- **6 brain architectures** implemented and benchmarked: QVarCircuitBrain, QQLearningBrain, MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain, SpikingReinforceBrain
+- **PPO validated** as classical SOTA (94-98% across thermotaxis configurations)
+- **CMA-ES validated** for quantum circuits (88% success, 4x better than gradient-based)
+- **Spiking neural networks** rewritten with surrogate gradient descent (73.3% success)
+- **IBM QPU deployment** complete (first quantum hardware run)
+- **14 benchmark categories** with automated experiment tracking
 
-2. **QQLearningBrain** (formerly QModularBrain): Hybrid quantum-classical Q-learning (early stage, incomplete TODOs)
+#### Phase 1 (Sensory & Threat Complexity) — COMPLETE
 
-**Classical Approaches:**
+All core exit criteria met:
 
-3. **MLPReinforceBrain** (formerly MLPBrain): REINFORCE policy gradients with baseline subtraction, entropy regularization, learning rate scheduling
+- **Thermotaxis** implemented with 9 configurations (3 sizes × 3 task variants), all baselines established (see [Logbook 007](experiments/logbooks/007-ppo-thermotaxis-baselines.md))
+- **Mechanosensation** implemented (boundary + predator contact detection)
+- **Enhanced predators**: Stationary + pursuit types with configurable behaviors
+- **Health/HP system** with damage, healing, and strategic trade-offs
+- Oxygen sensing deferred to Phase 3 (pairs naturally with temporal sensing infrastructure)
 
-4. **MLPDQNBrain** (formerly QMLPBrain): Deep Q-Network (DQN) with experience replay
+#### Phase 2 (Architecture Analysis) — SUBSTANTIALLY COMPLETE
 
-5. **MLPPPOBrain** (formerly PPOBrain): Proximal Policy Optimization with actor-critic architecture, clipped surrogate objective, Generalized Advantage Estimation (GAE)
+Core quantum evaluation complete, remaining items folded into later phases:
 
-**Biologically-Realistic:**
+- **300+ session quantum architecture campaign** across 15 architecture variants (see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md))
+- **Brain naming migration** to paradigm-prefix scheme complete
+- **Statistical framework** operational
+- **Novel architectures evaluated**: QRH, QEF, HybridQuantum, HybridClassical, QSNN, QRC, QSNN-PPO, QSNNReinforce A2C, HybridQuantumCortex, CRH, and variants
+- Remaining (folded into Phase 7): interpretability framework, mechanism discovery, biological predictions
 
-6. **SpikingReinforceBrain** (formerly SpikingBrain): Leaky Integrate-and-Fire (LIF) neurons with **surrogate gradient descent**, REINFORCE policy gradients, backpropagation through time (BPTT), PyTorch autograd integration. Previous STDP implementation replaced due to fundamental learning failures.
 
 #### Environments
 
