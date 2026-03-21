@@ -240,116 +240,89 @@ See [Current State](#architecture-evaluation-results-logbook-008) for the full a
 
 ______________________________________________________________________
 
-### Phase 2: Architecture Analysis & Standardization (Q2-Q3 2026)
+### Phase 3: Temporal Sensing & Memory
 
-**Goal**: Move beyond "which architecture wins?" to "why do architectures work?" through systematic analysis, interpretability, and mechanism discovery. Also complete standardization work including brain architecture renaming and benchmarking improvements.
+**Goal**: Transform the simulation from stateless reflex to temporal integration. Make C. elegans sense the way it actually senses — through temporal derivatives, not spatial gradient lookups. This is the single most impactful biological fidelity upgrade and directly addresses two quantum advantage thresholds (non-Markovian dependencies and partial observability).
 
-> **Quantum Architecture Evaluation Update (2026-03-20)**: The novel quantum architecture evaluation (Deliverables 10-11) has been substantially completed ahead of schedule through Logbook 008's QA-1 through QA-5 campaign (290+ sessions, 11+ architectures). Key findings: (1) QRH demonstrates genuine quantum advantage on pursuit predators (+9.4pp, Domingo-confirmed), (2) HybridQuantum achieves SOTA 96.9% but classical ablation matches at 96.3%, (3) QEF entangled features are competitive but not advantageous. Strategic assessment concluded that environment complexity (2-9D observations, 4 actions, ~10K states) is below quantum advantage thresholds. One final experiment remains — QA-7 (Quantum Plasticity, testing anti-forgetting) — after which quantum architecture search pauses until environment enrichment (Phases 1-3) creates classical bottlenecks. This activates the PIVOT path of the Go/No-Go decision below. See [quantum-architectures.md Strategic Assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for full analysis.
+**Aspirational timeline**: Q2-Q3 2026
+
+#### Background
+
+Real C. elegans uses temporal sensing for most modalities:
+
+- **Thermotaxis**: AFD neurons detect temperature changes (dT/dt) with extraordinary sensitivity (0.01°C changes over a >10°C range). The worm compares current temperature to recent history, not spatial sampling.
+- **Chemotaxis**: ASE neurons perform temporal concentration comparisons during head sweeps — the worm moves forward, senses concentration change over time, then adjusts.
+- **Oxygen sensing**: URX/BAG neurons integrate oxygen changes over time.
+
+Our current implementation provides spatial gradient information directly (gradient magnitude + direction), which is computationally convenient but biologically inaccurate. Switching to temporal derivatives fundamentally changes the computational problem: agents must maintain memory and integrate signals over time, creating non-Markovian decision dependencies.
 
 #### Deliverables
 
-01. **Architecture Ablation Studies** [Moved from Phase 1]
+1. **Temporal Gradient Sensing** [CRITICAL]
 
-    - Systematically remove components from each architecture (e.g., remove entanglement from quantum circuits, remove hidden layers from MLP)
-    - Measure performance degradation: which features are critical?
-    - Cross-architecture feature importance analysis
-    - Identify minimal sufficient architectures for each task
+   - Replace spatial gradient inputs (gradient_x, gradient_y) with temporal derivatives (dT/dt, dC/dt) computed from sensory history buffers
+   - Agent receives current temperature/concentration at its position + rate of change over recent steps
+   - Configurable: toggle between spatial (legacy) and temporal (biologically accurate) sensing modes
+   - Biologically calibrated: AFD sensitivity ~0.01°C changes, ASE concentration comparisons over ~1-second head sweep timescales
 
-02. **Brain Architecture Naming Migration**
+2. **Short-Term Associative Memory (STAM)** [CRITICAL — prerequisite for temporal sensing]
 
-    - Complete migration to paradigm-prefix naming scheme (QVarCircuitBrain, MLPPPOBrain, etc.)
-    - Deprecate old names with backward-compatible aliases
-    - Update all configs, benchmarks, and documentation
-    - See [STANDARDIZATION.md](STANDARDIZATION.md) for framework decisions
+   - Exponential-decay memory buffers for recent sensory history (biological timescale: minutes to ~30 minutes)
+   - No protein synthesis required (immediate formation, matches biological STAM)
+   - Molecular basis: cAMP and calcium signaling pathways
+   - Use cases: Remember recent food locations, recent predator encounters, recent temperature readings
+   - Integration with all brain architectures: memory state appended to observation vector
 
-03. **Benchmarking Improvements**
+3. **Oxygen Sensing** [Pairs with temporal infrastructure]
 
-    - Hierarchical benchmark categories (basic/foraging, survival/predator, thermotaxis/)
-    - Spiking as separate brain class alongside quantum/classical
-    - Statistical testing framework (confidence intervals, significance tests, effect sizes)
+   - O2 concentration gradient fields (5-12% optimal range, matching real C. elegans preference)
+   - URX/AQR/PQR neuron simulation (detect hyperoxia >12%)
+   - BAG neuron simulation (detect hypoxia \<5%)
+   - Temporal O2 sensing using STAM buffers (dO2/dt)
+   - Multi-objective: balance food quality vs. oxygen comfort vs. predator avoidance
 
-04. **Interpretability Framework**
+4. **ITAM/LTAM** [Conditional on STAM success]
 
-    - **Quantum**: Circuit visualization, gate importance analysis (parameter sensitivity), superposition state tracking
-    - **Classical**: Attention maps (if using attention mechanisms), activation analysis, saliency maps (which inputs drive decisions?)
-    - **Spiking**: Spike raster plots, connectivity analysis, neuron firing patterns, membrane potential dynamics, surrogate gradient flow visualization
-    - Unified API: `architecture.interpret(state, action)` returns explanation
+   - Intermediate-Term Associative Memory (30 min to hours): Two-pathway decay model inspired by cAMP + CaMKII signaling. Requires simulated protein synthesis gate.
+   - Long-Term Associative Memory (hours to days): Persistent across simulation sessions. Spaced vs. massed training distinction matching biology.
+   - **Validation gate**: Implement only if STAM improves foraging efficiency by ≥10% over baseline
 
-05. **Feature Importance Across Architectures**
+5. **Associative Learning Paradigms**
 
-    - Which sensory inputs are most critical? (Chemotaxis gradient magnitude? Direction? Satiety level?)
-    - How do architectures differ in feature reliance? (Does quantum use different cues than classical?)
-    - Integrated Gradients, SHAP values, or similar for attribution
-    - Cross-architecture comparison: "Quantum prioritizes gradient direction 60% vs. classical 40%"
-
-06. **Mechanism Discovery Protocol**
-
-    - Automated hypothesis generation from model analysis
-    - Example: "Quantum model uses superposition to simultaneously explore approach/avoid strategies"
-    - Translation to biological hypotheses: "Does C. elegans use [X] mechanism? Test with [Y] experiment"
-    - Partnership with C. elegans labs to design validation experiments
-
-07. **First Biological Prediction Tested**
-
-    - Identify a novel prediction from model behavior (e.g., "optimal escape angle from predators is 135° based on quantum model")
-    - Collaborate with neuroscience lab to test with real C. elegans
-    - Publication: Model prediction → experimental validation loop
-
-08. **Comparative Analysis Methodology**
-
-    - Statistical testing framework: confidence intervals, effect sizes (Cohen's d), significance tests (t-test, ANOVA, Bonferroni correction)
-    - Benchmark visualizations: heatmaps, performance profiles, scaling curves
-    - Reproducibility toolkit: containerized environments, seed management, deterministic benchmarks
-
-09. **Architecture Comparison Whitepaper**
-
-    - Comprehensive analysis: When does each architecture excel? Why?
-    - Computational cost comparison: parameters, FLOPs, wall-clock time, energy consumption
-    - Scalability analysis: how performance changes with environment complexity (grid size, food count, predator count)
-
-10. **Novel Quantum Architectures**
-
-    - **QRCBrain**: Quantum Reservoir Computing with fixed reservoir + classical readout (avoids barren plateaus by design)
-    - **QSNNBrain**: Quantum Spiking Neural Network with QLIF neurons and local learning rules
-    - **HybridQuantumBrain**: Hierarchical architecture combining QSNN/QRC reflexes with VQC planning cortex
-    - **Data re-uploading enhancement**: Add multi-layer data encoding to QVarCircuitBrain for increased expressivity
-    - See [docs/research/quantum-architectures.md](research/quantum-architectures.md) for detailed implementation specifications
-
-11. **Quantum Architecture Benchmarking**
-
-    - Compare QRC, QSNN, HybridQuantum against existing quantum/classical/spiking baselines
-    - Reflex metrics: evasion latency, collision rate, thermotaxis slope following
-    - Strategic metrics: food intake vs risk tradeoff, long-horizon reward
-    - Hierarchical evaluation: fusion efficiency (improvement over best individual component)
+   - **Classical conditioning**: Odor (CS) + food (US) → approach odor
+   - **Aversive learning**: Pathogen exposure → avoid pathogen
+   - **Context conditioning**: Temperature + food → prefer that temperature (NMDA receptor-dependent, RIM interneuron integration)
 
 #### Metrics Focus
 
-- **Interpretability**: Can we explain why an action was chosen?
-- **Mechanism discovery**: Generate ≥1 testable biological hypothesis per architecture
-- **Statistical rigor**: All comparisons have confidence intervals and significance tests
+- **Temporal integration**: Do agents learn to use temporal derivatives effectively?
+- **Memory utilisation**: Does STAM improve performance over stateless policies?
+- **Biological fidelity**: Match C. elegans thermotaxis precision, chemotaxis temporal comparisons
+- **Classical ceiling change**: Does temporal sensing lower classical success rates (creating headroom for quantum)?
 
-#### Phase 2 Exit Criteria
+#### Phase 3 Exit Criteria
 
-- ✅ Ablation toolkit operational with automated feature importance ranking
-- ✅ Brain naming migration complete (all configs, benchmarks, docs updated)
-- ✅ Hierarchical benchmark categories operational with statistical testing
-- ✅ Interpretability toolkit operational for all architectures
-- ✅ Feature importance analysis reveals architecture-specific strategies (e.g., "quantum prioritizes gradient direction 60% vs. classical 40%")
-- ✅ Comparative framework published: preprint or conference paper
-- ✅ Quantum advantage clearly demonstrated on **at least 2 tasks** OR compelling negative result documented ("why quantum didn't provide advantages")
-- ✅ Theory connecting architecture properties to task performance (e.g., "entanglement correlates with multi-objective optimization performance")
-- ✅ ≥1 biological prediction tested and published in peer-reviewed journal
-- ✅ Statistical analysis framework integrated into all benchmarks (confidence intervals, significance tests)
-- ✅ Mechanism discovery protocol yields ≥3 testable biological hypotheses
-- ✅ Performance profiles documented: where each architecture excels (e.g., "quantum best at multi-objective, classical best at single-objective")
-- ✅ ≥2 novel quantum architectures (QRC, QSNN) implemented and benchmarked
-- ✅ HybridQuantumBrain demonstrates fusion of reflex + planning layers
+- ✅ Temporal sensing operational for thermotaxis (dT/dt) and chemotaxis (dC/dt)
+- ✅ STAM implemented with biologically-calibrated exponential decay rates
+- ✅ Classical approaches show measurable difficulty increase vs. spatial-gradient baseline (quantified)
+- ✅ ≥1 associative learning paradigm functional (classical conditioning or aversive learning)
+- ✅ Oxygen sensing implemented with temporal integration
+
+#### Quantum Checkpoint (Phase 3)
+
+**Trigger**: Temporal sensing operational, classical ceiling measured.
+
+Re-evaluate:
+
+- **QRH** (showed genuine advantage on temporal pursuit tasks — does richer temporal structure amplify this?)
+- **QEF** on temporally-enriched tasks
+- If classical ceiling drops below ~80% on any enriched task, resume targeted quantum architecture search
 
 #### Go/No-Go Decision
 
-**GO if**: Quantum shows advantage on ≥2 tasks OR reveals interesting computational principles worth investigating further.
-**PIVOT if**: No quantum advantage found → Reframe as "architecture comparison study" focusing on classical vs. spiking. Publish "Why Quantum Didn't Work: Lessons from Biological Navigation" as valuable negative result.
-**STOP if**: Unable to explain why any architecture works → Need better interpretability tools or simpler tasks.
+**GO if**: Temporal sensing creates measurably harder problems (classical ceiling drops ≥10 percentage points) AND STAM improves performance ≥10%.
+**PIVOT if**: Temporal sensing doesn't change difficulty → Classical approaches may trivially handle temporal derivatives with simple RNNs. Focus on multi-agent complexity (Phase 4) as the primary difficulty driver.
+**STOP if**: STAM infrastructure too complex or unreliable → Simplify to fixed-length observation windows.
 
 ______________________________________________________________________
 
