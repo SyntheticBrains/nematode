@@ -548,6 +548,7 @@ class QSNNReinforceBrain(ClassicalBrain):
 
         self.config = config
         self.num_actions = num_actions
+        self._device_type = device
         self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
@@ -766,7 +767,7 @@ class QSNNReinforceBrain(ClassicalBrain):
         """Get or create the Qiskit Aer backend for circuit execution."""
         if self._backend is None:
             self._backend = get_qiskit_backend(
-                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
+                self._device_type,
                 seed=self.seed,
             )
         return self._backend
@@ -2173,7 +2174,7 @@ class QSNNReinforceBrain(ClassicalBrain):
         new_brain = QSNNReinforceBrain(
             config=config_copy,
             num_actions=self.num_actions,
-            device=DeviceType(self.device.type),
+            device=self._device_type,
             action_set=self._action_set,
         )
 

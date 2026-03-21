@@ -386,6 +386,7 @@ class HybridClassicalBrain(ClassicalBrain):
         self.config = config
         self.num_actions = num_actions
         self.num_motor = DEFAULT_NUM_MOTOR
+        self._device_type = device
         self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
@@ -1183,7 +1184,7 @@ class HybridClassicalBrain(ClassicalBrain):
         new_brain = HybridClassicalBrain(
             config=config_copy,
             num_actions=self.num_actions,
-            device=DeviceType(self.device.type),
+            device=self._device_type,
             action_set=self._action_set,
         )
 
