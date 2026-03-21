@@ -174,16 +174,16 @@ thermotaxis/                    # Temperature-aware tasks
 └── foraging_medium/
 ```
 
-- [ ] Add `thermotaxis/` top-level benchmark category
-- [ ] Define category paths: `thermotaxis/isothermal_small`, `thermotaxis/foraging_small`
-- [ ] Update benchmark categorization logic to support hierarchical paths
-- [ ] Ensure backward compatibility with existing `basic/` and `survival/` categories
+- [x] ~~Add `thermotaxis/` top-level benchmark category~~ *Won't Do — superseded by Phase 7 NematodeBench*
+- [x] ~~Define category paths: `thermotaxis/isothermal_small`, `thermotaxis/foraging_small`~~ *Won't Do — superseded by NematodeBench*
+- [x] ~~Update benchmark categorization logic to support hierarchical paths~~ *Won't Do — superseded by NematodeBench*
+- [x] ~~Ensure backward compatibility with existing `basic/` and `survival/` categories~~ *Won't Do — superseded by NematodeBench*
 
 ### 4.3 Biological Validation
 
-- [ ] Research C. elegans thermotaxis literature for validation targets
-- [ ] Document expected isothermal tracking behavior
-- [ ] Create validation metrics comparing agent to biological data
+- [x] ~~Research C. elegans thermotaxis literature for validation targets~~ *Won't Do — covered in nematode_biology.md and logbook 007*
+- [x] ~~Document expected isothermal tracking behavior~~ *Won't Do — covered in logbook 007*
+- [x] ~~Create validation metrics comparing agent to biological data~~ *Won't Do — formal validation in Phase 7*
 
 **Validation**: Run benchmarks with PPO and ModularBrain
 
@@ -193,9 +193,9 @@ ______________________________________________________________________
 
 ### 5.1 Console Output
 
-- [ ] Display `temperature_comfort_score` in per-run simulation summary
-- [ ] Display current temperature in step debug output (when verbose)
-- [ ] Display temperature zone counts in session summary
+- [x] ~~Display `temperature_comfort_score` in per-run simulation summary~~ *Won't Do — data available in exports; cosmetic*
+- [x] ~~Display current temperature in step debug output (when verbose)~~ *Won't Do — cosmetic*
+- [x] ~~Display temperature zone counts in session summary~~ *Won't Do — cosmetic*
 
 ### 5.2 Experiment Tracking (JSON)
 
@@ -206,27 +206,27 @@ ______________________________________________________________________
 - [x] Add `survival_score: float | None` to per-run and aggregate results ✅
   - Added to `PerRunResult` in metadata.py
   - Added `avg_survival_score` and `post_convergence_survival_score` to `ResultsMetadata`
-- [ ] Add `final_temperature: float | None` to experiment JSON
-- [ ] Add `steps_in_comfort_zone: int` and `total_thermotaxis_steps: int`
+- [x] ~~Add `final_temperature: float | None` to experiment JSON~~ *Won't Do — available in CSV exports*
+- [x] ~~Add `steps_in_comfort_zone: int` and `total_thermotaxis_steps: int`~~ *Won't Do — comfort_score captures this ratio*
 
 ### 5.3 Per-Run CSV Exports
 
 - [x] Export `temperature_history.csv` (step, temperature)
 - [x] Include temperature metrics (`final_temperature`, `mean_temperature`, `min_temperature`, `max_temperature`) in `foraging_summary.csv`
-- [ ] Include `temperature_comfort_score` in `foraging_summary.csv`
-- [ ] Include `died_to_temperature` in summary
+- [x] ~~Include `temperature_comfort_score` in `foraging_summary.csv`~~ *Won't Do — available in experiment JSON*
+- [x] ~~Include `died_to_temperature` in summary~~ *Won't Do — health_depleted termination covers this*
 
 ### 5.4 Per-Run Plots
 
 - [x] Generate `temperature_progression.png` (temperature over time with mean line)
-- [ ] Color-code background by temperature zone
-- [ ] Overlay comfort zone boundaries as horizontal lines
+- [x] ~~Color-code background by temperature zone~~ *Won't Do — plot enhancement, not blocking*
+- [x] ~~Overlay comfort zone boundaries as horizontal lines~~ *Won't Do — plot enhancement, not blocking*
 
 ### 5.5 Session-Level Plots
 
-- [ ] Generate session-level temperature comfort score distribution
-- [ ] Generate multi-run temperature progression overlay plot
-- [ ] Include temperature stats in session summary plots
+- [x] ~~Generate session-level temperature comfort score distribution~~ *Won't Do — plot enhancement, not blocking*
+- [x] ~~Generate multi-run temperature progression overlay plot~~ *Won't Do — plot enhancement, not blocking*
+- [x] ~~Include temperature stats in session summary plots~~ *Won't Do — plot enhancement, not blocking*
 
 ### 5.6 Data Pipeline Infrastructure
 
@@ -284,15 +284,15 @@ ______________________________________________________________________
 
 ### 7.1 Configuration Documentation
 
-- [ ] Document thermotaxis configuration options
-- [ ] Provide example configurations with explanations
-- [ ] Document temperature zone thresholds
+- [x] ~~Document thermotaxis configuration options~~ *Won't Do — covered by config examples; formal docs in Phase 7*
+- [x] ~~Provide example configurations with explanations~~ *Won't Do — configs exist with inline comments*
+- [x] ~~Document temperature zone thresholds~~ *Won't Do — in code and logbook 007*
 
 ### 7.2 Architecture Documentation
 
-- [ ] Document thermotaxis_features() computation
-- [ ] Document AFD neuron modeling approach
-- [ ] Add to optimization methods documentation
+- [x] ~~Document thermotaxis_features() computation~~ *Won't Do — in code docstrings; formal docs in Phase 7*
+- [x] ~~Document AFD neuron modeling approach~~ *Won't Do — covered in nematode_biology.md and modules.py docstrings*
+- [x] ~~Add to optimization methods documentation~~ *Won't Do — Phase 7*
 
 ______________________________________________________________________
 
@@ -326,7 +326,7 @@ ______________________________________________________________________
 - [x] Environment integration complete ✅ (10 tests in test_env.py::TestThermotaxisIntegration)
 - [x] Runners integration with temperature effects ✅ (3 tests in test_runners.py::TestThermotaxisIntegration)
 - [x] PPO can learn to navigate to comfort zone (>60% time) ✅ *(Foraging: 92% success, ~50% comfort score)*
-- [ ] ModularBrain with thermotaxis module achieves comparable performance *(ready for evaluation)*
+- [x] ~~ModularBrain with thermotaxis module achieves comparable performance~~ *Won't Do — superseded by 300+ session quantum architecture campaign (logbook 008)*
 - [x] Combined chemotaxis+thermotaxis task is learnable ✅ *(All 3 configs have viable baselines)*
 - [x] Temperature zones visible in Rich theme rendering ✅ *(implemented in theme.py with zone symbols)*
 - [x] Temperature zones visible in Emoji theme rendering ✅ *(implemented in theme.py with zone symbols)*
@@ -402,31 +402,31 @@ ______________________________________________________________________
 
 ### 8.1 Random Spot Generation
 
-- [ ] Add `random_hot_spots: int | None` to ThermotaxisParams (number of spots to generate)
-- [ ] Add `random_cold_spots: int | None` to ThermotaxisParams
-- [ ] Add `random_spot_intensity_range: tuple[float, float]` (min, max intensity)
-- [ ] Add `random_spot_min_distance: float` (minimum distance between spots)
-- [ ] Implement `_generate_random_spots()` in TemperatureField
+- [x] ~~Add `random_hot_spots: int | None` to ThermotaxisParams~~ *Won't Do — deferred; Phase 3 will redesign temperature sensing*
+- [x] ~~Add `random_cold_spots: int | None` to ThermotaxisParams~~ *Won't Do — same*
+- [x] ~~Add `random_spot_intensity_range: tuple[float, float]`~~ *Won't Do — same*
+- [x] ~~Add `random_spot_min_distance: float`~~ *Won't Do — same*
+- [x] ~~Implement `_generate_random_spots()` in TemperatureField~~ *Won't Do — same*
   - Ensure spots don't overlap excessively
   - Ensure minimum distance from agent spawn point (comfort zone around spawn)
   - Support seeding for reproducibility within a run
 
 ### 8.2 Config Support
 
-- [ ] Add `ThermotaxisConfig` fields for random generation parameters
-- [ ] Support hybrid mode: fixed spots + random spots combined
-- [ ] Add validation: either explicit spots OR random generation, not both for same type
+- [x] ~~Add `ThermotaxisConfig` fields for random generation parameters~~ *Won't Do — deferred to Phase 3*
+- [x] ~~Support hybrid mode: fixed spots + random spots combined~~ *Won't Do — deferred to Phase 3*
+- [x] ~~Add validation: either explicit spots OR random generation, not both for same type~~ *Won't Do — deferred to Phase 3*
 
 ### 8.3 Per-Episode Regeneration
 
-- [ ] Generate new spot positions at episode reset when random mode enabled
-- [ ] Ensure reproducibility with episode seed
-- [ ] Log generated spot positions for debugging
+- [x] ~~Generate new spot positions at episode reset when random mode enabled~~ *Won't Do — deferred to Phase 3*
+- [x] ~~Ensure reproducibility with episode seed~~ *Won't Do — deferred to Phase 3*
+- [x] ~~Log generated spot positions for debugging~~ *Won't Do — deferred to Phase 3*
 
 ### 8.4 Validation
 
-- [ ] Unit tests for random spot generation
-- [ ] Integration tests with PPO learning
-- [ ] Verify agent learns generalizable navigation (not memorizing fixed spots)
+- [x] ~~Unit tests for random spot generation~~ *Won't Do — deferred to Phase 3*
+- [x] ~~Integration tests with PPO learning~~ *Won't Do — deferred to Phase 3*
+- [x] ~~Verify agent learns generalizable navigation (not memorizing fixed spots)~~ *Won't Do — deferred to Phase 3*
 
 **Rationale**: Procedurally generated zones force the agent to learn general temperature navigation strategies rather than memorizing fixed danger zone locations. This is more representative of real-world scenarios where temperature gradients vary.

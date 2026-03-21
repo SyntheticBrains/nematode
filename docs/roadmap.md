@@ -1,12 +1,12 @@
 # Quantum Nematode Project Roadmap
 
-**Vision**: Map all behaviors of *Caenorhabditis elegans* through comparative architecture analysis, with focus on quantum computational approaches, to discover fundamental principles of biological intelligence and demonstrate quantum advantages in cognitively-relevant tasks.
+**Vision**: Build the highest-fidelity *Caenorhabditis elegans* behavioral simulation as a rigorous testbed for comparative architecture analysis, with two co-equal goals: (1) simulate the full behavioral repertoire of C. elegans with increasing biological fidelity, and (2) progressively cross complexity thresholds where quantum approaches may demonstrate genuine advantages over classical methods.
 
-**Version**: 2.0
+**Version**: 3.0
 
 **Last Updated**: March 2026
 
-**Horizon**: 2025-2028 (8 phases + future directions, ~3.5 years)
+**Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
 ______________________________________________________________________
 
@@ -22,967 +22,746 @@ ______________________________________________________________________
 
 01. [Timeline Overview](#timeline-overview)
 02. [Executive Summary](#executive-summary)
-03. [Current State (Baseline)](#current-state-baseline)
+03. [Current State](#current-state)
 04. [Phase Roadmap](#phase-roadmap)
-    - [Phase 0: Foundation & Baselines](#phase-0-foundation--baselines-q4-2025---q1-2026)
-    - [Phase 1: Sensory & Threat Complexity](#phase-1-sensory--threat-complexity-q1-q2-2026)
-    - [Phase 2: Architecture Analysis & Standardization](#phase-2-architecture-analysis--standardization-q2-q3-2026)
-    - [Phase 3: Learning & Memory](#phase-3-learning--memory-q3-q4-2026)
-    - [Phase 4: Evolution & Adaptation](#phase-4-evolution--adaptation-q4-2026---q1-2027)
-    - [Phase 5: Social Complexity](#phase-5-social-complexity-q1-q2-2027)
-    - [Phase 6: Quantum Frontiers](#phase-6-quantum-frontiers-q2-q3-2027)
-    - [Phase 7: Scaling & Real-World](#phase-7-scaling--real-world-q3-q4-2027)
-    - [Phase 8: Universality & Impact](#phase-8-universality--impact-q4-2027---q2-2028)
-05. [Adaptive Roadmap Philosophy](#adaptive-roadmap-philosophy)
-06. [Ongoing Validation Milestones](#ongoing-validation-milestones)
-07. [Success Metrics Framework](#success-metrics-framework)
-08. [Success Levels](#success-levels)
-09. [Relationship to External Projects](#relationship-to-external-projects)
-10. [Future Directions](#future-directions)
-11. [Technical Debt & Maintenance](#technical-debt--maintenance)
-12. [Conclusion](#conclusion)
+    - [Phase 0: Foundation & Baselines](#phase-0-foundation--baselines-complete) (COMPLETE)
+    - [Phase 1: Sensory & Threat Complexity](#phase-1-sensory--threat-complexity-complete) (COMPLETE)
+    - [Phase 2: Architecture Analysis & Standardization](#phase-2-architecture-analysis--standardization-substantially-complete) (SUBSTANTIALLY COMPLETE)
+    - [Phase 3: Temporal Sensing & Memory](#phase-3-temporal-sensing--memory)
+    - [Phase 4: Multi-Agent Complexity](#phase-4-multi-agent-complexity)
+    - [Phase 5: Evolution & Adaptation](#phase-5-evolution--adaptation)
+    - [Phase 6: Continuous Physics & Connectome](#phase-6-continuous-physics--connectome)
+    - [Phase 7: Community, Validation & Publication](#phase-7-community-validation--publication)
+    - [Phase 8: Integration & Comprehensive Evaluation](#phase-8-integration--comprehensive-evaluation)
+05. [Quantum Re-evaluation Checkpoints](#quantum-re-evaluation-checkpoints)
+06. [Complexity Dashboard](#complexity-dashboard)
+07. [Biological Fidelity Ladder](#biological-fidelity-ladder)
+08. [Adaptive Roadmap Philosophy](#adaptive-roadmap-philosophy)
+09. [Ongoing Validation Milestones](#ongoing-validation-milestones)
+10. [Success Metrics Framework](#success-metrics-framework)
+11. [Success Levels](#success-levels)
+12. [Relationship to External Projects](#relationship-to-external-projects)
+13. [Future Directions](#future-directions)
+14. [Technical Debt & Maintenance](#technical-debt--maintenance)
+15. [Conclusion](#conclusion)
 
 ______________________________________________________________________
 
 ## Timeline Overview
 
-| Phase | Timeline | Focus | Key Deliverable |
-|-------|----------|-------|-----------------|
-| **0** | Q4 2025 - Q1 2026 | Foundation & Baselines | Validated optimization methods, SOTA baselines, first QPU run |
-| **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | Thermotaxis, enhanced predators, mechanosensation |
-| **2** | Q2 - Q3 2026 | Architecture Analysis & Standardization | Ablation toolkit, brain renaming, interpretability framework, first biological prediction tested |
-| **3** | Q3 - Q4 2026 | Learning & Memory | STAM/ITAM/LTAM, associative learning paradigms, oxygen sensing |
-| **4** | Q4 2026 - Q1 2027 | Evolution & Adaptation | Baldwin Effect, evolutionary dynamics comparison |
-| **5** | Q1 - Q2 2027 | Social Complexity | Multi-agent infrastructure, emergent behaviors |
-| **6** | Q2 - Q3 2027 | Quantum Frontiers | Advanced quantum algorithms, hardware deployment |
-| **7** | Q3 - Q4 2027 | Scaling & Real-World | Large environments, neuromorphic, WormBot |
-| **8** | Q4 2027 - Q2 2028 | Universality & Impact | Cross-organism transfer, unified theory |
+> This roadmap is milestone-based: phases advance when exit criteria are met, not when calendar dates arrive. Aspirational timelines are provided for planning purposes but the science dictates the pace.
+
+| Phase | Aspirational Timeline | Focus | Status | Key Deliverable |
+|-------|----------------------|-------|--------|-----------------|
+| **0** | Q4 2025 - Q1 2026 | Foundation & Baselines | ✅ COMPLETE | Validated optimization methods, SOTA baselines, first QPU run |
+| **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | ✅ COMPLETE | Thermotaxis, enhanced predators, mechanosensation, HP system |
+| **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
+| **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | 🔲 NEXT | Temporal gradients (dT/dt, dC/dt), STAM, oxygen sensing |
+| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔲 PLANNED | Multi-agent infrastructure, pheromones, social/competitive dynamics |
+| **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
+| **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
+| **7** | Q2 - Q4 2027 | Community & Publication | 🔲 PLANNED | NematodeBench launch, publication campaign, external collaboration |
+| **8** | Late 2027+ | Integration & Evaluation | 🔲 PLANNED | Full integration, definitive quantum vs. classical comparison |
 
 ______________________________________________________________________
 
 ## Executive Summary
 
-The Quantum Nematode project aims to achieve breakthrough discoveries at the intersection of quantum computing, neuroscience, and artificial intelligence by:
+The Quantum Nematode project pursues two co-equal goals at the intersection of quantum computing, neuroscience, and artificial intelligence:
 
-1. **Comparative Architecture Analysis**: Systematically comparing quantum (QVarCircuitBrain, QQLearningBrain), classical (MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain), and biologically-realistic (SpikingReinforceBrain) architectures across increasingly complex C. elegans behaviors
+**Goal 1 — Biological Simulation**: Build the deepest, most complete behavioral simulation of *C. elegans* ever created. Progressively implement all sensory systems, survival behaviors, learning and memory, social dynamics, and realistic physics — grounded in a fully mapped 302-neuron connectome.
 
-2. **Incremental Behavioral Coverage**: Progressively implementing sensory systems (chemotaxis ✓, thermotaxis, oxygen sensing, mechanosensation), survival behaviors (foraging ✓, predator evasion ✓, learning/memory), and social dynamics (cooperation, competition, communication)
+**Goal 2 — Quantum Architecture Analysis**: Systematically compare quantum, classical, and biologically-realistic architectures as environment complexity increases, identifying the precise conditions under which quantum approaches provide genuine advantages — or definitively characterising why they don't.
 
-3. **Theoretical Foundations**: Developing mathematical frameworks linking quantum computational principles to biological intelligence, generating testable hypotheses for experimental validation
+These goals are mutually reinforcing: biological fidelity creates the computational complexity needed to test quantum advantage hypotheses, while architecture analysis reveals which computational principles best capture biological intelligence.
 
-4. **External Validation**: Partnering with C. elegans neuroscience labs, deploying on real quantum hardware (IBM Quantum), and testing on embodied platforms (WormBot integration)
+### Key Differentiators
 
-5. **Universal Principles**: Extracting domain-invariant computational principles through transfer learning to other organisms (Drosophila, zebrafish) and domains (swarm robotics, multi-objective optimization)
+- **vs. OpenWorm**: Complementary focus on neural computation paradigms and behavioral optimization vs. cellular biophysics. Integration opportunity: optimized policies controlling OpenWorm's simulated muscles. Our connectome-constrained architectures (Phase 6) use the wiring diagram for RL-trained networks, not biophysical simulation.
+- **vs. Standard RL Benchmarks**: Biologically-grounded tasks with real organism validation; the only benchmark suite where tasks are derived from documented C. elegans behaviors with quantitative biological validation targets.
+- **vs. Quantum ML Research**: Embodied, ecologically-valid tasks requiring multi-objective optimization, temporal integration, and social dynamics — not toy gridworlds or random circuits. Systematic 300+ session evaluation campaign provides the most comprehensive quantum architecture comparison in biological RL to date.
+- **Unique position**: The only project combining real connectome topology + reinforcement learning + quantum architecture comparison. C. elegans is the only organism with a fully mapped connectome, making this uniquely tractable.
 
-**Key Differentiators** from existing work:
+### North Star
 
-- **vs. OpenWorm**: Complementary focus on neural computation paradigms vs. cellular biophysics; potential integration where optimized policies control OpenWorm's simulated muscles
-- **vs. Standard RL Benchmarks**: Biologically-grounded tasks with real organism validation; quantum-classical comparative analysis
-- **vs. Quantum ML Research**: Embodied, ecologically-valid tasks requiring multi-objective optimization, long-horizon planning, and sensory integration
-
-**North Star Objective**: Demonstrate that quantum computational approaches can (1) match or exceed classical methods on biologically-relevant decision tasks, (2) reveal new insights into biological neural computation, and (3) establish theoretical foundations for quantum computational neuroscience as a new interdisciplinary field, achieving world-class scientific impact.
+Demonstrate that progressively increasing biological fidelity in C. elegans simulation creates computational challenges where (1) quantum approaches provide measurable advantages over classical methods, or (2) we can precisely characterise what complexity thresholds are required for quantum advantage — either outcome being a valuable scientific contribution. Simultaneously, build the most complete C. elegans behavioral simulation available, advancing computational neuroscience regardless of quantum outcomes.
 
 ______________________________________________________________________
 
-## Current State (Baseline)
+## Current State
 
-### Implemented Capabilities
+### Completed Phases Summary
 
-#### Brain Architectures (6 total)
+#### Phase 0 (Foundation & Baselines) — COMPLETE
 
-**Quantum Approaches:**
+All required and stretch exit criteria met:
 
-1. **QVarCircuitBrain** (formerly ModularBrain): Quantum variational circuits with modular sensory processing, multi-layer entanglement, evolutionary optimization (CMA-ES validated), with parameter-shift rule gradients available for comparison
+- **6 brain architectures** implemented and benchmarked: QVarCircuitBrain, QQLearningBrain, MLPReinforceBrain, MLPDQNBrain, MLPPPOBrain, SpikingReinforceBrain
+- **PPO validated** as classical SOTA (94-98% across thermotaxis configurations)
+- **CMA-ES validated** for quantum circuits (88% success, 4x better than gradient-based)
+- **Spiking neural networks** rewritten with surrogate gradient descent (73.3% success)
+- **IBM QPU deployment** complete (first quantum hardware run)
+- **14 benchmark categories** with automated experiment tracking
 
-2. **QQLearningBrain** (formerly QModularBrain): Hybrid quantum-classical Q-learning (early stage, incomplete TODOs)
+#### Phase 1 (Sensory & Threat Complexity) — COMPLETE
 
-**Classical Approaches:**
+All core exit criteria met:
 
-3. **MLPReinforceBrain** (formerly MLPBrain): REINFORCE policy gradients with baseline subtraction, entropy regularization, learning rate scheduling
+- **Thermotaxis** implemented with 9 configurations (3 sizes × 3 task variants), all baselines established (see [Logbook 007](experiments/logbooks/007-ppo-thermotaxis-baselines.md))
+- **Mechanosensation** implemented (boundary + predator contact detection)
+- **Enhanced predators**: Stationary + pursuit types with configurable behaviors
+- **Health/HP system** with damage, healing, and strategic trade-offs
+- Oxygen sensing deferred to Phase 3 (pairs naturally with temporal sensing infrastructure)
 
-4. **MLPDQNBrain** (formerly QMLPBrain): Deep Q-Network (DQN) with experience replay
+#### Phase 2 (Architecture Analysis) — SUBSTANTIALLY COMPLETE
 
-5. **MLPPPOBrain** (formerly PPOBrain): Proximal Policy Optimization with actor-critic architecture, clipped surrogate objective, Generalized Advantage Estimation (GAE)
+Core quantum evaluation complete, remaining items folded into later phases:
 
-**Biologically-Realistic:**
+- **300+ session quantum architecture campaign** across 15 architecture variants (see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md))
+- **Brain naming migration** to paradigm-prefix scheme complete
+- **Statistical framework** operational
+- **Novel architectures evaluated**: QRH, QEF, HybridQuantum, HybridClassical, QSNN, QRC, QSNN-PPO, QSNNReinforce A2C, HybridQuantumCortex, CRH, and variants
+- Remaining (folded into Phase 7): interpretability framework, mechanism discovery, biological predictions
 
-6. **SpikingReinforceBrain** (formerly SpikingBrain): Leaky Integrate-and-Fire (LIF) neurons with **surrogate gradient descent**, REINFORCE policy gradients, backpropagation through time (BPTT), PyTorch autograd integration. Previous STDP implementation replaced due to fundamental learning failures.
+### Architecture Evaluation Results (Logbook 008)
 
-#### Environments
+The 300+ session campaign across 15 architecture variants produced the following landscape (snapshot as of March 2026 — see [Logbook 008](experiments/logbooks/008-quantum-brain-evaluation.md) for full details):
 
-1. **DynamicForagingEnvironment**: Multi-food foraging with:
+```text
+GRADIENT-BASED ONLINE LEARNING EFFECTIVENESS (March 2026 snapshot)
+═══════════════════════════════════════════════════════════════════════════
 
-   - Satiety-based homeostasis (hunger decays, food replenishes)
-   - Gradient-based chemotaxis (exponential decay superposition)
-   - Viewport perception (no visual input, gradient-only)
-   - Distance efficiency tracking
-   - Exploration rewards for novel cell visits
+Architecture                      Foraging   Pursuit Pred   Viable?
+──────────────────────────────────────────────────────────────────────────
+QRC                               0%         0%             NO
+QSNN (Hebbian)                    0%         N/A            NO
+QSNN-PPO Hybrid                   N/A        0%             NO
+QVarCircuit (parameter-shift)     ~40%       Not tested     MARGINAL
+QSNN (Surrogate gradient)         73.9%      0%             PARTIAL
+QSNNReinforce A2C                 N/A        0.5%           NO
+QVarCircuit (CMA-ES)              99.8%      76.1%          NOT ONLINE
+QRH (quantum reservoir)           86.8%      41.2%          PARTIAL
+CRH (classical reservoir)         N/A        31.8%          PARTIAL (CTRL)
+QEF (entangled features)          N/A        93.0%          COMPETITIVE
+HybridQuantum                     91.0%      96.9%          YES (BEST)
+HybridClassical (ablation)        97.0%      96.3%          YES (CONTROL)
+SpikingReinforceBrain             73.3%      ~61%           UNRELIABLE
+MLPReinforceBrain                 95.1%      73.4%          YES
+MLPPPOBrain                       96.7%      94.5%          YES
+──────────────────────────────────────────────────────────────────────────
+```
 
-2. **Predator Evasion** (added Nov 2025):
+### Key Findings from Quantum Campaign
 
-   - Multi-predator support with random movement
-   - Detection radius and kill radius
-   - Unified gradient field: food attraction + predator repulsion
-   - Multi-objective learning: food collection vs. survival
-   - Proximity penalties and death penalties
-   - Predator metrics: encounters, evasions, survival rate
+1. **HybridQuantum achieved SOTA (96.9%)** but classical ablation matches (96.3%) — the three-stage curriculum and mode-gated fusion drive performance, not the quantum component
+2. **QRH shows genuine quantum advantage** on pursuit predators (+9.4pp, Domingo-confirmed) but at low absolute performance (41.2%)
+3. **QEF competitive but not advantageous** — 24-phase optimisation, no significant improvement (p>0.05 on all tasks)
+4. **QA-7 (Quantum Plasticity)**: Classical baselines show zero backward forgetting (11/12 seeds BF=0.0) — environment too simple for quantum anti-forgetting hypothesis
+5. **Every trainable quantum component matches classical**: QLIF gates = classical gates, QEF ≈ MLP PPO, HybridQuantum ≈ HybridClassical
 
-#### Benchmarking & Tracking
+### Strategic Conclusion
 
-- 14 benchmark categories across quantum/classical, with/without predators
-- Automated experiment tracking with session IDs
-- Per-run and session-level metrics (success rate, steps, convergence run, stability)
-- CSV exports and matplotlib visualizations
-- Leaderboard system with contributor attribution
+Environment complexity (2-9D observations, 4 discrete actions, ~10K effective states) is fundamentally below the threshold for quantum advantage. See [quantum-architectures.md Strategic Assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for full analysis.
 
-#### Current Performance Snapshot (December 2025)
-
-**Static Maze:**
-
-- **Quantum (QVarCircuitBrain)**: 0.980 score (100% success, 34 steps, converge@20)
-- **Classical (MLPReinforceBrain)**: 0.960 score (100% success, 24 steps, converge@20)
-- **Spiking (SpikingReinforceBrain)**: 0.932 score (100% success, 67 steps, converge@34) - *surrogate gradients*
-
-**Dynamic Small (≤20x20):**
-
-- **Quantum (QVarCircuitBrain)**: 0.762 score (100% success, 207 steps, converge@20) - *CMA-ES evolution*
-- **Classical (MLPReinforceBrain)**: 0.822 score (100% success, 181 steps, converge@20)
-- **Spiking (SpikingReinforceBrain)**: 0.733 score (100% success, 267 steps, converge@22) - *surrogate gradients*
-
-**Dynamic Predator Small (≤20x20):**
-
-- **Quantum (QVarCircuitBrain)**: 0.675 score (95% success, 224 steps, converge@29) - *CMA-ES evolution*
-- **Classical (MLPReinforceBrain)**: 0.740 score (92% success, 199 steps, converge@30)
-- **Spiking (SpikingReinforceBrain)**: 0.556 score (63% success, 247 steps, converge@20) - *surrogate gradients*
-
-**Key Findings**:
-
-1. **Quantum-classical gap nearly closed**: With evolutionary optimization (CMA-ES), quantum achieves 0.762 vs classical 0.822 on dynamic foraging
-2. **Spiking as a viable model**: Surrogate gradient approach achieving 0.733 on foraging tasks
-3. **Predator tasks remain challenging**: All architectures show lower scores due to multi-objective complexity
+**Path forward**: Advance biological fidelity to cross complexity thresholds, then re-evaluate quantum architectures at each milestone.
 
 ### Known Gaps & Technical Debt
 
-**Architecture Gaps:**
+**Resolved from Phase 0:**
 
-- QQLearningBrain incomplete (missing: tracking metrics, Qiskit runtime integration, parameter initialization)
-- MLPReinforceBrain loss calculation bug (flagged in codebase)
-- No multi-brain ensemble or hierarchical decision systems
-- No transfer learning framework
+- ~~QQLearningBrain incomplete~~ — evaluated but not competitive; low priority
+- ~~No SOTA RL baselines~~ — PPO implemented and validated
+- ~~No real C. elegans behavioral datasets~~ — integrated for validation
 
-**Simulation Gaps:**
+**Remaining:**
 
 - No energy/metabolic model (satiety is abstract, not ATP-based)
-- No neuromodulation (dopamine/serotonin mentioned in docs but not simulated)
-- Limited environmental diversity (no temporal dynamics, food quality variations)
-- No thermotaxis, oxygen sensing, or mechanosensation implementations yet
-
-**Experimental Gaps:**
-
-- No SOTA RL baselines for comparison (PPO, SAC, TD3, DreamerV3)
-- No real C. elegans behavioral datasets for validation
-- Limited interpretability tools (no attention maps, gradient visualization, spike rasters)
-- No statistical analysis framework (confidence intervals, effect sizes, significance testing)
+- No neuromodulation (dopamine/serotonin mentioned but not simulated)
+- Limited environmental diversity (no temporal dynamics beyond thermotaxis)
+- Sensory inputs are spatial gradient lookups, not temporal derivatives (biologically inaccurate)
+- Single-agent only
+- Discrete grid-world (not continuous physics)
+- No connectome-constrained architectures
 
 ### Research Questions
 
-1. **Quantum Advantage**: Under what task conditions do quantum approaches outperform classical? (Multi-objective optimization? Uncertainty? Exploration?)
-2. **Biological Plausibility**: Do optimized quantum circuits reveal insights into real C. elegans neural computation?
-3. **Scalability**: Can these approaches scale beyond 302 neurons to larger invertebrate nervous systems (Drosophila ~100K, honeybee ~1M neurons)?
-4. **Universality**: Do learned principles transfer to other organisms, domains, or tasks?
-5. **Hardware Viability**: How do real quantum devices (IBM QPU) perform vs. simulation on these tasks?
-
-### Recent Breakthrough: Evolutionary Optimization (December 2025)
-
-**Key Finding**: Evolutionary optimization (CMA-ES) achieves **4x better performance** than gradient-based learning on quantum circuits for complex predator evasion tasks.
-
-**Performance Data:**
-
-- **Evolutionary optimization (CMA-ES)**: **88% success rate** on dynamic predator evasion (small grid)
-- **Gradient-based learning**: Only **22.5% success rate** on the same task
-- **Quantum-classical gap**: Reduced from **70%** (22.5% quantum vs 92% classical) to just **4%** (88% vs 92%)
-
-**Critical Insight**: Gradient-based learning with parameter-shift rule shows high variance on quantum circuits due to statistical noise from finite shot counts in gradient estimation. This noise causes quantum circuits to converge to suboptimal local optima compared to gradient-free evolutionary methods.
-
-**Implication for Roadmap**: Evolution-based optimization (CMA-ES, Genetic Algorithms) is now the **validated baseline** for training quantum variational circuits. Gradient methods remain effective for classical networks (MLPReinforceBrain, MLPDQNBrain) but should not be assumed to work for quantum approaches without extensive validation.
-
-This breakthrough validates the adaptive, evidence-driven approach throughout this roadmap: methods are prioritized based on empirical results, not assumptions.
-
-### Recent Breakthrough: Spiking Neural Network Rewrite (December 2025)
-
-**Key Finding**: Complete architectural rewrite of SpikingReinforceBrain from STDP to **surrogate gradient descent** enables successful learning for the first time.
-
-**Previous Implementation Problems:**
-
-- **STDP (Spike-Timing Dependent Plasticity)** had critical bugs: wrong input preprocessing, broken credit assignment, missing weight updates
-- **Limitations for this implementation**: Standard STDP without reward modulation cannot implement effective credit assignment for sparse-reward reinforcement learning tasks
-- **Result**: 0% success rate over 400 episodes of testing
-
-**New Implementation (Surrogate Gradient Descent):**
-
-- **Differentiable spike function**: Smooth approximation enables backpropagation through spiking neurons
-- **REINFORCE policy gradients**: Same proven algorithm as MLPReinforceBrain with discounted returns and baseline subtraction
-- **LIF neurons preserved**: Maintains biological plausibility with Leaky Integrate-and-Fire dynamics
-- **PyTorch autograd integration**: Standard gradient-based optimization with gradient clipping
-
-**State-of-the-Art Alignment**: This approach matches modern neuromorphic research (SpikingJelly, snnTorch, Norse) which all use surrogate gradients for training spiking neural networks on complex tasks.
-
-**Implication for Roadmap**: SpikingReinforceBrain is now a viable architecture for comparative analysis. Gradient-based methods (with surrogate gradients) work for spiking networks, complementing the evolution-first approach for quantum architectures.
+1. **Complexity Thresholds**: At what environment complexity do quantum approaches first outperform classical? (>30D inputs? Multi-agent? Non-Markovian? Continuous state spaces?)
+2. **Biological Fidelity**: Does increasing biological realism (temporal sensing, connectome topology, realistic locomotion) create computational problems that favour quantum approaches?
+3. **Connectome Advantage**: Does the real C. elegans wiring diagram produce better learning agents than arbitrary architectures?
+4. **Universal Principles**: What computational principles emerge from a deep C. elegans simulation that generalise to other domains?
+5. **Quantum Reservoir Memory**: Can QRH's demonstrated temporal advantage (pursuit predators) scale with richer temporal dependencies?
 
 ______________________________________________________________________
 
 ## Phase Roadmap
 
-### Phase 0: Foundation & Baselines (Q4 2025 - Q1 2026)
+### Phase 0: Foundation & Baselines (COMPLETE)
 
-**Goal**: Establish rigorous baselines using validated optimization methods, fix critical technical debt, and create public benchmark infrastructure for reproducible science.
+**Status**: ✅ All required and stretch exit criteria met.
 
-#### Deliverables
+See [Current State](#completed-phases-summary) for achievements. Key breakthroughs:
 
-1. **Validated Optimization Baselines** (CRITICAL PRIORITY)
-
-   - **PRIMARY: Evolutionary optimization** for at least one quantum architecture (QVarCircuitBrain, QQLearningBrain)
-     - CMA-ES (validated: 88% success on predator tasks)
-     - Genetic Algorithms (population-based search)
-     - Compare variants: (μ, λ)-ES, Natural Evolution Strategies
-   - **SECONDARY: Gradient methods** for at least one of each classical and spiking architectures (MLPReinforceBrain, MLPDQNBrain, SpikingReinforceBrain)
-     - REINFORCE, DQN (already implemented for classical)
-     - SpikingReinforceBrain: Surrogate gradient descent with REINFORCE (December 2025 rewrite)
-     - Validate that gradients remain effective for non-quantum architectures
-   - Systematic comparison across all benchmarked architectures with consistent evaluation protocol
-   - Document which optimization methods work for which architecture types
-
-2. **SOTA RL Baselines**
-
-   - Implement modern RL algorithms: Proximal Policy Optimization (PPO), Soft Actor-Critic (SAC), Twin Delayed DDPG (TD3)
-   - Run on all current benchmark categories for credible classical comparison
-   - Establish performance ceiling: "What's the best classical performance we can achieve?"
-   - Identify where quantum/classical/spiking excel relative to SOTA
-
-3. **Real C. elegans Behavioral Datasets**
-
-   - Curate datasets from literature: chemotaxis indices, foraging paths, predator escape trajectories
-   - Define standard metrics matching biological experiments (e.g., chemotaxis index CI = (N_attractant - N_control) / N_total)
-   - Create validation benchmarks: "Does our agent match real worm behavior?"
-
-4. **NematodeBench: Public Benchmark Suite**
-
-   - Standardized task suite with reproducible configurations
-   - Public leaderboard (GitHub Pages or dedicated site)
-   - Submission guidelines, evaluation scripts, and reproducibility requirements
-   - Target: First external research group submission
-
-5. **Technical Debt Resolution**
-
-   - Fix QQLearningBrain TODOs (tracking, Qiskit runtime, initialization)
-   - Fix MLPReinforceBrain loss calculation bug
-   - Code quality improvements (address remaining Ruff/Pyright warnings)
-
-6. **First Quantum Hardware Run**
-
-   - Deploy QVarCircuitBrain on IBM Quantum backend (simulator → real QPU)
-   - Measure performance degradation from noise
-   - Establish hardware deployment pipeline for ongoing testing
-
-#### Metrics Focus
-
-- **Optimization validation**: Confirm evolutionary methods work for quantum, gradients for classical
-- **SOTA baselines**: Establish performance ceiling with modern RL
-- **Biological fidelity**: Correlation with real C. elegans data
-- **Reproducibility**: External researchers can replicate results
-
-#### Phase 0 Exit Criteria
-
-**Required (must complete before Phase 1):**
-
-- ✅ At least 1 quantum architecture (QVarCircuitBrain) achieves **>70% success** on at least 2 benchmark tasks using evolutionary optimization
-- ✅ At least 1 classical architecture (MLPReinforceBrain or MLPDQNBrain) benchmarked with gradient-based methods
-- ✅ Classical SOTA baseline (PPO or SAC) achieves **>85% success** on foraging tasks
-- ✅ Clear documentation of which optimization methods work for which architectures
-- ✅ At least 1 real C. elegans behavioral dataset integrated for validation
-
-**Stretch (complete if time permits, can continue into Phase 1):**
-
-- ✅ QVarCircuitBrain successfully runs on IBM QPU hardware (simulator → real QPU)
-- ✅ SpikingReinforceBrain benchmarked alongside quantum and classical
-- ✅ All 5 brain architectures benchmarked on consistent evaluation protocol
-- ✅ At least 3 real C. elegans behavioral datasets integrated
-- ✅ Public benchmark site launched with ≥1 external submission
-- ✅ All critical technical debt resolved
-
-#### Go/No-Go Decision
-
-**GO if**: Quantum architectures show promise (>70% success) OR reveal interesting failure modes worth investigating.
-**PIVOT if**: Quantum shows no promise → Focus Phase 1+ on classical vs. spiking comparison only, document "why quantum didn't work" for publication.
-**STOP if**: No architecture generalizes to basic tasks → Re-evaluate fundamental approach.
+- Evolutionary optimization (CMA-ES) achieving 4x better performance than gradient-based on quantum circuits
+- Spiking neural network rewrite to surrogate gradient descent enabling viable learning
+- PPO established as classical SOTA across all thermotaxis configurations
 
 ______________________________________________________________________
 
-### Phase 1: Sensory & Threat Complexity (Q1-Q2 2026)
+### Phase 1: Sensory & Threat Complexity (COMPLETE)
 
-**Goal**: Enrich sensory input and predator behaviors to match C. elegans multi-modal perception and ecological complexity.
+**Status**: ✅ All core exit criteria met. Oxygen sensing deferred to Phase 3.
 
-**Pilot-Then-Focus Approach**: Start with chemotaxis (already implemented) + thermotaxis as the priority sensory pair. For predators, start with stationary + pursuit types; add patrol and group hunting only if simpler predators work well. Mechanosensation runs as a parallel track. Oxygen sensing deferred to Phase 3 where it pairs naturally with temporal sensing and memory systems.
+See [Current State](#completed-phases-summary) for achievements. Key deliverables:
 
-#### Deliverables
-
-1. **Enhanced Predator Behaviors**
-
-   - **Stationary Predators** \[Priority: Implement First\]: Nematode-trapping fungi (sticky patches at fixed locations), toxic bacteria zones (invisible danger fields)
-   - **Active Pursuit** \[Priority: Implement Second\]: Predatory nematode tracking behavior (move toward agent within detection radius)
-   - **Patrol Patterns** \[Conditional\]: Fixed routes, circular paths, territorial zones
-   - **Group Hunting** \[Optional: if simpler predators work\]: Coordinated multi-predator attacks (2+ predators converge on target)
-   - **Dynamic Threat Levels**: Predator danger scales with proximity (graduated penalties vs. binary)
-
-2. **Health System Alternative**
-
-   - Replace instant death with HP-based damage model
-   - Predator encounters deal damage (e.g., -10 HP per collision)
-   - Food provides healing (+5 HP per food item)
-   - Strategic trade-offs: risky paths with more food vs. safe paths with less food
-   - Configurable: toggle between instant-death and HP modes
-
-3. **Thermotaxis System** [Priority: First new sensory modality]
-
-   - Spatial temperature gradient fields (2D grid with temperature values)
-   - AFD neuron simulation: temperature memory storage (cultivation temperature Tc)
-   - Isothermal tracking behavior (move along preferred temperature contours)
-   - Association learning: temperature ↔ food availability (high food at 20°C → prefer 20°C)
-   - Integration with foraging: agents perceive food gradients + temperature gradients
-
-4. **Mechanosensation (Touch Response)** [Parallel track: mechanistically simpler than gradient sensing]
-
-   - Obstacle collision detection (walls, barriers)
-   - Gentle touch: triggers local exploration (increased turning)
-   - Harsh touch: triggers escape response (rapid reversal, omega turn)
-   - Wall-following behavior option
-   - Integration with predator evasion: physical contact with predator = harsh touch → immediate escape
-   - **Note**: Can be developed in parallel with thermotaxis as a fallback if gradient-based sensing proves difficult
-
-#### Metrics Focus
-
-- **Generalization**: Transfer to unseen predator types, temperature ranges
-- **Biological fidelity**: Match C. elegans chemotaxis indices, thermotaxis precision, escape latencies
-
-#### Phase 1 Exit Criteria
-
-- ✅ Thermotaxis implemented and integrated with chemotaxis (dual-modality tasks)
-- ✅ Mechanosensation implemented (boundary + predator contact detection)
-- ✅ ≥2 predator behavior types (stationary + pursuit) implemented and tested
-- ✅ Health system option available and benchmarked
-- ✅ Biological validation: At least 1 behavior quantitatively matches C. elegans data (e.g., thermotaxis precision, escape latency)
-
-#### Go/No-Go Decision
-
-**GO if**: At least one architecture generalizes well across multiple sensory modalities (>60% success on ≥2 tasks).
-**PIVOT if**: No architecture generalizes → Focus on hybrid approaches combining architecture strengths, or specialize architectures for specific tasks.
-**STOP if**: Sensory complexity breaks all architectures → Simplify task suite or re-examine architecture fundamentals.
+- Thermotaxis system with 9 validated configurations (Logbook 007)
+- Mechanosensation with boundary and predator contact detection
+- Stationary and pursuit predator types
+- HP-based health system with strategic damage/healing trade-offs
 
 ______________________________________________________________________
 
-### Phase 2: Architecture Analysis & Standardization (Q2-Q3 2026)
+### Phase 2: Architecture Analysis & Standardization (SUBSTANTIALLY COMPLETE)
 
-**Goal**: Move beyond "which architecture wins?" to "why do architectures work?" through systematic analysis, interpretability, and mechanism discovery. Also complete standardization work including brain architecture renaming and benchmarking improvements.
+**Status**: ✅ Core quantum evaluation complete (300+ sessions). Remaining items folded into Phases 7-8.
 
-> **Quantum Architecture Evaluation Update (2026-03-20)**: The novel quantum architecture evaluation (Deliverables 10-11) has been substantially completed ahead of schedule through Logbook 008's QA-1 through QA-5 campaign (290+ sessions, 11+ architectures). Key findings: (1) QRH demonstrates genuine quantum advantage on pursuit predators (+9.4pp, Domingo-confirmed), (2) HybridQuantum achieves SOTA 96.9% but classical ablation matches at 96.3%, (3) QEF entangled features are competitive but not advantageous. Strategic assessment concluded that environment complexity (2-9D observations, 4 actions, ~10K states) is below quantum advantage thresholds. One final experiment remains — QA-7 (Quantum Plasticity, testing anti-forgetting) — after which quantum architecture search pauses until environment enrichment (Phases 1-3) creates classical bottlenecks. This activates the PIVOT path of the Go/No-Go decision below. See [quantum-architectures.md Strategic Assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for full analysis.
+See [Current State](#architecture-evaluation-results-logbook-008) for the full architecture landscape. Key outcomes:
 
-#### Deliverables
+- 15 architecture variants systematically evaluated
+- Strategic conclusion: environment complexity below quantum advantage thresholds
+- Brain naming migration complete
+- Statistical framework operational
+- Clear complexity thresholds identified for quantum re-evaluation
 
-01. **Architecture Ablation Studies** [Moved from Phase 1]
+**Remaining items** (moved to later phases):
 
-    - Systematically remove components from each architecture (e.g., remove entanglement from quantum circuits, remove hidden layers from MLP)
-    - Measure performance degradation: which features are critical?
-    - Cross-architecture feature importance analysis
-    - Identify minimal sufficient architectures for each task
-
-02. **Brain Architecture Naming Migration**
-
-    - Complete migration to paradigm-prefix naming scheme (QVarCircuitBrain, MLPPPOBrain, etc.)
-    - Deprecate old names with backward-compatible aliases
-    - Update all configs, benchmarks, and documentation
-    - See [STANDARDIZATION.md](STANDARDIZATION.md) for framework decisions
-
-03. **Benchmarking Improvements**
-
-    - Hierarchical benchmark categories (basic/foraging, survival/predator, thermotaxis/)
-    - Spiking as separate brain class alongside quantum/classical
-    - Statistical testing framework (confidence intervals, significance tests, effect sizes)
-
-04. **Interpretability Framework**
-
-    - **Quantum**: Circuit visualization, gate importance analysis (parameter sensitivity), superposition state tracking
-    - **Classical**: Attention maps (if using attention mechanisms), activation analysis, saliency maps (which inputs drive decisions?)
-    - **Spiking**: Spike raster plots, connectivity analysis, neuron firing patterns, membrane potential dynamics, surrogate gradient flow visualization
-    - Unified API: `architecture.interpret(state, action)` returns explanation
-
-05. **Feature Importance Across Architectures**
-
-    - Which sensory inputs are most critical? (Chemotaxis gradient magnitude? Direction? Satiety level?)
-    - How do architectures differ in feature reliance? (Does quantum use different cues than classical?)
-    - Integrated Gradients, SHAP values, or similar for attribution
-    - Cross-architecture comparison: "Quantum prioritizes gradient direction 60% vs. classical 40%"
-
-06. **Mechanism Discovery Protocol**
-
-    - Automated hypothesis generation from model analysis
-    - Example: "Quantum model uses superposition to simultaneously explore approach/avoid strategies"
-    - Translation to biological hypotheses: "Does C. elegans use [X] mechanism? Test with [Y] experiment"
-    - Partnership with C. elegans labs to design validation experiments
-
-07. **First Biological Prediction Tested**
-
-    - Identify a novel prediction from model behavior (e.g., "optimal escape angle from predators is 135° based on quantum model")
-    - Collaborate with neuroscience lab to test with real C. elegans
-    - Publication: Model prediction → experimental validation loop
-
-08. **Comparative Analysis Methodology**
-
-    - Statistical testing framework: confidence intervals, effect sizes (Cohen's d), significance tests (t-test, ANOVA, Bonferroni correction)
-    - Benchmark visualizations: heatmaps, performance profiles, scaling curves
-    - Reproducibility toolkit: containerized environments, seed management, deterministic benchmarks
-
-09. **Architecture Comparison Whitepaper**
-
-    - Comprehensive analysis: When does each architecture excel? Why?
-    - Computational cost comparison: parameters, FLOPs, wall-clock time, energy consumption
-    - Scalability analysis: how performance changes with environment complexity (grid size, food count, predator count)
-
-10. **Novel Quantum Architectures**
-
-    - **QRCBrain**: Quantum Reservoir Computing with fixed reservoir + classical readout (avoids barren plateaus by design)
-    - **QSNNBrain**: Quantum Spiking Neural Network with QLIF neurons and local learning rules
-    - **HybridQuantumBrain**: Hierarchical architecture combining QSNN/QRC reflexes with VQC planning cortex
-    - **Data re-uploading enhancement**: Add multi-layer data encoding to QVarCircuitBrain for increased expressivity
-    - See [docs/research/quantum-architectures.md](research/quantum-architectures.md) for detailed implementation specifications
-
-11. **Quantum Architecture Benchmarking**
-
-    - Compare QRC, QSNN, HybridQuantum against existing quantum/classical/spiking baselines
-    - Reflex metrics: evasion latency, collision rate, thermotaxis slope following
-    - Strategic metrics: food intake vs risk tradeoff, long-horizon reward
-    - Hierarchical evaluation: fusion efficiency (improvement over best individual component)
-
-#### Metrics Focus
-
-- **Interpretability**: Can we explain why an action was chosen?
-- **Mechanism discovery**: Generate ≥1 testable biological hypothesis per architecture
-- **Statistical rigor**: All comparisons have confidence intervals and significance tests
-
-#### Phase 2 Exit Criteria
-
-- ✅ Ablation toolkit operational with automated feature importance ranking
-- ✅ Brain naming migration complete (all configs, benchmarks, docs updated)
-- ✅ Hierarchical benchmark categories operational with statistical testing
-- ✅ Interpretability toolkit operational for all architectures
-- ✅ Feature importance analysis reveals architecture-specific strategies (e.g., "quantum prioritizes gradient direction 60% vs. classical 40%")
-- ✅ Comparative framework published: preprint or conference paper
-- ✅ Quantum advantage clearly demonstrated on **at least 2 tasks** OR compelling negative result documented ("why quantum didn't provide advantages")
-- ✅ Theory connecting architecture properties to task performance (e.g., "entanglement correlates with multi-objective optimization performance")
-- ✅ ≥1 biological prediction tested and published in peer-reviewed journal
-- ✅ Statistical analysis framework integrated into all benchmarks (confidence intervals, significance tests)
-- ✅ Mechanism discovery protocol yields ≥3 testable biological hypotheses
-- ✅ Performance profiles documented: where each architecture excels (e.g., "quantum best at multi-objective, classical best at single-objective")
-- ✅ ≥2 novel quantum architectures (QRC, QSNN) implemented and benchmarked
-- ✅ HybridQuantumBrain demonstrates fusion of reflex + planning layers
-
-#### Go/No-Go Decision
-
-**GO if**: Quantum shows advantage on ≥2 tasks OR reveals interesting computational principles worth investigating further.
-**PIVOT if**: No quantum advantage found → Reframe as "architecture comparison study" focusing on classical vs. spiking. Publish "Why Quantum Didn't Work: Lessons from Biological Navigation" as valuable negative result.
-**STOP if**: Unable to explain why any architecture works → Need better interpretability tools or simpler tasks.
+- Interpretability framework → Phase 7 (publication readiness)
+- Mechanism discovery protocol → Phase 7
+- First biological prediction tested → Phase 7 (external collaboration)
 
 ______________________________________________________________________
 
-### Phase 3: Learning & Memory (Q3-Q4 2026)
+### Phase 3: Temporal Sensing & Memory
 
-**Goal**: Implement associative learning and memory systems matching C. elegans biological timescales and mechanisms. Also add oxygen sensing, which pairs naturally with temporal sensing and memory infrastructure.
+**Goal**: Transform the simulation from stateless reflex to temporal integration. Make C. elegans sense the way it actually senses — through temporal derivatives, not spatial gradient lookups. This is the single most impactful biological fidelity upgrade and directly addresses two quantum advantage thresholds (non-Markovian dependencies and partial observability).
 
-**Pilot-Then-Focus Approach**: Start with Short-Term Associative Memory (STAM) as the foundation. If STAM demonstrates value (improves performance over static policies), extend to ITAM and LTAM. This avoids over-engineering memory systems before validating the core concept.
+**Aspirational timeline**: Q2-Q3 2026
+
+#### Background
+
+Real C. elegans uses temporal sensing for most modalities:
+
+- **Thermotaxis**: AFD neurons detect temperature changes (dT/dt) with extraordinary sensitivity (0.01°C changes over a >10°C range). The worm compares current temperature to recent history, not spatial sampling.
+- **Chemotaxis**: ASE neurons perform temporal concentration comparisons during head sweeps — the worm moves forward, senses concentration change over time, then adjusts.
+- **Oxygen sensing**: URX/BAG neurons integrate oxygen changes over time.
+
+Our current implementation provides spatial gradient information directly (gradient magnitude + direction), which is computationally convenient but **constitutes environmental cheating**. The environment computes central differences by sampling adjacent cells (T(x+1,y) - T(x-1,y))/2 and superposition of exponential decay functions from all food sources — information a ~1mm worm at position (x,y) cannot access. Switching to biologically honest sensing fundamentally changes the computational problem: agents must maintain memory, integrate signals over time, and infer gradient direction from their own movement history.
+
+#### Anti-Cheating Principle
+
+Phase 3 enforces **biological honesty**: the agent must only receive information available through its actual sensory neurons. For gradient-based modalities (chemotaxis, thermotaxis, aerotaxis), this means:
+
+- **The agent receives only the scalar value at its current position** (concentration, temperature, O2 level)
+- **The agent receives its own proprioceptive state** (heading, recent movement)
+- **The agent must infer gradient direction** by correlating how scalar values change with its own movement over time
+
+This is how real C. elegans navigates: a "biased random walk" where the worm moves forward, detects whether concentration is increasing or decreasing (temporal comparison), then modulates its turning probability. It does not follow a pre-computed gradient vector — it learns to turn less when things improve and turn more when they worsen.
+
+**Mechanosensation** (boundary_contact, predator_contact) is already biologically honest — binary contact signals the agent actually experiences. These remain unchanged.
+
+**Nociception** currently provides `predator_gradient_strength` and `predator_gradient_direction` — the same spatial gradient oracle as chemotaxis. A real C. elegans cannot sense predator direction at distance; it detects predator-secreted chemicals (sulfolipids) via the same temporal comparison mechanism as chemotaxis. Nociception must receive the same honest-sensing treatment: scalar chemical concentration at current position, with the agent inferring predator direction from temporal changes. This is included in deliverable 1 alongside chemotaxis and thermotaxis.
 
 #### Deliverables
 
-1. **Short-Term Associative Memory (STAM)** [Priority: Implement First]
+1. **Biologically Honest Sensory Inputs** [CRITICAL]
 
-   - Duration: Minutes to 30 minutes (timescale matches biology)
-   - Timescale modeling: Exponential decay parameters calibrated to match biological cAMP-mediated memory (~minutes)
-   - No protein synthesis required (immediate formation)
-   - Use cases: Remember recent food locations, recent predator encounters
-   - **Validation gate**: If STAM improves foraging efficiency by ≥10%, proceed to ITAM
+   Two sensing modes, both replacing the current spatial gradient oracle:
 
-2. **Intermediate-Term Associative Memory (ITAM)** [Conditional on STAM success]
+   - **Mode A — Raw scalar + memory (most biologically honest)**: Agent receives only the scalar reading at its current position (temperature in °C, chemical concentration, O2 level). No gradient information of any kind. The brain must use STAM memory buffers to store recent readings and learn temporal integration entirely on its own — discovering that "I moved forward and concentration increased, so food is probably ahead" from raw experience. This is the hardest mode and the most scientifically interesting.
 
-   - Duration: 30 minutes to several hours
-   - Timescale modeling: Two-pathway decay model inspired by cAMP + CaMKII signaling dynamics
-   - Memory consolidation gate: Simulates protein synthesis requirement to extend beyond 30 min
-   - Use cases: Learn temperature-food associations over multiple foraging bouts
+   - **Mode B — Pre-computed temporal derivative (biologically plausible)**: Agent receives the scalar reading + dC/dt or dT/dt (rate of change over recent steps). This models what sensory neurons actually output — AFD neurons signal "warming" or "cooling", not "gradient points north-east". Still much harder than spatial gradients because there is no directional information — only "things are getting better/worse". The agent must correlate its movement direction (from proprioception) with whether values improved to infer where to go.
 
-3. **Long-Term Associative Memory (LTAM)** [Conditional on ITAM value]
+   - **Legacy mode**: Spatial gradients remain available for backward compatibility and as a comparison baseline, but are explicitly labelled as "oracle sensing" in configs and documentation.
 
-   - Duration: Hours to days (persist across multiple simulation sessions)
-   - Training paradigm: Spaced training (multiple sessions with intervals) vs. massed training (single long session)
-   - Biological inspiration: Timescales matched to protein synthesis + CREB-dependent consolidation in real C. elegans
-   - Memory traces stored to disk, reloaded in subsequent sessions
-   - Use cases: Persistent pathogen avoidance, learned temperature preferences
+   - Biologically calibrated: AFD sensitivity ~0.01°C changes, ASE concentration comparisons over ~1-second head sweep timescales.
 
-4. **Associative Learning Paradigms**
+   - Configurable per modality: each sensory module can independently use Mode A, B, or legacy.
+
+2. **Short-Term Associative Memory (STAM)** [CRITICAL — prerequisite for Mode A sensing]
+
+   - Exponential-decay memory buffers for recent sensory history (biological timescale: minutes to ~30 minutes)
+   - Stores recent scalar readings, recent positions, recent actions — the raw material for temporal integration
+   - No protein synthesis required (immediate formation, matches biological STAM)
+   - Molecular basis: cAMP and calcium signaling pathways
+   - Use cases: Remember recent sensory readings (for temporal derivative computation in Mode A), recent food/predator encounters, build spatial map from temporal experience
+   - Integration with all brain architectures: memory state appended to observation vector
+
+3. **Oxygen Sensing** [Pairs with temporal infrastructure]
+
+   - O2 concentration gradient fields (5-12% optimal range, matching real C. elegans preference)
+   - URX/AQR/PQR neuron simulation (detect hyperoxia >12%)
+   - BAG neuron simulation (detect hypoxia \<5%)
+   - Temporal O2 sensing using STAM buffers (dO2/dt)
+   - Multi-objective: balance food quality vs. oxygen comfort vs. predator avoidance
+
+4. **ITAM/LTAM** [Conditional on STAM success]
+
+   - Intermediate-Term Associative Memory (30 min to hours): Two-pathway decay model inspired by cAMP + CaMKII signaling. Requires simulated protein synthesis gate.
+   - Long-Term Associative Memory (hours to days): Persistent across simulation sessions. Spaced vs. massed training distinction matching biology.
+   - **Validation gate**: Implement only if STAM improves foraging efficiency by ≥10% over baseline
+
+5. **Associative Learning Paradigms**
 
    - **Classical conditioning**: Odor (CS) + food (US) → approach odor
-   - **Operant conditioning**: Action (e.g., turn left) → reward (food) → repeat action
    - **Aversive learning**: Pathogen exposure → avoid pathogen
-   - **Context conditioning**: Temperature + food → prefer that temperature
-   - **Extinction learning**: Reward stops → unlearn association (forgetting)
-
-5. **Memory Decay & Forgetting**
-
-   - Protein synthesis for proper memory decay (biology: forgetting is active process)
-   - Configurable decay rates: STAM decays in minutes, LTAM decays in days
-   - Interference: new learning can overwrite old memories
-
-6. **Theoretical Framework: Quantum-Inspired Memory Models**
-
-   - Mathematical models exploring whether quantum-inspired representations offer advantages for memory encoding
-   - Research question: Do quantum circuit representations capture memory uncertainty better than classical networks?
-   - Compare quantum vs. classical memory architectures on associative learning benchmarks
-   - Note: This explores computational advantages, not claims about quantum effects in biological neurons
-
-7. **Neural Circuits for Learning**
-
-   - RIM interneurons: Integrate chemosensory + mechanosensory for associative learning
-   - NMDA receptors (NMR-1): Required for context conditioning
-   - Dopaminergic neurons: Reward signaling, motivation
-   - Serotonergic neurons: Modulate learning intensity
-
-8. **Oxygen Sensing System** [Moved from Phase 1: pairs with temporal sensing and memory]
-
-   - Oxygen concentration gradient fields (5-12% optimal range)
-   - Hypoxia avoidance (\<5% O2) and hyperoxia avoidance (>12% O2)
-   - URX/AQR/PQR neuron simulation (detect high O2)
-   - BAG neuron simulation (detect low O2)
-   - Multi-objective: balance food quality vs. oxygen comfort
-   - Temporal oxygen sensing using STAM memory buffers (dO2/dt)
-
-9. **Biological Accuracy Revisit: Temporal Sensory Systems**
-
-   > **Note**: Once memory systems are operational, revisit the biological accuracy of sensory modalities implemented in Phase 1 and earlier. Current implementations use spatial gradient sensing (computationally equivalent for stateless brains), but real C. elegans uses temporal sensing for several modalities:
-   >
-   > - **Thermotaxis**: AFD neurons use temporal derivative (dT/dt) to detect temperature changes over time, not instantaneous spatial gradients
-   > - **Chemotaxis**: ASE neurons perform temporal concentration comparisons during head sweeps
-   > - **Oxygen sensing**: URX/BAG neurons integrate oxygen changes over time
-   >
-   > With STAM/ITAM memory systems available, implement biologically-accurate temporal sensing that compares current vs. recent sensory values. This would require memory buffers and temporal derivative computation, making it a natural extension of Phase 3 memory infrastructure.
-   >
-   > **Deliverable**: Temporal sensing module for thermotaxis (and optionally chemotaxis, aerotaxis) that uses memory to compute dT/dt, dC/dt gradients instead of spatial approximations.
+   - **Context conditioning**: Temperature + food → prefer that temperature (NMDA receptor-dependent, RIM interneuron integration)
 
 #### Metrics Focus
 
-- **Memory timescales**: Match biological STAM (minutes), ITAM (hours), LTAM (days)
-- **Biological insight**: Do models reveal memory mechanisms? (e.g., role of protein synthesis, spaced training)
-- **Learning efficiency**: Sample complexity to learn associations (fewer trials = better)
+- **Oracle vs. honest comparison**: Quantify the performance gap between spatial gradient (oracle) and biologically honest sensing modes. This gap IS the measure of how much we were cheating.
+- **Mode A vs. Mode B**: Does pre-computing dT/dt (Mode B) substantially help versus raw scalars (Mode A)? If so, the temporal derivative is a key computational primitive.
+- **Temporal integration**: Do agents learn to correlate movement direction with value changes?
+- **Memory utilisation**: Does STAM improve performance over stateless policies?
+- **Classical ceiling change**: Does honest sensing lower classical success rates (creating headroom for quantum)?
 
 #### Phase 3 Exit Criteria
 
-- ✅ STAM implemented and validated (improves performance over static policies by ≥10%)
-- ✅ At least 1 additional memory timescale (ITAM or LTAM) if STAM proves valuable
-- ✅ ≥2 associative learning paradigms functional (classical conditioning + one other)
-- ✅ Meta-learning demonstrates improvement over static policies (agents that learn perform better than fixed policies)
-- ✅ Memory persistence across sessions demonstrated (save/load memory traces work correctly)
-- ✅ Quantum vs. classical memory comparison reveals mechanistic differences
-- ✅ Oxygen sensing implemented with temporal sensing using memory infrastructure (if STAM proves viable)
+**Required (must complete before Phase 4):**
+
+- ✅ Biologically honest sensing (Mode A or B) operational for thermotaxis, chemotaxis, and nociception
+- ✅ STAM implemented with biologically-calibrated exponential decay rates
+- ✅ Oracle vs. honest performance gap quantified (expected: significant drop in success rate)
+- ✅ Classical approaches show measurable difficulty increase vs. oracle baseline (quantified)
+
+**Stretch (can continue into Phase 4):**
+
+- ✅ Oxygen sensing implemented with honest temporal sensing
+- ✅ ≥1 associative learning paradigm functional (classical conditioning or aversive learning)
+
+#### Quantum Checkpoint (Phase 3)
+
+**Trigger**: Temporal sensing operational, classical ceiling measured.
+
+Re-evaluate:
+
+- **QRH** (showed genuine advantage on temporal pursuit tasks — does richer temporal structure amplify this?)
+- **QEF** on temporally-enriched tasks
+- If classical ceiling drops below ~80% on any enriched task, resume targeted quantum architecture search
 
 #### Go/No-Go Decision
 
-**GO if**: Learning and memory systems improve performance over static policies by ≥10%.
-**PIVOT if**: Learning doesn't improve performance → Focus on innate behavior repertoire mapping. Document "why learning didn't help" as interesting negative result.
-**STOP if**: Memory systems are too complex to implement reliably → Simplify to single timescale or remove temporal dynamics.
+**GO if**: Temporal sensing creates measurably harder problems (classical ceiling drops by any statistically significant amount) AND STAM improves performance over stateless policies.
+**PIVOT if**: Temporal sensing doesn't change difficulty → Classical approaches may trivially handle temporal derivatives with simple RNNs. Focus on multi-agent complexity (Phase 4) as the primary difficulty driver.
+**STOP if**: STAM infrastructure too complex or unreliable → Simplify to fixed-length observation windows.
 
 ______________________________________________________________________
 
-### Phase 4: Evolution & Adaptation (Q4 2026 - Q1 2027)
+### Phase 4: Multi-Agent Complexity
 
-**Goal**: Implement breeding and evolutionary algorithms to evolve optimal learning strategies, comparing evolutionary dynamics across architectures.
+**Goal**: Create exponential state spaces through agent-agent interactions. This is where quantum game theory has the strongest theoretical backing for advantage, and where C. elegans social behaviors (aggregation, pheromone communication, alarm signaling) are well-documented.
 
-**Building on Phase 0**: This phase extends the evolutionary optimization foundations established in Phase 0 (CMA-ES for quantum training) to full genetic algorithm systems with crossover, mutation, and population dynamics.
+**Aspirational timeline**: Q3-Q4 2026
 
-**Pilot-Then-Focus Approach**: Start with lightweight pilots of 2-3 evolutionary approaches (hyperparameter evolution, Lamarckian, Baldwin Effect) using small populations and few generations. Based on pilot results, select 1-2 approaches for deep investigation. This prevents over-investment in approaches that don't work for our specific architectures.
+**Prerequisites**: Phase 3 memory infrastructure (agents need to remember past interactions)
+
+#### Background
+
+C. elegans, while often considered solitary, exhibits sophisticated social behaviors:
+
+- **Social feeding**: Feeding rate increases near conspecifics (social facilitation)
+- **Aggregation**: Clustering on bacterial lawns mediated by ascaroside pheromones
+- **npr-1 variation**: Natural genetic variation determines solitary vs. social feeding behavior
+- **Alarm pheromones**: Injured worms release signals that repel nearby individuals
+- **Cooperative-like behaviors**: Worms following pheromone trails benefit from others' foraging discoveries
+- **Competition**: Limited food creates resource competition and dominance dynamics
+
+Multi-agent scenarios create exponential state spaces (state × number of agents), partial observability (each agent has local view), and strategic interactions — all identified as quantum advantage thresholds.
 
 #### Deliverables
 
-1. **Hyperparameter Evolution (Simplest)** [Priority: Pilot First]
+1. **Multi-Agent Infrastructure** [CRITICAL]
 
-   - Genome = learning rates, layer sizes, circuit depths, reward weights
-   - Crossover: Blend parent hyperparameters (weighted average, uniform crossover)
-   - Mutation: Random perturbations (Gaussian noise, random resampling)
-   - Fitness metric: Final performance after fixed number of training episodes
-   - Selection: Tournament selection, rank-based, fitness-proportionate
-   - Use case: Find optimal hyperparameter sets for each architecture
+   - 2-10 independent agents in same environment
+   - Each agent has its own brain instance (can be different architectures)
+   - Agent-agent interaction tracking (proximity, collisions, food competition)
+   - Scalable: performance linear in agent count, not quadratic
 
-2. **Lamarckian Evolution (Fast Convergence)** [Pilot alongside Hyperparameter]
+2. **Pheromone Communication**
 
-   - Each agent learns during lifetime (current RL approach)
-   - Genome = initial weights/parameters
-   - Fitness = final performance after learning
-   - Offspring inherit learned weights (not biologically accurate but fast)
-   - Use case: Rapidly evolve high-performing initial conditions
+   - **Aggregation pheromones**: Ascaroside-inspired chemical trails that attract nearby agents
+   - **Alarm pheromones**: Released on predator contact or HP loss, repel conspecifics
+   - **Food-marking trails**: Agents deposit chemical markers near food sources
+   - Diffusion dynamics: pheromones spread and decay over time (uses Phase 3 temporal infrastructure)
 
-3. **Baldwin Effect (Biologically Realistic)** [Conditional: if Lamarckian shows promise]
+3. **Social Feeding**
 
-   - Each agent learns during lifetime
-   - Genome = learning capacity (learning rates, architectural features)
-   - Fitness = final performance
-   - Offspring inherit *ability to learn*, not learned weights
-   - Over generations: Learned behaviors become innate (genetic assimilation)
-   - Use case: Study how learning guides evolution
+   - Feeding rate enhancement when near other agents (social facilitation)
+   - Aggregation behavior: agents cluster on food patches
+   - npr-1 behavioral variation: configurable solitary vs. social phenotypes
 
-4. **Architecture Evolution (NEAT-style)** [Optional: based on pilot findings]
+4. **Competitive Foraging**
 
-   - Genome = network topology + weights
-   - Crossover: Combine network structures, preserve innovations
-   - Mutation: Add/remove neurons, connections, quantum gates
-   - Speciation: Protect novel architectures from competition during early stages
-   - Use case: Discover novel hybrid quantum-classical architectures
+   - Zero-sum resource competition: limited food, agents compete for access
+   - Territorial behavior: agents defend food-rich zones
+   - Game-theoretic analysis: Nash equilibria, evolutionarily stable strategies
 
-5. **Co-Evolution (Predators + Prey)** [Optional: if basic evolution works well]
+5. **Collective Predator Response**
 
-   - Predators evolve hunting strategies simultaneously with prey evolving evasion
-   - Red Queen dynamics: Arms race between predator and prey
-   - Fitness: Prey = survival rate, Predators = kill rate
-   - Use case: Study evolutionary pressures shaping intelligence
-
-6. **Evolutionary Algorithm Comparisons**
-
-   - Benchmark against CMA-ES, genetic programming, evolution strategies
-   - Which EA works best for each architecture?
-
-7. **Generational Fitness Tracking**
-
-   - Visualize fitness curves over generations
-   - Track diversity (genotypic and phenotypic)
-   - Detect convergence, stagnation, speciation events
-   - Archive best genomes for reproduction
+   - Coordinated evasion when one agent detects predator (via alarm pheromones)
+   - Information sharing about predator locations
+   - Collective aggregation as defense strategy
 
 #### Metrics Focus
 
-- **Evolution of learning strategies**: Do populations discover better learning algorithms?
-- **Convergence speed**: Generations to reach optimal performance
-- **Architectural innovation**: Do new architectures emerge from NEAT-style evolution?
+- **Emergent phenomena**: Identify behaviors not explicitly programmed (spontaneous aggregation, division of labor, communication strategies)
+- **Cooperation quantification**: Cooperation intensity, stability, efficiency gains over individual foraging
+- **State space explosion**: Quantify effective state space growth with agent count
+- **Classical ceiling**: Do classical approaches struggle with multi-agent coordination?
 
 #### Phase 4 Exit Criteria
 
-- ✅ ≥2 evolution approaches piloted with documented results
-- ✅ At least 1 approach selected for deep investigation based on pilot performance
-- ✅ Selected approach(es) produce novel behaviors not present in training set
-- ✅ Baldwin Effect or Lamarckian inheritance demonstrated (learned behaviors become innate over generations) OR documented why neither worked
-- ✅ Evolutionary dynamics comparison (quantum vs. classical) completed showing convergence rates and diversity
-- ✅ Generational fitness tracking shows continuous improvement over ≥50 generations
+- ✅ ≥5 agents running stably with independent brains
+- ✅ ≥1 emergent behavior documented (spontaneous aggregation, information sharing, etc.)
+- ✅ Pheromone communication functional (at least alarm + food-marking)
+- ✅ Classical approaches show measurable strain on coordination tasks (quantified difficulty increase vs. single-agent baseline)
+
+#### Quantum Checkpoint (Phase 4)
+
+**Trigger**: Multi-agent operational with ≥5 agents, coordination metrics established.
+
+Evaluate:
+
+- **Quantum entangled strategy spaces**: Can quantum architectures represent correlated multi-agent strategies more efficiently?
+- **Quantum game theory approaches**: Do quantum-enhanced Nash equilibrium solvers outperform classical?
+- If classical approaches show measurable difficulty on coordination tasks (aspirational: ceiling \<85%), launch targeted quantum evaluation campaign
 
 #### Go/No-Go Decision
 
-**GO if**: Evolution produces novel, high-performing behaviors OR demonstrates Baldwin Effect.
-**PIVOT if**: Evolution plateaus quickly → Focus on hand-designed architectures and learning algorithms. Document evolutionary limitations.
-**STOP if**: Evolutionary algorithms fail to converge or produce unstable results → Revisit fitness functions or population parameters.
-
-______________________________________________________________________
-
-### Phase 5: Social Complexity (Q1-Q2 2027)
-
-**Goal**: Implement multi-agent scenarios to study cooperation, competition, and emergent collective behaviors.
-
-**Transition Buffer**: Phase 5 start is conditional on Phase 4 progress. If Phase 4 is on track by mid-Q4 2026, Phase 5 infrastructure work can begin in parallel. If Phase 4 requires extension, Phase 5 start shifts to Q2 2027.
-
-**Dependency Note**: Conditional on Phase 2 showing sufficient single-agent competence, and Phase 3 (Learning & Memory) providing memory systems needed for social behaviors. C. elegans social behavior depends on learned associations; implementing memory first ensures social agents can remember past interactions.
-
-#### Deliverables
-
-1. **Multi-Agent Infrastructure**
-
-   - Multiple agents in same environment (2-10 agents)
-   - Independent brains (each agent has own architecture instance)
-   - Agent-agent interactions tracked (proximity, collisions, food competition)
-
-2. **Cooperative Foraging**
-
-   - **Social facilitation**: Feeding rate increases when near other agents (biological observation)
-   - **Pheromone communication**: Agents deposit chemical trails marking food locations
-   - **Shared food discovery**: When one agent finds food, others can follow pheromone trail
-   - **Collective exploration**: Distributed search patterns (each agent explores different region)
-   - **Emergent cooperation metrics**: food collection rate per agent with cooperation vs. alone
-
-3. **Competitive Foraging**
-
-   - **Zero-sum resource competition**: Limited food, agents compete for access
-   - **Territorial behavior**: Agents defend food-rich zones
-   - **Dominance hierarchies**: Stronger agents (better learners) access food first
-   - **Mate competition**: Simulated reproductive success as fitness metric
-   - **Game-theoretic analysis**: Nash equilibria, evolutionary stable strategies
-
-4. **Collective Behaviors**
-
-   - **Aggregation patterns**: C. elegans naturally clusters; can agents learn aggregation?
-   - **Collective predator response**: Multiple agents coordinate to evade or mob predators
-   - **Information sharing**: Do agents develop communication strategies (pheromone trails, proximity signaling)?
-   - **Swarm intelligence**: Emergent optimization (find food faster as group than individuals)
-
-5. **Mechanism Discovery from Emergent Behaviors**
-
-   - Identify unexpected collective phenomena
-   - Compare to swarm robotics literature (particle swarm optimization, ant colony optimization)
-   - Extract general principles: "Cooperation emerges when [X conditions]"
-
-6. **Architecture Comparisons in Multi-Agent Settings**
-
-   - Quantum vs. classical in cooperative settings: which learns cooperation faster?
-   - Mixed populations: quantum + classical agents competing
-   - Evolutionary dynamics: which architectures dominate over many generations?
-
-#### Metrics Focus
-
-- **Emergent phenomena**: Identify behaviors not explicitly programmed (e.g., spontaneous aggregation, division of labor)
-- **Cooperation quantification**: Measure cooperation intensity, stability, efficiency gains
-- **Biological insight**: Do simulated behaviors match C. elegans social behavior literature?
-
-#### Phase 5 Exit Criteria
-
-- ✅ Multi-agent infrastructure supports ≥10 simultaneous agents with stable performance
-- ✅ Cooperative, competitive, and collective behaviors all implemented and benchmarked
-- ✅ ≥1 emergent behavior discovered and documented (e.g., spontaneous aggregation, division of labor, information sharing)
-- ✅ Quantum vs. classical comparison in multi-agent settings completed
-- ✅ Mechanism discovery yields insights applicable to swarm robotics or social foraging theory
-
-#### Go/No-Go Decision
-
-**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR scale successfully to ≥5 agents.
-**PIVOT if**: Multi-agent complexity too high or unstable → Continue with single-agent complexity (deeper sensory integration, longer-horizon planning).
+**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR create measurably harder coordination problems.
+**PIVOT if**: Multi-agent complexity too high or unstable → Deepen single-agent complexity (richer sensing, longer horizons).
 **STOP if**: Infrastructure can't handle ≥3 agents → Re-architect for scalability before proceeding.
 
 ______________________________________________________________________
 
-### Phase 6: Quantum Frontiers (Q2-Q3 2027)
+### Phase 5: Evolution & Adaptation
 
-> **Note**: This phase involves advanced quantum computing concepts (VQC, QAOA, error mitigation, hardware deployment). The technical claims and feasibility assessments in this section should be reviewed by domain experts in quantum computing and quantum machine learning before implementation.
+**Goal**: Evolve optimal learning strategies and study how learning guides evolution, including biologically-documented transgenerational memory.
 
-**Goal**: Push boundaries of quantum algorithms, deploy on real hardware, and demonstrate quantum advantages on biologically-relevant tasks.
+**Aspirational timeline**: Q4 2026 - Q1 2027
+
+**Prerequisites**: Phase 3 (memory infrastructure for transgenerational memory). Phase 4 multi-agent infrastructure required only for co-evolution (deliverable 4) — other deliverables can begin in parallel with Phase 4.
+
+**Pilot-Then-Focus Approach**: Start with lightweight pilots of 2-3 evolutionary approaches using small populations and few generations. Based on pilot results, select 1-2 approaches for deep investigation.
 
 #### Deliverables
 
-1. **Advanced Quantum Algorithms**
+1. **Hyperparameter Evolution** [Priority: Pilot First]
 
-   - **Variational Quantum Circuits (VQC)**: Continue developing parameterized quantum circuits optimized via evolution (building on Phase 0 success)
-   - **Quantum Approximate Optimization Algorithm (QAOA)**: Explore whether multi-objective foraging can be framed as combinatorial optimization (research-level question)
-   - **Quantum Neural Networks (QNN)**: Data reuploading circuits, hybrid quantum-classical architectures
-   - **Quantum Reinforcement Learning**: Quantum policy representations, exploration of quantum-enhanced value estimation
-   - **Quantum Natural Gradient (QNG) variants**: Momentum-QNG, Conjugate QNG (CQNG) with dynamic hyperparameters, QNG with geodesic corrections for faster convergence
-   - **Quantum kernel methods**: Quantum Policy Gradient in RKHS, sparse non-parametric policies with tunable expressiveness
+   - Genome = learning rates, layer sizes, circuit depths, reward weights
+   - Tournament selection, fitness = final performance after fixed training episodes
+   - Use case: Find optimal hyperparameter sets for each architecture
 
-2. **Quantum Error Mitigation**
+2. **Lamarckian Evolution** [Pilot alongside Hyperparameter]
 
-   - **Q-CTRL Fire Opal Integration**: Error suppression for NISQ devices
-   - **Zero-noise extrapolation**: Estimate noiseless results from noisy runs
-   - **Probabilistic error cancellation**: Mitigate gate errors
-   - **Noise-robust circuit design**: Shorter circuits, native gate sets, error-aware compilation
+   - Offspring inherit learned weights (not biologically accurate but fast convergence)
+   - Fitness = final performance after learning
+   - Use case: Rapidly evolve high-performing initial conditions
 
-3. **Real Quantum Hardware Deployment**
+3. **Baldwin Effect** [Conditional: if Lamarckian shows promise]
 
-   - **IBM Quantum**: Monthly benchmarks on ibm_sherbrooke, ibm_kyiv, or latest backends
-   - **IonQ**: Trapped-ion quantum computers (if accessible)
-   - **Hardware performance tracking**: Noise levels, gate fidelities, decoherence times
-   - **Hardware-specific optimization**: Topology-aware circuit mapping, qubit selection
+   - Offspring inherit *ability to learn*, not learned weights
+   - Over generations: learned behaviors become innate (genetic assimilation)
+   - Biologically significant: study how learning guides evolution
 
-4. **Theoretical Quantum Advantage Analysis**
+4. **Co-Evolution (Predators + Prey)** [Benefits from Phase 4 multi-agent]
 
-   - Mathematical analysis: Identify structural features of foraging tasks that may benefit from quantum computation
-   - Explore potential advantages: Grover-like search in large state spaces, quantum parallelism for multi-objective optimization
-   - Note: Formal complexity-theoretic proofs (BQP vs. P) are unlikely for RL tasks, but empirical advantages may be demonstrable
+   - Predators evolve hunting strategies while prey evolve evasion
+   - Red Queen dynamics: arms race between predator and prey
+   - Fitness: Prey = survival rate, Predators = kill rate
 
-5. **Quantum-Classical Hybrid Ensembles**
+5. **Transgenerational Memory** [NEW — biologically documented]
 
-   - Voting ensembles: Quantum + classical models vote on actions
-   - Hierarchical decision-making: Quantum for strategy, classical for tactics (or vice versa)
-   - Adaptive switching: Use quantum when uncertain, classical when confident
-   - Meta-learning: Learn which model to trust in which context
+   - Based on Posner et al. (2023): associative memories can be inherited across generations in C. elegans
+   - Epigenetic mechanisms: small RNAs and chromatin modifications
+   - Implementation: selected memory traces transfer to offspring (configurable heritability)
+   - Use case: Study how learned pathogen avoidance or temperature preferences persist across generations
 
-6. **Quantum Interpretability**
+6. **Architecture Evolution (NEAT-style)** [Optional]
 
-   - Visualize quantum state evolution during decision-making
-   - Track entanglement entropy: How much are qubits correlated?
-   - Gate importance: Which quantum gates are critical for performance?
-   - Hypothesis: "Entanglement enables [X] computational capability"
+   - Genome = network topology + weights
+   - Speciation: protect novel architectures during early stages
+   - Use case: Discover novel hybrid quantum-classical architectures
+
+#### Phase 5 Exit Criteria
+
+- ✅ ≥2 evolution approaches piloted with documented results
+- ✅ Baldwin Effect or Lamarckian inheritance demonstrated (learned behaviors become innate)
+- ✅ Co-evolution produces arms race dynamics with measurable escalation
+- ✅ Transgenerational memory functional (if biologically justified by pilot results)
+- ✅ Generational fitness tracking shows continuous improvement over ≥50 generations
+
+#### Quantum Note
+
+Phase 5 does not include a formal quantum checkpoint — evolution does not directly create new computational complexity in the way temporal sensing or multi-agent dynamics do. However, NEAT-style architecture evolution (deliverable 6) could discover novel quantum-classical hybrid topologies worth evaluating. If architecture evolution produces interesting quantum circuit structures, these should be flagged for evaluation at the Phase 6 checkpoint.
+
+#### Go/No-Go Decision
+
+**GO if**: Evolution produces novel, high-performing behaviors OR demonstrates Baldwin Effect.
+**PIVOT if**: Evolution plateaus quickly → Focus on hand-designed architectures. Document evolutionary limitations.
+**STOP if**: Evolutionary algorithms fail to converge → Revisit fitness functions or population parameters.
+
+______________________________________________________________________
+
+### Phase 6: Continuous Physics & Connectome
+
+**Goal**: Transition from grid-world to continuous 2D physics with realistic C. elegans locomotion, and introduce connectome-constrained architectures using the real 302-neuron wiring diagram. This is the largest single fidelity jump in the roadmap and creates the conditions for a major quantum re-evaluation.
+
+**Aspirational timeline**: Q1-Q3 2027
+
+#### Background
+
+**Continuous physics**: C. elegans moves via sinusoidal body undulations, with a rich locomotion repertoire: forward crawling, reversals, omega turns (deep ventral bends reorienting 180°), pirouettes, and speed modulation. Current discrete 4-direction grid movement captures none of this. Continuous 2D dramatically increases both action space (speed + turning angle) and state space (continuous coordinates + heading + velocity).
+
+**Connectome**: C. elegans has the only fully mapped connectome of any organism — 302 neurons connected by ~7,000 chemical synapses and ~900 gap junctions (Cook et al. 2019). This is the uniquely tractable advantage of choosing C. elegans. Using the real wiring diagram to constrain network architecture lets us ask: "Does biology's wiring learn better than arbitrary architectures?" and "Do quantum circuits on the real topology outperform classical ones?"
+
+#### Deliverables
+
+1. **Continuous 2D Environment** [CRITICAL]
+
+   - Replace discrete grid with continuous 2D coordinates
+   - Realistic C. elegans locomotion: sinusoidal crawling, reversals, omega turns, pirouettes
+   - Continuous action space: speed (0 to max) + turning angle (-π to π)
+   - Realistic spatial scales: ~1mm worm body on cm-scale plates
+   - Physics: basic 2D kinematics, optional viscous medium effects
+
+2. **Realistic Sensory Physics**
+
+   - Diffusion-based chemical gradients (Fick's law, not superposition approximation)
+   - Physical temperature fields with conduction
+   - Contact mechanics for mechanosensation (collision detection with continuous bodies)
+   - Realistic sensory ranges scaled to worm body length
+
+3. **Full 302-Neuron Connectome-Constrained Architecture** [CORE DELIVERABLE]
+
+   - Import C. elegans wiring diagram (Cook et al. 2019 / WormAtlas)
+   - Build network where connections exist only where real synapses exist
+   - Weights are learned via RL; topology is biologically fixed
+   - Functional circuit modules: chemotaxis (AWC→AIY→RIB→motor), thermotaxis (AFD→AIY→AIZ→RIA), escape (ASH→AVA→motor)
+   - Compare connectome-constrained vs. unconstrained architectures on identical tasks
+   - Ablation: remove specific circuits and measure behavioral impact (matches biological lesion studies)
+
+4. **Architecture Adaptation for Continuous Control**
+
+   - Existing brain architectures (MLPPPOBrain, QVarCircuitBrain, HybridQuantum, QRH, etc.) were designed for discrete 4-action grid-worlds
+   - Continuous action space (speed + turning angle) requires actor-critic variants with continuous action heads (e.g., Gaussian policy for PPO, continuous-output quantum circuits)
+   - Adaptation strategy: extend PPO with continuous action head first (well-understood), then adapt quantum architectures
+   - Benchmark discrete-trained vs. continuous-native architectures to quantify the impact of action space expansion
+
+5. **Connectome + Quantum** [RESEARCH]
+
+   - Build quantum circuit architectures (QSNN, variational) whose topology mirrors the real connectome
+   - Test whether biologically-constrained quantum circuits outperform:
+     - Unconstrained quantum circuits (arbitrary topology)
+     - Biologically-constrained classical circuits (same topology, classical dynamics)
+     - Unconstrained classical circuits (arbitrary MLP)
 
 #### Metrics Focus
 
-- **Quantum advantage**: Demonstrate quantum > classical on specific task with statistical significance
-- **Hardware viability**: Real QPU performance vs. simulation (noise gap)
-- **Error mitigation efficacy**: Performance improvement from error suppression
+- **Locomotion fidelity**: Match real C. elegans movement statistics (speed distribution, turn angle distribution, reversal frequency)
+- **Connectome advantage**: Performance gap between constrained and unconstrained architectures
+- **Continuous complexity**: Quantify state/action space expansion vs. grid-world
+- **Classical ceiling**: Does continuous action space + connectome create problems where classical approaches genuinely struggle?
 
 #### Phase 6 Exit Criteria
 
-- ✅ VQC and QAOA (if applicable) implemented and benchmarked on foraging tasks
-- ✅ Real quantum hardware deployment successful: Achieves **>50% of classical baseline performance** on at least 1 task
-- ✅ Quantum error mitigation (Fire Opal or similar) improves real hardware performance by ≥20%
-- ✅ Monthly IBM Quantum benchmarks operational (automated deployment and tracking pipeline)
-- ✅ At least 1 quantum advantage claim validated on physical QPU (not just simulation)
-- ✅ Quantum advantage demonstrated on ≥1 biologically-relevant task with p < 0.01 statistical significance OR compelling explanation of why quantum doesn't provide advantages
-- ✅ Theoretical framework published linking quantum computational principles to intelligent behavior
+- ✅ Continuous 2D environment operational with realistic locomotion (crawling, reversals, omega turns)
+- ✅ Full 302-neuron connectome architecture benchmarked on at least 3 tasks
+- ✅ Connectome-constrained vs. unconstrained comparison completed with statistical analysis
+- ✅ Action space is continuous (speed + turning angle, not discrete directions)
+- ✅ Locomotion statistics quantitatively compared to real C. elegans data
+
+#### Quantum Checkpoint (Phase 6) — MAJOR
+
+**Trigger**: Continuous environment + connectome operational, classical baselines established.
+
+This is the primary quantum re-evaluation point:
+
+- Continuous action/state space addresses the "action space too small" and "state space polynomial" limitations
+- Connectome complexity adds structural constraints that may favour quantum representations
+- High-dimensional continuous observations (>50D with temporal + multi-agent + continuous) address the "observation space too small" limitation
+
+**Action**: If any classical architecture drops below 70% on hard continuous tasks, launch **full quantum campaign v2** — systematic re-evaluation of QRH, QEF, HybridQuantum, and potentially new architectures designed for continuous domains.
 
 #### Go/No-Go Decision
 
-**GO if**: Quantum hardware achieves ≥50% classical performance OR reveals insights into quantum computation despite performance gaps.
-**PIVOT if**: Hardware too noisy for useful computation → Focus on quantum-inspired classical algorithms (variational methods, evolution strategies applied to classical nets).
-**STOP if**: No theoretical or empirical quantum advantage after extensive testing → Conclude quantum not suitable for this domain, publish comprehensive negative result.
+**GO if**: Continuous physics creates meaningfully harder problems AND connectome architectures show interesting properties.
+**PIVOT if**: Continuous physics doesn't increase difficulty → Classical approaches trivially handle continuous control. Focus on multi-agent + evolution as the primary complexity source.
+**STOP if**: Continuous physics too expensive computationally → Optimize or simplify (reduce physics fidelity while keeping continuous action space).
 
 ______________________________________________________________________
 
-### Phase 7: Scaling & Real-World (Q3-Q4 2027)
+### Phase 7: Community, Validation & Publication
 
-> **Note**: This phase involves neuromorphic hardware deployment (Intel Loihi) and embodied robotics (WormBot). Neuromorphic expertise and robotics integration experience recommended before implementation.
+**Goal**: Open-source launch, external validation, and publication campaign. Share the simulation, data, and findings with the research community.
 
-**Goal**: Scale to large environments, deploy on neuromorphic hardware, validate with embodied robots, and achieve biological discoveries.
+**Aspirational timeline**: Q2-Q4 2027
+
+**Note**: This phase runs partly in parallel with Phases 6-8. Community infrastructure (NematodeBench, docs, Docker) can begin before Phase 6 completes. Paper 1 (quantum evaluation) and Paper 2 (benchmark) can be drafted early. Paper 3 (connectome) depends on Phase 6 results. External collaboration outreach can begin at any time.
 
 #### Deliverables
 
-1. **Large-Scale Environments**
+1. **NematodeBench Public Launch** [CORE]
 
-   - 200×200+ grid support (vs. current 50×50 max)
-   - 100+ simultaneous food sources (vs. current ~20)
-   - 10+ concurrent predators (vs. current 1-3)
-   - Memory-efficient rendering (viewport-based, sparse representations)
-   - Distributed computation: Multi-GPU training, parallel environment execution
+   - Public benchmark suite with tasks spanning all complexity levels:
+     - Basic: chemotaxis, foraging (grid-world)
+     - Intermediate: thermotaxis, predator evasion, temporal sensing
+     - Advanced: multi-agent coordination, continuous locomotion
+   - Public leaderboard with standardized evaluation protocol
+   - Docker-based reproducibility (containerized environments, seed management)
+   - Submission guidelines and evaluation scripts
+   - Include the 300+ session quantum evaluation dataset as a baseline reference
+   - Target: Differentiated from standard RL benchmarks by biological grounding and validation targets
 
-2. **Neuromorphic Hardware Deployment**
+2. **Publication Campaign**
 
-   - **Intel Loihi**: Deploy SpikingReinforceBrain (LIF neurons with surrogate-gradient-trained weights) on neuromorphic chip
-   - Event-driven computation efficiency: Compare power consumption (Joules per decision)
-   - Spike-timing precision: Does hardware spike timing affect inference quality?
-   - Comparison: Neuromorphic vs. GPU vs. CPU vs. QPU (energy, latency, throughput)
-   - Note: Training done on GPU with surrogate gradients; inference on neuromorphic hardware
+   - **Paper 1**: "Systematic Evaluation of Quantum Architectures for Biological Navigation: From Grid-World Parity to Enriched Environments" — The before/after contrast showing the 300+ session quantum campaign results at grid-world complexity, then what happens when environment complexity crosses thresholds. Valuable regardless of whether quantum shows advantage at higher complexity.
+   - **Paper 2**: "NematodeBench: A Biologically-Grounded Benchmark for Comparative Computational Neuroscience" — Benchmark paper introducing the task suite, biological validation methodology, and baseline results across architectures.
+   - **Paper 3**: "Connectome-Constrained Learning in C. elegans: Does Real Wiring Beat Arbitrary Architecture?" — Results from Phase 6 connectome experiments.
+   - Target venues: Nature Methods, NeurIPS, ICML, eLife, PNAS
 
-3. **WormBot Embodied Deployment**
+3. **External Collaboration**
 
-   - Export optimized policies → control WormBot hardware platform
-   - Real-world sensors: Physical chemical sensors (if available), contact sensors, IMU
-   - Sim-to-real transfer: Does simulation training transfer to physical robot?
-   - Embodied validation: Does robot behavior match simulation predictions?
+   - **C. elegans labs**: Biological prediction validation
+     - Target: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon)
+     - Deliverable: ≥1 model prediction tested with real C. elegans (escape latencies, thermotaxis precision, foraging efficiency)
+     - Collaboration model: We generate predictions → lab designs experiments → co-authored publication
+   - **Quantum hardware providers**: QPU benchmarks on enriched tasks
+     - IBM Quantum, Q-CTRL Fire Opal for error suppression
+     - Deploy best quantum architectures on real hardware with enriched tasks
+   - **OpenWorm**: Explore policy export → muscle control integration
+     - Test whether RL-trained policies can control OpenWorm's simulated body
 
-4. **Biological Discovery Validation**
+4. **Community Building**
 
-   - Collaborate with C. elegans neuroscience labs
-   - Test ≥1 major prediction from model analysis (from Phase 2 or 3)
-   - Experimental design: Control vs. treatment, statistical power analysis
-   - Expected outcome: Model prediction confirmed → biological discovery
-
-5. **Scalability Analysis**
-
-   - **Theoretical**: Complexity analysis (time/space vs. neuron count)
-   - **Empirical**: Benchmark on increasingly complex tasks (10×10 to 200×200 grids)
-   - **Architectural**: Demonstrate composability (modules, hierarchies)
-   - Path to larger systems: Demonstrate scaling principles from C. elegans (302 neurons) to larger invertebrates (Drosophila: ~100K neurons, honeybee: ~1M neurons) as intermediate steps
-
-6. **Distributed Training Infrastructure**
-
-   - Ray-based parallel experiment running
-   - Multi-GPU classical training (PyTorch DDP)
-   - Distributed quantum circuit evaluation (parallel Qiskit jobs)
-   - Cloud deployment: AWS, GCP, or Azure for large-scale benchmarks
-
-#### Metrics Focus
-
-- **Scalability**: Performance on 200×200 grids, 100+ foods, 10+ predators
-- **Real-world performance**: Sim-to-real transfer success rate
-- **Energy efficiency**: Joules per decision (neuromorphic vs. classical vs. quantum)
+   - Documentation: API docs, tutorials, architecture guides
+   - Contribution guidelines: How to add new brain architectures, environments, sensory modules
+   - Example notebooks: Reproduce key results, extend benchmarks
+   - Target: ≥3 external research groups engaging with NematodeBench
 
 #### Phase 7 Exit Criteria
 
-- ✅ 200×200 environments operational with 100+ foods and 10+ predators
-- ✅ SpikingReinforceBrain deployed on Intel Loihi with energy efficiency analysis (Joules per decision vs. GPU/CPU)
-- ✅ [If quantum path continues from Phase 6] QPU energy efficiency comparison included
-- ✅ Embodied robot successfully demonstrates at least 1 C. elegans behavior (chemotaxis, predator evasion, or foraging)
-- ✅ WormBot controlled by optimized policy with successful sim-to-real transfer (>50% sim performance)
-- ✅ Biological experiment collaboration yields quantitative validation (model prediction confirmed in peer-reviewed publication)
-- ✅ Scalability path to larger invertebrate models (~100K-1M neurons) documented with proof-of-concept demonstration
+- ✅ NematodeBench launched with ≥1 external submission
+- ✅ ≥1 paper submitted to peer-reviewed venue
+- ✅ ≥1 external collaboration established (lab partnership or quantum hardware access)
+- ✅ 300+ session quantum evaluation dataset publicly available
+- ✅ Documentation sufficient for external researchers to run experiments independently
 
 #### Go/No-Go Decision
 
-**GO to Phase 8 if**: External validation successful (embodied robot works OR biological discovery confirmed).
-**PIVOT if**: Sim-to-real transfer fails → Focus on simulation-only insights, theoretical contributions. Still valuable without embodiment.
-**STOP if**: Scalability analysis shows fundamental barriers to larger systems → Document limits, focus on C. elegans-scale insights only.
+**GO if**: External interest demonstrated (submissions, citations, collaborations).
+**PIVOT if**: No external adoption → Focus on internal research value. Re-evaluate benchmark design and accessibility.
 
 ______________________________________________________________________
 
-### Phase 8: Universality & Impact (Q4 2027 - Q2 2028)
+### Phase 8: Integration & Comprehensive Evaluation
 
-**Goal**: Demonstrate universal principles by transferring to new organisms and domains, establish quantum computational neuroscience as a recognized research direction, and achieve paradigm-shifting impact.
+**Goal**: Full system integration and definitive quantum vs. classical comparison at maximum simulation complexity. Extract universal principles and scope future directions.
+
+**Aspirational timeline**: Late 2027+
 
 #### Deliverables
 
-1. **Transfer to New Organisms**
+1. **Full Integration**
 
-   - **Drosophila (fruit fly)**: 100,000 neurons, similar sensory tasks (chemotaxis, foraging, escape)
-   - **Zebrafish larvae**: 100,000 neurons, visual predator avoidance, schooling behavior
-   - **Honeybee**: Foraging, waggle dance communication, collective decision-making
-   - **Zero-shot transfer**: Do C. elegans-trained architectures transfer to new organisms?
-   - **Fine-tuning**: How much retraining is needed for new organism?
+   - All systems running together: temporal sensing + multi-agent + continuous physics + memory + evolution
+   - Unified configuration system for combined scenarios
+   - Performance at scale: 5+ agents in continuous 2D with temporal sensing, memory, and predators
 
-2. **Domain Transfer**
+2. **Definitive Quantum vs. Classical Comparison**
 
-   - **Swarm robotics**: Multi-robot foraging, cooperative exploration, task allocation
-   - **Financial trading**: Multi-objective optimization (profit vs. risk), temporal dynamics
-   - **Network routing**: Packet routing with congestion avoidance (food = destination, predators = congestion)
-   - **Autonomous vehicles**: Navigation with multi-objective constraints (speed vs. safety)
-   - **Measure**: Performance on new domain without C. elegans-specific tuning
+   - Comprehensive evaluation at maximum complexity across all architecture families
+   - **If classical ceiling \<70%**: Full quantum architecture campaign v2 — systematic evaluation of QRH, QEF, HybridQuantum, connectome-quantum, and new architectures on enriched tasks
+   - **If classical still dominant**: Publish definitive characterisation: "Quantum advantage in biological RL requires complexity threshold X" — precise measurement of what's needed
+   - Either outcome is a valuable scientific contribution
 
 3. **Universal Principles Extraction**
 
-   - Identify domain-invariant computational principles
-   - Example: "Approach-avoidance conflicts optimally resolved by [X quantum mechanism]"
-   - Example: "Exploration-exploitation trade-off follows [Y scaling law] across all architectures"
-   - Mathematical formalization: General theorems applicable beyond C. elegans
+   - What computational principles emerge from the C. elegans deep dive?
+   - Identify domain-invariant insights: approach-avoidance conflicts, exploration-exploitation trade-offs, temporal credit assignment
+   - Mathematical formalisation of principles applicable beyond C. elegans
+   - Target: ≥3 universal principles documented and validated
 
-4. **Scaling Theory Development**
+4. **Applied Directions** [Exploratory]
 
-   - **Theoretical scaling bounds**: Time/space complexity as function of neuron count
-   - **Hierarchical composition**: Combine modules for larger-scale systems
-   - **Modular quantum circuits**: Can we compose 1000+ qubit circuits from 10-qubit modules?
-   - **Scaling trajectory**: Principles for moving from C. elegans (302 neurons) through Drosophila (~100K) toward larger systems
+   - Drug screening assays: Use simulation for compound screening (behavioral phenotyping)
+   - Neurodegeneration models: C. elegans models of Alzheimer's, Parkinson's (age-dependent behavioral changes)
+   - Brain-computer interfaces: Quantum-inspired neural decoding insights
 
-5. **Unified Theory Publication**
+5. **Future Scoping**
 
-   - Mathematical framework connecting: quantum-inspired algorithms ↔ neural computation models ↔ intelligent behavior
-   - Testable predictions across multiple levels (algorithmic, neural network, behavioral)
-   - Computational implications: When do quantum-inspired representations provide advantages for modeling biological intelligence?
-
-6. **Field Establishment: Quantum Computational Neuroscience**
-
-   - Workshop organization: Invite quantum physicists, neuroscientists, AI researchers
-   - Special journal issue: Guest edit special issue on "Quantum Computing for Neuroscience Applications"
-   - Review article: "Quantum Machine Learning for Computational Neuroscience"
-   - Funding: Apply for major grants (NSF, NIH, ERC) to establish research program
-
-7. **Open Science Impact**
-
-   - ≥10 external research groups using NematodeBench
-   - ≥100 citations to project publications
-   - Open-source contributions: PRs from external researchers
-   - Educational impact: Used in university courses on quantum ML or computational neuroscience
-
-#### Metrics Focus
-
-- **Universal principles**: ≥3 domain-invariant principles extracted and validated
-- **Transfer success**: ≥50% performance on new organisms/domains without retraining
-- **Field recognition**: Invited talks, special sessions, funding awards
+   - Organism transfer proof-of-concept: Simplified Drosophila (~100K neurons) to test principle generality
+   - 3D physics aspiration: Define requirements for full 3D substrate simulation
+   - Clinical applications: Drug discovery, behavioral assay automation
+   - Clear roadmap for post-project research directions
 
 #### Phase 8 Exit Criteria
 
-- ✅ Transfer to ≥2 new organisms (Drosophila, zebrafish, or honeybee) demonstrated with ≥50% performance
-- ✅ Domain transfer to ≥2 non-biological domains (swarm robotics, financial trading, network routing, etc.)
-- ✅ ≥3 universal principles extracted, formalized mathematically, and validated across multiple domains
-- ✅ Unified theory published in peer-reviewed venue
-- ✅ Quantum computational neuroscience recognized as research direction (workshop organized, special issue published, OR funding program established)
-- ✅ External adoption (tiered): Minimum ≥3 / Target ≥10 / Stretch ≥25 external research groups using project tools/benchmarks (verified through citations, GitHub forks, or contributions)
+- ✅ Fully integrated simulation operational (all systems combined)
+- ✅ Definitive quantum vs. classical comparison at enriched complexity published
+- ✅ ≥3 universal principles documented with supporting evidence
+- ✅ Clear roadmap for post-project directions (organism transfer, 3D physics, clinical applications)
 
-#### Go/No-Go Decision
+______________________________________________________________________
 
-**SUCCESS (Phase complete) if**: Universal principles extracted AND recognized through publication in top-tier venue.
-**PARTIAL SUCCESS if**: Transfer works but principles are domain-specific → Still valuable contribution to computational neuroscience and quantum ML.
-**REFRAME if**: Universality doesn't hold → Focus on C. elegans-specific insights as deep case study. Publish comprehensive analysis of "when quantum works and why."
+## Quantum Re-evaluation Checkpoints
+
+Instead of concentrating quantum work in a single phase, quantum re-evaluation is distributed across the roadmap as complexity milestones are reached:
+
+| Phase | Complexity Milestone | Quantum Re-evaluation | Rationale |
+|-------|---------------------|----------------------|-----------|
+| **3** | Non-Markovian temporal dependencies | Re-test QRH (temporal advantage), QEF on harder tasks | QRH showed genuine advantage on temporal pursuit; richer temporal structure may amplify |
+| **4** | Exponential multi-agent state space | Evaluate quantum game theory, entangled strategies | Strongest theoretical case for quantum advantage (quantum game theory) |
+| **6** | Continuous action/state + connectome | **MAJOR**: Full quantum campaign v2 if classical \<70% | All identified complexity thresholds potentially crossed |
+| **8** | Full integration | Definitive comparison at maximum complexity | Final answer on quantum advantage at this simulation scale |
+
+Each checkpoint follows the same protocol:
+
+1. Establish classical baselines on enriched tasks
+2. Measure classical ceiling (post-convergence success rate)
+3. If ceiling \<threshold: launch targeted quantum evaluation
+4. If ceiling remains high: document and move to next checkpoint
+
+______________________________________________________________________
+
+## Complexity Dashboard
+
+A living metric tracking the five quantum advantage thresholds identified by the [strategic assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage):
+
+| Dimension | Phase 2 (current) | Phase 3 target | Phase 4 target | Phase 6 target | Quantum threshold |
+|-----------|-------------------|----------------|----------------|----------------|-------------------|
+| **Input dimensionality** | 2-9D | ~15-20D | >30D | >50D (continuous) | >30D with cross-modal correlations |
+| **Partial observability** | Viewport only | Temporal memory limited | Multi-agent fog-of-war | Realistic sensing range | Information-theoretic limits on classical |
+| **Multi-agent** | 1 | 1 | 5-10 | 5-10 | 5+ interacting agents |
+| **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Full non-Markovian | Very long non-Markovian dependencies |
+| **Classical ceiling** | 94-98% | Target \<85% | Target \<75% | Target \<70% | \<70% on challenging tasks |
+
+**Update protocol**: After each phase's classical baselines are established, update this dashboard with **measured** values (replacing the targets). Quantum checkpoints activate when thresholds are crossed. Classical ceiling targets are aspirational — the key criterion is measurable difficulty increase, not hitting a specific number.
+
+______________________________________________________________________
+
+## Biological Fidelity Ladder
+
+Progressive realism across the roadmap phases:
+
+| Level | Phase | Fidelity Description |
+|-------|-------|---------------------|
+| **1** | 0-2 ✅ | Grid-world, spatial gradient sensing, stateless reflexes, single agent, discrete actions |
+| **2** | 3 | Temporal sensing (dT/dt, dC/dt, dO2/dt), short-term memory, non-Markovian decisions |
+| **3** | 4 | Multi-agent, pheromone communication, social dynamics, competitive/cooperative behaviors |
+| **4** | 5 | Evolved behaviors, transgenerational epigenetic memory, co-evolutionary arms races |
+| **5** | 6 | Continuous 2D physics, realistic locomotion, connectome-constrained 302-neuron architecture |
+| **6** | Future | 3D substrate (soil mechanics), full sensory suite, population dynamics, life cycle simulation |
+
+Each level builds on the previous, with the entire stack running simultaneously in later phases. Level 5 represents the target state for this roadmap; Level 6 is aspirational for future work.
 
 ______________________________________________________________________
 
@@ -993,43 +772,37 @@ This roadmap is designed to be **adaptive, not linear**. Each phase includes exp
 ### Decision Gate Principles
 
 1. **Evidence-driven**: Decisions based on experimental results, not assumptions
-2. **Fail fast**: If a key assumption fails (e.g., quantum advantage), pivot immediately rather than continuing down an unproductive path
+2. **Fail fast**: If a key assumption fails, pivot immediately rather than continuing unproductively
 3. **Multiple paths to impact**: Alternative success modes if primary hypotheses don't hold
 4. **Scientific rigor**: Better to publish "quantum didn't work but here's why" than to force false claims
+5. **Quantum checkpoints, not quantum phases**: Quantum re-evaluation is distributed across the roadmap, triggered by complexity milestones rather than calendar dates
 
 ### Potential Pivot Scenarios
 
-The roadmap includes multiple pivot points to maintain scientific value even if primary hypotheses fail:
+- **Scenario 1: Quantum shows no advantage even at high complexity** → The C. elegans simulation is still the most complete ever built. Publish comprehensive characterisation of complexity thresholds. Focus on biological insights and computational neuroscience impact.
+- **Scenario 2: Multi-agent complexity too high** → Deepen single-agent biological fidelity (continuous physics, connectome, richer sensing) instead.
+- **Scenario 3: Temporal sensing doesn't increase difficulty** → Classical RNNs handle temporal derivatives trivially. Skip to multi-agent as the primary complexity driver.
+- **Scenario 4: Connectome doesn't improve performance** → Valuable negative result: "Evolution's wiring is not optimal for RL." Publish and continue with unconstrained architectures.
+- **Scenario 5: Continuous physics too expensive** → Keep continuous action space but simplify physics. The action space expansion alone may create sufficient complexity.
+- **Scenario 6: External collaboration fails** → Focus on simulation-only insights. Use published C. elegans behavioral datasets for validation instead of lab partnerships.
 
-- **Scenario 1: Quantum shows no advantage** → Focus on spiking vs. classical architecture comparison. Publish comprehensive negative result: "Why Quantum Doesn't Help Biological Navigation: Lessons for Quantum ML"
-- **Scenario 2: Multi-agent complexity too high** → Deepen single-agent biological fidelity, longer-horizon planning, more complex sensory integration
-- **Scenario 3: Learning doesn't improve performance** → Focus on innate behavior repertoire mapping. Document evolutionary optimization of fixed policies.
-- **Scenario 4: Hardware too noisy** → Quantum-inspired classical algorithms (evolutionary optimization, variational methods applied to classical networks)
-- **Scenario 5: Scaling fails** → Deep dive into C. elegans-specific insights as tractable case study. Extract principles applicable at 302-neuron scale.
-- **Scenario 6: Sim-to-real transfer fails** → Focus on simulation-only theoretical insights, mathematical frameworks, computational principles
-- **Scenario 7: Universality doesn't hold** → C. elegans as deep case study in computational neuroscience, quantum ML benchmarking
-
-Each pivot maintains scientific value and publishable outcomes. The goal is impactful science, not forcing a predetermined narrative.
+Each pivot maintains scientific value and publishable outcomes.
 
 ### External Dependency Risk Mitigation
 
-Several critical deliverables depend on external partners. Fallback strategies:
-
 | Dependency | Risk | Mitigation |
 |------------|------|------------|
-| **Neuroscience lab collaboration** (Phases 2, 7) | Labs decline or slow response | Use published C. elegans behavioral datasets; partner with smaller labs or citizen science projects |
-| **IBM Quantum access** (Phase 0+) | Queue times, access limits, service changes | Maintain simulator-first development; explore IonQ/Rigetti as alternatives; budget for paid access |
-| **WormBot integration** (Phases 5-7) | Project inactive or incompatible | Develop minimal embodied testbed in-house; partner with swarm robotics labs as alternative |
-| **Intel Loihi access** (Phase 7) | Hardware access denied | Use SpiNNaker or software neuromorphic simulators; focus on algorithmic insights over hardware deployment |
+| **Neuroscience lab collaboration** (Phase 7) | Labs decline or slow response | Use published behavioral datasets; partner with smaller labs or citizen science projects |
+| **IBM Quantum access** (quantum checkpoints) | Queue times, access limits | Maintain simulator-first development; explore IonQ/Rigetti alternatives |
+| **OpenWorm integration** (Phase 7) | Project inactive or incompatible | Develop minimal integration in-house; focus on connectome data (publicly available) |
+| **External NematodeBench adoption** (Phase 7) | No uptake | Focus on internal research value; improve accessibility and documentation |
 
 ### Adaptive Execution
 
-- **Quarterly reviews**: Assess progress against exit criteria, adjust timelines and priorities
-- **Annual replanning**: Major roadmap revisions based on cumulative findings
-- **Continuous validation**: Biological experiments, hardware tests, external collaborations throughout all phases (not just at the end)
+- **Phase reviews**: Assess progress against exit criteria at each phase boundary
+- **Complexity dashboard updates**: Measure and record quantum advantage thresholds after each phase
+- **Quantum checkpoints**: Triggered by measured complexity milestones, not calendar dates
 - **Open science**: Public benchmarks and preprints enable community feedback and course correction
-
-This adaptive approach maximizes the probability of **publishable, impactful outcomes** regardless of whether quantum provides advantages, while maintaining the ambitious north star goal of mapping C. elegans behaviors and extracting universal principles of biological intelligence.
 
 ______________________________________________________________________
 
@@ -1041,40 +814,22 @@ Throughout all phases, the following validation activities occur continuously:
 
 **Objective**: Ensure models align with real C. elegans biology and generate testable predictions.
 
-- **Phase 0-1**: Validate chemotaxis and predator evasion against published behavioral data
-- **Phase 2**: First biological prediction tested experimentally (collaboration with neuroscience lab)
-- **Phase 3**: Test memory timescale predictions (STAM, ITAM, LTAM) with real worms
-- **Phase 4**: Validate evolved behaviors match natural C. elegans adaptations (e.g., foraging efficiency, predator avoidance latency, exploration patterns)
-- **Phase 5**: Validate multi-agent behaviors against C. elegans social behavior literature
-- **Phase 6**: Quantum hardware validation with biological task benchmarks
-- **Phase 7**: Major biological discovery published (model → experiment → insight)
-- **Phase 8**: Predictions generalize to other organisms (Drosophila, zebrafish)
+- **Phases 0-2** ✅: Validated chemotaxis, thermotaxis, and predator evasion against published behavioral data
+- **Phase 3**: Validate temporal sensing against published dT/dt, dC/dt behavioral data
+- **Phase 4**: Validate social behaviors against aggregation and pheromone literature
+- **Phase 5**: Validate evolved behaviors against natural C. elegans adaptations
+- **Phase 6**: Validate locomotion statistics against real worm movement data
+- **Phase 7**: First experimental collaboration — model prediction tested with real C. elegans
+- **Phase 8**: Comprehensive biological validation across all behaviors
 
-**Partnerships**: Establish MOUs with 2-3 C. elegans labs (e.g., Bargmann Lab at Rockefeller, Sengupta Lab at Brandeis, Horvitz Lab at MIT)
+### Quantum Hardware Validation (At Checkpoints)
 
-### Quantum Hardware Validation (Every Phase)
+**Objective**: When quantum checkpoints activate, benchmark on real quantum devices.
 
-**Objective**: Regularly benchmark on real quantum devices to track hardware progress and algorithm robustness.
-
-- **Phase 0**: First successful QPU run (QVarCircuitBrain on IBM Quantum)
-- **Phase 1-4**: Monthly benchmarks on available backends (track noise, fidelity, queue times)
-- **Phase 5-6**: Weekly benchmarks as algorithm complexity increases
-- **Phase 6**: Daily benchmarks during intensive quantum algorithm development
-- **Phase 7-8**: Production deployment pipeline (automated QPU testing in CI/CD)
-
-**Hardware Partners**: IBM Quantum, Q-CTRL (Fire Opal), IonQ (if accessible), Rigetti (if accessible)
-
-### Embodied Testing (Phases 2+)
-
-**Objective**: Validate that simulation-trained policies transfer to physical robots.
-
-- **Phase 2**: Initial WormBot contact (explore collaboration, assess platform compatibility)
-- **Phase 3**: Define sim-to-real transfer requirements, begin policy export prototyping
-- **Phase 5**: Export first policy for WormBot testing (simple chemotaxis)
-- **Phase 7**: Full WormBot deployment with multiple behaviors (foraging, evasion, multi-agent)
-- **Phase 8**: Transfer to other robotic platforms (swarm robotics testbeds)
-
-**Partnerships**: WormBot project, swarm robotics labs, soft robotics groups
+- **Phase 3 checkpoint**: If triggered, run QRH on IBM Quantum with temporal tasks
+- **Phase 6 checkpoint**: Major QPU deployment — all viable quantum architectures on enriched tasks
+- **Phase 8**: Production deployment pipeline for final comparison
+- **Error mitigation**: Q-CTRL Fire Opal integration for noise suppression
 
 ______________________________________________________________________
 
@@ -1082,140 +837,133 @@ ______________________________________________________________________
 
 The project tracks success across 6 primary dimensions:
 
-### 1. Generalization
+### 1. Biological Fidelity
 
-**Definition**: Performance on unseen environments, tasks, or organisms without retraining.
-
-**Metrics**:
-
-- Zero-shot transfer accuracy (% of original performance)
-- Fine-tuning efficiency (episodes needed to match original performance)
-- Cross-organism transfer (C. elegans → Drosophila → zebrafish)
-- Cross-domain transfer (foraging → robotics → finance)
-
-**Targets** (Minimum / Target / Stretch):
-
-- **Phase 1**: ≥50% / ≥70% / ≥85% performance on unseen predator types
-- **Phase 3**: ≥40% / ≥60% / ≥75% performance on novel associative learning tasks
-- **Phase 8**: ≥30% / ≥50% / ≥70% performance on new organisms without retraining
-
-### 2. Hardware Efficiency
-
-**Definition**: Computational resources required for training and inference.
+**Definition**: How accurately the simulation captures real C. elegans behavior.
 
 **Metrics**:
 
-- **Quantum**: Circuit depth, gate count, qubit count, shots per decision
-- **Classical**: Parameter count, FLOPs, memory (MB), training time (hours)
-- **Spiking**: Neuron count, synapse count, spike count, energy (Joules per decision)
-- **All**: Wall-clock time to convergence, GPU-hours, QPU-hours, total cost ($)
+- Biological fidelity level achieved (see [Biological Fidelity Ladder](#biological-fidelity-ladder))
+- Quantitative match to published C. elegans behavioral data (chemotaxis indices, escape latencies, aggregation patterns)
+- Number of biological predictions generated and tested
 
 **Targets**:
 
-- **Phase 2**: Identify minimal sufficient architectures (fewest parameters for target performance)
-- **Phase 6**: Quantum error mitigation reduces QPU resource usage by ≥20%
-- **Phase 7**: Neuromorphic deployment achieves ≥10× energy efficiency vs. GPU
+- **Phase 3**: Temporal sensing matches published dT/dt sensitivity data
+- **Phase 6**: Locomotion statistics match real C. elegans (speed, turn angle, reversal frequency)
+- **Phase 7**: ≥1 biological prediction tested experimentally
 
-### 3. Biological Insight
+### 2. Complexity Achievement
 
-**Definition**: Novel discoveries about C. elegans or general principles of biological intelligence.
+**Definition**: Progress toward quantum advantage complexity thresholds.
 
 **Metrics**:
 
-- Biological predictions generated (count)
-- Predictions tested experimentally (count)
-- Predictions confirmed (%, significance level)
-- Mechanistic insights (does model reveal "how" behavior emerges?)
-- Publications in neuroscience journals (count)
+- Complexity dashboard values (5 dimensions)
+- Classical ceiling on hardest tasks
+- State/action space dimensionality
 
 **Targets**:
 
-- **Phase 2**: ≥1 prediction tested and confirmed (p < 0.05)
-- **Phase 7**: ≥1 major biological discovery published in peer-reviewed journal (e.g., Nature, Science, eLife, PNAS, Current Biology)
-- **Phase 8**: ≥3 universal principles applicable to other organisms
+- **Phase 3**: Input dimensionality >15D, classical ceiling measurably lower than Phase 2 baseline (aspirational: \<85%)
+- **Phase 4**: Multi-agent ≥5, classical ceiling measurably lower than Phase 3 (aspirational: \<75%)
+- **Phase 6**: Continuous action space, classical ceiling measurably lower than Phase 4 (aspirational: \<70%)
+
+### 3. Architecture Insight
+
+**Definition**: Understanding of when and why architectures succeed or fail.
+
+**Metrics**:
+
+- Quantum advantage demonstrated (task count, effect size, significance)
+- Complexity threshold characterisation (precise boundaries)
+- Connectome advantage (constrained vs. unconstrained gap)
+
+**Targets**:
+
+- **Phase 6**: Connectome-constrained vs. unconstrained comparison with p < 0.05
+- **Phase 8**: Definitive quantum vs. classical comparison at maximum complexity
 
 ### 4. Sample Efficiency
 
-**Definition**: Episodes or timesteps required to achieve target performance.
+**Definition**: Episodes required to achieve target performance.
 
 **Metrics**:
 
-- Episodes to convergence (when variance < 5% for 10 consecutive runs)
-- Timesteps to first success (e.g., first food collected, first predator evaded)
-- Data efficiency (performance per 1000 timesteps)
+- Episodes to convergence
+- Performance per 1000 timesteps
+- Memory utilisation efficiency (STAM/ITAM/LTAM impact)
 
-**Targets** (Minimum / Target / Stretch):
+**Targets**:
 
-- **Phase 1**: Reduce convergence episodes by 15% / 30% / 50% through better algorithms
-- **Phase 3**: Memory systems reduce sample complexity by 20% / 50% / 70% (leverage past experience)
-- **Phase 4**: Evolved architectures converge in 50% fewer episodes than hand-designed
+- **Phase 3**: Memory systems reduce sample complexity by ≥20%
+- **Phase 5**: Evolved architectures converge in 50% fewer episodes than hand-designed
 
-### 5. Robustness
+### 5. Community Impact
+
+**Definition**: External adoption and scientific influence.
+
+**Metrics**:
+
+- NematodeBench external submissions
+- Citations to project publications
+- External research groups engaging
+- Open-source contributions (PRs from external researchers)
+
+**Targets**:
+
+- **Phase 7**: ≥3 external groups engaging, ≥1 paper submitted
+- **Phase 8**: ≥10 external groups, ≥100 citations
+
+### 6. Robustness
 
 **Definition**: Performance under noise, missing sensors, or adversarial conditions.
 
 **Metrics**:
 
 - Sensor dropout robustness (performance with 10%, 20%, 50% sensors disabled)
-- Noise robustness (performance with Gaussian noise on observations)
-- Adversarial robustness (performance under worst-case perturbations)
-- Hardware noise tolerance (QPU performance degradation vs. simulator)
+- Noise robustness (Gaussian noise on observations)
+- Hardware noise tolerance (QPU performance vs. simulator)
 
 **Targets**:
 
-- **Phase 2**: ≥80% performance with 20% sensor dropout
-- **Phase 6**: Quantum error mitigation maintains ≥70% of simulator performance on real QPU
-- **Phase 7**: Sim-to-real transfer maintains ≥60% of simulation performance
-
-### 6. Interpretability
-
-**Definition**: Ability to explain and understand model decisions.
-
-**Metrics**:
-
-- Human-understandable explanations (qualitative assessment)
-- Feature attribution accuracy (measured by feature ablation)
-- Hypothesis generation (count of testable hypotheses from model analysis)
-- Mechanistic alignment (does explanation match known biology?)
-
-**Targets**:
-
-- **Phase 2**: All target architectures have operational interpretability tools
-- **Phase 3**: Memory mechanisms interpretable and matched to biological substrates
-- **Phase 8**: Universal principles extractable from interpretability analysis
+- **Phase 3**: ≥80% performance with 20% sensor dropout
+- **Phase 6**: Connectome architecture graceful degradation under circuit ablation (matches biological lesion data)
 
 ______________________________________________________________________
 
 ## Success Levels
 
-The project defines three levels of success, each representing valuable scientific contribution. These map to the [Success Metrics Framework](#success-metrics-framework) dimensions.
+Three levels of success, each representing valuable scientific contribution:
 
 ### Minimum Viable Success
 
-*Primary metrics: Interpretability, Hardware Efficiency*
+*Primary metrics: Biological Fidelity, Architecture Insight*
 
-- Comprehensive architecture comparison (quantum vs. classical vs. spiking) with rigorous statistical analysis
-- Public benchmark suite (NematodeBench) with external adoption
-- Clear documentation of which optimization methods work for which architectures
-- At least one peer-reviewed publication on architecture comparison methodology
+- Highest-fidelity C. elegans behavioral simulation (temporal sensing, memory, multi-agent)
+- Comprehensive architecture comparison published (quantum negative result at grid-world complexity + enriched re-evaluation results)
+- NematodeBench operational with external adoption
+- Clear documentation of complexity thresholds for quantum advantage
 
 ### Target Success
 
-*Primary metrics: Biological Insight, Generalization, Sample Efficiency*
+*Primary metrics: Complexity Achievement, Community Impact*
 
-- Demonstrated quantum advantage on at least one biologically-relevant task (or compelling explanation of why not)
-- Biological predictions validated experimentally with C. elegans lab collaboration
-- Memory and learning systems that improve agent performance over static policies
-- Transfer to at least one new domain (embodied robot or other organism)
+- Continuous physics + connectome-constrained architectures operational
+- Classical complexity ceiling identified (where classical genuinely struggles)
+- Quantum advantage demonstrated on enriched tasks OR definitive characterisation of required complexity
+- ≥1 biological prediction validated experimentally with lab collaboration
+- ≥3 external research groups building on NematodeBench
 
 ### Stretch Success
 
-*Primary metrics: Generalization (cross-organism), Robustness, all dimensions at stretch targets*
+*Primary metrics: All dimensions at stretch targets*
 
-- Universal computational principles extracted and validated across multiple domains
-- Quantum computational neuroscience recognized as a research direction (workshop, special issue, or funding program)
-- Sim-to-real transfer successful on embodied platform
-- External research groups actively building on project tools and benchmarks
+- Full 302-neuron connectome running in continuous environment with multi-agent dynamics
+- Universal computational principles extracted and validated
+- Quantum computational neuroscience recognised as research direction (workshop, special issue, or funding)
+- External research groups actively extending the project
+- Biological discoveries published in peer-reviewed journals
 
 ______________________________________________________________________
 
@@ -1229,186 +977,139 @@ ______________________________________________________________________
 
 **Differentiation**:
 
-- Quantum Nematode: Neural computation paradigms, behavioral optimization, quantum ML
-- OpenWorm: Cellular-level simulation, muscle physics, connectome-based modeling
+- Quantum Nematode: Neural computation paradigms, behavioral optimization, quantum ML, RL-trained networks
+- OpenWorm: Cellular-level simulation, muscle physics, connectome-based biophysical modeling
 
 **Integration Points**:
 
-1. Export optimized policies from Quantum Nematode → control OpenWorm's simulated muscles
-2. Import OpenWorm's connectome data → seed quantum circuit topology
-3. Validate: Do optimized behaviors match OpenWorm's biophysical predictions?
-
-**Collaboration Opportunities**:
-
-- Share behavioral datasets
-- Cross-validate predictions (algorithm-level vs. cellular-level)
-- Co-organize workshops on multi-scale modeling
+1. Phase 6: Use the same connectome data (wiring diagram) but different approaches — we train weights via RL on the real topology; they simulate biophysics
+2. Phase 7: Explore exporting RL-trained policies to control OpenWorm's simulated muscles
+3. Cross-validation: Do our behaviorally-optimized networks predict the same circuit importance as their biophysical model?
 
 ### WormBot
 
 **Focus**: Hardware embodiment, real-world sensors, physical nematode-inspired robots
 
-**Relationship**: **Validation platform**
+**Relationship**: **Potential future validation platform**
 
-**Integration Points**:
+**Integration Points** (Phase 7+):
 
-1. Deploy Quantum Nematode-optimized policies on WormBot hardware
-2. Test sim-to-real transfer (does simulation learning work on physical robot?)
-3. Real-world benchmarks: Chemical sensing (if available), obstacle navigation, multi-robot coordination
-
-**Collaboration Opportunities**:
-
-- WormBot provides embodied validation testbed
-- Quantum Nematode provides optimized control policies
-- Joint experiments on real-world foraging tasks
+1. Export optimized policies for robotic deployment
+2. Sim-to-real transfer testing
+3. Real-world benchmarks with physical sensors
 
 ### Quantum Computing Ecosystem
 
-**IBM Quantum**: Hardware provider, Qiskit framework, access to real QPUs
-
+**IBM Quantum**: Hardware provider, Qiskit framework, QPU access
 **Q-CTRL**: Quantum error suppression (Fire Opal), circuit optimization
 
-**Relationship**: **Technology partners**
-
-**Engagement**:
-
-- Regular benchmarking on IBM Quantum hardware
-- Quantum algorithm development using Qiskit ecosystem
-- Potential joint publications on quantum advantage in RL
+**Engagement**: Benchmarking at quantum checkpoints (Phases 3, 4, 6, 8), not continuous hardware testing. Simulator-first development with QPU validation at milestones.
 
 ### Neuroscience Community
 
 **Target Labs**: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon)
 
-**Relationship**: **Experimental validation partners**
+**Collaboration Model** (Phase 7):
 
-**Collaboration Model**:
-
-1. Quantum Nematode generates biological predictions from model analysis
-2. Neuroscience lab designs and executes experiments
+1. We generate biological predictions from model analysis
+2. Lab designs and executes experiments
 3. Co-authored publications validating (or refuting) predictions
-4. Iterative refinement: Experimental results → model updates → new predictions
+4. Iterative: experimental results → model updates → new predictions
 
-**Value Proposition for Labs**:
+**Value Proposition**: Computational predictions guide experiments; access to novel analysis tools; high-impact co-authored publications.
 
-- Computational predictions guide experiments (hypothesis generation)
-- Access to quantum ML expertise
-- Novel analysis tools (interpretability, mechanism discovery)
-- High-impact co-authored publications
+### NematodeBench Community
+
+**Goal**: Build an open-source community around biologically-grounded RL benchmarks.
+
+**Strategy**:
+
+- Launch when simulation is sufficiently differentiated from standard RL benchmarks (Phase 7)
+- Provide Docker images, evaluation scripts, submission guidelines
+- Include the 300+ session quantum evaluation dataset as baseline reference
+- Tutorials for extending the benchmark with new architectures, environments, or biological models
 
 ______________________________________________________________________
 
 ## Future Directions
 
-Beyond Phase 8 (2027+), potential research directions include:
+Beyond the current roadmap phases, potential research directions include:
 
-### 1. Hybrid Behavioral-Cellular Models
+### 1. Organism Transfer
 
-- Combine behavioral abstraction (current approach) with selective cellular models
-- Example: Behavioral foraging + detailed AFD neuron biophysics for thermotaxis
-- Validation: Does behavioral optimization match cellular-level predictions?
+- **Drosophila (fruit fly)**: ~100K neurons, similar sensory tasks, well-studied connectome (partial)
+- **Zebrafish larvae**: ~100K neurons, visual predator avoidance, schooling behavior
+- **Approach**: Transfer learned principles and architectural insights from C. elegans deep dive. Proof-of-concept, not full simulation.
 
-### 2. Quantum-Classical Computational Comparisons
+### 2. Three-Dimensional Physics
 
-- Systematic benchmarking of quantum-inspired vs. purely classical algorithms
-- Identify task features where quantum representations provide measurable advantages
-- Develop theoretical frameworks explaining when and why quantum approaches help (or don't)
+- Full 3D substrate simulation (soil mechanics, agar surface, burrowing)
+- Fluid dynamics for movement in aqueous media
+- OpenWorm integration for body physics
+- Significantly harder computationally but most biologically realistic
 
 ### 3. Clinical Applications
 
-- Neurological disease models: C. elegans models of Alzheimer's, Parkinson's
-- Drug discovery: Screen compounds using optimized behavioral assays
-- Brain-computer interfaces: Quantum-inspired neural decoding
+- Neurological disease models (C. elegans Alzheimer's, Parkinson's analogs)
+- Drug discovery: Compound screening via behavioral phenotyping
+- Aging studies: Age-dependent behavioral changes (C. elegans lifespan ~2-3 weeks)
 
-### 4. Larger-Scale Neural Systems
+### 4. Hybrid Behavioral-Cellular Models
 
-- Scaling toward larger invertebrate nervous systems (Drosophila ~100K neurons, honeybee ~1M neurons)
-- Compositional reasoning: Combine learned modules for novel tasks
-- Meta-learning: Learning to learn across domains
+- Combine behavioral abstraction with selective cellular models
+- Example: RL-trained behavioral foraging + detailed AFD neuron biophysics for thermotaxis
+- Cross-validation with OpenWorm's cellular-level predictions
 
-### 5. Quantum Advantage for AI
+### 5. Quantum Advantage for General AI
 
-- Beyond C. elegans: Quantum advantages in general RL, NLP, computer vision?
-- Theoretical foundations: When does quantum help? (BQP vs. P for AI tasks)
-- Hardware roadmap: What quantum devices enable practical AI applications?
+- Extract insights: When does quantum help for RL tasks?
+- Apply findings to broader quantum ML research
+- Contribute to theoretical understanding of quantum computational advantage
 
 ______________________________________________________________________
 
 ## Technical Debt & Maintenance
 
-The following items are tracked as ongoing maintenance, not blocking new phases:
+### Resolved (Phases 0-2)
 
-### High Priority (Fix in Phase 0)
+- ~~QQLearningBrain completion~~ — Evaluated, not competitive; deprioritised
+- ~~MLPReinforceBrain loss bug~~ — Investigated and documented
+- ~~Grid size hardcoding~~ — Fixed
+- ~~Statistical analysis framework~~ — Implemented (confidence intervals, significance tests)
 
-1. **QQLearningBrain Completion**
+### Active (Address by Phase 3)
 
-   - Implement tracking metrics (episode data collection)
-   - Add Qiskit runtime integration (for real hardware)
-   - Fix parameter initialization (currently hardcoded)
+1. **Sensory input refactoring** — Current spatial gradient inputs need parallel temporal derivative infrastructure
+2. **Memory buffer architecture** — Design efficient STAM buffers compatible with all brain architectures
+3. **Visualization improvements** — Gradient flow viz, spike raster plots, attention maps
+4. **Documentation** — API documentation, tutorials, architecture guides (prerequisite for Phase 7)
 
-2. **MLPReinforceBrain Loss Bug**
+### Lower Priority (Address as needed)
 
-   - Investigate loss calculation (flagged in codebase)
-   - Fix incorrect loss computation in later sessions
-   - Add unit tests for loss calculation
-
-3. **Grid Size Hardcoding**
-
-   - QQLearningBrain: Grid size hardcoded to 10 instead of derived from environment
-   - Fix: Read grid size from environment config
-
-### Medium Priority (Address by Phase 3)
-
-4. **Statistical Analysis Framework**
-
-   - Add confidence intervals to all benchmarks
-   - Implement significance testing (t-test, ANOVA, Bonferroni correction)
-   - Effect size calculations (Cohen's d)
-
-5. **Visualization Improvements**
-
-   - Gradient flow visualization (show how gradients propagate through surrogate gradient layers)
-   - Spike raster plots for spiking networks (membrane potential + spike times)
-   - Attention maps for classical networks (if using attention)
-
-6. **Documentation**
-
-   - API documentation
-   - Tutorials for new users
-   - Video demos
-
-### Lower Priority (Nice-to-Have)
-
-7. **Code Quality**
-
-   - Address remaining Ruff/Pyright warnings
-   - Increase test coverage to ≥90%
-   - Performance profiling and optimization
-
-8. **Configuration System**
-
-   - Hyperparameter search (grid search, Bayesian optimization)
-   - Experiment templates for common tasks
-   - Configuration validation improvements
+5. **Code quality** — Address remaining Ruff/Pyright warnings, increase test coverage
+6. **Configuration system** — Hyperparameter search, experiment templates
+7. **Performance profiling** — Optimization for multi-agent and continuous physics workloads
 
 ______________________________________________________________________
 
 ## Conclusion
 
-This roadmap charts a 3.5-year adaptive path from current strong foundations to potential paradigm-shifting discoveries in quantum computational neuroscience and biological intelligence. The incremental, evidence-driven, phase-based approach ensures:
+This roadmap charts a milestone-based adaptive path from strong completed foundations (Phases 0-2) through progressively increasing biological fidelity toward the most complete C. elegans behavioral simulation available, while systematically testing quantum advantage hypotheses at each complexity milestone.
 
-1. **Scientific Rigor**: Each phase builds on validated results from previous phases
-2. **External Validation**: Continuous testing with real C. elegans, quantum hardware, and embodied robots
-3. **Theoretical Depth**: Not just empirical comparisons, but mathematical frameworks and universal principles
-4. **Practical Impact**: Open-source benchmarks, reproducible science, and technological applications
-5. **World-Class Ambition**: Explicitly targeting field-defining contributions and paradigm-shifting discoveries
+The dual-goal approach ensures scientific value regardless of quantum outcomes:
 
-The project's unique position at the intersection of quantum computing, neuroscience, and AI—grounded in a tractable biological organism (C. elegans) with a fully mapped connectome—provides unparalleled opportunities for breakthrough discoveries.
+1. **If quantum shows advantage at higher complexity**: Groundbreaking result demonstrating that biological fidelity creates the conditions for quantum computational advantage — a new research direction linking quantum computing to neuroscience.
 
-By systematically mapping C. elegans behaviors across multiple architectures, validating predictions with real biology, and extracting universal principles, this project aims to answer fundamental questions:
+2. **If quantum shows no advantage**: The simulation itself is a major contribution to computational neuroscience, and the comprehensive characterisation of complexity thresholds (from 300+ sessions at grid-world complexity through enriched environments) provides definitive guidance for the quantum ML field.
 
-- **When do quantum-inspired algorithms outperform classical approaches for modeling biological intelligence?** (Empirical benchmarks)
-- **What computational principles enable intelligent behavior?** (Theoretical frameworks)
-- **How do we build efficient systems that capture biological decision-making?** (Engineering insights)
+The project's unique position — the only effort combining real connectome topology + reinforcement learning + quantum architecture comparison, grounded in the only organism with a fully mapped nervous system — provides unparalleled opportunities for breakthrough discoveries.
 
-The roadmap is ambitious but achievable with disciplined execution, strategic partnerships, and commitment to open science. The adaptive decision gates ensure scientific value even if primary hypotheses fail: negative results are valuable when rigorously documented. Success at the Minimum Viable level would represent solid scientific contribution; Target Success would establish new research directions; Stretch Success would fundamentally advance our understanding of biological intelligence.
+Key principles:
+
+1. **Biological fidelity drives complexity**: Each phase makes the simulation more realistic AND creates harder computational problems
+2. **Quantum checkpoints, not quantum phases**: Re-evaluation is triggered by measured complexity milestones
+3. **C. elegans deep dive**: Stay with the only fully-mapped organism and go deeper than anyone else
+4. **Community and validation**: External collaboration and open-source adoption amplify impact
+5. **Adaptive execution**: Every phase has go/no-go gates; negative results are valuable when rigorous
+
+By the completion of Phase 8, this project will have either demonstrated quantum advantage on biologically-grounded tasks or provided the most comprehensive negative result in quantum RL — along with the deepest C. elegans behavioral simulation, connectome-constrained architectures, and universal computational principles extracted from a uniquely tractable biological system.
