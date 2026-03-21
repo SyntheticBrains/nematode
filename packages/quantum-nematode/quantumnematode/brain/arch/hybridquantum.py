@@ -43,7 +43,7 @@ References
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from quantumnematode.utils.session import generate_session_id
 from pathlib import Path
 
 import numpy as np
@@ -579,8 +579,8 @@ class HybridQuantumBrain(ClassicalBrain):
         self._step_count = 0
         self._episode_count = 0
 
-        # Session ID for weight saving (set via set_session_id, fallback to timestamp)
-        self._session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        # Session ID for weight saving (set via set_session_id, fallback to unique ID)
+        self._session_id = generate_session_id()
 
         # Qiskit backend (lazy)
         self._backend = None

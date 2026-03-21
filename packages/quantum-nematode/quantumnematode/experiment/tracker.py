@@ -23,6 +23,7 @@ from quantumnematode.experiment.metadata import (
     SystemMetadata,
 )
 from quantumnematode.experiment.system_utils import capture_system_info
+from quantumnematode.utils.session import generate_session_id
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import PerformanceMetrics, SimulationResult, TerminationReason
 from quantumnematode.validation.chemotaxis import (
@@ -603,8 +604,6 @@ def capture_experiment_metadata(
         Complete experiment metadata.
     """
     # Use session ID as experiment ID if provided, otherwise generate a unique one
-    from quantumnematode.utils.session import generate_session_id
-
     timestamp = datetime.now(UTC)
     experiment_id = session_id if session_id is not None else generate_session_id()
 

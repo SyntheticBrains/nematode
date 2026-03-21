@@ -10,7 +10,6 @@ import argparse
 import json
 import shutil
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
 from quantumnematode.benchmark import (
@@ -21,6 +20,7 @@ from quantumnematode.benchmark import (
     update_readme,
 )
 from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES, QUANTUM_BRAIN_TYPES, BrainType
+from quantumnematode.utils.session import generate_session_id
 from quantumnematode.experiment import (
     MIN_SESSIONS_REQUIRED,
     AggregateMetrics,
@@ -297,7 +297,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         notes = notes_input or None
 
     # Generate submission ID early (needed for artifacts directory)
-    submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    submission_id = generate_session_id()
 
     # Create consolidated benchmark artifacts folder
     repo_root = Path(__file__).parent.parent

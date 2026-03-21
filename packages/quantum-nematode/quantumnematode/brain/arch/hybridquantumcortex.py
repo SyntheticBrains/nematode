@@ -51,7 +51,7 @@ References
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from quantumnematode.utils.session import generate_session_id
 from pathlib import Path
 
 import numpy as np
@@ -738,8 +738,8 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             self._cortex_alpha_warmup_delay = 0
             self._current_cortex_alpha = config.surrogate_alpha
 
-        # Session ID for weight saving
-        self._session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        # Session ID for weight saving (set via set_session_id, fallback to unique ID)
+        self._session_id = generate_session_id()
 
         # Qiskit backends (lazy)
         self._reflex_backend = None

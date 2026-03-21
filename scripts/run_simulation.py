@@ -226,13 +226,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     runs = args.runs
     brain_type: BrainType = DEFAULT_BRAIN_TYPE
 
+    # Generate unique session ID and configure file logging early
+    # so all logger.info() calls below are captured in the log file
+    session_id = generate_session_id()
+    configure_file_logging(session_id)
+
     # Configure logging level
     log_level = args.log_level.upper()
     if log_level == "NONE":
         logger.disabled = True
     else:
         logger.setLevel(log_level)
-        for handler in logger.handlers:
+        for handler in logging.getLogger().handlers:
             if isinstance(handler, logging.FileHandler):
                 handler.setLevel(log_level)
 
@@ -337,9 +342,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     validate_simulation_parameters(grid_size, brain_type, qubits)
 
-    # Generate unique session ID and configure file logging
-    session_id = generate_session_id()
-    configure_file_logging(session_id)
     logger.info(f"Session ID: {session_id}")
 
     logger.info("Simulation parameters:")

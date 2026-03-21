@@ -27,7 +27,7 @@ import numpy as np
 from quantumnematode.agent import QuantumNematodeAgent, SatietyConfig
 from quantumnematode.brain.arch.dtypes import BrainType
 from quantumnematode.env.theme import Theme
-from quantumnematode.logging_config import logger
+from quantumnematode.logging_config import configure_file_logging, logger
 from quantumnematode.plasticity import (
     EvalResult,
     PhaseTrainingResult,
@@ -482,6 +482,7 @@ def run_plasticity_protocol(config: PlasticityConfig) -> list[SeedResult]:
     parameter_initializer_config = config.parameter_initializer or ParameterInitializerConfig()
 
     session_id = generate_session_id()
+    configure_file_logging(session_id)
     export_base = Path.cwd() / "exports" / session_id / "plasticity"
 
     all_seed_results: list[SeedResult] = []

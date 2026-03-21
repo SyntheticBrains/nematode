@@ -28,7 +28,7 @@ import numpy as np
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
-from quantumnematode.logging_config import logger
+from quantumnematode.logging_config import configure_file_logging, logger
 from quantumnematode.optimizers.evolutionary import (
     CMAESOptimizer,
     EvolutionResult,
@@ -759,6 +759,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Create output directory
     session_id = generate_session_id()
+    configure_file_logging(session_id)
     output_dir = Path(args.output_dir) / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
 

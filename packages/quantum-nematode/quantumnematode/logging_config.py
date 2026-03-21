@@ -54,6 +54,10 @@ def configure_file_logging(session_id: str) -> Path | None:
         logging.getLogger().addHandler(handler)
         return log_file  # noqa: TRY300
     except OSError as exc:
+        # Fall back to stderr so the user sees the warning and subsequent log output
+        stderr_handler = logging.StreamHandler()
+        stderr_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+        logging.getLogger().addHandler(stderr_handler)
         logger.warning(
             "Failed to initialize file logging in %s: %s. Falling back to stderr logging.",
             log_dir,
