@@ -41,23 +41,23 @@ The system SHALL provide sensory module registry entries for temporal sensing th
 
 - **WHEN** chemotaxis is configured in temporal or derivative mode
 - **THEN** a `food_chemotaxis_temporal` module SHALL be registered in the SensoryModule registry
-- **AND** the module SHALL extract strength from food concentration normalized via `tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1], consistent with oracle module normalization
-- **AND** the module SHALL extract angle from the food temporal derivative (dC/dt) when available, or 0 when not
+- **AND** the module SHALL extract strength directly from the `food_concentration` field on BrainParams (already tanh-normalized to [0, 1] by the environment method — the module SHALL NOT re-normalize)
+- **AND** the module SHALL extract angle from the food temporal derivative (dC/dt), normalized via `tanh(derivative)` to [-1, 1] to match the CoreFeatures angle range, or 0 when not available
 - **AND** the module SHALL produce valid quantum gate angles via `to_quantum()` and classical features via `to_classical()`
 
 #### Scenario: Nociception Temporal Module
 
 - **WHEN** nociception is configured in temporal or derivative mode
 - **THEN** a `nociception_temporal` module SHALL be registered in the SensoryModule registry
-- **AND** the module SHALL extract strength from predator concentration normalized via `tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1]
-- **AND** the module SHALL extract angle from the predator temporal derivative when available, or 0 when not
+- **AND** the module SHALL extract strength directly from the `predator_concentration` field on BrainParams (already tanh-normalized to [0, 1] by the environment method — the module SHALL NOT re-normalize)
+- **AND** the module SHALL extract angle from the predator temporal derivative, normalized via `tanh(derivative)` to [-1, 1], or 0 when not available
 
 #### Scenario: Thermotaxis Temporal Module
 
 - **WHEN** thermotaxis is configured in temporal or derivative mode
 - **THEN** a `thermotaxis_temporal` module SHALL be registered in the SensoryModule registry
 - **AND** the module SHALL extract strength from temperature deviation from cultivation temperature (normalized to [-1, 1])
-- **AND** the module SHALL extract angle from the temperature temporal derivative (dT/dt) when available, or 0 when not
+- **AND** the module SHALL extract angle from the temperature temporal derivative (dT/dt), normalized via `tanh(derivative)` to [-1, 1], or 0 when not available
 - **AND** the module SHALL include temperature deviation as the binary field (classical_dim=3)
 
 #### Scenario: Brain Architecture Transparency

@@ -15,7 +15,8 @@ The environment SHALL compute scalar food concentration at a given position as t
 #### Scenario: Multiple Food Concentration Superposition
 
 - **WHEN** `get_food_concentration(position)` is called with multiple food sources
-- **THEN** the result SHALL be the sum of individual exponential decay magnitudes from all food sources
+- **THEN** the raw result SHALL be the sum of individual exponential decay magnitudes from all food sources (sum first)
+- **AND** the summed raw value SHALL then be normalized via a single `tanh()` application (normalize once after summing, not per-source)
 - **AND** the decay formula SHALL use the same `gradient_strength` and `gradient_decay_constant` parameters as the gradient computation
 
 #### Scenario: Concentration Updates on Food Collection

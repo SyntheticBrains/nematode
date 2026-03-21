@@ -25,9 +25,9 @@
 ## 5. Temporal Sensory Modules
 
 - [ ] 5.1 Add `FOOD_CHEMOTAXIS_TEMPORAL`, `NOCICEPTION_TEMPORAL`, `THERMOTAXIS_TEMPORAL`, `STAM` to `ModuleName` enum in `modules.py`
-- [ ] 5.2 Implement `_food_chemotaxis_temporal_core()` — strength from tanh-normalized food_concentration, angle from food_dconcentration_dt
-- [ ] 5.3 Implement `_nociception_temporal_core()` — strength from tanh-normalized predator_concentration, angle from predator_dconcentration_dt
-- [ ] 5.4 Implement `_thermotaxis_temporal_core()` — strength from temp deviation, angle from temperature_ddt, binary from temp deviation (classical_dim=3)
+- [ ] 5.2 Implement `_food_chemotaxis_temporal_core()` — strength directly from food_concentration (already tanh-normalized by env, do NOT re-normalize), angle from `tanh(food_dconcentration_dt)` to clamp derivative to [-1, 1]
+- [ ] 5.3 Implement `_nociception_temporal_core()` — strength directly from predator_concentration (already tanh-normalized by env), angle from `tanh(predator_dconcentration_dt)`
+- [ ] 5.4 Implement `_thermotaxis_temporal_core()` — strength from temp deviation, angle from `tanh(temperature_ddt)`, binary from temp deviation (classical_dim=3)
 - [ ] 5.5 Implement `STAMSensoryModule` subclass — `to_classical()` returns full 9-float state, `to_quantum()` compresses to 3-float summary, `classical_dim=9`
 - [ ] 5.6 Register all new modules in `SENSORY_MODULES` dict
 - [ ] 5.7 Create `tests/quantumnematode_tests/brain/test_temporal_modules.py` — each temporal module returns correct features, STAM module output shape, quantum/classical transforms, None-field handling

@@ -126,7 +126,8 @@ The system SHALL support configurable STAM parameters via YAML configuration.
 - **WHEN** `stam_enabled: true` is set without other STAM parameters
 - **THEN** `buffer_size` SHALL default to 30
 - **AND** `decay_rate` SHALL default to 0.1
-- **AND** the number of scalar channels SHALL be 3 (food, temperature, predator)
+- **AND** the number of scalar channels SHALL be 3 (food concentration, temperature, predator concentration)
+- **AND** if a channel's source is disabled (e.g., thermotaxis not configured, or predators disabled), the channel SHALL record 0.0 and its temporal derivative SHALL be 0.0
 
 #### Scenario: Custom STAM Parameters
 
