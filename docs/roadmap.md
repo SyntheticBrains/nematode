@@ -195,88 +195,15 @@ ______________________________________________________________________
 
 ## Phase Roadmap
 
-### Phase 0: Foundation & Baselines (Q4 2025 - Q1 2026)
+### Phase 0: Foundation & Baselines (COMPLETE)
 
-**Goal**: Establish rigorous baselines using validated optimization methods, fix critical technical debt, and create public benchmark infrastructure for reproducible science.
+**Status**: ✅ All required and stretch exit criteria met.
 
-#### Deliverables
+See [Current State](#completed-phases-summary) for achievements. Key breakthroughs:
 
-1. **Validated Optimization Baselines** (CRITICAL PRIORITY)
-
-   - **PRIMARY: Evolutionary optimization** for at least one quantum architecture (QVarCircuitBrain, QQLearningBrain)
-     - CMA-ES (validated: 88% success on predator tasks)
-     - Genetic Algorithms (population-based search)
-     - Compare variants: (μ, λ)-ES, Natural Evolution Strategies
-   - **SECONDARY: Gradient methods** for at least one of each classical and spiking architectures (MLPReinforceBrain, MLPDQNBrain, SpikingReinforceBrain)
-     - REINFORCE, DQN (already implemented for classical)
-     - SpikingReinforceBrain: Surrogate gradient descent with REINFORCE (December 2025 rewrite)
-     - Validate that gradients remain effective for non-quantum architectures
-   - Systematic comparison across all benchmarked architectures with consistent evaluation protocol
-   - Document which optimization methods work for which architecture types
-
-2. **SOTA RL Baselines**
-
-   - Implement modern RL algorithms: Proximal Policy Optimization (PPO), Soft Actor-Critic (SAC), Twin Delayed DDPG (TD3)
-   - Run on all current benchmark categories for credible classical comparison
-   - Establish performance ceiling: "What's the best classical performance we can achieve?"
-   - Identify where quantum/classical/spiking excel relative to SOTA
-
-3. **Real C. elegans Behavioral Datasets**
-
-   - Curate datasets from literature: chemotaxis indices, foraging paths, predator escape trajectories
-   - Define standard metrics matching biological experiments (e.g., chemotaxis index CI = (N_attractant - N_control) / N_total)
-   - Create validation benchmarks: "Does our agent match real worm behavior?"
-
-4. **NematodeBench: Public Benchmark Suite**
-
-   - Standardized task suite with reproducible configurations
-   - Public leaderboard (GitHub Pages or dedicated site)
-   - Submission guidelines, evaluation scripts, and reproducibility requirements
-   - Target: First external research group submission
-
-5. **Technical Debt Resolution**
-
-   - Fix QQLearningBrain TODOs (tracking, Qiskit runtime, initialization)
-   - Fix MLPReinforceBrain loss calculation bug
-   - Code quality improvements (address remaining Ruff/Pyright warnings)
-
-6. **First Quantum Hardware Run**
-
-   - Deploy QVarCircuitBrain on IBM Quantum backend (simulator → real QPU)
-   - Measure performance degradation from noise
-   - Establish hardware deployment pipeline for ongoing testing
-
-#### Metrics Focus
-
-- **Optimization validation**: Confirm evolutionary methods work for quantum, gradients for classical
-- **SOTA baselines**: Establish performance ceiling with modern RL
-- **Biological fidelity**: Correlation with real C. elegans data
-- **Reproducibility**: External researchers can replicate results
-
-#### Phase 0 Exit Criteria
-
-**Required (must complete before Phase 1):**
-
-- ✅ At least 1 quantum architecture (QVarCircuitBrain) achieves **>70% success** on at least 2 benchmark tasks using evolutionary optimization
-- ✅ At least 1 classical architecture (MLPReinforceBrain or MLPDQNBrain) benchmarked with gradient-based methods
-- ✅ Classical SOTA baseline (PPO or SAC) achieves **>85% success** on foraging tasks
-- ✅ Clear documentation of which optimization methods work for which architectures
-- ✅ At least 1 real C. elegans behavioral dataset integrated for validation
-
-**Stretch (complete if time permits, can continue into Phase 1):**
-
-- ✅ QVarCircuitBrain successfully runs on IBM QPU hardware (simulator → real QPU)
-- ✅ SpikingReinforceBrain benchmarked alongside quantum and classical
-- ✅ All 5 brain architectures benchmarked on consistent evaluation protocol
-- ✅ At least 3 real C. elegans behavioral datasets integrated
-- ✅ Public benchmark site launched with ≥1 external submission
-- ✅ All critical technical debt resolved
-
-#### Go/No-Go Decision
-
-**GO if**: Quantum architectures show promise (>70% success) OR reveal interesting failure modes worth investigating.
-**PIVOT if**: Quantum shows no promise → Focus Phase 1+ on classical vs. spiking comparison only, document "why quantum didn't work" for publication.
-**STOP if**: No architecture generalizes to basic tasks → Re-evaluate fundamental approach.
+- Evolutionary optimization (CMA-ES) achieving 4x better performance than gradient-based on quantum circuits
+- Spiking neural network rewrite to surrogate gradient descent enabling viable learning
+- PPO established as classical SOTA across all thermotaxis configurations
 
 ______________________________________________________________________
 
