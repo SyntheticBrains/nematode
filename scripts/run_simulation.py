@@ -107,6 +107,7 @@ from quantumnematode.utils.config_loader import (
     ManyworldsModeConfig,
     ParameterInitializerConfig,
     RewardConfig,
+    SensingConfig,
     configure_brain,
     configure_environment,
     configure_gradient_method,
@@ -117,6 +118,7 @@ from quantumnematode.utils.config_loader import (
     configure_satiety,
     create_env_from_config,
     load_simulation_config,
+    validate_sensing_config,
 )
 from quantumnematode.utils.interrupt_handler import manage_simulation_halt
 from quantumnematode.utils.seeding import derive_run_seed, ensure_seed, get_rng, set_global_seed
@@ -256,6 +258,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     reward_config = RewardConfig()
     satiety_config = SatietyConfig()
     environment_config = EnvironmentConfig()
+    sensing_config = SensingConfig()
     manyworlds_mode_config = ManyworldsModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
@@ -333,6 +336,27 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         # Load environment configuration if specified
         environment_config = configure_environment(config)
+
+        # Load and validate sensing configuration
+        sensing_config = validate_sensing_config(environment_config.get_sensing_config())
+
+        # Apply sensing mode translation to brain's sensory modules
+        sensory_modules_attr = getattr(brain_config, "sensory_modules", None)
+        if sensory_modules_attr is not None:
+            from quantumnematode.brain.modules import ModuleName
+            from quantumnematode.utils.config_loader import _apply_sensing_mode
+
+            original_modules = [m.value for m in sensory_modules_attr]
+            translated = _apply_sensing_mode(original_modules, sensing_config)
+            translated_modules = [ModuleName(m) for m in translated]
+            if translated_modules != list(sensory_modules_attr):
+                brain_config = brain_config.model_copy(
+                    update={"sensory_modules": translated_modules},
+                )
+                logger.info(
+                    f"Sensing mode translation: {original_modules} → "
+                    f"{[m.value for m in translated_modules]}",
+                )
 
         # Load many-worlds mode configuration if specified
         manyworlds_mode_config = configure_manyworlds_mode(config)
@@ -433,6 +457,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         max_body_length=body_length,
         theme=theme,
         satiety_config=satiety_config,
+        sensing_config=sensing_config,
         use_separated_gradients=use_separated_gradients,
     )
 

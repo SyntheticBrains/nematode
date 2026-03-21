@@ -558,6 +558,11 @@ class StandardEpisodeRunner(EpisodeRunner):
         # Prepare brain for new episode (e.g., save parameters for potential rollback)
         agent.brain.prepare_episode()
 
+        # Reset STAM buffer for new episode (no cross-episode memory)
+        if agent._stam is not None:
+            agent._stam.reset()
+        agent._previous_position = None
+
         # Reset food handler tracking for new episode
         agent._food_handler.reset()
 

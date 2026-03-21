@@ -212,6 +212,34 @@ class BrainParams(BaseModel):
         description="Maximum HP the agent can have.",
     )
 
+    # --- Temporal sensing (Phase 3) ---
+    food_concentration: float | None = Field(
+        default=None,
+        description="Scalar food signal at agent's position (tanh-normalized, no direction).",
+    )
+    predator_concentration: float | None = Field(
+        default=None,
+        description="Scalar predator signal at agent's position (tanh-normalized, no direction).",
+    )
+    food_dconcentration_dt: float | None = Field(
+        default=None,
+        description="Temporal derivative of food concentration (Mode B derivative sensing).",
+    )
+    predator_dconcentration_dt: float | None = Field(
+        default=None,
+        description="Temporal derivative of predator concentration (Mode B derivative sensing).",
+    )
+    temperature_ddt: float | None = Field(
+        default=None,
+        description="Temporal derivative of temperature (Mode B derivative sensing).",
+    )
+
+    # --- STAM state ---
+    stam_state: tuple[float, ...] | None = Field(
+        default=None,
+        description="Flattened STAM memory state vector (9 floats).",
+    )
+
 
 @runtime_checkable
 class Brain(Protocol):

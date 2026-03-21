@@ -2790,3 +2790,133 @@ class TestSafeZoneFoodSpawning:
         # All positions are considered "safe" when thermotaxis is disabled
         for food_pos in env.foods:
             assert env._is_safe_temperature_zone(food_pos) is True
+
+
+class TestScalarConcentration:
+    """Test scalar food and predator concentration methods."""
+
+    @pytest.fixture
+    def env(self):
+        """Create environment for concentration testing."""
+        return DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(
+                foods_on_grid=0,
+                target_foods_to_collect=10,
+                gradient_decay_constant=5.0,
+                gradient_strength=1.0,
+            ),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+        )
+
+    def test_single_food_concentration(self, env):
+        """Concentration from a single food source is positive."""
+        env.foods = [(15, 10)]
+        conc = env.get_food_concentration((10, 10))
+        assert conc > 0.0
+        assert conc <= 1.0  # tanh-normalized
+
+    def test_concentration_decays_with_distance(self, env):
+        """Closer positions have higher concentration."""
+        env.foods = [(15, 10)]
+        conc_near = env.get_food_concentration((14, 10))
+        conc_far = env.get_food_concentration((5, 10))
+        assert conc_near > conc_far
+
+    def test_multiple_food_superposition(self, env):
+        """Multiple food sources produce higher concentration than one."""
+        env.foods = [(15, 10)]
+        conc_one = env.get_food_concentration((10, 10))
+        env.foods = [(15, 10), (5, 10)]
+        conc_two = env.get_food_concentration((10, 10))
+        assert conc_two > conc_one
+
+    def test_no_food_zero_concentration(self, env):
+        """No food sources yield zero concentration."""
+        env.foods = []
+        conc = env.get_food_concentration((10, 10))
+        assert conc == 0.0
+
+    def test_tanh_normalization_range(self, env):
+        """Concentration is always in [0, 1] regardless of food count."""
+        # Many food sources close together
+        env.foods = [(10 + i, 10 + j) for i in range(-2, 3) for j in range(-2, 3)]
+        conc = env.get_food_concentration((10, 10))
+        assert 0.0 <= conc <= 1.0
+
+    def test_concentration_on_food_position(self, env):
+        """Agent on a food source gets maximum signal from that source."""
+        env.foods = [(10, 10)]
+        conc_on = env.get_food_concentration((10, 10))
+        conc_away = env.get_food_concentration((15, 15))
+        assert conc_on > conc_away
+
+    def test_food_collection_updates_concentration(self, env):
+        """Consuming food changes concentration field."""
+        env.foods = [(15, 10), (5, 10)]
+        conc_before = env.get_food_concentration((14, 10))
+        env.foods = [(5, 10)]  # Remove nearby food
+        conc_after = env.get_food_concentration((14, 10))
+        assert conc_after < conc_before
+
+    def test_default_position_uses_agent_pos(self, env):
+        """Calling without position argument uses agent's current position."""
+        env.foods = [(15, 10)]
+        conc_explicit = env.get_food_concentration(env.agent_pos)
+        conc_default = env.get_food_concentration()
+        assert conc_explicit == conc_default
+
+    def test_predator_concentration_disabled(self, env):
+        """Predator concentration returns 0 when predators disabled."""
+        assert env.get_predator_concentration((10, 10)) == 0.0
+
+    def test_predator_concentration_single(self):
+        """Predator concentration from a single predator."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(
+                foods_on_grid=0,
+                target_foods_to_collect=10,
+            ),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                gradient_decay_constant=5.0,
+                gradient_strength=1.0,
+            ),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            seed=42,
+        )
+        # Override predator position for determinism
+        env.predators[0].position = (15, 10)
+        conc = env.get_predator_concentration((10, 10))
+        assert conc > 0.0
+        assert conc <= 1.0
+
+    def test_predator_concentration_decays(self):
+        """Predator signal decays with distance."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(
+                foods_on_grid=0,
+                target_foods_to_collect=10,
+            ),
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                gradient_decay_constant=5.0,
+                gradient_strength=1.0,
+            ),
+            theme=Theme.ASCII,
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            seed=42,
+        )
+        env.predators[0].position = (15, 10)
+        conc_near = env.get_predator_concentration((14, 10))
+        conc_far = env.get_predator_concentration((5, 10))
+        assert conc_near > conc_far

@@ -6,6 +6,7 @@ __all__ = [
     "ManyworldsModeConfig",
     "QuantumNematodeAgent",
     "RewardConfig",
+    "STAMBuffer",
     "SatietyConfig",
 ]
 
@@ -17,3 +18,4 @@ from quantumnematode.agent.agent import (
     RewardConfig,
     SatietyConfig,
 )
+from quantumnematode.agent.stam import STAMBuffer
