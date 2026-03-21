@@ -20,7 +20,6 @@ import pickle
 import random
 import signal
 import time
-from datetime import UTC, datetime
 from multiprocessing import Pool
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,7 +28,7 @@ import numpy as np
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
-from quantumnematode.logging_config import logger
+from quantumnematode.logging_config import configure_file_logging, logger
 from quantumnematode.optimizers.evolutionary import (
     CMAESOptimizer,
     EvolutionResult,
@@ -44,6 +43,7 @@ from quantumnematode.utils.config_loader import (
 )
 from quantumnematode.utils.interrupt_handler import prompt_interrupt
 from quantumnematode.utils.seeding import derive_episode_seed
+from quantumnematode.utils.session import generate_session_id
 
 if TYPE_CHECKING:
     from quantumnematode.env import DynamicForagingEnvironment
@@ -685,7 +685,7 @@ def save_results(
     result: EvolutionResult,
     config_path: str,
     output_dir: Path,
-    timestamp: str,
+    session_id: str,
 ) -> None:
     """Save evolution results to files."""
     # Ensure output directory exists (defensive - should already exist from main/run_evolution)
@@ -698,7 +698,7 @@ def save_results(
     best_params_list = [float(x) for x in result.best_params]
     best_params_dict = dict(zip(param_keys, best_params_list, strict=False))
 
-    results_file = output_dir / f"best_params_{timestamp}.json"
+    results_file = output_dir / f"best_params_{session_id}.json"
     with results_file.open("w") as f:
         json.dump(
             {
@@ -706,7 +706,7 @@ def save_results(
                 "param_keys": param_keys,  # Preserve key order for self-describing artifact
                 "best_success_rate": -result.best_fitness,
                 "generations": result.generations,
-                "timestamp": timestamp,
+                "session_id": session_id,
             },
             f,
             indent=2,
@@ -714,7 +714,7 @@ def save_results(
     logger.info(f"Saved best parameters: {results_file}")
 
     # Save history as CSV
-    history_file = output_dir / f"history_{timestamp}.csv"
+    history_file = output_dir / f"history_{session_id}.csv"
     with history_file.open("w") as f:
         f.write("generation,best_fitness,mean_fitness,std_fitness\n")
         f.writelines(
@@ -732,12 +732,16 @@ def main() -> None:  # noqa: PLR0915
     args = parse_arguments()
     _validate_args(args)
 
+    # Generate unique session ID and configure file logging early
+    session_id = generate_session_id()
+    configure_file_logging(session_id)
+
     # Configure logging with console output
     log_level = getattr(logging, args.log_level)
     logger.setLevel(log_level)
 
-    # Update existing file handlers to use the specified log level
-    for handler in logger.handlers:
+    # Update file handler on root logger to use the specified log level
+    for handler in logging.getLogger().handlers:
         if isinstance(handler, logging.FileHandler):
             handler.setLevel(log_level)
 
@@ -758,11 +762,10 @@ def main() -> None:  # noqa: PLR0915
         np.random.seed(args.seed)  # noqa: NPY002
 
     # Create output directory
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    output_dir = Path(args.output_dir) / timestamp
+    output_dir = Path(args.output_dir) / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Session ID: {timestamp}")
+    logger.info(f"Session ID: {session_id}")
     logger.info(f"Config file: {args.config}")
     logger.info(f"Output directory: {output_dir}")
 
@@ -828,7 +831,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Save results (unless user chose not to on interrupt)
     if should_save:
-        save_results(result, args.config, output_dir, timestamp)
+        save_results(result, args.config, output_dir, session_id)
 
     # Print final summary
     print("\n" + "=" * 60)

@@ -324,18 +324,18 @@ def plot_tracking_data_by_session(  # pragma: no cover  # noqa: C901, PLR0912, P
 
 def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
-    timestamp: str,
+    session_id: str,
     run: int,
 ) -> None:
     """
     Generate and save plots for tracked agent data for a single run.
 
     Args:
-        timestamp (str): Timestamp for the plot directory.
-        agent (QuantumNematodeAgent): Agent containing brain with tracking histories.
+        session_id (str): Session ID for the plot directory.
+        tracking_data (TrackingData): Tracking data containing brain history.
         run (int): Index of the run.
     """
-    run_dir = Path.cwd() / "exports" / timestamp / f"run_{run}" / "plots"
+    run_dir = Path.cwd() / "exports" / session_id / f"run_{run}" / "plots"
     run_dir.mkdir(parents=True, exist_ok=True)
     current_run_data = tracking_data.brain_data.get(run, None)
 

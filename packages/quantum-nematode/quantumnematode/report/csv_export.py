@@ -801,7 +801,7 @@ class IncrementalDetailedTrackingWriter:
 def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     tracking_data: TrackingData,
     run: int,
-    timestamp: str,
+    session_id: str,
 ) -> None:
     """
     Export tracking data for a single run to CSV files.
@@ -809,9 +809,9 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
     Args:
         tracking_data (TrackingData): Tracking data containing brain history.
         run (int): Run number to export.
-        timestamp (str): Timestamp for the export directory.
+        session_id (str): Session ID for the export directory.
     """
-    run_dir = Path.cwd() / "exports" / timestamp / f"run_{run}" / "data"
+    run_dir = Path.cwd() / "exports" / session_id / f"run_{run}" / "data"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     current_brain_run_data = tracking_data.brain_data.get(run, None)

@@ -33,7 +33,7 @@ def manage_simulation_halt(  # noqa: PLR0913
     max_steps: int,
     brain_type: BrainType,
     qubits: int,
-    timestamp: str,
+    session_id: str,
     agent: QuantumNematodeAgent,
     all_results: list[SimulationResult],
     total_runs_done: int,
@@ -54,8 +54,8 @@ def manage_simulation_halt(  # noqa: PLR0913
         Type of brain architecture used.
     qubits : int
         Number of qubits used.
-    timestamp : str
-        Timestamp for the current session.
+    session_id : str
+        Session ID for the current session.
     agent : QuantumNematodeAgent
         The simulation agent.
     all_results : list of SimulationResult
@@ -69,7 +69,7 @@ def manage_simulation_halt(  # noqa: PLR0913
     plot_results_fn : callable or None, optional
         Callable for plotting results.
     """
-    data_dir = Path.cwd() / "exports" / timestamp / "session" / "data"
+    data_dir = Path.cwd() / "exports" / session_id / "session" / "data"
     while True:
         prompt_intro_message = (
             "KeyboardInterrupt detected. The simulation has halted. "
@@ -101,7 +101,7 @@ def manage_simulation_halt(  # noqa: PLR0913
 
             summary(
                 metrics=metrics,
-                session_id=timestamp,
+                session_id=session_id,
                 num_runs=total_runs_done,
                 max_steps=max_steps,
                 all_results=all_results,

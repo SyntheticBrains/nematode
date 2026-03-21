@@ -10,7 +10,6 @@ import argparse
 import json
 import shutil
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
 from quantumnematode.benchmark import (
@@ -30,6 +29,7 @@ from quantumnematode.experiment import (
     StatValue,
     validate_submission,
 )
+from quantumnematode.utils.session import generate_session_id
 
 
 def load_experiment_from_folder(experiment_dir: Path) -> ExperimentMetadata:
@@ -297,7 +297,7 @@ def cmd_submit_nematodebench(args: argparse.Namespace) -> None:  # noqa: C901, P
         notes = notes_input or None
 
     # Generate submission ID early (needed for artifacts directory)
-    submission_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    submission_id = generate_session_id()
 
     # Create consolidated benchmark artifacts folder
     repo_root = Path(__file__).parent.parent

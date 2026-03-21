@@ -40,7 +40,6 @@ or does the hybrid architecture + curriculum explain the performance gains?"
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -76,6 +75,7 @@ from quantumnematode.brain.modules import (
 )
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
+from quantumnematode.utils.session import generate_session_id
 
 # ──────────────────────────────────────────────────────────────────────
 # Defaults
@@ -468,8 +468,8 @@ class HybridClassicalBrain(ClassicalBrain):
         self._step_count = 0
         self._episode_count = 0
 
-        # Session ID for weight saving (set via set_session_id, fallback to timestamp)
-        self._session_id = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        # Session ID for weight saving (set via set_session_id, fallback to unique ID)
+        self._session_id = generate_session_id()
 
         # Running reward normalization (REINFORCE)
         self.reward_running_mean: float = 0.0
