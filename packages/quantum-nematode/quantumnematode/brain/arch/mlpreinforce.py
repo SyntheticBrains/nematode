@@ -95,7 +95,7 @@ class MLPReinforceBrain(ClassicalBrain):
         self.latest_data = BrainData()
         self.input_dim = input_dim
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self.device = torch.device(device.to_torch_device_str())
         self.entropy_beta = config.entropy_beta
         self.policy = self._build_network(config.hidden_dim, config.num_hidden_layers).to(
             self.device,

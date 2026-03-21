@@ -609,7 +609,8 @@ class HybridQuantumCortexBrain(ClassicalBrain):
 
         self.config = config
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self._device_type = device
+        self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
         if self.num_actions != len(self._action_set):
@@ -1056,7 +1057,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
     def _get_reflex_backend(self):  # noqa: ANN202
         if self._reflex_backend is None:
             self._reflex_backend = get_qiskit_backend(
-                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
+                self._device_type,
                 seed=self.seed,
             )
         return self._reflex_backend
@@ -1064,7 +1065,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
     def _get_cortex_backend(self):  # noqa: ANN202
         if self._cortex_backend is None:
             self._cortex_backend = get_qiskit_backend(
-                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
+                self._device_type,
                 seed=self.seed + 1 if self.seed is not None else None,
             )
         return self._cortex_backend
@@ -2743,7 +2744,7 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         new_brain = HybridQuantumCortexBrain(
             config=config_copy,
             num_actions=self.num_actions,
-            device=DeviceType(self.device.type),
+            device=self._device_type,
             action_set=self._action_set,
         )
 

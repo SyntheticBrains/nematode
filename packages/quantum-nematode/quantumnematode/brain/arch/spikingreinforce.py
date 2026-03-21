@@ -230,7 +230,8 @@ class SpikingReinforceBrain(ClassicalBrain):
         self.config = config
         self.input_dim = input_dim
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self._device_type = device
+        self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set
 
         # Initialize data structures
@@ -1065,7 +1066,7 @@ class SpikingReinforceBrain(ClassicalBrain):
             config=config_with_seed,
             input_dim=self.input_dim,
             num_actions=self.num_actions,
-            device=DeviceType(self.device.type),
+            device=self._device_type,
             action_set=self._action_set.copy(),
         )
 

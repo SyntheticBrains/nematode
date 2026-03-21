@@ -87,7 +87,7 @@ class MLPDQNBrain(ClassicalBrain):
         self.latest_data = BrainData()
         self.input_dim = input_dim
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self.device = torch.device(device.to_torch_device_str())
 
         # Q-networks
         self.q_network = self._build_network(config.hidden_dim, config.num_hidden_layers).to(

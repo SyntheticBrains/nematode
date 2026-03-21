@@ -555,7 +555,8 @@ class QSNNPPOBrain(ClassicalBrain):
 
         self.config = config
         self.num_actions = num_actions
-        self.device = torch.device(device.value)
+        self._device_type = device
+        self.device = torch.device(device.to_torch_device_str())
         self._action_set = action_set if action_set is not None else DEFAULT_ACTIONS[:num_actions]
 
         if self.num_actions != len(self._action_set):
@@ -705,7 +706,7 @@ class QSNNPPOBrain(ClassicalBrain):
         """Get or create the Qiskit Aer backend."""
         if self._backend is None:
             self._backend = get_qiskit_backend(
-                DeviceType(self.device.type) if hasattr(self.device, "type") else DeviceType.CPU,
+                self._device_type,
                 seed=self.seed,
             )
         return self._backend
