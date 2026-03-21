@@ -51,7 +51,6 @@ References
 
 from __future__ import annotations
 
-from quantumnematode.utils.session import generate_session_id
 from pathlib import Path
 
 import numpy as np
@@ -91,6 +90,7 @@ from quantumnematode.brain.modules import (
 )
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
+from quantumnematode.utils.session import generate_session_id
 
 # ──────────────────────────────────────────────────────────────────────
 # Defaults

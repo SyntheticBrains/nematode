@@ -45,6 +45,11 @@ def configure_file_logging(session_id: str) -> Path | None:
     if _is_testing:
         return None
 
+    # Guard against duplicate file handlers from repeated calls
+    root = logging.getLogger()
+    if any(isinstance(h, logging.FileHandler) for h in root.handlers):
+        return None
+
     log_dir = Path.cwd() / "logs"
     try:
         log_dir.mkdir(parents=True, exist_ok=True)

@@ -732,12 +732,16 @@ def main() -> None:  # noqa: PLR0915
     args = parse_arguments()
     _validate_args(args)
 
+    # Generate unique session ID and configure file logging early
+    session_id = generate_session_id()
+    configure_file_logging(session_id)
+
     # Configure logging with console output
     log_level = getattr(logging, args.log_level)
     logger.setLevel(log_level)
 
-    # Update existing file handlers to use the specified log level
-    for handler in logger.handlers:
+    # Update file handler on root logger to use the specified log level
+    for handler in logging.getLogger().handlers:
         if isinstance(handler, logging.FileHandler):
             handler.setLevel(log_level)
 
@@ -758,8 +762,6 @@ def main() -> None:  # noqa: PLR0915
         np.random.seed(args.seed)  # noqa: NPY002
 
     # Create output directory
-    session_id = generate_session_id()
-    configure_file_logging(session_id)
     output_dir = Path(args.output_dir) / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
 

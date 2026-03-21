@@ -20,7 +20,6 @@ from quantumnematode.benchmark import (
     update_readme,
 )
 from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES, QUANTUM_BRAIN_TYPES, BrainType
-from quantumnematode.utils.session import generate_session_id
 from quantumnematode.experiment import (
     MIN_SESSIONS_REQUIRED,
     AggregateMetrics,
@@ -30,6 +29,7 @@ from quantumnematode.experiment import (
     StatValue,
     validate_submission,
 )
+from quantumnematode.utils.session import generate_session_id
 
 
 def load_experiment_from_folder(experiment_dir: Path) -> ExperimentMetadata:
