@@ -959,108 +959,94 @@ ______________________________________________________________________
 
 **Differentiation**:
 
-- Quantum Nematode: Neural computation paradigms, behavioral optimization, quantum ML
-- OpenWorm: Cellular-level simulation, muscle physics, connectome-based modeling
+- Quantum Nematode: Neural computation paradigms, behavioral optimization, quantum ML, RL-trained networks
+- OpenWorm: Cellular-level simulation, muscle physics, connectome-based biophysical modeling
 
 **Integration Points**:
 
-1. Export optimized policies from Quantum Nematode → control OpenWorm's simulated muscles
-2. Import OpenWorm's connectome data → seed quantum circuit topology
-3. Validate: Do optimized behaviors match OpenWorm's biophysical predictions?
-
-**Collaboration Opportunities**:
-
-- Share behavioral datasets
-- Cross-validate predictions (algorithm-level vs. cellular-level)
-- Co-organize workshops on multi-scale modeling
+1. Phase 6: Use the same connectome data (wiring diagram) but different approaches — we train weights via RL on the real topology; they simulate biophysics
+2. Phase 7: Explore exporting RL-trained policies to control OpenWorm's simulated muscles
+3. Cross-validation: Do our behaviorally-optimized networks predict the same circuit importance as their biophysical model?
 
 ### WormBot
 
 **Focus**: Hardware embodiment, real-world sensors, physical nematode-inspired robots
 
-**Relationship**: **Validation platform**
+**Relationship**: **Potential future validation platform**
 
-**Integration Points**:
+**Integration Points** (Phase 7+):
 
-1. Deploy Quantum Nematode-optimized policies on WormBot hardware
-2. Test sim-to-real transfer (does simulation learning work on physical robot?)
-3. Real-world benchmarks: Chemical sensing (if available), obstacle navigation, multi-robot coordination
-
-**Collaboration Opportunities**:
-
-- WormBot provides embodied validation testbed
-- Quantum Nematode provides optimized control policies
-- Joint experiments on real-world foraging tasks
+1. Export optimized policies for robotic deployment
+2. Sim-to-real transfer testing
+3. Real-world benchmarks with physical sensors
 
 ### Quantum Computing Ecosystem
 
-**IBM Quantum**: Hardware provider, Qiskit framework, access to real QPUs
-
+**IBM Quantum**: Hardware provider, Qiskit framework, QPU access
 **Q-CTRL**: Quantum error suppression (Fire Opal), circuit optimization
 
-**Relationship**: **Technology partners**
-
-**Engagement**:
-
-- Regular benchmarking on IBM Quantum hardware
-- Quantum algorithm development using Qiskit ecosystem
-- Potential joint publications on quantum advantage in RL
+**Engagement**: Benchmarking at quantum checkpoints (Phases 3, 4, 6, 8), not continuous hardware testing. Simulator-first development with QPU validation at milestones.
 
 ### Neuroscience Community
 
 **Target Labs**: Bargmann (Rockefeller), Sengupta (Brandeis), Horvitz (MIT), Lockery (Oregon)
 
-**Relationship**: **Experimental validation partners**
+**Collaboration Model** (Phase 7):
 
-**Collaboration Model**:
-
-1. Quantum Nematode generates biological predictions from model analysis
-2. Neuroscience lab designs and executes experiments
+1. We generate biological predictions from model analysis
+2. Lab designs and executes experiments
 3. Co-authored publications validating (or refuting) predictions
-4. Iterative refinement: Experimental results → model updates → new predictions
+4. Iterative: experimental results → model updates → new predictions
 
-**Value Proposition for Labs**:
+**Value Proposition**: Computational predictions guide experiments; access to novel analysis tools; high-impact co-authored publications.
 
-- Computational predictions guide experiments (hypothesis generation)
-- Access to quantum ML expertise
-- Novel analysis tools (interpretability, mechanism discovery)
-- High-impact co-authored publications
+### NematodeBench Community
+
+**Goal**: Build an open-source community around biologically-grounded RL benchmarks.
+
+**Strategy**:
+
+- Launch when simulation is sufficiently differentiated from standard RL benchmarks (Phase 7)
+- Provide Docker images, evaluation scripts, submission guidelines
+- Include the 300+ session quantum evaluation dataset as baseline reference
+- Tutorials for extending the benchmark with new architectures, environments, or biological models
 
 ______________________________________________________________________
 
 ## Future Directions
 
-Beyond Phase 8 (2027+), potential research directions include:
+Beyond the current roadmap phases, potential research directions include:
 
-### 1. Hybrid Behavioral-Cellular Models
+### 1. Organism Transfer
 
-- Combine behavioral abstraction (current approach) with selective cellular models
-- Example: Behavioral foraging + detailed AFD neuron biophysics for thermotaxis
-- Validation: Does behavioral optimization match cellular-level predictions?
+- **Drosophila (fruit fly)**: ~100K neurons, similar sensory tasks, well-studied connectome (partial)
+- **Zebrafish larvae**: ~100K neurons, visual predator avoidance, schooling behavior
+- **Approach**: Transfer learned principles and architectural insights from C. elegans deep dive. Proof-of-concept, not full simulation.
 
-### 2. Quantum-Classical Computational Comparisons
+### 2. Three-Dimensional Physics
 
-- Systematic benchmarking of quantum-inspired vs. purely classical algorithms
-- Identify task features where quantum representations provide measurable advantages
-- Develop theoretical frameworks explaining when and why quantum approaches help (or don't)
+- Full 3D substrate simulation (soil mechanics, agar surface, burrowing)
+- Fluid dynamics for movement in aqueous media
+- OpenWorm integration for body physics
+- Significantly harder computationally but most biologically realistic
 
 ### 3. Clinical Applications
 
-- Neurological disease models: C. elegans models of Alzheimer's, Parkinson's
-- Drug discovery: Screen compounds using optimized behavioral assays
-- Brain-computer interfaces: Quantum-inspired neural decoding
+- Neurological disease models (C. elegans Alzheimer's, Parkinson's analogs)
+- Drug discovery: Compound screening via behavioral phenotyping
+- Aging studies: Age-dependent behavioral changes (C. elegans lifespan ~2-3 weeks)
 
-### 4. Larger-Scale Neural Systems
+### 4. Hybrid Behavioral-Cellular Models
 
-- Scaling toward larger invertebrate nervous systems (Drosophila ~100K neurons, honeybee ~1M neurons)
-- Compositional reasoning: Combine learned modules for novel tasks
-- Meta-learning: Learning to learn across domains
+- Combine behavioral abstraction with selective cellular models
+- Example: RL-trained behavioral foraging + detailed AFD neuron biophysics for thermotaxis
+- Cross-validation with OpenWorm's cellular-level predictions
 
-### 5. Quantum Advantage for AI
+### 5. Quantum Advantage for General AI
 
-- Beyond C. elegans: Quantum advantages in general RL, NLP, computer vision?
-- Theoretical foundations: When does quantum help? (BQP vs. P for AI tasks)
-- Hardware roadmap: What quantum devices enable practical AI applications?
+- Extract insights: When does quantum help for RL tasks?
+- Apply findings to broader quantum ML research
+- Contribute to theoretical understanding of quantum computational advantage
 
 ______________________________________________________________________
 
