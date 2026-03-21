@@ -34,6 +34,7 @@ SIMULATION_CONFIGS = [
     "qef_foraging_small.yml",
     "crh_foraging_small.yml",
     "mlpppo_foraging_small_temporal.yml",
+    "mlpppo_foraging_small_derivative.yml",
 ]
 
 
