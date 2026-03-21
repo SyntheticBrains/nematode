@@ -443,7 +443,6 @@ def print_summary(
 def run_plasticity_protocol(config: PlasticityConfig) -> list[SeedResult]:
     """Execute the full plasticity evaluation protocol."""
     protocol = config.plasticity
-    brain_name = config.brain.name
 
     # Build phase config lookup (by name)
     phase_configs: dict[str, PlasticityPhaseConfig] = {p.name: p for p in protocol.phases}
@@ -464,6 +463,7 @@ def run_plasticity_protocol(config: PlasticityConfig) -> list[SeedResult]:
     from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
 
     canonical_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
+    brain_name = canonical_name  # Use canonical name for all outputs
     brain_type = BrainType(canonical_name)
 
     # Resolve learning rate / gradient config
