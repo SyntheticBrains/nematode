@@ -916,34 +916,36 @@ ______________________________________________________________________
 
 ## Success Levels
 
-The project defines three levels of success, each representing valuable scientific contribution. These map to the [Success Metrics Framework](#success-metrics-framework) dimensions.
+Three levels of success, each representing valuable scientific contribution:
 
 ### Minimum Viable Success
 
-*Primary metrics: Interpretability, Hardware Efficiency*
+*Primary metrics: Biological Fidelity, Architecture Insight*
 
-- Comprehensive architecture comparison (quantum vs. classical vs. spiking) with rigorous statistical analysis
-- Public benchmark suite (NematodeBench) with external adoption
-- Clear documentation of which optimization methods work for which architectures
-- At least one peer-reviewed publication on architecture comparison methodology
+- Highest-fidelity C. elegans behavioral simulation (temporal sensing, memory, multi-agent)
+- Comprehensive architecture comparison published (quantum negative result at grid-world complexity + enriched re-evaluation results)
+- NematodeBench operational with external adoption
+- Clear documentation of complexity thresholds for quantum advantage
 
 ### Target Success
 
-*Primary metrics: Biological Insight, Generalization, Sample Efficiency*
+*Primary metrics: Complexity Achievement, Community Impact*
 
-- Demonstrated quantum advantage on at least one biologically-relevant task (or compelling explanation of why not)
-- Biological predictions validated experimentally with C. elegans lab collaboration
-- Memory and learning systems that improve agent performance over static policies
-- Transfer to at least one new domain (embodied robot or other organism)
+- Continuous physics + connectome-constrained architectures operational
+- Classical complexity ceiling identified (where classical genuinely struggles)
+- Quantum advantage demonstrated on enriched tasks OR definitive characterisation of required complexity
+- ≥1 biological prediction validated experimentally with lab collaboration
+- ≥3 external research groups building on NematodeBench
 
 ### Stretch Success
 
-*Primary metrics: Generalization (cross-organism), Robustness, all dimensions at stretch targets*
+*Primary metrics: All dimensions at stretch targets*
 
-- Universal computational principles extracted and validated across multiple domains
-- Quantum computational neuroscience recognized as a research direction (workshop, special issue, or funding program)
-- Sim-to-real transfer successful on embodied platform
-- External research groups actively building on project tools and benchmarks
+- Full 302-neuron connectome running in continuous environment with multi-agent dynamics
+- Universal computational principles extracted and validated
+- Quantum computational neuroscience recognised as research direction (workshop, special issue, or funding)
+- External research groups actively extending the project
+- Biological discoveries published in peer-reviewed journals
 
 ______________________________________________________________________
 
