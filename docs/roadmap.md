@@ -49,17 +49,19 @@ ______________________________________________________________________
 
 ## Timeline Overview
 
-| Phase | Timeline | Focus | Key Deliverable |
-|-------|----------|-------|-----------------|
-| **0** | Q4 2025 - Q1 2026 | Foundation & Baselines | Validated optimization methods, SOTA baselines, first QPU run |
-| **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | Thermotaxis, enhanced predators, mechanosensation |
-| **2** | Q2 - Q3 2026 | Architecture Analysis & Standardization | Ablation toolkit, brain renaming, interpretability framework, first biological prediction tested |
-| **3** | Q3 - Q4 2026 | Learning & Memory | STAM/ITAM/LTAM, associative learning paradigms, oxygen sensing |
-| **4** | Q4 2026 - Q1 2027 | Evolution & Adaptation | Baldwin Effect, evolutionary dynamics comparison |
-| **5** | Q1 - Q2 2027 | Social Complexity | Multi-agent infrastructure, emergent behaviors |
-| **6** | Q2 - Q3 2027 | Quantum Frontiers | Advanced quantum algorithms, hardware deployment |
-| **7** | Q3 - Q4 2027 | Scaling & Real-World | Large environments, neuromorphic, WormBot |
-| **8** | Q4 2027 - Q2 2028 | Universality & Impact | Cross-organism transfer, unified theory |
+> This roadmap is milestone-based: phases advance when exit criteria are met, not when calendar dates arrive. Aspirational timelines are provided for planning purposes but the science dictates the pace.
+
+| Phase | Aspirational Timeline | Focus | Status | Key Deliverable |
+|-------|----------------------|-------|--------|-----------------|
+| **0** | Q4 2025 - Q1 2026 | Foundation & Baselines | ✅ COMPLETE | Validated optimization methods, SOTA baselines, first QPU run |
+| **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | ✅ COMPLETE | Thermotaxis, enhanced predators, mechanosensation, HP system |
+| **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
+| **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | 🔲 NEXT | Temporal gradients (dT/dt, dC/dt), STAM, oxygen sensing |
+| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔲 PLANNED | Multi-agent infrastructure, pheromones, social/competitive dynamics |
+| **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
+| **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
+| **7** | Q2 - Q4 2027 | Community & Publication | 🔲 PLANNED | NematodeBench launch, publication campaign, external collaboration |
+| **8** | Late 2027+ | Integration & Evaluation | 🔲 PLANNED | Full integration, definitive quantum vs. classical comparison |
 
 ______________________________________________________________________
 
