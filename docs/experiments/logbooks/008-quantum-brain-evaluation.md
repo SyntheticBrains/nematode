@@ -1,8 +1,8 @@
 # 008: Quantum Brain Architecture Evaluation
 
-**Status**: `pivoting` — QA-5 (QEF) complete. QA-6 deferred. QA-7 (Quantum Plasticity) is the final quantum experiment at current environment complexity before pivoting to environment enrichment (Phases 1-3). Strategic assessment (2026-03-20) concluded current environments (2-9D observations, 4 actions, ~10K states) are below quantum advantage thresholds. See [quantum-architectures.md Strategic Assessment](../../research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage). Previous: QEF quantum-competitive but not quantum-advantageous (24 phases, ~500+ runs, 12-seed validation). HybridQuantum 96.9% pursuit, QRH genuine quantum dynamics on pursuit, QLIF-LSTM no quantum gate advantage, QRH-QLSTM REJECTED.
+**Status**: `complete` — All quantum architecture evaluations complete (QA-1 through QA-7). QA-7 (Quantum Plasticity) was the final experiment: classical baselines show zero backward forgetting (11/12 seeds BF=0.0, 1/12 BF=0.02), making the quantum anti-forgetting hypothesis untestable at current environment complexity. Quantum runs halted. Campaign concludes with 300+ sessions across 11+ architectures. Pivot to environment enrichment (Phases 1-3) confirmed. See [quantum-architectures.md Strategic Assessment](../../research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage).
 
-**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`, `feat/add-qrh-qlstm-variant`, `feat/add-qef-brain`
+**Branch**: `feature/add-qsnn-brain`, `feature/add-quantum-reservoir-hybrid-brain`, `feat/add-qliflstm-brain`, `feat/add-qrh-qlstm-variant`, `feat/add-qef-brain`, `feat/add-qef-brain-eval`
 
 **Date Started**: 2026-02-05
 
@@ -1869,10 +1869,66 @@ After 290+ experiment sessions across 11+ quantum architectures (QRC, QSNN, QVar
 
 - **QA-6**: DEFERRED — even +5pp target yields ~28% absolute vs classical 90%+
 - **QA-3**: DEFERRED — QA-5 showed entangled features competitive but not advantageous; trainable entangled circuits unlikely to help
-- **QA-7**: PROMOTED to NEXT — final quantum experiment (OpenSpec: `add-quantum-plasticity-test`)
-- **Post QA-7**: Pivot to environment enrichment. Return to quantum evaluation when environments reach complexity thresholds (>30 input features, multi-agent, long non-Markovian horizons)
+- **QA-7**: COMPLETED — classical baselines show zero forgetting; quantum runs halted (see below)
+- **Post QA-7**: Pivot to environment enrichment confirmed. Return to quantum evaluation when environments reach complexity thresholds (>30 input features, multi-agent, long non-Markovian horizons)
 
 Full analysis: [quantum-architectures.md Strategic Assessment](../../research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage)
+
+______________________________________________________________________
+
+## QA-7 Quantum Plasticity Test Results
+
+**Date**: 2026-03-21
+**Status**: COMPLETED — classical baselines show zero backward forgetting; quantum runs halted.
+
+### Protocol
+
+Sequential multi-objective training: Foraging (A) → Pursuit Predators (B) → Thermotaxis+Pursuit (C) → Foraging Return (A'). All phases on 100×100 grid with 200 training episodes per phase. 50-episode evaluation blocks at each of 5 transition points (9 eval blocks total per seed). Brain state snapshot/restore ensures eval blocks leave no trace on training.
+
+Convergence threshold for Plasticity Retention: 60% success rate in trailing-20 window.
+
+### Classical Baseline Results (4 seeds × 3 architectures = 12 sessions)
+
+| Architecture | BF (mean ± std) | FT (mean ± std) | PR (mean ± std) |
+|---|---|---|---|
+| **MLP PPO** | 0.000 ± 0.000 | 0.205 ± 0.067 | 1.000 ± 0.000 |
+| **CRH** | 0.000 ± 0.000 | -0.085 ± 0.104 | 1.000 ± 0.000 |
+| **HybridClassical** | 0.005 ± 0.009 | 0.130 ± 0.022 | 1.000 ± 0.000 |
+
+**Per-seed Backward Forgetting values:**
+
+- MLP PPO: [0.0, 0.0, 0.0, 0.0]
+- CRH: [0.0, 0.0, 0.0, 0.0]
+- HybridClassical: [0.0, 0.0, 0.0, 0.02]
+
+**11/12 seeds show exactly zero backward forgetting.** The one non-zero value (HybridClassical seed 512, BF=0.02) is noise — a single eval episode failure out of 50.
+
+### Decision: Halt Quantum Runs
+
+The quantum plasticity hypothesis (arXiv:2511.17228) posits that PQC unitarity prevents catastrophic forgetting compared to classical networks. Classical baselines show **zero forgetting** on these tasks. There is no classical forgetting for quantum to improve upon.
+
+Running QRH and HybridQuantum would at best produce "quantum = classical = no forgetting" — an uninformative comparison with no statistical power to detect a difference.
+
+### Key Findings
+
+1. **No catastrophic forgetting at this environment complexity.** All classical architectures maintain 100% foraging success throughout training on pursuit predators and thermotaxis+pursuit. The network has enough capacity to retain all skills simultaneously.
+
+2. **Forward transfer is architecture-dependent.** MLP PPO shows strong positive transfer (FT=0.21 — foraging training helps pursuit). CRH shows slight negative transfer (FT=-0.09 — ESN reservoir features learned for foraging slightly hurt pursuit). HybridClassical is intermediate (FT=0.13).
+
+3. **Perfect plasticity retention.** PR=1.0 across all architectures and seeds — relearning speed is identical to original learning speed. No plasticity loss.
+
+4. **The continual learning challenge doesn't exist at this scale.** The tasks (foraging, pursuit, thermotaxis) use different reward signals and environment dynamics, but the network's gradient-based learning easily accommodates all simultaneously. Catastrophic forgetting requires tasks that share and compete for the same representational capacity — which doesn't happen here.
+
+### Implications for QA-7 Hypothesis
+
+The arXiv:2511.17228 result (PQC unitarity prevents forgetting) may be valid for tasks where classical networks *do* show forgetting. Our environments are below that threshold. This further validates the strategic pivot: advance to richer environments (Phases 1-3) where classical approaches encounter actual learning conflicts before revisiting quantum plasticity.
+
+### Experiment Artifacts
+
+- Script: `scripts/run_plasticity_test.py`
+- Configs: `configs/studies/plasticity/campaign/*.yml`
+- Logs: `build/studies/plasticity_test/logs/*.log`
+- Scratchpad: `build/studies/plasticity_test/plasticity_test_scratchpad.md`
 
 ### Appendices
 

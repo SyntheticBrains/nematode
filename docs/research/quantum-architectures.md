@@ -2089,12 +2089,13 @@ Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/
 - Memory capacity must measurably exceed standard QRH
 - If weak measurement + feedback shows no memory improvement: approach is not viable with Aer simulator (may require real hardware noise)
 
-### QA-7 Quantum Plasticity for Multi-Objective Continual Learning — NEXT (Final Quantum Experiment)
+### QA-7 Quantum Plasticity for Multi-Objective Continual Learning — COMPLETED (Halted)
 
 **Strategy**: Exploit PQC unitarity for anti-forgetting in sequential multi-objective training
-**Risk**: Low | **Estimated effort**: 1-2 weeks
+**Risk**: Low | **Actual effort**: 1 week (implementation + classical evaluation)
 **Added**: 2026-03-13 based on arXiv:2511.17228 (quantum plasticity)
-**Promoted**: 2026-03-20 — Final quantum experiment at current environment complexity before pivoting to environment enrichment. This is the last testable quantum advantage hypothesis that doesn't require richer environments.
+**Promoted**: 2026-03-20 — Final quantum experiment at current environment complexity.
+**Completed**: 2026-03-21 — Classical baselines show zero backward forgetting (BF=0.000 ± 0.000 for MLP PPO and CRH, BF=0.005 ± 0.009 for HybridClassical across 4 seeds each). Quantum runs halted — no classical forgetting to improve upon. The continual learning challenge doesn't exist at this environment complexity.
 
 #### Architecture
 
@@ -2204,17 +2205,15 @@ COMPLETED:
     Key innovations: hybrid input, learnable feature gating, ring topology.
     Gating asymmetry discovered: helps quantum +7.7pp, hurts classical -4.0pp.
 
-NEXT:
-  QA-7 Quantum Plasticity Test (FINAL QUANTUM EXPERIMENT)
-             - Sequential multi-objective training protocol
-             - Measure forgetting: PQC vs classical equivalent
-             - Uses existing architectures — evaluation protocol only
-             - Tests the last quantum advantage hypothesis viable at
-               current environment complexity: anti-forgetting via
-               PQC unitarity (arXiv:2511.17228)
-             - OpenSpec change: add-quantum-plasticity-test
+  QA-7 Quantum Plasticity Test — 12 classical sessions (3 archs × 4 seeds)
+    Protocol: Foraging → Pursuit → Thermotaxis+Pursuit → Foraging Return
+    (200 eps/phase, 50-ep eval blocks, 100×100 grid).
+    Classical baselines: BF=0.000 (MLP PPO, CRH), BF=0.005 (HybridClassical).
+    11/12 seeds show exactly zero backward forgetting.
+    Quantum runs HALTED — no classical forgetting to improve upon.
+    STATUS: COMPLETED — hypothesis untestable at current environment complexity.
 
-AFTER QA-7: PIVOT TO ENVIRONMENT ENRICHMENT
+NEXT: PIVOT TO ENVIRONMENT ENRICHMENT
              - Advance through roadmap Phases 1-3
              - Build richer environments with >30 input features,
                multi-agent dynamics, long non-Markovian horizons
@@ -2252,21 +2251,25 @@ Decision Gates (completed):
     → Combined with theoretical analysis: environment complexity is the
       bottleneck, not quantum circuit design
 
-Decision Gates (upcoming):
-  After QA-7: Plasticity verdict (FINAL)
-    → If PQC forgetting ≤ 50% of classical: quantum landscape advantage
-      confirmed — reframes the quantum value proposition for the project.
-      Document and publish alongside environment enrichment pivot.
-    → If equivalent: unitarity advantage doesn't manifest at our scale.
-      Quantum architecture search conclusively complete at current
-      environment complexity. Publish comprehensive evaluation as
-      systematic negative/mixed result.
+Decision Gates (completed):
+  After QA-7 (2026-03-21): Plasticity verdict
+    → Classical baselines show ZERO backward forgetting (BF=0.000).
+    → Hypothesis untestable: no classical forgetting for quantum to
+      improve upon. Quantum runs halted.
+    → Root cause: environment tasks are sufficiently different that
+      skills don't interfere, and networks have enough capacity to
+      retain all skills simultaneously.
+    → Quantum architecture search CONCLUSIVELY COMPLETE at current
+      environment complexity.
 
+Decision Gates (future):
   After environment enrichment (Phases 1-3):
     → Re-evaluate quantum advantage when environment has >30 input features,
       multi-agent dynamics, or long non-Markovian horizons
     → Classical performance ceiling on new tasks determines if quantum
       re-evaluation is warranted
+    → Specifically: revisit QA-7 plasticity test if classical networks
+      show BF > 0.1 on enriched environments
 ```
 
 ______________________________________________________________________
@@ -2642,7 +2645,7 @@ Seven architectures proposed. QA-1, QA-4, and QA-5 completed. QA-7 is the final 
 | — | QA-1 QRH | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
 | — | QA-4 QLIF-LSTM | Quantum activations in LSTM | **COMPLETED (4a-4d)** | Classical LSTM: 98% last-100 pursuit. Quantum gates: no advantage. Stage 4d: QRH-LSTM FAILED — LSTM degrades QRH vs MLP readout on all tasks. |
 | — | QA-5 QEF | Entanglement for interaction encoding | **COMPLETED** | 24 phases, ~500+ runs, 12-seed validation. Quantum-competitive but no significant advantage (p>0.05). Trails MLP PPO on pursuit (-3.0pp, p=0.04). Key innovations: hybrid input, feature gating, gating asymmetry. |
-| **NEXT** | **QA-7 Quantum Plasticity Test** | **PQC unitarity for anti-forgetting** | **FINAL QUANTUM EXPERIMENT** | Last testable quantum advantage hypothesis at current environment complexity. Tests anti-forgetting via PQC unitarity in sequential multi-objective training. Low effort (evaluation protocol only). arXiv:2511.17228. |
+| — | QA-7 Quantum Plasticity Test | PQC unitarity for anti-forgetting | **COMPLETED (Halted)** | Classical baselines show zero forgetting (BF=0.000). Quantum runs halted — hypothesis untestable at current complexity. 12 classical sessions (3 archs × 4 seeds). |
 | Deferred | QA-3 Entangled QLIF + qtDNN | Classical surrogates | Deferred (environment too simple) | QA-5 showed entangled features competitive but not advantageous. Trainable entangled circuits unlikely to help at current complexity. |
 | Deferred | QA-6 QRH+ (Weak-Measurement Feedback) | Reservoir temporal memory | Deferred (environment too simple) | Even +5pp target yields ~28% absolute vs classical 90%+. Revisit after environment enrichment. |
 | Deferred | QA-2 SQS-QLIF Hybrid | Local learning rules | Deferred | Highest risk. Hebbian learning failed (12 rounds, 0%). SQS paper lacks RL validation. |
@@ -2663,3 +2666,4 @@ QA-3 and QA-6 are deferred (not cancelled) — they remain architecturally inter
 4. **Reservoir readout complexity is wrong fix** — Stage 4d QRH-LSTM failed on all tasks
 5. **Entangled features competitive but not advantageous** — QEF matches classical within 1-3pp but no significant improvement (QA-5)
 6. **Environment complexity is the bottleneck** — 2-9D observations, 4 actions, ~10K state space are below quantum advantage thresholds (strategic assessment, 2026-03-20)
+7. **No catastrophic forgetting at current complexity** — Classical baselines show zero backward forgetting in sequential multi-objective training (QA-7, 12 sessions). The continual learning challenge doesn't exist at this scale.
