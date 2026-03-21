@@ -20,7 +20,6 @@ import pickle
 import random
 import signal
 import time
-from datetime import UTC, datetime
 from multiprocessing import Pool
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -44,6 +43,7 @@ from quantumnematode.utils.config_loader import (
 )
 from quantumnematode.utils.interrupt_handler import prompt_interrupt
 from quantumnematode.utils.seeding import derive_episode_seed
+from quantumnematode.utils.session import generate_session_id
 
 if TYPE_CHECKING:
     from quantumnematode.env import DynamicForagingEnvironment
@@ -758,11 +758,11 @@ def main() -> None:  # noqa: PLR0915
         np.random.seed(args.seed)  # noqa: NPY002
 
     # Create output directory
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    output_dir = Path(args.output_dir) / timestamp
+    session_id = generate_session_id()
+    output_dir = Path(args.output_dir) / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Session ID: {timestamp}")
+    logger.info(f"Session ID: {session_id}")
     logger.info(f"Config file: {args.config}")
     logger.info(f"Output directory: {output_dir}")
 
@@ -828,7 +828,7 @@ def main() -> None:  # noqa: PLR0915
 
     # Save results (unless user chose not to on interrupt)
     if should_save:
-        save_results(result, args.config, output_dir, timestamp)
+        save_results(result, args.config, output_dir, session_id)
 
     # Print final summary
     print("\n" + "=" * 60)

@@ -8,7 +8,6 @@ import argparse
 import logging
 import shutil
 from copy import deepcopy
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -42,6 +41,7 @@ from quantumnematode.env import MIN_GRID_SIZE
 from quantumnematode.env.theme import DEFAULT_THEME, Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
+    configure_file_logging,
     logger,
 )
 from quantumnematode.optimizers.gradient_methods import (
@@ -120,6 +120,7 @@ from quantumnematode.utils.config_loader import (
 )
 from quantumnematode.utils.interrupt_handler import manage_simulation_halt
 from quantumnematode.utils.seeding import derive_run_seed, ensure_seed, get_rng, set_global_seed
+from quantumnematode.utils.session import generate_session_id
 
 DEFAULT_DEVICE = DeviceType.CPU
 DEFAULT_RUNS = 1
@@ -336,9 +337,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
     validate_simulation_parameters(grid_size, brain_type, qubits)
 
-    # Set up the timestamp for saving results
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    logger.info(f"Session ID: {timestamp}")
+    # Generate unique session ID and configure file logging
+    session_id = generate_session_id()
+    configure_file_logging(session_id)
+    logger.info(f"Session ID: {session_id}")
 
     logger.info("Simulation parameters:")
     logger.info(f"Config file: {config_file}")
@@ -369,7 +371,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Pass session ID to brain for weight export alignment
     set_session_id = getattr(brain, "set_session_id", None)
     if callable(set_session_id):
-        set_session_id(timestamp)
+        set_session_id(session_id)
 
     # Create the environment
     logger.info("Using dynamic foraging environment")
@@ -433,8 +435,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     )
 
     # Set the plot and data directories
-    plot_dir = Path.cwd() / "exports" / timestamp / "session" / "plots"
-    data_dir = Path.cwd() / "exports" / timestamp / "session" / "data"
+    plot_dir = Path.cwd() / "exports" / session_id / "session" / "plots"
+    data_dir = Path.cwd() / "exports" / session_id / "session" / "data"
 
     # Initialize tracking variables for plotting
     tracking_data = TrackingData()
@@ -698,13 +700,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
                 plot_tracking_data_by_latest_run(
                     tracking_data=tracking_data,
-                    timestamp=timestamp,
+                    timestamp=session_id,
                     run=run_num,
                 )
                 export_run_data_to_csv(
                     tracking_data=tracking_data,
                     run=run_num,
-                    timestamp=timestamp,
+                    timestamp=session_id,
                 )
 
             # --- Extract scalar snapshots and flush heavy data ---
@@ -762,7 +764,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             max_steps=max_steps,
             brain_type=brain_type,
             qubits=qubits,
-            timestamp=timestamp,
+            timestamp=session_id,
             agent=agent,
             all_results=all_results,
             total_runs_done=total_runs_done,
@@ -791,7 +793,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # Final summary of all runs.
     summary(
         metrics=metrics,
-        session_id=timestamp,
+        session_id=session_id,
         num_runs=total_runs_done,
         max_steps=max_steps,
         all_results=all_results,
@@ -868,7 +870,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         try:
             # Capture experiment metadata
             config_path = Path(config_file) if config_file else Path("config.yml")
-            exports_rel_path = f"exports/{timestamp}"
+            exports_rel_path = f"exports/{session_id}"
 
             learning_rate_metadata = None
             if isinstance(learning_rate, DynamicLearningRate):
@@ -947,7 +949,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 device_type=device,
                 qpu_backend=None,  # TODO: Implement extracting QPU backend
                 exports_path=exports_rel_path,
-                session_id=timestamp,
+                session_id=session_id,
                 precomputed_chemotaxis=chemotaxis_metrics_per_run,
             )
 

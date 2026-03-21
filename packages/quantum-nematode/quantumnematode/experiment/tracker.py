@@ -602,9 +602,11 @@ def capture_experiment_metadata(
     ExperimentMetadata
         Complete experiment metadata.
     """
-    # Use session ID as experiment ID if provided, otherwise generate new timestamp
+    # Use session ID as experiment ID if provided, otherwise generate a unique one
+    from quantumnematode.utils.session import generate_session_id
+
     timestamp = datetime.now(UTC)
-    experiment_id = session_id if session_id is not None else timestamp.strftime("%Y%m%d_%H%M%S")
+    experiment_id = session_id if session_id is not None else generate_session_id()
 
     # Capture git context
     git_context = capture_git_context()
