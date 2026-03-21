@@ -685,7 +685,7 @@ def save_results(
     result: EvolutionResult,
     config_path: str,
     output_dir: Path,
-    timestamp: str,
+    session_id: str,
 ) -> None:
     """Save evolution results to files."""
     # Ensure output directory exists (defensive - should already exist from main/run_evolution)
@@ -698,7 +698,7 @@ def save_results(
     best_params_list = [float(x) for x in result.best_params]
     best_params_dict = dict(zip(param_keys, best_params_list, strict=False))
 
-    results_file = output_dir / f"best_params_{timestamp}.json"
+    results_file = output_dir / f"best_params_{session_id}.json"
     with results_file.open("w") as f:
         json.dump(
             {
@@ -706,7 +706,7 @@ def save_results(
                 "param_keys": param_keys,  # Preserve key order for self-describing artifact
                 "best_success_rate": -result.best_fitness,
                 "generations": result.generations,
-                "timestamp": timestamp,
+                "session_id": session_id,
             },
             f,
             indent=2,
@@ -714,7 +714,7 @@ def save_results(
     logger.info(f"Saved best parameters: {results_file}")
 
     # Save history as CSV
-    history_file = output_dir / f"history_{timestamp}.csv"
+    history_file = output_dir / f"history_{session_id}.csv"
     with history_file.open("w") as f:
         f.write("generation,best_fitness,mean_fitness,std_fitness\n")
         f.writelines(

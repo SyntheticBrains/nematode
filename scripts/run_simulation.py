@@ -702,13 +702,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 )
                 plot_tracking_data_by_latest_run(
                     tracking_data=tracking_data,
-                    timestamp=session_id,
+                    session_id=session_id,
                     run=run_num,
                 )
                 export_run_data_to_csv(
                     tracking_data=tracking_data,
                     run=run_num,
-                    timestamp=session_id,
+                    session_id=session_id,
                 )
 
             # --- Extract scalar snapshots and flush heavy data ---
@@ -766,7 +766,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             max_steps=max_steps,
             brain_type=brain_type,
             qubits=qubits,
-            timestamp=session_id,
+            session_id=session_id,
             agent=agent,
             all_results=all_results,
             total_runs_done=total_runs_done,
