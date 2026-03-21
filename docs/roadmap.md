@@ -207,46 +207,18 @@ See [Current State](#completed-phases-summary) for achievements. Key breakthroug
 
 ______________________________________________________________________
 
-### Phase 1: Sensory & Threat Complexity (Q1-Q2 2026)
+### Phase 1: Sensory & Threat Complexity (COMPLETE)
 
-**Goal**: Enrich sensory input and predator behaviors to match C. elegans multi-modal perception and ecological complexity.
+**Status**: ✅ All core exit criteria met. Oxygen sensing deferred to Phase 3.
 
-**Pilot-Then-Focus Approach**: Start with chemotaxis (already implemented) + thermotaxis as the priority sensory pair. For predators, start with stationary + pursuit types; add patrol and group hunting only if simpler predators work well. Mechanosensation runs as a parallel track. Oxygen sensing deferred to Phase 3 where it pairs naturally with temporal sensing and memory systems.
+See [Current State](#completed-phases-summary) for achievements. Key deliverables:
 
-#### Deliverables
+- Thermotaxis system with 9 validated configurations (Logbook 007)
+- Mechanosensation with boundary and predator contact detection
+- Stationary and pursuit predator types
+- HP-based health system with strategic damage/healing trade-offs
 
-1. **Enhanced Predator Behaviors**
-
-   - **Stationary Predators** \[Priority: Implement First\]: Nematode-trapping fungi (sticky patches at fixed locations), toxic bacteria zones (invisible danger fields)
-   - **Active Pursuit** \[Priority: Implement Second\]: Predatory nematode tracking behavior (move toward agent within detection radius)
-   - **Patrol Patterns** \[Conditional\]: Fixed routes, circular paths, territorial zones
-   - **Group Hunting** \[Optional: if simpler predators work\]: Coordinated multi-predator attacks (2+ predators converge on target)
-   - **Dynamic Threat Levels**: Predator danger scales with proximity (graduated penalties vs. binary)
-
-2. **Health System Alternative**
-
-   - Replace instant death with HP-based damage model
-   - Predator encounters deal damage (e.g., -10 HP per collision)
-   - Food provides healing (+5 HP per food item)
-   - Strategic trade-offs: risky paths with more food vs. safe paths with less food
-   - Configurable: toggle between instant-death and HP modes
-
-3. **Thermotaxis System** [Priority: First new sensory modality]
-
-   - Spatial temperature gradient fields (2D grid with temperature values)
-   - AFD neuron simulation: temperature memory storage (cultivation temperature Tc)
-   - Isothermal tracking behavior (move along preferred temperature contours)
-   - Association learning: temperature ↔ food availability (high food at 20°C → prefer 20°C)
-   - Integration with foraging: agents perceive food gradients + temperature gradients
-
-4. **Mechanosensation (Touch Response)** [Parallel track: mechanistically simpler than gradient sensing]
-
-   - Obstacle collision detection (walls, barriers)
-   - Gentle touch: triggers local exploration (increased turning)
-   - Harsh touch: triggers escape response (rapid reversal, omega turn)
-   - Wall-following behavior option
-   - Integration with predator evasion: physical contact with predator = harsh touch → immediate escape
-   - **Note**: Can be developed in parallel with thermotaxis as a fallback if gradient-based sensing proves difficult
+______________________________________________________________________
 
 #### Metrics Focus
 
