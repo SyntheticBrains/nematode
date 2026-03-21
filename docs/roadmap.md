@@ -804,31 +804,14 @@ Throughout all phases, the following validation activities occur continuously:
 - **Phase 7**: First experimental collaboration — model prediction tested with real C. elegans
 - **Phase 8**: Comprehensive biological validation across all behaviors
 
-**Partnerships**: Establish MOUs with 2-3 C. elegans labs (e.g., Bargmann Lab at Rockefeller, Sengupta Lab at Brandeis, Horvitz Lab at MIT)
+### Quantum Hardware Validation (At Checkpoints)
 
-### Quantum Hardware Validation (Every Phase)
+**Objective**: When quantum checkpoints activate, benchmark on real quantum devices.
 
-**Objective**: Regularly benchmark on real quantum devices to track hardware progress and algorithm robustness.
-
-- **Phase 0**: First successful QPU run (QVarCircuitBrain on IBM Quantum)
-- **Phase 1-4**: Monthly benchmarks on available backends (track noise, fidelity, queue times)
-- **Phase 5-6**: Weekly benchmarks as algorithm complexity increases
-- **Phase 6**: Daily benchmarks during intensive quantum algorithm development
-- **Phase 7-8**: Production deployment pipeline (automated QPU testing in CI/CD)
-
-**Hardware Partners**: IBM Quantum, Q-CTRL (Fire Opal), IonQ (if accessible), Rigetti (if accessible)
-
-### Embodied Testing (Phases 2+)
-
-**Objective**: Validate that simulation-trained policies transfer to physical robots.
-
-- **Phase 2**: Initial WormBot contact (explore collaboration, assess platform compatibility)
-- **Phase 3**: Define sim-to-real transfer requirements, begin policy export prototyping
-- **Phase 5**: Export first policy for WormBot testing (simple chemotaxis)
-- **Phase 7**: Full WormBot deployment with multiple behaviors (foraging, evasion, multi-agent)
-- **Phase 8**: Transfer to other robotic platforms (swarm robotics testbeds)
-
-**Partnerships**: WormBot project, swarm robotics labs, soft robotics groups
+- **Phase 3 checkpoint**: If triggered, run QRH on IBM Quantum with temporal tasks
+- **Phase 6 checkpoint**: Major QPU deployment — all viable quantum architectures on enriched tasks
+- **Phase 8**: Production deployment pipeline for final comparison
+- **Error mitigation**: Q-CTRL Fire Opal integration for noise suppression
 
 ______________________________________________________________________
 
