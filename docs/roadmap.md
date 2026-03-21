@@ -4,7 +4,7 @@
 
 **Version**: 2.0
 
-**Last Updated**: February 2026
+**Last Updated**: March 2026
 
 **Horizon**: 2025-2028 (8 phases + future directions, ~3.5 years)
 
@@ -383,6 +383,8 @@ ______________________________________________________________________
 ### Phase 2: Architecture Analysis & Standardization (Q2-Q3 2026)
 
 **Goal**: Move beyond "which architecture wins?" to "why do architectures work?" through systematic analysis, interpretability, and mechanism discovery. Also complete standardization work including brain architecture renaming and benchmarking improvements.
+
+> **Quantum Architecture Evaluation Update (2026-03-20)**: The novel quantum architecture evaluation (Deliverables 10-11) has been substantially completed ahead of schedule through Logbook 008's QA-1 through QA-5 campaign (290+ sessions, 11+ architectures). Key findings: (1) QRH demonstrates genuine quantum advantage on pursuit predators (+9.4pp, Domingo-confirmed), (2) HybridQuantum achieves SOTA 96.9% but classical ablation matches at 96.3%, (3) QEF entangled features are competitive but not advantageous. Strategic assessment concluded that environment complexity (2-9D observations, 4 actions, ~10K states) is below quantum advantage thresholds. One final experiment remains — QA-7 (Quantum Plasticity, testing anti-forgetting) — after which quantum architecture search pauses until environment enrichment (Phases 1-3) creates classical bottlenecks. This activates the PIVOT path of the Go/No-Go decision below. See [quantum-architectures.md Strategic Assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage) for full analysis.
 
 #### Deliverables
 

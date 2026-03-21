@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -541,6 +541,59 @@ class SimulationConfig(BaseModel):
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
     environment: EnvironmentConfig | None = None
+
+
+class PlasticityPhaseConfig(BaseModel):
+    """Configuration for a single phase in the plasticity evaluation protocol."""
+
+    name: str
+    environment: EnvironmentConfig
+    reward: RewardConfig = RewardConfig()
+    satiety: SatietyConfig | None = None
+    max_steps: int = 2000
+
+
+class PlasticityProtocolConfig(BaseModel):
+    """Configuration for the plasticity evaluation protocol parameters."""
+
+    training_episodes_per_phase: int = 200
+    eval_episodes: int = 50
+    seeds: list[int] = [42, 123, 256, 512, 789, 1024, 2048, 4096]
+    convergence_threshold: float = Field(default=0.6, gt=0.0, le=1.0)
+    phases: list[PlasticityPhaseConfig]
+
+
+class PlasticityConfig(BaseModel):
+    """Top-level configuration for a plasticity evaluation run."""
+
+    brain: BrainContainerConfig
+    plasticity: PlasticityProtocolConfig
+    # Optional top-level overrides (shared across phases unless phase overrides)
+    shots: int | None = None
+    qubits: int | None = None
+    body_length: int = 2
+    learning_rate: LearningRateConfig | None = None
+    gradient: GradientConfig | None = None
+    parameter_initializer: ParameterInitializerConfig | None = None
+    modules: Modules | None = None
+
+
+def load_plasticity_config(config_path: str) -> PlasticityConfig:
+    """Load plasticity evaluation configuration from a YAML file.
+
+    Parameters
+    ----------
+    config_path : str
+        Path to the YAML configuration file.
+
+    Returns
+    -------
+    PlasticityConfig
+        Parsed configuration as a Pydantic model.
+    """
+    with Path(config_path).open() as file:
+        data = yaml.safe_load(file)
+        return PlasticityConfig(**data)
 
 
 def load_simulation_config(config_path: str) -> SimulationConfig:

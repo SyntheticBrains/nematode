@@ -2,7 +2,7 @@
 
 **Purpose**: Detailed specifications for novel quantum brain implementations beyond QVarCircuitBrain
 **Status**: Research & Planning
-**Last Updated**: 2026-03-20
+**Last Updated**: 2026-03-21 (QA-7 complete, campaign closed, pivot to environment enrichment)
 
 ______________________________________________________________________
 
@@ -21,8 +21,9 @@ ______________________________________________________________________
 11. [External Research Survey (2024-2026)](#external-research-survey-2024-2026)
 12. [Next-Generation Architecture Proposals (QA-1 to QA-7)](#next-generation-architecture-proposals)
 13. [Benchmarking Plan](#benchmarking-plan)
-14. [Research References](#research-references)
-15. [Open Questions](#open-questions)
+14. [Strategic Assessment: Environment Complexity & Quantum Advantage](#strategic-assessment-environment-complexity--quantum-advantage)
+15. [Research References](#research-references)
+16. [Open Questions](#open-questions)
 
 > **Codename convention**: Architecture proposals use the **QA-N** prefix (Quantum Architecture).
 > Sections A-G retain their original letter prefixes for specification content (A=QSNN,
@@ -2013,13 +2014,15 @@ Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/
 - Classical MLP feature extractor control must be tested for ablation completeness
 - If fixed entangled PQC matches QRH: the entanglement topology encodes useful inductive bias (positive result even if not trainable quantum advantage)
 
-### QA-6 Weak-Measurement Feedback Reservoir (QRH+) — Priority 4 (After QA-5)
+### QA-6 Weak-Measurement Feedback Reservoir (QRH+) — DEFERRED
 
 **Strategy**: Enhance QRH reservoir with weak measurements and feedback for temporal memory
 
 **Risk**: Medium | **Estimated effort**: 2-3 weeks
 
 **Added**: 2026-03-13 based on arXiv:2503.17939 (feedback-enhanced QRC)
+
+**Deferred**: 2026-03-20 — Following strategic assessment of environment complexity vs quantum advantage thresholds. Even if QA-6 achieves its +5pp target on stationary predators, the absolute performance (~28%) remains far below classical approaches (90%+). The environment's observation space (2-9D), action space (4), and state space (~10K) are orders of magnitude below thresholds where quantum approaches have theoretical basis for advantage (see [Strategic Assessment](#strategic-assessment-environment-complexity--quantum-advantage)). Revisit when environment enrichment (Phases 1-3) creates computational challenges that classical approaches genuinely struggle with.
 
 #### Architecture
 
@@ -2086,11 +2089,13 @@ Full evaluation data: [008-quantum-brain-evaluation.md](../experiments/logbooks/
 - Memory capacity must measurably exceed standard QRH
 - If weak measurement + feedback shows no memory improvement: approach is not viable with Aer simulator (may require real hardware noise)
 
-### QA-7 Quantum Plasticity for Multi-Objective Continual Learning — Priority 2 (Parallel)
+### QA-7 Quantum Plasticity for Multi-Objective Continual Learning — COMPLETED (Halted)
 
 **Strategy**: Exploit PQC unitarity for anti-forgetting in sequential multi-objective training
-**Risk**: Low | **Estimated effort**: 1-2 weeks
+**Risk**: Low | **Actual effort**: 1 week (implementation + classical evaluation)
 **Added**: 2026-03-13 based on arXiv:2511.17228 (quantum plasticity)
+**Promoted**: 2026-03-20 — Final quantum experiment at current environment complexity.
+**Completed**: 2026-03-21 — Classical baselines show zero backward forgetting (BF=0.000 ± 0.000 for MLP PPO and CRH, BF=0.005 ± 0.009 for HybridClassical across 4 seeds each). Quantum runs halted — no classical forgetting to improve upon. The continual learning challenge doesn't exist at this environment complexity.
 
 #### Architecture
 
@@ -2175,9 +2180,11 @@ All QA proposals (QA-1 through QA-6) and the QA-7 property test are designed for
 ### Implementation Roadmap
 
 ```text
-Updated 2026-03-13 — QA-1 (QRH), QA-4 (Stages 4a-4d), and reservoir-LSTM
-compositions evaluated. Three new candidates (QA-5, QA-6, QA-7) added based
-on post-QA-4 deep research investigation. Priorities revised.
+Updated 2026-03-20 — QA-5 (QEF) evaluated: quantum-competitive but no
+significant advantage (p>0.05). Strategic assessment concludes current
+environment complexity is below quantum advantage threshold. QA-6 deferred.
+QA-7 promoted to NEXT as final quantum experiment before pivoting to
+environment enrichment (Phases 1-3).
 
 COMPLETED:
   QA-1 QRH — 16 rounds, 96 sessions, ~30,000 episodes
@@ -2191,45 +2198,40 @@ COMPLETED:
     Stage 4d QRH-LSTM FAILED — LSTM degrades QRH vs MLP on all tasks.
     Key innovations: fan-in scaling, entropy floor, actor [features, h_t].
 
-NEXT (revised 2026-03-13 after deep research investigation):
-  Week 6-8:  QA-5 Entangled Feature Extraction (PRIORITY 1)
-             - Entangled PQC feature extractor (8 qubits, CZ/CNOT)
-             - Separable PQC + classical MLP ablation controls
-             - MI decision gate: entangled > separable features?
-             - Foraging + pursuit predator evaluation
-             - Rationale: extends QRH paradigm (our only genuine Q advantage)
-               with purposeful entanglement for interaction encoding.
-               Validated in adversarial RL (arXiv:2603.10289).
+  QA-5 QEF (Quantum Entangled Features) — 24 phases, ~500+ runs, 12-seed validation
+    90.8% stationary (A3 polynomial: 93.8%), 93.0% pursuit (MLP PPO: 96.0%).
+    Quantum-competitive but no statistically significant advantage (p>0.05
+    on all tasks except pursuit where QEF trails at p=0.04).
+    Key innovations: hybrid input, learnable feature gating, ring topology.
+    Gating asymmetry discovered: helps quantum +7.7pp, hurts classical -4.0pp.
 
-  Week 6-7:  QA-7 Quantum Plasticity Test (PARALLEL, low effort)
-             - Sequential multi-objective training protocol
-             - Measure forgetting: PQC vs classical equivalent
-             - Uses existing architectures — evaluation protocol only
-             - Rationale: reframes quantum advantage as optimization
-               landscape property. Low effort, high insight value.
+  QA-7 Quantum Plasticity Test — 12 classical sessions (3 archs × 4 seeds)
+    Protocol: Foraging → Pursuit → Thermotaxis+Pursuit → Foraging Return
+    (200 eps/phase, 50-ep eval blocks, 100×100 grid).
+    Classical baselines: BF=0.000 (MLP PPO, CRH), BF=0.005 (HybridClassical).
+    11/12 seeds show exactly zero backward forgetting.
+    Quantum runs HALTED — no classical forgetting to improve upon.
+    STATUS: COMPLETED — hypothesis untestable at current environment complexity.
 
-  Week 8-10: QA-3 Entangled QLIF + qtDNN (IF QA-5 validates entanglement)
-             - Entangled QLIF circuit design (CNOT/CZ between neuron qubits)
-             - qtDNN surrogate implementation and calibration
-             - Decision gate: qtDNN gradient correlation > 0.5
-             - Rationale: if QA-5 shows entangled features help, QA-3 tests
-               whether trainable entangled circuits add further value.
-               If QA-5 fails, QA-3 is deprioritised (entanglement doesn't
-               help even as features → unlikely to help as trainable circuits).
+NEXT: PIVOT TO ENVIRONMENT ENRICHMENT
+             - Advance through roadmap Phases 1-3
+             - Build richer environments with >30 input features,
+               multi-agent dynamics, long non-Markovian horizons
+             - Return to quantum architecture evaluation when
+               environment complexity creates classical bottlenecks
+             - See Strategic Assessment section for thresholds
 
-  Week 9-11: QA-6 QRH+ Weak-Measurement Feedback (IF QA-5 succeeds)
-             - Weak measurement implementation in quantum reservoir
-             - Feedback loop coupling strength optimisation
-             - Stationary predator evaluation (target: +5pp over QRH)
-             - Rationale: addresses QRH's temporal memory bottleneck
-               at the reservoir level (not readout — Stage 4d proved
-               readout complexity is the wrong fix).
+DEFERRED (pending environment enrichment):
+    QA-6 QRH+ Weak-Measurement Feedback — Environment too simple for
+             meaningful reservoir memory advantage. Even +5pp target
+             yields ~28% absolute vs classical 90%+.
 
-  Deprioritised:
-    QA-2 SQS-QLIF — Local learning rules failed in our experiments
-             (12 rounds Hebbian, 0% success). SQS paper lacks RL validation.
-             Revisit only if QA-5/QA-6 reveal quantum memory effects
-             worth pursuing with biologically-plausible neuron models.
+    QA-3 Entangled QLIF + qtDNN — QA-5 showed entangled features
+             competitive but not advantageous. Trainable entangled
+             circuits unlikely to help at current complexity.
+
+    QA-2 SQS-QLIF — Local learning rules failed (12 rounds, 0%).
+             SQS paper lacks RL validation. Lowest priority.
 
 Decision Gates (completed):
   After Stage 4a: Does QLIF-LSTM work on foraging? → YES (86.25%)
@@ -2243,32 +2245,31 @@ Decision Gates (completed):
       (85.4%) but doesn't scale. QRH-QLSTM/QRH-LSTM both FAILED.
     → Temporal readout cannot fix fixed reservoir limitations.
 
-Decision Gates (upcoming):
-  After QA-5 MI gate (Week 6): Entanglement feature verdict
-    → If entangled > separable features: proceed to full evaluation
-    → If entangled ≤ separable: try alternative topologies, then stop
+  After QA-5 (2026-03-20): Entanglement for RL verdict
+    → Entangled features competitive but no significant advantage
+    → Gating asymmetry interesting but not sufficient for quantum advantage
+    → Combined with theoretical analysis: environment complexity is the
+      bottleneck, not quantum circuit design
 
-  After QA-5 evaluation (Week 8): Entanglement for RL verdict
-    → If entangled features > QRH on pursuit: genuine quantum advantage
-      via purposeful entanglement — proceed to QA-3 (trainable version)
-    → If equivalent: entanglement adds inductive bias but no advantage
-    → If worse: interaction encoding hypothesis falsified
+Decision Gates (completed):
+  After QA-7 (2026-03-21): Plasticity verdict
+    → Classical baselines show ZERO backward forgetting (BF=0.000).
+    → Hypothesis untestable: no classical forgetting for quantum to
+      improve upon. Quantum runs halted.
+    → Root cause: environment tasks are sufficiently different that
+      skills don't interfere, and networks have enough capacity to
+      retain all skills simultaneously.
+    → Quantum architecture search CONCLUSIVELY COMPLETE at current
+      environment complexity.
 
-  After QA-7 (Week 7): Plasticity verdict
-    → If PQC forgetting ≤ 50% of classical: quantum landscape advantage
-      confirmed — reframes the quantum value proposition
-    → If equivalent: unitarity advantage doesn't manifest at our scale
-
-  After QA-3 (Week 10, conditional): Trainable entanglement verdict
-    → If entangled QLIF > non-entangled: first genuine trainable
-      quantum advantage — high-impact result
-    → If no: barren plateau-advantage dilemma confirmed empirically
-
-  Final architecture selection for Phase 2:
-    → Best quantum feature extractor for multi-objective tasks
-    → Best temporal architecture for Phase 3 memory systems
-    → Quantum advantage characterisation (feature-level, landscape-level,
-      or task-dependent reservoir-level)
+Decision Gates (future):
+  After environment enrichment (Phases 1-3):
+    → Re-evaluate quantum advantage when environment has >30 input features,
+      multi-agent dynamics, or long non-Markovian horizons
+    → Classical performance ceiling on new tasks determines if quantum
+      re-evaluation is warranted
+    → Specifically: revisit QA-7 plasticity test if classical networks
+      show BF > 0.1 on enriched environments
 ```
 
 ______________________________________________________________________
@@ -2395,6 +2396,69 @@ hybrid_quantum_predator_small:
 - Task-performance advantage: ΔSuccess = Success(quantum) - Success(classical_equivalent)
 - Biological fidelity advantage: Chemotaxis index, evasion trajectory similarity to real C. elegans
 - Resource advantage: Training time × parameter count for equivalent performance level
+
+______________________________________________________________________
+
+## Strategic Assessment: Environment Complexity & Quantum Advantage
+
+**Date**: 2026-03-20
+**Trigger**: QA-5 (QEF) evaluation complete — quantum-competitive but no significant advantage. 290+ sessions across 11+ architectures with no demonstrated quantum performance advantage.
+
+### Why Current Environments Cannot Show Quantum Advantage
+
+The convergence of theoretical analysis and our own experimental data demonstrates that our current environment complexity is fundamentally below the threshold for quantum advantage:
+
+1. **Observation space too small (2-9D)**: Dequantization results (Tang 2018; Computational Complexity 2024; arXiv:2505.15902, 2025) prove classical algorithms match quantum for low-dimensional classical data. At 2-9 dimensions, a classical MLP with ~10-17K parameters can trivially learn any relevant function mapping.
+
+2. **Action space too small (4 discrete)**: Grover-like quantum search advantages require action spaces >10^20 to overcome the ~10^13 hardware overhead factor (arXiv:2511.01253). With 4 actions, exhaustive classical evaluation is trivially fast.
+
+3. **State space polynomial, not exponential**: A 100×100 grid ≈ 10,000 states. Even with dynamic entities, the effective state space is manageable for classical tabular or neural approaches. Quantum advantage in search/optimisation requires exponential state spaces (quantum chemistry, combinatorial optimisation).
+
+4. **Smooth optimal policies**: The optimal policy for foraging/evasion follows food gradients, avoids predator gradients, and prefers comfortable temperatures. These locally smooth policies don't benefit from superposition or entanglement. Contrast with quantum chemistry where electron correlations are inherently entangled.
+
+5. **Classical already at 94-98%**: When classical approaches achieve >95% success, the remaining gap is largely irreducible noise/stochasticity with no room for quantum advantage.
+
+6. **Literature consensus**: Jerbi et al. (TQC 2023) proved only quadratic (not exponential) sample complexity improvement for quantum policy gradients with "very limited" applicability. ICML 2025 benchmarking (arXiv:2502.04909) found "previous claims of QRL superiority lack sufficient statistical rigor." EPJ Quantum Technology (2025) showed classical Q-learning converges in 80 iterations vs 190 for VQ-DQN on gridworld tasks.
+
+### What Our 290+ Session Campaign Conclusively Demonstrated
+
+| Finding | Evidence |
+|---------|----------|
+| **Parameter efficiency is real but irrelevant** | QSNN: 92 params → 73.9% foraging. But HybridClassical: 116 classical params → equivalent performance. |
+| **Only QRH shows genuine quantum advantage** | +9.4pp on pursuit predators (Domingo control confirms). But task-specific and 41.2% absolute vs classical 96%+. |
+| **Every trainable quantum component matches classical** | QLIF-LSTM quantum gates = classical gates. QEF = MLP PPO within noise. HybridQuantum ≈ HybridClassical. |
+| **Entangled features competitive but not advantageous** | QEF 24-phase optimisation with hybrid input, gating, ring topology — no significant improvement (p>0.05). |
+| **Barren Plateau-Advantage Dilemma confirmed** | Trainable circuits (QLIF) are classically simulable. Fixed circuits (QRH) show advantage but are limited. |
+
+### Complexity Thresholds for Returning to Quantum Evaluation
+
+Quantum architecture evaluation should resume when environment enrichment (Phases 1-3) creates:
+
+| Dimension | Current | Target for Re-evaluation | Rationale |
+|-----------|---------|--------------------------|-----------|
+| **Input features** | 2-9 | >30 with cross-modal correlations | Quantum feature spaces outperform classical when correlations are high-dimensional and non-linear |
+| **Partial observability** | Viewport only | Information-theoretic limits on classical | Quantum memory could help where classical approaches hit observability walls |
+| **Multi-agent** | Single agent | 5+ interacting agents | Quantum game theory provides genuine advantages for entangled strategies |
+| **Temporal horizon** | 200-2000 steps | Very long non-Markovian dependencies | Quantum reservoirs (QRH) showed advantage on temporal pursuit tasks; longer horizons amplify this |
+| **Classical ceiling** | 94-98% | \<70% on challenging tasks | No headroom for quantum advantage when classical already solves the task |
+
+### Path Forward
+
+1. **QA-7 (Quantum Plasticity)**: Final quantum experiment at current complexity — tests anti-forgetting via PQC unitarity, the one remaining hypothesis viable at this scale.
+2. **Document and publish**: The 290+ session evaluation campaign is a valuable systematic result — "Systematic Evaluation of Quantum Architectures for Biological Navigation: When and Why Quantum Doesn't Help."
+3. **Environment enrichment (Phases 1-3)**: Build richer sensory inputs, memory systems, multi-agent dynamics. Advance the simulation to where classical approaches genuinely struggle.
+4. **Return to quantum**: When environments reach complexity thresholds above, re-evaluate QA-3 (trainable entanglement), QA-6 (reservoir memory), and potentially new architectures informed by richer task structure.
+
+### Key References for This Assessment
+
+- Jerbi et al. — Parametrized Quantum Policies for RL (NeurIPS 2021, arXiv:2103.05577)
+- Jerbi et al. — Quantum Policy Gradient Algorithms (TQC 2023)
+- ICML 2025 Benchmarking QRL (arXiv:2502.04909)
+- "Quantum Deep Learning Still Needs a Quantum Leap" (arXiv:2511.01253)
+- Tang — Quantum-inspired classical algorithms (2018, extended through 2025)
+- Dequantization of QNN via Random Fourier Features (arXiv:2505.15902, 2025)
+- Exponential Concentration in Quantum Kernel Methods (Nature Communications, 2024)
+- Performance Comparison: Quantum vs Classical Deep Q-learning (EPJ Quantum Technology, 2025)
 
 ______________________________________________________________________
 
@@ -2574,27 +2638,25 @@ Six strategies have been identified to bridge this gap, with two evaluated and a
 5. **Use entanglement for interaction feature encoding** — (NEW, 2026-03-13) Use entangled PQC purely as feature extractor for agent-agent interaction dynamics. Classical PPO handles policy training. Avoids barren plateaus (quantum part can be fixed). Validated in adversarial game setting (arXiv:2603.10289).
 6. **Exploit PQC unitarity for multi-objective learning dynamics** — (NEW, 2026-03-13) PQC unitary constraints prevent plasticity loss and unbounded weight growth in continual/sequential learning (arXiv:2511.17228). Quantum advantage as optimization landscape property, not computational speedup.
 
-Seven architectures proposed. QA-1 and QA-4 completed; QA-5, QA-6, QA-7 added 2026-03-13 based on post-QA-4 deep research investigation. Priorities revised:
+Seven architectures proposed. QA-1, QA-4, and QA-5 completed. QA-7 is the final quantum experiment before pivoting to environment enrichment. QA-2, QA-3, QA-6 deferred pending richer environments.
 
 | Priority | Architecture | Strategy | Status | Key Finding / Rationale |
 |----------|-------------|----------|--------|-------------------------|
 | — | QA-1 QRH | Don't train quantum | **COMPLETED** | Random topology works; structured fails. Task-dependent advantage: QRH wins pursuit (+9.4pp), CRH wins stationary (+6.3pp). Domingo confound resolved. |
 | — | QA-4 QLIF-LSTM | Quantum activations in LSTM | **COMPLETED (4a-4d)** | Classical LSTM: 98% last-100 pursuit. Quantum gates: no advantage. Stage 4d: QRH-LSTM FAILED — LSTM degrades QRH vs MLP readout on all tasks. |
-| **1** | **QA-5 Entangled Feature Extraction** | **Entanglement for interaction encoding** | **NEXT** | Extends QRH paradigm (our only genuine Q advantage) with purposeful entanglement for predator-prey interaction features. Validated in adversarial RL (arXiv:2603.10289). Low-medium risk. |
-| **2** | **QA-7 Quantum Plasticity Test** | **PQC unitarity for anti-forgetting** | **PARALLEL** | Tests whether PQC policies show less catastrophic forgetting than classical equivalents in sequential multi-objective training. Low effort (evaluation protocol only). arXiv:2511.17228. |
-| 3 | QA-3 Entangled QLIF + qtDNN | Classical surrogates | Conditional on QA-5 | If QA-5 validates entanglement for features, QA-3 tests trainable entangled circuits. hDQNN-TD3 (arXiv:2503.09119) validated qtDNN concept. If QA-5 fails, QA-3 deprioritised. |
-| 4 | QA-6 QRH+ (Weak-Measurement Feedback) | Reservoir temporal memory | Conditional on QA-5 | Addresses QRH's temporal memory bottleneck at the reservoir level (arXiv:2503.17939). Stage 4d proved readout complexity is the wrong fix. |
-| 5 | QA-2 SQS-QLIF Hybrid | Local learning rules | Deprioritised | Highest risk. Hebbian learning failed (12 rounds, 0%). SQS paper lacks RL validation. Revisit only if QA-5/QA-6 reveal quantum memory effects worth pursuing. |
+| — | QA-5 QEF | Entanglement for interaction encoding | **COMPLETED** | 24 phases, ~500+ runs, 12-seed validation. Quantum-competitive but no significant advantage (p>0.05). Trails MLP PPO on pursuit (-3.0pp, p=0.04). Key innovations: hybrid input, feature gating, gating asymmetry. |
+| — | QA-7 Quantum Plasticity Test | PQC unitarity for anti-forgetting | **COMPLETED (Halted)** | Classical baselines show zero forgetting (BF=0.000). Quantum runs halted — hypothesis untestable at current complexity. 12 classical sessions (3 archs × 4 seeds). |
+| Deferred | QA-3 Entangled QLIF + qtDNN | Classical surrogates | Deferred (environment too simple) | QA-5 showed entangled features competitive but not advantageous. Trainable entangled circuits unlikely to help at current complexity. |
+| Deferred | QA-6 QRH+ (Weak-Measurement Feedback) | Reservoir temporal memory | Deferred (environment too simple) | Even +5pp target yields ~28% absolute vs classical 90%+. Revisit after environment enrichment. |
+| Deferred | QA-2 SQS-QLIF Hybrid | Local learning rules | Deferred | Highest risk. Hebbian learning failed (12 rounds, 0%). SQS paper lacks RL validation. |
 
-**Priority rationale (2026-03-13 revision)**:
+**Priority rationale (2026-03-20 revision — post-QA-5 strategic pivot)**:
 
-QA-5 is prioritised because it extends the only paradigm that has demonstrated genuine quantum advantage in our project (QRH: fixed quantum features → classical readout), with purposeful entanglement informed by the latest research showing entangled features capture agent-agent interaction dynamics (arXiv:2603.10289). It has low-medium risk, clear falsification criteria, and reuses existing PPO infrastructure.
+QA-5 (QEF) evaluation conclusively demonstrated that entangled quantum feature extraction achieves competitive but not advantageous performance at current environment complexity. Combined with the theoretical analysis of quantum advantage thresholds (see [Strategic Assessment](#strategic-assessment-environment-complexity--quantum-advantage)), the evidence is decisive: our environment's observation space (2-9D), action space (4), and state space (~10K) are below the thresholds where quantum approaches have theoretical basis for advantage.
 
-QA-7 runs in parallel due to minimal effort (evaluation protocol only, no new architecture). If confirmed, it reframes the quantum advantage story — even without single-task performance gains, PQC policies may enable more robust multi-objective learning.
+QA-7 is promoted to NEXT as the final quantum experiment because it tests a fundamentally different hypothesis — optimisation landscape properties (anti-forgetting) rather than computational performance. This is the one remaining hypothesis that current environments *can* meaningfully test, since multi-objective sequential training is already our core challenge. After QA-7, quantum architecture search pauses until environment enrichment (Phases 1-3) creates computational challenges classical approaches genuinely struggle with.
 
-QA-3 is now conditional on QA-5's entanglement verdict: if entangled features don't help even as a feature extractor, they're unlikely to help as trainable circuits (and the qtDNN adds significant complexity). The "Dissecting QRL" paper (arXiv:2511.17112) also warns that entanglement is context-dependent and can hurt.
-
-QA-6 addresses a real bottleneck (QRH temporal memory) but requires novel measurement infrastructure (weak measurements).
+QA-3 and QA-6 are deferred (not cancelled) — they remain architecturally interesting but need richer environments to have any chance of demonstrating meaningful advantage.
 
 **Key completed outcomes**:
 
@@ -2602,5 +2664,6 @@ QA-6 addresses a real bottleneck (QRH temporal memory) but requires novel measur
 2. **Quantum QLIF activations falsified** — no advantage on any task (QA-4)
 3. **Genuine quantum advantage confirmed** — QRH pursuit predators +9.4pp over CRH (QA-1)
 4. **Reservoir readout complexity is wrong fix** — Stage 4d QRH-LSTM failed on all tasks
-5. **Stationary predators remain unsolved** — 37% best ceiling across all architectures vs MLP PPO 96.5%
-6. **Entanglement is the key untested quantum resource** — all evaluated trainable circuits use single-qubit gates only
+5. **Entangled features competitive but not advantageous** — QEF matches classical within 1-3pp but no significant improvement (QA-5)
+6. **Environment complexity is the bottleneck** — 2-9D observations, 4 actions, ~10K state space are below quantum advantage thresholds (strategic assessment, 2026-03-20)
+7. **No catastrophic forgetting at current complexity** — Classical baselines show zero backward forgetting in sequential multi-objective training (QA-7, 12 sessions). The continual learning challenge doesn't exist at this scale.
