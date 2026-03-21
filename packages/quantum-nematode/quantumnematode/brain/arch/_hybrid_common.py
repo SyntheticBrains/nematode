@@ -6,7 +6,7 @@ Extracts common code from HybridQuantumBrain and HybridClassicalBrain
 Each brain imports only what it needs — no shared base class is imposed.
 
 Shared components:
-- _CortexRolloutBuffer: Rollout storage, GAE computation, minibatch iteration
+- _CortexRolloutBuffer: Re-exported from _ppo_buffer (shared RolloutBuffer)
 - _ReinforceUpdateStats: Bundled statistics for REINFORCE logging
 - _fuse(): Mode-gated fusion of reflex logits and cortex biases
 - _cortex_forward() / _cortex_value(): Classical cortex MLP forward passes
@@ -21,17 +21,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 import torch
 from torch import nn
 
+from quantumnematode.brain.arch._ppo_buffer import (
+    RolloutBuffer as _CortexRolloutBuffer,  # noqa: TC001
+)
 from quantumnematode.logging_config import logger
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
 
 # ──────────────────────────────────────────────────────────────────────
 # Shared constants and defaults
@@ -114,107 +113,6 @@ class _ReinforceUpdateStats:
     returns_tensor: torch.Tensor
     epoch: int
     num_epochs: int
-
-
-class _CortexRolloutBuffer:
-    """Rollout buffer for cortex PPO training."""
-
-    def __init__(
-        self,
-        buffer_size: int,
-        device: torch.device,
-        rng: np.random.Generator | None = None,
-    ) -> None:
-        self.buffer_size = buffer_size
-        self.device = device
-        self.rng = rng if rng is not None else np.random.default_rng()
-        self.reset()
-
-    def reset(self) -> None:
-        self.states: list[np.ndarray] = []
-        self.actions: list[int] = []
-        self.log_probs: list[torch.Tensor] = []
-        self.values: list[torch.Tensor] = []
-        self.rewards: list[float] = []
-        self.dones: list[bool] = []
-        self.position = 0
-
-    def add(  # noqa: PLR0913
-        self,
-        state: np.ndarray,
-        action: int,
-        log_prob: torch.Tensor,
-        value: torch.Tensor,
-        reward: float,
-        done: bool,  # noqa: FBT001
-    ) -> None:
-        self.states.append(state)
-        self.actions.append(action)
-        self.log_probs.append(log_prob.detach())
-        self.values.append(value.detach())
-        self.rewards.append(reward)
-        self.dones.append(done)
-        self.position += 1
-
-    def is_full(self) -> bool:
-        return self.position >= self.buffer_size
-
-    def __len__(self) -> int:
-        return self.position
-
-    def compute_returns_and_advantages(
-        self,
-        last_value: torch.Tensor,
-        gamma: float,
-        gae_lambda: float,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        advantages = torch.zeros(len(self), device=self.device)
-        last_gae = 0.0
-        values = torch.stack(self.values).reshape(-1)
-
-        for t in reversed(range(len(self))):
-            if t == len(self) - 1:
-                next_value = last_value.item()
-                next_non_terminal = 1.0 - float(self.dones[t])
-            else:
-                next_value = values[t + 1].item()
-                next_non_terminal = 1.0 - float(self.dones[t])
-
-            delta = self.rewards[t] + gamma * next_value * next_non_terminal - values[t].item()
-            advantages[t] = last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
-
-        returns = advantages + values
-        return returns, advantages
-
-    def get_minibatches(
-        self,
-        num_minibatches: int,
-        returns: torch.Tensor,
-        advantages: torch.Tensor,
-    ) -> Iterator[dict[str, torch.Tensor]]:
-        batch_size = len(self)
-        minibatch_size = batch_size // num_minibatches
-
-        states = torch.tensor(np.array(self.states), dtype=torch.float32, device=self.device)
-        actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
-        old_log_probs = torch.stack(self.log_probs)
-
-        if len(advantages) > 1:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        indices_np = self.rng.permutation(batch_size)
-        indices = torch.tensor(indices_np, device=self.device)
-
-        for start in range(0, batch_size, minibatch_size):
-            end = start + minibatch_size
-            mb_indices = indices[start:end]
-            yield {
-                "states": states[mb_indices],
-                "actions": actions[mb_indices],
-                "old_log_probs": old_log_probs[mb_indices],
-                "returns": returns[mb_indices],
-                "advantages": advantages[mb_indices],
-            }
 
 
 # ──────────────────────────────────────────────────────────────────────
