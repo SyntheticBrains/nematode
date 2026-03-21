@@ -82,13 +82,9 @@ These goals are mutually reinforcing: biological fidelity creates the computatio
 - **vs. Quantum ML Research**: Embodied, ecologically-valid tasks requiring multi-objective optimization, temporal integration, and social dynamics — not toy gridworlds or random circuits. Systematic 300+ session evaluation campaign provides the most comprehensive quantum architecture comparison in biological RL to date.
 - **Unique position**: The only project combining real connectome topology + reinforcement learning + quantum architecture comparison. C. elegans is the only organism with a fully mapped connectome, making this uniquely tractable.
 
-**Key Differentiators** from existing work:
+### North Star
 
-- **vs. OpenWorm**: Complementary focus on neural computation paradigms vs. cellular biophysics; potential integration where optimized policies control OpenWorm's simulated muscles
-- **vs. Standard RL Benchmarks**: Biologically-grounded tasks with real organism validation; quantum-classical comparative analysis
-- **vs. Quantum ML Research**: Embodied, ecologically-valid tasks requiring multi-objective optimization, long-horizon planning, and sensory integration
-
-**North Star Objective**: Demonstrate that quantum computational approaches can (1) match or exceed classical methods on biologically-relevant decision tasks, (2) reveal new insights into biological neural computation, and (3) establish theoretical foundations for quantum computational neuroscience as a new interdisciplinary field, achieving world-class scientific impact.
+Demonstrate that progressively increasing biological fidelity in C. elegans simulation creates computational challenges where (1) quantum approaches provide measurable advantages over classical methods, or (2) we can precisely characterise what complexity thresholds are required for quantum advantage — either outcome being a valuable scientific contribution. Simultaneously, build the most complete C. elegans behavioral simulation available, advancing computational neuroscience regardless of quantum outcomes.
 
 ______________________________________________________________________
 
