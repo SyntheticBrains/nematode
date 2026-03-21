@@ -28,8 +28,6 @@ class TestGenerateSessionId:
         frozen = datetime(2026, 3, 21, 12, 0, 0, tzinfo=UTC)
         with patch.object(session_module, "datetime") as mock_dt:
             mock_dt.now.return_value = frozen
-            # Keep strftime working via the real datetime instance
-            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
             ids = {generate_session_id() for _ in range(1000)}
         assert len(ids) == 1000, f"Expected 1000 unique IDs, got {len(ids)}"
         # All should share the same timestamp prefix
