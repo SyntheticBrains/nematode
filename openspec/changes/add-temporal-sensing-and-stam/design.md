@@ -81,7 +81,25 @@ The `SensoryModule` registry in `modules.py` maps `ModuleName` → `SensoryModul
 
 **Alternative considered**: Require users to manually list temporal module names in brain config. Rejected because it's error-prone (easy to forget to change one module) and creates coupling between environment sensing config and brain module config.
 
-### 7. Scalar concentration reuses existing decay math
+### 7. STAM resets each episode
+
+**Decision**: The STAM buffer resets at the start of each episode via `prepare_episode()`. No STAM state carries across episodes.
+
+**Rationale**: Food and predator positions are randomized each episode, so concentration values from a previous episode are meaningless — the agent starts at a new position in a different arrangement. STAM models short-term biological memory (cAMP/calcium, minutes to ~30 min), not cross-episode learning; that role belongs to the brain's trained weights. Temperature zones are fixed across episodes, but STAM still needs to rebuild temporal context from the agent's *current trajectory* each episode regardless, since dT/dt depends on the agent's movement path, not just the field itself.
+
+### 8. No environment configuration changes required; start with existing small configs
+
+**Decision**: Use existing small (20×20, 500-step) environment configs for initial temporal sensing experiments. No changes to grid size, max steps, food count, or respawn logic.
+
+**Rationale**: On a 20×20 grid with `gradient_decay_constant: 8.0` and 5 food sources, the concentration signal is detectable from most positions — gradients are steep enough that moving even one cell produces a measurable dC/dt. The 500-step budget is generous relative to grid traversal (~20 steps edge-to-edge), leaving headroom for the "orientation overhead" temporal sensing introduces (agents need a few initial steps to build STAM context before derivatives become informative).
+
+**Considerations for follow-up**:
+
+- If small grids prove too easy even with temporal sensing (concentration gradients are trivially informative from everywhere), medium (50×50) environments become the scientifically interesting regime — flatter gradients at distance make temporal derivatives near-zero and demand more sophisticated exploration.
+- If agents can't converge at 500 steps, a modest step budget increase (750-1000) may be warranted, but this should be data-driven, not preemptive.
+- Food respawn logic is unaffected — new food spawning mid-episode is fine because STAM naturally adapts to concentration changes in the environment.
+
+### 9. Scalar concentration reuses existing decay math
 
 **Decision**: `get_food_concentration(position)` sums `base_strength * exp(-distance / decay_constant)` from all food sources — the same formula as `_compute_food_gradient_vector()` but returning the scalar sum of magnitudes instead of the vector.
 
