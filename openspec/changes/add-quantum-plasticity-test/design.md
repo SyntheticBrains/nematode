@@ -48,7 +48,7 @@ The brain survives across phases because it is constructed once and passed by re
 
 **Rationale**: `MLPPPOBrain.copy()` raises `NotImplementedError`, so we cannot rely on `copy()` across all five architectures. Disk checkpoints are sufficient — we save before each phase transition and can reload if needed for debugging or reproducibility. In-memory snapshots are unnecessary since eval blocks measure the *current* brain state, not a prior snapshot.
 
-For architectures with multiple components (HybridQuantum has reflex + cortex + critic), we use their existing `save_*_weights()` / `load_*_weights()` methods. For simpler architectures (QRH, CRH, MLP PPO), we save the full `state_dict()` of their PyTorch modules plus optimizer state into a single checkpoint dict.
+For all architectures (including multi-component ones like HybridQuantum), we use a generic `_get_torch_modules()` discovery function that finds all PyTorch modules and optimizers on the brain instance via `getattr()`. This avoids architecture-specific save/load code and works uniformly across all 5 target architectures. Each checkpoint is a dict of `{module_name: state_dict}` saved via `torch.save`.
 
 ### 4. Brain construction and seed handling
 

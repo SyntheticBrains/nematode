@@ -1,5 +1,11 @@
 # experiment-tracking Specification (Delta)
 
+> **Implementation note**: The `PlasticityMetadata` and `PlasticityPhaseResult` models
+> were added to `experiment/metadata.py` and the optional `plasticity` field was added to
+> `ExperimentMetadata`. However, `run_plasticity_test.py` does not currently call
+> `save_experiment()` — CSV export is the primary output. The wiring can be added if the
+> protocol is reused with enriched environments.
+
 ## Purpose
 
 Extends experiment tracking to support the plasticity evaluation protocol's multi-phase sessions, where a single evaluation run spans multiple environment objectives with metric segmentation per phase.
