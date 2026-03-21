@@ -7,8 +7,9 @@ The environment SHALL compute scalar food concentration at a given position as t
 #### Scenario: Single Food Concentration
 
 - **WHEN** `get_food_concentration(position)` is called with one food source at (10, 10)
-- **THEN** the concentration at position (5, 5) SHALL be `gradient_strength * exp(-distance / gradient_decay_constant)`
+- **THEN** the raw concentration at position (5, 5) SHALL be `gradient_strength * exp(-distance / gradient_decay_constant)`
 - **AND** the distance SHALL be Euclidean distance between the query position and the food source
+- **AND** the raw value SHALL be normalized via `tanh(raw * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1], consistent with oracle gradient magnitude normalization
 - **AND** the result SHALL be a single non-negative float (no direction component)
 
 #### Scenario: Multiple Food Concentration Superposition
@@ -37,7 +38,8 @@ The environment SHALL compute scalar predator danger signal at a given position 
 #### Scenario: Single Predator Concentration
 
 - **WHEN** `get_predator_concentration(position)` is called with one predator at (10, 10)
-- **THEN** the concentration at position (5, 5) SHALL be `gradient_strength * exp(-distance / gradient_decay_constant)`
+- **THEN** the raw concentration at position (5, 5) SHALL be `gradient_strength * exp(-distance / gradient_decay_constant)`
+- **AND** the raw value SHALL be normalized via `tanh(raw * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1]
 - **AND** the result SHALL use predator-specific `gradient_strength` and `gradient_decay_constant` parameters
 - **AND** the result SHALL be a single non-negative float
 

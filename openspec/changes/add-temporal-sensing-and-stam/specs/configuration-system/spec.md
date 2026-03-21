@@ -42,6 +42,13 @@ The configuration system SHALL validate sensing mode and STAM parameter combinat
 - **THEN** the system SHALL log a warning that Mode A (temporal) without STAM may result in very limited sensory information
 - **AND** the configuration SHALL still be accepted (STAM is recommended but not required)
 
+#### Scenario: Derivative Mode Auto-Enables STAM
+
+- **WHEN** any modality is set to `derivative` mode and `stam_enabled` is not explicitly set to `true`
+- **THEN** the system SHALL auto-enable STAM with default parameters (`buffer_size: 30`, `decay_rate: 0.1`)
+- **AND** SHALL log an info message indicating that STAM was auto-enabled because derivative mode requires temporal history
+- **AND** explicitly-set STAM parameters SHALL be preserved if provided
+
 #### Scenario: STAM Buffer Size Validation
 
 - **WHEN** `stam_buffer_size` is set to 0 or a negative value

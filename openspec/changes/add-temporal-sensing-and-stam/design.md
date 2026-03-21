@@ -99,11 +99,41 @@ The `SensoryModule` registry in `modules.py` maps `ModuleName` → `SensoryModul
 - If agents can't converge at 500 steps, a modest step budget increase (750-1000) may be warranted, but this should be data-driven, not preemptive.
 - Food respawn logic is unaffected — new food spawning mid-episode is fine because STAM naturally adapts to concentration changes in the environment.
 
-### 9. Scalar concentration reuses existing decay math
+### 9. Scalar concentration reuses existing decay math and normalization
 
-**Decision**: `get_food_concentration(position)` sums `base_strength * exp(-distance / decay_constant)` from all food sources — the same formula as `_compute_food_gradient_vector()` but returning the scalar sum of magnitudes instead of the vector.
+**Decision**: `get_food_concentration(position)` sums `base_strength * exp(-distance / decay_constant)` from all food sources — the same formula as `_compute_food_gradient_vector()` but returning the scalar sum of magnitudes instead of the vector. The raw scalar is normalized via `tanh(raw * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1], matching the oracle module normalization (env.py:1294).
 
-**Rationale**: Reusing the existing decay model ensures consistency between oracle and temporal modes — the scalar value at a position is exactly what the gradient was computed from. This means the temporal derivative of concentration values will be physically consistent with the spatial gradients in oracle mode.
+**Rationale**: Reusing the existing decay model and normalization ensures consistency between oracle and temporal modes — the scalar value at a position uses the same scale as gradient magnitudes. This means temporal derivatives computed from normalized concentrations will have comparable magnitudes to the features brains are already trained on, and switching between oracle and temporal modes changes the information content (directional vs scalar) without also changing the value range.
+
+### 10. Derivative mode implicitly requires STAM
+
+**Decision**: When any modality is set to `derivative` mode, the system requires STAM to be enabled (since temporal derivatives are computed from STAM history). If `derivative` mode is configured without `stam_enabled: true`, the config loader SHALL auto-enable STAM with default parameters and log an info message.
+
+**Rationale**: Derivative mode's temporal derivative computation (`compute_temporal_derivative()`) operates on the STAM buffer. Without STAM, there is no history from which to compute dC/dt. Rather than failing validation (which would confuse users), auto-enabling STAM is the most ergonomic approach — derivative mode implies temporal history.
+
+### 11. Position deltas use step-to-step differences, not absolute coordinates
+
+**Decision**: The STAM position delta components (2 of the 9 memory state floats) are computed as the displacement from the weighted mean of recent step-to-step position *changes* (dx[i] = pos[i] - pos[i-1]) to the most recent step change. The buffer stores position *differences* per step, not absolute grid coordinates.
+
+**Rationale**: Absolute grid position is god-like knowledge — a real worm doesn't know where it is on the petri dish. But a worm does have proprioceptive awareness of its own movement (which direction and how far it moved each step). Step-to-step deltas are biologically legitimate proprioceptive signals. The weighted mean of recent deltas captures the agent's recent movement trend, and deviation from that trend captures changes in movement pattern.
+
+### 12. Combined chemotaxis module not supported for temporal mode
+
+**Decision**: The legacy combined `chemotaxis` module (which encodes food+predator as a single superposed gradient) is not compatible with temporal sensing. If `chemotaxis_mode` is set to `temporal` or `derivative`, the module translation MUST replace `chemotaxis` with `food_chemotaxis_temporal` and also add `nociception_temporal` if not already present (since the combined signal included predator information). If `nociception_mode` is still `oracle`, `nociception` (oracle) is added instead.
+
+**Rationale**: The combined chemotaxis module is a legacy shortcut — it merges food attraction and predator repulsion into one gradient vector. In temporal mode, there is no directional gradient to combine. Food and predator signals must be separated into independent scalar channels, each with its own temporal derivative. This separation is also more biologically accurate: real C. elegans uses distinct sensory neurons for food (AWC, AWA) and predator chemicals (ASH, ADL).
+
+### 13. Biological calibration as documentation, not enforcement
+
+**Decision**: Biological reference values (AFD sensitivity ~0.01°C, ASE concentration comparisons over ~1-second head sweep timescales, STAM decay ~minutes to 30 minutes) are documented as comments in code and config files. No runtime enforcement or unit conversion system is added. The `stam_decay_rate: 0.1` default with `buffer_size: 30` approximates a half-life of ~7 steps; if each step represents ~1-2 seconds of biological time, this maps to ~10-15 seconds of salient memory, appropriate for the short-term chemotaxis comparisons ASE neurons perform.
+
+**Rationale**: The simulation operates in discrete grid steps, not biological time. Introducing a formal time-unit mapping would add complexity without improving the computational experiment — what matters is whether temporal sensing creates measurably harder problems, not whether the exact timescales match biology. The biological reference values serve as calibration guidance for parameter tuning, not as constraints. Comments in the STAM module and config files will document the intended biological mapping.
+
+### 14. Action variety metric is computational, not biological
+
+**Decision**: The action variety component of the STAM memory state vector (1 of 9 floats) is documented as a computational convenience for learning, not a biological feature. It captures exploration diversity (entropy of recent actions) which helps brains distinguish "stuck in a loop" from "actively exploring."
+
+**Rationale**: There is no direct C. elegans neural correlate for "action diversity awareness." However, it provides useful signal for RL agents learning in temporal mode, where movement strategy is critical for gradient inference. Documenting it as non-biological prevents over-claiming.
 
 ## Risks / Trade-offs
 

@@ -41,7 +41,7 @@ The system SHALL provide sensory module registry entries for temporal sensing th
 
 - **WHEN** chemotaxis is configured in temporal or derivative mode
 - **THEN** a `food_chemotaxis_temporal` module SHALL be registered in the SensoryModule registry
-- **AND** the module SHALL extract strength from normalized food concentration at the agent's position
+- **AND** the module SHALL extract strength from food concentration normalized via `tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1], consistent with oracle module normalization
 - **AND** the module SHALL extract angle from the food temporal derivative (dC/dt) when available, or 0 when not
 - **AND** the module SHALL produce valid quantum gate angles via `to_quantum()` and classical features via `to_classical()`
 
@@ -49,7 +49,7 @@ The system SHALL provide sensory module registry entries for temporal sensing th
 
 - **WHEN** nociception is configured in temporal or derivative mode
 - **THEN** a `nociception_temporal` module SHALL be registered in the SensoryModule registry
-- **AND** the module SHALL extract strength from normalized predator concentration at the agent's position
+- **AND** the module SHALL extract strength from predator concentration normalized via `tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR)` to [0, 1]
 - **AND** the module SHALL extract angle from the predator temporal derivative when available, or 0 when not
 
 #### Scenario: Thermotaxis Temporal Module
@@ -90,7 +90,8 @@ The system SHALL automatically substitute temporal sensory module names for orac
 
 - **WHEN** a brain config specifies `sensory_modules: [chemotaxis]` (combined gradient) and `chemotaxis_mode: temporal`
 - **THEN** the system SHALL replace `chemotaxis` with `food_chemotaxis_temporal`
-- **AND** the replacement SHALL handle the combined-to-separated transition correctly
+- **AND** the system SHALL add `nociception_temporal` if `nociception_mode` is not `oracle`, or `nociception` if `nociception_mode` is `oracle`, unless a nociception module is already present
+- **AND** this ensures the predator signal (previously embedded in the combined gradient) is not silently dropped
 
 ### Requirement: Mechanosensation Exemption
 

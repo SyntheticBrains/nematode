@@ -8,7 +8,7 @@ The system SHALL provide an exponential-decay memory buffer that stores recent s
 
 - **WHEN** the agent completes a simulation step
 - **THEN** the STAM buffer SHALL record the current scalar readings for all active channels (food concentration, temperature, predator concentration)
-- **AND** SHALL record the agent's current position as (x, y)
+- **AND** SHALL record the step-to-step position change (dx, dy) as a proprioceptive movement signal, NOT absolute grid coordinates
 - **AND** SHALL record the action taken in that step
 - **AND** the most recent entry SHALL be stored at index 0
 
@@ -76,8 +76,8 @@ The system SHALL produce a fixed-size memory state vector suitable for neural ne
 - **THEN** it SHALL return a numpy array of exactly 9 floats:
   - 3 weighted scalar means (food concentration, temperature, predator concentration)
   - 3 temporal derivatives (dC/dt for each channel)
-  - 2 position deltas (dx, dy from weighted mean recent position to current position)
-  - 1 action variety metric (entropy of recent actions)
+  - 2 position deltas (dx, dy: deviation of most recent step-to-step movement from weighted mean of recent movements — captures change in movement pattern)
+  - 1 action variety metric (entropy of recent actions — computational convenience for learning, not biologically motivated)
 - **AND** the array shape SHALL be (9,) regardless of buffer fill level
 
 #### Scenario: Empty Buffer State
