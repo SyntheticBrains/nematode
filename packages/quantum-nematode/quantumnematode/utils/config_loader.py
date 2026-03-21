@@ -1,5 +1,7 @@
+# pyright: reportUnusedFunction=false
 """Load and configure simulation settings from a YAML file."""
 
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -490,6 +492,133 @@ class ThermotaxisConfig(BaseModel):
         )
 
 
+class SensingMode(StrEnum):
+    """Sensing mode for gradient-based sensory modalities."""
+
+    ORACLE = "oracle"  # Spatial gradients (existing behavior)
+    TEMPORAL = "temporal"  # Mode A: raw scalar only, agent uses STAM
+    DERIVATIVE = "derivative"  # Mode B: scalar + dC/dt
+
+
+class SensingConfig(BaseModel):
+    """Configuration for temporal sensing modes and STAM memory.
+
+    Each gradient-based modality (chemotaxis, thermotaxis, nociception) can
+    independently use oracle, temporal, or derivative sensing mode.
+    """
+
+    chemotaxis_mode: SensingMode = SensingMode.ORACLE
+    thermotaxis_mode: SensingMode = SensingMode.ORACLE
+    nociception_mode: SensingMode = SensingMode.ORACLE
+    stam_enabled: bool = False
+    stam_buffer_size: int = Field(default=30, gt=0)
+    stam_decay_rate: float = Field(default=0.1, gt=0.0)
+
+
+def _apply_sensing_mode(
+    sensory_modules: list[str],
+    sensing: SensingConfig,
+) -> list[str]:
+    """Auto-replace oracle sensory module names with temporal variants.
+
+    Handles:
+    - food_chemotaxis → food_chemotaxis_temporal when chemotaxis_mode != oracle
+    - nociception → nociception_temporal when nociception_mode != oracle
+    - thermotaxis → thermotaxis_temporal when thermotaxis_mode != oracle
+    - chemotaxis (combined) → food_chemotaxis_temporal + nociception split
+    - Appends stam module when stam_enabled
+
+    Parameters
+    ----------
+    sensory_modules : list[str]
+        Original sensory module names from brain config.
+    sensing : SensingConfig
+        Sensing configuration.
+
+    Returns
+    -------
+    list[str]
+        Updated sensory module names with temporal substitutions applied.
+    """
+    result = []
+    has_nociception = any(m in ("nociception", "nociception_temporal") for m in sensory_modules)
+
+    for module in sensory_modules:
+        if module == "food_chemotaxis" and sensing.chemotaxis_mode != SensingMode.ORACLE:
+            result.append("food_chemotaxis_temporal")
+        elif module == "nociception" and sensing.nociception_mode != SensingMode.ORACLE:
+            result.append("nociception_temporal")
+        elif module == "thermotaxis" and sensing.thermotaxis_mode != SensingMode.ORACLE:
+            result.append("thermotaxis_temporal")
+        elif module == "chemotaxis" and sensing.chemotaxis_mode != SensingMode.ORACLE:
+            # Combined module splits into food + nociception
+            result.append("food_chemotaxis_temporal")
+            if not has_nociception:
+                # Add nociception to avoid silently dropping predator signal
+                if sensing.nociception_mode != SensingMode.ORACLE:
+                    result.append("nociception_temporal")
+                else:
+                    result.append("nociception")
+        else:
+            result.append(module)
+
+    # Append STAM module when enabled (if not already present)
+    if sensing.stam_enabled and "stam" not in result:
+        result.append("stam")
+
+    return result
+
+
+def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
+    """Validate sensing config and auto-enable STAM for derivative mode.
+
+    Parameters
+    ----------
+    sensing : SensingConfig
+        Sensing configuration to validate.
+
+    Returns
+    -------
+    SensingConfig
+        Validated/updated sensing configuration.
+    """
+    any_derivative = any(
+        mode == SensingMode.DERIVATIVE
+        for mode in (
+            sensing.chemotaxis_mode,
+            sensing.thermotaxis_mode,
+            sensing.nociception_mode,
+        )
+    )
+    any_temporal = any(
+        mode == SensingMode.TEMPORAL
+        for mode in (
+            sensing.chemotaxis_mode,
+            sensing.thermotaxis_mode,
+            sensing.nociception_mode,
+        )
+    )
+
+    # Derivative mode requires STAM — auto-enable if not set
+    if any_derivative and not sensing.stam_enabled:
+        logger.info(
+            "Derivative sensing mode requires temporal history — "
+            "auto-enabling STAM with default parameters "
+            f"(buffer_size={sensing.stam_buffer_size}, "
+            f"decay_rate={sensing.stam_decay_rate}).",
+        )
+        sensing = sensing.model_copy(update={"stam_enabled": True})
+
+    # Temporal mode without STAM — warn but allow
+    if any_temporal and not sensing.stam_enabled:
+        logger.warning(
+            "Temporal sensing mode (Mode A) without STAM enabled may result in "
+            "very limited sensory information. Consider setting stam_enabled: true.",
+        )
+
+    return sensing
+
+
 class EnvironmentConfig(BaseModel):
     """Configuration for the dynamic foraging environment."""
 
@@ -502,6 +631,7 @@ class EnvironmentConfig(BaseModel):
     predators: PredatorConfig | None = None
     health: HealthConfig | None = None
     thermotaxis: ThermotaxisConfig | None = None
+    sensing: SensingConfig | None = None
 
     def get_foraging_config(self) -> ForagingConfig:
         """Get foraging configuration with defaults."""
@@ -518,6 +648,10 @@ class EnvironmentConfig(BaseModel):
     def get_thermotaxis_config(self) -> ThermotaxisConfig:
         """Get thermotaxis configuration with defaults."""
         return self.thermotaxis or ThermotaxisConfig()
+
+    def get_sensing_config(self) -> SensingConfig:
+        """Get sensing configuration with defaults."""
+        return self.sensing or SensingConfig()
 
 
 # Backward compatibility alias

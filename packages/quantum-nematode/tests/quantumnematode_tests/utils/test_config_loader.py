@@ -4,10 +4,15 @@ import pytest
 from quantumnematode.env import ForagingParams, HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.utils.config_loader import (
     DynamicEnvironmentConfig,
+    EnvironmentConfig,
     ForagingConfig,
     HealthConfig,
     PredatorConfig,
+    SensingConfig,
+    SensingMode,
     ThermotaxisConfig,
+    _apply_sensing_mode,
+    validate_sensing_config,
 )
 
 
@@ -436,3 +441,203 @@ class TestThermotaxisConfig:
 
         assert params.hot_spots == []
         assert params.cold_spots == []
+
+
+class TestSensingConfig:
+    """Test cases for SensingConfig and sensing mode logic."""
+
+    def test_defaults_all_oracle(self) -> None:
+        """Test that default sensing modes are all ORACLE with STAM disabled."""
+        config = SensingConfig()
+        assert config.chemotaxis_mode == SensingMode.ORACLE
+        assert config.thermotaxis_mode == SensingMode.ORACLE
+        assert config.nociception_mode == SensingMode.ORACLE
+        assert config.stam_enabled is False
+        assert config.stam_buffer_size == 30
+        assert config.stam_decay_rate == 0.1
+
+    def test_custom_modes(self) -> None:
+        """Test that custom sensing modes are accepted and stored correctly."""
+        config = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            thermotaxis_mode=SensingMode.DERIVATIVE,
+            nociception_mode=SensingMode.ORACLE,
+        )
+        assert config.chemotaxis_mode == SensingMode.TEMPORAL
+        assert config.thermotaxis_mode == SensingMode.DERIVATIVE
+        assert config.nociception_mode == SensingMode.ORACLE
+
+    def test_invalid_mode_rejected(self) -> None:
+        """Test that an invalid sensing mode raises ValueError."""
+        with pytest.raises(ValueError, match="validation error"):
+            SensingConfig.model_validate({"chemotaxis_mode": "invalid"})
+
+    def test_buffer_size_must_be_positive(self) -> None:
+        """Test that non-positive buffer size raises ValueError."""
+        with pytest.raises(ValueError, match="greater than 0"):
+            SensingConfig(stam_buffer_size=0)
+        with pytest.raises(ValueError, match="greater than 0"):
+            SensingConfig(stam_buffer_size=-1)
+
+    def test_decay_rate_must_be_positive(self) -> None:
+        """Test that non-positive decay rate raises ValueError."""
+        with pytest.raises(ValueError, match="greater than 0"):
+            SensingConfig(stam_decay_rate=0.0)
+        with pytest.raises(ValueError, match="greater than 0"):
+            SensingConfig(stam_decay_rate=-0.1)
+
+    def test_environment_config_has_sensing(self) -> None:
+        """Test that EnvironmentConfig provides default sensing configuration."""
+        env_config = EnvironmentConfig()
+        sensing = env_config.get_sensing_config()
+        assert sensing.chemotaxis_mode == SensingMode.ORACLE
+        assert sensing.stam_enabled is False
+
+    def test_environment_config_custom_sensing(self) -> None:
+        """Test that EnvironmentConfig accepts custom sensing configuration."""
+        env_config = EnvironmentConfig(
+            sensing=SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL, stam_enabled=True),
+        )
+        sensing = env_config.get_sensing_config()
+        assert sensing.chemotaxis_mode == SensingMode.TEMPORAL
+        assert sensing.stam_enabled is True
+
+
+class TestValidateSensingConfig:
+    """Test validation and auto-enable logic."""
+
+    def test_derivative_auto_enables_stam(self) -> None:
+        """Test that derivative mode auto-enables STAM."""
+        config = SensingConfig(chemotaxis_mode=SensingMode.DERIVATIVE)
+        validated = validate_sensing_config(config)
+        assert validated.stam_enabled is True
+
+    def test_derivative_preserves_custom_stam_params(self) -> None:
+        """Test that derivative mode preserves custom STAM buffer parameters."""
+        config = SensingConfig(
+            chemotaxis_mode=SensingMode.DERIVATIVE,
+            stam_buffer_size=50,
+            stam_decay_rate=0.2,
+        )
+        validated = validate_sensing_config(config)
+        assert validated.stam_enabled is True
+        assert validated.stam_buffer_size == 50
+        assert validated.stam_decay_rate == 0.2
+
+    def test_derivative_with_stam_already_enabled(self) -> None:
+        """Test that derivative mode keeps STAM enabled when already set."""
+        config = SensingConfig(
+            chemotaxis_mode=SensingMode.DERIVATIVE,
+            stam_enabled=True,
+        )
+        validated = validate_sensing_config(config)
+        assert validated.stam_enabled is True
+
+    def test_oracle_mode_no_stam_change(self) -> None:
+        """Test that oracle mode does not auto-enable STAM."""
+        config = SensingConfig()
+        validated = validate_sensing_config(config)
+        assert validated.stam_enabled is False
+
+    def test_temporal_without_stam_warns(self) -> None:
+        """Temporal without STAM should be accepted but is not recommended."""
+        config = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
+        validated = validate_sensing_config(config)
+        # Should still be accepted (no auto-enable for temporal)
+        assert validated.stam_enabled is False
+
+
+class TestApplySensingMode:
+    """Test sensory module name translation."""
+
+    def test_oracle_mode_no_changes(self) -> None:
+        """Test that oracle mode leaves module names unchanged."""
+        sensing = SensingConfig()
+        modules = ["food_chemotaxis", "mechanosensation"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert result == ["food_chemotaxis", "mechanosensation"]
+
+    def test_temporal_replaces_food_chemotaxis(self) -> None:
+        """Test that temporal mode replaces food_chemotaxis with food_chemotaxis_temporal."""
+        sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
+        modules = ["food_chemotaxis", "mechanosensation"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "food_chemotaxis_temporal" in result
+        assert "food_chemotaxis" not in result
+        assert "mechanosensation" in result
+
+    def test_temporal_replaces_nociception(self) -> None:
+        """Test that temporal mode replaces nociception with nociception_temporal."""
+        sensing = SensingConfig(nociception_mode=SensingMode.TEMPORAL)
+        modules = ["food_chemotaxis", "nociception"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "nociception_temporal" in result
+        assert "nociception" not in result
+
+    def test_temporal_replaces_thermotaxis(self) -> None:
+        """Test that derivative mode replaces thermotaxis with thermotaxis_temporal."""
+        sensing = SensingConfig(thermotaxis_mode=SensingMode.DERIVATIVE)
+        modules = ["food_chemotaxis", "thermotaxis"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "thermotaxis_temporal" in result
+        assert "thermotaxis" not in result
+
+    def test_combined_chemotaxis_splits(self) -> None:
+        """Test that combined chemotaxis is split into food and nociception modules."""
+        sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
+        modules = ["chemotaxis"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "food_chemotaxis_temporal" in result
+        assert "nociception" in result  # Oracle nociception added
+        assert "chemotaxis" not in result
+
+    def test_combined_chemotaxis_splits_with_temporal_nociception(self) -> None:
+        """Test that combined chemotaxis splits both food and nociception to temporal."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            nociception_mode=SensingMode.TEMPORAL,
+        )
+        modules = ["chemotaxis"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "food_chemotaxis_temporal" in result
+        assert "nociception_temporal" in result
+
+    def test_combined_chemotaxis_no_duplicate_nociception(self) -> None:
+        """Test that splitting chemotaxis does not duplicate nociception."""
+        sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
+        modules = ["chemotaxis", "nociception"]
+        result = _apply_sensing_mode(modules, sensing)
+        noci_count = sum(1 for m in result if "nociception" in m)
+        assert noci_count == 1
+
+    def test_stam_appended_when_enabled(self) -> None:
+        """Test that STAM module is appended when stam_enabled is True."""
+        sensing = SensingConfig(stam_enabled=True)
+        modules = ["food_chemotaxis"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "stam" in result
+
+    def test_stam_not_duplicated(self) -> None:
+        """Test that STAM is not duplicated if already in the module list."""
+        sensing = SensingConfig(stam_enabled=True)
+        modules = ["food_chemotaxis", "stam"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert result.count("stam") == 1
+
+    def test_stam_not_appended_when_disabled(self) -> None:
+        """Test that STAM module is not appended when stam_enabled is False."""
+        sensing = SensingConfig(stam_enabled=False)
+        modules = ["food_chemotaxis"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "stam" not in result
+
+    def test_mechanosensation_never_replaced(self) -> None:
+        """Test that mechanosensation is never replaced by temporal modes."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            thermotaxis_mode=SensingMode.TEMPORAL,
+            nociception_mode=SensingMode.TEMPORAL,
+        )
+        modules = ["food_chemotaxis", "mechanosensation", "nociception", "thermotaxis"]
+        result = _apply_sensing_mode(modules, sensing)
+        assert "mechanosensation" in result
