@@ -38,6 +38,16 @@ The system SHALL automatically capture comprehensive metadata for simulation run
 - **AND** the hash SHALL be stored in the metadata
 - **AND** the hash SHALL enable detection of config changes even with same filename
 
+#### Scenario: Plasticity evaluation metadata capture
+
+- **GIVEN** a plasticity evaluation run completes
+- **WHEN** experiment tracking captures metadata
+- **THEN** the metadata SHALL contain a `plasticity` section with:
+  - Protocol parameters (training episodes per phase, eval episodes, seeds)
+  - Per-phase results (phase name, environment config hash, training metrics, eval metrics)
+  - Aggregate plasticity metrics (backward forgetting, forward transfer, plasticity retention)
+- **AND** the experiment type SHALL be tagged as `"plasticity_evaluation"`
+
 ### Requirement: Experiment Storage and Retrieval
 
 The system SHALL store experiment metadata as JSON files and provide query capabilities for filtering, searching, and comparing experiments.
