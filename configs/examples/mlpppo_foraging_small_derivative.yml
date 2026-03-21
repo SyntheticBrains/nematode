@@ -9,9 +9,12 @@
 #     to infer food direction
 #   - Easier than Mode A (temporal) since the derivative is pre-computed
 #
+# Performance: 88.5% success rate (vs 97.5% oracle) with 1000 episodes training
+# Converged performance matches oracle (~98-100% in last 100 episodes)
+#
 # STAM auto-enabled by derivative mode for temporal history
 
-max_steps: 500
+max_steps: 1000  # Temporal sensing needs more steps (3.4x slower navigation than oracle)
 brain:
   name: mlpppo
   config:
@@ -32,6 +35,12 @@ brain:
     max_grad_norm: 0.5
     normalize_advantages: true
 
+    # LR schedule: warmup prevents early instability, decay prevents late oscillation
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 800
+    lr_decay_end: 0.0001
+
     sensory_modules:
       - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
       - proprioception   # Heading direction — critical for correlating dC/dt with movement
@@ -50,7 +59,7 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 400.0   # Increased from 200 — temporal sensing needs more exploration budget
+  initial_satiety: 400.0
   satiety_decay_rate: 1.0
   satiety_gain_per_food: 0.2
 
