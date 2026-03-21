@@ -694,49 +694,25 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-### Phase 8: Universality & Impact (Q4 2027 - Q2 2028)
+## Quantum Re-evaluation Checkpoints
 
-**Goal**: Demonstrate universal principles by transferring to new organisms and domains, establish quantum computational neuroscience as a recognized research direction, and achieve paradigm-shifting impact.
+Instead of concentrating quantum work in a single phase, quantum re-evaluation is distributed across the roadmap as complexity milestones are reached:
 
-#### Deliverables
+| Phase | Complexity Milestone | Quantum Re-evaluation | Rationale |
+|-------|---------------------|----------------------|-----------|
+| **3** | Non-Markovian temporal dependencies | Re-test QRH (temporal advantage), QEF on harder tasks | QRH showed genuine advantage on temporal pursuit; richer temporal structure may amplify |
+| **4** | Exponential multi-agent state space | Evaluate quantum game theory, entangled strategies | Strongest theoretical case for quantum advantage (quantum game theory) |
+| **6** | Continuous action/state + connectome | **MAJOR**: Full quantum campaign v2 if classical \<70% | All identified complexity thresholds potentially crossed |
+| **8** | Full integration | Definitive comparison at maximum complexity | Final answer on quantum advantage at this simulation scale |
 
-1. **Transfer to New Organisms**
+Each checkpoint follows the same protocol:
 
-   - **Drosophila (fruit fly)**: 100,000 neurons, similar sensory tasks (chemotaxis, foraging, escape)
-   - **Zebrafish larvae**: 100,000 neurons, visual predator avoidance, schooling behavior
-   - **Honeybee**: Foraging, waggle dance communication, collective decision-making
-   - **Zero-shot transfer**: Do C. elegans-trained architectures transfer to new organisms?
-   - **Fine-tuning**: How much retraining is needed for new organism?
+1. Establish classical baselines on enriched tasks
+2. Measure classical ceiling (post-convergence success rate)
+3. If ceiling \<threshold: launch targeted quantum evaluation
+4. If ceiling remains high: document and move to next checkpoint
 
-2. **Domain Transfer**
-
-   - **Swarm robotics**: Multi-robot foraging, cooperative exploration, task allocation
-   - **Financial trading**: Multi-objective optimization (profit vs. risk), temporal dynamics
-   - **Network routing**: Packet routing with congestion avoidance (food = destination, predators = congestion)
-   - **Autonomous vehicles**: Navigation with multi-objective constraints (speed vs. safety)
-   - **Measure**: Performance on new domain without C. elegans-specific tuning
-
-3. **Universal Principles Extraction**
-
-   - Identify domain-invariant computational principles
-   - Example: "Approach-avoidance conflicts optimally resolved by [X quantum mechanism]"
-   - Example: "Exploration-exploitation trade-off follows [Y scaling law] across all architectures"
-   - Mathematical formalization: General theorems applicable beyond C. elegans
-
-4. **Scaling Theory Development**
-
-   - **Theoretical scaling bounds**: Time/space complexity as function of neuron count
-   - **Hierarchical composition**: Combine modules for larger-scale systems
-   - **Modular quantum circuits**: Can we compose 1000+ qubit circuits from 10-qubit modules?
-   - **Scaling trajectory**: Principles for moving from C. elegans (302 neurons) through Drosophila (~100K) toward larger systems
-
-5. **Unified Theory Publication**
-
-   - Mathematical framework connecting: quantum-inspired algorithms ↔ neural computation models ↔ intelligent behavior
-   - Testable predictions across multiple levels (algorithmic, neural network, behavioral)
-   - Computational implications: When do quantum-inspired representations provide advantages for modeling biological intelligence?
-
-6. **Field Establishment: Quantum Computational Neuroscience**
+______________________________________________________________________
 
    - Workshop organization: Invite quantum physicists, neuroscientists, AI researchers
    - Special journal issue: Guest edit special issue on "Quantum Computing for Neuroscience Applications"
