@@ -714,23 +714,21 @@ Each checkpoint follows the same protocol:
 
 ______________________________________________________________________
 
-   - Workshop organization: Invite quantum physicists, neuroscientists, AI researchers
-   - Special journal issue: Guest edit special issue on "Quantum Computing for Neuroscience Applications"
-   - Review article: "Quantum Machine Learning for Computational Neuroscience"
-   - Funding: Apply for major grants (NSF, NIH, ERC) to establish research program
+## Complexity Dashboard
 
-7. **Open Science Impact**
+A living metric tracking the five quantum advantage thresholds identified by the [strategic assessment](research/quantum-architectures.md#strategic-assessment-environment-complexity--quantum-advantage):
 
-   - ≥10 external research groups using NematodeBench
-   - ≥100 citations to project publications
-   - Open-source contributions: PRs from external researchers
-   - Educational impact: Used in university courses on quantum ML or computational neuroscience
+| Dimension | Phase 2 (current) | Phase 3 target | Phase 4 target | Phase 6 target | Quantum threshold |
+|-----------|-------------------|----------------|----------------|----------------|-------------------|
+| **Input dimensionality** | 2-9D | ~15-20D | >30D | >50D (continuous) | >30D with cross-modal correlations |
+| **Partial observability** | Viewport only | Temporal memory limited | Multi-agent fog-of-war | Realistic sensing range | Information-theoretic limits on classical |
+| **Multi-agent** | 1 | 1 | 5-10 | 5-10 | 5+ interacting agents |
+| **Temporal horizon** | Memoryless | STAM (~minutes) | STAM + social memory | Full non-Markovian | Very long non-Markovian dependencies |
+| **Classical ceiling** | 94-98% | Target \<85% | Target \<75% | Target \<70% | \<70% on challenging tasks |
 
-#### Metrics Focus
+**Update protocol**: After each phase's classical baselines are established, update this dashboard with measured values. Quantum checkpoints activate when thresholds are crossed.
 
-- **Universal principles**: ≥3 domain-invariant principles extracted and validated
-- **Transfer success**: ≥50% performance on new organisms/domains without retraining
-- **Field recognition**: Invited talks, special sessions, funding awards
+______________________________________________________________________
 
 #### Phase 8 Exit Criteria
 
