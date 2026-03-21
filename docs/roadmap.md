@@ -185,48 +185,11 @@ Environment complexity (2-9D observations, 4 discrete actions, ~10K effective st
 
 ### Research Questions
 
-1. **Quantum Advantage**: Under what task conditions do quantum approaches outperform classical? (Multi-objective optimization? Uncertainty? Exploration?)
-2. **Biological Plausibility**: Do optimized quantum circuits reveal insights into real C. elegans neural computation?
-3. **Scalability**: Can these approaches scale beyond 302 neurons to larger invertebrate nervous systems (Drosophila ~100K, honeybee ~1M neurons)?
-4. **Universality**: Do learned principles transfer to other organisms, domains, or tasks?
-5. **Hardware Viability**: How do real quantum devices (IBM QPU) perform vs. simulation on these tasks?
-
-### Recent Breakthrough: Evolutionary Optimization (December 2025)
-
-**Key Finding**: Evolutionary optimization (CMA-ES) achieves **4x better performance** than gradient-based learning on quantum circuits for complex predator evasion tasks.
-
-**Performance Data:**
-
-- **Evolutionary optimization (CMA-ES)**: **88% success rate** on dynamic predator evasion (small grid)
-- **Gradient-based learning**: Only **22.5% success rate** on the same task
-- **Quantum-classical gap**: Reduced from **70%** (22.5% quantum vs 92% classical) to just **4%** (88% vs 92%)
-
-**Critical Insight**: Gradient-based learning with parameter-shift rule shows high variance on quantum circuits due to statistical noise from finite shot counts in gradient estimation. This noise causes quantum circuits to converge to suboptimal local optima compared to gradient-free evolutionary methods.
-
-**Implication for Roadmap**: Evolution-based optimization (CMA-ES, Genetic Algorithms) is now the **validated baseline** for training quantum variational circuits. Gradient methods remain effective for classical networks (MLPReinforceBrain, MLPDQNBrain) but should not be assumed to work for quantum approaches without extensive validation.
-
-This breakthrough validates the adaptive, evidence-driven approach throughout this roadmap: methods are prioritized based on empirical results, not assumptions.
-
-### Recent Breakthrough: Spiking Neural Network Rewrite (December 2025)
-
-**Key Finding**: Complete architectural rewrite of SpikingReinforceBrain from STDP to **surrogate gradient descent** enables successful learning for the first time.
-
-**Previous Implementation Problems:**
-
-- **STDP (Spike-Timing Dependent Plasticity)** had critical bugs: wrong input preprocessing, broken credit assignment, missing weight updates
-- **Limitations for this implementation**: Standard STDP without reward modulation cannot implement effective credit assignment for sparse-reward reinforcement learning tasks
-- **Result**: 0% success rate over 400 episodes of testing
-
-**New Implementation (Surrogate Gradient Descent):**
-
-- **Differentiable spike function**: Smooth approximation enables backpropagation through spiking neurons
-- **REINFORCE policy gradients**: Same proven algorithm as MLPReinforceBrain with discounted returns and baseline subtraction
-- **LIF neurons preserved**: Maintains biological plausibility with Leaky Integrate-and-Fire dynamics
-- **PyTorch autograd integration**: Standard gradient-based optimization with gradient clipping
-
-**State-of-the-Art Alignment**: This approach matches modern neuromorphic research (SpikingJelly, snnTorch, Norse) which all use surrogate gradients for training spiking neural networks on complex tasks.
-
-**Implication for Roadmap**: SpikingReinforceBrain is now a viable architecture for comparative analysis. Gradient-based methods (with surrogate gradients) work for spiking networks, complementing the evolution-first approach for quantum architectures.
+1. **Complexity Thresholds**: At what environment complexity do quantum approaches first outperform classical? (>30D inputs? Multi-agent? Non-Markovian? Continuous state spaces?)
+2. **Biological Fidelity**: Does increasing biological realism (temporal sensing, connectome topology, realistic locomotion) create computational problems that favour quantum approaches?
+3. **Connectome Advantage**: Does the real C. elegans wiring diagram produce better learning agents than arbitrary architectures?
+4. **Universal Principles**: What computational principles emerge from a deep C. elegans simulation that generalise to other domains?
+5. **Quantum Reservoir Memory**: Can QRH's demonstrated temporal advantage (pursuit predators) scale with richer temporal dependencies?
 
 ______________________________________________________________________
 
