@@ -38,6 +38,7 @@ brain:
       - nociception         # Auto-translated to nociception_temporal
       - mechanosensation    # Already biologically accurate, no translation
       - thermotaxis         # Auto-translated to thermotaxis_temporal
+      - proprioception      # Heading direction — critical for temporal sensing
 
 body_length: 2
 

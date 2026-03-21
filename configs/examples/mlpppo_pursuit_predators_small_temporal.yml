@@ -35,6 +35,7 @@ brain:
       - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal
       - nociception         # Auto-translated to nociception_temporal
       - mechanosensation    # Already biologically accurate, no translation
+      - proprioception      # Heading direction — critical for temporal sensing
 
 body_length: 2
 

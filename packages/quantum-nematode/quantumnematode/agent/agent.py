@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from pydantic import BaseModel
 
 from quantumnematode.agent.stam import STAMBuffer
@@ -52,6 +53,16 @@ DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS = 1.0
 DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS = 2
 DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE = True
 DEFAULT_STUCK_POSITION_THRESHOLD = 2
+
+# Action-to-index mapping for STAM action entropy computation
+_ACTION_TO_IDX: dict[str, int] = {
+    "forward": 0,
+    "left": 1,
+    "right": 2,
+    "stay": 3,
+    "forward-left": 4,
+    "forward-right": 5,
+}
 DEFAULT_SATIETY_INITIAL = 200.0
 DEFAULT_SATIETY_DECAY_RATE = 1.0
 DEFAULT_SATIETY_GAIN_PER_FOOD = 0.2
@@ -367,16 +378,6 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
-    # Action-to-index mapping for STAM entropy computation
-    _ACTION_TO_IDX: ClassVar[dict[str, int]] = {
-        "forward": 0,
-        "left": 1,
-        "right": 2,
-        "stay": 3,
-        "forward-left": 4,
-        "forward-right": 5,
-    }
-
     def _compute_temporal_data(
         self,
         sensing: SensingConfig,
@@ -402,8 +403,6 @@ class QuantumNematodeAgent:
         dict
             Temporal sensing fields for BrainParams.
         """
-        import numpy as np
-
         from quantumnematode.utils.config_loader import SensingMode
 
         result: dict[str, Any] = {}
@@ -447,7 +446,7 @@ class QuantumNematodeAgent:
             action_idx = 0
             if action is not None:
                 action_str = str(action.action) if action.action is not None else "stay"
-                action_idx = self._ACTION_TO_IDX.get(action_str, 0)
+                action_idx = _ACTION_TO_IDX.get(action_str, 0)
             self._stam.record(
                 np.array([food_conc_val, temp_val, pred_conc_val]),
                 pos_delta,

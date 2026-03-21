@@ -36,6 +36,7 @@ brain:
 
     sensory_modules:
       - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
+      - proprioception   # Heading direction — critical for temporal sensing (correlate movement with scalar changes)
 
 body_length: 2
 

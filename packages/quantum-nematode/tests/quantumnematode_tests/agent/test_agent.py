@@ -1,5 +1,6 @@
 """Tests for QuantumNematodeAgent core functionality."""
 
+import numpy as np
 import pytest
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -10,6 +11,7 @@ from quantumnematode.agent import (
 from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
+from quantumnematode.utils.config_loader import SensingConfig, SensingMode
 
 
 class TestSatietyConfig:
@@ -312,3 +314,136 @@ class TestQuantumNematodeAgentMetrics:
         assert metrics.success_rate == 0.0
         assert metrics.average_steps == 0.0
         assert metrics.average_reward == 0.0
+
+
+class TestTemporalSensingIntegration:
+    """Integration tests for temporal sensing data flow."""
+
+    def _create_temporal_agent(
+        self,
+        sensing_config: SensingConfig,
+    ) -> QuantumNematodeAgent:
+        """Create agent with temporal sensing for testing."""
+        from quantumnematode.brain.actions import Action
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            foraging=ForagingParams(
+                foods_on_grid=3,
+                target_foods_to_collect=5,
+                gradient_decay_constant=8.0,
+                gradient_strength=1.0,
+            ),
+            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
+            seed=42,
+        )
+        brain_config = QVarCircuitBrainConfig(seed=42)
+        brain = QVarCircuitBrain(brain_config)
+        return QuantumNematodeAgent(
+            brain=brain,
+            env=env,
+            sensing_config=sensing_config,
+            use_separated_gradients=True,
+        )
+
+    def test_temporal_mode_populates_food_concentration(self):
+        """Test that temporal mode sets food_concentration on BrainParams."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            stam_enabled=True,
+        )
+        agent = self._create_temporal_agent(sensing)
+        params = agent._create_brain_params(0.5, 0.0)
+        assert params.food_concentration is not None
+        assert 0.0 <= params.food_concentration <= 1.0
+
+    def test_temporal_mode_suppresses_oracle_food_gradient(self):
+        """Test that temporal mode sets food gradient fields to None."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            stam_enabled=True,
+        )
+        agent = self._create_temporal_agent(sensing)
+        params = agent._create_brain_params(0.5, 0.0)
+        assert params.food_gradient_strength is None
+        assert params.food_gradient_direction is None
+
+    def test_temporal_mode_suppresses_oracle_predator_gradient(self):
+        """Test that temporal nociception mode sets predator gradient fields to None."""
+        sensing = SensingConfig(
+            nociception_mode=SensingMode.TEMPORAL,
+            stam_enabled=True,
+        )
+        agent = self._create_temporal_agent(sensing)
+        params = agent._create_brain_params(0.5, 0.0)
+        assert params.predator_gradient_strength is None
+        assert params.predator_gradient_direction is None
+        assert params.predator_concentration is not None
+
+    def test_derivative_mode_populates_dconcentration_dt(self):
+        """Test that derivative mode populates temporal derivative fields."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.DERIVATIVE,
+            stam_enabled=True,
+        )
+        agent = self._create_temporal_agent(sensing)
+        # Need at least 2 steps for derivative
+        agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params(0.5, 0.0)
+        assert params.food_dconcentration_dt is not None
+
+    def test_stam_state_is_9_floats(self):
+        """Test that STAM state is a 9-float tuple on BrainParams."""
+        sensing = SensingConfig(stam_enabled=True)
+        agent = self._create_temporal_agent(sensing)
+        params = agent._create_brain_params(0.5, 0.0)
+        assert params.stam_state is not None
+        assert len(params.stam_state) == 9
+        assert all(isinstance(v, float) for v in params.stam_state)
+
+    def test_oracle_mode_leaves_temporal_fields_none(self):
+        """Test that oracle mode does not populate temporal sensing fields."""
+        sensing = SensingConfig()  # All oracle, STAM disabled
+        agent = self._create_temporal_agent(sensing)
+        params = agent._create_brain_params(0.5, 0.0)
+        assert params.food_concentration is None
+        assert params.predator_concentration is None
+        assert params.food_dconcentration_dt is None
+        assert params.stam_state is None
+
+    def test_stam_resets_between_episodes(self):
+        """Test that STAM resets produce zero state after episode boundary."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            stam_enabled=True,
+        )
+        agent = self._create_temporal_agent(sensing)
+        # Record some data
+        agent._create_brain_params(0.5, 0.0)
+        agent._create_brain_params(0.5, 0.0)
+        assert agent._stam is not None
+        assert len(agent._stam) > 0
+
+        # Simulate episode reset
+        agent._stam.reset()
+        agent._previous_position = None
+
+        state = agent._stam.get_memory_state()
+        np.testing.assert_array_equal(state, np.zeros(9, dtype=np.float32))
+
+    def test_mixed_modes_per_modality(self):
+        """Test that different modes can be used for different modalities."""
+        sensing = SensingConfig(
+            chemotaxis_mode=SensingMode.TEMPORAL,
+            nociception_mode=SensingMode.ORACLE,
+            stam_enabled=True,
+        )
+        agent = self._create_temporal_agent(sensing)
+        params = agent._create_brain_params(0.5, 0.0)
+        # Chemotaxis temporal: scalar set, gradient suppressed
+        assert params.food_concentration is not None
+        assert params.food_gradient_strength is None
+        # Nociception oracle: gradient still available (from separated_grads)
+        # Note: predator_concentration is None because nociception_mode is oracle
+        assert params.predator_concentration is None
