@@ -100,12 +100,17 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Load all results
+    # Load all results (one CSV per architecture expected)
     all_metrics: dict[str, ArchMetrics] = {}
     for path_str in args.results:
         path = Path(path_str)
         metrics = load_aggregate_csv(path)
         if metrics:
+            if metrics.name in all_metrics:
+                console.print(
+                    f"[yellow]Warning: duplicate architecture '{metrics.name}' "
+                    f"from {path} — overwriting previous entry[/yellow]",
+                )
             all_metrics[metrics.name] = metrics
             console.print(f"Loaded: {metrics.name} from {path}")
 
@@ -131,6 +136,47 @@ def main() -> None:
     console.print(summary_table)
 
     _print_comparison_table(all_metrics)
+
+
+def _compute_pair_verdict(
+    q: ArchMetrics,
+    c: ArchMetrics,
+) -> tuple[str, str, str]:
+    """Compute FR, p-value, and verdict for a quantum/classical pair.
+
+    Returns (fr_str, p_str, verdict) for table display.
+    """
+    q_constant = len(set(q.bf_values)) <= 1
+    c_constant = len(set(c.bf_values)) <= 1
+
+    if c.bf_mean == 0 and q.bf_mean == 0:
+        return "N/A", "N/A", "[dim]Both zero forgetting — uninformative[/dim]"
+    if c.bf_mean == 0:
+        return "inf", "N/A", "[red]Classical has zero forgetting[/red]"
+    if q_constant and c_constant:
+        fr = q.bf_mean / c.bf_mean
+        return (
+            f"{fr:.4f}",
+            "N/A",
+            f"[dim]Constant values (FR={fr:.2f}), no variance for t-test[/dim]",
+        )
+
+    # Normal case — Welch's t-test
+    fr = q.bf_mean / c.bf_mean
+    ttest_result = ttest_ind(q.bf_values, c.bf_values, equal_var=False)
+    p_value: float = ttest_result[1]  # type: ignore[assignment]
+
+    if np.isnan(p_value):
+        return f"{fr:.4f}", "NaN", "[dim]Degenerate (NaN p-value)[/dim]"
+
+    p_str = f"{p_value:.4f}"
+    if fr <= 0.5 and p_value < 0.05:
+        verdict = "[green]CONFIRMED[/green]"
+    elif p_value < 0.05:
+        verdict = f"[yellow]Significant (FR={fr:.2f})[/yellow]"
+    else:
+        verdict = f"[red]Not significant (p={p_value:.3f})[/red]"
+    return f"{fr:.4f}", p_str, verdict
 
 
 def _print_comparison_table(all_metrics: dict[str, ArchMetrics]) -> None:
@@ -168,23 +214,14 @@ def _print_comparison_table(all_metrics: dict[str, ArchMetrics]) -> None:
             )
             continue
 
-        fr = q.bf_mean / c.bf_mean if c.bf_mean != 0 else float("inf")
-        ttest_result = ttest_ind(q.bf_values, c.bf_values)
-        p_value: float = ttest_result[1]  # type: ignore[assignment]
-
-        if fr <= 0.5 and p_value < 0.05:
-            verdict = "[green]CONFIRMED[/green]"
-        elif p_value < 0.05:
-            verdict = f"[yellow]Significant (FR={fr:.2f})[/yellow]"
-        else:
-            verdict = f"[red]Not significant (p={p_value:.3f})[/red]"
+        fr_str, p_str, verdict = _compute_pair_verdict(q, c)
 
         comparison_table.add_row(
             f"{q_name} vs {c_name}",
             f"{q.bf_mean:.4f}",
             f"{c.bf_mean:.4f}",
-            f"{fr:.4f}",
-            f"{p_value:.4f}",
+            fr_str,
+            p_str,
             verdict,
         )
 

@@ -8,7 +8,9 @@ Covers:
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
+from pydantic import ValidationError
 from quantumnematode.plasticity import (
     EvalResult,
     PhaseTrainingResult,
@@ -91,9 +93,33 @@ class TestPlasticityConfig:
         )
         assert protocol.convergence_threshold == pytest.approx(0.8)
 
+    def test_convergence_threshold_bounds(self) -> None:
+        """convergence_threshold must be in (0, 1]."""
+        phases = [
+            PlasticityPhaseConfig(name="a", environment=EnvironmentConfig()),
+            PlasticityPhaseConfig(name="b", environment=EnvironmentConfig()),
+            PlasticityPhaseConfig(name="c", environment=EnvironmentConfig()),
+        ]
+        with pytest.raises(ValidationError):
+            PlasticityProtocolConfig(
+                training_episodes_per_phase=10,
+                eval_episodes=5,
+                seeds=[42],
+                convergence_threshold=0.0,
+                phases=phases,
+            )
+        with pytest.raises(ValidationError):
+            PlasticityProtocolConfig(
+                training_episodes_per_phase=10,
+                eval_episodes=5,
+                seeds=[42],
+                convergence_threshold=1.5,
+                phases=phases,
+            )
+
     def test_missing_brain_rejected(self) -> None:
         """Config without brain field raises validation error."""
-        with pytest.raises(Exception):  # noqa: B017, PT011
+        with pytest.raises(ValidationError):
             PlasticityConfig(
                 plasticity=PlasticityProtocolConfig(  # type: ignore[call-arg]
                     training_episodes_per_phase=10,
@@ -220,36 +246,87 @@ class TestStateSnapshotRestore:
     """Tests for brain state snapshot and restore."""
 
     def test_snapshot_restore_mlpppo(self) -> None:
-        """Verify MLPPPOBrain state is identical after snapshot → modify → restore."""
+        """Verify MLPPPOBrain state is fully identical after snapshot → modify → restore.
+
+        Checks actor, critic, optimizer state, and buffer clearing.
+        """
         import torch
         from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
 
         config = MLPPPOBrainConfig(seed=42)
         brain = MLPPPOBrain(config)
 
-        # Snapshot
-        snapshot = snapshot_brain_state(brain)
+        # Run a fake backward pass to populate optimizer momentum buffers
+        input_dim = next(iter(brain.actor.parameters())).shape[1]
+        loss = brain.actor(torch.randn(1, input_dim)).sum()
+        loss.backward()
+        brain.optimizer.step()
+        brain.optimizer.zero_grad()
 
-        # Modify weights
+        # Snapshot (now includes non-empty optimizer state)
+        snapshot = snapshot_brain_state(brain)
+        assert "actor" in snapshot
+        assert "critic" in snapshot
+        assert "optimizer" in snapshot
+        assert len(snapshot["optimizer"]["state"]) > 0, (
+            "Optimizer state should be non-empty after step"
+        )
+
+        # Modify actor, critic, and take another optimizer step
         with torch.no_grad():
             for param in brain.actor.parameters():
                 param.add_(torch.randn_like(param))
+            for param in brain.critic.parameters():
+                param.add_(torch.randn_like(param))
+        loss = brain.actor(torch.randn(1, input_dim)).sum()
+        loss.backward()
+        brain.optimizer.step()
 
-        # Verify weights changed
+        # Add dummy data to buffer so we can verify it gets cleared
+        brain.buffer.add(
+            state=np.zeros(input_dim),
+            action=0,
+            log_prob=torch.tensor(-0.5),
+            value=torch.tensor(0.5),
+            reward=1.0,
+            done=False,
+        )
+        assert len(brain.buffer) > 0, "Buffer should have data before restore"
+
+        # Verify all components changed
         current = snapshot_brain_state(brain)
-        actor_changed = False
-        for key in snapshot.get("actor", {}):
-            if not torch.equal(snapshot["actor"][key], current["actor"][key]):
-                actor_changed = True
-                break
-        assert actor_changed, "Weights should have changed after modification"
+        for component in ("actor", "critic"):
+            changed = any(
+                not torch.equal(snapshot[component][k], current[component][k])
+                for k in snapshot[component]
+            )
+            assert changed, f"{component} weights should have changed after modification"
 
         # Restore
         restore_brain_state(brain, snapshot)
 
-        # Verify weights restored
+        # Verify actor restored
         restored = snapshot_brain_state(brain)
-        for key in snapshot.get("actor", {}):
+        for key in snapshot["actor"]:
             assert torch.equal(snapshot["actor"][key], restored["actor"][key]), (
                 f"Actor weight {key} not restored correctly"
             )
+
+        # Verify critic restored
+        for key in snapshot["critic"]:
+            assert torch.equal(snapshot["critic"][key], restored["critic"][key]), (
+                f"Critic weight {key} not restored correctly"
+            )
+
+        # Verify optimizer state restored (momentum buffers match snapshot)
+        for param_idx in snapshot["optimizer"]["state"]:
+            for buf_name in snapshot["optimizer"]["state"][param_idx]:
+                original = snapshot["optimizer"]["state"][param_idx][buf_name]
+                restored_val = restored["optimizer"]["state"][param_idx][buf_name]
+                if isinstance(original, torch.Tensor):
+                    assert torch.equal(original, restored_val), (
+                        f"Optimizer state [{param_idx}][{buf_name}] not restored"
+                    )
+
+        # Verify buffer cleared
+        assert len(brain.buffer) == 0, "Buffer should be cleared after restore"

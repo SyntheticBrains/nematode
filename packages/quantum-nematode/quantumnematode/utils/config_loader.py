@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -559,7 +559,7 @@ class PlasticityProtocolConfig(BaseModel):
     training_episodes_per_phase: int = 200
     eval_episodes: int = 50
     seeds: list[int] = [42, 123, 256, 512, 789, 1024, 2048, 4096]
-    convergence_threshold: float = 0.6
+    convergence_threshold: float = Field(default=0.6, gt=0.0, le=1.0)
     phases: list[PlasticityPhaseConfig]
 
 

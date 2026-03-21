@@ -1853,7 +1853,7 @@ ______________________________________________________________________
 
 ### Rationale
 
-After 290+ experiment sessions across 11+ quantum architectures (QRC, QSNN, QVarCircuit, QSNN-PPO, QSNNReinforce A2C, HybridQuantum, HybridClassical, HybridQuantumCortex, QRH, CRH, QLIF-LSTM, QRH-QLSTM, CRH-QLSTM, QRH-LSTM, QEF), the theoretical and empirical evidence converges: our current environment complexity is below the threshold for quantum advantage.
+After 300+ experiment sessions across 11+ quantum architectures (QRC, QSNN, QVarCircuit, QSNN-PPO, QSNNReinforce A2C, HybridQuantum, HybridClassical, HybridQuantumCortex, QRH, CRH, QLIF-LSTM, QRH-QLSTM, CRH-QLSTM, QRH-LSTM, QEF), the theoretical and empirical evidence converges: our current environment complexity is below the threshold for quantum advantage.
 
 **Key factors**:
 

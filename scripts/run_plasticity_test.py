@@ -175,34 +175,35 @@ def run_eval_block(  # noqa: PLR0913
     rewards: list[float] = []
     steps: list[int] = []
 
-    for ep in range(num_episodes):
-        run_seed = derive_run_seed(seed + 10000, ep)  # Offset to avoid seed collision
-        set_global_seed(run_seed)
+    try:
+        for ep in range(num_episodes):
+            run_seed = derive_run_seed(seed + 10000, ep)  # Offset to avoid seed collision
+            set_global_seed(run_seed)
 
-        agent, reward_config, max_steps = build_agent_for_phase(
-            brain,
-            phase_config,
-            run_seed,
-            body_length,
-        )
+            agent, reward_config, max_steps = build_agent_for_phase(
+                brain,
+                phase_config,
+                run_seed,
+                body_length,
+            )
 
-        step_result = agent.run_episode(
-            reward_config=reward_config,
-            max_steps=max_steps,
-            render_text="",
-            show_last_frame_only=True,
-        )
+            step_result = agent.run_episode(
+                reward_config=reward_config,
+                max_steps=max_steps,
+                render_text="",
+                show_last_frame_only=True,
+            )
 
-        success = step_result.termination_reason in (
-            TerminationReason.GOAL_REACHED,
-            TerminationReason.COMPLETED_ALL_FOOD,
-        )
-        successes.append(success)
-        rewards.append(agent._episode_tracker.rewards)  # noqa: SLF001
-        steps.append(agent._episode_tracker.steps)  # noqa: SLF001
-
-    # Restore brain to pre-eval state
-    restore_brain_state(brain, snapshot)
+            success = step_result.termination_reason in (
+                TerminationReason.GOAL_REACHED,
+                TerminationReason.COMPLETED_ALL_FOOD,
+            )
+            successes.append(success)
+            rewards.append(agent._episode_tracker.rewards)  # noqa: SLF001
+            steps.append(agent._episode_tracker.steps)  # noqa: SLF001
+    finally:
+        # Always restore brain to pre-eval state, even on exception
+        restore_brain_state(brain, snapshot)
 
     return EvalResult(
         objective_name=phase_config.name,
@@ -460,7 +461,10 @@ def run_plasticity_protocol(config: PlasticityConfig) -> list[SeedResult]:
         modules=config.modules,
     )
     brain_config = configure_brain(sim_config)
-    brain_type = BrainType(config.brain.name)
+    from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
+
+    canonical_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
+    brain_type = BrainType(canonical_name)
 
     # Resolve learning rate / gradient config
     learning_rate = configure_learning_rate(sim_config)

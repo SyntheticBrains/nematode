@@ -57,9 +57,18 @@ def restore_brain_state(
 ) -> None:
     """Restore brain state from a snapshot and clear any PPO buffer."""
     modules = _get_torch_modules(brain)
+
+    # Fail-fast: verify all snapshot keys exist before restoring any state
+    missing = [name for name in snapshot if name not in modules]
+    if missing:
+        msg = (
+            f"Cannot restore brain state: snapshot contains keys {missing} "
+            f"not found on brain (available: {list(modules.keys())})"
+        )
+        raise ValueError(msg)
+
     for name, state_dict in snapshot.items():
-        if name in modules:
-            modules[name].load_state_dict(deepcopy(state_dict))
+        modules[name].load_state_dict(deepcopy(state_dict))
 
     # Clear PPO buffer to prevent eval experience leaking into training
     buffer = getattr(brain, "buffer", None) or getattr(brain, "ppo_buffer", None)
