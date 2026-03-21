@@ -50,7 +50,7 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 200.0
+  initial_satiety: 400.0   # Increased from 200 — temporal sensing needs more exploration budget
   satiety_decay_rate: 1.0
   satiety_gain_per_food: 0.2
 

@@ -239,6 +239,10 @@ class BrainParams(BaseModel):
         default=None,
         description="Flattened STAM memory state vector (9 floats).",
     )
+    derivative_scale: float = Field(
+        default=50.0,
+        description="Scaling factor for temporal derivatives before tanh normalization.",
+    )
 
 
 @runtime_checkable

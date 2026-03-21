@@ -35,12 +35,12 @@ class TestFoodChemotaxisTemporal:
         assert features[0] == pytest.approx(0.0)
 
     def test_angle_from_derivative(self) -> None:
-        """Test that angle feature is tanh of the food concentration derivative."""
+        """Test that angle feature is tanh of scaled food concentration derivative."""
         module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_TEMPORAL]
         params = BrainParams(food_concentration=0.5, food_dconcentration_dt=0.3)
         features = module.to_classical(params)
-        # angle = tanh(0.3) ≈ 0.291
-        assert features[1] == pytest.approx(np.tanh(0.3))
+        # angle = tanh(0.3 * derivative_scale), default scale=50.0
+        assert features[1] == pytest.approx(np.tanh(0.3 * 50.0))
 
     def test_angle_zero_when_no_derivative(self) -> None:
         """Test that angle is zero when no derivative is provided."""
@@ -85,11 +85,11 @@ class TestNociceptionTemporal:
         assert features[0] == pytest.approx(0.4)
 
     def test_angle_from_derivative(self) -> None:
-        """Test that angle feature is tanh of the predator concentration derivative."""
+        """Test that angle feature is tanh of scaled predator concentration derivative."""
         module = SENSORY_MODULES[ModuleName.NOCICEPTION_TEMPORAL]
         params = BrainParams(predator_concentration=0.4, predator_dconcentration_dt=-0.2)
         features = module.to_classical(params)
-        assert features[1] == pytest.approx(np.tanh(-0.2))
+        assert features[1] == pytest.approx(np.tanh(-0.2 * 50.0))
 
     def test_none_fields_produce_zeros(self) -> None:
         """Test that unset fields produce zero-valued features."""
@@ -121,11 +121,11 @@ class TestThermotaxisTemporal:
         assert features[0] == pytest.approx(5.0 / 15.0)
 
     def test_angle_from_temperature_ddt(self) -> None:
-        """Test that angle feature is tanh of the temperature time derivative."""
+        """Test that angle feature is tanh of scaled temperature time derivative."""
         module = SENSORY_MODULES[ModuleName.THERMOTAXIS_TEMPORAL]
         params = BrainParams(temperature=20.0, cultivation_temperature=20.0, temperature_ddt=0.5)
         features = module.to_classical(params)
-        assert features[1] == pytest.approx(np.tanh(0.5))
+        assert features[1] == pytest.approx(np.tanh(0.5 * 50.0))
 
     def test_binary_equals_strength(self) -> None:
         """Test that the binary feature equals the strength feature."""

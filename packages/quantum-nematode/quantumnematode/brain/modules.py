@@ -405,16 +405,19 @@ def _food_chemotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
     Food chemotaxis temporal (AWC, AWA neurons) encodes:
     - strength: food concentration at agent's position (already tanh-normalized
       by environment to [0, 1] — NOT re-normalized here)
-    - angle: temporal derivative of food concentration, normalized via tanh
-      to [-1, 1]. Positive = concentration increasing (approaching food).
+    - angle: temporal derivative of food concentration, scaled and normalized via
+      tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = concentration increasing (approaching food).
+
+    The derivative_scale amplifies weak raw derivatives (~0.001-0.01 on small
+    grids) into a useful signal range for neural networks.
 
     This replaces the oracle food_chemotaxis module which provides directional
     gradient information the worm cannot biologically access.
     """
     strength = float(params.food_concentration or 0.0)
-    # Derivative normalized to [-1, 1] via tanh
     raw_deriv = float(params.food_dconcentration_dt or 0.0)
-    angle = float(np.tanh(raw_deriv))
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
     return CoreFeatures(strength=strength, angle=angle)
 
 
@@ -423,15 +426,16 @@ def _nociception_temporal_core(params: BrainParams) -> CoreFeatures:
 
     Nociception temporal (ASH, ADL neurons) encodes:
     - strength: predator concentration at agent's position (tanh-normalized)
-    - angle: temporal derivative of predator concentration, normalized via tanh
-      to [-1, 1]. Positive = predator signal increasing (predator approaching).
+    - angle: temporal derivative of predator concentration, scaled and normalized
+      via tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = predator signal increasing (predator approaching).
 
     Models detection of predator-secreted chemicals (sulfolipids) via temporal
     comparison, not directional gradient sensing.
     """
     strength = float(params.predator_concentration or 0.0)
     raw_deriv = float(params.predator_dconcentration_dt or 0.0)
-    angle = float(np.tanh(raw_deriv))
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
     return CoreFeatures(strength=strength, angle=angle)
 
 
@@ -441,9 +445,9 @@ def _thermotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
     Thermotaxis temporal (AFD neurons) encodes:
     - strength: temperature deviation from cultivation temperature (Tc),
       normalized to [-1, 1] where 0 = at Tc. Same as oracle thermotaxis.
-    - angle: temporal derivative of temperature (dT/dt), normalized via tanh
-      to [-1, 1]. Positive = warming, negative = cooling.
-      Models what AFD neurons actually output (~0.01°C sensitivity).
+    - angle: temporal derivative of temperature (dT/dt), scaled and normalized
+      via tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = warming, negative = cooling.
     - binary: temperature deviation (same as strength), for classical_dim=3
       consistency with oracle thermotaxis module.
 
@@ -461,7 +465,7 @@ def _thermotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
     temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
 
     raw_deriv = float(params.temperature_ddt or 0.0)
-    angle = float(np.tanh(raw_deriv))
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
 
     return CoreFeatures(strength=temp_deviation, angle=angle, binary=temp_deviation)
 

@@ -563,6 +563,7 @@ class QuantumNematodeAgent:
             predator_dconcentration_dt=temporal.get("predator_dconcentration_dt"),
             temperature_ddt=temporal.get("temperature_ddt"),
             stam_state=temporal.get("stam_state"),
+            derivative_scale=sensing.derivative_scale,
             # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,

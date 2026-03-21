@@ -513,6 +513,16 @@ class SensingConfig(BaseModel):
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
+    derivative_scale: float = Field(
+        default=50.0,
+        gt=0.0,
+        description=(
+            "Scaling factor applied to temporal derivatives before tanh normalization. "
+            "Raw derivatives on small grids (20x20) are ~0.001-0.01, which tanh maps to "
+            "near-zero. This scale amplifies the signal: tanh(derivative * scale). "
+            "Default 50.0 maps a raw derivative of 0.01 to tanh(0.5) ≈ 0.46."
+        ),
+    )
 
 
 def _apply_sensing_mode(
