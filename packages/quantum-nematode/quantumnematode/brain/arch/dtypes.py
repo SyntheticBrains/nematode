@@ -77,6 +77,7 @@ class BrainConfig(BaseModel):
     """Configuration for the brain architecture."""
 
     seed: int | None = None  # Random seed for reproducibility
+    weights_path: str | None = None  # Path to load pre-trained weights from
 
 
 BRAIN_TYPES = Literal[
