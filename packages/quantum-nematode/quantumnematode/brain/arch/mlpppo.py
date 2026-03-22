@@ -29,11 +29,17 @@ References
 - Schulman et al. (2017) "Proximal Policy Optimization Algorithms"
 """
 
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
 from torch import nn, optim
+
+if TYPE_CHECKING:
+    from quantumnematode.brain.weights import WeightComponent
+    from quantumnematode.initializers._initializer import ParameterInitializer
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
@@ -46,7 +52,6 @@ from quantumnematode.brain.modules import (
     get_classical_feature_dimension,
 )
 from quantumnematode.env import Direction
-from quantumnematode.initializers._initializer import ParameterInitializer
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -684,7 +689,94 @@ class MLPPPOBrain(ClassicalBrain):
         # Reset tracking
         self._current_episode_rewards.clear()
 
-    def copy(self) -> "MLPPPOBrain":
+    # ------------------------------------------------------------------
+    # Weight persistence (WeightPersistence protocol)
+    # ------------------------------------------------------------------
+
+    def get_weight_components(
+        self,
+        *,
+        components: set[str] | None = None,
+    ) -> dict[str, WeightComponent]:
+        """Return weight components for persistence.
+
+        Components
+        ----------
+        ``"policy"``
+            Actor network state_dict.
+        ``"value"``
+            Critic network state_dict.
+        ``"optimizer"``
+            Joint optimizer state_dict.
+        ``"training_state"``
+            Episode count and other training metadata.
+        """
+        from quantumnematode.brain.weights import WeightComponent
+
+        all_components: dict[str, WeightComponent] = {
+            "policy": WeightComponent(
+                name="policy",
+                state=self.actor.state_dict(),
+            ),
+            "value": WeightComponent(
+                name="value",
+                state=self.critic.state_dict(),
+            ),
+            "optimizer": WeightComponent(
+                name="optimizer",
+                state=self.optimizer.state_dict(),
+            ),
+            "training_state": WeightComponent(
+                name="training_state",
+                state={"episode_count": self._episode_count},
+            ),
+        }
+
+        if components is None:
+            return all_components
+
+        unknown = components - set(all_components)
+        if unknown:
+            msg = f"Unknown weight components: {unknown}. Valid components: {set(all_components)}"
+            raise ValueError(msg)
+        return {k: v for k, v in all_components.items() if k in components}
+
+    def load_weight_components(
+        self,
+        components: dict[str, WeightComponent],
+    ) -> None:
+        """Load weight components into this brain.
+
+        Network state is loaded before optimizer state.  The PPO rollout
+        buffer is reset to discard stale experience.
+        """
+        # Load networks first (catches shape mismatches before optimizer)
+        if "policy" in components:
+            self.actor.load_state_dict(components["policy"].state)
+        if "value" in components:
+            self.critic.load_state_dict(components["value"].state)
+
+        # Optimizer state only after networks succeed
+        if "optimizer" in components:
+            self.optimizer.load_state_dict(components["optimizer"].state)
+
+        # Training state
+        if "training_state" in components:
+            ts = components["training_state"].state
+            if "episode_count" in ts:
+                self._episode_count = int(ts["episode_count"])
+                self._update_learning_rate()
+
+        # Reset buffer to prevent stale experience
+        self.buffer.reset()
+
+        logger.info(
+            "MLPPPOBrain weights loaded (components: %s, episode_count=%d)",
+            list(components.keys()),
+            self._episode_count,
+        )
+
+    def copy(self) -> MLPPPOBrain:
         """MLPPPOBrain does not support copying."""
         error_msg = "MLPPPOBrain does not support copying. Use deepcopy if needed."
         raise NotImplementedError(error_msg)

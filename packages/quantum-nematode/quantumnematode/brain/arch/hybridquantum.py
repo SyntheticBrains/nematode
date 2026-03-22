@@ -44,10 +44,14 @@ References
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 from pydantic import Field, field_validator
+
+if TYPE_CHECKING:
+    from quantumnematode.brain.weights import WeightComponent
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
@@ -1504,6 +1508,99 @@ class HybridQuantumBrain(ClassicalBrain):
             self.cortex_critic,
             weights_path,
             brain_name="HybridQuantum",
+        )
+
+    # ──────────────────────────────────────────────────────────────────
+    # WeightPersistence protocol
+    # ──────────────────────────────────────────────────────────────────
+
+    def get_weight_components(
+        self,
+        *,
+        components: set[str] | None = None,
+    ) -> dict[str, WeightComponent]:
+        """Return weight components for persistence.
+
+        Components
+        ----------
+        ``"qsnn"``
+            QSNN reflex weights (W_sh, W_hm, theta_hidden, theta_motor).
+        ``"cortex.policy"``
+            Cortex actor state_dict.
+        ``"cortex.value"``
+            Cortex critic state_dict.
+        """
+        from quantumnematode.brain.weights import WeightComponent
+
+        all_components: dict[str, WeightComponent] = {
+            "qsnn": WeightComponent(
+                name="qsnn",
+                state={
+                    "W_sh": self.W_sh.detach().cpu(),
+                    "W_hm": self.W_hm.detach().cpu(),
+                    "theta_hidden": self.theta_hidden.detach().cpu(),
+                    "theta_motor": self.theta_motor.detach().cpu(),
+                },
+            ),
+            "cortex.policy": WeightComponent(
+                name="cortex.policy",
+                state=self.cortex_actor.state_dict(),
+            ),
+            "cortex.value": WeightComponent(
+                name="cortex.value",
+                state=self.cortex_critic.state_dict(),
+            ),
+        }
+
+        if components is None:
+            return all_components
+
+        unknown = components - set(all_components)
+        if unknown:
+            msg = f"Unknown weight components: {unknown}. Valid components: {set(all_components)}"
+            raise ValueError(msg)
+        return {k: v for k, v in all_components.items() if k in components}
+
+    def load_weight_components(
+        self,
+        components: dict[str, WeightComponent],
+    ) -> None:
+        """Load weight components into this brain."""
+        if "qsnn" in components:
+            state = components["qsnn"].state
+            expected_shapes = {
+                "W_sh": (self.num_sensory, self.num_hidden),
+                "W_hm": (self.num_hidden, self.num_motor),
+                "theta_hidden": (self.num_hidden,),
+                "theta_motor": (self.num_motor,),
+            }
+            for key, expected_shape in expected_shapes.items():
+                if key not in state:
+                    msg = f"Missing key '{key}' in qsnn weight component"
+                    raise ValueError(msg)
+                actual_shape = tuple(state[key].shape)
+                if actual_shape != expected_shape:
+                    msg = (
+                        f"Shape mismatch for '{key}': expected {expected_shape}, got {actual_shape}"
+                    )
+                    raise ValueError(msg)
+            with torch.no_grad():
+                self.W_sh.copy_(state["W_sh"].to(self.device))
+                self.W_hm.copy_(state["W_hm"].to(self.device))
+                self.theta_hidden.copy_(state["theta_hidden"].to(self.device))
+                self.theta_motor.copy_(state["theta_motor"].to(self.device))
+
+        if "cortex.policy" in components:
+            self.cortex_actor.load_state_dict(components["cortex.policy"].state)
+        if "cortex.value" in components:
+            self.cortex_critic.load_state_dict(components["cortex.value"].state)
+
+        # Reset PPO buffer to prevent stale experience
+        self.ppo_buffer.reset()
+
+        logger.info(
+            "HybridQuantumBrain weights loaded (components: %s)",
+            list(components.keys()),
         )
 
     # ──────────────────────────────────────────────────────────────────

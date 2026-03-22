@@ -37,6 +37,7 @@ from quantumnematode.brain.arch.dtypes import (
     BrainType,
     DeviceType,
 )
+from quantumnematode.brain.weights import WeightPersistence, load_weights, save_weights
 from quantumnematode.env import MIN_GRID_SIZE
 from quantumnematode.env.theme import DEFAULT_THEME, Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
@@ -213,6 +214,18 @@ def parse_arguments() -> argparse.Namespace:
         type=int,
         default=None,
         help="Random seed for reproducibility. If not provided, a random seed is auto-generated.",
+    )
+    parser.add_argument(
+        "--load-weights",
+        type=str,
+        default=None,
+        help="Path to saved weights to load before training.",
+    )
+    parser.add_argument(
+        "--save-weights",
+        type=str,
+        default=None,
+        help="Path to save weights after training completes.",
     )
 
     return parser.parse_args()
@@ -398,6 +411,29 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     set_session_id = getattr(brain, "set_session_id", None)
     if callable(set_session_id):
         set_session_id(session_id)
+
+    # Weight persistence: resolve load path (CLI overrides config)
+    load_weights_path = args.load_weights or getattr(brain_config, "weights_path", None)
+    save_weights_path = args.save_weights
+
+    # Validate: if weight persistence requested, brain must implement it
+    if (load_weights_path or save_weights_path) and not isinstance(
+        brain,
+        WeightPersistence,
+    ):
+        source = (
+            "--load-weights/--save-weights"
+            if (args.load_weights or args.save_weights)
+            else "config.weights_path"
+        )
+        msg = (
+            f"Brain {type(brain).__name__} does not implement "
+            f"WeightPersistence. Cannot use {source} for weight persistence."
+        )
+        raise TypeError(msg)
+
+    if load_weights_path:
+        load_weights(brain, Path(load_weights_path))
 
     # Create the environment
     logger.info("Using dynamic foraging environment")
@@ -806,6 +842,25 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         if not sim_results_csv_file.closed:
             sim_results_csv_file.close()
         detailed_tracking_writer.close()
+
+        # Auto-save final weights (covers both normal completion and KeyboardInterrupt).
+        # Each save is isolated so I/O failures don't replace the original
+        # exception or prevent the other save from running.
+        weights_dir = Path.cwd() / "exports" / session_id / "weights"
+        try:
+            save_weights(brain, weights_dir / "final.pt")
+        except Exception:
+            logger.exception("Failed to auto-save weights to %s", weights_dir / "final.pt")
+
+        # Explicit --save-weights path (in addition to auto-save)
+        if save_weights_path:
+            try:
+                save_weights(brain, Path(save_weights_path))
+            except Exception:
+                logger.exception(
+                    "Failed to save weights to explicit path %s",
+                    save_weights_path,
+                )
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)

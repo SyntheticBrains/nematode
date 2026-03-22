@@ -41,6 +41,10 @@ or does the hybrid architecture + curriculum explain the performance gains?"
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from quantumnematode.brain.weights import WeightComponent
 
 import numpy as np
 import torch
@@ -1142,6 +1146,72 @@ class HybridClassicalBrain(ClassicalBrain):
             self.cortex_critic,
             weights_path,
             brain_name="HybridClassical",
+        )
+
+    # ──────────────────────────────────────────────────────────────────
+    # WeightPersistence protocol
+    # ──────────────────────────────────────────────────────────────────
+
+    def get_weight_components(
+        self,
+        *,
+        components: set[str] | None = None,
+    ) -> dict[str, WeightComponent]:
+        """Return weight components for persistence.
+
+        Components
+        ----------
+        ``"reflex"``
+            Reflex MLP state_dict.
+        ``"cortex.policy"``
+            Cortex actor state_dict.
+        ``"cortex.value"``
+            Cortex critic state_dict.
+        """
+        from quantumnematode.brain.weights import WeightComponent
+
+        all_components: dict[str, WeightComponent] = {
+            "reflex": WeightComponent(
+                name="reflex",
+                state=self.reflex_mlp.state_dict(),
+            ),
+            "cortex.policy": WeightComponent(
+                name="cortex.policy",
+                state=self.cortex_actor.state_dict(),
+            ),
+            "cortex.value": WeightComponent(
+                name="cortex.value",
+                state=self.cortex_critic.state_dict(),
+            ),
+        }
+
+        if components is None:
+            return all_components
+
+        unknown = components - set(all_components)
+        if unknown:
+            msg = f"Unknown weight components: {unknown}. Valid components: {set(all_components)}"
+            raise ValueError(msg)
+        return {k: v for k, v in all_components.items() if k in components}
+
+    def load_weight_components(
+        self,
+        components: dict[str, WeightComponent],
+    ) -> None:
+        """Load weight components into this brain."""
+        if "reflex" in components:
+            self.reflex_mlp.load_state_dict(components["reflex"].state)
+        if "cortex.policy" in components:
+            self.cortex_actor.load_state_dict(components["cortex.policy"].state)
+        if "cortex.value" in components:
+            self.cortex_critic.load_state_dict(components["cortex.value"].state)
+
+        # Reset PPO buffer to prevent stale experience
+        self.ppo_buffer.reset()
+
+        logger.info(
+            "HybridClassicalBrain weights loaded (components: %s)",
+            list(components.keys()),
         )
 
     # ──────────────────────────────────────────────────────────────────
