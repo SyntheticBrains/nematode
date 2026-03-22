@@ -43,11 +43,12 @@ The system SHALL provide a `save_weights()` free function that saves brain weigh
 - **AND** SHALL include a `_metadata` key in the saved dict
 - **AND** SHALL use `torch.save()` for serialization
 
-#### Scenario: Save With Generic Brain (Fallback)
+#### Scenario: Save With Non-Implementing Brain
 
 - **WHEN** `save_weights(brain, path)` is called on a brain that does NOT implement `WeightPersistence`
-- **THEN** the function SHALL fall back to `snapshot_brain_state()` from `plasticity/snapshot.py`
-- **AND** SHALL wrap the snapshot in the same file format with `_metadata`
+- **AND** the call originates from auto-save (not explicit CLI)
+- **THEN** the function SHALL skip saving and log a debug message
+- **AND** SHALL NOT raise an error
 
 #### Scenario: Save Creates Parent Directories
 
@@ -82,10 +83,11 @@ The system SHALL provide a `load_weights()` free function that loads brain weigh
 - **AND** SHALL construct `WeightComponent` objects from the loaded data
 - **AND** SHALL call `brain.load_weight_components(components)` to apply the weights
 
-#### Scenario: Load With Generic Brain (Fallback)
+#### Scenario: Load With Non-Implementing Brain
 
 - **WHEN** `load_weights(brain, path)` is called on a brain that does NOT implement `WeightPersistence`
-- **THEN** the function SHALL fall back to `restore_brain_state()` from `plasticity/snapshot.py`
+- **THEN** the function SHALL raise a `TypeError` with a message indicating the brain does not support weight persistence
+- **AND** SHALL name the brain's class in the error message
 
 #### Scenario: Load With Component Filter
 
@@ -132,13 +134,14 @@ The system SHALL provide a `load_weights()` free function that loads brain weigh
 - **AND** the critic state_dict SHALL be loaded via `self.critic.load_state_dict()`
 - **AND** optimizer states SHALL be restored
 - **AND** `_episode_count` SHALL be restored from `training_state`
-- **AND** the learning rate scheduler SHALL recalculate from the restored episode count
+- **AND** the learning rate SHALL recalculate from the restored episode count (no scheduler object — computed on-the-fly from `_episode_count` and config)
+- **AND** the PPO rollout buffer SHALL be reset to prevent stale experience from corrupting the first update
 
-#### Scenario: MLP PPO Config-Based Loading
+#### Scenario: MLP PPO Weight Loading Is Caller-Controlled
 
-- **WHEN** `MLPPPOBrain` is instantiated with `config.weights_path` set to a valid path
-- **THEN** the brain SHALL load weights from that path during `__init__`
-- **AND** training SHALL continue from the loaded state
+- **WHEN** `MLPPPOBrain` is instantiated with `config.weights_path` set
+- **THEN** the brain SHALL NOT load weights during `__init__`
+- **AND** the training loop (`run_simulation.py`) SHALL be responsible for calling `load_weights()` after brain construction, resolving CLI vs config paths
 
 #### Scenario: MLP PPO Round-Trip Consistency
 
@@ -151,3 +154,33 @@ The system SHALL provide a `load_weights()` free function that loads brain weigh
 - **WHEN** weights saved from an MLPPPOBrain with `input_dim=12` are loaded into one with `input_dim=8`
 - **THEN** `load_state_dict()` SHALL raise an error indicating shape mismatch
 - **AND** the error message SHALL identify which parameter has the wrong shape
+
+#### Scenario: MLP PPO Optimizer State Mismatch
+
+- **WHEN** optimizer state from a different architecture is loaded
+- **THEN** the network state_dict load SHALL fail first (catching the mismatch before optimizer state is attempted)
+- **AND** optimizer state SHALL only be loaded if network state loads succeed
+
+### Requirement: HybridClassical Weight Persistence
+
+`HybridClassicalBrain` SHALL implement the `WeightPersistence` protocol as a thin wrapper around its existing private save/load methods.
+
+#### Scenario: HybridClassical Weight Components
+
+- **WHEN** `get_weight_components()` is called on a HybridClassicalBrain
+- **THEN** the returned dict SHALL contain these components:
+  - `"reflex"`: reflex MLP state_dict (`self.reflex_mlp.state_dict()`)
+  - `"cortex.policy"`: cortex actor state_dict
+  - `"cortex.value"`: cortex critic state_dict
+
+#### Scenario: HybridClassical Partial Load
+
+- **WHEN** `load_weight_components()` is called with only `{"reflex": component}`
+- **THEN** only the reflex MLP weights SHALL be loaded
+- **AND** cortex actor and critic weights SHALL remain unchanged
+
+#### Scenario: HybridClassical Existing Config Fields Continue Working
+
+- **WHEN** HybridClassicalBrain is instantiated with `reflex_weights_path` or `cortex_weights_path` set
+- **THEN** existing load methods SHALL be called as before
+- **AND** behavior SHALL be identical to before this change

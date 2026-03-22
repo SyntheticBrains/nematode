@@ -73,11 +73,18 @@ The primary use case driving this work is **curriculum learning** for MLP PPO: t
 
 **Alternative considered**: Directory with one file per component. Rejected — non-atomic, more files to manage, and the hybrid wrapper needs to support both old and new formats anyway.
 
-### 4. Fallback to plasticity/snapshot.py for non-implementing brains
+### 4. No fallback — explicit implementation required
 
-**Decision**: `save_weights()` and `load_weights()` check `isinstance(brain, WeightPersistence)`. If false, fall back to `snapshot_brain_state()` / `restore_brain_state()` from `plasticity/snapshot.py`.
+**Decision**: `save_weights()` and `load_weights()` check `isinstance(brain, WeightPersistence)`. If false, they no-op with a warning (for auto-save) or raise an error (for explicit CLI flags).
 
-**Rationale**: This means every brain with PyTorch modules gets basic save/load for free, without implementing `WeightPersistence`. The snapshot system already discovers modules via `_get_torch_modules()`. The fallback doesn't support component filtering or brain-specific validation, but it works for auto-save and simple round-trips.
+**Rationale**: The `plasticity/snapshot.py` system was designed for in-memory plasticity evaluation, not persistent weight files. Repurposing it as a fallback would create a fragile format bridge — snapshot uses `{module_attr_name: state_dict}` while the new system uses `{component_name: state_dict, _metadata: {...}}`. A no-op is honest: if a brain doesn't implement `WeightPersistence`, the user learns immediately rather than getting a file that may not restore correctly. Any brain that needs persistence can implement the two-method protocol.
+
+**Strictness levels**:
+
+- Auto-save in training loop: skip silently (debug log) if brain doesn't implement `WeightPersistence`
+- `--load-weights` / `--save-weights` CLI flags: raise an error — the user explicitly asked for weight persistence and the brain can't provide it
+
+**Alternative considered**: Fallback to `snapshot_brain_state()` / `restore_brain_state()`. Rejected — format mismatch between snapshot dict and component-keyed dict would require a translation layer, and snapshot doesn't support component filtering, metadata, or buffer reset for the `WeightPersistence` path.
 
 ### 5. CLI overrides config
 
@@ -93,9 +100,11 @@ For saving: `--save-weights` provides an explicit additional output path. Auto-s
 
 ### 6. Auto-save placement in training loop
 
-**Decision**: Auto-save happens after the training loop completes (after line ~785 in `run_simulation.py`, before plots/exports), not inside `post_process_episode()`.
+**Decision**: Auto-save happens after the training loop completes (after line ~785 in `run_simulation.py`, before plots/exports), not inside `post_process_episode()`. Auto-save also happens on `KeyboardInterrupt` to preserve partial training progress.
 
 **Rationale**: Placing it in the training loop keeps the brain classes clean — brains shouldn't know about session export structure. The hybrid brains' existing per-episode auto-save in `post_process_episode()` stays untouched (wrapper approach). The new auto-save is additive.
+
+**Known gap**: The `manyworlds_mode` code path in `run_simulation.py` (line ~478) returns early and bypasses the normal training loop. Auto-save does not apply to manyworlds mode.
 
 ### 7. `weights_only=True` for `torch.load()`
 
@@ -107,14 +116,32 @@ For saving: `--save-weights` provides an explicit additional output path. Auto-s
 
 ### 8. Hybrid wrapper scope
 
-**Decision**: Thin wrappers only. `HybridQuantumBrain.get_weight_components()` calls `_save_qsnn_weights`-style logic to build component dicts. `load_weight_components()` delegates to `_load_qsnn_weights` / `_load_cortex_weights`. Existing config fields and auto-save behavior unchanged.
+**Decision**: Thin wrappers only for all three hybrid brains. `get_weight_components()` builds component dicts from existing internal state. `load_weight_components()` delegates to existing load logic. Existing config fields and auto-save behavior unchanged.
+
+**Covered brains**:
+
+- `HybridQuantumBrain`: components `qsnn`, `cortex.policy`, `cortex.value`
+- `HybridClassicalBrain`: components `reflex`, `cortex.policy`, `cortex.value`
+- `HybridQuantumCortexBrain`: components `reflex`, `cortex`, `critic` (three-component system with 4 training stages)
 
 **What this means concretely**:
 
-- `save_weights(hybrid_brain, path)` produces a single `.pt` with `qsnn`, `cortex.policy`, `cortex.value` keys
+- `save_weights(hybrid_brain, path)` produces a single `.pt` with all component keys
 - `load_weights(hybrid_brain, path, components={"qsnn"})` loads only the QSNN component
 - `config.qsnn_weights_path` continues to work via existing `__init__` logic (separate from `WeightPersistence`)
 - Per-episode auto-save in `post_process_episode()` continues using the old separate-file format
+
+### 9. Weight loading is caller-controlled, not in `__init__`
+
+**Decision**: `MLPPPOBrain.__init__` does NOT load weights from `config.weights_path`. Instead, the training loop (`run_simulation.py`) resolves the weight path (CLI overrides config) and calls `load_weights()` once after brain construction.
+
+**Rationale**: If both `config.weights_path` and `--load-weights` are set, loading in `__init__` wastes work (loads config path, then CLI path overwrites it). Keeping resolution in one place (the training script) avoids double-load and matches the existing pattern where hybrid brains handle their own specific config fields, while the new generic `weights_path` is consumed by the caller.
+
+### 10. PPO buffer reset on weight load
+
+**Decision**: `load_weight_components()` implementations SHALL reset the PPO rollout buffer after loading weights.
+
+**Rationale**: Stale experience in the buffer was collected under different weights. If not cleared, the first PPO update after loading would use off-policy data, potentially corrupting the loaded policy. The existing `restore_brain_state()` in `plasticity/snapshot.py` already does this — our implementations must match.
 
 ## Risks / Trade-offs
 
@@ -127,3 +154,9 @@ For saving: `--save-weights` provides an explicit additional output path. Auto-s
 **\[`weights_only=True` may reject future complex state\]** → If a brain needs to save non-tensor, non-primitive state (e.g. custom Python objects), `weights_only=True` will reject it. Mitigation: `WeightComponent.state` is typed as `dict[str, Any]` but in practice must contain only torch-safe types. Document this constraint.
 
 **[Component name collisions across brains]** → If two different brain types use the same component name (e.g. `"policy"`) with different semantics, loading weights from brain A into brain B would succeed but produce garbage. Mitigation: the `_metadata.brain_type` check warns on mismatch. Brain-specific shape validation in `load_state_dict(strict=True)` catches dimension mismatches.
+
+**[Optimizer state shape errors on architecture mismatch]** → Optimizer state_dicts encode parameter shapes implicitly via `exp_avg` and `exp_avg_sq` tensors. Loading optimizer state from a different architecture would fail with shape errors. Mitigation: `load_state_dict(strict=True)` on the network catches mismatches first; optimizer state is only loaded if network state succeeds. Document that optimizer state is only valid when architectures match exactly.
+
+**[Random projection matrix not persisted]** → MLPPPOBrain with `feature_expansion="random_projection"` creates a numpy `_projection_matrix` regenerated from `feature_expansion_seed`, not included in `state_dict()`. This works as long as the same brain config is used for both save and load (the brief's stated constraint: only environment parameters should change between curriculum stages). The generic `_metadata` does not capture brain-specific config; the shapes dict provides indirect validation (different projection dim = different input layer shape).
+
+**[Manyworlds mode bypasses auto-save]** → The `manyworlds_mode` code path returns early and skips auto-save. Documented as known gap; manyworlds mode is a specialized execution path unlikely to need weight persistence.
