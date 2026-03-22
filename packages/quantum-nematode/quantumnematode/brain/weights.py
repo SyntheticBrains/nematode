@@ -241,6 +241,7 @@ def load_weights(
         )
 
     # Build WeightComponent objects from loaded data
+    available_keys = {k for k in checkpoint if k != _METADATA_KEY}
     loaded_components: dict[str, WeightComponent] = {}
     for key, state in checkpoint.items():
         if key == _METADATA_KEY:
@@ -248,6 +249,16 @@ def load_weights(
         if components is not None and key not in components:
             continue
         loaded_components[key] = WeightComponent(name=key, state=state)
+
+    # Warn if requested components were not found in the file
+    if components is not None:
+        missing = components - set(loaded_components)
+        if missing:
+            logger.warning(
+                "Requested components %s not found in weight file (available: %s).",
+                missing,
+                available_keys,
+            )
 
     brain.load_weight_components(loaded_components)
     logger.info("Weights loaded from %s", path)

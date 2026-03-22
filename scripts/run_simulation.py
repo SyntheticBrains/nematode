@@ -392,14 +392,19 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     load_weights_path = args.load_weights or getattr(brain_config, "weights_path", None)
     save_weights_path = args.save_weights
 
-    # Validate: if CLI flags specified, brain must implement WeightPersistence
+    # Validate: if weight persistence requested, brain must implement it
     if (load_weights_path or save_weights_path) and not isinstance(
         brain,
         WeightPersistence,
     ):
+        source = (
+            "--load-weights/--save-weights"
+            if (args.load_weights or args.save_weights)
+            else "config.weights_path"
+        )
         msg = (
             f"Brain {type(brain).__name__} does not implement "
-            f"WeightPersistence. Cannot use --load-weights or --save-weights."
+            f"WeightPersistence. Cannot use {source} for weight persistence."
         )
         raise TypeError(msg)
 
@@ -815,15 +820,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         # Auto-save final weights (covers both normal completion and KeyboardInterrupt)
         weights_dir = Path.cwd() / "exports" / session_id / "weights"
-        auto_save_path = save_weights(brain, weights_dir / "final.pt")
-        if auto_save_path:
-            logger.info(f"Auto-saved weights to {auto_save_path}")
+        save_weights(brain, weights_dir / "final.pt")
 
         # Explicit --save-weights path (in addition to auto-save)
         if save_weights_path:
-            explicit_path = save_weights(brain, Path(save_weights_path))
-            if explicit_path:
-                logger.info(f"Saved weights to {explicit_path}")
+            save_weights(brain, Path(save_weights_path))
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)
