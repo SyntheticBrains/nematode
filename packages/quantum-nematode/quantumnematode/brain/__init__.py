@@ -9,6 +9,12 @@ from .modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
+from .weights import (
+    WeightComponent,
+    WeightPersistence,
+    load_weights,
+    save_weights,
+)
 
 __all__ = [
     "SENSORY_MODULES",
@@ -19,6 +25,10 @@ __all__ = [
     "QVarCircuitBrain",
     "SpikingBrain",
     "SpikingReinforceBrain",
+    "WeightComponent",
+    "WeightPersistence",
     "extract_classical_features",
     "get_classical_feature_dimension",
+    "load_weights",
+    "save_weights",
 ]
