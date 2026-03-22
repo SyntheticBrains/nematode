@@ -58,6 +58,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from quantumnematode.brain.weights import WeightComponent
+
 import torch
 from pydantic import Field, field_validator, model_validator
 
