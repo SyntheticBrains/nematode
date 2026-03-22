@@ -765,6 +765,7 @@ class MLPPPOBrain(ClassicalBrain):
             ts = components["training_state"].state
             if "episode_count" in ts:
                 self._episode_count = int(ts["episode_count"])
+                self._update_learning_rate()
 
         # Reset buffer to prevent stale experience
         self.buffer.reset()

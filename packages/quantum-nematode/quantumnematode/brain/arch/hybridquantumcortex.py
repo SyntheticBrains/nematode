@@ -2780,45 +2780,71 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             self.theta_hidden.copy_(state["theta_hidden"].to(self.device))
             self.theta_motor.copy_(state["theta_motor"].to(self.device))
 
+    def _build_cortex_expected_shapes(self) -> dict[str, tuple[int, ...]]:
+        """Build expected key→shape mapping for cortex component validation."""
+        expected: dict[str, tuple[int, ...]] = {}
+        for i, w in enumerate(self.cortex_group_weights):
+            expected[f"W_group_{i}"] = tuple(w.shape)
+        for i, t in enumerate(self.cortex_group_thetas):
+            expected[f"theta_group_{i}"] = tuple(t.shape)
+        expected["W_cortex_sh"] = tuple(self.W_cortex_sh.shape)
+        expected["theta_cortex_hidden"] = tuple(self.theta_cortex_hidden.shape)
+        expected["W_cortex_ho"] = tuple(self.W_cortex_ho.shape)
+        expected["theta_cortex_output"] = tuple(self.theta_cortex_output.shape)
+        for i, group_extra in enumerate(self.cortex_reupload_group_thetas):
+            for layer_idx, t in enumerate(group_extra):
+                expected[f"reupload_theta_group_{i}_layer_{layer_idx}"] = tuple(t.shape)
+        for layer_idx, t in enumerate(self.cortex_reupload_hidden_thetas):
+            expected[f"reupload_theta_hidden_layer_{layer_idx}"] = tuple(t.shape)
+        for layer_idx, t in enumerate(self.cortex_reupload_output_thetas):
+            expected[f"reupload_theta_output_layer_{layer_idx}"] = tuple(t.shape)
+        return expected
+
     def _load_cortex_component(self, state: dict[str, torch.Tensor]) -> None:
-        """Load cortex QSNN weights from a component state dict."""
+        """Load cortex QSNN weights from a component state dict.
+
+        Validates all expected keys are present with matching shapes
+        before mutating any tensors.
+        """
+        expected_shapes = self._build_cortex_expected_shapes()
+        for key, expected_shape in expected_shapes.items():
+            if key not in state:
+                msg = f"Missing key '{key}' in cortex weight component"
+                raise ValueError(msg)
+            actual_shape = tuple(state[key].shape)
+            if actual_shape != expected_shape:
+                msg = (
+                    f"Shape mismatch for cortex '{key}': "
+                    f"expected {expected_shape}, got {actual_shape}"
+                )
+                raise ValueError(msg)
+
         with torch.no_grad():
             for i in range(len(self.cortex_group_weights)):
-                key_w = f"W_group_{i}"
-                key_t = f"theta_group_{i}"
-                if key_w in state:
-                    self.cortex_group_weights[i].copy_(state[key_w].to(self.device))
-                if key_t in state:
-                    self.cortex_group_thetas[i].copy_(state[key_t].to(self.device))
+                self.cortex_group_weights[i].copy_(state[f"W_group_{i}"].to(self.device))
+                self.cortex_group_thetas[i].copy_(state[f"theta_group_{i}"].to(self.device))
             for key, tensor in [
                 ("W_cortex_sh", self.W_cortex_sh),
                 ("theta_cortex_hidden", self.theta_cortex_hidden),
                 ("W_cortex_ho", self.W_cortex_ho),
                 ("theta_cortex_output", self.theta_cortex_output),
             ]:
-                if key in state:
-                    tensor.copy_(state[key].to(self.device))
-            self._load_cortex_reupload_thetas(state)
+                tensor.copy_(state[key].to(self.device))
+            self._apply_cortex_reupload_thetas(state)
 
-    def _load_cortex_reupload_thetas(
+    def _apply_cortex_reupload_thetas(
         self,
         state: dict[str, torch.Tensor],
     ) -> None:
-        """Load re-upload thetas from a cortex component state dict."""
+        """Copy validated re-upload thetas from state into brain tensors."""
         with torch.no_grad():
             for i, group_extra in enumerate(self.cortex_reupload_group_thetas):
                 for layer_idx, t in enumerate(group_extra):
-                    key = f"reupload_theta_group_{i}_layer_{layer_idx}"
-                    if key in state:
-                        t.copy_(state[key].to(self.device))
+                    t.copy_(state[f"reupload_theta_group_{i}_layer_{layer_idx}"].to(self.device))
             for layer_idx, t in enumerate(self.cortex_reupload_hidden_thetas):
-                key = f"reupload_theta_hidden_layer_{layer_idx}"
-                if key in state:
-                    t.copy_(state[key].to(self.device))
+                t.copy_(state[f"reupload_theta_hidden_layer_{layer_idx}"].to(self.device))
             for layer_idx, t in enumerate(self.cortex_reupload_output_thetas):
-                key = f"reupload_theta_output_layer_{layer_idx}"
-                if key in state:
-                    t.copy_(state[key].to(self.device))
+                t.copy_(state[f"reupload_theta_output_layer_{layer_idx}"].to(self.device))
 
     def load_weight_components(
         self,
@@ -2831,6 +2857,15 @@ class HybridQuantumCortexBrain(ClassicalBrain):
             self._load_cortex_component(components["cortex"].state)
         if "critic" in components:
             self.critic.load_state_dict(components["critic"].state)
+
+        # Reset rollout buffer and REINFORCE episode state to prevent
+        # stale experience from contaminating the first post-load update
+        self.rollout_buffer.reset()
+        self.episode_rewards.clear()
+        self.episode_actions.clear()
+        self.episode_features.clear()
+        self.episode_old_log_probs.clear()
+        self._cached_spike_probs = []
 
         logger.info(
             "HybridQuantumCortexBrain weights loaded (components: %s)",

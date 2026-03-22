@@ -818,13 +818,24 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             sim_results_csv_file.close()
         detailed_tracking_writer.close()
 
-        # Auto-save final weights (covers both normal completion and KeyboardInterrupt)
+        # Auto-save final weights (covers both normal completion and KeyboardInterrupt).
+        # Each save is isolated so I/O failures don't replace the original
+        # exception or prevent the other save from running.
         weights_dir = Path.cwd() / "exports" / session_id / "weights"
-        save_weights(brain, weights_dir / "final.pt")
+        try:
+            save_weights(brain, weights_dir / "final.pt")
+        except Exception:
+            logger.exception("Failed to auto-save weights to %s", weights_dir / "final.pt")
 
         # Explicit --save-weights path (in addition to auto-save)
         if save_weights_path:
-            save_weights(brain, Path(save_weights_path))
+            try:
+                save_weights(brain, Path(save_weights_path))
+            except Exception:
+                logger.exception(
+                    "Failed to save weights to explicit path %s",
+                    save_weights_path,
+                )
 
     # Calculate and log performance metrics
     metrics = agent.calculate_metrics(total_runs=total_runs_done)

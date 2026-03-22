@@ -403,7 +403,8 @@ The base `BrainConfig` class SHALL support an optional `weights_path` field for 
 
 - **WHEN** a YAML config does not include `weights_path` under brain config
 - **THEN** the value SHALL default to `None`
-- **AND** no weight loading SHALL occur from config
+- **AND** no unified-path weight loading SHALL occur via the `WeightPersistence` system
+- **AND** legacy brain-specific fields (`qsnn_weights_path`, `cortex_weights_path`, `reflex_weights_path`, `critic_weights_path`) SHALL remain supported and MAY still trigger weight loading independently
 
 #### Scenario: Backward Compatibility
 
