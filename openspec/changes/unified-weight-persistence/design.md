@@ -36,7 +36,7 @@ The primary use case driving this work is **curriculum learning** for MLP PPO: t
 
 **Decision**: Create a new `WeightPersistence` protocol in `brain/weights.py` rather than adding methods to the `Brain` protocol.
 
-**Rationale**: `Brain` is a `@runtime_checkable Protocol` — adding methods would break structural subtyping for every brain that doesn't implement them (all 18 today). A separate protocol enables opt-in. The free functions `save_weights()` / `load_weights()` check for `WeightPersistence` first, then fall back to the generic `plasticity/snapshot.py` system.
+**Rationale**: `Brain` is a `@runtime_checkable Protocol` — adding methods would break structural subtyping for every brain that doesn't implement them (all 18 today). A separate protocol enables opt-in. The free functions `save_weights()` / `load_weights()` check for `WeightPersistence` and no-op or error for non-implementing brains.
 
 **Alternative considered**: Default no-op methods on `Brain`. Rejected because protocols don't support default implementations (they're structural, not inherited), and adding concrete methods would require converting to an ABC, which is a much larger change.
 

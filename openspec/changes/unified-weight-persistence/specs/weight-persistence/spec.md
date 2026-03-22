@@ -46,9 +46,9 @@ The system SHALL provide a `save_weights()` free function that saves brain weigh
 #### Scenario: Save With Non-Implementing Brain
 
 - **WHEN** `save_weights(brain, path)` is called on a brain that does NOT implement `WeightPersistence`
-- **AND** the call originates from auto-save (not explicit CLI)
 - **THEN** the function SHALL skip saving and log a debug message
 - **AND** SHALL NOT raise an error
+- **AND** callers requiring strict behavior (e.g. CLI `--save-weights`) SHALL validate `isinstance(brain, WeightPersistence)` before calling
 
 #### Scenario: Save Creates Parent Directories
 
@@ -70,7 +70,7 @@ The system SHALL provide a `save_weights()` free function that saves brain weigh
   - `saved_at` (str): ISO 8601 UTC timestamp
   - `components` (list[str]): names of saved components
   - `shapes` (dict\[str, list[int]\]): mapping of `component.param_name` to tensor shape
-  - `episode_count` (int | None): training progress if available from brain
+  - `episode_count` (int | None): extracted from `training_state` component if present, else from `getattr(brain, '_episode_count', None)`
 
 ### Requirement: Load Weights Function
 

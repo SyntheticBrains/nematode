@@ -24,6 +24,7 @@ HybridQuantumBrain SHALL implement the `WeightPersistence` protocol as a thin wr
 - **WHEN** `load_weight_components()` is called with all three components
 - **THEN** QSNN weights, cortex actor, and cortex critic SHALL all be loaded
 - **AND** each component's shapes SHALL be validated before loading
+- **AND** the cortex PPO rollout buffer SHALL be reset to prevent stale experience from corrupting the first update
 
 #### Scenario: Existing Config Fields Continue Working
 

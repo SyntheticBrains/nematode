@@ -24,6 +24,7 @@ HybridQuantumCortexBrain SHALL implement the `WeightPersistence` protocol as a t
 - **WHEN** `load_weight_components()` is called with all three components
 - **THEN** reflex, cortex, and critic weights SHALL all be loaded
 - **AND** each component's shapes SHALL be validated before loading
+- **AND** any PPO-related rollout buffers SHALL be reset to prevent stale experience from corrupting the first update
 
 #### Scenario: Existing Config Fields Continue Working
 
