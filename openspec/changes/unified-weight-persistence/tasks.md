@@ -40,13 +40,14 @@
 - [ ] 6.4 Test training continues after load — verify weights update and loss changes after loading
 - [ ] 6.5 Test component filtering — save all components, load only a subset, verify non-loaded components unchanged
 - [ ] 6.6 Test architecture mismatch — load weights from different input_dim, verify clear error
-- [ ] 6.7 Test parent directory creation — save to nested non-existent path
-- [ ] 6.8 Test metadata contents — verify `_metadata` key contains brain_type, saved_at, components, shapes, episode_count
-- [ ] 6.9 Test non-implementing brain — `load_weights()` raises `TypeError`, `save_weights()` no-ops with debug log
-- [ ] 6.10 Test CLI flags accepted — argparse accepts `--load-weights` and `--save-weights`
-- [ ] 6.11 Test hybrid `WeightPersistence` wrapper — HybridQuantumBrain round-trip with component filtering (partial load of qsnn only)
-- [ ] 6.12 Test brain_type mismatch warning — load weights saved by different brain class, verify warning logged
-- [ ] 6.13 Test PPO buffer reset after load — verify buffer is empty after `load_weight_components()`
+- [ ] 6.7 Test load file not found — `load_weights()` with nonexistent path raises `FileNotFoundError`
+- [ ] 6.8 Test parent directory creation — save to nested non-existent path
+- [ ] 6.9 Test metadata contents — verify `_metadata` key contains brain_type, saved_at, components, shapes, episode_count
+- [ ] 6.10 Test non-implementing brain — `load_weights()` raises `TypeError`, `save_weights()` no-ops with debug log
+- [ ] 6.11 Test CLI flags accepted — argparse accepts `--load-weights` and `--save-weights`
+- [ ] 6.12 Test hybrid `WeightPersistence` wrapper — HybridQuantumBrain round-trip with component filtering (partial load of qsnn only)
+- [ ] 6.13 Test brain_type mismatch warning — load weights saved by different brain class, verify warning logged
+- [ ] 6.14 Test PPO buffer reset after load — verify buffer is empty after `load_weight_components()`
 
 ## 7. Verification
 
