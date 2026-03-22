@@ -3,7 +3,9 @@
 #
 # Sensing mode: temporal (Mode A)
 #   - Agent receives only scalar food concentration at its position
-#   - No gradient direction provided — agent must infer from movement + STAM
+#   - No gradient direction or dC/dt provided — agent must infer everything
+#     from STAM memory + proprioception
+#   - The hardest sensing mode — most biologically honest
 #   - Models C. elegans chemosensory neurons (AWC, AWA) performing temporal
 #     concentration comparisons during head sweeps
 #
@@ -13,7 +15,7 @@
 #   - Biological timescale: ~10-15s (ASE neuron temporal comparisons)
 #   - Molecular basis: cAMP/calcium signaling pathways
 
-max_steps: 500
+max_steps: 1000  # Temporal sensing needs more steps (slower navigation than oracle)
 brain:
   name: mlpppo
   config:
@@ -28,15 +30,21 @@ brain:
     value_loss_coef: 0.5
     entropy_coef: 0.02
     learning_rate: 0.001
-    rollout_buffer_size: 256
-    num_epochs: 10
+    rollout_buffer_size: 512   # Larger buffer for longer episodes (max_steps=1000)
+    num_epochs: 20             # More epochs to extract learning from each rollout
     num_minibatches: 2
     max_grad_norm: 0.5
     normalize_advantages: true
 
+    # LR schedule
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 800
+    lr_decay_end: 0.0001
+
     sensory_modules:
       - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
-      - proprioception   # Heading direction — critical for temporal sensing (correlate movement with scalar changes)
+      - proprioception   # Heading direction — critical for temporal sensing
 
 body_length: 2
 
@@ -52,7 +60,7 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 400.0   # Increased from 200 — temporal sensing needs more exploration budget
+  initial_satiety: 400.0
   satiety_decay_rate: 1.0
   satiety_gain_per_food: 0.2
 
