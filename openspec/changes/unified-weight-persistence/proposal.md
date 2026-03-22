@@ -6,7 +6,7 @@ MLP PPO — our primary classical baseline — has no weight save/load support, 
 
 - **New `WeightPersistence` protocol** — A separate `@runtime_checkable` protocol (not added to `Brain`) with component-based save/load. Brains opt in by implementing `get_weight_components()` and `load_weight_components()`. Brains that don't implement it are treated as no-ops with warnings (no generic fallback — explicit implementation required).
 - **New `brain/weights.py` module** — Core types (`WeightComponent` dataclass), the protocol, and `save_weights()`/`load_weights()` free functions that handle dispatch, metadata, and component filtering.
-- **MLP PPO weight persistence** — `MLPPPOBrain` implements `WeightPersistence` with components: policy, value, optimizers, training state. Supports `weights_path` config field for loading pre-trained weights.
+- **MLP PPO weight persistence** — `MLPPPOBrain` implements `WeightPersistence` with components: policy, value, optimizer (single joint Adam), training state. Supports `weights_path` config field for loading pre-trained weights.
 - **Hybrid brain wrappers** — `HybridQuantumBrain`, `HybridClassicalBrain`, and `HybridQuantumCortexBrain` gain thin `WeightPersistence` wrappers delegating to existing private `_save/_load` methods. Existing `qsnn_weights_path`/`cortex_weights_path`/`critic_weights_path` config fields continue working.
 - **CLI flags** — `--load-weights PATH` and `--save-weights PATH` on `run_simulation.py`. CLI overrides config `weights_path` when both specified.
 - **Auto-save final weights** — Brains implementing `WeightPersistence` auto-save `final.pt` to `exports/{session_id}/weights/` at training end (no flag needed). Non-implementing brains skip auto-save silently.

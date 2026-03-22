@@ -107,6 +107,12 @@ The system SHALL provide a `load_weights()` free function that loads brain weigh
 - **THEN** the function SHALL log a warning with both the expected and actual brain types
 - **AND** SHALL proceed with loading (not raise an error)
 
+#### Scenario: Load With Missing Components Warning
+
+- **WHEN** `load_weights(brain, path, components={"policy", "nonexistent"})` is called with a filter that includes names not present in the file
+- **THEN** the function SHALL log a warning listing the missing component names and the available components in the file
+- **AND** SHALL proceed with loading only the components that were found
+
 #### Scenario: Security — weights_only=True
 
 - **WHEN** loading any weight file
@@ -123,8 +129,7 @@ The system SHALL provide a `load_weights()` free function that loads brain weigh
 - **THEN** the returned dict SHALL contain these components:
   - `"policy"`: actor network state_dict
   - `"value"`: critic network state_dict
-  - `"policy_optimizer"`: actor optimizer state_dict
-  - `"value_optimizer"`: critic optimizer state_dict
+  - `"optimizer"`: joint Adam optimizer state_dict (MLPPPOBrain uses a single optimizer for both actor and critic)
   - `"training_state"`: dict containing `episode_count` (int)
 
 #### Scenario: MLP PPO Load Weight Components

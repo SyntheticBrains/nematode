@@ -46,7 +46,7 @@ The primary use case driving this work is **curriculum learning** for MLP PPO: t
 
 **Rationale**: Hybrid brains need partial loading — stage 1 saves QSNN only, stage 2 loads QSNN and saves cortex. A flat save/load cannot express this. Components also enable meaningful metadata per component.
 
-**Component naming convention**: Brain-defined names following a convention — `policy`/`value` for actor/critic networks, `policy_optimizer`/`value_optimizer` for optimizer state, `training_state` for episode count and similar. Hybrid brains use prefixed names: `qsnn`, `cortex.policy`, `cortex.value`. Not enforced by protocol — documented convention.
+**Component naming convention**: Brain-defined names following a convention — `policy`/`value` for actor/critic networks, `optimizer` for optimizer state (single or joint), `training_state` for episode count and similar. Hybrid brains use prefixed names: `qsnn`, `cortex.policy`, `cortex.value`. Not enforced by protocol — documented convention.
 
 ### 3. Single `.pt` file format with component keys
 
@@ -56,14 +56,13 @@ The primary use case driving this work is **curriculum learning** for MLP PPO: t
 {
     "policy": {"0.weight": tensor, "0.bias": tensor, ...},
     "value": {"0.weight": tensor, "0.bias": tensor, ...},
-    "policy_optimizer": {optimizer state_dict},
-    "value_optimizer": {optimizer state_dict},
+    "optimizer": {optimizer state_dict},
     "training_state": {"episode_count": int, ...},
     "_metadata": {
         "brain_type": "MLPPPOBrain",
         "saved_at": "2026-03-22T14:30:00Z",
-        "components": ["policy", "value", ...],
-        "shapes": {"policy.0.weight": [64, 12], ...},
+        "components": ["policy", "value", "optimizer", "training_state"],
+        "shapes": {"policy.0.weight": [64, 2], ...},
         "episode_count": 500,
     },
 }

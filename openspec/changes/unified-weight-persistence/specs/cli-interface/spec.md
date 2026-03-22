@@ -42,10 +42,10 @@ The `run_simulation.py` script SHALL accept CLI arguments for loading and saving
 - **THEN** the system SHALL raise a `FileNotFoundError` with the path
 - **AND** SHALL exit before starting the training loop
 
-#### Scenario: Non-Implementing Brain With CLI Flags
+#### Scenario: Non-Implementing Brain With Weight Persistence Request
 
-- **WHEN** `--load-weights` or `--save-weights` is specified but the brain does not implement `WeightPersistence`
-- **THEN** the system SHALL raise a `TypeError` with a message naming the brain class
+- **WHEN** `--load-weights`, `--save-weights`, or `config.weights_path` is specified but the brain does not implement `WeightPersistence`
+- **THEN** the system SHALL raise a `TypeError` with a message naming the brain class and the source of the request (CLI flags or config field)
 - **AND** SHALL exit before starting the training loop
 
 ### Requirement: Auto-Save Final Weights
