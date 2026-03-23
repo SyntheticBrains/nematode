@@ -820,7 +820,10 @@ class LSTMPPOBrain(ClassicalBrain):
 
     def _get_entropy_coef(self) -> float:
         """Get current entropy coefficient with linear decay schedule."""
-        if self._episode_count >= self.config.entropy_decay_episodes:
+        if (
+            self.config.entropy_decay_episodes <= 0
+            or self._episode_count >= self.config.entropy_decay_episodes
+        ):
             return self.config.entropy_coef_end
         progress = self._episode_count / self.config.entropy_decay_episodes
         return self.config.entropy_coef + progress * (
@@ -870,6 +873,8 @@ class LSTMPPOBrain(ClassicalBrain):
     def prepare_episode(self) -> None:
         """Reset LSTM hidden state for a new episode."""
         self.h_t, self.c_t = self._zero_hidden()
+        self._pending_features = None
+        self._step_count = 0
 
     def post_process_episode(
         self,

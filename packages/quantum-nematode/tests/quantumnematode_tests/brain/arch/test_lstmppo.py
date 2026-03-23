@@ -620,6 +620,105 @@ class TestLSTMPPOBrainSensoryModules:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Entropy Decay and LR Scheduling
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestLSTMPPOBrainScheduling:
+    """Test entropy decay and learning rate scheduling."""
+
+    def test_entropy_decays_over_episodes(self):
+        """Test that entropy coefficient decreases over episodes."""
+        brain = _make_brain(entropy_coef=0.1, entropy_coef_end=0.01, entropy_decay_episodes=100)
+        coef_start = brain._get_entropy_coef()
+        assert coef_start == pytest.approx(0.1)
+
+        # Simulate 50 episodes
+        for _ in range(50):
+            brain.post_process_episode()
+        coef_mid = brain._get_entropy_coef()
+        assert coef_mid < coef_start
+        assert coef_mid > 0.01
+
+        # Simulate to end of decay
+        for _ in range(50):
+            brain.post_process_episode()
+        coef_end = brain._get_entropy_coef()
+        assert coef_end == pytest.approx(0.01)
+
+        # Past decay episodes, stays at end value
+        brain.post_process_episode()
+        assert brain._get_entropy_coef() == pytest.approx(0.01)
+
+    def test_lr_warmup_and_decay(self):
+        """Test that learning rate follows warmup then decay schedule."""
+        brain = _make_brain(
+            actor_lr=0.001,
+            critic_lr=0.002,
+            lr_warmup_episodes=10,
+            lr_warmup_start=0.0001,
+            lr_decay_episodes=20,
+            lr_decay_end=0.0001,
+        )
+        # At episode 0: should be at warmup start
+        lr_0 = brain._get_current_lr()
+        assert lr_0 == pytest.approx(0.0001)
+
+        # Warmup to episode 10
+        for _ in range(10):
+            brain.post_process_episode()
+        lr_10 = brain._get_current_lr()
+        assert lr_10 == pytest.approx(0.001)
+
+        # Decay: at episode 20 (midpoint of decay)
+        for _ in range(10):
+            brain.post_process_episode()
+        lr_20 = brain._get_current_lr()
+        assert lr_20 < 0.001
+        assert lr_20 > 0.0001
+
+        # End of decay at episode 30
+        for _ in range(10):
+            brain.post_process_episode()
+        lr_30 = brain._get_current_lr()
+        assert lr_30 == pytest.approx(0.0001)
+
+    def test_critic_lr_scales_proportionally(self):
+        """Test that critic LR maintains ratio with actor LR."""
+        brain = _make_brain(
+            actor_lr=0.001,
+            critic_lr=0.002,
+            lr_warmup_episodes=10,
+            lr_warmup_start=0.0001,
+        )
+        # At start of warmup, critic should be 2x actor
+        actor_lr = brain.actor_optimizer.param_groups[0]["lr"]
+        critic_lr = brain.critic_optimizer.param_groups[0]["lr"]
+        assert critic_lr / actor_lr == pytest.approx(2.0, rel=1e-4)
+
+        # After some warmup, ratio should be preserved
+        for _ in range(5):
+            brain.post_process_episode()
+        actor_lr = brain.actor_optimizer.param_groups[0]["lr"]
+        critic_lr = brain.critic_optimizer.param_groups[0]["lr"]
+        assert critic_lr / actor_lr == pytest.approx(2.0, rel=1e-4)
+
+    def test_prepare_episode_resets_pending_and_step_count(self):
+        """Test that prepare_episode resets pending features and step count."""
+        brain = _make_brain()
+        brain.prepare_episode()
+
+        params = _make_params()
+        brain.run_brain(params, top_only=False, top_randomize=False)
+        assert brain._pending_features is not None
+        assert brain._step_count == 1
+
+        brain.prepare_episode()
+        assert brain._pending_features is None
+        assert brain._step_count == 0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Protocol Compliance
 # ──────────────────────────────────────────────────────────────────────────────
 
