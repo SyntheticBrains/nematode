@@ -34,6 +34,7 @@ class BrainType(Enum):
     QEF = "qef"
     QRH_QLSTM = "qrhqlstm"
     CRH_QLSTM = "crhqlstm"
+    LSTM_PPO = "lstmppo"
 
     # Deprecated aliases (kept for backward compatibility)
     QSNN = "qsnn"
@@ -99,6 +100,7 @@ BRAIN_TYPES = Literal[
     BrainType.QLIF_LSTM,
     BrainType.QRH_QLSTM,
     BrainType.CRH_QLSTM,
+    BrainType.LSTM_PPO,
     # Deprecated aliases
     BrainType.QSNN,
     BrainType.MODULAR,
@@ -134,6 +136,7 @@ CLASSICAL_BRAIN_TYPES: set[BrainType] = {
     BrainType.PPO,
     BrainType.CRH,
     BrainType.CRH_QLSTM,
+    BrainType.LSTM_PPO,
 }
 SPIKING_BRAIN_TYPES: set[BrainType] = {
     BrainType.SPIKING_REINFORCE,

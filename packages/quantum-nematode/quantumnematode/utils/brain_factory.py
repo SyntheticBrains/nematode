@@ -15,6 +15,7 @@ from quantumnematode.brain.arch import (
     HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
     HybridQuantumCortexBrainConfig,
+    LSTMPPOBrainConfig,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
@@ -66,6 +67,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     | QLIFLSTMBrainConfig
     | QRHQLSTMBrainConfig
     | CRHQLSTMBrainConfig
+    | LSTMPPOBrainConfig
     | SpikingReinforceBrainConfig,
     shots: int,
     qubits: int,  # noqa: ARG001
@@ -432,6 +434,22 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             raise ValueError(error_message)
 
         brain = CRHQLSTMBrain(
+            config=brain_config,
+            num_actions=4,
+            device=device,
+        )
+    elif brain_type == BrainType.LSTM_PPO:
+        from quantumnematode.brain.arch.lstmppo import LSTMPPOBrain
+
+        if not isinstance(brain_config, LSTMPPOBrainConfig):
+            error_message = (
+                "The 'lstmppo' brain architecture requires a LSTMPPOBrainConfig. "
+                f"Provided brain config type: {type(brain_config)}."
+            )
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        brain = LSTMPPOBrain(
             config=brain_config,
             num_actions=4,
             device=device,

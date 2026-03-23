@@ -1,8 +1,8 @@
 ## 1. Core Implementation
 
-- [ ] 1.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py` with `LSTMPPOBrainConfig` — Pydantic config with all LSTM PPO parameters, validators for lstm_hidden_dim >= 2, bptt_chunk_length >= 4, rollout_buffer_size >= bptt_chunk_length, sensory_modules must not be None (no legacy 2-feature mode)
-- [ ] 1.2 Implement `LSTMPPORolloutBuffer` in lstmppo.py — stores per-step (features, action, log_prob, value, reward, done, h_state, c_state), `compute_returns_and_advantages()` with standard GAE, `get_sequential_chunks()` yielding chunks with h_init/c_init and shuffled chunk order
-- [ ] 1.3 Implement `LSTMPPOBrain.__init__()` — build LayerNorm, nn.LSTM or nn.GRU (based on rnn_type), actor MLP, critic MLP, separate Adam optimizers (actor covers LSTM+LayerNorm+actor, critic covers critic only), initialize hidden state to zeros, create rollout buffer
+- [x] 1.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py` with `LSTMPPOBrainConfig` — Pydantic config with all LSTM PPO parameters, validators for lstm_hidden_dim >= 2, bptt_chunk_length >= 4, rollout_buffer_size >= bptt_chunk_length, sensory_modules must not be None (no legacy 2-feature mode)
+- [x] 1.2 Implement `LSTMPPORolloutBuffer` in lstmppo.py — stores per-step (features, action, log_prob, value, reward, done, h_state, c_state), `compute_returns_and_advantages()` with standard GAE, `get_sequential_chunks()` yielding chunks with h_init/c_init and shuffled chunk order
+- [x] 1.3 Implement `LSTMPPOBrain.__init__()` — build LayerNorm, nn.LSTM or nn.GRU (based on rnn_type), actor MLP, critic MLP, separate Adam optimizers (actor covers LSTM+LayerNorm+actor, critic covers critic only), initialize hidden state to zeros, create rollout buffer
 - [ ] 1.4 Implement `preprocess()` — use `extract_classical_features(params, self.sensory_modules)` identical to MLPPPOBrain
 - [ ] 1.5 Implement `run_brain()` — preprocess → LayerNorm → LSTM step (no_grad) → actor sample from h_t → critic value from h_t.detach() → store pending (features, action, log_prob, value, pre-step h, c). Follow `_reservoir_lstm_base.py:489-573` pattern
 - [ ] 1.6 Implement `learn()` — add pending data + hidden states to buffer, trigger PPO update when buffer full or episode done with sufficient data. Follow `_reservoir_lstm_base.py:575-603` pattern
@@ -16,37 +16,37 @@
 
 ## 2. Registration
 
-- [ ] 2.1 Add `LSTM_PPO = "lstmppo"` to `BrainType` enum in `brain/arch/dtypes.py`, add to `CLASSICAL_BRAIN_TYPES` set
-- [ ] 2.2 Add `LSTMPPOBrain` and `LSTMPPOBrainConfig` to `brain/arch/__init__.py` imports and `__all__`
-- [ ] 2.3 Add `"lstmppo": LSTMPPOBrainConfig` to `BRAIN_CONFIG_MAP` in `utils/config_loader.py`
-- [ ] 2.4 Add `BrainType.LSTM_PPO` handler in `utils/brain_factory.py` — import and instantiate LSTMPPOBrain
+- [x] 2.1 Add `LSTM_PPO = "lstmppo"` to `BrainType` enum in `brain/arch/dtypes.py`, add to `CLASSICAL_BRAIN_TYPES` set
+- [x] 2.2 Add `LSTMPPOBrain` and `LSTMPPOBrainConfig` to `brain/arch/__init__.py` imports and `__all__`
+- [x] 2.3 Add `"lstmppo": LSTMPPOBrainConfig` to `BRAIN_CONFIG_MAP` in `utils/config_loader.py`
+- [x] 2.4 Add `BrainType.LSTM_PPO` handler in `utils/brain_factory.py` — import and instantiate LSTMPPOBrain
 
 ## 3. Tests
 
-- [ ] 3.1 Create `tests/quantumnematode_tests/brain/arch/test_lstmppo.py` with config validation tests (defaults, custom values, invalid values rejected)
-- [ ] 3.2 Add rollout buffer tests — add, full, reset, GAE computation, sequential chunk generation with correct h_init/c_init, episode boundary handling within chunks
-- [ ] 3.3 Add brain construction test — correct layer dimensions, parameter count, LSTM vs GRU variant
-- [ ] 3.4 Add single-step test — run_brain returns valid ActionData, hidden state updates
-- [ ] 3.5 Add multi-step + learn test — buffer fills, PPO update runs without error, loss is computed
-- [ ] 3.6 Add episode boundary test — prepare_episode resets hidden state, new episode starts fresh
-- [ ] 3.7 Add GRU end-to-end test — construct with `rnn_type: gru`, run multiple steps, learn, verify PPO update completes and loss changes
-- [ ] 3.8 Add weight persistence round-trip test — save and load produces same outputs
-- [ ] 3.9 Add sensory module compatibility test — works with temporal/derivative modules + STAM
+- [x] 3.1 Create `tests/quantumnematode_tests/brain/arch/test_lstmppo.py` with config validation tests (defaults, custom values, invalid values rejected)
+- [x] 3.2 Add rollout buffer tests — add, full, reset, GAE computation, sequential chunk generation with correct h_init/c_init, episode boundary handling within chunks
+- [x] 3.3 Add brain construction test — correct layer dimensions, parameter count, LSTM vs GRU variant
+- [x] 3.4 Add single-step test — run_brain returns valid ActionData, hidden state updates
+- [x] 3.5 Add multi-step + learn test — buffer fills, PPO update runs without error, loss is computed
+- [x] 3.6 Add episode boundary test — prepare_episode resets hidden state, new episode starts fresh
+- [x] 3.7 Add GRU end-to-end test — construct with `rnn_type: gru`, run multiple steps, learn, verify PPO update completes and loss changes
+- [x] 3.8 Add weight persistence round-trip test — save and load produces same outputs
+- [x] 3.9 Add sensory module compatibility test — works with temporal/derivative modules + STAM
 
 ## 4. Example Configurations
 
-- [ ] 4.1 Create `configs/examples/lstmppo_foraging_small_derivative.yml` — LSTM PPO with derivative chemotaxis, max_steps=1000, LR schedule, same environment as mlpppo_foraging_small_derivative.yml
-- [ ] 4.2 Create `configs/examples/lstmppo_pursuit_predators_small_derivative.yml` — LSTM PPO with derivative chemotaxis + nociception + mechanosensation + proprioception, pursuit predators, same environment as mlpppo_pursuit_predators_small_derivative.yml
+- [x] 4.1 Create `configs/examples/lstmppo_foraging_small_derivative.yml` — LSTM PPO with derivative chemotaxis, max_steps=1000, LR schedule, same environment as mlpppo_foraging_small_derivative.yml
+- [x] 4.2 Create `configs/examples/lstmppo_pursuit_predators_small_derivative.yml` — LSTM PPO with derivative chemotaxis + nociception + mechanosensation + proprioception, pursuit predators, same environment as mlpppo_pursuit_predators_small_derivative.yml
 
 ## 5. Verification
 
-- [ ] 5.1 Run `uv run pytest -m "not nightly"` — all existing + new tests pass
-- [ ] 5.2 Run `uv run pre-commit run -a` — lint, format, pyright pass
-- [ ] 5.3 Run foraging sanity check — `uv run ./scripts/run_simulation.py --runs 50 --config configs/examples/lstmppo_foraging_small_derivative.yml --theme headless --seed 42` — agent learns (food count increases)
-- [ ] 5.4 Run predator sanity check — `uv run ./scripts/run_simulation.py --runs 50 --config configs/examples/lstmppo_pursuit_predators_small_derivative.yml --theme headless --seed 42` — agent survives longer over episodes
-- [ ] 5.5 Add `lstmppo_foraging_small_derivative.yml` to smoke test suite in `test_smoke.py`
+- [x] 5.1 Run `uv run pytest -m "not nightly"` — all existing + new tests pass
+- [x] 5.2 Run `uv run pre-commit run -a` — lint, format, pyright pass
+- [x] 5.3 Run foraging sanity check — `uv run ./scripts/run_simulation.py --runs 50 --config configs/examples/lstmppo_foraging_small_derivative.yml --theme headless --seed 42` — agent learns (food count increases)
+- [x] 5.4 Run predator sanity check — `uv run ./scripts/run_simulation.py --runs 50 --config configs/examples/lstmppo_pursuit_predators_small_derivative.yml --theme headless --seed 42` — agent survives longer over episodes
+- [x] 5.5 Add `lstmppo_foraging_small_derivative.yml` to smoke test suite in `test_smoke.py`
 
 ## 6. Documentation
 
-- [ ] 6.1 Update `AGENTS.md` — add `lstmppo` to the brain architecture list in Key Directories section
-- [ ] 6.2 Update `openspec/config.yaml` — add `lstmppo` to brain architecture list if present
+- [x] 6.1 Update `AGENTS.md` — add `lstmppo` to the brain architecture list in Key Directories section
+- [x] 6.2 Update `openspec/config.yaml` — add `lstmppo` to brain architecture list if present

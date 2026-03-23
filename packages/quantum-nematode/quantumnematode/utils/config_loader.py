@@ -19,6 +19,7 @@ from quantumnematode.brain.arch import (
     HybridClassicalBrainConfig,
     HybridQuantumBrainConfig,
     HybridQuantumCortexBrainConfig,
+    LSTMPPOBrainConfig,
     MLPDQNBrainConfig,
     MLPPPOBrainConfig,
     MLPReinforceBrainConfig,
@@ -108,6 +109,7 @@ BrainConfigType = (
     | QLIFLSTMBrainConfig
     | QRHQLSTMBrainConfig
     | CRHQLSTMBrainConfig
+    | LSTMPPOBrainConfig
     | SpikingReinforceBrainConfig
 )
 
@@ -134,6 +136,7 @@ BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = {
     "qliflstm": QLIFLSTMBrainConfig,
     "qrhqlstm": QRHQLSTMBrainConfig,
     "crhqlstm": CRHQLSTMBrainConfig,
+    "lstmppo": LSTMPPOBrainConfig,
 }
 
 

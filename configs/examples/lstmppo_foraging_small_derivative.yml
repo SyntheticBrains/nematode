@@ -1,0 +1,90 @@
+# Derivative Sensing - LSTM PPO Brain - Dynamic Foraging Environment - Small Configuration
+# Phase 3: LSTM PPO with biologically-plausible derivative sensing
+#
+# Architecture: Features → LayerNorm → LSTM(64) → Actor MLP / Critic MLP (detached h)
+# Training: Chunk-based truncated BPTT with separate actor/critic optimizers
+#
+# Sensing mode: derivative (Mode B)
+#   - Agent receives scalar food concentration + dC/dt (rate of change)
+#   - LSTM provides temporal memory for correlating derivatives with movement
+#
+# STAM auto-enabled by derivative mode for temporal history
+
+max_steps: 1000  # Temporal sensing needs more steps
+brain:
+  name: lstmppo
+  config:
+    rnn_type: lstm
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    # Actor/Critic MLP
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    # Separate learning rates
+    actor_lr: 0.0005
+    critic_lr: 0.0005
+
+    # PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 1024
+    num_epochs: 6
+    max_grad_norm: 0.5
+
+    # Entropy decay
+    entropy_coef: 0.02
+    entropy_coef_end: 0.008
+    entropy_decay_episodes: 500
+
+    # LR schedule
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00005
+    lr_decay_episodes: 800
+    lr_decay_end: 0.00005
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
+      - proprioception   # Heading direction — critical for correlating dC/dt with movement
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 400.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  sensing:
+    chemotaxis_mode: derivative  # Mode B: scalar + dC/dt
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
