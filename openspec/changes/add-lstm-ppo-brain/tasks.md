@@ -1,6 +1,6 @@
 ## 1. Core Implementation
 
-- [ ] 1.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py` with `LSTMPPOBrainConfig` — Pydantic config with all LSTM PPO parameters, validators for lstm_hidden_dim >= 2, bptt_chunk_length >= 4, rollout_buffer_size >= bptt_chunk_length
+- [ ] 1.1 Create `packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py` with `LSTMPPOBrainConfig` — Pydantic config with all LSTM PPO parameters, validators for lstm_hidden_dim >= 2, bptt_chunk_length >= 4, rollout_buffer_size >= bptt_chunk_length, sensory_modules must not be None (no legacy 2-feature mode)
 - [ ] 1.2 Implement `LSTMPPORolloutBuffer` in lstmppo.py — stores per-step (features, action, log_prob, value, reward, done, h_state, c_state), `compute_returns_and_advantages()` with standard GAE, `get_sequential_chunks()` yielding chunks with h_init/c_init and shuffled chunk order
 - [ ] 1.3 Implement `LSTMPPOBrain.__init__()` — build LayerNorm, nn.LSTM or nn.GRU (based on rnn_type), actor MLP, critic MLP, separate Adam optimizers (actor covers LSTM+LayerNorm+actor, critic covers critic only), initialize hidden state to zeros, create rollout buffer
 - [ ] 1.4 Implement `preprocess()` — use `extract_classical_features(params, self.sensory_modules)` identical to MLPPPOBrain

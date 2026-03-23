@@ -30,7 +30,7 @@ The configuration system SHALL support the `lstmppo` brain type with LSTM/GRU-sp
   - `max_grad_norm` (float, default 0.5)
   - `entropy_coef`, `entropy_coef_end`, `entropy_decay_episodes` (entropy decay)
   - `lr_warmup_episodes`, `lr_warmup_start`, `lr_decay_episodes`, `lr_decay_end` (LR scheduling)
-  - `sensory_modules` (list of ModuleName, required for feature extraction)
+  - `sensory_modules` (list of ModuleName, **required** — no legacy 2-feature mode; validation SHALL reject None)
 
 #### Scenario: Example Configurations
 

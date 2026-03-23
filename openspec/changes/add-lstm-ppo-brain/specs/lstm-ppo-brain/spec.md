@@ -24,6 +24,7 @@ The system SHALL provide an LSTM/GRU-augmented PPO brain that processes sensory 
 - **THEN** the brain SHALL extract features using `extract_classical_features(params, sensory_modules)`
 - **AND** the features SHALL be passed through LayerNorm before the LSTM
 - **AND** the brain SHALL support all existing sensory modules including temporal, derivative, and STAM
+- **AND** `sensory_modules` SHALL be required (no legacy 2-feature mode — validation SHALL reject None)
 
 ### Requirement: Recurrent Hidden State Management
 
