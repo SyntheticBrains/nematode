@@ -106,3 +106,14 @@ The brain SHALL support saving and loading trained weights for curriculum learni
 - **WHEN** `load_weight_components()` is called with saved components
 - **THEN** the brain SHALL restore all network weights, optimizer states, and training state
 - **AND** the rollout buffer SHALL be reset to prevent stale experience
+
+### Requirement: Brain Protocol Compliance
+
+The brain SHALL implement all methods required by the ClassicalBrain protocol.
+
+#### Scenario: Protocol Method Implementation
+
+- **WHEN** LSTMPPOBrain is instantiated
+- **THEN** it SHALL implement `run_brain()`, `learn()`, `prepare_episode()`, `post_process_episode()`, `update_memory()` (no-op), `copy()` (raise NotImplementedError)
+- **AND** it SHALL implement the `action_set` property with getter and setter
+- **AND** `build_brain()` and `update_parameters()` SHALL raise NotImplementedError or be no-ops (not applicable to classical brains)

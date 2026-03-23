@@ -10,8 +10,9 @@
 - [ ] 1.8 Implement `prepare_episode()` — reset LSTM hidden state to zeros
 - [ ] 1.9 Implement `post_process_episode()` — increment episode count, update LR schedule, update entropy decay
 - [ ] 1.10 Implement entropy decay `_get_entropy_coef()` — linear decay from entropy_coef to entropy_coef_end over entropy_decay_episodes
-- [ ] 1.11 Implement LR scheduling `_get_current_lr()` and `_update_learning_rate()` — warmup + decay for both optimizers, critic LR scales proportionally
+- [ ] 1.11 Implement LR scheduling `_get_current_lr()` and `_update_learning_rate()` — warmup + decay for both optimizers, critic LR scales proportionally (preserve configured actor_lr/critic_lr ratio)
 - [ ] 1.12 Implement weight persistence `get_weight_components()` and `load_weight_components()` — components: lstm, layer_norm, policy, value, actor_optimizer, critic_optimizer, training_state
+- [ ] 1.13 Implement remaining Brain/ClassicalBrain protocol methods — `action_set` property (getter/setter), `update_memory()` (no-op), `copy()` (raise NotImplementedError, same as MLPPPOBrain), `build_brain()` (raise NotImplementedError), `update_parameters()` (no-op)
 
 ## 2. Registration
 
@@ -28,8 +29,9 @@
 - [ ] 3.4 Add single-step test — run_brain returns valid ActionData, hidden state updates
 - [ ] 3.5 Add multi-step + learn test — buffer fills, PPO update runs without error, loss is computed
 - [ ] 3.6 Add episode boundary test — prepare_episode resets hidden state, new episode starts fresh
-- [ ] 3.7 Add weight persistence round-trip test — save and load produces same outputs
-- [ ] 3.8 Add sensory module compatibility test — works with temporal/derivative modules + STAM
+- [ ] 3.7 Add GRU end-to-end test — construct with `rnn_type: gru`, run multiple steps, learn, verify PPO update completes and loss changes
+- [ ] 3.8 Add weight persistence round-trip test — save and load produces same outputs
+- [ ] 3.9 Add sensory module compatibility test — works with temporal/derivative modules + STAM
 
 ## 4. Example Configurations
 

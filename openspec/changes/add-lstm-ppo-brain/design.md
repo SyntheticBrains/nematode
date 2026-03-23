@@ -73,3 +73,9 @@ Key existing code to build on:
 **[Trade-off] Separate optimizers add complexity** → But they're proven in this codebase and enable better training dynamics. The alternative (single optimizer) risks critic loss distorting LSTM representations.
 
 **[Trade-off] New buffer class vs reusing existing** → Code duplication of ~50 lines (GAE + chunk generation). But avoids shape compatibility issues and keeps the code self-contained.
+
+## Notes
+
+**No `num_minibatches` parameter**: Unlike MLPPPOBrain which uses `num_minibatches` to divide the rollout into shuffled minibatches, LSTMPPOBrain uses `bptt_chunk_length` to divide into sequential chunks. These serve the same role (controlling gradient batch size) but with different semantics. The `num_minibatches` parameter is intentionally absent from LSTMPPOBrainConfig.
+
+**Supersedes `use_lstm` on MLPPPOBrain**: The `MLPPPOBrain.use_lstm` flag provides a simpler but inferior recurrent PPO (full-sequence processing, no chunk BPTT, no separate optimizers). `LSTMPPOBrain` is the recommended recurrent architecture. The old flag remains for backward compatibility but should not be used for new experiments.
