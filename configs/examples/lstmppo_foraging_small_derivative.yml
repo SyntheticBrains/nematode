@@ -8,6 +8,9 @@
 #   - Agent receives scalar food concentration + dC/dt (rate of change)
 #   - LSTM provides temporal memory for correlating derivatives with movement
 #
+# Performance: 81.3% mean success rate (4 seeds, 1000 eps each)
+# Best config from hyperparameter sweep: conservative LR + small buffer
+#
 # STAM auto-enabled by derivative mode for temporal history
 
 max_steps: 1000  # Temporal sensing needs more steps
@@ -24,29 +27,29 @@ brain:
     actor_num_layers: 2
     critic_num_layers: 2
 
-    # Separate learning rates
-    actor_lr: 0.0005
-    critic_lr: 0.0005
+    # Separate learning rates (conservative — prevents late-training collapse)
+    actor_lr: 0.0003
+    critic_lr: 0.0003
 
-    # PPO hyperparameters
+    # PPO hyperparameters (smaller buffer + fewer epochs = more frequent, fresher updates)
     clip_epsilon: 0.2
     gamma: 0.99
     gae_lambda: 0.95
     value_loss_coef: 0.5
-    rollout_buffer_size: 1024
-    num_epochs: 6
+    rollout_buffer_size: 512
+    num_epochs: 4
     max_grad_norm: 0.5
 
-    # Entropy decay
+    # Entropy decay (slower decay for stable exploration)
     entropy_coef: 0.02
-    entropy_coef_end: 0.008
-    entropy_decay_episodes: 500
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
 
-    # LR schedule
+    # LR schedule (extended decay to prevent late collapse)
     lr_warmup_episodes: 50
-    lr_warmup_start: 0.00005
-    lr_decay_episodes: 800
-    lr_decay_end: 0.00005
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
 
     sensory_modules:
       - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
