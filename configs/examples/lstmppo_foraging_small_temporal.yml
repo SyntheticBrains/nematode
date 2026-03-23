@@ -1,0 +1,95 @@
+# Temporal Sensing (Mode A) - LSTM PPO Brain - Dynamic Foraging Environment
+# Phase 3: LSTM PPO with biologically-honest temporal sensing (scalar only)
+#
+# Architecture: Features → LayerNorm → LSTM(64) → Actor MLP / Critic MLP (detached h)
+# Training: Chunk-based truncated BPTT with separate actor/critic optimizers
+#
+# Sensing mode: temporal (Mode A)
+#   - Agent receives only scalar food concentration at its position
+#   - No gradient direction or dC/dt — agent must infer everything from LSTM memory
+#   - The hardest sensing mode — most biologically honest
+#   - LSTM temporal memory enables learning movement-concentration correlations
+#
+# Performance: 57.8% mean success (4 seeds, 2000 eps), 96% L100 convergence
+# Key: gradient_decay=4.0 creates stronger concentration differences for LSTM to detect
+#
+# STAM auto-enabled for temporal history (but LSTM internal memory is primary)
+
+max_steps: 1000
+brain:
+  name: lstmppo
+  config:
+    rnn_type: lstm
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    # Actor/Critic MLP
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    # Separate learning rates (conservative — prevents late-training collapse)
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    # PPO hyperparameters (smaller buffer + fewer epochs = more frequent, fresher updates)
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    # Entropy decay (slower decay for stable exploration)
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+
+    # LR schedule (extended decay to prevent late collapse)
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
+      - proprioception   # Heading direction — critical for correlating concentration with movement
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 400.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  sensing:
+    chemotaxis_mode: temporal  # Mode A: scalar concentration only
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 4.0  # Steeper gradient — critical for temporal sensing
+    gradient_strength: 1.0
