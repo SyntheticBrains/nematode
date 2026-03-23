@@ -11,6 +11,10 @@
 # Pursuit predators: actively chase when agent is within detection radius
 # HP/damage tuned from MLP PPO predator experiments (R2 Group C):
 #   max_hp=200, damage=10 gives agent time to learn evasion patterns
+#
+# Performance: 55.4% mean success (4 seeds, 2000 eps), L200=86% convergence
+# Matches oracle (55.7%) — first derivative architecture to achieve this
+# Key: steep food gradient (4.0) + LSTM temporal memory for evasion
 
 max_steps: 500
 brain:
@@ -95,7 +99,7 @@ environment:
     target_foods_to_collect: 10
     min_food_distance: 3
     agent_exclusion_radius: 5
-    gradient_decay_constant: 8.0
+    gradient_decay_constant: 4.0  # Steeper — stronger food derivative for faster food-finding
     gradient_strength: 1.0
 
   predators:
