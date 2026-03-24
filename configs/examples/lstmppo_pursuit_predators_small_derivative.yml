@@ -13,10 +13,10 @@
 # Environment matches mlpppo_pursuit_predators_sensory_small.yml (oracle baseline)
 # except: derivative sensing, steeper gradients (4.0), + mechano/proprioception modules
 #
-# Performance: 44.2% mean success (4 seeds, 8000 eps), L1000=62%
-# Matches oracle L1000 (63%) — derivative sensing achieves oracle-equivalent convergence
-# Evasion rate 90% surpasses oracle's 72%
-# Key: bptt_chunk=48 captures full detect→evade→confirm→resume sequence
+# Performance: 54.1% mean success (4 seeds, 8000 eps), L1000=70%
+# Exceeds oracle L1000 (63%) — derivative sensing outperforms oracle at convergence
+# Evasion rate 92% surpasses oracle's 72%
+# Key: bptt_chunk=64 captures full multi-step evasion and foraging sequences
 
 max_steps: 500
 brain:
@@ -24,7 +24,7 @@ brain:
   config:
     rnn_type: lstm
     lstm_hidden_dim: 64
-    bptt_chunk_length: 48  # Longer chunks capture full detect→evade→confirm→resume sequence
+    bptt_chunk_length: 64  # Longer chunks capture full detect→evade→confirm→resume sequence
 
     # Actor/Critic MLP — larger for predator avoidance complexity
     actor_hidden_dim: 128
