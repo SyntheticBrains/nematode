@@ -13,6 +13,11 @@
 # 4 pursuit predators, scattered temperature zones, 45 foods
 # Environment matches mlpppo_thermotaxis_pursuit_predators_large.yml (oracle baseline)
 # except: temporal sensing, steeper gradients, + proprioception module
+#
+# Performance: 51.1% mean success (4 seeds, 8000 eps), L500=91%
+# Matches derivative L500 (90%) and approaches oracle (97%) at convergence
+# Evasion rate 94% surpasses oracle's 92%
+# Key: bptt_chunk=128 + 8000 eps + extended schedule for temporal on 100x100
 
 max_steps: 2000
 brain:
@@ -20,7 +25,7 @@ brain:
   config:
     rnn_type: lstm
     lstm_hidden_dim: 64
-    bptt_chunk_length: 96  # Long chunks for two-stage temporal inference
+    bptt_chunk_length: 128  # Long chunks for two-stage temporal inference on 100x100 grid
 
     # Actor/Critic MLP
     actor_hidden_dim: 128
@@ -44,12 +49,12 @@ brain:
     # Entropy decay
     entropy_coef: 0.02
     entropy_coef_end: 0.01
-    entropy_decay_episodes: 2000
+    entropy_decay_episodes: 4000
 
-    # LR schedule (extended for long training)
+    # LR schedule (extended for temporal's slower convergence)
     lr_warmup_episodes: 100
     lr_warmup_start: 0.00003
-    lr_decay_episodes: 4000
+    lr_decay_episodes: 6000
     lr_decay_end: 0.00003
 
     sensory_modules:
