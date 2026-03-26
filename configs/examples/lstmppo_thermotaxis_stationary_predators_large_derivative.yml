@@ -15,7 +15,9 @@
 # Environment matches qrh_thermotaxis_stationary_predators_large.yml
 # except: derivative sensing, steeper gradients, + mechano/proprioception modules
 #
-# Performance: TBD — pending evaluation results
+# Performance: 48.8% mean success (4 seeds, 4000 eps), L500=77%
+# Nearly matches oracle L500 (79%) — only 2pp converged gap
+# Oracle on same env: 67.1% mean, L500=79%
 
 max_steps: 2000
 brain:
