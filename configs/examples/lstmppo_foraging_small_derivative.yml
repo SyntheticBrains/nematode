@@ -8,8 +8,8 @@
 #   - Agent receives scalar food concentration + dC/dt (rate of change)
 #   - LSTM provides temporal memory for correlating derivatives with movement
 #
-# Performance: 81.3% mean success rate (4 seeds, 1000 eps each)
-# Best config from hyperparameter sweep: conservative LR + small buffer
+# Performance: 90.8% mean success (GRU, 4 seeds, 1000 eps), L100=100%
+# GRU outperforms LSTM by ~10pp (90.8% vs 81.3%) with identical convergence
 #
 # STAM auto-enabled by derivative mode for temporal history
 
@@ -17,7 +17,7 @@ max_steps: 1000  # Temporal sensing needs more steps
 brain:
   name: lstmppo
   config:
-    rnn_type: lstm
+    rnn_type: gru  # GRU outperforms LSTM by ~10pp on foraging (fewer params, faster training)
     lstm_hidden_dim: 64
     bptt_chunk_length: 16
 

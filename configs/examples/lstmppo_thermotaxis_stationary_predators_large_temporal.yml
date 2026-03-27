@@ -16,15 +16,16 @@
 # Environment matches qrh_thermotaxis_stationary_predators_large.yml
 # except: temporal sensing, steeper gradients, + mechano/proprioception modules
 #
-# Performance: 18.4% mean success (chunk=64, 8000 eps), L500=54% (3/4 seeds 65-76%)
-# chunk=128 failed catastrophically (0%) — too few chunks per buffer for spatial avoidance
-# Derivative on same env: 48.8% mean, L500=77%. Oracle: 67.1% mean, L500=79%
+# Performance: 44.5% mean success (GRU, 4 seeds, 12000 eps), L500=74%
+# Within 5pp of oracle L500 (79%) — scalar-only sensing nearly matches oracle
+# Key: 12000 eps with extended schedule ensures all seeds break through
+# GRU comparable to LSTM (44.5% vs 47.9%). Oracle: 67.1% mean, L500=79%
 
 max_steps: 2000
 brain:
   name: lstmppo
   config:
-    rnn_type: lstm
+    rnn_type: gru  # GRU matches LSTM on large stationary temporal with simpler architecture
     lstm_hidden_dim: 64
     bptt_chunk_length: 64  # Shorter chunks for spatial avoidance (stationary predators need more gradient updates, not longer sequences)
 
@@ -50,12 +51,12 @@ brain:
     # Entropy decay (extended for temporal's slower convergence)
     entropy_coef: 0.02
     entropy_coef_end: 0.01
-    entropy_decay_episodes: 4000
+    entropy_decay_episodes: 5000
 
-    # LR schedule (extended for temporal)
+    # LR schedule (extended — temporal needs 12000 eps to converge all seeds)
     lr_warmup_episodes: 100
     lr_warmup_start: 0.00003
-    lr_decay_episodes: 6000
+    lr_decay_episodes: 8000
     lr_decay_end: 0.00003
 
     sensory_modules:

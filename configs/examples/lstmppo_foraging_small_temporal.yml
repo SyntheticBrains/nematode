@@ -10,7 +10,8 @@
 #   - The hardest sensing mode — most biologically honest
 #   - LSTM temporal memory enables learning movement-concentration correlations
 #
-# Performance: 57.8% mean success (4 seeds, 2000 eps), 96% L100 convergence
+# Performance: 67.9% mean success (GRU, 4 seeds, 1000 eps)
+# GRU significantly outperforms LSTM temporal (67.9% vs 27.9% at 1000 eps)
 # Key: gradient_decay=4.0 creates stronger concentration differences for LSTM to detect
 #
 # STAM auto-enabled for temporal history (but LSTM internal memory is primary)
@@ -19,7 +20,7 @@ max_steps: 1000
 brain:
   name: lstmppo
   config:
-    rnn_type: lstm
+    rnn_type: gru  # GRU outperforms LSTM on foraging (fewer params, faster training)
     lstm_hidden_dim: 64
     bptt_chunk_length: 16
 

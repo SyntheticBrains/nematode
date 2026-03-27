@@ -13,16 +13,15 @@
 # Environment matches mlpppo_thermotaxis_pursuit_predators_large.yml (oracle baseline)
 # except: derivative sensing, steeper gradients, + proprioception module
 #
-# Performance: 57.4% mean success (4 seeds, 4000 eps), L500=90%
-# Oracle on same env: 86.0% mean, L500=97% — converged gap only 7pp
-# Evasion rate 94% surpasses oracle's 92%
-# Key: bptt_chunk=96, steep gradients (4.0), entropy_end=0.01
+# Performance: 62.6% mean success (GRU, 4 seeds, 4000 eps), L500=88%
+# Oracle on same env: 86.0% mean, L500=97%
+# GRU outperforms LSTM (62.6% vs 57.4%), evasion 94% surpasses oracle 92%
 
 max_steps: 2000
 brain:
   name: lstmppo
   config:
-    rnn_type: lstm
+    rnn_type: gru  # GRU outperforms LSTM by ~5pp overall on large pursuit predators
     lstm_hidden_dim: 64
     bptt_chunk_length: 96  # Long chunks for multi-step evasion + foraging temporal patterns
 
