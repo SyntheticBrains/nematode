@@ -35,6 +35,8 @@ The configuration system SHALL support the `lstmppo` brain type with LSTM/GRU-sp
 #### Scenario: Example Configurations
 
 - **WHEN** example configs are provided for `lstmppo`
-- **THEN** `lstmppo_foraging_small_derivative.yml` SHALL configure derivative foraging with LSTM PPO
-- **AND** `lstmppo_pursuit_predators_small_derivative.yml` SHALL configure derivative pursuit predators with LSTM PPO
-- **AND** both SHALL use sensory modules compatible with temporal sensing
+- **THEN** small foraging configs SHALL be provided for both derivative and temporal modes
+- **AND** large thermotaxis + pursuit predator configs SHALL be provided for both derivative and temporal modes
+- **AND** large thermotaxis + stationary predator configs SHALL be provided for both derivative and temporal modes
+- **AND** all SHALL use sensory modules compatible with temporal sensing
+- **AND** all SHALL use `rnn_type: gru` as the default (GRU outperforms LSTM across all evaluated environments)
