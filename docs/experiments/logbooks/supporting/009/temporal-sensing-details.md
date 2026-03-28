@@ -11,7 +11,9 @@
 
 L100 = mean success rate over last 100 episodes across 4 seeds.
 
-## Per-Seed Results
+## Per-Seed Results (Overall Success Rate)
+
+These tables show **overall success rate** across the full training run. For post-convergence performance (last 100 episodes), see [Per-Seed L100 Post-Convergence Results](#per-seed-l100-post-convergence-results) below.
 
 ### Small Foraging (20×20, 1000 episodes)
 

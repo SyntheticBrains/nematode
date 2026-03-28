@@ -84,14 +84,15 @@ ______________________________________________________________________
 
 L100 = success rate over the last 100 episodes (post-convergence performance). For consistency with prior logbooks (007, 008) which used L100 as the primary convergence metric.
 
-### Summary Table: Extended Convergence (L500/L1000)
+### Summary Table: Extended Window Convergence
 
-| Environment | Oracle | GRU Derivative | GRU Temporal |
-|---|---|---|---|
-| Foraging (small) L100 | 97.5% | **100%** | **99%** |
-| Pursuit pred (small) L1000 | 63% | **77%** | **78%** |
-| Pursuit pred (large+thermo) L500 | 97% | 88% | **94%** |
-| Stationary pred (large+thermo) L500 | 79% | **74%** | **74%** |
+For environments with longer training, larger convergence windows provide more robust estimates:
+
+| Environment | Window | Oracle | GRU Derivative | GRU Temporal |
+|---|---|---|---|---|
+| Pursuit pred (small) | L1000 | 63% | **77%** | **78%** |
+| Pursuit pred (large+thermo) | L500 | 97% | 88% | **94%** |
+| Stationary pred (large+thermo) | L500 | 79% | **74%** | **74%** |
 
 ### Summary Table: Overall Success Rates
 
