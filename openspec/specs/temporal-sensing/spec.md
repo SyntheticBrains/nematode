@@ -65,7 +65,7 @@ The system SHALL provide sensory module registry entries for temporal sensing th
 #### Scenario: Brain Architecture Transparency
 
 - **WHEN** temporal sensing modules are used in place of oracle modules
-- **THEN** all 18 brain architectures SHALL function without modification
+- **THEN** all 19 brain architectures SHALL function without modification
 - **AND** the `extract_classical_features()` function SHALL return correctly-shaped feature vectors
 - **AND** the `to_quantum()` function SHALL return valid 3-element gate angle arrays
 - **AND** the only change visible to brains SHALL be the semantic content of the features (scalar vs gradient)
