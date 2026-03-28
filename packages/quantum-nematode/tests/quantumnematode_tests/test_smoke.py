@@ -36,6 +36,7 @@ SIMULATION_CONFIGS = [
     "mlpppo_foraging_small_temporal.yml",
     "mlpppo_foraging_small_derivative.yml",
     "lstmppo_foraging_small_derivative.yml",
+    "lstmppo_foraging_small_temporal.yml",
 ]
 
 
