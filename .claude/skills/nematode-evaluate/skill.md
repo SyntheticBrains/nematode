@@ -3,7 +3,7 @@ name: nematode-evaluate
 description: Analyse experiment results from simulation sessions. Use when the user wants to evaluate how experiments performed, diagnose issues, or decide next steps after running experiments.
 metadata:
   author: nematode
-  version: "1.0"
+  version: '1.0'
 ---
 
 Analyse experiment results from completed simulation sessions.

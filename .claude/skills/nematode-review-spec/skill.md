@@ -3,7 +3,7 @@ name: nematode-review-spec
 description: Review an OpenSpec change for completeness, correctness, and scientific rigor before implementation. Use before starting implementation of a change.
 metadata:
   author: nematode
-  version: "1.0"
+  version: '1.0'
 ---
 
 Review an OpenSpec change to ensure it is ready for implementation.

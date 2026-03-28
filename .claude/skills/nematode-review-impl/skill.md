@@ -3,7 +3,7 @@ name: nematode-review-impl
 description: Comprehensive review of implementation before evaluation or merge. Checks completeness, correctness, code quality, test coverage, and more.
 metadata:
   author: nematode
-  version: "1.0"
+  version: '1.0'
 ---
 
 Comprehensive review of implementation before evaluation or merge.

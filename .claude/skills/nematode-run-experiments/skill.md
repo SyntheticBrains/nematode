@@ -3,7 +3,7 @@ name: nematode-run-experiments
 description: Run parallel experiment groups with multiple seeds. Use when the user wants to launch evaluation experiments across different configurations.
 metadata:
   author: nematode
-  version: "1.0"
+  version: '1.0'
 ---
 
 Run parallel experiment groups with multiple seeds for evaluation.

@@ -3,7 +3,7 @@ name: nematode-logbook
 description: Create or update an experiment logbook with artifacts, supporting data, and roadmap updates. Use when the user wants to document evaluation results permanently.
 metadata:
   author: nematode
-  version: "1.0"
+  version: '1.0'
 ---
 
 Create or update an experiment logbook with artifacts and documentation.

@@ -3,7 +3,7 @@ name: nematode-scratchpad
 description: Update the evaluation scratchpad with latest experiment results. Use when the user wants to record findings from an evaluation round to the working scratchpad document.
 metadata:
   author: nematode
-  version: "1.0"
+  version: '1.0'
 ---
 
 Update the evaluation scratchpad with latest experiment results.
