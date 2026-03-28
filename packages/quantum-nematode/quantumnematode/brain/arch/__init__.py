@@ -8,6 +8,7 @@ from .crhqlstm import CRHQLSTMBrain, CRHQLSTMBrainConfig
 from .hybridclassical import HybridClassicalBrain, HybridClassicalBrainConfig
 from .hybridquantum import HybridQuantumBrain, HybridQuantumBrainConfig
 from .hybridquantumcortex import HybridQuantumCortexBrain, HybridQuantumCortexBrainConfig
+from .lstmppo import LSTMPPOBrain, LSTMPPOBrainConfig
 from .mlpdqn import MLPDQNBrain, MLPDQNBrainConfig, QMLPBrain, QMLPBrainConfig
 from .mlpppo import MLPPPOBrain, MLPPPOBrainConfig, PPOBrain, PPOBrainConfig
 from .mlpreinforce import MLPBrain, MLPBrainConfig, MLPReinforceBrain, MLPReinforceBrainConfig
@@ -46,6 +47,8 @@ __all__ = [
     "HybridQuantumBrainConfig",
     "HybridQuantumCortexBrain",
     "HybridQuantumCortexBrainConfig",
+    "LSTMPPOBrain",
+    "LSTMPPOBrainConfig",
     "MLPBrain",
     "MLPBrainConfig",
     "MLPDQNBrain",

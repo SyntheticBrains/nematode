@@ -1,0 +1,93 @@
+# Temporal Sensing - Dynamic Foraging Environment - Small Configuration
+# Phase 3: Biologically-accurate sensing replacing oracle spatial gradients
+#
+# Sensing mode: temporal (Mode A)
+#   - Agent receives only scalar food concentration at its position
+#   - No gradient direction or dC/dt provided — agent must infer everything
+#     from STAM memory + proprioception
+#   - The hardest sensing mode — most biologically honest
+#   - Models C. elegans chemosensory neurons (AWC, AWA) performing temporal
+#     concentration comparisons during head sweeps
+#
+# Performance: 84.7% success rate (vs 97.5% oracle) with 4000 episodes training
+# Converged performance: ~99% in last 100 episodes (seed 43 achieves 100/100)
+#
+# Key parameter: gradient_decay_constant=4.0 (steeper than oracle's 8.0)
+#   Creates stronger concentration differences between adjacent cells,
+#   making STAM's internal temporal derivatives detectable by the MLP.
+#   Biologically justified: real chemical gradients in petri dishes
+#   can be steeper than the oracle's default exponential decay.
+#
+# STAM (Short-Term Associative Memory):
+#   - Exponential-decay buffer storing recent sensory readings
+#   - buffer_size=30, decay_rate=0.1 → half-life ~7 steps
+#   - Biological timescale: ~10-15s (ASE neuron temporal comparisons)
+#   - Molecular basis: cAMP/calcium signaling pathways
+
+max_steps: 1000  # Temporal sensing needs more steps (slower navigation than oracle)
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    # Core PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 512   # Larger buffer for longer episodes (max_steps=1000)
+    num_epochs: 20             # More epochs to extract learning from each rollout
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+
+    # LR schedule (decay matched to 4000 episode training)
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.0001
+    lr_decay_episodes: 3200
+    lr_decay_end: 0.0001
+
+    sensory_modules:
+      - food_chemotaxis  # Auto-translated to food_chemotaxis_temporal
+      - proprioception   # Heading direction — critical for temporal sensing
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 400.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+  use_separated_gradients: true
+
+  sensing:
+    chemotaxis_mode: temporal  # Mode A: scalar concentration only
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 4.0  # Steeper gradient — critical for temporal sensing
+    gradient_strength: 1.0

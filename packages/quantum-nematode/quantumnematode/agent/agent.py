@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from pydantic import BaseModel
 
+from quantumnematode.agent.stam import STAMBuffer
 from quantumnematode.agent.tracker import EpisodeTracker
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
@@ -23,6 +25,7 @@ if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
     from quantumnematode.agent.runners import EpisodeResult
     from quantumnematode.env.pygame_renderer import PygameRenderer
+    from quantumnematode.utils.config_loader import SensingConfig
 
 # Defaults
 DEFAULT_AGENT_BODY_LENGTH = 2
@@ -50,6 +53,16 @@ DEFAULT_MANYWORLDS_MODE_RENDER_SLEEP_SECONDS = 1.0
 DEFAULT_MANYWORLDS_MODE_TOP_N_ACTIONS = 2
 DEFAULT_MANYWORLDS_MODE_TOP_N_RANDOMIZE = True
 DEFAULT_STUCK_POSITION_THRESHOLD = 2
+
+# Action-to-index mapping for STAM action entropy computation
+_ACTION_TO_IDX: dict[str, int] = {
+    "forward": 0,
+    "left": 1,
+    "right": 2,
+    "stay": 3,
+    "forward-left": 4,
+    "forward-right": 5,
+}
 DEFAULT_SATIETY_INITIAL = 200.0
 DEFAULT_SATIETY_DECAY_RATE = 1.0
 DEFAULT_SATIETY_GAIN_PER_FOOD = 0.2
@@ -144,6 +157,7 @@ class QuantumNematodeAgent:
         theme: Theme = DEFAULT_THEME,
         rich_style_config: DarkColorRichStyleConfig | None = None,
         satiety_config: SatietyConfig | None = None,
+        sensing_config: SensingConfig | None = None,
         *,
         use_separated_gradients: bool = False,
     ) -> None:
@@ -166,13 +180,27 @@ class QuantumNematodeAgent:
             Rich styling configuration.
         satiety_config : SatietyConfig | None, optional
             Satiety system configuration.
+        sensing_config : SensingConfig | None, optional
+            Temporal sensing modes and STAM configuration.
         use_separated_gradients : bool, optional
             Whether to use separated food/predator gradients for appetitive/aversive modules.
             Only valid for dynamic environments. Default is False (unified gradients).
         """
+        from quantumnematode.utils.config_loader import SensingConfig
+
         self.brain = brain
         self.satiety_config = satiety_config or SatietyConfig()
+        self.sensing_config: SensingConfig = sensing_config or SensingConfig()
         self.use_separated_gradients = use_separated_gradients
+
+        # Initialize STAM buffer when enabled
+        self._stam: STAMBuffer | None = None
+        if self.sensing_config.stam_enabled:
+            self._stam = STAMBuffer(
+                buffer_size=self.sensing_config.stam_buffer_size,
+                decay_rate=self.sensing_config.stam_decay_rate,
+            )
+        self._previous_position: tuple[int, ...] | None = None
 
         if env is None:
             self.env = DynamicForagingEnvironment(
@@ -350,6 +378,93 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
+    def _compute_temporal_data(
+        self,
+        sensing: SensingConfig,
+        temperature: float | None,
+        separated_grads: dict[str, Any],
+        action: ActionData | None,
+    ) -> dict[str, Any]:
+        """Compute temporal sensing data (scalar concentrations, STAM, derivatives).
+
+        Parameters
+        ----------
+        sensing : SensingConfig
+            Sensing configuration.
+        temperature : float | None
+            Current temperature at agent's position (None if thermotaxis disabled).
+        separated_grads : dict
+            Separated gradient dict (modified in-place to suppress oracle fields).
+        action : ActionData | None
+            Previous action taken.
+
+        Returns
+        -------
+        dict
+            Temporal sensing fields for BrainParams.
+        """
+        from quantumnematode.utils.config_loader import SensingMode
+
+        result: dict[str, Any] = {}
+
+        any_non_oracle = (
+            sensing.chemotaxis_mode != SensingMode.ORACLE
+            or sensing.nociception_mode != SensingMode.ORACLE
+            or sensing.thermotaxis_mode != SensingMode.ORACLE
+        )
+
+        if not (any_non_oracle or sensing.stam_enabled):
+            return result
+
+        # (a) Get scalar concentrations from environment
+        food_conc_val = self.env.get_food_concentration()
+        pred_conc_val = self.env.get_predator_concentration()
+        temp_val = temperature if temperature is not None else 0.0
+
+        if sensing.chemotaxis_mode != SensingMode.ORACLE:
+            result["food_concentration"] = food_conc_val
+            separated_grads.pop("food_gradient_strength", None)
+            separated_grads.pop("food_gradient_direction", None)
+
+        if sensing.nociception_mode != SensingMode.ORACLE:
+            result["predator_concentration"] = pred_conc_val
+            separated_grads.pop("predator_gradient_strength", None)
+            separated_grads.pop("predator_gradient_direction", None)
+
+        # (b) Compute position delta from previous position
+        current_pos = tuple(self.env.agent_pos)
+        pos_delta = (0.0, 0.0)
+        if self._previous_position is not None:
+            pos_delta = (
+                float(current_pos[0] - self._previous_position[0]),
+                float(current_pos[1] - self._previous_position[1]),
+            )
+        self._previous_position = current_pos
+
+        # (c) Record to STAM
+        if self._stam is not None:
+            action_idx = 0
+            if action is not None:
+                action_str = str(action.action) if action.action is not None else "stay"
+                action_idx = _ACTION_TO_IDX.get(action_str, 0)
+            self._stam.record(
+                np.array([food_conc_val, temp_val, pred_conc_val]),
+                pos_delta,
+                action_idx,
+            )
+
+            # (d) Get temporal derivatives from STAM
+            if sensing.chemotaxis_mode == SensingMode.DERIVATIVE:
+                result["food_dconcentration_dt"] = self._stam.compute_temporal_derivative(0)
+            if sensing.thermotaxis_mode == SensingMode.DERIVATIVE:
+                result["temperature_ddt"] = self._stam.compute_temporal_derivative(1)
+            if sensing.nociception_mode == SensingMode.DERIVATIVE:
+                result["predator_dconcentration_dt"] = self._stam.compute_temporal_derivative(2)
+
+            result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
+
+        return result
+
     def _create_brain_params(
         self,
         gradient_strength: float,
@@ -357,6 +472,13 @@ class QuantumNematodeAgent:
         action: ActionData | None = None,
     ) -> BrainParams:
         """Create BrainParams for brain execution.
+
+        Step-0-safe ordering for temporal sensing:
+        (a) get scalar concentrations from env
+        (b) compute position delta from previous position
+        (c) record to STAM
+        (d) get temporal derivatives from STAM
+        (e) build BrainParams with all fields
 
         Parameters
         ----------
@@ -372,6 +494,8 @@ class QuantumNematodeAgent:
         BrainParams
             Brain parameters ready for execution.
         """
+        sensing = self.sensing_config
+
         # Get separated gradients for appetitive/aversive modules if configured
         separated_grads = {}
         if self.use_separated_gradients:
@@ -381,10 +505,15 @@ class QuantumNematodeAgent:
             )
 
         # Mechanosensation: detect physical contact with boundaries and predators
-        boundary_contact = None
-        predator_contact = None
+        boundary_contact = self.env.is_agent_at_boundary()
+        predator_contact = self.env.is_agent_in_predator_contact()
+
+        # Health state
         health = None
         max_health = None
+        if self.env.health.enabled:
+            health = self.env.agent_hp
+            max_health = self.env.health.max_hp
 
         # Thermotaxis: temperature sensing
         temperature = None
@@ -392,26 +521,26 @@ class QuantumNematodeAgent:
         temperature_gradient_direction = None
         cultivation_temperature = None
 
-        boundary_contact = self.env.is_agent_at_boundary()
-        predator_contact = self.env.is_agent_in_predator_contact()
-        # Health state (if health system enabled)
-        if self.env.health.enabled:
-            health = self.env.agent_hp
-            max_health = self.env.health.max_hp
-        # Thermotaxis state (if thermotaxis enabled)
         if self.env.thermotaxis.enabled:
             temperature = self.env.get_temperature()
-            temp_gradient = self.env.get_temperature_gradient()
-            if temp_gradient is not None:
-                temperature_gradient_strength = temp_gradient[0]
-                temperature_gradient_direction = temp_gradient[1]
+            from quantumnematode.utils.config_loader import SensingMode
+
+            if sensing.thermotaxis_mode == SensingMode.ORACLE:
+                temp_gradient = self.env.get_temperature_gradient()
+                if temp_gradient is not None:
+                    temperature_gradient_strength = temp_gradient[0]
+                    temperature_gradient_direction = temp_gradient[1]
             cultivation_temperature = self.env.thermotaxis.cultivation_temperature
 
+        # --- Temporal sensing: scalar concentrations ---
+        temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
+
+        # (e) Build BrainParams with all fields
         return BrainParams(
-            # Combined gradients
+            # Combined gradients (oracle)
             gradient_strength=gradient_strength,
             gradient_direction=gradient_direction,
-            # Separated LOCAL gradients (egocentric sensing)
+            # Separated LOCAL gradients (egocentric sensing, oracle)
             food_gradient_strength=separated_grads.get("food_gradient_strength"),
             food_gradient_direction=separated_grads.get("food_gradient_direction"),
             predator_gradient_strength=separated_grads.get("predator_gradient_strength"),
@@ -429,6 +558,14 @@ class QuantumNematodeAgent:
             temperature_gradient_strength=temperature_gradient_strength,
             temperature_gradient_direction=temperature_gradient_direction,
             cultivation_temperature=cultivation_temperature,
+            # Temporal sensing (Phase 3)
+            food_concentration=temporal.get("food_concentration"),
+            predator_concentration=temporal.get("predator_concentration"),
+            food_dconcentration_dt=temporal.get("food_dconcentration_dt"),
+            predator_dconcentration_dt=temporal.get("predator_dconcentration_dt"),
+            temperature_ddt=temporal.get("temperature_ddt"),
+            stam_state=temporal.get("stam_state"),
+            derivative_scale=sensing.derivative_scale,
             # Agent proprioception
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,

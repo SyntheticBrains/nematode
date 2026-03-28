@@ -1192,6 +1192,91 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return vector_x, vector_y
 
+    def get_food_concentration(
+        self,
+        position: tuple[int, ...] | None = None,
+    ) -> float:
+        """Scalar food concentration at position (no directional information).
+
+        Sums exponential decay magnitudes from all active food sources,
+        then normalizes via tanh to [0, 1]. This is the scalar equivalent
+        of the gradient magnitude — what a real C. elegans chemosensory
+        neuron (AWC, AWA) would detect at its current position.
+
+        Parameters
+        ----------
+        position : tuple[int, ...] | None
+            Position to query. Defaults to agent's current position.
+
+        Returns
+        -------
+        float
+            Food concentration in [0, 1] (tanh-normalized).
+        """
+        if position is None:
+            position = self.agent_pos
+
+        raw_concentration = 0.0
+        for food in self.foods:
+            dx = food[0] - position[0]
+            dy = food[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                # Agent is on the food source — maximum signal
+                raw_concentration += self.foraging.gradient_strength
+                continue
+
+            raw_concentration += self.foraging.gradient_strength * np.exp(
+                -distance / self.foraging.gradient_decay_constant,
+            )
+
+        return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
+
+    def get_predator_concentration(
+        self,
+        position: tuple[int, ...] | None = None,
+    ) -> float:
+        """Scalar predator danger signal at position (no directional information).
+
+        Sums exponential decay magnitudes from all predator positions,
+        then normalizes via tanh to [0, 1]. Models what ASH/ADL nociceptive
+        neurons detect — predator-secreted chemicals (sulfolipids) via
+        temporal comparison, not directional gradient.
+
+        Parameters
+        ----------
+        position : tuple[int, ...] | None
+            Position to query. Defaults to agent's current position.
+
+        Returns
+        -------
+        float
+            Predator concentration in [0, 1] (tanh-normalized).
+            Returns 0.0 if predators are disabled.
+        """
+        if not self.predator.enabled:
+            return 0.0
+
+        if position is None:
+            position = self.agent_pos
+
+        raw_concentration = 0.0
+        for pred in self.predators:
+            dx = pred.position[0] - position[0]
+            dy = pred.position[1] - position[1]
+            distance = np.sqrt(dx**2 + dy**2)
+
+            if distance == 0:
+                raw_concentration += self.predator.gradient_strength
+                continue
+
+            raw_concentration += self.predator.gradient_strength * np.exp(
+                -distance / self.predator.gradient_decay_constant,
+            )
+
+        return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
+
     def get_state(
         self,
         position: tuple[int, ...],

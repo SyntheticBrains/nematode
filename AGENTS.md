@@ -28,7 +28,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 ## Key Directories
 
 - `packages/quantum-nematode/quantumnematode/` — Main source code
-  - `brain/arch/` — 18 brain architectures: qvarcircuit, qqlearning, qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm, hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn, mlpppo, spikingreinforce
+  - `brain/arch/` — 19 brain architectures: qvarcircuit, qqlearning, qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm, hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn, mlpppo, lstmppo, spikingreinforce
   - `env/` — Environment simulation
   - `agent/` — Agent orchestration, rewards, metrics
   - `experiment/` — Experiment tracking and benchmarking
@@ -36,7 +36,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
 - `configs/examples/` — YAML config files (`[{prefix}_]{brain}_{environment}_{size}[_{postfix}].yml`)
   - Prefixes: `evolution` (for evolutionary optimization configs)
-  - Postfixes: `classical` (classical gate ablation), `finetune`, `fair` (for fair ablations) etc.
+  - Postfixes: `classical` (classical gate ablation), `finetune`, `fair` (for fair ablations), `derivative` (derivative dC/dt sensing mode), `temporal` (scalar-only temporal sensing mode) etc.
   - Example: `evolution_qvarcircuit_foraging_small.yml`, `mlpppo_predators_small.yml`
 - `tests/` — Three-tier testing (unit, smoke, nightly)
 - `benchmarks/` — Submitted benchmark results

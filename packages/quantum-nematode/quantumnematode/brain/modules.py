@@ -83,6 +83,12 @@ class ModuleName(StrEnum):
     MECHANOSENSATION = "mechanosensation"
     THERMOTAXIS = "thermotaxis"
 
+    # Temporal sensing modules (Phase 3)
+    FOOD_CHEMOTAXIS_TEMPORAL = "food_chemotaxis_temporal"
+    NOCICEPTION_TEMPORAL = "nociception_temporal"
+    THERMOTAXIS_TEMPORAL = "thermotaxis_temporal"
+    STAM = "stam"
+
     # Placeholder modules
     AEROTAXIS = "aerotaxis"
     VISION = "vision"
@@ -389,6 +395,86 @@ def _action_core(params: BrainParams) -> CoreFeatures:
 
 
 # =============================================================================
+# Temporal Sensing Core Feature Extractors (Phase 3)
+# =============================================================================
+
+
+def _food_chemotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal food chemotaxis features (scalar concentration + dC/dt).
+
+    Food chemotaxis temporal (AWC, AWA neurons) encodes:
+    - strength: food concentration at agent's position (already tanh-normalized
+      by environment to [0, 1] — NOT re-normalized here)
+    - angle: temporal derivative of food concentration, scaled and normalized via
+      tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = concentration increasing (approaching food).
+
+    The derivative_scale amplifies weak raw derivatives (~0.001-0.01 on small
+    grids) into a useful signal range for neural networks.
+
+    This replaces the oracle food_chemotaxis module which provides directional
+    gradient information the worm cannot biologically access.
+    """
+    strength = float(params.food_concentration or 0.0)
+    raw_deriv = float(params.food_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _nociception_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal nociception features (scalar predator concentration + dC/dt).
+
+    Nociception temporal (ASH, ADL neurons) encodes:
+    - strength: predator concentration at agent's position (tanh-normalized)
+    - angle: temporal derivative of predator concentration, scaled and normalized
+      via tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = predator signal increasing (predator approaching).
+
+    Models detection of predator-secreted chemicals (sulfolipids) via temporal
+    comparison, not directional gradient sensing.
+    """
+    strength = float(params.predator_concentration or 0.0)
+    raw_deriv = float(params.predator_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _thermotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal thermotaxis features (temp deviation + dT/dt).
+
+    Thermotaxis temporal (AFD neurons) encodes:
+    - strength: temperature deviation from cultivation temperature (Tc),
+      normalized to [-1, 1] where 0 = at Tc. Same as oracle thermotaxis.
+    - angle: temporal derivative of temperature (dT/dt), scaled and normalized
+      via tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = warming, negative = cooling.
+    - binary: temperature deviation (same as strength), for classical_dim=3
+      consistency with oracle thermotaxis module.
+
+    This replaces the oracle thermotaxis module which provides spatial gradient
+    direction — information computed from T(x+1,y) - T(x-1,y) that the worm
+    cannot biologically access.
+    """
+    if params.temperature is None:
+        return CoreFeatures()
+
+    cultivation_temp = (
+        params.cultivation_temperature if params.cultivation_temperature is not None else 20.0
+    )
+    temp_deviation = (params.temperature - cultivation_temp) / 15.0
+    temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
+
+    raw_deriv = float(params.temperature_ddt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+
+    return CoreFeatures(
+        strength=abs(temp_deviation),  # Non-negative magnitude for to_quantum contract
+        angle=angle,
+        binary=temp_deviation,  # Signed deviation preserved in binary field
+    )
+
+
+# =============================================================================
 # SensoryModule Class
 # =============================================================================
 
@@ -490,6 +576,60 @@ class SensoryModule:
         if self.classical_dim == 3:  # noqa: PLR2004
             return np.array([core.strength, core.angle, core.binary], dtype=np.float32)
         return np.array([core.strength, core.angle], dtype=np.float32)
+
+
+@dataclass
+class STAMSensoryModule(SensoryModule):
+    """Sensory module for STAM memory state with variable classical_dim.
+
+    Unlike standard modules that output 2-3 features via CoreFeatures,
+    STAM outputs the full 9-float memory state vector for classical brains.
+    For quantum brains, it compresses to a 3-float summary.
+    """
+
+    classical_dim: int = 9
+
+    def to_classical(self, params: BrainParams) -> np.ndarray:
+        """Return the full STAM memory state vector.
+
+        Returns
+        -------
+            np.ndarray of shape (9,) with STAM memory state.
+            Returns zeros if stam_state is None (STAM disabled).
+        """
+        if params.stam_state is not None:
+            return np.array(params.stam_state, dtype=np.float32)
+        return np.zeros(self.classical_dim, dtype=np.float32)
+
+    def to_quantum(self, params: BrainParams) -> np.ndarray:
+        """Compress STAM state to 3-float quantum gate angles.
+
+        Compression: rx=mean scalar, ry=mean derivative, rz=action entropy.
+        Scaled to [-π/2, π/2] range.
+
+        Returns
+        -------
+            np.ndarray of shape (3,) with quantum gate angles.
+        """
+        if params.stam_state is None:
+            return np.zeros(3, dtype=np.float32)
+
+        state = np.array(params.stam_state, dtype=np.float32)
+        # Mean of weighted scalar means (indices 0-2)
+        mean_scalar = float(np.mean(state[0:3]))
+        # Mean of temporal derivatives (indices 3-5)
+        mean_deriv = float(np.mean(state[3:6]))
+        # Action entropy (index 8)
+        action_entropy = float(state[8])
+
+        return np.array(
+            [
+                mean_scalar * np.pi - np.pi / 2,  # [0,1] -> [-π/2, π/2]
+                np.tanh(mean_deriv) * np.pi / 2,  # -> [-π/2, π/2]
+                action_entropy * np.pi / 2,  # [0,1] -> [0, π/2]
+            ],
+            dtype=np.float32,
+        )
 
 
 # =============================================================================
@@ -597,6 +737,44 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
 SENSORY_MODULES[ModuleName.APPETITIVE] = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
 SENSORY_MODULES[ModuleName.AVERSIVE] = SENSORY_MODULES[ModuleName.NOCICEPTION]
 SENSORY_MODULES[ModuleName.OXYGEN] = SENSORY_MODULES[ModuleName.AEROTAXIS]
+
+# Temporal sensing modules (Phase 3)
+SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_TEMPORAL] = SensoryModule(
+    name=ModuleName.FOOD_CHEMOTAXIS_TEMPORAL,
+    extract=_food_chemotaxis_temporal_core,
+    description=(
+        "Temporal food chemotaxis (AWC, AWA neurons). Encodes scalar food "
+        "concentration at agent's position (no directional gradient). "
+        "Angle encodes dC/dt via tanh (temporal derivative)."
+    ),
+)
+SENSORY_MODULES[ModuleName.NOCICEPTION_TEMPORAL] = SensoryModule(
+    name=ModuleName.NOCICEPTION_TEMPORAL,
+    extract=_nociception_temporal_core,
+    description=(
+        "Temporal nociception (ASH, ADL neurons). Encodes scalar predator "
+        "concentration at agent's position. Models sulfolipid detection "
+        "via temporal comparison, not directional gradient sensing."
+    ),
+)
+SENSORY_MODULES[ModuleName.THERMOTAXIS_TEMPORAL] = SensoryModule(
+    name=ModuleName.THERMOTAXIS_TEMPORAL,
+    extract=_thermotaxis_temporal_core,
+    description=(
+        "Temporal thermotaxis (AFD neurons). Encodes temperature deviation from "
+        "cultivation temperature. Angle encodes dT/dt (warming/cooling signal). "
+        "Models AFD neuron output (~0.01°C sensitivity)."
+    ),
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(
+    name=ModuleName.STAM,
+    extract=lambda _params: CoreFeatures(),  # Not used — overridden by to_classical/to_quantum
+    description=(
+        "Short-Term Associative Memory state. Provides 9-float temporal context "
+        "(3 weighted means, 3 derivatives, 2 position deltas, 1 action entropy)."
+    ),
+)
 
 
 # =============================================================================
