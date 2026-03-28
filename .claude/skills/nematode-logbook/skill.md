@@ -15,11 +15,13 @@ Create or update an experiment logbook with artifacts and documentation.
 1. **Determine logbook number and scope**
 
    If creating new:
+
    - Check existing logbooks: `ls docs/experiments/logbooks/*.md`
    - Assign the next number (e.g., if 009 exists, use 010)
    - Discuss angle/hypothesis with user if not provided
 
    If updating existing:
+
    - Identify which logbook to update
    - Determine what new data to add
 
@@ -28,6 +30,7 @@ Create or update an experiment logbook with artifacts and documentation.
    For each experiment config to include:
 
    a. **Find all sessions** matching the config in `exports/`:
+
    ```python
    # Group by config name, find all 4 seeds
    ```
@@ -35,10 +38,12 @@ Create or update an experiment logbook with artifacts and documentation.
    b. **Create artifact directory**: `artifacts/logbooks/{NNN}/{brain}_{environment}/`
 
    c. **Copy per session**:
+
    - Experiment JSON from `experiments/{SESSION_ID}/{SESSION_ID}.json`
    - Config YAML from `experiments/{SESSION_ID}/*.yml`
 
    d. **Copy best seed weights**:
+
    - Find the session with highest success rate
    - Copy `exports/{SESSION_ID}/weights/final.pt` to `artifacts/logbooks/{NNN}/{dir}/weights/final.pt`
 
@@ -49,6 +54,7 @@ Create or update an experiment logbook with artifacts and documentation.
    File: `docs/experiments/logbooks/{NNN}-{title}.md`
 
    Follow the template structure from existing logbooks (see `docs/experiments/templates/experiment.md`):
+
    - **Objective**: What question is being answered
    - **Background**: Context and prior work
    - **Hypothesis**: Testable predictions with expected ranges
@@ -64,6 +70,7 @@ Create or update an experiment logbook with artifacts and documentation.
    File: `docs/experiments/logbooks/supporting/{NNN}/{title}-details.md`
 
    Include:
+
    - Per-seed results tables (overall and L100)
    - Learning curve analysis
    - Ablation comparisons
@@ -77,6 +84,7 @@ Create or update an experiment logbook with artifacts and documentation.
 6. **Update the roadmap** (if findings affect project direction)
 
    Check `docs/roadmap.md` for:
+
    - Phase status updates
    - Exit criteria that can be checked off
    - Quantum checkpoint assessments
@@ -90,6 +98,7 @@ Create or update an experiment logbook with artifacts and documentation.
    - L100 metrics are included for consistency with prior logbooks
 
 **Guardrails**
+
 - Always include L100 (last 100 episodes) as the primary convergence metric
 - Always copy best-seed weights alongside session data
 - Artifact configs are historical records — don't modify them after copying

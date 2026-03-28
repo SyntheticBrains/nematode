@@ -15,6 +15,7 @@ Comprehensive review of implementation before evaluation or merge.
 1. **Identify scope**
 
    Determine what to review:
+
    - If an OpenSpec change exists, use its task list to identify expected files
    - Otherwise, use `git diff --stat main` to find changed files
    - Read all new/modified source files thoroughly
@@ -22,7 +23,7 @@ Comprehensive review of implementation before evaluation or merge.
 2. **Completeness check**
 
    - Are all tasks/requirements implemented?
-   - Are all registration steps done? (dtypes, __init__, config_loader, brain_factory, BrainConfigType)
+   - Are all registration steps done? (`dtypes`, `__init__`, `config_loader`, `brain_factory`, `BrainConfigType`)
    - Are example configs created?
    - Are smoke test entries added?
    - Are docs updated? (AGENTS.md, openspec/config.yaml, README.md if applicable)
@@ -75,6 +76,7 @@ Comprehensive review of implementation before evaluation or merge.
 9. **Report findings**
 
    Categorise as:
+
    - **Bugs**: Must fix (incorrect behaviour)
    - **Issues**: Should fix (code quality, missing tests)
    - **Minor**: Nice to have
@@ -83,6 +85,7 @@ Comprehensive review of implementation before evaluation or merge.
    For each bug/issue, propose a fix.
 
 **Guardrails**
+
 - Read the actual code, don't just check file existence
 - Cross-reference with existing similar implementations (e.g., compare lstmppo with mlpppo patterns)
 - Run the test suite — don't just review, verify

@@ -22,17 +22,20 @@ Run parallel experiment groups with multiple seeds for evaluation.
 1. **Design the experiment matrix**
 
    Present a clear table to the user before launching:
-   ```
+
+   ```markdown
    | Exp | Key Variable | Episodes | Purpose |
    |-----|--------------|----------|---------|
    | A   | ...          | ...      | ...     |
    | B   | ...          | ...      | ...     |
    ```
+
    Confirm with user before proceeding.
 
 2. **Create temporary configs**
 
    Write experiment YAML configs to `/tmp/` (or a temp directory).
+
    - Copy the base config and modify only the experimental variable
    - Name clearly: `expA_descriptive_name.yml`
    - Environment sections should be identical between experiments (only brain/hyperparams differ) unless the experiment specifically tests environment changes
@@ -40,6 +43,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
 3. **Launch all sessions in parallel**
 
    Use a single background bash command with `&` for parallelism:
+
    ```bash
    for cfg in expA expB expC expD; do
      for seed in 42 43 44 45; do
@@ -63,6 +67,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
 5. **Update configs if improvements found**
 
    If an experiment outperforms the current best:
+
    - Update the permanent config in `configs/examples/` with the winning parameters
    - Update performance comments in the config header
 

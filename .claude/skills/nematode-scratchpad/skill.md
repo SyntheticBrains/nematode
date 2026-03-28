@@ -15,14 +15,17 @@ Update the evaluation scratchpad with latest experiment results.
 1. **Identify the scratchpad**
 
    Find the active scratchpad:
+
    ```bash
    ls tmp/evaluations/*/
    ```
+
    If multiple evaluations exist, ask which one. The scratchpad is typically named `*_scratchpad.md`.
 
 2. **Read the current scratchpad end**
 
    Read the last section to understand:
+
    - What round number we're on (increment for new section)
    - What format/style the prior sections use
    - What the last recommendations were
@@ -30,6 +33,7 @@ Update the evaluation scratchpad with latest experiment results.
 3. **Collect the new results**
 
    Use the nematode-evaluate analysis pattern to extract metrics from the latest experiments. Compute:
+
    - Per-seed overall success rates
    - L100/L500/L1000 convergence metrics
    - Evasion rates (if applicable)
@@ -61,11 +65,13 @@ Update the evaluation scratchpad with latest experiment results.
 5. **Update configs if needed**
 
    If results warrant config changes:
+
    - Update the permanent config YAML
    - Update the performance comment in the config header
    - Note what changed in the scratchpad section
 
 **Guardrails**
+
 - Always include L100 for consistency with logbooks
 - Number the round sections sequentially (R1, R2, R3...)
 - Include per-seed detail — don't just report means
