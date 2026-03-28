@@ -6,6 +6,8 @@ __pycache__/
 *.log
 *.code-workspace
 .vscode/
+tmp/*
+temp/*
 build/*
 builds/*
 log/*
