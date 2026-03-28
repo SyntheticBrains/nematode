@@ -14,9 +14,11 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 ## 🧪 Features
 
 - ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
-- ✅ **Predator Evasion**: Multi-objective learning with random-moving predators and gradient-based danger perception
+- ✅ **Predator Evasion**: Multi-objective learning with pursuit/stationary predators and gradient-based danger perception
+- ✅ **Temporal Sensing**: Biologically-accurate sensing modes replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with Short-Term Associative Memory (STAM) buffers
+- ✅ **Thermotaxis**: Temperature-guided navigation with comfort/discomfort/danger zones and scattered hot/cold spots
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
-- ✅ **Classical ML Alternatives**: REINFORCE, PPO, DQN, and spiking neural network brain architectures
+- ✅ **Classical ML Alternatives**: REINFORCE, PPO, DQN, LSTM/GRU PPO, and spiking neural network brain architectures
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
 - ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
@@ -25,7 +27,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 ## 🧠 Brain Architectures
 
-Choose from 18 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
+Choose from 19 brain architectures spanning quantum, classical, hybrid, and biologically-inspired approaches:
 
 **Quantum:**
 
@@ -50,6 +52,7 @@ Choose from 18 brain architectures spanning quantum, classical, hybrid, and biol
 
 - **CRHBrain** (crh): Classical reservoir hybrid — Echo State Network reservoir with configurable feature channels (raw, cos_sin, squared, pairwise) and PPO-trained classical readout; quantum ablation control for QRH
 - **MLPPPOBrain** (mlpppo): Classical actor-critic with Proximal Policy Optimization (clipped objective, GAE)
+- **LSTMPPOBrain** (lstmppo): LSTM/GRU-augmented PPO with chunk-based truncated BPTT, separate actor/critic optimizers, and entropy decay — designed for temporal sensing tasks where memoryless MLP processing is insufficient. GRU variant recommended (outperforms LSTM across all evaluated environments)
 - **MLPReinforceBrain** (mlpreinforce): Classical multi-layer perceptron with policy gradients (REINFORCE)
 - **MLPDQNBrain** (mlpdqn): Classical MLP with Deep Q-Network (DQN) learning
 
@@ -64,6 +67,7 @@ Select the brain architecture when running simulations:
 ```bash
 uv run ./scripts/run_simulation.py --brain hybridquantum     # Best quantum (96.9% pursuit predators)
 uv run ./scripts/run_simulation.py --brain mlpppo            # Best classical (PPO actor-critic)
+uv run ./scripts/run_simulation.py --brain lstmppo           # LSTM/GRU PPO (temporal sensing)
 uv run ./scripts/run_simulation.py --brain crh               # Classical reservoir hybrid (QRH ablation control)
 uv run ./scripts/run_simulation.py --brain spikingreinforce  # Biologically realistic (LIF spiking)
 uv run ./scripts/run_simulation.py --brain qvarcircuit       # Quantum variational circuit
@@ -143,7 +147,7 @@ docker-compose exec quantum-nematode bash
 
 ### Dynamic Foraging Environment
 
-1. **State Perception**: The nematode perceives its environment through a viewport (distance to nearest food, gradient information, satiety level)
+1. **State Perception**: The nematode perceives its environment through modular sensory inputs — oracle gradients, temporal concentration scalars, or derivative signals (dC/dt) depending on sensing mode, plus proprioception, mechanosensation, and STAM temporal memory
 2. **Brain Processing**: The selected brain architecture processes the state
 3. **Action Selection**: Brain outputs action probabilities (forward, left, right, stay)
 4. **Environment Update**: Agent moves, satiety decays, and receives reward signal
@@ -189,12 +193,12 @@ The predator evasion system adds a challenging multi-objective learning task whe
 - Kill radius (default 0 units) for lethal collisions
 - Multiple predators with independent movement
 
-**Gradient-Based Perception:**
+**Perception Modes:**
 
-- **Food gradients**: Attractive exponential decay guiding agents toward food
-- **Predator gradients**: Repulsive exponential decay warning of danger
-- **Gradient superposition**: Combined vector field for multi-objective decision-making
-- Agent perceives both food and threat locations through unified gradient system
+- **Oracle sensing** (default): Directional gradients — food attraction and predator repulsion via spatial gradient vectors
+- **Derivative sensing** (Mode B): Scalar concentration + temporal derivative (dC/dt) — biologically plausible, models sensory neuron temporal detection
+- **Temporal sensing** (Mode A): Scalar concentration only — most biologically honest, agent infers direction from LSTM/GRU memory of movement-concentration correlations
+- **STAM (Short-Term Associative Memory)**: Exponential-decay buffer storing recent sensory readings, position deltas, and action entropy for temporal integration
 
 **Learning Dynamics:**
 
@@ -338,15 +342,18 @@ This project serves as a platform for exploring:
 
 See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
+### Recently Completed
+
+- **Temporal Sensing**: Biologically-accurate sensing replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with STAM temporal memory buffers
+- **LSTM/GRU PPO Brain**: Recurrent architecture with chunk-based truncated BPTT for temporal sensing tasks — achieves oracle-level converged performance with scalar-only sensing
+- **Enhanced Sensory Systems**: Thermotaxis with hot/cold zones, mechanosensation (touch response), health/damage systems
+- **Advanced Predator Behaviors**: Stationary traps with toxic zones, pursuit patterns with configurable speed/detection
+
 ### Upcoming Features
 
-- **SOTA RL Baselines**: Modern algorithms (SAC, TD3) for credible classical comparison
-- **Enhanced Sensory Systems**: Thermotaxis, oxygen sensing, mechanosensation (touch response), and health/damage systems
-- **Advanced Predator Behaviors**: Stationary traps, pursuit patterns, patrol routes, and group hunting strategies
-- **Architecture Analysis**: Ablation studies, interpretability tools, and systematic feature importance ranking
-- **Learning & Memory**: Associative learning systems (STAM, ITAM, LTAM) with biological timescales
-- **Evolution & Breeding**: Genetic algorithms, Baldwin effect, co-evolution of predators and prey
 - **Multi-Agent Scenarios**: Cooperative and competitive foraging with pheromone communication and emergent behaviors
+- **Evolution & Breeding**: Genetic algorithms, Baldwin effect, co-evolution of predators and prey
+- **Continuous Physics & Connectome**: Continuous 2D movement, realistic locomotion, 302-neuron connectome-constrained architectures
 - **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
 - **Real-World Validation**: WormBot deployment, C. elegans lab collaborations, cross-organism transfer (Drosophila, zebrafish)
 
