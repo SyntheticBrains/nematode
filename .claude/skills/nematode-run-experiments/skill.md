@@ -8,7 +8,7 @@ metadata:
 
 Run parallel experiment groups with multiple seeds for evaluation.
 
-**Input**: Specify experiment configs (file paths or descriptions of what to test). Optionally specify number of seeds (default 4), episodes per run, and any other parameters.
+**Input**: Specify experiment configs (file paths or descriptions of what to test). Optionally specify number of runs/episodes (controlled by `--runs`, default varies by task), number of seeds (default 4), and any other parameters.
 
 **Constraints**
 
@@ -48,7 +48,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
    for cfg in expA expB expC expD; do
      for seed in 42 43 44 45; do
        uv run ./scripts/run_simulation.py --log-level INFO --show-last-frame-only \
-         --runs {EPISODES} --config /tmp/{cfg}.yml \
+         --runs {NUM_RUNS} --config /tmp/{cfg}.yml \
          --theme headless --track-experiment --seed $seed 2>&1 | tail -25 &
      done
    done
