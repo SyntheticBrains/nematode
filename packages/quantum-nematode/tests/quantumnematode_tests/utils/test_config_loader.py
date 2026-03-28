@@ -11,7 +11,7 @@ from quantumnematode.utils.config_loader import (
     SensingConfig,
     SensingMode,
     ThermotaxisConfig,
-    _apply_sensing_mode,
+    apply_sensing_mode,
     validate_sensing_config,
 )
 
@@ -554,14 +554,14 @@ class TestApplySensingMode:
         """Test that oracle mode leaves module names unchanged."""
         sensing = SensingConfig()
         modules = ["food_chemotaxis", "mechanosensation"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert result == ["food_chemotaxis", "mechanosensation"]
 
     def test_temporal_replaces_food_chemotaxis(self) -> None:
         """Test that temporal mode replaces food_chemotaxis with food_chemotaxis_temporal."""
         sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
         modules = ["food_chemotaxis", "mechanosensation"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "food_chemotaxis_temporal" in result
         assert "food_chemotaxis" not in result
         assert "mechanosensation" in result
@@ -570,7 +570,7 @@ class TestApplySensingMode:
         """Test that temporal mode replaces nociception with nociception_temporal."""
         sensing = SensingConfig(nociception_mode=SensingMode.TEMPORAL)
         modules = ["food_chemotaxis", "nociception"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "nociception_temporal" in result
         assert "nociception" not in result
 
@@ -578,7 +578,7 @@ class TestApplySensingMode:
         """Test that derivative mode replaces thermotaxis with thermotaxis_temporal."""
         sensing = SensingConfig(thermotaxis_mode=SensingMode.DERIVATIVE)
         modules = ["food_chemotaxis", "thermotaxis"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "thermotaxis_temporal" in result
         assert "thermotaxis" not in result
 
@@ -586,7 +586,7 @@ class TestApplySensingMode:
         """Test that combined chemotaxis is split into food and nociception modules."""
         sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
         modules = ["chemotaxis"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "food_chemotaxis_temporal" in result
         assert "nociception" in result  # Oracle nociception added
         assert "chemotaxis" not in result
@@ -598,7 +598,7 @@ class TestApplySensingMode:
             nociception_mode=SensingMode.TEMPORAL,
         )
         modules = ["chemotaxis"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "food_chemotaxis_temporal" in result
         assert "nociception_temporal" in result
 
@@ -606,7 +606,7 @@ class TestApplySensingMode:
         """Test that splitting chemotaxis does not duplicate nociception."""
         sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
         modules = ["chemotaxis", "nociception"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         noci_count = sum(1 for m in result if "nociception" in m)
         assert noci_count == 1
 
@@ -614,21 +614,21 @@ class TestApplySensingMode:
         """Test that STAM module is appended when stam_enabled is True."""
         sensing = SensingConfig(stam_enabled=True)
         modules = ["food_chemotaxis"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "stam" in result
 
     def test_stam_not_duplicated(self) -> None:
         """Test that STAM is not duplicated if already in the module list."""
         sensing = SensingConfig(stam_enabled=True)
         modules = ["food_chemotaxis", "stam"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert result.count("stam") == 1
 
     def test_stam_not_appended_when_disabled(self) -> None:
         """Test that STAM module is not appended when stam_enabled is False."""
         sensing = SensingConfig(stam_enabled=False)
         modules = ["food_chemotaxis"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "stam" not in result
 
     def test_mechanosensation_never_replaced(self) -> None:
@@ -639,5 +639,5 @@ class TestApplySensingMode:
             nociception_mode=SensingMode.TEMPORAL,
         )
         modules = ["food_chemotaxis", "mechanosensation", "nociception", "thermotaxis"]
-        result = _apply_sensing_mode(modules, sensing)
+        result = apply_sensing_mode(modules, sensing)
         assert "mechanosensation" in result

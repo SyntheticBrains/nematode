@@ -1,7 +1,7 @@
 # Temporal Sensing (Mode A) - LSTM PPO with Thermotaxis + Stationary Predators - Large Config
 # Phase 3: LSTM PPO with biologically-honest temporal sensing
 #
-# Architecture: Features → LayerNorm → LSTM(64) → Actor MLP / Critic MLP (detached h)
+# Architecture: Features → LayerNorm → GRU(64) → Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Triple-objective task on 100x100 grid:

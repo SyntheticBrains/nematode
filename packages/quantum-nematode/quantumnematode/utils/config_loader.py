@@ -528,7 +528,7 @@ class SensingConfig(BaseModel):
     )
 
 
-def _apply_sensing_mode(
+def apply_sensing_mode(
     sensory_modules: list[str],
     sensing: SensingConfig,
 ) -> list[str]:

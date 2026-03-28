@@ -489,11 +489,11 @@ The system SHALL provide example configurations demonstrating temporal sensing m
 - **AND** SHALL use existing small environment parameters (20×20 grid, 5 foods, 500 steps)
 - **AND** SHALL include inline comments explaining the sensing mode and STAM parameters
 
-#### Scenario: Derivative Thermotaxis With Foraging Example
+#### Scenario: Temporal Thermotaxis With Foraging Example
 
 - **WHEN** example config `mlpppo_thermotaxis_foraging_small_temporal.yml` is loaded
-- **THEN** it SHALL configure Mode B (derivative) thermotaxis with STAM enabled
-- **AND** chemotaxis SHALL also be configured in temporal or derivative mode
+- **THEN** it SHALL configure Mode A (temporal) thermotaxis with STAM enabled
+- **AND** chemotaxis SHALL also be configured in temporal mode
 - **AND** SHALL use existing small thermotaxis foraging environment parameters
 
 #### Scenario: Temporal Pursuit Predators Example

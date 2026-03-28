@@ -1,7 +1,7 @@
 # Derivative Sensing - LSTM PPO Brain - Dynamic Foraging Environment - Small Configuration
 # Phase 3: LSTM PPO with biologically-plausible derivative sensing
 #
-# Architecture: Features → LayerNorm → LSTM(64) → Actor MLP / Critic MLP (detached h)
+# Architecture: Features → LayerNorm → GRU(64) → Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Sensing mode: derivative (Mode B)

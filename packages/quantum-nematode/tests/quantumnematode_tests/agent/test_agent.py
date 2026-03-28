@@ -347,7 +347,7 @@ class TestTemporalSensingIntegration:
             use_separated_gradients=True,
         )
 
-    def test_temporal_mode_populates_food_concentration(self):
+    def test_temporal_mode_populates_food_concentration(self) -> None:
         """Test that temporal mode sets food_concentration on BrainParams."""
         sensing = SensingConfig(
             chemotaxis_mode=SensingMode.TEMPORAL,
@@ -358,7 +358,7 @@ class TestTemporalSensingIntegration:
         assert params.food_concentration is not None
         assert 0.0 <= params.food_concentration <= 1.0
 
-    def test_temporal_mode_suppresses_oracle_food_gradient(self):
+    def test_temporal_mode_suppresses_oracle_food_gradient(self) -> None:
         """Test that temporal mode sets food gradient fields to None."""
         sensing = SensingConfig(
             chemotaxis_mode=SensingMode.TEMPORAL,
@@ -369,7 +369,7 @@ class TestTemporalSensingIntegration:
         assert params.food_gradient_strength is None
         assert params.food_gradient_direction is None
 
-    def test_temporal_mode_suppresses_oracle_predator_gradient(self):
+    def test_temporal_mode_suppresses_oracle_predator_gradient(self) -> None:
         """Test that temporal nociception mode sets predator gradient fields to None."""
         sensing = SensingConfig(
             nociception_mode=SensingMode.TEMPORAL,
@@ -381,7 +381,7 @@ class TestTemporalSensingIntegration:
         assert params.predator_gradient_direction is None
         assert params.predator_concentration is not None
 
-    def test_derivative_mode_populates_dconcentration_dt(self):
+    def test_derivative_mode_populates_dconcentration_dt(self) -> None:
         """Test that derivative mode populates temporal derivative fields."""
         sensing = SensingConfig(
             chemotaxis_mode=SensingMode.DERIVATIVE,
@@ -393,7 +393,7 @@ class TestTemporalSensingIntegration:
         params = agent._create_brain_params(0.5, 0.0)
         assert params.food_dconcentration_dt is not None
 
-    def test_stam_state_is_9_floats(self):
+    def test_stam_state_is_9_floats(self) -> None:
         """Test that STAM state is a 9-float tuple on BrainParams."""
         sensing = SensingConfig(stam_enabled=True)
         agent = self._create_temporal_agent(sensing)
@@ -402,7 +402,7 @@ class TestTemporalSensingIntegration:
         assert len(params.stam_state) == 9
         assert all(isinstance(v, float) for v in params.stam_state)
 
-    def test_oracle_mode_leaves_temporal_fields_none(self):
+    def test_oracle_mode_leaves_temporal_fields_none(self) -> None:
         """Test that oracle mode does not populate temporal sensing fields."""
         sensing = SensingConfig()  # All oracle, STAM disabled
         agent = self._create_temporal_agent(sensing)
@@ -412,7 +412,7 @@ class TestTemporalSensingIntegration:
         assert params.food_dconcentration_dt is None
         assert params.stam_state is None
 
-    def test_stam_resets_between_episodes(self):
+    def test_stam_resets_between_episodes(self) -> None:
         """Test that STAM resets produce zero state after episode boundary."""
         sensing = SensingConfig(
             chemotaxis_mode=SensingMode.TEMPORAL,
@@ -432,7 +432,7 @@ class TestTemporalSensingIntegration:
         state = agent._stam.get_memory_state()
         np.testing.assert_array_equal(state, np.zeros(9, dtype=np.float32))
 
-    def test_mixed_modes_per_modality(self):
+    def test_mixed_modes_per_modality(self) -> None:
         """Test that different modes can be used for different modalities."""
         sensing = SensingConfig(
             chemotaxis_mode=SensingMode.TEMPORAL,

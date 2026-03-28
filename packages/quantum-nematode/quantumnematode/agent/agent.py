@@ -523,7 +523,9 @@ class QuantumNematodeAgent:
 
         if self.env.thermotaxis.enabled:
             temperature = self.env.get_temperature()
-            if sensing.thermotaxis_mode == "oracle":
+            from quantumnematode.utils.config_loader import SensingMode
+
+            if sensing.thermotaxis_mode == SensingMode.ORACLE:
                 temp_gradient = self.env.get_temperature_gradient()
                 if temp_gradient is not None:
                     temperature_gradient_strength = temp_gradient[0]

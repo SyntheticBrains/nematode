@@ -1,7 +1,7 @@
 # Derivative Sensing - LSTM PPO with Thermotaxis + Pursuit Predators - Large Configuration
 # Phase 3: LSTM PPO with biologically-plausible derivative sensing on the hardest task
 #
-# Architecture: Features → LayerNorm → LSTM(64) → Actor MLP / Critic MLP (detached h)
+# Architecture: Features → LayerNorm → GRU(64) → Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Triple-objective task on 100x100 grid:

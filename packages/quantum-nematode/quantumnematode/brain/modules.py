@@ -467,7 +467,11 @@ def _thermotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
     raw_deriv = float(params.temperature_ddt or 0.0)
     angle = float(np.tanh(raw_deriv * params.derivative_scale))
 
-    return CoreFeatures(strength=temp_deviation, angle=angle, binary=temp_deviation)
+    return CoreFeatures(
+        strength=abs(temp_deviation),  # Non-negative magnitude for to_quantum contract
+        angle=angle,
+        binary=temp_deviation,  # Signed deviation preserved in binary field
+    )
 
 
 # =============================================================================

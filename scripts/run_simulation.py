@@ -357,10 +357,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         sensory_modules_attr = getattr(brain_config, "sensory_modules", None)
         if sensory_modules_attr is not None:
             from quantumnematode.brain.modules import ModuleName
-            from quantumnematode.utils.config_loader import _apply_sensing_mode
+            from quantumnematode.utils.config_loader import apply_sensing_mode
 
             original_modules = [m.value for m in sensory_modules_attr]
-            translated = _apply_sensing_mode(original_modules, sensing_config)
+            translated = apply_sensing_mode(original_modules, sensing_config)
             translated_modules = [ModuleName(m) for m in translated]
             if translated_modules != list(sensory_modules_attr):
                 brain_config = brain_config.model_copy(

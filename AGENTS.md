@@ -36,7 +36,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
 - `configs/examples/` — YAML config files (`[{prefix}_]{brain}_{environment}_{size}[_{postfix}].yml`)
   - Prefixes: `evolution` (for evolutionary optimization configs)
-  - Postfixes: `classical` (classical gate ablation), `finetune`, `fair` (for fair ablations) etc.
+  - Postfixes: `classical` (classical gate ablation), `finetune`, `fair` (for fair ablations), `derivative` (derivative dC/dt sensing mode), `temporal` (scalar-only temporal sensing mode) etc.
   - Example: `evolution_qvarcircuit_foraging_small.yml`, `mlpppo_predators_small.yml`
 - `tests/` — Three-tier testing (unit, smoke, nightly)
 - `benchmarks/` — Submitted benchmark results

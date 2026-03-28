@@ -49,12 +49,30 @@ class STAMBuffer:
 
     MEMORY_DIM = 9
 
+    # Named indices into the 9-dim memory state vector
+    IDX_WEIGHTED_FOOD = 0
+    IDX_WEIGHTED_TEMP = 1
+    IDX_WEIGHTED_PRED = 2
+    IDX_DERIV_FOOD = 3
+    IDX_DERIV_TEMP = 4
+    IDX_DERIV_PRED = 5
+    IDX_POS_DELTA_X = 6
+    IDX_POS_DELTA_Y = 7
+    IDX_ACTION_ENTROPY = 8
+
     def __init__(
         self,
         buffer_size: int = 30,
         decay_rate: float = 0.1,
         num_channels: int = 3,
     ) -> None:
+        if num_channels != 3:  # noqa: PLR2004
+            msg = (
+                f"STAMBuffer requires num_channels=3 (food, predator, temperature) "
+                f"to produce the fixed {self.MEMORY_DIM}-dim memory state. "
+                f"Got num_channels={num_channels}."
+            )
+            raise ValueError(msg)
         self._buffer_size = buffer_size
         self._decay_rate = decay_rate
         self._num_channels = num_channels
@@ -92,7 +110,14 @@ class STAMBuffer:
         action : int
             Action taken this step (integer action index).
         """
-        self._scalar_history.appendleft(np.asarray(scalars, dtype=np.float64))
+        scalars_arr = np.asarray(scalars, dtype=np.float64)
+        if scalars_arr.ndim != 1 or scalars_arr.shape[0] != self._num_channels:
+            msg = (
+                f"scalars must be a 1-D array of length {self._num_channels}, "
+                f"got shape {scalars_arr.shape}"
+            )
+            raise ValueError(msg)
+        self._scalar_history.appendleft(scalars_arr)
         self._position_delta_history.appendleft(position_delta)
         self._action_history.appendleft(action)
 

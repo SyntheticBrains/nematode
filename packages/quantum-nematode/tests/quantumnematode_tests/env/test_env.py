@@ -68,7 +68,7 @@ class TestGradientSuperposition:
     """Test cases for gradient superposition logic."""
 
     @pytest.fixture
-    def env(self):
+    def env(self) -> DynamicForagingEnvironment:
         """Create environment for gradient testing."""
         return DynamicForagingEnvironment(
             grid_size=20,
@@ -300,7 +300,7 @@ class TestSatietySystem:
     """Test cases for satiety and food consumption."""
 
     @pytest.fixture
-    def env(self):
+    def env(self) -> DynamicForagingEnvironment:
         """Create environment for satiety testing."""
         return DynamicForagingEnvironment(
             grid_size=20,
@@ -371,7 +371,7 @@ class TestViewportCalculations:
     """Test cases for viewport rendering system."""
 
     @pytest.fixture
-    def env(self):
+    def env(self) -> DynamicForagingEnvironment:
         """Create large environment for viewport testing."""
         return DynamicForagingEnvironment(
             grid_size=50,
@@ -460,7 +460,7 @@ class TestExplorationTracking:
     """Test cases for visited cell tracking."""
 
     @pytest.fixture
-    def env(self):
+    def env(self) -> DynamicForagingEnvironment:
         """Create environment for exploration testing."""
         return DynamicForagingEnvironment(
             grid_size=20,
@@ -1783,7 +1783,7 @@ class TestMechanosensation:
     """Tests for mechanosensation (boundary and predator contact detection)."""
 
     @pytest.fixture
-    def env(self):
+    def env(self) -> DynamicForagingEnvironment:
         """Create environment for mechanosensation testing."""
         return DynamicForagingEnvironment(
             grid_size=20,
@@ -2796,7 +2796,7 @@ class TestScalarConcentration:
     """Test scalar food and predator concentration methods."""
 
     @pytest.fixture
-    def env(self):
+    def env(self) -> DynamicForagingEnvironment:
         """Create environment for concentration testing."""
         return DynamicForagingEnvironment(
             grid_size=20,
@@ -2811,14 +2811,14 @@ class TestScalarConcentration:
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
         )
 
-    def test_single_food_concentration(self, env):
+    def test_single_food_concentration(self, env: DynamicForagingEnvironment) -> None:
         """Concentration from a single food source is positive."""
         env.foods = [(15, 10)]
         conc = env.get_food_concentration((10, 10))
         assert conc > 0.0
         assert conc <= 1.0  # tanh-normalized
 
-    def test_concentration_decays_with_distance(self, env):
+    def test_concentration_decays_with_distance(self, env: DynamicForagingEnvironment) -> None:
         """Closer positions have higher concentration."""
         env.foods = [(15, 10)]
         conc_near = env.get_food_concentration((14, 10))
@@ -2833,7 +2833,7 @@ class TestScalarConcentration:
         conc_two = env.get_food_concentration((10, 10))
         assert conc_two > conc_one
 
-    def test_no_food_zero_concentration(self, env):
+    def test_no_food_zero_concentration(self, env: DynamicForagingEnvironment) -> None:
         """No food sources yield zero concentration."""
         env.foods = []
         conc = env.get_food_concentration((10, 10))
@@ -2853,7 +2853,7 @@ class TestScalarConcentration:
         conc_away = env.get_food_concentration((15, 15))
         assert conc_on > conc_away
 
-    def test_food_collection_updates_concentration(self, env):
+    def test_food_collection_updates_concentration(self, env: DynamicForagingEnvironment) -> None:
         """Consuming food changes concentration field."""
         env.foods = [(15, 10), (5, 10)]
         conc_before = env.get_food_concentration((14, 10))
@@ -2872,7 +2872,7 @@ class TestScalarConcentration:
         """Predator concentration returns 0 when predators disabled."""
         assert env.get_predator_concentration((10, 10)) == 0.0
 
-    def test_predator_concentration_single(self):
+    def test_predator_concentration_single(self) -> None:
         """Predator concentration from a single predator."""
         env = DynamicForagingEnvironment(
             grid_size=20,
@@ -2897,7 +2897,7 @@ class TestScalarConcentration:
         assert conc > 0.0
         assert conc <= 1.0
 
-    def test_predator_concentration_decays(self):
+    def test_predator_concentration_decays(self) -> None:
         """Predator signal decays with distance."""
         env = DynamicForagingEnvironment(
             grid_size=20,
