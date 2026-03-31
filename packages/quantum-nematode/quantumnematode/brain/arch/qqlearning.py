@@ -773,8 +773,3 @@ class QQLearningBrain:
         )
         new_brain.parameter_values = deepcopy(self.parameter_values)
         return new_brain
-
-
-# Deprecated aliases (backward compatibility)
-QModularBrain = QQLearningBrain
-QModularBrainConfig = QQLearningBrainConfig

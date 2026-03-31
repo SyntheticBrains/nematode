@@ -103,7 +103,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
     ------
         ValueError: If an unknown brain type is provided.
     """
-    if brain_type in (BrainType.QVARCIRCUIT, BrainType.MODULAR):
+    if brain_type == BrainType.QVARCIRCUIT:
         if not isinstance(brain_config, QVarCircuitBrainConfig):
             error_message = (
                 "The 'qvarcircuit' brain architecture requires a QVarCircuitBrainConfig. "
@@ -135,7 +135,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             gradient_max_norm=gradient_max_norm,
             perf_mgmt=perf_mgmt,
         )
-    elif brain_type in (BrainType.QQLEARNING, BrainType.QMODULAR):
+    elif brain_type == BrainType.QQLEARNING:
         if not isinstance(brain_config, QQLearningBrainConfig):
             error_message = (
                 "The 'qqlearning' brain architecture requires a QQLearningBrainConfig. "
@@ -164,7 +164,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             parameter_initializer=parameter_initializer,
         )
 
-    elif brain_type in (BrainType.MLP_REINFORCE, BrainType.MLP):
+    elif brain_type == BrainType.MLP_REINFORCE:
         from quantumnematode.brain.arch.mlpreinforce import MLPReinforceBrain
 
         if not isinstance(brain_config, MLPReinforceBrainConfig):
@@ -185,7 +185,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             device=device,
             parameter_initializer=parameter_initializer,
         )
-    elif brain_type in (BrainType.MLP_PPO, BrainType.PPO):
+    elif brain_type == BrainType.MLP_PPO:
         from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
 
         if not isinstance(brain_config, MLPPPOBrainConfig):
@@ -205,7 +205,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             device=device,
             parameter_initializer=parameter_initializer,
         )
-    elif brain_type in (BrainType.MLP_DQN, BrainType.QMLP):
+    elif brain_type == BrainType.MLP_DQN:
         from quantumnematode.brain.arch.mlpdqn import MLPDQNBrain
 
         if not isinstance(brain_config, MLPDQNBrainConfig):
@@ -225,7 +225,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             device=device,
             parameter_initializer=parameter_initializer,
         )
-    elif brain_type in (BrainType.SPIKING_REINFORCE, BrainType.SPIKING):
+    elif brain_type == BrainType.SPIKING_REINFORCE:
         from quantumnematode.brain.arch.spikingreinforce import SpikingReinforceBrain
 
         if not isinstance(brain_config, SpikingReinforceBrainConfig):
@@ -308,7 +308,7 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             num_actions=4,
             device=device,
         )
-    elif brain_type in (BrainType.QSNN_REINFORCE, BrainType.QSNN):
+    elif brain_type == BrainType.QSNN_REINFORCE:
         from quantumnematode.brain.arch.qsnnreinforce import QSNNReinforceBrain
 
         if not isinstance(brain_config, QSNNReinforceBrainConfig):

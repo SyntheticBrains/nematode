@@ -1431,8 +1431,3 @@ class QVarCircuitBrain(QuantumBrain):
             return 0.0
 
         return counts.get(state, 0) / total
-
-
-# Deprecated aliases (backward compatibility)
-ModularBrain = QVarCircuitBrain
-ModularBrainConfig = QVarCircuitBrainConfig

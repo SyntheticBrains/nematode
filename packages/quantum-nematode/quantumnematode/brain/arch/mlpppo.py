@@ -418,7 +418,7 @@ class MLPPPOBrain(ClassicalBrain):
            - angle: [-1, 1] where 0 = aligned with agent heading
 
         2. **Legacy mode** (default):
-           Matches original MLPBrain preprocessing:
+           Matches original MLPReinforceBrain preprocessing:
            - Gradient strength (float, [0, 1])
            - Normalized relative angle to goal ([-1, 1])
         """
@@ -1032,8 +1032,3 @@ class MLPPPOBrain(ClassicalBrain):
         **kwargs: object,
     ) -> None:
         """Not used - PPO uses its own optimizer."""
-
-
-# Deprecated aliases (backward compatibility)
-PPOBrain = MLPPPOBrain
-PPOBrainConfig = MLPPPOBrainConfig

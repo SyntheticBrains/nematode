@@ -460,11 +460,8 @@ def run_plasticity_protocol(config: PlasticityConfig) -> list[SeedResult]:
         modules=config.modules,
     )
     brain_config = configure_brain(sim_config)
-    from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
-
-    canonical_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
-    brain_name = canonical_name  # Use canonical name for all outputs
-    brain_type = BrainType(canonical_name)
+    brain_name = config.brain.name
+    brain_type = BrainType(brain_name)
 
     # Resolve learning rate / gradient config
     learning_rate = configure_learning_rate(sim_config)

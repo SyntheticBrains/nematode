@@ -310,7 +310,7 @@ class SpikingReinforceBrain(ClassicalBrain):
         Preprocess brain parameters into state vector.
 
         Computes relative angle between agent orientation and goal direction,
-        matching the preprocessing used by MLPBrain for fair comparison.
+        matching the preprocessing used by MLPReinforceBrain for fair comparison.
 
         When use_separated_gradients is enabled, returns 4 features:
         [food_strength, food_rel_angle, predator_strength, predator_rel_angle]
@@ -1081,8 +1081,3 @@ class SpikingReinforceBrain(ClassicalBrain):
         new_brain.episode_count = self.episode_count
 
         return new_brain
-
-
-# Deprecated aliases (backward compatibility)
-SpikingBrain = SpikingReinforceBrain
-SpikingBrainConfig = SpikingReinforceBrainConfig

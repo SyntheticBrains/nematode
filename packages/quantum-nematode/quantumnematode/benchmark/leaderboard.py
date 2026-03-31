@@ -9,7 +9,6 @@ import json
 import re
 from pathlib import Path
 
-from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
 from quantumnematode.experiment.metadata import StatValue
 from quantumnematode.experiment.submission import NematodeBenchSubmission
 from quantumnematode.logging_config import logger
@@ -147,7 +146,7 @@ def format_benchmark_row(submission: NematodeBenchSubmission) -> dict[str, str]:
     date = submission.timestamp.strftime("%Y-%m-%d")
 
     row = {
-        "brain": BRAIN_NAME_ALIASES.get(submission.brain_type, submission.brain_type),
+        "brain": submission.brain_type,
         "score": format_stat_value(submission.metrics.composite_score, ".3f"),
         "success_rate": format_stat_value(submission.metrics.success_rate, ".1f", is_percent=True),
         "learning_speed": format_stat_value(submission.metrics.learning_speed, ".2f"),
