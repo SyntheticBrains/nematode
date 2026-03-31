@@ -479,21 +479,6 @@ class MLPPPOBrain(ClassicalBrain):
         expanded = x[..., self._raw_input_dim :]
         return torch.cat([raw, expanded * gate], dim=-1)
 
-    def _prepare_features(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply gating to raw features.
-
-        Parameters
-        ----------
-        x : torch.Tensor
-            Raw feature tensor.
-
-        Returns
-        -------
-        torch.Tensor
-            Processed features ready for actor/critic heads.
-        """
-        return self._apply_torch_gating(x)
-
     def forward_actor(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through actor network."""
         return self.actor(self._apply_torch_gating(x))
@@ -520,7 +505,7 @@ class MLPPPOBrain(ClassicalBrain):
         """
         x = torch.tensor(state, dtype=torch.float32, device=self.device)
 
-        features = self._prepare_features(x)
+        features = self._apply_torch_gating(x)
 
         # Get action logits and value
         logits = self.actor(features)
@@ -562,7 +547,7 @@ class MLPPPOBrain(ClassicalBrain):
         self.last_value = value
 
         # Get probabilities for tracking
-        features = self._prepare_features(
+        features = self._apply_torch_gating(
             torch.tensor(x, dtype=torch.float32, device=self.device),
         )
         logits = self.actor(features)
@@ -755,6 +740,12 @@ class MLPPPOBrain(ClassicalBrain):
             ),
         }
 
+        if self._feature_gating:
+            all_components["gate_weights"] = WeightComponent(
+                name="gate_weights",
+                state={"gate_weights": self.gate_weights.data.clone()},
+            )
+
         if components is None:
             return all_components
 
@@ -778,6 +769,10 @@ class MLPPPOBrain(ClassicalBrain):
             self.actor.load_state_dict(components["policy"].state)
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
+
+        # Gate weights
+        if "gate_weights" in components and self._feature_gating:
+            self.gate_weights.data.copy_(components["gate_weights"].state["gate_weights"])
 
         # Optimizer state only after networks succeed
         if "optimizer" in components:
