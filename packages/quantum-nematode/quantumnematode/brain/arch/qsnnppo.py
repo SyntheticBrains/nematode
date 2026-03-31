@@ -60,8 +60,8 @@ from quantumnematode.brain.arch._qlif_layers import (
     execute_qlif_layer,
     execute_qlif_layer_differentiable,
     execute_qlif_layer_differentiable_cached,
-    get_qiskit_backend,
 )
+from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.modules import (
     ModuleName,

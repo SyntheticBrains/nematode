@@ -34,10 +34,6 @@ import numpy as np
 import torch
 from qiskit import QuantumCircuit
 
-# Re-export from shared module for backward compatibility.
-# Canonical location: quantumnematode.brain.arch._quantum_utils
-from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend  # noqa: F401
-
 # ──────────────────────────────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────────────────────────────
