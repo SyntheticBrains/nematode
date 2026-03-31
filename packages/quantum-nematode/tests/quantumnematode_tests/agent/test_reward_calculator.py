@@ -19,6 +19,8 @@ def default_config():
         penalty_stuck_position=0.02,
         stuck_position_threshold=3,
         reward_exploration=0.02,
+        penalty_boundary_collision=0.0,
+        penalty_temperature_proximity=0.0,
     )
 
 
@@ -45,6 +47,8 @@ class TestDynamicForagingRewards:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(3, 3), (2, 2)]  # Previous nearest was Manhattan=4, now=1
@@ -66,6 +70,8 @@ class TestDynamicForagingRewards:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -86,6 +92,8 @@ class TestDynamicForagingRewards:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 2)]
@@ -109,6 +117,8 @@ class TestAntiDitheringPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 1), (2, 2), (1, 1)]  # Back to same position
@@ -129,6 +139,8 @@ class TestAntiDitheringPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(1, 1), (2, 2), (3, 3)]  # Normal progression
@@ -159,6 +171,8 @@ class TestPredatorEvasionReward:
         env.predator.enabled = True
         env.is_agent_in_danger = Mock(return_value=in_danger)
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         # Create predator mocks
         predators = []
@@ -313,6 +327,8 @@ class TestPredatorEvasionReward:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(config)
         path = [(4, 5), (5, 5)]
@@ -384,6 +400,8 @@ class TestTemperatureAvoidanceReward:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         # Thermotaxis setup
         env.thermotaxis = Mock()
@@ -587,6 +605,8 @@ class TestStuckPositionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(2, 2), (2, 2)]
@@ -607,6 +627,8 @@ class TestStuckPositionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(2, 2), (2, 2)]
@@ -626,6 +648,8 @@ class TestStuckPositionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(default_config)
         path = [(2, 2), (2, 2)]
@@ -660,6 +684,8 @@ class TestBoundaryCollisionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = True  # Tried to move into wall
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(config)
         path = [(0, 5)]
@@ -684,6 +710,8 @@ class TestBoundaryCollisionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False  # No wall collision
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(config)
         path = [(5, 5)]
@@ -712,6 +740,8 @@ class TestBoundaryCollisionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False  # At edge but no collision attempt
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(config)
         path = [(0, 5)]
@@ -736,6 +766,8 @@ class TestBoundaryCollisionPenalty:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = True  # Collision occurred but penalty is 0
+        env.thermotaxis = Mock()
+        env.thermotaxis.enabled = False
 
         calculator = RewardCalculator(config)
         path = [(0, 5)]
