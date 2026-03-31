@@ -29,7 +29,6 @@ configs/*.yml
 !configs/scenarios/**/*.yml
 !configs/evolution/*.yml
 !configs/special/*.yml
-!configs/studies/**/*.yml
 
 # Environment files
 .env

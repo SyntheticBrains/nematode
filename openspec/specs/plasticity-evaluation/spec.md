@@ -12,7 +12,7 @@ The system SHALL provide a CLI script (`scripts/run_plasticity_test.py`) that ex
 
 #### Scenario: Full four-phase sequential training
 
-- **WHEN** a user runs `scripts/run_plasticity_test.py --config configs/studies/plasticity/<arch>_plasticity.yml`
+- **WHEN** a user runs `scripts/run_plasticity_test.py --config artifacts/logbooks/008/plasticity/<arch>_plasticity.yml`
 - **THEN** the system SHALL train the brain on four phases in sequence: A (foraging) → B (pursuit predators) → C (thermotaxis+pursuit) → A' (foraging return)
 - **AND** all phases SHALL use the same grid size (100×100) to eliminate grid-size confounds in eval comparisons
 - **AND** each phase SHALL run for the number of training episodes specified in the config's `plasticity.training_episodes_per_phase` field

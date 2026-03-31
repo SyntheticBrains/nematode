@@ -357,21 +357,21 @@ ______________________________________________________________________
 
 **Health-enabled:**
 
-- `configs/studies/health_scaling/health_p1.yml`
-- `configs/studies/health_scaling/health_p2.yml`
-- `configs/studies/health_scaling/health_p3.yml`
-- `configs/studies/health_scaling/health_p5.yml`
-- `configs/studies/health_scaling/health_p7.yml`
-- `configs/studies/health_scaling/health_p10.yml`
+- `artifacts/logbooks/005/health_scaling/health_p1.yml`
+- `artifacts/logbooks/005/health_scaling/health_p2.yml`
+- `artifacts/logbooks/005/health_scaling/health_p3.yml`
+- `artifacts/logbooks/005/health_scaling/health_p5.yml`
+- `artifacts/logbooks/005/health_scaling/health_p7.yml`
+- `artifacts/logbooks/005/health_scaling/health_p10.yml`
 
 **Control (health-disabled):**
 
-- `configs/studies/health_scaling/control_p1.yml`
-- `configs/studies/health_scaling/control_p2.yml`
-- `configs/studies/health_scaling/control_p3.yml`
-- `configs/studies/health_scaling/control_p5.yml`
-- `configs/studies/health_scaling/control_p7.yml`
-- `configs/studies/health_scaling/control_p10.yml`
+- `artifacts/logbooks/005/health_scaling/control_p1.yml`
+- `artifacts/logbooks/005/health_scaling/control_p2.yml`
+- `artifacts/logbooks/005/health_scaling/control_p3.yml`
+- `artifacts/logbooks/005/health_scaling/control_p5.yml`
+- `artifacts/logbooks/005/health_scaling/control_p7.yml`
+- `artifacts/logbooks/005/health_scaling/control_p10.yml`
 
 ### Raw Data
 
