@@ -21,8 +21,7 @@ Module naming follows C. elegans neuroscience conventions:
 - chemotaxis: Combined gradient sensing (ASE neurons)
 - food_chemotaxis: Food-specific approach behavior (AWC, AWA neurons)
 - nociception: Aversive/escape response (ASH, ADL neurons)
-- thermotaxis: Temperature sensing (AFD neurons) - placeholder
-- aerotaxis: Oxygen sensing (URX, BAG neurons) - placeholder
+- thermotaxis: Temperature sensing (AFD neurons)
 - mechanosensation: Touch/contact detection (ALM, PLM, AVM neurons)
 - proprioception: Body orientation sensing
 """
@@ -89,15 +88,9 @@ class ModuleName(StrEnum):
     THERMOTAXIS_TEMPORAL = "thermotaxis_temporal"
     STAM = "stam"
 
-    # Placeholder modules
-    AEROTAXIS = "aerotaxis"
-    VISION = "vision"
-    ACTION = "action"
-
     # Legacy aliases (deprecated)
     APPETITIVE = "appetitive"
     AVERSIVE = "aversive"
-    OXYGEN = "oxygen"
 
 
 # =============================================================================
@@ -352,48 +345,6 @@ def _thermotaxis_core(params: BrainParams) -> CoreFeatures:
     )
 
 
-def _aerotaxis_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
-    """Extract aerotaxis features (placeholder - returns zeros).
-
-    Aerotaxis (URX, BAG neurons) will encode oxygen gradient navigation:
-    - strength: oxygen gradient magnitude (planned)
-    - angle: egocentric direction to preferred O2 level (planned)
-    - binary: deviation from preferred O2 concentration (planned)
-
-    C. elegans prefer ~10% O2 (normoxia), avoiding both hypoxia (<5%) and
-    hyperoxia (>14%). Implementation will follow thermotaxis pattern with
-    an oxygen field class and O2 zone classification.
-
-    Biological Reference:
-        URX neurons are oxygen sensors that detect increases in O2.
-        BAG neurons detect decreases in O2 (CO2 also affects BAG).
-        AQR and PQR provide additional O2 sensing at head/tail.
-        Together they enable navigation to optimal oxygen levels.
-
-    Status: PLACEHOLDER - returns zeros until oxygen field is implemented.
-    """
-    return CoreFeatures()
-
-
-def _vision_core(params: BrainParams) -> CoreFeatures:  # noqa: ARG001
-    """Extract vision features (placeholder - returns zeros)."""
-    return CoreFeatures()
-
-
-def _action_core(params: BrainParams) -> CoreFeatures:
-    """Extract action memory features from most recent action."""
-    action_map = {
-        Action.FORWARD: 1.0,
-        Action.LEFT: 0.5,
-        Action.RIGHT: -0.5,
-        Action.STAY: 0.0,
-        None: 0.0,
-    }
-    action_data = getattr(params, "action", None)
-    action = action_data.action if action_data and hasattr(action_data, "action") else None
-    return CoreFeatures(binary=action_map.get(action, 0.0))
-
-
 # =============================================================================
 # Temporal Sensing Core Feature Extractors (Phase 3)
 # =============================================================================
@@ -495,15 +446,13 @@ class SensoryModule:
         extract: Function that extracts CoreFeatures from BrainParams
         description: Scientific description with C. elegans neuron references
         transform_type: "standard" or "binary" for quantum transform
-        is_placeholder: Whether module is fully implemented
         classical_dim: Number of classical features (2 or 3). When 3, includes binary field.
     """
 
     name: ModuleName
     extract: Callable[[BrainParams], CoreFeatures]
     description: str
-    transform_type: Literal["standard", "binary", "placeholder"] = "standard"
-    is_placeholder: bool = False
+    transform_type: Literal["standard", "binary"] = "standard"
     classical_dim: int = 2
 
     def to_quantum(self, params: BrainParams) -> np.ndarray:
@@ -514,12 +463,8 @@ class SensoryModule:
             np.ndarray of shape (3,) with values depending on transform_type:
             - standard: RX uses offset for full range
             - binary: all values scaled by π/2 (for on/off signals)
-            - placeholder: returns zeros
         """
         core = self.extract(params)
-        if self.transform_type == "placeholder":
-            # Placeholder modules return zeros
-            return np.zeros(3, dtype=np.float32)
         if self.transform_type == "binary":
             # Binary signals: [0, 1] -> [0, π/2]
             return np.array(
@@ -701,42 +646,11 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
         transform_type="standard",
         classical_dim=3,  # Include temp deviation for reactive avoidance
     ),
-    # [PLACEHOLDER] Aerotaxis - oxygen
-    ModuleName.AEROTAXIS: SensoryModule(
-        name=ModuleName.AEROTAXIS,
-        extract=_aerotaxis_core,
-        description=(
-            "Oxygen sensing (URX, BAG neurons). Placeholder: will encode navigation "
-            "toward preferred O2 levels."
-        ),
-        transform_type="placeholder",
-        is_placeholder=True,
-    ),
-    # [PLACEHOLDER] Vision
-    ModuleName.VISION: SensoryModule(
-        name=ModuleName.VISION,
-        extract=_vision_core,
-        description=(
-            "Light sensing (ASJ, AWB neurons). Placeholder: C. elegans has minimal "
-            "light sensing. For future extensions to more complex agents."
-        ),
-        transform_type="placeholder",
-        is_placeholder=True,
-    ),
-    # Action memory
-    ModuleName.ACTION: SensoryModule(
-        name=ModuleName.ACTION,
-        extract=_action_core,
-        description="Memory of most recent action. Encodes as binary (RZ-only).",
-        transform_type="placeholder",
-        is_placeholder=True,
-    ),
 }
 
 # Legacy aliases - point to same modules
 SENSORY_MODULES[ModuleName.APPETITIVE] = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
 SENSORY_MODULES[ModuleName.AVERSIVE] = SENSORY_MODULES[ModuleName.NOCICEPTION]
-SENSORY_MODULES[ModuleName.OXYGEN] = SENSORY_MODULES[ModuleName.AEROTAXIS]
 
 # Temporal sensing modules (Phase 3)
 SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_TEMPORAL] = SensoryModule(
