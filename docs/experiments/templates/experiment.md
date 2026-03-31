@@ -61,5 +61,5 @@ What do the results tell us? Why did we see these outcomes?
 ## Data References
 
 - Session IDs: `20251207_123456`, ...
-- Config files: `configs/examples/...`
+- Config files: `configs/scenarios/...`
 - Result files: `artifacts/experiments/[session_id]/...`

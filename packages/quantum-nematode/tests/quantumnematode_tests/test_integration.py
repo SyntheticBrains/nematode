@@ -16,17 +16,17 @@ class TestPresetConfigurations:
 
     @pytest.fixture
     def config_dir(self):
-        """Get path to config examples directory."""
+        """Get path to configs directory."""
         # Assuming we're in packages/quantum-nematode/tests/
-        return Path(__file__).parents[4] / "configs" / "examples"
+        return Path(__file__).parents[4] / "configs"
 
     @pytest.mark.parametrize(
         ("config_file", "expected_brain", "expected_env_type"),
         [
             # Foraging configs
-            ("qvarcircuit_foraging_small.yml", "qvarcircuit", "dynamic"),
-            ("qvarcircuit_foraging_medium.yml", "qvarcircuit", "dynamic"),
-            ("qvarcircuit_foraging_large.yml", "qvarcircuit", "dynamic"),
+            ("scenarios/foraging/qvarcircuit_small_oracle.yml", "qvarcircuit", "dynamic"),
+            ("scenarios/foraging/qvarcircuit_medium_oracle.yml", "qvarcircuit", "dynamic"),
+            ("scenarios/foraging/qvarcircuit_large_oracle.yml", "qvarcircuit", "dynamic"),
         ],
     )
     def test_config_loads_correctly(
@@ -95,9 +95,9 @@ class TestPresetConfigurations:
         ("config_file", "expected_shots"),
         [
             # Quantum QVarCircuit architectures
-            ("qvarcircuit_foraging_small.yml", 3000),
-            ("qvarcircuit_foraging_medium.yml", 3000),
-            ("qvarcircuit_foraging_large.yml", 3000),
+            ("scenarios/foraging/qvarcircuit_small_oracle.yml", 3000),
+            ("scenarios/foraging/qvarcircuit_medium_oracle.yml", 3000),
+            ("scenarios/foraging/qvarcircuit_large_oracle.yml", 3000),
             # Note: qmlp is Q-learning MLP, not quantum - it doesn't use shots
         ],
     )

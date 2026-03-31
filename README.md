@@ -118,26 +118,26 @@ cp .env.template .env
 
 ```bash
 # Hybrid quantum brain — QSNN reflex + classical cortex (best quantum: 96.9% on pursuit predators)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/hybridquantum_foraging_small.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/hybridquantum_small_oracle.yml --theme emoji
 
 # Classical PPO brain (best classical: actor-critic with GAE)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlpppo_foraging_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/mlpppo_medium_oracle.yml --theme emoji
 
 # Spiking neural network brain (biologically realistic LIF neurons)
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/spikingreinforce_foraging_small.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/spikingreinforce_small_oracle.yml --theme emoji
 
 # Quantum variational circuit brain
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/qvarcircuit_foraging_medium.yml --theme emoji
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/qvarcircuit_medium_oracle.yml --theme emoji
 
 # Quantum hardware (IBM QPU) with dynamic foraging
-uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/examples/qvarcircuit_foraging_small.yml --theme emoji --device qpu
+uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/scenarios/foraging/qvarcircuit_small_oracle.yml --theme emoji --device qpu
 ```
 
 **Docker GPU Examples:**
 
 ```bash
 # Run dynamic foraging with MLP brain and GPU acceleration
-docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/examples/mlpreinforce_foraging_medium.yml --theme emoji
+docker-compose exec quantum-nematode uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/mlpreinforce_medium_oracle.yml --theme emoji
 
 # Interactive Docker shell for development
 docker-compose exec quantum-nematode bash
@@ -297,7 +297,7 @@ Console-based themes (ASCII, Emoji, Rich, etc.) are available for terminal rende
 
 ```bash
 # Headless mode — no rendering overhead, fastest for training
-uv run ./scripts/run_simulation.py --config ./configs/examples/mlpppo_foraging_small.yml --runs 50 --theme headless
+uv run ./scripts/run_simulation.py --config ./configs/scenarios/foraging/mlpppo_small_oracle.yml --runs 50 --theme headless
 ```
 
 Available themes: `pixel` (default), `ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`, `headless`.

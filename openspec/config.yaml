@@ -21,7 +21,7 @@ context: |
     mlpppo, lstmppo, spikingreinforce
   - DynamicForagingEnvironment: multi-food foraging with predators and thermotaxis
   - Executor pattern: CPU, GPU, QPU backends
-  - YAML-driven simulation configs (configs/examples/)
+  - YAML-driven simulation configs (configs/scenarios/)
   - Comprehensive tracking: EpisodeTracker, experiment metadata, CSV/plot exports
 
   ## Domain Context

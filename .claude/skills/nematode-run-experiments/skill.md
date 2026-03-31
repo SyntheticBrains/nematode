@@ -15,7 +15,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
 - **Max 16 concurrent sessions** (4 groups × 4 seeds) — machine handles this without degradation
 - **Max 4 experiment groups** per round — keep comparisons manageable
 - **4 seeds per group** (default: 42, 43, 44, 45) — sufficient for variance estimation
-- **Temporary configs** go in `/tmp/` — permanent configs stay in `configs/examples/`
+- **Temporary configs** go in `/tmp/` — permanent configs stay in `configs/scenarios/`
 
 **Steps**
 
@@ -68,7 +68,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
 
    If an experiment outperforms the current best:
 
-   - Update the permanent config in `configs/examples/` with the winning parameters
+   - Update the permanent config in `configs/scenarios/` with the winning parameters
    - Update performance comments in the config header
 
 **Tips for effective experiments**

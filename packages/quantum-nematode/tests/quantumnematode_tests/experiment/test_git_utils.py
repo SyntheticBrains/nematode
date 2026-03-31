@@ -244,7 +244,7 @@ class TestGetRelativeConfigPath:
 
     def test_get_relative_config_path_nested(self):
         """Test nested config path."""
-        config_path = Path("/Users/test/project/configs/examples/test.yml")
+        config_path = Path("/Users/test/project/configs/scenarios/foraging/test.yml")
 
         with (
             patch("quantumnematode.experiment.git_utils.is_git_repository", return_value=True),
@@ -256,7 +256,7 @@ class TestGetRelativeConfigPath:
                 returncode=0,
             )
             relative = get_relative_config_path(config_path)
-            assert relative == "configs/examples/test.yml"
+            assert relative == "configs/scenarios/foraging/test.yml"
 
     def test_get_relative_config_path_outside_project(self):
         """Test config path outside project (should return absolute)."""
