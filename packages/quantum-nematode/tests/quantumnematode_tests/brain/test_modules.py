@@ -269,7 +269,6 @@ class TestThermotaxisModule:
         RX = 0 * π - π/2 = -π/2 (same as chemotaxis when gradient_strength=None)
         """
         module = SENSORY_MODULES[ModuleName.THERMOTAXIS]
-        assert module.is_placeholder is False
 
         # No temperature fields set (thermotaxis disabled)
         params = BrainParams()
@@ -338,65 +337,6 @@ class TestThermotaxisModule:
         assert features[2] == pytest.approx(-np.pi / 2, abs=0.1)
 
 
-class TestPlaceholderModules:
-    """Test placeholder modules that return zero features."""
-
-    def test_aerotaxis_returns_zeros(self):
-        """Test that aerotaxis returns zeros (placeholder)."""
-        module = SENSORY_MODULES[ModuleName.AEROTAXIS]
-        assert module.is_placeholder is True
-
-        params = BrainParams()
-        features = module.to_quantum(params)
-
-        # Placeholder transform returns all zeros
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
-
-    def test_vision_returns_zeros(self):
-        """Test that vision returns zeros (placeholder)."""
-        module = SENSORY_MODULES[ModuleName.VISION]
-        assert module.is_placeholder is True
-
-        params = BrainParams()
-        features = module.to_quantum(params)
-
-        # Placeholder transform returns all zeros
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
-
-
-class TestActionModule:
-    """Test action memory feature extraction (placeholder)."""
-
-    def test_action_forward(self):
-        """Test action features for FORWARD action - placeholder returns zeros."""
-        module = SENSORY_MODULES[ModuleName.ACTION]
-        assert module.is_placeholder is True
-
-        params = BrainParams()
-        features = module.to_quantum(params)
-
-        # Placeholder transform returns all zeros regardless of input
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
-
-    def test_action_stay(self):
-        """Test action features for STAY action - placeholder returns zeros."""
-        module = SENSORY_MODULES[ModuleName.ACTION]
-        params = BrainParams()
-        features = module.to_quantum(params)
-
-        # Placeholder transform returns all zeros
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
-
-    def test_no_action(self):
-        """Test action features when no action is present."""
-        module = SENSORY_MODULES[ModuleName.ACTION]
-        params = BrainParams()
-        features = module.to_quantum(params)
-
-        # Placeholder transform returns all zeros
-        np.testing.assert_array_equal(features, np.zeros(3, dtype=np.float32))
-
-
 class TestModuleName:
     """Test ModuleName enum."""
 
@@ -405,18 +345,14 @@ class TestModuleName:
         assert ModuleName.PROPRIOCEPTION.value == "proprioception"
         assert ModuleName.CHEMOTAXIS.value == "chemotaxis"
         assert ModuleName.THERMOTAXIS.value == "thermotaxis"
-        assert ModuleName.VISION.value == "vision"
-        assert ModuleName.ACTION.value == "action"
         assert ModuleName.MECHANOSENSATION.value == "mechanosensation"
         assert ModuleName.FOOD_CHEMOTAXIS.value == "food_chemotaxis"
         assert ModuleName.NOCICEPTION.value == "nociception"
-        assert ModuleName.AEROTAXIS.value == "aerotaxis"
 
     def test_legacy_aliases(self):
         """Test legacy module name aliases."""
         assert ModuleName.APPETITIVE.value == "appetitive"
         assert ModuleName.AVERSIVE.value == "aversive"
-        assert ModuleName.OXYGEN.value == "oxygen"
 
     def test_all_modules_in_registry(self):
         """Test that all module names have corresponding entries in SENSORY_MODULES."""
@@ -455,17 +391,6 @@ class TestToQuantumDict:
         # Standard transform: RX = 0*π - π/2 = -π/2, RY = -0.5 * π/2 = -π/4, RZ = 0
         assert features["rx"] == pytest.approx(-np.pi / 2)
         assert features["ry"] == pytest.approx(-np.pi / 4)
-        assert features["rz"] == pytest.approx(0.0)
-
-    def test_extract_placeholder_module(self):
-        """Test extracting features from placeholder module."""
-        params = BrainParams()
-        module = SENSORY_MODULES[ModuleName.VISION]
-        features = module.to_quantum_dict(params)
-
-        # Placeholder modules return zeros
-        assert features["rx"] == pytest.approx(0.0)
-        assert features["ry"] == pytest.approx(0.0)
         assert features["rz"] == pytest.approx(0.0)
 
     def test_to_quantum_dict_deterministic(self):
