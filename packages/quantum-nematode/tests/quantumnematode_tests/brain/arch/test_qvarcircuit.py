@@ -40,7 +40,7 @@ class TestQVarCircuitBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         custom_modules = {
-            ModuleName.CHEMOTAXIS: [0, 1],
+            ModuleName.FOOD_CHEMOTAXIS: [0, 1],
         }
         config = QVarCircuitBrainConfig(
             num_layers=3,
@@ -62,7 +62,7 @@ class TestQVarCircuitBrain:
         return QVarCircuitBrainConfig(
             num_layers=1,
             modules={
-                ModuleName.CHEMOTAXIS: [0, 1],
+                ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             },
         )
 
@@ -103,7 +103,7 @@ class TestQVarCircuitBrain:
     def test_build_brain(self, brain):
         """Test quantum circuit building."""
         input_params = {
-            ModuleName.CHEMOTAXIS.value: {"rx": 0.5, "ry": 0.3, "rz": 0.1},
+            ModuleName.FOOD_CHEMOTAXIS.value: {"rx": 0.5, "ry": 0.3, "rz": 0.1},
         }
 
         qc = brain.build_brain(input_params)
@@ -298,7 +298,7 @@ class TestQVarCircuitBrainIntegration:
         config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={
-                ModuleName.CHEMOTAXIS: [0, 1],
+                ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             },
         )
         brain = QVarCircuitBrain(
@@ -340,7 +340,7 @@ class TestQVarCircuitBrainIntegration:
         """Test learning rate boost mechanism."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             lr_boost=True,
             low_reward_threshold=-0.25,
             low_reward_window=5,
@@ -361,7 +361,7 @@ class TestQVarCircuitBrainIntegration:
         """Test momentum-based parameter updates."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
@@ -379,7 +379,7 @@ class TestQVarCircuitBrainIntegration:
         """Test L2 regularization in parameter updates."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             l2_reg=0.1,  # High regularization
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
@@ -402,7 +402,7 @@ class TestQVarCircuitBrainIntegration:
         """Test QPU backend name retrieval."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0]},
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.QPU)
 
@@ -418,7 +418,7 @@ class TestQVarCircuitBrainIntegration:
         """Test using custom parameter initializer."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
         )
 
         initializer = RandomSmallUniformInitializer()
@@ -445,7 +445,7 @@ class TestTrajectoryLearning:
         return QVarCircuitBrainConfig(
             num_layers=1,
             modules={
-                ModuleName.CHEMOTAXIS: [0, 1],
+                ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             },
             use_trajectory_learning=True,
             gamma=0.99,
@@ -552,7 +552,7 @@ class TestTrajectoryLearning:
         """Test backward compatibility when trajectory learning is disabled."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             use_trajectory_learning=False,  # Disabled
         )
         brain = QVarCircuitBrain(config=config, shots=100, device=DeviceType.CPU)
@@ -713,7 +713,7 @@ class TestQVarCircuitBrainEdgeCases:
         """Test handling of empty measurement counts."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0]},
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
@@ -725,7 +725,7 @@ class TestQVarCircuitBrainEdgeCases:
         """Test handling of invalid measurement counts."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0]},
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
@@ -739,7 +739,7 @@ class TestQVarCircuitBrainEdgeCases:
         """Test handling of zero reward."""
         config = QVarCircuitBrainConfig(
             num_layers=1,
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 

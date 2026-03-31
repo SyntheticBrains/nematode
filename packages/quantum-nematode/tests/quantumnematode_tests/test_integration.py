@@ -149,7 +149,7 @@ class TestDynamicEnvironmentWithBrain:
         config = QVarCircuitBrainConfig(
             num_layers=1,
             modules={
-                ModuleName.CHEMOTAXIS: [0, 1],
+                ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             },
         )
         return QVarCircuitBrain(

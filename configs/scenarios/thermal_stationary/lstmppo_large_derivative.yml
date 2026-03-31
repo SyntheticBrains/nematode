@@ -90,7 +90,6 @@ satiety:
 environment:
   grid_size: 100
   viewport_size: [11, 11]
-  use_separated_gradients: true
 
   sensing:
     chemotaxis_mode: derivative     # Mode B: scalar + dC/dt

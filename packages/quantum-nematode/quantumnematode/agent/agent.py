@@ -158,8 +158,6 @@ class QuantumNematodeAgent:
         rich_style_config: DarkColorRichStyleConfig | None = None,
         satiety_config: SatietyConfig | None = None,
         sensing_config: SensingConfig | None = None,
-        *,
-        use_separated_gradients: bool = False,
     ) -> None:
         """
         Initialize the nematode agent.
@@ -182,16 +180,12 @@ class QuantumNematodeAgent:
             Satiety system configuration.
         sensing_config : SensingConfig | None, optional
             Temporal sensing modes and STAM configuration.
-        use_separated_gradients : bool, optional
-            Whether to use separated food/predator gradients for appetitive/aversive modules.
-            Only valid for dynamic environments. Default is False (unified gradients).
         """
         from quantumnematode.utils.config_loader import SensingConfig
 
         self.brain = brain
         self.satiety_config = satiety_config or SatietyConfig()
         self.sensing_config: SensingConfig = sensing_config or SensingConfig()
-        self.use_separated_gradients = use_separated_gradients
 
         # Initialize STAM buffer when enabled
         self._stam: STAMBuffer | None = None
@@ -496,13 +490,11 @@ class QuantumNematodeAgent:
         """
         sensing = self.sensing_config
 
-        # Get separated gradients for appetitive/aversive modules if configured
-        separated_grads = {}
-        if self.use_separated_gradients:
-            separated_grads = self.env.get_separated_gradients(
-                self.env.agent_pos,
-                disable_log=True,
-            )
+        # Get separated food/predator gradients for sensory modules
+        separated_grads = self.env.get_separated_gradients(
+            self.env.agent_pos,
+            disable_log=True,
+        )
 
         # Mechanosensation: detect physical contact with boundaries and predators
         boundary_contact = self.env.is_agent_at_boundary()

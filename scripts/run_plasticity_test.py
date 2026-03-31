@@ -89,7 +89,6 @@ def build_agent_for_phase(
         max_body_length=body_length,
         theme=Theme.ASCII,
         satiety_config=satiety_config,
-        use_separated_gradients=phase_config.environment.use_separated_gradients,
     )
     reward_config = phase_config.reward
     max_steps = phase_config.max_steps

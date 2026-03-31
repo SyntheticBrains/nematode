@@ -68,18 +68,18 @@ class TestPPOBrainUnifiedMode:
     def test_unified_mode_auto_computes_input_dim(self):
         """Test that input_dim is auto-computed from modules."""
         config = MLPPPOBrainConfig(
-            sensory_modules=[ModuleName.CHEMOTAXIS, ModuleName.NOCICEPTION],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = MLPPPOBrain(config=config)
 
         # 2 modules * 2 features each = 4 (classical extraction: [strength, angle])
         assert brain.input_dim == 4
-        assert brain.sensory_modules == [ModuleName.CHEMOTAXIS, ModuleName.NOCICEPTION]
+        assert brain.sensory_modules == [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION]
 
     def test_unified_mode_single_module(self):
         """Test unified mode with single module."""
         config = MLPPPOBrainConfig(
-            sensory_modules=[ModuleName.CHEMOTAXIS],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         )
         brain = MLPPPOBrain(config=config)
 
@@ -89,7 +89,7 @@ class TestPPOBrainUnifiedMode:
     def test_unified_mode_overrides_explicit_input_dim(self):
         """Test that sensory_modules overrides explicit input_dim."""
         config = MLPPPOBrainConfig(
-            sensory_modules=[ModuleName.CHEMOTAXIS],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         )
         # Explicitly pass wrong input_dim - should be overridden
         brain = MLPPPOBrain(config=config, input_dim=10)
@@ -99,7 +99,7 @@ class TestPPOBrainUnifiedMode:
     def test_unified_preprocess_output_shape(self):
         """Test that unified preprocessing returns correct shape."""
         config = MLPPPOBrainConfig(
-            sensory_modules=[ModuleName.CHEMOTAXIS, ModuleName.PROPRIOCEPTION],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.PROPRIOCEPTION],
         )
         brain = MLPPPOBrain(config=config)
 
@@ -168,7 +168,7 @@ class TestPPOBrainRunWithUnifiedFeatures:
     def test_run_brain_with_unified_features(self):
         """Test that run_brain works with unified feature extraction."""
         config = MLPPPOBrainConfig(
-            sensory_modules=[ModuleName.CHEMOTAXIS, ModuleName.NOCICEPTION],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = MLPPPOBrain(config=config, num_actions=4)
 
@@ -263,10 +263,10 @@ class TestPPOBrainWithScientificModuleNames:
         """Test with multiple sensory modules for multi-objective scenarios."""
         config = MLPPPOBrainConfig(
             sensory_modules=[
-                ModuleName.CHEMOTAXIS,
                 ModuleName.FOOD_CHEMOTAXIS,
                 ModuleName.NOCICEPTION,
                 ModuleName.MECHANOSENSATION,
+                ModuleName.PROPRIOCEPTION,
             ],
         )
         brain = MLPPPOBrain(config=config)
