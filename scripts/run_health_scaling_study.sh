@@ -21,7 +21,7 @@ RUNS_PER_SESSION=50
 SESSIONS_PER_CONDITION=10
 PARALLEL_JOBS=4
 STUDY_NAME="health_scaling_study"
-CONFIG_DIR="configs/studies/health_scaling"
+CONFIG_DIR="artifacts/logbooks/005/health_scaling"
 LOG_DIR="logs/${STUDY_NAME}"
 SUMMARY_FILE="${LOG_DIR}/summary.csv"
 

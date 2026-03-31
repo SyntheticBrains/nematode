@@ -9,7 +9,6 @@ configs/
   scenarios/          Experiment configs organized by scenario
   evolution/          Evolutionary optimization configs
   special/            One-off experimental configs
-  studies/            Parameterized study configs (health_scaling, plasticity)
 ```
 
 ## Scenarios

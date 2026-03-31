@@ -12,7 +12,7 @@ Single architecture per invocation. Cross-architecture comparison via
 scripts/compare_plasticity_results.py.
 
 Usage:
-    uv run python scripts/run_plasticity_test.py --config configs/studies/plasticity/qrh_plasticity.yml
+    uv run python scripts/run_plasticity_test.py --config artifacts/logbooks/008/plasticity/qrh_plasticity.yml
 """
 
 from __future__ import annotations
