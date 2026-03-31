@@ -38,10 +38,10 @@ class TestSensoryModule:
 
     def test_to_quantum_standard_transform(self):
         """Test to_quantum with standard transform type."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
             agent_direction=Direction.RIGHT,
         )
         features = module.to_quantum(params)
@@ -67,10 +67,10 @@ class TestSensoryModule:
 
     def test_to_classical(self):
         """Test to_classical returns semantic-preserving features."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=np.pi / 2,
+            food_gradient_strength=0.8,
+            food_gradient_direction=np.pi / 2,
             agent_direction=Direction.UP,
         )
         features = module.to_classical(params)
@@ -187,14 +187,14 @@ class TestProprioceptionModule:
 
 
 class TestChemotaxisModule:
-    """Test chemotaxis feature extraction."""
+    """Test food chemotaxis feature extraction."""
 
     def test_zero_gradient(self):
-        """Test chemotaxis features with zero gradient strength."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        """Test food chemotaxis features with zero gradient strength."""
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=0.0,
-            gradient_direction=0.0,
+            food_gradient_strength=0.0,
+            food_gradient_direction=0.0,
             agent_direction=Direction.UP,
         )
         features = module.to_quantum(params)
@@ -204,11 +204,11 @@ class TestChemotaxisModule:
         assert features[2] == pytest.approx(0.0)
 
     def test_max_gradient(self):
-        """Test chemotaxis features with maximum gradient strength."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        """Test food chemotaxis features with maximum gradient strength."""
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=1.0,
-            gradient_direction=0.0,
+            food_gradient_strength=1.0,
+            food_gradient_direction=0.0,
             agent_direction=Direction.UP,
         )
         features = module.to_quantum(params)
@@ -217,11 +217,11 @@ class TestChemotaxisModule:
         assert features[0] == pytest.approx(np.pi / 2)
 
     def test_gradient_direction_aligned(self):
-        """Test when gradient direction aligns with agent direction."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        """Test when food gradient direction aligns with agent direction."""
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
             agent_direction=Direction.RIGHT,
         )
         features = module.to_quantum(params)
@@ -230,11 +230,11 @@ class TestChemotaxisModule:
         assert features[1] == pytest.approx(0.0, abs=1e-6)
 
     def test_gradient_direction_opposite(self):
-        """Test when gradient direction is opposite to agent direction."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        """Test when food gradient direction is opposite to agent direction."""
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=np.pi,
+            food_gradient_strength=0.5,
+            food_gradient_direction=np.pi,
             agent_direction=Direction.RIGHT,
         )
         features = module.to_quantum(params)
@@ -243,18 +243,18 @@ class TestChemotaxisModule:
         assert abs(features[1]) == pytest.approx(np.pi / 2, rel=0.01)
 
     def test_none_gradient_values(self):
-        """Test chemotaxis features when gradient values are None."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        """Test food chemotaxis features when gradient values are None."""
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=None,
-            gradient_direction=None,
+            food_gradient_strength=None,
+            food_gradient_direction=None,
             agent_direction=Direction.UP,
         )
         features = module.to_quantum(params)
 
-        # gradient_strength=None defaults to 0.0, scaled to -π/2
+        # food_gradient_strength=None defaults to 0.0, scaled to -π/2
         assert features[0] == pytest.approx(-np.pi / 2)
-        # gradient_direction=None means no direction info, so angle is neutral (0)
+        # food_gradient_direction=None means no direction info, so angle is neutral (0)
         assert features[1] == pytest.approx(0.0)
 
 
@@ -343,7 +343,6 @@ class TestModuleName:
     def test_module_names(self):
         """Test that all module names have correct values."""
         assert ModuleName.PROPRIOCEPTION.value == "proprioception"
-        assert ModuleName.CHEMOTAXIS.value == "chemotaxis"
         assert ModuleName.THERMOTAXIS.value == "thermotaxis"
         assert ModuleName.MECHANOSENSATION.value == "mechanosensation"
         assert ModuleName.FOOD_CHEMOTAXIS.value == "food_chemotaxis"
@@ -361,13 +360,13 @@ class TestToQuantumDict:
     """Test the to_quantum_dict method on SensoryModule."""
 
     def test_extract_chemotaxis(self):
-        """Test extracting chemotaxis features as dict."""
+        """Test extracting food chemotaxis features as dict."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
             agent_direction=Direction.UP,
         )
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         features = module.to_quantum_dict(params)
 
         # Should return dict with string keys
@@ -391,11 +390,11 @@ class TestToQuantumDict:
     def test_to_quantum_dict_deterministic(self):
         """Test that to_quantum_dict is deterministic."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
             agent_direction=Direction.RIGHT,
         )
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         features1 = module.to_quantum_dict(params)
         features2 = module.to_quantum_dict(params)
 
@@ -407,18 +406,18 @@ class TestCountTotalQubits:
 
     def test_single_module_single_qubit(self):
         """Test counting qubits with one module using one qubit."""
-        modules = {ModuleName.CHEMOTAXIS: [0]}
+        modules = {ModuleName.FOOD_CHEMOTAXIS: [0]}
         assert count_total_qubits(modules) == 1
 
     def test_single_module_multiple_qubits(self):
         """Test counting qubits with one module using multiple qubits."""
-        modules = {ModuleName.CHEMOTAXIS: [0, 1]}
+        modules = {ModuleName.FOOD_CHEMOTAXIS: [0, 1]}
         assert count_total_qubits(modules) == 2
 
     def test_multiple_modules_no_overlap(self):
         """Test counting qubits with multiple modules, no qubit overlap."""
         modules = {
-            ModuleName.CHEMOTAXIS: [0, 1],
+            ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             ModuleName.PROPRIOCEPTION: [2, 3],
         }
         assert count_total_qubits(modules) == 4
@@ -426,7 +425,7 @@ class TestCountTotalQubits:
     def test_multiple_modules_with_overlap(self):
         """Test counting qubits with overlapping qubit assignments."""
         modules = {
-            ModuleName.CHEMOTAXIS: [0, 1],
+            ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             ModuleName.PROPRIOCEPTION: [1, 2],  # Qubit 1 is shared
         }
         assert count_total_qubits(modules) == 3
@@ -584,12 +583,12 @@ class TestFeatureValueRanges:
 
     def test_chemotaxis_features_bounded(self):
         """Test that chemotaxis features stay within [-π/2, π/2]."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         for strength in [0.0, 0.25, 0.5, 0.75, 1.0]:
             for grad_dir in np.linspace(-np.pi, np.pi, 5):
                 params = BrainParams(
-                    gradient_strength=strength,
-                    gradient_direction=float(grad_dir),
+                    food_gradient_strength=strength,
+                    food_gradient_direction=float(grad_dir),
                     agent_direction=Direction.UP,
                 )
                 features = module.to_quantum(params)
@@ -603,10 +602,10 @@ class TestFeatureConsistency:
 
     def test_chemotaxis_deterministic(self):
         """Test that chemotaxis features are deterministic."""
-        module = SENSORY_MODULES[ModuleName.CHEMOTAXIS]
+        module = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
         params = BrainParams(
-            gradient_strength=0.7,
-            gradient_direction=np.pi / 4,
+            food_gradient_strength=0.7,
+            food_gradient_direction=np.pi / 4,
             agent_direction=Direction.UP,
         )
         features1 = module.to_quantum(params)
@@ -634,7 +633,6 @@ class TestClassicalDim:
     def test_default_classical_dim_is_two(self):
         """Test that most modules have classical_dim=2 by default."""
         # Standard modules should have classical_dim=2
-        assert SENSORY_MODULES[ModuleName.CHEMOTAXIS].classical_dim == 2
         assert SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS].classical_dim == 2
         assert SENSORY_MODULES[ModuleName.NOCICEPTION].classical_dim == 2
         assert SENSORY_MODULES[ModuleName.PROPRIOCEPTION].classical_dim == 2

@@ -7,7 +7,7 @@ brain:
   name: qvarcircuit
   config:
     modules:
-      chemotaxis: [0, 1]
+      food_chemotaxis: [0, 1]
     num_layers: 2
     min_gradient_magnitude: 1e-4
     l2_reg: 0.0005

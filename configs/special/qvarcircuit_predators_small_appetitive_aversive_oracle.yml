@@ -60,7 +60,6 @@ satiety:
 environment:
   grid_size: 20
   viewport_size: [11, 11]
-  use_separated_gradients: true
 
   foraging:
     foods_on_grid: 5

@@ -252,8 +252,6 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
     initial_satiety: float = 200.0,
     satiety_decay_rate: float = 1.0,
     satiety_gain_per_food: float = 0.2,
-    *,
-    use_separated_gradients: bool = False,
 ) -> bool:
     """Run a single episode and return whether it was successful.
 
@@ -264,7 +262,6 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
         initial_satiety: Starting satiety level.
         satiety_decay_rate: Satiety decay per step.
         satiety_gain_per_food: Fraction of initial_satiety restored per food.
-        use_separated_gradients: Whether to compute separated food/predator gradients.
 
     Returns
     -------
@@ -281,18 +278,12 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
             position = (env.agent_pos[0], env.agent_pos[1])
             gradient_strength, gradient_direction = env.get_state(position, disable_log=True)
 
-            # Only compute separated gradients if needed (avoids duplicate gradient computation)
-            if use_separated_gradients:
-                separated_grads = env.get_separated_gradients(position, disable_log=True)
-                food_gradient_strength = separated_grads.get("food_gradient_strength")
-                food_gradient_direction = separated_grads.get("food_gradient_direction")
-                predator_gradient_strength = separated_grads.get("predator_gradient_strength")
-                predator_gradient_direction = separated_grads.get("predator_gradient_direction")
-            else:
-                food_gradient_strength = None
-                food_gradient_direction = None
-                predator_gradient_strength = None
-                predator_gradient_direction = None
+            # Get separated food/predator gradients
+            separated_grads = env.get_separated_gradients(position, disable_log=True)
+            food_gradient_strength = separated_grads.get("food_gradient_strength")
+            food_gradient_direction = separated_grads.get("food_gradient_direction")
+            predator_gradient_strength = separated_grads.get("predator_gradient_strength")
+            predator_gradient_direction = separated_grads.get("predator_gradient_direction")
 
             # Get thermotaxis state if enabled
             temperature = None
@@ -435,11 +426,6 @@ def evaluate_fitness(  # noqa: PLR0913
     # Get max_steps from config
     max_steps = config.max_steps or 500
 
-    # Check if separated gradients are needed (for appetitive/aversive modules)
-    use_separated_gradients = False
-    if config.environment:
-        use_separated_gradients = config.environment.use_separated_gradients
-
     successes = 0
 
     for ep in range(episodes):
@@ -462,7 +448,6 @@ def evaluate_fitness(  # noqa: PLR0913
             initial_satiety=satiety_config.initial_satiety,
             satiety_decay_rate=satiety_config.satiety_decay_rate,
             satiety_gain_per_food=satiety_config.satiety_gain_per_food,
-            use_separated_gradients=use_separated_gradients,
         ):
             successes += 1
 

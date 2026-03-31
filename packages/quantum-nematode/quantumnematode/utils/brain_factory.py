@@ -236,11 +236,9 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
             logger.error(error_message)
             raise ValueError(error_message)
 
-        input_dim = 4 if brain_config.use_separated_gradients else 2
-
         brain = SpikingReinforceBrain(
             config=brain_config,
-            input_dim=input_dim,
+            input_dim=4,
             num_actions=4,
             device=device,
         )

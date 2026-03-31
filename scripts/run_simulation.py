@@ -474,16 +474,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         f"{predator_info}{health_info}{thermotaxis_info}",
     )
 
-    # Separated gradients can be enabled via environment config OR brain config (for spiking)
-    use_separated_gradients = environment_config.use_separated_gradients
-
-    # For spiking brain, also check brain config for use_separated_gradients
-    if (
-        isinstance(brain_config, SpikingReinforceBrainConfig)
-        and brain_config.use_separated_gradients
-    ):
-        use_separated_gradients = True
-
     agent = QuantumNematodeAgent(
         brain=brain,
         env=env,
@@ -491,7 +481,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         theme=theme,
         satiety_config=satiety_config,
         sensing_config=sensing_config,
-        use_separated_gradients=use_separated_gradients,
     )
 
     # Set the plot and data directories

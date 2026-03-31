@@ -105,7 +105,7 @@ class TestQuantumNematodeAgentInitialization:
     def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
         config = QVarCircuitBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
         return QVarCircuitBrain(config=config, shots=50)
@@ -162,7 +162,7 @@ class TestQuantumNematodeAgentGoalDistance:
     def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
         config = QVarCircuitBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
         return QVarCircuitBrain(config=config, shots=50)
@@ -175,7 +175,7 @@ class TestQuantumNematodeAgentReset:
     def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
         config = QVarCircuitBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
         return QVarCircuitBrain(config=config, shots=50)
@@ -246,7 +246,7 @@ class TestQuantumNematodeAgentMetrics:
     def qvarcircuit_brain(self):
         """Create a simple modular brain for testing."""
         config = QVarCircuitBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
         return QVarCircuitBrain(config=config, shots=50)
@@ -344,7 +344,6 @@ class TestTemporalSensingIntegration:
             brain=brain,
             env=env,
             sensing_config=sensing_config,
-            use_separated_gradients=True,
         )
 
     def test_temporal_mode_populates_food_concentration(self) -> None:

@@ -4,7 +4,6 @@
 # Key differences from ppo_stationary_predators_small.yml:
 # - Uses sensory_modules for unified feature extraction
 # - Each module contributes 2 features [strength, angle] in semantic ranges
-# - Requires use_separated_gradients: true for food/predator gradient data
 #
 # Sensory modules (C. elegans neuron references):
 # - food_chemotaxis: Food-specific attraction (AWC, AWA neurons)
@@ -65,7 +64,6 @@ satiety:
 environment:
   grid_size: 20
   viewport_size: [11, 11]
-  use_separated_gradients: true
 
   foraging:
     foods_on_grid: 6
