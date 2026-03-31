@@ -34,7 +34,6 @@ from quantumnematode.brain.arch import (
     QVarCircuitBrainConfig,
     SpikingReinforceBrainConfig,
 )
-from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
 from quantumnematode.brain.modules import Modules
 from quantumnematode.dtypes import TemperatureSpot
 from quantumnematode.env.env import (
@@ -656,10 +655,6 @@ class EnvironmentConfig(BaseModel):
         return self.sensing or SensingConfig()
 
 
-# Backward compatibility alias
-DynamicEnvironmentConfig = EnvironmentConfig
-
-
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -772,8 +767,7 @@ def configure_brain(
         logger.error(error_message)
         raise ValueError(error_message)
 
-    # Resolve deprecated names to canonical names
-    brain_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
+    brain_name = config.brain.name
 
     if brain_name not in BRAIN_CONFIG_MAP:
         error_message = f"Unknown brain type: {config.brain.name}."

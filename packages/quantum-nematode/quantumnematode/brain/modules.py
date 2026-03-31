@@ -2,7 +2,7 @@
 Sensory feature extraction modules for brain architectures.
 
 This module provides a unified interface for extracting sensory features from
-BrainParams, supporting both quantum (ModularBrain) and classical (PPOBrain)
+BrainParams, supporting both quantum (QVarCircuitBrain) and classical (MLPPPOBrain)
 brain architectures through a single SensoryModule abstraction.
 
 Architecture:
@@ -479,7 +479,7 @@ class SensoryModule:
     def to_quantum_dict(self, params: BrainParams) -> dict[str, float]:
         """Extract and transform to quantum gate angles as a dict.
 
-        This is a convenience method for ModularBrain and QModularBrain that
+        This is a convenience method for QVarCircuitBrain and QQLearningBrain that
         returns features in the dict format expected by circuit building code.
 
         Returns
@@ -674,7 +674,7 @@ SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(
 
 
 # =============================================================================
-# Classical Feature Extraction (for PPOBrain and other classical networks)
+# Classical Feature Extraction (for MLPPPOBrain and other classical networks)
 # =============================================================================
 
 

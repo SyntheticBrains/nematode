@@ -68,7 +68,7 @@ from torch import nn
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
-from quantumnematode.brain.arch._qlif_layers import get_qiskit_backend
+from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
 from quantumnematode.brain.arch.dtypes import BrainConfig, DeviceType
 from quantumnematode.brain.arch.qliflstm import QLIFLSTMCell, QLIFLSTMCritic, QLIFLSTMRolloutBuffer
 from quantumnematode.brain.modules import ModuleName  # noqa: TC001

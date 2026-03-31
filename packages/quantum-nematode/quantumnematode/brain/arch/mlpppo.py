@@ -133,14 +133,6 @@ class MLPPPOBrainConfig(BrainConfig):
     lr_decay_episodes: int | None = None  # None = no decay after warmup
     lr_decay_end: float | None = None  # None = 0.1 * learning_rate
 
-    # LSTM temporal memory (optional)
-    # When enabled, an LSTM layer processes features before the actor/critic heads.
-    # This gives the brain temporal memory within an episode — it can learn sequential
-    # patterns like "I moved right and concentration increased, so food is to my right."
-    # The LSTM hidden state is reset at episode boundaries.
-    use_lstm: bool = False
-    lstm_hidden_dim: int = 64  # LSTM hidden dimension
-
     # Feature expansion for ablation experiments
     # - "none": raw sensory features only (default)
     # - "polynomial": raw + all pairwise products (x_i * x_j for i < j)
@@ -231,25 +223,19 @@ class MLPPPOBrain(ClassicalBrain):
         # Store LR scheduling config
         self._init_lr_schedule(config)
 
-        # Build LSTM layer (optional temporal memory)
-        self.use_lstm = config.use_lstm
-        self.lstm: nn.LSTM | None = None
-        self._lstm_hidden: tuple[torch.Tensor, torch.Tensor] | None = None
-        network_input_dim = self._init_lstm(config)
-
         # Build networks
         self.actor = self._build_network(
             config.actor_hidden_dim,
             config.num_hidden_layers,
             output_dim=num_actions,
-            input_dim_override=network_input_dim,
+            input_dim_override=self.input_dim,
         ).to(self.device)
 
         self.critic = self._build_network(
             config.critic_hidden_dim,
             config.num_hidden_layers,
             output_dim=1,
-            input_dim_override=network_input_dim,
+            input_dim_override=self.input_dim,
         ).to(self.device)
 
         # Initialize parameters
@@ -268,8 +254,6 @@ class MLPPPOBrain(ClassicalBrain):
 
         # Single optimizer for all trainable components
         params = list(self.actor.parameters()) + list(self.critic.parameters())
-        if self.lstm is not None:
-            params += list(self.lstm.parameters())
         if self._feature_gating:
             params.append(self.gate_weights)
         self.optimizer = optim.Adam(params, lr=config.learning_rate)
@@ -342,30 +326,6 @@ class MLPPPOBrain(ClassicalBrain):
                 )
             logger.info(f"LR scheduling enabled: {', then '.join(schedule_desc)}")
 
-    def _init_lstm(self, config: MLPPPOBrainConfig) -> int:
-        """Initialize LSTM layer if enabled.
-
-        Returns
-        -------
-        int
-            Input dimension for actor/critic networks (LSTM hidden dim or raw input dim).
-        """
-        if not config.use_lstm:
-            return self.input_dim
-
-        self.lstm_hidden_dim = config.lstm_hidden_dim
-        self.lstm = nn.LSTM(
-            input_size=self.input_dim,
-            hidden_size=config.lstm_hidden_dim,
-            num_layers=1,
-            batch_first=True,
-        ).to(self.device)
-        logger.info(
-            f"LSTM enabled: input_dim={self.input_dim} -> "
-            f"lstm_hidden={config.lstm_hidden_dim} -> actor/critic",
-        )
-        return config.lstm_hidden_dim
-
     def _build_network(
         self,
         hidden_dim: int,
@@ -399,9 +359,6 @@ class MLPPPOBrain(ClassicalBrain):
             param_count += param.numel()
         for param in self.critic.parameters():
             param_count += param.numel()
-        if self.lstm is not None:
-            for param in self.lstm.parameters():
-                param_count += param.numel()
 
         logger.info(f"MLPPPOBrain initialized with {param_count:,} total parameters")
         if parameter_initializer is not None:
@@ -418,7 +375,7 @@ class MLPPPOBrain(ClassicalBrain):
            - angle: [-1, 1] where 0 = aligned with agent heading
 
         2. **Legacy mode** (default):
-           Matches original MLPBrain preprocessing:
+           Matches original MLPReinforceBrain preprocessing:
            - Gradient strength (float, [0, 1])
            - Normalized relative angle to goal ([-1, 1])
         """
@@ -522,82 +479,18 @@ class MLPPPOBrain(ClassicalBrain):
         expanded = x[..., self._raw_input_dim :]
         return torch.cat([raw, expanded * gate], dim=-1)
 
-    def _process_lstm(self, x: torch.Tensor) -> torch.Tensor:
-        """Process features through LSTM, updating hidden state.
-
-        Parameters
-        ----------
-        x : torch.Tensor
-            Feature tensor. Shape (input_dim,) for single step or
-            (batch, input_dim) for batch processing.
-
-        Returns
-        -------
-        torch.Tensor
-            LSTM output of shape (lstm_hidden_dim,) or (batch, lstm_hidden_dim).
-        """
-        if self.lstm is None:
-            return x
-
-        # Single step: add batch and sequence dimensions
-        if x.dim() == 1:
-            x_seq = x.unsqueeze(0).unsqueeze(0)  # (1, 1, input_dim)
-            lstm_out, self._lstm_hidden = self.lstm(x_seq, self._lstm_hidden)
-            return lstm_out.squeeze(0).squeeze(0)  # (lstm_hidden_dim,)
-
-        # Batch: add sequence dimension (treat each as independent step)
-        # For PPO minibatch updates, we process independently (no BPTT across batch)
-        x_seq = x.unsqueeze(1)  # (batch, 1, input_dim)
-        lstm_out, _ = self.lstm(x_seq)  # Don't update hidden state for batch
-        return lstm_out.squeeze(1)  # (batch, lstm_hidden_dim)
-
-    def _reset_lstm_hidden(self) -> None:
-        """Reset LSTM hidden state (at episode boundaries)."""
-        self._lstm_hidden = None
-
-    def _prepare_features(self, x: torch.Tensor, *, update_hidden: bool = True) -> torch.Tensor:
-        """Apply gating and LSTM to raw features.
-
-        Parameters
-        ----------
-        x : torch.Tensor
-            Raw feature tensor.
-        update_hidden : bool
-            Whether to update LSTM hidden state (True during rollout, False in batch).
-
-        Returns
-        -------
-        torch.Tensor
-            Processed features ready for actor/critic heads.
-        """
-        x = self._apply_torch_gating(x)
-        if self.lstm is not None:
-            if update_hidden:
-                return self._process_lstm(x)
-            # Batch mode: no hidden state update
-            if x.dim() == 1:
-                x_seq = x.unsqueeze(0).unsqueeze(0)
-                lstm_out, _ = self.lstm(x_seq)
-                return lstm_out.squeeze(0).squeeze(0)
-            x_seq = x.unsqueeze(1)
-            lstm_out, _ = self.lstm(x_seq)
-            return lstm_out.squeeze(1)
-        return x
-
     def forward_actor(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through actor network (no LSTM processing — use run_brain)."""
+        """Forward pass through actor network."""
         return self.actor(self._apply_torch_gating(x))
 
     def forward_critic(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through critic network (no LSTM processing — use run_brain)."""
+        """Forward pass through critic network."""
         return self.critic(self._apply_torch_gating(x))
 
     def get_action_and_value(
         self,
         state: np.ndarray,
         action: int | None = None,
-        *,
-        update_lstm_hidden: bool = True,
     ) -> tuple[int, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Get action, log probability, entropy, and value for a state.
@@ -605,7 +498,6 @@ class MLPPPOBrain(ClassicalBrain):
         Args:
             state: Preprocessed state features
             action: If provided, compute log_prob for this action
-            update_lstm_hidden: Whether to update LSTM hidden state (rollout vs batch)
 
         Returns
         -------
@@ -613,8 +505,7 @@ class MLPPPOBrain(ClassicalBrain):
         """
         x = torch.tensor(state, dtype=torch.float32, device=self.device)
 
-        # Process through LSTM once, then pass to both actor and critic
-        features = self._prepare_features(x, update_hidden=update_lstm_hidden)
+        features = self._apply_torch_gating(x)
 
         # Get action logits and value
         logits = self.actor(features)
@@ -648,17 +539,16 @@ class MLPPPOBrain(ClassicalBrain):
 
         x = self.preprocess(params)
 
-        # Get action and value (LSTM hidden state updated here)
+        # Get action and value
         action_idx, log_prob, _entropy, value = self.get_action_and_value(x)
         action_name = self.action_set[action_idx]
 
         # Store value for next step's buffer update
         self.last_value = value
 
-        # Get probabilities for tracking (use features already processed by LSTM)
-        features = self._prepare_features(
+        # Get probabilities for tracking
+        features = self._apply_torch_gating(
             torch.tensor(x, dtype=torch.float32, device=self.device),
-            update_hidden=False,  # Don't update hidden state again
         )
         logits = self.actor(features)
         probs = torch.softmax(logits, dim=-1)
@@ -731,17 +621,14 @@ class MLPPPOBrain(ClassicalBrain):
             self.gae_lambda,
         )
 
-        if self.use_lstm:
-            self._perform_recurrent_ppo_update(returns, advantages)
-        else:
-            self._perform_standard_ppo_update(returns, advantages)
+        self._perform_standard_ppo_update(returns, advantages)
 
     def _perform_standard_ppo_update(
         self,
         returns: torch.Tensor,
         advantages: torch.Tensor,
     ) -> None:
-        """Perform PPO update with shuffled minibatches (for MLP, no LSTM)."""
+        """Perform PPO update with shuffled minibatches."""
         total_policy_loss = 0.0
         total_value_loss = 0.0
         total_entropy_loss = 0.0
@@ -790,109 +677,11 @@ class MLPPPOBrain(ClassicalBrain):
                 f"entropy={total_entropy_loss / num_updates:.4f}",
             )
 
-    def _perform_recurrent_ppo_update(
-        self,
-        returns: torch.Tensor,
-        advantages: torch.Tensor,
-    ) -> None:
-        """Recurrent PPO update: process rollout sequentially through LSTM.
-
-        Unlike standard PPO which shuffles minibatches, recurrent PPO processes
-        the rollout in sequential order to maintain LSTM hidden state continuity.
-        The LSTM hidden state is reset at episode boundaries (done=True).
-        """
-        # Prepare full sequential data
-        states = torch.tensor(
-            np.array(self.buffer.states),
-            dtype=torch.float32,
-            device=self.device,
-        )
-        actions = torch.tensor(self.buffer.actions, dtype=torch.long, device=self.device)
-        old_log_probs = torch.stack(self.buffer.log_probs)
-        dones = self.buffer.dones
-
-        # Normalize advantages
-        if len(advantages) > 1:
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        total_policy_loss = 0.0
-        total_value_loss = 0.0
-        total_entropy_loss = 0.0
-        num_updates = 0
-
-        lstm = self.lstm
-        if lstm is None:  # pragma: no cover — called only when use_lstm=True
-            return
-
-        for _ in range(self.num_epochs):
-            # Process entire sequence through LSTM with hidden state management
-            lstm_hidden: tuple[torch.Tensor, torch.Tensor] | None = None
-            all_features = []
-
-            for t in range(len(states)):
-                x = self._apply_torch_gating(states[t])
-                x_seq = x.unsqueeze(0).unsqueeze(0)  # (1, 1, input_dim)
-                lstm_out, lstm_hidden = lstm(x_seq, lstm_hidden)
-                all_features.append(lstm_out.squeeze(0).squeeze(0))
-
-                # Reset hidden state at episode boundaries
-                if dones[t]:
-                    lstm_hidden = None
-
-            features = torch.stack(all_features)  # (seq_len, lstm_hidden_dim)
-
-            # Compute actor/critic outputs on LSTM features
-            logits = self.actor(features)
-            values = self.critic(features).squeeze(-1)
-
-            probs = torch.softmax(logits, dim=-1)
-            dist = torch.distributions.Categorical(probs)
-
-            new_log_probs = dist.log_prob(actions)
-            entropy = dist.entropy().mean()
-
-            # PPO clipped objective
-            ratio = torch.exp(new_log_probs - old_log_probs)
-            surr1 = ratio * advantages
-            surr2 = torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon) * advantages
-            policy_loss = -torch.min(surr1, surr2).mean()
-            value_loss = nn.functional.mse_loss(values, returns)
-            loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
-
-            # Optimize
-            self.optimizer.zero_grad()
-            loss.backward()
-            all_params = (
-                list(self.actor.parameters())
-                + list(self.critic.parameters())
-                + list(lstm.parameters())
-            )
-            if self._feature_gating:
-                all_params.append(self.gate_weights)
-            nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
-            self.optimizer.step()
-
-            total_policy_loss += policy_loss.item()
-            total_value_loss += value_loss.item()
-            total_entropy_loss += entropy.item()
-            num_updates += 1
-
-        if num_updates > 0:
-            self.latest_data.loss = total_policy_loss / num_updates
-            logger.debug(
-                f"Recurrent PPO update: policy_loss={total_policy_loss / num_updates:.4f}, "
-                f"value_loss={total_value_loss / num_updates:.4f}, "
-                f"entropy={total_entropy_loss / num_updates:.4f}",
-            )
-
     def update_memory(self, reward: float | None = None) -> None:
         """No-op for MLPPPOBrain."""
 
     def prepare_episode(self) -> None:
         """Prepare for a new episode."""
-        # Reset LSTM hidden state at episode boundaries
-        if self.use_lstm:
-            self._reset_lstm_hidden()
 
     def post_process_episode(
         self,
@@ -951,10 +740,10 @@ class MLPPPOBrain(ClassicalBrain):
             ),
         }
 
-        if self.lstm is not None:
-            all_components["lstm"] = WeightComponent(
-                name="lstm",
-                state=self.lstm.state_dict(),
+        if self._feature_gating:
+            all_components["gate_weights"] = WeightComponent(
+                name="gate_weights",
+                state={"gate_weights": self.gate_weights.data.clone()},
             )
 
         if components is None:
@@ -981,9 +770,9 @@ class MLPPPOBrain(ClassicalBrain):
         if "value" in components:
             self.critic.load_state_dict(components["value"].state)
 
-        # LSTM state
-        if "lstm" in components and self.lstm is not None:
-            self.lstm.load_state_dict(components["lstm"].state)
+        # Gate weights
+        if "gate_weights" in components and self._feature_gating:
+            self.gate_weights.data.copy_(components["gate_weights"].state["gate_weights"])
 
         # Optimizer state only after networks succeed
         if "optimizer" in components:
@@ -1032,8 +821,3 @@ class MLPPPOBrain(ClassicalBrain):
         **kwargs: object,
     ) -> None:
         """Not used - PPO uses its own optimizer."""
-
-
-# Deprecated aliases (backward compatibility)
-PPOBrain = MLPPPOBrain
-PPOBrainConfig = MLPPPOBrainConfig

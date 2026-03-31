@@ -9,7 +9,6 @@ import json
 import re
 from pathlib import Path
 
-from quantumnematode.brain.arch.dtypes import BRAIN_NAME_ALIASES
 from quantumnematode.experiment.metadata import StatValue
 from quantumnematode.experiment.submission import NematodeBenchSubmission
 from quantumnematode.logging_config import logger
@@ -65,11 +64,7 @@ def list_benchmarks(category: str | None = None) -> list[NematodeBenchSubmission
     if not BENCHMARKS_DIR.exists():
         return submissions
 
-    # Skip files in the dedicated legacy folder
     for json_file in BENCHMARKS_DIR.rglob("*.json"):
-        if any(part == "legacy" for part in json_file.relative_to(BENCHMARKS_DIR).parts):
-            continue
-
         submission = load_submission(json_file)
         if submission is None:
             continue
@@ -147,7 +142,7 @@ def format_benchmark_row(submission: NematodeBenchSubmission) -> dict[str, str]:
     date = submission.timestamp.strftime("%Y-%m-%d")
 
     row = {
-        "brain": BRAIN_NAME_ALIASES.get(submission.brain_type, submission.brain_type),
+        "brain": submission.brain_type,
         "score": format_stat_value(submission.metrics.composite_score, ".3f"),
         "success_rate": format_stat_value(submission.metrics.success_rate, ".1f", is_percent=True),
         "learning_speed": format_stat_value(submission.metrics.learning_speed, ".2f"),

@@ -53,13 +53,6 @@ class TestGetQiskitBackend:
         # Results should differ (extremely unlikely to match with different seeds)
         assert result1 != result2
 
-    def test_backward_compatibility_import_from_qlif_layers(self):
-        """get_qiskit_backend should still be importable from _qlif_layers."""
-        from quantumnematode.brain.arch._qlif_layers import get_qiskit_backend as qlif_backend
-
-        # Should be the same function
-        assert qlif_backend is get_qiskit_backend
-
 
 class TestRunCircuitShots:
     """Test cases for run_circuit_shots()."""

@@ -29,7 +29,6 @@ from quantumnematode.brain.arch import (
     SpikingReinforceBrainConfig,
 )
 from quantumnematode.brain.arch.dtypes import (
-    BRAIN_NAME_ALIASES,
     DEFAULT_BRAIN_TYPE,
     DEFAULT_QUBITS,
     DEFAULT_SHOTS,
@@ -278,17 +277,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     optimize_quantum_performance = args.optimize
 
     match brain_type:
-        case BrainType.QVARCIRCUIT | BrainType.MODULAR:
+        case BrainType.QVARCIRCUIT:
             brain_config = QVarCircuitBrainConfig(seed=simulation_seed)
-        case BrainType.MLP_REINFORCE | BrainType.MLP:
+        case BrainType.MLP_REINFORCE:
             brain_config = MLPReinforceBrainConfig(seed=simulation_seed)
-        case BrainType.MLP_PPO | BrainType.PPO:
+        case BrainType.MLP_PPO:
             brain_config = MLPPPOBrainConfig(seed=simulation_seed)
-        case BrainType.MLP_DQN | BrainType.QMLP:
+        case BrainType.MLP_DQN:
             brain_config = MLPDQNBrainConfig(seed=simulation_seed)
-        case BrainType.QQLEARNING | BrainType.QMODULAR:
+        case BrainType.QQLEARNING:
             brain_config = QQLearningBrainConfig(seed=simulation_seed)
-        case BrainType.SPIKING_REINFORCE | BrainType.SPIKING:
+        case BrainType.SPIKING_REINFORCE:
             brain_config = SpikingReinforceBrainConfig(seed=simulation_seed)
 
     # Authenticate and setup Q-CTRL if needed
@@ -323,9 +322,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         brain_config = brain_config.model_copy(update={"seed": simulation_seed})
 
         if config.brain is not None and isinstance(config.brain, BrainContainerConfig):
-            # Resolve deprecated names to canonical names
-            resolved_name = BRAIN_NAME_ALIASES.get(config.brain.name, config.brain.name)
-            brain_type = BrainType(resolved_name)
+            brain_type = BrainType(config.brain.name)
 
         max_steps = config.max_steps if config.max_steps is not None else max_steps
         shots = config.shots if config.shots is not None else shots
@@ -1147,10 +1144,7 @@ def validate_simulation_parameters(maze_grid_size: int, brain_type: BrainType, q
         raise ValueError(error_message)
 
     # Validate qubits parameter for classical brain types
-    if (
-        brain_type in (BrainType.MLP_REINFORCE, BrainType.MLP, BrainType.MLP_DQN, BrainType.QMLP)
-        and qubits != DEFAULT_QUBITS
-    ):
+    if brain_type in (BrainType.MLP_REINFORCE, BrainType.MLP_DQN) and qubits != DEFAULT_QUBITS:
         error_message = (
             f"The 'qubits' parameter is only supported by "
             "quantum brain architectures. "

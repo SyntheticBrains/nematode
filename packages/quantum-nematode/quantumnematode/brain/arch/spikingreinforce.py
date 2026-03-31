@@ -1061,8 +1061,3 @@ class SpikingReinforceBrain(ClassicalBrain):
         new_brain.episode_count = self.episode_count
 
         return new_brain
-
-
-# Deprecated aliases (backward compatibility)
-SpikingBrain = SpikingReinforceBrain
-SpikingBrainConfig = SpikingReinforceBrainConfig

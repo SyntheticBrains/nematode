@@ -36,15 +36,6 @@ class BrainType(Enum):
     CRH_QLSTM = "crhqlstm"
     LSTM_PPO = "lstmppo"
 
-    # Deprecated aliases (kept for backward compatibility)
-    QSNN = "qsnn"
-    MODULAR = "modular"
-    QMODULAR = "qmodular"
-    MLP = "mlp"
-    QMLP = "qmlp"
-    PPO = "ppo"
-    SPIKING = "spiking"
-
 
 class DeviceType(Enum):
     """
@@ -101,14 +92,6 @@ BRAIN_TYPES = Literal[
     BrainType.QRH_QLSTM,
     BrainType.CRH_QLSTM,
     BrainType.LSTM_PPO,
-    # Deprecated aliases
-    BrainType.QSNN,
-    BrainType.MODULAR,
-    BrainType.QMODULAR,
-    BrainType.MLP,
-    BrainType.QMLP,
-    BrainType.PPO,
-    BrainType.SPIKING,
 ]
 QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QVARCIRCUIT,
@@ -121,9 +104,6 @@ QUANTUM_BRAIN_TYPES: set[BrainType] = {
     BrainType.QEF,
     BrainType.QLIF_LSTM,
     BrainType.QRH_QLSTM,
-    BrainType.QSNN,
-    BrainType.MODULAR,
-    BrainType.QMODULAR,
 }
 CLASSICAL_BRAIN_TYPES: set[BrainType] = {
     BrainType.QRC,
@@ -131,27 +111,12 @@ CLASSICAL_BRAIN_TYPES: set[BrainType] = {
     BrainType.MLP_REINFORCE,
     BrainType.MLP_DQN,
     BrainType.MLP_PPO,
-    BrainType.MLP,
-    BrainType.QMLP,
-    BrainType.PPO,
     BrainType.CRH,
     BrainType.CRH_QLSTM,
     BrainType.LSTM_PPO,
 }
 SPIKING_BRAIN_TYPES: set[BrainType] = {
     BrainType.SPIKING_REINFORCE,
-    BrainType.SPIKING,
-}
-
-# Map deprecated names to canonical names
-BRAIN_NAME_ALIASES: dict[str, str] = {
-    "qsnn": "qsnnreinforce",
-    "modular": "qvarcircuit",
-    "qmodular": "qqlearning",
-    "mlp": "mlpreinforce",
-    "qmlp": "mlpdqn",
-    "ppo": "mlpppo",
-    "spiking": "spikingreinforce",
 }
 
 # Defaults

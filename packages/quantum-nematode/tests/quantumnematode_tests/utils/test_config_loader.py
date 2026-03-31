@@ -3,7 +3,6 @@
 import pytest
 from quantumnematode.env import ForagingParams, HealthParams, PredatorParams, ThermotaxisParams
 from quantumnematode.utils.config_loader import (
-    DynamicEnvironmentConfig,
     EnvironmentConfig,
     ForagingConfig,
     HealthConfig,
@@ -178,12 +177,12 @@ class TestPredatorConfig:
         assert params.gradient_strength == 1.5
 
 
-class TestDynamicEnvironmentConfig:
-    """Test cases for DynamicEnvironmentConfig."""
+class TestEnvironmentConfig:
+    """Test cases for EnvironmentConfig."""
 
     def test_default_values(self):
-        """Test DynamicEnvironmentConfig default values."""
-        config = DynamicEnvironmentConfig()
+        """Test default values."""
+        config = EnvironmentConfig()
         assert config.grid_size == 50
         assert config.viewport_size == (11, 11)
         assert config.foraging is None
@@ -191,8 +190,8 @@ class TestDynamicEnvironmentConfig:
         assert config.health is None
 
     def test_with_nested_configs(self):
-        """Test DynamicEnvironmentConfig with nested configurations."""
-        config = DynamicEnvironmentConfig(
+        """Test EnvironmentConfig with nested configurations."""
+        config = EnvironmentConfig(
             grid_size=30,
             viewport_size=(15, 15),
             foraging=ForagingConfig(foods_on_grid=20),
@@ -214,21 +213,21 @@ class TestDynamicEnvironmentConfig:
     def test_get_foraging_config(self):
         """Test get_foraging_config returns configured or default."""
         # With explicit config
-        config_with = DynamicEnvironmentConfig(
+        config_with = EnvironmentConfig(
             foraging=ForagingConfig(foods_on_grid=25),
         )
         foraging = config_with.get_foraging_config()
         assert foraging.foods_on_grid == 25
 
         # Without explicit config (should return default)
-        config_without = DynamicEnvironmentConfig()
+        config_without = EnvironmentConfig()
         foraging_default = config_without.get_foraging_config()
         assert foraging_default.foods_on_grid == 10  # Default value
 
     def test_get_predator_config(self):
         """Test get_predator_config returns configured or default."""
         # With explicit config
-        config_with = DynamicEnvironmentConfig(
+        config_with = EnvironmentConfig(
             predators=PredatorConfig(enabled=True, count=5),
         )
         predator = config_with.get_predator_config()
@@ -236,14 +235,14 @@ class TestDynamicEnvironmentConfig:
         assert predator.count == 5
 
         # Without explicit config (should return default)
-        config_without = DynamicEnvironmentConfig()
+        config_without = EnvironmentConfig()
         predator_default = config_without.get_predator_config()
         assert predator_default.enabled is False  # Default value
 
     def test_get_health_config(self):
         """Test get_health_config returns configured or default."""
         # With explicit config
-        config_with = DynamicEnvironmentConfig(
+        config_with = EnvironmentConfig(
             health=HealthConfig(enabled=True, max_hp=150.0),
         )
         health = config_with.get_health_config()
@@ -251,7 +250,7 @@ class TestDynamicEnvironmentConfig:
         assert health.max_hp == 150.0
 
         # Without explicit config (should return default)
-        config_without = DynamicEnvironmentConfig()
+        config_without = EnvironmentConfig()
         health_default = config_without.get_health_config()
         assert health_default.enabled is False  # Default value
         assert health_default.max_hp == 100.0  # Default value
