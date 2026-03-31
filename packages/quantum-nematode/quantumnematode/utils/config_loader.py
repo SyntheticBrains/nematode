@@ -666,10 +666,6 @@ class EnvironmentConfig(BaseModel):
         return self.sensing or SensingConfig()
 
 
-# Backward compatibility alias
-DynamicEnvironmentConfig = EnvironmentConfig
-
-
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
