@@ -26,7 +26,7 @@ Rename all brain architectures to use paradigm prefix + algorithm naming.
 - [x] Add new class names with old as deprecated aliases (6 brain files)
 - [x] Update `brain/arch/__init__.py` exports
 - [x] Update config_loader.py match cases (accept both old and new names)
-- [x] Migrate ~47 config files in `configs/examples/`
+- [x] Migrate ~47 config files to `configs/scenarios/`
 - [x] Update `benchmark/categorization.py`
 - [x] Update AGENTS.md, README.md references
 - [x] Rename config files from old brain names to new brain names

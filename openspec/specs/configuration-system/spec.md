@@ -120,11 +120,11 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 
 #### Scenario: Configuration File Examples
 
-- **GIVEN** example configuration files in `configs/examples/`
+- **GIVEN** example configuration files in `configs/scenarios/`
 - **WHEN** users need preset foraging environments
-- **THEN** `<brain>_foraging_small.yml` SHALL provide small foraging configuration
-- **AND** `<brain>_foraging_medium.yml` SHALL provide medium foraging configuration
-- **AND** `<brain>_foraging_large.yml` SHALL provide large foraging configuration
+- **THEN** `configs/scenarios/foraging/<brain>_small_oracle.yml` SHALL provide small foraging configuration
+- **AND** `<brain>_medium_oracle.yml` SHALL provide medium foraging configuration
+- **AND** `<brain>_large_oracle.yml` SHALL provide large foraging configuration
 - **AND** each SHALL include commented parameter explanations
 
 ### Requirement: Configuration Validation for Dynamic Environments
@@ -354,7 +354,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 
 #### Scenario: Predator-Enabled Small Environment Example
 
-- **GIVEN** an example configuration file `configs/examples/mlpreinforce_predators_small.yml`
+- **GIVEN** an example configuration file `configs/scenarios/predators/mlpreinforce_small_oracle.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
   - 20×20 grid with predators enabled
@@ -365,7 +365,7 @@ The system SHALL provide example configuration files demonstrating predator-enab
 
 #### Scenario: Predator-Enabled Large Environment Example
 
-- **GIVEN** an example configuration file `configs/examples/qvarcircuit_predators_large.yml`
+- **GIVEN** an example configuration file `configs/scenarios/predators/qvarcircuit_large_oracle.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
   - 100×100 grid with 5 predators for advanced difficulty

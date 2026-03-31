@@ -26,7 +26,10 @@ evolution_results/*
 
 # Configuration files
 configs/*.yml
-!configs/examples/*.yml
+!configs/scenarios/**/*.yml
+!configs/evolution/*.yml
+!configs/special/*.yml
+!configs/studies/**/*.yml
 
 # Environment files
 .env

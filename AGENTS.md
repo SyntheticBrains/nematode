@@ -23,7 +23,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
 - Test (nightly E2E only): `uv run pytest -m nightly -v`
 - Test (all, including nightly): `uv run pytest`
 - Lint/format: `uv run pre-commit run -a`
-- Run simulation: `uv run ./scripts/run_simulation.py --config ./configs/examples/<config>.yml`
+- Run simulation: `uv run ./scripts/run_simulation.py --config ./configs/scenarios/<scenario>/<config>.yml`
 
 ## Key Directories
 
@@ -34,10 +34,13 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
   - `experiment/` — Experiment tracking and benchmarking
   - `optimizers/` — Learning algorithms (PSR, CMA-ES)
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
-- `configs/examples/` — YAML config files (`[{prefix}_]{brain}_{environment}_{size}[_{postfix}].yml`)
-  - Prefixes: `evolution` (for evolutionary optimization configs)
-  - Postfixes: `classical` (classical gate ablation), `finetune`, `fair` (for fair ablations), `derivative` (derivative dC/dt sensing mode), `temporal` (scalar-only temporal sensing mode) etc.
-  - Example: `evolution_qvarcircuit_foraging_small.yml`, `mlpppo_predators_small.yml`
+- `configs/scenarios/` — YAML config files organized by scenario (`{brain}_{size}[_{variant}]_{sensing}.yml`)
+  - Scenarios: `foraging`, `predators`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`, `health_predators`
+  - Sensing suffixes: `_oracle`, `_temporal`, `_derivative`
+  - Variant suffixes: `_classical`, `_fair`, `_separable`, `_modality_paired`, etc.
+  - Example: `configs/scenarios/foraging/mlpppo_small_oracle.yml`, `configs/scenarios/thermal_pursuit/lstmppo_large_temporal.yml`
+- `configs/evolution/` — Evolutionary optimization configs
+- `configs/special/` — One-off experimental configs
 - `tests/` — Three-tier testing (unit, smoke, nightly)
 - `benchmarks/` — Submitted benchmark results
 - `openspec/` — Spec-driven development framework

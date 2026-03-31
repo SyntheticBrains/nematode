@@ -38,10 +38,10 @@ uv run python -c "from quantumnematode import brain; print('OK')"
 
 ## Step 2: Prepare Your Configuration
 
-Create or modify a configuration file in `configs/examples/`:
+Create or modify a configuration file in `configs/scenarios/`:
 
 ```yaml
-# configs/examples/my_brain_foraging_medium.yml
+# configs/scenarios/foraging/my_brain_medium_oracle.yml
 max_steps: 1000
 brain:
   name: mlpppo  # or mlpreinforce, qvarcircuit, spikingreinforce, etc.
@@ -66,7 +66,7 @@ Run **at least 10 independent training sessions**:
 # Run 10+ independent sessions (each will generate unique seeds automatically)
 for session in {1..10}; do
     uv run scripts/run_simulation.py \
-        --config configs/examples/my_brain_foraging_medium.yml \
+        --config configs/scenarios/foraging/my_brain_medium_oracle.yml \
         --track-experiment \
         --runs 50
 done
