@@ -4,7 +4,7 @@ YAML configuration files for the Quantum Nematode simulation. Configs are standa
 
 ## Directory Structure
 
-```
+```text
 configs/
   scenarios/          Experiment configs organized by scenario
   evolution/          Evolutionary optimization configs
@@ -31,7 +31,7 @@ Each scenario directory represents a distinct environment configuration:
 
 Within each scenario directory:
 
-```
+```text
 {brain}_{size}[_{variant}]_{sensing}.yml
 ```
 
@@ -41,6 +41,7 @@ Within each scenario directory:
 - **sensing**: `oracle`, `temporal`, `derivative`
 
 Examples:
+
 - `mlpppo_small_oracle.yml` — MLP PPO, small grid, oracle sensing
 - `lstmppo_large_temporal.yml` — LSTM PPO, large grid, temporal sensing
 - `qef_small_modality_paired_oracle.yml` — QEF with modality-paired topology
