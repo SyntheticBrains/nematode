@@ -123,8 +123,8 @@ The configuration system SHALL support a complete schema for dynamic foraging en
 - **GIVEN** example configuration files in `configs/scenarios/`
 - **WHEN** users need preset foraging environments
 - **THEN** `configs/scenarios/foraging/<brain>_small_oracle.yml` SHALL provide small foraging configuration
-- **AND** `<brain>_foraging_medium.yml` SHALL provide medium foraging configuration
-- **AND** `<brain>_foraging_large.yml` SHALL provide large foraging configuration
+- **AND** `<brain>_medium_oracle.yml` SHALL provide medium foraging configuration
+- **AND** `<brain>_large_oracle.yml` SHALL provide large foraging configuration
 - **AND** each SHALL include commented parameter explanations
 
 ### Requirement: Configuration Validation for Dynamic Environments
