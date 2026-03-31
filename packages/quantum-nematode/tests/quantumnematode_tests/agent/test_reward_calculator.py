@@ -400,8 +400,6 @@ class TestTemperatureAvoidanceReward:
         env.predator = Mock()
         env.predator.enabled = False
         env.wall_collision_occurred = False
-        env.thermotaxis = Mock()
-        env.thermotaxis.enabled = False
 
         # Thermotaxis setup
         env.thermotaxis = Mock()
