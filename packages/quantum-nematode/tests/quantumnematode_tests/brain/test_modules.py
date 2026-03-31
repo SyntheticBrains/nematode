@@ -349,11 +349,6 @@ class TestModuleName:
         assert ModuleName.FOOD_CHEMOTAXIS.value == "food_chemotaxis"
         assert ModuleName.NOCICEPTION.value == "nociception"
 
-    def test_legacy_aliases(self):
-        """Test legacy module name aliases."""
-        assert ModuleName.APPETITIVE.value == "appetitive"
-        assert ModuleName.AVERSIVE.value == "aversive"
-
     def test_all_modules_in_registry(self):
         """Test that all module names have corresponding entries in SENSORY_MODULES."""
         for module_name in ModuleName:
@@ -493,10 +488,6 @@ class TestFoodChemotaxisModule:
         features = module.to_classical(params_with_food)
         assert features[0] == pytest.approx(0.9)  # strength preserved
 
-    def test_legacy_alias(self):
-        """Test that APPETITIVE alias points to same module."""
-        assert SENSORY_MODULES[ModuleName.APPETITIVE] is SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
-
 
 class TestNociceptionModule:
     """Test nociception (aversive/predator avoidance) feature extraction."""
@@ -526,10 +517,6 @@ class TestNociceptionModule:
 
         # strength=1 -> π/2
         assert features[0] == pytest.approx(np.pi / 2)
-
-    def test_legacy_alias(self):
-        """Test that AVERSIVE alias points to same module."""
-        assert SENSORY_MODULES[ModuleName.AVERSIVE] is SENSORY_MODULES[ModuleName.NOCICEPTION]
 
 
 class TestMechanosensationModule:

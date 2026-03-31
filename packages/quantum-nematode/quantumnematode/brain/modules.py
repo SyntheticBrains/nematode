@@ -88,10 +88,6 @@ class ModuleName(StrEnum):
     THERMOTAXIS_TEMPORAL = "thermotaxis_temporal"
     STAM = "stam"
 
-    # Legacy aliases (deprecated)
-    APPETITIVE = "appetitive"
-    AVERSIVE = "aversive"
-
 
 # =============================================================================
 # Helper Functions
@@ -648,9 +644,6 @@ SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
     ),
 }
 
-# Legacy aliases - point to same modules
-SENSORY_MODULES[ModuleName.APPETITIVE] = SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS]
-SENSORY_MODULES[ModuleName.AVERSIVE] = SENSORY_MODULES[ModuleName.NOCICEPTION]
 
 # Temporal sensing modules (Phase 3)
 SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_TEMPORAL] = SensoryModule(

@@ -1,5 +1,5 @@
 # Dynamic Foraging with Predators - Appetitive/Aversive Modules
-# Uses separate quantum modules for food-seeking (appetitive) and predator-avoidance (aversive)
+# Uses separate quantum modules for food-seeking (food_chemotaxis) and predator-avoidance (nociception)
 # Inspired by C. elegans neural circuits for approach/avoidance behaviors
 
 # Next:
@@ -12,8 +12,8 @@ brain:
   name: qvarcircuit
   config:
     modules:
-      appetitive: [0, 1]
-      aversive: [2, 3]
+      food_chemotaxis: [0, 1]
+      nociception: [2, 3]
     num_layers: 2
     min_gradient_magnitude: 1e-4
     l2_reg: 0.0005
