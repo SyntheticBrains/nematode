@@ -185,7 +185,7 @@ class TestQLIFLSTMCell:
 
     def test_quantum_cell_forward_and_backward(self):
         """Smoke test: quantum gate path runs forward + backward without error."""
-        from quantumnematode.brain.arch._qlif_layers import get_qiskit_backend
+        from quantumnematode.brain.arch._quantum_utils import get_qiskit_backend
 
         backend = get_qiskit_backend(device=DeviceType.CPU)
         cell = QLIFLSTMCell(
