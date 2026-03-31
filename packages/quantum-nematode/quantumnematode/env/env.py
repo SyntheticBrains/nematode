@@ -61,12 +61,10 @@ class PredatorType(Enum):
     """
     Types of predator movement behaviors.
 
-    RANDOM: Moves randomly in one of four directions each step (default).
     STATIONARY: Does not move, acts as a toxic zone with larger damage radius.
     PURSUIT: Moves toward the agent when within detection radius, otherwise random.
     """
 
-    RANDOM = "random"
     STATIONARY = "stationary"
     PURSUIT = "pursuit"
 
@@ -129,7 +127,7 @@ class PredatorParams:
     count : int
         Number of predators to spawn.
     predator_type : PredatorType
-        Movement behavior type (RANDOM, STATIONARY, or PURSUIT).
+        Movement behavior type (STATIONARY or PURSUIT).
     speed : float
         Movement speed relative to agent.
     detection_radius : int
@@ -147,7 +145,7 @@ class PredatorParams:
 
     enabled: bool = False
     count: int = 2
-    predator_type: PredatorType = PredatorType.RANDOM
+    predator_type: PredatorType = PredatorType.PURSUIT
     speed: float = 1.0
     detection_radius: int = 8
     kill_radius: int = 0
@@ -260,7 +258,7 @@ class Predator:
     position : tuple[int, int]
         Current position of the predator.
     predator_type : PredatorType
-        Movement behavior type (RANDOM, STATIONARY, or PURSUIT).
+        Movement behavior type (STATIONARY or PURSUIT).
     speed : float
         Movement speed relative to agent (1.0 = same speed).
         Supports fractional speeds (< 1.0) and multi-step movement (> 1.0).
@@ -278,7 +276,7 @@ class Predator:
     def __init__(  # noqa: PLR0913
         self,
         position: tuple[int, int],
-        predator_type: PredatorType = PredatorType.RANDOM,
+        predator_type: PredatorType = PredatorType.PURSUIT,
         speed: float = 1.0,
         movement_accumulator: float = 0.0,
         detection_radius: int = 8,
@@ -292,7 +290,7 @@ class Predator:
         position : tuple[int, int]
             Starting position of the predator.
         predator_type : PredatorType
-            Movement behavior type (default RANDOM).
+            Movement behavior type (default PURSUIT).
         speed : float
             Movement speed (default 1.0).
         movement_accumulator : float

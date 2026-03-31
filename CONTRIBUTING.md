@@ -229,7 +229,7 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/foragin
 uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/hybridquantum_small_oracle.yml --theme emoji
 
 # Spiking brain on predator evasion
-uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/predators/spikingreinforce_small_oracle.yml --theme emoji
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/qsnnreinforce_small_oracle.yml --theme emoji
 ```
 
 ### Experiment Tracking and Benchmarks
