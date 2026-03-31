@@ -281,7 +281,7 @@ class TestSpikingReinforceBrain:
         """Create a test spiking brain."""
         return SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -289,7 +289,7 @@ class TestSpikingReinforceBrain:
     def test_brain_initialization(self, brain, config):
         """Test spiking brain initialization."""
         assert brain.config == config
-        assert brain.input_dim == 2
+        assert brain.input_dim == 4
         assert brain.num_actions == 4
 
         # Check policy network exists
@@ -300,25 +300,29 @@ class TestSpikingReinforceBrain:
         assert brain.optimizer is not None
 
     def test_preprocess(self, brain):
-        """Test state preprocessing with relative angles."""
+        """Test state preprocessing with separated gradients."""
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=1.5,
+            food_gradient_strength=0.8,
+            food_gradient_direction=1.5,
+            predator_gradient_strength=0.3,
+            predator_gradient_direction=0.5,
             agent_position=(2, 3),
             agent_direction=Direction.UP,
         )
 
         state = brain.preprocess(params)
-        assert len(state) == 2
-        assert 0.0 <= state[0] <= 1.0  # gradient_strength normalized
-        assert -1.0 <= state[1] <= 1.0  # relative angle normalized
+        assert len(state) == 4
+        assert 0.0 <= state[0] <= 1.0  # food_strength normalized
+        assert -1.0 <= state[1] <= 1.0  # food relative angle normalized
+        assert 0.0 <= state[2] <= 1.0  # predator_strength normalized
+        assert -1.0 <= state[3] <= 1.0  # predator relative angle normalized
 
     def test_preprocess_relative_angle(self, brain):
         """Test that preprocessing computes relative angles correctly."""
-        # Agent facing UP (0.5π), gradient pointing RIGHT (0.0)
+        # Agent facing UP (0.5π), food gradient pointing RIGHT (0.0)
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,  # RIGHT
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,  # RIGHT
             agent_position=(1, 1),
             agent_direction=Direction.UP,  # UP
         )
@@ -334,9 +338,11 @@ class TestSpikingReinforceBrain:
         params = BrainParams()
 
         state = brain.preprocess(params)
-        assert len(state) == 2
+        assert len(state) == 4
         assert state[0] == 0.0
         assert state[1] == 0.0
+        assert state[2] == 0.0
+        assert state[3] == 0.0
 
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
@@ -471,7 +477,7 @@ class TestSpikingReinforceBrainIntegration:
         config = SpikingReinforceBrainConfig(hidden_size=8, num_timesteps=10)
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -512,7 +518,7 @@ class TestSpikingReinforceBrainIntegration:
         config = SpikingReinforceBrainConfig(hidden_size=8, num_timesteps=10, learning_rate=0.1)
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -549,13 +555,13 @@ class TestSpikingReinforceBrainIntegration:
 
         brain1 = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
         brain2 = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -577,7 +583,7 @@ class TestWeightInitialization:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -592,7 +598,7 @@ class TestWeightInitialization:
         config = SpikingReinforceBrainConfig(hidden_size=8, num_timesteps=10, weight_init="kaiming")
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -616,7 +622,7 @@ class TestIntraEpisodeUpdates:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -654,7 +660,7 @@ class TestIntraEpisodeUpdates:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -706,7 +712,7 @@ class TestMinActionProb:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -734,7 +740,7 @@ class TestMinActionProb:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -764,7 +770,7 @@ class TestPopulationCodingIntegration:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -790,7 +796,6 @@ class TestSeparatedGradients:
         config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
-            use_separated_gradients=True,
         )
         # Input dim should be 4 for separated gradients
         brain = SpikingReinforceBrain(
@@ -826,7 +831,6 @@ class TestSeparatedGradients:
         config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
-            use_separated_gradients=True,
         )
         brain = SpikingReinforceBrain(
             config=config,
@@ -848,40 +852,11 @@ class TestSeparatedGradients:
         assert len(actions) == 1
         assert actions[0].action in [Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY]
 
-    def test_combined_gradients_still_works(self):
-        """Test that combined gradient mode (default) still works."""
-        config = SpikingReinforceBrainConfig(
-            hidden_size=16,
-            num_timesteps=10,
-            use_separated_gradients=False,  # Default
-        )
-        brain = SpikingReinforceBrain(
-            config=config,
-            input_dim=2,
-            num_actions=4,
-            device=DeviceType.CPU,
-        )
-
-        params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
-            agent_position=(1.0, 1.0),
-            agent_direction=Direction.UP,
-        )
-
-        # Preprocess should return 2 features
-        state = brain.preprocess(params)
-        assert state.shape == (2,)
-
-        actions = brain.run_brain(params, top_only=False, top_randomize=False)
-        assert len(actions) == 1
-
     def test_separated_gradients_handles_none_values(self):
         """Test that separated gradients handles None values gracefully."""
         config = SpikingReinforceBrainConfig(
             hidden_size=16,
             num_timesteps=10,
-            use_separated_gradients=True,
         )
         brain = SpikingReinforceBrain(
             config=config,
@@ -1049,7 +1024,7 @@ class TestClippingParameters:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1072,7 +1047,7 @@ class TestClippingParameters:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1090,7 +1065,7 @@ class TestClippingParameters:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1113,7 +1088,7 @@ class TestExplorationDecay:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1133,7 +1108,7 @@ class TestExplorationDecay:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1152,7 +1127,7 @@ class TestExplorationDecay:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1171,7 +1146,7 @@ class TestExplorationDecay:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1192,7 +1167,7 @@ class TestProbabilityFloorHelper:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1218,7 +1193,7 @@ class TestProbabilityFloorHelper:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -1238,7 +1213,7 @@ class TestProbabilityFloorHelper:
         )
         brain = SpikingReinforceBrain(
             config=config,
-            input_dim=2,
+            input_dim=4,
             num_actions=4,
             device=DeviceType.CPU,
         )

@@ -163,12 +163,6 @@ class SpikingReinforceBrainConfig(BrainConfig):
     # 0 = disabled (update only at episode end), recommended: 5 (like MLP brain)
     update_frequency: int = 0
 
-    # Separated gradients - use separate food and predator gradient inputs
-    # instead of the combined gradient. Enables the network to learn distinct
-    # responses to appetitive (food) vs aversive (predator) signals.
-    # When enabled, input_dim becomes 4: [food_strength, food_angle, pred_strength, pred_angle]
-    use_separated_gradients: bool = False
-
 
 class SpikingReinforceBrain(ClassicalBrain):
     """
@@ -309,10 +303,9 @@ class SpikingReinforceBrain(ClassicalBrain):
         """
         Preprocess brain parameters into state vector.
 
-        Computes relative angle between agent orientation and goal direction,
-        matching the preprocessing used by MLPBrain for fair comparison.
+        Computes relative angle between agent orientation and goal direction.
 
-        When use_separated_gradients is enabled, returns 4 features:
+        Returns 4 features:
         [food_strength, food_rel_angle, predator_strength, predator_rel_angle]
 
         Parameters
@@ -323,9 +316,8 @@ class SpikingReinforceBrain(ClassicalBrain):
         Returns
         -------
         np.ndarray
-            Preprocessed state vector. Either:
-            - 2 features: [gradient_strength, relative_angle_normalized] (combined)
-            - 4 features: [food_strength, food_angle, pred_strength, pred_angle] (separated)
+            Preprocessed state vector with 4 features:
+            [food_strength, food_angle, pred_strength, pred_angle]
             All angles normalized to [-1, 1]
         """
         # Map agent direction to angle (radians)
@@ -343,35 +335,23 @@ class SpikingReinforceBrain(ClassicalBrain):
             """Compute relative angle normalized to [-1, 1]."""
             if direction is None:
                 return 0.0
-            # Compute relative angle: goal direction - agent facing direction
-            # Normalize to [-π, π]
             relative_angle = (direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-            # Normalize to [-1, 1] for network input
             return relative_angle / np.pi
 
-        # Use separated gradients if configured and available
-        if self.config.use_separated_gradients:
-            # Food gradient features
-            food_strength = float(params.food_gradient_strength or 0.0)
-            food_strength = max(0.0, min(1.0, food_strength))
-            food_rel_angle = compute_relative_angle(params.food_gradient_direction)
+        # Food gradient features
+        food_strength = float(params.food_gradient_strength or 0.0)
+        food_strength = max(0.0, min(1.0, food_strength))
+        food_rel_angle = compute_relative_angle(params.food_gradient_direction)
 
-            # Predator gradient features
-            pred_strength = float(params.predator_gradient_strength or 0.0)
-            pred_strength = max(0.0, min(1.0, pred_strength))
-            pred_rel_angle = compute_relative_angle(params.predator_gradient_direction)
+        # Predator gradient features
+        pred_strength = float(params.predator_gradient_strength or 0.0)
+        pred_strength = max(0.0, min(1.0, pred_strength))
+        pred_rel_angle = compute_relative_angle(params.predator_gradient_direction)
 
-            return np.array(
-                [food_strength, food_rel_angle, pred_strength, pred_rel_angle],
-                dtype=np.float32,
-            )
-
-        # Default: use combined gradient (2 features)
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_strength = max(0.0, min(1.0, grad_strength))
-        rel_angle_normalized = compute_relative_angle(params.gradient_direction)
-
-        return np.array([grad_strength, rel_angle_normalized], dtype=np.float32)
+        return np.array(
+            [food_strength, food_rel_angle, pred_strength, pred_rel_angle],
+            dtype=np.float32,
+        )
 
     def run_brain(
         self,

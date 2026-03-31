@@ -39,7 +39,7 @@ class TestQQLearningBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         custom_modules = {
-            ModuleName.CHEMOTAXIS: [0, 1],
+            ModuleName.FOOD_CHEMOTAXIS: [0, 1],
         }
         config = QQLearningBrainConfig(
             modules=custom_modules,
@@ -64,7 +64,7 @@ class TestQQLearningBrain:
         """Create a test configuration with minimal qubits."""
         return QQLearningBrainConfig(
             modules={
-                ModuleName.CHEMOTAXIS: [0, 1],
+                ModuleName.FOOD_CHEMOTAXIS: [0, 1],
             },
             num_layers=1,
             buffer_size=100,
@@ -136,7 +136,7 @@ class TestQQLearningBrain:
     def test_build_quantum_circuit(self, brain):
         """Test quantum circuit building."""
         input_params = {
-            ModuleName.CHEMOTAXIS.value: {"rx": 0.5, "ry": 0.3, "rz": 0.1},
+            ModuleName.FOOD_CHEMOTAXIS.value: {"rx": 0.5, "ry": 0.3, "rz": 0.1},
         }
 
         qc = brain.build_quantum_circuit(input_params)
@@ -449,7 +449,7 @@ class TestQQLearningBrainIntegration:
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
         config = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
@@ -484,7 +484,7 @@ class TestQQLearningBrainIntegration:
     def test_q_guidance_progression(self):
         """Test that Q-guidance weight increases with experience."""
         config = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=200,
             batch_size=16,
@@ -515,14 +515,14 @@ class TestQQLearningBrainIntegration:
     def test_deterministic_behavior_with_seed(self):
         """Test that behavior is deterministic with fixed seed."""
         config1 = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             seed=42,
         )
         brain1 = QQLearningBrain(config=config1, shots=50, device=DeviceType.CPU)
 
         config2 = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             seed=42,
         )
@@ -535,7 +535,7 @@ class TestQQLearningBrainIntegration:
     def test_adaptive_learning(self):
         """Test adaptive learning with multiple passes when struggling."""
         config = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
@@ -566,7 +566,7 @@ class TestQQLearningBrainEdgeCases:
     def test_empty_experience_buffer(self):
         """Test learning with empty buffer."""
         config = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
         )
         brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
@@ -578,7 +578,7 @@ class TestQQLearningBrainEdgeCases:
     def test_terminal_state_handling(self):
         """Test handling of terminal states in learning."""
         config = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,
@@ -611,7 +611,7 @@ class TestQQLearningBrainEdgeCases:
     def test_gradient_clipping(self):
         """Test gradient clipping for stability."""
         config = QQLearningBrainConfig(
-            modules={ModuleName.CHEMOTAXIS: [0, 1]},
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
             num_layers=1,
             buffer_size=100,
             batch_size=16,

@@ -79,7 +79,6 @@ satiety:
 environment:
   grid_size: 20
   viewport_size: [11, 11]
-  use_separated_gradients: true
 
   sensing:
     chemotaxis_mode: temporal  # Mode A: scalar concentration only

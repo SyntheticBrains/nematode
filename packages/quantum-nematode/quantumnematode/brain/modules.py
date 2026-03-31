@@ -18,7 +18,6 @@ Architecture:
        - to_classical(): Returns np.ndarray [strength, angle] preserving semantics
 
 Module naming follows C. elegans neuroscience conventions:
-- chemotaxis: Combined gradient sensing (ASE neurons)
 - food_chemotaxis: Food-specific approach behavior (AWC, AWA neurons)
 - nociception: Aversive/escape response (ASH, ADL neurons)
 - thermotaxis: Temperature sensing (AFD neurons)
@@ -76,7 +75,6 @@ class ModuleName(StrEnum):
 
     # Core modules
     PROPRIOCEPTION = "proprioception"
-    CHEMOTAXIS = "chemotaxis"
     FOOD_CHEMOTAXIS = "food_chemotaxis"
     NOCICEPTION = "nociception"
     MECHANOSENSATION = "mechanosensation"
@@ -137,13 +135,6 @@ def _compute_relative_angle(
 # =============================================================================
 # Core Feature Extractors
 # =============================================================================
-
-
-def _chemotaxis_core(params: BrainParams) -> CoreFeatures:
-    """Extract chemotaxis features from combined gradient."""
-    strength = float(params.gradient_strength or 0.0)
-    angle = _compute_relative_angle(params.gradient_direction, params.agent_direction)
-    return CoreFeatures(strength=strength, angle=angle)
 
 
 def _food_chemotaxis_core(params: BrainParams) -> CoreFeatures:
@@ -582,15 +573,6 @@ class STAMSensoryModule(SensoryModule):
 # =============================================================================
 
 SENSORY_MODULES: dict[ModuleName, SensoryModule] = {
-    # Core chemotaxis - combined gradient sensing
-    ModuleName.CHEMOTAXIS: SensoryModule(
-        name=ModuleName.CHEMOTAXIS,
-        extract=_chemotaxis_core,
-        description=(
-            "Combined gradient sensing (ASE neurons). Uses the combined gradient "
-            "(food attraction + predator repulsion) for general navigation."
-        ),
-    ),
     # Food-specific chemotaxis
     ModuleName.FOOD_CHEMOTAXIS: SensoryModule(
         name=ModuleName.FOOD_CHEMOTAXIS,
@@ -781,7 +763,7 @@ def get_classical_feature_dimension(modules: list[ModuleName]) -> int:
 Modules = dict[ModuleName, list[int]]
 
 DEFAULT_MODULES: Modules = {
-    ModuleName.CHEMOTAXIS: [0, 1],
+    ModuleName.FOOD_CHEMOTAXIS: [0, 1],
 }
 
 

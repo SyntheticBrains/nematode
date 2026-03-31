@@ -582,34 +582,6 @@ class TestApplySensingMode:
         assert "thermotaxis_temporal" in result
         assert "thermotaxis" not in result
 
-    def test_combined_chemotaxis_splits(self) -> None:
-        """Test that combined chemotaxis is split into food and nociception modules."""
-        sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
-        modules = ["chemotaxis"]
-        result = apply_sensing_mode(modules, sensing)
-        assert "food_chemotaxis_temporal" in result
-        assert "nociception" in result  # Oracle nociception added
-        assert "chemotaxis" not in result
-
-    def test_combined_chemotaxis_splits_with_temporal_nociception(self) -> None:
-        """Test that combined chemotaxis splits both food and nociception to temporal."""
-        sensing = SensingConfig(
-            chemotaxis_mode=SensingMode.TEMPORAL,
-            nociception_mode=SensingMode.TEMPORAL,
-        )
-        modules = ["chemotaxis"]
-        result = apply_sensing_mode(modules, sensing)
-        assert "food_chemotaxis_temporal" in result
-        assert "nociception_temporal" in result
-
-    def test_combined_chemotaxis_no_duplicate_nociception(self) -> None:
-        """Test that splitting chemotaxis does not duplicate nociception."""
-        sensing = SensingConfig(chemotaxis_mode=SensingMode.TEMPORAL)
-        modules = ["chemotaxis", "nociception"]
-        result = apply_sensing_mode(modules, sensing)
-        noci_count = sum(1 for m in result if "nociception" in m)
-        assert noci_count == 1
-
     def test_stam_appended_when_enabled(self) -> None:
         """Test that STAM module is appended when stam_enabled is True."""
         sensing = SensingConfig(stam_enabled=True)

@@ -554,7 +554,6 @@ def apply_sensing_mode(
         Updated sensory module names with temporal substitutions applied.
     """
     result = []
-    has_nociception = any(m in ("nociception", "nociception_temporal") for m in sensory_modules)
 
     for module in sensory_modules:
         if module == "food_chemotaxis" and sensing.chemotaxis_mode != SensingMode.ORACLE:
@@ -563,15 +562,6 @@ def apply_sensing_mode(
             result.append("nociception_temporal")
         elif module == "thermotaxis" and sensing.thermotaxis_mode != SensingMode.ORACLE:
             result.append("thermotaxis_temporal")
-        elif module == "chemotaxis" and sensing.chemotaxis_mode != SensingMode.ORACLE:
-            # Combined module splits into food + nociception
-            result.append("food_chemotaxis_temporal")
-            if not has_nociception:
-                # Add nociception to avoid silently dropping predator signal
-                if sensing.nociception_mode != SensingMode.ORACLE:
-                    result.append("nociception_temporal")
-                else:
-                    result.append("nociception")
         else:
             result.append(module)
 
@@ -637,7 +627,6 @@ class EnvironmentConfig(BaseModel):
 
     grid_size: int = 50
     viewport_size: tuple[int, int] = (11, 11)
-    use_separated_gradients: bool = False  # Whether to use separated food/predator gradients
 
     # Nested configuration subsections
     foraging: ForagingConfig | None = None
