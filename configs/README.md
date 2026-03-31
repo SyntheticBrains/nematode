@@ -18,13 +18,11 @@ Each scenario directory represents a distinct environment configuration:
 | Directory | Modalities | Description |
 |---|---|---|
 | `foraging/` | Chemotaxis | Pure food-seeking |
-| `predators/` | Chemotaxis + random predators | Legacy random-movement predators |
 | `pursuit/` | Chemotaxis + pursuit predators | Active predator evasion |
 | `stationary/` | Chemotaxis + stationary predators | Static predator avoidance |
 | `thermal_foraging/` | Chemotaxis + thermotaxis | Temperature gradient + food-seeking |
 | `thermal_pursuit/` | Chemotaxis + thermotaxis + pursuit | Multi-objective (hardest current env) |
 | `thermal_stationary/` | Chemotaxis + thermotaxis + stationary | Multi-objective with static predators |
-| `health_predators/` | Chemotaxis + health + predators | Health system experiments |
 
 ## Naming Convention
 

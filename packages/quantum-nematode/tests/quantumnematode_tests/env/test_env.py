@@ -682,7 +682,7 @@ class TestPredatorMechanics:
             assert predator.speed == 1.0
 
     def test_predator_movement(self, predator_env):
-        """Test predator random movement."""
+        """Test predator movement."""
         predator = predator_env.predators[0]
         rng = get_rng(42)
 
@@ -1315,10 +1315,10 @@ class TestHealthSystem:
 class TestPredatorTypes:
     """Test cases for different predator movement behaviors."""
 
-    def test_predator_type_defaults_to_random(self):
-        """Test that predator type defaults to RANDOM."""
+    def test_predator_type_defaults_to_pursuit(self):
+        """Test that predator type defaults to PURSUIT."""
         predator = Predator(position=(5, 5))
-        assert predator.predator_type == PredatorType.RANDOM
+        assert predator.predator_type == PredatorType.PURSUIT
 
     def test_stationary_predator_does_not_move(self):
         """Test that stationary predators never move."""
@@ -1519,9 +1519,9 @@ class TestPredatorTypes:
         )
         assert params.predator_type == PredatorType.PURSUIT
 
-        # Default should be RANDOM
+        # Default should be PURSUIT
         default_params = PredatorParams(enabled=True, count=2)
-        assert default_params.predator_type == PredatorType.RANDOM
+        assert default_params.predator_type == PredatorType.PURSUIT
 
 
 class TestPredatorTypeSymbols:
@@ -1556,7 +1556,7 @@ class TestPredatorTypeSymbols:
             predator=PredatorParams(
                 enabled=True,
                 count=1,
-                predator_type=PredatorType.RANDOM,
+                predator_type=PredatorType.PURSUIT,
             ),
         )
         # Set predator position within viewport
@@ -1564,8 +1564,8 @@ class TestPredatorTypeSymbols:
 
         rendered = env.render()
         rendered_str = "\n".join(rendered)
-        # ASCII theme uses '#' for random predators
-        assert "#" in rendered_str
+        # ASCII theme uses '@' for pursuit predators
+        assert "@" in rendered_str
 
     def test_render_stationary_predator_symbol(self):
         """Test that stationary predators render with their specific symbol."""
@@ -1617,12 +1617,6 @@ class TestPredatorTypeSymbols:
         symbols = THEME_SYMBOLS[Theme.ASCII]
 
         # Create predators of each type
-        random_pred = Predator(
-            position=(0, 0),
-            predator_type=PredatorType.RANDOM,
-            speed=1.0,
-            detection_radius=8,
-        )
         stationary_pred = Predator(
             position=(1, 1),
             predator_type=PredatorType.STATIONARY,
@@ -1636,7 +1630,6 @@ class TestPredatorTypeSymbols:
             detection_radius=8,
         )
 
-        assert env._get_predator_symbol(random_pred, symbols) == "#"
         assert env._get_predator_symbol(stationary_pred, symbols) == "X"
         assert env._get_predator_symbol(pursuit_pred, symbols) == "@"
 
@@ -1648,7 +1641,7 @@ class TestDamageRadius:
         """Test that Predator class has damage_radius attribute."""
         pred = Predator(
             position=(5, 5),
-            predator_type=PredatorType.RANDOM,
+            predator_type=PredatorType.PURSUIT,
             speed=1.0,
             detection_radius=8,
             damage_radius=1,
@@ -2253,14 +2246,14 @@ class TestZoneVisualization:
             predator=PredatorParams(
                 enabled=True,
                 count=1,
-                predator_type=PredatorType.RANDOM,
+                predator_type=PredatorType.PURSUIT,
                 damage_radius=3,
             ),
         )
-        # Random predators don't create toxic zones
+        # Pursuit predators don't create toxic zones
         # Even if agent is within damage_radius of the predator
         for pred in env.predators:
-            if pred.predator_type == PredatorType.RANDOM:
+            if pred.predator_type == PredatorType.PURSUIT:
                 # Check a position near the predator
                 assert env._is_in_toxic_zone(pred.position[0], pred.position[1]) is False
 

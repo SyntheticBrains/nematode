@@ -113,7 +113,7 @@ BrainConfigType = (
 )
 
 # Type alias for predator movement patterns
-MovementPattern = Literal["random", "stationary", "pursuit"]
+MovementPattern = Literal["stationary", "pursuit"]
 
 # Mapping of brain names to their config classes
 BRAIN_CONFIG_MAP: dict[str, type[BrainConfigType]] = {
@@ -290,7 +290,7 @@ class PredatorConfig(BaseModel):
     speed : float
         Movement speed relative to agent.
     movement_pattern : MovementPattern
-        Movement behavior: "random", "stationary", or "pursuit".
+        Movement behavior: "stationary" or "pursuit".
     detection_radius : int
         Distance at which pursuit predators detect the agent.
     kill_radius : int
@@ -307,7 +307,7 @@ class PredatorConfig(BaseModel):
     enabled: bool = False
     count: int = 2  # Maps to DynamicForagingEnvironment.num_predators
     speed: float = 1.0  # Maps to DynamicForagingEnvironment.predator_speed
-    movement_pattern: MovementPattern = "random"
+    movement_pattern: MovementPattern = "pursuit"
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
     kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
@@ -321,7 +321,6 @@ class PredatorConfig(BaseModel):
         """Convert to PredatorParams for environment initialization."""
         # Map movement_pattern string to PredatorType enum
         pattern_to_type = {
-            "random": PredatorType.RANDOM,
             "stationary": PredatorType.STATIONARY,
             "pursuit": PredatorType.PURSUIT,
         }

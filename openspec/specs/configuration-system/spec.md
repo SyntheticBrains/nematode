@@ -352,25 +352,16 @@ The system SHALL validate predator movement pattern configuration and provide cl
 
 The system SHALL provide example configuration files demonstrating predator-enabled setups for different difficulty levels.
 
-#### Scenario: Predator-Enabled Small Environment Example
+#### Scenario: Pursuit Predator Small Environment Example
 
-- **GIVEN** an example configuration file `configs/scenarios/predators/mlpreinforce_small_oracle.yml`
+- **GIVEN** an example configuration file `configs/scenarios/pursuit/mlpppo_small_oracle.yml`
 - **WHEN** the file is read
 - **THEN** it SHALL demonstrate:
-  - 20×20 grid with predators enabled
+  - 20×20 grid with pursuit predators enabled
   - 2 predators for introductory difficulty
   - All predator parameters explicitly shown with comments
   - Foraging parameters in nested subsection
 - **AND** the configuration SHALL be immediately runnable
-
-#### Scenario: Predator-Enabled Large Environment Example
-
-- **GIVEN** an example configuration file `configs/scenarios/predators/qvarcircuit_large_oracle.yml`
-- **WHEN** the file is read
-- **THEN** it SHALL demonstrate:
-  - 100×100 grid with 5 predators for advanced difficulty
-  - QVarCircuitBrain configuration with predator support
-  - Commented explanations of predator mechanics
   - Both foraging and predator subsections fully configured
 
 #### Scenario: Configuration Documentation

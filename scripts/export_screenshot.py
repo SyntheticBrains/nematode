@@ -103,7 +103,7 @@ def main(output_path: str = "docs/assets/images/pixel_theme.png") -> None:
         ),
         Predator(
             position=(ax - 3, ay - 2),
-            predator_type=PredatorType.RANDOM,
+            predator_type=PredatorType.PURSUIT,
             speed=1.0,
             detection_radius=5,
             damage_radius=0,

@@ -35,7 +35,7 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
   - `optimizers/` — Learning algorithms (PSR, CMA-ES)
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
 - `configs/scenarios/` — YAML config files organized by scenario (`{brain}_{size}[_{variant}]_{sensing}.yml`)
-  - Scenarios: `foraging`, `predators`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`, `health_predators`
+  - Scenarios: `foraging`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`
   - Sensing suffixes: `_oracle`, `_temporal`, `_derivative`
   - Variant suffixes: `_classical`, `_fair`, `_separable`, `_modality_paired`, etc.
   - Example: `configs/scenarios/foraging/mlpppo_small_oracle.yml`, `configs/scenarios/thermal_pursuit/lstmppo_large_temporal.yml`

@@ -262,7 +262,7 @@ class TestPygameRenderer:
             ),
             Predator(
                 position=(ax - 1, ay),
-                predator_type=PredatorType.RANDOM,
+                predator_type=PredatorType.PURSUIT,
                 speed=1.0,
                 detection_radius=5,
                 damage_radius=0,
