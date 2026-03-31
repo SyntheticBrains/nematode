@@ -347,8 +347,8 @@ class TestSpikingReinforceBrain:
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -370,8 +370,8 @@ class TestSpikingReinforceBrain:
     def test_learn_policy_gradient(self, brain):
         """Test learning with policy gradients."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -488,8 +488,8 @@ class TestSpikingReinforceBrainIntegration:
 
         for step in range(5):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(float(step), float(step)),
                 agent_direction=Direction.UP,
             )
@@ -530,8 +530,8 @@ class TestSpikingReinforceBrainIntegration:
         for _ in range(3):
             for step in range(5):
                 params = BrainParams(
-                    gradient_strength=0.5,
-                    gradient_direction=1.0,
+                    food_gradient_strength=0.5,
+                    food_gradient_direction=1.0,
                     agent_position=(1.0, 1.0),
                     agent_direction=Direction.UP,
                 )
@@ -628,8 +628,8 @@ class TestIntraEpisodeUpdates:
         )
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_position=(1.0, 1.0),
             agent_direction=Direction.UP,
         )
@@ -666,8 +666,8 @@ class TestIntraEpisodeUpdates:
         )
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_position=(1.0, 1.0),
             agent_direction=Direction.UP,
         )
@@ -718,8 +718,8 @@ class TestMinActionProb:
         )
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_position=(1.0, 1.0),
             agent_direction=Direction.UP,
         )
@@ -747,8 +747,8 @@ class TestMinActionProb:
 
         # Brain should work without errors
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_position=(1.0, 1.0),
             agent_direction=Direction.UP,
         )
@@ -776,8 +776,8 @@ class TestPopulationCodingIntegration:
         )
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_position=(1.0, 1.0),
             agent_direction=Direction.UP,
         )
@@ -806,8 +806,6 @@ class TestSeparatedGradients:
         )
 
         params = BrainParams(
-            gradient_strength=0.5,  # Combined (unused when separated)
-            gradient_direction=1.0,
             food_gradient_strength=0.8,
             food_gradient_direction=0.5,
             predator_gradient_strength=0.3,

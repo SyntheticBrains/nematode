@@ -264,9 +264,9 @@ class TestPPOBrainWithScientificModuleNames:
         config = MLPPPOBrainConfig(
             sensory_modules=[
                 ModuleName.FOOD_CHEMOTAXIS,
-                ModuleName.FOOD_CHEMOTAXIS,
                 ModuleName.NOCICEPTION,
                 ModuleName.MECHANOSENSATION,
+                ModuleName.PROPRIOCEPTION,
             ],
         )
         brain = MLPPPOBrain(config=config)
