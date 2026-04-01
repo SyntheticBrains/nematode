@@ -1022,7 +1022,6 @@ class TestHealthSystem:
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             health=HealthParams(
-                enabled=True,
                 max_hp=100.0,
                 predator_damage=10.0,
                 food_healing=5.0,
@@ -1039,7 +1038,6 @@ class TestHealthSystem:
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             health=HealthParams(
-                enabled=True,
                 max_hp=100.0,
                 predator_damage=25.0,
                 food_healing=10.0,
@@ -1204,7 +1202,6 @@ class TestHealthSystem:
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             health=HealthParams(
-                enabled=True,
                 max_hp=50.0,
                 predator_damage=5.0,
                 food_healing=15.0,

@@ -352,11 +352,11 @@ class ResultsMetadata(BaseModel):
         Per-run result data for full transparency and reproducibility verification.
         Contains essential metrics for each run including seeds.
     avg_survival_score : float | None
-        Average survival score across all runs (final_hp / max_hp). None if health disabled.
+        Average survival score across all runs (final_hp / max_hp).
     avg_temperature_comfort_score : float | None
         Average temperature comfort score across all runs. None if thermotaxis disabled.
     post_convergence_survival_score : float | None
-        Average survival score in post-convergence runs. None if health disabled.
+        Average survival score in post-convergence runs.
     post_convergence_temperature_comfort_score : float | None
         Average temperature comfort score in post-convergence runs. None if thermotaxis disabled.
     avg_chemotaxis_index : float | None

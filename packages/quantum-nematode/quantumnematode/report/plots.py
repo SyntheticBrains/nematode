@@ -1400,7 +1400,7 @@ def plot_survival_vs_food_collection(  # pragma: no cover
             s=100,
             color="green",
             edgecolors="black",
-            label=f"Survived ({len(survived_foods)} runs)",
+            label=f"Not Depleted ({len(survived_foods)} runs)",
         )
 
     # Plot died runs
@@ -1423,9 +1423,9 @@ def plot_survival_vs_food_collection(  # pragma: no cover
     avg_foods_died_str = f"{avg_foods_died:.1f}" if died_foods else "N/A"
 
     stats_text = (
-        f"Survival Rate: {survival_rate:.1%}\n"
-        f"Avg Foods (Survived): {avg_foods_survived:.1f}\n"
-        f"Avg Foods (Died): {avg_foods_died_str}"
+        f"HP Survival Rate: {survival_rate:.1%}\n"
+        f"Avg Foods (Not Depleted): {avg_foods_survived:.1f}\n"
+        f"Avg Foods (Depleted): {avg_foods_died_str}"
     )
     plt.text(
         0.05,
@@ -1437,8 +1437,8 @@ def plot_survival_vs_food_collection(  # pragma: no cover
         bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
     )
 
-    plt.yticks([0, 1], ["Killed", "Survived"])
-    plt.title("Survival vs Food Collection")
+    plt.yticks([0, 1], ["Health Depleted", "Not Depleted"])
+    plt.title("Health Depletion vs Food Collection")
     plt.xlabel("Foods Collected")
     plt.ylabel("Outcome")
     plt.legend()

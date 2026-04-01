@@ -224,8 +224,8 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
 - **THEN** each episode SHALL include predator metrics:
   - `predator_encounters` (integer)
   - `successful_evasions` (integer)
-  - `predator_deaths` (boolean or integer)
-  - `foods_collected_before_death` (integer, if applicable)
+  - `died_to_health_depletion` (boolean)
+  - `foods_collected` (integer)
 - **AND** these SHALL be included in the episode performance data
 
 #### Scenario: Experiment Metadata When Predators Disabled
@@ -357,9 +357,9 @@ The experiment tracking system SHALL include predator metrics in CSV exports and
 - **THEN** the CSV SHALL include columns:
   - `predator_encounters`
   - `successful_evasions`
-  - `predator_deaths` (boolean)
-  - `foods_collected` (existing, but crucial for predator context)
-  - `termination_reason` (showing "predator" when applicable)
+  - `died_to_health_depletion` (boolean)
+  - `foods_collected`
+  - `termination_reason` (showing "health_depleted" when HP reaches zero)
 - **AND** columns SHALL be empty/null when predators disabled (backward compatibility)
 
 #### Scenario: JSON Export with Full Predator Configuration

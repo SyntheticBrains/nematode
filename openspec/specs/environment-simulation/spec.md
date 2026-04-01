@@ -271,8 +271,8 @@ The system SHALL provide three preset configurations for curriculum learning: sm
   - count: 2
   - speed: 1.0
   - detection radius: 8
-  - kill radius: 0
-  - movement pattern: "random"
+  - damage radius: 0
+  - movement pattern: "pursuit"
 - **AND** both foraging and predator mechanics SHALL be active
 
 ### Requirement: Brain Architecture Compatibility

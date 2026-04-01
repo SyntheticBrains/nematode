@@ -1277,7 +1277,7 @@ def export_predator_session_metrics_to_csv(  # pragma: no cover
         r.successful_evasions for r in predator_results if r.successful_evasions is not None
     )
     total_health_deaths = sum(1 for r in predator_results if r.died_to_health_depletion)
-    survival_rate = 1.0 - (total_health_deaths / total_runs) if total_runs > 0 else 0.0
+    hp_survival_rate = 1.0 - (total_health_deaths / total_runs) if total_runs > 0 else 0.0
     overall_evasion_rate = total_evasions / total_encounters if total_encounters > 0 else 0.0
 
     with filepath.open("w", newline="") as csvfile:
@@ -1289,7 +1289,7 @@ def export_predator_session_metrics_to_csv(  # pragma: no cover
         writer.writerow({"metric": "total_predator_encounters", "value": total_encounters})
         writer.writerow({"metric": "total_successful_evasions", "value": total_evasions})
         writer.writerow({"metric": "total_health_depleted", "value": total_health_deaths})
-        writer.writerow({"metric": "survival_rate", "value": f"{survival_rate:.4f}"})
+        writer.writerow({"metric": "hp_survival_rate", "value": f"{hp_survival_rate:.4f}"})
         writer.writerow({"metric": "overall_evasion_rate", "value": f"{overall_evasion_rate:.4f}"})
 
         # Add metrics from PerformanceMetrics

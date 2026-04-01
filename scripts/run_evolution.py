@@ -354,9 +354,17 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     success = True
                     return True
 
-            # Move predators and check for death
+            # Check predator damage before and after movement
             if env.predator.enabled:
+                # Check before predators move (agent may have walked into radius)
+                if env.is_agent_in_damage_radius():
+                    env.apply_predator_damage()
+                    if env.is_health_depleted():
+                        return False  # Died from HP depletion
+
                 env.update_predators()
+
+                # Check after predators move (predator may have stepped onto agent)
                 if env.is_agent_in_damage_radius():
                     env.apply_predator_damage()
                     if env.is_health_depleted():

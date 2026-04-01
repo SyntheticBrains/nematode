@@ -457,6 +457,9 @@ class StandardEpisodeRunner(EpisodeRunner):
                 f"(took {temp_damage:.1f} damage)",
             )
 
+            # Track health after temperature damage
+            agent._episode_tracker.track_health(agent.env.agent_hp)
+
         # Check if temperature damage depleted health
         if temp_damage > 0 and agent.env.is_health_depleted():
             logger.warning(
