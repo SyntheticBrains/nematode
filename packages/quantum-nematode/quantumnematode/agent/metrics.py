@@ -36,7 +36,6 @@ class MetricsTracker:
         # Predator tracking
         self.total_predator_encounters = 0
         self.total_successful_evasions = 0
-        self.total_predator_deaths = 0
         self.total_starved = 0
         self.total_max_steps = 0
         self.total_interrupted = 0
@@ -90,9 +89,7 @@ class MetricsTracker:
 
         # Track termination reasons
         if termination_reason:
-            if termination_reason == TerminationReason.PREDATOR:
-                self.total_predator_deaths += 1
-            elif termination_reason == TerminationReason.STARVED:
+            if termination_reason == TerminationReason.STARVED:
                 self.total_starved += 1
             elif termination_reason == TerminationReason.HEALTH_DEPLETED:
                 self.total_health_depleted += 1
@@ -164,7 +161,6 @@ class MetricsTracker:
             total_successes=self.success_count,
             total_starved=self.total_starved,
             total_predator_encounters=self.total_predator_encounters,
-            total_predator_deaths=self.total_predator_deaths,
             total_health_depleted=self.total_health_depleted,
             total_successful_evasions=self.total_successful_evasions,
             total_max_steps=self.total_max_steps,
@@ -181,7 +177,6 @@ class MetricsTracker:
         self.distance_efficiencies = []
         self.total_predator_encounters = 0
         self.total_successful_evasions = 0
-        self.total_predator_deaths = 0
         self.total_starved = 0
         self.total_max_steps = 0
         self.total_interrupted = 0

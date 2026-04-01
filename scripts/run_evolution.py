@@ -298,15 +298,11 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     temperature_gradient_direction = temp_grad[1]
                 cultivation_temperature = env.thermotaxis.cultivation_temperature
 
-            # Get health state if enabled
-            health = None
-            max_health = None
-            if env.health.enabled:
-                health = env.agent_hp
-                max_health = env.health.max_hp
+            # Get health state
+            health = env.agent_hp
+            max_health = env.health.max_hp
 
             # Mechanosensation
-            # (uses damage_radius when health enabled, kill_radius otherwise)
             boundary_contact = env.is_agent_at_boundary()
             predator_contact = env.is_agent_in_predator_contact()
 
@@ -350,9 +346,8 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 satiety = min(satiety + satiety_gain, initial_satiety)
                 env.spawn_food()  # Spawn new food
 
-                # Apply food healing if health system enabled
-                if env.health.enabled:
-                    env.apply_food_healing()
+                # Apply food healing
+                env.apply_food_healing()
 
                 # Check for success (collected target foods)
                 if foods_collected >= env.foraging.target_foods_to_collect:
@@ -362,21 +357,15 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
             # Move predators and check for death
             if env.predator.enabled:
                 env.update_predators()
-                if env.check_predator_collision():
-                    if env.health.enabled:
-                        # HP-based damage: apply damage and check for death
-                        env.apply_predator_damage()
-                        if env.is_health_depleted():
-                            return False  # Died from HP depletion
-                    else:
-                        # Instant death (original behavior)
-                        return False  # Died to predator
+                if env.is_agent_in_damage_radius():
+                    env.apply_predator_damage()
+                    if env.is_health_depleted():
+                        return False  # Died from HP depletion
 
             # Apply temperature effects (rewards and HP damage) if thermotaxis enabled
             if env.thermotaxis.enabled:
                 _reward_delta, _hp_damage = env.apply_temperature_effects()
-                # Check for death from temperature damage (only if health enabled)
-                if env.health.enabled and env.is_health_depleted():
+                if env.is_health_depleted():
                     return False  # Died from temperature damage
 
             # Decay satiety

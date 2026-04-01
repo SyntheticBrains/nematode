@@ -1353,7 +1353,7 @@ def plot_survival_vs_food_collection(  # pragma: no cover
     file_prefix: str,
     plot_dir: Path,
     foods_collected: list[int],
-    predator_deaths: list[bool],
+    health_depleted: list[bool],
 ) -> None:
     """Plot survival rate vs food collection scatter plot.
 
@@ -1365,28 +1365,28 @@ def plot_survival_vs_food_collection(  # pragma: no cover
         Directory to save the plot.
     foods_collected : list[int]
         Number of foods collected in each run.
-    predator_deaths : list[bool]
-        Whether each run ended in predator death (True) or survival (False).
+    health_depleted : list[bool]
+        Whether each run ended in health depletion (True) or survival (False).
     """
     # Guard against empty inputs
-    if not foods_collected or not predator_deaths:
+    if not foods_collected or not health_depleted:
         logger.warning("No survival/food collection data to plot")
         return
 
     # Validate input lengths match
-    if len(foods_collected) != len(predator_deaths):
+    if len(foods_collected) != len(health_depleted):
         logger.warning(
             f"Length mismatch: foods_collected ({len(foods_collected)}) vs "
-            f"predator_deaths ({len(predator_deaths)}). Skipping plot.",
+            f"health_depleted ({len(health_depleted)}). Skipping plot.",
         )
         return
 
     # Separate data by survival status
     survived_foods = [
-        foods for foods, died in zip(foods_collected, predator_deaths, strict=True) if not died
+        foods for foods, died in zip(foods_collected, health_depleted, strict=True) if not died
     ]
     died_foods = [
-        foods for foods, died in zip(foods_collected, predator_deaths, strict=True) if died
+        foods for foods, died in zip(foods_collected, health_depleted, strict=True) if died
     ]
 
     plt.figure(figsize=(10, 8))
@@ -1412,11 +1412,11 @@ def plot_survival_vs_food_collection(  # pragma: no cover
             s=100,
             color="red",
             edgecolors="black",
-            label=f"Killed by Predator ({len(died_foods)} runs)",
+            label=f"Health Depleted ({len(died_foods)} runs)",
         )
 
     # Add statistics
-    total_runs = len(predator_deaths)
+    total_runs = len(health_depleted)
     survival_rate = len(survived_foods) / total_runs if total_runs > 0 else 0.0
     avg_foods_survived = sum(survived_foods) / len(survived_foods) if survived_foods else 0.0
     avg_foods_died = sum(died_foods) / len(died_foods) if died_foods else 0.0

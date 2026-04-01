@@ -273,21 +273,21 @@ class TestRunnerComponentIntegration:
 class TestPredatorCollisionTermination:
     """Test predator collision handling in episode runner."""
 
-    def test_predator_instant_death_terminates_episode(self):
-        """Test that predator collision without health system causes instant death."""
+    def test_predator_damage_depletes_health(self):
+        """Test that predator contact depletes health and terminates episode."""
         config = MLPReinforceBrainConfig(hidden_dim=32, learning_rate=0.01, num_hidden_layers=2)
         brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4)
 
-        # Create environment with predator that has kill_radius=1
-        # (agent moves first in the step loop, so kill_radius=0 would miss)
+        # Create environment with predator that has damage_radius=1
+        # and high damage so health depletes quickly
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            predator=PredatorParams(enabled=True, count=1, kill_radius=1),
-            health=HealthParams(enabled=False),  # Instant death mode
+            predator=PredatorParams(enabled=True, count=1, damage_radius=1),
+            health=HealthParams(max_hp=10.0, predator_damage=100.0),
         )
 
-        # Place predator adjacent to agent - will be in kill range after agent moves
+        # Place predator on agent - will be in damage range
         agent_x, agent_y = env.agent_pos[0], env.agent_pos[1]
         env.predators[0].position = (agent_x, agent_y)
 
@@ -297,8 +297,8 @@ class TestPredatorCollisionTermination:
         reward_config = RewardConfig()
         result = agent.run_episode(reward_config, max_steps=100)
 
-        # Should terminate due to predator
-        assert result.termination_reason == TerminationReason.PREDATOR
+        # Should terminate due to health depletion from predator damage
+        assert result.termination_reason == TerminationReason.HEALTH_DEPLETED
 
     def test_predator_with_health_system_applies_damage(self):
         """Test that predator collision with health system applies damage."""
@@ -308,8 +308,8 @@ class TestPredatorCollisionTermination:
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            predator=PredatorParams(enabled=True, count=1, kill_radius=0),
-            health=HealthParams(enabled=True, max_hp=100.0, predator_damage=20.0),
+            predator=PredatorParams(enabled=True, count=1),
+            health=HealthParams(max_hp=100.0, predator_damage=20.0),
         )
 
         # Place predator on agent's starting position
@@ -334,8 +334,8 @@ class TestPredatorCollisionTermination:
         env = DynamicForagingEnvironment(
             grid_size=5,  # Small grid, hard to avoid predator
             foraging=ForagingParams(target_foods_to_collect=5),
-            predator=PredatorParams(enabled=True, count=3, kill_radius=0),  # Multiple predators
-            health=HealthParams(enabled=True, max_hp=20.0, predator_damage=20.0),  # One-hit kill
+            predator=PredatorParams(enabled=True, count=3),  # Multiple predators
+            health=HealthParams(max_hp=20.0, predator_damage=20.0),  # One-hit kill
         )
 
         satiety_config = SatietyConfig(initial_satiety=500.0)
@@ -427,7 +427,7 @@ class TestHealthHistoryTracking:
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
         )
 
         satiety_config = SatietyConfig(initial_satiety=100.0)
@@ -456,7 +456,7 @@ class TestThermotaxisIntegration:
         env = DynamicForagingEnvironment(
             grid_size=20,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -488,7 +488,7 @@ class TestThermotaxisIntegration:
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -517,7 +517,7 @@ class TestThermotaxisIntegration:
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=50.0),  # Low HP
+            health=HealthParams(max_hp=50.0),  # Low HP
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -545,7 +545,7 @@ class TestThermotaxisIntegration:
         env = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -583,7 +583,7 @@ class TestThermotaxisIntegration:
         env1 = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -604,7 +604,7 @@ class TestThermotaxisIntegration:
         env2 = DynamicForagingEnvironment(
             grid_size=10,
             foraging=ForagingParams(target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -641,7 +641,7 @@ class TestBraveForagingBonus:
                 min_food_distance=1,
                 agent_exclusion_radius=1,
             ),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -686,7 +686,7 @@ class TestBraveForagingBonus:
                 min_food_distance=1,
                 agent_exclusion_radius=1,
             ),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -727,7 +727,7 @@ class TestBraveForagingBonus:
                 min_food_distance=1,
                 agent_exclusion_radius=1,
             ),
-            health=HealthParams(enabled=True, max_hp=200.0),  # High HP to survive
+            health=HealthParams(max_hp=200.0),  # High HP to survive
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,
@@ -767,7 +767,7 @@ class TestBraveForagingBonus:
                 min_food_distance=1,
                 agent_exclusion_radius=1,
             ),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,

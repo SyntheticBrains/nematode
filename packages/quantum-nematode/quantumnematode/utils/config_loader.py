@@ -293,10 +293,8 @@ class PredatorConfig(BaseModel):
         Movement behavior: "stationary" or "pursuit".
     detection_radius : int
         Distance at which pursuit predators detect the agent.
-    kill_radius : int
-        Distance for instant death (when health system disabled).
     damage_radius : int
-        Distance at which predators deal damage (when health system enabled).
+        Distance at which predators deal damage.
         Stationary predators typically have larger damage_radius (toxic zones).
     gradient_decay_constant : float
         Controls how quickly predator gradient signal decays with distance.
@@ -310,8 +308,7 @@ class PredatorConfig(BaseModel):
     movement_pattern: MovementPattern = "pursuit"
     # Maps to DynamicForagingEnvironment.predator_detection_radius
     detection_radius: int = 8
-    kill_radius: int = 0  # Maps to DynamicForagingEnvironment.predator_kill_radius
-    damage_radius: int = 0  # Distance for damage application (health system)
+    damage_radius: int = 0  # Distance for damage application
     # Maps to DynamicForagingEnvironment.predator_gradient_decay
     gradient_decay_constant: float = 12.0
     # Maps to DynamicForagingEnvironment.predator_gradient_strength
@@ -332,7 +329,6 @@ class PredatorConfig(BaseModel):
             predator_type=predator_type,
             speed=self.speed,
             detection_radius=self.detection_radius,
-            kill_radius=self.kill_radius,
             damage_radius=self.damage_radius,
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
@@ -342,11 +338,10 @@ class PredatorConfig(BaseModel):
 class HealthConfig(BaseModel):
     """Configuration for HP-based health system.
 
-    When enabled, predator contact deals damage instead of instant death.
-    Food consumption restores both HP and satiety (when both systems are enabled).
+    Predator contact deals damage based on proximity within damage_radius.
+    Food consumption restores both HP and satiety.
     """
 
-    enabled: bool = False
     max_hp: float = 100.0
     predator_damage: float = 10.0
     food_healing: float = 5.0
@@ -354,7 +349,6 @@ class HealthConfig(BaseModel):
     def to_params(self) -> HealthParams:
         """Convert to HealthParams for environment initialization."""
         return HealthParams(
-            enabled=self.enabled,
             max_hp=self.max_hp,
             predator_damage=self.predator_damage,
             food_healing=self.food_healing,

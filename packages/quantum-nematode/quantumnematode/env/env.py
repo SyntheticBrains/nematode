@@ -132,10 +132,8 @@ class PredatorParams:
         Movement speed relative to agent.
     detection_radius : int
         Distance at which pursuit predators detect the agent.
-    kill_radius : int
-        Distance for instant death (when health system disabled).
     damage_radius : int
-        Distance at which predators deal damage (when health system enabled).
+        Distance at which predators deal damage.
         Stationary predators typically have larger damage_radius (toxic zones).
     gradient_decay_constant : float
         Controls how quickly predator gradient signal decays with distance.
@@ -148,7 +146,6 @@ class PredatorParams:
     predator_type: PredatorType = PredatorType.PURSUIT
     speed: float = 1.0
     detection_radius: int = 8
-    kill_radius: int = 0
     damage_radius: int = 0
     gradient_decay_constant: float = 12.0
     gradient_strength: float = 1.0
@@ -163,7 +160,6 @@ class HealthParams:
     https://github.com/microsoft/pylance-release/issues/7801
     """
 
-    enabled: bool = False
     max_hp: float = DEFAULT_MAX_HP
     predator_damage: float = DEFAULT_PREDATOR_DAMAGE
     food_healing: float = DEFAULT_FOOD_HEALING
@@ -894,7 +890,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.viewport_size = viewport_size
 
         # Health state (runtime, not config)
-        self.agent_hp: float = self.health.max_hp if self.health.enabled else 0.0
+        self.agent_hp: float = self.health.max_hp
 
         # Temperature field (runtime, created from thermotaxis config)
         self.temperature_field: TemperatureField | None = None
@@ -1469,31 +1465,6 @@ class DynamicForagingEnvironment(BaseEnvironment):
         for pred in self.predators:
             pred.update_position(self.grid_size, self.rng, agent_pos)
 
-    def check_predator_collision(self) -> bool:
-        """
-        Check if agent collided with any predator.
-
-        Returns
-        -------
-        bool
-            True if collision detected (within kill_radius), False otherwise.
-        """
-        if not self.predator.enabled:
-            return False
-
-        agent_pos = self.agent_pos
-        for pred in self.predators:
-            # Manhattan distance for kill radius
-            distance = abs(agent_pos[0] - pred.position[0]) + abs(
-                agent_pos[1] - pred.position[1],
-            )
-            if distance <= self.predator.kill_radius:
-                logger.debug(
-                    f"Predator collision! Agent at {agent_pos}, Predator at {pred.position}",
-                )
-                return True
-        return False
-
     def is_agent_in_danger(self) -> bool:
         """
         Check if agent is within detection radius of any predator.
@@ -1623,21 +1594,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Mechanosensation: Detects harsh touch from predator contact,
         modeled after C. elegans harsh touch response (ASH, ADL neurons).
 
-        This uses kill_radius for non-health environments and damage_radius
-        for health-enabled environments to determine physical contact.
-
         Returns
         -------
         bool
-            True if agent is within contact radius of any predator.
+            True if agent is within damage radius of any predator.
         """
-        if not self.predator.enabled:
-            return False
-
-        # Use damage_radius if health system enabled, otherwise kill_radius
-        if self.health.enabled:
-            return self.is_agent_in_damage_radius()
-        return self.check_predator_collision()
+        return self.is_agent_in_damage_radius()
 
     # --- Health methods ---
 
@@ -1648,12 +1610,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Returns
         -------
         float
-            Actual amount of damage applied (0 if health system disabled).
+            Actual amount of damage applied.
             May be less than configured damage if HP was already low.
         """
-        if not self.health.enabled:
-            return 0.0
-
         old_hp = self.agent_hp
         self.agent_hp = max(0.0, self.agent_hp - self.health.predator_damage)
         actual_damage = old_hp - self.agent_hp
@@ -1670,11 +1629,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Returns
         -------
         float
-            Amount of HP restored (0 if health system disabled).
+            Amount of HP restored.
         """
-        if not self.health.enabled:
-            return 0.0
-
         old_hp = self.agent_hp
         self.agent_hp = min(self.health.max_hp, self.agent_hp + self.health.food_healing)
         actual_healing = self.agent_hp - old_hp
@@ -1693,12 +1649,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         bool
             True if HP <= 0 and health system is enabled, False otherwise.
         """
-        return self.health.enabled and self.agent_hp <= 0.0
+        return self.agent_hp <= 0.0
 
     def reset_health(self) -> None:
         """Reset agent HP to maximum (called at episode start)."""
-        if self.health.enabled:
-            self.agent_hp = self.health.max_hp
+        self.agent_hp = self.health.max_hp
 
     # -------------------------------------------------------------------------
     # Thermotaxis Methods
@@ -1852,8 +1807,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             reward_delta = self.thermotaxis.danger_penalty  # Use danger penalty for lethal too
             hp_damage = self.thermotaxis.lethal_hp_damage
 
-        # Apply HP damage if health system is enabled
-        if hp_damage > 0 and self.health.enabled:
+        # Apply HP damage
+        if hp_damage > 0:
             self.agent_hp = max(0.0, self.agent_hp - hp_damage)
             logger.debug(
                 f"Temperature damage: zone={zone.value}, damage={hp_damage}, hp={self.agent_hp}",

@@ -52,7 +52,6 @@ class TestEnvironmentMetadata:
             num_predators=2,
             predator_speed=1.0,
             predator_detection_radius=8,
-            predator_kill_radius=0,
             predator_gradient_decay=12.0,
             predator_gradient_strength=1.0,
         )
@@ -61,7 +60,6 @@ class TestEnvironmentMetadata:
         assert env_meta.num_predators == 2
         assert env_meta.predator_speed == 1.0
         assert env_meta.predator_detection_radius == 8
-        assert env_meta.predator_kill_radius == 0
         assert env_meta.predator_gradient_decay == 12.0
         assert env_meta.predator_gradient_strength == 1.0
 
@@ -77,7 +75,6 @@ class TestEnvironmentMetadata:
         assert env_meta.num_predators is None
         assert env_meta.predator_speed is None
         assert env_meta.predator_detection_radius is None
-        assert env_meta.predator_kill_radius is None
         assert env_meta.predator_gradient_decay is None
         assert env_meta.predator_gradient_strength is None
 

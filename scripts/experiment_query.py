@@ -104,7 +104,6 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:  # noqa: C90
         print(f"    Count: {metadata.environment.num_predators}")
         print(f"    Speed: {metadata.environment.predator_speed}")
         print(f"    Detection Radius: {metadata.environment.predator_detection_radius}")
-        print(f"    Kill Radius: {metadata.environment.predator_kill_radius}")
         if metadata.environment.predator_damage_radius:
             print(f"    Damage Radius: {metadata.environment.predator_damage_radius}")
         if metadata.environment.predator_gradient_decay:

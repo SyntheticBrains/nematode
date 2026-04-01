@@ -313,7 +313,7 @@ class StandardEpisodeRunner(EpisodeRunner):
         *,
         after_movement: bool = False,
     ) -> tuple[EpisodeResult | None, float]:
-        """Check for predator collision and apply damage or instant death.
+        """Check for predator contact and apply damage.
 
         Parameters
         ----------
@@ -326,59 +326,32 @@ class StandardEpisodeRunner(EpisodeRunner):
             A termination result if the agent died (or None), and the
             updated reward value.
         """
-        predator_contact = (
-            agent.env.is_agent_in_damage_radius()
-            if agent.env.health.enabled
-            else agent.env.check_predator_collision()
-        )
-        if not predator_contact:
+        if not agent.env.is_agent_in_damage_radius():
             return None, reward
 
-        if agent.env.health.enabled:
-            damage = agent.env.apply_predator_damage()
-            log_prefix = "Predator stepped on agent!" if after_movement else "Predator contact!"
-            logger.info(
-                f"{log_prefix} Took {damage:.1f} damage. "
-                f"HP: {agent.env.agent_hp:.1f}/{agent.env.health.max_hp:.1f}",
-            )
+        damage = agent.env.apply_predator_damage()
+        log_prefix = "Predator stepped on agent!" if after_movement else "Predator contact!"
+        logger.info(
+            f"{log_prefix} Took {damage:.1f} damage. "
+            f"HP: {agent.env.agent_hp:.1f}/{agent.env.health.max_hp:.1f}",
+        )
 
-            # Apply damage penalty (learning signal for taking damage)
-            damage_penalty = -reward_config.penalty_health_damage
-            reward += damage_penalty
-            agent._episode_tracker.track_reward(damage_penalty)
+        # Apply damage penalty (learning signal for taking damage)
+        damage_penalty = -reward_config.penalty_health_damage
+        reward += damage_penalty
+        agent._episode_tracker.track_reward(damage_penalty)
 
-            # Check if health depleted
-            if not agent.env.is_health_depleted():
-                return None, reward
+        # Check if health depleted
+        if not agent.env.is_health_depleted():
+            return None, reward
 
-            # Track final health (0 HP) before returning
-            agent._episode_tracker.track_health(agent.env.agent_hp)
+        # Track final health (0 HP) before returning
+        agent._episode_tracker.track_health(agent.env.agent_hp)
 
-            logger.warning(
-                "Failed to complete episode: health depleted from predator damage!",
-            )
-            # Apply death penalty
-            penalty = -reward_config.penalty_predator_death
-            reward += penalty
-            agent._episode_tracker.track_reward(penalty)
-
-            return self._terminate_episode(
-                agent,
-                params,
-                reward,
-                success=False,
-                termination_reason=TerminationReason.HEALTH_DEPLETED,
-            ), reward
-
-        # Instant death (original behavior when health system disabled)
-        if after_movement:
-            logger.warning(
-                "Failed to complete episode: agent caught by predator (after predator movement)!",
-            )
-        else:
-            logger.warning("Failed to complete episode: agent caught by predator!")
-
-        # Apply death penalty to both brain reward and episode tracker
+        logger.warning(
+            "Failed to complete episode: health depleted from predator damage!",
+        )
+        # Apply death penalty
         penalty = -reward_config.penalty_predator_death
         reward += penalty
         agent._episode_tracker.track_reward(penalty)
@@ -388,7 +361,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             params,
             reward,
             success=False,
-            termination_reason=TerminationReason.PREDATOR,
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
         ), reward
 
     def _handle_predator_phase(
@@ -657,9 +630,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Track satiety after decay
             agent._episode_tracker.track_satiety(agent.current_satiety)
 
-            # Track health if health system is enabled
-            if agent.env.health.enabled:
-                agent._episode_tracker.track_health(agent.env.agent_hp)
+            # Track health
+            agent._episode_tracker.track_health(agent.env.agent_hp)
 
             # Temperature effects
             result, reward = self._handle_temperature_effects(agent, reward_config, params, reward)

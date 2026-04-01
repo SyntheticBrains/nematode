@@ -451,16 +451,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         predator_info = (
             f", {predator_config.count} predators "
             f"(detection_radius={predator_config.detection_radius}, "
-            f"kill_radius={predator_config.kill_radius}, "
             f"damage_radius={predator_config.damage_radius})"
         )
-    health_info = ""
-    if health_config.enabled:
-        health_info = (
-            f", health (max_hp={health_config.max_hp}, "
-            f"predator_damage={health_config.predator_damage}, "
-            f"food_healing={health_config.food_healing})"
-        )
+    health_info = (
+        f", health (max_hp={health_config.max_hp}, "
+        f"predator_damage={health_config.predator_damage}, "
+        f"food_healing={health_config.food_healing})"
+    )
     thermotaxis_info = ""
     if thermotaxis_config.enabled:
         thermotaxis_info = (
@@ -617,15 +614,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
             predator_encounters_this_run = agent._episode_tracker.predator_encounters  # noqa: SLF001
             successful_evasions_this_run = agent._episode_tracker.successful_evasions  # noqa: SLF001
-            died_to_predator_this_run = step_result.termination_reason == TerminationReason.PREDATOR
             died_to_health_depletion_this_run = (
                 step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
             )
-            health_history_this_run = None
+            health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
             temperature_history_this_run = None
-            # Copy health history if health system is enabled
-            if agent.env.health.enabled:
-                health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
             # Copy temperature history if thermotaxis is enabled
             if agent.env.thermotaxis.enabled:
                 temperature_history_this_run = (
@@ -637,7 +630,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             temperature_comfort_score_this_run = None
 
             # Survival score: final_hp / max_hp
-            if agent.env.health.enabled and health_history_this_run:
+            if health_history_this_run:
                 final_hp = health_history_this_run[-1]
                 max_hp = agent.env.health.max_hp
                 survival_score_this_run = final_hp / max_hp if max_hp > 0 else 0.0
@@ -664,7 +657,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 temperature_history=temperature_history_this_run,
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
-                died_to_predator=died_to_predator_this_run,
                 died_to_health_depletion=died_to_health_depletion_this_run,
                 food_history=step_result.food_history,
                 survival_score=survival_score_this_run,
@@ -722,8 +714,6 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 outcome_msg += "FAILED: Agent starved"
             elif step_result.termination_reason == TerminationReason.MAX_STEPS:
                 outcome_msg += "FAILED: Max steps reached"
-            elif step_result.termination_reason == TerminationReason.PREDATOR:
-                outcome_msg += "FAILED: Killed by predator"
             elif step_result.termination_reason == TerminationReason.HEALTH_DEPLETED:
                 outcome_msg += "FAILED: Health depleted"
 
@@ -906,7 +896,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         r
         for r in all_results
         if r.predator_encounters is not None
-        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
+        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_health_depletion)
     ]
     if predator_results:
         export_predator_results_to_csv(all_results=all_results, data_dir=data_dir)
@@ -1341,7 +1331,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         r
         for r in all_results
         if r.predator_encounters is not None
-        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_predator)
+        and (r.predator_encounters > 0 or r.successful_evasions or r.died_to_health_depletion)
     ]
     if predator_results:
         # Extract predator-specific data for encounters plot
@@ -1389,14 +1379,14 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
         predator_foraging_results = [
             r
             for r in predator_results
-            if r.foods_collected is not None and r.died_to_predator is not None
+            if r.foods_collected is not None and r.died_to_health_depletion is not None
         ]
         if predator_foraging_results:
             foods_in_predator = []
             deaths_in_predator = []
             for r in predator_foraging_results:
                 foods_in_predator.append(r.foods_collected)
-                deaths_in_predator.append(r.died_to_predator)
+                deaths_in_predator.append(r.died_to_health_depletion)
 
             if foods_in_predator and deaths_in_predator:
                 plot_survival_vs_food_collection(

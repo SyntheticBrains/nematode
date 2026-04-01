@@ -20,10 +20,8 @@ class TerminationReason(StrEnum):
         Agent collected all available food (DynamicForagingEnvironment - not yet implemented).
     STARVED : str
         Agent's satiety reached zero (DynamicForagingEnvironment).
-    PREDATOR : str
-        Agent was caught by a predator (DynamicForagingEnvironment with predators enabled).
     HEALTH_DEPLETED : str
-        Agent's HP reached zero from accumulated damage (health system enabled).
+        Agent's HP reached zero from accumulated damage.
     MAX_STEPS : str
         Agent reached maximum allowed steps.
     INTERRUPTED : str
@@ -33,7 +31,6 @@ class TerminationReason(StrEnum):
     GOAL_REACHED = "goal_reached"
     COMPLETED_ALL_FOOD = "completed_all_food"
     STARVED = "starved"
-    PREDATOR = "predator"
     HEALTH_DEPLETED = "health_depleted"
     MAX_STEPS = "max_steps"
     INTERRUPTED = "interrupted"
@@ -79,10 +76,8 @@ class SimulationResult(BaseModel):
         Number of predator encounters (predator environments only).
     successful_evasions : int | None
         Number of successful predator evasions (predator environments only).
-    died_to_predator : bool | None
-        Whether run ended due to predator death (predator environments only).
     died_to_health_depletion : bool | None
-        Whether run ended due to HP reaching zero (health system enabled).
+        Whether run ended due to HP reaching zero.
     food_history : FoodHistory | None
         Food positions at each step (DynamicForagingEnvironment only).
     survival_score : float | None
@@ -108,7 +103,6 @@ class SimulationResult(BaseModel):
     temperature_history: list[float] | None = None
     predator_encounters: int | None = None
     successful_evasions: int | None = None
-    died_to_predator: bool | None = None
     died_to_health_depletion: bool | None = None
     food_history: FoodHistory | None = None
     survival_score: float | None = None
@@ -218,10 +212,8 @@ class PerformanceMetrics(BaseModel):
         Total number of runs that ended due to starvation.
     total_predator_encounters : int
         Total number of predator encounters across all runs.
-    total_predator_deaths : int
-        Total number of runs that ended due to predator collision.
     total_health_depleted : int
-        Total number of runs that ended due to HP reaching zero (health system).
+        Total number of runs that ended due to HP reaching zero.
     total_successful_evasions : int
         Total number of successful predator evasions across all runs.
     total_max_steps : int
@@ -247,7 +239,6 @@ class PerformanceMetrics(BaseModel):
     total_successes: int = 0
     total_starved: int = 0
     total_predator_encounters: int = 0
-    total_predator_deaths: int = 0
     total_health_depleted: int = 0
     total_successful_evasions: int = 0
     total_max_steps: int = 0
