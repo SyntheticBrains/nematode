@@ -86,7 +86,6 @@ from quantumnematode.utils.session import generate_session_id
 
 # Reflex MLP defaults
 DEFAULT_REFLEX_HIDDEN_DIM = 16
-DEFAULT_REFLEX_INPUT_DIM = 2  # only used as fallback if input_dim not set
 DEFAULT_NUM_MOTOR = 4
 DEFAULT_LOGIT_SCALE = 5.0
 
