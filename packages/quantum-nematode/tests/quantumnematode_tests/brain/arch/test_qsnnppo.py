@@ -533,8 +533,8 @@ class TestQSNNPPOBrainForwardPass:
     def test_run_brain_returns_action(self, brain: QSNNPPOBrain):
         """Test run_brain returns valid action data."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -548,8 +548,8 @@ class TestQSNNPPOBrainForwardPass:
     def test_run_brain_stores_pending_data(self, brain: QSNNPPOBrain):
         """Test run_brain stores pending data for learn()."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
         brain.run_brain(params, top_only=True, top_randomize=True)
@@ -561,8 +561,8 @@ class TestQSNNPPOBrainForwardPass:
     def test_action_probabilities_sum_to_one(self, brain: QSNNPPOBrain):
         """Test action probabilities sum to 1."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
         brain.run_brain(params, top_only=True, top_randomize=True)
@@ -574,8 +574,8 @@ class TestQSNNPPOBrainForwardPass:
     def test_history_tracking(self, brain: QSNNPPOBrain):
         """Test that actions are tracked in history."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
         brain.run_brain(params, top_only=True, top_randomize=True)
@@ -612,8 +612,8 @@ class TestQSNNPPOBrainLearning:
     def test_learn_adds_to_buffer(self, brain: QSNNPPOBrain):
         """Test learn() adds experiences to buffer."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -625,8 +625,8 @@ class TestQSNNPPOBrainLearning:
     def test_buffer_triggers_ppo_update(self, brain: QSNNPPOBrain):
         """Test PPO update triggers when buffer is full."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -640,8 +640,8 @@ class TestQSNNPPOBrainLearning:
     def test_episode_done_does_not_trigger_update(self, brain: QSNNPPOBrain):
         """Test buffer persists across episodes until full."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -655,8 +655,8 @@ class TestQSNNPPOBrainLearning:
     def test_ppo_update_changes_actor_weights(self, brain: QSNNPPOBrain):
         """Test PPO update modifies actor weights."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -673,8 +673,8 @@ class TestQSNNPPOBrainLearning:
     def test_ppo_update_changes_critic_weights(self, brain: QSNNPPOBrain):
         """Test PPO update modifies critic weights."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -754,8 +754,8 @@ class TestQSNNPPOBrainLearning:
     def test_rewards_stored_in_history(self, brain: QSNNPPOBrain):
         """Test rewards are recorded in history."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -834,8 +834,8 @@ class TestQSNNPPOBrainEpisode:
     def test_multiple_episodes(self, brain: QSNNPPOBrain):
         """Test running multiple complete episodes."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -878,8 +878,8 @@ class TestQSNNPPOBrainReproducibility:
         )
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -941,8 +941,8 @@ class TestQSNNPPOBrainIntegration:
     def test_full_training_episode(self, brain: QSNNPPOBrain):
         """Test a complete training episode workflow."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -963,13 +963,13 @@ class TestQSNNPPOBrainIntegration:
         """Test training across multiple episodes."""
         params_list = [
             BrainParams(
-                gradient_strength=0.3,
-                gradient_direction=0.0,
+                food_gradient_strength=0.3,
+                food_gradient_direction=0.0,
                 agent_direction=Direction.UP,
             ),
             BrainParams(
-                gradient_strength=0.8,
-                gradient_direction=1.5,
+                food_gradient_strength=0.8,
+                food_gradient_direction=1.5,
                 agent_direction=Direction.RIGHT,
             ),
         ]
@@ -987,8 +987,8 @@ class TestQSNNPPOBrainIntegration:
     def test_varying_reward_signals(self, brain: QSNNPPOBrain):
         """Test brain handles varying reward magnitudes."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 

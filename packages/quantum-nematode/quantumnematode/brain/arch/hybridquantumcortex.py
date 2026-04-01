@@ -463,6 +463,24 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
 
     # ── Validators ──
 
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("cortex_sensory_modules")
+    @classmethod
+    def validate_cortex_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate cortex_sensory_modules is non-empty."""
+        if not v:
+            msg = "cortex_sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
+
     @field_validator("num_sensory_neurons")
     @classmethod
     def validate_num_sensory_neurons(cls, v: int) -> int:
@@ -563,17 +581,6 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
         return v
 
     @model_validator(mode="after")
-    def validate_cortex_modules_for_stage(self) -> HybridQuantumCortexBrainConfig:
-        """Validate cortex_sensory_modules non-empty when training_stage >= 2."""
-        if self.training_stage >= STAGE_CORTEX_ONLY and not self.cortex_sensory_modules:
-            msg = (
-                "cortex_sensory_modules must be non-empty when training_stage >= 2, "
-                f"got {self.cortex_sensory_modules}"
-            )
-            raise ValueError(msg)
-        return self
-
-    @model_validator(mode="after")
     def validate_cortex_output_neurons(self) -> HybridQuantumCortexBrainConfig:
         """Validate cortex_output_neurons >= num_motor_neurons + num_modes + 1."""
         required = self.num_motor_neurons + self.num_modes + 1
@@ -637,8 +644,10 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         self.cortex_input_dim = get_classical_feature_dimension(self.cortex_sensory_modules)
         self.num_cortex_groups = len(self.cortex_sensory_modules)
         # TODO(stage4): Replace with per-module classical_dim lookup when adding
-        # thermotaxis (classical_dim=3). Currently all stage 1-3 modules have
-        # classical_dim=2, so this is safe until multi-sensory scaling.
+        # modules with classical_dim != 2 (e.g. thermotaxis=3, STAM=9).
+        # Currently all modules used with the cortex QSNN have classical_dim=2.
+        # The grouped QLIF slicing in _cortex_sensory_forward* assumes uniform
+        # width — variable widths would require per-module offset computation.
         self.features_per_module = 2
 
         # Data tracking

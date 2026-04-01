@@ -347,8 +347,8 @@ class TestQSNNReinforceBrainForwardPass:
     def test_run_brain_returns_action(self, brain):
         """Test run_brain returns valid action."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -363,7 +363,7 @@ class TestQSNNReinforceBrainForwardPass:
 
     def test_run_brain_tracks_episode_data(self, brain):
         """Test run_brain tracks episode data."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
 
@@ -371,7 +371,7 @@ class TestQSNNReinforceBrainForwardPass:
 
     def test_exploration_floor_prevents_deterministic_policy(self, brain):
         """Test that epsilon mixing prevents any action probability from reaching 0."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
 
@@ -383,7 +383,7 @@ class TestQSNNReinforceBrainForwardPass:
 
     def test_exploration_floor_probabilities_sum_to_one(self, brain):
         """Test that action probabilities still sum to 1.0 after epsilon mixing."""
-        params = BrainParams(gradient_strength=0.8, gradient_direction=0.1)
+        params = BrainParams(food_gradient_strength=0.8, food_gradient_direction=0.1)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
 
@@ -414,7 +414,7 @@ class TestQSNNReinforceBrainEligibilityTrace:
         assert torch.allclose(brain.eligibility_hm, torch.zeros_like(brain.eligibility_hm))
 
         # run_brain triggers _timestep then accumulates eligibility after action selection
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
 
         # At least one eligibility matrix should have non-zero values
@@ -476,7 +476,7 @@ class TestQSNNReinforceBrainEligibilityTrace:
     def test_eligibility_reset_on_episode_end(self, brain):
         """Test eligibility traces reset when episode ends."""
         # Run a step to accumulate some eligibility
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         brain.learn(params, reward=1.0, episode_done=True)
 
@@ -517,7 +517,7 @@ class TestQSNNReinforceBrainLocalLearning:
         initial_w_hm = brain.W_hm.clone()
 
         # Run episode with positive reward
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         for _ in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=1.0, episode_done=False)
@@ -890,8 +890,8 @@ class TestQSNNReinforceBrainIntegration:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -921,7 +921,7 @@ class TestQSNNReinforceBrainIntegration:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for _episode in range(3):
             brain.prepare_episode()
@@ -1067,7 +1067,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         initial_w_hm = brain.W_hm.clone().detach()
 
         # Run a short episode with varied rewards for meaningful advantages
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         rewards = [0.1, 2.0, -1.0, 3.0, 0.5]
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -1090,7 +1090,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         initial_theta_m = brain.theta_motor.clone().detach()
 
         # Run a short episode with varied rewards
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=1.0, episode_done=(step == 4))
@@ -1104,7 +1104,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
 
     def test_surrogate_mode_stores_features(self, brain):
         """Test that run_brain stores features for gradient recomputation."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
 
@@ -1113,7 +1113,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
 
     def test_surrogate_mode_episode_features_cleared_on_reset(self, brain):
         """Test that episode_features is cleared on episode reset."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_features) == 1
 
@@ -1122,7 +1122,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
 
     def test_surrogate_mode_full_episode(self, brain):
         """Test complete episode workflow in surrogate gradient mode."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.prepare_episode()
         for step in range(10):
@@ -1191,7 +1191,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         """Test that _episode_count increments after each episode."""
         assert brain._episode_count == 0
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         for step in range(3):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=1.0, episode_done=(step == 2))
@@ -1207,7 +1207,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_logit_scale_used_in_run_brain(self, brain):
         """Test that LOGIT_SCALE constant is used (not hardcoded 10.0)."""
         # Run brain and check that action probs are valid
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert brain.current_probabilities is not None
         assert np.isclose(np.sum(brain.current_probabilities), 1.0, atol=1e-6)
@@ -1240,7 +1240,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         initial_lr = brain.optimizer.param_groups[0]["lr"]
 
         # Run several episodes to trigger scheduler steps
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         for _episode in range(10):
             brain.prepare_episode()
             for step in range(3):
@@ -1320,7 +1320,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         # Run 5 steps (= update_interval), not episode_done
         for _step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -1348,7 +1348,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         initial_w_sh = brain.W_sh.clone().detach()
         initial_w_hm = brain.W_hm.clone().detach()
 
@@ -1379,7 +1379,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 10 steps: updates at step 3, 6, 9
         for step in range(10):
@@ -1409,7 +1409,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 7 steps: intra-episode update at step 5, then 2 remaining steps
         for step in range(7):
@@ -1435,7 +1435,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run exactly 5 steps with episode_done=True on the last step
         # The intra-episode update should NOT fire (episode_done=True),
@@ -1597,7 +1597,7 @@ class TestAdaptiveEntropyBonus:
     def test_no_boost_when_entropy_above_floor(self, brain):
         """Test that entropy_coef is unchanged when entropy is above the floor."""
         # Run a few steps to have episode data
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.prepare_episode()
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -1774,7 +1774,7 @@ class TestMultiTimestepIntegration:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         actions = brain.run_brain(params, top_only=True, top_randomize=True)
 
         assert len(actions) == 1
@@ -1799,7 +1799,7 @@ class TestMultiTimestepIntegration:
         initial_w_hm = brain.W_hm.clone().detach()
 
         # Run a short episode with varied rewards for meaningful advantages
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         rewards = [0.1, 2.0, -1.0, 3.0, 0.5]
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -1863,7 +1863,7 @@ class TestPPOClipping:
             use_local_learning=False,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
 
         assert len(brain.episode_old_log_probs) == 1
@@ -1882,7 +1882,7 @@ class TestPPOClipping:
             use_local_learning=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
 
         assert len(brain.episode_old_log_probs) == 0
@@ -1899,7 +1899,7 @@ class TestPPOClipping:
             learning_rate=0.1,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_old_log_probs) == 1
 
@@ -1920,7 +1920,7 @@ class TestPPOClipping:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         for _step in range(3):
             brain.run_brain(params, top_only=True, top_randomize=True)
             brain.learn(params, reward=0.5, episode_done=False)
@@ -1938,7 +1938,7 @@ class TestPPOClipping:
             use_local_learning=False,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         for _ in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
 
@@ -1960,7 +1960,7 @@ class TestPPOClipping:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         initial_w_sh = brain.W_sh.clone().detach()
         initial_w_hm = brain.W_hm.clone().detach()
@@ -2027,7 +2027,7 @@ class TestThetaMotorNormClamping:
         with torch.no_grad():
             brain.theta_motor.fill_(2.0)  # norm = 4.0, well above max_norm=0.5
 
-        params = BrainParams(gradient_strength=0.8, gradient_direction=0.5)
+        params = BrainParams(food_gradient_strength=0.8, food_gradient_direction=0.5)
 
         # Run several steps then trigger episode-end update
         for step in range(5):
@@ -2058,7 +2058,7 @@ class TestThetaMotorNormClamping:
         with torch.no_grad():
             brain.theta_motor.fill_(2.0)
 
-        params = BrainParams(gradient_strength=0.8, gradient_direction=0.5)
+        params = BrainParams(food_gradient_strength=0.8, food_gradient_direction=0.5)
 
         # Run a step and trigger learning
         brain.run_brain(params, top_only=True, top_randomize=True)
@@ -2083,7 +2083,7 @@ class TestThetaMotorNormClamping:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
 
         brain.learn(params, reward=1.0, episode_done=True)
@@ -2195,7 +2195,7 @@ class TestRewardNormalization:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         brain.learn(params, reward=10.0, episode_done=False)
 
@@ -2216,7 +2216,7 @@ class TestRewardNormalization:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         brain.learn(params, reward=10.0, episode_done=False)
 
@@ -2236,7 +2236,7 @@ class TestRewardNormalization:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=True)
         brain.learn(params, reward=10.0, episode_done=False)
 
@@ -2256,7 +2256,7 @@ class TestRewardNormalization:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run a full episode with large rewards
         for step in range(5):
@@ -2306,7 +2306,7 @@ class TestRewardNormalization:
         initial_w_sh = brain.W_sh.clone().detach()
         initial_w_hm = brain.W_hm.clone().detach()
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         rewards = [0.1, 5.0, -3.0, 2.0, 0.5]
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -2415,7 +2415,7 @@ class TestQSNNCritic:
             use_critic=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_values) == 1
@@ -2437,7 +2437,7 @@ class TestQSNNCritic:
             use_critic=False,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_values) == 0
@@ -2454,7 +2454,7 @@ class TestQSNNCritic:
             use_critic=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_values) == 1
@@ -2474,7 +2474,7 @@ class TestQSNNCritic:
             use_critic=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for _ in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -2573,7 +2573,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -2602,7 +2602,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 3 steps: triggers deferred update flag at step 3
         for _step in range(3):
@@ -2648,7 +2648,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 2 steps to trigger deferred update flag
         for _step in range(2):
@@ -2763,7 +2763,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run a full episode with mixed rewards
         rewards = [0.1, -5.0, 2.0, -0.3, 1.0]
@@ -2789,7 +2789,7 @@ class TestQSNNCritic:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Populate episode data manually
         for _ in range(3):
@@ -2819,7 +2819,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         assert brain._pending_critic_update is False
 
@@ -2855,7 +2855,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 3 steps to hit the update_interval boundary
         for _step in range(3):
@@ -2880,7 +2880,7 @@ class TestQSNNCritic:
             use_reward_normalization=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run a step with a known reward
         brain.run_brain(params, top_only=True, top_randomize=True)
@@ -2905,7 +2905,7 @@ class TestQSNNCritic:
             use_reward_normalization=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run a step with a known reward
         brain.run_brain(params, top_only=True, top_randomize=True)
@@ -2929,7 +2929,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Populate episode data with extreme rewards (simulating death penalty)
         for step in range(5):
@@ -2958,7 +2958,7 @@ class TestQSNNCritic:
             learning_rate=0.01,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 3 steps to set the deferred flag
         for _step in range(3):
@@ -3027,7 +3027,7 @@ class TestQSNNCritic:
             use_critic=True,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_hidden_spikes) == 1
@@ -3049,7 +3049,7 @@ class TestQSNNCritic:
             use_critic=False,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         brain.run_brain(params, top_only=True, top_randomize=True)
         assert len(brain.episode_hidden_spikes) == 0
@@ -3171,7 +3171,7 @@ class TestMultiEpochReinforce:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for step in range(10):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -3192,7 +3192,7 @@ class TestMultiEpochReinforce:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for step in range(10):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -3213,7 +3213,7 @@ class TestMultiEpochReinforce:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         w_sh_before = brain.W_sh.clone()
         w_hm_before = brain.W_hm.clone()
@@ -3245,7 +3245,7 @@ class TestMultiEpochReinforce:
                 seed=seed,
             )
             brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-            params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+            params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
             w_sh_init = brain.W_sh.clone()
             w_hm_init = brain.W_hm.clone()
@@ -3282,7 +3282,7 @@ class TestMultiEpochReinforce:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 9 steps (3 windows of 3) + episode end at step 9
         for step in range(10):
@@ -3304,7 +3304,7 @@ class TestMultiEpochReinforce:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for step in range(5):
             brain.run_brain(params, top_only=True, top_randomize=True)
@@ -3328,7 +3328,7 @@ class TestMultiEpochReinforce:
             seed=42,
         )
         brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run 3 steps to trigger intra-episode update
         for _step in range(3):
@@ -3354,8 +3354,8 @@ class TestMultiEpochReinforce:
         )
         brain = QSNNReinforceBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             predator_gradient_strength=0.3,
             predator_gradient_direction=2.5,
         )

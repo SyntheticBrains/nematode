@@ -209,7 +209,7 @@ class BrainContainerConfig(BaseModel):
     """Configuration for the brain architecture."""
 
     name: str
-    config: BrainConfigType | None = None
+    config: BrainConfigType
 
 
 class LearningRateParameters(BaseModel):

@@ -319,7 +319,7 @@ class TestFusionMechanism:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
         actions = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(actions) == 1
         assert isinstance(actions[0], ActionData)
@@ -342,7 +342,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -368,7 +368,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -398,7 +398,7 @@ class TestReinforceUpdate:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(4):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -422,7 +422,7 @@ class TestPPOBuffer:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(5):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -469,7 +469,7 @@ class TestEpisodeReset:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Run an episode
         for i in range(3):
@@ -717,7 +717,7 @@ class TestWeightPersistence:
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
         brain.set_session_id("auto_save_test")
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(5):
             brain.run_brain(params, top_only=False, top_randomize=False)

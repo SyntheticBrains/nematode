@@ -28,14 +28,12 @@ def _stage1_config(**overrides: Any) -> HybridQuantumCortexBrainConfig:
         "shots": 100,
         "num_qsnn_timesteps": 1,
         "num_cortex_timesteps": 1,
+        "sensory_modules": [ModuleName.FOOD_CHEMOTAXIS],
+        "cortex_sensory_modules": [ModuleName.FOOD_CHEMOTAXIS],
         "seed": 42,
     }
     defaults.update(overrides)
-    return HybridQuantumCortexBrainConfig(
-        cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
-        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
-        **defaults,
-    )
+    return HybridQuantumCortexBrainConfig(**defaults)
 
 
 def _stage2_config(**overrides: Any) -> HybridQuantumCortexBrainConfig:
@@ -139,19 +137,22 @@ class TestHybridQuantumCortexBrainConfig:
                 num_modes=1,
             )
 
-    def test_validation_cortex_modules_required_stage2(self):
-        """Test validation requires non-empty cortex_sensory_modules for stage >= 2."""
+    def test_validation_cortex_modules_non_empty(self):
+        """Test validation rejects empty cortex_sensory_modules."""
         with pytest.raises(ValueError, match="cortex_sensory_modules must be non-empty"):
             HybridQuantumCortexBrainConfig(
                 sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
                 cortex_sensory_modules=[],
-                training_stage=2,
+                training_stage=1,
             )
-        with pytest.raises(ValueError, match="cortex_sensory_modules must be non-empty"):
+
+    def test_validation_sensory_modules_non_empty(self):
+        """Test validation rejects empty sensory_modules."""
+        with pytest.raises(ValueError, match="sensory_modules must be non-empty"):
             HybridQuantumCortexBrainConfig(
-                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
-                cortex_sensory_modules=[],
-                training_stage=3,
+                sensory_modules=[],
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                training_stage=1,
             )
 
     def test_validation_shots_too_low(self):
@@ -362,7 +363,7 @@ class TestActionSelection:
     def test_stage1_produces_valid_action(self):
         """Test stage 1 brain produces valid ActionData."""
         brain = HybridQuantumCortexBrain(config=_stage1_config(), num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
         result = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(result) == 1
         assert isinstance(result[0], ActionData)
@@ -370,7 +371,7 @@ class TestActionSelection:
     def test_stage2_produces_valid_action(self):
         """Test stage 2 brain produces valid ActionData."""
         brain = HybridQuantumCortexBrain(config=_stage2_config(), num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
         result = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(result) == 1
         assert isinstance(result[0], ActionData)
@@ -389,7 +390,7 @@ class TestStageAwareTraining:
         monkeypatch.chdir(tmp_path)
         config = _stage1_config(reinforce_window_size=5)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -405,7 +406,7 @@ class TestStageAwareTraining:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -435,7 +436,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -556,7 +557,7 @@ class TestWeightPersistence:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(6):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -588,7 +589,7 @@ class TestReinforceGAE:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(6):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -599,7 +600,7 @@ class TestReinforceGAE:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config(use_gae_advantages=False)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Should complete without error
         for i in range(6):
@@ -619,7 +620,7 @@ class TestEpisodeReset:
         """Test episode reset clears buffers and refractory states."""
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Run some steps
         for _ in range(3):
@@ -738,7 +739,7 @@ class TestSmokeTest:
             num_reinforce_epochs=1,
         )
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for _ep in range(3):
             brain.prepare_episode()
@@ -763,7 +764,7 @@ class TestSmokeTest:
             num_cortex_reinforce_epochs=1,
         )
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for _ep in range(3):
             brain.prepare_episode()
@@ -794,7 +795,7 @@ class TestStage2CortexLearns:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config(ppo_buffer_size=5)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         group_w_before = [w.clone().detach() for w in brain.cortex_group_weights]
         hidden_w_before = brain.W_cortex_sh.clone().detach()
@@ -822,7 +823,7 @@ class TestStage2CortexLearns:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config(ppo_buffer_size=5)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         critic_before = {name: p.clone().detach() for name, p in brain.critic.named_parameters()}
 
@@ -854,7 +855,7 @@ class TestCortexLRScheduling:
             cortex_lr_warmup_start=0.001,
         )
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Run first episode to establish warmup start
         brain.prepare_episode()
@@ -888,7 +889,7 @@ class TestCortexLRScheduling:
 
         initial_lr = brain.cortex_optimizer.param_groups[0]["lr"]
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
         for _ep in range(3):
             brain.prepare_episode()
             for step in range(6):
@@ -986,7 +987,7 @@ class TestRefractoryReset:
         """Test refractory states are zeroed on prepare_episode."""
         config = _stage2_config()
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Run some steps to potentially populate refractory state
         for _ in range(5):
@@ -1009,7 +1010,7 @@ class TestRefractoryReset:
         monkeypatch.chdir(tmp_path)
         config = _stage2_config(ppo_buffer_size=5, num_cortex_reinforce_epochs=2)
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Fill buffer and trigger update (6 steps, last is episode_done)
         for i in range(6):
@@ -1038,7 +1039,7 @@ class TestMultiEpochCaching:
             num_cortex_reinforce_epochs=2,
         )
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_before = brain.W_cortex_sh.clone().detach()
 
@@ -1058,7 +1059,7 @@ class TestMultiEpochCaching:
             num_cortex_reinforce_epochs=1,
         )
         brain = HybridQuantumCortexBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Should complete without error
         for i in range(6):

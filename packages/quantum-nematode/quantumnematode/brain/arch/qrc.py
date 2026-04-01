@@ -76,7 +76,7 @@ class QRCBrainConfig(BrainConfig):
     """Configuration for the QRCBrain architecture.
 
     Uses modular feature extraction via sensory_modules (required).
-    Each module contributes 2 features [strength, angle] in [0,1] and [-1,1].
+    Each module contributes a variable number of features (typically 2).
 
     Example config:
         >>> config = QRCBrainConfig(
@@ -155,6 +155,15 @@ class QRCBrainConfig(BrainConfig):
     sensory_modules: list[ModuleName] = Field(
         description="List of sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     @field_validator("num_reservoir_qubits")
     @classmethod

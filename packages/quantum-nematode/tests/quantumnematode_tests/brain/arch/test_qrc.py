@@ -547,8 +547,8 @@ class TestQRCBrainIntegration:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -578,7 +578,7 @@ class TestQRCBrainIntegration:
         )
         brain = QRCBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Initial baseline
         initial_baseline = brain.baseline

@@ -240,8 +240,8 @@ class TestMLPPPOBrain:
     def test_preprocess(self, brain):
         """Test state preprocessing."""
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=1.5,
+            food_gradient_strength=0.8,
+            food_gradient_direction=1.5,
             agent_position=(2, 3),
             agent_direction=Direction.UP,
         )
@@ -292,8 +292,8 @@ class TestMLPPPOBrain:
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -315,8 +315,8 @@ class TestMLPPPOBrain:
     def test_learn_adds_to_buffer(self, brain):
         """Test that learn adds experience to buffer."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -334,8 +334,8 @@ class TestMLPPPOBrain:
     def test_learn_triggers_update_when_buffer_full(self, brain):
         """Test that PPO update is triggered when buffer is full."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -352,8 +352,8 @@ class TestMLPPPOBrain:
     def test_ppo_update(self, brain):
         """Test PPO update mechanics."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -443,8 +443,8 @@ class TestMLPPPOBrainIntegration:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -489,8 +489,8 @@ class TestMLPPPOBrainIntegration:
 
             for step in range(15):
                 params = BrainParams(
-                    gradient_strength=rng.random(),
-                    gradient_direction=rng.random() * 2 * np.pi,
+                    food_gradient_strength=rng.random(),
+                    food_gradient_direction=rng.random() * 2 * np.pi,
                     agent_position=(step, step),
                     agent_direction=Direction.UP,
                 )
@@ -523,7 +523,7 @@ class TestMLPPPOBrainIntegration:
             device=DeviceType.CPU,
         )
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Collect experience and trigger update
         for i in range(25):
@@ -551,7 +551,7 @@ class TestMLPPPOBrainIntegration:
         torch.manual_seed(42)
         brain2 = MLPPPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Set same seed for action sampling
         torch.manual_seed(123)
@@ -582,7 +582,7 @@ class TestMLPPPOBrainIntegration:
         )
 
         # Train on experiences where this state leads to positive reward
-        params = BrainParams(gradient_strength=1.0, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=1.0, food_gradient_direction=0.0)
 
         for _episode in range(5):
             for step in range(25):
@@ -819,7 +819,7 @@ class TestMLPPPOClipping:
 
     def test_clipping_prevents_large_updates(self, brain):
         """Test that clipping limits policy changes."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Get initial policy output
         state = brain.preprocess(params)
@@ -957,8 +957,8 @@ class TestFeatureExpansion:
     def test_expansion_run_brain(self):
         """run_brain should work with all expansion modes."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -1089,8 +1089,8 @@ class TestFeatureGating:
         )
         brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )

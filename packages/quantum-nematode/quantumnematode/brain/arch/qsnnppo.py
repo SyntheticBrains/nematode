@@ -321,7 +321,7 @@ class QSNNPPOBrainConfig(BrainConfig):
     """Configuration for the QSNNPPOBrain architecture.
 
     Uses modular feature extraction via sensory_modules (required).
-    Each module contributes 2 features [strength, angle] in [0,1] and [-1,1].
+    Each module contributes a variable number of features (typically 2).
     """
 
     # QLIF network architecture
@@ -449,6 +449,15 @@ class QSNNPPOBrainConfig(BrainConfig):
     sensory_modules: list[ModuleName] = Field(
         description="List of sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     # Learning rate scheduling
     lr_decay_episodes: int | None = Field(

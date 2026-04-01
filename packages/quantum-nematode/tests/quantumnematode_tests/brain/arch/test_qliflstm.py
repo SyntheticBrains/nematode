@@ -450,8 +450,8 @@ class TestQLIFLSTMBrain:
     def params(self) -> BrainParams:
         """Create test BrainParams."""
         return BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_direction=Direction.UP,
         )
 

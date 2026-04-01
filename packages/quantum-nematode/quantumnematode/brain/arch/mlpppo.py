@@ -41,6 +41,8 @@ if TYPE_CHECKING:
     from quantumnematode.brain.weights import WeightComponent
     from quantumnematode.initializers._initializer import ParameterInitializer
 
+from pydantic import field_validator
+
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
@@ -77,14 +79,15 @@ class MLPPPOBrainConfig(BrainConfig):
 
     Uses modular feature extraction via sensory_modules (required).
 
-    Each module contributes 2 features [strength, angle] in [0,1] and [-1,1].
-    ``input_dim`` is auto-computed as ``len(sensory_modules) * 2``.
+    Each module contributes a variable number of features (typically 2:
+    [strength, angle], but some modules like thermotaxis contribute 3).
+    ``input_dim`` is auto-computed as ``sum(classical_dim per module)``.
 
     Example config:
         >>> config = MLPPPOBrainConfig(
         ...     sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         ... )
-        >>> # input_dim will be 4 (2 modules * 2 features each)
+        >>> # input_dim will be 4 (2 modules with classical_dim=2 each)
     """
 
     # Network architecture
@@ -110,6 +113,15 @@ class MLPPPOBrainConfig(BrainConfig):
 
     # Sensory feature extraction (required)
     sensory_modules: list[ModuleName]
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     # Learning rate scheduling (optional)
     # Supports warmup followed by optional decay for more stable early learning.
@@ -172,7 +184,7 @@ class MLPPPOBrain(ClassicalBrain):
         logger.info(
             f"Using classical feature extraction with modules: "
             f"{[m.value for m in config.sensory_modules]} "
-            f"(input_dim={self.input_dim}, features=[strength, angle] per module)",
+            f"(input_dim={self.input_dim})",
         )
 
         # Feature expansion for ablation experiments

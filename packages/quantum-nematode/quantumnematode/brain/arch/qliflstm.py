@@ -613,6 +613,15 @@ class QLIFLSTMBrainConfig(BrainConfig):
         description="List of sensory modules for feature extraction.",
     )
 
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
+
     # Device
     device_type: DeviceType = Field(
         default=DeviceType.CPU,

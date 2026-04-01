@@ -125,6 +125,17 @@ class TestHybridClassicalBrainInit:
         # Linear(2, 16) = 2*16+16 = 48, Linear(16, 4) = 16*4+4 = 68 → 116
         assert total == 116
 
+    def test_reflex_mlp_multi_module(self):
+        """Test reflex MLP input dimension scales with multiple sensory modules."""
+        config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            training_stage=1,
+            seed=42,
+        )
+        brain = HybridClassicalBrain(config=config, num_actions=4)
+        first_layer = next(iter(brain.reflex_mlp.children()))
+        assert first_layer.in_features == 4  # 2 modules * 2 features each
+
     def test_reflex_requires_grad_stage1(self, brain_stage1):
         """Test reflex weights require gradient in stage 1."""
         for param in brain_stage1.reflex_mlp.parameters():
@@ -272,7 +283,7 @@ class TestFusionMechanism:
             seed=42,
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
         actions = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(actions) == 1
         assert isinstance(actions[0], ActionData)
@@ -293,7 +304,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         weights_before = {
             name: p.clone().detach() for name, p in brain.reflex_mlp.named_parameters()
@@ -323,7 +334,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         weights_before = {
             name: p.clone().detach() for name, p in brain.reflex_mlp.named_parameters()
@@ -353,7 +364,7 @@ class TestReinforceUpdate:
             seed=42,
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(4):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -375,7 +386,7 @@ class TestPPOBuffer:
             seed=42,
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(5):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -420,7 +431,7 @@ class TestEpisodeReset:
             seed=42,
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Run an episode
         for i in range(3):
@@ -613,7 +624,7 @@ class TestWeightPersistence:
         )
         brain = HybridClassicalBrain(config=config, num_actions=4)
         brain.set_session_id("auto_save_test")
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(5):
             brain.run_brain(params, top_only=False, top_randomize=False)
