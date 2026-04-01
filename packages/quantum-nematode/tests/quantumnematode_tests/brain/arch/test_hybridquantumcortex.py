@@ -31,7 +31,11 @@ def _stage1_config(**overrides: Any) -> HybridQuantumCortexBrainConfig:
         "seed": 42,
     }
     defaults.update(overrides)
-    return HybridQuantumCortexBrainConfig(**defaults)
+    return HybridQuantumCortexBrainConfig(
+        cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        **defaults,
+    )
 
 
 def _stage2_config(**overrides: Any) -> HybridQuantumCortexBrainConfig:
@@ -41,6 +45,7 @@ def _stage2_config(**overrides: Any) -> HybridQuantumCortexBrainConfig:
         "shots": 100,
         "num_qsnn_timesteps": 1,
         "num_cortex_timesteps": 1,
+        "sensory_modules": [ModuleName.FOOD_CHEMOTAXIS],
         "cortex_sensory_modules": [
             ModuleName.FOOD_CHEMOTAXIS,
             ModuleName.NOCICEPTION,
@@ -63,7 +68,10 @@ class TestHybridQuantumCortexBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = HybridQuantumCortexBrainConfig()
+        config = HybridQuantumCortexBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.num_sensory_neurons == 8
         assert config.num_hidden_neurons == 16
         assert config.num_motor_neurons == 4
@@ -82,64 +90,103 @@ class TestHybridQuantumCortexBrainConfig:
     def test_validation_training_stage_valid(self):
         """Test all valid training stages are accepted."""
         for stage in (1, 2, 3, 4):
-            modules = [ModuleName.FOOD_CHEMOTAXIS] if stage >= 2 else None
             config = HybridQuantumCortexBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
                 training_stage=stage,
-                cortex_sensory_modules=modules,
             )
             assert config.training_stage == stage
 
     def test_validation_training_stage_invalid(self):
         """Test validation rejects invalid training stage."""
         with pytest.raises(ValueError, match="training_stage must be 1, 2, 3, or 4"):
-            HybridQuantumCortexBrainConfig(training_stage=0)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                training_stage=0,
+            )
         with pytest.raises(ValueError, match="training_stage must be 1, 2, 3, or 4"):
-            HybridQuantumCortexBrainConfig(training_stage=5)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                training_stage=5,
+            )
 
     def test_validation_cortex_neurons_per_group(self):
         """Test validation rejects cortex_neurons_per_group < 2."""
         with pytest.raises(ValueError, match="cortex_neurons_per_group must be >= 2"):
-            HybridQuantumCortexBrainConfig(cortex_neurons_per_group=1)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                cortex_neurons_per_group=1,
+            )
 
     def test_validation_cortex_hidden_neurons(self):
         """Test validation rejects cortex_hidden_neurons < 4."""
         with pytest.raises(ValueError, match="cortex_hidden_neurons must be >= 4"):
-            HybridQuantumCortexBrainConfig(cortex_hidden_neurons=3)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                cortex_hidden_neurons=3,
+            )
 
     def test_validation_num_modes(self):
         """Test validation rejects num_modes < 2."""
         with pytest.raises(ValueError, match="num_modes must be >= 2"):
-            HybridQuantumCortexBrainConfig(num_modes=1)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_modes=1,
+            )
 
     def test_validation_cortex_modules_required_stage2(self):
-        """Test validation requires cortex_sensory_modules for stage >= 2."""
-        with pytest.raises(ValueError, match="cortex_sensory_modules must be non-empty"):
-            HybridQuantumCortexBrainConfig(training_stage=2)
+        """Test validation requires non-empty cortex_sensory_modules for stage >= 2."""
         with pytest.raises(ValueError, match="cortex_sensory_modules must be non-empty"):
             HybridQuantumCortexBrainConfig(
-                training_stage=3,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
                 cortex_sensory_modules=[],
+                training_stage=2,
+            )
+        with pytest.raises(ValueError, match="cortex_sensory_modules must be non-empty"):
+            HybridQuantumCortexBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                cortex_sensory_modules=[],
+                training_stage=3,
             )
 
     def test_validation_shots_too_low(self):
         """Test validation rejects shots below minimum."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            HybridQuantumCortexBrainConfig(shots=50)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                shots=50,
+            )
 
     def test_validation_membrane_tau(self):
         """Test validation rejects membrane_tau outside (0, 1]."""
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            HybridQuantumCortexBrainConfig(membrane_tau=0.0)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                membrane_tau=0.0,
+            )
 
     def test_validation_threshold(self):
         """Test validation rejects threshold outside (0, 1)."""
         with pytest.raises(ValueError, match="threshold must be in"):
-            HybridQuantumCortexBrainConfig(threshold=0.0)
+            HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                threshold=0.0,
+            )
 
     def test_validation_cortex_output_neurons_too_small(self):
         """Test validation rejects cortex_output_neurons < num_motor + num_modes + 1."""
         with pytest.raises(ValueError, match="cortex_output_neurons must be >="):
             HybridQuantumCortexBrainConfig(
+                cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
                 num_motor_neurons=4,
                 num_modes=3,
                 cortex_output_neurons=7,  # needs 4+3+1=8
@@ -148,6 +195,8 @@ class TestHybridQuantumCortexBrainConfig:
     def test_validation_cortex_output_neurons_exact_minimum(self):
         """Test cortex_output_neurons == num_motor + num_modes + 1 is accepted."""
         config = HybridQuantumCortexBrainConfig(
+            cortex_sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_motor_neurons=4,
             num_modes=3,
             cortex_output_neurons=8,
@@ -375,6 +424,7 @@ class TestStageAwareTraining:
             shots=100,
             num_qsnn_timesteps=1,
             num_cortex_timesteps=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             cortex_sensory_modules=[
                 ModuleName.FOOD_CHEMOTAXIS,
                 ModuleName.NOCICEPTION,

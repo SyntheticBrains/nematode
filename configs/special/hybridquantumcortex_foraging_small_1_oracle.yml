@@ -1,6 +1,5 @@
 # Hybrid Quantum Cortex Brain - Stage 1: QSNN Reflex Training
 # Trains the QSNN reflex layer on foraging using REINFORCE.
-# Uses legacy 2-feature mode (gradient_strength, relative_angle).
 # After training, reflex weights are saved to exports/<session>/reflex_weights.pt
 # for use in stage 2 (cortex REINFORCE+GAE training).
 #
@@ -40,6 +39,11 @@ brain:
     lr_min_factor: 0.1
     entropy_coeff: 0.02
     use_reward_normalization: true
+
+    sensory_modules:
+      - food_chemotaxis
+    cortex_sensory_modules:
+      - food_chemotaxis
 
     # Cortex QSNN params (unused in stage 1 but needed for init)
     cortex_neurons_per_group: 4

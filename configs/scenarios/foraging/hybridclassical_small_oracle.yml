@@ -1,7 +1,6 @@
 # Hybrid Classical Brain - Stage 1: Reflex MLP Training
 # Classical ablation of HybridQuantum: replaces QSNN with a small MLP reflex.
 # Trains the classical reflex MLP on foraging using REINFORCE.
-# Uses legacy 2-feature mode (gradient_strength, relative_angle).
 # After training, reflex weights are saved to exports/<session>/reflex_weights.pt
 # for use in stage 2 (cortex PPO training).
 #
@@ -31,6 +30,9 @@ brain:
     lr_min_factor: 0.1
     entropy_coeff: 0.02
     use_reward_normalization: true
+
+    sensory_modules:
+      - food_chemotaxis
 
     # Cortex params (unused in stage 1, but required for init)
     cortex_hidden_dim: 64

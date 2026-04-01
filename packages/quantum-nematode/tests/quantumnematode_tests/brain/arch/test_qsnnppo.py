@@ -25,7 +25,9 @@ class TestQSNNPPOBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QSNNPPOBrainConfig()
+        config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.num_sensory_neurons == 8
         assert config.num_hidden_neurons == 16
         assert config.num_motor_neurons == 4
@@ -50,6 +52,7 @@ class TestQSNNPPOBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=8,
             num_motor_neurons=2,
@@ -71,36 +74,36 @@ class TestQSNNPPOBrainConfig:
     def test_invalid_num_sensory_neurons(self):
         """Test validation rejects invalid sensory neuron count."""
         with pytest.raises(ValueError, match="num_sensory_neurons must be >= 1"):
-            QSNNPPOBrainConfig(num_sensory_neurons=0)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], num_sensory_neurons=0)
 
     def test_invalid_num_motor_neurons(self):
         """Test validation rejects too few motor neurons."""
         with pytest.raises(ValueError, match="num_motor_neurons must be >= 2"):
-            QSNNPPOBrainConfig(num_motor_neurons=1)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], num_motor_neurons=1)
 
     def test_invalid_membrane_tau(self):
         """Test validation rejects out-of-range membrane_tau."""
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            QSNNPPOBrainConfig(membrane_tau=0.0)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=0.0)
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            QSNNPPOBrainConfig(membrane_tau=1.5)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=1.5)
 
     def test_invalid_threshold(self):
         """Test validation rejects out-of-range threshold."""
         with pytest.raises(ValueError, match="threshold must be in"):
-            QSNNPPOBrainConfig(threshold=0.0)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], threshold=0.0)
         with pytest.raises(ValueError, match="threshold must be in"):
-            QSNNPPOBrainConfig(threshold=1.0)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], threshold=1.0)
 
     def test_invalid_shots(self):
         """Test validation rejects too few shots."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            QSNNPPOBrainConfig(shots=50)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], shots=50)
 
     def test_invalid_num_epochs(self):
         """Test validation rejects zero epochs."""
         with pytest.raises(ValueError, match="num_epochs must be >= 1"):
-            QSNNPPOBrainConfig(num_epochs=0)
+            QSNNPPOBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], num_epochs=0)
 
     def test_sensory_modules_config(self):
         """Test sensory module configuration."""
@@ -340,6 +343,7 @@ class TestQSNNPPOBrainInit:
     def config(self) -> QSNNPPOBrainConfig:
         """Create a small test configuration."""
         return QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=4,
             num_motor_neurons=2,
@@ -407,6 +411,7 @@ class TestQSNNPPOBrainInit:
         from quantumnematode.brain.actions import Action
 
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -428,6 +433,7 @@ class TestQSNNPPOBrainInit:
     def test_lr_scheduler_created(self):
         """Test LR scheduler created when lr_decay_episodes is set."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -448,37 +454,16 @@ class TestQSNNPPOBrainPreprocess:
 
     @pytest.fixture
     def brain(self) -> QSNNPPOBrain:
-        """Create a test brain with legacy preprocessing."""
+        """Create a test brain with sensory module preprocessing."""
         config = QSNNPPOBrainConfig(
             num_sensory_neurons=4,
             num_hidden_neurons=4,
             num_motor_neurons=2,
             shots=100,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             seed=42,
         )
         return QSNNPPOBrain(config=config, num_actions=2, device=DeviceType.CPU)
-
-    def test_legacy_preprocess(self, brain: QSNNPPOBrain):
-        """Test legacy 2-feature preprocessing."""
-        params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
-            agent_direction=Direction.UP,
-        )
-        features = brain.preprocess(params)
-        assert isinstance(features, np.ndarray)
-        assert len(features) == 2
-        assert features.dtype == np.float32
-
-    def test_legacy_preprocess_zero_strength(self, brain: QSNNPPOBrain):
-        """Test preprocessing with zero gradient strength."""
-        params = BrainParams(
-            gradient_strength=0.0,
-            gradient_direction=0.0,
-            agent_direction=Direction.UP,
-        )
-        features = brain.preprocess(params)
-        assert features[0] == 0.0  # gradient_strength
 
     def test_sensory_module_preprocess(self):
         """Test preprocessing with unified sensory modules."""
@@ -535,6 +520,7 @@ class TestQSNNPPOBrainForwardPass:
     def brain(self) -> QSNNPPOBrain:
         """Create a small test brain."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -610,6 +596,7 @@ class TestQSNNPPOBrainLearning:
     def brain(self) -> QSNNPPOBrain:
         """Create a test brain for learning tests."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -791,6 +778,7 @@ class TestQSNNPPOBrainEpisode:
     def brain(self) -> QSNNPPOBrain:
         """Create a test brain."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -825,6 +813,7 @@ class TestQSNNPPOBrainEpisode:
     def test_lr_scheduler_step(self):
         """Test LR scheduler steps on episode end."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -872,6 +861,7 @@ class TestQSNNPPOBrainReproducibility:
     def test_deterministic_with_seed(self):
         """Test that identical seeds produce identical actions."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -901,6 +891,7 @@ class TestQSNNPPOBrainReproducibility:
     def test_different_seeds_produce_different_weights(self):
         """Test that different seeds produce different initial weights."""
         config1 = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -908,6 +899,7 @@ class TestQSNNPPOBrainReproducibility:
             seed=42,
         )
         config2 = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -933,6 +925,7 @@ class TestQSNNPPOBrainIntegration:
     def brain(self) -> QSNNPPOBrain:
         """Create a brain for integration tests."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=4,
             num_motor_neurons=2,
@@ -1058,6 +1051,7 @@ class TestQSNNPPOBrainErrors:
     def test_copy_not_implemented(self):
         """Test copy raises NotImplementedError."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1071,6 +1065,7 @@ class TestQSNNPPOBrainErrors:
     def test_build_brain_not_implemented(self):
         """Test build_brain raises NotImplementedError."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1084,6 +1079,7 @@ class TestQSNNPPOBrainErrors:
     def test_action_set_setter_validates_length(self):
         """Test action_set setter validates length."""
         config = QSNNPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,

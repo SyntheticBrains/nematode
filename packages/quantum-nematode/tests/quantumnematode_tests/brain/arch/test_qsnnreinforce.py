@@ -42,7 +42,9 @@ class TestQSNNReinforceBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
 
         assert config.num_sensory_neurons == 6
         assert config.num_hidden_neurons == 8
@@ -58,6 +60,7 @@ class TestQSNNReinforceBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=8,
             num_hidden_neurons=6,
             num_motor_neurons=5,
@@ -81,11 +84,6 @@ class TestQSNNReinforceBrainConfig:
         assert config.gamma == 0.95
         assert config.learning_rate == 0.005
 
-    def test_config_sensory_modules_default(self):
-        """Test that sensory_modules defaults to None (legacy mode)."""
-        config = QSNNReinforceBrainConfig()
-        assert config.sensory_modules is None
-
     def test_config_with_sensory_modules(self):
         """Test configuration with sensory modules."""
         config = QSNNReinforceBrainConfig(
@@ -100,43 +98,55 @@ class TestQSNNReinforceBrainConfig:
     def test_validation_num_sensory_neurons(self):
         """Test validation for num_sensory_neurons."""
         with pytest.raises(ValueError, match="num_sensory_neurons must be >= 1"):
-            QSNNReinforceBrainConfig(num_sensory_neurons=0)
+            QSNNReinforceBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_sensory_neurons=0,
+            )
 
     def test_validation_num_hidden_neurons(self):
         """Test validation for num_hidden_neurons."""
         with pytest.raises(ValueError, match="num_hidden_neurons must be >= 1"):
-            QSNNReinforceBrainConfig(num_hidden_neurons=0)
+            QSNNReinforceBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_hidden_neurons=0,
+            )
 
     def test_validation_num_motor_neurons(self):
         """Test validation for num_motor_neurons."""
         with pytest.raises(ValueError, match="num_motor_neurons must be >= 2"):
-            QSNNReinforceBrainConfig(num_motor_neurons=1)
+            QSNNReinforceBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_motor_neurons=1,
+            )
 
     def test_validation_membrane_tau_lower_bound(self):
         """Test validation for membrane_tau lower bound."""
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            QSNNReinforceBrainConfig(membrane_tau=0.0)
+            QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=0.0)
 
     def test_validation_membrane_tau_upper_bound(self):
         """Test validation for membrane_tau at upper bound."""
         # Upper bound is inclusive (0, 1]
-        config = QSNNReinforceBrainConfig(membrane_tau=1.0)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            membrane_tau=1.0,
+        )
         assert config.membrane_tau == 1.0
 
     def test_validation_threshold_lower_bound(self):
         """Test validation for threshold lower bound."""
         with pytest.raises(ValueError, match="threshold must be in"):
-            QSNNReinforceBrainConfig(threshold=0.0)
+            QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], threshold=0.0)
 
     def test_validation_threshold_upper_bound(self):
         """Test validation for threshold upper bound."""
         with pytest.raises(ValueError, match="threshold must be in"):
-            QSNNReinforceBrainConfig(threshold=1.0)
+            QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], threshold=1.0)
 
     def test_validation_shots(self):
         """Test validation for shots."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            QSNNReinforceBrainConfig(shots=50)
+            QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], shots=50)
 
 
 class TestQSNNReinforceBrainQLIFCircuit:
@@ -146,6 +156,7 @@ class TestQSNNReinforceBrainQLIFCircuit:
     def small_config(self) -> QSNNReinforceBrainConfig:
         """Create a small test configuration for faster tests."""
         return QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -270,6 +281,7 @@ class TestQSNNReinforceBrainSensoryEncoding:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -314,6 +326,7 @@ class TestQSNNReinforceBrainForwardPass:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -385,6 +398,7 @@ class TestQSNNReinforceBrainEligibilityTrace:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain with local learning."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -486,6 +500,7 @@ class TestQSNNReinforceBrainLocalLearning:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -680,6 +695,7 @@ class TestQSNNReinforceBrainRefractoryPeriod:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -713,12 +729,14 @@ class TestQSNNReinforceBrainReproducibility:
     def test_same_seed_same_weights(self):
         """Same seed should produce identical initial weights."""
         config1 = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             seed=42,
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
         )
         config2 = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             seed=42,
             num_sensory_neurons=2,
             num_hidden_neurons=2,
@@ -734,12 +752,14 @@ class TestQSNNReinforceBrainReproducibility:
     def test_different_seed_different_weights(self):
         """Different seeds should produce different initial weights."""
         config1 = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             seed=42,
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
         )
         config2 = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             seed=123,
             num_sensory_neurons=2,
             num_hidden_neurons=2,
@@ -763,6 +783,7 @@ class TestQSNNReinforceBrainCopy:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -848,20 +869,6 @@ class TestQSNNReinforceBrainSensoryModules:
         assert len(features) == 4  # 2 modules * 2 features each
         assert features.dtype == np.float32
 
-    def test_legacy_mode_when_no_sensory_modules(self):
-        """Test that brain uses legacy preprocessing when sensory_modules is None."""
-        config = QSNNReinforceBrainConfig(
-            num_sensory_neurons=4,
-            num_hidden_neurons=2,
-            num_motor_neurons=2,
-            shots=100,
-            # No sensory_modules - legacy mode
-        )
-        brain = QSNNReinforceBrain(config=config, num_actions=2, device=DeviceType.CPU)
-
-        assert brain.sensory_modules is None
-        assert brain.input_dim == 2  # Legacy mode: gradient_strength + relative_angle
-
 
 class TestQSNNReinforceBrainIntegration:
     """Integration tests for QSNN brain with full simulation workflow."""
@@ -869,6 +876,7 @@ class TestQSNNReinforceBrainIntegration:
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=2,
             num_motor_neurons=4,
@@ -905,6 +913,7 @@ class TestQSNNReinforceBrainIntegration:
     def test_multiple_episodes(self):
         """Test running multiple episodes."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=4,
             num_hidden_neurons=2,
             num_motor_neurons=4,
@@ -932,6 +941,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def brain(self) -> QSNNReinforceBrain:
         """Create a test QSNN brain in surrogate gradient mode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -957,6 +967,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_hebbian_mode_weights_no_grad(self):
         """Test that weights do NOT have requires_grad in Hebbian mode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1214,6 +1225,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_lr_scheduler_not_created_for_hebbian(self):
         """Test that Hebbian mode does NOT create an LR scheduler."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1297,6 +1309,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_intra_episode_reinforce_triggers(self):
         """Test that intra-episode REINFORCE fires every update_interval steps."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1323,6 +1336,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_intra_episode_reinforce_changes_weights(self):
         """Test that intra-episode REINFORCE updates actually modify weights."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1354,6 +1368,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_intra_episode_reinforce_multiple_windows(self):
         """Test that multiple intra-episode updates fire across an episode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1383,6 +1398,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_intra_episode_reinforce_final_window_at_episode_end(self):
         """Test that remaining steps after last intra-episode update are learned at episode end."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1408,6 +1424,7 @@ class TestQSNNReinforceBrainSurrogateGradient:
     def test_intra_episode_reinforce_not_triggered_at_episode_end(self):
         """Test that intra-episode update does NOT fire when episode_done=True on boundary."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1439,6 +1456,7 @@ class TestQSNNWeightInitialization:
     def test_w_sh_random_gaussian_shape(self):
         """Test that W_sh has correct shape after random Gaussian initialization."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=4,
             num_motor_neurons=4,
@@ -1451,6 +1469,7 @@ class TestQSNNWeightInitialization:
     def test_w_hm_random_gaussian_shape(self):
         """Test that W_hm has correct shape after random Gaussian initialization."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=8,
             num_motor_neurons=4,
@@ -1463,6 +1482,7 @@ class TestQSNNWeightInitialization:
     def test_weight_scale_approximately_correct(self):
         """Test that randn * WEIGHT_INIT_SCALE produces weights near expected magnitude."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=8,
             num_motor_neurons=4,
@@ -1484,6 +1504,7 @@ class TestQSNNWeightInitialization:
     def test_weight_columns_have_varied_norms(self):
         """Test that random Gaussian init produces columns with varied norms (symmetry breaking)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=16,
             num_hidden_neurons=32,
             num_motor_neurons=4,
@@ -1504,6 +1525,7 @@ class TestQSNNWeightInitialization:
     def test_theta_hidden_initialized_at_pi_over_4(self):
         """Test that theta_hidden is initialized at pi/4 for moderate warm start."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=8,
             num_motor_neurons=4,
@@ -1519,6 +1541,7 @@ class TestQSNNWeightInitialization:
     def test_theta_motor_initialized_at_zero(self):
         """Test that theta_motor remains initialized at zero (no action bias)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=8,
             num_motor_neurons=4,
@@ -1534,6 +1557,7 @@ class TestQSNNWeightInitialization:
     def test_w_hm_column_diversity_positive_at_init(self):
         """Test that random Gaussian init produces positive W_hm column diversity."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=8,
             num_motor_neurons=4,
@@ -1554,6 +1578,7 @@ class TestAdaptiveEntropyBonus:
     def brain(self):
         """Create a QSNN brain in surrogate gradient mode for testing."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=4,
             num_motor_neurons=4,
@@ -1652,17 +1677,21 @@ class TestMultiTimestepIntegration:
 
     def test_config_default_integration_steps(self):
         """Test that QSNNReinforceBrainConfig defaults to DEFAULT_NUM_INTEGRATION_STEPS."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.num_integration_steps == DEFAULT_NUM_INTEGRATION_STEPS
 
     def test_config_custom_integration_steps(self):
         """Test that num_integration_steps can be set to a custom value."""
-        config = QSNNReinforceBrainConfig(num_integration_steps=5)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            num_integration_steps=5,
+        )
         assert config.num_integration_steps == 5
 
     def test_brain_stores_integration_steps(self):
         """Test that QSNNReinforceBrain stores the num_integration_steps from config."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1675,6 +1704,7 @@ class TestMultiTimestepIntegration:
     def test_multi_timestep_produces_valid_probabilities(self):
         """Test that _multi_timestep produces valid averaged motor probabilities."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1694,6 +1724,7 @@ class TestMultiTimestepIntegration:
     def test_multi_timestep_differentiable_returns_tensor(self):
         """Test that _multi_timestep_differentiable returns a torch tensor."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1712,6 +1743,7 @@ class TestMultiTimestepIntegration:
     def test_single_step_equivalent_to_original(self):
         """Test that num_integration_steps=1 behaves like original single-timestep."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             seed=42,
             num_sensory_neurons=2,
             num_hidden_neurons=2,
@@ -1733,6 +1765,7 @@ class TestMultiTimestepIntegration:
     def test_run_brain_uses_multi_timestep(self):
         """Test that run_brain works with multi-timestep integration."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1750,6 +1783,7 @@ class TestMultiTimestepIntegration:
     def test_surrogate_update_with_multi_timestep(self):
         """Test that surrogate gradient update works with multi-timestep integration."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1781,6 +1815,7 @@ class TestMultiTimestepIntegration:
     def test_copy_preserves_integration_steps(self):
         """Test that copy() preserves num_integration_steps."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1806,17 +1841,21 @@ class TestPPOClipping:
 
     def test_config_clip_epsilon_default(self):
         """Test that QSNNReinforceBrainConfig defaults clip_epsilon to 0.2."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.clip_epsilon == 0.2
 
     def test_config_clip_epsilon_custom(self):
         """Test that clip_epsilon can be set to a custom value."""
-        config = QSNNReinforceBrainConfig(clip_epsilon=0.1)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            clip_epsilon=0.1,
+        )
         assert config.clip_epsilon == 0.1
 
     def test_old_log_probs_stored_during_run_brain(self):
         """Test that run_brain stores old_log_probs for PPO clipping."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1835,6 +1874,7 @@ class TestPPOClipping:
     def test_old_log_probs_not_stored_in_hebbian_mode(self):
         """Test that old_log_probs are NOT stored in Hebbian (local learning) mode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1850,6 +1890,7 @@ class TestPPOClipping:
     def test_old_log_probs_cleared_on_episode_reset(self):
         """Test that episode_old_log_probs is cleared on episode reset."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1868,6 +1909,7 @@ class TestPPOClipping:
     def test_old_log_probs_cleared_on_intra_episode_update(self):
         """Test that episode_old_log_probs is cleared after intra-episode REINFORCE."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1888,6 +1930,7 @@ class TestPPOClipping:
     def test_old_log_probs_sync_with_actions_and_features(self):
         """Test that old_log_probs, actions, and features stay in sync."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1906,6 +1949,7 @@ class TestPPOClipping:
     def test_ppo_clipping_still_learns(self):
         """Test that PPO clipping doesn't prevent learning (weights still change)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -1942,17 +1986,21 @@ class TestThetaMotorNormClamping:
 
     def test_config_theta_motor_max_norm_default(self):
         """Test that QSNNReinforceBrainConfig defaults theta_motor_max_norm to 1.0."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.theta_motor_max_norm == 1.0
 
     def test_config_theta_motor_max_norm_custom(self):
         """Test that theta_motor_max_norm can be set to a custom value."""
-        config = QSNNReinforceBrainConfig(theta_motor_max_norm=0.5)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            theta_motor_max_norm=0.5,
+        )
         assert config.theta_motor_max_norm == 0.5
 
     def test_theta_motor_initialized_to_zero(self):
         """Test that theta_motor is initialized to zeros (no initial bias)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=4,
@@ -1964,6 +2012,7 @@ class TestThetaMotorNormClamping:
     def test_theta_motor_norm_clamped_surrogate_mode(self):
         """Test that theta_motor norm is clamped after surrogate gradient update."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=4,
@@ -1994,6 +2043,7 @@ class TestThetaMotorNormClamping:
     def test_theta_motor_norm_clamped_hebbian_mode(self):
         """Test that theta_motor norm is clamped after Hebbian local learning update."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=4,
@@ -2022,6 +2072,7 @@ class TestThetaMotorNormClamping:
     def test_theta_motor_below_max_norm_unchanged(self):
         """Test that theta_motor below max_norm is not scaled down."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=4,
@@ -2054,27 +2105,34 @@ class TestRewardNormalization:
 
     def test_config_reward_norm_alpha_default(self):
         """Test that QSNNReinforceBrainConfig defaults reward_norm_alpha to 0.01."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.reward_norm_alpha == 0.01
 
     def test_config_reward_norm_alpha_custom(self):
         """Test that reward_norm_alpha can be set to a custom value."""
-        config = QSNNReinforceBrainConfig(reward_norm_alpha=0.05)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            reward_norm_alpha=0.05,
+        )
         assert config.reward_norm_alpha == 0.05
 
     def test_config_use_reward_normalization_default(self):
         """Test that use_reward_normalization defaults to True."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.use_reward_normalization is True
 
     def test_config_use_reward_normalization_disabled(self):
         """Test that use_reward_normalization can be disabled."""
-        config = QSNNReinforceBrainConfig(use_reward_normalization=False)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            use_reward_normalization=False,
+        )
         assert config.use_reward_normalization is False
 
     def test_running_stats_initialized(self):
         """Test that running reward stats are initialized correctly."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2087,6 +2145,7 @@ class TestRewardNormalization:
     def test_normalize_reward_updates_running_stats(self):
         """Test that _normalize_reward updates running mean and variance."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2103,6 +2162,7 @@ class TestRewardNormalization:
     def test_normalize_reward_returns_normalized_value(self):
         """Test that _normalize_reward returns a normalized reward."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2125,6 +2185,7 @@ class TestRewardNormalization:
     def test_normalized_rewards_stored_in_episode_rewards(self):
         """Test that normalized (not raw) rewards are stored in episode_rewards."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2145,6 +2206,7 @@ class TestRewardNormalization:
     def test_raw_rewards_stored_in_history(self):
         """Test that raw (not normalized) rewards are stored in history_data."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2164,6 +2226,7 @@ class TestRewardNormalization:
     def test_disabled_normalization_stores_raw_rewards(self):
         """Test that disabling normalization stores raw rewards in episode_rewards."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2182,6 +2245,7 @@ class TestRewardNormalization:
     def test_running_stats_persist_across_episodes(self):
         """Test that running reward stats persist across episode resets."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2206,6 +2270,7 @@ class TestRewardNormalization:
     def test_copy_preserves_running_stats(self):
         """Test that copy() preserves running reward normalization stats."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2226,6 +2291,7 @@ class TestRewardNormalization:
     def test_normalization_with_varied_rewards_still_learns(self):
         """Test that normalization doesn't prevent learning (weights still change)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2266,7 +2332,7 @@ class TestQSNNCritic:
 
     def test_config_critic_defaults(self):
         """Test critic config fields default to False/correct values."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.use_critic is False
         assert config.critic_hidden_dim == DEFAULT_CRITIC_HIDDEN_DIM
         assert config.critic_num_layers == DEFAULT_CRITIC_NUM_LAYERS
@@ -2277,6 +2343,7 @@ class TestQSNNCritic:
     def test_critic_not_created_when_disabled(self):
         """Test critic is None when use_critic=False."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2291,6 +2358,7 @@ class TestQSNNCritic:
     def test_critic_created_when_enabled(self):
         """Test critic is created with correct architecture when use_critic=True."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2338,6 +2406,7 @@ class TestQSNNCritic:
     def test_episode_values_stored_when_critic_enabled(self):
         """Test episode_values are populated during run_brain with critic."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2359,6 +2428,7 @@ class TestQSNNCritic:
     def test_episode_values_not_stored_when_critic_disabled(self):
         """Test episode_values stay empty when use_critic=False."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2375,6 +2445,7 @@ class TestQSNNCritic:
     def test_episode_values_cleared_on_reset(self):
         """Test episode_values cleared when episode resets."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2394,6 +2465,7 @@ class TestQSNNCritic:
     def test_episode_values_in_sync_with_actions(self):
         """Test episode_values length matches episode_actions."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2413,6 +2485,7 @@ class TestQSNNCritic:
     def test_compute_gae_shapes(self):
         """Test _compute_gae returns correct shapes."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2435,6 +2508,7 @@ class TestQSNNCritic:
     def test_compute_gae_terminal_vs_bootstrap(self):
         """Test GAE with bootstrap=0 (terminal) vs non-zero (window boundary)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2458,6 +2532,7 @@ class TestQSNNCritic:
     def test_critic_update_does_not_affect_actor(self):
         """Test that critic update leaves actor weights unchanged."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2488,6 +2563,7 @@ class TestQSNNCritic:
     def test_full_episode_with_critic(self):
         """Test a complete episode with critic enabled runs without error."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2515,6 +2591,7 @@ class TestQSNNCritic:
         V(s_{N+1}) and executes the deferred update, then clears buffers.
         """
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2560,6 +2637,7 @@ class TestQSNNCritic:
         call after the window boundary, not immediately in learn().
         """
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2592,6 +2670,7 @@ class TestQSNNCritic:
     def test_copy_preserves_critic_weights(self):
         """Test copy() creates independent critic with same weights."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2629,6 +2708,7 @@ class TestQSNNCritic:
     def test_copy_no_critic_when_disabled(self):
         """Test copy() does not create critic when use_critic=False."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2672,6 +2752,7 @@ class TestQSNNCritic:
         GAE + advantage normalization handles variance reduction instead.
         """
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2697,6 +2778,7 @@ class TestQSNNCritic:
     def test_disabled_critic_identical_behavior(self):
         """Test use_critic=False produces same code path as before (no GAE)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2726,6 +2808,7 @@ class TestQSNNCritic:
     def test_deferred_bootstrap_computes_correct_value(self):
         """Test deferred bootstrap: flag set at boundary, update runs in next run_brain()."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2761,6 +2844,7 @@ class TestQSNNCritic:
     def test_deferred_bootstrap_not_set_without_critic(self):
         """Test vanilla REINFORCE path does not set deferred flag."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2786,6 +2870,7 @@ class TestQSNNCritic:
     def test_reward_normalization_skipped_with_critic(self):
         """Test raw rewards are stored when critic is active (normalization skipped)."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2810,6 +2895,7 @@ class TestQSNNCritic:
     def test_reward_normalization_still_works_without_critic(self):
         """Test REINFORCE path still normalizes rewards when critic is disabled."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2833,6 +2919,7 @@ class TestQSNNCritic:
     def test_critic_uses_huber_loss(self):
         """Test critic update with extreme targets doesn't crash and params stay finite."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2860,6 +2947,7 @@ class TestQSNNCritic:
     def test_deferred_update_cleared_on_episode_reset(self):
         """Test _pending_critic_update is cleared when episode resets."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -2930,6 +3018,7 @@ class TestQSNNCritic:
     def test_hidden_spikes_stored_in_episode_buffer(self):
         """Test hidden spike rates are stored during run_brain with critic."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=4,
             num_motor_neurons=2,
@@ -2951,6 +3040,7 @@ class TestQSNNCritic:
     def test_hidden_spikes_not_stored_when_critic_disabled(self):
         """Test hidden spike rates buffer stays empty when critic disabled."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=4,
             num_motor_neurons=2,
@@ -2967,6 +3057,7 @@ class TestQSNNCritic:
     def test_critic_input_concatenation(self):
         """Test critic input batch is features + hidden spikes concatenated."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,
@@ -2989,6 +3080,7 @@ class TestQSNNCritic:
     def test_explained_variance_computation(self):
         """Test explained variance is logged during critic update."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=2,
             num_motor_neurons=2,
@@ -3036,28 +3128,38 @@ class TestMultiEpochReinforce:
 
     def test_config_num_reinforce_epochs_default(self):
         """Test num_reinforce_epochs defaults to 1."""
-        config = QSNNReinforceBrainConfig()
+        config = QSNNReinforceBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         assert config.num_reinforce_epochs == DEFAULT_NUM_REINFORCE_EPOCHS
         assert config.num_reinforce_epochs == 1
 
     def test_config_num_reinforce_epochs_custom(self):
         """Test num_reinforce_epochs can be set to custom value."""
-        config = QSNNReinforceBrainConfig(num_reinforce_epochs=3)
+        config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            num_reinforce_epochs=3,
+        )
         assert config.num_reinforce_epochs == 3
 
     def test_validation_num_reinforce_epochs_zero(self):
         """Test that num_reinforce_epochs=0 is rejected."""
         with pytest.raises(ValueError, match="num_reinforce_epochs must be >= 1"):
-            QSNNReinforceBrainConfig(num_reinforce_epochs=0)
+            QSNNReinforceBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_reinforce_epochs=0,
+            )
 
     def test_validation_num_reinforce_epochs_negative(self):
         """Test that negative num_reinforce_epochs is rejected."""
         with pytest.raises(ValueError, match="num_reinforce_epochs must be >= 1"):
-            QSNNReinforceBrainConfig(num_reinforce_epochs=-1)
+            QSNNReinforceBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_reinforce_epochs=-1,
+            )
 
     def test_single_epoch_completes_without_error(self):
         """Test that num_reinforce_epochs=1 (default) completes a full episode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,
@@ -3078,6 +3180,7 @@ class TestMultiEpochReinforce:
     def test_multi_epoch_completes_without_error(self):
         """Test that num_reinforce_epochs=3 completes a full episode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,
@@ -3098,6 +3201,7 @@ class TestMultiEpochReinforce:
     def test_multi_epoch_changes_weights(self):
         """Test that multi-epoch REINFORCE modifies weights after episode."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,
@@ -3129,6 +3233,7 @@ class TestMultiEpochReinforce:
 
         def run_episode(num_epochs, seed):
             config = QSNNReinforceBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
                 num_sensory_neurons=2,
                 num_hidden_neurons=3,
                 num_motor_neurons=2,
@@ -3165,6 +3270,7 @@ class TestMultiEpochReinforce:
     def test_multi_epoch_intra_episode_update(self):
         """Test multi-epoch works with intra-episode update_interval windowing."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,
@@ -3186,6 +3292,7 @@ class TestMultiEpochReinforce:
     def test_cache_cleared_after_update(self):
         """Test _cached_spike_probs is empty after episode end."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,
@@ -3209,6 +3316,7 @@ class TestMultiEpochReinforce:
     def test_cache_cleared_on_intra_episode_update(self):
         """Test _cached_spike_probs is cleared after intra-episode window update."""
         config = QSNNReinforceBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=2,
             num_hidden_neurons=3,
             num_motor_neurons=2,

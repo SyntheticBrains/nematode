@@ -13,6 +13,7 @@ import pytest
 import torch
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
+from quantumnematode.brain.modules import ModuleName
 from quantumnematode.brain.weights import (
     WeightPersistence,
     load_weights,
@@ -33,6 +34,7 @@ def mlpppo_config() -> MLPPPOBrainConfig:
         critic_hidden_dim=16,
         num_hidden_layers=1,
         rollout_buffer_size=32,
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
     )
 
 

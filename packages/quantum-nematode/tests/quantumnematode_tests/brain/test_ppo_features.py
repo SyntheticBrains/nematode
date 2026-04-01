@@ -1,4 +1,4 @@
-"""Tests for MLPPPOBrain unified feature extraction integration."""
+"""Tests for MLPPPOBrain feature extraction integration."""
 
 import numpy as np
 import pytest
@@ -6,60 +6,6 @@ from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
-
-
-class TestPPOBrainLegacyMode:
-    """Test MLPPPOBrain in legacy mode (backward compatibility)."""
-
-    def test_legacy_mode_default_input_dim(self):
-        """Test that legacy mode defaults to 2 features."""
-        config = MLPPPOBrainConfig()
-        brain = MLPPPOBrain(config=config)
-
-        assert brain.input_dim == 2
-        assert brain.sensory_modules is None
-
-    def test_legacy_mode_explicit_input_dim(self):
-        """Test that explicit input_dim is respected in legacy mode."""
-        config = MLPPPOBrainConfig()
-        brain = MLPPPOBrain(config=config, input_dim=5)
-
-        assert brain.input_dim == 5
-        assert brain.sensory_modules is None
-
-    def test_legacy_preprocess_output_shape(self):
-        """Test that legacy preprocessing returns 2 features."""
-        config = MLPPPOBrainConfig()
-        brain = MLPPPOBrain(config=config)
-
-        params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
-            agent_direction=Direction.UP,
-        )
-
-        features = brain.preprocess(params)
-
-        assert features.shape == (2,)
-        assert features.dtype == np.float32
-
-    def test_legacy_preprocess_values(self):
-        """Test that legacy preprocessing computes correct values."""
-        config = MLPPPOBrainConfig()
-        brain = MLPPPOBrain(config=config)
-
-        params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=np.pi / 2,  # Pointing up
-            agent_direction=Direction.UP,  # Facing up (aligned)
-        )
-
-        features = brain.preprocess(params)
-
-        # First feature: gradient_strength
-        assert features[0] == pytest.approx(0.8)
-        # Second feature: rel_angle_norm (should be ~0 when aligned)
-        assert abs(features[1]) < 0.1
 
 
 class TestPPOBrainUnifiedMode:
@@ -185,22 +131,6 @@ class TestPPOBrainRunWithUnifiedFeatures:
         assert len(actions) == 1
         assert actions[0].action is not None
         assert 0 <= actions[0].probability <= 1
-
-    def test_run_brain_legacy_mode_still_works(self):
-        """Test that run_brain still works in legacy mode."""
-        config = MLPPPOBrainConfig()
-        brain = MLPPPOBrain(config=config, input_dim=2, num_actions=4)
-
-        params = BrainParams(
-            gradient_strength=0.7,
-            gradient_direction=np.pi / 4,
-            agent_direction=Direction.RIGHT,
-        )
-
-        actions = brain.run_brain(params, top_only=True, top_randomize=False)
-
-        assert len(actions) == 1
-        assert actions[0].action is not None
 
 
 class TestPPOBrainWithScientificModuleNames:

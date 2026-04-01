@@ -18,7 +18,9 @@ class TestMLPPPOBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MLPPPOBrainConfig()
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
 
         assert config.actor_hidden_dim == 64
         assert config.critic_hidden_dim == 64
@@ -37,6 +39,7 @@ class TestMLPPPOBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=128,
             critic_hidden_dim=128,
             num_hidden_layers=3,
@@ -187,6 +190,7 @@ class TestMLPPPOBrain:
     def config(self) -> MLPPPOBrainConfig:
         """Create a test configuration."""
         return MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=32,
             critic_hidden_dim=32,
             num_hidden_layers=2,
@@ -418,6 +422,7 @@ class TestMLPPPOBrainIntegration:
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=0.01,
@@ -462,6 +467,7 @@ class TestMLPPPOBrainIntegration:
     def test_multiple_episodes(self):
         """Test running multiple episodes."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=0.001,
@@ -501,6 +507,7 @@ class TestMLPPPOBrainIntegration:
     def test_gradient_clipping(self):
         """Test that gradient clipping is applied."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=1.0,  # Very high LR to potentially cause large gradients
@@ -531,7 +538,11 @@ class TestMLPPPOBrainIntegration:
 
     def test_deterministic_action_selection(self):
         """Test that action selection is deterministic with same seed."""
-        config = MLPPPOBrainConfig(actor_hidden_dim=16, critic_hidden_dim=16)
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            actor_hidden_dim=16,
+            critic_hidden_dim=16,
+        )
 
         # Create two brains with same weights
         torch.manual_seed(42)
@@ -555,6 +566,7 @@ class TestMLPPPOBrainIntegration:
     def test_value_estimates_remain_finite_with_learning(self):
         """Test that value estimates remain finite during training."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=32,
             critic_hidden_dim=32,
             learning_rate=0.01,
@@ -591,7 +603,10 @@ class TestLRScheduling:
 
     def test_lr_scheduling_disabled_by_default(self):
         """Test that LR scheduling is disabled when no warmup episodes set."""
-        config = MLPPPOBrainConfig(learning_rate=0.001)
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            learning_rate=0.001,
+        )
         brain = MLPPPOBrain(
             config=config,
             input_dim=2,
@@ -605,6 +620,7 @@ class TestLRScheduling:
     def test_lr_warmup_enabled(self):
         """Test that LR warmup can be enabled via config."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_warmup_start=0.0001,
@@ -624,6 +640,7 @@ class TestLRScheduling:
     def test_lr_warmup_default_start(self):
         """Test that lr_warmup_start defaults to 10% of base LR."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             # lr_warmup_start not set
@@ -640,6 +657,7 @@ class TestLRScheduling:
     def test_lr_warmup_progression(self):
         """Test that LR increases linearly during warmup phase."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=100,
             lr_warmup_start=0.0001,
@@ -671,6 +689,7 @@ class TestLRScheduling:
     def test_lr_decay_after_warmup(self):
         """Test that LR decays after warmup when decay is configured."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_warmup_start=0.0001,
@@ -708,6 +727,7 @@ class TestLRScheduling:
     def test_lr_decay_default_end(self):
         """Test that lr_decay_end defaults to 10% of base LR."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_decay_episodes=100,
@@ -725,6 +745,7 @@ class TestLRScheduling:
     def test_update_learning_rate_modifies_optimizer(self):
         """Test that _update_learning_rate actually updates the optimizer."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=100,
             lr_warmup_start=0.0001,
@@ -751,7 +772,10 @@ class TestLRScheduling:
 
     def test_lr_scheduling_no_update_when_disabled(self):
         """Test that _update_learning_rate does nothing when scheduling disabled."""
-        config = MLPPPOBrainConfig(learning_rate=0.001)
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            learning_rate=0.001,
+        )
         brain = MLPPPOBrain(
             config=config,
             input_dim=2,
@@ -774,6 +798,7 @@ class TestMLPPPOClipping:
     def brain(self):
         """Create a brain for clipping tests."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             clip_epsilon=0.2,
@@ -848,7 +873,9 @@ class TestFeatureExpansion:
 
     def test_config_defaults(self):
         """Feature expansion and gating should default to none/false."""
-        config = MLPPPOBrainConfig()
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.feature_expansion == "none"
         assert config.feature_gating is False
 
@@ -974,6 +1001,7 @@ class TestFeatureGating:
     def test_gating_without_expansion_raises(self):
         """Gating with no expansion should raise ValueError."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             feature_gating=True,
             feature_expansion="none",
             actor_hidden_dim=16,
@@ -1072,15 +1100,17 @@ class TestFeatureGating:
     def test_gating_gradient_flows(self):
         """Gate weights should receive non-zero gradients when expanded features are non-zero."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             feature_expansion="polynomial",
             feature_gating=True,
             actor_hidden_dim=16,
             num_hidden_layers=2,
         )
-        brain = MLPPPOBrain(config=config, input_dim=3, num_actions=4, device=DeviceType.CPU)
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
         # Non-zero input so polynomial products are non-zero
-        x = torch.tensor([0.5, 0.3, 0.8, 0.15, 0.40, 0.24], dtype=torch.float32)
+        # 2 raw features + 1 pairwise product = 3 total with polynomial expansion
+        x = torch.tensor([0.5, 0.3, 0.15], dtype=torch.float32)
         logits = brain.forward_actor(x)
         loss = logits.sum()
         loss.backward()

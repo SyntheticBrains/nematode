@@ -19,7 +19,9 @@ class TestHybridClassicalBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = HybridClassicalBrainConfig()
+        config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.reflex_hidden_dim == 16
         assert config.training_stage == 1
         assert config.cortex_hidden_dim == 64
@@ -28,11 +30,11 @@ class TestHybridClassicalBrainConfig:
         assert config.reflex_lr == 0.01
         assert config.ppo_buffer_size == 512
         assert config.reflex_weights_path is None
-        assert config.sensory_modules is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             reflex_hidden_dim=32,
             training_stage=2,
             cortex_hidden_dim=128,
@@ -48,19 +50,31 @@ class TestHybridClassicalBrainConfig:
     def test_validation_training_stage_invalid(self):
         """Test validation rejects invalid training stage."""
         with pytest.raises(ValueError, match="training_stage must be 1, 2, or 3"):
-            HybridClassicalBrainConfig(training_stage=0)
+            HybridClassicalBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                training_stage=0,
+            )
         with pytest.raises(ValueError, match="training_stage must be 1, 2, or 3"):
-            HybridClassicalBrainConfig(training_stage=4)
+            HybridClassicalBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                training_stage=4,
+            )
 
     def test_validation_num_reinforce_epochs(self):
         """Test validation rejects zero reinforce epochs."""
         with pytest.raises(ValueError, match="num_reinforce_epochs must be >= 1"):
-            HybridClassicalBrainConfig(num_reinforce_epochs=0)
+            HybridClassicalBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_reinforce_epochs=0,
+            )
 
     def test_validation_reflex_hidden_dim(self):
         """Test validation rejects zero reflex hidden dim."""
         with pytest.raises(ValueError, match="reflex_hidden_dim must be >= 1"):
-            HybridClassicalBrainConfig(reflex_hidden_dim=0)
+            HybridClassicalBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                reflex_hidden_dim=0,
+            )
 
     def test_config_with_sensory_modules(self):
         """Test config with sensory modules specified."""
@@ -78,6 +92,7 @@ class TestHybridClassicalBrainInit:
     def brain_stage1(self):
         """Create a stage 1 brain for testing."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             seed=42,
         )
@@ -87,6 +102,7 @@ class TestHybridClassicalBrainInit:
     def brain_stage2(self):
         """Create a stage 2 brain for testing."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             seed=42,
         )
@@ -147,6 +163,7 @@ class TestReflexForwardPass:
     def brain(self):
         """Create a brain for reflex forward pass testing."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             seed=42,
         )
@@ -175,6 +192,7 @@ class TestCortexForwardPass:
     def brain(self):
         """Create a stage 2 brain for cortex forward pass testing."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             seed=42,
         )
@@ -200,6 +218,7 @@ class TestFusionMechanism:
     def test_fusion_math(self):
         """Test fusion with forage mode dominant produces high reflex trust."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             seed=42,
         )
@@ -224,6 +243,7 @@ class TestFusionMechanism:
     def test_fusion_low_trust(self):
         """Test fusion with evade mode dominant produces low reflex trust."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             seed=42,
         )
@@ -247,6 +267,7 @@ class TestFusionMechanism:
     def test_stage1_bypass(self):
         """Stage 1 should bypass cortex entirely."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             seed=42,
         )
@@ -266,6 +287,7 @@ class TestStageAwareTraining:
         """Test reflex weights change during stage 1 REINFORCE training."""
         monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             reinforce_window_size=5,
             seed=42,
@@ -294,6 +316,7 @@ class TestStageAwareTraining:
         """Test reflex weights remain unchanged during stage 2 PPO training."""
         monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             ppo_buffer_size=5,
             ppo_minibatches=1,
@@ -323,6 +346,7 @@ class TestReinforceUpdate:
         """Test REINFORCE update completes without error."""
         monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             reinforce_window_size=3,
             num_reinforce_epochs=1,
@@ -343,6 +367,7 @@ class TestPPOBuffer:
         """Test PPO buffer fills and triggers update correctly."""
         monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             ppo_buffer_size=4,
             ppo_minibatches=1,
@@ -390,6 +415,7 @@ class TestEpisodeReset:
         """Test state and buffers are cleared after episode."""
         monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             seed=42,
         )
@@ -436,7 +462,7 @@ class TestBrainRegistration:
         from quantumnematode.utils.brain_factory import setup_brain_model
         from quantumnematode.utils.config_loader import ParameterInitializerConfig
 
-        config = HybridClassicalBrainConfig(seed=42)
+        config = HybridClassicalBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], seed=42)
         brain = setup_brain_model(
             brain_type=BrainType.HYBRID_CLASSICAL,
             brain_config=config,
@@ -457,7 +483,11 @@ class TestWeightPersistence:
     def test_save_and_load_round_trip(self, tmp_path, monkeypatch):
         """Test reflex weights survive a save/load round trip."""
         monkeypatch.chdir(tmp_path)
-        config1 = HybridClassicalBrainConfig(training_stage=1, seed=42)
+        config1 = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            training_stage=1,
+            seed=42,
+        )
         brain1 = HybridClassicalBrain(config=config1, num_actions=4)
         brain1._save_reflex_weights("test_session")
 
@@ -466,6 +496,7 @@ class TestWeightPersistence:
 
         # Load into new brain
         config2 = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             reflex_weights_path=str(save_path),
             seed=43,
@@ -483,6 +514,7 @@ class TestWeightPersistence:
     def test_load_missing_file_raises(self):
         """Test loading from missing file raises FileNotFoundError."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             reflex_weights_path="/nonexistent/path/reflex_weights.pt",
         )
@@ -492,6 +524,7 @@ class TestWeightPersistence:
     def test_stage2_without_weights_logs_warning(self, caplog):
         """Test stage 2 without weights path logs a warning."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             seed=42,
         )
@@ -502,7 +535,11 @@ class TestWeightPersistence:
     def test_save_reflex_weights(self, tmp_path, monkeypatch):
         """Test saving reflex weights creates correct file."""
         monkeypatch.chdir(tmp_path)
-        config = HybridClassicalBrainConfig(training_stage=1, seed=42)
+        config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            training_stage=1,
+            seed=42,
+        )
         brain = HybridClassicalBrain(config=config, num_actions=4)
         brain._save_reflex_weights("test_session")
 
@@ -519,7 +556,11 @@ class TestWeightPersistence:
     def test_save_and_load_cortex_round_trip(self, tmp_path, monkeypatch):
         """Test cortex weights survive a save/load round trip."""
         monkeypatch.chdir(tmp_path)
-        config = HybridClassicalBrainConfig(training_stage=2, seed=42)
+        config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            training_stage=2,
+            seed=42,
+        )
         brain1 = HybridClassicalBrain(config=config, num_actions=4)
         brain1._save_cortex_weights("test_session")
 
@@ -528,6 +569,7 @@ class TestWeightPersistence:
 
         # Load into new brain
         config2 = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=3,
             cortex_weights_path=str(save_path),
             seed=43,
@@ -551,6 +593,7 @@ class TestWeightPersistence:
     def test_load_cortex_missing_file_raises(self):
         """Test loading cortex from missing file raises FileNotFoundError."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=3,
             cortex_weights_path="/nonexistent/path/cortex_weights.pt",
         )
@@ -561,6 +604,7 @@ class TestWeightPersistence:
         """Test cortex weights are auto-saved during stage 2 training."""
         monkeypatch.chdir(tmp_path)
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             ppo_buffer_size=4,
             ppo_minibatches=1,
@@ -586,6 +630,7 @@ class TestCortexLRScheduling:
     def test_lr_warmup(self):
         """Test LR warmup from low to base value."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             cortex_actor_lr=0.001,
             cortex_lr_warmup_episodes=10,
@@ -609,6 +654,7 @@ class TestCortexLRScheduling:
     def test_lr_decay(self):
         """Test LR decay after warmup."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             cortex_actor_lr=0.001,
             cortex_lr_warmup_episodes=10,
@@ -639,6 +685,7 @@ class TestCortexLRScheduling:
     def test_no_lr_scheduling(self):
         """Test that LR is flat when no scheduling configured."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             cortex_actor_lr=0.001,
             seed=42,
@@ -652,6 +699,7 @@ class TestCortexLRScheduling:
     def test_lr_update_changes_optimizer(self):
         """Test that _update_cortex_learning_rate changes optimizer LR."""
         config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             cortex_actor_lr=0.001,
             cortex_lr_warmup_episodes=10,
@@ -676,7 +724,11 @@ class TestBrainCopy:
 
     def test_copy_preserves_weights(self):
         """Test copied brain has identical weights."""
-        config = HybridClassicalBrainConfig(training_stage=1, seed=42)
+        config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            training_stage=1,
+            seed=42,
+        )
         brain = HybridClassicalBrain(config=config, num_actions=4)
         copy = brain.copy()
 
@@ -691,7 +743,11 @@ class TestBrainCopy:
 
     def test_copy_is_independent(self):
         """Test copied brain is independent of original."""
-        config = HybridClassicalBrainConfig(training_stage=1, seed=42)
+        config = HybridClassicalBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            training_stage=1,
+            seed=42,
+        )
         brain = HybridClassicalBrain(config=config, num_actions=4)
         copy = brain.copy()
 

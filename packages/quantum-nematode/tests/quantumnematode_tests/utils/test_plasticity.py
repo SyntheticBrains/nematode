@@ -252,8 +252,9 @@ class TestStateSnapshotRestore:
         """
         import torch
         from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
+        from quantumnematode.brain.modules import ModuleName
 
-        config = MLPPPOBrainConfig(seed=42)
+        config = MLPPPOBrainConfig(seed=42, sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         brain = MLPPPOBrain(config)
 
         # Run a fake backward pass to populate optimizer momentum buffers

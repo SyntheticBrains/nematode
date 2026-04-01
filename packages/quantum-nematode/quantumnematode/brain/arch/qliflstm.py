@@ -74,7 +74,6 @@ from quantumnematode.brain.modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -609,10 +608,9 @@ class QLIFLSTMBrainConfig(BrainConfig):
         description="Use QLIF quantum gates (True) or classical sigmoid (False).",
     )
 
-    # Sensory feature extraction
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="List of sensory modules for feature extraction (None = legacy mode).",
+    # Sensory feature extraction (required)
+    sensory_modules: list[ModuleName] = Field(
+        description="List of sensory modules for feature extraction.",
     )
 
     # Device
@@ -722,18 +720,12 @@ class QLIFLSTMBrain(ClassicalBrain):
         # Sensory modules
         self.sensory_modules = config.sensory_modules
 
-        if config.sensory_modules is not None:
-            self.input_dim = get_classical_feature_dimension(config.sensory_modules)
-            logger.info(
-                f"Using unified sensory modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim})",
-            )
-        else:
-            self.input_dim = 2
-            logger.info(
-                "Using legacy 2-feature preprocessing (gradient_strength, rel_angle)",
-            )
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
+        logger.info(
+            f"Using sensory modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Data tracking
         self.history_data = BrainHistoryData()
@@ -878,39 +870,8 @@ class QLIFLSTMBrain(ClassicalBrain):
     # ──────────────────────────────────────────────────────────────────
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams to extract features.
-
-        Two modes:
-        1. **Unified sensory mode** (when sensory_modules is set)
-        2. **Legacy mode** (default): gradient strength + relative angle
-
-        Returns
-        -------
-        np.ndarray
-            Feature vector (dtype=np.float32). In unified sensory mode, returns
-            the output of ``extract_classical_features(params, sensory_modules)``.
-            In legacy mode, returns a 2-element array ``[grad_strength,
-            rel_angle_norm]`` with gradient strength and normalized relative angle.
-        """
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(
-            params.agent_direction or Direction.UP,
-            np.pi / 2,
-        )
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
-
-        return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+        """Preprocess BrainParams to extract features via sensory modules."""
+        return extract_classical_features(params, self.sensory_modules)
 
     def _get_actor_input(
         self,
