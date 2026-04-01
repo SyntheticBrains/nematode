@@ -37,6 +37,10 @@ brain:
     critic_hidden_dim: 64
     critic_num_layers: 2
 
+    # Unified sensory modules for single-objective task
+    sensory_modules:
+      - food_chemotaxis
+
 body_length: 2
 
 reward:

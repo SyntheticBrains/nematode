@@ -16,7 +16,7 @@ class TestQRCBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QRCBrainConfig()
+        config = QRCBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
 
         assert config.num_reservoir_qubits == 8
         assert config.reservoir_depth == 3
@@ -31,6 +31,7 @@ class TestQRCBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=4,
             reservoir_depth=2,
             reservoir_seed=123,
@@ -50,11 +51,6 @@ class TestQRCBrainConfig:
         assert config.gamma == 0.95
         assert config.learning_rate == 0.005
 
-    def test_config_sensory_modules_default(self):
-        """Test that sensory_modules defaults to None (legacy mode)."""
-        config = QRCBrainConfig()
-        assert config.sensory_modules is None
-
     def test_config_with_sensory_modules(self):
         """Test configuration with sensory modules."""
         config = QRCBrainConfig(
@@ -69,27 +65,27 @@ class TestQRCBrainConfig:
     def test_validation_num_reservoir_qubits(self):
         """Test validation for num_reservoir_qubits."""
         with pytest.raises(ValueError, match="num_reservoir_qubits must be >= 2"):
-            QRCBrainConfig(num_reservoir_qubits=1)
+            QRCBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], num_reservoir_qubits=1)
 
     def test_validation_reservoir_depth(self):
         """Test validation for reservoir_depth."""
         with pytest.raises(ValueError, match="reservoir_depth must be >= 1"):
-            QRCBrainConfig(reservoir_depth=0)
+            QRCBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], reservoir_depth=0)
 
     def test_validation_readout_hidden(self):
         """Test validation for readout_hidden."""
         with pytest.raises(ValueError, match="readout_hidden must be >= 1"):
-            QRCBrainConfig(readout_hidden=0)
+            QRCBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], readout_hidden=0)
 
     def test_validation_shots(self):
         """Test validation for shots."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            QRCBrainConfig(shots=50)
+            QRCBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], shots=50)
 
     def test_validation_readout_type(self):
         """Test validation for readout_type."""
         with pytest.raises(ValueError, match="readout_type must be one of"):
-            QRCBrainConfig(readout_type="invalid")
+            QRCBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], readout_type="invalid")
 
 
 class TestQRCBrainReservoirCircuit:
@@ -99,6 +95,7 @@ class TestQRCBrainReservoirCircuit:
     def small_config(self) -> QRCBrainConfig:
         """Create a small test configuration for faster tests."""
         return QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=2,
             reservoir_seed=42,
@@ -155,12 +152,14 @@ class TestQRCBrainReservoirCircuit:
     def test_reservoir_reproducibility(self):
         """Same seed should produce identical reservoir circuits and outputs."""
         config1 = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=2,
             reservoir_seed=42,
             shots=200,
         )
         config2 = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=2,
             reservoir_seed=42,
@@ -197,11 +196,13 @@ class TestQRCBrainReservoirCircuit:
     def test_different_seeds_different_circuits(self):
         """Different seeds should produce different reservoir circuits."""
         config1 = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=2,
             reservoir_seed=42,
         )
         config2 = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=2,
             reservoir_seed=123,
@@ -238,6 +239,7 @@ class TestQRCBrainInputEncoding:
     def brain(self) -> QRCBrain:
         """Create a test QRC brain."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=4,
             reservoir_depth=2,
             shots=100,
@@ -247,26 +249,26 @@ class TestQRCBrainInputEncoding:
     def test_preprocess(self, brain):
         """Test state preprocessing extracts correct features."""
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=1.5,
+            food_gradient_strength=0.8,
+            food_gradient_direction=1.5,
             agent_position=(2, 3),
             agent_direction=Direction.UP,
         )
 
         features = brain.preprocess(params)
         assert isinstance(features, np.ndarray)
-        assert len(features) == 2  # gradient_strength, relative_angle
+        assert len(features) == 2  # food strength, food relative angle
         assert features.dtype == np.float32
-        assert features[0] == 0.8  # gradient_strength
+        assert features[0] == pytest.approx(0.8)  # food strength
         assert -1.0 <= features[1] <= 1.0  # Normalized relative angle
 
     def test_preprocess_none_values(self, brain):
-        """Test preprocessing with None values defaults correctly."""
+        """Test preprocessing with no food signal defaults correctly."""
         params = BrainParams()
         features = brain.preprocess(params)
 
         assert len(features) == 2
-        assert features[0] == 0.0  # gradient_strength defaults to 0
+        assert features[0] == 0.0  # food strength defaults to 0
 
     def test_input_encoding_angle_calculation(self, brain):
         """Test RY angle calculation for input encoding."""
@@ -333,28 +335,6 @@ class TestQRCBrainSensoryModules:
         assert 0.0 <= features[2] <= 1.0  # predator strength [0, 1]
         assert -1.0 <= features[3] <= 1.0  # predator angle [-1, 1]
 
-    def test_legacy_mode_when_no_sensory_modules(self):
-        """Test that brain uses legacy preprocessing when sensory_modules is None."""
-        config = QRCBrainConfig(
-            num_reservoir_qubits=4,
-            reservoir_depth=2,
-            shots=100,
-            # No sensory_modules - legacy mode
-        )
-        brain = QRCBrain(config=config, num_actions=4, device=DeviceType.CPU)
-
-        assert brain.sensory_modules is None
-        assert brain.input_dim == 2  # Legacy mode: gradient_strength + relative_angle
-
-        params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
-            agent_direction=Direction.UP,
-        )
-        features = brain.preprocess(params)
-
-        assert len(features) == 2
-
 
 class TestQRCBrainReadoutNetwork:
     """Test cases for readout network architecture."""
@@ -362,6 +342,7 @@ class TestQRCBrainReadoutNetwork:
     def test_mlp_readout_architecture(self):
         """Test MLP readout has correct layer dimensions."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,  # 2^3 = 8 input dim
             readout_hidden=16,
             readout_type="mlp",
@@ -382,6 +363,7 @@ class TestQRCBrainReadoutNetwork:
     def test_linear_readout_architecture(self):
         """Test linear readout has correct layer dimensions."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,  # 2^3 = 8 input dim
             readout_type="linear",
         )
@@ -405,6 +387,7 @@ class TestQRCBrainLearning:
     def brain(self) -> QRCBrain:
         """Create a test QRC brain."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=1,
             readout_hidden=8,
@@ -486,6 +469,7 @@ class TestQRCBrainCopy:
     def brain(self) -> QRCBrain:
         """Create a test QRC brain."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=1,
             readout_hidden=8,
@@ -549,6 +533,7 @@ class TestQRCBrainIntegration:
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=1,
             readout_hidden=8,
@@ -562,8 +547,8 @@ class TestQRCBrainIntegration:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -585,6 +570,7 @@ class TestQRCBrainIntegration:
     def test_baseline_updates(self):
         """Test that baseline is updated during learning."""
         config = QRCBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_reservoir_qubits=3,
             reservoir_depth=1,
             shots=100,
@@ -592,7 +578,7 @@ class TestQRCBrainIntegration:
         )
         brain = QRCBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Initial baseline
         initial_baseline = brain.baseline

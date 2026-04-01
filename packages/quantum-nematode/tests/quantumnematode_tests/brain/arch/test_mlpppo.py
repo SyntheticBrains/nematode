@@ -5,6 +5,7 @@ from typing import Literal
 import numpy as np
 import pytest
 import torch
+from pydantic import ValidationError
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
@@ -18,7 +19,9 @@ class TestMLPPPOBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = MLPPPOBrainConfig()
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
 
         assert config.actor_hidden_dim == 64
         assert config.critic_hidden_dim == 64
@@ -37,6 +40,7 @@ class TestMLPPPOBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=128,
             critic_hidden_dim=128,
             num_hidden_layers=3,
@@ -53,6 +57,11 @@ class TestMLPPPOBrainConfig:
         assert config.gamma == 0.95
         assert config.clip_epsilon == 0.1
         assert config.rollout_buffer_size == 256
+
+    def test_validation_sensory_modules_non_empty(self):
+        """Test validation rejects empty sensory_modules."""
+        with pytest.raises(ValidationError):
+            MLPPPOBrainConfig(sensory_modules=[])
 
 
 class TestRolloutBuffer:
@@ -187,6 +196,7 @@ class TestMLPPPOBrain:
     def config(self) -> MLPPPOBrainConfig:
         """Create a test configuration."""
         return MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=32,
             critic_hidden_dim=32,
             num_hidden_layers=2,
@@ -236,8 +246,8 @@ class TestMLPPPOBrain:
     def test_preprocess(self, brain):
         """Test state preprocessing."""
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=1.5,
+            food_gradient_strength=0.8,
+            food_gradient_direction=1.5,
             agent_position=(2, 3),
             agent_direction=Direction.UP,
         )
@@ -288,8 +298,8 @@ class TestMLPPPOBrain:
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -311,8 +321,8 @@ class TestMLPPPOBrain:
     def test_learn_adds_to_buffer(self, brain):
         """Test that learn adds experience to buffer."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -330,8 +340,8 @@ class TestMLPPPOBrain:
     def test_learn_triggers_update_when_buffer_full(self, brain):
         """Test that PPO update is triggered when buffer is full."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -348,8 +358,8 @@ class TestMLPPPOBrain:
     def test_ppo_update(self, brain):
         """Test PPO update mechanics."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -418,6 +428,7 @@ class TestMLPPPOBrainIntegration:
     def test_full_episode_workflow(self):
         """Test a complete episode workflow."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=0.01,
@@ -438,8 +449,8 @@ class TestMLPPPOBrainIntegration:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -462,6 +473,7 @@ class TestMLPPPOBrainIntegration:
     def test_multiple_episodes(self):
         """Test running multiple episodes."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=0.001,
@@ -483,8 +495,8 @@ class TestMLPPPOBrainIntegration:
 
             for step in range(15):
                 params = BrainParams(
-                    gradient_strength=rng.random(),
-                    gradient_direction=rng.random() * 2 * np.pi,
+                    food_gradient_strength=rng.random(),
+                    food_gradient_direction=rng.random() * 2 * np.pi,
                     agent_position=(step, step),
                     agent_direction=Direction.UP,
                 )
@@ -501,6 +513,7 @@ class TestMLPPPOBrainIntegration:
     def test_gradient_clipping(self):
         """Test that gradient clipping is applied."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             learning_rate=1.0,  # Very high LR to potentially cause large gradients
@@ -516,7 +529,7 @@ class TestMLPPPOBrainIntegration:
             device=DeviceType.CPU,
         )
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Collect experience and trigger update
         for i in range(25):
@@ -531,7 +544,11 @@ class TestMLPPPOBrainIntegration:
 
     def test_deterministic_action_selection(self):
         """Test that action selection is deterministic with same seed."""
-        config = MLPPPOBrainConfig(actor_hidden_dim=16, critic_hidden_dim=16)
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            actor_hidden_dim=16,
+            critic_hidden_dim=16,
+        )
 
         # Create two brains with same weights
         torch.manual_seed(42)
@@ -540,7 +557,7 @@ class TestMLPPPOBrainIntegration:
         torch.manual_seed(42)
         brain2 = MLPPPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Set same seed for action sampling
         torch.manual_seed(123)
@@ -555,6 +572,7 @@ class TestMLPPPOBrainIntegration:
     def test_value_estimates_remain_finite_with_learning(self):
         """Test that value estimates remain finite during training."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=32,
             critic_hidden_dim=32,
             learning_rate=0.01,
@@ -570,7 +588,7 @@ class TestMLPPPOBrainIntegration:
         )
 
         # Train on experiences where this state leads to positive reward
-        params = BrainParams(gradient_strength=1.0, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=1.0, food_gradient_direction=0.0)
 
         for _episode in range(5):
             for step in range(25):
@@ -591,7 +609,10 @@ class TestLRScheduling:
 
     def test_lr_scheduling_disabled_by_default(self):
         """Test that LR scheduling is disabled when no warmup episodes set."""
-        config = MLPPPOBrainConfig(learning_rate=0.001)
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            learning_rate=0.001,
+        )
         brain = MLPPPOBrain(
             config=config,
             input_dim=2,
@@ -605,6 +626,7 @@ class TestLRScheduling:
     def test_lr_warmup_enabled(self):
         """Test that LR warmup can be enabled via config."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_warmup_start=0.0001,
@@ -624,6 +646,7 @@ class TestLRScheduling:
     def test_lr_warmup_default_start(self):
         """Test that lr_warmup_start defaults to 10% of base LR."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             # lr_warmup_start not set
@@ -640,6 +663,7 @@ class TestLRScheduling:
     def test_lr_warmup_progression(self):
         """Test that LR increases linearly during warmup phase."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=100,
             lr_warmup_start=0.0001,
@@ -671,6 +695,7 @@ class TestLRScheduling:
     def test_lr_decay_after_warmup(self):
         """Test that LR decays after warmup when decay is configured."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_warmup_start=0.0001,
@@ -708,6 +733,7 @@ class TestLRScheduling:
     def test_lr_decay_default_end(self):
         """Test that lr_decay_end defaults to 10% of base LR."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=50,
             lr_decay_episodes=100,
@@ -725,6 +751,7 @@ class TestLRScheduling:
     def test_update_learning_rate_modifies_optimizer(self):
         """Test that _update_learning_rate actually updates the optimizer."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             learning_rate=0.001,
             lr_warmup_episodes=100,
             lr_warmup_start=0.0001,
@@ -751,7 +778,10 @@ class TestLRScheduling:
 
     def test_lr_scheduling_no_update_when_disabled(self):
         """Test that _update_learning_rate does nothing when scheduling disabled."""
-        config = MLPPPOBrainConfig(learning_rate=0.001)
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+            learning_rate=0.001,
+        )
         brain = MLPPPOBrain(
             config=config,
             input_dim=2,
@@ -774,6 +804,7 @@ class TestMLPPPOClipping:
     def brain(self):
         """Create a brain for clipping tests."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             clip_epsilon=0.2,
@@ -794,7 +825,7 @@ class TestMLPPPOClipping:
 
     def test_clipping_prevents_large_updates(self, brain):
         """Test that clipping limits policy changes."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Get initial policy output
         state = brain.preprocess(params)
@@ -848,7 +879,9 @@ class TestFeatureExpansion:
 
     def test_config_defaults(self):
         """Feature expansion and gating should default to none/false."""
-        config = MLPPPOBrainConfig()
+        config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.feature_expansion == "none"
         assert config.feature_gating is False
 
@@ -930,8 +963,8 @@ class TestFeatureExpansion:
     def test_expansion_run_brain(self):
         """run_brain should work with all expansion modes."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -974,6 +1007,7 @@ class TestFeatureGating:
     def test_gating_without_expansion_raises(self):
         """Gating with no expansion should raise ValueError."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             feature_gating=True,
             feature_expansion="none",
             actor_hidden_dim=16,
@@ -1061,8 +1095,8 @@ class TestFeatureGating:
         )
         brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -1072,15 +1106,17 @@ class TestFeatureGating:
     def test_gating_gradient_flows(self):
         """Gate weights should receive non-zero gradients when expanded features are non-zero."""
         config = MLPPPOBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             feature_expansion="polynomial",
             feature_gating=True,
             actor_hidden_dim=16,
             num_hidden_layers=2,
         )
-        brain = MLPPPOBrain(config=config, input_dim=3, num_actions=4, device=DeviceType.CPU)
+        brain = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
         # Non-zero input so polynomial products are non-zero
-        x = torch.tensor([0.5, 0.3, 0.8, 0.15, 0.40, 0.24], dtype=torch.float32)
+        # 2 raw features + 1 pairwise product = 3 total with polynomial expansion
+        x = torch.tensor([0.5, 0.3, 0.15], dtype=torch.float32)
         logits = brain.forward_actor(x)
         loss = logits.sum()
         loss.backward()

@@ -46,7 +46,7 @@ class TestPlasticityConfig:
     def test_valid_config_loads(self) -> None:
         """Valid config with all required fields loads successfully."""
         config = PlasticityConfig(
-            brain={"name": "mlpppo"},  # type: ignore[arg-type]
+            brain={"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},  # type: ignore[arg-type]
             plasticity=PlasticityProtocolConfig(
                 training_episodes_per_phase=10,
                 eval_episodes=5,
@@ -252,8 +252,9 @@ class TestStateSnapshotRestore:
         """
         import torch
         from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
+        from quantumnematode.brain.modules import ModuleName
 
-        config = MLPPPOBrainConfig(seed=42)
+        config = MLPPPOBrainConfig(seed=42, sensory_modules=[ModuleName.FOOD_CHEMOTAXIS])
         brain = MLPPPOBrain(config)
 
         # Run a fake backward pass to populate optimizer momentum buffers

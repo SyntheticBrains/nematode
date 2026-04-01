@@ -147,7 +147,7 @@ def _resolve_brain_config[T: BrainConfigType](
     """Resolve a raw brain config to the expected config class.
 
     Handles three cases:
-    1. None -> return default config
+    1. None -> raise (brain config is required)
     2. Already correct type -> return as-is
     3. Dict-like object -> extract matching fields and construct
 
@@ -171,7 +171,8 @@ def _resolve_brain_config[T: BrainConfigType](
         If the raw_config cannot be converted to the expected type.
     """
     if raw_config is None:
-        return config_cls()
+        msg = f"Brain config is required for '{brain_name}' — no default config available."
+        raise ValueError(msg)
     if isinstance(raw_config, config_cls):
         return raw_config
     if hasattr(raw_config, "__dict__"):
@@ -208,7 +209,7 @@ class BrainContainerConfig(BaseModel):
     """Configuration for the brain architecture."""
 
     name: str
-    config: BrainConfigType | None = None
+    config: BrainConfigType
 
 
 class LearningRateParameters(BaseModel):

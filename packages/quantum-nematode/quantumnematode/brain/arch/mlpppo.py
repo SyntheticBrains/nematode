@@ -12,7 +12,7 @@ Key Features:
 - **Multiple Epochs**: Performs multiple gradient steps per rollout for sample efficiency
 
 Architecture:
-- Input: 2D state features (gradient strength, relative direction to goal)
+- Input: State features from configurable sensory modules
 - Actor: MLP producing action probabilities via softmax
 - Critic: MLP producing value estimate (single scalar)
 - Output: Action selection from categorical distribution
@@ -41,6 +41,8 @@ if TYPE_CHECKING:
     from quantumnematode.brain.weights import WeightComponent
     from quantumnematode.initializers._initializer import ParameterInitializer
 
+from pydantic import field_validator
+
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
@@ -51,7 +53,6 @@ from quantumnematode.brain.modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -76,23 +77,17 @@ EPISODE_LOG_INTERVAL = 25
 class MLPPPOBrainConfig(BrainConfig):
     """Configuration for the MLPPPOBrain architecture.
 
-    Supports two modes for input feature extraction:
+    Uses modular feature extraction via sensory_modules (required).
 
-    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
-       - Set `sensory_modules=None` (default)
-       - If `input_dim` is omitted, MLPPPOBrain defaults to 2 in legacy mode
+    Each module contributes a variable number of features (typically 2:
+    [strength, angle], but some modules like thermotaxis contribute 3).
+    ``input_dim`` is auto-computed as ``sum(classical_dim per module)``.
 
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
-       - Set `sensory_modules` to a list of ModuleName values
-       - Uses extract_classical_features() which outputs semantic-preserving ranges
-       - Each module contributes 2 features [strength, angle] in [0,1] and [-1,1]
-       - `input_dim` is auto-computed as `len(sensory_modules) * 2`
-
-    Example unified mode config:
+    Example config:
         >>> config = MLPPPOBrainConfig(
         ...     sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         ... )
-        >>> # input_dim will be 4 (2 modules * 2 features each)
+        >>> # input_dim will be 4 (2 modules with classical_dim=2 each)
     """
 
     # Network architecture
@@ -116,11 +111,17 @@ class MLPPPOBrainConfig(BrainConfig):
     # Rollout buffer
     rollout_buffer_size: int = DEFAULT_ROLLOUT_BUFFER_SIZE
 
-    # Unified sensory feature extraction (optional)
-    # When set, uses extract_classical_features() which outputs:
-    # - strength: [0, 1] where 0 = no signal (matches legacy semantics)
-    # - angle: [-1, 1] where 0 = aligned with agent heading
-    sensory_modules: list[ModuleName] | None = None
+    # Sensory feature extraction (required)
+    sensory_modules: list[ModuleName]
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     # Learning rate scheduling (optional)
     # Supports warmup followed by optional decay for more stable early learning.
@@ -173,29 +174,18 @@ class MLPPPOBrain(ClassicalBrain):
         # Store sensory modules for feature extraction
         self.sensory_modules = config.sensory_modules
 
-        # Determine input dimension
-        if config.sensory_modules is not None:
-            # Unified sensory mode: use classical feature extraction
-            # Each module contributes 2 features [strength, angle]
-            computed_dim = get_classical_feature_dimension(config.sensory_modules)
-            if input_dim is not None and input_dim != computed_dim:
-                logger.warning(
-                    f"input_dim={input_dim} overridden by sensory_modules "
-                    f"(computed: {computed_dim})",
-                )
-            self.input_dim = computed_dim
-            logger.info(
-                f"Using classical feature extraction with modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim}, features=[strength, angle] per module)",
+        # Determine input dimension from sensory modules
+        computed_dim = get_classical_feature_dimension(config.sensory_modules)
+        if input_dim is not None and input_dim != computed_dim:
+            logger.warning(
+                f"input_dim={input_dim} overridden by sensory_modules (computed: {computed_dim})",
             )
-        elif input_dim is not None:
-            # Legacy mode: explicit input_dim
-            self.input_dim = input_dim
-        else:
-            # Default legacy mode: 2 features
-            self.input_dim = 2
-            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+        self.input_dim = computed_dim
+        logger.info(
+            f"Using classical feature extraction with modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Feature expansion for ablation experiments
         self._raw_input_dim = self.input_dim
@@ -365,41 +355,13 @@ class MLPPPOBrain(ClassicalBrain):
             logger.info("Custom parameter initializer provided but using orthogonal init")
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
+        """Preprocess BrainParams to extract features for the neural network.
+
+        Uses extract_classical_features() which outputs semantic-preserving ranges:
+        - strength: [0, 1] where 0 = no signal
+        - angle: [-1, 1] where 0 = aligned with agent heading
         """
-        Preprocess BrainParams to extract features for the neural network.
-
-        Two modes:
-        1. **Unified sensory mode** (when sensory_modules is set):
-           Uses extract_classical_features() which outputs semantic-preserving ranges:
-           - strength: [0, 1] where 0 = no signal (matches legacy)
-           - angle: [-1, 1] where 0 = aligned with agent heading
-
-        2. **Legacy mode** (default):
-           Matches original MLPReinforceBrain preprocessing:
-           - Gradient strength (float, [0, 1])
-           - Normalized relative angle to goal ([-1, 1])
-        """
-        # Unified sensory mode: use classical feature extraction
-        if self.sensory_modules is not None:
-            raw_features = extract_classical_features(params, self.sensory_modules)
-        else:
-            # Legacy mode: 2-feature preprocessing
-            grad_strength = float(params.gradient_strength or 0.0)
-            grad_direction = float(params.gradient_direction or 0.0)
-            direction_map = {
-                Direction.UP: np.pi / 2,
-                Direction.DOWN: -np.pi / 2,
-                Direction.LEFT: np.pi,
-                Direction.RIGHT: 0.0,
-            }
-            agent_facing_angle = direction_map.get(
-                params.agent_direction or Direction.UP,
-                np.pi / 2,
-            )
-            relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-            rel_angle_norm = relative_angle / np.pi
-            raw_features = np.array([grad_strength, rel_angle_norm], dtype=np.float32)
-
+        raw_features = extract_classical_features(params, self.sensory_modules)
         return self._apply_feature_expansion(raw_features)
 
     def _apply_feature_expansion(self, raw_features: np.ndarray) -> np.ndarray:

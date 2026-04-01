@@ -50,7 +50,6 @@ from quantumnematode.brain.modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -76,18 +75,10 @@ MIN_SHOTS = 100
 class QRCBrainConfig(BrainConfig):
     """Configuration for the QRCBrain architecture.
 
-    Supports two modes for input feature extraction:
+    Uses modular feature extraction via sensory_modules (required).
+    Each module contributes a variable number of features (typically 2).
 
-    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
-       - Set `sensory_modules=None` (default)
-
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
-       - Set `sensory_modules` to a list of ModuleName values
-       - Uses extract_classical_features() which outputs semantic-preserving ranges
-       - Each module contributes 2 features [strength, angle] in [0,1] and [-1,1]
-       - Required for multi-sensory scenarios (predator evasion + foraging)
-
-    Example unified mode config:
+    Example config:
         >>> config = QRCBrainConfig(
         ...     sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         ... )
@@ -115,8 +106,8 @@ class QRCBrainConfig(BrainConfig):
         Smoothing factor for baseline running average (default 0.05).
     entropy_coef : float
         Entropy regularization coefficient for exploration (default 0.01).
-    sensory_modules : list[ModuleName] | None
-        List of sensory modules for feature extraction (default None = legacy mode).
+    sensory_modules : list[ModuleName]
+        List of sensory modules for feature extraction (required).
     """
 
     num_reservoir_qubits: int = Field(
@@ -160,14 +151,19 @@ class QRCBrainConfig(BrainConfig):
         description="Entropy regularization coefficient for exploration.",
     )
 
-    # Unified sensory feature extraction (optional)
-    # When set, uses extract_classical_features() which outputs:
-    # - strength: [0, 1] where 0 = no signal (matches legacy semantics)
-    # - angle: [-1, 1] where 0 = aligned with agent heading
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="List of sensory modules for feature extraction (None = legacy mode).",
+    # Sensory feature extraction (required)
+    sensory_modules: list[ModuleName] = Field(
+        description="List of sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     @field_validator("num_reservoir_qubits")
     @classmethod
@@ -270,18 +266,12 @@ class QRCBrain(ClassicalBrain):
         self.sensory_modules = config.sensory_modules
 
         # Determine input dimension based on sensory modules
-        if config.sensory_modules is not None:
-            # Unified sensory mode: use classical feature extraction
-            self.input_dim = get_classical_feature_dimension(config.sensory_modules)
-            logger.info(
-                f"Using unified sensory modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim})",
-            )
-        else:
-            # Legacy mode: 2 features (gradient_strength, relative_angle)
-            self.input_dim = 2
-            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
+        logger.info(
+            f"Using sensory modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Initialize data tracking
         self.history_data = BrainHistoryData()
@@ -370,14 +360,17 @@ class QRCBrain(ClassicalBrain):
         # Data re-uploading: encode inputs before each reservoir layer
         for _layer in range(self.reservoir_depth):
             # Input encoding: dense encoding across all qubits
+            # NOTE: Parity-based gate assignment (even→RY, odd→RZ) assumes all
+            # sensory modules have classical_dim=2. If modules with odd widths
+            # are added, this should be updated to use per-module gate mapping.
             for i, feature in enumerate(features):
                 angle = float(feature) * np.pi
                 for q in range(self.num_qubits):
                     if i % 2 == 0:
-                        # Even-indexed features (e.g., gradient_strength): RY (amplitude)
+                        # Even-indexed features (strength): RY (amplitude)
                         qc.ry(angle, q)
                     else:
-                        # Odd-indexed features (e.g., relative_angle): RZ (phase)
+                        # Odd-indexed features (angle): RZ (phase)
                         qc.rz(angle, q)
 
             # Reservoir layer: structured rotations (fractional angles)
@@ -435,48 +428,11 @@ class QRCBrain(ClassicalBrain):
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Preprocess BrainParams to extract features for the reservoir.
 
-        Two modes:
-        1. **Unified sensory mode** (when sensory_modules is set):
-           Uses extract_classical_features() which outputs semantic-preserving ranges:
-           - strength: [0, 1] where 0 = no signal
-           - angle: [-1, 1] where 0 = aligned with agent heading
-
-        2. **Legacy mode** (default):
-           Computes gradient strength normalized to [0, 1] and relative angle
-           normalized to [-1, 1].
-
-        Parameters
-        ----------
-        params : BrainParams
-            Brain parameters containing sensory information.
-
-        Returns
-        -------
-        np.ndarray
-            Preprocessed features.
+        Uses extract_classical_features() which outputs semantic-preserving ranges:
+        - strength: [0, 1] where 0 = no signal
+        - angle: [-1, 1] where 0 = aligned with agent heading
         """
-        # Unified sensory mode: use classical feature extraction
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-
-        # Legacy mode: 2-feature preprocessing
-        # Use gradient_strength as-is (assumed [0, 1])
-        grad_strength = float(params.gradient_strength or 0.0)
-
-        # Compute relative angle to goal ([-pi, pi])
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        # Normalize relative angle to [-1, 1]
-        rel_angle_norm = relative_angle / np.pi
-
-        return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+        return extract_classical_features(params, self.sensory_modules)
 
     def forward(self, reservoir_state: np.ndarray) -> torch.Tensor:
         """Forward pass through the readout network.

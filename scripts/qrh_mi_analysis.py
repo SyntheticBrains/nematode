@@ -49,6 +49,7 @@ from quantumnematode.brain.arch.qrh import (
     QRHBrainConfig,
     _compute_feature_dim,
 )
+from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
 from quantumnematode.utils.seeding import set_global_seed
 from sklearn.feature_selection import mutual_info_classif
@@ -318,6 +319,7 @@ def extract_classical_features(
         Feature matrix, shape (num_samples, hidden_dim).
     """
     config = MLPPPOBrainConfig(
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         seed=seed,
         actor_hidden_dim=64,
         critic_hidden_dim=64,

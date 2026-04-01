@@ -19,7 +19,9 @@ class TestHybridQuantumBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = HybridQuantumBrainConfig()
+        config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.num_sensory_neurons == 8
         assert config.num_hidden_neurons == 16
         assert config.num_motor_neurons == 4
@@ -33,11 +35,11 @@ class TestHybridQuantumBrainConfig:
         assert config.qsnn_lr == 0.01
         assert config.ppo_buffer_size == 512
         assert config.qsnn_weights_path is None
-        assert config.sensory_modules is None
 
     def test_custom_config(self):
         """Test custom configuration values."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             num_sensory_neurons=6,
             num_hidden_neurons=12,
             training_stage=2,
@@ -55,48 +57,60 @@ class TestHybridQuantumBrainConfig:
     def test_validation_training_stage_invalid(self):
         """Test validation rejects invalid training stage."""
         with pytest.raises(ValueError, match="training_stage must be 1, 2, or 3"):
-            HybridQuantumBrainConfig(training_stage=0)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], training_stage=0)
         with pytest.raises(ValueError, match="training_stage must be 1, 2, or 3"):
-            HybridQuantumBrainConfig(training_stage=4)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], training_stage=4)
 
     def test_validation_shots_too_low(self):
         """Test validation rejects shots below minimum."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            HybridQuantumBrainConfig(shots=50)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], shots=50)
 
     def test_validation_num_sensory_neurons(self):
         """Test validation rejects zero sensory neurons."""
         with pytest.raises(ValueError, match="num_sensory_neurons must be >= 1"):
-            HybridQuantumBrainConfig(num_sensory_neurons=0)
+            HybridQuantumBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_sensory_neurons=0,
+            )
 
     def test_validation_num_hidden_neurons(self):
         """Test validation rejects zero hidden neurons."""
         with pytest.raises(ValueError, match="num_hidden_neurons must be >= 1"):
-            HybridQuantumBrainConfig(num_hidden_neurons=0)
+            HybridQuantumBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_hidden_neurons=0,
+            )
 
     def test_validation_num_motor_neurons(self):
         """Test validation rejects fewer than 2 motor neurons."""
         with pytest.raises(ValueError, match="num_motor_neurons must be >= 2"):
-            HybridQuantumBrainConfig(num_motor_neurons=1)
+            HybridQuantumBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_motor_neurons=1,
+            )
 
     def test_validation_membrane_tau(self):
         """Test validation rejects membrane_tau outside (0, 1]."""
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            HybridQuantumBrainConfig(membrane_tau=0.0)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=0.0)
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            HybridQuantumBrainConfig(membrane_tau=1.5)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=1.5)
 
     def test_validation_threshold(self):
         """Test validation rejects threshold outside (0, 1)."""
         with pytest.raises(ValueError, match="threshold must be in"):
-            HybridQuantumBrainConfig(threshold=0.0)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], threshold=0.0)
         with pytest.raises(ValueError, match="threshold must be in"):
-            HybridQuantumBrainConfig(threshold=1.0)
+            HybridQuantumBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], threshold=1.0)
 
     def test_validation_num_reinforce_epochs(self):
         """Test validation rejects zero reinforce epochs."""
         with pytest.raises(ValueError, match="num_reinforce_epochs must be >= 1"):
-            HybridQuantumBrainConfig(num_reinforce_epochs=0)
+            HybridQuantumBrainConfig(
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+                num_reinforce_epochs=0,
+            )
 
     def test_config_with_sensory_modules(self):
         """Test config with sensory modules specified."""
@@ -114,6 +128,7 @@ class TestHybridQuantumBrainInit:
     def brain_stage1(self):
         """Create a stage 1 brain for testing."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -125,6 +140,7 @@ class TestHybridQuantumBrainInit:
     def brain_stage2(self):
         """Create a stage 2 brain for testing."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -165,9 +181,9 @@ class TestHybridQuantumBrainInit:
         assert last_layer.out_features == 1
 
     def test_cortex_actor_input_dim(self, brain_stage1):
-        """Test cortex actor input dimension matches legacy mode."""
+        """Test cortex actor input dimension matches sensory module count."""
         first_layer = next(iter(brain_stage1.cortex_actor.children()))
-        assert first_layer.in_features == 2  # legacy mode
+        assert first_layer.in_features == 2  # 1 module * 2 features
 
     def test_action_set(self, brain_stage1):
         """Test action set has correct length."""
@@ -181,6 +197,7 @@ class TestQSNNForwardPass:
     def brain(self):
         """Create a brain for QSNN forward pass testing."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -214,6 +231,7 @@ class TestCortexForwardPass:
     def brain(self):
         """Create a stage 2 brain for cortex forward pass testing."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -223,7 +241,7 @@ class TestCortexForwardPass:
 
     def test_cortex_forward_output_split(self, brain):
         """Test cortex forward splits into action biases and mode logits."""
-        sensory_t = torch.randn(2)  # legacy 2-feature input
+        sensory_t = torch.randn(2)  # 1 module * 2 features
         action_biases, mode_logits = brain._cortex_forward(sensory_t)
         assert action_biases.shape == (4,)
         assert mode_logits.shape == (3,)
@@ -241,6 +259,7 @@ class TestFusionMechanism:
     def test_fusion_math(self):
         """Test fusion with forage mode dominant produces high QSNN trust."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -267,6 +286,7 @@ class TestFusionMechanism:
     def test_fusion_low_trust(self):
         """Test fusion with evade mode dominant produces low QSNN trust."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -292,13 +312,14 @@ class TestFusionMechanism:
     def test_stage1_bypass(self):
         """Stage 1 should bypass cortex entirely."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
         actions = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(actions) == 1
         assert isinstance(actions[0], ActionData)
@@ -313,6 +334,7 @@ class TestStageAwareTraining:
         """Test QSNN weights change during stage 1 REINFORCE training."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -320,7 +342,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -337,6 +359,7 @@ class TestStageAwareTraining:
         """Test QSNN weights remain unchanged during stage 2 PPO training."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -345,7 +368,7 @@ class TestStageAwareTraining:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         w_sh_before = brain.W_sh.clone().detach()
 
@@ -366,6 +389,7 @@ class TestReinforceUpdate:
         """Test REINFORCE update completes without error."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -374,7 +398,7 @@ class TestReinforceUpdate:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(4):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -388,6 +412,7 @@ class TestPPOBuffer:
         """Test PPO buffer fills and triggers update correctly."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -397,7 +422,7 @@ class TestPPOBuffer:
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(5):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -437,13 +462,14 @@ class TestEpisodeReset:
         """Test QSNN state and buffers are cleared after episode."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
             seed=42,
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         # Run an episode
         for i in range(3):
@@ -488,6 +514,7 @@ class TestBrainRegistration:
         from quantumnematode.utils.config_loader import ParameterInitializerConfig
 
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             shots=100,
             num_qsnn_timesteps=1,
             seed=42,
@@ -512,6 +539,7 @@ class TestWeightPersistence:
     def test_save_and_load_round_trip(self, tmp_path):
         """Test weights survive a save/load round trip."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -535,6 +563,7 @@ class TestWeightPersistence:
 
         # Load into new brain
         config2 = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -554,6 +583,7 @@ class TestWeightPersistence:
     def test_load_missing_file_raises(self):
         """Test loading from missing file raises FileNotFoundError."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -575,6 +605,7 @@ class TestWeightPersistence:
         torch.save(weights_dict, save_path)
 
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -586,6 +617,7 @@ class TestWeightPersistence:
     def test_stage2_without_weights_logs_warning(self, caplog):
         """Test stage 2 without weights path logs a warning."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -599,6 +631,7 @@ class TestWeightPersistence:
         """Test saving QSNN weights creates correct file."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -620,6 +653,7 @@ class TestWeightPersistence:
         """Test cortex weights survive a save/load round trip."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -633,6 +667,7 @@ class TestWeightPersistence:
 
         # Load into new brain
         config2 = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=3,
             shots=100,
             num_qsnn_timesteps=1,
@@ -658,6 +693,7 @@ class TestWeightPersistence:
     def test_load_cortex_missing_file_raises(self):
         """Test loading cortex from missing file raises FileNotFoundError."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=3,
             shots=100,
             num_qsnn_timesteps=1,
@@ -670,6 +706,7 @@ class TestWeightPersistence:
         """Test cortex weights are auto-saved during stage 2 training."""
         monkeypatch.chdir(tmp_path)
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -680,7 +717,7 @@ class TestWeightPersistence:
         )
         brain = HybridQuantumBrain(config=config, num_actions=4)
         brain.set_session_id("auto_save_test")
-        params = BrainParams(gradient_strength=0.5, gradient_direction=0.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=0.0)
 
         for i in range(5):
             brain.run_brain(params, top_only=False, top_randomize=False)
@@ -697,6 +734,7 @@ class TestCortexLRScheduling:
     def test_lr_warmup(self):
         """Test LR warmup from low to base value."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -722,6 +760,7 @@ class TestCortexLRScheduling:
     def test_lr_decay(self):
         """Test LR decay after warmup."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -754,6 +793,7 @@ class TestCortexLRScheduling:
     def test_no_lr_scheduling(self):
         """Test that LR is flat when no scheduling configured."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -769,6 +809,7 @@ class TestCortexLRScheduling:
     def test_lr_update_changes_optimizer(self):
         """Test that _update_cortex_learning_rate changes optimizer LR."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=2,
             shots=100,
             num_qsnn_timesteps=1,
@@ -792,6 +833,7 @@ class TestCortexLRScheduling:
     def test_config_with_lr_scheduling(self):
         """Test config accepts LR scheduling parameters."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             cortex_lr_warmup_episodes=50,
             cortex_lr_warmup_start=0.0001,
             cortex_lr_decay_episodes=200,
@@ -809,6 +851,7 @@ class TestBrainCopy:
     def test_copy_preserves_weights(self):
         """Test copied brain has identical weights."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,
@@ -825,6 +868,7 @@ class TestBrainCopy:
     def test_copy_is_independent(self):
         """Test copied brain is independent of original."""
         config = HybridQuantumBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             training_stage=1,
             shots=100,
             num_qsnn_timesteps=1,

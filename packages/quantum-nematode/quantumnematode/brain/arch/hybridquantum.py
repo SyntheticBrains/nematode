@@ -69,7 +69,6 @@ from quantumnematode.brain.arch._hybrid_common import (
     load_cortex_weights,
     normalize_reward,
     perform_ppo_update,
-    preprocess_legacy,
     save_cortex_weights,
     update_cortex_learning_rates,
 )
@@ -170,14 +169,8 @@ STAGE_JOINT = 3
 class HybridQuantumBrainConfig(BrainConfig):
     """Configuration for the HybridQuantumBrain architecture.
 
-    Supports two modes for input feature extraction:
-
-    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
-       - Set `sensory_modules=None` (default)
-
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
-       - Set `sensory_modules` to a list of ModuleName values
-       - Each module contributes 2 features [strength, angle]
+    Uses modular feature extraction via sensory_modules (required).
+    Each module contributes a variable number of features (typically 2).
     """
 
     # QSNN reflex params
@@ -385,11 +378,19 @@ class HybridQuantumBrainConfig(BrainConfig):
         description="Path to pre-trained cortex weights (.pt file) for stage 3.",
     )
 
-    # Sensory modules
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="List of sensory modules for feature extraction (None = legacy mode).",
+    # Sensory modules (required)
+    sensory_modules: list[ModuleName] = Field(
+        description="List of sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     @field_validator("num_sensory_neurons")
     @classmethod
@@ -508,16 +509,12 @@ class HybridQuantumBrain(ClassicalBrain):
 
         # Sensory modules
         self.sensory_modules = config.sensory_modules
-        if config.sensory_modules is not None:
-            self.input_dim = get_classical_feature_dimension(config.sensory_modules)
-            logger.info(
-                f"Using unified sensory modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim})",
-            )
-        else:
-            self.input_dim = 2
-            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
+        logger.info(
+            f"Using sensory modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Data tracking
         self.history_data = BrainHistoryData()
@@ -987,23 +984,13 @@ class HybridQuantumBrain(ClassicalBrain):
     # Preprocessing
     # ──────────────────────────────────────────────────────────────────
 
-    def _preprocess_legacy(self, params: BrainParams) -> np.ndarray:
-        """Extract legacy 2-feature input (gradient_strength, relative_angle)."""
-        return preprocess_legacy(params)
-
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams to extract QSNN features (always legacy 2-feature)."""
-        return self._preprocess_legacy(params)
+        """Preprocess BrainParams to extract QSNN reflex features."""
+        return extract_classical_features(params, self.sensory_modules)
 
     def _preprocess_cortex(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams for cortex input.
-
-        Uses unified sensory modules when configured (multi-objective),
-        otherwise falls back to the same legacy 2-feature input as the QSNN.
-        """
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-        return self._preprocess_legacy(params)
+        """Preprocess BrainParams for cortex input via sensory modules."""
+        return extract_classical_features(params, self.sensory_modules)
 
     # ──────────────────────────────────────────────────────────────────
     # Exploration schedule

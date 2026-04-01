@@ -572,28 +572,3 @@ def exploration_schedule(
     current_epsilon = exploration_epsilon * (1.0 - progress * 0.7)
     current_temperature = 1.5 - 0.5 * progress
     return current_epsilon, current_temperature
-
-
-def preprocess_legacy(
-    params: object,
-) -> np.ndarray:
-    """Extract legacy 2-feature input (gradient_strength, relative_angle).
-
-    Accepts any object with gradient_strength, gradient_direction, and
-    agent_direction attributes (BrainParams protocol).
-    """
-    from quantumnematode.env import Direction
-
-    grad_strength = float(getattr(params, "gradient_strength", None) or 0.0)
-    grad_direction = float(getattr(params, "gradient_direction", None) or 0.0)
-    direction_map = {
-        Direction.UP: np.pi / 2,
-        Direction.DOWN: -np.pi / 2,
-        Direction.LEFT: np.pi,
-        Direction.RIGHT: 0.0,
-    }
-    agent_dir = getattr(params, "agent_direction", None) or Direction.UP
-    agent_facing_angle = direction_map.get(agent_dir, np.pi / 2)
-    relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-    rel_angle_norm = relative_angle / np.pi
-    return np.array([grad_strength, rel_angle_norm], dtype=np.float32)

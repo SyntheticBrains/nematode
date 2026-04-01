@@ -68,7 +68,6 @@ from quantumnematode.brain.modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -321,14 +320,8 @@ class QSNNPPOCritic(nn.Module):
 class QSNNPPOBrainConfig(BrainConfig):
     """Configuration for the QSNNPPOBrain architecture.
 
-    Supports two modes for input feature extraction:
-
-    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
-       - Set ``sensory_modules=None`` (default)
-
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
-       - Set ``sensory_modules`` to a list of ModuleName values
-       - Each module contributes 2 features [strength, angle]
+    Uses modular feature extraction via sensory_modules (required).
+    Each module contributes a variable number of features (typically 2).
     """
 
     # QLIF network architecture
@@ -452,11 +445,19 @@ class QSNNPPOBrainConfig(BrainConfig):
         description="Number of hidden layers in the critic MLP.",
     )
 
-    # Sensory feature extraction
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="List of sensory modules for feature extraction (None = legacy mode).",
+    # Sensory feature extraction (required)
+    sensory_modules: list[ModuleName] = Field(
+        description="List of sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     # Learning rate scheduling
     lr_decay_episodes: int | None = Field(
@@ -544,7 +545,7 @@ class QSNNPPOBrain(ClassicalBrain):
     paired with a classical MLP critic trained via PPO.
     """
 
-    def __init__(  # noqa: PLR0915
+    def __init__(
         self,
         config: QSNNPPOBrainConfig,
         num_actions: int = 4,
@@ -575,18 +576,12 @@ class QSNNPPOBrain(ClassicalBrain):
         # Sensory modules
         self.sensory_modules = config.sensory_modules
 
-        if config.sensory_modules is not None:
-            self.input_dim = get_classical_feature_dimension(config.sensory_modules)
-            logger.info(
-                f"Using unified sensory modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim})",
-            )
-        else:
-            self.input_dim = 2
-            logger.info(
-                "Using legacy 2-feature preprocessing (gradient_strength, rel_angle)",
-            )
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
+        logger.info(
+            f"Using sensory modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Data tracking
         self.history_data = BrainHistoryData()
@@ -878,31 +873,8 @@ class QSNNPPOBrain(ClassicalBrain):
     # ──────────────────────────────────────────────────────────────────
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams to extract features.
-
-        Two modes:
-        1. **Unified sensory mode** (when sensory_modules is set)
-        2. **Legacy mode** (default): gradient strength + relative angle
-        """
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(
-            params.agent_direction or Direction.UP,
-            np.pi / 2,
-        )
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
-
-        return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+        """Preprocess BrainParams to extract features via sensory modules."""
+        return extract_classical_features(params, self.sensory_modules)
 
     def _get_critic_input(
         self,

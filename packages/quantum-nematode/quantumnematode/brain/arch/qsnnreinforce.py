@@ -72,7 +72,6 @@ from quantumnematode.brain.modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -248,15 +247,8 @@ class CriticMLP(nn.Module):
 class QSNNReinforceBrainConfig(BrainConfig):
     """Configuration for the QSNNReinforceBrain architecture.
 
-    Supports two modes for input feature extraction:
-
-    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
-       - Set `sensory_modules=None` (default)
-
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
-       - Set `sensory_modules` to a list of ModuleName values
-       - Uses extract_classical_features() which outputs semantic-preserving ranges
-       - Each module contributes 2 features [strength, angle] in [0,1] and [-1,1]
+    Uses modular feature extraction via sensory_modules (required).
+    Each module contributes a variable number of features (typically 2).
 
     Attributes
     ----------
@@ -284,8 +276,8 @@ class QSNNReinforceBrainConfig(BrainConfig):
         Entropy regularization coefficient (default 0.01).
     weight_clip : float
         Maximum absolute weight value for stability (default 5.0).
-    sensory_modules : list[ModuleName] | None
-        List of sensory modules for feature extraction (None = legacy mode).
+    sensory_modules : list[ModuleName]
+        List of sensory modules for feature extraction (required).
     """
 
     num_sensory_neurons: int = Field(
@@ -446,11 +438,19 @@ class QSNNReinforceBrainConfig(BrainConfig):
         description="Fraction of max entropy above which entropy bonus is suppressed.",
     )
 
-    # Unified sensory feature extraction (optional)
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="List of sensory modules for feature extraction (None = legacy mode).",
+    # Sensory feature extraction (required)
+    sensory_modules: list[ModuleName] = Field(
+        description="List of sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     @field_validator("num_sensory_neurons")
     @classmethod
@@ -569,17 +569,13 @@ class QSNNReinforceBrain(ClassicalBrain):
         # Store sensory modules for feature extraction
         self.sensory_modules = config.sensory_modules
 
-        # Determine input dimension based on sensory modules
-        if config.sensory_modules is not None:
-            self.input_dim = get_classical_feature_dimension(config.sensory_modules)
-            logger.info(
-                f"Using unified sensory modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim})",
-            )
-        else:
-            self.input_dim = 2
-            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+        # Determine input dimension from sensory modules
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
+        logger.info(
+            f"Using sensory modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Initialize data tracking
         self.history_data = BrainHistoryData()
@@ -1781,41 +1777,8 @@ class QSNNReinforceBrain(ClassicalBrain):
                 self.theta_motor.mul_(self.config.theta_motor_max_norm / tm_norm)
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams to extract features.
-
-        Two modes:
-        1. **Unified sensory mode** (when sensory_modules is set)
-        2. **Legacy mode** (default): gradient strength + relative angle
-
-        Parameters
-        ----------
-        params : BrainParams
-            Brain parameters containing sensory information.
-
-        Returns
-        -------
-        np.ndarray
-            Preprocessed features.
-        """
-        # Unified sensory mode
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-
-        # Legacy mode: 2-feature preprocessing
-        grad_strength = float(params.gradient_strength or 0.0)
-
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
-
-        return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+        """Preprocess BrainParams to extract features via sensory modules."""
+        return extract_classical_features(params, self.sensory_modules)
 
     def _log_motor_dynamics(
         self,

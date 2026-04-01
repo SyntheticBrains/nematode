@@ -13,7 +13,7 @@ pursuit. See logbook 008 for full evaluation.
 
 Architecture::
 
-    Sensory Input (2-dim legacy)         Multi-sensory Input (8+ dim)
+    Sensory Input (from sensory_modules)  Multi-sensory Input (cortex_sensory_modules)
            |                                       |
            v                                       v
     QSNN Reflex                          QSNN Cortex
@@ -73,7 +73,6 @@ from quantumnematode.brain.arch._hybrid_common import (
     fuse,
     init_critic_mlp,
     normalize_reward,
-    preprocess_legacy,
     update_cortex_learning_rates,
 )
 from quantumnematode.brain.arch._qlif_layers import (
@@ -189,8 +188,8 @@ MODE_LOGIT_SCALE = 2.0
 class HybridQuantumCortexBrainConfig(BrainConfig):
     """Configuration for the HybridQuantumCortexBrain architecture.
 
-    Supports a QSNN reflex layer (legacy 2-feature) combined with a QSNN cortex
-    layer (grouped sensory QLIF neurons) and a classical critic.
+    Supports a QSNN reflex layer combined with a QSNN cortex layer
+    (grouped sensory QLIF neurons) and a classical critic.
     """
 
     # QSNN reflex params
@@ -244,8 +243,7 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
     )
 
     # Cortex QSNN params
-    cortex_sensory_modules: list[ModuleName] | None = Field(
-        default=None,
+    cortex_sensory_modules: list[ModuleName] = Field(
         description="List of sensory modules for cortex grouped QLIF processing.",
     )
     cortex_neurons_per_group: int = Field(
@@ -458,13 +456,30 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
         description="Path to pre-trained critic weights (.pt file) for stage 3/4.",
     )
 
-    # Sensory modules for reflex (legacy mode uses None)
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="List of sensory modules for reflex feature extraction (None = legacy mode).",
+    # Sensory modules for reflex (required)
+    sensory_modules: list[ModuleName] = Field(
+        description="List of sensory modules for reflex feature extraction.",
     )
 
     # ── Validators ──
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("cortex_sensory_modules")
+    @classmethod
+    def validate_cortex_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate cortex_sensory_modules is non-empty."""
+        if not v:
+            msg = "cortex_sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     @field_validator("num_sensory_neurons")
     @classmethod
@@ -566,17 +581,6 @@ class HybridQuantumCortexBrainConfig(BrainConfig):
         return v
 
     @model_validator(mode="after")
-    def validate_cortex_modules_for_stage(self) -> HybridQuantumCortexBrainConfig:
-        """Validate cortex_sensory_modules non-empty when training_stage >= 2."""
-        if self.training_stage >= STAGE_CORTEX_ONLY and not self.cortex_sensory_modules:
-            msg = (
-                "cortex_sensory_modules must be non-empty when training_stage >= 2, "
-                f"got {self.cortex_sensory_modules}"
-            )
-            raise ValueError(msg)
-        return self
-
-    @model_validator(mode="after")
     def validate_cortex_output_neurons(self) -> HybridQuantumCortexBrainConfig:
         """Validate cortex_output_neurons >= num_motor_neurons + num_modes + 1."""
         required = self.num_motor_neurons + self.num_modes + 1
@@ -631,26 +635,20 @@ class HybridQuantumCortexBrain(ClassicalBrain):
         set_global_seed(self.seed)
         logger.info(f"HybridQuantumCortexBrain using seed: {self.seed}")
 
-        # Reflex sensory modules (always legacy 2-feature for reflex)
+        # Reflex sensory modules
         self.sensory_modules = config.sensory_modules
-        if config.sensory_modules is not None:
-            self.reflex_input_dim = get_classical_feature_dimension(config.sensory_modules)
-        else:
-            self.reflex_input_dim = 2
+        self.reflex_input_dim = get_classical_feature_dimension(config.sensory_modules)
 
         # Cortex sensory modules
         self.cortex_sensory_modules = config.cortex_sensory_modules
-        if self.cortex_sensory_modules is not None:
-            self.cortex_input_dim = get_classical_feature_dimension(self.cortex_sensory_modules)
-            self.num_cortex_groups = len(self.cortex_sensory_modules)
-            # TODO(stage4): Replace with per-module classical_dim lookup when adding
-            # thermotaxis (classical_dim=3). Currently all stage 1-3 modules have
-            # classical_dim=2, so this is safe until multi-sensory scaling.
-            self.features_per_module = 2
-        else:
-            self.cortex_input_dim = 2
-            self.num_cortex_groups = 1
-            self.features_per_module = self.cortex_input_dim
+        self.cortex_input_dim = get_classical_feature_dimension(self.cortex_sensory_modules)
+        self.num_cortex_groups = len(self.cortex_sensory_modules)
+        # TODO(stage4): Replace with per-module classical_dim lookup when adding
+        # modules with classical_dim != 2 (e.g. thermotaxis=3, STAM=9).
+        # Currently all modules used with the cortex QSNN have classical_dim=2.
+        # The grouped QLIF slicing in _cortex_sensory_forward* assumes uniform
+        # width — variable widths would require per-module offset computation.
+        self.features_per_module = 2
 
         # Data tracking
         self.history_data = BrainHistoryData()
@@ -1810,19 +1808,13 @@ class HybridQuantumCortexBrain(ClassicalBrain):
     # Preprocessing
     # ──────────────────────────────────────────────────────────────────
 
-    def _preprocess_legacy(self, params: BrainParams) -> np.ndarray:
-        """Extract legacy 2-feature input (gradient_strength, relative_angle)."""
-        return preprocess_legacy(params)
-
     def preprocess(self, params: BrainParams) -> np.ndarray:
-        """Preprocess BrainParams to extract reflex features (always legacy 2-feature)."""
-        return self._preprocess_legacy(params)
+        """Preprocess BrainParams to extract reflex features."""
+        return extract_classical_features(params, self.sensory_modules)
 
     def _preprocess_cortex(self, params: BrainParams) -> np.ndarray:
         """Preprocess BrainParams for cortex input via sensory modules."""
-        if self.cortex_sensory_modules is not None:
-            return extract_classical_features(params, self.cortex_sensory_modules)
-        return self._preprocess_legacy(params)
+        return extract_classical_features(params, self.cortex_sensory_modules)
 
     # ──────────────────────────────────────────────────────────────────
     # Exploration schedule

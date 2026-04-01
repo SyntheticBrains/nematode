@@ -26,7 +26,9 @@ class TestQLIFLSTMBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QLIFLSTMBrainConfig()
+        config = QLIFLSTMBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
+        )
         assert config.lstm_hidden_dim == 32
         assert config.shots == 1024
         assert config.membrane_tau == 0.9
@@ -51,6 +53,7 @@ class TestQLIFLSTMBrainConfig:
     def test_custom_config(self):
         """Test custom configuration values."""
         config = QLIFLSTMBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             lstm_hidden_dim=16,
             shots=512,
             gamma=0.95,
@@ -66,29 +69,29 @@ class TestQLIFLSTMBrainConfig:
     def test_invalid_lstm_hidden_dim(self):
         """Test validation rejects too small hidden dim."""
         with pytest.raises(ValueError, match="lstm_hidden_dim must be >= 2"):
-            QLIFLSTMBrainConfig(lstm_hidden_dim=1)
+            QLIFLSTMBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], lstm_hidden_dim=1)
 
     def test_invalid_shots(self):
         """Test validation rejects too few shots."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            QLIFLSTMBrainConfig(shots=50)
+            QLIFLSTMBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], shots=50)
 
     def test_invalid_membrane_tau(self):
         """Test validation rejects out-of-range membrane_tau."""
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            QLIFLSTMBrainConfig(membrane_tau=0.0)
+            QLIFLSTMBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=0.0)
         with pytest.raises(ValueError, match="membrane_tau must be in"):
-            QLIFLSTMBrainConfig(membrane_tau=1.5)
+            QLIFLSTMBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], membrane_tau=1.5)
 
     def test_invalid_num_epochs(self):
         """Test validation rejects zero epochs."""
         with pytest.raises(ValueError, match="num_epochs must be >= 1"):
-            QLIFLSTMBrainConfig(num_epochs=0)
+            QLIFLSTMBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], num_epochs=0)
 
     def test_invalid_bptt_chunk_length(self):
         """Test validation rejects too small chunk length."""
         with pytest.raises(ValueError, match="bptt_chunk_length must be >= 4"):
-            QLIFLSTMBrainConfig(bptt_chunk_length=2)
+            QLIFLSTMBrainConfig(sensory_modules=[ModuleName.FOOD_CHEMOTAXIS], bptt_chunk_length=2)
 
     def test_sensory_modules_config(self):
         """Test sensory module configuration."""
@@ -429,6 +432,7 @@ class TestQLIFLSTMBrain:
     def config(self) -> QLIFLSTMBrainConfig:
         """Create a small test configuration (classical mode)."""
         return QLIFLSTMBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             lstm_hidden_dim=8,
             use_quantum_gates=False,
             rollout_buffer_size=8,
@@ -446,8 +450,8 @@ class TestQLIFLSTMBrain:
     def params(self) -> BrainParams:
         """Create test BrainParams."""
         return BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_direction=Direction.UP,
         )
 

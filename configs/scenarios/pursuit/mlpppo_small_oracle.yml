@@ -24,6 +24,9 @@ brain:
     num_minibatches: 2
     max_grad_norm: 0.5
     normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
 
 body_length: 2
 
