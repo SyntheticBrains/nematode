@@ -5,6 +5,7 @@ from typing import Literal
 import numpy as np
 import pytest
 import torch
+from pydantic import ValidationError
 from quantumnematode.brain.actions import Action, ActionData
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import DeviceType
@@ -56,6 +57,11 @@ class TestMLPPPOBrainConfig:
         assert config.gamma == 0.95
         assert config.clip_epsilon == 0.1
         assert config.rollout_buffer_size == 256
+
+    def test_validation_sensory_modules_non_empty(self):
+        """Test validation rejects empty sensory_modules."""
+        with pytest.raises(ValidationError):
+            MLPPPOBrainConfig(sensory_modules=[])
 
 
 class TestRolloutBuffer:

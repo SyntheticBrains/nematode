@@ -360,14 +360,17 @@ class QRCBrain(ClassicalBrain):
         # Data re-uploading: encode inputs before each reservoir layer
         for _layer in range(self.reservoir_depth):
             # Input encoding: dense encoding across all qubits
+            # NOTE: Parity-based gate assignment (even→RY, odd→RZ) assumes all
+            # sensory modules have classical_dim=2. If modules with odd widths
+            # are added, this should be updated to use per-module gate mapping.
             for i, feature in enumerate(features):
                 angle = float(feature) * np.pi
                 for q in range(self.num_qubits):
                     if i % 2 == 0:
-                        # Even-indexed features (e.g., gradient_strength): RY (amplitude)
+                        # Even-indexed features (strength): RY (amplitude)
                         qc.ry(angle, q)
                     else:
-                        # Odd-indexed features (e.g., relative_angle): RZ (phase)
+                        # Odd-indexed features (angle): RZ (phase)
                         qc.rz(angle, q)
 
             # Reservoir layer: structured rotations (fractional angles)
