@@ -81,7 +81,6 @@ def extract_environment_metadata(
         num_predators=env.predator.count if env.predator.enabled else None,
         predator_speed=env.predator.speed if env.predator.enabled else None,
         predator_detection_radius=env.predator.detection_radius if env.predator.enabled else None,
-        predator_kill_radius=env.predator.kill_radius if env.predator.enabled else None,
         predator_damage_radius=env.predator.damage_radius if env.predator.enabled else None,
         predator_gradient_decay=env.predator.gradient_decay_constant
         if env.predator.enabled
@@ -312,11 +311,6 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         1 for r in all_results if r.termination_reason == TerminationReason.GOAL_REACHED
     )
 
-    # Predator-specific metrics
-    predator_deaths = sum(
-        1 for r in all_results if r.termination_reason == TerminationReason.PREDATOR
-    )
-
     # Health system metrics
     health_depleted = sum(
         1 for r in all_results if r.termination_reason == TerminationReason.HEALTH_DEPLETED
@@ -516,7 +510,6 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         starved=starved,
         max_steps_reached=max_steps_reached,
         goal_reached=goal_reached,
-        predator_deaths=predator_deaths,
         health_depleted=health_depleted,
         avg_predator_encounters=avg_predator_encounters,
         avg_successful_evasions=avg_successful_evasions,

@@ -124,10 +124,8 @@ class EnvironmentMetadata(BaseModel):
         Predator movement speed (predator environments only).
     predator_detection_radius : int | None
         Predator detection radius (predator environments only).
-    predator_kill_radius : int | None
-        Predator kill radius (predator environments only).
     predator_damage_radius : int | None
-        Predator damage radius for HP damage (predator environments with health system only).
+        Predator damage radius for HP damage (predator environments only).
     predator_gradient_decay : float | None
         Predator gradient decay constant (predator environments only).
     predator_gradient_strength : float | None
@@ -144,7 +142,6 @@ class EnvironmentMetadata(BaseModel):
     num_predators: int | None = None
     predator_speed: float | None = None
     predator_detection_radius: int | None = None
-    predator_kill_radius: int | None = None
     predator_damage_radius: int | None = None
     predator_gradient_decay: float | None = None
     predator_gradient_strength: float | None = None
@@ -316,10 +313,8 @@ class ResultsMetadata(BaseModel):
         Number of runs that reached max steps.
     goal_reached : int
         Number of runs that reached the goal.
-    predator_deaths : int
-        Number of runs that ended due to predator collision.
     health_depleted : int
-        Number of runs that ended due to HP reaching zero (health system enabled).
+        Number of runs that ended due to HP reaching zero.
     avg_predator_encounters : float | None
         Average predator encounters per run (predator environments only).
     avg_successful_evasions : float | None
@@ -357,11 +352,11 @@ class ResultsMetadata(BaseModel):
         Per-run result data for full transparency and reproducibility verification.
         Contains essential metrics for each run including seeds.
     avg_survival_score : float | None
-        Average survival score across all runs (final_hp / max_hp). None if health disabled.
+        Average survival score across all runs (final_hp / max_hp).
     avg_temperature_comfort_score : float | None
         Average temperature comfort score across all runs. None if thermotaxis disabled.
     post_convergence_survival_score : float | None
-        Average survival score in post-convergence runs. None if health disabled.
+        Average survival score in post-convergence runs.
     post_convergence_temperature_comfort_score : float | None
         Average temperature comfort score in post-convergence runs. None if thermotaxis disabled.
     avg_chemotaxis_index : float | None
@@ -402,7 +397,6 @@ class ResultsMetadata(BaseModel):
     starved: int = 0
     max_steps_reached: int = 0
     goal_reached: int = 0
-    predator_deaths: int = 0
     health_depleted: int = 0
     avg_predator_encounters: float | None = None
     avg_successful_evasions: float | None = None

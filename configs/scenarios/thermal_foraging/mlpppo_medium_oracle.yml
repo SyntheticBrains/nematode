@@ -78,7 +78,6 @@ environment:
     gradient_strength: 1.0
 
   health:
-    enabled: true
     max_hp: 100.0
     predator_damage: 0.0
     food_healing: 5.0

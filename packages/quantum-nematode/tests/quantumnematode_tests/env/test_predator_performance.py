@@ -32,7 +32,6 @@ class TestPredatorPerformance:
                 count=5,
                 speed=1.0,
                 detection_radius=8,
-                kill_radius=0,
                 gradient_decay_constant=5.0,
                 gradient_strength=1.0,
             ),
@@ -57,7 +56,7 @@ class TestPredatorPerformance:
             # Simulate a full environment step
             env.get_state(env.agent_pos)
             env.update_predators()
-            env.check_predator_collision()
+            env.is_agent_in_damage_radius()
             env.is_agent_in_danger()
 
             end = time.perf_counter()

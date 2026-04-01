@@ -21,7 +21,6 @@ class TestHealthConfig:
     def test_default_values(self):
         """Test HealthConfig default values."""
         config = HealthConfig()
-        assert config.enabled is False
         assert config.max_hp == 100.0
         assert config.predator_damage == 10.0
         assert config.food_healing == 5.0
@@ -29,12 +28,10 @@ class TestHealthConfig:
     def test_custom_values(self):
         """Test HealthConfig with custom values."""
         config = HealthConfig(
-            enabled=True,
             max_hp=200.0,
             predator_damage=25.0,
             food_healing=15.0,
         )
-        assert config.enabled is True
         assert config.max_hp == 200.0
         assert config.predator_damage == 25.0
         assert config.food_healing == 15.0
@@ -42,7 +39,6 @@ class TestHealthConfig:
     def test_to_params(self):
         """Test HealthConfig.to_params() conversion."""
         config = HealthConfig(
-            enabled=True,
             max_hp=150.0,
             predator_damage=20.0,
             food_healing=10.0,
@@ -51,7 +47,6 @@ class TestHealthConfig:
         params = config.to_params()
 
         assert isinstance(params, HealthParams)
-        assert params.enabled is True
         assert params.max_hp == 150.0
         assert params.predator_damage == 20.0
         assert params.food_healing == 10.0
@@ -62,7 +57,6 @@ class TestHealthConfig:
         params = config.to_params()
 
         assert isinstance(params, HealthParams)
-        assert params.enabled is False
         assert params.max_hp == 100.0
         assert params.predator_damage == 10.0
         assert params.food_healing == 5.0
@@ -130,7 +124,6 @@ class TestPredatorConfig:
         assert config.count == 2
         assert config.speed == 1.0
         assert config.detection_radius == 8
-        assert config.kill_radius == 0
         assert config.gradient_decay_constant == 12.0
         assert config.gradient_strength == 1.0
 
@@ -141,7 +134,6 @@ class TestPredatorConfig:
             count=5,
             speed=0.5,
             detection_radius=10,
-            kill_radius=2,
             gradient_decay_constant=15.0,
             gradient_strength=2.0,
         )
@@ -149,7 +141,6 @@ class TestPredatorConfig:
         assert config.count == 5
         assert config.speed == 0.5
         assert config.detection_radius == 10
-        assert config.kill_radius == 2
         assert config.gradient_decay_constant == 15.0
         assert config.gradient_strength == 2.0
 
@@ -160,7 +151,6 @@ class TestPredatorConfig:
             count=3,
             speed=0.75,
             detection_radius=6,
-            kill_radius=1,
             gradient_decay_constant=10.0,
             gradient_strength=1.5,
         )
@@ -172,7 +162,6 @@ class TestPredatorConfig:
         assert params.count == 3
         assert params.speed == 0.75
         assert params.detection_radius == 6
-        assert params.kill_radius == 1
         assert params.gradient_decay_constant == 10.0
         assert params.gradient_strength == 1.5
 
@@ -196,7 +185,7 @@ class TestEnvironmentConfig:
             viewport_size=(15, 15),
             foraging=ForagingConfig(foods_on_grid=20),
             predators=PredatorConfig(enabled=True, count=3),
-            health=HealthConfig(enabled=True, max_hp=200.0),
+            health=HealthConfig(max_hp=200.0),
         )
 
         assert config.grid_size == 30
@@ -207,7 +196,6 @@ class TestEnvironmentConfig:
         assert config.predators.enabled is True
         assert config.predators.count == 3
         assert config.health is not None
-        assert config.health.enabled is True
         assert config.health.max_hp == 200.0
 
     def test_get_foraging_config(self):
@@ -243,16 +231,14 @@ class TestEnvironmentConfig:
         """Test get_health_config returns configured or default."""
         # With explicit config
         config_with = EnvironmentConfig(
-            health=HealthConfig(enabled=True, max_hp=150.0),
+            health=HealthConfig(max_hp=150.0),
         )
         health = config_with.get_health_config()
-        assert health.enabled is True
         assert health.max_hp == 150.0
 
         # Without explicit config (should return default)
         config_without = EnvironmentConfig()
         health_default = config_without.get_health_config()
-        assert health_default.enabled is False  # Default value
         assert health_default.max_hp == 100.0  # Default value
 
 

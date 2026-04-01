@@ -499,11 +499,8 @@ class QuantumNematodeAgent:
         predator_contact = self.env.is_agent_in_predator_contact()
 
         # Health state
-        health = None
-        max_health = None
-        if self.env.health.enabled:
-            health = self.env.agent_hp
-            max_health = self.env.health.max_hp
+        health = self.env.agent_hp
+        max_health = self.env.health.max_hp
 
         # Thermotaxis: temperature sensing
         temperature = None
@@ -807,7 +804,6 @@ class QuantumNematodeAgent:
             total_successes=metrics.total_successes,
             total_starved=metrics.total_starved,
             total_predator_encounters=metrics.total_predator_encounters,
-            total_predator_deaths=metrics.total_predator_deaths,
             total_successful_evasions=metrics.total_successful_evasions,
             total_max_steps=metrics.total_max_steps,
             total_interrupted=metrics.total_interrupted,

@@ -57,7 +57,6 @@ def main(output_path: str = "docs/assets/images/pixel_theme.png") -> None:
             damage_radius=2,
         ),
         health=HealthParams(
-            enabled=True,
             max_hp=100.0,
         ),
         thermotaxis=ThermotaxisParams(

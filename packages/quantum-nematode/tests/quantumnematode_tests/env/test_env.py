@@ -664,7 +664,6 @@ class TestPredatorMechanics:
                 count=2,
                 speed=1.0,
                 detection_radius=8,
-                kill_radius=0,
             ),
         )
 
@@ -712,32 +711,29 @@ class TestPredatorMechanics:
         # Verify all values are finite (no NaN or Inf)
         assert all(np.isfinite(val) for val in state)
 
-    def test_collision_detection_kill_radius(self, predator_env):
-        """Test collision detection with non-zero kill_radius using Manhattan distance."""
+    def test_damage_radius_detection(self, predator_env):
+        """Test damage radius detection using Manhattan distance."""
         predator_env.agent_pos = (10, 10)
-        predator_env.predator = PredatorParams(
-            enabled=True,
-            count=2,
-            speed=1.0,
-            detection_radius=8,
-            kill_radius=1,
-        )
+        # Set per-predator damage_radius to 1
+        for pred in predator_env.predators:
+            pred.damage_radius = 1
 
-        # Distance 0: same cell → kill
+        # Distance 0: same cell → in damage radius
         predator_env.predators[0].position = (10, 10)
-        assert predator_env.check_predator_collision() is True
+        assert predator_env.is_agent_in_damage_radius() is True
 
-        # Distance 1 (cardinal neighbour) → kill
+        # Distance 1 (cardinal neighbour) → in damage radius
         predator_env.predators[0].position = (11, 10)
-        assert predator_env.check_predator_collision() is True
+        assert predator_env.is_agent_in_damage_radius() is True
 
-        # Distance 2 → no kill
+        # Distance 2 → not in damage radius
         predator_env.predators[0].position = (12, 10)
-        assert predator_env.check_predator_collision() is False
+        predator_env.predators[1].position = (0, 0)  # Move other predator away
+        assert predator_env.is_agent_in_damage_radius() is False
 
-        # Distance 2 (diagonal) → no kill
+        # Distance 2 (diagonal) → not in damage radius
         predator_env.predators[0].position = (11, 11)
-        assert predator_env.check_predator_collision() is False
+        assert predator_env.is_agent_in_damage_radius() is False
 
     def test_proximity_detection(self, predator_env):
         """Test proximity detection with detection_radius."""
@@ -824,10 +820,6 @@ class TestPredatorMechanics:
                 assert 0 <= predator.position[0] < predator_env.grid_size
                 assert 0 <= predator.position[1] < predator_env.grid_size
 
-            # Check collision detection works
-            collision = predator_env.check_predator_collision()
-            assert isinstance(collision, bool)
-
             # Check danger detection works
             in_danger = predator_env.is_agent_in_danger()
             assert isinstance(in_danger, bool)
@@ -847,13 +839,9 @@ class TestPredatorMechanics:
         assert env.predator.enabled is False
         assert len(env.predators) == 0
         assert env.predator.detection_radius == 8  # Default value
-        assert env.predator.kill_radius == 0  # Default value
 
         # is_agent_in_danger should return False
         assert env.is_agent_in_danger() is False
-
-        # check_predator_collision should return False
-        assert env.check_predator_collision() is False
 
     def test_predators_spawn_outside_detection_radius(self, predator_env):
         """Test that predators spawn outside detection/damage radius of agent at initialization."""
@@ -1034,7 +1022,6 @@ class TestHealthSystem:
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             health=HealthParams(
-                enabled=True,
                 max_hp=100.0,
                 predator_damage=10.0,
                 food_healing=5.0,
@@ -1051,7 +1038,6 @@ class TestHealthSystem:
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             health=HealthParams(
-                enabled=True,
                 max_hp=100.0,
                 predator_damage=25.0,
                 food_healing=10.0,
@@ -1061,26 +1047,11 @@ class TestHealthSystem:
                 count=2,
                 speed=1.0,
                 detection_radius=8,
-                kill_radius=1,
             ),
         )
 
-    def test_health_disabled_by_default(self):
-        """Test that health system is disabled by default."""
-        env = DynamicForagingEnvironment(
-            grid_size=20,
-            start_pos=(10, 10),
-            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
-            theme=Theme.ASCII,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-        )
-
-        assert env.health.enabled is False
-        assert env.agent_hp == 0.0  # HP is 0 when disabled
-
     def test_health_initialization(self, health_env):
         """Test health system initialization."""
-        assert health_env.health.enabled is True
         assert health_env.health.max_hp == 100.0
         assert health_env.health.predator_damage == 10.0
         assert health_env.health.food_healing == 5.0
@@ -1089,7 +1060,6 @@ class TestHealthSystem:
     def test_health_params_defaults(self):
         """Test HealthParams default values."""
         params = HealthParams()
-        assert params.enabled is False
         assert params.max_hp == 100.0
         assert params.predator_damage == 10.0
         assert params.food_healing == 5.0
@@ -1097,12 +1067,10 @@ class TestHealthSystem:
     def test_health_params_custom_values(self):
         """Test HealthParams with custom values."""
         params = HealthParams(
-            enabled=True,
             max_hp=200.0,
             predator_damage=50.0,
             food_healing=25.0,
         )
-        assert params.enabled is True
         assert params.max_hp == 200.0
         assert params.predator_damage == 50.0
         assert params.food_healing == 25.0
@@ -1131,21 +1099,6 @@ class TestHealthSystem:
 
         assert health_env.agent_hp == 0.0
         assert health_env.is_health_depleted() is True
-
-    def test_apply_predator_damage_when_disabled(self):
-        """Test that damage is not applied when health system is disabled."""
-        env = DynamicForagingEnvironment(
-            grid_size=20,
-            start_pos=(10, 10),
-            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
-            theme=Theme.ASCII,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            health=HealthParams(enabled=False),
-        )
-
-        damage = env.apply_predator_damage()
-        assert damage == 0.0
-        assert env.agent_hp == 0.0
 
     def test_apply_food_healing(self, health_env):
         """Test applying food healing."""
@@ -1176,20 +1129,6 @@ class TestHealthSystem:
         assert healing == 0.0
         assert health_env.agent_hp == 100.0
 
-    def test_apply_food_healing_when_disabled(self):
-        """Test that healing is not applied when health system is disabled."""
-        env = DynamicForagingEnvironment(
-            grid_size=20,
-            start_pos=(10, 10),
-            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
-            theme=Theme.ASCII,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            health=HealthParams(enabled=False),
-        )
-
-        healing = env.apply_food_healing()
-        assert healing == 0.0
-
     def test_is_health_depleted(self, health_env):
         """Test health depletion check."""
         assert health_env.is_health_depleted() is False
@@ -1200,40 +1139,11 @@ class TestHealthSystem:
         health_env.agent_hp = 0.1
         assert health_env.is_health_depleted() is False
 
-    def test_is_health_depleted_when_disabled(self):
-        """Test that health depletion returns False when disabled."""
-        env = DynamicForagingEnvironment(
-            grid_size=20,
-            start_pos=(10, 10),
-            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
-            theme=Theme.ASCII,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            health=HealthParams(enabled=False),
-        )
-
-        # Even with HP at 0, should return False when disabled
-        assert env.agent_hp == 0.0
-        assert env.is_health_depleted() is False
-
     def test_reset_health(self, health_env):
         """Test resetting health to max."""
         health_env.agent_hp = 25.0
         health_env.reset_health()
         assert health_env.agent_hp == 100.0
-
-    def test_reset_health_when_disabled(self):
-        """Test that reset_health does nothing when disabled."""
-        env = DynamicForagingEnvironment(
-            grid_size=20,
-            start_pos=(10, 10),
-            foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
-            theme=Theme.ASCII,
-            action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            health=HealthParams(enabled=False),
-        )
-
-        env.reset_health()
-        assert env.agent_hp == 0.0  # Should remain 0 when disabled
 
     def test_health_with_predator_damage_workflow(self, health_predator_env):
         """Test complete health + predator workflow."""
@@ -1269,7 +1179,6 @@ class TestHealthSystem:
 
         copied_env = health_env.copy()
 
-        assert copied_env.health.enabled is True
         assert copied_env.health.max_hp == 100.0
         assert copied_env.agent_hp == 50.0
 
@@ -1293,7 +1202,6 @@ class TestHealthSystem:
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
             health=HealthParams(
-                enabled=True,
                 max_hp=50.0,
                 predator_damage=5.0,
                 food_healing=15.0,
@@ -1852,7 +1760,7 @@ class TestMechanosensation:
             foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             predator=PredatorParams(
                 enabled=True,
                 count=1,
@@ -1868,8 +1776,8 @@ class TestMechanosensation:
         env.predators[0].position = (13, 10)  # 3 cells away, outside damage_radius=2
         assert env.is_agent_in_predator_contact() is False
 
-    def test_is_agent_in_predator_contact_without_health(self):
-        """Test predator contact uses kill radius when health system disabled."""
+    def test_is_agent_in_predator_contact_with_damage_radius(self):
+        """Test predator contact uses damage radius."""
         env = DynamicForagingEnvironment(
             grid_size=20,
             start_pos=(10, 10),
@@ -1879,16 +1787,16 @@ class TestMechanosensation:
             predator=PredatorParams(
                 enabled=True,
                 count=1,
-                kill_radius=1,
+                damage_radius=1,
             ),
         )
 
-        # Place predator within kill radius
-        env.predators[0].position = (11, 10)  # 1 cell away, within kill_radius=1
+        # Place predator within damage radius
+        env.predators[0].position = (11, 10)  # 1 cell away, within damage_radius=1
         assert env.is_agent_in_predator_contact() is True
 
-        # Place predator outside kill radius
-        env.predators[0].position = (12, 10)  # 2 cells away, outside kill_radius=1
+        # Place predator outside damage radius
+        env.predators[0].position = (12, 10)  # 2 cells away, outside damage_radius=1
         assert env.is_agent_in_predator_contact() is False
 
     def test_is_agent_in_predator_contact_exact_boundary(self):
@@ -1899,7 +1807,7 @@ class TestMechanosensation:
             foraging=ForagingParams(foods_on_grid=5, target_foods_to_collect=10),
             theme=Theme.ASCII,
             action_set=[Action.FORWARD, Action.LEFT, Action.RIGHT, Action.STAY],
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             predator=PredatorParams(
                 enabled=True,
                 count=1,
@@ -2163,7 +2071,7 @@ class TestThermotaxisIntegration:
             grid_size=30,
             start_pos=(29, 15),  # 14 cells right of center (15, 15)
             foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,

@@ -231,7 +231,7 @@ class TestPygameRenderer:
                 predator_type=PredatorType.STATIONARY,
                 damage_radius=1,
             ),
-            health=HealthParams(enabled=True, max_hp=100.0),
+            health=HealthParams(max_hp=100.0),
             thermotaxis=ThermotaxisParams(
                 enabled=True,
                 cultivation_temperature=20.0,

@@ -177,9 +177,9 @@ The system SHALL support comprehensive configuration of predator behavior, appea
   - `enabled` (boolean, default false)
   - `count` (integer, default 2)
   - `speed` (float, default 1.0)
-  - `movement_pattern` (string, default "random")
+  - `movement_pattern` (string: "stationary" or "pursuit", default "pursuit")
   - `detection_radius` (integer, default 8)
-  - `kill_radius` (integer, default 0)
+  - `damage_radius` (integer, default 0)
 - **AND** all parameters SHALL have sensible defaults allowing minimal configuration
 
 #### Scenario: Predator Gradient Configuration
@@ -261,9 +261,9 @@ environment:
       enabled: true
       count: 3
       speed: 1.0
-      movement_pattern: "random"
+      movement_pattern: "pursuit"
       detection_radius: 8
-      kill_radius: 0
+      damage_radius: 0
       gradient_decay_constant: 12.0
       gradient_strength: 1.0
 
@@ -325,28 +325,26 @@ environment:
 
 The system SHALL validate predator movement pattern configuration and provide clear errors for invalid values.
 
-#### Scenario: Valid Movement Pattern
+#### Scenario: Valid Movement Pattern — Pursuit
 
-- **GIVEN** a configuration with `movement_pattern: "random"`
+- **GIVEN** a configuration with `movement_pattern: "pursuit"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL pass
-- **AND** the predator SHALL use random movement behavior
+- **AND** the predator SHALL actively pursue the agent when within detection radius
+
+#### Scenario: Valid Movement Pattern — Stationary
+
+- **GIVEN** a configuration with `movement_pattern: "stationary"`
+- **WHEN** the configuration is validated
+- **THEN** validation SHALL pass
+- **AND** the predator SHALL remain at its spawn position (toxic zone)
 
 #### Scenario: Invalid Movement Pattern
 
 - **GIVEN** a configuration with `movement_pattern: "invalid_pattern"`
 - **WHEN** the configuration is validated
 - **THEN** validation SHALL fail with clear error message
-- **AND** error SHALL list valid options: "random"
-- **AND** error SHALL indicate future options (commented): "patrol", "pursue"
-
-#### Scenario: Future Movement Pattern Placeholder
-
-- **GIVEN** a configuration with `movement_pattern: "pursue"`
-- **WHEN** the configuration is validated
-- **THEN** validation SHALL fail
-- **AND** error SHALL indicate "pursue pattern not yet implemented"
-- **AND** error SHALL suggest using "random" for current version
+- **AND** error SHALL list valid options: "stationary", "pursuit"
 
 ### Requirement: Configuration Examples and Templates
 

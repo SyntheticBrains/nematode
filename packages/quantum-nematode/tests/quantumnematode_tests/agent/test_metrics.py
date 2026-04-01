@@ -21,7 +21,6 @@ class TestMetricsTrackerInitialization:
         assert tracker.total_predator_encounters == 0
         assert tracker.total_successful_evasions == 0
         # Verify termination reason counters
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
@@ -153,7 +152,6 @@ class TestMetricsReset:
         assert tracker.total_predator_encounters == 0
         assert tracker.total_successful_evasions == 0
         # Verify termination reason counters are reset
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
@@ -222,7 +220,7 @@ class TestPredatorMetrics:
         # Non-predator environment: metrics should be None
         assert metrics.average_predator_encounters is None
         assert metrics.average_successful_evasions is None
-        assert metrics.total_predator_deaths == 0
+        assert metrics.total_health_depleted == 0
         assert metrics.total_predator_encounters == 0
         assert metrics.total_successful_evasions == 0
 
@@ -239,7 +237,7 @@ class TestPredatorMetrics:
         # Predator-enabled environment with zero encounters: metrics should be 0.0
         assert metrics.average_predator_encounters == 0.0
         assert metrics.average_successful_evasions == 0.0
-        assert metrics.total_predator_deaths == 0
+        assert metrics.total_health_depleted == 0
         assert metrics.total_predator_encounters == 0
         assert metrics.total_successful_evasions == 0
 
@@ -272,7 +270,7 @@ class TestPredatorMetrics:
         # Total counts
         assert metrics.total_predator_encounters == 4
         assert metrics.total_successful_evasions == 3
-        assert metrics.total_predator_deaths == 0
+        assert metrics.total_health_depleted == 0
 
     def test_predator_metrics_distinction(self):
         """Test that we can distinguish predator-enabled from non-predator environments."""
@@ -297,8 +295,6 @@ class TestPredatorMetrics:
         assert metrics_with_predators.average_predator_encounters == 0.0
         assert metrics_no_predators.average_successful_evasions is None
         assert metrics_with_predators.average_successful_evasions == 0.0
-        assert metrics_no_predators.total_predator_deaths == 0
-        assert metrics_with_predators.total_predator_deaths == 0
         assert metrics_no_predators.total_predator_encounters == 0
         assert metrics_with_predators.total_predator_encounters == 0
         assert metrics_no_predators.total_successful_evasions == 0
@@ -317,22 +313,22 @@ class TestTerminationReasonTracking:
             success=False,
             steps=10,
             reward=-50.0,
-            termination_reason=TerminationReason.PREDATOR,
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
         )
         tracker.track_episode_completion(
             success=False,
             steps=8,
             reward=-50.0,
-            termination_reason=TerminationReason.PREDATOR,
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
         )
 
-        assert tracker.total_predator_deaths == 2
+        assert tracker.total_health_depleted == 2
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
 
         metrics = tracker.calculate_metrics(total_runs=2)
-        assert metrics.total_predator_deaths == 2
+        assert metrics.total_health_depleted == 2
 
     def test_termination_reason_starved(self):
         """Test that starvation deaths are tracked correctly."""
@@ -359,7 +355,7 @@ class TestTerminationReasonTracking:
         )
 
         assert tracker.total_starved == 3
-        assert tracker.total_predator_deaths == 0
+        assert tracker.total_health_depleted == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
 
@@ -379,7 +375,6 @@ class TestTerminationReasonTracking:
         )
 
         assert tracker.total_max_steps == 1
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_interrupted == 0
 
@@ -405,7 +400,6 @@ class TestTerminationReasonTracking:
         )
 
         assert tracker.total_interrupted == 2
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
 
@@ -425,14 +419,13 @@ class TestTerminationReasonTracking:
         )
 
         # No failure counters should be incremented
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
 
         metrics = tracker.calculate_metrics(total_runs=1)
         assert metrics.total_successes == 1
-        assert metrics.total_predator_deaths == 0
+        assert metrics.total_health_depleted == 0
         assert metrics.total_starved == 0
         assert metrics.total_max_steps == 0
         assert metrics.total_interrupted == 0
@@ -451,14 +444,13 @@ class TestTerminationReasonTracking:
         )
 
         # No failure counters should be incremented
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
 
         metrics = tracker.calculate_metrics(total_runs=1)
         assert metrics.total_successes == 1
-        assert metrics.total_predator_deaths == 0
+        assert metrics.total_health_depleted == 0
 
     def test_termination_reason_mixed_scenarios(self):
         """Test tracking multiple different termination reasons."""
@@ -475,7 +467,7 @@ class TestTerminationReasonTracking:
             success=False,
             steps=10,
             reward=-50.0,
-            termination_reason=TerminationReason.PREDATOR,
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
         )
         tracker.track_episode_completion(
             success=False,
@@ -499,11 +491,11 @@ class TestTerminationReasonTracking:
             success=False,
             steps=12,
             reward=-50.0,
-            termination_reason=TerminationReason.PREDATOR,
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
         )
 
         assert tracker.success_count == 1
-        assert tracker.total_predator_deaths == 2
+        assert tracker.total_health_depleted == 2
         assert tracker.total_starved == 1
         assert tracker.total_max_steps == 1
         assert tracker.total_interrupted == 1
@@ -511,7 +503,7 @@ class TestTerminationReasonTracking:
         metrics = tracker.calculate_metrics(total_runs=6)
         assert metrics.success_rate == pytest.approx(1 / 6)
         assert metrics.total_successes == 1
-        assert metrics.total_predator_deaths == 2
+        assert metrics.total_health_depleted == 2
         assert metrics.total_starved == 1
         assert metrics.total_max_steps == 1
         assert metrics.total_interrupted == 1
@@ -535,13 +527,12 @@ class TestTerminationReasonTracking:
         )
 
         # No termination counters should be incremented
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0
 
         metrics = tracker.calculate_metrics(total_runs=2)
-        assert metrics.total_predator_deaths == 0
+        assert metrics.total_health_depleted == 0
         assert metrics.total_starved == 0
         assert metrics.total_max_steps == 0
         assert metrics.total_interrupted == 0
@@ -555,7 +546,7 @@ class TestTerminationReasonTracking:
             success=False,
             steps=10,
             reward=-50.0,
-            termination_reason=TerminationReason.PREDATOR,
+            termination_reason=TerminationReason.HEALTH_DEPLETED,
         )
         tracker.track_episode_completion(
             success=False,
@@ -564,13 +555,12 @@ class TestTerminationReasonTracking:
             termination_reason=TerminationReason.STARVED,
         )
 
-        assert tracker.total_predator_deaths == 1
+        assert tracker.total_health_depleted == 1
         assert tracker.total_starved == 1
 
         # Reset should clear termination counters
         tracker.reset()
 
-        assert tracker.total_predator_deaths == 0
         assert tracker.total_starved == 0
         assert tracker.total_max_steps == 0
         assert tracker.total_interrupted == 0

@@ -271,8 +271,8 @@ The system SHALL provide three preset configurations for curriculum learning: sm
   - count: 2
   - speed: 1.0
   - detection radius: 8
-  - kill radius: 0
-  - movement pattern: "random"
+  - damage radius: 0
+  - movement pattern: "pursuit"
 - **AND** both foraging and predator mechanics SHALL be active
 
 ### Requirement: Brain Architecture Compatibility
@@ -358,29 +358,28 @@ The environment SHALL compute a unified chemotaxis gradient that superimposes fo
 
 ### Requirement: Predator Collision Detection and Termination
 
-The system SHALL detect when the agent collides with a predator and terminate the episode immediately with appropriate termination reason.
+The system SHALL detect when the agent is within a predator's damage radius and apply HP damage. If HP reaches zero, the episode terminates with `TerminationReason.HEALTH_DEPLETED`.
 
-#### Scenario: Predator Kill on Direct Collision
+#### Scenario: Predator Damage on Contact
 
-- **GIVEN** an agent at position (10, 10) and a predator at position (10, 10)
-- **WHEN** collision is detected (same cell occupation)
-- **THEN** the episode SHALL terminate immediately
-- **AND** the termination reason SHALL be `TerminationReason.PREDATOR`
+- **GIVEN** an agent at position (10, 10) and a predator with `damage_radius: 1` at position (10, 10)
+- **WHEN** damage radius check runs
+- **THEN** predator damage SHALL be applied to agent HP
+- **AND** if HP reaches zero, the episode SHALL terminate with `TerminationReason.HEALTH_DEPLETED`
 - **AND** a death penalty reward SHALL be applied (configurable, default -10)
 
-#### Scenario: Kill Radius Configuration
+#### Scenario: Damage Radius Configuration
 
-- **GIVEN** a configuration with `kill_radius: 0`
-- **WHEN** collision detection runs
-- **THEN** collision SHALL be detected when agent is within 0 cells (Manhattan distance) of any predator
-- **AND** kill_radius of 0 SHALL include the center cell only
+- **GIVEN** a configuration with `damage_radius: 1`
+- **WHEN** damage radius detection runs
+- **THEN** contact SHALL be detected when agent is within 1 cell (Manhattan distance) of any predator
 - **AND** diagonal adjacency SHALL be excluded (Manhattan distance only)
 
-#### Scenario: No Collision Outside Kill Radius
+#### Scenario: No Contact Outside Damage Radius
 
-- **GIVEN** an agent at (10, 10) and predator at (11, 10) with `kill_radius: 0`
+- **GIVEN** an agent at (10, 10) and predator at (12, 10) with `damage_radius: 1`
 - **WHEN** positions are checked
-- **THEN** no collision SHALL be detected (distance = 1 > kill_radius)
+- **THEN** no contact SHALL be detected (distance = 2 > damage_radius)
 - **AND** the episode SHALL continue normally
 - **AND** agent SHALL still sense predator gradient if within detection radius
 
@@ -462,17 +461,17 @@ The system SHALL track predator-related performance metrics including encounters
 - **THEN** `successful_evasions` metric SHALL increment by 1
 - **AND** evasion is defined as entering detection radius and leaving without death
 
-#### Scenario: Death by Predator Tracking
+#### Scenario: Death by Health Depletion Tracking
 
-- **GIVEN** an episode terminated by predator collision
+- **GIVEN** an episode terminated by HP reaching zero (from predator damage, temperature, or other sources)
 - **WHEN** episode metrics are computed
-- **THEN** `predator_deaths` metric SHALL equal 1
-- **AND** termination reason SHALL be `TerminationReason.PREDATOR`
+- **THEN** `health_depleted` metric SHALL increment by 1
+- **AND** termination reason SHALL be `TerminationReason.HEALTH_DEPLETED`
 - **AND** this SHALL be distinct from starvation or timeout terminations
 
 #### Scenario: Food Collected Before Death
 
-- **GIVEN** an agent that collected 8 foods before predator collision
+- **GIVEN** an agent that collected 8 foods before health depletion
 - **WHEN** episode metrics are computed
 - **THEN** `foods_collected` metric SHALL equal 8
 - **AND** this SHALL be tracked alongside predator death
@@ -533,14 +532,14 @@ The system SHALL execute each simulation step in a deterministic order to ensure
   9. Other termination conditions checked (starvation, max steps)
 - **AND** this order SHALL be deterministic and consistent across all episodes
 
-#### Scenario: Collision Detection Before Predator Movement
+#### Scenario: Damage Check Before Predator Movement
 
 - **GIVEN** an agent at (10, 10) after moving, and a predator at (10, 10) before predator update
 - **WHEN** the step sequence executes
-- **THEN** collision SHALL be detected at step 5 (before predator movement)
-- **AND** the episode SHALL terminate with `TerminationReason.PREDATOR`
-- **AND** predator movement (step 7) SHALL NOT occur after collision
-- **AND** this prevents predators from moving away before collision is registered
+- **THEN** damage SHALL be applied at step 5 (before predator movement)
+- **AND** if HP reaches zero, the episode SHALL terminate with `TerminationReason.HEALTH_DEPLETED`
+- **AND** predator movement (step 7) SHALL NOT occur after termination
+- **AND** this prevents predators from moving away before damage is applied
 
 #### Scenario: Predator Movement After Safe Step
 
