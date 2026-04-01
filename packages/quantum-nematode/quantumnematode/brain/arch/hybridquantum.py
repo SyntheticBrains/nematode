@@ -169,14 +169,8 @@ STAGE_JOINT = 3
 class HybridQuantumBrainConfig(BrainConfig):
     """Configuration for the HybridQuantumBrain architecture.
 
-    Supports two modes for input feature extraction:
-
-    1. **Legacy mode** (default): Uses 2 features (gradient_strength, relative_angle)
-       - Set `sensory_modules=None` (default)
-
-    2. **Unified sensory mode**: Uses modular feature extraction from brain/modules.py
-       - Set `sensory_modules` to a list of ModuleName values
-       - Each module contributes 2 features [strength, angle]
+    Uses modular feature extraction via sensory_modules (required).
+    Each module contributes 2 features [strength, angle] in [0,1] and [-1,1].
     """
 
     # QSNN reflex params
