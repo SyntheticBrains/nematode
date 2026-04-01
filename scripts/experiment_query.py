@@ -140,8 +140,8 @@ def print_experiment_details(metadata: ExperimentMetadata) -> None:  # noqa: C90
     print(f"  All Foods: {metadata.results.completed_all_food}")
     print(f"  Starved: {metadata.results.starved}")
     print(f"  Max Steps: {metadata.results.max_steps_reached}")
-    if metadata.results.predator_deaths > 0:
-        print(f"  Predator Deaths: {metadata.results.predator_deaths}")
+    if metadata.results.health_depleted > 0:
+        print(f"  Health Depleted: {metadata.results.health_depleted}")
 
     if metadata.results.avg_predator_encounters is not None:
         print("\nPredator Metrics:")
