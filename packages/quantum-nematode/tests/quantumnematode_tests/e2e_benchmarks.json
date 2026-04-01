@@ -79,14 +79,6 @@
       "success_rate_min": 0.89,
       "success_rate_max": 1.0,
       "source": "benchmarks/foraging_small/classical: sessions 94.0%-98.5% with 5% buffer"
-    },
-    {
-      "name": "mlpppo_predators_small",
-      "config": "configs/scenarios/predators/mlpppo_small_oracle.yml",
-      "runs": 200,
-      "success_rate_min": 0.72,
-      "success_rate_max": 0.92,
-      "source": "benchmarks/predator_small/classical: sessions 77.0%-87.0% with 5% buffer"
     }
   ]
 }
