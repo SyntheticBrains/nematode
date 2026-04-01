@@ -1647,7 +1647,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Returns
         -------
         bool
-            True if HP <= 0 and health system is enabled, False otherwise.
+            True if HP <= 0, False otherwise.
         """
         return self.agent_hp <= 0.0
 

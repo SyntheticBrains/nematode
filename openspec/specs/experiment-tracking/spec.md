@@ -211,7 +211,7 @@ The experiment tracking system SHALL capture comprehensive predator configuratio
   - `predator_speed` (float)
   - `predator_movement_pattern` (string)
   - `predator_detection_radius` (integer)
-  - `predator_kill_radius` (integer)
+  - `predator_damage_radius` (integer)
   - `predator_gradient_decay_constant` (float)
   - `predator_gradient_strength` (float)
 - **AND** this SHALL be stored in experiment JSON metadata
