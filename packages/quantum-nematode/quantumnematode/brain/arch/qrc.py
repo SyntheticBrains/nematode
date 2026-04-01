@@ -106,8 +106,8 @@ class QRCBrainConfig(BrainConfig):
         Smoothing factor for baseline running average (default 0.05).
     entropy_coef : float
         Entropy regularization coefficient for exploration (default 0.01).
-    sensory_modules : list[ModuleName] | None
-        List of sensory modules for feature extraction (default None = legacy mode).
+    sensory_modules : list[ModuleName]
+        List of sensory modules for feature extraction (required).
     """
 
     num_reservoir_qubits: int = Field(

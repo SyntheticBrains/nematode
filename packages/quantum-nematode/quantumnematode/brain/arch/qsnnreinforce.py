@@ -276,8 +276,8 @@ class QSNNReinforceBrainConfig(BrainConfig):
         Entropy regularization coefficient (default 0.01).
     weight_clip : float
         Maximum absolute weight value for stability (default 5.0).
-    sensory_modules : list[ModuleName] | None
-        List of sensory modules for feature extraction (None = legacy mode).
+    sensory_modules : list[ModuleName]
+        List of sensory modules for feature extraction (required).
     """
 
     num_sensory_neurons: int = Field(

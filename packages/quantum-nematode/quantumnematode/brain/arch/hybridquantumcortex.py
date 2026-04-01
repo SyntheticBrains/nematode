@@ -13,7 +13,7 @@ pursuit. See logbook 008 for full evaluation.
 
 Architecture::
 
-    Sensory Input (2-dim legacy)         Multi-sensory Input (8+ dim)
+    Sensory Input (from sensory_modules)  Multi-sensory Input (cortex_sensory_modules)
            |                                       |
            v                                       v
     QSNN Reflex                          QSNN Cortex
@@ -188,8 +188,8 @@ MODE_LOGIT_SCALE = 2.0
 class HybridQuantumCortexBrainConfig(BrainConfig):
     """Configuration for the HybridQuantumCortexBrain architecture.
 
-    Supports a QSNN reflex layer (legacy 2-feature) combined with a QSNN cortex
-    layer (grouped sensory QLIF neurons) and a classical critic.
+    Supports a QSNN reflex layer combined with a QSNN cortex layer
+    (grouped sensory QLIF neurons) and a classical critic.
     """
 
     # QSNN reflex params

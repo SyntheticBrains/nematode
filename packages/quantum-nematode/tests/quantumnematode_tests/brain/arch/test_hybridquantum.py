@@ -181,9 +181,9 @@ class TestHybridQuantumBrainInit:
         assert last_layer.out_features == 1
 
     def test_cortex_actor_input_dim(self, brain_stage1):
-        """Test cortex actor input dimension matches legacy mode."""
+        """Test cortex actor input dimension matches sensory module count."""
         first_layer = next(iter(brain_stage1.cortex_actor.children()))
-        assert first_layer.in_features == 2  # legacy mode
+        assert first_layer.in_features == 2  # 1 module * 2 features
 
     def test_action_set(self, brain_stage1):
         """Test action set has correct length."""
@@ -241,7 +241,7 @@ class TestCortexForwardPass:
 
     def test_cortex_forward_output_split(self, brain):
         """Test cortex forward splits into action biases and mode logits."""
-        sensory_t = torch.randn(2)  # legacy 2-feature input
+        sensory_t = torch.randn(2)  # 1 module * 2 features
         action_biases, mode_logits = brain._cortex_forward(sensory_t)
         assert action_biases.shape == (4,)
         assert mode_logits.shape == (3,)

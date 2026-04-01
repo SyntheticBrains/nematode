@@ -8,11 +8,11 @@ same mode-gated fusion, same 3-stage curriculum, same REINFORCE + PPO training.
 
 Architecture::
 
-    Sensory Input (2-dim legacy)
+    Sensory Input (from sensory_modules)
            |
            v
     Classical Reflex MLP (nn.Sequential)
-      2 -> 16 -> 4 (ReLU hidden)
+      input_dim -> 16 -> 4 (ReLU hidden)
       ~116 classical params, REINFORCE training
       Output: 4-dim reflex logits
            |
@@ -86,7 +86,7 @@ from quantumnematode.utils.session import generate_session_id
 
 # Reflex MLP defaults
 DEFAULT_REFLEX_HIDDEN_DIM = 16
-DEFAULT_REFLEX_INPUT_DIM = 2  # legacy 2-feature mode
+DEFAULT_REFLEX_INPUT_DIM = 2  # only used as fallback if input_dim not set
 DEFAULT_NUM_MOTOR = 4
 DEFAULT_LOGIT_SCALE = 5.0
 
@@ -492,11 +492,10 @@ class HybridClassicalBrain(ClassicalBrain):
     def _init_reflex(self) -> None:
         """Initialize the classical reflex MLP.
 
-        Architecture: Linear(2 -> hidden) -> ReLU -> Linear(hidden -> 4)
-        Matches QSNN's legacy 2-feature input and 4 motor outputs.
+        Architecture: Linear(input_dim -> hidden) -> ReLU -> Linear(hidden -> num_motor)
         """
         self.reflex_mlp = nn.Sequential(
-            nn.Linear(DEFAULT_REFLEX_INPUT_DIM, self.config.reflex_hidden_dim),
+            nn.Linear(self.input_dim, self.config.reflex_hidden_dim),
             nn.ReLU(),
             nn.Linear(self.config.reflex_hidden_dim, self.num_motor),
         ).to(self.device)
