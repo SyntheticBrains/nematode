@@ -267,7 +267,7 @@ def extract_qef_features(  # noqa: PLR0913
         encoding_mode=encoding_mode,
         gate_mode=gate_mode,
         feature_mode=feature_mode,
-        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
     )
     brain = QEFBrain(config=config)
 
@@ -307,7 +307,7 @@ def extract_qrh_random_features(
         num_reservoir_qubits=num_qubits,
         reservoir_depth=3,
         use_random_topology=True,
-        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
     )
     brain = QRHBrain(config=config)
 

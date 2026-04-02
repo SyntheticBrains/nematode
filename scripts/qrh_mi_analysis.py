@@ -242,7 +242,7 @@ def extract_structured_features(
         num_reservoir_qubits=num_qubits,
         reservoir_depth=reservoir_depth,
         use_random_topology=False,
-        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
     )
     brain = QRHBrain(config=config)
 
@@ -285,7 +285,7 @@ def extract_random_features(
         num_reservoir_qubits=num_qubits,
         reservoir_depth=reservoir_depth,
         use_random_topology=True,
-        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
     )
     brain = QRHBrain(config=config)
 

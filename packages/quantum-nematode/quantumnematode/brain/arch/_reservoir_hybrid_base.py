@@ -23,10 +23,11 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Self
 
 import torch
+from pydantic import Field, field_validator
 
 if TYPE_CHECKING:
     import numpy as np
-from pydantic import Field, field_validator
+
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
