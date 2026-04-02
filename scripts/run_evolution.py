@@ -276,7 +276,6 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
         for _ in range(max_steps):
             # Get state from environment
             position = (env.agent_pos[0], env.agent_pos[1])
-            gradient_strength, gradient_direction = env.get_state(position, disable_log=True)
 
             # Get separated food/predator gradients
             separated_grads = env.get_separated_gradients(position, disable_log=True)
@@ -308,8 +307,6 @@ def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
             # Build BrainParams with all available sensory information
             params = BrainParams(
-                gradient_strength=gradient_strength,
-                gradient_direction=gradient_direction,
                 food_gradient_strength=food_gradient_strength,
                 food_gradient_direction=food_gradient_direction,
                 predator_gradient_strength=predator_gradient_strength,

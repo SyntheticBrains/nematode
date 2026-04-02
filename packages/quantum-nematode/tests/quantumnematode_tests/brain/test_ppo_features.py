@@ -32,16 +32,6 @@ class TestPPOBrainUnifiedMode:
         # 1 module * 2 features = 2 (classical: [strength, angle])
         assert brain.input_dim == 2
 
-    def test_unified_mode_overrides_explicit_input_dim(self):
-        """Test that sensory_modules overrides explicit input_dim."""
-        config = MLPPPOBrainConfig(
-            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
-        )
-        # Explicitly pass wrong input_dim - should be overridden
-        brain = MLPPPOBrain(config=config, input_dim=10)
-
-        assert brain.input_dim == 2  # Overridden by modules (1 * 2 features)
-
     def test_unified_preprocess_output_shape(self):
         """Test that unified preprocessing returns correct shape."""
         config = MLPPPOBrainConfig(
@@ -50,8 +40,8 @@ class TestPPOBrainUnifiedMode:
         brain = MLPPPOBrain(config=config)
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
             agent_direction=Direction.UP,
         )
 
@@ -119,9 +109,8 @@ class TestPPOBrainRunWithUnifiedFeatures:
         brain = MLPPPOBrain(config=config, num_actions=4)
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=0.0,
-            food_gradient_strength=0.3,
+            food_gradient_strength=0.5,
+            food_gradient_direction=0.0,
             predator_gradient_strength=0.2,
             agent_direction=Direction.UP,
         )

@@ -106,8 +106,8 @@ class TestMLPDQNBrain:
     def test_preprocess(self, brain):
         """Test state preprocessing."""
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=1.5,
+            food_gradient_strength=0.8,
+            food_gradient_direction=1.5,
             agent_position=(2, 3),
             agent_direction=Direction.UP,
         )
@@ -138,8 +138,8 @@ class TestMLPDQNBrain:
     def test_run_brain_exploration(self, brain):
         """Test epsilon-greedy exploration during training."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -160,8 +160,8 @@ class TestMLPDQNBrain:
     def test_run_brain_exploitation(self, brain):
         """Test greedy action selection with epsilon=0."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -178,8 +178,8 @@ class TestMLPDQNBrain:
 
     def test_experience_storage(self, brain):
         """Test that experiences are stored correctly."""
-        params1 = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
-        params2 = BrainParams(gradient_strength=0.6, gradient_direction=1.2)
+        params1 = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
+        params2 = BrainParams(food_gradient_strength=0.6, food_gradient_direction=1.2)
 
         # First action
         brain.run_brain(params1, top_only=True, top_randomize=False)
@@ -193,7 +193,7 @@ class TestMLPDQNBrain:
 
     def test_learn_insufficient_data(self, brain):
         """Test that learning doesn't happen with insufficient data."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run brain once
         brain.run_brain(params, top_only=True, top_randomize=False)
@@ -210,7 +210,7 @@ class TestMLPDQNBrain:
 
     def test_learn_with_batch(self, brain):
         """Test learning with sufficient experiences."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Fill buffer with experiences
         for _ in range(brain.batch_size + 5):
@@ -230,7 +230,7 @@ class TestMLPDQNBrain:
 
     def test_target_network_update(self, brain):
         """Test that target network is updated periodically."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Fill buffer
         for _ in range(brain.batch_size):
@@ -248,7 +248,7 @@ class TestMLPDQNBrain:
 
     def test_epsilon_decay(self, brain):
         """Test that epsilon decays over time."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         initial_epsilon = brain.epsilon
 
@@ -320,8 +320,8 @@ class TestMLPDQNBrainIntegration:
         # Simulate multiple steps in an episode
         for step in range(50):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step % 10, step % 10),
                 agent_direction=Direction.UP,
             )
@@ -347,7 +347,7 @@ class TestMLPDQNBrainIntegration:
         config = MLPDQNBrainConfig(hidden_dim=16, epsilon=0.5)
         brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Training mode - epsilon-greedy
         brain.training = True
@@ -377,7 +377,7 @@ class TestMLPDQNBrainIntegration:
         )
         brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.8, gradient_direction=0.5)
+        params = BrainParams(food_gradient_strength=0.8, food_gradient_direction=0.5)
 
         # Train with consistent positive reward for specific state
         for _ in range(100):
@@ -397,7 +397,7 @@ class TestMLPDQNBrainIntegration:
         config = MLPDQNBrainConfig(buffer_size=50, batch_size=16)
         brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Fill buffer beyond capacity
         for _ in range(100):
@@ -412,7 +412,7 @@ class TestMLPDQNBrainIntegration:
         config = MLPDQNBrainConfig(hidden_dim=16, learning_rate=0.1, buffer_size=50, batch_size=16)
         brain = MLPDQNBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Fill buffer
         for _ in range(brain.batch_size):

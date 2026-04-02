@@ -200,7 +200,6 @@ def setup_brain_model(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         brain = MLPPPOBrain(
             config=brain_config,
-            input_dim=2,
             num_actions=4,
             device=device,
             parameter_initializer=parameter_initializer,

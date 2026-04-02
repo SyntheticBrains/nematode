@@ -153,10 +153,9 @@ class MLPPPOBrain(ClassicalBrain):
     This is a SOTA classical baseline for comparison with quantum approaches.
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
+    def __init__(
         self,
         config: MLPPPOBrainConfig,
-        input_dim: int | None = None,
         num_actions: int = 4,
         device: DeviceType = DeviceType.CPU,
         action_set: list[Action] = DEFAULT_ACTIONS,
@@ -175,12 +174,7 @@ class MLPPPOBrain(ClassicalBrain):
         self.sensory_modules = config.sensory_modules
 
         # Determine input dimension from sensory modules
-        computed_dim = get_classical_feature_dimension(config.sensory_modules)
-        if input_dim is not None and input_dim != computed_dim:
-            logger.warning(
-                f"input_dim={input_dim} overridden by sensory_modules (computed: {computed_dim})",
-            )
-        self.input_dim = computed_dim
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
         logger.info(
             f"Using classical feature extraction with modules: "
             f"{[m.value for m in config.sensory_modules]} "

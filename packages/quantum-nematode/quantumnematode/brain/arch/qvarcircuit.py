@@ -474,7 +474,7 @@ class QVarCircuitBrain(QuantumBrain):
         # For simulators, use the device type
         return f"aer_simulator_{self.device.value}"
 
-    def run_brain(  # noqa: PLR0912, PLR0915
+    def run_brain(  # noqa: PLR0915
         self,
         params: BrainParams,
         reward: float | None = None,
@@ -501,18 +501,6 @@ class QVarCircuitBrain(QuantumBrain):
         -------
             list[ActionData]: List of ActionData with action and probability.
         """
-        gradient_strength = params.gradient_strength
-        if gradient_strength:
-            self.history_data.gradient_strengths.append(
-                gradient_strength,
-            )  # Used for reporting only
-
-        gradient_direction = params.gradient_direction
-        if gradient_direction:
-            self.history_data.gradient_directions.append(
-                gradient_direction,
-            )  # Used for reporting only
-
         input_params = {
             module.value: SENSORY_MODULES[module].to_quantum_dict(params) for module in self.modules
         }

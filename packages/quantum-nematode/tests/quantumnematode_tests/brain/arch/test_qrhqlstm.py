@@ -7,7 +7,6 @@ from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
 from quantumnematode.brain.arch.qrhqlstm import QRHQLSTMBrain, QRHQLSTMBrainConfig
 from quantumnematode.brain.modules import ModuleName
-from quantumnematode.env import Direction
 
 # ──────────────────────────────────────────────────────────────────────
 # Config Tests
@@ -19,7 +18,9 @@ class TestQRHQLSTMBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QRHQLSTMBrainConfig()
+        config = QRHQLSTMBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.num_reservoir_qubits == 8
         assert config.reservoir_depth == 3
         assert config.reservoir_seed == 42
@@ -50,6 +51,7 @@ class TestQRHQLSTMBrainConfig:
             use_quantum_gates=False,
             bptt_chunk_length=16,
             rollout_buffer_size=256,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         assert config.num_reservoir_qubits == 10
         assert config.lstm_hidden_dim == 32
@@ -59,12 +61,19 @@ class TestQRHQLSTMBrainConfig:
     def test_invalid_lstm_hidden_dim(self):
         """Test validation rejects too small hidden dim."""
         with pytest.raises(ValueError, match="lstm_hidden_dim must be >= 2"):
-            QRHQLSTMBrainConfig(lstm_hidden_dim=1)
+            QRHQLSTMBrainConfig(
+                lstm_hidden_dim=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_invalid_buffer_vs_chunk(self):
         """Test validation rejects buffer_size < chunk_length."""
         with pytest.raises(ValueError, match="rollout_buffer_size"):
-            QRHQLSTMBrainConfig(rollout_buffer_size=8, bptt_chunk_length=16)
+            QRHQLSTMBrainConfig(
+                rollout_buffer_size=8,
+                bptt_chunk_length=16,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -106,6 +115,7 @@ class TestQRHQLSTMBrain:
             bptt_chunk_length=4,
             num_epochs=1,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
 
     @pytest.fixture
@@ -117,9 +127,10 @@ class TestQRHQLSTMBrain:
     def params(self) -> BrainParams:
         """Create test BrainParams."""
         return BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
-            agent_direction=Direction.UP,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
+            predator_gradient_strength=0.3,
+            predator_gradient_direction=-0.5,
         )
 
     def test_initialization(self, brain: QRHQLSTMBrain):

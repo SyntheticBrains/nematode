@@ -151,8 +151,8 @@ class TestQQLearningBrain:
     def test_extract_quantum_features(self, brain):
         """Test quantum feature extraction."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -167,8 +167,8 @@ class TestQQLearningBrain:
     def test_get_state_features(self, brain):
         """Test combined quantum and classical feature extraction."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(5, 7),
             agent_direction=Direction.UP,
         )
@@ -184,8 +184,8 @@ class TestQQLearningBrain:
     def test_decide_action(self, brain):
         """Test action decision making."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -358,8 +358,8 @@ class TestQQLearningBrain:
     def test_run_brain(self, brain):
         """Test running the brain."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -375,8 +375,8 @@ class TestQQLearningBrain:
     def test_run_brain_with_learning(self, brain):
         """Test running brain with learning integration."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -462,8 +462,8 @@ class TestQQLearningBrainIntegration:
         # Simulate multiple steps in an episode
         for step in range(30):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step % 10, step % 10),
                 agent_direction=Direction.UP,
             )
@@ -492,7 +492,7 @@ class TestQQLearningBrainIntegration:
         )
         brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.6, gradient_direction=0.3)
+        params = BrainParams(food_gradient_strength=0.6, food_gradient_direction=0.3)
 
         # Fill buffer to increase experience
         state = brain.get_state_features(params)
@@ -543,7 +543,7 @@ class TestQQLearningBrainIntegration:
         )
         brain = QQLearningBrain(config=config, shots=50, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Fill buffer
         state = brain.get_state_features(params)

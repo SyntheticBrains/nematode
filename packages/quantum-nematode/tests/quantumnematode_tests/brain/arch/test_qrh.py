@@ -21,7 +21,9 @@ class TestQRHBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QRHBrainConfig()
+        config = QRHBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
 
         assert config.num_reservoir_qubits == 8
         assert config.reservoir_depth == 3
@@ -41,7 +43,7 @@ class TestQRHBrainConfig:
         assert config.value_loss_coef == 0.5
         assert config.max_grad_norm == 0.5
         assert config.use_random_topology is False
-        assert config.sensory_modules is None
+        assert config.sensory_modules is not None
         assert config.num_sensory_qubits is None
         assert config.lr_warmup_episodes == 0
         assert config.lr_warmup_start is None
@@ -61,6 +63,7 @@ class TestQRHBrainConfig:
             gamma=0.95,
             ppo_buffer_size=256,
             use_random_topology=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
 
         assert config.num_reservoir_qubits == 4
@@ -77,22 +80,34 @@ class TestQRHBrainConfig:
     def test_validation_num_reservoir_qubits(self):
         """Validate num_reservoir_qubits >= 2."""
         with pytest.raises(ValueError, match="num_reservoir_qubits must be >= 2"):
-            QRHBrainConfig(num_reservoir_qubits=1)
+            QRHBrainConfig(
+                num_reservoir_qubits=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validation_reservoir_depth(self):
         """Validate reservoir_depth >= 1."""
         with pytest.raises(ValueError, match="reservoir_depth must be >= 1"):
-            QRHBrainConfig(reservoir_depth=0)
+            QRHBrainConfig(
+                reservoir_depth=0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validation_shots(self):
         """Validate shots >= 100."""
         with pytest.raises(ValueError, match="shots must be >= 100"):
-            QRHBrainConfig(shots=50)
+            QRHBrainConfig(
+                shots=50,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validation_readout_hidden_dim(self):
         """Validate readout_hidden_dim >= 1."""
         with pytest.raises(ValueError, match="readout_hidden_dim must be >= 1"):
-            QRHBrainConfig(readout_hidden_dim=0)
+            QRHBrainConfig(
+                readout_hidden_dim=0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_config_with_sensory_modules(self):
         """Test configuration with sensory modules."""
@@ -116,6 +131,7 @@ class TestQRHReservoirCircuit:
             readout_hidden_dim=8,
             readout_num_layers=1,
             ppo_buffer_size=8,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
 
     @pytest.fixture
@@ -146,8 +162,8 @@ class TestQRHReservoirCircuit:
 
     def test_per_qubit_encoding(self, brain):
         """Input encoding should only target sensory qubits, not all qubits."""
-        features = np.array([0.8, -0.6], dtype=np.float32)
-        zero_features = np.array([0.0, 0.0], dtype=np.float32)
+        features = np.array([0.8, -0.6, 0.4, 0.2], dtype=np.float32)
+        zero_features = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
 
         result_active = brain._get_reservoir_features(features)
         result_zero = brain._get_reservoir_features(zero_features)
@@ -158,14 +174,15 @@ class TestQRHReservoirCircuit:
         )
 
     def test_sensory_qubits_default(self):
-        """Default sensory qubits should be [0, 1] for legacy 2-feature mode."""
+        """Sensory qubits should match input_dim for 2-module config."""
         config = QRHBrainConfig(
             num_reservoir_qubits=4,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
-        assert brain.sensory_qubits == [0, 1]
+        assert brain.sensory_qubits == [0, 1, 2, 3]
         # Module constant preserved for backward compatibility
         assert SENSORY_QUBITS == [0, 1]
 
@@ -177,11 +194,12 @@ class TestQRHReservoirCircuit:
             reservoir_seed=42,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain1 = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
         brain2 = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
         result1 = brain1._get_reservoir_features(features)
         result2 = brain2._get_reservoir_features(features)
 
@@ -196,6 +214,7 @@ class TestQRHReservoirCircuit:
             readout_hidden_dim=8,
             readout_num_layers=1,
             use_random_topology=False,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         random_config = QRHBrainConfig(
             num_reservoir_qubits=8,
@@ -204,6 +223,7 @@ class TestQRHReservoirCircuit:
             readout_hidden_dim=8,
             readout_num_layers=1,
             use_random_topology=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         structured_brain = QRHBrain(
             config=structured_config,
@@ -216,7 +236,7 @@ class TestQRHReservoirCircuit:
             device=DeviceType.CPU,
         )
 
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
         structured_out = structured_brain._get_reservoir_features(features)
         random_out = random_brain._get_reservoir_features(features)
 
@@ -235,12 +255,13 @@ class TestQRHFeatureExtraction:
             reservoir_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_feature_dimension(self, brain):
         """Feature dimension should be 3N + N(N-1)/2."""
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
         # 4 qubits: 3*4 + 4*3/2 = 12 + 6 = 18
@@ -254,7 +275,7 @@ class TestQRHFeatureExtraction:
 
     def test_xyz_expectations_range(self, brain):
         """X, Y, Z expectations should all be in [-1, 1]."""
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
         n = brain.num_qubits
@@ -268,7 +289,7 @@ class TestQRHFeatureExtraction:
 
     def test_zz_correlations_range(self, brain):
         """ZZ-correlations should be in [-1, 1]."""
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
         # ZZ correlations start after 3N expectations
@@ -278,7 +299,7 @@ class TestQRHFeatureExtraction:
 
     def test_xy_expectations_nontrivial(self, brain):
         """X and Y expectations should not all be zero for non-trivial states."""
-        features = np.array([0.8, -0.6], dtype=np.float32)
+        features = np.array([0.8, -0.6, 0.4, 0.2], dtype=np.float32)
         result = brain._get_reservoir_features(features)
 
         n = brain.num_qubits
@@ -298,11 +319,12 @@ class TestQRHFeatureExtraction:
             reservoir_depth=3,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
-        features_a = np.array([0.1, 0.2], dtype=np.float32)
-        features_b = np.array([0.9, -0.8], dtype=np.float32)
+        features_a = np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float32)
+        features_b = np.array([0.9, -0.8, 0.5, -0.3], dtype=np.float32)
 
         result_a = brain._get_reservoir_features(features_a)
         result_b = brain._get_reservoir_features(features_b)
@@ -311,7 +333,7 @@ class TestQRHFeatureExtraction:
 
     def test_determinism(self, brain):
         """Same input should always produce same features (statevector is exact)."""
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
 
         result1 = brain._get_reservoir_features(features)
         result2 = brain._get_reservoir_features(features)
@@ -329,6 +351,7 @@ class TestQRHBrainReadout:
             num_reservoir_qubits=4,
             readout_hidden_dim=16,
             readout_num_layers=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -369,14 +392,15 @@ class TestQRHBrainLearning:
             ppo_buffer_size=8,
             ppo_minibatches=2,
             ppo_epochs=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_run_brain_returns_valid_action(self, brain):
         """run_brain should return valid ActionData."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -392,8 +416,8 @@ class TestQRHBrainLearning:
     def test_ppo_update_changes_weights(self, brain):
         """PPO update should modify readout weights."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -418,7 +442,7 @@ class TestQRHBrainLearning:
 
     def test_buffer_management(self, brain):
         """Buffer resets after mid-episode PPO update, which is deferred to next run_brain()."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Fill buffer mid-episode — update is deferred until next run_brain()
         for _step in range(brain.config.ppo_buffer_size):
@@ -443,6 +467,7 @@ class TestQRHBrainLearning:
             readout_num_layers=1,
             ppo_buffer_size=16,
             ppo_minibatches=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -452,8 +477,8 @@ class TestQRHBrainLearning:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -481,6 +506,7 @@ class TestQRHBrainCopy:
             reservoir_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -505,7 +531,7 @@ class TestQRHBrainCopy:
         """Copy should produce identical reservoir features for same input."""
         brain_copy = brain.copy()
 
-        features = np.array([0.5, 0.3], dtype=np.float32)
+        features = np.array([0.5, 0.3, 0.1, 0.7], dtype=np.float32)
         orig_result = brain._get_reservoir_features(features)
         copy_result = brain_copy._get_reservoir_features(features)
 
@@ -540,27 +566,6 @@ class TestQRHBrainSensoryModules:
         # Each module contributes 2 features [strength, angle]
         assert brain.input_dim == 4
         assert brain.sensory_modules is not None
-
-    def test_legacy_fallback(self):
-        """Legacy mode (no sensory_modules) should use 2 features."""
-        config = QRHBrainConfig(
-            num_reservoir_qubits=4,
-            reservoir_depth=1,
-            readout_hidden_dim=8,
-            readout_num_layers=1,
-        )
-        brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
-
-        assert brain.sensory_modules is None
-        assert brain.input_dim == 2
-
-        params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
-            agent_direction=Direction.UP,
-        )
-        features = brain.preprocess(params)
-        assert len(features) == 2
 
     def test_preprocess_with_sensory_modules(self):
         """Preprocessing with sensory modules should use extract_classical_features."""
@@ -600,12 +605,13 @@ class TestQRHEpisodeBoundaries:
             readout_num_layers=1,
             ppo_buffer_size=16,
             ppo_minibatches=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_prepare_episode_clears_pending_state(self, brain):
         """prepare_episode() should clear all pending state."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=False)
 
         assert brain._pending_state is not None
@@ -620,7 +626,7 @@ class TestQRHEpisodeBoundaries:
 
     def test_post_process_episode_clears_pending_state(self, brain):
         """post_process_episode() should clear pending state and increment counter."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
         brain.run_brain(params, top_only=True, top_randomize=False)
 
         initial_count = brain._episode_count
@@ -632,7 +638,7 @@ class TestQRHEpisodeBoundaries:
 
     def test_multi_episode_no_cross_contamination(self, brain):
         """Running multiple episodes should not leak state between them."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for _ep in range(3):
             brain.prepare_episode()
@@ -655,7 +661,7 @@ class TestQRHEpisodeBoundaries:
         """Preprocessing with None gradient values should not crash."""
         params = BrainParams()
         features = brain.preprocess(params)
-        assert len(features) == 2
+        assert len(features) == 4
         assert np.isfinite(features).all()
 
 
@@ -669,6 +675,7 @@ class TestQRHLRScheduling:
             lr_warmup_start=0.00005,
             lr_decay_episodes=100,
             lr_decay_end=0.00001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         assert config.lr_warmup_episodes == 30
         assert config.lr_warmup_start == 0.00005
@@ -677,7 +684,11 @@ class TestQRHLRScheduling:
 
     def test_lr_no_scheduling_by_default(self):
         """LR should stay constant when warmup=0 and no decay."""
-        config = QRHBrainConfig(num_reservoir_qubits=2, actor_lr=0.001)
+        config = QRHBrainConfig(
+            num_reservoir_qubits=2,
+            actor_lr=0.001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         brain = QRHBrain(config=config, num_actions=4)
         assert not brain.lr_scheduling_enabled
         assert brain._get_current_lr() == 0.001
@@ -694,6 +705,7 @@ class TestQRHLRScheduling:
             actor_lr=0.001,
             lr_warmup_episodes=10,
             lr_warmup_start=0.0001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4)
         assert brain.lr_scheduling_enabled
@@ -722,6 +734,7 @@ class TestQRHLRScheduling:
             lr_warmup_start=0.0001,
             lr_decay_episodes=20,
             lr_decay_end=0.0002,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4)
 
@@ -752,6 +765,7 @@ class TestQRHLRScheduling:
             actor_lr=0.001,
             lr_warmup_episodes=10,
             lr_warmup_start=0.0001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4)
 
@@ -769,6 +783,7 @@ class TestQRHLRScheduling:
             actor_lr=0.001,
             lr_warmup_episodes=10,
             lr_warmup_start=0.0001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4)
 
@@ -807,6 +822,7 @@ class TestQRHSensoryQubits:
             readout_hidden_dim=8,
             readout_num_layers=1,
             num_sensory_qubits=3,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
         assert brain.sensory_qubits == [0, 1, 2]
@@ -817,12 +833,20 @@ class TestQRHSensoryQubits:
             ValueError,
             match=r"num_sensory_qubits.*must be.*<= num_reservoir_qubits",
         ):
-            QRHBrainConfig(num_reservoir_qubits=4, num_sensory_qubits=5)
+            QRHBrainConfig(
+                num_reservoir_qubits=4,
+                num_sensory_qubits=5,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_sensory_qubits_validation_zero(self):
         """num_sensory_qubits < 1 should raise ValueError."""
         with pytest.raises(ValueError, match="num_sensory_qubits must be >= 1"):
-            QRHBrainConfig(num_reservoir_qubits=4, num_sensory_qubits=0)
+            QRHBrainConfig(
+                num_reservoir_qubits=4,
+                num_sensory_qubits=0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_sensory_qubits_capped_at_num_qubits(self):
         """Auto-computed sensory qubits should not exceed total qubit count."""
@@ -868,6 +892,7 @@ class TestQRHSensoryQubits:
             readout_hidden_dim=8,
             readout_num_layers=1,
             num_sensory_qubits=4,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config=config, num_actions=4, device=DeviceType.CPU)
         brain_copy = brain.copy()

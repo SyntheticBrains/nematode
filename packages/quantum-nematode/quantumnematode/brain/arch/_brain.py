@@ -24,14 +24,6 @@ class BrainData(BaseModel):
         default=None,
         description="Counts of actions taken by the agent",
     )
-    gradient_direction: float | None = Field(
-        default=None,
-        description="Direction of the chemical gradient",
-    )
-    gradient_strength: float | None = Field(
-        default=None,
-        description="Strength of the chemical gradient",
-    )
     input_parameters: dict[str, float] | None = Field(
         default=None,
         description="Input parameters for the brain",
@@ -80,14 +72,6 @@ class BrainHistoryData(BaseModel):
     counts: list[dict[str, int]] = Field(
         default_factory=list,
         description="Counts of actions taken by the agent",
-    )
-    gradient_directions: list[float] = Field(
-        default_factory=list,
-        description="Direction of the chemical gradient",
-    )
-    gradient_strengths: list[float] = Field(
-        default_factory=list,
-        description="Strength of the chemical gradient",
     )
     input_parameters: list[dict[str, float]] = Field(
         default_factory=list,
@@ -145,14 +129,6 @@ class BrainParams(BaseModel):
     )
 
     # --- Chemotaxis (food/predator gradients) ---
-    gradient_strength: float | None = Field(
-        default=None,
-        description="Combined gradient magnitude (food attraction + predator repulsion).",
-    )
-    gradient_direction: float | None = Field(
-        default=None,
-        description="Combined gradient direction (radians).",
-    )
     food_gradient_strength: float | None = Field(
         default=None,
         description="Food gradient magnitude at agent's position.",

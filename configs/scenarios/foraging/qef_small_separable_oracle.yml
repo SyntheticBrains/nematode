@@ -43,6 +43,9 @@ brain:
     lr_warmup_episodes: 30
     lr_warmup_start: 0.00005
 
+    sensory_modules:
+      - food_chemotaxis
+
 body_length: 2
 
 reward:

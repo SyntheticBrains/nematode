@@ -47,8 +47,8 @@ def _make_brain(**overrides) -> LSTMPPOBrain:
 def _make_params(grad_strength: float = 0.5, direction: Direction = Direction.UP) -> BrainParams:
     """Create a BrainParams for testing."""
     return BrainParams(
-        gradient_strength=grad_strength,
-        gradient_direction=np.pi / 2,
+        food_gradient_strength=grad_strength,
+        food_gradient_direction=np.pi / 2,
         agent_direction=direction,
     )
 
@@ -584,8 +584,8 @@ class TestLSTMPPOBrainSensoryModules:
 
         brain.prepare_episode()
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=np.pi / 2,
+            food_gradient_strength=0.5,
+            food_gradient_direction=np.pi / 2,
             agent_direction=Direction.UP,
             food_concentration=0.7,
             food_dconcentration_dt=0.1,
@@ -607,8 +607,8 @@ class TestLSTMPPOBrainSensoryModules:
 
         brain.prepare_episode()
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=np.pi / 2,
+            food_gradient_strength=0.5,
+            food_gradient_direction=np.pi / 2,
             agent_direction=Direction.UP,
             predator_gradient_strength=0.3,
             predator_gradient_direction=np.pi,

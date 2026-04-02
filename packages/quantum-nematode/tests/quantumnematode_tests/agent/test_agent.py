@@ -353,7 +353,7 @@ class TestTemporalSensingIntegration:
             stam_enabled=True,
         )
         agent = self._create_temporal_agent(sensing)
-        params = agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params()
         assert params.food_concentration is not None
         assert 0.0 <= params.food_concentration <= 1.0
 
@@ -364,7 +364,7 @@ class TestTemporalSensingIntegration:
             stam_enabled=True,
         )
         agent = self._create_temporal_agent(sensing)
-        params = agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params()
         assert params.food_gradient_strength is None
         assert params.food_gradient_direction is None
 
@@ -375,7 +375,7 @@ class TestTemporalSensingIntegration:
             stam_enabled=True,
         )
         agent = self._create_temporal_agent(sensing)
-        params = agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params()
         assert params.predator_gradient_strength is None
         assert params.predator_gradient_direction is None
         assert params.predator_concentration is not None
@@ -388,15 +388,15 @@ class TestTemporalSensingIntegration:
         )
         agent = self._create_temporal_agent(sensing)
         # Need at least 2 steps for derivative
-        agent._create_brain_params(0.5, 0.0)
-        params = agent._create_brain_params(0.5, 0.0)
+        agent._create_brain_params()
+        params = agent._create_brain_params()
         assert params.food_dconcentration_dt is not None
 
     def test_stam_state_is_9_floats(self) -> None:
         """Test that STAM state is a 9-float tuple on BrainParams."""
         sensing = SensingConfig(stam_enabled=True)
         agent = self._create_temporal_agent(sensing)
-        params = agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params()
         assert params.stam_state is not None
         assert len(params.stam_state) == 9
         assert all(isinstance(v, float) for v in params.stam_state)
@@ -405,7 +405,7 @@ class TestTemporalSensingIntegration:
         """Test that oracle mode does not populate temporal sensing fields."""
         sensing = SensingConfig()  # All oracle, STAM disabled
         agent = self._create_temporal_agent(sensing)
-        params = agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params()
         assert params.food_concentration is None
         assert params.predator_concentration is None
         assert params.food_dconcentration_dt is None
@@ -419,8 +419,8 @@ class TestTemporalSensingIntegration:
         )
         agent = self._create_temporal_agent(sensing)
         # Record some data
-        agent._create_brain_params(0.5, 0.0)
-        agent._create_brain_params(0.5, 0.0)
+        agent._create_brain_params()
+        agent._create_brain_params()
         assert agent._stam is not None
         assert len(agent._stam) > 0
 
@@ -439,7 +439,7 @@ class TestTemporalSensingIntegration:
             stam_enabled=True,
         )
         agent = self._create_temporal_agent(sensing)
-        params = agent._create_brain_params(0.5, 0.0)
+        params = agent._create_brain_params()
         # Chemotaxis temporal: scalar set, gradient suppressed
         assert params.food_concentration is not None
         assert params.food_gradient_strength is None

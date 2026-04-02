@@ -378,9 +378,9 @@ class QQLearningBrain:
         # Extract classical environment features
         env_features = np.zeros(4)
 
-        # Use gradient information (which represents direction to food)
-        grad_strength = brain_params.gradient_strength or 0.0
-        grad_direction = brain_params.gradient_direction or 0.0
+        # Use food gradient information (direction to food)
+        grad_strength = brain_params.food_gradient_strength or 0.0
+        grad_direction = brain_params.food_gradient_direction or 0.0
 
         # Position features
         # TODO: Get grid size from agent's environment, currently set to 10 here

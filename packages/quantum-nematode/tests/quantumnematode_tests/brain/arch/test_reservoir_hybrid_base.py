@@ -21,7 +21,9 @@ class TestReservoirHybridBaseConfig:
 
     def test_default_config_values(self):
         """Test that base config defaults match expected values."""
-        config = ReservoirHybridBaseConfig()
+        config = ReservoirHybridBaseConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
 
         assert config.readout_hidden_dim == 64
         assert config.readout_num_layers == 2
@@ -42,7 +44,7 @@ class TestReservoirHybridBaseConfig:
         assert config.lr_decay_end is None
         assert config.entropy_coeff_end is None
         assert config.entropy_decay_episodes is None
-        assert config.sensory_modules is None
+        assert config.sensory_modules == [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION]
         assert config.seed is None
 
     def test_custom_config_values(self):
@@ -63,7 +65,10 @@ class TestReservoirHybridBaseConfig:
 
     def test_qrh_config_inherits_base_fields(self):
         """QRHBrainConfig inherits all base fields."""
-        config = QRHBrainConfig(actor_lr=0.001)
+        config = QRHBrainConfig(
+            actor_lr=0.001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
 
         assert config.actor_lr == 0.001
         assert config.readout_hidden_dim == 64  # base default
@@ -197,6 +202,7 @@ class TestReservoirHybridBaseViaQRH:
             ppo_minibatches=2,
             ppo_epochs=1,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QRHBrain(config)
 
@@ -214,8 +220,8 @@ class TestReservoirHybridBaseViaQRH:
         """Base class initializes all shared attributes."""
         assert brain.feature_dim > 0
         assert brain.num_actions == 4
-        assert brain.input_dim == 2  # legacy mode
-        assert brain.sensory_modules is None
+        assert brain.input_dim == 4  # FOOD_CHEMOTAXIS (2) + NOCICEPTION (2)
+        assert brain.sensory_modules == [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION]
         assert brain._episode_count == 0
         assert brain.training is True
         assert brain.current_probabilities is None
@@ -234,8 +240,8 @@ class TestReservoirHybridBaseViaQRH:
 
         # Do a forward pass to mutate weights
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=None,
         )
         brain.run_brain(params, top_only=False, top_randomize=False)
@@ -285,6 +291,7 @@ class TestReservoirHybridBaseViaQRH:
             lr_warmup_episodes=10,
             lr_warmup_start=0.0001,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
 
@@ -321,6 +328,7 @@ class TestReservoirHybridBaseViaQRH:
             entropy_coeff_end=0.005,
             entropy_decay_episodes=100,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
 
@@ -350,6 +358,7 @@ class TestReservoirHybridBaseViaQRH:
             entropy_coeff_end=0.005,
             entropy_decay_episodes=None,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
         # Should return static value since decay_episodes is None
@@ -393,9 +402,14 @@ class TestReservoirHybridBaseViaQRH:
             ppo_minibatches=2,
             ppo_epochs=1,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
+            agent_direction=None,
+        )
 
         # Fill the buffer without triggering episode_done — this should defer, not update
         for _ in range(brain.config.ppo_buffer_size):
@@ -417,9 +431,14 @@ class TestReservoirHybridBaseViaQRH:
             ppo_minibatches=2,
             ppo_epochs=1,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
+            agent_direction=None,
+        )
 
         # Fill buffer mid-episode to trigger deferred flag
         for _ in range(brain.config.ppo_buffer_size):
@@ -446,9 +465,14 @@ class TestReservoirHybridBaseViaQRH:
             ppo_minibatches=2,
             ppo_epochs=1,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
+            agent_direction=None,
+        )
 
         # Fill buffer mid-episode → deferred flag set, buffer is full
         for _ in range(brain.config.ppo_buffer_size):
@@ -483,9 +507,14 @@ class TestReservoirHybridBaseViaQRH:
             ppo_minibatches=2,
             ppo_epochs=1,
             seed=42,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QRHBrain(config)
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0, agent_direction=None)
+        params = BrainParams(
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
+            agent_direction=None,
+        )
 
         # Run a few steps then end the episode
         for i in range(4):

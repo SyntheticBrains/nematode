@@ -23,7 +23,9 @@ class TestQEFBrainConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
 
         assert config.num_qubits == 8
         assert config.circuit_depth == 2
@@ -33,7 +35,7 @@ class TestQEFBrainConfig:
         assert config.trainable_entanglement is False
         assert config.readout_hidden_dim == 64
         assert config.readout_num_layers == 2
-        assert config.sensory_modules is None
+        assert config.sensory_modules == [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION]
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -46,6 +48,7 @@ class TestQEFBrainConfig:
             readout_hidden_dim=32,
             readout_num_layers=1,
             actor_lr=0.001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
 
         assert config.num_qubits == 4
@@ -58,16 +61,25 @@ class TestQEFBrainConfig:
     def test_validation_num_qubits(self):
         """Validate num_qubits >= 2."""
         with pytest.raises(ValueError, match="num_qubits must be >= 2"):
-            QEFBrainConfig(num_qubits=1)
+            QEFBrainConfig(
+                num_qubits=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validation_circuit_depth(self):
         """Validate circuit_depth >= 1."""
         with pytest.raises(ValueError, match="circuit_depth must be >= 1"):
-            QEFBrainConfig(circuit_depth=0)
+            QEFBrainConfig(
+                circuit_depth=0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_trainable_entanglement_raises(self):
         """Trainable entanglement should raise NotImplementedError."""
-        config = QEFBrainConfig(trainable_entanglement=True)
+        config = QEFBrainConfig(
+            trainable_entanglement=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         with pytest.raises(NotImplementedError, match="Trainable entanglement"):
             QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -91,6 +103,7 @@ class TestQEFFeatureExtraction:
             circuit_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -178,6 +191,7 @@ class TestQEFFeatureExtraction:
             circuit_depth=2,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -196,6 +210,7 @@ class TestQEFFeatureExtraction:
             circuit_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -218,6 +233,7 @@ class TestQEFFeatureExtraction:
             circuit_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -235,12 +251,14 @@ class TestQEFFeatureExtraction:
             circuit_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         config_d3 = QEFBrainConfig(
             num_qubits=4,
             circuit_depth=3,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain_d1 = QEFBrain(config=config_d1, num_actions=4, device=DeviceType.CPU)
         brain_d3 = QEFBrain(config=config_d3, num_actions=4, device=DeviceType.CPU)
@@ -261,6 +279,7 @@ class TestQEFFeatureExtraction:
                 encoding_mode="uniform",
                 readout_hidden_dim=8,
                 readout_num_layers=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ),
             num_actions=4,
             device=DeviceType.CPU,
@@ -272,6 +291,7 @@ class TestQEFFeatureExtraction:
                 encoding_mode="sparse",
                 readout_hidden_dim=8,
                 readout_num_layers=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ),
             num_actions=4,
             device=DeviceType.CPU,
@@ -292,6 +312,7 @@ class TestQEFFeatureExtraction:
                 encoding_mode="uniform",
                 readout_hidden_dim=8,
                 readout_num_layers=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ),
             num_actions=4,
             device=DeviceType.CPU,
@@ -303,6 +324,7 @@ class TestQEFFeatureExtraction:
                 encoding_mode="sparse",
                 readout_hidden_dim=8,
                 readout_num_layers=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ),
             num_actions=4,
             device=DeviceType.CPU,
@@ -316,7 +338,9 @@ class TestQEFFeatureExtraction:
 
     def test_sparse_encoding_default_is_uniform(self):
         """Default encoding_mode should be 'uniform'."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.encoding_mode == "uniform"
 
 
@@ -339,12 +363,15 @@ class TestQEFGateAndFeatureModes:
             feature_mode=feature_mode,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_default_modes(self):
         """Default gate_mode and feature_mode should be cz and z_cossin."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.gate_mode == "cz"
         assert config.feature_mode == "z_cossin"
 
@@ -436,6 +463,7 @@ class TestQEFTopology:
             entanglement_enabled=enabled,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -454,6 +482,7 @@ class TestQEFTopology:
             entanglement_topology="modality_paired",
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         # Only (0,2) survives — (1,3), (4,6), (5,7) all have indices >= 3
@@ -554,6 +583,7 @@ class TestQEFBrainReadout:
             num_qubits=4,
             readout_hidden_dim=16,
             readout_num_layers=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
@@ -579,12 +609,13 @@ class TestQEFBrainReadout:
             readout_hidden_dim=8,
             readout_num_layers=1,
             ppo_buffer_size=8,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -612,14 +643,15 @@ class TestQEFBrainLearning:
             ppo_buffer_size=8,
             ppo_minibatches=2,
             ppo_epochs=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_ppo_update_changes_weights(self, brain):
         """PPO update should modify readout weights."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
 
@@ -642,7 +674,7 @@ class TestQEFBrainLearning:
 
     def test_buffer_management(self, brain):
         """Buffer resets after mid-episode PPO update."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         for _step in range(brain.config.ppo_buffer_size):
             brain.run_brain(params, top_only=True, top_randomize=False)
@@ -666,12 +698,15 @@ class TestQEFHybridInput:
             readout_hidden_dim=8,
             readout_num_layers=1,
             hybrid_input=hybrid,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
     def test_config_default_false(self):
         """hybrid_input should default to False."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.hybrid_input is False
 
     def test_feature_dim_non_hybrid(self):
@@ -754,12 +789,13 @@ class TestQEFHybridInput:
             readout_num_layers=1,
             ppo_buffer_size=8,
             hybrid_input=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -781,7 +817,9 @@ class TestQEFFeatureGating:
 
     def test_config_default_false(self):
         """feature_gating should default to 'none'."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.feature_gating == "none"
 
     def test_gating_changes_feature_dim(self):
@@ -791,6 +829,7 @@ class TestQEFFeatureGating:
             readout_hidden_dim=8,
             readout_num_layers=1,
             feature_gating="static",
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         assert brain.feature_dim == _compute_feature_dim(4)
@@ -803,6 +842,7 @@ class TestQEFFeatureGating:
             readout_num_layers=1,
             feature_gating="static",
             hybrid_input=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         assert brain.feature_dim == brain.input_dim + _compute_feature_dim(4)
@@ -817,11 +857,12 @@ class TestQEFFeatureGating:
             readout_num_layers=1,
             ppo_buffer_size=8,
             feature_gating="static",
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -839,13 +880,14 @@ class TestQEFFeatureGating:
             ppo_minibatches=2,
             ppo_epochs=2,
             feature_gating="static",
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         initial_gates = brain.gate_weights.clone()
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
         for step in range(config.ppo_buffer_size):
@@ -862,7 +904,9 @@ class TestQEFZZZCorrelations:
 
     def test_config_default_false(self):
         """include_zzz should default to False."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.include_zzz is False
 
     def test_feature_dim_without_zzz(self):
@@ -882,6 +926,7 @@ class TestQEFZZZCorrelations:
             readout_hidden_dim=8,
             readout_num_layers=1,
             include_zzz=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         features = np.array([0.5, 0.3], dtype=np.float32)
@@ -894,12 +939,14 @@ class TestQEFZZZCorrelations:
             num_qubits=4,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         config_zzz = QEFBrainConfig(
             num_qubits=4,
             readout_hidden_dim=8,
             readout_num_layers=1,
             include_zzz=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain_no = QEFBrain(config=config_no, num_actions=4, device=DeviceType.CPU)
         brain_zzz = QEFBrain(config=config_zzz, num_actions=4, device=DeviceType.CPU)
@@ -920,6 +967,7 @@ class TestQEFZZZCorrelations:
             readout_hidden_dim=8,
             readout_num_layers=1,
             include_zzz=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         features = np.array([0.5, 0.3], dtype=np.float32)
@@ -954,6 +1002,7 @@ class TestQEFZZZCorrelations:
             include_zzz=True,
             hybrid_input=True,
             feature_gating="static",
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         # Gate weights should cover all quantum features (18 base + 4 ZZZ = 22)
@@ -967,6 +1016,7 @@ class TestQEFZZZCorrelations:
             readout_hidden_dim=8,
             readout_num_layers=1,
             include_zzz=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         features = np.array([0.5, 0.3], dtype=np.float32)
@@ -985,6 +1035,7 @@ class TestQEFContextGating:
             readout_num_layers=1,
             feature_gating="context",
             hybrid_input=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         assert hasattr(brain, "gate_network")
@@ -997,6 +1048,7 @@ class TestQEFContextGating:
             readout_num_layers=1,
             feature_gating="context",
             hybrid_input=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         x = torch.randn(brain.feature_dim)
@@ -1011,12 +1063,18 @@ class TestQEFContextGating:
             readout_num_layers=1,
             feature_gating="context",
             hybrid_input=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         # Use same quantum features but different raw features
-        quantum_part = torch.randn(brain.feature_dim - brain._raw_input_dim)
-        x1 = torch.cat([torch.tensor([1.0, 0.0]), quantum_part])
-        x2 = torch.cat([torch.tensor([0.0, 1.0]), quantum_part])
+        raw_dim = brain._raw_input_dim
+        quantum_part = torch.randn(brain.feature_dim - raw_dim)
+        raw1 = torch.zeros(raw_dim)
+        raw1[0] = 1.0
+        raw2 = torch.zeros(raw_dim)
+        raw2[1] = 1.0
+        x1 = torch.cat([raw1, quantum_part])
+        x2 = torch.cat([raw2, quantum_part])
         gated1 = brain._apply_feature_gating(x1)
         gated2 = brain._apply_feature_gating(x2)
         # Same quantum features but different raw → different gates → different output
@@ -1032,11 +1090,12 @@ class TestQEFContextGating:
             ppo_buffer_size=8,
             feature_gating="context",
             hybrid_input=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -1071,20 +1130,34 @@ class TestQEFSeparateCritic:
 
     def test_config_default_false(self):
         """separate_critic should default to False."""
-        config = QEFBrainConfig()
+        config = QEFBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.separate_critic is False
 
     def test_requires_hybrid_input(self):
         """separate_critic should require hybrid_input."""
         with pytest.raises(ValueError, match="separate_critic requires hybrid_input"):
-            QEFBrainConfig(separate_critic=True, hybrid_input=False)
+            QEFBrainConfig(
+                separate_critic=True,
+                hybrid_input=False,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_context_gating_requires_hybrid_input(self):
         """Context and mixed gating should require hybrid_input."""
         with pytest.raises(ValueError, match="feature_gating='context' requires hybrid_input"):
-            QEFBrainConfig(feature_gating="context", hybrid_input=False)
+            QEFBrainConfig(
+                feature_gating="context",
+                hybrid_input=False,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
         with pytest.raises(ValueError, match="feature_gating='mixed' requires hybrid_input"):
-            QEFBrainConfig(feature_gating="mixed", hybrid_input=False)
+            QEFBrainConfig(
+                feature_gating="mixed",
+                hybrid_input=False,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_separate_critic_network_dim(self):
         """Separate critic should have raw input dim, not feature dim."""
@@ -1094,6 +1167,7 @@ class TestQEFSeparateCritic:
             readout_num_layers=1,
             hybrid_input=True,
             separate_critic=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         # Critic input should be raw_input_dim (2 for legacy)
@@ -1111,11 +1185,12 @@ class TestQEFSeparateCritic:
             ppo_buffer_size=8,
             hybrid_input=True,
             separate_critic=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -1134,6 +1209,7 @@ class TestQEFSeparateCritic:
             ppo_epochs=2,
             hybrid_input=True,
             separate_critic=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         initial_critic_weights = {
@@ -1141,8 +1217,8 @@ class TestQEFSeparateCritic:
         }
 
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=Direction.UP,
         )
         for step in range(config.ppo_buffer_size):
@@ -1166,11 +1242,12 @@ class TestQEFSeparateCritic:
             hybrid_input=True,
             feature_gating="static",
             separate_critic=True,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         brain = QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -1189,6 +1266,7 @@ class TestQEFBrainCopy:
             circuit_depth=1,
             readout_hidden_dim=8,
             readout_num_layers=1,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
         return QEFBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
