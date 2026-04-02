@@ -264,10 +264,10 @@ class TestRunnerComponentIntegration:
         input_data = agent._prepare_input_data(0.5)
         assert input_data is None  # MLP brain returns None
 
-        params = agent._create_brain_params(0.5, 1.57)
+        params = agent._create_brain_params()
         assert params is not None
-        assert hasattr(params, "gradient_strength")
-        assert hasattr(params, "gradient_direction")
+        assert hasattr(params, "food_gradient_strength")
+        assert hasattr(params, "food_gradient_direction")
 
 
 class TestPredatorCollisionTermination:

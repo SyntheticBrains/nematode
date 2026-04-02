@@ -35,6 +35,10 @@ brain:
     # Topology
     use_random_topology: true
 
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
 body_length: 2
 
 reward:

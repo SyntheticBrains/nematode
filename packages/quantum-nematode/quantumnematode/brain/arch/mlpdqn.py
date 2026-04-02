@@ -175,8 +175,8 @@ class MLPDQNBrain(ClassicalBrain):
 
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Preprocess brain parameters into feature vector."""
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
+        grad_strength = float(params.food_gradient_strength or 0.0)
+        grad_direction = float(params.food_gradient_direction or 0.0)
 
         direction_map = {
             Direction.UP: np.pi / 2,

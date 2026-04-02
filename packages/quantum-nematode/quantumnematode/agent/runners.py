@@ -569,7 +569,7 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         for _ in range(max_steps):
             logger.debug("--- New Step ---")
-            gradient_strength, gradient_direction = agent.env.get_state(agent.path[-1])
+            gradient_strength, _gradient_direction = agent.env.get_state(agent.path[-1])
 
             # Track if agent stays in same position
             current_position = tuple(agent.env.agent_pos)
@@ -592,8 +592,6 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Prepare input_data and brain parameters
             input_data = agent._prepare_input_data(gradient_strength)
             params = agent._create_brain_params(
-                gradient_strength,
-                gradient_direction,
                 action=top_action,
             )
             action = agent.brain.run_brain(
@@ -824,7 +822,6 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
             total_superpositions = len(superpositions)
             i = 0
             for brain_copy, env_copy, path_copy in superpositions:
-                gradient_strength, gradient_direction = env_copy.get_state(path_copy[-1])
                 reward = agent.calculate_reward(
                     reward_config,
                     env_copy,
@@ -834,10 +831,7 @@ class ManyworldsEpisodeRunner(EpisodeRunner):
                 )
                 agent._episode_tracker.track_reward(reward)
 
-                params = agent._create_brain_params(
-                    gradient_strength,
-                    gradient_direction,
-                )
+                params = agent._create_brain_params()
                 actions = brain_copy.run_brain(
                     params=params,
                     reward=reward,

@@ -19,7 +19,9 @@ class TestCRHBrainConfig:
 
     def test_default_config_values(self):
         """Test that default CRH config values match expected values."""
-        config = CRHBrainConfig()
+        config = CRHBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
 
         assert config.num_reservoir_neurons == 10
         assert config.reservoir_depth == 3
@@ -35,7 +37,7 @@ class TestCRHBrainConfig:
         assert config.readout_hidden_dim == 64
         assert config.actor_lr == 0.0003
         assert config.ppo_buffer_size == 512
-        assert config.sensory_modules is None
+        assert config.sensory_modules == [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION]
 
     def test_custom_config_values(self):
         """Test that custom values are accepted."""
@@ -50,6 +52,7 @@ class TestCRHBrainConfig:
             num_sensory_neurons=8,
             readout_hidden_dim=128,
             actor_lr=0.001,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
         )
 
         assert config.num_reservoir_neurons == 20
@@ -67,67 +70,109 @@ class TestCRHBrainConfig:
         """CRHBrainConfig inherits from ReservoirHybridBaseConfig."""
         from quantumnematode.brain.arch._reservoir_hybrid_base import ReservoirHybridBaseConfig
 
-        config = CRHBrainConfig()
+        config = CRHBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert isinstance(config, ReservoirHybridBaseConfig)
 
     def test_validate_feature_channels_non_empty(self):
         """feature_channels must be non-empty."""
         with pytest.raises(ValueError, match="non-empty"):
-            CRHBrainConfig(feature_channels=[])
+            CRHBrainConfig(
+                feature_channels=[],
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_input_connectivity_values(self):
         """input_connectivity must be 'sparse' or 'dense'."""
         with pytest.raises(ValueError, match=r"sparse.*dense"):
-            CRHBrainConfig(input_connectivity="invalid")
+            CRHBrainConfig(
+                input_connectivity="invalid",
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_spectral_radius_positive(self):
         """spectral_radius must be > 0."""
         with pytest.raises(ValueError, match="spectral_radius"):
-            CRHBrainConfig(spectral_radius=0.0)
+            CRHBrainConfig(
+                spectral_radius=0.0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
         with pytest.raises(ValueError, match="spectral_radius"):
-            CRHBrainConfig(spectral_radius=-0.5)
+            CRHBrainConfig(
+                spectral_radius=-0.5,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_input_scale_positive(self):
         """input_scale must be > 0."""
         with pytest.raises(ValueError, match="input_scale"):
-            CRHBrainConfig(input_scale=0.0)
+            CRHBrainConfig(
+                input_scale=0.0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
         with pytest.raises(ValueError, match="input_scale"):
-            CRHBrainConfig(input_scale=-0.5)
+            CRHBrainConfig(
+                input_scale=-0.5,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_num_reservoir_neurons_minimum(self):
         """num_reservoir_neurons must be >= 2."""
         with pytest.raises(ValueError, match="num_reservoir_neurons"):
-            CRHBrainConfig(num_reservoir_neurons=1)
+            CRHBrainConfig(
+                num_reservoir_neurons=1,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_num_sensory_neurons_bounds(self):
         """num_sensory_neurons must be >= 1 and <= num_reservoir_neurons."""
         with pytest.raises(ValueError, match="num_sensory_neurons"):
-            CRHBrainConfig(num_reservoir_neurons=10, num_sensory_neurons=0)
+            CRHBrainConfig(
+                num_reservoir_neurons=10,
+                num_sensory_neurons=0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
         with pytest.raises(ValueError, match="num_sensory_neurons"):
-            CRHBrainConfig(num_reservoir_neurons=10, num_sensory_neurons=11)
+            CRHBrainConfig(
+                num_reservoir_neurons=10,
+                num_sensory_neurons=11,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_reservoir_depth_minimum(self):
         """reservoir_depth must be >= 1."""
         with pytest.raises(ValueError, match="reservoir_depth"):
-            CRHBrainConfig(reservoir_depth=0)
+            CRHBrainConfig(
+                reservoir_depth=0,
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
     def test_validate_input_encoding_linear(self):
         """input_encoding defaults to 'linear'."""
-        config = CRHBrainConfig()
+        config = CRHBrainConfig(
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.input_encoding == "linear"
 
     def test_validate_input_encoding_trig(self):
         """input_encoding accepts 'trig'."""
-        config = CRHBrainConfig(input_encoding="trig")
+        config = CRHBrainConfig(
+            input_encoding="trig",
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+        )
         assert config.input_encoding == "trig"
 
     def test_validate_input_encoding_invalid(self):
         """input_encoding rejects invalid values."""
         with pytest.raises(ValueError, match="input_encoding"):
-            CRHBrainConfig(input_encoding="invalid")  # type: ignore[arg-type]
+            CRHBrainConfig(
+                input_encoding="invalid",  # type: ignore[arg-type]
+                sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            )
 
 
 # =============================================================================
@@ -149,6 +194,7 @@ class TestCRHReservoir:
             input_connectivity="sparse",
             num_sensory_neurons=2,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ppo_buffer_size=16,
             ppo_minibatches=2,
             ppo_epochs=1,
@@ -158,7 +204,7 @@ class TestCRHReservoir:
 
     def test_w_in_shape(self, brain):
         """W_in has shape (num_neurons, input_dim)."""
-        assert brain.W_in.shape == (6, 2)
+        assert brain.W_in.shape == (6, 4)
 
     def test_w_res_shape(self, brain):
         """W_res has shape (num_neurons, num_neurons)."""
@@ -177,6 +223,7 @@ class TestCRHReservoir:
             reservoir_depth=2,
             reservoir_seed=99,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             seed=42,
         )
         brain1 = CRHBrain(config)
@@ -186,6 +233,7 @@ class TestCRHReservoir:
             reservoir_depth=2,
             reservoir_seed=99,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             seed=42,
         )
         brain2 = CRHBrain(config2)
@@ -199,12 +247,14 @@ class TestCRHReservoir:
             num_reservoir_neurons=6,
             reservoir_seed=42,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             seed=42,
         )
         config2 = CRHBrainConfig(
             num_reservoir_neurons=6,
             reservoir_seed=99,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             seed=42,
         )
         brain1 = CRHBrain(config1)
@@ -228,6 +278,7 @@ class TestCRHReservoir:
             reservoir_seed=42,
             input_connectivity="dense",
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             seed=42,
         )
         brain = CRHBrain(config)
@@ -242,6 +293,7 @@ class TestCRHReservoir:
             input_connectivity="dense",
             input_scale=0.5,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             seed=42,
         )
         brain = CRHBrain(config)
@@ -265,6 +317,10 @@ class TestCRHFeatureExtraction:
             reservoir_depth=2,
             reservoir_seed=42,
             feature_channels=channels,
+            sensory_modules=kwargs.pop(
+                "sensory_modules",
+                [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            ),
             ppo_buffer_size=16,
             ppo_minibatches=2,
             ppo_epochs=1,
@@ -307,7 +363,7 @@ class TestCRHFeatureExtraction:
     def test_raw_range(self):
         """Raw features are in [-1, 1] (tanh output)."""
         brain = self._make_brain(["raw"], num_neurons=6)
-        features = brain._get_reservoir_features(np.array([0.5, -0.3], dtype=np.float32))
+        features = brain._get_reservoir_features(np.array([0.5, -0.3, 0.2, 0.8], dtype=np.float32))
         assert features.shape == (6,)
         assert np.all(features >= -1.0)
         assert np.all(features <= 1.0)
@@ -315,7 +371,7 @@ class TestCRHFeatureExtraction:
     def test_cos_sin_range(self):
         """Cos/sin features are in [-1, 1]."""
         brain = self._make_brain(["cos_sin"], num_neurons=6)
-        features = brain._get_reservoir_features(np.array([0.5, -0.3], dtype=np.float32))
+        features = brain._get_reservoir_features(np.array([0.5, -0.3, 0.2, 0.8], dtype=np.float32))
         assert features.shape == (12,)  # 2*6
         assert np.all(features >= -1.0)
         assert np.all(features <= 1.0)
@@ -323,7 +379,7 @@ class TestCRHFeatureExtraction:
     def test_squared_range(self):
         """Squared features are in [0, 1]."""
         brain = self._make_brain(["squared"], num_neurons=6)
-        features = brain._get_reservoir_features(np.array([0.5, -0.3], dtype=np.float32))
+        features = brain._get_reservoir_features(np.array([0.5, -0.3, 0.2, 0.8], dtype=np.float32))
         assert features.shape == (6,)
         assert np.all(features >= 0.0)
         assert np.all(features <= 1.0)
@@ -331,7 +387,7 @@ class TestCRHFeatureExtraction:
     def test_pairwise_range(self):
         """Pairwise features are in [-1, 1] (product of tanh outputs)."""
         brain = self._make_brain(["pairwise"], num_neurons=6)
-        features = brain._get_reservoir_features(np.array([0.5, -0.3], dtype=np.float32))
+        features = brain._get_reservoir_features(np.array([0.5, -0.3, 0.2, 0.8], dtype=np.float32))
         assert features.shape == (15,)  # 6*5/2
         assert np.all(features >= -1.0)
         assert np.all(features <= 1.0)
@@ -339,7 +395,7 @@ class TestCRHFeatureExtraction:
     def test_feature_determinism(self):
         """Same input produces same features (stateless reservoir)."""
         brain = self._make_brain(["raw", "cos_sin", "pairwise"], num_neurons=6)
-        x = np.array([0.7, -0.2], dtype=np.float32)
+        x = np.array([0.7, -0.2, 0.1, 0.4], dtype=np.float32)
         f1 = brain._get_reservoir_features(x)
         f2 = brain._get_reservoir_features(x)
         np.testing.assert_array_equal(f1, f2)
@@ -362,6 +418,7 @@ class TestCRHBrainReadout:
             feature_channels=["raw", "cos_sin"],
             readout_hidden_dim=32,
             readout_num_layers=2,
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ppo_buffer_size=16,
             ppo_minibatches=2,
             ppo_epochs=1,
@@ -399,6 +456,7 @@ class TestCRHBrainLearning:
             num_reservoir_neurons=6,
             reservoir_depth=2,
             feature_channels=["raw"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ppo_buffer_size=8,
             ppo_minibatches=2,
             ppo_epochs=1,
@@ -409,8 +467,8 @@ class TestCRHBrainLearning:
     def test_run_brain_returns_action_data(self, brain):
         """run_brain() returns a list with valid ActionData."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=None,
         )
         result = brain.run_brain(params, top_only=False, top_randomize=False)
@@ -423,8 +481,8 @@ class TestCRHBrainLearning:
     def test_ppo_update_changes_weights(self, brain):
         """PPO update modifies actor weights."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=None,
         )
 
@@ -446,8 +504,8 @@ class TestCRHBrainLearning:
     def test_buffer_management(self, brain):
         """Buffer fills and resets after PPO update."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=None,
         )
 
@@ -461,8 +519,8 @@ class TestCRHBrainLearning:
     def test_full_episode_workflow(self, brain):
         """Full episode: prepare -> run/learn loop -> post_process."""
         params = BrainParams(
-            gradient_strength=0.5,
-            gradient_direction=1.0,
+            food_gradient_strength=0.5,
+            food_gradient_direction=1.0,
             agent_direction=None,
         )
 
@@ -492,6 +550,7 @@ class TestCRHBrainCopy:
             num_reservoir_neurons=6,
             reservoir_depth=2,
             feature_channels=["raw", "cos_sin"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
             ppo_buffer_size=16,
             ppo_minibatches=2,
             ppo_epochs=1,
@@ -550,7 +609,7 @@ class TestCRHBrainCopy:
 
 
 class TestCRHBrainSensoryModules:
-    """Test unified sensory mode dimensions and legacy fallback."""
+    """Test unified sensory mode dimensions."""
 
     def test_unified_mode_dimensions(self):
         """Unified sensory modules correctly set input_dim."""
@@ -568,22 +627,6 @@ class TestCRHBrainSensoryModules:
         # food_chemotaxis: 2 features, nociception: 2 features -> 4
         assert brain.input_dim == 4
         assert brain.W_in.shape == (10, 4)
-
-    def test_legacy_fallback(self):
-        """Legacy mode (no sensory_modules) uses input_dim=2."""
-        config = CRHBrainConfig(
-            num_reservoir_neurons=6,
-            feature_channels=["raw"],
-            ppo_buffer_size=16,
-            ppo_minibatches=2,
-            ppo_epochs=1,
-            seed=42,
-        )
-        brain = CRHBrain(config)
-
-        assert brain.input_dim == 2
-        assert brain.sensory_modules is None
-        assert brain.W_in.shape == (6, 2)
 
     def test_triple_objective_modules(self):
         """Triple-objective sensory modules match expected dimensions."""
@@ -626,6 +669,10 @@ class TestCRHTrigEncoding:
             reservoir_seed=42,
             feature_channels=["raw", "cos_sin", "pairwise"],
             input_encoding=input_encoding,
+            sensory_modules=kwargs.pop(
+                "sensory_modules",
+                [ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
+            ),
             ppo_buffer_size=16,
             ppo_minibatches=2,
             ppo_epochs=1,
@@ -637,9 +684,9 @@ class TestCRHTrigEncoding:
     def test_trig_encoding_w_in_shape(self):
         """Trig encoding doubles W_in column dimension."""
         brain = self._make_brain("trig")
-        # Default input_dim=2 (legacy mode), trig doubles to 4
-        assert brain.W_in.shape == (10, 4)
-        assert brain.w_in_dim == 4
+        # input_dim=4 (food_chemotaxis + nociception), trig doubles to 8
+        assert brain.W_in.shape == (10, 8)
+        assert brain.w_in_dim == 8
 
     def test_trig_encoding_w_in_shape_with_modules(self):
         """Trig encoding doubles W_in with sensory modules (7 features -> 14)."""
@@ -665,14 +712,14 @@ class TestCRHTrigEncoding:
     def test_trig_encoding_output_shape(self):
         """_get_reservoir_features produces same-length features regardless of encoding."""
         brain = self._make_brain("trig")
-        features = brain._get_reservoir_features(np.array([0.5, -0.3], dtype=np.float32))
+        features = brain._get_reservoir_features(np.array([0.5, -0.3, 0.2, 0.8], dtype=np.float32))
         assert features.shape == (75,)
 
     def test_trig_encoding_different_from_linear(self):
         """Trig encoding produces different features from linear for same input."""
         brain_linear = self._make_brain("linear")
         brain_trig = self._make_brain("trig")
-        x = np.array([0.5, -0.3], dtype=np.float32)
+        x = np.array([0.5, -0.3, 0.2, 0.8], dtype=np.float32)
         f_linear = brain_linear._get_reservoir_features(x)
         f_trig = brain_trig._get_reservoir_features(x)
         assert not np.allclose(f_linear, f_trig)
@@ -680,7 +727,7 @@ class TestCRHTrigEncoding:
     def test_trig_encoding_deterministic(self):
         """Same input produces same output (stateless)."""
         brain = self._make_brain("trig")
-        x = np.array([0.7, -0.2], dtype=np.float32)
+        x = np.array([0.7, -0.2, 0.1, 0.4], dtype=np.float32)
         f1 = brain._get_reservoir_features(x)
         f2 = brain._get_reservoir_features(x)
         np.testing.assert_array_equal(f1, f2)
@@ -711,5 +758,5 @@ class TestCRHTrigEncoding:
     def test_linear_w_in_shape_unchanged(self):
         """Linear encoding preserves original W_in shape."""
         brain = self._make_brain("linear")
-        assert brain.W_in.shape == (10, 2)
-        assert brain.w_in_dim == 2
+        assert brain.W_in.shape == (10, 4)
+        assert brain.w_in_dim == 4

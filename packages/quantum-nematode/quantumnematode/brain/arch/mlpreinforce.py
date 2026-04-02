@@ -205,11 +205,11 @@ class MLPReinforceBrain(ClassicalBrain):
             - Gradient strength (float, [0, 1])
             - Normalised relative angle to goal ([-1, 1])
         """
-        # Use gradient_strength as-is (assumed [0, 1])
-        grad_strength = float(params.gradient_strength or 0.0)
+        # Use food_gradient_strength as-is (assumed [0, 1])
+        grad_strength = float(params.food_gradient_strength or 0.0)
 
         # Compute relative angle to goal ([-pi, pi])
-        grad_direction = float(params.gradient_direction or 0.0)
+        grad_direction = float(params.food_gradient_direction or 0.0)
         direction_map = {
             Direction.UP: np.pi / 2,
             Direction.DOWN: -np.pi / 2,

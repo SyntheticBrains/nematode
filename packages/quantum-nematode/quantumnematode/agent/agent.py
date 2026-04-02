@@ -459,8 +459,6 @@ class QuantumNematodeAgent:
 
     def _create_brain_params(
         self,
-        gradient_strength: float,
-        gradient_direction: float,
         action: ActionData | None = None,
     ) -> BrainParams:
         """Create BrainParams for brain execution.
@@ -474,10 +472,6 @@ class QuantumNematodeAgent:
 
         Parameters
         ----------
-        gradient_strength : float
-            Strength of the combined gradient (food + predator).
-        gradient_direction : float
-            Direction of the combined gradient (angle in radians).
         action : ActionData | None, optional
             Previous action taken, by default None.
 
@@ -524,9 +518,6 @@ class QuantumNematodeAgent:
 
         # (e) Build BrainParams with all fields
         return BrainParams(
-            # Combined gradients (oracle)
-            gradient_strength=gradient_strength,
-            gradient_direction=gradient_direction,
             # Separated LOCAL gradients (egocentric sensing, oracle)
             food_gradient_strength=separated_grads.get("food_gradient_strength"),
             food_gradient_direction=separated_grads.get("food_gradient_direction"),

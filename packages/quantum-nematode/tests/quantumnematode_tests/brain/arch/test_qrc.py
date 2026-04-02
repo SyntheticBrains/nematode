@@ -399,8 +399,8 @@ class TestQRCBrainLearning:
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -421,8 +421,8 @@ class TestQRCBrainLearning:
     def test_learn(self, brain):
         """Test learning with REINFORCE policy gradient."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -441,7 +441,7 @@ class TestQRCBrainLearning:
 
     def test_episode_buffer_management(self, brain):
         """Test episode buffer is managed correctly."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run multiple steps
         for _ in range(3):

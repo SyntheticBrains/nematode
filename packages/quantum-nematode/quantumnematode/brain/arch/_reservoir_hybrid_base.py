@@ -20,11 +20,13 @@ from __future__ import annotations
 
 import abc
 from copy import deepcopy
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
-import numpy as np
 import torch
-from pydantic import Field
+
+if TYPE_CHECKING:
+    import numpy as np
+from pydantic import Field, field_validator
 from torch import nn, optim
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
@@ -38,7 +40,6 @@ from quantumnematode.brain.modules import (
     extract_classical_features,
     get_classical_feature_dimension,
 )
-from quantumnematode.env import Direction
 from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
@@ -158,10 +159,18 @@ class ReservoirHybridBaseConfig(BrainConfig):
     )
 
     # Unified sensory feature extraction
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="Sensory modules for feature extraction (None = legacy mode).",
+    sensory_modules: list[ModuleName] = Field(
+        description="Sensory modules for feature extraction.",
     )
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
 
 # =============================================================================
@@ -237,16 +246,12 @@ class ReservoirHybridBase(ClassicalBrain):
         self.sensory_modules = config.sensory_modules
 
         # Determine input dimension
-        if config.sensory_modules is not None:
-            self.input_dim = get_classical_feature_dimension(config.sensory_modules)
-            logger.info(
-                f"Using unified sensory modules: "
-                f"{[m.value for m in config.sensory_modules]} "
-                f"(input_dim={self.input_dim})",
-            )
-        else:
-            self.input_dim = 2
-            logger.info("Using legacy 2-feature preprocessing (gradient_strength, rel_angle)")
+        self.input_dim = get_classical_feature_dimension(config.sensory_modules)
+        logger.info(
+            f"Using unified sensory modules: "
+            f"{[m.value for m in config.sensory_modules]} "
+            f"(input_dim={self.input_dim})",
+        )
 
         # Initialize data tracking
         self.history_data = BrainHistoryData()
@@ -340,29 +345,9 @@ class ReservoirHybridBase(ClassicalBrain):
     def preprocess(self, params: BrainParams) -> np.ndarray:
         """Preprocess BrainParams to extract features for the reservoir.
 
-        Two modes:
-        1. **Unified sensory mode** (when sensory_modules is set):
-           Uses extract_classical_features() which outputs semantic-preserving ranges.
-        2. **Legacy mode** (default):
-           Computes gradient strength [0, 1] and relative angle [-1, 1].
+        Uses extract_classical_features() which outputs semantic-preserving ranges.
         """
-        if self.sensory_modules is not None:
-            return extract_classical_features(params, self.sensory_modules)
-
-        # Legacy mode
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
-        direction_map = {
-            Direction.UP: np.pi / 2,
-            Direction.DOWN: -np.pi / 2,
-            Direction.LEFT: np.pi,
-            Direction.RIGHT: 0.0,
-        }
-        agent_facing_angle = direction_map.get(params.agent_direction or Direction.UP, np.pi / 2)
-        relative_angle = (grad_direction - agent_facing_angle + np.pi) % (2 * np.pi) - np.pi
-        rel_angle_norm = relative_angle / np.pi
-
-        return np.array([grad_strength, rel_angle_norm], dtype=np.float32)
+        return extract_classical_features(params, self.sensory_modules)
 
     # =========================================================================
     # Subclass Hooks

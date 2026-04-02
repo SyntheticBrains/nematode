@@ -211,7 +211,6 @@ class TestMLPPPOBrain:
         """Create a test MLP PPO brain."""
         return MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -438,7 +437,6 @@ class TestMLPPPOBrainIntegration:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -483,7 +481,6 @@ class TestMLPPPOBrainIntegration:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -524,7 +521,6 @@ class TestMLPPPOBrainIntegration:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -552,10 +548,10 @@ class TestMLPPPOBrainIntegration:
 
         # Create two brains with same weights
         torch.manual_seed(42)
-        brain1 = MLPPPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain1 = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
         torch.manual_seed(42)
-        brain2 = MLPPPOBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
+        brain2 = MLPPPOBrain(config=config, num_actions=4, device=DeviceType.CPU)
 
         params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
@@ -582,7 +578,6 @@ class TestMLPPPOBrainIntegration:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -615,7 +610,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -633,7 +627,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -653,7 +646,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -670,7 +662,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -704,7 +695,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -741,7 +731,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -758,7 +747,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -784,7 +772,6 @@ class TestLRScheduling:
         )
         brain = MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )
@@ -814,7 +801,6 @@ class TestMLPPPOClipping:
         )
         return MLPPPOBrain(
             config=config,
-            input_dim=2,
             num_actions=4,
             device=DeviceType.CPU,
         )

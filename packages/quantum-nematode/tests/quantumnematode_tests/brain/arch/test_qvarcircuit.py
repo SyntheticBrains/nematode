@@ -141,8 +141,8 @@ class TestQVarCircuitBrain:
     def test_run_brain(self, brain):
         """Test running the quantum brain."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -162,8 +162,8 @@ class TestQVarCircuitBrain:
     def test_run_brain_with_reward(self, brain):
         """Test running brain with reward for learning."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -212,8 +212,8 @@ class TestQVarCircuitBrain:
     def test_parameter_shift_gradients(self, brain):
         """Test parameter-shift gradient computation."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
         )
 
         # Run brain to get an action
@@ -312,8 +312,8 @@ class TestQVarCircuitBrainIntegration:
         # Simulate multiple steps in an episode
         for step in range(5):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -347,7 +347,7 @@ class TestQVarCircuitBrainIntegration:
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Simulate poor performance
         for _ in range(10):
@@ -365,7 +365,7 @@ class TestQVarCircuitBrainIntegration:
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run multiple learning steps
         for _ in range(5):
@@ -388,7 +388,7 @@ class TestQVarCircuitBrainIntegration:
         for key in brain.parameter_values:
             brain.parameter_values[key] = 2.0
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run with learning
         brain.run_brain(params, reward=None, top_only=True, top_randomize=False)
@@ -475,8 +475,8 @@ class TestTrajectoryLearning:
     def test_episode_buffer_accumulation(self, trajectory_brain):
         """Test episode buffer data accumulation."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -561,8 +561,8 @@ class TestTrajectoryLearning:
         assert brain.episode_buffer is None
 
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -582,8 +582,8 @@ class TestTrajectoryLearning:
         # Simulate an episode
         for step in range(5):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -610,8 +610,8 @@ class TestTrajectoryLearning:
     def test_episode_buffer_clearing(self, trajectory_brain):
         """Test that episode buffer is cleared after processing."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -637,8 +637,8 @@ class TestTrajectoryLearning:
         """Test trajectory gradients with varying return values."""
         # Manually populate episode buffer
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -674,7 +674,7 @@ class TestTrajectoryLearning:
 
     def test_trajectory_gradient_length_mismatch(self, trajectory_brain):
         """Test error handling when returns length doesn't match buffer."""
-        params = BrainParams(gradient_strength=0.6, gradient_direction=0.3)
+        params = BrainParams(food_gradient_strength=0.6, food_gradient_direction=0.3)
         actions = trajectory_brain.run_brain(
             params,
             reward=None,
@@ -743,7 +743,7 @@ class TestQVarCircuitBrainEdgeCases:
         )
         brain = QVarCircuitBrain(config=config, shots=50, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run with zero reward
         brain.run_brain(params, reward=None, top_only=True, top_randomize=False)

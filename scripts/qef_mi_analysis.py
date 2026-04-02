@@ -59,6 +59,7 @@ from quantumnematode.brain.arch.qrh import (
 from quantumnematode.brain.arch.qrh import (
     _compute_feature_dim as qrh_compute_feature_dim,
 )
+from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import Direction
 from quantumnematode.utils.seeding import set_global_seed
 from sklearn.feature_selection import mutual_info_classif
@@ -155,8 +156,8 @@ def generate_synthetic_brain_params(
 
         params_list.append(
             BrainParams(
-                gradient_strength=grad_strength,
-                gradient_direction=grad_direction,
+                food_gradient_strength=grad_strength,
+                food_gradient_direction=grad_direction,
                 agent_direction=agent_dir,
             ),
         )
@@ -187,8 +188,8 @@ def generate_oracle_labels(
     labels = np.zeros(len(params_list), dtype=np.int64)
 
     for i, params in enumerate(params_list):
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
+        grad_strength = float(params.food_gradient_strength or 0.0)
+        grad_direction = float(params.food_gradient_direction or 0.0)
         direction_map = {
             Direction.UP: np.pi / 2,
             Direction.DOWN: -np.pi / 2,
@@ -266,6 +267,7 @@ def extract_qef_features(  # noqa: PLR0913
         encoding_mode=encoding_mode,
         gate_mode=gate_mode,
         feature_mode=feature_mode,
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
     )
     brain = QEFBrain(config=config)
 
@@ -305,6 +307,7 @@ def extract_qrh_random_features(
         num_reservoir_qubits=num_qubits,
         reservoir_depth=3,
         use_random_topology=True,
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
     )
     brain = QRHBrain(config=config)
 

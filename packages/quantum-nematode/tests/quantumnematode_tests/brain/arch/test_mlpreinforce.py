@@ -88,8 +88,8 @@ class TestMLPReinforceBrain:
     def test_preprocess(self, brain):
         """Test state preprocessing."""
         params = BrainParams(
-            gradient_strength=0.8,
-            gradient_direction=1.5,
+            food_gradient_strength=0.8,
+            food_gradient_direction=1.5,
             agent_position=(2, 3),
             agent_direction=Direction.UP,
         )
@@ -120,8 +120,8 @@ class TestMLPReinforceBrain:
     def test_run_brain(self, brain):
         """Test running the brain for decision making."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -152,8 +152,8 @@ class TestMLPReinforceBrain:
     def test_learn(self, brain):
         """Test learning with policy gradient."""
         params = BrainParams(
-            gradient_strength=0.6,
-            gradient_direction=0.3,
+            food_gradient_strength=0.6,
+            food_gradient_direction=0.3,
             agent_position=(1, 1),
             agent_direction=Direction.UP,
         )
@@ -175,7 +175,7 @@ class TestMLPReinforceBrain:
 
     def test_episode_buffer_management(self, brain):
         """Test episode buffer is managed correctly."""
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Run multiple steps
         for _ in range(3):
@@ -247,8 +247,8 @@ class TestMLPReinforceBrainIntegration:
 
         for step in range(10):
             params = BrainParams(
-                gradient_strength=rng.random(),
-                gradient_direction=rng.random() * 2 * np.pi,
+                food_gradient_strength=rng.random(),
+                food_gradient_direction=rng.random() * 2 * np.pi,
                 agent_position=(step, step),
                 agent_direction=Direction.UP,
             )
@@ -273,7 +273,7 @@ class TestMLPReinforceBrainIntegration:
         config = MLPReinforceBrainConfig(hidden_dim=16)
         brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Training mode
         brain.training = True
@@ -292,7 +292,7 @@ class TestMLPReinforceBrainIntegration:
         config = MLPReinforceBrainConfig(baseline=0.0, baseline_alpha=0.1)
         brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Initial baseline
         initial_baseline = brain.baseline
@@ -310,7 +310,7 @@ class TestMLPReinforceBrainIntegration:
         config = MLPReinforceBrainConfig(hidden_dim=16)
         brain = MLPReinforceBrain(config=config, input_dim=2, num_actions=4, device=DeviceType.CPU)
 
-        params = BrainParams(gradient_strength=0.5, gradient_direction=1.0)
+        params = BrainParams(food_gradient_strength=0.5, food_gradient_direction=1.0)
 
         # Set seed for reproducibility
         torch.manual_seed(42)

@@ -144,8 +144,8 @@ def generate_synthetic_brain_params(
 
         params_list.append(
             BrainParams(
-                gradient_strength=grad_strength,
-                gradient_direction=grad_direction,
+                food_gradient_strength=grad_strength,
+                food_gradient_direction=grad_direction,
                 agent_direction=agent_dir,
             ),
         )
@@ -180,8 +180,8 @@ def generate_oracle_labels(
     labels = np.zeros(len(params_list), dtype=np.int64)
 
     for i, params in enumerate(params_list):
-        grad_strength = float(params.gradient_strength or 0.0)
-        grad_direction = float(params.gradient_direction or 0.0)
+        grad_strength = float(params.food_gradient_strength or 0.0)
+        grad_direction = float(params.food_gradient_direction or 0.0)
         direction_map = {
             Direction.UP: np.pi / 2,
             Direction.DOWN: -np.pi / 2,
@@ -242,6 +242,7 @@ def extract_structured_features(
         num_reservoir_qubits=num_qubits,
         reservoir_depth=reservoir_depth,
         use_random_topology=False,
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
     )
     brain = QRHBrain(config=config)
 
@@ -284,6 +285,7 @@ def extract_random_features(
         num_reservoir_qubits=num_qubits,
         reservoir_depth=reservoir_depth,
         use_random_topology=True,
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS, ModuleName.NOCICEPTION],
     )
     brain = QRHBrain(config=config)
 

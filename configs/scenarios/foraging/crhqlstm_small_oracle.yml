@@ -52,6 +52,10 @@ brain:
     critic_hidden_dim: 64
     critic_num_layers: 2
 
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+
 body_length: 2
 
 reward:

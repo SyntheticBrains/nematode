@@ -182,13 +182,21 @@ class ReservoirLSTMBaseConfig(BrainConfig):
     critic_num_layers: int = Field(default=DEFAULT_CRITIC_NUM_LAYERS, description="Critic layers.")
 
     # Sensory modules
-    sensory_modules: list[ModuleName] | None = Field(
-        default=None,
-        description="Sensory modules for feature extraction (None = legacy mode).",
+    sensory_modules: list[ModuleName] = Field(
+        description="Sensory modules for feature extraction.",
     )
 
     # Device
     device_type: DeviceType = Field(default=DeviceType.CPU, description="Device for computation.")
+
+    @field_validator("sensory_modules")
+    @classmethod
+    def validate_sensory_modules(cls, v: list[ModuleName]) -> list[ModuleName]:
+        """Validate sensory_modules is non-empty."""
+        if not v:
+            msg = "sensory_modules must be non-empty"
+            raise ValueError(msg)
+        return v
 
     @field_validator("lstm_hidden_dim")
     @classmethod
