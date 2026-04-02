@@ -46,7 +46,6 @@ brain:
 
     sensory_modules:
       - food_chemotaxis
-      - nociception
 
 body_length: 2
 
