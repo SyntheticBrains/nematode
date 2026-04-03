@@ -222,6 +222,45 @@ class StandardEpisodeRunner(EpisodeRunner):
             food_history=resolved_food_history,
         )
 
+    def _apply_brave_foraging_bonuses(
+        self,
+        agent: QuantumNematodeAgent,
+        reward: float,
+    ) -> tuple[str, float]:
+        """Apply brave foraging bonuses for collecting food in danger zones.
+
+        Returns
+        -------
+        tuple[str, float]
+            (brave_msg for logging, updated reward)
+        """
+        brave_msg = ""
+
+        # Temperature brave foraging bonus (discomfort zones)
+        if agent.env.thermotaxis.enabled:
+            zone = agent.env.get_temperature_zone()
+            if zone in (TemperatureZone.DISCOMFORT_COLD, TemperatureZone.DISCOMFORT_HOT):
+                brave_bonus = agent.env.thermotaxis.reward_discomfort_food
+                if brave_bonus > 0:
+                    reward += brave_bonus
+                    agent._episode_tracker.track_reward(brave_bonus)
+                    brave_msg = f" [Brave foraging bonus: +{brave_bonus}]"
+                    logger.debug(
+                        f"Brave foraging bonus: +{brave_bonus} ({zone.value} zone)",
+                    )
+
+        # Oxygen brave foraging bonus (danger zones)
+        if agent.env.aerotaxis.enabled:
+            o2_zone = agent.env.get_oxygen_zone()
+            if o2_zone in (OxygenZone.DANGER_HYPOXIA, OxygenZone.DANGER_HYPEROXIA):
+                o2_bonus = agent.env.aerotaxis.reward_discomfort_food
+                if o2_bonus > 0:
+                    reward += o2_bonus
+                    agent._episode_tracker.track_reward(o2_bonus)
+                    brave_msg += f" [O2 brave bonus: +{o2_bonus}]"
+
+        return brave_msg, reward
+
     def _handle_food_collection(
         self,
         agent: QuantumNematodeAgent,
@@ -265,33 +304,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             reward += healing_reward
             agent._episode_tracker.track_reward(healing_reward)
 
-        # Apply brave foraging bonus for collecting food in discomfort zones
-        brave_msg = ""
-        if agent.env.thermotaxis.enabled:
-            zone = agent.env.get_temperature_zone()
-            if zone in (
-                TemperatureZone.DISCOMFORT_COLD,
-                TemperatureZone.DISCOMFORT_HOT,
-            ):
-                brave_bonus = agent.env.thermotaxis.reward_discomfort_food
-                if brave_bonus > 0:
-                    reward += brave_bonus
-                    agent._episode_tracker.track_reward(brave_bonus)
-                    brave_msg = f" [Brave foraging bonus: +{brave_bonus}]"
-                    logger.debug(
-                        f"Brave foraging bonus applied: +{brave_bonus} "
-                        f"(food collected in {zone.value} zone)",
-                    )
-
-        # Apply brave foraging bonus for collecting food in oxygen danger zones
-        if agent.env.aerotaxis.enabled:
-            o2_zone = agent.env.get_oxygen_zone()
-            if o2_zone in (OxygenZone.DANGER_HYPOXIA, OxygenZone.DANGER_HYPEROXIA):
-                o2_brave_bonus = agent.env.aerotaxis.reward_discomfort_food
-                if o2_brave_bonus > 0:
-                    reward += o2_brave_bonus
-                    agent._episode_tracker.track_reward(o2_brave_bonus)
-                    brave_msg += f" [O2 brave bonus: +{o2_brave_bonus}]"
+        # Apply brave foraging bonuses
+        brave_msg, reward = self._apply_brave_foraging_bonuses(agent, reward)
 
         logger.info(
             f"Food #{agent._episode_tracker.foods_collected} collected! "
@@ -526,8 +540,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             reward += damage_penalty
             agent._episode_tracker.track_reward(damage_penalty)
             logger.debug(
-                f"Oxygen HP damage penalty applied: {damage_penalty} "
-                f"(took {o2_damage:.1f} damage)",
+                f"Oxygen HP damage penalty applied: {damage_penalty} (took {o2_damage:.1f} damage)",
             )
 
             # Track health after oxygen damage

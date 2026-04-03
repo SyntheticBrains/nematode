@@ -264,18 +264,10 @@ class PygameRenderer:
         viewport: Viewport,
     ) -> None:
         """Render oxygen zone overlays on all cells."""
-        if not env.aerotaxis.enabled or env._oxygen_field is None:
+        if not env.aerotaxis.enabled:
             return
 
-        from quantumnematode.env.oxygen import OxygenZone, OxygenZoneThresholds
-
-        thresholds = OxygenZoneThresholds(
-            lethal_hypoxia_upper=env.aerotaxis.lethal_hypoxia_upper,
-            danger_hypoxia_upper=env.aerotaxis.danger_hypoxia_upper,
-            comfort_lower=env.aerotaxis.comfort_lower,
-            comfort_upper=env.aerotaxis.comfort_upper,
-            danger_hyperoxia_upper=env.aerotaxis.danger_hyperoxia_upper,
-        )
+        from quantumnematode.env.oxygen import OxygenZone
 
         zone_to_overlay_name = {
             OxygenZone.LETHAL_HYPOXIA: "lethal_hypoxia",
@@ -288,8 +280,9 @@ class PygameRenderer:
         min_x, min_y, max_x, max_y = viewport
         for gy in range(min_y, max_y):
             for gx in range(min_x, max_x):
-                o2 = env._oxygen_field.get_oxygen((gx, gy))
-                zone = env._oxygen_field.get_zone(o2, thresholds)
+                zone = env.get_oxygen_zone((gx, gy))
+                if zone is None:
+                    continue
                 overlay_name = zone_to_overlay_name.get(zone)
                 if overlay_name and overlay_name != "comfort_oxygen":
                     overlay = self._zone_overlays[overlay_name]

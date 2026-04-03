@@ -370,7 +370,7 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
-    def _compute_temporal_data(
+    def _compute_temporal_data(  # noqa: C901
         self,
         sensing: SensingConfig,
         temperature: float | None,
