@@ -392,13 +392,13 @@ class TestTemporalSensingIntegration:
         params = agent._create_brain_params()
         assert params.food_dconcentration_dt is not None
 
-    def test_stam_state_is_9_floats(self) -> None:
-        """Test that STAM state is a 9-float tuple on BrainParams."""
+    def test_stam_state_is_11_floats(self) -> None:
+        """Test that STAM state is an 11-float tuple on BrainParams."""
         sensing = SensingConfig(stam_enabled=True)
         agent = self._create_temporal_agent(sensing)
         params = agent._create_brain_params()
         assert params.stam_state is not None
-        assert len(params.stam_state) == 9
+        assert len(params.stam_state) == 11
         assert all(isinstance(v, float) for v in params.stam_state)
 
     def test_oracle_mode_leaves_temporal_fields_none(self) -> None:
@@ -429,7 +429,7 @@ class TestTemporalSensingIntegration:
         agent._previous_position = None
 
         state = agent._stam.get_memory_state()
-        np.testing.assert_array_equal(state, np.zeros(9, dtype=np.float32))
+        np.testing.assert_array_equal(state, np.zeros(11, dtype=np.float32))
 
     def test_mixed_modes_per_modality(self) -> None:
         """Test that different modes can be used for different modalities."""

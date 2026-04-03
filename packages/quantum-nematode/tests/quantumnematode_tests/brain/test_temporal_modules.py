@@ -149,19 +149,19 @@ class TestSTAMModule:
         """Test that STAM is registered in SENSORY_MODULES."""
         assert ModuleName.STAM in SENSORY_MODULES
 
-    def test_classical_dim_is_9(self) -> None:
-        """Test that the STAM classical feature dimension is 9."""
+    def test_classical_dim_is_11(self) -> None:
+        """Test that the STAM classical feature dimension is 11."""
         module = SENSORY_MODULES[ModuleName.STAM]
-        assert module.classical_dim == 9
+        assert module.classical_dim == 11
 
     def test_classical_output_from_stam_state(self) -> None:
         """Test that classical output matches the provided STAM state values."""
         module = SENSORY_MODULES[ModuleName.STAM]
-        stam_state = tuple(float(i) * 0.1 for i in range(9))
+        stam_state = tuple(float(i) * 0.1 for i in range(11))
         params = BrainParams(stam_state=stam_state)
         features = module.to_classical(params)
-        assert features.shape == (9,)
-        for i in range(9):
+        assert features.shape == (11,)
+        for i in range(11):
             assert features[i] == pytest.approx(float(i) * 0.1)
 
     def test_classical_output_zeros_when_none(self) -> None:
@@ -169,13 +169,13 @@ class TestSTAMModule:
         module = SENSORY_MODULES[ModuleName.STAM]
         params = BrainParams()
         features = module.to_classical(params)
-        assert features.shape == (9,)
-        np.testing.assert_array_equal(features, np.zeros(9, dtype=np.float32))
+        assert features.shape == (11,)
+        np.testing.assert_array_equal(features, np.zeros(11, dtype=np.float32))
 
     def test_quantum_output_shape(self) -> None:
         """Test that quantum output has shape (3,)."""
         module = SENSORY_MODULES[ModuleName.STAM]
-        stam_state = tuple(float(i) * 0.1 for i in range(9))
+        stam_state = tuple(float(i) * 0.1 for i in range(11))
         params = BrainParams(stam_state=stam_state)
         q = module.to_quantum(params)
         assert q.shape == (3,)
@@ -206,12 +206,12 @@ class TestTemporalModuleIntegration:
 
     def test_extract_with_stam_module(self) -> None:
         """Test that extract_classical_features includes STAM features."""
-        stam_state = tuple(float(i) * 0.1 for i in range(9))
+        stam_state = tuple(float(i) * 0.1 for i in range(11))
         params = BrainParams(food_concentration=0.5, stam_state=stam_state)
         modules = [ModuleName.FOOD_CHEMOTAXIS_TEMPORAL, ModuleName.STAM]
         features = extract_classical_features(params, modules)
-        # food_chemotaxis_temporal (2) + stam (9) = 11
-        assert features.shape == (11,)
+        # food_chemotaxis_temporal (2) + stam (11) = 13
+        assert features.shape == (13,)
 
     def test_feature_dimension_with_temporal(self) -> None:
         """Test that total feature dimension sums correctly across temporal modules."""
@@ -222,5 +222,5 @@ class TestTemporalModuleIntegration:
             ModuleName.STAM,
         ]
         dim = get_classical_feature_dimension(modules)
-        # 2 + 2 + 3 + 9 = 16
-        assert dim == 16
+        # 2 + 2 + 3 + 11 = 18
+        assert dim == 18

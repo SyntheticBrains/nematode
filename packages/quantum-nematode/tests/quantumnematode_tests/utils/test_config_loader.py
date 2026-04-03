@@ -1,8 +1,15 @@
 """Tests for configuration loading utilities."""
 
 import pytest
-from quantumnematode.env import ForagingParams, HealthParams, PredatorParams, ThermotaxisParams
+from quantumnematode.env import (
+    AerotaxisParams,
+    ForagingParams,
+    HealthParams,
+    PredatorParams,
+    ThermotaxisParams,
+)
 from quantumnematode.utils.config_loader import (
+    AerotaxisConfig,
     EnvironmentConfig,
     ForagingConfig,
     HealthConfig,
@@ -598,3 +605,58 @@ class TestApplySensingMode:
         modules = ["food_chemotaxis", "mechanosensation", "nociception", "thermotaxis"]
         result = apply_sensing_mode(modules, sensing)
         assert "mechanosensation" in result
+
+
+class TestAerotaxisConfig:
+    """Test cases for AerotaxisConfig."""
+
+    def test_aerotaxis_config_to_params(self):
+        """Test AerotaxisConfig.to_params() basic conversion."""
+        config = AerotaxisConfig(
+            enabled=True,
+            base_oxygen=10.0,
+            gradient_direction=1.57,
+            gradient_strength=0.1,
+        )
+
+        params = config.to_params()
+
+        assert isinstance(params, AerotaxisParams)
+        assert params.enabled is True
+        assert params.base_oxygen == 10.0
+        assert params.gradient_direction == 1.57
+        assert params.gradient_strength == 0.1
+
+    def test_aerotaxis_config_defaults(self):
+        """Test AerotaxisConfig default values."""
+        config = AerotaxisConfig()
+        assert config.enabled is False
+        assert config.base_oxygen == 10.0
+        assert config.gradient_direction == 0.0
+        assert config.comfort_lower == 5.0
+        assert config.comfort_upper == 12.0
+        assert config.lethal_hypoxia_upper == 2.0
+        assert config.danger_hyperoxia_upper == 17.0
+
+
+class TestApplySensingModeAerotaxis:
+    """Test sensing mode translation for aerotaxis."""
+
+    def test_apply_sensing_mode_aerotaxis(self):
+        """Test that aerotaxis becomes aerotaxis_temporal when mode is temporal."""
+        sensing = SensingConfig(aerotaxis_mode=SensingMode.TEMPORAL)
+        modules = ["food_chemotaxis", "aerotaxis"]
+        result = apply_sensing_mode(modules, sensing)
+        assert "aerotaxis_temporal" in result
+        assert "aerotaxis" not in result
+        assert "food_chemotaxis" in result
+
+
+class TestValidateSensingConfigAerotaxis:
+    """Test validation logic for aerotaxis sensing config."""
+
+    def test_validate_sensing_config_aerotaxis_derivative(self):
+        """Test that aerotaxis derivative mode auto-enables STAM."""
+        config = SensingConfig(aerotaxis_mode=SensingMode.DERIVATIVE)
+        validated = validate_sensing_config(config)
+        assert validated.stam_enabled is True
