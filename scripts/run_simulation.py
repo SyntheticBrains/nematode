@@ -625,9 +625,17 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
                 )
 
+            oxygen_history_this_run = None
+            # Copy oxygen history if aerotaxis is enabled
+            if agent.env.aerotaxis.enabled:
+                oxygen_history_this_run = (
+                    agent._episode_tracker.oxygen_history.copy()  # noqa: SLF001
+                )
+
             # Calculate multi-objective scores
             survival_score_this_run = None
             temperature_comfort_score_this_run = None
+            oxygen_comfort_score_this_run = None
 
             # Survival score: final_hp / max_hp
             if health_history_this_run:
@@ -638,6 +646,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Temperature comfort score: fraction of time in comfort zone
             if agent.env.thermotaxis.enabled and temperature_history_this_run:
                 temperature_comfort_score_this_run = agent.env.get_temperature_comfort_score()
+
+            # Oxygen comfort score: fraction of time in O2 comfort zone
+            if agent.env.aerotaxis.enabled and oxygen_history_this_run:
+                oxygen_comfort_score_this_run = agent.env.get_oxygen_comfort_score()
 
             result = SimulationResult(
                 run=run_num,
@@ -655,12 +667,14 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 satiety_history=satiety_history_this_run,
                 health_history=health_history_this_run,
                 temperature_history=temperature_history_this_run,
+                oxygen_history=oxygen_history_this_run,
                 predator_encounters=predator_encounters_this_run,
                 successful_evasions=successful_evasions_this_run,
                 died_to_health_depletion=died_to_health_depletion_this_run,
                 food_history=step_result.food_history,
                 survival_score=survival_score_this_run,
                 temperature_comfort_score=temperature_comfort_score_this_run,
+                oxygen_comfort_score=oxygen_comfort_score_this_run,
             )
             all_results.append(result)
             running_wins += int(result.success)
@@ -734,6 +748,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     temperature_history=temperature_history_this_run.copy()
                     if temperature_history_this_run
                     else [],
+                    oxygen_history=oxygen_history_this_run.copy()
+                    if oxygen_history_this_run
+                    else [],
                     foods_collected=foods_collected_this_run or 0,
                     distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
                 )
@@ -778,6 +795,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             result.satiety_history = None
             result.health_history = None
             result.temperature_history = None
+            result.oxygen_history = None
 
             # Replace episode tracking data with lightweight version
             tracking_data.episode_data[run_num] = EpisodeTrackingData(

@@ -22,6 +22,7 @@ class EpisodeTracker:
             satiety_history=[],
             health_history=[],
             temperature_history=[],
+            oxygen_history=[],
             predator_encounters=0,
             successful_evasions=0,
             in_danger=False,
@@ -145,6 +146,21 @@ class EpisodeTracker:
         """
         self.data.temperature_history.append(temperature)
 
+    @property
+    def oxygen_history(self) -> list[float]:
+        """Get the oxygen history for the episode."""
+        return self.data.oxygen_history
+
+    def track_oxygen(self, oxygen: float) -> None:
+        """Track current oxygen concentration.
+
+        Parameters
+        ----------
+        oxygen : float
+            Current O2 percentage at agent position for this step.
+        """
+        self.data.oxygen_history.append(oxygen)
+
     def track_step(self, reward: float = 0.0, satiety: float | None = None) -> None:
         """Track a single step.
 
@@ -170,6 +186,7 @@ class EpisodeTracker:
             satiety_history=[],
             health_history=[],
             temperature_history=[],
+            oxygen_history=[],
             predator_encounters=0,
             successful_evasions=0,
             in_danger=False,

@@ -165,6 +165,7 @@ _SIMULATION_RESULTS_FIELDNAMES = [
     "predator_encounters",
     "successful_evasions",
     "died_to_health_depletion",
+    "oxygen_comfort_score",
 ]
 
 
@@ -194,6 +195,9 @@ def _simulation_result_to_row(result: SimulationResult) -> dict[str, object]:
         else np.nan,
         "died_to_health_depletion": result.died_to_health_depletion
         if result.died_to_health_depletion is not None
+        else np.nan,
+        "oxygen_comfort_score": result.oxygen_comfort_score
+        if result.oxygen_comfort_score is not None
         else np.nan,
     }
 
@@ -908,6 +912,15 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
                 for step, temperature in enumerate(current_episode_run_data.temperature_history):
                     writer.writerow({"step": step, "temperature": temperature})
 
+        # Export oxygen history (if aerotaxis was enabled)
+        if current_episode_run_data.oxygen_history:
+            filepath = run_dir / "oxygen_history.csv"
+            with filepath.open("w", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=["step", "oxygen"])
+                writer.writeheader()
+                for step, oxygen in enumerate(current_episode_run_data.oxygen_history):
+                    writer.writerow({"step": step, "oxygen": oxygen})
+
         # Export distance efficiencies
         if current_episode_run_data.distance_efficiencies:
             filepath = run_dir / "distance_efficiencies.csv"
@@ -955,6 +968,16 @@ def export_run_data_to_csv(  # pragma: no cover  # noqa: C901, PLR0912, PLR0915
                 writer.writerow({"metric": "mean_temperature", "value": f"{mean_temp:.2f}"})
                 writer.writerow({"metric": "min_temperature", "value": f"{min_temp:.2f}"})
                 writer.writerow({"metric": "max_temperature", "value": f"{max_temp:.2f}"})
+            if current_episode_run_data.oxygen_history:
+                o2s = current_episode_run_data.oxygen_history
+                final_o2 = o2s[-1]
+                mean_o2 = sum(o2s) / len(o2s)
+                min_o2 = min(o2s)
+                max_o2 = max(o2s)
+                writer.writerow({"metric": "final_oxygen", "value": f"{final_o2:.2f}"})
+                writer.writerow({"metric": "mean_oxygen", "value": f"{mean_o2:.2f}"})
+                writer.writerow({"metric": "min_oxygen", "value": f"{min_o2:.2f}"})
+                writer.writerow({"metric": "max_oxygen", "value": f"{max_o2:.2f}"})
 
 
 # Dynamic Foraging Environment Specific Exports

@@ -60,6 +60,7 @@ class EpisodeData:
     satiety_history: list[float]
     health_history: list[float]
     temperature_history: list[float]
+    oxygen_history: list[float]
     predator_encounters: int = 0
     successful_evasions: int = 0
     in_danger: bool = False
@@ -508,6 +509,11 @@ class StandardEpisodeRunner(EpisodeRunner):
         """
         if not agent.env.aerotaxis.enabled:
             return None, reward
+
+        # Track oxygen at agent position
+        current_o2 = agent.env.get_oxygen()
+        if current_o2 is not None:
+            agent._episode_tracker.track_oxygen(current_o2)
 
         o2_reward, o2_damage = agent.env.apply_oxygen_effects()
         if o2_reward != 0.0:

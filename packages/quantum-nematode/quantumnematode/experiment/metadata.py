@@ -97,6 +97,7 @@ class PerRunResult(BaseModel):
     distance_efficiency: float | None = None
     survival_score: float | None = None
     temperature_comfort_score: float | None = None
+    oxygen_comfort_score: float | None = None
 
 
 class EnvironmentMetadata(BaseModel):
@@ -420,6 +421,8 @@ class ResultsMetadata(BaseModel):
     avg_temperature_comfort_score: float | None = None
     post_convergence_survival_score: float | None = None
     post_convergence_temperature_comfort_score: float | None = None
+    avg_oxygen_comfort_score: float | None = None
+    post_convergence_oxygen_comfort_score: float | None = None
     # Chemotaxis validation metrics (added for biological validation)
     # All-run chemotaxis metrics (includes learning phase)
     avg_chemotaxis_index: float | None = None

@@ -101,6 +101,7 @@ class SimulationResult(BaseModel):
     satiety_history: list[float] | None = None
     health_history: list[float] | None = None
     temperature_history: list[float] | None = None
+    oxygen_history: list[float] | None = None
     predator_encounters: int | None = None
     successful_evasions: int | None = None
     died_to_health_depletion: bool | None = None
@@ -109,6 +110,8 @@ class SimulationResult(BaseModel):
     """Survival score: final_hp / max_hp (0.0 to 1.0). None if health system disabled."""
     temperature_comfort_score: float | None = None
     """Fraction of time spent in comfort zone (0.0 to 1.0). None if thermotaxis disabled."""
+    oxygen_comfort_score: float | None = None
+    """Fraction of time in O2 comfort zone (0.0 to 1.0). None if aerotaxis disabled."""
 
     # Scalar snapshots — populated before per-step data is flushed to save memory
     path_length: int | None = None
@@ -160,6 +163,7 @@ class EpisodeTrackingData(BaseModel):
     satiety_history: list[float] = Field(default_factory=list)
     health_history: list[float] = Field(default_factory=list)
     temperature_history: list[float] = Field(default_factory=list)
+    oxygen_history: list[float] = Field(default_factory=list)
     foods_collected: int = 0
     distance_efficiencies: list[float] = Field(default_factory=list)
     predator_encounters: int = 0
@@ -247,3 +251,4 @@ class PerformanceMetrics(BaseModel):
     average_successful_evasions: float | None = None
     average_survival_score: float | None = None
     average_temperature_comfort_score: float | None = None
+    average_oxygen_comfort_score: float | None = None
