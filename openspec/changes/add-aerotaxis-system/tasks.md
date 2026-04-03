@@ -84,11 +84,11 @@
 
 - [ ] 9.1 Create `configs/scenarios/oxygen_foraging/mlpppo_medium_oracle.yml` (50×50, aerotaxis+food, oracle sensing)
 - [ ] 9.2 Create `configs/scenarios/oxygen_foraging/mlpppo_large_oracle.yml` (100×100, aerotaxis+food with high/low O2 spots)
-- [ ] 9.3 Create `configs/scenarios/oxygen_foraging/mlpppo_medium_temporal.yml` (50×50, temporal sensing for both chemotaxis and aerotaxis)
+- [ ] 9.3 Create `configs/scenarios/oxygen_foraging/lstmppo_medium_temporal.yml` (50×50, LSTM PPO GRU temporal sensing for chemotaxis and aerotaxis)
 - [ ] 9.4 Create `configs/scenarios/oxygen_pursuit/mlpppo_large_oracle.yml` (100×100, aerotaxis+food+pursuit predators)
 - [ ] 9.5 Create `configs/scenarios/oxygen_stationary/mlpppo_large_oracle.yml` (100×100, aerotaxis+food+stationary predators)
 - [ ] 9.6 Create `configs/scenarios/oxygen_thermal_foraging/mlpppo_large_oracle.yml` (100×100, combined O2+thermal+food, orthogonal gradients)
-- [ ] 9.7 Create `configs/scenarios/oxygen_thermal_foraging/mlpppo_large_temporal.yml` (100×100, combined temporal sensing)
+- [ ] 9.7 ~~Create mlpppo_large_temporal.yml~~ — removed in favor of lstmppo_large_temporal.yml (MLP PPO has no recurrence for temporal sensing)
 - [ ] 9.8 Create `configs/scenarios/oxygen_thermal_foraging/lstmppo_large_temporal.yml` (100×100, LSTM PPO with temporal sensing)
 - [ ] 9.9 Create `configs/scenarios/oxygen_thermal_pursuit/mlpppo_large_oracle.yml` (100×100, combined+pursuit predators)
 - [ ] 9.10 Create `configs/scenarios/oxygen_thermal_pursuit/lstmppo_large_temporal.yml`
