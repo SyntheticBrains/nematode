@@ -47,28 +47,30 @@ class STAMBuffer:
         Fixed dimension of the memory state vector (9).
     """
 
-    MEMORY_DIM = 9
+    MEMORY_DIM = 11
 
-    # Named indices into the 9-dim memory state vector
+    # Named indices into the 11-dim memory state vector
     IDX_WEIGHTED_FOOD = 0
     IDX_WEIGHTED_TEMP = 1
     IDX_WEIGHTED_PRED = 2
-    IDX_DERIV_FOOD = 3
-    IDX_DERIV_TEMP = 4
-    IDX_DERIV_PRED = 5
-    IDX_POS_DELTA_X = 6
-    IDX_POS_DELTA_Y = 7
-    IDX_ACTION_ENTROPY = 8
+    IDX_WEIGHTED_OXYGEN = 3
+    IDX_DERIV_FOOD = 4
+    IDX_DERIV_TEMP = 5
+    IDX_DERIV_PRED = 6
+    IDX_DERIV_OXYGEN = 7
+    IDX_POS_DELTA_X = 8
+    IDX_POS_DELTA_Y = 9
+    IDX_ACTION_ENTROPY = 10
 
     def __init__(
         self,
         buffer_size: int = 30,
         decay_rate: float = 0.1,
-        num_channels: int = 3,
+        num_channels: int = 4,
     ) -> None:
-        if num_channels != 3:  # noqa: PLR2004
+        if num_channels != 4:  # noqa: PLR2004
             msg = (
-                f"STAMBuffer requires num_channels=3 (food, predator, temperature) "
+                f"STAMBuffer requires num_channels=4 (food, temperature, predator, oxygen) "
                 f"to produce the fixed {self.MEMORY_DIM}-dim memory state. "
                 f"Got num_channels={num_channels}."
             )
@@ -102,7 +104,7 @@ class STAMBuffer:
         ----------
         scalars : np.ndarray
             Scalar readings for each channel, shape (num_channels,).
-            Order: [food_concentration, temperature, predator_concentration].
+            Order: [food_concentration, temperature, predator_concentration, oxygen_concentration].
             Disabled channels should pass 0.0.
         position_delta : tuple[float, float]
             Step-to-step position change (dx, dy) — proprioceptive movement
@@ -140,7 +142,7 @@ class STAMBuffer:
         Parameters
         ----------
         channel : int
-            Channel index (0=food, 1=temperature, 2=predator).
+            Channel index (0=food, 1=temperature, 2=predator, 3=oxygen).
 
         Returns
         -------
@@ -174,13 +176,13 @@ class STAMBuffer:
         Returns
         -------
         np.ndarray
-            Array of shape (9,) containing:
-            - [0:3] Weighted scalar means (food, temperature, predator)
-            - [3:6] Temporal derivatives (dC/dt per channel)
-            - [6:8] Position deltas (deviation of most recent step-to-step
+            Array of shape (11,) containing:
+            - [0:4] Weighted scalar means (food, temperature, predator, oxygen)
+            - [4:8] Temporal derivatives (dC/dt per channel)
+            - [8:10] Position deltas (deviation of most recent step-to-step
                      movement from weighted mean of recent movements —
                      captures change in movement pattern)
-            - [8]   Action variety metric (entropy of recent actions —
+            - [10]  Action variety metric (entropy of recent actions —
                      computational convenience for learning, not biologically
                      motivated; helps brains distinguish "stuck in a loop"
                      from "actively exploring")
@@ -191,7 +193,7 @@ class STAMBuffer:
         if n == 0:
             return state.astype(np.float32)
 
-        # --- Weighted scalar means (indices 0-2) ---
+        # --- Weighted scalar means (indices 0:num_channels) ---
         weights = self._weights[:n]
         weight_sum = np.sum(weights)
         if weight_sum > 0.0:
@@ -199,11 +201,12 @@ class STAMBuffer:
             for ch in range(self._num_channels):
                 state[ch] = np.sum(weights * scalars_array[:, ch]) / weight_sum
 
-        # --- Temporal derivatives (indices 3-5) ---
+        # --- Temporal derivatives (indices num_channels:2*num_channels) ---
         for ch in range(self._num_channels):
-            state[3 + ch] = self.compute_temporal_derivative(ch)
+            state[self._num_channels + ch] = self.compute_temporal_derivative(ch)
 
-        # --- Position deltas (indices 6-7) ---
+        # --- Position deltas (indices 2*num_channels:2*num_channels+2) ---
+        pos_start = 2 * self._num_channels
         if n >= 1:
             deltas = np.array(list(self._position_delta_history), dtype=np.float64)
             if n >= 2:  # noqa: PLR2004
@@ -214,13 +217,13 @@ class STAMBuffer:
                     mean_dx = np.sum(pos_weights * deltas[:, 0]) / pos_weight_sum
                     mean_dy = np.sum(pos_weights * deltas[:, 1]) / pos_weight_sum
                     # Deviation of most recent movement from weighted mean
-                    state[6] = deltas[0, 0] - mean_dx
-                    state[7] = deltas[0, 1] - mean_dy
+                    state[pos_start] = deltas[0, 0] - mean_dx
+                    state[pos_start + 1] = deltas[0, 1] - mean_dy
             # If only 1 entry, deviation from mean is 0 (no trend yet)
 
-        # --- Action variety / entropy (index 8) ---
+        # --- Action variety / entropy (last index) ---
         if n >= 1:
-            state[8] = self._compute_action_entropy()
+            state[pos_start + 2] = self._compute_action_entropy()
 
         return state.astype(np.float32)
 

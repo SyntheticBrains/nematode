@@ -16,6 +16,7 @@ from quantumnematode.dtypes import (  # noqa: TC001 - used at runtime
     GridPosition,
 )
 from quantumnematode.env import Direction
+from quantumnematode.env.oxygen import OxygenZone
 from quantumnematode.env.temperature import TemperatureZone
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import TerminationReason
@@ -281,6 +282,16 @@ class StandardEpisodeRunner(EpisodeRunner):
                         f"(food collected in {zone.value} zone)",
                     )
 
+        # Apply brave foraging bonus for collecting food in oxygen danger zones
+        if agent.env.aerotaxis.enabled:
+            o2_zone = agent.env.get_oxygen_zone()
+            if o2_zone in (OxygenZone.DANGER_HYPOXIA, OxygenZone.DANGER_HYPEROXIA):
+                o2_brave_bonus = agent.env.aerotaxis.reward_discomfort_food
+                if o2_brave_bonus > 0:
+                    reward += o2_brave_bonus
+                    agent._episode_tracker.track_reward(o2_brave_bonus)
+                    brave_msg += f" [O2 brave bonus: +{o2_brave_bonus}]"
+
         logger.info(
             f"Food #{agent._episode_tracker.foods_collected} collected! "
             f"Satiety restored by {food_result.satiety_restored:.1f} to "
@@ -480,6 +491,61 @@ class StandardEpisodeRunner(EpisodeRunner):
 
         return None, reward
 
+    def _handle_oxygen_effects(
+        self,
+        agent: QuantumNematodeAgent,
+        reward_config: RewardConfig,
+        params: Any,  # noqa: ANN401
+        reward: float,
+    ) -> tuple[EpisodeResult | None, float]:
+        """Apply oxygen zone effects (rewards/penalties, HP damage).
+
+        Returns
+        -------
+        tuple[EpisodeResult | None, float]
+            Episode result (if terminated by oxygen damage) and
+            updated reward value.
+        """
+        if not agent.env.aerotaxis.enabled:
+            return None, reward
+
+        o2_reward, o2_damage = agent.env.apply_oxygen_effects()
+        if o2_reward != 0.0:
+            reward += o2_reward
+            agent._episode_tracker.track_reward(o2_reward)
+
+        # Apply HP damage penalty for oxygen damage (immediate learning signal)
+        if o2_damage > 0:
+            damage_penalty = -reward_config.penalty_health_damage
+            reward += damage_penalty
+            agent._episode_tracker.track_reward(damage_penalty)
+            logger.debug(
+                f"Oxygen HP damage penalty applied: {damage_penalty} "
+                f"(took {o2_damage:.1f} damage)",
+            )
+
+            # Track health after oxygen damage
+            agent._episode_tracker.track_health(agent.env.agent_hp)
+
+        # Check if oxygen damage depleted health
+        if o2_damage > 0 and agent.env.is_health_depleted():
+            logger.warning(
+                "Failed to complete episode: health depleted from oxygen damage!",
+            )
+            penalty = -reward_config.penalty_predator_death
+            reward += penalty
+            agent._episode_tracker.track_reward(penalty)
+
+            return self._terminate_episode(
+                agent,
+                params,
+                reward,
+                success=False,
+                termination_reason=TerminationReason.HEALTH_DEPLETED,
+            ), reward
+
+        return None, reward
+
     def _handle_starvation_check(
         self,
         agent: QuantumNematodeAgent,
@@ -636,6 +702,11 @@ class StandardEpisodeRunner(EpisodeRunner):
 
             # Temperature effects
             result, reward = self._handle_temperature_effects(agent, reward_config, params, reward)
+            if result is not None:
+                return result
+
+            # Oxygen effects
+            result, reward = self._handle_oxygen_effects(agent, reward_config, params, reward)
             if result is not None:
                 return result
 

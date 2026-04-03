@@ -80,10 +80,14 @@ class ModuleName(StrEnum):
     MECHANOSENSATION = "mechanosensation"
     THERMOTAXIS = "thermotaxis"
 
+    # Aerotaxis module
+    AEROTAXIS = "aerotaxis"
+
     # Temporal sensing modules (Phase 3)
     FOOD_CHEMOTAXIS_TEMPORAL = "food_chemotaxis_temporal"
     NOCICEPTION_TEMPORAL = "nociception_temporal"
     THERMOTAXIS_TEMPORAL = "thermotaxis_temporal"
+    AEROTAXIS_TEMPORAL = "aerotaxis_temporal"
     STAM = "stam"
 
 
@@ -413,6 +417,73 @@ def _thermotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
 
 
 # =============================================================================
+# Aerotaxis Feature Extractors (URX/AQR/PQR + BAG neurons)
+# =============================================================================
+
+# Oxygen comfort midpoint and normalization factor
+# Comfort range is 5-12% O2, midpoint is 8.5%, max deviation from midpoint to [0, 21] is 12.5
+_O2_COMFORT_MIDPOINT = 8.5
+_O2_NORMALIZATION = 12.5
+
+
+def _aerotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract aerotaxis oracle features (O2 gradient + comfort deviation).
+
+    Aerotaxis (URX/AQR/PQR + BAG neurons) encodes:
+    - strength: oxygen gradient magnitude, tanh-normalized to [0, 1]
+    - angle: egocentric relative angle to higher O2, in [-1, 1]
+    - binary: oxygen comfort deviation (O2 - 8.5) / 12.5, clipped to [-1, 1]
+      Negative = too little O2, positive = too much O2
+    """
+    if params.oxygen_concentration is None:
+        return CoreFeatures()
+
+    gradient_strength = float(np.tanh(params.oxygen_gradient_strength or 0.0))
+    angle = _compute_relative_angle(
+        params.oxygen_gradient_direction,
+        params.agent_direction,
+    )
+
+    o2_deviation = (params.oxygen_concentration - _O2_COMFORT_MIDPOINT) / _O2_NORMALIZATION
+    o2_deviation = float(np.clip(o2_deviation, -1.0, 1.0))
+
+    return CoreFeatures(
+        strength=gradient_strength,
+        angle=angle,
+        binary=o2_deviation,
+    )
+
+
+def _aerotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal aerotaxis features (O2 deviation + dO2/dt).
+
+    Aerotaxis temporal encodes:
+    - strength: absolute oxygen comfort deviation, in [0, 1]
+    - angle: temporal derivative of O2 (dO2/dt), scaled via
+      tanh(derivative * derivative_scale) to [-1, 1].
+      Positive = O2 increasing, negative = O2 decreasing.
+    - binary: signed oxygen comfort deviation, in [-1, 1]
+
+    This replaces the oracle aerotaxis module which provides spatial gradient
+    direction — information the worm cannot biologically access at distance.
+    """
+    if params.oxygen_concentration is None:
+        return CoreFeatures()
+
+    o2_deviation = (params.oxygen_concentration - _O2_COMFORT_MIDPOINT) / _O2_NORMALIZATION
+    o2_deviation = float(np.clip(o2_deviation, -1.0, 1.0))
+
+    raw_deriv = float(params.oxygen_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+
+    return CoreFeatures(
+        strength=abs(o2_deviation),
+        angle=angle,
+        binary=o2_deviation,
+    )
+
+
+# =============================================================================
 # SensoryModule Class
 # =============================================================================
 
@@ -515,18 +586,18 @@ class STAMSensoryModule(SensoryModule):
     """Sensory module for STAM memory state with variable classical_dim.
 
     Unlike standard modules that output 2-3 features via CoreFeatures,
-    STAM outputs the full 9-float memory state vector for classical brains.
+    STAM outputs the full 11-float memory state vector for classical brains.
     For quantum brains, it compresses to a 3-float summary.
     """
 
-    classical_dim: int = 9
+    classical_dim: int = 11
 
     def to_classical(self, params: BrainParams) -> np.ndarray:
         """Return the full STAM memory state vector.
 
         Returns
         -------
-            np.ndarray of shape (9,) with STAM memory state.
+            np.ndarray of shape (11,) with STAM memory state.
             Returns zeros if stam_state is None (STAM disabled).
         """
         if params.stam_state is not None:
@@ -547,12 +618,12 @@ class STAMSensoryModule(SensoryModule):
             return np.zeros(3, dtype=np.float32)
 
         state = np.array(params.stam_state, dtype=np.float32)
-        # Mean of weighted scalar means (indices 0-2)
-        mean_scalar = float(np.mean(state[0:3]))
-        # Mean of temporal derivatives (indices 3-5)
-        mean_deriv = float(np.mean(state[3:6]))
-        # Action entropy (index 8)
-        action_entropy = float(state[8])
+        # Mean of weighted scalar means (indices 0-3)
+        mean_scalar = float(np.mean(state[0:4]))
+        # Mean of temporal derivatives (indices 4-7)
+        mean_deriv = float(np.mean(state[4:8]))
+        # Action entropy (index 10)
+        action_entropy = float(state[10])
 
         return np.array(
             [
@@ -656,12 +727,37 @@ SENSORY_MODULES[ModuleName.THERMOTAXIS_TEMPORAL] = SensoryModule(
     ),
     classical_dim=3,
 )
+
+# Aerotaxis modules
+SENSORY_MODULES[ModuleName.AEROTAXIS] = SensoryModule(
+    name=ModuleName.AEROTAXIS,
+    extract=_aerotaxis_core,
+    description=(
+        "Oxygen sensing (URX/AQR/PQR + BAG neurons). Encodes oxygen gradient "
+        "for navigation toward preferred O2 range (5-12%). Uses spatial gradient "
+        "sensing (oracle mode). strength: gradient magnitude, angle: direction "
+        "to higher O2, binary: deviation from comfort midpoint (8.5%)."
+    ),
+    transform_type="standard",
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL] = SensoryModule(
+    name=ModuleName.AEROTAXIS_TEMPORAL,
+    extract=_aerotaxis_temporal_core,
+    description=(
+        "Temporal aerotaxis (URX/AQR/PQR + BAG neurons). Encodes oxygen "
+        "deviation from comfort midpoint. Angle encodes dO2/dt (O2 increasing/"
+        "decreasing signal). Models URX/BAG neuron temporal responses."
+    ),
+    classical_dim=3,
+)
+
 SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(
     name=ModuleName.STAM,
     extract=lambda _params: CoreFeatures(),  # Not used — overridden by to_classical/to_quantum
     description=(
-        "Short-Term Associative Memory state. Provides 9-float temporal context "
-        "(3 weighted means, 3 derivatives, 2 position deltas, 1 action entropy)."
+        "Short-Term Associative Memory state. Provides 11-float temporal context "
+        "(4 weighted means, 4 derivatives, 2 position deltas, 1 action entropy)."
     ),
 )
 

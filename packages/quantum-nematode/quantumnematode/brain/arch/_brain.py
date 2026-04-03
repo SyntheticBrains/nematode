@@ -164,6 +164,24 @@ class BrainParams(BaseModel):
         description="Cultivation temperature (Tc) - the agent's preferred temperature.",
     )
 
+    # --- Aerotaxis (oxygen sensing) ---
+    oxygen_concentration: float | None = Field(
+        default=None,
+        description="Current O2 percentage at agent's position (0.0-21.0%).",
+    )
+    oxygen_gradient_strength: float | None = Field(
+        default=None,
+        description="Oxygen gradient magnitude (O2 % per cell, oracle mode).",
+    )
+    oxygen_gradient_direction: float | None = Field(
+        default=None,
+        description="Oxygen gradient direction (radians, oracle mode).",
+    )
+    oxygen_dconcentration_dt: float | None = Field(
+        default=None,
+        description="Temporal derivative of oxygen concentration (Mode B derivative sensing).",
+    )
+
     # --- Mechanosensation (touch/contact) ---
     boundary_contact: bool | None = Field(
         default=None,
@@ -213,7 +231,7 @@ class BrainParams(BaseModel):
     # --- STAM state ---
     stam_state: tuple[float, ...] | None = Field(
         default=None,
-        description="Flattened STAM memory state vector (9 floats).",
+        description="Flattened STAM memory state vector (11 floats).",
     )
     derivative_scale: float = Field(
         default=50.0,
