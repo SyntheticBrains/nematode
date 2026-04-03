@@ -134,7 +134,7 @@ Oxygen sinks placed near food-dense areas (bacteria consume O2, creating realist
 **Color palette** (complementary to temperature's blue-red spectrum):
 
 - Lethal hypoxia: dark red (180, 40, 40, 90) — distinct from temperature's blue-cold
-- Danger hypoxia: amber/orange (220, 160, 40, 70)
+- Danger hypoxia: red-brown (200, 80, 60, 70)
 - Comfort: transparent (0, 0, 0, 0)
 - Danger hyperoxia: light cyan (80, 200, 220, 70)
 - Lethal hyperoxia: bright cyan (40, 180, 220, 90)
@@ -147,7 +147,7 @@ This creates a red-to-cyan spectrum for oxygen that is visually distinguishable 
 
 **Rationale**: Early thermotaxis experiments discovered that positive comfort rewards cause "freeze behavior" — the agent stops foraging and sits in the comfort zone. The solution (Logbook 007) was setting `comfort_reward: 0.0` and using only penalties for discomfort/danger. Oxygen follows the same pattern: penalize being outside comfort, don't reward being inside it.
 
-Default penalties mirror thermotaxis: `discomfort_penalty: -0.05`, `danger_penalty: -0.5`, `danger_hp_damage: 0.5`, `lethal_hp_damage: 6.0`.
+Default penalties: `danger_penalty: -0.5`, `danger_hp_damage: 0.5`, `lethal_hp_damage: 6.0`. Note: unlike the 7-zone thermotaxis system, oxygen uses 5 zones (no discomfort tier) because URX/BAG neurons have relatively sharp activation thresholds — the transition from comfort to danger is biologically abrupt. The `reward_discomfort_food` field (default 0.0) provides a "brave foraging" bonus for collecting food in danger zones, matching the thermotaxis pattern in runners.py.
 
 ## Risks / Trade-offs
 

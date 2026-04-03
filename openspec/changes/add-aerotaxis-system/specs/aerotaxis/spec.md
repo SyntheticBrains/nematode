@@ -108,11 +108,11 @@ The environment SHALL apply zone-based rewards, penalties, and HP damage for oxy
 - **THEN** `apply_oxygen_effects()` SHALL return the configured `danger_penalty` as reward delta
 - **AND** SHALL return the configured `lethal_hp_damage` (default 6.0) as HP damage
 
-#### Scenario: Discomfort Zone Penalty
+#### Scenario: Brave Foraging Bonus in Danger Zones
 
-- **WHEN** the agent is in a discomfort zone (near boundaries of comfort)
-- **THEN** `apply_oxygen_effects()` SHALL return the configured `discomfort_penalty` (default -0.05) as reward delta
-- **AND** SHALL return 0.0 HP damage
+- **WHEN** the agent collects food while in an oxygen danger zone (hypoxia or hyperoxia)
+- **THEN** the system SHALL apply the configured `reward_discomfort_food` bonus (default 0.0)
+- **AND** this encourages agents to briefly enter dangerous O2 zones for food when the reward is positive
 
 #### Scenario: Oxygen Comfort Score Tracking
 
@@ -187,7 +187,7 @@ The system SHALL render oxygen zones visually across all themes that support zon
 - **WHEN** the pixel (Pygame) theme renders a frame in an aerotaxis-enabled environment
 - **THEN** oxygen zone overlays SHALL be rendered as semi-transparent colored surfaces
 - **AND** lethal hypoxia SHALL use dark red (180, 40, 40, 90)
-- **AND** danger hypoxia SHALL use amber/orange (220, 160, 40, 70)
+- **AND** danger hypoxia SHALL use red-brown (200, 80, 60, 70)
 - **AND** comfort SHALL be transparent (no overlay)
 - **AND** danger hyperoxia SHALL use light cyan (80, 200, 220, 70)
 - **AND** lethal hyperoxia SHALL use bright cyan (40, 180, 220, 90)
@@ -253,10 +253,10 @@ environment:
       - [30, 30, 5.0]
     spot_decay_constant: 6.0
     comfort_reward: 0.0
-    discomfort_penalty: -0.05
     danger_penalty: -0.5
     danger_hp_damage: 0.5
     lethal_hp_damage: 6.0
+    reward_discomfort_food: 0.0
     lethal_hypoxia_upper: 2.0
     danger_hypoxia_upper: 5.0
     comfort_lower: 5.0
@@ -273,3 +273,47 @@ environment:
 - **AND** `apply_temperature_effects()` and `apply_oxygen_effects()` SHALL both be called per step
 - **AND** rewards/penalties from both systems SHALL be additive
 - **AND** HP damage from both systems SHALL be additive
+
+### Requirement: Aerotaxis Data Pipeline
+
+The system SHALL track, export, and aggregate oxygen sensing data through the full experiment tracking pipeline, parallel to the existing temperature data pipeline.
+
+#### Scenario: Per-Step Oxygen History Recording
+
+- **WHEN** the agent completes a step in an aerotaxis-enabled environment
+- **THEN** the episode tracker SHALL record the current oxygen percentage via `track_oxygen(oxygen)` in `agent/tracker.py`
+- **AND** the oxygen value SHALL be appended to `oxygen_history: list[float]` in `EpisodeTrackingData` in `report/dtypes.py`
+- **AND** the runner step loop SHALL call `track_oxygen()` parallel to the existing `track_temperature()` call
+
+#### Scenario: Per-Run Oxygen History in SimulationResult
+
+- **WHEN** a run completes in an aerotaxis-enabled environment
+- **THEN** `SimulationResult` in `report/dtypes.py` SHALL include `oxygen_history: list[float] | None` (None if aerotaxis disabled)
+- **AND** SHALL include `oxygen_comfort_score: float | None` (None if aerotaxis disabled)
+- **AND** `run_simulation.py` SHALL populate both fields from the episode tracker and environment
+
+#### Scenario: Per-Run CSV and Plot Exports
+
+- **WHEN** per-run data is exported in `report/csv_export.py`
+- **THEN** the system SHALL export `oxygen_history.csv` with columns [step, oxygen] (parallel to `temperature_history.csv`)
+- **AND** the foraging_summary.csv SHALL include final_oxygen, mean_oxygen, min_oxygen, max_oxygen metrics (parallel to temperature metrics)
+- **AND** `report/plots.py` SHALL generate `oxygen_progression.png` showing step-by-step O2 percentage with mean line (parallel to `temperature_progression.png`)
+
+#### Scenario: Experiment Metadata Aggregation
+
+- **WHEN** experiment results are aggregated in `experiment/tracker.py` and `experiment/metadata.py`
+- **THEN** `PerRunResult` SHALL include `oxygen_comfort_score: float | None`
+- **AND** `ResultsMetadata` SHALL include `avg_oxygen_comfort_score: float | None` and `post_convergence_oxygen_comfort_score: float | None`
+- **AND** aggregation SHALL average oxygen_comfort_score across runs (parallel to temperature_comfort_score)
+
+#### Scenario: Per-Step Data Flushing
+
+- **WHEN** per-step data is flushed to save memory after export
+- **THEN** `result.oxygen_history` SHALL be set to None (parallel to temperature_history flushing)
+- **AND** scalar snapshots SHALL be preserved before flushing
+
+#### Scenario: Main Simulation Results CSV
+
+- **WHEN** simulation results are exported to `simulation_results.csv`
+- **THEN** the fieldnames SHALL include `oxygen_comfort_score`
+- **AND** the value SHALL be the per-run oxygen comfort score or NaN if aerotaxis disabled
