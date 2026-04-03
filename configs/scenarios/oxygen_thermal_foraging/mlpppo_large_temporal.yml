@@ -116,11 +116,14 @@ environment:
     enabled: true
     base_oxygen: 10.0
     gradient_direction: 1.5708
-    gradient_strength: 0.08
+    gradient_strength: 0.12      # ~50% of cells in O2 comfort zone
     high_oxygen_spots:
-      - [80, 50, 6.0]
+      - [80, 50, 8.0]           # Ventilation point: +8% O2
+      - [20, 80, 6.0]           # Secondary ventilation
     low_oxygen_spots:
-      - [30, 30, 5.0]
+      - [30, 30, 8.0]           # Dense bacterial lawn: -8% O2
+      - [70, 20, 6.0]           # Secondary bacterial sink
+      - [50, 70, 5.0]           # Third bacterial sink
     spot_decay_constant: 6.0
     comfort_reward: 0.0
     danger_penalty: -0.5
