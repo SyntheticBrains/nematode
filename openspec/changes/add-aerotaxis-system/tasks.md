@@ -57,11 +57,11 @@
 
 ## 7. Experiment Tracking and Data Pipeline
 
-- [ ] 7.1 Add `oxygen_history: list[float]` to `EpisodeTrackingData` in `report/dtypes.py` (parallel to `temperature_history`)
-- [ ] 7.2 Add `track_oxygen(oxygen: float)` method to `EpisodeTracker` in `agent/tracker.py` (parallel to `track_temperature`)
+- [ ] 7.1 Add `oxygen_history: list[float]` field to `EpisodeData` dataclass in `agent/runners.py` (parallel to `temperature_history` at line 61) AND to `EpisodeTrackingData` in `report/dtypes.py` (parallel to line 162)
+- [ ] 7.2 Add `track_oxygen(oxygen: float)` method to `EpisodeTracker` in `agent/tracker.py` (parallel to `track_temperature` at line 138), add `oxygen_history` property, and include `oxygen_history=[]` in `__init__()` reset
 - [ ] 7.3 Add `oxygen_history: list[float] | None = None` and `oxygen_comfort_score: float | None = None` to `SimulationResult` in `report/dtypes.py`
 - [ ] 7.4 Add `oxygen_history` field to runner step data (`agent/runners.py`): call `track_oxygen()` each step when aerotaxis enabled (parallel to `track_temperature` at line 443)
-- [ ] 7.5 Populate `oxygen_history` and `oxygen_comfort_score` in `run_simulation.py` when building `SimulationResult` (parallel to temperature pattern at lines 621-663)
+- [ ] 7.5 Populate `oxygen_history` and `oxygen_comfort_score` in `run_simulation.py`: (a) copy oxygen_history from tracker (parallel to temperature at lines 621-626), (b) compute oxygen_comfort_score from env (parallel to lines 639-640), (c) include both in `SimulationResult` constructor, (d) include oxygen_history in `EpisodeTrackingData` construction in the `track_per_run` block (parallel to temperature_history at line 734)
 - [ ] 7.6 Add `oxygen_comfort_score` to `_SIMULATION_RESULTS_FIELDNAMES` and `_simulation_result_to_row()` in `report/csv_export.py`
 - [ ] 7.7 Add `oxygen_history.csv` export in per-run data export in `report/csv_export.py` (parallel to `temperature_history.csv` at lines 902-909)
 - [ ] 7.8 Add oxygen metrics (final_oxygen, mean_oxygen, min_oxygen, max_oxygen) to `foraging_summary.csv` in `report/csv_export.py` (parallel to temperature metrics at lines 948-957)
