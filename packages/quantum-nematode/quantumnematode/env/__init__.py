@@ -2,6 +2,7 @@
 
 __all__ = [
     "MIN_GRID_SIZE",
+    "AerotaxisParams",
     "BaseEnvironment",
     "Direction",
     "DynamicForagingEnvironment",
@@ -20,6 +21,7 @@ __all__ = [
 
 from quantumnematode.env.env import (
     MIN_GRID_SIZE,
+    AerotaxisParams,
     BaseEnvironment,
     Direction,
     DynamicForagingEnvironment,
