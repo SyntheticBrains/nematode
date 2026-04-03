@@ -39,12 +39,12 @@ class STAMBuffer:
         Exponential decay lambda per step (default 0.1).
         Weight for entry i steps ago: w[i] = exp(-decay_rate * i).
     num_channels : int
-        Number of scalar sensory channels (default 3: food, temperature, predator).
+        Number of scalar sensory channels (default 4: food, temperature, predator, oxygen).
 
     Attributes
     ----------
     MEMORY_DIM : int
-        Fixed dimension of the memory state vector (9).
+        Fixed dimension of the memory state vector (11).
     """
 
     MEMORY_DIM = 11
