@@ -689,6 +689,14 @@ class QuantumNematodeAgent:
             if zone is not None:
                 zone_name = zone.value.upper().replace("_", " ")
 
+        oxygen: float | None = None
+        oxygen_zone_name: str | None = None
+        if self.env.aerotaxis.enabled:
+            oxygen = self.env.get_oxygen_concentration()
+            o2_zone = self.env.get_oxygen_zone()
+            if o2_zone is not None:
+                oxygen_zone_name = o2_zone.value.upper().replace("_", " ")
+
         renderer.render_frame(
             env=self.env,
             step=self._episode_tracker.steps,
@@ -702,6 +710,8 @@ class QuantumNematodeAgent:
             in_danger=self.env.is_agent_in_danger() if self.env.predator.enabled else False,
             temperature=temperature,
             zone_name=zone_name,
+            oxygen=oxygen,
+            oxygen_zone_name=oxygen_zone_name,
             session_text=render_text,
         )
 
