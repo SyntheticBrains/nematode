@@ -1,6 +1,5 @@
 """Tests for the oxygen field module."""
 
-import numpy as np
 import pytest
 from quantumnematode.env.oxygen import (
     OxygenField,

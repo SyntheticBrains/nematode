@@ -16,7 +16,8 @@ The implementation supports:
 - Gradient vector computation for navigation
 - O2 values clamped to [0.0, 21.0] (atmospheric maximum)
 
-References:
+References
+----------
 - Cheung BH, et al. (2005). Cell 123(1):157-171
 - Zimmer M, et al. (2009). Neuron 61(6):865-879
 - Gray JM, et al. (2004). Nature 430(6997):317-322
@@ -222,7 +223,7 @@ class OxygenField:
         direction = np.arctan2(dy, dx) if magnitude > 0 else 0.0
         return float(magnitude), float(direction)
 
-    def get_zone(  # noqa: PLR0911
+    def get_zone(
         self,
         oxygen: float,
         thresholds: OxygenZoneThresholds | None = None,
