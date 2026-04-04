@@ -50,6 +50,7 @@ This project has complementary systems for tracking experiments:
 | 007 | [PPO Thermotaxis Baselines](logbooks/007-ppo-thermotaxis-baselines.md) | completed | PPO baselines for 9 thermotaxis configs (3 sizes × 3 tasks), 84-98% post-conv |
 | 008 | [Quantum Brain Evaluation](logbooks/008-quantum-brain-evaluation.md) | completed | 300+ sessions, 11+ quantum architectures (QA-1 to QA-7). QRH genuine quantum advantage on pursuit (+9.4pp). HybridQuantum 96.9% but classical ablation matches. QEF competitive, not advantageous. QA-7 plasticity: classical shows zero forgetting — hypothesis untestable at current complexity. Pivot to environment enrichment. |
 | 009 | [Temporal Sensing Evaluation](logbooks/009-temporal-sensing-evaluation.md) | completed | Phase 3: Temporal/derivative sensing replacing oracle gradients. New GRU PPO brain (19th architecture). Temporal Mode A achieves L100=95% on hardest environment (matching oracle L100=95%; L500=94% vs oracle 97%, within 3pp). GRU outperforms LSTM. Chunk length is critical hyperparameter. |
+| 010 | [Aerotaxis Baselines](logbooks/010-aerotaxis-baselines.md) | halted | Oxygen sensing (aerotaxis) oracle baselines across 7 scenarios + 3 thermal controls. Adding O2 drops thermal-only performance by 10-42pp. Agent learns dual O2+thermal navigation. Temporal GRU plateaus at 13% L1000 (oracle 72%) on medium — deferred to large grid derivative/temporal evaluation. |
 
 ## How to Use Logbooks
 

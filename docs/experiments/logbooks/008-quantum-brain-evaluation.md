@@ -1928,7 +1928,6 @@ The arXiv:2511.17228 result (PQC unitarity prevents forgetting) may be valid for
 - Script: `scripts/run_plasticity_test.py`
 - Configs: `artifacts/logbooks/008/plasticity/*.yml`
 - Logs: `build/studies/plasticity_test/logs/*.log`
-- Scratchpad: `build/studies/plasticity_test/plasticity_test_scratchpad.md`
 
 ### Appendices
 

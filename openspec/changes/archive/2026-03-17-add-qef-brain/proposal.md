@@ -33,4 +33,4 @@ QRH is our only architecture with genuine quantum advantage (+9.4pp over classic
 
 ## Evaluation Outcome
 
-12-seed validation (~500+ runs) concluded: QEF is quantum-competitive but not quantum-advantageous. It matches classical approaches within ~1-3pp across all tasks but does not demonstrate statistically significant superiority. See `build/brains/qef/qef_scratchpad.md` for complete evaluation history and analysis.
+12-seed validation (~500+ runs) concluded: QEF is quantum-competitive but not quantum-advantageous. It matches classical approaches within ~1-3pp across all tasks but does not demonstrate statistically significant superiority.

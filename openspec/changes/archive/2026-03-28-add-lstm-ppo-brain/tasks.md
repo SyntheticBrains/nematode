@@ -49,7 +49,7 @@
 - [x] 5.3 Run foraging sanity check — agent learns (food count increases)
 - [x] 5.4 Run predator sanity check — agent survives longer over episodes
 - [x] 5.5 Add `lstmppo_foraging_small_derivative.yml` to smoke test suite in `test_smoke.py`
-- [x] 5.6 Comprehensive evaluation across foraging, pursuit predators, stationary predators (small and large) with derivative and temporal sensing — documented in temporal_scratchpad.md
+- [x] 5.6 Comprehensive evaluation across foraging, pursuit predators, stationary predators (small and large) with derivative and temporal sensing
 - [x] 5.7 GRU vs LSTM ablation — GRU outperforms LSTM across all environments; configs updated to use GRU as default
 
 ## 6. Documentation
