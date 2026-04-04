@@ -49,6 +49,7 @@ Oxygen difficulty was tuned to match thermal challenge level: ~46% comfort cell 
 | O2 + thermal + stationary | 100×100 | food + O2 + temp + 5 stationary | 2000 | |
 | Thermal foraging (control) | 100×100 | food + temp | 2000 | No oxygen — comparison baseline |
 | Thermal + pursuit (control) | 100×100 | food + temp + 4 pursuit | 2000 | No oxygen — comparison baseline |
+| Thermal + stationary (control) | 100×100 | food + temp + 5 stationary | 2000 | No oxygen — comparison baseline |
 | O2 foraging temporal | 50×50 | food + O2 (temporal mode) | 12000 | LSTM PPO GRU, scalar-only |
 
 ### Key Configuration
@@ -90,6 +91,7 @@ ______________________________________________________________________
 |----------|------|------|--------------|
 | Thermal foraging (control) | **99%** | 98% | 0.72 |
 | Thermal + pursuit (control) | **94%** | 93% | 0.74 |
+| Thermal + stationary (control) | **93%** | 93% | 0.73 |
 
 ### Impact of Adding Oxygen
 
@@ -97,6 +99,7 @@ ______________________________________________________________________
 |------------|-----------|---------|------|
 | Foraging (large) | 99% L100 | 89% L100 | **-10pp** |
 | Pursuit (large) | 94% L100 | 70% L100 | **-24pp** |
+| Stationary (large) | 93% L100 | 51% L100 | **-42pp** |
 
 ### Temporal Sensing — Medium Foraging (12000 episodes)
 
@@ -117,7 +120,7 @@ Medium oracle achieves 76% L100 (below 80% target), large oracle achieves 79% L1
 
 ### H2: O2 adds 10-20pp drop vs thermal-only — CONFIRMED
 
-Adding oxygen to thermal foraging drops L100 by 10pp (99→89%). Adding oxygen to thermal+pursuit drops L100 by 24pp (94→70%). Oxygen creates a genuine third navigational constraint that the agent cannot ignore.
+Adding oxygen to thermal foraging drops L100 by 10pp (99→89%). Adding oxygen to thermal+pursuit drops L100 by 24pp (94→70%). Adding oxygen to thermal+stationary drops L100 by 42pp (93→51%). The stationary scenario shows the largest impact — toxic zones combined with O2 danger zones severely restrict the safe foraging area. Oxygen creates a genuine third navigational constraint that the agent cannot ignore.
 
 ### H3: Agent learns dual O2+temperature navigation — CONFIRMED
 
@@ -150,7 +153,7 @@ ______________________________________________________________________
 
 1. **Oxygen sensing works as intended.** Oracle MLP PPO achieves 76-89% L100 across foraging scenarios, creating genuine navigational challenge.
 
-2. **Oxygen creates meaningful multi-objective pressure.** Adding O2 to thermal environments drops performance by 10-24pp versus thermal-only controls. The agent can't ignore oxygen.
+2. **Oxygen creates meaningful multi-objective pressure.** Adding O2 to thermal environments drops performance by 10-42pp versus thermal-only controls (foraging -10pp, pursuit -24pp, stationary -42pp). The stationary scenario is hardest-hit as toxic zones compound with O2 danger zones.
 
 3. **Dual-modality learning is confirmed.** In combined O2+thermal environments, the agent learns to navigate both oxygen and temperature zones simultaneously, with O2 comfort rising from 0.85→0.97 over training.
 
@@ -188,6 +191,7 @@ Temporal/derivative oxygen evaluation paused due to time requirements. When resu
   - `mlpppo_oxygen_thermal_stationary/` — 4 sessions + config + best-seed weights
   - `thermal_foraging_control/` — 4 sessions + config + best-seed weights
   - `thermal_pursuit_control/` — 4 sessions + config + best-seed weights
+  - `thermal_stationary_control/` — 4 sessions + config + best-seed weights
   - `lstmppo_medium_temporal_12k/` — 4 sessions + config + best-seed weights
 - **Configs**: `configs/scenarios/oxygen_*/`, `configs/scenarios/oxygen_thermal_*/`
 - **Supporting data**: [010/aerotaxis-baselines-details.md](supporting/010/aerotaxis-baselines-details.md)

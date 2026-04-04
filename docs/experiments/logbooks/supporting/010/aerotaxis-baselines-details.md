@@ -94,6 +94,16 @@ Note: Seed 44 has anomalously low O2 comfort (0.727) — possible early converge
 | 45 | 85.4% | 90.0% | 88.4% | 0.727 |
 | **Mean** | **86.7%** | **93.8%** | **92.8%** | **0.724** |
 
+### Thermal + Stationary Control (100×100, 2000 episodes, NO oxygen)
+
+| Seed | Overall | L100 | L500 | Temp Comfort |
+|------|---------|------|------|--------------|
+| 42 | 85.4% | **95.0%** | 94.0% | 0.711 |
+| 43 | 85.7% | 93.0% | 90.6% | 0.705 |
+| 44 | 86.2% | 95.0% | **96.2%** | 0.704 |
+| 45 | 81.3% | 90.0% | 90.2% | 0.726 |
+| **Mean** | **84.7%** | **93.3%** | **92.8%** | **0.712** |
+
 ## Temporal Sensing Results
 
 ### O2 Foraging Medium Temporal (50×50, 12000 episodes, GRU)
