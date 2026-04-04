@@ -191,4 +191,3 @@ Temporal/derivative oxygen evaluation paused due to time requirements. When resu
   - `lstmppo_medium_temporal_12k/` — 4 sessions + config + best-seed weights
 - **Configs**: `configs/scenarios/oxygen_*/`, `configs/scenarios/oxygen_thermal_*/`
 - **Supporting data**: [010/aerotaxis-baselines-details.md](supporting/010/aerotaxis-baselines-details.md)
-- **Scratchpad**: `tmp/evaluations/aerotaxis_scratchpad.md`

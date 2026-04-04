@@ -124,5 +124,3 @@ QEF implements the same 3 abstract methods as QRH: `_get_reservoir_features()`, 
 - Stationary: QEF 90.8% vs MLP PPO 89.6% vs A3 Poly 93.8% (QEF vs Poly: p=0.08, ns)
 - Pursuit: QEF 93.0% vs MLP PPO 96.0% vs A3 Poly 94.8% (QEF vs MLP: p=0.04, \*)
 - Small PP: QEF 98.2% vs MLP PPO 98.6% vs A3 Poly 97.0% (all ns)
-
-See `build/brains/qef/qef_scratchpad.md` for complete evaluation history.
