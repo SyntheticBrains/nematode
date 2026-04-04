@@ -76,7 +76,7 @@ class OxygenZoneThresholds:
 - Field name: `high_oxygen_spots` / `low_oxygen_spots` (vs hot/cold)
 - Values clamped to [0.0, 21.0] (vs unclamped temperature)
 - Default `base_oxygen: 10.0` (center of comfort, vs `base_temperature: 20.0`)
-- Default `gradient_strength: 0.1` (O2 % per cell, tuned so medium/large grids span meaningful range)
+- Default `gradient_strength: 0.1` in code (configurable per scenario; tuned to 0.30 for medium, 0.12 for large to achieve ~46-50% comfort cell coverage matching thermal difficulty)
 
 ### 4. STAM: Hardcoded 4 Channels, MEMORY_DIM=11
 
@@ -113,11 +113,20 @@ thermotaxis:
   gradient_strength: 0.15     # Mild linear (same as thermal_foraging/large)
 aerotaxis:
   gradient_direction: 1.5708  # O2 increases north (π/2)
-  gradient_strength: 0.08     # O2 % per cell
+  gradient_strength: 0.12     # O2 % per cell (~50% comfort coverage on 100×100)
   base_oxygen: 10.0           # Center of comfort range at grid center
+  high_oxygen_spots:           # 2 ventilation points
+    - [80, 50, 8.0]
+    - [20, 80, 6.0]
+  low_oxygen_spots:            # 3 bacterial consumption sinks
+    - [30, 30, 8.0]
+    - [70, 20, 6.0]
+    - [50, 70, 5.0]
 ```
 
 Oxygen sinks placed near food-dense areas (bacteria consume O2, creating realistic trade-off: best food = lowest oxygen). High-oxygen spots at exposed grid edges (surface ventilation = predation risk).
+
+**Post-implementation tuning**: Initial gradient strengths (0.15 medium, 0.08 large) were too gentle — O2 comfort was ~99% (trivially easy). Tuned to 0.30 (medium, ~46% comfort) and 0.12 with expanded spots (large, ~50% comfort) to match thermal difficulty levels from Logbook 007. This was validated by oracle evaluation showing L100 ~76% (medium) and ~79% (large) — genuine navigational challenge.
 
 ### 6. Scenario Naming: Alphabetized Modalities
 
