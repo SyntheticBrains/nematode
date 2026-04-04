@@ -181,6 +181,14 @@ class BrainParams(BaseModel):
         default=None,
         description="Temporal derivative of oxygen concentration (Mode B derivative sensing).",
     )
+    oxygen_comfort_midpoint: float = Field(
+        default=8.5,
+        description="Midpoint of O2 comfort range for deviation normalization.",
+    )
+    oxygen_comfort_normalization: float = Field(
+        default=12.5,
+        description="Normalization factor for O2 deviation (max deviation from midpoint).",
+    )
 
     # --- Mechanosensation (touch/contact) ---
     boundary_contact: bool | None = Field(

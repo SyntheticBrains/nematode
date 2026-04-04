@@ -72,6 +72,9 @@ class ConvergenceMetrics(BaseModel):
     avg_temperature_comfort_score: float | None = None
     """Average temperature comfort score across all runs. None if thermotaxis disabled."""
 
+    avg_oxygen_comfort_score: float | None = None
+    """Average oxygen comfort score across all runs. None if aerotaxis disabled."""
+
 
 def detect_convergence(
     results: list[SimulationResult],
@@ -390,6 +393,14 @@ def calculate_post_convergence_metrics(
     if comfort_scores:
         avg_temperature_comfort_score = float(np.mean(comfort_scores))
 
+    # Calculate average oxygen comfort score if available
+    avg_oxygen_comfort_score = None
+    o2_comfort_scores = [
+        r.oxygen_comfort_score for r in analysis_runs if r.oxygen_comfort_score is not None
+    ]
+    if o2_comfort_scores:
+        avg_oxygen_comfort_score = float(np.mean(o2_comfort_scores))
+
     return {
         "success_rate": success_rate,
         "avg_steps": avg_steps,
@@ -398,6 +409,7 @@ def calculate_post_convergence_metrics(
         "distance_efficiency": distance_efficiency,
         "avg_survival_score": avg_survival_score,
         "avg_temperature_comfort_score": avg_temperature_comfort_score,
+        "avg_oxygen_comfort_score": avg_oxygen_comfort_score,
     }
 
 
@@ -619,4 +631,5 @@ def analyze_convergence(
         stability=stability,
         avg_survival_score=post_metrics["avg_survival_score"],
         avg_temperature_comfort_score=post_metrics["avg_temperature_comfort_score"],
+        avg_oxygen_comfort_score=post_metrics["avg_oxygen_comfort_score"],
     )

@@ -64,9 +64,9 @@ class TestOxygenField:
             gradient_direction=0.0,
             gradient_strength=1.0,  # Extreme gradient
         )
-        # Far east should be clamped to 21.0
+        # Far east should be clamped to exactly 21.0
         o2 = field.get_oxygen((99, 50))
-        assert o2 <= 21.0
+        assert o2 == pytest.approx(21.0)
 
     def test_value_clamping_min(self):
         """Test that oxygen values are clamped to 0.0 minimum."""
@@ -78,7 +78,7 @@ class TestOxygenField:
             spot_decay_constant=5.0,
         )
         o2 = field.get_oxygen((50, 50))
-        assert o2 >= 0.0
+        assert o2 == pytest.approx(0.0)
 
 
 class TestOxygenZones:

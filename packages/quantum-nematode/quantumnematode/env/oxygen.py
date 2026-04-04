@@ -256,5 +256,7 @@ class OxygenField:
             return OxygenZone.LETHAL_HYPEROXIA
         if oxygen > thresholds.comfort_upper:
             return OxygenZone.DANGER_HYPEROXIA
+        if oxygen < thresholds.comfort_lower:
+            return OxygenZone.DANGER_HYPOXIA
 
         return OxygenZone.COMFORT

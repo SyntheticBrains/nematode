@@ -542,6 +542,7 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         avg_oxygen_comfort_score=avg_oxygen_comfort_score,
         post_convergence_survival_score=convergence_metrics.avg_survival_score,
         post_convergence_temperature_comfort_score=convergence_metrics.avg_temperature_comfort_score,
+        post_convergence_oxygen_comfort_score=convergence_metrics.avg_oxygen_comfort_score,
         # Chemotaxis validation metrics
         avg_chemotaxis_index=avg_chemotaxis_index,
         avg_time_in_attractant=avg_time_in_attractant,

@@ -568,6 +568,20 @@ class QuantumNematodeAgent:
             oxygen_gradient_strength=oxygen_gradient_strength,
             oxygen_gradient_direction=oxygen_gradient_direction,
             oxygen_dconcentration_dt=temporal.get("oxygen_dconcentration_dt"),
+            oxygen_comfort_midpoint=(
+                (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0
+                if self.env.aerotaxis.enabled
+                else 8.5
+            ),
+            oxygen_comfort_normalization=(
+                max(
+                    (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0,
+                    self.env.aerotaxis.comfort_upper
+                    - (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0,
+                )
+                if self.env.aerotaxis.enabled
+                else 12.5
+            ),
             # Temporal sensing (Phase 3)
             food_concentration=temporal.get("food_concentration"),
             predator_concentration=temporal.get("predator_concentration"),

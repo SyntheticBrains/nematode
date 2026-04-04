@@ -420,11 +420,6 @@ def _thermotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
 # Aerotaxis Feature Extractors (URX/AQR/PQR + BAG neurons)
 # =============================================================================
 
-# Oxygen comfort midpoint and normalization factor
-# Comfort range is 5-12% O2, midpoint is 8.5%, max deviation from midpoint to [0, 21] is 12.5
-_O2_COMFORT_MIDPOINT = 8.5
-_O2_NORMALIZATION = 12.5
-
 
 def _aerotaxis_core(params: BrainParams) -> CoreFeatures:
     """Extract aerotaxis oracle features (O2 gradient + comfort deviation).
@@ -432,7 +427,7 @@ def _aerotaxis_core(params: BrainParams) -> CoreFeatures:
     Aerotaxis (URX/AQR/PQR + BAG neurons) encodes:
     - strength: oxygen gradient magnitude, tanh-normalized to [0, 1]
     - angle: egocentric relative angle to higher O2, in [-1, 1]
-    - binary: oxygen comfort deviation (O2 - 8.5) / 12.5, clipped to [-1, 1]
+    - binary: oxygen comfort deviation from configured midpoint, clipped to [-1, 1]
       Negative = too little O2, positive = too much O2
     """
     if params.oxygen_concentration is None:
@@ -444,7 +439,9 @@ def _aerotaxis_core(params: BrainParams) -> CoreFeatures:
         params.agent_direction,
     )
 
-    o2_deviation = (params.oxygen_concentration - _O2_COMFORT_MIDPOINT) / _O2_NORMALIZATION
+    midpoint = params.oxygen_comfort_midpoint
+    normalization = params.oxygen_comfort_normalization
+    o2_deviation = (params.oxygen_concentration - midpoint) / normalization
     o2_deviation = float(np.clip(o2_deviation, -1.0, 1.0))
 
     return CoreFeatures(
@@ -470,7 +467,9 @@ def _aerotaxis_temporal_core(params: BrainParams) -> CoreFeatures:
     if params.oxygen_concentration is None:
         return CoreFeatures()
 
-    o2_deviation = (params.oxygen_concentration - _O2_COMFORT_MIDPOINT) / _O2_NORMALIZATION
+    midpoint = params.oxygen_comfort_midpoint
+    normalization = params.oxygen_comfort_normalization
+    o2_deviation = (params.oxygen_concentration - midpoint) / normalization
     o2_deviation = float(np.clip(o2_deviation, -1.0, 1.0))
 
     raw_deriv = float(params.oxygen_dconcentration_dt or 0.0)

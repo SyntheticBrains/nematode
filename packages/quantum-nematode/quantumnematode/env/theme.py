@@ -214,6 +214,12 @@ THEME_SYMBOLS = {
         zone_danger_hot="🟧",
         zone_lethal_hot="🟥",
         zone_toxic="🟪",
+        # Oxygen zone backgrounds
+        zone_lethal_hypoxia="🟥",
+        zone_danger_hypoxia="🟫",
+        zone_comfort_oxygen="",
+        zone_danger_hyperoxia="🩵",
+        zone_lethal_hyperoxia="🩵",
     ),
     Theme.UNICODE: ThemeSymbolSet(
         goal="◆",
@@ -247,6 +253,12 @@ THEME_SYMBOLS = {
         zone_danger_hot="\033[33m.\033[0m",  # Orange/dark yellow dot
         zone_lethal_hot="\033[91m.\033[0m",  # Red dot
         zone_toxic="\033[95m.\033[0m",  # Magenta/purple dot
+        # Oxygen zone symbols
+        zone_lethal_hypoxia="\033[91m·\033[0m",  # Red dot
+        zone_danger_hypoxia="\033[31m·\033[0m",  # Dark red dot
+        zone_comfort_oxygen="",
+        zone_danger_hyperoxia="\033[96m·\033[0m",  # Cyan dot
+        zone_lethal_hyperoxia="\033[36m·\033[0m",  # Dark cyan dot
     ),
     Theme.RICH: ThemeSymbolSet(
         goal="⬢",
