@@ -73,7 +73,10 @@ class ConvergenceMetrics(BaseModel):
     """Average temperature comfort score across all runs. None if thermotaxis disabled."""
 
     avg_oxygen_comfort_score: float | None = None
-    """Average oxygen comfort score from post-convergence analysis runs. None if aerotaxis disabled."""
+    """
+    Average oxygen comfort score from post-convergence analysis runs.
+    None if aerotaxis disabled.
+    """
 
 
 def detect_convergence(
