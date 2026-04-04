@@ -118,9 +118,9 @@ ______________________________________________________________________
 
 Medium oracle achieves 76% L100 (below 80% target), large oracle achieves 79% L100. The medium grid's steep gradient (0.30%/cell, 46% comfort) makes it genuinely harder than expected. Large grid (0.12%/cell + spots, 50% comfort) is closer to the target. The difficulty tuning was intentionally calibrated to match thermal challenge levels.
 
-### H2: O2 adds 10-20pp drop vs thermal-only — CONFIRMED
+### H2: O2 adds 10-20pp drop vs thermal-only — EXCEEDED
 
-Adding oxygen to thermal foraging drops L100 by 10pp (99→89%). In pursuit scenarios, oxygen reduces L100 by 24pp (94→70%). For stationary predators, the impact is most severe at 42pp (93→51%) — toxic zones combined with O2 danger zones severely restrict the safe foraging area. Oxygen creates a genuine third navigational constraint that the agent cannot ignore.
+Foraging drops by 10pp (99→89%), within the predicted 10-20pp range. However, pursuit drops by 24pp (94→70%) and stationary by 42pp (93→51%) — both exceeding the predicted range. The stationary scenario is most severely impacted as toxic zones compound with O2 danger zones to restrict the safe foraging area. Oxygen creates a stronger constraint than anticipated, particularly in predator scenarios.
 
 ### H3: Agent learns dual O2+temperature navigation — CONFIRMED
 
