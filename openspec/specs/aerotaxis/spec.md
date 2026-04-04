@@ -5,6 +5,7 @@
 This specification defines the aerotaxis (oxygen sensing) system for the Quantum Nematode project. It implements C. elegans oxygen-guided navigation with asymmetric zone classification (5 zones), oracle and temporal sensing modes, zone-based rewards/HP damage, visualization, and full experiment tracking pipeline.
 
 ## Requirements
+
 ### Requirement: Oxygen Field Generation
 
 The system SHALL provide an OxygenField class that computes spatial oxygen concentration distributions using a linear gradient plus high/low oxygen spots with exponential decay, mirroring the TemperatureField architecture.
