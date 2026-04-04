@@ -17,6 +17,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Predator Evasion**: Multi-objective learning with pursuit/stationary predators and gradient-based danger perception
 - ✅ **Temporal Sensing**: Biologically-accurate sensing modes replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with Short-Term Associative Memory (STAM) buffers
 - ✅ **Thermotaxis**: Temperature-guided navigation with comfort/discomfort/danger zones and scattered hot/cold spots
+- ✅ **Aerotaxis**: Oxygen-guided navigation with asymmetric hypoxia/hyperoxia danger zones (5-12% O2 comfort range, URX/BAG neuron-inspired)
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
 - ✅ **Classical ML Alternatives**: REINFORCE, PPO, DQN, LSTM/GRU PPO, and spiking neural network brain architectures
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
@@ -285,11 +286,12 @@ The default Pixel theme renders the simulation in a Pygame window with biologica
 |-------|-------------|
 | **Soil** | Dark earth background with subtle texture |
 | **Temperature zones** | Blue (cold) through neutral to red/orange (hot) overlays based on thermal gradient |
+| **Oxygen zones** | Red (hypoxia) through neutral to cyan (hyperoxia) overlays based on O2 concentration |
 | **Toxic zones** | Purple overlay around stationary predators indicating damage radius |
 
 ### Status Bar
 
-The status bar displays session-level information (run progress, cumulative wins, total food eaten, average steps) and run-level information (current step, food collected, health, satiety, danger status, temperature zone).
+The status bar displays session-level information (run progress, cumulative wins, total food eaten, average steps) and run-level information (current step, food collected, health, satiety, danger status, temperature zone, oxygen zone).
 
 ### Alternative Themes
 
@@ -346,6 +348,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 - **Temporal Sensing**: Biologically-accurate sensing replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with STAM temporal memory buffers
 - **LSTM/GRU PPO Brain**: Recurrent architecture with chunk-based truncated BPTT for temporal sensing tasks — achieves oracle-level converged performance with scalar-only sensing
+- **Aerotaxis**: Oxygen sensing with asymmetric 5-zone system (URX/BAG neuron-inspired), combined thermal+oxygen environments with orthogonal gradients
 - **Enhanced Sensory Systems**: Thermotaxis with hot/cold zones, mechanosensation (touch response), health/damage systems
 - **Advanced Predator Behaviors**: Stationary traps with toxic zones, pursuit patterns with configurable speed/detection
 

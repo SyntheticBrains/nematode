@@ -20,7 +20,12 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.dtypes import GradientPolar, GridPosition, TemperatureSpot
+from quantumnematode.dtypes import GradientPolar, GridPosition, OxygenSpot, TemperatureSpot
+from quantumnematode.env.oxygen import (
+    OxygenField,
+    OxygenZone,
+    OxygenZoneThresholds,
+)
 from quantumnematode.env.temperature import (
     TemperatureField,
     TemperatureZone,
@@ -243,6 +248,53 @@ class ThermotaxisParams:
     discomfort_delta: float = 10.0
     danger_delta: float = 15.0
     reward_discomfort_food: float = 0.0
+
+
+# Aerotaxis system defaults
+DEFAULT_BASE_OXYGEN = 10.0
+DEFAULT_OXYGEN_GRADIENT_STRENGTH = 0.1
+DEFAULT_OXYGEN_DANGER_PENALTY = -0.5
+DEFAULT_OXYGEN_DANGER_HP_DAMAGE = 0.5
+DEFAULT_OXYGEN_LETHAL_HP_DAMAGE = 6.0
+
+
+@dataclass
+class AerotaxisParams:
+    """
+    Parameters for aerotaxis configuration in the environment.
+
+    Aerotaxis simulates C. elegans oxygen-guided navigation behavior.
+    Worms prefer moderate oxygen levels (5-12%) and avoid both hypoxic
+    and hyperoxic conditions using URX/AQR/PQR and BAG neurons.
+
+    Unlike thermotaxis, oxygen zones use absolute percentage thresholds
+    (not symmetric deltas from a reference), reflecting the biological
+    asymmetry between hypoxia and hyperoxia responses. The 5-zone model
+    has no discomfort tier because URX/BAG neurons have relatively sharp
+    activation thresholds.
+
+    TODO: Freeze this class once the following Pylance issue is resolved:
+    https://github.com/microsoft/pylance-release/issues/7801
+    """
+
+    enabled: bool = False
+    base_oxygen: float = DEFAULT_BASE_OXYGEN
+    gradient_direction: float = 0.0
+    gradient_strength: float = DEFAULT_OXYGEN_GRADIENT_STRENGTH
+    high_oxygen_spots: list[OxygenSpot] | None = None
+    low_oxygen_spots: list[OxygenSpot] | None = None
+    spot_decay_constant: float = 5.0
+    comfort_reward: float = 0.0
+    danger_penalty: float = DEFAULT_OXYGEN_DANGER_PENALTY
+    danger_hp_damage: float = DEFAULT_OXYGEN_DANGER_HP_DAMAGE
+    lethal_hp_damage: float = DEFAULT_OXYGEN_LETHAL_HP_DAMAGE
+    reward_discomfort_food: float = 0.0
+    # Zone thresholds (absolute O2 percentages)
+    lethal_hypoxia_upper: float = 2.0
+    danger_hypoxia_upper: float = 5.0
+    comfort_lower: float = 5.0
+    comfort_upper: float = 12.0
+    danger_hyperoxia_upper: float = 17.0
 
 
 class Predator:
@@ -866,6 +918,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         predator: PredatorParams | None = None,
         health: HealthParams | None = None,
         thermotaxis: ThermotaxisParams | None = None,
+        aerotaxis: AerotaxisParams | None = None,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -886,6 +939,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.predator = predator or PredatorParams()
         self.health = health or HealthParams()
         self.thermotaxis = thermotaxis or ThermotaxisParams()
+        self.aerotaxis = aerotaxis or AerotaxisParams()
 
         self.viewport_size = viewport_size
 
@@ -905,9 +959,26 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 spot_decay_constant=self.thermotaxis.spot_decay_constant,
             )
 
+        # Oxygen field (runtime, created from aerotaxis config)
+        self._oxygen_field: OxygenField | None = None
+        if self.aerotaxis.enabled:
+            self._oxygen_field = OxygenField(
+                grid_size=grid_size,
+                base_oxygen=self.aerotaxis.base_oxygen,
+                gradient_direction=self.aerotaxis.gradient_direction,
+                gradient_strength=self.aerotaxis.gradient_strength,
+                high_oxygen_spots=self.aerotaxis.high_oxygen_spots,
+                low_oxygen_spots=self.aerotaxis.low_oxygen_spots,
+                spot_decay_constant=self.aerotaxis.spot_decay_constant,
+            )
+
         # Thermotaxis tracking (comfort score calculation)
         self.steps_in_comfort_zone: int = 0
         self.total_thermotaxis_steps: int = 0
+
+        # Aerotaxis tracking (oxygen comfort score calculation)
+        self.steps_in_oxygen_comfort_zone: int = 0
+        self.total_aerotaxis_steps: int = 0
 
         # Validate gradient parameters to prevent divide-by-zero in exp(-distance/decay)
         if self.foraging.gradient_decay_constant <= 0:
@@ -1381,6 +1452,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
             "predator_gradient_direction": float(predator_direction),
         }
 
+        # Add oxygen gradients if aerotaxis is enabled (oracle mode only —
+        # temporal/derivative modes use scalar concentration via STAM)
+        if self.aerotaxis.enabled and self._oxygen_field is not None:
+            o2_gradient = self._oxygen_field.get_gradient_polar(
+                (position[0], position[1]),
+            )
+            result["oxygen_gradient_strength"] = float(
+                np.tanh(o2_gradient[0] * GRADIENT_SCALING_TANH_FACTOR),
+            )
+            result["oxygen_gradient_direction"] = float(o2_gradient[1])
+
         if not disable_log:
             logger.debug(
                 f"Local gradients: food_mag={food_magnitude:.3f}, "
@@ -1835,6 +1917,173 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.steps_in_comfort_zone = 0
         self.total_thermotaxis_steps = 0
 
+    # =========================================================================
+    # Aerotaxis (oxygen sensing) methods
+    # =========================================================================
+
+    def get_oxygen(self, position: GridPosition | None = None) -> float | None:
+        """
+        Get oxygen concentration at a position (or agent position if not specified).
+
+        Parameters
+        ----------
+        position : GridPosition | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        float | None
+            O2 percentage, or None if aerotaxis is disabled.
+        """
+        if not self.aerotaxis.enabled or self._oxygen_field is None:
+            return None
+        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
+        return self._oxygen_field.get_oxygen(pos)
+
+    def get_oxygen_gradient(
+        self,
+        position: GridPosition | None = None,
+    ) -> GradientPolar | None:
+        """
+        Get oxygen gradient (magnitude, direction) at a position.
+
+        Parameters
+        ----------
+        position : GridPosition | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        GradientPolar | None
+            (magnitude, direction) or None if aerotaxis is disabled.
+            Direction points toward increasing oxygen.
+        """
+        if not self.aerotaxis.enabled or self._oxygen_field is None:
+            return None
+        pos: GridPosition = position or (self.agent_pos[0], self.agent_pos[1])
+        return self._oxygen_field.get_gradient_polar(pos)
+
+    def get_oxygen_zone(
+        self,
+        position: GridPosition | None = None,
+    ) -> OxygenZone | None:
+        """
+        Get the oxygen zone at a position.
+
+        Parameters
+        ----------
+        position : GridPosition | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        OxygenZone | None
+            The oxygen zone, or None if aerotaxis is disabled.
+        """
+        if not self.aerotaxis.enabled or self._oxygen_field is None:
+            return None
+
+        o2 = self.get_oxygen(position)
+        if o2 is None:
+            return None
+
+        thresholds = OxygenZoneThresholds(
+            lethal_hypoxia_upper=self.aerotaxis.lethal_hypoxia_upper,
+            danger_hypoxia_upper=self.aerotaxis.danger_hypoxia_upper,
+            comfort_lower=self.aerotaxis.comfort_lower,
+            comfort_upper=self.aerotaxis.comfort_upper,
+            danger_hyperoxia_upper=self.aerotaxis.danger_hyperoxia_upper,
+        )
+        return self._oxygen_field.get_zone(o2, thresholds)
+
+    def get_oxygen_concentration(
+        self,
+        position: GridPosition | None = None,
+    ) -> float | None:
+        """
+        Get scalar oxygen concentration at a position.
+
+        Unlike food/predator concentrations, this returns the raw O2 percentage
+        (NOT tanh-normalized) since O2 percentage is already a meaningful absolute value.
+
+        Parameters
+        ----------
+        position : GridPosition | None
+            Position to query. Uses agent position if None.
+
+        Returns
+        -------
+        float | None
+            O2 percentage in [0.0, 21.0], or None if aerotaxis is disabled.
+        """
+        return self.get_oxygen(position)
+
+    def apply_oxygen_effects(self) -> tuple[float, float]:
+        """
+        Apply oxygen zone effects (rewards/penalties and HP damage).
+
+        Updates the oxygen comfort zone tracking counters and applies appropriate
+        rewards, penalties, and HP damage based on the current oxygen zone.
+
+        Returns
+        -------
+        tuple[float, float]
+            (reward_delta, hp_damage) applied this step.
+            reward_delta is positive for comfort, negative for danger.
+            hp_damage is always non-negative (0 if no damage).
+        """
+        if not self.aerotaxis.enabled:
+            return 0.0, 0.0
+
+        zone = self.get_oxygen_zone()
+        if zone is None:
+            return 0.0, 0.0
+
+        # Track comfort zone time
+        self.total_aerotaxis_steps += 1
+        if zone == OxygenZone.COMFORT:
+            self.steps_in_oxygen_comfort_zone += 1
+
+        reward_delta = 0.0
+        hp_damage = 0.0
+
+        if zone == OxygenZone.COMFORT:
+            reward_delta = self.aerotaxis.comfort_reward
+        elif zone in (OxygenZone.DANGER_HYPOXIA, OxygenZone.DANGER_HYPEROXIA):
+            reward_delta = self.aerotaxis.danger_penalty
+            hp_damage = self.aerotaxis.danger_hp_damage
+        elif zone in (OxygenZone.LETHAL_HYPOXIA, OxygenZone.LETHAL_HYPEROXIA):
+            reward_delta = self.aerotaxis.danger_penalty
+            hp_damage = self.aerotaxis.lethal_hp_damage
+
+        # Apply HP damage
+        if hp_damage > 0:
+            self.agent_hp = max(0.0, self.agent_hp - hp_damage)
+            logger.debug(
+                f"Oxygen damage: zone={zone.value}, damage={hp_damage}, hp={self.agent_hp}",
+            )
+
+        return reward_delta, hp_damage
+
+    def get_oxygen_comfort_score(self) -> float:
+        """
+        Get the fraction of time spent in the oxygen comfort zone.
+
+        Returns
+        -------
+        float
+            Ratio of steps in comfort zone to total steps (0.0 to 1.0).
+            Returns 0.0 if no aerotaxis steps have occurred.
+        """
+        if self.total_aerotaxis_steps == 0:
+            return 0.0
+        return self.steps_in_oxygen_comfort_zone / self.total_aerotaxis_steps
+
+    def reset_aerotaxis(self) -> None:
+        """Reset aerotaxis tracking counters (called at episode start)."""
+        self.steps_in_oxygen_comfort_zone = 0
+        self.total_aerotaxis_steps = 0
+
     def get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """
         Calculate viewport bounds centered on the agent.
@@ -2273,11 +2522,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Notes
         -----
-        Config objects (ForagingParams, PredatorParams, HealthParams, ThermotaxisParams)
-        are shared between the original and copy, not deep-copied. This is intentional
-        as these are treated as immutable configuration. Runtime state (foods,
-        visited_cells, agent_hp, predator positions, thermotaxis counters) is properly
-        copied.
+        Config objects (ForagingParams, PredatorParams, HealthParams, ThermotaxisParams,
+        AerotaxisParams) are shared between the original and copy, not deep-copied.
+        This is intentional as these are treated as immutable configuration. Runtime
+        state (foods, visited_cells, agent_hp, predator positions, thermotaxis/aerotaxis
+        counters) is properly copied.
         """
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,
@@ -2292,6 +2541,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             predator=self.predator,
             health=self.health,
             thermotaxis=self.thermotaxis,
+            aerotaxis=self.aerotaxis,
         )
         new_env.body = self.body.copy()
         new_env.current_direction = self.current_direction
@@ -2304,6 +2554,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Copy thermotaxis tracking state
         new_env.steps_in_comfort_zone = self.steps_in_comfort_zone
         new_env.total_thermotaxis_steps = self.total_thermotaxis_steps
+        # Copy aerotaxis tracking state
+        new_env.steps_in_oxygen_comfort_zone = self.steps_in_oxygen_comfort_zone
+        new_env.total_aerotaxis_steps = self.total_aerotaxis_steps
         if self.predator.enabled:
             new_env.predators = [
                 Predator(

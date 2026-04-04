@@ -3,9 +3,10 @@
 Renders the simulation in a Pygame window with layered surfaces:
 1. Background (soil)
 2. Temperature zone overlays
-3. Toxic zone overlays
-4. Entities (food, predators, nematode) - drawn with transparency so zones show through
-5. UI status bar
+3. Oxygen zone overlays
+4. Toxic zone overlays
+5. Entities (food, predators, nematode) - drawn with transparency so zones show through
+6. UI status bar
 """
 
 from __future__ import annotations
@@ -84,6 +85,12 @@ class PygameRenderer:
             "danger_hot",
             "lethal_hot",
             "toxic",
+            # Oxygen zones
+            "lethal_hypoxia",
+            "danger_hypoxia",
+            "comfort_oxygen",
+            "danger_hyperoxia",
+            "lethal_hyperoxia",
         ):
             self._zone_overlays[name] = create_zone_overlay(pygame, name)
 
@@ -133,6 +140,8 @@ class PygameRenderer:
         in_danger: bool = False,
         temperature: float | None = None,
         zone_name: str | None = None,
+        oxygen: float | None = None,
+        oxygen_zone_name: str | None = None,
         session_text: str | None = None,
     ) -> None:
         """Render one complete frame."""
@@ -153,8 +162,8 @@ class PygameRenderer:
                 )
                 + 1
             )  # +1 for separator
-        # 7 = max run-level lines (title, step, food, hp, satiety, status, temp)
-        self._resize_if_needed(session_lines + 7)
+        # 8 = max run-level lines (title, step, food, hp, satiety, status, temp, o2)
+        self._resize_if_needed(session_lines + 8)
 
         viewport = env.get_viewport_bounds()
 
@@ -163,6 +172,7 @@ class PygameRenderer:
 
         self._render_background(viewport)
         self._render_temperature_zones(env, viewport)
+        self._render_oxygen_zones(env, viewport)
         self._render_toxic_zones(env, viewport)
         self._render_entities(env, viewport)
         self._render_status_bar(
@@ -177,6 +187,8 @@ class PygameRenderer:
             in_danger=in_danger,
             temperature=temperature,
             zone_name=zone_name,
+            oxygen=oxygen,
+            oxygen_zone_name=oxygen_zone_name,
             session_text=session_text,
         )
 
@@ -242,6 +254,37 @@ class PygameRenderer:
                 )
                 overlay_name = zone_to_overlay_name.get(zone)
                 if overlay_name and overlay_name != "comfort":
+                    overlay = self._zone_overlays[overlay_name]
+                    px, py = self._cell_to_pixel(gx, gy, viewport)
+                    self._screen.blit(overlay, (px, py))
+
+    def _render_oxygen_zones(
+        self,
+        env: DynamicForagingEnvironment,
+        viewport: Viewport,
+    ) -> None:
+        """Render oxygen zone overlays on all cells."""
+        if not env.aerotaxis.enabled:
+            return
+
+        from quantumnematode.env.oxygen import OxygenZone
+
+        zone_to_overlay_name = {
+            OxygenZone.LETHAL_HYPOXIA: "lethal_hypoxia",
+            OxygenZone.DANGER_HYPOXIA: "danger_hypoxia",
+            OxygenZone.COMFORT: "comfort_oxygen",
+            OxygenZone.DANGER_HYPEROXIA: "danger_hyperoxia",
+            OxygenZone.LETHAL_HYPEROXIA: "lethal_hyperoxia",
+        }
+
+        min_x, min_y, max_x, max_y = viewport
+        for gy in range(min_y, max_y):
+            for gx in range(min_x, max_x):
+                zone = env.get_oxygen_zone((gx, gy))
+                if zone is None:
+                    continue
+                overlay_name = zone_to_overlay_name.get(zone)
+                if overlay_name and overlay_name != "comfort_oxygen":
                     overlay = self._zone_overlays[overlay_name]
                     px, py = self._cell_to_pixel(gx, gy, viewport)
                     self._screen.blit(overlay, (px, py))
@@ -392,6 +435,8 @@ class PygameRenderer:
         in_danger: bool,
         temperature: float | None,
         zone_name: str | None,
+        oxygen: float | None = None,
+        oxygen_zone_name: str | None = None,
         session_text: str | None = None,
     ) -> None:
         """Render status information below the grid."""
@@ -426,6 +471,9 @@ class PygameRenderer:
 
         if temperature is not None and zone_name:
             lines.append((f"Temp: {temperature:.1f}C ({zone_name})", STATUS_TEXT_COLOR))
+
+        if oxygen is not None and oxygen_zone_name:
+            lines.append((f"O2: {oxygen:.1f}% ({oxygen_zone_name})", STATUS_TEXT_COLOR))
 
         line_height = STATUS_FONT_SIZE + 2
         antialias = True

@@ -35,15 +35,21 @@ from quantumnematode.brain.arch import (
     SpikingReinforceBrainConfig,
 )
 from quantumnematode.brain.modules import Modules
-from quantumnematode.dtypes import TemperatureSpot
+from quantumnematode.dtypes import OxygenSpot, TemperatureSpot
 from quantumnematode.env.env import (
+    DEFAULT_BASE_OXYGEN,
     DEFAULT_COMFORT_REWARD,
     DEFAULT_CULTIVATION_TEMPERATURE,
     DEFAULT_DANGER_HP_DAMAGE,
     DEFAULT_DANGER_PENALTY,
     DEFAULT_DISCOMFORT_PENALTY,
     DEFAULT_LETHAL_HP_DAMAGE,
+    DEFAULT_OXYGEN_DANGER_HP_DAMAGE,
+    DEFAULT_OXYGEN_DANGER_PENALTY,
+    DEFAULT_OXYGEN_GRADIENT_STRENGTH,
+    DEFAULT_OXYGEN_LETHAL_HP_DAMAGE,
     DEFAULT_TEMPERATURE_GRADIENT_STRENGTH,
+    AerotaxisParams,
     ForagingParams,
     HealthParams,
     PredatorParams,
@@ -488,6 +494,72 @@ class ThermotaxisConfig(BaseModel):
         )
 
 
+class AerotaxisConfig(BaseModel):
+    """Configuration for aerotaxis (oxygen sensing) system.
+
+    When enabled, the environment has an oxygen field that the agent can sense.
+    Oxygen zones affect rewards and HP damage based on O2 percentage.
+
+    Unlike thermotaxis, oxygen zones use absolute percentage thresholds (not
+    symmetric deltas) and have 5 zones (no discomfort tier).
+    """
+
+    enabled: bool = False
+    base_oxygen: float = DEFAULT_BASE_OXYGEN
+    gradient_direction: float = 0.0
+    gradient_strength: float = DEFAULT_OXYGEN_GRADIENT_STRENGTH
+    high_oxygen_spots: list[list[float]] | None = None
+    low_oxygen_spots: list[list[float]] | None = None
+    spot_decay_constant: float = 5.0
+    comfort_reward: float = 0.0
+    danger_penalty: float = DEFAULT_OXYGEN_DANGER_PENALTY
+    danger_hp_damage: float = DEFAULT_OXYGEN_DANGER_HP_DAMAGE
+    lethal_hp_damage: float = DEFAULT_OXYGEN_LETHAL_HP_DAMAGE
+    reward_discomfort_food: float = 0.0
+    # Zone thresholds (absolute O2 percentages)
+    lethal_hypoxia_upper: float = 2.0
+    danger_hypoxia_upper: float = 5.0
+    comfort_lower: float = 5.0
+    comfort_upper: float = 12.0
+    danger_hyperoxia_upper: float = 17.0
+
+    def to_params(self) -> AerotaxisParams:
+        """Convert to AerotaxisParams for environment initialization."""
+        high_spots: list[OxygenSpot] | None = None
+        if self.high_oxygen_spots is not None:
+            high_spots = [
+                _validate_and_convert_spot(spot, "high_oxygen_spot", i)
+                for i, spot in enumerate(self.high_oxygen_spots)
+            ]
+
+        low_spots: list[OxygenSpot] | None = None
+        if self.low_oxygen_spots is not None:
+            low_spots = [
+                _validate_and_convert_spot(spot, "low_oxygen_spot", i)
+                for i, spot in enumerate(self.low_oxygen_spots)
+            ]
+
+        return AerotaxisParams(
+            enabled=self.enabled,
+            base_oxygen=self.base_oxygen,
+            gradient_direction=self.gradient_direction,
+            gradient_strength=self.gradient_strength,
+            high_oxygen_spots=high_spots,
+            low_oxygen_spots=low_spots,
+            spot_decay_constant=self.spot_decay_constant,
+            comfort_reward=self.comfort_reward,
+            danger_penalty=self.danger_penalty,
+            danger_hp_damage=self.danger_hp_damage,
+            lethal_hp_damage=self.lethal_hp_damage,
+            reward_discomfort_food=self.reward_discomfort_food,
+            lethal_hypoxia_upper=self.lethal_hypoxia_upper,
+            danger_hypoxia_upper=self.danger_hypoxia_upper,
+            comfort_lower=self.comfort_lower,
+            comfort_upper=self.comfort_upper,
+            danger_hyperoxia_upper=self.danger_hyperoxia_upper,
+        )
+
+
 class SensingMode(StrEnum):
     """Sensing mode for gradient-based sensory modalities."""
 
@@ -506,6 +578,7 @@ class SensingConfig(BaseModel):
     chemotaxis_mode: SensingMode = SensingMode.ORACLE
     thermotaxis_mode: SensingMode = SensingMode.ORACLE
     nociception_mode: SensingMode = SensingMode.ORACLE
+    aerotaxis_mode: SensingMode = SensingMode.ORACLE
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
@@ -555,6 +628,8 @@ def apply_sensing_mode(
             result.append("nociception_temporal")
         elif module == "thermotaxis" and sensing.thermotaxis_mode != SensingMode.ORACLE:
             result.append("thermotaxis_temporal")
+        elif module == "aerotaxis" and sensing.aerotaxis_mode != SensingMode.ORACLE:
+            result.append("aerotaxis_temporal")
         else:
             result.append(module)
 
@@ -584,6 +659,7 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.chemotaxis_mode,
             sensing.thermotaxis_mode,
             sensing.nociception_mode,
+            sensing.aerotaxis_mode,
         )
     )
     any_temporal = any(
@@ -592,6 +668,7 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.chemotaxis_mode,
             sensing.thermotaxis_mode,
             sensing.nociception_mode,
+            sensing.aerotaxis_mode,
         )
     )
 
@@ -626,6 +703,7 @@ class EnvironmentConfig(BaseModel):
     predators: PredatorConfig | None = None
     health: HealthConfig | None = None
     thermotaxis: ThermotaxisConfig | None = None
+    aerotaxis: AerotaxisConfig | None = None
     sensing: SensingConfig | None = None
 
     def get_foraging_config(self) -> ForagingConfig:
@@ -643,6 +721,10 @@ class EnvironmentConfig(BaseModel):
     def get_thermotaxis_config(self) -> ThermotaxisConfig:
         """Get thermotaxis configuration with defaults."""
         return self.thermotaxis or ThermotaxisConfig()
+
+    def get_aerotaxis_config(self) -> AerotaxisConfig:
+        """Get aerotaxis configuration with defaults."""
+        return self.aerotaxis or AerotaxisConfig()
 
     def get_sensing_config(self) -> SensingConfig:
         """Get sensing configuration with defaults."""
@@ -1043,6 +1125,7 @@ def create_env_from_config(
     predator_config = env_config.get_predator_config()
     health_config = env_config.get_health_config()
     thermotaxis_config = env_config.get_thermotaxis_config()
+    aerotaxis_config = env_config.get_aerotaxis_config()
 
     return DynamicForagingEnvironment(
         grid_size=env_config.grid_size,
@@ -1054,4 +1137,5 @@ def create_env_from_config(
         predator=predator_config.to_params(),
         health=health_config.to_params(),
         thermotaxis=thermotaxis_config.to_params(),
+        aerotaxis=aerotaxis_config.to_params(),
     )

@@ -56,7 +56,7 @@ ______________________________________________________________________
 | **0** | Q4 2025 - Q1 2026 | Foundation & Baselines | ✅ COMPLETE | Validated optimization methods, SOTA baselines, first QPU run |
 | **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | ✅ COMPLETE | Thermotaxis, enhanced predators, mechanosensation, HP system |
 | **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
-| **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | ✅ SUBSTANTIALLY COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A achieves 94% L500 on hardest environment. Oxygen sensing deferred to Phase 4. |
+| **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | ✅ SUBSTANTIALLY COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A achieves 94% L500 on hardest environment. Oxygen sensing (aerotaxis) implemented with 5-zone system and combined thermal+oxygen environments. |
 | **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔲 PLANNED | Multi-agent infrastructure, pheromones, social/competitive dynamics |
 | **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
 | **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
@@ -346,9 +346,12 @@ This is how real C. elegans navigates: a "biased random walk" where the worm mov
 - **BPTT chunk length** is the most critical hyperparameter — must match the temporal scale of the behavioral sequence.
 - **Training efficiency** is the main gap: temporal needs 6000-12000 episodes vs oracle's ~300-1000. Capability is equivalent at convergence.
 
+**Completed after initial Phase 3 evaluation:**
+
+- ✅ Oxygen sensing (aerotaxis) — OxygenField with asymmetric 5-zone system, combined thermal+oxygen environments, full oracle/temporal/derivative support, STAM expanded to 4 channels
+
 **Deferred to later phases:**
 
-- Oxygen sensing (pairs with Phase 4 multi-agent environment enrichment)
 - ITAM/LTAM (STAM was sufficient — the GRU's internal memory makes explicit ITAM/LTAM less critical)
 - Associative learning paradigms (deferred to Phase 5)
 
@@ -363,7 +366,7 @@ This is how real C. elegans navigates: a "biased random walk" where the worm mov
 
 **Stretch (can continue into Phase 4):**
 
-- 🔲 Oxygen sensing — deferred (pairs naturally with Phase 4 environment enrichment)
+- ✅ Oxygen sensing — implemented with asymmetric 5-zone system (URX/BAG neuron-inspired), combined thermal+oxygen environments, full temporal/derivative sensing support, and experiment tracking pipeline
 - 🔲 Associative learning paradigms — deferred to Phase 5
 
 #### Quantum Checkpoint (Phase 3)

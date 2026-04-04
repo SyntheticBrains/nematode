@@ -511,6 +511,36 @@ def plot_tracking_data_by_latest_run(  # pragma: no cover  # noqa: C901, PLR0912
             plt.savefig(run_dir / "temperature_progression.png")
             plt.close()
 
+        # Plot oxygen progression (if aerotaxis was enabled)
+        if episode_data.oxygen_history:
+            oxygen_history = episode_data.oxygen_history
+            steps = list(range(len(oxygen_history)))
+
+            plt.figure(figsize=(14, 6))
+            plt.plot(
+                steps,
+                oxygen_history,
+                linewidth=2,
+                label="O₂ %",
+                color="teal",
+            )
+            mean_o2 = float(np.mean(oxygen_history))
+            plt.axhline(
+                y=mean_o2,
+                color="darkcyan",
+                linestyle="--",
+                linewidth=1.5,
+                label=f"Mean: {mean_o2:.1f}%",
+            )
+            plt.title(f"Oxygen Progression (run {run})")
+            plt.xlabel("Step")
+            plt.ylabel("O₂ (%)")
+            plt.legend()
+            plt.grid(alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(run_dir / "oxygen_progression.png")
+            plt.close()
+
         # Plot distance efficiencies for this run
         if episode_data.distance_efficiencies:
             dist_effs = episode_data.distance_efficiencies

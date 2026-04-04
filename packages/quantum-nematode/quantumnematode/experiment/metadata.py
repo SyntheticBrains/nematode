@@ -85,6 +85,8 @@ class PerRunResult(BaseModel):
         Survival score (final_hp / max_hp). None if health system disabled.
     temperature_comfort_score : float | None
         Fraction of time in comfort zone. None if thermotaxis disabled.
+    oxygen_comfort_score : float | None
+        Fraction of time in O2 comfort zone. None if aerotaxis disabled.
     """
 
     run: int
@@ -97,6 +99,7 @@ class PerRunResult(BaseModel):
     distance_efficiency: float | None = None
     survival_score: float | None = None
     temperature_comfort_score: float | None = None
+    oxygen_comfort_score: float | None = None
 
 
 class EnvironmentMetadata(BaseModel):
@@ -359,6 +362,10 @@ class ResultsMetadata(BaseModel):
         Average survival score in post-convergence runs.
     post_convergence_temperature_comfort_score : float | None
         Average temperature comfort score in post-convergence runs. None if thermotaxis disabled.
+    avg_oxygen_comfort_score : float | None
+        Average oxygen comfort score across all runs. None if aerotaxis disabled.
+    post_convergence_oxygen_comfort_score : float | None
+        Average oxygen comfort score in post-convergence runs. None if aerotaxis disabled.
     avg_chemotaxis_index : float | None
         Average chemotaxis index across all runs (dynamic environments only).
     avg_time_in_attractant : float | None
@@ -420,6 +427,8 @@ class ResultsMetadata(BaseModel):
     avg_temperature_comfort_score: float | None = None
     post_convergence_survival_score: float | None = None
     post_convergence_temperature_comfort_score: float | None = None
+    avg_oxygen_comfort_score: float | None = None
+    post_convergence_oxygen_comfort_score: float | None = None
     # Chemotaxis validation metrics (added for biological validation)
     # All-run chemotaxis metrics (includes learning phase)
     avg_chemotaxis_index: float | None = None

@@ -26,12 +26,16 @@ GradientPolar = tuple[float, float]
 GradientVector = tuple[float, float]
 
 # =============================================================================
-# Spot Types (for temperature field)
+# Spot Types (for environmental fields)
 # =============================================================================
 
 # Hot/cold spot definition: (x, y, intensity)
 # Intensity is temperature delta in °C (positive for hot, used as-is for cold)
 TemperatureSpot = tuple[int, int, float]
+
+# High/low oxygen spot definition: (x, y, intensity)
+# Intensity is O2 percentage delta (positive for high-O2, used as-is for low-O2)
+OxygenSpot = tuple[int, int, float]
 
 # =============================================================================
 # Path and History Types

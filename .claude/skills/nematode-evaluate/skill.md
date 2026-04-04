@@ -64,6 +64,7 @@ Analyse experiment results from completed simulation sessions.
    - **Foraging**: Is the agent finding food? Check avg foods, starvation rate, distance efficiency
    - **Predator evasion**: Check death rate, evasion rate, survival steps. Is the agent dying early (before learning) or late (after partial learning)?
    - **Thermotaxis**: Check for temperature-related deaths, comfort zone navigation
+   - **Aerotaxis**: Check for oxygen-related deaths, comfort zone (5-12% O2) navigation
    - **Training dynamics**: Is entropy collapsing too fast? Is LR decaying before convergence? Check the schedule against the learning curve inflection point.
 
 6. **Provide recommendations**
@@ -85,4 +86,4 @@ Show a summary table first, then detailed analysis, then recommendations. Be con
 - Always compute L100 for consistency with prior logbooks (007, 008, 009)
 - When comparing to oracle, state the oracle numbers explicitly
 - Flag any seeds that failed to converge or collapsed
-- If the experiment CSV doesn't have predator/thermotaxis columns, skip those analyses — don't assume all experiments have all objectives
+- If the experiment CSV doesn't have predator/thermotaxis/aerotaxis columns, skip those analyses — don't assume all experiments have all objectives

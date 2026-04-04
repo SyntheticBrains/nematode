@@ -62,6 +62,16 @@ class ThemeSymbolSet(BaseModel):
         Symbol/style for lethal hot zone background.
     zone_toxic : str
         Symbol/style for toxic zone background (stationary predator radius).
+    zone_lethal_hypoxia : str
+        Symbol/style for lethal hypoxia zone background.
+    zone_danger_hypoxia : str
+        Symbol/style for danger hypoxia zone background.
+    zone_comfort_oxygen : str
+        Symbol/style for comfort oxygen zone background.
+    zone_danger_hyperoxia : str
+        Symbol/style for danger hyperoxia zone background.
+    zone_lethal_hyperoxia : str
+        Symbol/style for lethal hyperoxia zone background.
     """
 
     goal: str
@@ -83,6 +93,12 @@ class ThemeSymbolSet(BaseModel):
     zone_danger_hot: str = ""
     zone_lethal_hot: str = ""
     zone_toxic: str = ""
+    # Oxygen zone backgrounds (optional, default to empty for themes without zone support)
+    zone_lethal_hypoxia: str = ""
+    zone_danger_hypoxia: str = ""
+    zone_comfort_oxygen: str = ""
+    zone_danger_hyperoxia: str = ""
+    zone_lethal_hyperoxia: str = ""
 
 
 class DarkColorRichStyleConfig(BaseModel):
@@ -120,6 +136,16 @@ class DarkColorRichStyleConfig(BaseModel):
         Background style for danger hot temperature zone.
     zone_lethal_hot_bg : str
         Background style for lethal hot temperature zone.
+    zone_lethal_hypoxia_bg : str
+        Background style for lethal hypoxia oxygen zone.
+    zone_danger_hypoxia_bg : str
+        Background style for danger hypoxia oxygen zone.
+    zone_comfort_oxygen_bg : str
+        Background style for comfort oxygen zone (default: no background).
+    zone_danger_hyperoxia_bg : str
+        Background style for danger hyperoxia oxygen zone.
+    zone_lethal_hyperoxia_bg : str
+        Background style for lethal hyperoxia oxygen zone.
     zone_toxic_bg : str
         Background style for toxic zones (stationary predator damage radius).
     """
@@ -143,6 +169,13 @@ class DarkColorRichStyleConfig(BaseModel):
     zone_discomfort_hot_bg: str = "on light_goldenrod1"
     zone_danger_hot_bg: str = "on orange1"
     zone_lethal_hot_bg: str = "on red"
+
+    # Oxygen zone background styles (hypoxia to hyperoxia)
+    zone_lethal_hypoxia_bg: str = "on dark_red"
+    zone_danger_hypoxia_bg: str = "on red3"
+    zone_comfort_oxygen_bg: str = ""  # No background override for comfort zone
+    zone_danger_hyperoxia_bg: str = "on light_cyan3"
+    zone_lethal_hyperoxia_bg: str = "on cyan"
 
     # Toxic zone background (higher priority than temperature)
     zone_toxic_bg: str = "on medium_purple"
@@ -181,6 +214,12 @@ THEME_SYMBOLS = {
         zone_danger_hot="🟧",
         zone_lethal_hot="🟥",
         zone_toxic="🟪",
+        # Oxygen zone backgrounds
+        zone_lethal_hypoxia="🟥",
+        zone_danger_hypoxia="🟫",
+        zone_comfort_oxygen="",
+        zone_danger_hyperoxia="🩵",
+        zone_lethal_hyperoxia="🩵",
     ),
     Theme.UNICODE: ThemeSymbolSet(
         goal="◆",
@@ -214,6 +253,12 @@ THEME_SYMBOLS = {
         zone_danger_hot="\033[33m.\033[0m",  # Orange/dark yellow dot
         zone_lethal_hot="\033[91m.\033[0m",  # Red dot
         zone_toxic="\033[95m.\033[0m",  # Magenta/purple dot
+        # Oxygen zone symbols
+        zone_lethal_hypoxia="\033[91m·\033[0m",  # Red dot
+        zone_danger_hypoxia="\033[31m·\033[0m",  # Dark red dot
+        zone_comfort_oxygen="",
+        zone_danger_hyperoxia="\033[96m·\033[0m",  # Cyan dot
+        zone_lethal_hyperoxia="\033[36m·\033[0m",  # Dark cyan dot
     ),
     Theme.RICH: ThemeSymbolSet(
         goal="⬢",

@@ -2,11 +2,15 @@
 
 __all__ = [
     "MIN_GRID_SIZE",
+    "AerotaxisParams",
     "BaseEnvironment",
     "Direction",
     "DynamicForagingEnvironment",
     "ForagingParams",
     "HealthParams",
+    "OxygenField",
+    "OxygenZone",
+    "OxygenZoneThresholds",
     "PredatorParams",
     "PredatorType",
     "TemperatureField",
@@ -17,6 +21,7 @@ __all__ = [
 
 from quantumnematode.env.env import (
     MIN_GRID_SIZE,
+    AerotaxisParams,
     BaseEnvironment,
     Direction,
     DynamicForagingEnvironment,
@@ -25,6 +30,11 @@ from quantumnematode.env.env import (
     PredatorParams,
     PredatorType,
     ThermotaxisParams,
+)
+from quantumnematode.env.oxygen import (
+    OxygenField,
+    OxygenZone,
+    OxygenZoneThresholds,
 )
 from quantumnematode.env.temperature import (
     TemperatureField,

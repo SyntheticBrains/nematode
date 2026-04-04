@@ -777,6 +777,61 @@ class TestGetClassicalFeatureDimension:
         assert get_classical_feature_dimension(modules) == 0
 
 
+class TestAerotaxisModule:
+    """Test aerotaxis (oxygen sensing) feature extraction."""
+
+    def test_aerotaxis_oracle_features(self):
+        """Test aerotaxis oracle at comfort midpoint produces near-zero binary."""
+        module = SENSORY_MODULES[ModuleName.AEROTAXIS]
+        params = BrainParams(
+            oxygen_concentration=8.5,
+            oxygen_gradient_strength=0.5,
+            oxygen_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        core = module.extract(params)
+        # At comfort midpoint (8.5%), binary deviation should be ~0
+        assert core.binary == pytest.approx(0.0)
+
+    def test_aerotaxis_oracle_deviation(self):
+        """Test aerotaxis oracle with low O2 produces negative binary deviation."""
+        module = SENSORY_MODULES[ModuleName.AEROTAXIS]
+        params = BrainParams(
+            oxygen_concentration=3.0,
+            oxygen_gradient_strength=0.5,
+            oxygen_gradient_direction=0.0,
+            agent_direction=Direction.UP,
+        )
+        core = module.extract(params)
+        # 3.0% is below comfort midpoint → negative deviation
+        assert core.binary < 0.0
+
+    def test_aerotaxis_temporal_features(self):
+        """Test aerotaxis temporal with dO2/dt produces nonzero angle."""
+        module = SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL]
+        params = BrainParams(
+            oxygen_concentration=8.5,
+            oxygen_dconcentration_dt=0.5,
+        )
+        core = module.extract(params)
+        # Positive dO2/dt → positive angle
+        assert core.angle > 0.0
+
+    def test_aerotaxis_classical_dim(self):
+        """Test that both aerotaxis modules have classical_dim=3."""
+        assert SENSORY_MODULES[ModuleName.AEROTAXIS].classical_dim == 3
+        assert SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL].classical_dim == 3
+
+    def test_aerotaxis_disabled(self):
+        """Test that aerotaxis with oxygen_concentration=None returns zero features."""
+        module = SENSORY_MODULES[ModuleName.AEROTAXIS]
+        params = BrainParams()
+        core = module.extract(params)
+        assert core.strength == 0.0
+        assert core.angle == 0.0
+        assert core.binary == 0.0
+
+
 class TestExtractClassicalFeatures:
     """Test extract_classical_features function."""
 

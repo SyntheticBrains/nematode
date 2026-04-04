@@ -578,8 +578,8 @@ class TestLSTMPPOBrainSensoryModules:
             ModuleName.STAM,
         ]
         brain = _make_brain(sensory_modules=modules)
-        # STAM has classical_dim=9, plus 2 per normal module = 4 + 9 = 13
-        expected_dim = 2 + 2 + 9  # food_chemotaxis_temporal + proprioception + STAM
+        # STAM has classical_dim=11, plus 2 per normal module = 4 + 11 = 15
+        expected_dim = 2 + 2 + 11  # food_chemotaxis_temporal + proprioception + STAM
         assert brain.input_dim == expected_dim
 
         brain.prepare_episode()
@@ -589,7 +589,7 @@ class TestLSTMPPOBrainSensoryModules:
             agent_direction=Direction.UP,
             food_concentration=0.7,
             food_dconcentration_dt=0.1,
-            stam_state=(0.1,) * 9,
+            stam_state=(0.1,) * 11,
         )
         actions = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(actions) == 1

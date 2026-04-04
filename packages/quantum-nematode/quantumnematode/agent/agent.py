@@ -370,7 +370,7 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
-    def _compute_temporal_data(
+    def _compute_temporal_data(  # noqa: C901
         self,
         sensing: SensingConfig,
         temperature: float | None,
@@ -403,6 +403,7 @@ class QuantumNematodeAgent:
             sensing.chemotaxis_mode != SensingMode.ORACLE
             or sensing.nociception_mode != SensingMode.ORACLE
             or sensing.thermotaxis_mode != SensingMode.ORACLE
+            or sensing.aerotaxis_mode != SensingMode.ORACLE
         )
 
         if not (any_non_oracle or sensing.stam_enabled):
@@ -423,6 +424,15 @@ class QuantumNematodeAgent:
             separated_grads.pop("predator_gradient_strength", None)
             separated_grads.pop("predator_gradient_direction", None)
 
+        # Oxygen scalar concentration (raw percentage, not tanh-normalized)
+        o2_val = 0.0
+        if self.env.aerotaxis.enabled:
+            o2_raw = self.env.get_oxygen_concentration()
+            o2_val = o2_raw if o2_raw is not None else 0.0
+            if sensing.aerotaxis_mode != SensingMode.ORACLE:
+                separated_grads.pop("oxygen_gradient_strength", None)
+                separated_grads.pop("oxygen_gradient_direction", None)
+
         # (b) Compute position delta from previous position
         current_pos = tuple(self.env.agent_pos)
         pos_delta = (0.0, 0.0)
@@ -440,7 +450,7 @@ class QuantumNematodeAgent:
                 action_str = str(action.action) if action.action is not None else "stay"
                 action_idx = _ACTION_TO_IDX.get(action_str, 0)
             self._stam.record(
-                np.array([food_conc_val, temp_val, pred_conc_val]),
+                np.array([food_conc_val, temp_val, pred_conc_val, o2_val]),
                 pos_delta,
                 action_idx,
             )
@@ -452,6 +462,8 @@ class QuantumNematodeAgent:
                 result["temperature_ddt"] = self._stam.compute_temporal_derivative(1)
             if sensing.nociception_mode == SensingMode.DERIVATIVE:
                 result["predator_dconcentration_dt"] = self._stam.compute_temporal_derivative(2)
+            if sensing.aerotaxis_mode == SensingMode.DERIVATIVE:
+                result["oxygen_dconcentration_dt"] = self._stam.compute_temporal_derivative(3)
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
 
@@ -513,6 +525,21 @@ class QuantumNematodeAgent:
                     temperature_gradient_direction = temp_gradient[1]
             cultivation_temperature = self.env.thermotaxis.cultivation_temperature
 
+        # Aerotaxis: oxygen sensing
+        oxygen_concentration = None
+        oxygen_gradient_strength = None
+        oxygen_gradient_direction = None
+
+        if self.env.aerotaxis.enabled:
+            oxygen_concentration = self.env.get_oxygen_concentration()
+            from quantumnematode.utils.config_loader import SensingMode
+
+            if sensing.aerotaxis_mode == SensingMode.ORACLE:
+                o2_gradient = self.env.get_oxygen_gradient()
+                if o2_gradient is not None:
+                    oxygen_gradient_strength = o2_gradient[0]
+                    oxygen_gradient_direction = o2_gradient[1]
+
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
 
@@ -536,6 +563,29 @@ class QuantumNematodeAgent:
             temperature_gradient_strength=temperature_gradient_strength,
             temperature_gradient_direction=temperature_gradient_direction,
             cultivation_temperature=cultivation_temperature,
+            # Aerotaxis (oxygen sensing)
+            oxygen_concentration=oxygen_concentration,
+            oxygen_gradient_strength=oxygen_gradient_strength,
+            oxygen_gradient_direction=oxygen_gradient_direction,
+            oxygen_dconcentration_dt=temporal.get("oxygen_dconcentration_dt"),
+            oxygen_comfort_midpoint=(
+                (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0
+                if self.env.aerotaxis.enabled
+                else 8.5
+            ),
+            # Normalization = max(midpoint, half_width) so that the larger
+            # possible deviation (hypoxia toward 0% or hyperoxia toward 21%)
+            # maps to [-1, 1] after clipping.  For default 5-12% comfort:
+            # midpoint=8.5, half_width=3.5 → norm=8.5 (hypoxia side dominates).
+            oxygen_comfort_normalization=(
+                max(
+                    (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0,
+                    self.env.aerotaxis.comfort_upper
+                    - (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0,
+                )
+                if self.env.aerotaxis.enabled
+                else 12.5
+            ),
             # Temporal sensing (Phase 3)
             food_concentration=temporal.get("food_concentration"),
             predator_concentration=temporal.get("predator_concentration"),
@@ -657,6 +707,14 @@ class QuantumNematodeAgent:
             if zone is not None:
                 zone_name = zone.value.upper().replace("_", " ")
 
+        oxygen: float | None = None
+        oxygen_zone_name: str | None = None
+        if self.env.aerotaxis.enabled:
+            oxygen = self.env.get_oxygen_concentration()
+            o2_zone = self.env.get_oxygen_zone()
+            if o2_zone is not None:
+                oxygen_zone_name = o2_zone.value.upper().replace("_", " ")
+
         renderer.render_frame(
             env=self.env,
             step=self._episode_tracker.steps,
@@ -670,6 +728,8 @@ class QuantumNematodeAgent:
             in_danger=self.env.is_agent_in_danger() if self.env.predator.enabled else False,
             temperature=temperature,
             zone_name=zone_name,
+            oxygen=oxygen,
+            oxygen_zone_name=oxygen_zone_name,
             session_text=render_text,
         )
 
@@ -720,6 +780,7 @@ class QuantumNematodeAgent:
             predator=self.env.predator,
             health=self.env.health,
             thermotaxis=self.env.thermotaxis,
+            aerotaxis=self.env.aerotaxis,
             # Reproducibility: preserve seed from original environment
             seed=self.env.seed,
         )

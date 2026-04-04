@@ -54,6 +54,13 @@ ZONE_DISCOMFORT_HOT = (220, 200, 80, 50)
 ZONE_DANGER_HOT = (220, 140, 40, 70)
 ZONE_LETHAL_HOT = (220, 50, 30, 90)
 
+# Oxygen zone overlay colors (with alpha)
+ZONE_LETHAL_HYPOXIA = (180, 40, 40, 90)  # dark red
+ZONE_DANGER_HYPOXIA = (200, 80, 60, 70)  # red-brown
+ZONE_COMFORT_OXYGEN = (0, 0, 0, 0)  # transparent
+ZONE_DANGER_HYPEROXIA = (80, 200, 220, 70)  # light cyan
+ZONE_LETHAL_HYPEROXIA = (40, 180, 220, 90)  # bright cyan
+
 # Toxic zone overlay
 ZONE_TOXIC = (140, 60, 180, 80)
 
@@ -297,7 +304,9 @@ def create_zone_overlay(
         The pygame module.
     zone_name : str
         One of: lethal_cold, danger_cold, discomfort_cold, comfort,
-        discomfort_hot, danger_hot, lethal_hot, toxic.
+        discomfort_hot, danger_hot, lethal_hot, toxic,
+        lethal_hypoxia, danger_hypoxia, comfort_oxygen,
+        danger_hyperoxia, lethal_hyperoxia.
 
     Returns
     -------
@@ -313,6 +322,12 @@ def create_zone_overlay(
         "danger_hot": ZONE_DANGER_HOT,
         "lethal_hot": ZONE_LETHAL_HOT,
         "toxic": ZONE_TOXIC,
+        # Oxygen zones
+        "lethal_hypoxia": ZONE_LETHAL_HYPOXIA,
+        "danger_hypoxia": ZONE_DANGER_HYPOXIA,
+        "comfort_oxygen": ZONE_COMFORT_OXYGEN,
+        "danger_hyperoxia": ZONE_DANGER_HYPEROXIA,
+        "lethal_hyperoxia": ZONE_LETHAL_HYPEROXIA,
     }
     rgba = color_map.get(zone_name, ZONE_COMFORT)
     surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)

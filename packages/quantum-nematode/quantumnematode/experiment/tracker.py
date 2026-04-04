@@ -343,6 +343,13 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         sum(comfort_scores) / len(comfort_scores) if comfort_scores else None
     )
 
+    o2_comfort_scores = [
+        r.oxygen_comfort_score for r in all_results if r.oxygen_comfort_score is not None
+    ]
+    avg_oxygen_comfort_score = (
+        sum(o2_comfort_scores) / len(o2_comfort_scores) if o2_comfort_scores else None
+    )
+
     # BUILD PER-RUN RESULTS for full transparency
     per_run_results = []
     for r in all_results:
@@ -365,6 +372,7 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
                 distance_efficiency=r.average_distance_efficiency,
                 survival_score=r.survival_score,
                 temperature_comfort_score=r.temperature_comfort_score,
+                oxygen_comfort_score=r.oxygen_comfort_score,
             ),
         )
 
@@ -531,8 +539,10 @@ def aggregate_results_metadata(  # noqa: PLR0912, PLR0915, C901
         # Multi-objective metrics (survival and temperature comfort)
         avg_survival_score=avg_survival_score,
         avg_temperature_comfort_score=avg_temperature_comfort_score,
+        avg_oxygen_comfort_score=avg_oxygen_comfort_score,
         post_convergence_survival_score=convergence_metrics.avg_survival_score,
         post_convergence_temperature_comfort_score=convergence_metrics.avg_temperature_comfort_score,
+        post_convergence_oxygen_comfort_score=convergence_metrics.avg_oxygen_comfort_score,
         # Chemotaxis validation metrics
         avg_chemotaxis_index=avg_chemotaxis_index,
         avg_time_in_attractant=avg_time_in_attractant,
