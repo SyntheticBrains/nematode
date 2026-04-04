@@ -127,4 +127,4 @@
 - [x] 13.2 Fix LR schedule: lr_decay_episodes 200→1500 in medium oracle config (was decaying 90% too early)
 - [x] 13.3 Replace mlpppo temporal configs with lstmppo (GRU): MLP PPO has no recurrence for temporal sensing
 - [x] 13.4 Oracle evaluation across all scenarios (A-I): oxygen-only foraging/pursuit/stationary, combined oxygen+thermal foraging/pursuit/stationary, thermal-only controls
-- [ ] 13.5 Extended temporal evaluation: 12000-episode GRU runs (in progress)
+- [x] 13.5 ~~Extended temporal evaluation~~ — out of scope for this change; will continue after archiving
