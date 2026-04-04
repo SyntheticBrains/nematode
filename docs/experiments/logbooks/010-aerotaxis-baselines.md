@@ -120,7 +120,7 @@ Medium oracle achieves 76% L100 (below 80% target), large oracle achieves 79% L1
 
 ### H2: O2 adds 10-20pp drop vs thermal-only — CONFIRMED
 
-Adding oxygen to thermal foraging drops L100 by 10pp (99→89%). Adding oxygen to thermal+pursuit drops L100 by 24pp (94→70%). Adding oxygen to thermal+stationary drops L100 by 42pp (93→51%). The stationary scenario shows the largest impact — toxic zones combined with O2 danger zones severely restrict the safe foraging area. Oxygen creates a genuine third navigational constraint that the agent cannot ignore.
+Adding oxygen to thermal foraging drops L100 by 10pp (99→89%). In pursuit scenarios, oxygen reduces L100 by 24pp (94→70%). For stationary predators, the impact is most severe at 42pp (93→51%) — toxic zones combined with O2 danger zones severely restrict the safe foraging area. Oxygen creates a genuine third navigational constraint that the agent cannot ignore.
 
 ### H3: Agent learns dual O2+temperature navigation — CONFIRMED
 
