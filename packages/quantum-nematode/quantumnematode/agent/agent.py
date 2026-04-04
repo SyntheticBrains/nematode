@@ -573,6 +573,10 @@ class QuantumNematodeAgent:
                 if self.env.aerotaxis.enabled
                 else 8.5
             ),
+            # Normalization = max(midpoint, half_width) so that the larger
+            # possible deviation (hypoxia toward 0% or hyperoxia toward 21%)
+            # maps to [-1, 1] after clipping.  For default 5-12% comfort:
+            # midpoint=8.5, half_width=3.5 → norm=8.5 (hypoxia side dominates).
             oxygen_comfort_normalization=(
                 max(
                     (self.env.aerotaxis.comfort_lower + self.env.aerotaxis.comfort_upper) / 2.0,
