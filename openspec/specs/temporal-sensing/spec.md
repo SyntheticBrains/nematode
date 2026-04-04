@@ -4,7 +4,7 @@
 
 ### Requirement: Sensing Mode Selection
 
-The system SHALL support three sensing modes for each gradient-based sensory modality (chemotaxis, thermotaxis, nociception), selectable independently per modality via configuration.
+The system SHALL support three sensing modes for each gradient-based sensory modality (chemotaxis, thermotaxis, nociception, aerotaxis), selectable independently per modality via configuration.
 
 #### Scenario: Oracle Mode (Default)
 
@@ -15,7 +15,7 @@ The system SHALL support three sensing modes for each gradient-based sensory mod
 #### Scenario: Temporal Mode (Mode A)
 
 - **WHEN** a modality is configured with `mode: temporal`
-- **THEN** the system SHALL provide only the scalar value at the agent's current position (concentration, temperature)
+- **THEN** the system SHALL provide only the scalar value at the agent's current position (concentration, temperature, oxygen percentage)
 - **AND** the system SHALL NOT provide gradient magnitude or gradient direction for that modality
 - **AND** the agent SHALL rely on STAM memory buffers to infer gradient direction from movement history
 
@@ -29,11 +29,12 @@ The system SHALL support three sensing modes for each gradient-based sensory mod
 
 #### Scenario: Independent Per-Modality Configuration
 
-- **WHEN** sensing modes are configured as `chemotaxis_mode: temporal`, `thermotaxis_mode: derivative`, `nociception_mode: oracle`
+- **WHEN** sensing modes are configured as `chemotaxis_mode: temporal`, `thermotaxis_mode: derivative`, `nociception_mode: oracle`, `aerotaxis_mode: temporal`
 - **THEN** chemotaxis SHALL use temporal mode (scalar only)
 - **AND** thermotaxis SHALL use derivative mode (scalar + dT/dt)
 - **AND** nociception SHALL use oracle mode (spatial gradient)
-- **AND** all three modes SHALL operate correctly within the same simulation
+- **AND** aerotaxis SHALL use temporal mode (scalar O2 only)
+- **AND** all four modes SHALL operate correctly within the same simulation
 
 ### Requirement: Temporal Sensory Modules
 
@@ -62,6 +63,14 @@ The system SHALL provide sensory module registry entries for temporal sensing th
 - **AND** the module SHALL extract angle from the temperature temporal derivative (dT/dt), normalized via `tanh(derivative)` to [-1, 1], or 0 when not available
 - **AND** the module SHALL include temperature deviation as the binary field (classical_dim=3)
 
+#### Scenario: Aerotaxis Temporal Module
+
+- **WHEN** aerotaxis is configured in temporal or derivative mode
+- **THEN** an `aerotaxis_temporal` module SHALL be registered in the SensoryModule registry
+- **AND** the module SHALL extract strength from the absolute oxygen comfort deviation: `abs(clip((O2 - 8.5) / 12.5, -1, 1))`
+- **AND** the module SHALL extract angle from the oxygen temporal derivative (dO2/dt), normalized via `tanh(derivative * derivative_scale)` to [-1, 1], or 0 when not available
+- **AND** the module SHALL include signed oxygen comfort deviation as the binary field (classical_dim=3)
+
 #### Scenario: Brain Architecture Transparency
 
 - **WHEN** temporal sensing modules are used in place of oracle modules
@@ -80,6 +89,12 @@ The system SHALL automatically substitute temporal sensory module names for orac
 - **THEN** the system SHALL automatically replace `food_chemotaxis` with `food_chemotaxis_temporal`
 - **AND** `mechanosensation` SHALL remain unchanged (it is already biologically accurate)
 - **AND** the substitution SHALL occur at config load time, before brain construction
+
+#### Scenario: Aerotaxis Module Substitution
+
+- **WHEN** a brain config specifies `sensory_modules: [aerotaxis]` and `aerotaxis_mode: temporal`
+- **THEN** the system SHALL automatically replace `aerotaxis` with `aerotaxis_temporal`
+- **AND** the substitution SHALL follow the same pattern as chemotaxis/thermotaxis/nociception
 
 #### Scenario: STAM Module Auto-Append
 

@@ -9,7 +9,7 @@ The system SHALL provide an exponential-decay memory buffer that stores recent s
 #### Scenario: Recording Sensory Data
 
 - **WHEN** the agent completes a simulation step
-- **THEN** the STAM buffer SHALL record the current scalar readings for all active channels (food concentration, temperature, predator concentration)
+- **THEN** the STAM buffer SHALL record the current scalar readings for all 4 channels (food concentration, temperature, predator concentration, oxygen concentration)
 - **AND** SHALL record the step-to-step position change (dx, dy) as a proprioceptive movement signal, NOT absolute grid coordinates
 - **AND** SHALL record the action taken in that step
 - **AND** the most recent entry SHALL be stored at index 0
@@ -75,25 +75,25 @@ The system SHALL produce a fixed-size memory state vector suitable for neural ne
 #### Scenario: Full Memory State Output
 
 - **WHEN** `get_memory_state()` is called
-- **THEN** it SHALL return a numpy array of exactly 9 floats:
-  - 3 weighted scalar means (food concentration, temperature, predator concentration)
-  - 3 temporal derivatives (dC/dt for each channel)
+- **THEN** it SHALL return a numpy array of exactly 11 floats:
+  - 4 weighted scalar means (food concentration, temperature, predator concentration, oxygen concentration)
+  - 4 temporal derivatives (dC/dt for each channel)
   - 2 position deltas (dx, dy: deviation of most recent step-to-step movement from weighted mean of recent movements — captures change in movement pattern)
   - 1 action variety metric (entropy of recent actions — computational convenience for learning, not biologically motivated)
-- **AND** the array shape SHALL be (9,) regardless of buffer fill level
+- **AND** the array shape SHALL be (11,) regardless of buffer fill level
 
 #### Scenario: Empty Buffer State
 
 - **WHEN** `get_memory_state()` is called with an empty buffer
-- **THEN** all 9 values SHALL be 0.0
-- **AND** the array shape SHALL still be (9,)
+- **THEN** all 11 values SHALL be 0.0
+- **AND** the array shape SHALL still be (11,)
 
 #### Scenario: Partially Filled Buffer
 
 - **WHEN** the buffer has fewer than `buffer_size` entries
 - **THEN** weighted means and derivatives SHALL be computed using only available entries
 - **AND** zero-weighting for missing entries SHALL NOT be applied (use actual entries only)
-- **AND** the output SHALL still be exactly 9 floats
+- **AND** the output SHALL still be exactly 11 floats
 
 ### Requirement: STAM Sensory Module
 
@@ -102,21 +102,21 @@ The system SHALL provide a sensory module registry entry for STAM that integrate
 #### Scenario: Classical Feature Output
 
 - **WHEN** the STAM module's `to_classical()` is called
-- **THEN** it SHALL return the full 9-float memory state vector
-- **AND** `classical_dim` SHALL be 9
+- **THEN** it SHALL return the full 11-float memory state vector
+- **AND** `classical_dim` SHALL be 11
 - **AND** the output SHALL be compatible with `extract_classical_features()` concatenation
 
 #### Scenario: Quantum Feature Output
 
 - **WHEN** the STAM module's `to_quantum()` is called
 - **THEN** it SHALL return a 3-element array [rx, ry, rz] compressed from the memory state
-- **AND** the compression SHALL use: rx=mean scalar, ry=mean derivative, rz=action entropy
+- **AND** the compression SHALL use: rx=mean of weighted scalar means (indices 0-3), ry=mean of temporal derivatives (indices 4-7), rz=action entropy (index 10)
 - **AND** values SHALL be scaled to [-π/2, π/2] range
 
 #### Scenario: STAM Module When Disabled
 
 - **WHEN** the STAM module is included in sensory modules but STAM is not enabled (stam_state is None)
-- **THEN** `to_classical()` SHALL return a zero vector of shape (9,)
+- **THEN** `to_classical()` SHALL return a zero vector of shape (11,)
 - **AND** `to_quantum()` SHALL return a zero vector of shape (3,)
 
 ### Requirement: STAM Configuration
@@ -128,8 +128,8 @@ The system SHALL support configurable STAM parameters via YAML configuration.
 - **WHEN** `stam_enabled: true` is set without other STAM parameters
 - **THEN** `buffer_size` SHALL default to 30
 - **AND** `decay_rate` SHALL default to 0.1
-- **AND** the number of scalar channels SHALL be 3 (food concentration, temperature, predator concentration)
-- **AND** if a channel's source is disabled (e.g., thermotaxis not configured, or predators disabled), the channel SHALL record 0.0 and its temporal derivative SHALL be 0.0
+- **AND** the number of scalar channels SHALL be 4 (food concentration, temperature, predator concentration, oxygen concentration)
+- **AND** if a channel's source is disabled (e.g., thermotaxis not configured, aerotaxis not configured, or predators disabled), the channel SHALL record 0.0 and its temporal derivative SHALL be 0.0
 
 #### Scenario: Custom STAM Parameters
 
