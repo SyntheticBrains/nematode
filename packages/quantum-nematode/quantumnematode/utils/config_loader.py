@@ -894,6 +894,29 @@ def configure_brain(
     return _resolve_brain_config(config.brain.config, config_cls, brain_name)
 
 
+def configure_brain_from_container(
+    brain_container: BrainContainerConfig,
+) -> BrainConfigType:
+    """Configure brain from a BrainContainerConfig (for multi-agent per-agent configs).
+
+    Parameters
+    ----------
+    brain_container : BrainContainerConfig
+        Brain container with name and config.
+
+    Returns
+    -------
+    BrainConfigType
+        Parsed brain configuration.
+    """
+    brain_name = brain_container.name
+    if brain_name not in BRAIN_CONFIG_MAP:
+        msg = f"Unknown brain type: {brain_name}."
+        raise ValueError(msg)
+    config_cls = BRAIN_CONFIG_MAP[brain_name]
+    return _resolve_brain_config(brain_container.config, config_cls, brain_name)
+
+
 def configure_learning_rate(
     config: SimulationConfig,
 ) -> ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate:
