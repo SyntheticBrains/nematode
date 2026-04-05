@@ -1,8 +1,10 @@
 """Module for environments."""
 
 __all__ = [
+    "DEFAULT_AGENT_ID",
     "MIN_GRID_SIZE",
     "AerotaxisParams",
+    "AgentState",
     "BaseEnvironment",
     "Direction",
     "DynamicForagingEnvironment",
@@ -20,8 +22,10 @@ __all__ = [
 ]
 
 from quantumnematode.env.env import (
+    DEFAULT_AGENT_ID,
     MIN_GRID_SIZE,
     AerotaxisParams,
+    AgentState,
     BaseEnvironment,
     Direction,
     DynamicForagingEnvironment,

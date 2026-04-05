@@ -42,6 +42,9 @@ from quantumnematode.utils.seeding import ensure_seed, get_rng
 
 # Validation
 MIN_GRID_SIZE = 5
+
+# Default agent ID for single-agent backward compatibility
+DEFAULT_AGENT_ID = "default"
 MAX_POISSON_ATTEMPTS = 100
 
 # Constants for gradient scaling
@@ -295,6 +298,56 @@ class AerotaxisParams:
     comfort_lower: float = 5.0
     comfort_upper: float = 12.0
     danger_hyperoxia_upper: float = 17.0
+
+
+@dataclass
+class AgentState:
+    """Per-agent mutable state for multi-agent support.
+
+    Decouples agent state from the environment singleton. Each agent has its own
+    position, body, direction, HP, and tracking counters. In single-agent mode,
+    a single AgentState with agent_id="default" is created for backward compatibility.
+
+    Attributes
+    ----------
+    agent_id : str
+        Unique identifier for this agent.
+    position : tuple[int, int]
+        Current grid position (x, y).
+    body : list[tuple[int, int]]
+        Positions of the agent's body segments.
+    direction : Direction
+        Current facing direction.
+    hp : float
+        Current health points.
+    visited_cells : set[tuple[int, int]]
+        Cells visited this episode (for exploration bonus).
+    wall_collision_occurred : bool
+        Whether a wall collision occurred this step.
+    alive : bool
+        Whether agent is still active. False when terminated (frozen in place).
+    steps_in_comfort_zone : int
+        Thermotaxis comfort zone step counter.
+    total_thermotaxis_steps : int
+        Total steps with thermotaxis active.
+    steps_in_oxygen_comfort_zone : int
+        Aerotaxis comfort zone step counter.
+    total_aerotaxis_steps : int
+        Total steps with aerotaxis active.
+    """
+
+    agent_id: str
+    position: tuple[int, int]
+    body: list[tuple[int, int]]
+    direction: Direction
+    hp: float
+    visited_cells: set[tuple[int, int]]
+    wall_collision_occurred: bool = False
+    alive: bool = True
+    steps_in_comfort_zone: int = 0
+    total_thermotaxis_steps: int = 0
+    steps_in_oxygen_comfort_zone: int = 0
+    total_aerotaxis_steps: int = 0
 
 
 class Predator:
@@ -567,12 +620,71 @@ class BaseEnvironment(ABC):
         self.rng = get_rng(self.seed)
 
         self.grid_size = grid_size
-        self.agent_pos = start_pos or (1, 1)
-        self.body = [tuple(self.agent_pos)] if max_body_length > 0 else []
-        self.current_direction = Direction.UP
         self.theme = theme
         self.action_set = action_set
         self.rich_style_config = rich_style_config or DarkColorRichStyleConfig()
+
+        # Multi-agent state: dict of AgentState keyed by agent_id.
+        # Single-agent mode creates a "default" agent for backward compatibility.
+        initial_pos = start_pos or (1, 1)
+        initial_body = [tuple(initial_pos)] if max_body_length > 0 else []
+        self.agents: dict[str, AgentState] = {
+            DEFAULT_AGENT_ID: AgentState(
+                agent_id=DEFAULT_AGENT_ID,
+                position=initial_pos,
+                body=initial_body,
+                direction=Direction.UP,
+                hp=0.0,  # Set by subclass (DynamicForagingEnvironment)
+                visited_cells={initial_pos},
+            ),
+        }
+
+    # ── Backward-compatible property accessors ─────────────────────────
+    # These delegate to the "default" AgentState so all existing code
+    # (runners, agents, tests) works unchanged.
+
+    @property
+    def agent_pos(self) -> tuple[int, int]:
+        """Current position of the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].position
+
+    @agent_pos.setter
+    def agent_pos(self, value: tuple[int, int]) -> None:
+        self.agents[DEFAULT_AGENT_ID].position = value
+
+    @property
+    def body(self) -> list[tuple[int, int]]:
+        """Body segments of the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].body
+
+    @body.setter
+    def body(self, value: list[tuple[int, int]]) -> None:
+        self.agents[DEFAULT_AGENT_ID].body = value
+
+    @property
+    def current_direction(self) -> Direction:
+        """Facing direction of the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].direction
+
+    @current_direction.setter
+    def current_direction(self, value: Direction) -> None:
+        self.agents[DEFAULT_AGENT_ID].direction = value
+
+    # ── Agent registry methods ───────────────────────────────────────
+
+    def get_agent_ids(self) -> list[str]:
+        """Return sorted list of all agent IDs."""
+        return sorted(self.agents.keys())
+
+    def get_agent_state(self, agent_id: str) -> AgentState:
+        """Return the AgentState for the given agent_id.
+
+        Raises
+        ------
+        KeyError
+            If agent_id is not found.
+        """
+        return self.agents[agent_id]
 
     @abstractmethod
     def get_state(
@@ -943,8 +1055,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         self.viewport_size = viewport_size
 
-        # Health state (runtime, not config)
-        self.agent_hp: float = self.health.max_hp
+        # Initialize default agent HP from health config
+        self.agents[DEFAULT_AGENT_ID].hp = self.health.max_hp
 
         # Temperature field (runtime, created from thermotaxis config)
         self.temperature_field: TemperatureField | None = None
@@ -972,13 +1084,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 spot_decay_constant=self.aerotaxis.spot_decay_constant,
             )
 
-        # Thermotaxis tracking (comfort score calculation)
-        self.steps_in_comfort_zone: int = 0
-        self.total_thermotaxis_steps: int = 0
-
-        # Aerotaxis tracking (oxygen comfort score calculation)
-        self.steps_in_oxygen_comfort_zone: int = 0
-        self.total_aerotaxis_steps: int = 0
+        # Comfort zone tracking is now per-agent (in AgentState).
+        # Backward-compatible properties are defined below.
 
         # Validate gradient parameters to prevent divide-by-zero in exp(-distance/decay)
         if self.foraging.gradient_decay_constant <= 0:
@@ -1002,11 +1109,73 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if self.predator.enabled:
             self._initialize_predators()
 
-        # Track visited cells for exploration bonus
-        self.visited_cells: set[tuple[int, int]] = {(self.agent_pos[0], self.agent_pos[1])}
+        # visited_cells and wall_collision_occurred are now per-agent (in AgentState).
+        # Backward-compatible properties are defined below.
 
-        # Track wall collision for boundary penalty (reset each step)
-        self.wall_collision_occurred: bool = False
+    # ── Backward-compatible property accessors (DynamicForagingEnvironment) ──
+
+    @property
+    def agent_hp(self) -> float:
+        """Health points of the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].hp
+
+    @agent_hp.setter
+    def agent_hp(self, value: float) -> None:
+        self.agents[DEFAULT_AGENT_ID].hp = value
+
+    @property
+    def visited_cells(self) -> set[tuple[int, int]]:
+        """Cells visited by the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].visited_cells
+
+    @visited_cells.setter
+    def visited_cells(self, value: set[tuple[int, int]]) -> None:
+        self.agents[DEFAULT_AGENT_ID].visited_cells = value
+
+    @property
+    def wall_collision_occurred(self) -> bool:
+        """Whether a wall collision occurred for the default agent this step."""
+        return self.agents[DEFAULT_AGENT_ID].wall_collision_occurred
+
+    @wall_collision_occurred.setter
+    def wall_collision_occurred(self, value: bool) -> None:
+        self.agents[DEFAULT_AGENT_ID].wall_collision_occurred = value
+
+    @property
+    def steps_in_comfort_zone(self) -> int:
+        """Thermotaxis comfort zone step counter for the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].steps_in_comfort_zone
+
+    @steps_in_comfort_zone.setter
+    def steps_in_comfort_zone(self, value: int) -> None:
+        self.agents[DEFAULT_AGENT_ID].steps_in_comfort_zone = value
+
+    @property
+    def total_thermotaxis_steps(self) -> int:
+        """Total thermotaxis steps for the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].total_thermotaxis_steps
+
+    @total_thermotaxis_steps.setter
+    def total_thermotaxis_steps(self, value: int) -> None:
+        self.agents[DEFAULT_AGENT_ID].total_thermotaxis_steps = value
+
+    @property
+    def steps_in_oxygen_comfort_zone(self) -> int:
+        """Aerotaxis comfort zone step counter for the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].steps_in_oxygen_comfort_zone
+
+    @steps_in_oxygen_comfort_zone.setter
+    def steps_in_oxygen_comfort_zone(self, value: int) -> None:
+        self.agents[DEFAULT_AGENT_ID].steps_in_oxygen_comfort_zone = value
+
+    @property
+    def total_aerotaxis_steps(self) -> int:
+        """Total aerotaxis steps for the default agent."""
+        return self.agents[DEFAULT_AGENT_ID].total_aerotaxis_steps
+
+    @total_aerotaxis_steps.setter
+    def total_aerotaxis_steps(self, value: int) -> None:
+        self.agents[DEFAULT_AGENT_ID].total_aerotaxis_steps = value
 
     def _initialize_foods(self) -> None:
         """
