@@ -753,7 +753,7 @@ class MultiAgentConfig(BaseModel):
     food_competition: str = "first_arrival"
     social_detection_radius: int = 5
     termination_policy: str = "freeze"
-    min_agent_distance: int = 5
+    min_agent_distance: int = 5  # Best-effort Poisson disk; may be violated on dense grids
 
     @model_validator(mode="after")
     def _validate_population(self) -> "MultiAgentConfig":

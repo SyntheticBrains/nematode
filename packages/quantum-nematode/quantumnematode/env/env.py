@@ -1270,12 +1270,13 @@ class DynamicForagingEnvironment(BaseEnvironment):
         bool
             True if position is valid, False otherwise.
         """
-        # Check Euclidean distance from agent
-        agent_dist = np.sqrt(
-            (pos[0] - self.agent_pos[0]) ** 2 + (pos[1] - self.agent_pos[1]) ** 2,
-        )
-        if agent_dist < self.foraging.agent_exclusion_radius:
-            return False
+        # Check Euclidean distance from all agents (multi-agent aware)
+        for agent_state in self.agents.values():
+            agent_dist = np.sqrt(
+                (pos[0] - agent_state.position[0]) ** 2 + (pos[1] - agent_state.position[1]) ** 2,
+            )
+            if agent_dist < self.foraging.agent_exclusion_radius:
+                return False
 
         # Check Euclidean distance from other foods
         for food in self.foods:
@@ -2157,7 +2158,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return reward_delta, hp_damage
 
-    def add_agent(
+    def add_agent(  # noqa: C901
         self,
         agent_id: str,
         position: tuple[int, int] | None = None,
@@ -2217,11 +2218,21 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 position = pos
                 break
             if position is None:
-                # Fallback: any position not occupied by another agent
-                position = (
-                    int(self.rng.integers(0, self.grid_size)),
-                    int(self.rng.integers(0, self.grid_size)),
-                )
+                # Fallback: find a non-occupied cell (ignore min_distance)
+                for _ in range(MAX_POISSON_ATTEMPTS):
+                    candidate = (
+                        int(self.rng.integers(0, self.grid_size)),
+                        int(self.rng.integers(0, self.grid_size)),
+                    )
+                    if candidate not in occupied:
+                        position = candidate
+                        break
+                if position is None:
+                    # Last resort: truly random (grid is nearly full)
+                    position = (
+                        int(self.rng.integers(0, self.grid_size)),
+                        int(self.rng.integers(0, self.grid_size)),
+                    )
                 if min_distance > 0:
                     logger.warning(
                         "Agent '%s' placed without min_distance=%d guarantee "
