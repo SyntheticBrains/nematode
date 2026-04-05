@@ -127,6 +127,13 @@ The system SHALL compute the number of nearby agents for each agent as a minimal
 - **GIVEN** a frozen (terminated) agent within detection radius
 - **WHEN** nearby agent count is computed for an alive agent
 - **THEN** the frozen agent SHALL be counted in the proximity total
+- **AND** this differs from predator targeting, which only considers alive agents
+
+#### Scenario: Removed Agents
+
+- **GIVEN** a removed agent (termination_policy="remove")
+- **WHEN** nearby agent count is computed
+- **THEN** the removed agent SHALL NOT be counted (it no longer exists in the agents dict)
 
 #### Scenario: Self-Exclusion
 

@@ -10,7 +10,7 @@ C. elegans exhibits well-documented social behaviors: aggregation on bacterial l
 
 ### 1. AgentState Dataclass
 
-Extract per-agent mutable state from `BaseEnvironment` / `DynamicForagingEnvironment` into an `AgentState` dataclass holding: `agent_id`, `position`, `body`, `direction`, `hp`, `visited_cells`, `wall_collision_occurred`. The environment maintains `agents: dict[str, AgentState]` keyed by agent ID. Existing `self.agent_pos`, `self.body`, `self.current_direction`, `self.agent_hp` become properties delegating to `agents["default"]` for backward compatibility.
+Extract per-agent mutable state from `BaseEnvironment` / `DynamicForagingEnvironment` into an `AgentState` dataclass holding: `agent_id`, `position`, `body`, `direction`, `hp`, `visited_cells`, `wall_collision_occurred`, `alive`, and per-agent comfort zone tracking counters (`steps_in_comfort_zone`, `total_thermotaxis_steps`, `steps_in_oxygen_comfort_zone`, `total_aerotaxis_steps`). The environment maintains `agents: dict[str, AgentState]` keyed by agent ID. Existing `self.agent_pos`, `self.body`, `self.current_direction`, `self.agent_hp`, and comfort counters become properties delegating to `agents["default"]` for backward compatibility.
 
 ### 2. Position-Parameterized Environment Methods
 
@@ -18,7 +18,7 @@ Add explicit `*_for(agent_id)` variants of all agent-implicit methods: `move_age
 
 ### 3. Multi-Agent Predator Targeting
 
-Pursuit predators chase the nearest agent (Manhattan distance) rather than a single hardcoded agent position. `Predator.update_position()` gains an `agent_positions` parameter accepting a list of positions. `DynamicForagingEnvironment.update_predators()` passes all agent positions. Single-agent behavior is identical when only one agent exists.
+Pursuit predators chase the nearest alive agent (Manhattan distance) rather than a single hardcoded agent position. `Predator.update_position()` gains an `agent_positions` parameter accepting a list of positions. `DynamicForagingEnvironment.update_predators()` passes all alive agent positions (terminated/frozen agents are excluded from targeting). Single-agent behavior is identical when only one agent exists.
 
 ### 4. Social Proximity Observation
 

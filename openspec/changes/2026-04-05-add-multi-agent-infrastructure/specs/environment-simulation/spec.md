@@ -16,6 +16,10 @@ The environment SHALL manage per-agent mutable state via an `AgentState` datacla
   - `visited_cells: set[tuple[int, int]]` -- cells visited this episode
   - `wall_collision_occurred: bool` -- whether wall was hit this step (default False)
   - `alive: bool` -- whether agent is still active (default True)
+  - `steps_in_comfort_zone: int` -- thermotaxis comfort zone step counter (default 0)
+  - `total_thermotaxis_steps: int` -- total steps with thermotaxis active (default 0)
+  - `steps_in_oxygen_comfort_zone: int` -- aerotaxis comfort zone step counter (default 0)
+  - `total_aerotaxis_steps: int` -- total steps with aerotaxis active (default 0)
 
 #### Scenario: Default Agent Backward Compatibility
 
@@ -49,6 +53,24 @@ The environment SHALL maintain a registry of all agents.
 - **WHEN** `get_agent_state(agent_id)` is called
 - **THEN** it SHALL return the AgentState for that agent_id
 - **AND** SHALL raise KeyError if agent_id is not found
+
+### Requirement: Per-Agent Comfort Zone Tracking
+
+Environment comfort zone tracking counters SHALL be per-agent, not global.
+
+#### Scenario: Per-Agent Comfort Scores
+
+- **GIVEN** a multi-agent environment with thermotaxis and aerotaxis enabled
+- **WHEN** `apply_temperature_effects_for(agent_id)` is called
+- **THEN** it SHALL update that agent's `steps_in_comfort_zone` and `total_thermotaxis_steps` counters
+- **AND** SHALL NOT affect other agents' comfort tracking counters
+
+#### Scenario: Backward Compatible Comfort Properties
+
+- **GIVEN** a single-agent environment
+- **WHEN** `self.steps_in_comfort_zone` is accessed
+- **THEN** it SHALL delegate to `self.agents["default"].steps_in_comfort_zone`
+- **AND** `get_temperature_comfort_score()` and `get_oxygen_comfort_score()` SHALL read from the default agent
 
 ### Requirement: Position-Parameterized Methods
 

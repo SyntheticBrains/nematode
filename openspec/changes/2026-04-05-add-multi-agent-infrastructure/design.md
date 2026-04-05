@@ -25,6 +25,13 @@ The predator system provides a useful pattern: predators are independent entitie
 - Agent reproduction or death/respawn (terminated agents freeze)
 - Multi-agent rendering (headless only for this change)
 - Collaborative/team reward structures (per-agent independent scoring)
+- ManyworldsEpisodeRunner support (quantum branching is single-agent only; multi-agent uses MultiAgentSimulation exclusively)
+
+**Constraints:**
+
+- Multi-agent mode always passes the shared `DynamicForagingEnvironment` explicitly to each `QuantumNematodeAgent`. Agents MUST NOT self-create environments (`env` parameter is required, not optional, in multi-agent context).
+- Weight save uses `save_weights()` from `brain/weights.py`; weight load uses `load_weights()` from the same module. The call sites are in `scripts/run_simulation.py` (save at line ~845) and `utils/brain_factory.py` / `run_simulation.py` (load).
+- CSV export logic lives in `quantumnematode/report/csv_export.py`, called from `run_simulation.py`.
 
 ## Component Hierarchy
 
@@ -72,6 +79,11 @@ class AgentState:
     visited_cells: set[tuple[int, int]]
     wall_collision_occurred: bool = False
     alive: bool = True  # False when terminated (frozen in place)
+    # Per-agent comfort tracking (moved from env globals)
+    steps_in_comfort_zone: int = 0
+    total_thermotaxis_steps: int = 0
+    steps_in_oxygen_comfort_zone: int = 0
+    total_aerotaxis_steps: int = 0
 ```
 
 `BaseEnvironment.__init__` creates `self.agents: dict[str, AgentState]` with a single `"default"` entry initialized from existing `start_pos`, `max_body_length` params. Existing properties become:
@@ -92,27 +104,30 @@ Same pattern for `body`, `current_direction`, `agent_hp`, `visited_cells`, `wall
 
 ### Decision 2: Explicit `*_for(agent_id)` Methods
 
-Each agent-implicit method gets a `*_for` variant that directly indexes the agents dict:
+Each agent-implicit method gets a `*_for` variant that directly indexes the agents dict. The implementation strategy depends on whether the existing method already accepts a position parameter:
+
+**Methods that already accept `position` parameter** (minimal change): `get_food_concentration()`, `get_predator_concentration()`, `get_temperature()`, `get_temperature_gradient()`, `get_oxygen()`, `get_oxygen_gradient()`, `get_temperature_zone()`, `get_oxygen_zone()`. Also `get_separated_gradients()` where position is a required parameter. For these, the `*_for` variant simply resolves the agent_id to a position and calls the existing method:
+
+```python
+def get_food_concentration_for(self, agent_id: str) -> float:
+    return self.get_food_concentration(position=self.agents[agent_id].position)
+```
+
+**Methods that need actual refactoring** (use `self.agent_pos` or `self.agent_hp` internally): `move_agent()`, `reached_goal()`, `consume_food()`, `is_agent_in_danger()`, `is_agent_in_damage_radius()`, `is_agent_at_boundary()`, `apply_predator_damage()`, `apply_temperature_effects()`, `apply_oxygen_effects()`. For these, internal logic is extracted to operate on an AgentState:
 
 ```python
 def move_agent_for(self, agent_id: str, action: Action) -> None:
     agent_state = self.agents[agent_id]
-    # Same logic as move_agent() but using agent_state.position,
-    # agent_state.body, agent_state.direction instead of self.agent_pos etc.
+    # Core logic extracted to _apply_movement(agent_state, action)
+
+def move_agent(self, action: Action) -> None:
+    self.move_agent_for("default", action)
 
 def reached_goal_for(self, agent_id: str) -> bool:
     return self.agents[agent_id].position in self._food_positions_set
-
-def get_food_concentration_for(self, agent_id: str) -> float:
-    return self._compute_food_concentration(self.agents[agent_id].position)
 ```
 
-The internal computation logic is refactored to accept a position parameter, with the original methods calling the position-parameterized internal:
-
-```python
-def move_agent(self, action: Action) -> None:
-    self.move_agent_for("default", action)
-```
+**`apply_temperature_effects_for()` / `apply_oxygen_effects_for()`**: These methods also update comfort zone tracking counters (`steps_in_comfort_zone`, `total_thermotaxis_steps`, etc.) and write to `agent_hp`. In multi-agent mode, these counters are per-agent (stored in `AgentState`), and HP is written to the specified agent's state.
 
 This avoids code duplication while preserving backward compatibility.
 
@@ -200,7 +215,7 @@ When `agent_positions` is provided, pursuit predators chase the nearest position
 
 ### Decision 7: Terminated Agent Freeze
 
-When an agent terminates (starved, killed by predator, health depleted):
+When an agent terminates (STARVED, HEALTH_DEPLETED, COMPLETED_ALL_FOOD, or MAX_STEPS):
 
 - `AgentState.alive` set to `False`
 - Agent stops being included in perception/action loop (step 1)
@@ -228,7 +243,7 @@ def _social_proximity_core(params: BrainParams) -> CoreFeatures:
     return CoreFeatures(strength=normalized, angle=0.0, binary=0.0)
 ```
 
-Registered with `classical_dim=1` (strength only). Quantum transform maps normalized count to a single qubit rotation. The orchestrator computes `nearby_agents_count` as the number of other alive agents within `social_detection_radius` (Manhattan distance).
+Registered with `classical_dim=1` (strength only). Quantum transform maps normalized count to a single qubit rotation. The orchestrator computes `nearby_agents_count` as the number of other agents (both alive AND frozen) within `social_detection_radius` (Manhattan distance). Frozen agents are physically present on the grid and detectable. This differs from predator targeting (Decision 6), which only considers alive agents -- predators chase prey, not corpses.
 
 ### Decision 9: Agent Spawn Placement
 

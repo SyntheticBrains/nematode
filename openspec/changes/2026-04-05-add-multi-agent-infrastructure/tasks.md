@@ -7,7 +7,7 @@
 
 - [ ] 1.1 Create `AgentState` dataclass in `quantumnematode/env/env.py`
 
-  - Fields: `agent_id: str`, `position: tuple[int, int]`, `body: list[tuple[int, int]]`, `direction: Direction`, `hp: float`, `visited_cells: set[tuple[int, int]]`, `wall_collision_occurred: bool = False`, `alive: bool = True`
+  - Fields: `agent_id: str`, `position: tuple[int, int]`, `body: list[tuple[int, int]]`, `direction: Direction`, `hp: float`, `visited_cells: set[tuple[int, int]]`, `wall_collision_occurred: bool = False`, `alive: bool = True`, `steps_in_comfort_zone: int = 0`, `total_thermotaxis_steps: int = 0`, `steps_in_oxygen_comfort_zone: int = 0`, `total_aerotaxis_steps: int = 0`
   - Validation: AgentState is a plain dataclass (not Pydantic) to match existing Predator pattern
 
 - [ ] 1.2 Add `agents: dict[str, AgentState]` to `BaseEnvironment.__init__()`
@@ -25,7 +25,15 @@
   - Same for `visited_cells` and `wall_collision_occurred`
   - Ensure `__init__` sets via the AgentState, not directly
 
-- [ ] 1.5 Run full test suite (`uv run pytest -m "not nightly"`) -- all existing tests must pass unchanged
+- [ ] 1.5 Migrate comfort zone tracking counters to AgentState
+
+  - Move `steps_in_comfort_zone`, `total_thermotaxis_steps` from env globals to `AgentState`
+  - Move `steps_in_oxygen_comfort_zone`, `total_aerotaxis_steps` from env globals to `AgentState`
+  - Create backward-compatible properties on env delegating to `agents["default"]`
+  - Update `apply_temperature_effects()` and `apply_oxygen_effects()` to use AgentState counters
+  - Update `get_temperature_comfort_score()` and `get_oxygen_comfort_score()` to read from AgentState
+
+- [ ] 1.6 Run full test suite (`uv run pytest -m "not nightly"`) -- all existing tests must pass unchanged
 
   - This validates backward compatibility of the property delegation
 
@@ -45,12 +53,12 @@
   - Check if `agents[agent_id].position` is at any food position
   - Original `reached_goal()` delegates to `reached_goal_for("default")`
 
-- [ ] 2.3 Refactor gradient computation to accept position parameter
+- [ ] 2.3 Add gradient `*_for(agent_id)` wrappers
 
-  - `_compute_food_gradient(position) -> GradientPolar` (extracted from `get_state`)
-  - `_compute_predator_gradient(position) -> GradientPolar`
-  - `get_separated_gradients_for(agent_id, ...)`, `get_food_concentration_for(agent_id)`, `get_predator_concentration_for(agent_id)`
-  - Originals delegate to `*_for("default")`
+  - Note: `get_food_concentration()`, `get_predator_concentration()` already accept `position` parameter -- `*_for` variants just resolve agent_id to position and call existing methods
+  - Note: `get_separated_gradients()` already takes position as a required parameter -- `*_for` variant resolves agent_id
+  - Add `get_separated_gradients_for(agent_id, ...)`, `get_food_concentration_for(agent_id)`, `get_predator_concentration_for(agent_id)`
+  - Originals keep existing signatures unchanged
 
 - [ ] 2.4 Add boundary and danger checks for specific agents
 
@@ -58,12 +66,11 @@
   - `apply_predator_damage_for(agent_id) -> float`
   - Originals delegate to `*_for("default")`
 
-- [ ] 2.5 Add temperature and oxygen accessors for specific agents
+- [ ] 2.5 Add temperature and oxygen `*_for(agent_id)` methods
 
-  - `get_temperature_for(agent_id)`, `get_temperature_gradient_for(agent_id)`, `get_temperature_zone_for(agent_id)`
-  - `get_oxygen_for(agent_id)`, `get_oxygen_gradient_for(agent_id)`, `get_oxygen_zone_for(agent_id)`
-  - `apply_temperature_effects_for(agent_id)`, `apply_oxygen_effects_for(agent_id)`
-  - Originals delegate to `*_for("default")`
+  - Note: `get_temperature()`, `get_temperature_gradient()`, `get_temperature_zone()`, `get_oxygen()`, `get_oxygen_gradient()`, `get_oxygen_zone()` already accept `position` parameter -- `*_for` variants just resolve agent_id to position
+  - `apply_temperature_effects_for(agent_id)` and `apply_oxygen_effects_for(agent_id)` need actual refactoring: must read zone from agent's position, update agent's HP, and update agent's comfort tracking counters (in AgentState)
+  - Originals keep existing signatures unchanged
 
 - [ ] 2.6 Add `consume_food_for(agent_id) -> tuple[int, int] | None`
 
@@ -192,7 +199,9 @@
 
 - [ ] 7.3 Implement `_compute_nearby_agents_count(agent_id: str) -> int`
 
-  - Count other alive agents within `social_detection_radius` (Manhattan distance)
+  - Count other agents (both alive AND frozen) within `social_detection_radius` (Manhattan distance)
+  - Frozen agents are physically present on the grid and detectable (unlike predator targeting which only chases alive agents)
+  - Exclude self from count; exclude agents removed via `remove` termination policy
   - O(n) per agent call
 
 - [ ] 7.4 Implement `step()` method with synchronous step order
@@ -212,8 +221,9 @@
   - Handles episode cleanup (brain.learn final, brain.post_process_episode per agent)
   - Returns `MultiAgentEpisodeResult`
 
-- [ ] 7.6 Implement `_handle_agent_termination(agent_id, reason)`
+- [ ] 7.6 Implement `_handle_agent_termination(agent_id, reason: TerminationReason)`
 
+  - Reason is a `TerminationReason` enum value (STARVED, HEALTH_DEPLETED, COMPLETED_ALL_FOOD, MAX_STEPS)
   - Set `AgentState.alive = False`
   - Record termination in per-agent tracker
   - `freeze` policy: agent remains in agents dict, position fixed
@@ -304,7 +314,8 @@
 
   - `final.pt` when `agent_id == "default"` (backward compat)
   - `final_{agent_id}.pt` otherwise
-  - Update `brain_factory.py` or relevant save/load utilities
+  - Save logic is in `scripts/run_simulation.py` (line ~845) using `save_weights()` from `brain/weights.py`
+  - Load logic is in `scripts/run_simulation.py` and `utils/brain_factory.py` using `load_weights()` from `brain/weights.py`
 
 - [ ] 10.2 Add weight loading support per agent
 
@@ -336,8 +347,9 @@
 
 - [ ] 11.3 CSV export with agent_id column
 
-  - `simulation_results.csv`: one row per agent per episode
-  - `multi_agent_summary.csv`: one row per episode with aggregates
+  - Export logic lives in `quantumnematode/report/csv_export.py` (called from `run_simulation.py`)
+  - `simulation_results.csv`: add `agent_id` column, one row per agent per episode
+  - `multi_agent_summary.csv`: NEW file, one row per episode with aggregates
 
 - [ ] 11.4 Multi-agent console output
 
@@ -425,13 +437,25 @@
   - Mark Phase 4 Deliverable 1 status as in-progress
   - Add multi-agent infrastructure to Current State section when complete
 
+- [ ] 13.11 Update module exports and registrations
+
+  - Update `quantumnematode/agent/__init__.py` to export `MultiAgentSimulation`, `MultiAgentEpisodeResult`, `FoodCompetitionPolicy`
+  - Update `openspec/config.yaml` context section to mention multi-agent capability
+  - Verify `SOCIAL_PROXIMITY` is registered in all relevant module lists (SENSORY_MODULES, apply_sensing_mode, etc.)
+
+- [ ] 13.12 Update AGENTS.md
+
+  - Add `multi_agent_foraging` to scenario list
+  - Document `multi_agent` config section
+  - Add multi-agent-specific commands/examples
+
 ______________________________________________________________________
 
 ## Summary
 
 | Phase | Tasks | Dependencies | Parallelizable |
 |-------|-------|-------------|----------------|
-| 1. AgentState Extraction | 5 | None | No |
+| 1. AgentState Extraction | 6 | None | No |
 | 2. Position-Parameterized Methods | 8 | Phase 1 | Yes |
 | 3. Predator Multi-Target | 3 | Phase 1 | Yes (with 2) |
 | 4. Social Proximity Module | 4 | None | Yes (with 1-3) |
@@ -443,6 +467,6 @@ ______________________________________________________________________
 | 10. Model Persistence | 3 | Phase 8 | Yes (with 9) |
 | 11. Script Integration | 4 | Phases 7, 9 | No |
 | 12. Scenario Configs | 5 | Phase 9 | Yes (with 11) |
-| 13. Verification | 10 | All | Partially |
+| 13. Verification | 12 | All | Partially |
 
-**Total: 64 tasks across 13 phases**
+**Total: 67 tasks across 13 phases**
