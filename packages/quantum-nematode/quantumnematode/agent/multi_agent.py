@@ -221,6 +221,15 @@ class MultiAgentSimulation:
                 msg = f"Agent '{agent.agent_id}' does not share the environment instance."
                 raise ValueError(msg)
 
+        # Validate all agent_ids are registered in the environment
+        missing_ids = [a.agent_id for a in self.agents if a.agent_id not in self.env.agents]
+        if missing_ids:
+            msg = (
+                f"Agent IDs {missing_ids} not registered in environment. "
+                f"Available: {list(self.env.agents.keys())}"
+            )
+            raise ValueError(msg)
+
         # Initialize per-agent food tracking
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
 
@@ -297,6 +306,7 @@ class MultiAgentSimulation:
 
         reward_per_agent: dict[str, float] = {a.agent_id: 0.0 for a in self.agents}
         action_per_agent: dict[str, ActionData | None] = {a.agent_id: None for a in self.agents}
+        nearby_per_agent: dict[str, int] = {a.agent_id: 0 for a in self.agents}
 
         for _step in range(max_steps):
             alive = self._alive_agents
@@ -308,6 +318,7 @@ class MultiAgentSimulation:
             for agent in alive:
                 aid = agent.agent_id
                 nearby = self._compute_nearby_agents_count(aid)
+                nearby_per_agent[aid] = nearby
 
                 gradient_strength, _ = agent.env.get_state(
                     agent.env.agents[aid].position,
@@ -359,13 +370,18 @@ class MultiAgentSimulation:
                 if self.env.is_agent_in_damage_radius_for(aid):
                     self.env.apply_predator_damage_for(aid)
                     if self.env.agents[aid].hp <= 0:
-                        self._handle_termination(agent, TerminationReason.HEALTH_DEPLETED)
+                        self._handle_termination(
+                            agent,
+                            TerminationReason.HEALTH_DEPLETED,
+                            nearby_agents_count=nearby_per_agent.get(aid, 0),
+                        )
 
             # ── 5. EFFECTS ───────────────────────────────────────
             # Refresh alive list after predator phase
             still_alive = self._alive_agents
             for agent in list(still_alive):
                 aid = agent.agent_id
+                cached_nearby = nearby_per_agent.get(aid, 0)
 
                 # Satiety decay
                 agent._satiety_manager.decay_satiety()
@@ -377,7 +393,11 @@ class MultiAgentSimulation:
                     temp_reward, _temp_damage = self.env.apply_temperature_effects_for(aid)
                     reward_per_agent[aid] += temp_reward
                     if self.env.agents[aid].hp <= 0:
-                        self._handle_termination(agent, TerminationReason.HEALTH_DEPLETED)
+                        self._handle_termination(
+                            agent,
+                            TerminationReason.HEALTH_DEPLETED,
+                            nearby_agents_count=cached_nearby,
+                        )
                         continue
 
                 # Oxygen effects
@@ -385,12 +405,20 @@ class MultiAgentSimulation:
                     o2_reward, _o2_damage = self.env.apply_oxygen_effects_for(aid)
                     reward_per_agent[aid] += o2_reward
                     if self.env.agents[aid].hp <= 0:
-                        self._handle_termination(agent, TerminationReason.HEALTH_DEPLETED)
+                        self._handle_termination(
+                            agent,
+                            TerminationReason.HEALTH_DEPLETED,
+                            nearby_agents_count=cached_nearby,
+                        )
                         continue
 
                 # Starvation check
                 if agent._satiety_manager.is_starved():
-                    self._handle_termination(agent, TerminationReason.STARVED)
+                    self._handle_termination(
+                        agent,
+                        TerminationReason.STARVED,
+                        nearby_agents_count=cached_nearby,
+                    )
                     continue
 
                 # Check if agent collected all target foods
@@ -398,7 +426,11 @@ class MultiAgentSimulation:
                     agent._episode_tracker.foods_collected
                     >= self.env.foraging.target_foods_to_collect
                 ):
-                    self._handle_termination(agent, TerminationReason.COMPLETED_ALL_FOOD)
+                    self._handle_termination(
+                        agent,
+                        TerminationReason.COMPLETED_ALL_FOOD,
+                        nearby_agents_count=cached_nearby,
+                    )
                     continue
 
             # ── 6. LEARNING ──────────────────────────────────────
@@ -415,7 +447,10 @@ class MultiAgentSimulation:
                 action_per_agent[aid] = actions.get(aid)
 
                 if isinstance(agent.brain, ClassicalBrain):
-                    params = agent._create_brain_params(action=action_per_agent.get(aid))
+                    params = agent._create_brain_params(
+                        action=action_per_agent.get(aid),
+                        nearby_agents_count=nearby_per_agent.get(aid, 0),
+                    )
                     agent.brain.learn(
                         params=params,
                         reward=reward_per_agent[aid],
@@ -431,7 +466,11 @@ class MultiAgentSimulation:
         # ── EPISODE END ──────────────────────────────────────────
         # Terminate remaining alive agents (max_steps reached)
         for agent in list(self._alive_agents):
-            self._handle_termination(agent, TerminationReason.MAX_STEPS)
+            self._handle_termination(
+                agent,
+                TerminationReason.MAX_STEPS,
+                nearby_agents_count=nearby_per_agent.get(agent.agent_id, 0),
+            )
 
         return self._build_result()
 
@@ -484,6 +523,7 @@ class MultiAgentSimulation:
         self,
         agent: QuantumNematodeAgent,
         reason: TerminationReason,
+        nearby_agents_count: int = 0,
     ) -> None:
         """Handle agent termination according to policy."""
         aid = agent.agent_id
@@ -493,9 +533,9 @@ class MultiAgentSimulation:
         self._agent_terminations[aid] = reason
         agent_state = self.env.agents[aid]
 
-        # Final learning step
+        # Final learning step (include nearby_agents_count for consistent BrainParams)
         if isinstance(agent.brain, ClassicalBrain):
-            params = agent._create_brain_params()
+            params = agent._create_brain_params(nearby_agents_count=nearby_agents_count)
             agent.brain.learn(params=params, reward=0.0, episode_done=True)
         agent.brain.update_memory(0.0)
         agent.brain.post_process_episode(
@@ -535,6 +575,7 @@ class MultiAgentSimulation:
         self,
         agent: QuantumNematodeAgent,
         reason: TerminationReason,
+        nearby_agents_count: int = 0,
     ) -> None:
         """Terminate a single agent without policy propagation (used by end_all)."""
         aid = agent.agent_id
@@ -545,7 +586,7 @@ class MultiAgentSimulation:
             self.env.agents[aid].alive = False
 
         if isinstance(agent.brain, ClassicalBrain):
-            params = agent._create_brain_params()
+            params = agent._create_brain_params(nearby_agents_count=nearby_agents_count)
             agent.brain.learn(params=params, reward=0.0, episode_done=True)
         agent.brain.update_memory(0.0)
         agent.brain.post_process_episode(

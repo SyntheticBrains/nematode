@@ -767,6 +767,20 @@ class MultiAgentConfig(BaseModel):
         if not has_count and not has_agents:
             msg = "Must set either 'count' or 'agents' when multi_agent.enabled=True."
             raise ValueError(msg)
+        min_agents = 2
+        max_agents = 10
+        if has_count and not (min_agents <= self.count <= max_agents):  # type: ignore[operator]
+            msg = (
+                f"multi_agent.count must be between {min_agents} and "
+                f"{max_agents}, got {self.count}."
+            )
+            raise ValueError(msg)
+        if has_agents and not (min_agents <= len(self.agents) <= max_agents):  # type: ignore[arg-type]
+            msg = (
+                f"multi_agent.agents must contain between {min_agents} and {max_agents} entries, "
+                f"got {len(self.agents)}."  # type: ignore[arg-type]
+            )
+            raise ValueError(msg)
         return self
 
 

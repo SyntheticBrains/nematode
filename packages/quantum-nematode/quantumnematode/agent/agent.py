@@ -15,6 +15,7 @@ from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import FoodHistory, GridPosition  # noqa: TC001 - used at runtime
 from quantumnematode.env import (
+    DEFAULT_AGENT_ID,
     DynamicForagingEnvironment,
 )
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
@@ -156,7 +157,7 @@ class QuantumNematodeAgent:
         rich_style_config: DarkColorRichStyleConfig | None = None,
         satiety_config: SatietyConfig | None = None,
         sensing_config: SensingConfig | None = None,
-        agent_id: str = "default",
+        agent_id: str = DEFAULT_AGENT_ID,
     ) -> None:
         """
         Initialize the nematode agent.

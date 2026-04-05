@@ -69,6 +69,13 @@ class TestSocialProximityModule:
         features = module.to_classical(params)
         assert features[0] == pytest.approx(0.1)
 
+    def test_negative_count_clamped_to_zero(self) -> None:
+        """Regression: negative nearby_agents_count is clamped to 0."""
+        module = SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY]
+        params = BrainParams(nearby_agents_count=-1)
+        features = module.to_classical(params)
+        assert features[0] == pytest.approx(0.0)
+
     def test_quantum_transform_produces_valid_angles(self) -> None:
         """Test that quantum transform produces angles in valid range."""
         module = SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY]

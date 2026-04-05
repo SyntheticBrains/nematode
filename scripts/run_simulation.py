@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
 import shutil
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from quantumnematode.validation.chemotaxis import ChemotaxisMetrics
@@ -416,6 +417,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             gradient_max_norm=gradient_max_norm,
             parameter_initializer_config=parameter_initializer_config,
             theme=theme,
+            perf_mgmt=perf_mgmt,
         )
         return
 
@@ -1508,6 +1510,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
     theme: Theme,
+    perf_mgmt: Any | None = None,  # noqa: ANN401 - RunnableQiskitFunction conditional import
 ) -> None:
     """Run a multi-agent simulation session.
 
@@ -1562,8 +1565,11 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     agents: list[QuantumNematodeAgent] = []
 
     for ac in agent_configs:
-        # Derive per-agent seed for reproducibility
-        agent_seed = hash((simulation_seed, ac.id)) % (2**32)
+        # Derive per-agent seed (stable across runs, unlike Python's hash())
+        agent_seed = int.from_bytes(
+            hashlib.blake2b(f"{simulation_seed}:{ac.id}".encode(), digest_size=4).digest(),
+            "little",
+        )
 
         # Configure brain for this agent
         agent_brain_config = _configure_brain_for_agent(ac.brain, agent_seed, sensing_config)
@@ -1578,7 +1584,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             gradient_method=gradient_method,
             gradient_max_norm=gradient_max_norm,
             parameter_initializer_config=parameter_initializer_config,
-            perf_mgmt=None,
+            perf_mgmt=perf_mgmt,
         )
 
         # Load pre-trained weights if specified
@@ -1646,10 +1652,10 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 f"steps={len(agent_result.agent_path)}",
             )
 
-        # Reset for next episode: create fresh shared env and reassign all agents
+        # Reset for next episode: create fresh shared env with per-episode seed
         env = create_env_from_config(
             environment_config,
-            seed=simulation_seed,
+            seed=run_seed,
             max_body_length=body_length,
             theme=theme,
         )

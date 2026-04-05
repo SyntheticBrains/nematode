@@ -775,8 +775,8 @@ def _social_proximity_core(params: BrainParams) -> CoreFeatures:
     CoreFeatures
         strength = min(count, 10) / 10.0, angle = 0.0, binary = 0.0.
     """
-    count = params.nearby_agents_count or 0
-    normalized = min(count, 10) / 10.0
+    count = max(0, min(params.nearby_agents_count or 0, 10))
+    normalized = count / 10.0
     return CoreFeatures(strength=normalized, angle=0.0, binary=0.0)
 
 
