@@ -20,7 +20,6 @@ from quantumnematode.env import (
     PredatorParams,
     PredatorType,
 )
-from quantumnematode.report.dtypes import TerminationReason
 from quantumnematode.utils.seeding import get_rng
 
 
@@ -29,6 +28,7 @@ def _make_env(
     seed: int = 42,
     foods: int = 5,
     target: int = 10,
+    *,
     predators: bool = False,
 ) -> DynamicForagingEnvironment:
     """Create a test environment."""
@@ -140,7 +140,7 @@ class TestGridSizeValidation:
         """Check minimum size formula."""
         # 10 agents: min = max(5, ceil(5*sqrt(10))) = ceil(15.81) = 16
         validate_multi_agent_grid(16, 10)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="too small"):
             validate_multi_agent_grid(15, 10)
 
 
@@ -223,7 +223,7 @@ class TestMultiAgentSimulation:
             termination_policy="freeze",
         )
         # Run episode — agent should eventually terminate (starved or max_steps)
-        result = sim.run_episode(RewardConfig(), max_steps=10)
+        sim.run_episode(RewardConfig(), max_steps=10)
         assert not env.agents["agent_0"].alive
 
     def test_duplicate_agent_ids_raises(self) -> None:

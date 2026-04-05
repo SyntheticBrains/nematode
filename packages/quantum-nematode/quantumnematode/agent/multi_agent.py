@@ -98,10 +98,7 @@ def validate_multi_agent_grid(grid_size: int, num_agents: int) -> None:
     """
     min_size = max(MIN_GRID_SIZE_BASE, math.ceil(5 * math.sqrt(num_agents)))
     if grid_size < min_size:
-        msg = (
-            f"Grid size {grid_size} too small for {num_agents} agents. "
-            f"Minimum: {min_size}."
-        )
+        msg = f"Grid size {grid_size} too small for {num_agents} agents. Minimum: {min_size}."
         raise ValueError(msg)
 
 
