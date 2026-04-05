@@ -15,6 +15,7 @@ from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import FoodHistory, GridPosition  # noqa: TC001 - used at runtime
 from quantumnematode.env import (
+    DEFAULT_AGENT_ID,
     DynamicForagingEnvironment,
 )
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
@@ -156,6 +157,7 @@ class QuantumNematodeAgent:
         rich_style_config: DarkColorRichStyleConfig | None = None,
         satiety_config: SatietyConfig | None = None,
         sensing_config: SensingConfig | None = None,
+        agent_id: str = DEFAULT_AGENT_ID,
     ) -> None:
         """
         Initialize the nematode agent.
@@ -178,9 +180,12 @@ class QuantumNematodeAgent:
             Satiety system configuration.
         sensing_config : SensingConfig | None, optional
             Temporal sensing modes and STAM configuration.
+        agent_id : str, optional
+            Unique identifier for multi-agent mode. Defaults to "default".
         """
         from quantumnematode.utils.config_loader import SensingConfig
 
+        self.agent_id = agent_id
         self.brain = brain
         self.satiety_config = satiety_config or SatietyConfig()
         self.sensing_config: SensingConfig = sensing_config or SensingConfig()
@@ -472,6 +477,7 @@ class QuantumNematodeAgent:
     def _create_brain_params(
         self,
         action: ActionData | None = None,
+        nearby_agents_count: int | None = None,
     ) -> BrainParams:
         """Create BrainParams for brain execution.
 
@@ -598,6 +604,8 @@ class QuantumNematodeAgent:
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
             action=action,
+            # Social sensing
+            nearby_agents_count=nearby_agents_count,
         )
 
     def _render_step(

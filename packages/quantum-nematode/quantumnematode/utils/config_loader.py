@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -731,6 +731,59 @@ class EnvironmentConfig(BaseModel):
         return self.sensing or SensingConfig()
 
 
+class AgentConfig(BaseModel):
+    """Configuration for a single agent in multi-agent mode."""
+
+    id: str
+    brain: BrainContainerConfig
+    weights_path: str | None = None
+
+
+class MultiAgentConfig(BaseModel):
+    """Configuration for multi-agent simulation.
+
+    Either ``count`` (homogeneous population using top-level brain config) or
+    ``agents`` (heterogeneous population with per-agent brain configs) must be
+    set when ``enabled=True``.
+    """
+
+    enabled: bool = False
+    count: int | None = None
+    agents: list[AgentConfig] | None = None
+    food_competition: Literal["first_arrival", "random"] = "first_arrival"
+    social_detection_radius: int = 5
+    termination_policy: Literal["freeze", "remove", "end_all"] = "freeze"
+    min_agent_distance: int = 5  # Best-effort Poisson disk; may be violated on dense grids
+
+    @model_validator(mode="after")
+    def _validate_population(self) -> "MultiAgentConfig":
+        if not self.enabled:
+            return self
+        has_count = self.count is not None
+        has_agents = self.agents is not None and len(self.agents) > 0
+        if has_count and has_agents:
+            msg = "Cannot set both 'count' and 'agents' in multi_agent config."
+            raise ValueError(msg)
+        if not has_count and not has_agents:
+            msg = "Must set either 'count' or 'agents' when multi_agent.enabled=True."
+            raise ValueError(msg)
+        min_agents = 2
+        max_agents = 10
+        if has_count and not (min_agents <= self.count <= max_agents):  # type: ignore[operator]
+            msg = (
+                f"multi_agent.count must be between {min_agents} and "
+                f"{max_agents}, got {self.count}."
+            )
+            raise ValueError(msg)
+        if has_agents and not (min_agents <= len(self.agents) <= max_agents):  # type: ignore[arg-type]
+            msg = (
+                f"multi_agent.agents must contain between {min_agents} and {max_agents} entries, "
+                f"got {len(self.agents)}."  # type: ignore[arg-type]
+            )
+            raise ValueError(msg)
+        return self
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -748,6 +801,7 @@ class SimulationConfig(BaseModel):
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
     environment: EnvironmentConfig | None = None
+    multi_agent: MultiAgentConfig | None = None
 
 
 class PlasticityPhaseConfig(BaseModel):
@@ -852,6 +906,29 @@ def configure_brain(
 
     config_cls = BRAIN_CONFIG_MAP[brain_name]
     return _resolve_brain_config(config.brain.config, config_cls, brain_name)
+
+
+def configure_brain_from_container(
+    brain_container: BrainContainerConfig,
+) -> BrainConfigType:
+    """Configure brain from a BrainContainerConfig (for multi-agent per-agent configs).
+
+    Parameters
+    ----------
+    brain_container : BrainContainerConfig
+        Brain container with name and config.
+
+    Returns
+    -------
+    BrainConfigType
+        Parsed brain configuration.
+    """
+    brain_name = brain_container.name
+    if brain_name not in BRAIN_CONFIG_MAP:
+        msg = f"Unknown brain type: {brain_name}."
+        raise ValueError(msg)
+    config_cls = BRAIN_CONFIG_MAP[brain_name]
+    return _resolve_brain_config(brain_container.config, config_cls, brain_name)
 
 
 def configure_learning_rate(

@@ -19,7 +19,10 @@ context: |
     qrc, qrh, qef, crh, qrhqlstm, crhqlstm, qsnnreinforce, qsnnppo, qliflstm,
     hybridquantum, hybridclassical, hybridquantumcortex, mlpreinforce, mlpdqn,
     mlpppo, lstmppo, spikingreinforce
-  - DynamicForagingEnvironment: multi-food foraging with predators and thermotaxis
+  - DynamicForagingEnvironment: multi-food foraging with predators, thermotaxis,
+    aerotaxis, and multi-agent support (2-10 agents with food competition)
+  - MultiAgentSimulation: orchestrator for multi-agent episodes with synchronous
+    stepping, food competition, social proximity sensing, and per-agent metrics
   - Executor pattern: CPU, GPU, QPU backends
   - YAML-driven simulation configs (configs/scenarios/)
   - Comprehensive tracking: EpisodeTracker, experiment metadata, CSV/plot exports
