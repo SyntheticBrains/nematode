@@ -271,3 +271,29 @@ class TestMultiAgentSimulation:
             )
             result = sim.run_episode(RewardConfig(), max_steps=10)
             assert isinstance(result, MultiAgentEpisodeResult)
+
+    def test_invalid_termination_policy_raises(self) -> None:
+        """Invalid termination policy raises ValueError."""
+        env = _make_env(grid_size=20, seed=42)
+        agent = _make_agent(env, "agent_0", position=(5, 5))
+        with pytest.raises(ValueError, match="Invalid termination_policy"):
+            MultiAgentSimulation(
+                env=env,
+                agents=[agent],
+                termination_policy="invalid",
+            )
+
+    def test_remove_policy_no_keyerror(self) -> None:
+        """Remove policy doesn't crash with KeyError on subsequent steps."""
+        env = _make_env(grid_size=20, seed=42)
+        a0 = _make_agent(env, "agent_0", position=(5, 5))
+        a1 = _make_agent(env, "agent_1", position=(15, 15))
+
+        sim = MultiAgentSimulation(
+            env=env,
+            agents=[a0, a1],
+            termination_policy="remove",
+        )
+        # Should complete without KeyError even when agents are removed
+        result = sim.run_episode(RewardConfig(), max_steps=20)
+        assert isinstance(result, MultiAgentEpisodeResult)

@@ -818,9 +818,7 @@ class BaseEnvironment(ABC):
 
         pos = agent_state.position
         agent_state.body = (
-            [(pos[0], pos[1]), *agent_state.body[:-1]]
-            if len(agent_state.body) > 0
-            else []
+            [(pos[0], pos[1]), *agent_state.body[:-1]] if len(agent_state.body) > 0 else []
         )
         agent_state.position = (new_pos[0], new_pos[1])
 

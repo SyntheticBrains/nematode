@@ -251,7 +251,7 @@ def extract_structured_features(
 
     for i, params in enumerate(params_list):
         sensory = brain.preprocess(params)
-        features[i] = brain._get_reservoir_features(sensory)  # noqa: SLF001
+        features[i] = brain._get_reservoir_features(sensory)
 
     return features
 
@@ -294,7 +294,7 @@ def extract_random_features(
 
     for i, params in enumerate(params_list):
         sensory = brain.preprocess(params)
-        features[i] = brain._get_reservoir_features(sensory)  # noqa: SLF001
+        features[i] = brain._get_reservoir_features(sensory)
 
     return features
 

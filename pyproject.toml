@@ -102,6 +102,7 @@ ignore = ['FIX002', 'PLC0415', 'TD002', 'TD003']
   "SLF001",  # Multi-agent orchestrator intentionally accesses private agent members
 ]
 "scripts/*.py" = [
+  "SLF001",  # CLI scripts access private agent members for multi-agent reset
   "T201",  # CLI scripts use print for output
   "PLR2004",  # CLI scripts can have magic values
   "E501",  # CLI scripts can have slightly longer lines for readability

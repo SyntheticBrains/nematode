@@ -135,8 +135,8 @@ def run_training_phase(
             TerminationReason.COMPLETED_ALL_FOOD,
         )
         result.episode_successes.append(success)
-        result.episode_rewards.append(agent._episode_tracker.rewards)  # noqa: SLF001
-        result.episode_steps.append(agent._episode_tracker.steps)  # noqa: SLF001
+        result.episode_rewards.append(agent._episode_tracker.rewards)
+        result.episode_steps.append(agent._episode_tracker.steps)
 
         if (ep + 1) % 50 == 0 or ep == num_episodes - 1:
             recent_sr = np.mean(result.episode_successes[max(0, ep - 19) : ep + 1])
@@ -198,8 +198,8 @@ def run_eval_block(  # noqa: PLR0913
                 TerminationReason.COMPLETED_ALL_FOOD,
             )
             successes.append(success)
-            rewards.append(agent._episode_tracker.rewards)  # noqa: SLF001
-            steps.append(agent._episode_tracker.steps)  # noqa: SLF001
+            rewards.append(agent._episode_tracker.rewards)
+            steps.append(agent._episode_tracker.steps)
     finally:
         # Always restore brain to pre-eval state, even on exception
         restore_brain_state(brain, snapshot)

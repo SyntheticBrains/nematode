@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np  # noqa: TC002 - needed at runtime for np.random.Generator
 
@@ -195,12 +195,24 @@ class MultiAgentSimulation:
         init=False,
     )
 
+    _VALID_TERMINATION_POLICIES: ClassVar[frozenset[str]] = frozenset(
+        {"freeze", "remove", "end_all"},
+    )
+
     def __post_init__(self) -> None:
         """Validate agents and initialize tracking."""
         # Validate unique agent_ids
         ids = [a.agent_id for a in self.agents]
         if len(ids) != len(set(ids)):
             msg = f"Duplicate agent_ids: {ids}"
+            raise ValueError(msg)
+
+        # Validate termination policy
+        if self.termination_policy not in self._VALID_TERMINATION_POLICIES:
+            msg = (
+                f"Invalid termination_policy '{self.termination_policy}'. "
+                f"Must be one of: {sorted(self._VALID_TERMINATION_POLICIES)}"
+            )
             raise ValueError(msg)
 
         # Validate all agents reference the shared env
@@ -214,8 +226,12 @@ class MultiAgentSimulation:
 
     @property
     def _alive_agents(self) -> list[QuantumNematodeAgent]:
-        """Return list of agents that are still alive."""
-        return [a for a in self.agents if self.env.agents[a.agent_id].alive]
+        """Return list of agents that are still alive (handles 'remove' policy safely)."""
+        return [
+            a
+            for a in self.agents
+            if a.agent_id in self.env.agents and self.env.agents[a.agent_id].alive
+        ]
 
     def _compute_nearby_agents_count(self, agent_id: str) -> int:
         """Count other agents (alive and frozen) within social detection radius.
@@ -334,16 +350,20 @@ class MultiAgentSimulation:
             # ── 4. PREDATORS ─────────────────────────────────────
             self.env.update_predators()
 
-            # Per-agent predator damage
+            # Per-agent predator damage (copy list — terminations modify alive set)
             for agent in list(alive):
                 aid = agent.agent_id
+                if aid not in self.env.agents:
+                    continue  # Removed by policy
                 if self.env.is_agent_in_damage_radius_for(aid):
                     self.env.apply_predator_damage_for(aid)
                     if self.env.agents[aid].hp <= 0:
                         self._handle_termination(agent, TerminationReason.HEALTH_DEPLETED)
 
             # ── 5. EFFECTS ───────────────────────────────────────
-            for agent in list(self._alive_agents):
+            # Refresh alive list after predator phase
+            still_alive = self._alive_agents
+            for agent in list(still_alive):
                 aid = agent.agent_id
 
                 # Satiety decay
@@ -502,10 +522,45 @@ class MultiAgentSimulation:
             del self.env.agents[aid]
         elif self.termination_policy == "end_all":
             agent_state.alive = False
-            for other in self.agents:
-                oid = other.agent_id
-                if oid != aid and oid not in self._agent_terminations:
-                    self._handle_termination(other, TerminationReason.MAX_STEPS)
+            # Iteratively terminate all remaining agents (avoids recursion)
+            remaining = [
+                other
+                for other in self.agents
+                if other.agent_id != aid and other.agent_id not in self._agent_terminations
+            ]
+            for other in remaining:
+                self._terminate_single(other, TerminationReason.MAX_STEPS)
+
+    def _terminate_single(
+        self,
+        agent: QuantumNematodeAgent,
+        reason: TerminationReason,
+    ) -> None:
+        """Terminate a single agent without policy propagation (used by end_all)."""
+        aid = agent.agent_id
+        if aid in self._agent_terminations:
+            return
+        self._agent_terminations[aid] = reason
+        if aid in self.env.agents:
+            self.env.agents[aid].alive = False
+
+        if isinstance(agent.brain, ClassicalBrain):
+            params = agent._create_brain_params()
+            agent.brain.learn(params=params, reward=0.0, episode_done=True)
+        agent.brain.update_memory(0.0)
+        agent.brain.post_process_episode(
+            episode_success=(reason == TerminationReason.COMPLETED_ALL_FOOD),
+        )
+        agent._metrics_tracker.track_episode_completion(
+            success=(reason == TerminationReason.COMPLETED_ALL_FOOD),
+            steps=agent._episode_tracker.steps,
+            reward=agent._episode_tracker.rewards,
+            foods_collected=agent._episode_tracker.foods_collected,
+            distance_efficiencies=agent._episode_tracker.distance_efficiencies,
+            predator_encounters=agent._episode_tracker.predator_encounters,
+            successful_evasions=agent._episode_tracker.successful_evasions,
+            termination_reason=reason,
+        )
 
     def _get_agent(self, agent_id: str) -> QuantumNematodeAgent:
         """Get agent instance by ID."""

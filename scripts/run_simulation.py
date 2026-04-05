@@ -615,8 +615,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 show_last_frame_only=show_last_frame_only,
             )
 
-            steps_taken = agent._episode_tracker.steps  # noqa: SLF001
-            total_reward = agent._episode_tracker.rewards  # noqa: SLF001
+            steps_taken = agent._episode_tracker.steps
+            total_reward = agent._episode_tracker.rewards
 
             # Determine success and track termination types
             success = step_result.termination_reason in (
@@ -637,35 +637,31 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_interrupted += 1
 
             # Get environment specific data
-            foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
+            foods_collected_this_run = agent._episode_tracker.foods_collected
             foods_available_this_run = agent.env.foraging.target_foods_to_collect
             satiety_remaining_this_run = agent.current_satiety
-            distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
+            distance_efficiencies = agent._episode_tracker.distance_efficiencies
             average_distance_efficiency = (
                 sum(distance_efficiencies) / len(distance_efficiencies)
                 if distance_efficiencies
                 else 0.0
             )
-            satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
-            predator_encounters_this_run = agent._episode_tracker.predator_encounters  # noqa: SLF001
-            successful_evasions_this_run = agent._episode_tracker.successful_evasions  # noqa: SLF001
+            satiety_history_this_run = agent._episode_tracker.satiety_history.copy()
+            predator_encounters_this_run = agent._episode_tracker.predator_encounters
+            successful_evasions_this_run = agent._episode_tracker.successful_evasions
             died_to_health_depletion_this_run = (
                 step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
             )
-            health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
+            health_history_this_run = agent._episode_tracker.health_history.copy()
             temperature_history_this_run = None
             # Copy temperature history if thermotaxis is enabled
             if agent.env.thermotaxis.enabled:
-                temperature_history_this_run = (
-                    agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
-                )
+                temperature_history_this_run = agent._episode_tracker.temperature_history.copy()
 
             oxygen_history_this_run = None
             # Copy oxygen history if aerotaxis is enabled
             if agent.env.aerotaxis.enabled:
-                oxygen_history_this_run = (
-                    agent._episode_tracker.oxygen_history.copy()  # noqa: SLF001
-                )
+                oxygen_history_this_run = agent._episode_tracker.oxygen_history.copy()
 
             # Calculate multi-objective scores
             survival_score_this_run = None
@@ -692,7 +688,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 steps=steps_taken,
                 path=step_result.agent_path,
                 total_reward=total_reward,
-                last_total_reward=agent._episode_tracker.rewards,  # noqa: SLF001
+                last_total_reward=agent._episode_tracker.rewards,
                 termination_reason=step_result.termination_reason,
                 success=success,
                 foods_collected=foods_collected_this_run,
@@ -787,7 +783,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     if oxygen_history_this_run
                     else [],
                     foods_collected=foods_collected_this_run or 0,
-                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),
                 )
                 plot_tracking_data_by_latest_run(
                     tracking_data=tracking_data,
@@ -835,7 +831,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Replace episode tracking data with lightweight version
             tracking_data.episode_data[run_num] = EpisodeTrackingData(
                 foods_collected=foods_collected_this_run or 0,
-                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),
             )
 
             if run_num < runs:
@@ -1475,7 +1471,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
 
 
-def _run_multi_agent(  # noqa: C901, PLR0913, PLR0915
+def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     *,
     config: SimulationConfig,
     multi_agent_config: MultiAgentConfig,
@@ -1491,7 +1487,10 @@ def _run_multi_agent(  # noqa: C901, PLR0913, PLR0915
     device: DeviceType,
     runs: int,
     session_id: str,
-    learning_rate: ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
+    learning_rate: ConstantLearningRate
+    | DynamicLearningRate
+    | AdamLearningRate
+    | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,
     gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
@@ -1634,9 +1633,26 @@ def _run_multi_agent(  # noqa: C901, PLR0913, PLR0915
                 f"steps={len(agent_result.agent_path)}",
             )
 
-        # Reset for next episode
+        # Reset for next episode: create fresh shared env and reassign all agents
+        env = create_env_from_config(
+            environment_config,
+            seed=simulation_seed,
+            max_body_length=body_length,
+            theme=theme,
+        )
+        for ac in agent_configs:
+            env.add_agent(agent_id=ac.id, position=None, max_body_length=body_length)
         for agent in agents:
-            agent.reset_environment()
+            agent.env = env
+            agent.path = [
+                (env.agents[agent.agent_id].position[0], env.agents[agent.agent_id].position[1]),
+            ]
+            agent.food_history = [list(env.foods)]
+            agent._food_handler.env = env
+            agent._satiety_manager.reset()
+            agent._food_handler.reset()
+            agent._episode_tracker.reset()
+        sim.env = env
 
     # Save weights per agent
     weights_dir = data_dir / "weights"
