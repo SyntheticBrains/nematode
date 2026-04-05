@@ -591,7 +591,10 @@ class MultiAgentSimulation:
             for r in self._agent_terminations.values()
             if r == TerminationReason.COMPLETED_ALL_FOOD
         )
-        alive_count = sum(1 for a in self.env.agents.values() if a.alive)
+        # Count alive agents excluding the backward-compat "default" placeholder
+        alive_count = sum(
+            1 for a in self.env.agents.values() if a.alive and a.agent_id != DEFAULT_AGENT_ID
+        )
 
         return MultiAgentEpisodeResult(
             agent_results=agent_results,
