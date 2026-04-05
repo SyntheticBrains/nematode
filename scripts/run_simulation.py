@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
 import shutil
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from quantumnematode.validation.chemotaxis import ChemotaxisMetrics
@@ -48,8 +49,10 @@ from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
 )
 from quantumnematode.optimizers.learning_rate import (
+    AdamLearningRate,
     ConstantLearningRate,
     DynamicLearningRate,
+    PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
     IncrementalDetailedTrackingWriter,
@@ -102,12 +105,16 @@ from quantumnematode.report.plots import (
 from quantumnematode.report.summary import summary
 from quantumnematode.utils.brain_factory import setup_brain_model
 from quantumnematode.utils.config_loader import (
+    AgentConfig,
+    BrainConfigType,
     BrainContainerConfig,
     EnvironmentConfig,
     ManyworldsModeConfig,
+    MultiAgentConfig,
     ParameterInitializerConfig,
     RewardConfig,
     SensingConfig,
+    SimulationConfig,
     configure_brain,
     configure_environment,
     configure_gradient_method,
@@ -304,6 +311,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         else:
             ibmq_authenticator.authenticate_runtime_service()
 
+    config: SimulationConfig | None = None
     if config_file:
         config = load_simulation_config(config_file)
         logger.info(f"Initializing simulation config: {config}")
@@ -317,9 +325,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             simulation_seed = config.seed
             logger.info(f"Using seed from config file: {simulation_seed}")
 
-        brain_config = configure_brain(config)
-        # Always update brain config with the resolved simulation seed
-        brain_config = brain_config.model_copy(update={"seed": simulation_seed})
+        # For heterogeneous multi-agent (agents list, no top-level brain),
+        # skip single-agent brain configuration — agents configure their own brains.
+        _is_heterogeneous_multi_agent = (
+            config.multi_agent is not None
+            and config.multi_agent.enabled
+            and config.multi_agent.agents is not None
+        )
+
+        if not _is_heterogeneous_multi_agent:
+            brain_config = configure_brain(config)
+            # Always update brain config with the resolved simulation seed
+            brain_config = brain_config.model_copy(update={"seed": simulation_seed})
 
         if config.brain is not None and isinstance(config.brain, BrainContainerConfig):
             brain_type = BrainType(config.brain.name)
@@ -351,7 +368,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         sensing_config = validate_sensing_config(environment_config.get_sensing_config())
 
         # Apply sensing mode translation to brain's sensory modules
-        sensory_modules_attr = getattr(brain_config, "sensory_modules", None)
+        sensory_modules_attr = (
+            getattr(brain_config, "sensory_modules", None)
+            if not _is_heterogeneous_multi_agent
+            else None
+        )
         if sensory_modules_attr is not None:
             from quantumnematode.brain.modules import ModuleName
             from quantumnematode.utils.config_loader import apply_sensing_mode
@@ -370,6 +391,53 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
         # Load many-worlds mode configuration if specified
         manyworlds_mode_config = configure_manyworlds_mode(config)
+
+    # ── Multi-agent branch ────────────────────────────────────────────
+    # If multi-agent is enabled in config, delegate to the multi-agent
+    # simulation runner and return. The rest of main() is single-agent.
+    multi_agent_config = config.multi_agent if config_file and config is not None else None
+    if multi_agent_config is not None and multi_agent_config.enabled and config is not None:
+        # Reject single-agent-only CLI flags in multi-agent mode
+        unsupported_flags = []
+        if args.load_weights or args.save_weights:
+            unsupported_flags.append("--load-weights/--save-weights")
+        if args.manyworlds:
+            unsupported_flags.append("--manyworlds")
+        if args.track_per_run:
+            unsupported_flags.append("--track-per-run")
+        if args.track_experiment:
+            unsupported_flags.append("--track-experiment")
+        if args.validate_chemotaxis:
+            unsupported_flags.append("--validate-chemotaxis")
+        if unsupported_flags:
+            msg = (
+                f"Cannot use {', '.join(unsupported_flags)} with multi-agent mode. "
+                "Use per-agent config options in multi_agent.agents instead."
+            )
+            raise ValueError(msg)
+        _run_multi_agent(
+            config=config,
+            multi_agent_config=multi_agent_config,
+            environment_config=environment_config,
+            reward_config=reward_config,
+            satiety_config=satiety_config,
+            sensing_config=sensing_config,
+            simulation_seed=simulation_seed,
+            max_steps=max_steps,
+            shots=shots,
+            body_length=body_length,
+            qubits=qubits,
+            device=device,
+            runs=runs,
+            session_id=session_id,
+            learning_rate=learning_rate,
+            gradient_method=gradient_method,
+            gradient_max_norm=gradient_max_norm,
+            parameter_initializer_config=parameter_initializer_config,
+            theme=theme,
+            perf_mgmt=perf_mgmt,
+        )
+        return
 
     # Get grid size from environment config for validation and logging
     grid_size = environment_config.grid_size
@@ -580,8 +648,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 show_last_frame_only=show_last_frame_only,
             )
 
-            steps_taken = agent._episode_tracker.steps  # noqa: SLF001
-            total_reward = agent._episode_tracker.rewards  # noqa: SLF001
+            steps_taken = agent._episode_tracker.steps
+            total_reward = agent._episode_tracker.rewards
 
             # Determine success and track termination types
             success = step_result.termination_reason in (
@@ -602,35 +670,31 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_interrupted += 1
 
             # Get environment specific data
-            foods_collected_this_run = agent._episode_tracker.foods_collected  # noqa: SLF001
+            foods_collected_this_run = agent._episode_tracker.foods_collected
             foods_available_this_run = agent.env.foraging.target_foods_to_collect
             satiety_remaining_this_run = agent.current_satiety
-            distance_efficiencies = agent._episode_tracker.distance_efficiencies  # noqa: SLF001
+            distance_efficiencies = agent._episode_tracker.distance_efficiencies
             average_distance_efficiency = (
                 sum(distance_efficiencies) / len(distance_efficiencies)
                 if distance_efficiencies
                 else 0.0
             )
-            satiety_history_this_run = agent._episode_tracker.satiety_history.copy()  # noqa: SLF001
-            predator_encounters_this_run = agent._episode_tracker.predator_encounters  # noqa: SLF001
-            successful_evasions_this_run = agent._episode_tracker.successful_evasions  # noqa: SLF001
+            satiety_history_this_run = agent._episode_tracker.satiety_history.copy()
+            predator_encounters_this_run = agent._episode_tracker.predator_encounters
+            successful_evasions_this_run = agent._episode_tracker.successful_evasions
             died_to_health_depletion_this_run = (
                 step_result.termination_reason == TerminationReason.HEALTH_DEPLETED
             )
-            health_history_this_run = agent._episode_tracker.health_history.copy()  # noqa: SLF001
+            health_history_this_run = agent._episode_tracker.health_history.copy()
             temperature_history_this_run = None
             # Copy temperature history if thermotaxis is enabled
             if agent.env.thermotaxis.enabled:
-                temperature_history_this_run = (
-                    agent._episode_tracker.temperature_history.copy()  # noqa: SLF001
-                )
+                temperature_history_this_run = agent._episode_tracker.temperature_history.copy()
 
             oxygen_history_this_run = None
             # Copy oxygen history if aerotaxis is enabled
             if agent.env.aerotaxis.enabled:
-                oxygen_history_this_run = (
-                    agent._episode_tracker.oxygen_history.copy()  # noqa: SLF001
-                )
+                oxygen_history_this_run = agent._episode_tracker.oxygen_history.copy()
 
             # Calculate multi-objective scores
             survival_score_this_run = None
@@ -657,7 +721,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 steps=steps_taken,
                 path=step_result.agent_path,
                 total_reward=total_reward,
-                last_total_reward=agent._episode_tracker.rewards,  # noqa: SLF001
+                last_total_reward=agent._episode_tracker.rewards,
                 termination_reason=step_result.termination_reason,
                 success=success,
                 foods_collected=foods_collected_this_run,
@@ -752,7 +816,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                     if oxygen_history_this_run
                     else [],
                     foods_collected=foods_collected_this_run or 0,
-                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                    distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),
                 )
                 plot_tracking_data_by_latest_run(
                     tracking_data=tracking_data,
@@ -800,7 +864,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             # Replace episode tracking data with lightweight version
             tracking_data.episode_data[run_num] = EpisodeTrackingData(
                 foods_collected=foods_collected_this_run or 0,
-                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),  # noqa: SLF001
+                distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),
             )
 
             if run_num < runs:
@@ -1438,6 +1502,267 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 health_hist,
                 max_health_pred,
             )
+
+
+def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
+    *,
+    config: SimulationConfig,
+    multi_agent_config: MultiAgentConfig,
+    environment_config: EnvironmentConfig,
+    reward_config: RewardConfig,
+    satiety_config: SatietyConfig,
+    sensing_config: SensingConfig,
+    simulation_seed: int,
+    max_steps: int,
+    shots: int,
+    body_length: int,
+    qubits: int,
+    device: DeviceType,
+    runs: int,
+    session_id: str,
+    learning_rate: ConstantLearningRate
+    | DynamicLearningRate
+    | AdamLearningRate
+    | PerformanceBasedLearningRate,
+    gradient_method: GradientCalculationMethod,
+    gradient_max_norm: float | None,
+    parameter_initializer_config: ParameterInitializerConfig,
+    theme: Theme,
+    perf_mgmt: Any | None = None,  # noqa: ANN401 - RunnableQiskitFunction conditional import
+) -> None:
+    """Run a multi-agent simulation session.
+
+    Called from main() when multi_agent.enabled=True. Creates multiple agents
+    with independent brains in a shared environment and runs episodes via
+    MultiAgentSimulation.
+    """
+    from quantumnematode.agent.multi_agent import (
+        FoodCompetitionPolicy,
+        MultiAgentSimulation,
+        validate_multi_agent_grid,
+    )
+
+    # Determine agent configs
+    if multi_agent_config.agents:
+        agent_configs = multi_agent_config.agents
+    else:
+        # Homogeneous: create N agents with top-level brain config
+        if config.brain is None:
+            msg = "multi_agent.count requires a top-level 'brain' config."
+            raise ValueError(msg)
+        if multi_agent_config.count is None:
+            msg = "multi_agent must specify 'count' or 'agents'."
+            raise ValueError(msg)
+        agent_configs = [
+            AgentConfig(
+                id=f"agent_{i}",
+                brain=config.brain,
+            )
+            for i in range(multi_agent_config.count)
+        ]
+
+    num_agents = len(agent_configs)
+    grid_size = environment_config.grid_size
+
+    # Validate grid size
+    validate_multi_agent_grid(grid_size, num_agents)
+
+    logger.info(f"Multi-agent mode: {num_agents} agents, grid {grid_size}x{grid_size}")
+    logger.info(f"Food competition: {multi_agent_config.food_competition}")
+    logger.info(f"Termination policy: {multi_agent_config.termination_policy}")
+
+    # Create initial shared environment (seeded for run 0)
+    initial_run_seed = derive_run_seed(simulation_seed, 0)
+    env = create_env_from_config(
+        environment_config,
+        seed=initial_run_seed,
+        max_body_length=body_length,
+        theme=theme,
+    )
+
+    # Create agents with independent brains
+    agents: list[QuantumNematodeAgent] = []
+
+    for ac in agent_configs:
+        # Derive per-agent seed (stable across runs, unlike Python's hash())
+        agent_seed = int.from_bytes(
+            hashlib.blake2b(f"{simulation_seed}:{ac.id}".encode(), digest_size=4).digest(),
+            "little",
+        )
+
+        # Configure brain for this agent
+        agent_brain_config = _configure_brain_for_agent(ac.brain, agent_seed, sensing_config)
+
+        agent_brain = setup_brain_model(
+            brain_type=BrainType(ac.brain.name),
+            brain_config=agent_brain_config,
+            shots=shots,
+            qubits=qubits,
+            device=device,
+            learning_rate=learning_rate,
+            gradient_method=gradient_method,
+            gradient_max_norm=gradient_max_norm,
+            parameter_initializer_config=parameter_initializer_config,
+            perf_mgmt=perf_mgmt,
+        )
+
+        # Load pre-trained weights if specified
+        if ac.weights_path:
+            if not isinstance(agent_brain, WeightPersistence):
+                msg = (
+                    f"Agent '{ac.id}' brain {type(agent_brain).__name__} does not implement "
+                    f"WeightPersistence. Cannot load weights from {ac.weights_path}."
+                )
+                raise TypeError(msg)
+            load_weights(agent_brain, Path(ac.weights_path))
+
+        # Add agent to environment with min_distance separation
+        env.add_agent(
+            agent_id=ac.id,
+            position=None,
+            max_body_length=body_length,
+            min_distance=multi_agent_config.min_agent_distance,
+        )
+
+        agent = QuantumNematodeAgent(
+            brain=agent_brain,
+            env=env,
+            max_body_length=body_length,
+            theme=theme,
+            satiety_config=satiety_config,
+            sensing_config=sensing_config,
+            agent_id=ac.id,
+        )
+        agents.append(agent)
+
+    # Create orchestrator
+    food_policy = FoodCompetitionPolicy(multi_agent_config.food_competition)
+    sim = MultiAgentSimulation(
+        env=env,
+        agents=agents,
+        food_policy=food_policy,
+        social_detection_radius=multi_agent_config.social_detection_radius,
+        termination_policy=multi_agent_config.termination_policy,
+    )
+
+    # Set up export directories
+    data_dir = Path.cwd() / "exports" / session_id / "session" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\n{'=' * 60}")
+    print(f"Multi-Agent Simulation: {num_agents} agents")
+    print(f"Session: {session_id}")
+    print(f"{'=' * 60}\n")
+
+    # Run episodes (with finally block for weight checkpoint)
+    try:
+        for run in range(runs):
+            run_seed = derive_run_seed(simulation_seed, run)
+            set_global_seed(run_seed)
+
+            # Create fresh env for this episode (run 0 uses initial env above)
+            if run > 0:
+                env = create_env_from_config(
+                    environment_config,
+                    seed=run_seed,
+                    max_body_length=body_length,
+                    theme=theme,
+                )
+                for ac in agent_configs:
+                    env.add_agent(
+                        agent_id=ac.id,
+                        position=None,
+                        max_body_length=body_length,
+                        min_distance=multi_agent_config.min_agent_distance,
+                    )
+                for agent in agents:
+                    agent.env = env
+                    pos = env.agents[agent.agent_id].position
+                    agent.path = [(pos[0], pos[1])]
+                    agent.food_history = [list(env.foods)]
+                    agent._food_handler.env = env
+                    agent._satiety_manager.reset()
+                    agent._food_handler.reset()
+                    agent._episode_tracker.reset()
+                    agent.reset_brain()
+                sim.env = env
+
+            result = sim.run_episode(reward_config, max_steps)
+
+            # Log per-episode results
+            print(
+                f"Run {run + 1}/{runs}: "
+                f"food={result.total_food_collected}, "
+                f"competition={result.food_competition_events}, "
+                f"alive={result.agents_alive_at_end}/{num_agents}, "
+                f"success={result.mean_agent_success:.0%}, "
+                f"gini={result.food_gini_coefficient:.2f}",
+            )
+
+            for aid, agent_result in result.agent_results.items():
+                print(
+                    f"  {aid}: {agent_result.termination_reason.value}, "
+                    f"food={result.per_agent_food.get(aid, 0)}, "
+                    f"steps={len(agent_result.agent_path)}",
+                )
+    finally:
+        # Save weights per agent (always attempt, even on interrupt/error)
+        weights_dir = data_dir / "weights"
+        weights_dir.mkdir(parents=True, exist_ok=True)
+        for agent in agents:
+            if isinstance(agent.brain, WeightPersistence):
+                weight_file = (
+                    "final.pt" if agent.agent_id == "default" else f"final_{agent.agent_id}.pt"
+                )
+                try:
+                    save_weights(agent.brain, weights_dir / weight_file)
+                except Exception:
+                    logger.exception("Failed to save weights for %s", agent.agent_id)
+
+    print(f"\nSession complete. Results in exports/{session_id}/")
+
+
+def _configure_brain_for_agent(
+    brain_container: BrainContainerConfig,
+    seed: int,
+    sensing_config: SensingConfig,
+) -> BrainConfigType:
+    """Configure a brain from a BrainContainerConfig with sensing mode translation.
+
+    Parameters
+    ----------
+    brain_container : BrainContainerConfig
+        Brain container config from YAML.
+    seed : int
+        Seed for the brain.
+    sensing_config : SensingConfig
+        Sensing configuration for module translation.
+
+    Returns
+    -------
+    BrainConfigType
+        Configured brain config ready for setup_brain_model().
+    """
+    from quantumnematode.utils.config_loader import configure_brain_from_container
+
+    brain_config = configure_brain_from_container(brain_container)
+    brain_config = brain_config.model_copy(update={"seed": seed})
+
+    # Apply sensing mode translation
+    sensory_modules_attr = getattr(brain_config, "sensory_modules", None)
+    if sensory_modules_attr is not None:
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.utils.config_loader import apply_sensing_mode
+
+        original_modules = [m.value for m in sensory_modules_attr]
+        translated = apply_sensing_mode(original_modules, sensing_config)
+        translated_modules = [ModuleName(m) for m in translated]
+        if translated_modules != list(sensory_modules_attr):
+            brain_config = brain_config.model_copy(
+                update={"sensory_modules": translated_modules},
+            )
+
+    return brain_config
 
 
 if __name__ == "__main__":

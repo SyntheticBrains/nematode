@@ -90,6 +90,9 @@ class ModuleName(StrEnum):
     AEROTAXIS_TEMPORAL = "aerotaxis_temporal"
     STAM = "stam"
 
+    # Social sensing module
+    SOCIAL_PROXIMITY = "social_proximity"
+
 
 # =============================================================================
 # Helper Functions
@@ -575,6 +578,8 @@ class SensoryModule:
             - binary (if classical_dim=3): [-1, 1] module-specific scalar
         """
         core = self.extract(params)
+        if self.classical_dim == 1:
+            return np.array([core.strength], dtype=np.float32)
         if self.classical_dim == 3:  # noqa: PLR2004
             return np.array([core.strength, core.angle, core.binary], dtype=np.float32)
         return np.array([core.strength, core.angle], dtype=np.float32)
@@ -749,6 +754,49 @@ SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL] = SensoryModule(
         "decreasing signal). Models URX/BAG neuron temporal responses."
     ),
     classical_dim=3,
+)
+
+# --- Social sensing ---
+
+
+# Must match MultiAgentConfig max agent count (config_loader.py _validate_population)
+_MAX_NEARBY_AGENTS = 10
+
+
+def _social_proximity_core(params: BrainParams) -> CoreFeatures:
+    """Extract social proximity features for multi-agent sensing.
+
+    **Oracle sensing mode**: Returns exact count of nearby agents within a
+    hard-radius cutoff. This is biologically dishonest — real C. elegans
+    detects conspecifics via ascaroside pheromone concentration gradients
+    (ASK, ADL, ASI chemosensory neurons), not by counting individuals.
+    A biologically honest version using pheromone diffusion fields with
+    temporal sensing (Mode A/B) is planned for the multi-agent pheromone deliverable.
+
+    Parameters
+    ----------
+    params : BrainParams
+        Brain parameters containing nearby_agents_count.
+
+    Returns
+    -------
+    CoreFeatures
+        strength = clamp(count, 0, _MAX_NEARBY_AGENTS) / _MAX_NEARBY_AGENTS.
+    """
+    count = max(0, min(params.nearby_agents_count or 0, _MAX_NEARBY_AGENTS))
+    normalized = count / _MAX_NEARBY_AGENTS
+    return CoreFeatures(strength=normalized, angle=0.0, binary=0.0)
+
+
+SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY] = SensoryModule(
+    name=ModuleName.SOCIAL_PROXIMITY,
+    extract=_social_proximity_core,
+    description=(
+        "Social proximity detection (oracle mode). Encodes normalized count of "
+        "nearby agents within social detection radius. Strength only (1 dimension). "
+        "Biologically honest pheromone-based sensing planned for multi-agent pheromone deliverable."
+    ),
+    classical_dim=1,
 )
 
 SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(

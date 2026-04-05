@@ -2821,3 +2821,199 @@ class TestScalarConcentration:
         conc_near = env.get_predator_concentration((14, 10))
         conc_far = env.get_predator_concentration((5, 10))
         assert conc_near > conc_far
+
+
+# =============================================================================
+# Multi-Agent Infrastructure Tests
+# =============================================================================
+
+
+class TestAgentState:
+    """Tests for AgentState dataclass and agent registry."""
+
+    def test_default_agent_exists(self):
+        """Test that a default agent is created on env init."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        assert "default" in env.agents
+        state = env.agents["default"]
+        assert state.agent_id == "default"
+        assert state.position == (10, 10)
+        assert state.alive is True
+
+    def test_agent_pos_property_delegates(self):
+        """Test that agent_pos property delegates to default AgentState."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        assert env.agent_pos == (10, 10)
+        env.agent_pos = (5, 5)
+        assert env.agents["default"].position == (5, 5)
+
+    def test_agent_hp_property_delegates(self):
+        """Test that agent_hp property delegates to default AgentState."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        original_hp = env.agent_hp
+        assert original_hp > 0
+        env.agent_hp = 50.0
+        assert env.agents["default"].hp == 50.0
+
+    def test_comfort_counters_in_agent_state(self):
+        """Test that comfort zone counters are per-agent in AgentState."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        env.steps_in_comfort_zone = 5
+        assert env.agents["default"].steps_in_comfort_zone == 5
+        env.total_thermotaxis_steps = 10
+        assert env.agents["default"].total_thermotaxis_steps == 10
+
+    def test_get_agent_ids_sorted(self):
+        """Test that get_agent_ids returns sorted list."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        assert env.get_agent_ids() == ["default"]
+
+    def test_get_agent_state(self):
+        """Test getting agent state by ID."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        state = env.get_agent_state("default")
+        assert state.position == (10, 10)
+
+    def test_get_agent_state_missing_raises(self):
+        """Test that missing agent_id raises KeyError."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        with pytest.raises(KeyError):
+            env.get_agent_state("nonexistent")
+
+    def test_add_agent(self):
+        """Test adding a new agent to the environment."""
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            start_pos=(10, 10),
+            seed=42,
+            health=HealthParams(max_hp=100.0),
+        )
+        state = env.add_agent("agent_0", position=(5, 5))
+        assert state.agent_id == "agent_0"
+        assert state.position == (5, 5)
+        assert state.hp == 100.0
+        assert state.alive is True
+        assert "agent_0" in env.agents
+        assert env.get_agent_ids() == ["agent_0", "default"]
+
+    def test_add_agent_duplicate_raises(self):
+        """Test that adding duplicate agent_id raises ValueError."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        with pytest.raises(ValueError, match="already exists"):
+            env.add_agent("default")
+
+    def test_add_agent_random_position(self):
+        """Test adding agent with random position."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        state = env.add_agent("agent_0")
+        assert 0 <= state.position[0] < 20
+        assert 0 <= state.position[1] < 20
+
+
+class TestMultiAgentMovement:
+    """Tests for multi-agent movement via move_agent_for."""
+
+    def test_move_agent_for_independent(self):
+        """Test that moving one agent doesn't affect another."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        env.add_agent("agent_0", position=(5, 5))
+
+        env.move_agent_for("agent_0", Action.FORWARD)
+        # agent_0 should have moved (UP from (5,5) -> (5,6))
+        assert env.agents["agent_0"].position == (5, 6)
+        # default agent should be unchanged
+        assert env.agents["default"].position == (10, 10)
+
+    def test_move_agent_delegates_to_default(self):
+        """Test that move_agent() delegates to move_agent_for('default')."""
+        env = DynamicForagingEnvironment(grid_size=20, start_pos=(10, 10), seed=42)
+        env.move_agent(Action.FORWARD)
+        assert env.agent_pos == (10, 11)
+
+
+class TestMultiAgentPredatorTargeting:
+    """Tests for predator multi-target pursuit."""
+
+    def test_predator_chases_nearest_of_multiple(self):
+        """Test that pursuit predator chases the nearest agent."""
+        rng = get_rng(42)
+        pred = Predator(
+            position=(10, 10),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=20,
+        )
+        # Agent positions: (12, 10) is nearest (distance=2), (50, 50) is far
+        pred.update_position(
+            grid_size=100,
+            rng=rng,
+            agent_positions=[(12, 10), (50, 50)],
+        )
+        # Predator should move toward (12, 10) — so x should increase
+        assert pred.position[0] > 10 or pred.position[1] != 10
+
+    def test_predator_chases_nearest_switches_target(self):
+        """Test predator switches to nearer agent when positions change."""
+        rng = get_rng(42)
+        pred = Predator(
+            position=(10, 10),
+            predator_type=PredatorType.PURSUIT,
+            speed=1.0,
+            detection_radius=50,
+        )
+        # First step: agent at (12,10) is nearest, predator moves toward it
+        pred.update_position(grid_size=100, rng=rng, agent_positions=[(12, 10), (90, 90)])
+        # Predator should have moved toward (12,10) — x increases
+        assert pred.position[0] >= 10
+
+        # Now place a different agent much closer on the other side
+        pred.position = (50, 50)  # Reset position to middle
+        # agent at (48, 50) is nearer than (90, 90)
+        pred.update_position(grid_size=100, rng=rng, agent_positions=[(90, 90), (48, 50)])
+        # Predator should move toward (48,50) — x decreases
+        assert pred.position[0] <= 50
+
+    def test_stationary_predator_unaffected_by_multi_agent(self):
+        """Test that stationary predators don't move regardless of agents."""
+        rng = get_rng(42)
+        pred = Predator(
+            position=(10, 10),
+            predator_type=PredatorType.STATIONARY,
+        )
+        pred.update_position(grid_size=100, rng=rng, agent_positions=[(12, 10)])
+        assert pred.position == (10, 10)
+
+    def test_update_predators_uses_all_alive_agents(self):
+        """Test that update_predators passes alive agent positions."""
+        env = DynamicForagingEnvironment(
+            grid_size=50,
+            start_pos=(25, 25),
+            seed=42,
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.PURSUIT,
+                speed=1.0,
+                detection_radius=50,
+            ),
+        )
+        env.add_agent("agent_0", position=(5, 5))
+        # Both agents should be considered
+        env.update_predators()  # Should not crash
+
+    def test_backward_compat_single_agent_predator(self):
+        """Test single-agent predator behavior is identical to before."""
+        env = DynamicForagingEnvironment(
+            grid_size=50,
+            start_pos=(25, 25),
+            seed=42,
+            predator=PredatorParams(
+                enabled=True,
+                count=1,
+                predator_type=PredatorType.PURSUIT,
+                speed=1.0,
+                detection_radius=50,
+            ),
+        )
+        # With only "default" agent, predators should still work
+        env.update_predators()

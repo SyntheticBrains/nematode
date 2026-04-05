@@ -57,7 +57,7 @@ ______________________________________________________________________
 | **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | ✅ COMPLETE | Thermotaxis, enhanced predators, mechanosensation, HP system |
 | **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
 | **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | ✅ SUBSTANTIALLY COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A achieves 94% L500 on hardest environment. Oxygen sensing (aerotaxis) implemented with 5-zone system and combined thermal+oxygen environments. |
-| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔲 PLANNED | Multi-agent infrastructure, pheromones, social/competitive dynamics |
+| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔨 IN PROGRESS | Multi-agent infrastructure (Deliverable 1 complete: AgentState, \*\_for methods, MultiAgentSimulation orchestrator, food competition, social proximity module). Pheromones and social dynamics pending. |
 | **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
 | **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
 | **7** | Q2 - Q4 2027 | Community & Publication | 🔲 PLANNED | NematodeBench launch, publication campaign, external collaboration |
@@ -179,7 +179,7 @@ Environment complexity (2-9D observations, 4 discrete actions, ~10K effective st
 - No neuromodulation (dopamine/serotonin mentioned but not simulated)
 - Limited environmental diversity (no temporal dynamics beyond thermotaxis)
 - Sensory inputs are spatial gradient lookups, not temporal derivatives (biologically inaccurate)
-- Single-agent only
+- ~~Single-agent only~~ — Multi-agent infrastructure implemented (Phase 4 Deliverable 1)
 - Discrete grid-world (not continuous physics)
 - No connectome-constrained architectures
 

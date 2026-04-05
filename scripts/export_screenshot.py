@@ -161,7 +161,7 @@ def main(output_path: str = "docs/assets/images/pixel_theme.png") -> None:
     from pathlib import Path
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    pygame.image.save(renderer._screen, output_path)  # noqa: SLF001
+    pygame.image.save(renderer._screen, output_path)
     print(f"Screenshot saved to {output_path}")
 
     renderer.close()
