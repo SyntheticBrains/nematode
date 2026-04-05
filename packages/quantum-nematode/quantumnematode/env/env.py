@@ -724,11 +724,23 @@ class BaseEnvironment(ABC):
         self,
         direction: Direction,
     ) -> tuple[int, int] | None:
+        """Calculate new position if valid. Uses default agent position.
+
+        For multi-agent support, prefer ``_get_new_position_from()``.
         """
-        Calculate the new position if moving in the given direction is valid.
+        return self._get_new_position_from(self.agent_pos, direction)
+
+    def _get_new_position_from(
+        self,
+        position: tuple[int, int],
+        direction: Direction,
+    ) -> tuple[int, int] | None:
+        """Calculate new position from a given position if the move is valid.
 
         Parameters
         ----------
+        position : tuple[int, int]
+            Current position to move from.
         direction : Direction
             The direction to move.
 
@@ -738,7 +750,7 @@ class BaseEnvironment(ABC):
             The new position if the move is valid (within grid bounds),
             or None if the move would hit a wall.
         """
-        x, y = self.agent_pos
+        x, y = position
         match direction:
             case Direction.UP:
                 return (x, y + 1) if y < self.grid_size - 1 else None
@@ -751,17 +763,18 @@ class BaseEnvironment(ABC):
             case _:
                 return None
 
-    def move_agent(self, action: Action) -> None:
-        """
-        Move the agent based on its perspective.
+    def _apply_movement(self, agent_state: AgentState, action: Action) -> None:
+        """Apply movement action to an agent state.
+
+        Core movement logic extracted for multi-agent support.
 
         Parameters
         ----------
+        agent_state : AgentState
+            The agent state to update.
         action : Action
             The action to take.
         """
-        logger.debug(f"Action received: {action.value}, Current position: {self.agent_pos}")
-
         if self.action_set != DEFAULT_ACTIONS:
             error_message = (
                 f"Action set {self.action_set} is not supported. "
@@ -771,37 +784,49 @@ class BaseEnvironment(ABC):
             raise ValueError(error_message)
 
         if action == Action.STAY:
-            logger.debug("Action is stay: staying in place.")
             return
 
-        previous_direction = self.current_direction
-        new_direction = self.DIRECTION_MAP[self.current_direction][action]
-        self.current_direction = new_direction
+        previous_direction = agent_state.direction
+        new_direction = self.DIRECTION_MAP[agent_state.direction][action]
+        agent_state.direction = new_direction
 
-        # Calculate the new position based on the new direction
-        new_pos = self._get_new_position_if_valid(new_direction)
+        new_pos = self._get_new_position_from(agent_state.position, new_direction)
         if new_pos is None:
-            logger.debug(
-                f"Collision against boundary with action: {action.value}, staying in place.",
-            )
-            self.current_direction = previous_direction
+            agent_state.direction = previous_direction
             return
 
-        # Check for collision with the body
-        if tuple(new_pos) in self.body:
-            logger.debug(f"Collision detected at {new_pos}, staying in place.")
-            self.current_direction = previous_direction
+        if tuple(new_pos) in agent_state.body:
+            agent_state.direction = previous_direction
             return
 
-        # Update the body positions
-        self.body = [tuple(self.agent_pos), *self.body[:-1]] if len(self.body) > 0 else []
-
-        # Update the agent's position
-        self.agent_pos = tuple(new_pos)
-
-        logger.debug(
-            f"New position: {self.agent_pos}, New direction: {self.current_direction.value}",
+        agent_state.body = (
+            [tuple(agent_state.position), *agent_state.body[:-1]]
+            if len(agent_state.body) > 0
+            else []
         )
+        agent_state.position = tuple(new_pos)
+
+    def move_agent(self, action: Action) -> None:
+        """Move the default agent based on its perspective.
+
+        Parameters
+        ----------
+        action : Action
+            The action to take.
+        """
+        self.move_agent_for(DEFAULT_AGENT_ID, action)
+
+    def move_agent_for(self, agent_id: str, action: Action) -> None:
+        """Move a specific agent based on its perspective.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to move.
+        action : Action
+            The action to take.
+        """
+        self._apply_movement(self.agents[agent_id], action)
 
     @abstractmethod
     def render(self) -> list[str]:
@@ -1641,37 +1666,48 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return result
 
     def reached_goal(self) -> bool:
-        """
-        Check if the agent has reached any food source.
+        """Check if the default agent has reached any food source."""
+        return self.reached_goal_for(DEFAULT_AGENT_ID)
+
+    def reached_goal_for(self, agent_id: str) -> bool:
+        """Check if a specific agent has reached any food source.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to check.
 
         Returns
         -------
         bool
             True if agent is at a food position, False otherwise.
         """
-        return tuple(self.agent_pos) in self.foods
+        return tuple(self.agents[agent_id].position) in self.foods
 
     def consume_food(self) -> tuple[int, int] | None:
-        """
-        Consume food at the agent's current position and respawn immediately.
+        """Consume food at the default agent's position."""
+        return self.consume_food_for(DEFAULT_AGENT_ID)
 
-        Automatically respawns a new food to maintain constant foods_on_grid count.
+    def consume_food_for(self, agent_id: str) -> tuple[int, int] | None:
+        """Consume food at a specific agent's position and respawn immediately.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent whose position to check.
 
         Returns
         -------
         tuple[int, int] | None
             Position of consumed food, or None if no food at current position.
         """
-        agent_tuple = (self.agent_pos[0], self.agent_pos[1])
+        pos = self.agents[agent_id].position
+        agent_tuple = (pos[0], pos[1])
         if agent_tuple in self.foods:
             self.foods.remove(agent_tuple)
-            logger.info(f"Food consumed at {agent_tuple}")
-
-            # Immediately spawn new food to maintain constant supply
+            logger.info(f"Food consumed at {agent_tuple} by {agent_id}")
             self.spawn_food()
-
             return agent_tuple
-
         return None
 
     def has_collected_target_foods(self, foods_collected: int) -> bool:
@@ -1717,8 +1753,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
             pred.update_position(self.grid_size, self.rng, agent_pos)
 
     def is_agent_in_danger(self) -> bool:
-        """
-        Check if agent is within detection radius of any predator.
+        """Check if default agent is within detection radius of any predator."""
+        return self.is_agent_in_danger_for(DEFAULT_AGENT_ID)
+
+    def is_agent_in_danger_for(self, agent_id: str) -> bool:
+        """Check if a specific agent is within detection radius of any predator.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to check.
 
         Returns
         -------
@@ -1728,9 +1772,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if not self.predator.enabled:
             return False
 
-        agent_pos = self.agent_pos
+        agent_pos = self.agents[agent_id].position
         for pred in self.predators:
-            # Manhattan distance for detection radius
             distance = abs(agent_pos[0] - pred.position[0]) + abs(
                 agent_pos[1] - pred.position[1],
             )
@@ -1739,11 +1782,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return False
 
     def is_agent_in_damage_radius(self) -> bool:
-        """
-        Check if agent is within damage radius of any predator.
+        """Check if default agent is within damage radius of any predator."""
+        return self.is_agent_in_damage_radius_for(DEFAULT_AGENT_ID)
 
-        Uses per-predator damage_radius which may vary by predator type.
-        Stationary predators typically have larger damage_radius (toxic zones).
+    def is_agent_in_damage_radius_for(self, agent_id: str) -> bool:
+        """Check if a specific agent is within damage radius of any predator.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to check.
 
         Returns
         -------
@@ -1753,15 +1801,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if not self.predator.enabled:
             return False
 
-        agent_pos = self.agent_pos
+        agent_pos = self.agents[agent_id].position
         for pred in self.predators:
-            # Manhattan distance for damage radius (per-predator)
             distance = abs(agent_pos[0] - pred.position[0]) + abs(
                 agent_pos[1] - pred.position[1],
             )
             if distance <= pred.damage_radius:
                 logger.debug(
-                    f"Agent in damage radius of {pred.predator_type.value} predator "
+                    f"Agent {agent_id} in damage radius of {pred.predator_type.value} predator "
                     f"at {pred.position} (distance: {distance}, radius: {pred.damage_radius})",
                 )
                 return True
@@ -1780,8 +1827,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
     # --- Mechanosensation methods ---
 
     def move_agent(self, action: Action) -> None:
+        """Move the default agent, tracking wall collisions.
+
+        Overrides base class to track wall collisions for boundary penalty.
         """
-        Move the agent based on its perspective.
+        self.move_agent_for(DEFAULT_AGENT_ID, action)
+
+    def move_agent_for(self, agent_id: str, action: Action) -> None:
+        """Move a specific agent, tracking wall collisions.
 
         Overrides base class to track wall collisions for boundary penalty.
         Distinguishes wall collisions from body collisions by checking
@@ -1789,26 +1842,34 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         Parameters
         ----------
+        agent_id : str
+            The agent to move.
         action : Action
             The action to take.
         """
+        agent_state = self.agents[agent_id]
+
         # Reset wall collision flag at start of each move
-        self.wall_collision_occurred = False
+        agent_state.wall_collision_occurred = False
 
-        # Check if this action would result in a wall collision BEFORE calling parent
-        # This distinguishes wall collisions from body collisions
+        # Check if this action would result in a wall collision BEFORE applying movement
         if action != Action.STAY:
-            self.wall_collision_occurred = self._would_hit_wall(action)
+            agent_state.wall_collision_occurred = self._would_hit_wall_for(agent_state, action)
 
-        # Call parent move_agent
-        super().move_agent(action)
+        # Apply the movement
+        self._apply_movement(agent_state, action)
 
     def _would_hit_wall(self, action: Action) -> bool:
-        """
-        Check if the given action would cause a wall collision.
+        """Check if action would cause wall collision for default agent."""
+        return self._would_hit_wall_for(self.agents[DEFAULT_AGENT_ID], action)
+
+    def _would_hit_wall_for(self, agent_state: AgentState, action: Action) -> bool:
+        """Check if action would cause a wall collision for a specific agent.
 
         Parameters
         ----------
+        agent_state : AgentState
+            The agent state to check.
         action : Action
             The action to check.
 
@@ -1820,56 +1881,69 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if action == Action.STAY:
             return False
 
-        intended_direction = self.DIRECTION_MAP[self.current_direction][action]
-        return self._get_new_position_if_valid(intended_direction) is None
+        intended_direction = self.DIRECTION_MAP[agent_state.direction][action]
+        return self._get_new_position_from(agent_state.position, intended_direction) is None
 
     def is_agent_at_boundary(self) -> bool:
-        """
-        Check if agent is touching grid boundary.
+        """Check if default agent is touching grid boundary."""
+        return self.is_agent_at_boundary_for(DEFAULT_AGENT_ID)
 
-        Mechanosensation: Detects physical contact with environment edges,
-        modeled after C. elegans gentle touch neurons (ALM, PLM, AVM).
+    def is_agent_at_boundary_for(self, agent_id: str) -> bool:
+        """Check if a specific agent is touching grid boundary.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to check.
 
         Returns
         -------
         bool
             True if agent is at x=0, x=grid_size-1, y=0, or y=grid_size-1.
         """
-        x, y = self.agent_pos
+        x, y = self.agents[agent_id].position
         return x == 0 or x == self.grid_size - 1 or y == 0 or y == self.grid_size - 1
 
     def is_agent_in_predator_contact(self) -> bool:
-        """
-        Check if agent is in physical contact with a predator.
-
-        Mechanosensation: Detects harsh touch from predator contact,
-        modeled after C. elegans harsh touch response (ASH, ADL neurons).
-
-        Returns
-        -------
-        bool
-            True if agent is within damage radius of any predator.
-        """
+        """Check if default agent is in physical contact with a predator."""
         return self.is_agent_in_damage_radius()
+
+    def is_agent_in_predator_contact_for(self, agent_id: str) -> bool:
+        """Check if a specific agent is in physical contact with a predator.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to check.
+        """
+        return self.is_agent_in_damage_radius_for(agent_id)
 
     # --- Health methods ---
 
     def apply_predator_damage(self) -> float:
-        """
-        Apply damage from predator contact.
+        """Apply damage from predator contact to the default agent."""
+        return self.apply_predator_damage_for(DEFAULT_AGENT_ID)
+
+    def apply_predator_damage_for(self, agent_id: str) -> float:
+        """Apply damage from predator contact to a specific agent.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to damage.
 
         Returns
         -------
         float
             Actual amount of damage applied.
-            May be less than configured damage if HP was already low.
         """
-        old_hp = self.agent_hp
-        self.agent_hp = max(0.0, self.agent_hp - self.health.predator_damage)
-        actual_damage = old_hp - self.agent_hp
+        agent_state = self.agents[agent_id]
+        old_hp = agent_state.hp
+        agent_state.hp = max(0.0, agent_state.hp - self.health.predator_damage)
+        actual_damage = old_hp - agent_state.hp
         logger.debug(
-            f"Predator damage applied: {actual_damage} HP. "
-            f"Current HP: {self.agent_hp}/{self.health.max_hp}",
+            f"Predator damage to {agent_id}: {actual_damage} HP. "
+            f"Current HP: {agent_state.hp}/{self.health.max_hp}",
         )
         return actual_damage
 
@@ -1905,6 +1979,221 @@ class DynamicForagingEnvironment(BaseEnvironment):
     def reset_health(self) -> None:
         """Reset agent HP to maximum (called at episode start)."""
         self.agent_hp = self.health.max_hp
+
+    # -------------------------------------------------------------------------
+    # Multi-agent wrapper methods (*_for variants)
+    # Methods that already accept a position parameter get thin wrappers.
+    # Methods that need refactoring (use self.agent_hp, comfort counters) are
+    # fully re-implemented for the specified agent.
+    # -------------------------------------------------------------------------
+
+    def get_separated_gradients_for(
+        self,
+        agent_id: str,
+        *,
+        disable_log: bool = False,
+    ) -> dict[str, float]:
+        """Get separated gradients for a specific agent's position."""
+        return self.get_separated_gradients(
+            self.agents[agent_id].position,
+            disable_log=disable_log,
+        )
+
+    def get_food_concentration_for(self, agent_id: str) -> float:
+        """Get scalar food concentration at a specific agent's position."""
+        return self.get_food_concentration(position=self.agents[agent_id].position)
+
+    def get_predator_concentration_for(self, agent_id: str) -> float:
+        """Get scalar predator concentration at a specific agent's position."""
+        return self.get_predator_concentration(position=self.agents[agent_id].position)
+
+    def get_temperature_for(self, agent_id: str) -> float | None:
+        """Get temperature at a specific agent's position."""
+        return self.get_temperature(position=self.agents[agent_id].position)
+
+    def get_temperature_gradient_for(
+        self,
+        agent_id: str,
+    ) -> "GradientPolar | None":
+        """Get temperature gradient at a specific agent's position."""
+        return self.get_temperature_gradient(position=self.agents[agent_id].position)
+
+    def get_temperature_zone_for(self, agent_id: str) -> "TemperatureZone | None":
+        """Get temperature zone at a specific agent's position."""
+        return self.get_temperature_zone(position=self.agents[agent_id].position)
+
+    def get_oxygen_for(self, agent_id: str) -> float | None:
+        """Get oxygen concentration at a specific agent's position."""
+        return self.get_oxygen(position=self.agents[agent_id].position)
+
+    def get_oxygen_gradient_for(
+        self,
+        agent_id: str,
+    ) -> "GradientPolar | None":
+        """Get oxygen gradient at a specific agent's position."""
+        return self.get_oxygen_gradient(position=self.agents[agent_id].position)
+
+    def get_oxygen_zone_for(self, agent_id: str) -> "OxygenZone | None":
+        """Get oxygen zone at a specific agent's position."""
+        return self.get_oxygen_zone(position=self.agents[agent_id].position)
+
+    def get_oxygen_concentration_for(self, agent_id: str) -> float | None:
+        """Get scalar oxygen concentration at a specific agent's position."""
+        return self.get_oxygen_concentration(position=self.agents[agent_id].position)
+
+    def apply_temperature_effects_for(self, agent_id: str) -> tuple[float, float]:
+        """Apply temperature zone effects to a specific agent.
+
+        Updates per-agent comfort tracking counters and HP.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to apply effects to.
+
+        Returns
+        -------
+        tuple[float, float]
+            (reward_delta, hp_damage) applied this step.
+        """
+        if not self.thermotaxis.enabled:
+            return 0.0, 0.0
+
+        zone = self.get_temperature_zone(position=self.agents[agent_id].position)
+        if zone is None:
+            return 0.0, 0.0
+
+        agent_state = self.agents[agent_id]
+        agent_state.total_thermotaxis_steps += 1
+        if zone == TemperatureZone.COMFORT:
+            agent_state.steps_in_comfort_zone += 1
+
+        reward_delta = 0.0
+        hp_damage = 0.0
+
+        if zone == TemperatureZone.COMFORT:
+            reward_delta = self.thermotaxis.comfort_reward
+        elif zone in (TemperatureZone.DISCOMFORT_COLD, TemperatureZone.DISCOMFORT_HOT):
+            reward_delta = self.thermotaxis.discomfort_penalty
+        elif zone in (TemperatureZone.DANGER_COLD, TemperatureZone.DANGER_HOT):
+            reward_delta = self.thermotaxis.danger_penalty
+            hp_damage = self.thermotaxis.danger_hp_damage
+        elif zone in (TemperatureZone.LETHAL_COLD, TemperatureZone.LETHAL_HOT):
+            reward_delta = self.thermotaxis.danger_penalty
+            hp_damage = self.thermotaxis.lethal_hp_damage
+
+        if hp_damage > 0:
+            agent_state.hp = max(0.0, agent_state.hp - hp_damage)
+
+        return reward_delta, hp_damage
+
+    def apply_oxygen_effects_for(self, agent_id: str) -> tuple[float, float]:
+        """Apply oxygen zone effects to a specific agent.
+
+        Updates per-agent oxygen comfort tracking counters and HP.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to apply effects to.
+
+        Returns
+        -------
+        tuple[float, float]
+            (reward_delta, hp_damage) applied this step.
+        """
+        if not self.aerotaxis.enabled:
+            return 0.0, 0.0
+
+        zone = self.get_oxygen_zone(position=self.agents[agent_id].position)
+        if zone is None:
+            return 0.0, 0.0
+
+        agent_state = self.agents[agent_id]
+        agent_state.total_aerotaxis_steps += 1
+        if zone == OxygenZone.COMFORT:
+            agent_state.steps_in_oxygen_comfort_zone += 1
+
+        reward_delta = 0.0
+        hp_damage = 0.0
+
+        if zone == OxygenZone.COMFORT:
+            reward_delta = self.aerotaxis.comfort_reward
+        elif zone in (OxygenZone.DANGER_HYPOXIA, OxygenZone.DANGER_HYPEROXIA):
+            reward_delta = self.aerotaxis.danger_penalty
+            hp_damage = self.aerotaxis.danger_hp_damage
+        elif zone in (OxygenZone.LETHAL_HYPOXIA, OxygenZone.LETHAL_HYPEROXIA):
+            reward_delta = self.aerotaxis.danger_penalty
+            hp_damage = self.aerotaxis.lethal_hp_damage
+
+        if hp_damage > 0:
+            agent_state.hp = max(0.0, agent_state.hp - hp_damage)
+
+        return reward_delta, hp_damage
+
+    def add_agent(
+        self,
+        agent_id: str,
+        position: tuple[int, int] | None = None,
+        max_body_length: int = 0,
+    ) -> AgentState:
+        """Add a new agent to the environment.
+
+        Parameters
+        ----------
+        agent_id : str
+            Unique identifier for the new agent.
+        position : tuple[int, int] | None
+            Starting position. Random valid position if None.
+        max_body_length : int
+            Maximum body length for the agent.
+
+        Returns
+        -------
+        AgentState
+            The newly created agent state.
+
+        Raises
+        ------
+        ValueError
+            If agent_id already exists.
+        """
+        if agent_id in self.agents:
+            msg = f"Agent '{agent_id}' already exists in environment."
+            raise ValueError(msg)
+
+        if position is None:
+            # Random valid position avoiding food and predator positions
+            occupied = set(self.foods)
+            if self.predator.enabled:
+                occupied.update(p.position for p in self.predators)
+            occupied.update(a.position for a in self.agents.values())
+            for _ in range(MAX_POISSON_ATTEMPTS):
+                pos = (
+                    int(self.rng.integers(0, self.grid_size)),
+                    int(self.rng.integers(0, self.grid_size)),
+                )
+                if pos not in occupied:
+                    position = pos
+                    break
+            if position is None:
+                # Fallback: any position not occupied by another agent
+                position = (
+                    int(self.rng.integers(0, self.grid_size)),
+                    int(self.rng.integers(0, self.grid_size)),
+                )
+
+        initial_body = [tuple(position)] if max_body_length > 0 else []
+        agent_state = AgentState(
+            agent_id=agent_id,
+            position=position,
+            body=initial_body,
+            direction=Direction.UP,
+            hp=self.health.max_hp,
+            visited_cells={position},
+        )
+        self.agents[agent_id] = agent_state
+        return agent_state
 
     # -------------------------------------------------------------------------
     # Thermotaxis Methods
