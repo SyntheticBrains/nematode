@@ -1595,10 +1595,10 @@ def _run_multi_agent(  # noqa: PLR0913
     data_dir = Path.cwd() / "exports" / session_id / "session" / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Multi-Agent Simulation: {num_agents} agents")
     print(f"Session: {session_id}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Run episodes
     for run in range(runs):
