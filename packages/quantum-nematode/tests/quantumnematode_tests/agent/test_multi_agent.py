@@ -13,6 +13,7 @@ from quantumnematode.agent.multi_agent import (
     validate_multi_agent_grid,
 )
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrain, MLPPPOBrainConfig
+from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env import (
     DynamicForagingEnvironment,
     ForagingParams,
@@ -62,7 +63,7 @@ def _make_agent(
 ) -> QuantumNematodeAgent:
     """Create a test agent with MLP PPO brain."""
     config = MLPPPOBrainConfig(
-        sensory_modules=["food_chemotaxis"],
+        sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
         actor_hidden_dim=16,
         critic_hidden_dim=16,
         num_hidden_layers=1,
@@ -232,7 +233,7 @@ class TestMultiAgentSimulation:
         agent_0a = _make_agent(env, "agent_0", position=(5, 5))
         # Create second agent with same ID — need to work around add_agent check
         config = MLPPPOBrainConfig(
-            sensory_modules=["food_chemotaxis"],
+            sensory_modules=[ModuleName.FOOD_CHEMOTAXIS],
             actor_hidden_dim=16,
             critic_hidden_dim=16,
             num_hidden_layers=1,

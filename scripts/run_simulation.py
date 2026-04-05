@@ -48,8 +48,10 @@ from quantumnematode.optimizers.gradient_methods import (
     GradientCalculationMethod,
 )
 from quantumnematode.optimizers.learning_rate import (
+    AdamLearningRate,
     ConstantLearningRate,
     DynamicLearningRate,
+    PerformanceBasedLearningRate,
 )
 from quantumnematode.report.csv_export import (
     IncrementalDetailedTrackingWriter,
@@ -103,6 +105,7 @@ from quantumnematode.report.summary import summary
 from quantumnematode.utils.brain_factory import setup_brain_model
 from quantumnematode.utils.config_loader import (
     AgentConfig,
+    BrainConfigType,
     BrainContainerConfig,
     EnvironmentConfig,
     ManyworldsModeConfig,
@@ -307,6 +310,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         else:
             ibmq_authenticator.authenticate_runtime_service()
 
+    config: SimulationConfig | None = None
     if config_file:
         config = load_simulation_config(config_file)
         logger.info(f"Initializing simulation config: {config}")
@@ -377,8 +381,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # ── Multi-agent branch ────────────────────────────────────────────
     # If multi-agent is enabled in config, delegate to the multi-agent
     # simulation runner and return. The rest of main() is single-agent.
-    multi_agent_config = getattr(config, "multi_agent", None) if config_file else None
-    if multi_agent_config is not None and multi_agent_config.enabled:
+    multi_agent_config = config.multi_agent if config_file and config is not None else None
+    if multi_agent_config is not None and multi_agent_config.enabled and config is not None:
         _run_multi_agent(
             config=config,
             multi_agent_config=multi_agent_config,
@@ -1471,7 +1475,7 @@ def plot_results(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
 
 
-def _run_multi_agent(  # noqa: PLR0913
+def _run_multi_agent(  # noqa: C901, PLR0913, PLR0915
     *,
     config: SimulationConfig,
     multi_agent_config: MultiAgentConfig,
@@ -1487,7 +1491,7 @@ def _run_multi_agent(  # noqa: PLR0913
     device: DeviceType,
     runs: int,
     session_id: str,
-    learning_rate: DynamicLearningRate,
+    learning_rate: ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate,
     gradient_method: GradientCalculationMethod,
     gradient_max_norm: float | None,
     parameter_initializer_config: ParameterInitializerConfig,
@@ -1510,6 +1514,12 @@ def _run_multi_agent(  # noqa: PLR0913
         agent_configs = multi_agent_config.agents
     else:
         # Homogeneous: create N agents with top-level brain config
+        if config.brain is None:
+            msg = "multi_agent.count requires a top-level 'brain' config."
+            raise ValueError(msg)
+        if multi_agent_config.count is None:
+            msg = "multi_agent must specify 'count' or 'agents'."
+            raise ValueError(msg)
         agent_configs = [
             AgentConfig(
                 id=f"agent_{i}",
@@ -1648,7 +1658,7 @@ def _configure_brain_for_agent(
     brain_container: BrainContainerConfig,
     seed: int,
     sensing_config: SensingConfig,
-) -> object:
+) -> BrainConfigType:
     """Configure a brain from a BrainContainerConfig with sensing mode translation.
 
     Parameters

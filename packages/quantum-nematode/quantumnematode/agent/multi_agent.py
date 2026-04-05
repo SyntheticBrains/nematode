@@ -21,6 +21,7 @@ from quantumnematode.report.dtypes import TerminationReason
 if TYPE_CHECKING:
     from quantumnematode.agent.agent import QuantumNematodeAgent, RewardConfig
     from quantumnematode.agent.runners import EpisodeResult
+    from quantumnematode.brain.actions import ActionData
     from quantumnematode.dtypes import GridPosition
     from quantumnematode.env import DynamicForagingEnvironment
 
@@ -278,7 +279,7 @@ class MultiAgentSimulation:
             agent._episode_tracker.reset()
 
         reward_per_agent: dict[str, float] = {a.agent_id: 0.0 for a in self.agents}
-        action_per_agent: dict[str, object] = {a.agent_id: None for a in self.agents}
+        action_per_agent: dict[str, ActionData | None] = {a.agent_id: None for a in self.agents}
 
         for _step in range(max_steps):
             alive = self._alive_agents
@@ -286,7 +287,7 @@ class MultiAgentSimulation:
                 break
 
             # ── 1. PERCEPTION + DECISION ─────────────────────────
-            actions: dict[str, object] = {}
+            actions: dict[str, ActionData] = {}
             for agent in alive:
                 aid = agent.agent_id
                 nearby = self._compute_nearby_agents_count(aid)

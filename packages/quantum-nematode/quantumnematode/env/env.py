@@ -642,7 +642,9 @@ class BaseEnvironment(ABC):
         # Multi-agent state: dict of AgentState keyed by agent_id.
         # Single-agent mode creates a "default" agent for backward compatibility.
         initial_pos = start_pos or (1, 1)
-        initial_body = [tuple(initial_pos)] if max_body_length > 0 else []
+        initial_body: list[tuple[int, int]] = (
+            [(initial_pos[0], initial_pos[1])] if max_body_length > 0 else []
+        )
         self.agents: dict[str, AgentState] = {
             DEFAULT_AGENT_ID: AgentState(
                 agent_id=DEFAULT_AGENT_ID,
@@ -814,12 +816,13 @@ class BaseEnvironment(ABC):
             agent_state.direction = previous_direction
             return
 
+        pos = agent_state.position
         agent_state.body = (
-            [tuple(agent_state.position), *agent_state.body[:-1]]
+            [(pos[0], pos[1]), *agent_state.body[:-1]]
             if len(agent_state.body) > 0
             else []
         )
-        agent_state.position = tuple(new_pos)
+        agent_state.position = (new_pos[0], new_pos[1])
 
     def move_agent(self, action: Action) -> None:
         """Move the default agent based on its perspective.
@@ -2208,7 +2211,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     int(self.rng.integers(0, self.grid_size)),
                 )
 
-        initial_body = [tuple(position)] if max_body_length > 0 else []
+        initial_body: list[tuple[int, int]] = (
+            [(position[0], position[1])] if max_body_length > 0 else []
+        )
         agent_state = AgentState(
             agent_id=agent_id,
             position=position,
