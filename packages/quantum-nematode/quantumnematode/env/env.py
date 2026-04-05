@@ -413,9 +413,9 @@ class Predator:
         grid_size: int,
         rng: np.random.Generator,
         agent_pos: tuple[int, int] | None = None,
+        agent_positions: list[tuple[int, int]] | None = None,
     ) -> None:
-        """
-        Update predator position based on its type.
+        """Update predator position based on its type.
 
         Parameters
         ----------
@@ -424,13 +424,28 @@ class Predator:
         rng : np.random.Generator
             Random number generator for reproducible movement.
         agent_pos : tuple[int, int] | None
-            Current agent position. Required for PURSUIT type predators.
+            Single agent position (backward compat). Used if agent_positions not provided.
+        agent_positions : list[tuple[int, int]] | None
+            Multiple agent positions (multi-agent mode). Pursuit predators chase
+            the nearest position. Takes precedence over agent_pos.
         """
         if self.predator_type == PredatorType.STATIONARY:
             return  # Stationary predators don't move
 
-        if self.predator_type == PredatorType.PURSUIT and agent_pos is not None:
-            self._update_pursuit(grid_size, rng, agent_pos)
+        # Determine chase target: nearest agent from multi-agent list, or single agent
+        chase_target: tuple[int, int] | None = None
+        if agent_positions is not None and len(agent_positions) > 0:
+            # Chase nearest agent (Manhattan distance)
+            px, py = self.position
+            chase_target = min(
+                agent_positions,
+                key=lambda ap: abs(px - ap[0]) + abs(py - ap[1]),
+            )
+        elif agent_pos is not None:
+            chase_target = agent_pos
+
+        if self.predator_type == PredatorType.PURSUIT and chase_target is not None:
+            self._update_pursuit(grid_size, rng, chase_target)
         else:
             self._update_random(grid_size, rng)
 
@@ -1745,12 +1760,24 @@ class DynamicForagingEnvironment(BaseEnvironment):
         return min(distances)
 
     def update_predators(self) -> None:
-        """Update all predator positions."""
+        """Update all predator positions.
+
+        In multi-agent mode, pursuit predators chase the nearest alive agent.
+        """
         if not self.predator.enabled:
             return
-        agent_pos = (int(self.agent_pos[0]), int(self.agent_pos[1]))
+        # Collect positions of all alive agents for multi-target pursuit
+        alive_positions = [
+            (int(a.position[0]), int(a.position[1]))
+            for a in self.agents.values()
+            if a.alive
+        ]
         for pred in self.predators:
-            pred.update_position(self.grid_size, self.rng, agent_pos)
+            pred.update_position(
+                self.grid_size,
+                self.rng,
+                agent_positions=alive_positions,
+            )
 
     def is_agent_in_danger(self) -> bool:
         """Check if default agent is within detection radius of any predator."""
