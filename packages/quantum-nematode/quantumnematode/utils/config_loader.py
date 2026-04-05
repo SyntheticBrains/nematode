@@ -750,9 +750,9 @@ class MultiAgentConfig(BaseModel):
     enabled: bool = False
     count: int | None = None
     agents: list[AgentConfig] | None = None
-    food_competition: str = "first_arrival"
+    food_competition: Literal["first_arrival", "random"] = "first_arrival"
     social_detection_radius: int = 5
-    termination_policy: str = "freeze"
+    termination_policy: Literal["freeze", "remove", "end_all"] = "freeze"
     min_agent_distance: int = 5  # Best-effort Poisson disk; may be violated on dense grids
 
     @model_validator(mode="after")

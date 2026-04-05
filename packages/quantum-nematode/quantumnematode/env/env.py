@@ -2158,7 +2158,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return reward_delta, hp_damage
 
-    def add_agent(  # noqa: C901
+    def add_agent(  # noqa: C901, PLR0912
         self,
         agent_id: str,
         position: tuple[int, int] | None = None,
@@ -2192,6 +2192,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if agent_id in self.agents:
             msg = f"Agent '{agent_id}' already exists in environment."
             raise ValueError(msg)
+
+        if position is not None:
+            # Validate explicit position
+            x, y = position
+            if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
+                msg = f"Position {position} out of bounds for grid size {self.grid_size}."
+                raise ValueError(msg)
+            occupied_positions = {a.position for a in self.agents.values()}
+            if position in occupied_positions:
+                msg = f"Position {position} already occupied by another agent."
+                raise ValueError(msg)
 
         if position is None:
             # Random valid position avoiding food, predators, and respecting min_distance
@@ -3062,20 +3073,26 @@ class DynamicForagingEnvironment(BaseEnvironment):
             thermotaxis=self.thermotaxis,
             aerotaxis=self.aerotaxis,
         )
-        new_env.body = self.body.copy()
-        new_env.current_direction = self.current_direction
         new_env.foods = self.foods.copy()
-        new_env.visited_cells = self.visited_cells.copy()
         # Copy RNG state for reproducibility
         new_env.rng = get_rng(self.seed)
-        # Copy health state
-        new_env.agent_hp = self.agent_hp
-        # Copy thermotaxis tracking state
-        new_env.steps_in_comfort_zone = self.steps_in_comfort_zone
-        new_env.total_thermotaxis_steps = self.total_thermotaxis_steps
-        # Copy aerotaxis tracking state
-        new_env.steps_in_oxygen_comfort_zone = self.steps_in_oxygen_comfort_zone
-        new_env.total_aerotaxis_steps = self.total_aerotaxis_steps
+        # Copy all agents (not just default)
+        new_env.agents = {}
+        for aid, state in self.agents.items():
+            new_env.agents[aid] = AgentState(
+                agent_id=state.agent_id,
+                position=state.position,
+                body=state.body.copy(),
+                direction=state.direction,
+                hp=state.hp,
+                visited_cells=state.visited_cells.copy(),
+                wall_collision_occurred=state.wall_collision_occurred,
+                alive=state.alive,
+                steps_in_comfort_zone=state.steps_in_comfort_zone,
+                total_thermotaxis_steps=state.total_thermotaxis_steps,
+                steps_in_oxygen_comfort_zone=state.steps_in_oxygen_comfort_zone,
+                total_aerotaxis_steps=state.total_aerotaxis_steps,
+            )
         if self.predator.enabled:
             new_env.predators = [
                 Predator(

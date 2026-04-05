@@ -196,7 +196,7 @@ class TestMultiAgentSimulation:
         # Note: "default" agent remains in env but is not included in the
         # MultiAgentSimulation.agents list, so it doesn't participate.
         for i in range(5):
-            pos = (5 + i * 5, 15)
+            pos = (5 + i * 5, 10)  # y=10 avoids default agent at grid center (15,15)
             agents.append(_make_agent(env, f"agent_{i}", position=pos))
 
         sim = MultiAgentSimulation(
