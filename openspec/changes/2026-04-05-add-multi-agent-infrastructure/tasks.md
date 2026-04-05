@@ -47,6 +47,7 @@
   - Extract core logic into `_apply_movement(agent_state: AgentState, action: Action)`
   - `move_agent()` calls `_apply_movement(self.agents["default"], action)`
   - Add `move_agent_for(agent_id: str, action: Action)` calling `_apply_movement(self.agents[agent_id], action)`
+  - Note: private helpers `_get_new_position_if_valid()` (BaseEnvironment line 611) and `_would_hit_wall()` (DynamicForagingEnvironment line 1637) also read `self.agent_pos` directly -- these need position-parameterized variants (e.g. `_get_new_position_if_valid(position, direction)`) or their logic inlined into `_apply_movement()`
 
 - [ ] 2.2 Add `reached_goal_for(agent_id: str) -> bool`
 
