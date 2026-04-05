@@ -1560,10 +1560,11 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     logger.info(f"Food competition: {multi_agent_config.food_competition}")
     logger.info(f"Termination policy: {multi_agent_config.termination_policy}")
 
-    # Create shared environment
+    # Create initial shared environment (seeded for run 0)
+    initial_run_seed = derive_run_seed(simulation_seed, 0)
     env = create_env_from_config(
         environment_config,
-        seed=simulation_seed,
+        seed=initial_run_seed,
         max_body_length=body_length,
         theme=theme,
     )
@@ -1640,6 +1641,28 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
         run_seed = derive_run_seed(simulation_seed, run)
         set_global_seed(run_seed)
 
+        # Create fresh env for this episode (run 0 uses initial env above)
+        if run > 0:
+            env = create_env_from_config(
+                environment_config,
+                seed=run_seed,
+                max_body_length=body_length,
+                theme=theme,
+            )
+            for ac in agent_configs:
+                env.add_agent(agent_id=ac.id, position=None, max_body_length=body_length)
+            for agent in agents:
+                agent.env = env
+                pos = env.agents[agent.agent_id].position
+                agent.path = [(pos[0], pos[1])]
+                agent.food_history = [list(env.foods)]
+                agent._food_handler.env = env
+                agent._satiety_manager.reset()
+                agent._food_handler.reset()
+                agent._episode_tracker.reset()
+                agent.reset_brain()
+            sim.env = env
+
         result = sim.run_episode(reward_config, max_steps)
 
         # Log per-episode results
@@ -1658,28 +1681,6 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 f"food={result.per_agent_food.get(aid, 0)}, "
                 f"steps={len(agent_result.agent_path)}",
             )
-
-        # Reset for next episode: create fresh shared env with per-episode seed
-        env = create_env_from_config(
-            environment_config,
-            seed=run_seed,
-            max_body_length=body_length,
-            theme=theme,
-        )
-        for ac in agent_configs:
-            env.add_agent(agent_id=ac.id, position=None, max_body_length=body_length)
-        for agent in agents:
-            agent.env = env
-            agent.path = [
-                (env.agents[agent.agent_id].position[0], env.agents[agent.agent_id].position[1]),
-            ]
-            agent.food_history = [list(env.foods)]
-            agent._food_handler.env = env
-            agent._satiety_manager.reset()
-            agent._food_handler.reset()
-            agent._episode_tracker.reset()
-            agent.reset_brain()
-        sim.env = env
 
     # Save weights per agent
     weights_dir = data_dir / "weights"
