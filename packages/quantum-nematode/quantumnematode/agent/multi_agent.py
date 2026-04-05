@@ -252,6 +252,7 @@ class MultiAgentSimulation:
         pos = self.env.agents[agent_id].position
         count = 0
         for aid, state in self.env.agents.items():
+            # Skip self and the backward-compat "default" placeholder agent
             if aid in (agent_id, DEFAULT_AGENT_ID):
                 continue
             distance = abs(pos[0] - state.position[0]) + abs(pos[1] - state.position[1])
@@ -345,7 +346,7 @@ class MultiAgentSimulation:
                 self.env.agents[aid].visited_cells.add(pos)
 
             # ── 3. FOOD COMPETITION ──────────────────────────────
-            self._resolve_food_step(alive, reward_config)
+            self._resolve_food_step(alive)
 
             # ── 4. PREDATORS ─────────────────────────────────────
             self.env.update_predators()
@@ -437,7 +438,6 @@ class MultiAgentSimulation:
     def _resolve_food_step(
         self,
         alive_agents: list[QuantumNematodeAgent],
-        reward_config: RewardConfig,  # noqa: ARG002
     ) -> None:
         """Resolve food collection with competition for this step."""
         # Build map: food_position -> list of agent_ids at that position
