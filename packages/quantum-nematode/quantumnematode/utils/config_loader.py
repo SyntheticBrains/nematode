@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -731,6 +731,45 @@ class EnvironmentConfig(BaseModel):
         return self.sensing or SensingConfig()
 
 
+class AgentConfig(BaseModel):
+    """Configuration for a single agent in multi-agent mode."""
+
+    id: str
+    brain: BrainContainerConfig
+    weights_path: str | None = None
+
+
+class MultiAgentConfig(BaseModel):
+    """Configuration for multi-agent simulation.
+
+    Either ``count`` (homogeneous population using top-level brain config) or
+    ``agents`` (heterogeneous population with per-agent brain configs) must be
+    set when ``enabled=True``.
+    """
+
+    enabled: bool = False
+    count: int | None = None
+    agents: list[AgentConfig] | None = None
+    food_competition: str = "first_arrival"
+    social_detection_radius: int = 5
+    termination_policy: str = "freeze"
+    min_agent_distance: int = 5
+
+    @model_validator(mode="after")
+    def _validate_population(self) -> "MultiAgentConfig":
+        if not self.enabled:
+            return self
+        has_count = self.count is not None
+        has_agents = self.agents is not None and len(self.agents) > 0
+        if has_count and has_agents:
+            msg = "Cannot set both 'count' and 'agents' in multi_agent config."
+            raise ValueError(msg)
+        if not has_count and not has_agents:
+            msg = "Must set either 'count' or 'agents' when multi_agent.enabled=True."
+            raise ValueError(msg)
+        return self
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -748,6 +787,7 @@ class SimulationConfig(BaseModel):
     modules: Modules | None = None
     manyworlds_mode: ManyworldsModeConfig | None = None
     environment: EnvironmentConfig | None = None
+    multi_agent: MultiAgentConfig | None = None
 
 
 class PlasticityPhaseConfig(BaseModel):
