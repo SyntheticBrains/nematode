@@ -246,6 +246,12 @@ class BrainParams(BaseModel):
         description="Scaling factor for temporal derivatives before tanh normalization.",
     )
 
+    # --- Social sensing (Phase 4 multi-agent) ---
+    nearby_agents_count: int | None = Field(
+        default=None,
+        description="Number of other agents within social detection radius (None in single-agent).",
+    )
+
 
 @runtime_checkable
 class Brain(Protocol):

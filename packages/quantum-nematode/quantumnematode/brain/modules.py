@@ -90,6 +90,9 @@ class ModuleName(StrEnum):
     AEROTAXIS_TEMPORAL = "aerotaxis_temporal"
     STAM = "stam"
 
+    # Social sensing module (Phase 4 multi-agent)
+    SOCIAL_PROXIMITY = "social_proximity"
+
 
 # =============================================================================
 # Helper Functions
@@ -575,6 +578,8 @@ class SensoryModule:
             - binary (if classical_dim=3): [-1, 1] module-specific scalar
         """
         core = self.extract(params)
+        if self.classical_dim == 1:
+            return np.array([core.strength], dtype=np.float32)
         if self.classical_dim == 3:  # noqa: PLR2004
             return np.array([core.strength, core.angle, core.binary], dtype=np.float32)
         return np.array([core.strength, core.angle], dtype=np.float32)
@@ -749,6 +754,40 @@ SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL] = SensoryModule(
         "decreasing signal). Models URX/BAG neuron temporal responses."
     ),
     classical_dim=3,
+)
+
+# --- Social sensing (Phase 4 multi-agent) ---
+
+
+def _social_proximity_core(params: BrainParams) -> CoreFeatures:
+    """Extract social proximity features for multi-agent sensing.
+
+    Returns normalized count of nearby agents. Strength encodes population
+    density within detection radius, clamped to [0, 1].
+
+    Parameters
+    ----------
+    params : BrainParams
+        Brain parameters containing nearby_agents_count.
+
+    Returns
+    -------
+    CoreFeatures
+        strength = min(count, 10) / 10.0, angle = 0.0, binary = 0.0.
+    """
+    count = params.nearby_agents_count or 0
+    normalized = min(count, 10) / 10.0
+    return CoreFeatures(strength=normalized, angle=0.0, binary=0.0)
+
+
+SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY] = SensoryModule(
+    name=ModuleName.SOCIAL_PROXIMITY,
+    extract=_social_proximity_core,
+    description=(
+        "Social proximity detection. Encodes normalized count of nearby agents "
+        "within social detection radius. Strength only (1 dimension)."
+    ),
+    classical_dim=1,
 )
 
 SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(
