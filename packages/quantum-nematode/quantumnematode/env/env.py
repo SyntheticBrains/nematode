@@ -2194,14 +2194,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
             raise ValueError(msg)
 
         if position is not None:
-            # Validate explicit position
+            # Validate explicit position (bounds, agents, food, predators)
             x, y = position
             if not (0 <= x < self.grid_size and 0 <= y < self.grid_size):
                 msg = f"Position {position} out of bounds for grid size {self.grid_size}."
                 raise ValueError(msg)
-            occupied_positions = {a.position for a in self.agents.values()}
-            if position in occupied_positions:
-                msg = f"Position {position} already occupied by another agent."
+            occupied: set[tuple[int, int]] = {a.position for a in self.agents.values()}
+            occupied.update(self.foods)
+            if self.predator.enabled:
+                occupied.update(p.position for p in self.predators)
+            if position in occupied:
+                msg = f"Position {position} already occupied by an agent, food, or predator."
                 raise ValueError(msg)
 
         if position is None:
@@ -2239,12 +2242,19 @@ class DynamicForagingEnvironment(BaseEnvironment):
                         position = candidate
                         break
                 if position is None:
-                    # Last resort: truly random (grid is nearly full)
+                    # Last resort: truly random (grid is nearly full, may overlap)
                     position = (
                         int(self.rng.integers(0, self.grid_size)),
                         int(self.rng.integers(0, self.grid_size)),
                     )
-                if min_distance > 0:
+                    logger.warning(
+                        "Agent '%s' placed at last-resort random position "
+                        "(grid nearly full, may overlap food/predators, "
+                        "Poisson sampling exhausted %d attempts)",
+                        agent_id,
+                        MAX_POISSON_ATTEMPTS,
+                    )
+                elif min_distance > 0:
                     logger.warning(
                         "Agent '%s' placed without min_distance=%d guarantee "
                         "(Poisson sampling exhausted %d attempts)",
