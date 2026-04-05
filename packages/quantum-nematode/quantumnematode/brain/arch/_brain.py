@@ -246,10 +246,14 @@ class BrainParams(BaseModel):
         description="Scaling factor for temporal derivatives before tanh normalization.",
     )
 
-    # --- Social sensing ---
+    # --- Social sensing (multi-agent, oracle mode) ---
     nearby_agents_count: int | None = Field(
         default=None,
-        description="Number of other agents within social detection radius (None in single-agent).",
+        description=(
+            "Number of other agents within social detection radius (None in single-agent). "
+            "Oracle sensing: exact count, not biologically honest. "
+            "Pheromone-based sensing planned for multi-agent pheromone deliverable."
+        ),
     )
 
 

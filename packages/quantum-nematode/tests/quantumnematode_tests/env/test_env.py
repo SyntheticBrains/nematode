@@ -2932,7 +2932,7 @@ class TestMultiAgentMovement:
 
 
 class TestMultiAgentPredatorTargeting:
-    """Tests for predator multi-target pursuit (Phase 3)."""
+    """Tests for predator multi-target pursuit."""
 
     def test_predator_chases_nearest_of_multiple(self):
         """Test that pursuit predator chases the nearest agent."""

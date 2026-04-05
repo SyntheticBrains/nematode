@@ -759,11 +759,19 @@ SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL] = SensoryModule(
 # --- Social sensing ---
 
 
+# Must match MultiAgentConfig max agent count (config_loader.py _validate_population)
+_MAX_NEARBY_AGENTS = 10
+
+
 def _social_proximity_core(params: BrainParams) -> CoreFeatures:
     """Extract social proximity features for multi-agent sensing.
 
-    Returns normalized count of nearby agents. Strength encodes population
-    density within detection radius, clamped to [0, 1].
+    **Oracle sensing mode**: Returns exact count of nearby agents within a
+    hard-radius cutoff. This is biologically dishonest — real C. elegans
+    detects conspecifics via ascaroside pheromone concentration gradients
+    (ASK, ADL, ASI chemosensory neurons), not by counting individuals.
+    A biologically honest version using pheromone diffusion fields with
+    temporal sensing (Mode A/B) is planned for the multi-agent pheromone deliverable.
 
     Parameters
     ----------
@@ -773,10 +781,10 @@ def _social_proximity_core(params: BrainParams) -> CoreFeatures:
     Returns
     -------
     CoreFeatures
-        strength = min(count, 10) / 10.0, angle = 0.0, binary = 0.0.
+        strength = clamp(count, 0, _MAX_NEARBY_AGENTS) / _MAX_NEARBY_AGENTS.
     """
-    count = max(0, min(params.nearby_agents_count or 0, 10))
-    normalized = count / 10.0
+    count = max(0, min(params.nearby_agents_count or 0, _MAX_NEARBY_AGENTS))
+    normalized = count / _MAX_NEARBY_AGENTS
     return CoreFeatures(strength=normalized, angle=0.0, binary=0.0)
 
 
@@ -784,8 +792,9 @@ SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY] = SensoryModule(
     name=ModuleName.SOCIAL_PROXIMITY,
     extract=_social_proximity_core,
     description=(
-        "Social proximity detection. Encodes normalized count of nearby agents "
-        "within social detection radius. Strength only (1 dimension)."
+        "Social proximity detection (oracle mode). Encodes normalized count of "
+        "nearby agents within social detection radius. Strength only (1 dimension). "
+        "Biologically honest pheromone-based sensing planned for multi-agent pheromone deliverable."
     ),
     classical_dim=1,
 )
