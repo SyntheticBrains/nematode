@@ -2222,6 +2222,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
                     int(self.rng.integers(0, self.grid_size)),
                     int(self.rng.integers(0, self.grid_size)),
                 )
+                if min_distance > 0:
+                    logger.warning(
+                        "Agent '%s' placed without min_distance=%d guarantee "
+                        "(Poisson sampling exhausted %d attempts)",
+                        agent_id,
+                        min_distance,
+                        MAX_POISSON_ATTEMPTS,
+                    )
 
         initial_body: list[tuple[int, int]] = (
             [(position[0], position[1])] if max_body_length > 0 else []

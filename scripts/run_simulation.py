@@ -1654,69 +1654,72 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     print(f"Session: {session_id}")
     print(f"{'=' * 60}\n")
 
-    # Run episodes
-    for run in range(runs):
-        run_seed = derive_run_seed(simulation_seed, run)
-        set_global_seed(run_seed)
+    # Run episodes (with finally block for weight checkpoint)
+    try:
+        for run in range(runs):
+            run_seed = derive_run_seed(simulation_seed, run)
+            set_global_seed(run_seed)
 
-        # Create fresh env for this episode (run 0 uses initial env above)
-        if run > 0:
-            env = create_env_from_config(
-                environment_config,
-                seed=run_seed,
-                max_body_length=body_length,
-                theme=theme,
-            )
-            for ac in agent_configs:
-                env.add_agent(
-                    agent_id=ac.id,
-                    position=None,
+            # Create fresh env for this episode (run 0 uses initial env above)
+            if run > 0:
+                env = create_env_from_config(
+                    environment_config,
+                    seed=run_seed,
                     max_body_length=body_length,
-                    min_distance=multi_agent_config.min_agent_distance,
+                    theme=theme,
                 )
-            for agent in agents:
-                agent.env = env
-                pos = env.agents[agent.agent_id].position
-                agent.path = [(pos[0], pos[1])]
-                agent.food_history = [list(env.foods)]
-                agent._food_handler.env = env
-                agent._satiety_manager.reset()
-                agent._food_handler.reset()
-                agent._episode_tracker.reset()
-                agent.reset_brain()
-            sim.env = env
+                for ac in agent_configs:
+                    env.add_agent(
+                        agent_id=ac.id,
+                        position=None,
+                        max_body_length=body_length,
+                        min_distance=multi_agent_config.min_agent_distance,
+                    )
+                for agent in agents:
+                    agent.env = env
+                    pos = env.agents[agent.agent_id].position
+                    agent.path = [(pos[0], pos[1])]
+                    agent.food_history = [list(env.foods)]
+                    agent._food_handler.env = env
+                    agent._satiety_manager.reset()
+                    agent._food_handler.reset()
+                    agent._episode_tracker.reset()
+                    agent.reset_brain()
+                sim.env = env
 
-        result = sim.run_episode(reward_config, max_steps)
+            result = sim.run_episode(reward_config, max_steps)
 
-        # Log per-episode results
-        print(
-            f"Run {run + 1}/{runs}: "
-            f"food={result.total_food_collected}, "
-            f"competition={result.food_competition_events}, "
-            f"alive={result.agents_alive_at_end}/{num_agents}, "
-            f"success={result.mean_agent_success:.0%}, "
-            f"gini={result.food_gini_coefficient:.2f}",
-        )
-
-        for aid, agent_result in result.agent_results.items():
+            # Log per-episode results
             print(
-                f"  {aid}: {agent_result.termination_reason.value}, "
-                f"food={result.per_agent_food.get(aid, 0)}, "
-                f"steps={len(agent_result.agent_path)}",
+                f"Run {run + 1}/{runs}: "
+                f"food={result.total_food_collected}, "
+                f"competition={result.food_competition_events}, "
+                f"alive={result.agents_alive_at_end}/{num_agents}, "
+                f"success={result.mean_agent_success:.0%}, "
+                f"gini={result.food_gini_coefficient:.2f}",
             )
 
-    # Save weights per agent
-    weights_dir = data_dir / "weights"
-    weights_dir.mkdir(parents=True, exist_ok=True)
-    for agent in agents:
-        if isinstance(agent.brain, WeightPersistence):
-            weight_file = (
-                "final.pt" if agent.agent_id == "default" else f"final_{agent.agent_id}.pt"
-            )
-            try:
-                save_weights(agent.brain, weights_dir / weight_file)
-            except Exception:
-                logger.exception("Failed to save weights for %s", agent.agent_id)
+            for aid, agent_result in result.agent_results.items():
+                print(
+                    f"  {aid}: {agent_result.termination_reason.value}, "
+                    f"food={result.per_agent_food.get(aid, 0)}, "
+                    f"steps={len(agent_result.agent_path)}",
+                )
+    finally:
+        # Save weights per agent (always attempt, even on interrupt/error)
+        weights_dir = data_dir / "weights"
+        weights_dir.mkdir(parents=True, exist_ok=True)
+        for agent in agents:
+            if isinstance(agent.brain, WeightPersistence):
+                weight_file = (
+                    "final.pt"
+                    if agent.agent_id == "default"
+                    else f"final_{agent.agent_id}.pt"
+                )
+                try:
+                    save_weights(agent.brain, weights_dir / weight_file)
+                except Exception:
+                    logger.exception("Failed to save weights for %s", agent.agent_id)
 
     print(f"\nSession complete. Results in exports/{session_id}/")
 
