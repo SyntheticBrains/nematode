@@ -1712,9 +1712,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
         for agent in agents:
             if isinstance(agent.brain, WeightPersistence):
                 weight_file = (
-                    "final.pt"
-                    if agent.agent_id == "default"
-                    else f"final_{agent.agent_id}.pt"
+                    "final.pt" if agent.agent_id == "default" else f"final_{agent.agent_id}.pt"
                 )
                 try:
                     save_weights(agent.brain, weights_dir / weight_file)
