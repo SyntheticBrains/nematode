@@ -90,7 +90,7 @@ class ModuleName(StrEnum):
     AEROTAXIS_TEMPORAL = "aerotaxis_temporal"
     STAM = "stam"
 
-    # Social sensing module (Phase 4 multi-agent)
+    # Social sensing module
     SOCIAL_PROXIMITY = "social_proximity"
 
 
@@ -756,7 +756,7 @@ SENSORY_MODULES[ModuleName.AEROTAXIS_TEMPORAL] = SensoryModule(
     classical_dim=3,
 )
 
-# --- Social sensing (Phase 4 multi-agent) ---
+# --- Social sensing ---
 
 
 def _social_proximity_core(params: BrainParams) -> CoreFeatures:

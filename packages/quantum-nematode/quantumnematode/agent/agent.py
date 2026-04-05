@@ -604,7 +604,7 @@ class QuantumNematodeAgent:
             agent_position=self._get_agent_position_tuple(),
             agent_direction=self.env.current_direction,
             action=action,
-            # Social sensing (Phase 4 multi-agent)
+            # Social sensing
             nearby_agents_count=nearby_agents_count,
         )
 

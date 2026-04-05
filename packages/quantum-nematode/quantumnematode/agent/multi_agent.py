@@ -1,4 +1,4 @@
-"""Multi-agent simulation orchestrator for Phase 4 multi-agent infrastructure.
+"""Multi-agent simulation orchestrator for multi-agent infrastructure.
 
 Coordinates multiple independent QuantumNematodeAgent instances in a shared
 DynamicForagingEnvironment with synchronous simultaneous stepping, food

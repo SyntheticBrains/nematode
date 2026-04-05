@@ -2824,7 +2824,7 @@ class TestScalarConcentration:
 
 
 # =============================================================================
-# Multi-Agent Infrastructure Tests (Phase 4 Deliverable 1)
+# Multi-Agent Infrastructure Tests
 # =============================================================================
 
 

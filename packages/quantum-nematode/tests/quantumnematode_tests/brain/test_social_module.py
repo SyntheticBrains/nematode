@@ -1,4 +1,4 @@
-"""Tests for the social proximity sensory module (Phase 4 multi-agent)."""
+"""Tests for the social proximity sensory module."""
 
 from __future__ import annotations
 

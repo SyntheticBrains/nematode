@@ -1,4 +1,4 @@
-"""Tests for multi-agent simulation orchestrator (Phase 4 Deliverable 1)."""
+"""Tests for multi-agent simulation orchestrator."""
 
 from __future__ import annotations
 
