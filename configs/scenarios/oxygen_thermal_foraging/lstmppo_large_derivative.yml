@@ -1,0 +1,151 @@
+# Derivative Sensing (Mode B) - LSTM PPO with Aerotaxis + Thermotaxis + Foraging - Large Configuration
+# Phase 3: LSTM PPO with biologically-plausible derivative sensing on combined environment
+#
+# Architecture: Features -> LayerNorm -> GRU(64) -> Actor MLP / Critic MLP (detached h)
+# Training: Chunk-based truncated BPTT with separate actor/critic optimizers
+#
+# Triple-sensory foraging on 100x100 grid:
+#   - chemotaxis: derivative (Mode B) — scalar food concentration + dC/dt
+#   - thermotaxis: derivative (Mode B) — temperature + dT/dt
+#   - aerotaxis: derivative (Mode B) — oxygen + dO2/dt
+#   - Agent gets rate-of-change (dC/dt, dT/dt, dO2/dt) but no directional gradients
+#
+# Dual environmental gradients (orthogonal):
+# - Temperature increases eastward (0.0 rad)
+# - Oxygen increases northward (pi/2 rad)
+#
+# Environment matches mlpppo_large_oracle.yml (oracle baseline)
+# except: temporal sensing, + proprioception module
+
+max_steps: 2000
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru  # GRU outperforms LSTM on temporal tasks
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 128  # Long chunks for temporal inference on 100x100 grid
+
+    # Actor/Critic MLP
+    actor_hidden_dim: 128
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    # Separate learning rates
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    # PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.98
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    # Entropy decay
+    entropy_coef: 0.02
+    entropy_coef_end: 0.01
+    entropy_decay_episodes: 4000
+
+    # LR schedule (extended for temporal's slower convergence)
+    lr_warmup_episodes: 100
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 6000
+    lr_decay_end: 0.00003
+
+    sensory_modules:
+      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal
+      - thermotaxis         # Auto-translated to thermotaxis_temporal
+      - aerotaxis           # Auto-translated to aerotaxis_temporal
+      - proprioception      # Heading direction — critical for correlating concentration with movement
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_temperature_proximity: 0.0
+  penalty_health_damage: 0.3
+  reward_health_gain: 0.2
+
+satiety:
+  initial_satiety: 1000.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.25
+
+environment:
+  grid_size: 100
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: derivative       # Mode B: scalar + dC/dt
+    thermotaxis_mode: derivative      # Mode B: temperature + dT/dt
+    aerotaxis_mode: derivative        # Mode B: oxygen + dO2/dt
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 40
+    target_foods_to_collect: 20
+    min_food_distance: 8
+    agent_exclusion_radius: 12
+    gradient_decay_constant: 4.0     # Steeper than oracle (12.0) for derivative detectability
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 150.0
+    predator_damage: 0.0
+    food_healing: 15.0
+
+  thermotaxis:
+    enabled: true
+    cultivation_temperature: 20.0
+    base_temperature: 20.0
+    gradient_direction: 0.0
+    gradient_strength: 0.15
+    hot_spots:
+      - [75, 50, 25.0]
+      - [25, 75, 20.0]
+      - [80, 80, 22.0]
+    cold_spots:
+      - [25, 25, 25.0]
+      - [75, 25, 20.0]
+      - [50, 85, 18.0]
+    spot_decay_constant: 6.5
+    comfort_reward: 0.0
+    discomfort_penalty: -0.05
+    danger_penalty: -0.5
+    reward_discomfort_food: 0.3
+    danger_hp_damage: 0.5
+    lethal_hp_damage: 6.0
+    comfort_delta: 5.0
+    discomfort_delta: 10.0
+    danger_delta: 15.0
+
+  aerotaxis:
+    enabled: true
+    base_oxygen: 10.0
+    gradient_direction: 1.5708
+    gradient_strength: 0.12      # ~50% of cells in O2 comfort zone
+    high_oxygen_spots:
+      - [80, 50, 8.0]           # Ventilation point: +8% O2
+      - [20, 80, 6.0]           # Secondary ventilation
+    low_oxygen_spots:
+      - [30, 30, 8.0]           # Dense bacterial lawn: -8% O2
+      - [70, 20, 6.0]           # Secondary bacterial sink
+      - [50, 70, 5.0]           # Third bacterial sink
+    spot_decay_constant: 6.0
+    comfort_reward: 0.0
+    danger_penalty: -0.5
+    danger_hp_damage: 0.5
+    lethal_hp_damage: 6.0
