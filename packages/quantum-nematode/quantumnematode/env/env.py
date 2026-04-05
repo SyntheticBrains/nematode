@@ -2162,6 +2162,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         agent_id: str,
         position: tuple[int, int] | None = None,
         max_body_length: int = 0,
+        min_distance: int = 0,
     ) -> AgentState:
         """Add a new agent to the environment.
 
@@ -2173,6 +2174,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             Starting position. Random valid position if None.
         max_body_length : int
             Maximum body length for the agent.
+        min_distance : int
+            Minimum Manhattan distance from existing agents (Poisson disk sampling).
+            Only used when position is None. Default 0 (no minimum).
 
         Returns
         -------
@@ -2189,19 +2193,29 @@ class DynamicForagingEnvironment(BaseEnvironment):
             raise ValueError(msg)
 
         if position is None:
-            # Random valid position avoiding food and predator positions
+            # Random valid position avoiding food, predators, and respecting min_distance
             occupied = set(self.foods)
             if self.predator.enabled:
                 occupied.update(p.position for p in self.predators)
-            occupied.update(a.position for a in self.agents.values())
+            existing_positions = [a.position for a in self.agents.values()]
+            occupied.update(existing_positions)
             for _ in range(MAX_POISSON_ATTEMPTS):
                 pos = (
                     int(self.rng.integers(0, self.grid_size)),
                     int(self.rng.integers(0, self.grid_size)),
                 )
-                if pos not in occupied:
-                    position = pos
-                    break
+                if pos in occupied:
+                    continue
+                # Check min_distance from all existing agents
+                if min_distance > 0 and existing_positions:
+                    too_close = any(
+                        abs(pos[0] - ep[0]) + abs(pos[1] - ep[1]) < min_distance
+                        for ep in existing_positions
+                    )
+                    if too_close:
+                        continue
+                position = pos
+                break
             if position is None:
                 # Fallback: any position not occupied by another agent
                 position = (

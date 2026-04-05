@@ -397,11 +397,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # simulation runner and return. The rest of main() is single-agent.
     multi_agent_config = config.multi_agent if config_file and config is not None else None
     if multi_agent_config is not None and multi_agent_config.enabled and config is not None:
-        # CLI weight flags are single-agent concepts; multi-agent uses per-agent weights_path
+        # Reject single-agent-only CLI flags in multi-agent mode
+        unsupported_flags = []
         if args.load_weights or args.save_weights:
+            unsupported_flags.append("--load-weights/--save-weights")
+        if args.manyworlds:
+            unsupported_flags.append("--manyworlds")
+        if args.track_per_run:
+            unsupported_flags.append("--track-per-run")
+        if args.track_experiment:
+            unsupported_flags.append("--track-experiment")
+        if args.validate_chemotaxis:
+            unsupported_flags.append("--validate-chemotaxis")
+        if unsupported_flags:
             msg = (
-                "Cannot use --load-weights/--save-weights with multi-agent mode. "
-                "Use per-agent weights_path in the multi_agent.agents config instead."
+                f"Cannot use {', '.join(unsupported_flags)} with multi-agent mode. "
+                "Use per-agent config options in multi_agent.agents instead."
             )
             raise ValueError(msg)
         _run_multi_agent(
@@ -1597,13 +1608,20 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         # Load pre-trained weights if specified
         if ac.weights_path:
+            if not isinstance(agent_brain, WeightPersistence):
+                msg = (
+                    f"Agent '{ac.id}' brain {type(agent_brain).__name__} does not implement "
+                    f"WeightPersistence. Cannot load weights from {ac.weights_path}."
+                )
+                raise TypeError(msg)
             load_weights(agent_brain, Path(ac.weights_path))
 
-        # Add agent to environment
+        # Add agent to environment with min_distance separation
         env.add_agent(
             agent_id=ac.id,
-            position=None,  # Random valid position
+            position=None,
             max_body_length=body_length,
+            min_distance=multi_agent_config.min_agent_distance,
         )
 
         agent = QuantumNematodeAgent(
@@ -1650,7 +1668,12 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 theme=theme,
             )
             for ac in agent_configs:
-                env.add_agent(agent_id=ac.id, position=None, max_body_length=body_length)
+                env.add_agent(
+                    agent_id=ac.id,
+                    position=None,
+                    max_body_length=body_length,
+                    min_distance=multi_agent_config.min_agent_distance,
+                )
             for agent in agents:
                 agent.env = env
                 pos = env.agents[agent.agent_id].position
