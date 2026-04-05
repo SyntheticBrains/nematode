@@ -1768,9 +1768,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             return
         # Collect positions of all alive agents for multi-target pursuit
         alive_positions = [
-            (int(a.position[0]), int(a.position[1]))
-            for a in self.agents.values()
-            if a.alive
+            (int(a.position[0]), int(a.position[1])) for a in self.agents.values() if a.alive
         ]
         for pred in self.predators:
             pred.update_position(
