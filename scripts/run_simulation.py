@@ -324,9 +324,18 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             simulation_seed = config.seed
             logger.info(f"Using seed from config file: {simulation_seed}")
 
-        brain_config = configure_brain(config)
-        # Always update brain config with the resolved simulation seed
-        brain_config = brain_config.model_copy(update={"seed": simulation_seed})
+        # For heterogeneous multi-agent (agents list, no top-level brain),
+        # skip single-agent brain configuration — agents configure their own brains.
+        _is_heterogeneous_multi_agent = (
+            config.multi_agent is not None
+            and config.multi_agent.enabled
+            and config.multi_agent.agents is not None
+        )
+
+        if not _is_heterogeneous_multi_agent:
+            brain_config = configure_brain(config)
+            # Always update brain config with the resolved simulation seed
+            brain_config = brain_config.model_copy(update={"seed": simulation_seed})
 
         if config.brain is not None and isinstance(config.brain, BrainContainerConfig):
             brain_type = BrainType(config.brain.name)
@@ -358,7 +367,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         sensing_config = validate_sensing_config(environment_config.get_sensing_config())
 
         # Apply sensing mode translation to brain's sensory modules
-        sensory_modules_attr = getattr(brain_config, "sensory_modules", None)
+        sensory_modules_attr = (
+            getattr(brain_config, "sensory_modules", None)
+            if not _is_heterogeneous_multi_agent
+            else None
+        )
         if sensory_modules_attr is not None:
             from quantumnematode.brain.modules import ModuleName
             from quantumnematode.utils.config_loader import apply_sensing_mode
