@@ -397,6 +397,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     # simulation runner and return. The rest of main() is single-agent.
     multi_agent_config = config.multi_agent if config_file and config is not None else None
     if multi_agent_config is not None and multi_agent_config.enabled and config is not None:
+        # CLI weight flags are single-agent concepts; multi-agent uses per-agent weights_path
+        if args.load_weights or args.save_weights:
+            msg = (
+                "Cannot use --load-weights/--save-weights with multi-agent mode. "
+                "Use per-agent weights_path in the multi_agent.agents config instead."
+            )
+            raise ValueError(msg)
         _run_multi_agent(
             config=config,
             multi_agent_config=multi_agent_config,
@@ -1671,6 +1678,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             agent._satiety_manager.reset()
             agent._food_handler.reset()
             agent._episode_tracker.reset()
+            agent.reset_brain()
         sim.env = env
 
     # Save weights per agent
