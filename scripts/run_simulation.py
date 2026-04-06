@@ -1649,6 +1649,26 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     data_dir = Path.cwd() / "exports" / session_id / "session" / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
 
+    # Set up CSV writers for multi-agent results
+    from quantumnematode.report.csv_export import (
+        create_multi_agent_results_csv_writer,
+        create_multi_agent_summary_csv_writer,
+        write_multi_agent_result_row,
+        write_multi_agent_summary_row,
+    )
+
+    results_csv_file, results_csv_writer = create_multi_agent_results_csv_writer(
+        data_dir / "simulation_results.csv",
+    )
+    summary_csv_file, summary_csv_writer = create_multi_agent_summary_csv_writer(
+        data_dir / "multi_agent_summary.csv",
+    )
+
+    # Tracking for session summary
+    total_food_all_runs = 0
+    total_competition_all_runs = 0
+    per_agent_successes: dict[str, int] = {ac.id: 0 for ac in agent_configs}
+
     print(f"\n{'=' * 60}")
     print(f"Multi-Agent Simulation: {num_agents} agents")
     print(f"Session: {session_id}")
@@ -1705,7 +1725,38 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     f"food={result.per_agent_food.get(aid, 0)}, "
                     f"steps={len(agent_result.agent_path)}",
                 )
+                # Write per-agent CSV row
+                write_multi_agent_result_row(
+                    results_csv_writer,
+                    run=run,
+                    agent_id=aid,
+                    steps=len(agent_result.agent_path),
+                    termination_reason=agent_result.termination_reason.value,
+                    foods_collected=result.per_agent_food.get(aid, 0),
+                    csvfile=results_csv_file,
+                )
+                # Track per-agent success
+                if agent_result.termination_reason.value == "completed_all_food":
+                    per_agent_successes[aid] = per_agent_successes.get(aid, 0) + 1
+
+            # Write episode summary CSV row
+            write_multi_agent_summary_row(
+                summary_csv_writer,
+                run=run,
+                total_food=result.total_food_collected,
+                food_competition_events=result.food_competition_events,
+                proximity_events=result.proximity_events,
+                agents_alive_at_end=result.agents_alive_at_end,
+                mean_success=result.mean_agent_success,
+                food_gini_coefficient=result.food_gini_coefficient,
+                csvfile=summary_csv_file,
+            )
+            total_food_all_runs += result.total_food_collected
+            total_competition_all_runs += result.food_competition_events
     finally:
+        # Close CSV files
+        results_csv_file.close()
+        summary_csv_file.close()
         # Save weights per agent (always attempt, even on interrupt/error)
         weights_dir = data_dir / "weights"
         weights_dir.mkdir(parents=True, exist_ok=True)
@@ -1719,7 +1770,19 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 except Exception:
                     logger.exception("Failed to save weights for %s", agent.agent_id)
 
-    print(f"\nSession complete. Results in exports/{session_id}/")
+    # Session summary
+    print(f"\n{'=' * 60}")
+    print("Session Summary")
+    print(f"{'=' * 60}")
+    print(f"Episodes: {runs}")
+    if runs > 0:
+        print(f"Mean food/episode: {total_food_all_runs / runs:.1f}")
+        print(f"Mean competition events/episode: {total_competition_all_runs / runs:.1f}")
+        print("Per-agent success rates:")
+        for aid in sorted(per_agent_successes.keys()):
+            rate = per_agent_successes[aid] / runs * 100
+            print(f"  {aid}: {rate:.0f}%")
+    print(f"\nResults in exports/{session_id}/")
 
 
 def _configure_brain_for_agent(

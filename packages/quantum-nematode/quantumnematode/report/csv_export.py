@@ -1332,3 +1332,118 @@ def export_predator_session_metrics_to_csv(  # pragma: no cover
             )
 
     logger.info(f"Predator session metrics exported to {filepath}")
+
+
+# =============================================================================
+# Multi-Agent CSV Export
+# =============================================================================
+
+_MULTI_AGENT_RESULTS_FIELDNAMES = [
+    "run",
+    "agent_id",
+    "steps",
+    "termination_reason",
+    "foods_collected",
+]
+
+_MULTI_AGENT_SUMMARY_FIELDNAMES = [
+    "run",
+    "total_food",
+    "food_competition_events",
+    "proximity_events",
+    "agents_alive_at_end",
+    "mean_success",
+    "food_gini_coefficient",
+]
+
+
+def create_multi_agent_results_csv_writer(
+    filepath: Path,
+) -> tuple[IO[str], csv.DictWriter[str]]:
+    """Create a CSV writer for per-agent multi-agent results.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to the output CSV file.
+
+    Returns
+    -------
+    tuple[IO[str], csv.DictWriter[str]]
+        File handle and CSV writer. Caller must close the file.
+    """
+    csvfile = filepath.open("w", newline="")
+    writer = csv.DictWriter(csvfile, fieldnames=_MULTI_AGENT_RESULTS_FIELDNAMES)
+    writer.writeheader()
+    return csvfile, writer
+
+
+def write_multi_agent_result_row(  # noqa: PLR0913
+    writer: csv.DictWriter[str],
+    run: int,
+    agent_id: str,
+    steps: int,
+    termination_reason: str,
+    foods_collected: int,
+    csvfile: IO[str] | None = None,
+) -> None:
+    """Write one per-agent result row to the multi-agent CSV."""
+    writer.writerow(
+        {
+            "run": run,
+            "agent_id": agent_id,
+            "steps": steps,
+            "termination_reason": termination_reason,
+            "foods_collected": foods_collected,
+        },
+    )
+    if csvfile is not None:
+        csvfile.flush()
+
+
+def create_multi_agent_summary_csv_writer(
+    filepath: Path,
+) -> tuple[IO[str], csv.DictWriter[str]]:
+    """Create a CSV writer for multi-agent episode summary.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to the output CSV file.
+
+    Returns
+    -------
+    tuple[IO[str], csv.DictWriter[str]]
+        File handle and CSV writer. Caller must close the file.
+    """
+    csvfile = filepath.open("w", newline="")
+    writer = csv.DictWriter(csvfile, fieldnames=_MULTI_AGENT_SUMMARY_FIELDNAMES)
+    writer.writeheader()
+    return csvfile, writer
+
+
+def write_multi_agent_summary_row(  # noqa: PLR0913
+    writer: csv.DictWriter[str],
+    run: int,
+    total_food: int,
+    food_competition_events: int,
+    proximity_events: int,
+    agents_alive_at_end: int,
+    mean_success: float,
+    food_gini_coefficient: float,
+    csvfile: IO[str] | None = None,
+) -> None:
+    """Write one episode summary row to the multi-agent summary CSV."""
+    writer.writerow(
+        {
+            "run": run,
+            "total_food": total_food,
+            "food_competition_events": food_competition_events,
+            "proximity_events": proximity_events,
+            "agents_alive_at_end": agents_alive_at_end,
+            "mean_success": f"{mean_success:.4f}",
+            "food_gini_coefficient": f"{food_gini_coefficient:.4f}",
+        },
+    )
+    if csvfile is not None:
+        csvfile.flush()
