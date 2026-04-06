@@ -1,14 +1,14 @@
-# Temporal Sensing (Mode A) - LSTM PPO with Aerotaxis + Thermotaxis + Foraging - Large Configuration
-# Phase 3: LSTM PPO with biologically-honest temporal sensing on combined environment
+# Derivative Sensing (Mode B) - LSTM PPO with Aerotaxis + Thermotaxis + Foraging - Large Configuration
+# Phase 3: LSTM PPO with biologically-plausible derivative sensing on combined environment
 #
 # Architecture: Features -> LayerNorm -> GRU(64) -> Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Triple-sensory foraging on 100x100 grid:
-#   - chemotaxis: temporal (Mode A) — scalar food concentration only
-#   - thermotaxis: temporal (Mode A) — temperature only
-#   - aerotaxis: temporal (Mode A) — oxygen only
-#   - No directional gradients, no derivatives — agent must infer everything from GRU memory
+#   - chemotaxis: derivative (Mode B) — scalar food concentration + dC/dt
+#   - thermotaxis: derivative (Mode B) — temperature + dT/dt
+#   - aerotaxis: derivative (Mode B) — oxygen + dO2/dt
+#   - Agent gets rate-of-change (dC/dt, dT/dt, dO2/dt) but no directional gradients
 #
 # Dual environmental gradients (orthogonal):
 # - Temperature increases eastward (0.0 rad)
@@ -87,9 +87,9 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: temporal       # Mode A: scalar concentration only
-    thermotaxis_mode: temporal      # Mode A: temperature scalar only
-    aerotaxis_mode: temporal        # Mode A: oxygen scalar only
+    chemotaxis_mode: derivative       # Mode B: scalar + dC/dt
+    thermotaxis_mode: derivative      # Mode B: temperature + dT/dt
+    aerotaxis_mode: derivative        # Mode B: oxygen + dO2/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1
@@ -99,7 +99,7 @@ environment:
     target_foods_to_collect: 20
     min_food_distance: 8
     agent_exclusion_radius: 12
-    gradient_decay_constant: 4.0   # Steeper than oracle (12.0) for temporal detectability
+    gradient_decay_constant: 4.0     # Steeper than oracle (12.0) for derivative detectability
     gradient_strength: 1.0
 
   health:

@@ -1,29 +1,31 @@
-# Derivative Sensing - LSTM PPO with Thermotaxis + Pursuit Predators - Large Configuration
-# Phase 3: LSTM PPO with biologically-plausible derivative sensing on the hardest task
+# Derivative Sensing (Mode B) - LSTM PPO with Aerotaxis + Thermotaxis + Stationary Predators - Large Configuration
+# Phase 3: LSTM PPO with biologically-plausible derivative sensing on combined stationary predator task
 #
-# Architecture: Features → LayerNorm → GRU(64) → Actor MLP / Critic MLP (detached h)
+# Architecture: Features -> LayerNorm -> GRU(64) -> Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
-# Triple-objective task on 100x100 grid:
+# Quad-objective task on 100x100 grid:
 #   - chemotaxis: derivative (Mode B) — scalar food concentration + dC/dt
-#   - nociception: derivative (Mode B) — scalar predator concentration + dC/dt
+#   - nociception: derivative (Mode B) — predator concentration + dP/dt
 #   - thermotaxis: derivative (Mode B) — temperature + dT/dt
+#   - aerotaxis: derivative (Mode B) — oxygen + dO2/dt
+#   - Agent gets rate-of-change but no directional gradients
 #
-# 4 pursuit predators, scattered temperature zones, 45 foods
-# Environment matches mlpppo_thermotaxis_pursuit_predators_large.yml (oracle baseline)
-# except: derivative sensing, steeper gradients, + proprioception module
+# Dual environmental gradients (orthogonal):
+# - Temperature increases eastward (0.0 rad)
+# - Oxygen increases northward (pi/2 rad)
 #
-# Performance: 62.6% mean success (GRU, 4 seeds, 4000 eps), L500=88%
-# Oracle on same env: 86.0% mean, L500=97%
-# GRU outperforms LSTM (62.6% vs 57.4%), evasion 94% surpasses oracle 92%
+# 5 stationary predators, scattered temperature zones, oxygen gradient, 45 foods
+# Environment matches mlpppo_large_oracle.yml (oracle baseline)
+# except: derivative sensing (Mode B), steeper gradients, + proprioception module
 
 max_steps: 2000
 brain:
   name: lstmppo
   config:
-    rnn_type: gru  # GRU outperforms LSTM by ~5pp overall on large pursuit predators
+    rnn_type: gru  # GRU outperforms LSTM on temporal tasks
     lstm_hidden_dim: 64
-    bptt_chunk_length: 96  # Long chunks for multi-step evasion + foraging temporal patterns
+    bptt_chunk_length: 128  # Long chunks for temporal inference on 100x100 grid
 
     # Actor/Critic MLP
     actor_hidden_dim: 128
@@ -47,12 +49,12 @@ brain:
     # Entropy decay
     entropy_coef: 0.02
     entropy_coef_end: 0.01
-    entropy_decay_episodes: 2000
+    entropy_decay_episodes: 4000
 
-    # LR schedule (extended for long training)
+    # LR schedule (extended for temporal's slower convergence)
     lr_warmup_episodes: 100
     lr_warmup_start: 0.00003
-    lr_decay_episodes: 4000
+    lr_decay_episodes: 6000
     lr_decay_end: 0.00003
 
     sensory_modules:
@@ -60,7 +62,8 @@ brain:
       - nociception         # Auto-translated to nociception_temporal (handles both Mode A/B)
       - mechanosensation    # Physical contact detection
       - thermotaxis         # Auto-translated to thermotaxis_temporal (handles both Mode A/B)
-      - proprioception      # Heading direction — critical for correlating derivatives with movement
+      - aerotaxis           # Auto-translated to aerotaxis_temporal (handles both Mode A/B)
+      - proprioception      # Heading direction — critical for correlating concentration with movement
 
 body_length: 2
 
@@ -73,8 +76,7 @@ reward:
   penalty_stuck_position: 0
   penalty_starvation: 10.0
   penalty_predator_death: 10.0
-  penalty_predator_proximity: 0.15
-  penalty_temperature_proximity: 0.3
+  penalty_predator_proximity: 0.3
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
   penalty_health_damage: 0.3
@@ -90,9 +92,10 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: derivative     # Mode B: scalar + dC/dt
-    nociception_mode: derivative    # Mode B: scalar + dC/dt
-    thermotaxis_mode: derivative    # Mode B: temperature + dT/dt
+    chemotaxis_mode: derivative       # Mode B: scalar + dC/dt
+    nociception_mode: derivative      # Mode B: scalar + dP/dt
+    thermotaxis_mode: derivative      # Mode B: temperature + dT/dt
+    aerotaxis_mode: derivative        # Mode B: oxygen + dO2/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1
@@ -102,21 +105,22 @@ environment:
     target_foods_to_collect: 25
     min_food_distance: 8
     agent_exclusion_radius: 12
-    gradient_decay_constant: 4.0  # Steeper than oracle (12.0) for detectable derivatives
+    gradient_decay_constant: 4.0  # Steeper for detectable concentration differences
     gradient_strength: 1.0
 
   predators:
     enabled: true
-    count: 4
-    speed: 0.5
-    movement_pattern: pursuit
-    detection_radius: 10
-    gradient_decay_constant: 4.0  # Steeper for detectable predator derivatives
-    gradient_strength: 1.0
+    count: 5
+    speed: 0.0
+    movement_pattern: stationary
+    detection_radius: 8
+    damage_radius: 4
+    gradient_decay_constant: 4.0  # Steeper for detectable predator concentration
+    gradient_strength: 1.2
 
   health:
     max_hp: 150.0
-    predator_damage: 15.0
+    predator_damage: 10.0
     food_healing: 15.0
 
   thermotaxis:
@@ -143,3 +147,21 @@ environment:
     comfort_delta: 5.0
     discomfort_delta: 10.0
     danger_delta: 15.0
+
+  aerotaxis:
+    enabled: true
+    base_oxygen: 10.0
+    gradient_direction: 1.5708
+    gradient_strength: 0.12      # ~50% of cells in O2 comfort zone
+    high_oxygen_spots:
+      - [80, 50, 8.0]           # Ventilation point: +8% O2
+      - [20, 80, 6.0]           # Secondary ventilation
+    low_oxygen_spots:
+      - [30, 30, 8.0]           # Dense bacterial lawn: -8% O2
+      - [70, 20, 6.0]           # Secondary bacterial sink
+      - [50, 70, 5.0]           # Third bacterial sink
+    spot_decay_constant: 6.0
+    comfort_reward: 0.0
+    danger_penalty: -0.5
+    danger_hp_damage: 0.5
+    lethal_hp_damage: 6.0
