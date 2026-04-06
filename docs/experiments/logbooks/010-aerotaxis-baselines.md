@@ -240,4 +240,3 @@ Temporal evaluation on large grid in progress. Remaining scenarios:
     - `lstmppo_oxygen_foraging_temporal_large/` — 4 sessions (exports-only) + config + best-seed weights
 - **Configs**: `configs/scenarios/oxygen_*/`, `configs/scenarios/oxygen_thermal_*/`
 - **Supporting data**: [010/aerotaxis-baselines-details.md](supporting/010/aerotaxis-baselines-details.md)
-- **Scratchpad**: `tmp/evaluations/aerotaxis_scratchpad.md`
