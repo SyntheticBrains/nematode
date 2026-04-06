@@ -193,9 +193,17 @@ class QuantumNematodeAgent:
         # Initialize STAM buffer when enabled
         self._stam: STAMBuffer | None = None
         if self.sensing_config.stam_enabled:
+            # Use 6 channels when pheromones are enabled on the environment
+            from quantumnematode.agent.stam import CHANNELS_BASE, CHANNELS_PHEROMONE
+
+            pheromones_enabled = (
+                env is not None and hasattr(env, "pheromones") and env.pheromones.enabled
+            )
+            num_channels = CHANNELS_PHEROMONE if pheromones_enabled else CHANNELS_BASE
             self._stam = STAMBuffer(
                 buffer_size=self.sensing_config.stam_buffer_size,
                 decay_rate=self.sensing_config.stam_decay_rate,
+                num_channels=num_channels,
             )
         self._previous_position: tuple[int, ...] | None = None
 
@@ -375,7 +383,7 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
-    def _compute_temporal_data(  # noqa: C901
+    def _compute_temporal_data(  # noqa: C901, PLR0912, PLR0915
         self,
         sensing: SensingConfig,
         temperature: float | None,
@@ -454,8 +462,21 @@ class QuantumNematodeAgent:
             if action is not None:
                 action_str = str(action.action) if action.action is not None else "stay"
                 action_idx = _ACTION_TO_IDX.get(action_str, 0)
+
+            # Build scalar array — extend with pheromone channels when enabled
+            scalars = [food_conc_val, temp_val, pred_conc_val, o2_val]
+            if self._stam.num_channels > 4:  # noqa: PLR2004
+                # Pheromone channels (indices 4, 5)
+                pheromone_food_val = self.env.get_pheromone_food_concentration(
+                    position=current_pos,
+                )
+                pheromone_alarm_val = self.env.get_pheromone_alarm_concentration(
+                    position=current_pos,
+                )
+                scalars.extend([pheromone_food_val, pheromone_alarm_val])
+
             self._stam.record(
-                np.array([food_conc_val, temp_val, pred_conc_val, o2_val]),
+                np.array(scalars),
                 pos_delta,
                 action_idx,
             )
@@ -469,6 +490,18 @@ class QuantumNematodeAgent:
                 result["predator_dconcentration_dt"] = self._stam.compute_temporal_derivative(2)
             if sensing.aerotaxis_mode == SensingMode.DERIVATIVE:
                 result["oxygen_dconcentration_dt"] = self._stam.compute_temporal_derivative(3)
+            # Pheromone derivatives (channels 4, 5)
+            if self._stam.num_channels > 4:  # noqa: PLR2004
+                pheromone_food_mode = getattr(sensing, "pheromone_food_mode", None)
+                pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", None)
+                if pheromone_food_mode == SensingMode.DERIVATIVE:
+                    result["pheromone_food_dconcentration_dt"] = (
+                        self._stam.compute_temporal_derivative(4)
+                    )
+                if pheromone_alarm_mode == SensingMode.DERIVATIVE:
+                    result["pheromone_alarm_dconcentration_dt"] = (
+                        self._stam.compute_temporal_derivative(5)
+                    )
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
 

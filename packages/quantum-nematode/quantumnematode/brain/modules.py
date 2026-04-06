@@ -596,19 +596,20 @@ class STAMSensoryModule(SensoryModule):
     """Sensory module for STAM memory state with variable classical_dim.
 
     Unlike standard modules that output 2-3 features via CoreFeatures,
-    STAM outputs the full 11-float memory state vector for classical brains.
+    STAM outputs the full memory state vector for classical brains.
+    Dimension depends on num_channels: 11 for 4 channels, 15 for 6 channels.
     For quantum brains, it compresses to a 3-float summary.
     """
 
-    classical_dim: int = 11
+    classical_dim: int = 11  # Default for 4-channel mode (no pheromones)
 
     def to_classical(self, params: BrainParams) -> np.ndarray:
         """Return the full STAM memory state vector.
 
         Returns
         -------
-            np.ndarray of shape (11,) with STAM memory state.
-            Returns zeros if stam_state is None (STAM disabled).
+            np.ndarray with STAM memory state (11-dim or 15-dim).
+            Returns zeros of classical_dim if stam_state is None.
         """
         if params.stam_state is not None:
             return np.array(params.stam_state, dtype=np.float32)
@@ -618,7 +619,8 @@ class STAMSensoryModule(SensoryModule):
         """Compress STAM state to 3-float quantum gate angles.
 
         Compression: rx=mean scalar, ry=mean derivative, rz=action entropy.
-        Scaled to [-π/2, π/2] range.
+        Scaled to [-π/2, π/2] range. Works for both 4-channel and 6-channel modes
+        by using dynamic slicing based on stam_state length.
 
         Returns
         -------
@@ -628,12 +630,15 @@ class STAMSensoryModule(SensoryModule):
             return np.zeros(3, dtype=np.float32)
 
         state = np.array(params.stam_state, dtype=np.float32)
-        # Mean of weighted scalar means (indices 0-3)
-        mean_scalar = float(np.mean(state[0:4]))
-        # Mean of temporal derivatives (indices 4-7)
-        mean_deriv = float(np.mean(state[4:8]))
-        # Action entropy (index 10)
-        action_entropy = float(state[10])
+        # Infer num_channels from state length: dim = 2*N + 3, so N = (dim - 3) / 2
+        num_ch = (len(state) - 3) // 2
+
+        # Mean of weighted scalar means (indices 0:N)
+        mean_scalar = float(np.mean(state[0:num_ch]))
+        # Mean of temporal derivatives (indices N:2N)
+        mean_deriv = float(np.mean(state[num_ch : 2 * num_ch]))
+        # Action entropy (last index)
+        action_entropy = float(state[-1])
 
         return np.array(
             [
