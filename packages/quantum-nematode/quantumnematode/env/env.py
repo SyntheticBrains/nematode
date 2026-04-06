@@ -9,6 +9,7 @@ check if the goal is reached, and render the environment.
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import field
 from enum import Enum
 from typing import ClassVar
 
@@ -342,20 +343,15 @@ class PheromoneParams:
     """
 
     enabled: bool = False
-    food_marking: PheromoneTypeConfig | None = None
-    alarm: PheromoneTypeConfig | None = None
-
-    def __post_init__(self) -> None:
-        """Set default configs if not provided."""
-        if self.food_marking is None:
-            self.food_marking = PheromoneTypeConfig()
-        if self.alarm is None:
-            self.alarm = PheromoneTypeConfig(
-                emission_strength=2.0,
-                spatial_decay_constant=5.0,
-                temporal_half_life=20.0,
-                max_sources=50,
-            )
+    food_marking: PheromoneTypeConfig = field(default_factory=PheromoneTypeConfig)
+    alarm: PheromoneTypeConfig = field(
+        default_factory=lambda: PheromoneTypeConfig(
+            emission_strength=2.0,
+            spatial_decay_constant=5.0,
+            temporal_half_life=20.0,
+            max_sources=50,
+        ),
+    )
 
 
 @dataclass

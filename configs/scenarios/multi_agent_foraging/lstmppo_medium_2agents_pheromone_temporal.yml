@@ -1,0 +1,84 @@
+# Multi-Agent Foraging with Pheromones — 2 Agents, Temporal Mode (LSTM PPO)
+# Biologically honest pheromone sensing via temporal derivatives
+
+max_steps: 1000
+brain:
+  name: lstmppo
+  config:
+    hidden_dim: 64
+    rnn_type: gru
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    chunk_length: 16
+    rollout_buffer_size: 512
+    num_epochs: 10
+    max_grad_norm: 0.5
+    sensory_modules:
+      - food_chemotaxis_temporal
+      - pheromone_food_temporal
+      - pheromone_alarm_temporal
+      - stam
+
+body_length: 2
+
+multi_agent:
+  enabled: true
+  count: 2
+  food_competition: first_arrival
+  social_detection_radius: 5
+  termination_policy: freeze
+  min_agent_distance: 5
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 400.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+sensing:
+  chemotaxis_mode: temporal
+  pheromone_food_mode: temporal
+  pheromone_alarm_mode: temporal
+  stam:
+    enabled: true
+    buffer_size: 32
+    decay_rate: 0.05
+
+environment:
+  grid_size: 50
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 10
+    target_foods_to_collect: 20
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 4.0
+    gradient_strength: 1.0
+
+  pheromones:
+    enabled: true
+    food_marking:
+      emission_strength: 1.0
+      spatial_decay_constant: 8.0
+      temporal_half_life: 50
+      max_sources: 100
+    alarm:
+      emission_strength: 2.0
+      spatial_decay_constant: 5.0
+      temporal_half_life: 20
+      max_sources: 50

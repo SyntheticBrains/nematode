@@ -467,11 +467,12 @@ class QuantumNematodeAgent:
             scalars = [food_conc_val, temp_val, pred_conc_val, o2_val]
             if self._stam.num_channels > 4:  # noqa: PLR2004
                 # Pheromone channels (indices 4, 5)
+                pos_2d = (int(current_pos[0]), int(current_pos[1]))
                 pheromone_food_val = self.env.get_pheromone_food_concentration(
-                    position=current_pos,
+                    position=pos_2d,
                 )
                 pheromone_alarm_val = self.env.get_pheromone_alarm_concentration(
-                    position=current_pos,
+                    position=pos_2d,
                 )
                 scalars.extend([pheromone_food_val, pheromone_alarm_val])
 
