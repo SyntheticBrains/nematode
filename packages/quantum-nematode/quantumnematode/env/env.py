@@ -26,6 +26,11 @@ from quantumnematode.env.oxygen import (
     OxygenZone,
     OxygenZoneThresholds,
 )
+from quantumnematode.env.pheromone import (
+    PheromoneField,
+    PheromoneSource,
+    PheromoneType,
+)
 from quantumnematode.env.temperature import (
     TemperatureField,
     TemperatureZone,
@@ -298,6 +303,59 @@ class AerotaxisParams:
     comfort_lower: float = 5.0
     comfort_upper: float = 12.0
     danger_hyperoxia_upper: float = 17.0
+
+
+@dataclass
+class PheromoneTypeConfig:
+    """Configuration for a single pheromone type.
+
+    Attributes
+    ----------
+    emission_strength : float
+        Base strength of each emission event.
+    spatial_decay_constant : float
+        Controls how quickly concentration decreases with distance.
+    temporal_half_life : float
+        Number of steps for concentration to halve.
+    max_sources : int
+        Maximum active sources (oldest pruned when exceeded).
+    """
+
+    emission_strength: float = 1.0
+    spatial_decay_constant: float = 8.0
+    temporal_half_life: float = 50.0
+    max_sources: int = 100
+
+
+@dataclass
+class PheromoneParams:
+    """Parameters for pheromone communication in the environment.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether pheromone communication is active.
+    food_marking : PheromoneTypeConfig
+        Config for food-marking pheromones (deposited on food consumption).
+    alarm : PheromoneTypeConfig
+        Config for alarm pheromones (emitted on predator damage).
+    """
+
+    enabled: bool = False
+    food_marking: PheromoneTypeConfig | None = None
+    alarm: PheromoneTypeConfig | None = None
+
+    def __post_init__(self) -> None:
+        """Set default configs if not provided."""
+        if self.food_marking is None:
+            self.food_marking = PheromoneTypeConfig()
+        if self.alarm is None:
+            self.alarm = PheromoneTypeConfig(
+                emission_strength=2.0,
+                spatial_decay_constant=5.0,
+                temporal_half_life=20.0,
+                max_sources=50,
+            )
 
 
 @dataclass
@@ -1072,6 +1130,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         health: HealthParams | None = None,
         thermotaxis: ThermotaxisParams | None = None,
         aerotaxis: AerotaxisParams | None = None,
+        pheromones: PheromoneParams | None = None,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -1093,6 +1152,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.health = health or HealthParams()
         self.thermotaxis = thermotaxis or ThermotaxisParams()
         self.aerotaxis = aerotaxis or AerotaxisParams()
+        self.pheromones = pheromones or PheromoneParams()
 
         self.viewport_size = viewport_size
 
@@ -1123,6 +1183,21 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 high_oxygen_spots=self.aerotaxis.high_oxygen_spots,
                 low_oxygen_spots=self.aerotaxis.low_oxygen_spots,
                 spot_decay_constant=self.aerotaxis.spot_decay_constant,
+            )
+
+        # Pheromone fields (runtime, created from pheromone config)
+        self.pheromone_field_food: PheromoneField | None = None
+        self.pheromone_field_alarm: PheromoneField | None = None
+        if self.pheromones.enabled:
+            self.pheromone_field_food = PheromoneField(
+                spatial_decay_constant=self.pheromones.food_marking.spatial_decay_constant,
+                temporal_half_life=self.pheromones.food_marking.temporal_half_life,
+                max_sources=self.pheromones.food_marking.max_sources,
+            )
+            self.pheromone_field_alarm = PheromoneField(
+                spatial_decay_constant=self.pheromones.alarm.spatial_decay_constant,
+                temporal_half_life=self.pheromones.alarm.temporal_half_life,
+                max_sources=self.pheromones.alarm.max_sources,
             )
 
         # Comfort zone tracking is now per-agent (in AgentState).
@@ -2158,6 +2233,152 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         return reward_delta, hp_damage
 
+    # ── Pheromone methods ──────────────────────────────────────────────
+
+    def get_pheromone_food_concentration(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> float:
+        """Get food-marking pheromone concentration at a position."""
+        if self.pheromone_field_food is None:
+            return 0.0
+        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        return self.pheromone_field_food.get_concentration(pos, current_step)
+
+    def get_pheromone_alarm_concentration(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> float:
+        """Get alarm pheromone concentration at a position."""
+        if self.pheromone_field_alarm is None:
+            return 0.0
+        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        return self.pheromone_field_alarm.get_concentration(pos, current_step)
+
+    def get_pheromone_food_gradient(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> GradientPolar | None:
+        """Get food-marking pheromone gradient in polar coordinates."""
+        if self.pheromone_field_food is None:
+            return None
+        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        return self.pheromone_field_food.get_gradient_polar(pos, current_step)
+
+    def get_pheromone_alarm_gradient(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> GradientPolar | None:
+        """Get alarm pheromone gradient in polar coordinates."""
+        if self.pheromone_field_alarm is None:
+            return None
+        pos = position or (self.agent_pos[0], self.agent_pos[1])
+        return self.pheromone_field_alarm.get_gradient_polar(pos, current_step)
+
+    def get_pheromone_food_concentration_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> float:
+        """Get food-marking pheromone concentration at a specific agent's position."""
+        return self.get_pheromone_food_concentration(
+            position=self.agents[agent_id].position,
+            current_step=current_step,
+        )
+
+    def get_pheromone_alarm_concentration_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> float:
+        """Get alarm pheromone concentration at a specific agent's position."""
+        return self.get_pheromone_alarm_concentration(
+            position=self.agents[agent_id].position,
+            current_step=current_step,
+        )
+
+    def get_pheromone_food_gradient_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> GradientPolar | None:
+        """Get food-marking pheromone gradient at a specific agent's position."""
+        return self.get_pheromone_food_gradient(
+            position=self.agents[agent_id].position,
+            current_step=current_step,
+        )
+
+    def get_pheromone_alarm_gradient_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> GradientPolar | None:
+        """Get alarm pheromone gradient at a specific agent's position."""
+        return self.get_pheromone_alarm_gradient(
+            position=self.agents[agent_id].position,
+            current_step=current_step,
+        )
+
+    def emit_food_pheromone(
+        self,
+        position: tuple[int, int],
+        current_step: int,
+        emitter_id: str,
+        strength: float | None = None,
+    ) -> None:
+        """Emit a food-marking pheromone at a position.
+
+        No-op if pheromones are disabled.
+        """
+        if self.pheromone_field_food is None:
+            return
+        self.pheromone_field_food.add_source(
+            PheromoneSource(
+                position=position,
+                pheromone_type=PheromoneType.FOOD_MARKING,
+                strength=strength or self.pheromones.food_marking.emission_strength,
+                emission_step=current_step,
+                emitter_id=emitter_id,
+            ),
+        )
+
+    def emit_alarm_pheromone(
+        self,
+        position: tuple[int, int],
+        current_step: int,
+        emitter_id: str,
+        strength: float | None = None,
+    ) -> None:
+        """Emit an alarm pheromone at a position.
+
+        No-op if pheromones are disabled.
+        """
+        if self.pheromone_field_alarm is None:
+            return
+        self.pheromone_field_alarm.add_source(
+            PheromoneSource(
+                position=position,
+                pheromone_type=PheromoneType.ALARM,
+                strength=strength or self.pheromones.alarm.emission_strength,
+                emission_step=current_step,
+                emitter_id=emitter_id,
+            ),
+        )
+
+    def update_pheromone_fields(self, current_step: int) -> None:
+        """Prune expired pheromone sources on all fields.
+
+        Called once per step from the orchestrator.
+        """
+        if self.pheromone_field_food is not None:
+            self.pheromone_field_food.prune(current_step)
+        if self.pheromone_field_alarm is not None:
+            self.pheromone_field_alarm.prune(current_step)
+
     def add_agent(  # noqa: C901, PLR0912
         self,
         agent_id: str,
@@ -3082,6 +3303,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             health=self.health,
             thermotaxis=self.thermotaxis,
             aerotaxis=self.aerotaxis,
+            pheromones=self.pheromones,
         )
         new_env.foods = self.foods.copy()
         # Copy RNG state for reproducibility
