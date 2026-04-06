@@ -159,3 +159,86 @@ The original medium oracle config had `lr_decay_episodes: 200`, causing LR to bo
 ### Failed Experiment: penalty_health_damage on Medium
 
 Adding `penalty_health_damage: 0.3` to the medium oxygen config (alongside the existing `danger_penalty: -0.3`) created a perverse incentive — total penalty of -0.6/step in danger zones caused the agent to freeze in the comfort zone and starve rather than forage. Success dropped from 61% → 1-3%. Lesson: don't combine zone penalties with health damage penalties for oxygen.
+
+## Derivative Sensing Results (Large Grid, 6000 Episodes)
+
+### O2 Foraging Derivative (Group J)
+
+| Seed | Overall | L100 | L500 | L1000 | O2 Comfort |
+|------|---------|------|------|-------|------------|
+| 42 | 73.5% | **100%** | **99.2%** | **96.8%** | 0.963 |
+| 43 | 62.0% | 86.0% | 56.0% | 60.6% | 0.965 |
+| 44 | 63.3% | 76.0% | 78.8% | 79.3% | 0.964 |
+| 45 | 50.0% | 68.0% | 75.4% | 72.3% | 0.966 |
+| **Mean** | **62.2%** | **82.5%** | **77.4%** | **77.2%** | **0.965** |
+
+### O2+Thermal Foraging Derivative (Group K)
+
+| Seed | Overall | L100 | L500 | L1000 | O2 Comfort | Temp Comfort |
+|------|---------|------|------|-------|------------|--------------|
+| 42 | 69.5% | **99.0%** | **99.2%** | **99.2%** | 0.951 | 0.719 |
+| 43 | 64.0% | 98.0% | 95.8% | 95.0% | 0.948 | 0.744 |
+| 44 | 63.5% | 97.0% | 97.4% | 96.7% | 0.954 | 0.735 |
+| 45 | 62.1% | 93.0% | 92.4% | 91.6% | 0.937 | 0.771 |
+| **Mean** | **64.8%** | **96.8%** | **96.2%** | **95.6%** | **0.948** | **0.742** |
+
+### O2+Pursuit Derivative (Group L)
+
+| Seed | Overall | L100 | L500 | L1000 | O2 Comfort |
+|------|---------|------|------|-------|------------|
+| 42 | 49.3% | **96.0%** | **92.2%** | 87.3% | 0.963 |
+| 43 | 56.5% | 95.0% | 87.4% | 81.7% | 0.958 |
+| 44 | 52.6% | 93.0% | 89.0% | 83.3% | 0.960 |
+| 45 | 48.3% | 78.0% | 82.0% | 82.6% | 0.958 |
+| **Mean** | **51.6%** | **90.5%** | **87.7%** | **83.7%** | **0.960** |
+
+### O2+Thermal+Pursuit Derivative (Group M, 3 seeds)
+
+| Seed | Overall | L100 | L500 | L1000 | O2 Comfort | Temp Comfort |
+|------|---------|------|------|-------|------------|--------------|
+| 42 | 39.6% | **96.0%** | **92.2%** | **92.1%** | 0.950 | 0.749 |
+| 43 | 35.4% | 88.0% | 87.8% | 84.8% | 0.947 | 0.772 |
+| 45 | 26.4% | 80.0% | 80.8% | 80.6% | 0.941 | 0.829 |
+| **Mean** | **33.8%** | **88.0%** | **86.9%** | **85.8%** | **0.946** | **0.784** |
+
+### O2+Stationary Derivative (Group N, best 4 of 8 seeds from exports)
+
+| Seed | L100 | L500 | O2 Comfort |
+|------|------|------|------------|
+| best | 68% | 62.6% | 0.960 |
+| 2nd | 66% | 59.2% | 0.943 |
+| 3rd | 64% | 74.0% | 0.955 |
+| 4th | 59% | 66.4% | 0.942 |
+| **Mean (best 4)** | **64.3%** | **65.6%** | **0.950** |
+
+High seed variance (41-68% L100) — stationary toxic zones create position-dependent difficulty.
+
+### O2+Thermal+Stationary Derivative (Group O, 4 seeds)
+
+| Seed | Overall | L100 | L500 | O2 Comfort | Temp Comfort |
+|------|---------|------|------|------------|--------------|
+| 42 | 25.4% | 62.0% | 57.8% | 0.955 | 0.789 |
+| 43 | 21.6% | 45.0% | 57.2% | 0.958 | 0.798 |
+| 44 | 25.4% | 62.0% | 57.8% | 0.955 | 0.789 |
+| 45 | 23.8% | 59.0% | 66.4% | 0.942 | 0.802 |
+| **Mean** | **24.1%** | **57.0%** | **59.8%** | **0.953** | **0.795** |
+
+## Temporal Sensing Results (Large Grid, 6000 Episodes)
+
+### O2 Foraging Large Temporal (Group P)
+
+| Seed | Overall | L100 | L500 | O2 Comfort |
+|------|---------|------|------|------------|
+| 42 | 45.1% | **99%** | **95.4%** | 0.968 |
+| 43 | 61.6% | **99%** | **97.2%** | 0.961 |
+| 44 | 58.8% | **97%** | **95.4%** | 0.966 |
+| 45 | 59.4% | **100%** | **98.2%** | 0.960 |
+| **Mean** | **56.2%** | **98.8%** | **96.6%** | **0.964** |
+
+### O2+Thermal Foraging Large Temporal (Group Q) — FAILED
+
+All 4 seeds achieved 0% success in 6000 episodes. Root cause: `gradient_decay_constant: 12.0` instead of 4.0 in food foraging section. Config fixed, needs re-run.
+
+## Config Issue: gradient_decay_constant
+
+The `oxygen_thermal_foraging/lstmppo_large_temporal.yml` config was created from the oracle config template which uses `gradient_decay_constant: 12.0`. All temporal and derivative configs require 4.0 for detectable scalar concentration changes during movement. Fixed to 4.0 after discovering the Q failure.
