@@ -17,7 +17,7 @@
 #
 # 5 stationary predators, scattered temperature zones, oxygen gradient, 45 foods
 # Environment matches mlpppo_large_oracle.yml (oracle baseline)
-# except: temporal sensing, steeper gradients, + proprioception module
+# except: derivative sensing (Mode B), steeper gradients, + proprioception module
 
 max_steps: 2000
 brain:
@@ -92,10 +92,10 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: derivative       # Mode A: scalar concentration only
-    nociception_mode: derivative      # Mode A: scalar concentration only
-    thermotaxis_mode: derivative      # Mode A: temperature only
-    aerotaxis_mode: derivative        # Mode A: oxygen only
+    chemotaxis_mode: derivative       # Mode B: scalar + dC/dt
+    nociception_mode: derivative      # Mode B: scalar + dP/dt
+    thermotaxis_mode: derivative      # Mode B: temperature + dT/dt
+    aerotaxis_mode: derivative        # Mode B: oxygen + dO2/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1

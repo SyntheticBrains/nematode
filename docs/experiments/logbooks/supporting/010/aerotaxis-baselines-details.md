@@ -237,7 +237,7 @@ High seed variance (41-68% L100) — stationary toxic zones create position-depe
 
 ### O2+Thermal Foraging Large Temporal (Group Q) — FAILED
 
-All 4 seeds achieved 0% success in 6000 episodes. Root cause: `gradient_decay_constant: 12.0` instead of 4.0 in food foraging section. Config fixed, needs re-run.
+All 4 seeds achieved 0% success in 6000 episodes. Root cause: `gradient_decay_constant: 12.0` instead of 4.0 in food foraging section. Config fixed; requires re-running.
 
 ## Config Issue: gradient_decay_constant
 

@@ -55,8 +55,8 @@ brain:
     lr_decay_end: 0.00003
 
     sensory_modules:
-      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal
-      - aerotaxis           # Auto-translated to aerotaxis_temporal
+      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal (handles both Mode A/B)
+      - aerotaxis           # Auto-translated to aerotaxis_temporal (handles both Mode A/B)
       - proprioception      # Heading direction — critical for correlating dC/dt with movement
 
 body_length: 2

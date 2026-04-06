@@ -17,7 +17,7 @@
 #
 # 4 pursuit predators, scattered temperature zones, oxygen gradient, 45 foods
 # Environment matches mlpppo_large_oracle.yml (oracle baseline)
-# except: temporal sensing, steeper gradients, + proprioception module
+# except: derivative sensing (Mode B), steeper gradients, + proprioception module
 
 max_steps: 2000
 brain:
