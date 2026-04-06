@@ -412,11 +412,15 @@ class QuantumNematodeAgent:
 
         result: dict[str, Any] = {}
 
+        pheromone_food_mode = getattr(sensing, "pheromone_food_mode", SensingMode.ORACLE)
+        pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", SensingMode.ORACLE)
         any_non_oracle = (
             sensing.chemotaxis_mode != SensingMode.ORACLE
             or sensing.nociception_mode != SensingMode.ORACLE
             or sensing.thermotaxis_mode != SensingMode.ORACLE
             or sensing.aerotaxis_mode != SensingMode.ORACLE
+            or pheromone_food_mode != SensingMode.ORACLE
+            or pheromone_alarm_mode != SensingMode.ORACLE
         )
 
         if not (any_non_oracle or sensing.stam_enabled):
@@ -445,6 +449,12 @@ class QuantumNematodeAgent:
             if sensing.aerotaxis_mode != SensingMode.ORACLE:
                 separated_grads.pop("oxygen_gradient_strength", None)
                 separated_grads.pop("oxygen_gradient_direction", None)
+
+        # Pheromone temporal concentrations (when not oracle mode)
+        if self.env.pheromones.enabled and pheromone_food_mode != SensingMode.ORACLE:
+            result["pheromone_food_concentration"] = self.env.get_pheromone_food_concentration()
+        if self.env.pheromones.enabled and pheromone_alarm_mode != SensingMode.ORACLE:
+            result["pheromone_alarm_concentration"] = self.env.get_pheromone_alarm_concentration()
 
         # (b) Compute position delta from previous position
         current_pos = tuple(self.env.agent_pos)
@@ -508,7 +518,7 @@ class QuantumNematodeAgent:
 
         return result
 
-    def _create_brain_params(
+    def _create_brain_params(  # noqa: C901, PLR0912, PLR0915
         self,
         action: ActionData | None = None,
         nearby_agents_count: int | None = None,
@@ -580,6 +590,36 @@ class QuantumNematodeAgent:
                     oxygen_gradient_strength = o2_gradient[0]
                     oxygen_gradient_direction = o2_gradient[1]
 
+        # Pheromone sensing
+        pheromone_food_gradient_strength = None
+        pheromone_food_gradient_direction = None
+        pheromone_alarm_gradient_strength = None
+        pheromone_alarm_gradient_direction = None
+        pheromone_food_concentration = None
+        pheromone_alarm_concentration = None
+
+        if self.env.pheromones.enabled:
+            from quantumnematode.utils.config_loader import SensingMode
+
+            pheromone_food_mode = getattr(sensing, "pheromone_food_mode", SensingMode.ORACLE)
+            pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", SensingMode.ORACLE)
+
+            if pheromone_food_mode == SensingMode.ORACLE:
+                food_ph_grad = self.env.get_pheromone_food_gradient()
+                if food_ph_grad is not None:
+                    pheromone_food_gradient_strength = food_ph_grad[0]
+                    pheromone_food_gradient_direction = food_ph_grad[1]
+            else:
+                pheromone_food_concentration = self.env.get_pheromone_food_concentration()
+
+            if pheromone_alarm_mode == SensingMode.ORACLE:
+                alarm_ph_grad = self.env.get_pheromone_alarm_gradient()
+                if alarm_ph_grad is not None:
+                    pheromone_alarm_gradient_strength = alarm_ph_grad[0]
+                    pheromone_alarm_gradient_direction = alarm_ph_grad[1]
+            else:
+                pheromone_alarm_concentration = self.env.get_pheromone_alarm_concentration()
+
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
 
@@ -640,6 +680,15 @@ class QuantumNematodeAgent:
             action=action,
             # Social sensing
             nearby_agents_count=nearby_agents_count,
+            # Pheromone sensing
+            pheromone_food_gradient_strength=pheromone_food_gradient_strength,
+            pheromone_food_gradient_direction=pheromone_food_gradient_direction,
+            pheromone_alarm_gradient_strength=pheromone_alarm_gradient_strength,
+            pheromone_alarm_gradient_direction=pheromone_alarm_gradient_direction,
+            pheromone_food_concentration=pheromone_food_concentration,
+            pheromone_alarm_concentration=pheromone_alarm_concentration,
+            pheromone_food_dconcentration_dt=temporal.get("pheromone_food_dconcentration_dt"),
+            pheromone_alarm_dconcentration_dt=temporal.get("pheromone_alarm_dconcentration_dt"),
         )
 
     def _render_step(
