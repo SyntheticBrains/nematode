@@ -58,11 +58,11 @@ brain:
     lr_decay_end: 0.00003
 
     sensory_modules:
-      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal
-      - nociception         # Auto-translated to nociception_temporal
+      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal (handles both Mode A/B)
+      - nociception         # Auto-translated to nociception_temporal (handles both Mode A/B)
       - mechanosensation    # Physical contact detection
-      - thermotaxis         # Auto-translated to thermotaxis_temporal
-      - aerotaxis           # Auto-translated to aerotaxis_temporal
+      - thermotaxis         # Auto-translated to thermotaxis_temporal (handles both Mode A/B)
+      - aerotaxis           # Auto-translated to aerotaxis_temporal (handles both Mode A/B)
       - proprioception      # Heading direction — critical for correlating concentration with movement
 
 body_length: 2
