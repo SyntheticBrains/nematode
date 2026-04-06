@@ -22,7 +22,8 @@ context: |
   - DynamicForagingEnvironment: multi-food foraging with predators, thermotaxis,
     aerotaxis, and multi-agent support (2-10 agents with food competition)
   - MultiAgentSimulation: orchestrator for multi-agent episodes with synchronous
-    stepping, food competition, social proximity sensing, and per-agent metrics
+    stepping, food competition, pheromone communication (food-marking + alarm),
+    social proximity sensing, and per-agent metrics with CSV export
   - Executor pattern: CPU, GPU, QPU backends
   - YAML-driven simulation configs (configs/scenarios/)
   - Comprehensive tracking: EpisodeTracker, experiment metadata, CSV/plot exports

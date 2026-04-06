@@ -35,9 +35,9 @@ Quantum Nematode simulates a simplified C. elegans navigating dynamic environmen
   - `optimizers/` — Learning algorithms (PSR, CMA-ES)
 - `scripts/` — CLI entry points (run_simulation.py, run_evolution.py, benchmark_submit.py)
 - `configs/scenarios/` — YAML config files organized by scenario (`{brain}_{size}[_{variant}]_{sensing}.yml`)
-  - Scenarios: `foraging`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`, `oxygen_foraging`, `oxygen_pursuit`, `oxygen_stationary`, `oxygen_thermal_foraging`, `oxygen_thermal_pursuit`, `oxygen_thermal_stationary`, `multi_agent_foraging`
+  - Scenarios: `foraging`, `pursuit`, `stationary`, `thermal_foraging`, `thermal_pursuit`, `thermal_stationary`, `oxygen_foraging`, `oxygen_pursuit`, `oxygen_stationary`, `oxygen_thermal_foraging`, `oxygen_thermal_pursuit`, `oxygen_thermal_stationary`, `multi_agent_foraging`, `multi_agent_pursuit`
   - Sensing suffixes: `_oracle`, `_temporal`, `_derivative`
-  - Variant suffixes: `_classical`, `_fair`, `_separable`, `_modality_paired`, etc.
+  - Variant suffixes: `_classical`, `_fair`, `_separable`, `_modality_paired`, `_pheromone`, etc.
   - Example: `configs/scenarios/foraging/mlpppo_small_oracle.yml`, `configs/scenarios/thermal_pursuit/lstmppo_large_temporal.yml`
 - `configs/evolution/` — Evolutionary optimization configs
 - `configs/special/` — One-off experimental configs
