@@ -1,29 +1,28 @@
-# Temporal Sensing (Mode A) - LSTM PPO with Aerotaxis + Thermotaxis + Foraging - Large Configuration
-# Phase 3: LSTM PPO with biologically-honest temporal sensing on combined environment
+# Temporal Sensing (Mode A) - LSTM PPO with Aerotaxis + Foraging - Large Configuration
+# Phase 3: LSTM PPO with biologically-honest temporal sensing for oxygen navigation
 #
 # Architecture: Features -> LayerNorm -> GRU(64) -> Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
-# Triple-sensory foraging on 100x100 grid:
+# Sensing modes:
 #   - chemotaxis: temporal (Mode A) — scalar food concentration only
-#   - thermotaxis: temporal (Mode A) — temperature only
-#   - aerotaxis: temporal (Mode A) — oxygen only
+#   - aerotaxis: temporal (Mode A) — oxygen scalar only (no dO2/dt or direction)
 #   - No directional gradients, no derivatives — agent must infer everything from GRU memory
 #
-# Dual environmental gradients (orthogonal):
-# - Temperature increases eastward (0.0 rad)
-# - Oxygen increases northward (pi/2 rad)
+# Large environment (100x100 grid):
+# - O2 gradient northward at 0.12%/cell + 2 high + 3 low oxygen spots
+# - ~50% of cells in O2 comfort zone
 #
 # Environment matches mlpppo_large_oracle.yml (oracle baseline)
-# except: temporal sensing, + proprioception module
+# except: temporal sensing, steeper food gradient, + proprioception module
 
 max_steps: 2000
 brain:
   name: lstmppo
   config:
-    rnn_type: gru  # GRU outperforms LSTM on temporal tasks
+    rnn_type: gru
     lstm_hidden_dim: 64
-    bptt_chunk_length: 128  # Long chunks for temporal inference on 100x100 grid
+    bptt_chunk_length: 128
 
     # Actor/Critic MLP
     actor_hidden_dim: 128
@@ -57,7 +56,6 @@ brain:
 
     sensory_modules:
       - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal
-      - thermotaxis         # Auto-translated to thermotaxis_temporal
       - aerotaxis           # Auto-translated to aerotaxis_temporal
       - proprioception      # Heading direction — critical for correlating concentration with movement
 
@@ -73,7 +71,6 @@ reward:
   penalty_starvation: 10.0
   stuck_position_threshold: 0
   penalty_boundary_collision: 0.02
-  penalty_temperature_proximity: 0.0
   penalty_health_damage: 0.3
   reward_health_gain: 0.2
 
@@ -87,9 +84,8 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: temporal       # Mode A: scalar concentration only
-    thermotaxis_mode: temporal      # Mode A: temperature scalar only
-    aerotaxis_mode: temporal        # Mode A: oxygen scalar only
+    chemotaxis_mode: temporal      # Mode A: scalar concentration only
+    aerotaxis_mode: temporal       # Mode A: oxygen scalar only
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1
@@ -107,43 +103,18 @@ environment:
     predator_damage: 0.0
     food_healing: 15.0
 
-  thermotaxis:
-    enabled: true
-    cultivation_temperature: 20.0
-    base_temperature: 20.0
-    gradient_direction: 0.0
-    gradient_strength: 0.15
-    hot_spots:
-      - [75, 50, 25.0]
-      - [25, 75, 20.0]
-      - [80, 80, 22.0]
-    cold_spots:
-      - [25, 25, 25.0]
-      - [75, 25, 20.0]
-      - [50, 85, 18.0]
-    spot_decay_constant: 6.5
-    comfort_reward: 0.0
-    discomfort_penalty: -0.05
-    danger_penalty: -0.5
-    reward_discomfort_food: 0.3
-    danger_hp_damage: 0.5
-    lethal_hp_damage: 6.0
-    comfort_delta: 5.0
-    discomfort_delta: 10.0
-    danger_delta: 15.0
-
   aerotaxis:
     enabled: true
     base_oxygen: 10.0
     gradient_direction: 1.5708
-    gradient_strength: 0.12      # ~50% of cells in O2 comfort zone
+    gradient_strength: 0.12
     high_oxygen_spots:
-      - [80, 50, 8.0]           # Ventilation point: +8% O2
-      - [20, 80, 6.0]           # Secondary ventilation
+      - [80, 50, 8.0]
+      - [20, 80, 6.0]
     low_oxygen_spots:
-      - [30, 30, 8.0]           # Dense bacterial lawn: -8% O2
-      - [70, 20, 6.0]           # Secondary bacterial sink
-      - [50, 70, 5.0]           # Third bacterial sink
+      - [30, 30, 8.0]
+      - [70, 20, 6.0]
+      - [50, 70, 5.0]
     spot_decay_constant: 6.0
     comfort_reward: 0.0
     danger_penalty: -0.5
