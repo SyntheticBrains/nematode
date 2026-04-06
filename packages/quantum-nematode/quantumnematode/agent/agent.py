@@ -451,10 +451,15 @@ class QuantumNematodeAgent:
                 separated_grads.pop("oxygen_gradient_direction", None)
 
         # Pheromone temporal concentrations (when not oracle mode)
+        step = self._episode_tracker.steps
         if self.env.pheromones.enabled and pheromone_food_mode != SensingMode.ORACLE:
-            result["pheromone_food_concentration"] = self.env.get_pheromone_food_concentration()
+            result["pheromone_food_concentration"] = self.env.get_pheromone_food_concentration(
+                current_step=step,
+            )
         if self.env.pheromones.enabled and pheromone_alarm_mode != SensingMode.ORACLE:
-            result["pheromone_alarm_concentration"] = self.env.get_pheromone_alarm_concentration()
+            result["pheromone_alarm_concentration"] = self.env.get_pheromone_alarm_concentration(
+                current_step=step,
+            )
 
         # (b) Compute position delta from previous position
         current_pos = tuple(self.env.agent_pos)
@@ -480,9 +485,11 @@ class QuantumNematodeAgent:
                 pos_2d = (int(current_pos[0]), int(current_pos[1]))
                 pheromone_food_val = self.env.get_pheromone_food_concentration(
                     position=pos_2d,
+                    current_step=step,
                 )
                 pheromone_alarm_val = self.env.get_pheromone_alarm_concentration(
                     position=pos_2d,
+                    current_step=step,
                 )
                 scalars.extend([pheromone_food_val, pheromone_alarm_val])
 
@@ -603,22 +610,27 @@ class QuantumNematodeAgent:
 
             pheromone_food_mode = getattr(sensing, "pheromone_food_mode", SensingMode.ORACLE)
             pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", SensingMode.ORACLE)
+            step = self._episode_tracker.steps
 
             if pheromone_food_mode == SensingMode.ORACLE:
-                food_ph_grad = self.env.get_pheromone_food_gradient()
+                food_ph_grad = self.env.get_pheromone_food_gradient(current_step=step)
                 if food_ph_grad is not None:
                     pheromone_food_gradient_strength = food_ph_grad[0]
                     pheromone_food_gradient_direction = food_ph_grad[1]
             else:
-                pheromone_food_concentration = self.env.get_pheromone_food_concentration()
+                pheromone_food_concentration = self.env.get_pheromone_food_concentration(
+                    current_step=step,
+                )
 
             if pheromone_alarm_mode == SensingMode.ORACLE:
-                alarm_ph_grad = self.env.get_pheromone_alarm_gradient()
+                alarm_ph_grad = self.env.get_pheromone_alarm_gradient(current_step=step)
                 if alarm_ph_grad is not None:
                     pheromone_alarm_gradient_strength = alarm_ph_grad[0]
                     pheromone_alarm_gradient_direction = alarm_ph_grad[1]
             else:
-                pheromone_alarm_concentration = self.env.get_pheromone_alarm_concentration()
+                pheromone_alarm_concentration = self.env.get_pheromone_alarm_concentration(
+                    current_step=step,
+                )
 
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
