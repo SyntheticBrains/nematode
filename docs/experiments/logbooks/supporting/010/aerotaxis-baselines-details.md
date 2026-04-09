@@ -235,9 +235,79 @@ High seed variance (41-68% L100) — stationary toxic zones create position-depe
 | 45 | 59.4% | **100%** | **98.2%** | 0.960 |
 | **Mean** | **56.2%** | **98.8%** | **96.6%** | **0.964** |
 
-### O2+Thermal Foraging Large Temporal (Group Q) — FAILED
+### O2+Thermal Foraging Large Temporal (Group Q, initial) — FAILED
 
-All 4 seeds achieved 0% success in 6000 episodes. Root cause: `gradient_decay_constant: 12.0` instead of 4.0 in food foraging section. Config fixed; requires re-running.
+All 4 seeds achieved 0% success in 6000 episodes. Root cause: `gradient_decay_constant: 12.0` instead of 4.0 in food foraging section. Config fixed.
+
+### O2+Thermal Foraging Large Temporal (Group Q, re-run, 6000 episodes)
+
+| Seed | Overall | L100 | L500 | O2 Comfort | Temp Comfort |
+|------|---------|------|------|------------|--------------|
+| 42 | 0.0% | 0% | 0% | 0.945 | 0.861 |
+| 43 | 0.0% | 0% | 0% | 0.943 | 0.858 |
+| 44 | **20.7%** | **95%** | **93.4%** | 0.950 | 0.843 |
+| 45 | 0.0% | 0% | 0% | 0.951 | 0.877 |
+| **Mean** | **5.2%** | **23.8%** | **23.4%** | **0.947** | **0.860** |
+
+Only 1/4 seeds converged at 6000 episodes.
+
+### O2+Thermal Foraging Large Temporal (Group Q2, 12000 episodes)
+
+| Seed | Overall | L100 | L500 | L1000 | Breakthrough |
+|------|---------|------|------|-------|-------------|
+| 42 | 9.8% | **89%** | **89%** | 82.8% | 10-12k |
+| 43 | 58.3% | **98%** | **98%** | **96.6%** | 4-6k |
+| 44 | 26.3% | **90%** | **88%** | 88.1% | 8-10k |
+| 45 | 12.8% | **78%** | **68%** | 66.9% | 10-12k |
+| **Mean** | **26.8%** | **88.8%** | **85.5%** | **83.6%** | |
+
+All 4 seeds converge. Breakthrough timing: 4k to 12k episodes (sharp phase transition), with two seeds breaking through at 10-12k.
+
+## Triple-Modality Temporal Ablation (6000 episodes)
+
+Testing 4 variations to improve Q convergence reliability:
+
+### Q3 — Higher Entropy (entropy_coef 0.02→0.03, end 0.01→0.015)
+
+| Seed | L100 | L500 | Foods (L1000) |
+|------|------|------|---------------|
+| 42 | 17% | 5.2% | 9.4 |
+| 43 | 15% | 11.4% | 12.3 |
+| 44 | 10% | 3.0% | 9.2 |
+| 45 | 0% | 0% | 5.5 |
+| **Mean** | **10.5%** | **4.9%** | **9.1** |
+
+More seeds show partial learning but none break through to high performance.
+
+### Q4 — Longer BPTT Chunks (128→256)
+
+| Seed | L100 | L500 | Foods (L1000) |
+|------|------|------|---------------|
+| ALL | 0% | 0% | 4.0-5.1 |
+
+Complete failure. Longer chunks hurt — likely reduces effective number of training updates.
+
+### Q5 — Larger GRU (64→128)
+
+| Seed | L100 | L500 | Foods (L1000) |
+|------|------|------|---------------|
+| 42 | **93%** | **90.8%** | 19.4 |
+| 43 | 0% | 0% | 4.7 |
+| 44 | **68%** | **70.6%** | 18.2 |
+| 45 | 0% | 0% | 4.0 |
+| **Mean** | **40.2%** | **40.4%** | **11.6** |
+
+2/4 seeds converge — larger GRU helps convergence speed but isn't required (Q2 shows 4/4 at 12k with GRU-64).
+
+### Ablation Summary
+
+| Variant | Change | Seeds Converged | Mean L100 | Verdict |
+|---------|--------|----------------|-----------|---------|
+| Q baseline (6k) | — | 1/4 | 23.8% | Unreliable |
+| Q3 entropy+ (6k) | entropy 0.02→0.03 | 0/4 full | 10.5% | Partial only |
+| Q4 chunks+ (6k) | chunks 128→256 | 0/4 | 0% | Worse |
+| Q5 GRU-128 (6k) | hidden 64→128 | 2/4 | 40.2% | Faster convergence |
+| **Q2 baseline (12k)** | **more training** | **4/4** | **88.8%** | **Solution** |
 
 ## Config Issue: gradient_decay_constant
 
