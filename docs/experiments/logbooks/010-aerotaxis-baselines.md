@@ -136,6 +136,8 @@ Large grid temporal achieves **99% L100** — exceeding both oracle and derivati
 
 ### Temporal Sensing — Triple-Modality (O2+Thermal Foraging, 12000 episodes)
 
+A seed is considered "converged" if it achieves L100 ≥ 50% (sustained success over the final 100 episodes). "Breakthrough" refers to the first 2000-episode window where success rate exceeds 5%.
+
 | Seed | L100 | L500 | Breakthrough Window |
 |------|------|------|---------------------|
 | 42 | **89%** | **89%** | 10-12k episodes |
@@ -236,7 +238,9 @@ ______________________________________________________________________
 
 11. **`gradient_decay_constant` is critical for temporal/derivative configs.** A temporal config with 12.0 (oracle default) instead of 4.0 produced 0% success. Steeper food gradients are required for detectable scalar concentration changes.
 
-12. **Temporal on predator scenarios can be inferred from derivative results.** Temporal matches or exceeds derivative on tested scenarios (P: temporal 99% vs derivative 83%; Q2: temporal 89% vs derivative 97%). Since derivative exceeds oracle on all predator scenarios (+6pp to +28pp), and temporal uses the same GRU architecture, temporal on predator configs would likely converge at 12000+ episodes to similar or higher L100 — requiring longer training but not architectural changes. This remains untested and is a candidate for future validation.
+### Untested Inference: Temporal on Predator Scenarios
+
+Temporal matches or exceeds derivative on tested scenarios (P: temporal 99% vs derivative 83%; Q2: temporal 89% vs derivative 97%). Since derivative exceeds oracle on all predator scenarios (+6pp to +28pp), and temporal uses the same GRU architecture, temporal on predator configs may converge at 12000+ episodes to similar or higher L100 — requiring longer training but not architectural changes. This remains untested and is a candidate for future validation.
 
 ## Next Steps
 

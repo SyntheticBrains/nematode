@@ -261,7 +261,7 @@ Only 1/4 seeds converged at 6000 episodes.
 | 45 | 12.8% | **78%** | **68%** | 66.9% | 10-12k |
 | **Mean** | **26.8%** | **88.8%** | **85.5%** | **83.6%** | |
 
-All 4 seeds converge. Breakthrough timing: 4k to 10k episodes (sharp phase transition).
+All 4 seeds converge. Breakthrough timing: 4k to 12k episodes (sharp phase transition), with two seeds breaking through at 10-12k.
 
 ## Triple-Modality Temporal Ablation (6000 episodes)
 
