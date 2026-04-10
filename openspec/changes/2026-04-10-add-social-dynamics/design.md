@@ -93,6 +93,7 @@ IDX_PHEROMONE_AGGREGATION = 6
 ```
 
 Channel count determined from config:
+
 - 4: pheromones disabled
 - 6: pheromones enabled (food-marking + alarm)
 - 7: pheromones enabled AND aggregation type configured
@@ -123,7 +124,7 @@ def _compute_aggregation_index(positions: list[tuple[int, int]], grid_size: int)
     return total_proximity / n_pairs
 ```
 
-Computed per step, averaged over episode. O(N^2) per step where N = agents — acceptable for N <= 10.
+Computed per step, averaged over episode. O(N^2) per step where N = agents — acceptable for N \<= 10.
 
 **3. alarm_evasion_events** (int): After the predator phase, for each agent that had alarm pheromone concentration above a threshold on the previous step, check if the agent moved away from the alarm source (increased distance from alarm gradient direction). Requires tracking previous-step alarm concentrations per agent.
 

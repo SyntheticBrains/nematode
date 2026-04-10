@@ -84,7 +84,7 @@ multi_agent:
 - `quantumnematode/env/pheromone.py` — AGGREGATION added to PheromoneType enum
 - `quantumnematode/env/__init__.py` — Export SocialFeedingParams
 - `quantumnematode/agent/multi_agent.py` — Decay reduction, aggregation emission, collective metrics, MultiAgentEpisodeResult extension
-- `quantumnematode/agent/agent.py` — Aggregation pheromone in _create_brain_params + _compute_temporal_data
+- `quantumnematode/agent/agent.py` — Aggregation pheromone in \_create_brain_params + \_compute_temporal_data
 - `quantumnematode/agent/stam.py` — 7-channel mode (MEMORY_DIM 17)
 - `quantumnematode/brain/arch/_brain.py` — 4 new BrainParams fields
 - `quantumnematode/brain/modules.py` — PHEROMONE_AGGREGATION + PHEROMONE_AGGREGATION_TEMPORAL modules

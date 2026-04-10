@@ -30,6 +30,9 @@ if TYPE_CHECKING:
 
 MIN_GRID_SIZE_BASE = 5
 
+# Minimum alarm pheromone concentration to count as "in alarm zone"
+ALARM_EVASION_THRESHOLD = 0.1
+
 
 # ── Food Competition ─────────────────────────────────────────────────────────
 
@@ -190,7 +193,7 @@ def _compute_aggregation_index(
     for i in range(len(positions)):
         for j in range(i + 1, len(positions)):
             dist = abs(positions[i][0] - positions[j][0]) + abs(
-                positions[i][1] - positions[j][1]
+                positions[i][1] - positions[j][1],
             )
             total_proximity += 1.0 - (dist / max_dist)
             n_pairs += 1
@@ -239,7 +242,8 @@ class MultiAgentSimulation:
     _food_sharing_events: int = field(default=0, init=False)
     _prev_alarm_concentration: dict[str, float] = field(default_factory=dict, init=False)
     _food_marking_buffer: list[tuple[tuple[int, int], int, str]] = field(
-        default_factory=list, init=False,
+        default_factory=list,
+        init=False,
     )
     _per_agent_food: dict[str, int] = field(default_factory=dict, init=False)
     _agent_terminations: dict[str, TerminationReason] = field(
@@ -551,11 +555,10 @@ class MultiAgentSimulation:
             alive_now = self._alive_agents
             # Aggregation index
             if len(alive_now) >= 2:  # noqa: PLR2004
-                positions = [
-                    self.env.agents[a.agent_id].position for a in alive_now
-                ]
+                positions = [self.env.agents[a.agent_id].position for a in alive_now]
                 self._aggregation_index_sum += _compute_aggregation_index(
-                    positions, self.env.grid_size,
+                    positions,
+                    self.env.grid_size,
                 )
                 self._aggregation_index_steps += 1
 
@@ -569,7 +572,7 @@ class MultiAgentSimulation:
                     )
                     prev_conc = self._prev_alarm_concentration.get(aid, 0.0)
                     # Evasion: was in alarm zone last step, now concentration decreased
-                    if prev_conc > 0.1 and alarm_conc < prev_conc:
+                    if prev_conc > ALARM_EVASION_THRESHOLD and alarm_conc < prev_conc:
                         self._alarm_evasion_events += 1
                     self._prev_alarm_concentration[aid] = alarm_conc
 

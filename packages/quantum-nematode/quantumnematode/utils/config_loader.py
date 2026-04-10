@@ -55,8 +55,8 @@ from quantumnematode.env.env import (
     PheromoneParams,
     PheromoneTypeConfig,
     PredatorParams,
-    SocialFeedingParams,
     PredatorType,
+    SocialFeedingParams,
     ThermotaxisParams,
 )
 from quantumnematode.initializers import (

@@ -49,7 +49,7 @@ The STAM buffer SHALL support 7 channels when aggregation pheromone is enabled.
 
 - **GIVEN** pheromones enabled with aggregation configured
 - **WHEN** STAMBuffer is created with num_channels=7
-- **THEN** MEMORY_DIM SHALL be 17 (2*7 + 3)
+- **THEN** MEMORY_DIM SHALL be 17 (2\*7 + 3)
 - **AND** channel 6 SHALL be pheromone_aggregation
 
 #### Scenario: Backward Compatibility

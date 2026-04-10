@@ -2470,9 +2470,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 position=position,
                 pheromone_type=PheromoneType.AGGREGATION,
                 strength=(
-                    self.pheromones.aggregation.emission_strength
-                    if strength is None
-                    else strength
+                    self.pheromones.aggregation.emission_strength if strength is None else strength
                 ),
                 emission_step=current_step,
                 emitter_id=emitter_id,

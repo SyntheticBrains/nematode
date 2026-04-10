@@ -67,7 +67,8 @@ class SatietyManager:
             New satiety level after decay.
         """
         self._current_satiety = max(
-            0.0, self._current_satiety - self.decay_rate * multiplier
+            0.0,
+            self._current_satiety - self.decay_rate * multiplier,
         )
         return self._current_satiety
 
