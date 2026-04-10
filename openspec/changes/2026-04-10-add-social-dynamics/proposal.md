@@ -34,8 +34,8 @@ Four new fields on `MultiAgentEpisodeResult` for measuring emergent phenomena:
 
 - `social_feeding_events`: count of step-agent pairs where decay reduction was applied
 - `aggregation_index`: mean normalized inverse pairwise distance across all steps (0=dispersed, 1=clustered)
-- `alarm_evasion_events`: count of agents that moved away from alarm pheromone gradient
-- `food_sharing_events`: count of non-emitter agents approaching a food-marking pheromone source within N steps
+- `alarm_evasion_events`: count of alarm zone exits (concentration drops below threshold)
+- `food_sharing_events`: count of non-emitter agents approaching a food-marking pheromone source within lookback window
 
 ### 4. Configuration
 

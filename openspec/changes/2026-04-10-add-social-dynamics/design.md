@@ -127,9 +127,9 @@ def _compute_aggregation_index(positions: list[tuple[int, int]], grid_size: int)
 
 Computed per step, averaged over episode. O(N^2) per step where N = agents — acceptable for N \<= 10.
 
-**3. alarm_evasion_events** (int): After the predator phase, for each agent that had alarm pheromone concentration above a threshold on the previous step, check if the agent moved away from the alarm source (increased distance from alarm gradient direction). Requires tracking previous-step alarm concentrations per agent.
+**3. alarm_evasion_events** (int): Counts zone exits from alarm pheromone regions. For each agent, if alarm concentration was above `ALARM_EVASION_THRESHOLD` (0.1) on the previous step and drops to or below the threshold on the current step, this counts as an evasion event. Requires tracking previous-step alarm concentrations per agent. Zone-exit semantics prevent double-counting from oscillation near the threshold boundary.
 
-**4. food_sharing_events** (int): When a food-marking pheromone is emitted, track the emission position. Over the next N steps (configurable, default 20), if a *different* agent moves to within detection_radius of that position, count as a food-sharing event. Requires a small buffer of recent food-marking positions with emitter_id and step.
+**4. food_sharing_events** (int): When a food-marking pheromone is emitted, track the emission position. Over the next `FOOD_SHARING_LOOKBACK_STEPS` (20) steps, if a *different* agent moves to within `social_detection_radius` of that position, count as a food-sharing event. Entry removed from buffer after detection to prevent double-counting.
 
 ### Decision 5: Per-Agent Phenotype
 

@@ -63,17 +63,18 @@ MultiAgentEpisodeResult SHALL include collective behavior metrics.
 
 #### Scenario: Alarm Evasion Events
 
-- **GIVEN** an agent with alarm pheromone concentration > threshold at step T
-- **AND** the agent moves at step T+1
-- **WHEN** the agent's distance from the alarm gradient source increases
+- **GIVEN** an agent with alarm pheromone concentration > ALARM_EVASION_THRESHOLD (0.1) at step T
+- **WHEN** alarm concentration drops to \<= ALARM_EVASION_THRESHOLD at step T+1
 - **THEN** alarm_evasion_events SHALL be incremented
+- **AND** repeated crossings below threshold SHALL each count as separate events
 
 #### Scenario: Food Sharing Events
 
 - **GIVEN** agent A emits a food-marking pheromone at position P at step T
-- **AND** agent B (B != A) moves within detection radius of P within the next N steps
-- **WHEN** the episode completes
-- **THEN** food_sharing_events SHALL include this event
+- **AND** agent B (B != A) moves within `social_detection_radius` of P within FOOD_SHARING_LOOKBACK_STEPS (20) steps
+- **WHEN** the proximity is detected
+- **THEN** food_sharing_events SHALL be incremented
+- **AND** the emission SHALL be removed from the tracking buffer (no double-counting)
 
 ### Requirement: CSV Export of Collective Metrics
 

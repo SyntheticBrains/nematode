@@ -143,13 +143,13 @@
 - [ ] 3.3 Implement `alarm_evasion_events` tracking
 
   - Track per-agent alarm pheromone concentration from previous step
-  - After movement, if previous alarm concentration > threshold AND agent moved away from alarm gradient, increment counter
-  - Threshold: configurable, default 0.1
+  - Zone-exit semantics: if previous concentration > ALARM_EVASION_THRESHOLD and current concentration \<= threshold, count as evasion
+  - ALARM_EVASION_THRESHOLD = 0.1 (module-level constant)
 
 - [ ] 3.4 Implement `food_sharing_events` tracking
 
   - Buffer recent food-marking emissions: (position, step, emitter_id)
-  - After movement, check if any non-emitter agent moved within detection_radius of a recent emission (within lookback window, default 20 steps)
+  - After movement, check if any non-emitter agent moved within `social_detection_radius` of a recent emission (within FOOD_SHARING_LOOKBACK_STEPS=20 steps)
   - Increment counter for each such event, then remove the emission from buffer
 
 - [ ] 3.5 Wire metrics into `_build_result()` in multi_agent.py
