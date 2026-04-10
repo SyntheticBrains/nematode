@@ -1344,6 +1344,10 @@ _MULTI_AGENT_RESULTS_FIELDNAMES = [
     "steps",
     "termination_reason",
     "foods_collected",
+    "total_reward",
+    "success",
+    "satiety_remaining",
+    "foods_available",
 ]
 
 _MULTI_AGENT_SUMMARY_FIELDNAMES = [
@@ -1393,6 +1397,11 @@ def write_multi_agent_result_row(  # noqa: PLR0913
     termination_reason: str,
     foods_collected: int,
     csvfile: IO[str] | None = None,
+    total_reward: float = 0.0,
+    *,
+    success: bool = False,
+    satiety_remaining: float = 0.0,
+    foods_available: int = 0,
 ) -> None:
     """Write one per-agent result row to the multi-agent CSV."""
     writer.writerow(
@@ -1402,6 +1411,10 @@ def write_multi_agent_result_row(  # noqa: PLR0913
             "steps": steps,
             "termination_reason": termination_reason,
             "foods_collected": foods_collected,
+            "total_reward": f"{total_reward:.4f}",
+            "success": success,
+            "satiety_remaining": f"{satiety_remaining:.2f}",
+            "foods_available": foods_available,
         },
     )
     if csvfile is not None:

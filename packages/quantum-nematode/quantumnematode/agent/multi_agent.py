@@ -172,6 +172,8 @@ class MultiAgentEpisodeResult:
     food_sharing_events: int = 0
     territorial_index: float = 0.0
     alarm_response_rate: float = 0.0
+    per_agent_reward: dict[str, float] = field(default_factory=dict)
+    per_agent_satiety: dict[str, float] = field(default_factory=dict)
 
 
 def _compute_gini(values: list[int]) -> float:
@@ -322,6 +324,7 @@ class MultiAgentSimulation:
         init=False,
     )
     _per_agent_food: dict[str, int] = field(default_factory=dict, init=False)
+    _per_agent_total_reward: dict[str, float] = field(default_factory=dict, init=False)
     _per_agent_food_positions: dict[str, list[tuple[int, int]]] = field(
         default_factory=dict,
         init=False,
@@ -451,6 +454,7 @@ class MultiAgentSimulation:
         self._prev_alarm_concentration = {}
         self._food_marking_buffer = []
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
+        self._per_agent_total_reward = {a.agent_id: 0.0 for a in self.agents}
         self._per_agent_food_positions = {a.agent_id: [] for a in self.agents}
         self._alarm_response_opportunities = 0
         self._alarm_response_successes = 0
@@ -644,6 +648,7 @@ class MultiAgentSimulation:
                     max_steps=max_steps,
                     stuck_position_count=0,
                 )
+                self._per_agent_total_reward[aid] += reward_per_agent[aid]
                 action_per_agent[aid] = actions.get(aid)
 
                 if isinstance(agent.brain, ClassicalBrain):
@@ -949,4 +954,6 @@ class MultiAgentSimulation:
                 if self._alarm_response_opportunities > 0
                 else 0.0
             ),
+            per_agent_reward=dict(self._per_agent_total_reward),
+            per_agent_satiety={a.agent_id: a._satiety_manager.current_satiety for a in self.agents},
         )

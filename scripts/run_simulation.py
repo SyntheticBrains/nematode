@@ -1736,6 +1736,10 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     termination_reason=agent_result.termination_reason.value,
                     foods_collected=result.per_agent_food.get(aid, 0),
                     csvfile=results_csv_file,
+                    total_reward=result.per_agent_reward.get(aid, 0.0),
+                    success=(agent_result.termination_reason.value == "completed_all_food"),
+                    satiety_remaining=result.per_agent_satiety.get(aid, 0.0),
+                    foods_available=environment_config.get_foraging_config().target_foods_to_collect,
                 )
                 # Track per-agent success
                 if agent_result.termination_reason.value == "completed_all_food":
