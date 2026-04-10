@@ -627,7 +627,8 @@ class SocialFeedingConfig(BaseModel):
 
     Models C. elegans npr-1-mediated social feeding: social animals conserve
     energy near conspecifics via reduced locomotion and increased pharyngeal
-    pumping on bacterial lawns.
+    pumping on bacterial lawns. Detection radius is shared with the multi-agent
+    config's ``social_detection_radius``.
     """
 
     enabled: bool = False
@@ -635,11 +636,6 @@ class SocialFeedingConfig(BaseModel):
         default=0.7,
         gt=0.0,
         description="Satiety decay multiplier when near conspecifics (< 1.0 = slower decay).",
-    )
-    detection_radius: int = Field(
-        default=5,
-        gt=0,
-        description="Manhattan distance for detecting nearby conspecifics.",
     )
     solitary_decay: float = Field(
         default=1.0,
@@ -652,7 +648,6 @@ class SocialFeedingConfig(BaseModel):
         return SocialFeedingParams(
             enabled=self.enabled,
             decay_reduction=self.decay_reduction,
-            detection_radius=self.detection_radius,
             solitary_decay=self.solitary_decay,
         )
 

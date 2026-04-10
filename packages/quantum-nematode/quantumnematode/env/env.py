@@ -365,14 +365,16 @@ class SocialFeedingParams:
     social animals reduce locomotion and increase pharyngeal pumping on
     bacterial lawns near conspecifics, effectively conserving energy.
 
+    Detection radius is controlled by the multi-agent config's
+    ``social_detection_radius`` parameter, shared with SOCIAL_PROXIMITY
+    sensing and nearby-agent counting.
+
     Attributes
     ----------
     enabled : bool
         Whether social feeding is active.
     decay_reduction : float
         Satiety decay multiplier when near conspecifics (< 1.0 = slower decay).
-    detection_radius : int
-        Manhattan distance for detecting nearby conspecifics.
     solitary_decay : float
         Satiety decay multiplier for solitary phenotype when near others.
         1.0 = no change, > 1.0 = crowding penalty.
@@ -380,7 +382,6 @@ class SocialFeedingParams:
 
     enabled: bool = False
     decay_reduction: float = 0.7
-    detection_radius: int = 5
     solitary_decay: float = 1.0
 
 

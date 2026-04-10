@@ -1637,12 +1637,14 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     # Create orchestrator
     food_policy = FoodCompetitionPolicy(multi_agent_config.food_competition)
+    phenotypes = {ac.id: ac.social_phenotype for ac in agent_configs}
     sim = MultiAgentSimulation(
         env=env,
         agents=agents,
         food_policy=food_policy,
         social_detection_radius=multi_agent_config.social_detection_radius,
         termination_policy=multi_agent_config.termination_policy,
+        agent_phenotypes=phenotypes,
     )
 
     # Set up export directories

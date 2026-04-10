@@ -44,7 +44,6 @@ environment:
   social_feeding:
     enabled: true
     decay_reduction: 0.7
-    detection_radius: 5
     solitary_decay: 1.0
 
   pheromones:

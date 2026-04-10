@@ -7,7 +7,7 @@
 
 - [ ] 1.1 Add `SocialFeedingParams` dataclass to `env/env.py`
 
-  - Fields: `enabled: bool = False`, `decay_reduction: float = 0.7`, `detection_radius: int = 5`, `solitary_decay: float = 1.0`
+  - Fields: `enabled: bool = False`, `decay_reduction: float = 0.7`, `solitary_decay: float = 1.0`
 
 - [ ] 1.2 Wire `SocialFeedingParams` into `DynamicForagingEnvironment.__init__()` and `copy()`
 
@@ -22,7 +22,7 @@
 
 - [ ] 1.4 Add `SocialFeedingConfig` to `config_loader.py`
 
-  - Pydantic model with validation (decay_reduction > 0, detection_radius > 0)
+  - Pydantic model with validation (decay_reduction > 0)
   - `to_params() -> SocialFeedingParams` conversion method
   - Wire into `EnvironmentConfig` as optional field
 

@@ -33,9 +33,10 @@ Real C. elegans social feeding works by increased pharyngeal pumping and reduced
 class SocialFeedingParams:
     enabled: bool = False
     decay_reduction: float = 0.7      # multiplier on satiety decay when near others
-    detection_radius: int = 5         # Manhattan distance
     solitary_decay: float = 1.0       # multiplier for solitary phenotype
 ```
+
+Detection radius is shared with the multi-agent config's `social_detection_radius` parameter (default 5), which also controls SOCIAL_PROXIMITY sensing and nearby-agent counting.
 
 **Integration point**: In `MultiAgentSimulation.run_episode()`, section 5 (EFFECTS), before `decay_satiety()`:
 
@@ -145,9 +146,10 @@ environment:
   social_feeding:
     enabled: true
     decay_reduction: 0.7      # 30% slower energy burn near conspecifics
-    detection_radius: 5        # Manhattan distance for social detection
     solitary_decay: 1.0        # no change for solitary phenotype (>1.0 for crowding penalty)
 ```
+
+Detection radius is shared with `multi_agent.social_detection_radius` (default 5).
 
 ### Aggregation Pheromone Config
 

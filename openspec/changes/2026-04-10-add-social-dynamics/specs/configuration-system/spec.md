@@ -19,7 +19,7 @@ The configuration system SHALL support social feeding parameters.
 
 #### Scenario: Social Feeding Validation
 
-- **GIVEN** `decay_reduction` \<= 0 or `detection_radius` \<= 0
+- **GIVEN** `decay_reduction` \<= 0
 - **WHEN** config validation runs
 - **THEN** a validation error SHALL be raised
 

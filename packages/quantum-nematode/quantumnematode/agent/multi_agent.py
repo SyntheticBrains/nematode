@@ -33,6 +33,9 @@ MIN_GRID_SIZE_BASE = 5
 # Minimum alarm pheromone concentration to count as "in alarm zone"
 ALARM_EVASION_THRESHOLD = 0.1
 
+# Number of steps to look back for food-sharing event detection
+FOOD_SHARING_LOOKBACK_STEPS = 20
+
 
 # ── Food Competition ─────────────────────────────────────────────────────────
 
@@ -285,6 +288,16 @@ class MultiAgentSimulation:
                 f"Available: {list(self.env.agents.keys())}"
             )
             raise ValueError(msg)
+
+        # Validate agent phenotypes
+        _valid_phenotypes = {"social", "solitary"}
+        for aid, phenotype in self.agent_phenotypes.items():
+            if phenotype not in _valid_phenotypes:
+                msg = (
+                    f"Agent '{aid}': invalid social_phenotype '{phenotype}'. "
+                    f"Must be one of: {sorted(_valid_phenotypes)}"
+                )
+                raise ValueError(msg)
 
         # Initialize per-agent food tracking
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
@@ -571,8 +584,11 @@ class MultiAgentSimulation:
                         current_step=current_step,
                     )
                     prev_conc = self._prev_alarm_concentration.get(aid, 0.0)
-                    # Evasion: was in alarm zone last step, now concentration decreased
-                    if prev_conc > ALARM_EVASION_THRESHOLD and alarm_conc < prev_conc:
+                    # Evasion: was in alarm zone last step, now exited it
+                    if (
+                        prev_conc > ALARM_EVASION_THRESHOLD
+                        and alarm_conc <= ALARM_EVASION_THRESHOLD
+                    ):
                         self._alarm_evasion_events += 1
                     self._prev_alarm_concentration[aid] = alarm_conc
 
@@ -582,7 +598,7 @@ class MultiAgentSimulation:
                 self._food_marking_buffer = [
                     (pos, step, eid)
                     for pos, step, eid in self._food_marking_buffer
-                    if current_step - step <= 20  # noqa: PLR2004
+                    if current_step - step <= FOOD_SHARING_LOOKBACK_STEPS
                 ]
                 # Check if any alive agent (not the emitter) is near a food-marking site
                 for fpos, _fstep, emitter_id in list(self._food_marking_buffer):

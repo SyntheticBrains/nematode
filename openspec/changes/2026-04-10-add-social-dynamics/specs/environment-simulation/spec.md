@@ -6,16 +6,16 @@ The environment SHALL support social feeding via satiety decay reduction when ag
 
 #### Scenario: Social Decay Reduction Applied
 
-- **GIVEN** social feeding enabled with `decay_reduction=0.7` and `detection_radius=5`
+- **GIVEN** social feeding enabled with `decay_reduction=0.7`
 - **AND** an agent with social phenotype at position (10, 10)
-- **AND** another agent within Manhattan distance 5
+- **AND** another agent within `social_detection_radius` (Manhattan distance)
 - **WHEN** satiety decay is applied for the step
 - **THEN** the satiety decay rate SHALL be multiplied by 0.7
 
 #### Scenario: No Reduction When Alone
 
 - **GIVEN** social feeding enabled
-- **AND** an agent with no other agents within detection_radius
+- **AND** an agent with no other agents within `social_detection_radius`
 - **WHEN** satiety decay is applied for the step
 - **THEN** the decay rate SHALL be multiplied by 1.0 (unchanged)
 
