@@ -134,6 +134,18 @@ class MultiAgentEpisodeResult:
         Fraction of agents that completed their food target.
     food_gini_coefficient : float
         Gini coefficient of food distribution (0=equal, 1=monopoly).
+    social_feeding_events : int
+        Step-agent pairs where social feeding decay reduction was applied
+        (both social and solitary phenotypes counted when near conspecifics).
+    aggregation_index : float
+        Mean normalized inverse pairwise distance averaged over all steps
+        (0=maximally dispersed, 1=all agents co-located).
+    alarm_evasion_events : int
+        Zone exits: agent concentration dropped from above ALARM_EVASION_THRESHOLD
+        to at or below it between consecutive steps.
+    food_sharing_events : int
+        Non-emitter agent approached a food-marking pheromone source within
+        FOOD_SHARING_LOOKBACK_STEPS of emission.
     """
 
     agent_results: dict[str, EpisodeResult]
