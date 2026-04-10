@@ -53,10 +53,9 @@ sensing:
   chemotaxis_mode: temporal
   pheromone_food_mode: temporal
   pheromone_alarm_mode: temporal
-  stam:
-    enabled: true
-    buffer_size: 32
-    decay_rate: 0.05
+  stam_enabled: true
+  stam_buffer_size: 32
+  stam_decay_rate: 0.05
 
 environment:
   grid_size: 50

@@ -2336,7 +2336,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
             PheromoneSource(
                 position=position,
                 pheromone_type=PheromoneType.FOOD_MARKING,
-                strength=strength or self.pheromones.food_marking.emission_strength,
+                strength=self.pheromones.food_marking.emission_strength
+                if strength is None
+                else strength,
                 emission_step=current_step,
                 emitter_id=emitter_id,
             ),
@@ -2359,7 +2361,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             PheromoneSource(
                 position=position,
                 pheromone_type=PheromoneType.ALARM,
-                strength=strength or self.pheromones.alarm.emission_strength,
+                strength=self.pheromones.alarm.emission_strength if strength is None else strength,
                 emission_step=current_step,
                 emitter_id=emitter_id,
             ),

@@ -717,6 +717,8 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.thermotaxis_mode,
             sensing.nociception_mode,
             sensing.aerotaxis_mode,
+            sensing.pheromone_food_mode,
+            sensing.pheromone_alarm_mode,
         )
     )
     any_temporal = any(
@@ -726,6 +728,8 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.thermotaxis_mode,
             sensing.nociception_mode,
             sensing.aerotaxis_mode,
+            sensing.pheromone_food_mode,
+            sensing.pheromone_alarm_mode,
         )
     )
 

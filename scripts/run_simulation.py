@@ -1728,7 +1728,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 # Write per-agent CSV row
                 write_multi_agent_result_row(
                     results_csv_writer,
-                    run=run,
+                    run=run + 1,
                     agent_id=aid,
                     steps=len(agent_result.agent_path),
                     termination_reason=agent_result.termination_reason.value,
@@ -1742,7 +1742,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             # Write episode summary CSV row
             write_multi_agent_summary_row(
                 summary_csv_writer,
-                run=run,
+                run=run + 1,
                 total_food=result.total_food_collected,
                 food_competition_events=result.food_competition_events,
                 proximity_events=result.proximity_events,

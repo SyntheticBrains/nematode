@@ -487,7 +487,7 @@ class MultiAgentSimulation:
     def _resolve_food_step(
         self,
         alive_agents: list[QuantumNematodeAgent],
-        current_step: int = 0,
+        current_step: int,
     ) -> None:
         """Resolve food collection with competition for this step."""
         # Build map: food_position -> list of agent_ids at that position

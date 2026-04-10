@@ -149,7 +149,7 @@ class PheromoneField:
             distance = abs(position[0] - source.position[0]) + abs(
                 position[1] - source.position[1],
             )
-            age = current_step - source.emission_step
+            age = max(0, current_step - source.emission_step)
             spatial_factor = math.exp(-distance / self.spatial_decay_constant)
             temporal_factor = math.exp(-age * ln2 / self.temporal_half_life)
             total += source.strength * spatial_factor * temporal_factor

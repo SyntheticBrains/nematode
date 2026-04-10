@@ -1372,6 +1372,7 @@ def create_multi_agent_results_csv_writer(
     tuple[IO[str], csv.DictWriter[str]]
         File handle and CSV writer. Caller must close the file.
     """
+    filepath.parent.mkdir(parents=True, exist_ok=True)
     csvfile = filepath.open("w", newline="")
     writer = csv.DictWriter(csvfile, fieldnames=_MULTI_AGENT_RESULTS_FIELDNAMES)
     writer.writeheader()
@@ -1416,6 +1417,7 @@ def create_multi_agent_summary_csv_writer(
     tuple[IO[str], csv.DictWriter[str]]
         File handle and CSV writer. Caller must close the file.
     """
+    filepath.parent.mkdir(parents=True, exist_ok=True)
     csvfile = filepath.open("w", newline="")
     writer = csv.DictWriter(csvfile, fieldnames=_MULTI_AGENT_SUMMARY_FIELDNAMES)
     writer.writeheader()

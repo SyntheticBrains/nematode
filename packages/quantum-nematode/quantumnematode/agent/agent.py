@@ -884,6 +884,7 @@ class QuantumNematodeAgent:
             health=self.env.health,
             thermotaxis=self.env.thermotaxis,
             aerotaxis=self.env.aerotaxis,
+            pheromones=self.env.pheromones,
             # Reproducibility: preserve seed from original environment
             seed=self.env.seed,
         )
