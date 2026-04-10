@@ -87,8 +87,11 @@ class STAMBuffer:
         # num_channels=4: food, temp, predator, oxygen (no pheromones)
         # num_channels=6: + pheromone_food, pheromone_alarm
         self.num_channels = num_channels
-        self.MEMORY_DIM = num_channels * 2 + 2 + 1
-        # weighted_means(N) + derivatives(N) + pos_deltas(2) + action_entropy(1)
+        self.MEMORY_DIM = compute_memory_dim(num_channels)  # 2*N + 3
+
+def compute_memory_dim(num_channels: int) -> int:
+    """weighted_means(N) + derivatives(N) + pos_deltas(2) + action_entropy(1)"""
+    return num_channels * 2 + 3
 ```
 
 **Why dynamic**: When pheromones are disabled, STAM produces 11-dim output (backward compatible). When enabled, 15-dim. The STAMSensoryModule's `classical_dim` is set from the STAMBuffer instance, and brain `input_dim` is derived dynamically from the module list. No hardcoded dimensions need updating.
@@ -207,6 +210,10 @@ Mean competition events: 0.8
 Mean Gini: 0.45
 Per-agent success: agent_0=12%, agent_1=8%, agent_2=15%
 ```
+
+## Implementation Notes
+
+- **current_step parameter**: All pheromone concentration/gradient methods on the environment take `current_step` for temporal decay computation. Callers in `_create_brain_params` and `_compute_temporal_data` pass `self._episode_tracker.steps`. The `*_for(agent_id)` methods propagate `current_step` through. Default `current_step=0` in method signatures is a convenience for tests only — production calls must always pass the actual step.
 
 ## Risks / Trade-offs
 
