@@ -98,6 +98,8 @@ class ModuleName(StrEnum):
     PHEROMONE_ALARM = "pheromone_alarm"
     PHEROMONE_FOOD_TEMPORAL = "pheromone_food_temporal"
     PHEROMONE_ALARM_TEMPORAL = "pheromone_alarm_temporal"
+    PHEROMONE_AGGREGATION = "pheromone_aggregation"
+    PHEROMONE_AGGREGATION_TEMPORAL = "pheromone_aggregation_temporal"
 
 
 # =============================================================================
@@ -914,6 +916,57 @@ SENSORY_MODULES[ModuleName.PHEROMONE_ALARM_TEMPORAL] = SensoryModule(
     extract=_pheromone_alarm_temporal_core,
     description=(
         "Temporal alarm pheromone (ADL neurons). Scalar concentration + dC/dt. "
+        "Biologically honest — no directional information."
+    ),
+    classical_dim=2,
+)
+
+
+# ── Aggregation pheromone modules ──────────────────────────────────────────
+
+
+def _pheromone_aggregation_core(params: BrainParams) -> CoreFeatures:
+    """Extract aggregation pheromone gradient features (oracle mode).
+
+    Aggregation pheromones model ascaroside signals continuously emitted
+    by conspecifics, detected by ASI chemosensory neurons. Gradient points
+    toward nearby agents.
+    """
+    strength = float(params.pheromone_aggregation_gradient_strength or 0.0)
+    angle = _compute_relative_angle(
+        params.pheromone_aggregation_gradient_direction,
+        params.agent_direction,
+    )
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _pheromone_aggregation_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal aggregation pheromone features (scalar + dC/dt).
+
+    Biologically honest: scalar aggregation concentration at position +
+    temporal derivative. Positive derivative = more agents approaching.
+    """
+    strength = float(params.pheromone_aggregation_concentration or 0.0)
+    raw_deriv = float(params.pheromone_aggregation_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+SENSORY_MODULES[ModuleName.PHEROMONE_AGGREGATION] = SensoryModule(
+    name=ModuleName.PHEROMONE_AGGREGATION,
+    extract=_pheromone_aggregation_core,
+    description=(
+        "Aggregation pheromone gradient (oracle mode, ASI neurons). Encodes direction "
+        "and strength of ascaroside signals from nearby conspecifics."
+    ),
+    classical_dim=2,
+)
+
+SENSORY_MODULES[ModuleName.PHEROMONE_AGGREGATION_TEMPORAL] = SensoryModule(
+    name=ModuleName.PHEROMONE_AGGREGATION_TEMPORAL,
+    extract=_pheromone_aggregation_temporal_core,
+    description=(
+        "Temporal aggregation pheromone (ASI neurons). Scalar concentration + dC/dt. "
         "Biologically honest — no directional information."
     ),
     classical_dim=2,

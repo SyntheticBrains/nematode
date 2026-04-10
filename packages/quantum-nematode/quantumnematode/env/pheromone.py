@@ -28,6 +28,7 @@ class PheromoneType(StrEnum):
 
     FOOD_MARKING = "food_marking"
     ALARM = "alarm"
+    AGGREGATION = "aggregation"
 
 
 @dataclass

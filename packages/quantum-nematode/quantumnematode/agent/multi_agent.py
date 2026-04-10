@@ -30,6 +30,12 @@ if TYPE_CHECKING:
 
 MIN_GRID_SIZE_BASE = 5
 
+# Minimum alarm pheromone concentration to count as "in alarm zone"
+ALARM_EVASION_THRESHOLD = 0.1
+
+# Number of steps to look back for food-sharing event detection
+FOOD_SHARING_LOOKBACK_STEPS = 20
+
 
 # ── Food Competition ─────────────────────────────────────────────────────────
 
@@ -128,6 +134,18 @@ class MultiAgentEpisodeResult:
         Fraction of agents that completed their food target.
     food_gini_coefficient : float
         Gini coefficient of food distribution (0=equal, 1=monopoly).
+    social_feeding_events : int
+        Step-agent pairs where social feeding decay reduction was applied
+        (both social and solitary phenotypes counted when near conspecifics).
+    aggregation_index : float
+        Mean normalized inverse pairwise distance averaged over all steps
+        (0=maximally dispersed, 1=all agents co-located).
+    alarm_evasion_events : int
+        Zone exits: agent concentration dropped from above ALARM_EVASION_THRESHOLD
+        to at or below it between consecutive steps.
+    food_sharing_events : int
+        Non-emitter agent approached a food-marking pheromone source within
+        FOOD_SHARING_LOOKBACK_STEPS of emission.
     """
 
     agent_results: dict[str, EpisodeResult]
@@ -138,6 +156,10 @@ class MultiAgentEpisodeResult:
     agents_alive_at_end: int
     mean_agent_success: float
     food_gini_coefficient: float
+    social_feeding_events: int = 0
+    aggregation_index: float = 0.0
+    alarm_evasion_events: int = 0
+    food_sharing_events: int = 0
 
 
 def _compute_gini(values: list[int]) -> float:
@@ -153,6 +175,44 @@ def _compute_gini(values: list[int]) -> float:
         cumulative += v
         weighted_sum += (2 * (i + 1) - n - 1) * v
     return weighted_sum / (n * total) if total > 0 else 0.0
+
+
+def _compute_aggregation_index(
+    positions: list[tuple[int, int]],
+    grid_size: int,
+) -> float:
+    """Compute aggregation index from agent positions.
+
+    Mean normalized inverse pairwise distance. 0 = maximally dispersed,
+    1 = all agents at same position.
+
+    Parameters
+    ----------
+    positions : list[tuple[int, int]]
+        Positions of alive agents.
+    grid_size : int
+        Grid size for normalization.
+
+    Returns
+    -------
+    float
+        Aggregation index in [0, 1].
+    """
+    if len(positions) < 2:  # noqa: PLR2004
+        return 0.0
+    max_dist = 2 * (grid_size - 1)
+    if max_dist == 0:
+        return 1.0
+    total_proximity = 0.0
+    n_pairs = 0
+    for i in range(len(positions)):
+        for j in range(i + 1, len(positions)):
+            dist = abs(positions[i][0] - positions[j][0]) + abs(
+                positions[i][1] - positions[j][1],
+            )
+            total_proximity += 1.0 - (dist / max_dist)
+            n_pairs += 1
+    return total_proximity / n_pairs
 
 
 # ── Multi-Agent Simulation Orchestrator ──────────────────────────────────────
@@ -185,10 +245,21 @@ class MultiAgentSimulation:
     food_policy: FoodCompetitionPolicy = FoodCompetitionPolicy.FIRST_ARRIVAL
     social_detection_radius: int = 5
     termination_policy: str = "freeze"
+    agent_phenotypes: dict[str, str] = field(default_factory=dict)
 
     # Runtime tracking (not init params)
     _food_competition_events: int = field(default=0, init=False)
     _proximity_events: int = field(default=0, init=False)
+    _social_feeding_events: int = field(default=0, init=False)
+    _aggregation_index_sum: float = field(default=0.0, init=False)
+    _aggregation_index_steps: int = field(default=0, init=False)
+    _alarm_evasion_events: int = field(default=0, init=False)
+    _food_sharing_events: int = field(default=0, init=False)
+    _prev_alarm_concentration: dict[str, float] = field(default_factory=dict, init=False)
+    _food_marking_buffer: list[tuple[tuple[int, int], int, str]] = field(
+        default_factory=list,
+        init=False,
+    )
     _per_agent_food: dict[str, int] = field(default_factory=dict, init=False)
     _agent_terminations: dict[str, TerminationReason] = field(
         default_factory=dict,
@@ -229,6 +300,16 @@ class MultiAgentSimulation:
                 f"Available: {list(self.env.agents.keys())}"
             )
             raise ValueError(msg)
+
+        # Validate agent phenotypes
+        _valid_phenotypes = {"social", "solitary"}
+        for aid, phenotype in self.agent_phenotypes.items():
+            if phenotype not in _valid_phenotypes:
+                msg = (
+                    f"Agent '{aid}': invalid social_phenotype '{phenotype}'. "
+                    f"Must be one of: {sorted(_valid_phenotypes)}"
+                )
+                raise ValueError(msg)
 
         # Initialize per-agent food tracking
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
@@ -291,6 +372,13 @@ class MultiAgentSimulation:
         # Reset tracking
         self._food_competition_events = 0
         self._proximity_events = 0
+        self._social_feeding_events = 0
+        self._aggregation_index_sum = 0.0
+        self._aggregation_index_steps = 0
+        self._alarm_evasion_events = 0
+        self._food_sharing_events = 0
+        self._prev_alarm_concentration = {}
+        self._food_marking_buffer = []
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
         self._agent_terminations = {}
 
@@ -358,6 +446,13 @@ class MultiAgentSimulation:
                 # Update visited cells
                 self.env.agents[aid].visited_cells.add(pos)
 
+            # ── 2b. AGGREGATION PHEROMONE EMISSION ───────────────
+            if pheromones_enabled and self.env.pheromone_field_aggregation is not None:
+                for agent in alive:
+                    aid = agent.agent_id
+                    agent_pos = self.env.agents[aid].position
+                    self.env.emit_aggregation_pheromone(agent_pos, current_step, aid)
+
             # ── 3. FOOD COMPETITION ──────────────────────────────
             self._resolve_food_step(alive, current_step)
 
@@ -389,8 +484,16 @@ class MultiAgentSimulation:
                 aid = agent.agent_id
                 cached_nearby = nearby_per_agent.get(aid, 0)
 
-                # Satiety decay
-                agent._satiety_manager.decay_satiety()
+                # Satiety decay (with social feeding reduction if applicable)
+                decay_mult = 1.0
+                if self.env.social_feeding.enabled and cached_nearby > 0:
+                    phenotype = self.agent_phenotypes.get(aid, "social")
+                    if phenotype == "social":
+                        decay_mult = self.env.social_feeding.decay_reduction
+                    else:
+                        decay_mult = self.env.social_feeding.solitary_decay
+                    self._social_feeding_events += 1
+                agent._satiety_manager.decay_satiety(multiplier=decay_mult)
                 agent._episode_tracker.track_satiety(agent.current_satiety)
                 agent._episode_tracker.track_health(self.env.agents[aid].hp)
 
@@ -473,6 +576,56 @@ class MultiAgentSimulation:
                 if self._compute_nearby_agents_count(agent.agent_id) > 0:
                     self._proximity_events += 1
 
+            # ── COLLECTIVE METRICS ──────────────────────────────
+            alive_now = self._alive_agents
+            # Aggregation index
+            if len(alive_now) >= 2:  # noqa: PLR2004
+                positions = [self.env.agents[a.agent_id].position for a in alive_now]
+                self._aggregation_index_sum += _compute_aggregation_index(
+                    positions,
+                    self.env.grid_size,
+                )
+                self._aggregation_index_steps += 1
+
+            # Alarm evasion: did agents move away from alarm pheromone?
+            if pheromones_enabled:
+                for agent in alive_now:
+                    aid = agent.agent_id
+                    alarm_conc = self.env.get_pheromone_alarm_concentration(
+                        position=self.env.agents[aid].position,
+                        current_step=current_step,
+                    )
+                    prev_conc = self._prev_alarm_concentration.get(aid, 0.0)
+                    # Evasion: was in alarm zone last step, now exited it
+                    if (
+                        prev_conc > ALARM_EVASION_THRESHOLD
+                        and alarm_conc <= ALARM_EVASION_THRESHOLD
+                    ):
+                        self._alarm_evasion_events += 1
+                    self._prev_alarm_concentration[aid] = alarm_conc
+
+            # Food sharing: did non-emitter approach food-marking source?
+            if pheromones_enabled:
+                # Prune old entries from buffer
+                self._food_marking_buffer = [
+                    (pos, step, eid)
+                    for pos, step, eid in self._food_marking_buffer
+                    if current_step - step <= FOOD_SHARING_LOOKBACK_STEPS
+                ]
+                # Check if any alive agent (not the emitter) is near a food-marking site
+                for fpos, _fstep, emitter_id in list(self._food_marking_buffer):
+                    for agent in alive_now:
+                        aid = agent.agent_id
+                        if aid == emitter_id:
+                            continue
+                        apos = self.env.agents[aid].position
+                        dist = abs(apos[0] - fpos[0]) + abs(apos[1] - fpos[1])
+                        if dist <= self.social_detection_radius:
+                            self._food_sharing_events += 1
+                            # Remove from buffer to avoid double-counting
+                            self._food_marking_buffer.remove((fpos, _fstep, emitter_id))
+                            break
+
         # ── EPISODE END ──────────────────────────────────────────
         # Terminate remaining alive agents (max_steps reached)
         for agent in list(self._alive_agents):
@@ -531,6 +684,8 @@ class MultiAgentSimulation:
                     )
                     # Emit food-marking pheromone at consumed food position
                     self.env.emit_food_pheromone(consumed, current_step, aid)
+                    # Track for food-sharing metric
+                    self._food_marking_buffer.append((consumed, current_step, aid))
 
     def _handle_termination(
         self,
@@ -650,6 +805,12 @@ class MultiAgentSimulation:
             1 for a in self.env.agents.values() if a.alive and a.agent_id != DEFAULT_AGENT_ID
         )
 
+        agg_index = (
+            self._aggregation_index_sum / self._aggregation_index_steps
+            if self._aggregation_index_steps > 0
+            else 0.0
+        )
+
         return MultiAgentEpisodeResult(
             agent_results=agent_results,
             total_food_collected=total_food,
@@ -659,4 +820,8 @@ class MultiAgentSimulation:
             agents_alive_at_end=alive_count,
             mean_agent_success=successes / len(self.agents) if self.agents else 0.0,
             food_gini_coefficient=_compute_gini(food_values),
+            social_feeding_events=self._social_feeding_events,
+            aggregation_index=agg_index,
+            alarm_evasion_events=self._alarm_evasion_events,
+            food_sharing_events=self._food_sharing_events,
         )

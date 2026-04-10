@@ -1354,6 +1354,10 @@ _MULTI_AGENT_SUMMARY_FIELDNAMES = [
     "agents_alive_at_end",
     "mean_success",
     "food_gini_coefficient",
+    "social_feeding_events",
+    "aggregation_index",
+    "alarm_evasion_events",
+    "food_sharing_events",
 ]
 
 
@@ -1434,6 +1438,10 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
     mean_success: float,
     food_gini_coefficient: float,
     csvfile: IO[str] | None = None,
+    social_feeding_events: int = 0,
+    aggregation_index: float = 0.0,
+    alarm_evasion_events: int = 0,
+    food_sharing_events: int = 0,
 ) -> None:
     """Write one episode summary row to the multi-agent summary CSV."""
     writer.writerow(
@@ -1445,6 +1453,10 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
             "agents_alive_at_end": agents_alive_at_end,
             "mean_success": f"{mean_success:.4f}",
             "food_gini_coefficient": f"{food_gini_coefficient:.4f}",
+            "social_feeding_events": social_feeding_events,
+            "aggregation_index": f"{aggregation_index:.4f}",
+            "alarm_evasion_events": alarm_evasion_events,
+            "food_sharing_events": food_sharing_events,
         },
     )
     if csvfile is not None:

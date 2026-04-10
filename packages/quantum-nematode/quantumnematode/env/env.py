@@ -340,6 +340,8 @@ class PheromoneParams:
         Config for food-marking pheromones (deposited on food consumption).
     alarm : PheromoneTypeConfig
         Config for alarm pheromones (emitted on predator damage).
+    aggregation : PheromoneTypeConfig | None
+        Config for aggregation pheromones (continuous emission). None = disabled.
     """
 
     enabled: bool = False
@@ -352,6 +354,43 @@ class PheromoneParams:
             max_sources=50,
         ),
     )
+    aggregation: PheromoneTypeConfig | None = None
+
+
+@dataclass
+class SocialFeedingParams:
+    """Parameters for social feeding behavior.
+
+    Models C. elegans social feeding mediated by npr-1 neuropeptide receptor:
+    social animals reduce locomotion and increase pharyngeal pumping on
+    bacterial lawns near conspecifics, effectively conserving energy.
+
+    Detection radius is controlled by the multi-agent config's
+    ``social_detection_radius`` parameter, shared with SOCIAL_PROXIMITY
+    sensing and nearby-agent counting.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether social feeding is active.
+    decay_reduction : float
+        Satiety decay multiplier when near conspecifics (< 1.0 = slower decay).
+    solitary_decay : float
+        Satiety decay multiplier for solitary phenotype when near others.
+        1.0 = no change, > 1.0 = crowding penalty.
+    """
+
+    enabled: bool = False
+    decay_reduction: float = 0.7
+    solitary_decay: float = 1.0
+
+    def __post_init__(self) -> None:  # noqa: D105
+        if self.decay_reduction <= 0 or self.decay_reduction > 1:
+            msg = f"decay_reduction must be in (0, 1], got {self.decay_reduction}"
+            raise ValueError(msg)
+        if self.solitary_decay <= 0:
+            msg = f"solitary_decay must be > 0, got {self.solitary_decay}"
+            raise ValueError(msg)
 
 
 @dataclass
@@ -1127,6 +1166,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         thermotaxis: ThermotaxisParams | None = None,
         aerotaxis: AerotaxisParams | None = None,
         pheromones: PheromoneParams | None = None,
+        social_feeding: SocialFeedingParams | None = None,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -1149,6 +1189,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.thermotaxis = thermotaxis or ThermotaxisParams()
         self.aerotaxis = aerotaxis or AerotaxisParams()
         self.pheromones = pheromones or PheromoneParams()
+        self.social_feeding = social_feeding or SocialFeedingParams()
 
         self.viewport_size = viewport_size
 
@@ -1184,6 +1225,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Pheromone fields (runtime, created from pheromone config)
         self.pheromone_field_food: PheromoneField | None = None
         self.pheromone_field_alarm: PheromoneField | None = None
+        self.pheromone_field_aggregation: PheromoneField | None = None
         if self.pheromones.enabled:
             self.pheromone_field_food = PheromoneField(
                 spatial_decay_constant=self.pheromones.food_marking.spatial_decay_constant,
@@ -1195,6 +1237,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 temporal_half_life=self.pheromones.alarm.temporal_half_life,
                 max_sources=self.pheromones.alarm.max_sources,
             )
+            if self.pheromones.aggregation is not None:
+                self.pheromone_field_aggregation = PheromoneField(
+                    spatial_decay_constant=self.pheromones.aggregation.spatial_decay_constant,
+                    temporal_half_life=self.pheromones.aggregation.temporal_half_life,
+                    max_sources=self.pheromones.aggregation.max_sources,
+                )
 
         # Comfort zone tracking is now per-agent (in AgentState).
         # Backward-compatible properties are defined below.
@@ -2367,6 +2415,77 @@ class DynamicForagingEnvironment(BaseEnvironment):
             ),
         )
 
+    # ── Aggregation pheromone methods ─────────────────────────────────────────
+
+    def get_pheromone_aggregation_concentration(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> float:
+        """Get aggregation pheromone concentration at a position."""
+        if self.pheromone_field_aggregation is None:
+            return 0.0
+        pos = position if position is not None else self.agent_pos
+        return self.pheromone_field_aggregation.get_concentration(pos, current_step)
+
+    def get_pheromone_aggregation_gradient(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> tuple[float, float] | None:
+        """Get aggregation pheromone gradient (magnitude, direction) in polar coords."""
+        if self.pheromone_field_aggregation is None:
+            return None
+        pos = position if position is not None else self.agent_pos
+        return self.pheromone_field_aggregation.get_gradient_polar(pos, current_step)
+
+    def get_pheromone_aggregation_concentration_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> float:
+        """Get aggregation pheromone concentration for a specific agent."""
+        if self.pheromone_field_aggregation is None:
+            return 0.0
+        pos = self.agents[agent_id].position
+        return self.pheromone_field_aggregation.get_concentration(pos, current_step)
+
+    def get_pheromone_aggregation_gradient_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> tuple[float, float] | None:
+        """Get aggregation pheromone gradient for a specific agent."""
+        if self.pheromone_field_aggregation is None:
+            return None
+        pos = self.agents[agent_id].position
+        return self.pheromone_field_aggregation.get_gradient_polar(pos, current_step)
+
+    def emit_aggregation_pheromone(
+        self,
+        position: tuple[int, int],
+        current_step: int,
+        emitter_id: str,
+        strength: float | None = None,
+    ) -> None:
+        """Emit an aggregation pheromone at a position.
+
+        No-op if aggregation pheromone is not configured.
+        """
+        if self.pheromone_field_aggregation is None or self.pheromones.aggregation is None:
+            return
+        self.pheromone_field_aggregation.add_source(
+            PheromoneSource(
+                position=position,
+                pheromone_type=PheromoneType.AGGREGATION,
+                strength=(
+                    self.pheromones.aggregation.emission_strength if strength is None else strength
+                ),
+                emission_step=current_step,
+                emitter_id=emitter_id,
+            ),
+        )
+
     def update_pheromone_fields(self, current_step: int) -> None:
         """Prune expired pheromone sources on all fields.
 
@@ -2376,6 +2495,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             self.pheromone_field_food.prune(current_step)
         if self.pheromone_field_alarm is not None:
             self.pheromone_field_alarm.prune(current_step)
+        if self.pheromone_field_aggregation is not None:
+            self.pheromone_field_aggregation.prune(current_step)
 
     def add_agent(  # noqa: C901, PLR0912
         self,
@@ -3282,10 +3403,15 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Notes
         -----
         Config objects (ForagingParams, PredatorParams, HealthParams, ThermotaxisParams,
-        AerotaxisParams) are shared between the original and copy, not deep-copied.
-        This is intentional as these are treated as immutable configuration. Runtime
-        state (foods, visited_cells, agent_hp, predator positions, thermotaxis/aerotaxis
-        counters) is properly copied.
+        AerotaxisParams, PheromoneParams, SocialFeedingParams) are shared between
+        the original and copy, not deep-copied. This is intentional as these are
+        treated as immutable configuration. Runtime state (foods, visited_cells,
+        agent_hp, predator positions, thermotaxis/aerotaxis counters) is properly
+        copied. Pheromone fields are intentionally recreated empty — in multi-agent
+        mode, copy() is used to create fresh environments between episodes, so
+        pheromone sources from the previous episode should not carry over.
+        Manyworlds mode does not currently support multi-agent pheromone state
+        branching; this is a known limitation to be addressed if needed.
         """
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,
@@ -3302,6 +3428,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             thermotaxis=self.thermotaxis,
             aerotaxis=self.aerotaxis,
             pheromones=self.pheromones,
+            social_feeding=self.social_feeding,
         )
         new_env.foods = self.foods.copy()
         # Copy RNG state for reproducibility

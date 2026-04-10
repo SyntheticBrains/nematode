@@ -704,3 +704,93 @@ The BrainParams data structure SHALL include optional fields for scalar concentr
 - **THEN** all new BrainParams fields SHALL be None
 - **AND** all existing fields (gradient_strength, gradient_direction, food_gradient\_*, predator_gradient\_*, temperature_gradient\_\*, etc.) SHALL be populated as before
 - **AND** no existing brain architecture SHALL be affected
+
+### Requirement: AgentState Dataclass
+
+The environment SHALL manage per-agent mutable state via an `AgentState` dataclass.
+
+#### Scenario: AgentState Fields
+
+- Fields: `agent_id`, `position`, `body`, `direction`, `hp`, `visited_cells`, `wall_collision_occurred`, `alive`, `steps_in_comfort_zone`, `total_thermotaxis_steps`, `steps_in_oxygen_comfort_zone`, `total_aerotaxis_steps`
+
+#### Scenario: Default Agent Backward Compatibility
+
+- Single-agent mode creates AgentState with agent_id="default"
+- Properties `agent_pos`, `body`, `current_direction` delegate to the "default" agent
+
+### Requirement: Agent Registry
+
+- `self.agents`: `dict[str, AgentState]` keyed by agent_id
+- `add_agent(agent_id, position, max_body_length, min_distance)` creates and registers agents
+- Poisson disk sampling with minimum separation for spawn placement
+
+### Requirement: Position-Parameterized Methods
+
+All environment methods provide `*_for(agent_id)` variants: `move_agent_for`, `reached_goal_for`, `consume_food_for`, `apply_predator_damage_for`, `apply_temperature_effects_for`, `apply_oxygen_effects_for`, `is_agent_at_boundary_for`, `is_agent_in_damage_radius_for`, `get_separated_gradients_for`, etc.
+
+#### Scenario: Backward Compatible Originals
+
+- Original methods (e.g., `move_agent(action)`) delegate to `*_for("default", ...)`
+
+### Requirement: Predator Multi-Target Pursuit
+
+- Pursuit predators chase the nearest alive agent (Manhattan distance)
+- Terminated agents excluded from targeting
+- Single-agent: identical to current behavior
+
+### Requirement: Pheromone Field System
+
+Dynamic pheromone concentration fields using point-source exponential decay.
+
+#### Scenario: Concentration
+
+- `C(P, T) = tanh(Sigma strength_i * exp(-dist_i / spatial_decay) * exp(-age_i * ln(2) / half_life))`
+- Result in [0.0, 1.0], Manhattan distance
+
+#### Scenario: Gradient
+
+- Central differences: `(C(x+1,y) - C(x-1,y)) / 2`, polar form via atan2
+
+#### Scenario: Source Pruning
+
+- Sources older than `temporal_half_life * 5` removed; max_sources enforced (oldest first)
+
+### Requirement: Pheromone Emission
+
+- `emit_food_pheromone()`: adds FOOD_MARKING source on food consumption
+- `emit_alarm_pheromone()`: adds ALARM source on predator damage
+- `emit_aggregation_pheromone()`: adds AGGREGATION source (continuous, every step)
+- No-op when pheromones disabled or field not configured
+
+### Requirement: Social Feeding System
+
+Satiety decay reduction when agents are near conspecifics (npr-1 mediated).
+
+#### Scenario: Social Phenotype
+
+- Decay multiplied by `decay_reduction` (default 0.7) when nearby_agents_count > 0
+
+#### Scenario: Solitary Phenotype
+
+- Decay multiplied by `solitary_decay` (default 1.0) when nearby agents present
+
+#### Scenario: Disabled
+
+- Default disabled; decay rate unchanged
+
+### Requirement: Aggregation Pheromone Field
+
+Third PheromoneType (AGGREGATION) with continuous emission by all alive agents.
+
+#### Scenario: Field Creation
+
+- Created when pheromones enabled AND aggregation config present; None otherwise
+
+#### Scenario: Pruning
+
+- `update_pheromone_fields()` prunes aggregation field alongside food and alarm
+
+### Requirement: Satiety Decay Multiplier
+
+- `SatietyManager.decay_satiety(multiplier=1.0)` — default preserves original behavior
+- Multiplier < 1.0 reduces decay; > 1.0 increases; clamped at zero

@@ -50,17 +50,29 @@ class SatietyManager:
         """
         return self._current_satiety
 
-    def decay_satiety(self) -> float:
+    def decay_satiety(self, multiplier: float = 1.0) -> float:
         """Decay satiety by the configured decay rate.
 
         Satiety cannot go below 0.0.
+
+        Parameters
+        ----------
+        multiplier : float
+            Multiplier applied to the decay amount. Values < 1.0 reduce decay
+            (e.g., social feeding near conspecifics). Default 1.0 (no change).
 
         Returns
         -------
         float
             New satiety level after decay.
         """
-        self._current_satiety = max(0.0, self._current_satiety - self.decay_rate)
+        if multiplier < 0:
+            msg = f"multiplier must be non-negative, got {multiplier}"
+            raise ValueError(msg)
+        self._current_satiety = max(
+            0.0,
+            self._current_satiety - self.decay_rate * multiplier,
+        )
         return self._current_satiety
 
     def restore_satiety(self, amount: float) -> float:

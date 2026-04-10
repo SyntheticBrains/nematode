@@ -1637,12 +1637,14 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     # Create orchestrator
     food_policy = FoodCompetitionPolicy(multi_agent_config.food_competition)
+    phenotypes = {ac.id: ac.social_phenotype for ac in agent_configs}
     sim = MultiAgentSimulation(
         env=env,
         agents=agents,
         food_policy=food_policy,
         social_detection_radius=multi_agent_config.social_detection_radius,
         termination_policy=multi_agent_config.termination_policy,
+        agent_phenotypes=phenotypes,
     )
 
     # Set up export directories
@@ -1750,6 +1752,10 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 mean_success=result.mean_agent_success,
                 food_gini_coefficient=result.food_gini_coefficient,
                 csvfile=summary_csv_file,
+                social_feeding_events=result.social_feeding_events,
+                aggregation_index=result.aggregation_index,
+                alarm_evasion_events=result.alarm_evasion_events,
+                food_sharing_events=result.food_sharing_events,
             )
             total_food_all_runs += result.total_food_collected
             total_competition_all_runs += result.food_competition_events

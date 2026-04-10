@@ -610,3 +610,91 @@ The configuration system SHALL support the `lstmppo` brain type with LSTM/GRU-sp
 - **AND** large thermotaxis + stationary predator configs SHALL be provided for both derivative and temporal modes
 - **AND** all SHALL use sensory modules compatible with temporal sensing
 - **AND** all SHALL use `rnn_type: gru` as the default (GRU outperforms LSTM across all evaluated environments)
+
+### Requirement: Multi-Agent Configuration Schema
+
+The configuration system SHALL support an optional `multi_agent` section for multi-agent scenarios.
+
+#### Scenario: Multi-Agent Disabled (Default)
+
+- **GIVEN** a config without `multi_agent` section
+- **THEN** simulation SHALL run in single-agent mode
+
+#### Scenario: Homogeneous Population
+
+- **GIVEN** `multi_agent.enabled: true` with `count: N`
+- **THEN** N agents SHALL be created using the top-level `brain` config
+
+#### Scenario: Heterogeneous Population
+
+- **GIVEN** `multi_agent.enabled: true` with `agents` list
+- **THEN** agents SHALL be created with per-agent brain configs
+
+#### Scenario: Validation
+
+- Count and agents are mutually exclusive
+- Enabled requires either count or agents
+
+### Requirement: Multi-Agent Config Parameters
+
+#### Scenario: Default Parameters
+
+- `food_competition` defaults to "first_arrival" (valid: "first_arrival", "random")
+- `social_detection_radius` defaults to 5 (positive integer)
+- `termination_policy` defaults to "freeze" (valid: "freeze", "remove", "end_all")
+- `min_agent_distance` defaults to 5 (positive integer)
+
+### Requirement: Per-Agent Configuration
+
+Each agent supports: `id`, `brain`, `weights_path`, `social_phenotype`.
+
+#### Scenario: Shared vs Per-Agent Config
+
+- All agents share: environment, reward, satiety, sensing, max_steps
+- Per-agent: brain config, pre-trained weights, social phenotype
+
+### Requirement: Multi-Agent Model Persistence
+
+- Multi-agent saves: `final_agent_0.pt`, `final_agent_1.pt`, etc.
+- Single-agent saves: `final.pt` (unchanged)
+
+### Requirement: Multi-Agent CSV Export
+
+#### Scenario: Per-Agent Results
+
+- `simulation_results.csv` includes `agent_id` column (one row per agent per episode)
+- Single-agent: agent_id is "default"
+
+#### Scenario: Aggregate Summary
+
+- `multi_agent_summary.csv` with: run, total_food, competition_events, proximity_events, alive_at_end, mean_success, gini, social_feeding_events, aggregation_index, alarm_evasion_events, food_sharing_events
+
+### Requirement: Pheromone Configuration Schema
+
+The environment config SHALL support pheromone parameters.
+
+#### Scenario: Pheromone Config
+
+- `environment.pheromones.enabled`, `food_marking`, `alarm`, `aggregation` (optional) sub-blocks
+- Each type: `emission_strength`, `spatial_decay_constant`, `temporal_half_life`, `max_sources`
+
+#### Scenario: Defaults
+
+- Pheromones disabled by default; aggregation is None unless explicitly configured
+
+### Requirement: SensingConfig Pheromone and Aggregation Modes
+
+- `pheromone_food_mode`, `pheromone_alarm_mode`, `pheromone_aggregation_mode` all default to ORACLE
+- `apply_sensing_mode()` translates oracle modules to temporal variants when non-oracle
+- `validate_sensing_config()` auto-enables STAM for derivative/temporal modes
+
+### Requirement: Social Feeding Configuration
+
+- `environment.social_feeding` block with `enabled`, `decay_reduction`, `solitary_decay`
+- Defaults: disabled, decay_reduction=0.7, solitary_decay=1.0
+- Detection radius shared with `multi_agent.social_detection_radius`
+
+### Requirement: Per-Agent Social Phenotype
+
+- `AgentConfig.social_phenotype`: "social" (default) or "solitary"
+- Homogeneous configs default all agents to "social"
