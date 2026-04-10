@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from quantumnematode.env.env import (
     DynamicForagingEnvironment,
     ForagingParams,
@@ -113,7 +112,7 @@ class TestAggregationPheromoneField:
                 ),
             )
         # Query gradient at (10, 10) — should point toward (15, 10) = positive x
-        dx, dy = field.get_gradient((10, 10), current_step=0)
+        dx, _dy = field.get_gradient((10, 10), current_step=0)
         assert dx > 0  # Points toward cluster (higher x)
 
     def test_max_sources_enforced(self) -> None:

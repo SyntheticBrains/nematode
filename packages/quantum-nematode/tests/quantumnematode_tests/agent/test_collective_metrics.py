@@ -142,7 +142,9 @@ class TestAgentPhenotypeValidation:
         brain = MLPPPOBrain(config=config, num_actions=4)
         env.add_agent("agent_0")
         agent = QuantumNematodeAgent(
-            brain=brain, env=env, agent_id="agent_0",
+            brain=brain,
+            env=env,
+            agent_id="agent_0",
             satiety_config=SatietyConfig(initial_satiety=200.0),
         )
 

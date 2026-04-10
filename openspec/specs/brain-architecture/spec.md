@@ -310,3 +310,110 @@ The SimulationResult SHALL include optional per-objective scores for multi-senso
 - **THEN** base Phase 0 score components SHALL be weighted at 85%
 - **AND** multi-objective components SHALL be weighted at 15%
 - **AND** the formula SHALL be documented for reproducibility
+
+### Requirement: Extended BrainParams for Social Sensing
+
+The BrainParams class SHALL include an optional field for social proximity information in multi-agent scenarios.
+
+#### Scenario: Social Proximity Field
+
+- **GIVEN** a brain receiving sensory input in a multi-agent environment
+- **WHEN** BrainParams is populated
+- **THEN** `nearby_agents_count: int | None` SHALL be available
+- **AND** this field SHALL default to None in single-agent mode
+
+### Requirement: Social Proximity Sensory Module
+
+The system SHALL provide a sensory module for social proximity detection in multi-agent scenarios.
+
+#### Scenario: Module Registration
+
+- **GIVEN** the sensory module system
+- **THEN** `SOCIAL_PROXIMITY` SHALL be a valid ModuleName with `classical_dim=1`
+
+#### Scenario: Feature Extraction
+
+- **GIVEN** BrainParams with `nearby_agents_count=N`
+- **WHEN** features are extracted
+- **THEN** strength SHALL be `min(N, 10) / 10.0`, clamped to [0, 1]
+
+### Requirement: Extended BrainParams for Pheromone Sensing
+
+The BrainParams class SHALL include optional fields for pheromone concentration and gradient information.
+
+#### Scenario: Pheromone Oracle Fields
+
+- **WHEN** BrainParams is populated in oracle mode
+- **THEN** `pheromone_food_gradient_strength`, `pheromone_food_gradient_direction`, `pheromone_alarm_gradient_strength`, `pheromone_alarm_gradient_direction` (all `float | None`) SHALL be available
+
+#### Scenario: Pheromone Temporal Fields
+
+- **WHEN** BrainParams is populated in temporal/derivative mode
+- **THEN** `pheromone_food_concentration`, `pheromone_alarm_concentration`, `pheromone_food_dconcentration_dt`, `pheromone_alarm_dconcentration_dt` (all `float | None`) SHALL be available
+
+#### Scenario: Pheromone Fields Backward Compatibility
+
+- **GIVEN** pheromones disabled
+- **THEN** all pheromone BrainParams fields SHALL be None
+
+### Requirement: Pheromone Sensory Modules
+
+The system SHALL provide sensory modules for pheromone detection following the oracle/temporal pattern.
+
+#### Scenario: Oracle Pheromone Modules
+
+- `PHEROMONE_FOOD` and `PHEROMONE_ALARM` SHALL be registered with `classical_dim=2`
+- Strength encodes gradient magnitude [0, 1], angle encodes egocentric direction [-1, 1]
+
+#### Scenario: Temporal Pheromone Modules
+
+- `PHEROMONE_FOOD_TEMPORAL` and `PHEROMONE_ALARM_TEMPORAL` SHALL be registered with `classical_dim=2`
+- Strength encodes scalar concentration [0, 1], angle encodes tanh(dC/dt * derivative_scale) [-1, 1]
+
+### Requirement: STAM Pheromone Channel Extension
+
+The STAM buffer SHALL support variable channel counts for pheromone sensing.
+
+#### Scenario: 4-Channel Mode (Base)
+
+- **GIVEN** pheromones disabled
+- **THEN** STAM SHALL use 4 channels and MEMORY_DIM=11
+
+#### Scenario: 6-Channel Mode (Food-Marking + Alarm)
+
+- **GIVEN** pheromones enabled (food-marking + alarm)
+- **THEN** STAM SHALL use 6 channels and MEMORY_DIM=15
+- **AND** channels 4, 5 correspond to pheromone_food, pheromone_alarm
+
+#### Scenario: 7-Channel Mode (+ Aggregation)
+
+- **GIVEN** pheromones enabled with aggregation configured
+- **THEN** STAM SHALL use 7 channels and MEMORY_DIM=17
+- **AND** channel 6 corresponds to pheromone_aggregation
+
+### Requirement: BrainParams Aggregation Pheromone Fields
+
+BrainParams SHALL include fields for aggregation pheromone sensing data.
+
+#### Scenario: Oracle Mode
+
+- `pheromone_aggregation_gradient_strength` and `pheromone_aggregation_gradient_direction` (both `float | None`)
+
+#### Scenario: Temporal Mode
+
+- `pheromone_aggregation_concentration` and `pheromone_aggregation_dconcentration_dt` (both `float | None`)
+
+#### Scenario: Default None
+
+- **GIVEN** aggregation not configured
+- **THEN** all 4 aggregation fields SHALL be None
+
+### Requirement: Aggregation Pheromone Sensing Modules
+
+#### Scenario: Oracle Module
+
+- `PHEROMONE_AGGREGATION` SHALL be registered with `classical_dim=2` (strength + relative angle)
+
+#### Scenario: Temporal Module
+
+- `PHEROMONE_AGGREGATION_TEMPORAL` SHALL be registered with `classical_dim=2` (concentration + derivative)
