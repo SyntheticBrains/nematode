@@ -1750,6 +1750,10 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 mean_success=result.mean_agent_success,
                 food_gini_coefficient=result.food_gini_coefficient,
                 csvfile=summary_csv_file,
+                social_feeding_events=result.social_feeding_events,
+                aggregation_index=result.aggregation_index,
+                alarm_evasion_events=result.alarm_evasion_events,
+                food_sharing_events=result.food_sharing_events,
             )
             total_food_all_runs += result.total_food_collected
             total_competition_all_runs += result.food_competition_events
