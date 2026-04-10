@@ -62,9 +62,10 @@ Formal evaluation logbook documenting: learning curves, classical strain quantif
 
 **Configs:**
 
-- `configs/scenarios/multi_agent_foraging/` — 6 new configs
-- `configs/scenarios/multi_agent_pursuit/` — 2 new configs
-- `configs/scenarios/foraging/` — 1 new single-agent temporal baseline
+- `configs/scenarios/multi_agent_foraging/` — 4 new configs (2-agent, 10-agent, full-stack, temporal pheromone)
+- `configs/scenarios/multi_agent_pursuit/` — 2 new configs (alarm-enabled, alarm-disabled)
+- `configs/scenarios/foraging/` — 2 new single-agent baselines (oracle, temporal) with environment params matching multi-agent competition configs
+- `configs/scenarios/multi_agent_foraging/` — 1 new temporal no-pheromone config
 
 **Docs:**
 

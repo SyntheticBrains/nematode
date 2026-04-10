@@ -82,17 +82,21 @@
 
   - 20x20, 5 agents, 3 food, 2 pursuit predators, pheromones disabled
 
-- [ ] 2.6 Create `mlpppo_small_1agent_foraging_oracle.yml`
+- [ ] 2.6 Create `configs/scenarios/foraging/mlpppo_small_1agent_foraging_oracle.yml`
 
   - 20x20, 1 agent, 3 food, single-agent baseline (no multi_agent block)
+  - Placed in `foraging/` (single-agent), not `multi_agent_foraging/`
+  - Environment params (grid_size, food, reward, satiety) must match multi-agent competition configs
 
 - [ ] 2.7 Create `lstmppo_small_5agents_competition_temporal.yml`
 
   - 20x20, 5 agents, 3 food, LSTM PPO GRU, temporal chemotaxis + STAM
 
-- [ ] 2.8 Create `lstmppo_small_1agent_foraging_temporal.yml`
+- [ ] 2.8 Create `configs/scenarios/foraging/lstmppo_small_1agent_foraging_temporal.yml`
 
   - 20x20, 1 agent, 3 food, LSTM PPO GRU, temporal chemotaxis + STAM
+  - Placed in `foraging/` (single-agent)
+  - Environment params must match multi-agent temporal competition configs
 
 - [ ] 2.9 Create `lstmppo_small_5agents_competition_pheromone_temporal.yml`
 
@@ -122,9 +126,19 @@
 
 - [ ] 4.4 Campaign C: Collective predator response (2000 eps, 4 seeds, 2 configs)
 
-- [ ] 4.5 Campaign D: Temporal pheromone value (4000 eps, 4 seeds, 2 configs)
+- [ ] 4.5 Campaign D: Temporal pheromone value (reuse B2 no-pheromone data + 4000 eps, 4 seeds, 1 new config)
 
-- [ ] 4.6 Game-theoretic indicator analysis (post-hoc from CSV data)
+- [ ] 4.6 Game-theoretic indicator analysis from CSV data
+
+  - Food Gini trajectory (post-hoc from Campaign A/B CSVs)
+  - Cooperation/competition ratio (post-hoc from Campaign A CSVs)
+  - Territorial index trajectory (post-hoc from Campaign B1 CSVs)
+
+- [ ] 4.7 Best-response analysis (requires additional simulation runs)
+
+  - Load trained 5-agent weights from Campaign B1
+  - Run modified session: 4 agents frozen at step 0, 1 active
+  - Compare active agent food rate to full 5-agent rate
 
 ## Phase 5: Documentation & Conclusion
 
@@ -153,7 +167,7 @@ ______________________________________________________________________
 | 1. New Metrics | 12 | None |
 | 2. Scenario Configs | 9 | None |
 | 3. Verification | 4 | Phases 1, 2 |
-| 4. Evaluation Campaigns | 6 | Phase 3 |
+| 4. Evaluation Campaigns | 7 | Phase 3 |
 | 5. Documentation | 7 | Phase 4 |
 
-**Total: 38 tasks across 5 phases**
+**Total: 39 tasks across 5 phases**

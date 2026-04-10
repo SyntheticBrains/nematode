@@ -82,7 +82,9 @@ Edge cases:
 | Config | Purpose |
 |--------|---------|
 | lstmppo_small_1agent_foraging_temporal | Single-agent temporal ceiling |
-| lstmppo_small_5agents_competition_temporal | 5-agent temporal scaling |
+| lstmppo_small_5agents_competition_temporal | 5-agent temporal scaling (no pheromones) |
+
+Note: `lstmppo_small_5agents_competition_temporal` is the **no-pheromone temporal baseline** — temporal chemotaxis + STAM only, no pheromone modules. It is reused in Campaign D as the control against the pheromone-enabled variant (same config, different comparison partner).
 
 **Campaign C (2000 eps, 4 seeds)** — Collective predator response:
 
@@ -95,17 +97,19 @@ Edge cases:
 
 | Config | Purpose |
 |--------|---------|
-| lstmppo_small_5agents_competition_temporal | No pheromones, temporal |
+| lstmppo_small_5agents_competition_temporal | No-pheromone temporal control (same as B2) |
 | lstmppo_small_5agents_competition_pheromone_temporal | Full pheromone stack, temporal |
 
-### Decision 4: Game-Theoretic Indicators (Post-Hoc Analysis)
+Campaign D reuses the B2 no-pheromone run data — no duplicate execution needed. The comparison is: does adding pheromone modules (food-marking, alarm, aggregation) improve temporal-mode multi-agent foraging?
 
-All indicators computed from CSV data during evaluation — no new runtime code:
+### Decision 4: Game-Theoretic Indicators
 
-- **Food Gini trajectory**: Plot `food_gini_coefficient` from multi_agent_summary.csv over episodes. Increasing trend = competitive dynamics emerging.
-- **Best-response analysis**: After Campaign B1, freeze 4 of 5 trained agents and run the 5th agent solo. Compare food collection rate. If rate changes significantly, agents have learned strategic interaction.
-- **Cooperation/competition ratio**: `food_sharing_events / max(food_competition_events, 1)` from summary CSV. Ratio > 1 = cooperative tendency, < 1 = competitive.
-- **Territorial index trajectory**: Plot `territorial_index` over episodes. Increasing trend = spatial specialization.
+Most indicators computed from CSV data — no new runtime code. One (best-response) requires additional simulation runs.
+
+- **Food Gini trajectory**: Plot `food_gini_coefficient` from multi_agent_summary.csv over episodes. Increasing trend = competitive dynamics emerging. *(CSV post-hoc)*
+- **Cooperation/competition ratio**: `food_sharing_events / max(food_competition_events, 1)` from summary CSV. Ratio > 1 = cooperative tendency, < 1 = competitive. *(CSV post-hoc)*
+- **Territorial index trajectory**: Plot `territorial_index` over episodes. Increasing trend = spatial specialization. *(CSV post-hoc)*
+- **Best-response analysis**: After Campaign B1, load trained 5-agent weights and run a modified session: 4 agents with `termination_policy: freeze` terminated at step 0 (present but inert), 1 agent active. Compare the active agent's food collection rate to its rate in the full 5-agent run. If rate changes significantly, agents have learned strategic interaction. *(Requires additional simulation runs with saved weights)*
 
 ### Decision 5: Logbook 011 Structure
 

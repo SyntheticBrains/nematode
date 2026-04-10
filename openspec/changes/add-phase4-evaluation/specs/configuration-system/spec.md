@@ -8,7 +8,9 @@ The configuration system SHALL provide scenario configs for Phase 4 evaluation.
 
 - **GIVEN** evaluation needs single-agent vs multi-agent comparison
 - **THEN** single-agent foraging configs SHALL exist for both oracle and temporal modes
-- **AND** they SHALL use identical environment parameters (20x20 grid, 3 food) to multi-agent configs
+- **AND** they SHALL use identical environment parameters (20x20 grid, 3 food, same reward/satiety) to multi-agent configs
+- **AND** they SHALL be placed in `configs/scenarios/foraging/` (single-agent directory)
+- **AND** classical strain comparison uses per-agent food rate (total food / agents / episodes), not success rate, since multi-agent agents share the same food pool
 
 #### Scenario: Agent Scaling Series
 
