@@ -217,7 +217,8 @@ class QuantumNematodeAgent:
         else:
             self.env = env
 
-        self.path: list[GridPosition] = [(self.env.agent_pos[0], self.env.agent_pos[1])]
+        _init_pos = self.env.agents[self.agent_id].position
+        self.path: list[GridPosition] = [(_init_pos[0], _init_pos[1])]
         # Track food positions at each step for chemotaxis validation
         self.food_history: FoodHistory = [list(self.env.foods)]
         self.max_body_length = min(
@@ -351,17 +352,15 @@ class QuantumNematodeAgent:
         )
 
     def _get_agent_position_tuple(self) -> tuple[float, float]:
-        """Get agent position as a 2-element float tuple.
+        """Get this agent's position as a 2-element float tuple.
 
         Returns
         -------
         tuple[float, float]
             Agent position (x, y) as floats.
         """
-        agent_pos = tuple(float(x) for x in self.env.agent_pos[:2])
-        if len(agent_pos) != 2:  # noqa: PLR2004
-            return (float(self.env.agent_pos[0]), float(self.env.agent_pos[1]))
-        return agent_pos  # type: ignore[return-value]
+        pos = self.env.agents[self.agent_id].position
+        return (float(pos[0]), float(pos[1]))
 
     def _prepare_input_data(self, gradient_strength: float) -> list[float] | None:
         """Prepare input data for quantum brain data re-uploading.
