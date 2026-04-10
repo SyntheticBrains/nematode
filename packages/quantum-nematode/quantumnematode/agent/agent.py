@@ -953,6 +953,7 @@ class QuantumNematodeAgent:
             stuck_position_count=stuck_position_count,
             current_step=self._episode_tracker.steps,
             max_steps=max_steps,
+            agent_id=self.agent_id,
         )
 
     def reset_environment(self) -> None:

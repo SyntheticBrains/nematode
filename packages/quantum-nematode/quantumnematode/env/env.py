@@ -1880,6 +1880,14 @@ class DynamicForagingEnvironment(BaseEnvironment):
         ]
         return min(distances)
 
+    def get_nearest_food_distance_for(self, agent_id: str) -> int | None:
+        """Get Manhattan distance to nearest food from a specific agent's position."""
+        if not self.foods:
+            return None
+        pos = self.agents[agent_id].position
+        distances = [abs(pos[0] - food[0]) + abs(pos[1] - food[1]) for food in self.foods]
+        return min(distances)
+
     def update_predators(self) -> None:
         """Update all predator positions.
 
@@ -1967,6 +1975,16 @@ class DynamicForagingEnvironment(BaseEnvironment):
         agent_pos = self.agent_pos
         return min(
             abs(agent_pos[0] - pred.position[0]) + abs(agent_pos[1] - pred.position[1])
+            for pred in self.predators
+        )
+
+    def get_nearest_predator_distance_for(self, agent_id: str) -> float | None:
+        """Return Manhattan distance to nearest predator from a specific agent."""
+        if not self.predator.enabled or not self.predators:
+            return None
+        pos = self.agents[agent_id].position
+        return min(
+            abs(pos[0] - pred.position[0]) + abs(pos[1] - pred.position[1])
             for pred in self.predators
         )
 
