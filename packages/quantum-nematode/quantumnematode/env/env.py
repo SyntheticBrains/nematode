@@ -384,6 +384,14 @@ class SocialFeedingParams:
     decay_reduction: float = 0.7
     solitary_decay: float = 1.0
 
+    def __post_init__(self) -> None:  # noqa: D105
+        if self.decay_reduction <= 0 or self.decay_reduction > 1:
+            msg = f"decay_reduction must be in (0, 1], got {self.decay_reduction}"
+            raise ValueError(msg)
+        if self.solitary_decay <= 0:
+            msg = f"solitary_decay must be > 0, got {self.solitary_decay}"
+            raise ValueError(msg)
+
 
 @dataclass
 class AgentState:
@@ -3395,10 +3403,15 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Notes
         -----
         Config objects (ForagingParams, PredatorParams, HealthParams, ThermotaxisParams,
-        AerotaxisParams) are shared between the original and copy, not deep-copied.
-        This is intentional as these are treated as immutable configuration. Runtime
-        state (foods, visited_cells, agent_hp, predator positions, thermotaxis/aerotaxis
-        counters) is properly copied.
+        AerotaxisParams, PheromoneParams, SocialFeedingParams) are shared between
+        the original and copy, not deep-copied. This is intentional as these are
+        treated as immutable configuration. Runtime state (foods, visited_cells,
+        agent_hp, predator positions, thermotaxis/aerotaxis counters) is properly
+        copied. Pheromone fields are intentionally recreated empty — in multi-agent
+        mode, copy() is used to create fresh environments between episodes, so
+        pheromone sources from the previous episode should not carry over.
+        Manyworlds mode does not currently support multi-agent pheromone state
+        branching; this is a known limitation to be addressed if needed.
         """
         new_env = DynamicForagingEnvironment(
             grid_size=self.grid_size,

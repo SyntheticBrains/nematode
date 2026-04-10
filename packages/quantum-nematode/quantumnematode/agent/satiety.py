@@ -66,6 +66,9 @@ class SatietyManager:
         float
             New satiety level after decay.
         """
+        if multiplier < 0:
+            msg = f"multiplier must be non-negative, got {multiplier}"
+            raise ValueError(msg)
         self._current_satiety = max(
             0.0,
             self._current_satiety - self.decay_rate * multiplier,

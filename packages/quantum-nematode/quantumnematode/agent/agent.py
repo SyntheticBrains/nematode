@@ -558,16 +558,13 @@ class QuantumNematodeAgent:
                         self._stam.compute_temporal_derivative(5)
                     )
                 # Aggregation pheromone derivative (channel 6)
-                if self._stam.num_channels > 6:  # noqa: PLR2004
-                    pheromone_aggregation_mode_val = getattr(
-                        sensing,
-                        "pheromone_aggregation_mode",
-                        None,
+                if (
+                    self._stam.num_channels > 6  # noqa: PLR2004
+                    and pheromone_aggregation_mode == SensingMode.DERIVATIVE
+                ):
+                    result["pheromone_aggregation_dconcentration_dt"] = (
+                        self._stam.compute_temporal_derivative(6)
                     )
-                    if pheromone_aggregation_mode_val == SensingMode.DERIVATIVE:
-                        result["pheromone_aggregation_dconcentration_dt"] = (
-                            self._stam.compute_temporal_derivative(6)
-                        )
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
 
