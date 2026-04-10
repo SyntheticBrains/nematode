@@ -1358,6 +1358,8 @@ _MULTI_AGENT_SUMMARY_FIELDNAMES = [
     "aggregation_index",
     "alarm_evasion_events",
     "food_sharing_events",
+    "territorial_index",
+    "alarm_response_rate",
 ]
 
 
@@ -1442,6 +1444,8 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
     aggregation_index: float = 0.0,
     alarm_evasion_events: int = 0,
     food_sharing_events: int = 0,
+    territorial_index: float = 0.0,
+    alarm_response_rate: float = 0.0,
 ) -> None:
     """Write one episode summary row to the multi-agent summary CSV."""
     writer.writerow(
@@ -1457,6 +1461,8 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
             "aggregation_index": f"{aggregation_index:.4f}",
             "alarm_evasion_events": alarm_evasion_events,
             "food_sharing_events": food_sharing_events,
+            "territorial_index": f"{territorial_index:.4f}",
+            "alarm_response_rate": f"{alarm_response_rate:.4f}",
         },
     )
     if csvfile is not None:

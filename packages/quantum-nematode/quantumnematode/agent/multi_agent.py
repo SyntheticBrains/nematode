@@ -36,6 +36,9 @@ ALARM_EVASION_THRESHOLD = 0.1
 # Number of steps to look back for food-sharing event detection
 FOOD_SHARING_LOOKBACK_STEPS = 20
 
+# Number of steps after alarm emission to check for direction change response
+ALARM_RESPONSE_WINDOW = 5
+
 
 # ── Food Competition ─────────────────────────────────────────────────────────
 
@@ -146,6 +149,13 @@ class MultiAgentEpisodeResult:
     food_sharing_events : int
         Non-emitter agent approached a food-marking pheromone source within
         FOOD_SHARING_LOOKBACK_STEPS of emission.
+    territorial_index : float
+        Spatial Gini coefficient of per-agent foraging spreads. Each agent's
+        spread is the mean Manhattan distance of their food collection positions
+        from their centroid. 0 = equal foraging patterns, 1 = maximal specialization.
+    alarm_response_rate : float
+        Fraction of alarm response opportunities where a nearby agent changed
+        direction within ALARM_RESPONSE_WINDOW steps of an alarm emission.
     """
 
     agent_results: dict[str, EpisodeResult]
@@ -160,6 +170,8 @@ class MultiAgentEpisodeResult:
     aggregation_index: float = 0.0
     alarm_evasion_events: int = 0
     food_sharing_events: int = 0
+    territorial_index: float = 0.0
+    alarm_response_rate: float = 0.0
 
 
 def _compute_gini(values: list[int]) -> float:
@@ -215,6 +227,55 @@ def _compute_aggregation_index(
     return total_proximity / n_pairs
 
 
+def _compute_territorial_index(
+    per_agent_food_positions: dict[str, list[tuple[int, int]]],
+) -> float:
+    """Compute territorial index from per-agent food collection positions.
+
+    Spatial Gini coefficient of per-agent foraging spreads. Each agent's
+    spread is the mean Manhattan distance of food positions from the centroid.
+    High Gini = some agents forage tightly while others range widely.
+
+    Parameters
+    ----------
+    per_agent_food_positions : dict[str, list[tuple[int, int]]]
+        Food collection positions per agent.
+
+    Returns
+    -------
+    float
+        Territorial index in [0, 1]. 0 = equal, 1 = maximal specialization.
+    """
+    # Only consider agents that collected food
+    spreads: list[float] = []
+    for positions in per_agent_food_positions.values():
+        if not positions:
+            continue
+        if len(positions) == 1:
+            spreads.append(0.0)
+            continue
+        # Compute centroid
+        cx = sum(p[0] for p in positions) / len(positions)
+        cy = sum(p[1] for p in positions) / len(positions)
+        # Mean Manhattan distance from centroid
+        mean_dist = sum(abs(p[0] - cx) + abs(p[1] - cy) for p in positions) / len(positions)
+        spreads.append(mean_dist)
+
+    if len(spreads) < 2:  # noqa: PLR2004
+        return 0.0
+
+    # Gini coefficient of spreads
+    sorted_spreads = sorted(spreads)
+    n = len(sorted_spreads)
+    total = sum(sorted_spreads)
+    if total == 0:
+        return 0.0
+    weighted_sum = 0.0
+    for i, v in enumerate(sorted_spreads):
+        weighted_sum += (2 * (i + 1) - n - 1) * v
+    return weighted_sum / (n * total)
+
+
 # ── Multi-Agent Simulation Orchestrator ──────────────────────────────────────
 
 
@@ -261,6 +322,16 @@ class MultiAgentSimulation:
         init=False,
     )
     _per_agent_food: dict[str, int] = field(default_factory=dict, init=False)
+    _per_agent_food_positions: dict[str, list[tuple[int, int]]] = field(
+        default_factory=dict,
+        init=False,
+    )
+    _alarm_response_opportunities: int = field(default=0, init=False)
+    _alarm_response_successes: int = field(default=0, init=False)
+    _alarm_response_buffer: list[tuple[int, str, dict[str, str]]] = field(
+        default_factory=list,
+        init=False,
+    )
     _agent_terminations: dict[str, TerminationReason] = field(
         default_factory=dict,
         init=False,
@@ -380,6 +451,10 @@ class MultiAgentSimulation:
         self._prev_alarm_concentration = {}
         self._food_marking_buffer = []
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
+        self._per_agent_food_positions = {a.agent_id: [] for a in self.agents}
+        self._alarm_response_opportunities = 0
+        self._alarm_response_successes = 0
+        self._alarm_response_buffer = []
         self._agent_terminations = {}
 
         # Episode preparation for each agent
@@ -470,6 +545,22 @@ class MultiAgentSimulation:
                     if actual_damage > 0 and pheromones_enabled:
                         agent_pos = self.env.agents[aid].position
                         self.env.emit_alarm_pheromone(agent_pos, current_step, aid)
+                        # Record nearby agents' directions for alarm response tracking
+                        nearby_dirs: dict[str, str] = {}
+                        for other in alive:
+                            oid = other.agent_id
+                            if oid == aid or oid not in self.env.agents:
+                                continue
+                            opos = self.env.agents[oid].position
+                            dist = abs(opos[0] - agent_pos[0]) + abs(
+                                opos[1] - agent_pos[1],
+                            )
+                            if dist <= self.social_detection_radius:
+                                nearby_dirs[oid] = str(self.env.agents[oid].direction)
+                        if nearby_dirs:
+                            self._alarm_response_buffer.append(
+                                (current_step, aid, nearby_dirs),
+                            )
                     if self.env.agents[aid].hp <= 0:
                         self._handle_termination(
                             agent,
@@ -626,6 +717,33 @@ class MultiAgentSimulation:
                             self._food_marking_buffer.remove((fpos, _fstep, emitter_id))
                             break
 
+            # Alarm response: check if agents changed direction after alarm emissions
+            expired: list[int] = []
+            for idx, (emit_step, _emitter_id, nearby_dirs) in enumerate(
+                self._alarm_response_buffer,
+            ):
+                if current_step - emit_step > ALARM_RESPONSE_WINDOW:
+                    expired.append(idx)
+                    continue
+                if current_step - emit_step < 1:
+                    continue  # Need at least 1 step to observe change
+                for oid, original_dir in list(nearby_dirs.items()):
+                    if oid not in self.env.agents:
+                        continue
+                    current_dir = str(self.env.agents[oid].direction)
+                    if current_dir != original_dir:
+                        self._alarm_response_successes += 1
+                        self._alarm_response_opportunities += 1
+                        # Remove this agent from tracking (counted once)
+                        del nearby_dirs[oid]
+                    elif current_step - emit_step == ALARM_RESPONSE_WINDOW:
+                        # Window expired without change — count as non-response
+                        self._alarm_response_opportunities += 1
+                        del nearby_dirs[oid]
+            # Remove fully expired entries
+            for idx in reversed(expired):
+                self._alarm_response_buffer.pop(idx)
+
         # ── EPISODE END ──────────────────────────────────────────
         # Terminate remaining alive agents (max_steps reached)
         for agent in list(self._alive_agents):
@@ -669,6 +787,7 @@ class MultiAgentSimulation:
                 consumed = self.env.consume_food_for(aid)
                 if consumed is not None:
                     self._per_agent_food[aid] += 1
+                    self._per_agent_food_positions[aid].append(consumed)
                     agent._episode_tracker.track_food_collection()
                     # Restore satiety (same logic as FoodConsumptionHandler)
                     satiety_gain = (
@@ -824,4 +943,10 @@ class MultiAgentSimulation:
             aggregation_index=agg_index,
             alarm_evasion_events=self._alarm_evasion_events,
             food_sharing_events=self._food_sharing_events,
+            territorial_index=_compute_territorial_index(self._per_agent_food_positions),
+            alarm_response_rate=(
+                self._alarm_response_successes / self._alarm_response_opportunities
+                if self._alarm_response_opportunities > 0
+                else 0.0
+            ),
         )

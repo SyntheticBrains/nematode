@@ -36,12 +36,14 @@ For each agent, compute the mean distance of their food collection positions fro
 Requires tracking `_per_agent_food_positions: dict[str, list[tuple[int, int]]]` in `_resolve_food_step()`. Populated alongside existing `_per_agent_food` counter. Agents that collect no food contribute 0 spread.
 
 Edge cases:
+
 - < 2 agents with food: return 0.0 (no territorial comparison possible)
 - Agent with 1 food item: spread = 0 (single point has no spread)
 
 ### Decision 2: alarm_response_rate via Direction Change Tracking
 
 When an alarm pheromone is emitted (agent takes predator damage):
+
 1. Record `(position, step, emitter_id)` in a buffer
 2. For each non-emitter agent within `social_detection_radius` at emission time, record their current direction
 3. Over the next `ALARM_RESPONSE_WINDOW = 5` steps, check if that agent's direction changed
@@ -54,6 +56,7 @@ ALARM_RESPONSE_WINDOW = 5
 This measures *causal* response to alarm signals — did the alarm emission cause other agents to react? The existing `alarm_evasion_events` metric counts zone exits but doesn't establish causality (agents may exit alarm zones without having been influenced by the alarm).
 
 Edge cases:
+
 - No alarm emissions: rate = 0.0
 - No nearby agents at emission time: no opportunities, rate = 0.0
 
@@ -115,7 +118,7 @@ Most indicators computed from CSV data — no new runtime code. One (best-respon
 
 Follow the template established by Logbooks 007-010:
 
-```
+```text
 # Logbook 011: Multi-Agent Phase 4 Evaluation
 ## Study Overview
 ## Campaign A: Post-Bug-Fix Validation

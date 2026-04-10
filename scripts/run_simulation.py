@@ -1756,6 +1756,8 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 aggregation_index=result.aggregation_index,
                 alarm_evasion_events=result.alarm_evasion_events,
                 food_sharing_events=result.food_sharing_events,
+                territorial_index=result.territorial_index,
+                alarm_response_rate=result.alarm_response_rate,
             )
             total_food_all_runs += result.total_food_collected
             total_competition_all_runs += result.food_competition_events
