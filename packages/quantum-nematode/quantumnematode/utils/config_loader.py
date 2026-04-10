@@ -592,9 +592,18 @@ class PheromoneConfig(BaseModel):
             max_sources=50,
         ),
     )
+    aggregation: PheromoneTypeConfigYAML | None = None
 
     def to_params(self) -> PheromoneParams:
         """Convert to PheromoneParams for environment initialization."""
+        agg_config = None
+        if self.aggregation is not None:
+            agg_config = PheromoneTypeConfig(
+                emission_strength=self.aggregation.emission_strength,
+                spatial_decay_constant=self.aggregation.spatial_decay_constant,
+                temporal_half_life=self.aggregation.temporal_half_life,
+                max_sources=self.aggregation.max_sources,
+            )
         return PheromoneParams(
             enabled=self.enabled,
             food_marking=PheromoneTypeConfig(
@@ -609,6 +618,7 @@ class PheromoneConfig(BaseModel):
                 temporal_half_life=self.alarm.temporal_half_life,
                 max_sources=self.alarm.max_sources,
             ),
+            aggregation=agg_config,
         )
 
 
@@ -668,6 +678,7 @@ class SensingConfig(BaseModel):
     aerotaxis_mode: SensingMode = SensingMode.ORACLE
     pheromone_food_mode: SensingMode = SensingMode.ORACLE
     pheromone_alarm_mode: SensingMode = SensingMode.ORACLE
+    pheromone_aggregation_mode: SensingMode = SensingMode.ORACLE
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
@@ -723,6 +734,11 @@ def apply_sensing_mode(
             result.append("pheromone_food_temporal")
         elif module == "pheromone_alarm" and sensing.pheromone_alarm_mode != SensingMode.ORACLE:
             result.append("pheromone_alarm_temporal")
+        elif (
+            module == "pheromone_aggregation"
+            and sensing.pheromone_aggregation_mode != SensingMode.ORACLE
+        ):
+            result.append("pheromone_aggregation_temporal")
         else:
             result.append(module)
 
@@ -755,6 +771,7 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.aerotaxis_mode,
             sensing.pheromone_food_mode,
             sensing.pheromone_alarm_mode,
+            sensing.pheromone_aggregation_mode,
         )
     )
     any_temporal = any(
@@ -766,6 +783,7 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.aerotaxis_mode,
             sensing.pheromone_food_mode,
             sensing.pheromone_alarm_mode,
+            sensing.pheromone_aggregation_mode,
         )
     )
 

@@ -361,6 +361,13 @@ class MultiAgentSimulation:
                 # Update visited cells
                 self.env.agents[aid].visited_cells.add(pos)
 
+            # ── 2b. AGGREGATION PHEROMONE EMISSION ───────────────
+            if pheromones_enabled and self.env.pheromone_field_aggregation is not None:
+                for agent in alive:
+                    aid = agent.agent_id
+                    agent_pos = self.env.agents[aid].position
+                    self.env.emit_aggregation_pheromone(agent_pos, current_step, aid)
+
             # ── 3. FOOD COMPETITION ──────────────────────────────
             self._resolve_food_step(alive, current_step)
 

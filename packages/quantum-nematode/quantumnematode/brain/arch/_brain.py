@@ -289,6 +289,24 @@ class BrainParams(BaseModel):
         description="Temporal derivative of alarm pheromone concentration (derivative mode).",
     )
 
+    # --- Aggregation pheromone sensing ---
+    pheromone_aggregation_gradient_strength: float | None = Field(
+        default=None,
+        description="Aggregation pheromone gradient magnitude (oracle mode).",
+    )
+    pheromone_aggregation_gradient_direction: float | None = Field(
+        default=None,
+        description="Aggregation pheromone gradient direction in radians (oracle mode).",
+    )
+    pheromone_aggregation_concentration: float | None = Field(
+        default=None,
+        description="Scalar aggregation pheromone at agent position (temporal mode).",
+    )
+    pheromone_aggregation_dconcentration_dt: float | None = Field(
+        default=None,
+        description="Temporal derivative of aggregation pheromone concentration (derivative mode).",
+    )
+
 
 @runtime_checkable
 class Brain(Protocol):

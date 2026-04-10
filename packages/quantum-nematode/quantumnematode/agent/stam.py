@@ -47,6 +47,7 @@ def compute_memory_dim(num_channels: int) -> int:
 # Standard channel configurations
 CHANNELS_BASE = 4  # food, temperature, predator, oxygen
 CHANNELS_PHEROMONE = 6  # + pheromone_food, pheromone_alarm
+CHANNELS_PHEROMONE_FULL = 7  # + pheromone_aggregation
 
 # Channel indices (base 4-channel mode)
 IDX_FOOD = 0
@@ -57,6 +58,9 @@ IDX_OXYGEN = 3
 # Additional channel indices (6-channel pheromone mode)
 IDX_PHEROMONE_FOOD = 4
 IDX_PHEROMONE_ALARM = 5
+
+# Additional channel index (7-channel aggregation mode)
+IDX_PHEROMONE_AGGREGATION = 6
 
 
 class STAMBuffer:

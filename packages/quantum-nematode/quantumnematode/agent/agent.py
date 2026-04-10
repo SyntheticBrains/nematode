@@ -193,13 +193,26 @@ class QuantumNematodeAgent:
         # Initialize STAM buffer when enabled
         self._stam: STAMBuffer | None = None
         if self.sensing_config.stam_enabled:
-            # Use 6 channels when pheromones are enabled on the environment
-            from quantumnematode.agent.stam import CHANNELS_BASE, CHANNELS_PHEROMONE
+            from quantumnematode.agent.stam import (
+                CHANNELS_BASE,
+                CHANNELS_PHEROMONE,
+                CHANNELS_PHEROMONE_FULL,
+            )
 
             pheromones_enabled = (
                 env is not None and hasattr(env, "pheromones") and env.pheromones.enabled
             )
-            num_channels = CHANNELS_PHEROMONE if pheromones_enabled else CHANNELS_BASE
+            aggregation_enabled = (
+                pheromones_enabled
+                and env is not None
+                and env.pheromones.aggregation is not None
+            )
+            if aggregation_enabled:
+                num_channels = CHANNELS_PHEROMONE_FULL
+            elif pheromones_enabled:
+                num_channels = CHANNELS_PHEROMONE
+            else:
+                num_channels = CHANNELS_BASE
             self._stam = STAMBuffer(
                 buffer_size=self.sensing_config.stam_buffer_size,
                 decay_rate=self.sensing_config.stam_decay_rate,
@@ -413,6 +426,9 @@ class QuantumNematodeAgent:
 
         pheromone_food_mode = getattr(sensing, "pheromone_food_mode", SensingMode.ORACLE)
         pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", SensingMode.ORACLE)
+        pheromone_aggregation_mode = getattr(
+            sensing, "pheromone_aggregation_mode", SensingMode.ORACLE
+        )
         any_non_oracle = (
             sensing.chemotaxis_mode != SensingMode.ORACLE
             or sensing.nociception_mode != SensingMode.ORACLE
@@ -420,6 +436,7 @@ class QuantumNematodeAgent:
             or sensing.aerotaxis_mode != SensingMode.ORACLE
             or pheromone_food_mode != SensingMode.ORACLE
             or pheromone_alarm_mode != SensingMode.ORACLE
+            or pheromone_aggregation_mode != SensingMode.ORACLE
         )
 
         if not (any_non_oracle or sensing.stam_enabled):
@@ -462,6 +479,17 @@ class QuantumNematodeAgent:
                 position=agent_pos,
                 current_step=step,
             )
+        if (
+            self.env.pheromones.enabled
+            and self.env.pheromone_field_aggregation is not None
+            and pheromone_aggregation_mode != SensingMode.ORACLE
+        ):
+            result["pheromone_aggregation_concentration"] = (
+                self.env.get_pheromone_aggregation_concentration(
+                    position=agent_pos,
+                    current_step=step,
+                )
+            )
 
         # (b) Compute position delta from previous position
         current_pos = tuple(agent_pos)
@@ -494,6 +522,13 @@ class QuantumNematodeAgent:
                     current_step=step,
                 )
                 scalars.extend([pheromone_food_val, pheromone_alarm_val])
+                # Aggregation pheromone channel (index 6)
+                if self._stam.num_channels > 6:  # noqa: PLR2004
+                    pheromone_agg_val = self.env.get_pheromone_aggregation_concentration(
+                        position=pos_2d,
+                        current_step=step,
+                    )
+                    scalars.append(pheromone_agg_val)
 
             self._stam.record(
                 np.array(scalars),
@@ -522,6 +557,15 @@ class QuantumNematodeAgent:
                     result["pheromone_alarm_dconcentration_dt"] = (
                         self._stam.compute_temporal_derivative(5)
                     )
+                # Aggregation pheromone derivative (channel 6)
+                if self._stam.num_channels > 6:  # noqa: PLR2004
+                    pheromone_aggregation_mode_val = getattr(
+                        sensing, "pheromone_aggregation_mode", None
+                    )
+                    if pheromone_aggregation_mode_val == SensingMode.DERIVATIVE:
+                        result["pheromone_aggregation_dconcentration_dt"] = (
+                            self._stam.compute_temporal_derivative(6)
+                        )
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
 
@@ -612,12 +656,18 @@ class QuantumNematodeAgent:
         pheromone_alarm_gradient_direction = None
         pheromone_food_concentration = None
         pheromone_alarm_concentration = None
+        pheromone_aggregation_gradient_strength = None
+        pheromone_aggregation_gradient_direction = None
+        pheromone_aggregation_concentration = None
 
         if self.env.pheromones.enabled:
             from quantumnematode.utils.config_loader import SensingMode
 
             pheromone_food_mode = getattr(sensing, "pheromone_food_mode", SensingMode.ORACLE)
             pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", SensingMode.ORACLE)
+            pheromone_aggregation_mode = getattr(
+                sensing, "pheromone_aggregation_mode", SensingMode.ORACLE
+            )
             step = self._episode_tracker.steps
 
             if pheromone_food_mode == SensingMode.ORACLE:
@@ -647,6 +697,23 @@ class QuantumNematodeAgent:
                     position=agent_pos,
                     current_step=step,
                 )
+
+            if self.env.pheromone_field_aggregation is not None:
+                if pheromone_aggregation_mode == SensingMode.ORACLE:
+                    agg_ph_grad = self.env.get_pheromone_aggregation_gradient(
+                        position=agent_pos,
+                        current_step=step,
+                    )
+                    if agg_ph_grad is not None:
+                        pheromone_aggregation_gradient_strength = agg_ph_grad[0]
+                        pheromone_aggregation_gradient_direction = agg_ph_grad[1]
+                else:
+                    pheromone_aggregation_concentration = (
+                        self.env.get_pheromone_aggregation_concentration(
+                            position=agent_pos,
+                            current_step=step,
+                        )
+                    )
 
         # --- Temporal sensing: scalar concentrations ---
         temporal = self._compute_temporal_data(sensing, temperature, separated_grads, action)
@@ -717,6 +784,13 @@ class QuantumNematodeAgent:
             pheromone_alarm_concentration=pheromone_alarm_concentration,
             pheromone_food_dconcentration_dt=temporal.get("pheromone_food_dconcentration_dt"),
             pheromone_alarm_dconcentration_dt=temporal.get("pheromone_alarm_dconcentration_dt"),
+            # Aggregation pheromone sensing
+            pheromone_aggregation_gradient_strength=pheromone_aggregation_gradient_strength,
+            pheromone_aggregation_gradient_direction=pheromone_aggregation_gradient_direction,
+            pheromone_aggregation_concentration=pheromone_aggregation_concentration,
+            pheromone_aggregation_dconcentration_dt=temporal.get(
+                "pheromone_aggregation_dconcentration_dt"
+            ),
         )
 
     def _render_step(

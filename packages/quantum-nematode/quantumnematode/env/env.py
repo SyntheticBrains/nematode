@@ -340,6 +340,8 @@ class PheromoneParams:
         Config for food-marking pheromones (deposited on food consumption).
     alarm : PheromoneTypeConfig
         Config for alarm pheromones (emitted on predator damage).
+    aggregation : PheromoneTypeConfig | None
+        Config for aggregation pheromones (continuous emission). None = disabled.
     """
 
     enabled: bool = False
@@ -352,6 +354,7 @@ class PheromoneParams:
             max_sources=50,
         ),
     )
+    aggregation: PheromoneTypeConfig | None = None
 
 
 @dataclass
@@ -1213,6 +1216,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # Pheromone fields (runtime, created from pheromone config)
         self.pheromone_field_food: PheromoneField | None = None
         self.pheromone_field_alarm: PheromoneField | None = None
+        self.pheromone_field_aggregation: PheromoneField | None = None
         if self.pheromones.enabled:
             self.pheromone_field_food = PheromoneField(
                 spatial_decay_constant=self.pheromones.food_marking.spatial_decay_constant,
@@ -1224,6 +1228,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 temporal_half_life=self.pheromones.alarm.temporal_half_life,
                 max_sources=self.pheromones.alarm.max_sources,
             )
+            if self.pheromones.aggregation is not None:
+                self.pheromone_field_aggregation = PheromoneField(
+                    spatial_decay_constant=self.pheromones.aggregation.spatial_decay_constant,
+                    temporal_half_life=self.pheromones.aggregation.temporal_half_life,
+                    max_sources=self.pheromones.aggregation.max_sources,
+                )
 
         # Comfort zone tracking is now per-agent (in AgentState).
         # Backward-compatible properties are defined below.
@@ -2396,6 +2406,79 @@ class DynamicForagingEnvironment(BaseEnvironment):
             ),
         )
 
+    # ── Aggregation pheromone methods ─────────────────────────────────────────
+
+    def get_pheromone_aggregation_concentration(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> float:
+        """Get aggregation pheromone concentration at a position."""
+        if self.pheromone_field_aggregation is None:
+            return 0.0
+        pos = position if position is not None else self.agent_pos
+        return self.pheromone_field_aggregation.get_concentration(pos, current_step)
+
+    def get_pheromone_aggregation_gradient(
+        self,
+        position: tuple[int, int] | None = None,
+        current_step: int = 0,
+    ) -> tuple[float, float] | None:
+        """Get aggregation pheromone gradient (magnitude, direction) in polar coords."""
+        if self.pheromone_field_aggregation is None:
+            return None
+        pos = position if position is not None else self.agent_pos
+        return self.pheromone_field_aggregation.get_gradient_polar(pos, current_step)
+
+    def get_pheromone_aggregation_concentration_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> float:
+        """Get aggregation pheromone concentration for a specific agent."""
+        if self.pheromone_field_aggregation is None:
+            return 0.0
+        pos = self.agents[agent_id].position
+        return self.pheromone_field_aggregation.get_concentration(pos, current_step)
+
+    def get_pheromone_aggregation_gradient_for(
+        self,
+        agent_id: str,
+        current_step: int = 0,
+    ) -> tuple[float, float] | None:
+        """Get aggregation pheromone gradient for a specific agent."""
+        if self.pheromone_field_aggregation is None:
+            return None
+        pos = self.agents[agent_id].position
+        return self.pheromone_field_aggregation.get_gradient_polar(pos, current_step)
+
+    def emit_aggregation_pheromone(
+        self,
+        position: tuple[int, int],
+        current_step: int,
+        emitter_id: str,
+        strength: float | None = None,
+    ) -> None:
+        """Emit an aggregation pheromone at a position.
+
+        No-op if aggregation pheromone is not configured.
+        """
+        if self.pheromone_field_aggregation is None or self.pheromones.aggregation is None:
+            return
+        self.pheromone_field_aggregation.add_source(
+            PheromoneSource(
+                position=position,
+                pheromone_type=PheromoneType.AGGREGATION,
+                strength=(
+                    self.pheromones.aggregation.emission_strength
+                    if strength is None
+                    else strength
+                ),
+                emission_step=current_step,
+                emitter_id=emitter_id,
+            ),
+        )
+
     def update_pheromone_fields(self, current_step: int) -> None:
         """Prune expired pheromone sources on all fields.
 
@@ -2405,6 +2488,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
             self.pheromone_field_food.prune(current_step)
         if self.pheromone_field_alarm is not None:
             self.pheromone_field_alarm.prune(current_step)
+        if self.pheromone_field_aggregation is not None:
+            self.pheromone_field_aggregation.prune(current_step)
 
     def add_agent(  # noqa: C901, PLR0912
         self,
