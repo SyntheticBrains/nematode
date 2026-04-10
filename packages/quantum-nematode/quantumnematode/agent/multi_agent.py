@@ -185,10 +185,12 @@ class MultiAgentSimulation:
     food_policy: FoodCompetitionPolicy = FoodCompetitionPolicy.FIRST_ARRIVAL
     social_detection_radius: int = 5
     termination_policy: str = "freeze"
+    agent_phenotypes: dict[str, str] = field(default_factory=dict)
 
     # Runtime tracking (not init params)
     _food_competition_events: int = field(default=0, init=False)
     _proximity_events: int = field(default=0, init=False)
+    _social_feeding_events: int = field(default=0, init=False)
     _per_agent_food: dict[str, int] = field(default_factory=dict, init=False)
     _agent_terminations: dict[str, TerminationReason] = field(
         default_factory=dict,
@@ -291,6 +293,7 @@ class MultiAgentSimulation:
         # Reset tracking
         self._food_competition_events = 0
         self._proximity_events = 0
+        self._social_feeding_events = 0
         self._per_agent_food = {a.agent_id: 0 for a in self.agents}
         self._agent_terminations = {}
 
@@ -389,8 +392,16 @@ class MultiAgentSimulation:
                 aid = agent.agent_id
                 cached_nearby = nearby_per_agent.get(aid, 0)
 
-                # Satiety decay
-                agent._satiety_manager.decay_satiety()
+                # Satiety decay (with social feeding reduction if applicable)
+                decay_mult = 1.0
+                if self.env.social_feeding.enabled and cached_nearby > 0:
+                    phenotype = self.agent_phenotypes.get(aid, "social")
+                    if phenotype == "social":
+                        decay_mult = self.env.social_feeding.decay_reduction
+                    else:
+                        decay_mult = self.env.social_feeding.solitary_decay
+                    self._social_feeding_events += 1
+                agent._satiety_manager.decay_satiety(multiplier=decay_mult)
                 agent._episode_tracker.track_satiety(agent.current_satiety)
                 agent._episode_tracker.track_health(self.env.agents[aid].hp)
 

@@ -55,6 +55,7 @@ from quantumnematode.env.env import (
     PheromoneParams,
     PheromoneTypeConfig,
     PredatorParams,
+    SocialFeedingParams,
     PredatorType,
     ThermotaxisParams,
 )
@@ -611,6 +612,41 @@ class PheromoneConfig(BaseModel):
         )
 
 
+class SocialFeedingConfig(BaseModel):
+    """YAML configuration for social feeding behavior.
+
+    Models C. elegans npr-1-mediated social feeding: social animals conserve
+    energy near conspecifics via reduced locomotion and increased pharyngeal
+    pumping on bacterial lawns.
+    """
+
+    enabled: bool = False
+    decay_reduction: float = Field(
+        default=0.7,
+        gt=0.0,
+        description="Satiety decay multiplier when near conspecifics (< 1.0 = slower decay).",
+    )
+    detection_radius: int = Field(
+        default=5,
+        gt=0,
+        description="Manhattan distance for detecting nearby conspecifics.",
+    )
+    solitary_decay: float = Field(
+        default=1.0,
+        gt=0.0,
+        description="Satiety decay multiplier for solitary phenotype (> 1.0 = crowding penalty).",
+    )
+
+    def to_params(self) -> SocialFeedingParams:
+        """Convert to SocialFeedingParams for environment initialization."""
+        return SocialFeedingParams(
+            enabled=self.enabled,
+            decay_reduction=self.decay_reduction,
+            detection_radius=self.detection_radius,
+            solitary_decay=self.solitary_decay,
+        )
+
+
 class SensingMode(StrEnum):
     """Sensing mode for gradient-based sensory modalities."""
 
@@ -766,6 +802,7 @@ class EnvironmentConfig(BaseModel):
     thermotaxis: ThermotaxisConfig | None = None
     aerotaxis: AerotaxisConfig | None = None
     pheromones: PheromoneConfig | None = None
+    social_feeding: SocialFeedingConfig | None = None
     sensing: SensingConfig | None = None
 
     def get_foraging_config(self) -> ForagingConfig:
@@ -792,6 +829,10 @@ class EnvironmentConfig(BaseModel):
         """Get pheromone configuration with defaults."""
         return self.pheromones or PheromoneConfig()
 
+    def get_social_feeding_config(self) -> SocialFeedingConfig:
+        """Get social feeding configuration with defaults."""
+        return self.social_feeding or SocialFeedingConfig()
+
     def get_sensing_config(self) -> SensingConfig:
         """Get sensing configuration with defaults."""
         return self.sensing or SensingConfig()
@@ -803,6 +844,7 @@ class AgentConfig(BaseModel):
     id: str
     brain: BrainContainerConfig
     weights_path: str | None = None
+    social_phenotype: Literal["social", "solitary"] = "social"
 
 
 class MultiAgentConfig(BaseModel):
@@ -1270,6 +1312,7 @@ def create_env_from_config(
     thermotaxis_config = env_config.get_thermotaxis_config()
     aerotaxis_config = env_config.get_aerotaxis_config()
     pheromone_config = env_config.get_pheromone_config()
+    social_feeding_config = env_config.get_social_feeding_config()
 
     return DynamicForagingEnvironment(
         grid_size=env_config.grid_size,
@@ -1283,4 +1326,5 @@ def create_env_from_config(
         thermotaxis=thermotaxis_config.to_params(),
         aerotaxis=aerotaxis_config.to_params(),
         pheromones=pheromone_config.to_params(),
+        social_feeding=social_feeding_config.to_params(),
     )

@@ -19,6 +19,7 @@ __all__ = [
     "PheromoneType",
     "PredatorParams",
     "PredatorType",
+    "SocialFeedingParams",
     "TemperatureField",
     "TemperatureZone",
     "TemperatureZoneThresholds",
@@ -38,6 +39,7 @@ from quantumnematode.env.env import (
     PheromoneParams,
     PredatorParams,
     PredatorType,
+    SocialFeedingParams,
     ThermotaxisParams,
 )
 from quantumnematode.env.oxygen import (

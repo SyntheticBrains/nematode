@@ -355,6 +355,33 @@ class PheromoneParams:
 
 
 @dataclass
+class SocialFeedingParams:
+    """Parameters for social feeding behavior.
+
+    Models C. elegans social feeding mediated by npr-1 neuropeptide receptor:
+    social animals reduce locomotion and increase pharyngeal pumping on
+    bacterial lawns near conspecifics, effectively conserving energy.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether social feeding is active.
+    decay_reduction : float
+        Satiety decay multiplier when near conspecifics (< 1.0 = slower decay).
+    detection_radius : int
+        Manhattan distance for detecting nearby conspecifics.
+    solitary_decay : float
+        Satiety decay multiplier for solitary phenotype when near others.
+        1.0 = no change, > 1.0 = crowding penalty.
+    """
+
+    enabled: bool = False
+    decay_reduction: float = 0.7
+    detection_radius: int = 5
+    solitary_decay: float = 1.0
+
+
+@dataclass
 class AgentState:
     """Per-agent mutable state for multi-agent support.
 
@@ -1127,6 +1154,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         thermotaxis: ThermotaxisParams | None = None,
         aerotaxis: AerotaxisParams | None = None,
         pheromones: PheromoneParams | None = None,
+        social_feeding: SocialFeedingParams | None = None,
     ) -> None:
         """Initialize the dynamic foraging environment."""
         if start_pos is None:
@@ -1149,6 +1177,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         self.thermotaxis = thermotaxis or ThermotaxisParams()
         self.aerotaxis = aerotaxis or AerotaxisParams()
         self.pheromones = pheromones or PheromoneParams()
+        self.social_feeding = social_feeding or SocialFeedingParams()
 
         self.viewport_size = viewport_size
 
@@ -3302,6 +3331,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
             thermotaxis=self.thermotaxis,
             aerotaxis=self.aerotaxis,
             pheromones=self.pheromones,
+            social_feeding=self.social_feeding,
         )
         new_env.foods = self.foods.copy()
         # Copy RNG state for reproducibility
