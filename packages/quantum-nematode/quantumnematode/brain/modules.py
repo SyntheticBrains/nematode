@@ -93,6 +93,12 @@ class ModuleName(StrEnum):
     # Social sensing module
     SOCIAL_PROXIMITY = "social_proximity"
 
+    # Pheromone sensing modules
+    PHEROMONE_FOOD = "pheromone_food"
+    PHEROMONE_ALARM = "pheromone_alarm"
+    PHEROMONE_FOOD_TEMPORAL = "pheromone_food_temporal"
+    PHEROMONE_ALARM_TEMPORAL = "pheromone_alarm_temporal"
+
 
 # =============================================================================
 # Helper Functions
@@ -590,19 +596,20 @@ class STAMSensoryModule(SensoryModule):
     """Sensory module for STAM memory state with variable classical_dim.
 
     Unlike standard modules that output 2-3 features via CoreFeatures,
-    STAM outputs the full 11-float memory state vector for classical brains.
+    STAM outputs the full memory state vector for classical brains.
+    Dimension depends on num_channels: 11 for 4 channels, 15 for 6 channels.
     For quantum brains, it compresses to a 3-float summary.
     """
 
-    classical_dim: int = 11
+    classical_dim: int = 11  # Default for 4-channel mode (no pheromones)
 
     def to_classical(self, params: BrainParams) -> np.ndarray:
         """Return the full STAM memory state vector.
 
         Returns
         -------
-            np.ndarray of shape (11,) with STAM memory state.
-            Returns zeros if stam_state is None (STAM disabled).
+            np.ndarray with STAM memory state (11-dim or 15-dim).
+            Returns zeros of classical_dim if stam_state is None.
         """
         if params.stam_state is not None:
             return np.array(params.stam_state, dtype=np.float32)
@@ -612,7 +619,8 @@ class STAMSensoryModule(SensoryModule):
         """Compress STAM state to 3-float quantum gate angles.
 
         Compression: rx=mean scalar, ry=mean derivative, rz=action entropy.
-        Scaled to [-π/2, π/2] range.
+        Scaled to [-π/2, π/2] range. Works for both 4-channel and 6-channel modes
+        by using dynamic slicing based on stam_state length.
 
         Returns
         -------
@@ -622,12 +630,15 @@ class STAMSensoryModule(SensoryModule):
             return np.zeros(3, dtype=np.float32)
 
         state = np.array(params.stam_state, dtype=np.float32)
-        # Mean of weighted scalar means (indices 0-3)
-        mean_scalar = float(np.mean(state[0:4]))
-        # Mean of temporal derivatives (indices 4-7)
-        mean_deriv = float(np.mean(state[4:8]))
-        # Action entropy (index 10)
-        action_entropy = float(state[10])
+        # Infer num_channels from state length: dim = 2*N + 3, so N = (dim - 3) / 2
+        num_ch = (len(state) - 3) // 2
+
+        # Mean of weighted scalar means (indices 0:N)
+        mean_scalar = float(np.mean(state[0:num_ch]))
+        # Mean of temporal derivatives (indices N:2N)
+        mean_deriv = float(np.mean(state[num_ch : 2 * num_ch]))
+        # Action entropy (last index)
+        action_entropy = float(state[-1])
 
         return np.array(
             [
@@ -797,6 +808,115 @@ SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY] = SensoryModule(
         "Biologically honest pheromone-based sensing planned for multi-agent pheromone deliverable."
     ),
     classical_dim=1,
+)
+
+# --- Pheromone sensing modules ---
+
+
+def _pheromone_food_core(params: BrainParams) -> CoreFeatures:
+    """Extract food-marking pheromone features from gradient (oracle mode).
+
+    Food-marking pheromone (ASK chemosensory neurons) encodes attraction
+    toward areas where other agents found food:
+    - strength: pheromone gradient magnitude [0, 1]
+    - angle: egocentric direction to higher concentration [-1, 1]
+
+    Biological Reference:
+        ASK neurons detect ascaroside pheromones that C. elegans deposits
+        near bacterial lawns. Conspecifics follow these chemical trails
+        to productive foraging areas.
+    """
+    strength = float(params.pheromone_food_gradient_strength or 0.0)
+    angle = _compute_relative_angle(
+        params.pheromone_food_gradient_direction,
+        params.agent_direction,
+    )
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _pheromone_alarm_core(params: BrainParams) -> CoreFeatures:
+    """Extract alarm pheromone features from gradient (oracle mode).
+
+    Alarm pheromone (ADL chemosensory neurons) encodes aversive signals
+    from areas where agents were damaged:
+    - strength: alarm gradient magnitude [0, 1]
+    - angle: egocentric direction toward alarm source [-1, 1]
+
+    Biological Reference:
+        ADL neurons detect repellent chemicals released by injured
+        C. elegans. Conspecifics avoid these areas to reduce predation risk.
+    """
+    strength = float(params.pheromone_alarm_gradient_strength or 0.0)
+    angle = _compute_relative_angle(
+        params.pheromone_alarm_gradient_direction,
+        params.agent_direction,
+    )
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _pheromone_food_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal food pheromone features (scalar + dC/dt).
+
+    Biologically honest: scalar pheromone concentration at position + temporal
+    derivative. No directional information. Agent must infer direction from
+    movement + temporal changes.
+    """
+    strength = float(params.pheromone_food_concentration or 0.0)
+    raw_deriv = float(params.pheromone_food_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+def _pheromone_alarm_temporal_core(params: BrainParams) -> CoreFeatures:
+    """Extract temporal alarm pheromone features (scalar + dC/dt).
+
+    Biologically honest: scalar alarm concentration at position + temporal
+    derivative. Positive derivative = alarm signal increasing (approaching danger).
+    """
+    strength = float(params.pheromone_alarm_concentration or 0.0)
+    raw_deriv = float(params.pheromone_alarm_dconcentration_dt or 0.0)
+    angle = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle)
+
+
+SENSORY_MODULES[ModuleName.PHEROMONE_FOOD] = SensoryModule(
+    name=ModuleName.PHEROMONE_FOOD,
+    extract=_pheromone_food_core,
+    description=(
+        "Food-marking pheromone gradient (oracle mode, ASK neurons). Encodes direction "
+        "and strength of food-marking pheromone trail left by other agents."
+    ),
+    classical_dim=2,
+)
+
+SENSORY_MODULES[ModuleName.PHEROMONE_ALARM] = SensoryModule(
+    name=ModuleName.PHEROMONE_ALARM,
+    extract=_pheromone_alarm_core,
+    description=(
+        "Alarm pheromone gradient (oracle mode, ADL neurons). Encodes direction "
+        "and strength of alarm signals from damaged conspecifics."
+    ),
+    classical_dim=2,
+)
+
+SENSORY_MODULES[ModuleName.PHEROMONE_FOOD_TEMPORAL] = SensoryModule(
+    name=ModuleName.PHEROMONE_FOOD_TEMPORAL,
+    extract=_pheromone_food_temporal_core,
+    description=(
+        "Temporal food-marking pheromone (ASK neurons). Scalar concentration + dC/dt. "
+        "Biologically honest — no directional information."
+    ),
+    classical_dim=2,
+)
+
+SENSORY_MODULES[ModuleName.PHEROMONE_ALARM_TEMPORAL] = SensoryModule(
+    name=ModuleName.PHEROMONE_ALARM_TEMPORAL,
+    extract=_pheromone_alarm_temporal_core,
+    description=(
+        "Temporal alarm pheromone (ADL neurons). Scalar concentration + dC/dt. "
+        "Biologically honest — no directional information."
+    ),
+    classical_dim=2,
 )
 
 SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(

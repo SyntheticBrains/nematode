@@ -57,7 +57,7 @@ ______________________________________________________________________
 | **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | ✅ COMPLETE | Thermotaxis, enhanced predators, mechanosensation, HP system |
 | **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
 | **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | ✅ SUBSTANTIALLY COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A achieves 94% L500 on hardest environment. Oxygen sensing (aerotaxis) implemented with 5-zone system and combined thermal+oxygen environments. |
-| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔨 IN PROGRESS | Multi-agent infrastructure (Deliverable 1 complete: AgentState, \*\_for methods, MultiAgentSimulation orchestrator, food competition, social proximity module). Pheromones and social dynamics pending. |
+| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔨 IN PROGRESS | Multi-agent infrastructure (Deliverable 1 complete). Pheromone communication (Deliverable 2): PheromoneField with point-source decay, food-marking + alarm pheromones, 4 sensing modules (oracle + temporal), STAM 6-channel extension, CSV export with agent_id. Social dynamics pending. |
 | **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
 | **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
 | **7** | Q2 - Q4 2027 | Community & Publication | 🔲 PLANNED | NematodeBench launch, publication campaign, external collaboration |

@@ -52,6 +52,8 @@ from quantumnematode.env.env import (
     AerotaxisParams,
     ForagingParams,
     HealthParams,
+    PheromoneParams,
+    PheromoneTypeConfig,
     PredatorParams,
     PredatorType,
     ThermotaxisParams,
@@ -560,6 +562,55 @@ class AerotaxisConfig(BaseModel):
         )
 
 
+class PheromoneTypeConfigYAML(BaseModel):
+    """YAML configuration for a single pheromone type."""
+
+    emission_strength: float = Field(default=1.0, ge=0.0)
+    spatial_decay_constant: float = Field(default=8.0, gt=0.0)
+    temporal_half_life: float = Field(default=50.0, gt=0.0)
+    max_sources: int = Field(default=100, gt=0)
+
+
+class PheromoneConfig(BaseModel):
+    """YAML configuration for pheromone communication.
+
+    When enabled, agents emit chemical signals on events (food consumption,
+    predator damage) that diffuse and decay over time. Other agents sense
+    pheromone concentrations for biologically grounded communication.
+    """
+
+    enabled: bool = False
+    food_marking: PheromoneTypeConfigYAML = Field(
+        default_factory=PheromoneTypeConfigYAML,
+    )
+    alarm: PheromoneTypeConfigYAML = Field(
+        default_factory=lambda: PheromoneTypeConfigYAML(
+            emission_strength=2.0,
+            spatial_decay_constant=5.0,
+            temporal_half_life=20.0,
+            max_sources=50,
+        ),
+    )
+
+    def to_params(self) -> PheromoneParams:
+        """Convert to PheromoneParams for environment initialization."""
+        return PheromoneParams(
+            enabled=self.enabled,
+            food_marking=PheromoneTypeConfig(
+                emission_strength=self.food_marking.emission_strength,
+                spatial_decay_constant=self.food_marking.spatial_decay_constant,
+                temporal_half_life=self.food_marking.temporal_half_life,
+                max_sources=self.food_marking.max_sources,
+            ),
+            alarm=PheromoneTypeConfig(
+                emission_strength=self.alarm.emission_strength,
+                spatial_decay_constant=self.alarm.spatial_decay_constant,
+                temporal_half_life=self.alarm.temporal_half_life,
+                max_sources=self.alarm.max_sources,
+            ),
+        )
+
+
 class SensingMode(StrEnum):
     """Sensing mode for gradient-based sensory modalities."""
 
@@ -571,14 +622,16 @@ class SensingMode(StrEnum):
 class SensingConfig(BaseModel):
     """Configuration for temporal sensing modes and STAM memory.
 
-    Each gradient-based modality (chemotaxis, thermotaxis, nociception) can
-    independently use oracle, temporal, or derivative sensing mode.
+    Each gradient-based modality (chemotaxis, thermotaxis, nociception,
+    pheromones) can independently use oracle, temporal, or derivative mode.
     """
 
     chemotaxis_mode: SensingMode = SensingMode.ORACLE
     thermotaxis_mode: SensingMode = SensingMode.ORACLE
     nociception_mode: SensingMode = SensingMode.ORACLE
     aerotaxis_mode: SensingMode = SensingMode.ORACLE
+    pheromone_food_mode: SensingMode = SensingMode.ORACLE
+    pheromone_alarm_mode: SensingMode = SensingMode.ORACLE
     stam_enabled: bool = False
     stam_buffer_size: int = Field(default=30, gt=0)
     stam_decay_rate: float = Field(default=0.1, gt=0.0)
@@ -630,6 +683,10 @@ def apply_sensing_mode(
             result.append("thermotaxis_temporal")
         elif module == "aerotaxis" and sensing.aerotaxis_mode != SensingMode.ORACLE:
             result.append("aerotaxis_temporal")
+        elif module == "pheromone_food" and sensing.pheromone_food_mode != SensingMode.ORACLE:
+            result.append("pheromone_food_temporal")
+        elif module == "pheromone_alarm" and sensing.pheromone_alarm_mode != SensingMode.ORACLE:
+            result.append("pheromone_alarm_temporal")
         else:
             result.append(module)
 
@@ -660,6 +717,8 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.thermotaxis_mode,
             sensing.nociception_mode,
             sensing.aerotaxis_mode,
+            sensing.pheromone_food_mode,
+            sensing.pheromone_alarm_mode,
         )
     )
     any_temporal = any(
@@ -669,6 +728,8 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
             sensing.thermotaxis_mode,
             sensing.nociception_mode,
             sensing.aerotaxis_mode,
+            sensing.pheromone_food_mode,
+            sensing.pheromone_alarm_mode,
         )
     )
 
@@ -704,6 +765,7 @@ class EnvironmentConfig(BaseModel):
     health: HealthConfig | None = None
     thermotaxis: ThermotaxisConfig | None = None
     aerotaxis: AerotaxisConfig | None = None
+    pheromones: PheromoneConfig | None = None
     sensing: SensingConfig | None = None
 
     def get_foraging_config(self) -> ForagingConfig:
@@ -725,6 +787,10 @@ class EnvironmentConfig(BaseModel):
     def get_aerotaxis_config(self) -> AerotaxisConfig:
         """Get aerotaxis configuration with defaults."""
         return self.aerotaxis or AerotaxisConfig()
+
+    def get_pheromone_config(self) -> PheromoneConfig:
+        """Get pheromone configuration with defaults."""
+        return self.pheromones or PheromoneConfig()
 
     def get_sensing_config(self) -> SensingConfig:
         """Get sensing configuration with defaults."""
@@ -1203,6 +1269,7 @@ def create_env_from_config(
     health_config = env_config.get_health_config()
     thermotaxis_config = env_config.get_thermotaxis_config()
     aerotaxis_config = env_config.get_aerotaxis_config()
+    pheromone_config = env_config.get_pheromone_config()
 
     return DynamicForagingEnvironment(
         grid_size=env_config.grid_size,
@@ -1215,4 +1282,5 @@ def create_env_from_config(
         health=health_config.to_params(),
         thermotaxis=thermotaxis_config.to_params(),
         aerotaxis=aerotaxis_config.to_params(),
+        pheromones=pheromone_config.to_params(),
     )

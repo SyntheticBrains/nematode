@@ -308,7 +308,9 @@ class MultiAgentSimulation:
         action_per_agent: dict[str, ActionData | None] = {a.agent_id: None for a in self.agents}
         nearby_per_agent: dict[str, int] = {a.agent_id: 0 for a in self.agents}
 
-        for _step in range(max_steps):
+        pheromones_enabled = self.env.pheromones.enabled
+
+        for current_step in range(max_steps):
             alive = self._alive_agents
             if not alive:
                 break
@@ -357,7 +359,7 @@ class MultiAgentSimulation:
                 self.env.agents[aid].visited_cells.add(pos)
 
             # ── 3. FOOD COMPETITION ──────────────────────────────
-            self._resolve_food_step(alive)
+            self._resolve_food_step(alive, current_step)
 
             # ── 4. PREDATORS ─────────────────────────────────────
             self.env.update_predators()
@@ -368,7 +370,11 @@ class MultiAgentSimulation:
                 if aid not in self.env.agents:
                     continue  # Removed by policy
                 if self.env.is_agent_in_damage_radius_for(aid):
-                    self.env.apply_predator_damage_for(aid)
+                    actual_damage = self.env.apply_predator_damage_for(aid)
+                    # Emit alarm pheromone when agent takes damage
+                    if actual_damage > 0 and pheromones_enabled:
+                        agent_pos = self.env.agents[aid].position
+                        self.env.emit_alarm_pheromone(agent_pos, current_step, aid)
                     if self.env.agents[aid].hp <= 0:
                         self._handle_termination(
                             agent,
@@ -458,6 +464,10 @@ class MultiAgentSimulation:
                     )
                 agent.brain.update_memory(reward_per_agent[aid])
 
+            # ── PHEROMONE FIELD UPDATE ────────────────────────────
+            if pheromones_enabled:
+                self.env.update_pheromone_fields(current_step)
+
             # ── PROXIMITY TRACKING ───────────────────────────────
             for agent in self._alive_agents:
                 if self._compute_nearby_agents_count(agent.agent_id) > 0:
@@ -477,6 +487,7 @@ class MultiAgentSimulation:
     def _resolve_food_step(
         self,
         alive_agents: list[QuantumNematodeAgent],
+        current_step: int,
     ) -> None:
         """Resolve food collection with competition for this step."""
         # Build map: food_position -> list of agent_ids at that position
@@ -518,6 +529,8 @@ class MultiAgentSimulation:
                         self.env.health.max_hp,
                         agent_state.hp + self.env.health.food_healing,
                     )
+                    # Emit food-marking pheromone at consumed food position
+                    self.env.emit_food_pheromone(consumed, current_step, aid)
 
     def _handle_termination(
         self,

@@ -25,11 +25,45 @@ from collections import deque
 import numpy as np
 
 
+def compute_memory_dim(num_channels: int) -> int:
+    """Compute STAM memory state dimension from channel count.
+
+    Layout: weighted_means(N) + derivatives(N) + pos_deltas(2) + action_entropy(1)
+    = 2*N + 3
+
+    Parameters
+    ----------
+    num_channels : int
+        Number of scalar sensory channels.
+
+    Returns
+    -------
+    int
+        Total memory state dimension.
+    """
+    return num_channels * 2 + 3
+
+
+# Standard channel configurations
+CHANNELS_BASE = 4  # food, temperature, predator, oxygen
+CHANNELS_PHEROMONE = 6  # + pheromone_food, pheromone_alarm
+
+# Channel indices (base 4-channel mode)
+IDX_FOOD = 0
+IDX_TEMP = 1
+IDX_PRED = 2
+IDX_OXYGEN = 3
+
+# Additional channel indices (6-channel pheromone mode)
+IDX_PHEROMONE_FOOD = 4
+IDX_PHEROMONE_ALARM = 5
+
+
 class STAMBuffer:
     """Short-Term Associative Memory with exponential decay.
 
     Stores recent sensory readings with biological decay kinetics.
-    Produces a fixed-size memory state vector suitable for neural network input.
+    Produces a dynamic-size memory state vector suitable for neural network input.
 
     Parameters
     ----------
@@ -39,45 +73,34 @@ class STAMBuffer:
         Exponential decay lambda per step (default 0.1).
         Weight for entry i steps ago: w[i] = exp(-decay_rate * i).
     num_channels : int
-        Number of scalar sensory channels (default 4: food, temperature, predator, oxygen).
+        Number of scalar sensory channels.
+        4 = base (food, temperature, predator, oxygen).
+        6 = with pheromones (+ pheromone_food, pheromone_alarm).
 
     Attributes
     ----------
     MEMORY_DIM : int
-        Fixed dimension of the memory state vector (11).
+        Dimension of the memory state vector (2*num_channels + 3).
+        11 for 4 channels, 15 for 6 channels.
     """
-
-    MEMORY_DIM = 11
-
-    # Named indices into the 11-dim memory state vector
-    IDX_WEIGHTED_FOOD = 0
-    IDX_WEIGHTED_TEMP = 1
-    IDX_WEIGHTED_PRED = 2
-    IDX_WEIGHTED_OXYGEN = 3
-    IDX_DERIV_FOOD = 4
-    IDX_DERIV_TEMP = 5
-    IDX_DERIV_PRED = 6
-    IDX_DERIV_OXYGEN = 7
-    IDX_POS_DELTA_X = 8
-    IDX_POS_DELTA_Y = 9
-    IDX_ACTION_ENTROPY = 10
 
     def __init__(
         self,
         buffer_size: int = 30,
         decay_rate: float = 0.1,
-        num_channels: int = 4,
+        num_channels: int = CHANNELS_BASE,
     ) -> None:
-        if num_channels != 4:  # noqa: PLR2004
+        if num_channels < CHANNELS_BASE:
             msg = (
-                f"STAMBuffer requires num_channels=4 (food, temperature, predator, oxygen) "
-                f"to produce the fixed {self.MEMORY_DIM}-dim memory state. "
-                f"Got num_channels={num_channels}."
+                f"STAMBuffer requires at least {CHANNELS_BASE} channels "
+                f"(food, temperature, predator, oxygen). Got {num_channels}."
             )
             raise ValueError(msg)
+
         self._buffer_size = buffer_size
         self._decay_rate = decay_rate
         self._num_channels = num_channels
+        self.MEMORY_DIM = compute_memory_dim(num_channels)
 
         # Precompute exponential decay weights for efficiency
         self._weights = np.array(
@@ -104,7 +127,8 @@ class STAMBuffer:
         ----------
         scalars : np.ndarray
             Scalar readings for each channel, shape (num_channels,).
-            Order: [food_concentration, temperature, predator_concentration, oxygen_concentration].
+            Base order: [food, temperature, predator, oxygen].
+            With pheromones: [food, temp, predator, oxygen, pheromone_food, pheromone_alarm].
             Disabled channels should pass 0.0.
         position_delta : tuple[float, float]
             Step-to-step position change (dx, dy) — proprioceptive movement
@@ -142,7 +166,8 @@ class STAMBuffer:
         Parameters
         ----------
         channel : int
-            Channel index (0=food, 1=temperature, 2=predator, 3=oxygen).
+            Channel index (0=food, 1=temperature, 2=predator, 3=oxygen,
+            4=pheromone_food, 5=pheromone_alarm when pheromones enabled).
 
         Returns
         -------
@@ -171,21 +196,18 @@ class STAMBuffer:
         return float(np.sum(weights * diffs) / weight_sum)
 
     def get_memory_state(self) -> np.ndarray:
-        """Return fixed-size memory state vector for neural network input.
+        """Return dynamic-size memory state vector for neural network input.
 
         Returns
         -------
         np.ndarray
-            Array of shape (11,) containing:
-            - [0:4] Weighted scalar means (food, temperature, predator, oxygen)
-            - [4:8] Temporal derivatives (dC/dt per channel)
-            - [8:10] Position deltas (deviation of most recent step-to-step
-                     movement from weighted mean of recent movements —
-                     captures change in movement pattern)
-            - [10]  Action variety metric (entropy of recent actions —
-                     computational convenience for learning, not biologically
-                     motivated; helps brains distinguish "stuck in a loop"
-                     from "actively exploring")
+            Array of shape (MEMORY_DIM,) containing:
+            - [0:N] Weighted scalar means (N = num_channels)
+            - [N:2N] Temporal derivatives (dC/dt per channel)
+            - [2N:2N+2] Position deltas (deviation from weighted mean)
+            - [2N+2] Action variety metric (Shannon entropy)
+
+            For 4 channels: shape (11,). For 6 channels: shape (15,).
         """
         state = np.zeros(self.MEMORY_DIM, dtype=np.float64)
         n = len(self._scalar_history)
@@ -258,6 +280,11 @@ class STAMBuffer:
         if max_entropy > 0:
             return float(entropy / max_entropy)
         return 0.0
+
+    @property
+    def num_channels(self) -> int:
+        """Number of sensory channels."""
+        return self._num_channels
 
     @property
     def memory_dimension(self) -> int:

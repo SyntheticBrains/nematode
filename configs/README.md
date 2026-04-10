@@ -23,6 +23,8 @@ Each scenario directory represents a distinct environment configuration:
 | `thermal_foraging/` | Chemotaxis + thermotaxis | Temperature gradient + food-seeking |
 | `thermal_pursuit/` | Chemotaxis + thermotaxis + pursuit | Multi-objective (hardest current env) |
 | `thermal_stationary/` | Chemotaxis + thermotaxis + stationary | Multi-objective with static predators |
+| `multi_agent_foraging/` | Multi-agent + chemotaxis (+ pheromones) | Multi-agent food-seeking |
+| `multi_agent_pursuit/` | Multi-agent + chemotaxis + pursuit (+ pheromones) | Multi-agent with predators |
 
 ## Naming Convention
 

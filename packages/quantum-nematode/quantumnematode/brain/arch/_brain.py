@@ -251,9 +251,42 @@ class BrainParams(BaseModel):
         default=None,
         description=(
             "Number of other agents within social detection radius (None in single-agent). "
-            "Oracle sensing: exact count, not biologically honest. "
-            "Pheromone-based sensing planned for multi-agent pheromone deliverable."
+            "Oracle sensing: exact count, not biologically honest."
         ),
+    )
+
+    # --- Pheromone sensing (multi-agent chemical communication) ---
+    pheromone_food_gradient_strength: float | None = Field(
+        default=None,
+        description="Food-marking pheromone gradient magnitude (oracle mode).",
+    )
+    pheromone_food_gradient_direction: float | None = Field(
+        default=None,
+        description="Food-marking pheromone gradient direction in radians (oracle mode).",
+    )
+    pheromone_alarm_gradient_strength: float | None = Field(
+        default=None,
+        description="Alarm pheromone gradient magnitude (oracle mode).",
+    )
+    pheromone_alarm_gradient_direction: float | None = Field(
+        default=None,
+        description="Alarm pheromone gradient direction in radians (oracle mode).",
+    )
+    pheromone_food_concentration: float | None = Field(
+        default=None,
+        description="Scalar food pheromone at agent position (temporal mode).",
+    )
+    pheromone_alarm_concentration: float | None = Field(
+        default=None,
+        description="Scalar alarm pheromone concentration at agent position (temporal mode).",
+    )
+    pheromone_food_dconcentration_dt: float | None = Field(
+        default=None,
+        description="Temporal derivative of food pheromone concentration (derivative mode).",
+    )
+    pheromone_alarm_dconcentration_dt: float | None = Field(
+        default=None,
+        description="Temporal derivative of alarm pheromone concentration (derivative mode).",
     )
 
 
