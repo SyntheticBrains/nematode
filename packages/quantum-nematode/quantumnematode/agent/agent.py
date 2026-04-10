@@ -426,9 +426,10 @@ class QuantumNematodeAgent:
         if not (any_non_oracle or sensing.stam_enabled):
             return result
 
-        # (a) Get scalar concentrations from environment
-        food_conc_val = self.env.get_food_concentration()
-        pred_conc_val = self.env.get_predator_concentration()
+        # (a) Get scalar concentrations from environment at this agent's position
+        agent_pos = self.env.agents[self.agent_id].position
+        food_conc_val = self.env.get_food_concentration(position=agent_pos)
+        pred_conc_val = self.env.get_predator_concentration(position=agent_pos)
         temp_val = temperature if temperature is not None else 0.0
 
         if sensing.chemotaxis_mode != SensingMode.ORACLE:
@@ -444,7 +445,7 @@ class QuantumNematodeAgent:
         # Oxygen scalar concentration (raw percentage, not tanh-normalized)
         o2_val = 0.0
         if self.env.aerotaxis.enabled:
-            o2_raw = self.env.get_oxygen_concentration()
+            o2_raw = self.env.get_oxygen_concentration(position=agent_pos)
             o2_val = o2_raw if o2_raw is not None else 0.0
             if sensing.aerotaxis_mode != SensingMode.ORACLE:
                 separated_grads.pop("oxygen_gradient_strength", None)
@@ -454,15 +455,17 @@ class QuantumNematodeAgent:
         step = self._episode_tracker.steps
         if self.env.pheromones.enabled and pheromone_food_mode != SensingMode.ORACLE:
             result["pheromone_food_concentration"] = self.env.get_pheromone_food_concentration(
+                position=agent_pos,
                 current_step=step,
             )
         if self.env.pheromones.enabled and pheromone_alarm_mode != SensingMode.ORACLE:
             result["pheromone_alarm_concentration"] = self.env.get_pheromone_alarm_concentration(
+                position=agent_pos,
                 current_step=step,
             )
 
         # (b) Compute position delta from previous position
-        current_pos = tuple(self.env.agent_pos)
+        current_pos = tuple(agent_pos)
         pos_delta = (0.0, 0.0)
         if self._previous_position is not None:
             pos_delta = (
@@ -551,18 +554,24 @@ class QuantumNematodeAgent:
         """
         sensing = self.sensing_config
 
+        # Resolve this agent's actual position (not the default agent's position).
+        # In multi-agent mode, self.env is shared — self.env.agent_pos returns the
+        # "default" backward-compat agent. Use agents[self.agent_id] instead.
+        agent_state = self.env.agents[self.agent_id]
+        agent_pos: tuple[int, int] = agent_state.position
+
         # Get separated food/predator gradients for sensory modules
         separated_grads = self.env.get_separated_gradients(
-            self.env.agent_pos,
+            agent_pos,
             disable_log=True,
         )
 
         # Mechanosensation: detect physical contact with boundaries and predators
-        boundary_contact = self.env.is_agent_at_boundary()
-        predator_contact = self.env.is_agent_in_predator_contact()
+        boundary_contact = self.env.is_agent_at_boundary_for(self.agent_id)
+        predator_contact = self.env.is_agent_in_predator_contact_for(self.agent_id)
 
         # Health state
-        health = self.env.agent_hp
+        health = agent_state.hp
         max_health = self.env.health.max_hp
 
         # Thermotaxis: temperature sensing
@@ -572,11 +581,11 @@ class QuantumNematodeAgent:
         cultivation_temperature = None
 
         if self.env.thermotaxis.enabled:
-            temperature = self.env.get_temperature()
+            temperature = self.env.get_temperature(position=agent_pos)
             from quantumnematode.utils.config_loader import SensingMode
 
             if sensing.thermotaxis_mode == SensingMode.ORACLE:
-                temp_gradient = self.env.get_temperature_gradient()
+                temp_gradient = self.env.get_temperature_gradient(position=agent_pos)
                 if temp_gradient is not None:
                     temperature_gradient_strength = temp_gradient[0]
                     temperature_gradient_direction = temp_gradient[1]
@@ -588,11 +597,11 @@ class QuantumNematodeAgent:
         oxygen_gradient_direction = None
 
         if self.env.aerotaxis.enabled:
-            oxygen_concentration = self.env.get_oxygen_concentration()
+            oxygen_concentration = self.env.get_oxygen_concentration(position=agent_pos)
             from quantumnematode.utils.config_loader import SensingMode
 
             if sensing.aerotaxis_mode == SensingMode.ORACLE:
-                o2_gradient = self.env.get_oxygen_gradient()
+                o2_gradient = self.env.get_oxygen_gradient(position=agent_pos)
                 if o2_gradient is not None:
                     oxygen_gradient_strength = o2_gradient[0]
                     oxygen_gradient_direction = o2_gradient[1]
@@ -613,22 +622,30 @@ class QuantumNematodeAgent:
             step = self._episode_tracker.steps
 
             if pheromone_food_mode == SensingMode.ORACLE:
-                food_ph_grad = self.env.get_pheromone_food_gradient(current_step=step)
+                food_ph_grad = self.env.get_pheromone_food_gradient(
+                    position=agent_pos,
+                    current_step=step,
+                )
                 if food_ph_grad is not None:
                     pheromone_food_gradient_strength = food_ph_grad[0]
                     pheromone_food_gradient_direction = food_ph_grad[1]
             else:
                 pheromone_food_concentration = self.env.get_pheromone_food_concentration(
+                    position=agent_pos,
                     current_step=step,
                 )
 
             if pheromone_alarm_mode == SensingMode.ORACLE:
-                alarm_ph_grad = self.env.get_pheromone_alarm_gradient(current_step=step)
+                alarm_ph_grad = self.env.get_pheromone_alarm_gradient(
+                    position=agent_pos,
+                    current_step=step,
+                )
                 if alarm_ph_grad is not None:
                     pheromone_alarm_gradient_strength = alarm_ph_grad[0]
                     pheromone_alarm_gradient_direction = alarm_ph_grad[1]
             else:
                 pheromone_alarm_concentration = self.env.get_pheromone_alarm_concentration(
+                    position=agent_pos,
                     current_step=step,
                 )
 
@@ -687,8 +704,8 @@ class QuantumNematodeAgent:
             stam_state=temporal.get("stam_state"),
             derivative_scale=sensing.derivative_scale,
             # Agent proprioception
-            agent_position=self._get_agent_position_tuple(),
-            agent_direction=self.env.current_direction,
+            agent_position=(float(agent_pos[0]), float(agent_pos[1])),
+            agent_direction=agent_state.direction,
             action=action,
             # Social sensing
             nearby_agents_count=nearby_agents_count,
