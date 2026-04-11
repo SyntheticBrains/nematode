@@ -27,7 +27,7 @@ Two critical bugs were discovered and fixed during evaluation:
 
 A third bug (STAM dimension mismatch with pheromone temporal modules) was found and fixed: `get_classical_feature_dimension()` now auto-infers correct STAM memory dimension from pheromone temporal modules in the sensory list.
 
-**Prior work**: Scratchpad evaluations in D1-D3 (pre-bug-fix, largely invalidated). Logbook 009 (temporal sensing baselines). Logbook 010 (aerotaxis baselines).
+**Prior work**: Logbook 009 (temporal sensing baselines). Logbook 010 (aerotaxis baselines). Earlier D1-D3 evaluations (pre-bug-fix) were largely invalidated.
 
 ## Hypotheses
 
@@ -216,7 +216,7 @@ Located at `artifacts/logbooks/011/`:
 | `campaign_G/` | CSVs for proportional food scaling 1/2/5-agent (2000 eps, 2 seeds) |
 | `weights/` | Best single-agent weights (oracle + proportional food baselines) |
 
-Note: Sessions were run without `--track-experiment`, so no experiment JSONs were generated. Multi-agent sessions do not produce per-agent weight files. Scratchpad with running evaluation notes at `tmp/evaluations/multi_agent_infrastructure/multi_agent_scratchpad.md`.
+Note: Sessions were run without `--track-experiment`, so no experiment JSONs were generated. Multi-agent sessions do not produce per-agent weight files.
 
 ## Future Work (Open)
 
@@ -230,8 +230,7 @@ The following items are planned for a subsequent PR to enable deeper multi-agent
 
 ## Data References
 
-- Scratchpad: `tmp/evaluations/multi_agent_infrastructure/multi_agent_scratchpad.md`
-- Campaign data: `exports/20260410_*` (Campaign A-v2, B1-v2), `exports/20260411_*` (B2+D-v2, C, E, F, G)
+- Artifacts: `artifacts/logbooks/011/` (CSV data, configs, weights)
 - Config files: `configs/scenarios/multi_agent_foraging/`, `configs/scenarios/multi_agent_pursuit/`, `configs/scenarios/foraging/`
 - Supporting detail: `docs/experiments/logbooks/supporting/011/`
 - Issues: #112 (sensing position), #115 (reward calculator), #116 (food spatial persistence)
