@@ -203,22 +203,20 @@ Issues #112 and #115 (same bug class: backward-compat properties in multi-agent 
 
 ## Artifacts
 
-Experiment sessions were run without `--track-experiment` flag, so no experiment JSONs were generated. Multi-agent sessions do not save per-agent weights by default.
+Located at `artifacts/logbooks/011/`:
 
-Artifacts for this logbook consist of:
+| Directory | Contents |
+|-----------|----------|
+| `configs/` | 18 evaluation config YAMLs (historical snapshots) |
+| `campaign_B1v2/` | Per-agent and summary CSVs for 1/2/5/10-agent oracle scaling (4000 eps, 4 seeds) |
+| `campaign_B2Dv2/` | CSVs for temporal 1-agent/5-agent ± pheromone (2000 eps, 2 seeds) |
+| `campaign_C/` | CSVs for pursuit ± alarm pheromone (2000 eps, 2 seeds) |
+| `campaign_E/` | CSVs for extreme scarcity ± social feeding (2000 eps, 2 seeds) |
+| `campaign_F/` | CSVs for mixed phenotype competition (2000 eps, 2 seeds) |
+| `campaign_G/` | CSVs for proportional food scaling 1/2/5-agent (2000 eps, 2 seeds) |
+| `weights/` | Best single-agent weights (oracle + proportional food baselines) |
 
-- **Configs**: All evaluation configs are committed to `configs/scenarios/` (multi_agent_foraging/, multi_agent_pursuit/, foraging/)
-- **CSV data**: Session exports in `exports/` (not git-tracked — see session IDs in supporting detail)
-- **Scratchpad**: Running evaluation notes at `tmp/evaluations/multi_agent_infrastructure/multi_agent_scratchpad.md`
-
-Key session timestamp ranges:
-
-| Campaign | Timestamp Prefix | Episodes |
-|----------|-----------------|----------|
-| A-v2 + B1-v2 | `20260410_1551*` | 2000/4000 |
-| B2+D-v2 | `20260411_0400*` | 2000 |
-| C | `20260411_0624*` | 2000 |
-| E + F + G | `20260411_1031*` | 2000 |
+Note: Sessions were run without `--track-experiment`, so no experiment JSONs were generated. Multi-agent sessions do not produce per-agent weight files. Scratchpad with running evaluation notes at `tmp/evaluations/multi_agent_infrastructure/multi_agent_scratchpad.md`.
 
 ## Future Work (Open)
 
