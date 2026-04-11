@@ -741,16 +741,17 @@ class MultiAgentSimulation:
                 self._alarm_response_buffer,
             ):
                 if current_step - emit_step > ALARM_RESPONSE_WINDOW:
-                    # Count remaining tracked agents as non-responses before expiring
-                    for oid in list(nearby_dirs):
-                        if oid in self.env.agents:
-                            self._alarm_response_opportunities += 1
+                    # Count all remaining tracked agents as non-responses
+                    self._alarm_response_opportunities += len(nearby_dirs)
                     expired.append(idx)
                     continue
                 if current_step - emit_step < 1:
                     continue  # Need at least 1 step to observe change
                 for oid, original_dir in list(nearby_dirs.items()):
                     if oid not in self.env.agents:
+                        # Removed agent — count as non-response
+                        self._alarm_response_opportunities += 1
+                        del nearby_dirs[oid]
                         continue
                     current_dir = str(self.env.agents[oid].direction)
                     if current_dir != original_dir:
