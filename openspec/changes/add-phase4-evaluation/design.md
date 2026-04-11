@@ -80,30 +80,43 @@ Edge cases:
 | mlpppo_small_5agents_competition_oracle | 5-agent scaling |
 | mlpppo_small_10agents_competition_oracle | 10-agent scaling |
 
-**Campaign B2 (4000 eps, 4 seeds)** — Temporal classical strain:
+**Campaign B2+D combined (2000 eps, 2 seeds)** — Temporal strain + pheromone value:
 
 | Config | Purpose |
 |--------|---------|
-| lstmppo_small_1agent_foraging_temporal | Single-agent temporal ceiling |
-| lstmppo_small_5agents_competition_temporal | 5-agent temporal scaling (no pheromones) |
+| lstmppo_small_1agent_temporal_baseline | Single-agent temporal ceiling |
+| lstmppo_small_5agents_temporal_no_pheromone | 5-agent temporal (no pheromones) |
+| lstmppo_small_5agents_temporal_pheromone | 5-agent temporal (alarm + aggregation pheromones) |
 
-Note: `lstmppo_small_5agents_competition_temporal` is the **no-pheromone temporal baseline** — temporal chemotaxis + STAM only, no pheromone modules. It is reused in Campaign D as the control against the pheromone-enabled variant (same config, different comparison partner).
+Note: Proper temporal configs use Phase 3 proven brain hyperparams (critic_hidden=128, LR warmup/decay, entropy decay, 400 satiety, 1000 max_steps, 5 food). Food-marking pheromone excluded from treatment due to stale signal issue (#116). Aggregation pheromone included (valid real-time signal).
 
-**Campaign C (2000 eps, 4 seeds)** — Collective predator response:
+**Campaign C (2000 eps, 2 seeds)** — Collective predator response:
 
 | Config | Purpose |
 |--------|---------|
 | mlpppo_small_5agents_pursuit_oracle | Alarm-enabled |
 | mlpppo_small_5agents_pursuit_no_alarm_oracle | No-alarm control |
 
-**Campaign D (4000 eps, 4 seeds)** — Temporal pheromone value:
+**Campaign E (2000 eps, 2 seeds)** — Social feeding under extreme scarcity:
 
 | Config | Purpose |
 |--------|---------|
-| lstmppo_small_5agents_competition_temporal | No-pheromone temporal control (same as B2) |
-| lstmppo_small_5agents_competition_pheromone_temporal | Full pheromone stack, temporal |
+| mlpppo_small_5agents_scarcity_social_oracle | Social feeding ON (1 food, 2x decay) |
+| mlpppo_small_5agents_scarcity_no_social_oracle | No social feeding control |
 
-Campaign D reuses the B2 no-pheromone run data — no duplicate execution needed. The comparison is: does adding pheromone modules (food-marking, alarm, aggregation) improve temporal-mode multi-agent foraging?
+**Campaign F (2000 eps, 2 seeds)** — Mixed phenotype competition:
+
+| Config | Purpose |
+|--------|---------|
+| mlpppo_small_5agents_mixed_phenotype_oracle | 3 social + 2 solitary agents |
+
+**Campaign G (2000 eps, 2 seeds)** — Proportional food scaling:
+
+| Config | Purpose |
+|--------|---------|
+| mlpppo_small_1agent_propfood_oracle | 1 agent, 3 food |
+| mlpppo_small_2agents_propfood_oracle | 2 agents, 6 food |
+| mlpppo_small_5agents_propfood_oracle | 5 agents, 15 food |
 
 ### Decision 4: Game-Theoretic Indicators
 
