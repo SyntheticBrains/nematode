@@ -559,6 +559,8 @@ class MultiAgentSimulation:
                             oid = other.agent_id
                             if oid == aid or oid not in self.env.agents:
                                 continue
+                            if not self.env.agents[oid].alive:
+                                continue
                             opos = self.env.agents[oid].position
                             dist = abs(opos[0] - agent_pos[0]) + abs(
                                 opos[1] - agent_pos[1],
