@@ -440,6 +440,14 @@ Multi-agent scenarios create exponential state spaces (state × number of agents
    - Information sharing about predator locations
    - Collective aggregation as defense strategy
 
+6. **Food Spatial Persistence** [DEFERRED — prerequisite for food-marking pheromone evaluation]
+
+   - Current food respawns uniformly random after consumption, making food-marking pheromone trails point to stale locations (misleading signal)
+   - **Food patches/hotspots**: Define regions where food spawns preferentially, modeled on bacterial lawns. Pheromone trails then correctly signal "productive region"
+   - **Satiety-dependent foraging**: Agents should reduce food-seeking when sated (biological: npr-1 dwelling behavior). Prevents local monopoly where one agent depletes a patch before pheromone-guided agents arrive
+   - **Biased respawn**: Food respawns with spatial correlation to consumed position (configurable locality parameter)
+   - Required for meaningful food-marking pheromone evaluation; alarm and aggregation pheromones have valid signals without this
+
 #### Metrics Focus
 
 - **Emergent phenomena**: Identify behaviors not explicitly programmed (spontaneous aggregation, division of labor, communication strategies)
