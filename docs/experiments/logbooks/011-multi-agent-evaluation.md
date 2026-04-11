@@ -208,13 +208,9 @@ Located at `artifacts/logbooks/011/`:
 | Directory | Contents |
 |-----------|----------|
 | `configs/` | 18 evaluation config YAMLs (historical snapshots) |
-| `campaign_B1v2/` | Per-agent and summary CSVs for 1/2/5/10-agent oracle scaling (4000 eps, 4 seeds) |
-| `campaign_B2Dv2/` | CSVs for temporal 1-agent/5-agent ± pheromone (2000 eps, 2 seeds) |
-| `campaign_C/` | CSVs for pursuit ± alarm pheromone (2000 eps, 2 seeds) |
-| `campaign_E/` | CSVs for extreme scarcity ± social feeding (2000 eps, 2 seeds) |
-| `campaign_F/` | CSVs for mixed phenotype competition (2000 eps, 2 seeds) |
-| `campaign_G/` | CSVs for proportional food scaling 1/2/5-agent (2000 eps, 2 seeds) |
 | `weights/` | Best single-agent weights (oracle + proportional food baselines) |
+
+Results are reproducible by re-running the configs with the seeds documented in the supporting detail. Key numbers are recorded in the results tables above and in the supporting appendix.
 
 Note: Sessions were run without `--track-experiment`, so no experiment JSONs were generated. Multi-agent sessions do not produce per-agent weight files.
 
