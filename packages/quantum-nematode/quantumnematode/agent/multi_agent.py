@@ -808,8 +808,9 @@ class MultiAgentSimulation:
                     )
                     # Emit food-marking pheromone at consumed food position
                     self.env.emit_food_pheromone(consumed, current_step, aid)
-                    # Track for food-sharing metric
-                    self._food_marking_buffer.append((consumed, current_step, aid))
+                    # Track for food-sharing metric (only when pheromones active)
+                    if self.env.pheromones.enabled:
+                        self._food_marking_buffer.append((consumed, current_step, aid))
 
     def _handle_termination(
         self,

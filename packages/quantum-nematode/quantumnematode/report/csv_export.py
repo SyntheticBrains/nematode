@@ -1340,6 +1340,7 @@ def export_predator_session_metrics_to_csv(  # pragma: no cover
 
 _MULTI_AGENT_RESULTS_FIELDNAMES = [
     "run",
+    "config_name",
     "agent_id",
     "steps",
     "termination_reason",
@@ -1352,6 +1353,7 @@ _MULTI_AGENT_RESULTS_FIELDNAMES = [
 
 _MULTI_AGENT_SUMMARY_FIELDNAMES = [
     "run",
+    "config_name",
     "total_food",
     "food_competition_events",
     "proximity_events",
@@ -1402,11 +1404,13 @@ def write_multi_agent_result_row(  # noqa: PLR0913
     success: bool = False,
     satiety_remaining: float = 0.0,
     foods_available: int = 0,
+    config_name: str = "",
 ) -> None:
     """Write one per-agent result row to the multi-agent CSV."""
     writer.writerow(
         {
             "run": run,
+            "config_name": config_name,
             "agent_id": agent_id,
             "steps": steps,
             "termination_reason": termination_reason,
@@ -1459,11 +1463,13 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
     food_sharing_events: int = 0,
     territorial_index: float = 0.0,
     alarm_response_rate: float = 0.0,
+    config_name: str = "",
 ) -> None:
     """Write one episode summary row to the multi-agent summary CSV."""
     writer.writerow(
         {
             "run": run,
+            "config_name": config_name,
             "total_food": total_food,
             "food_competition_events": food_competition_events,
             "proximity_events": proximity_events,

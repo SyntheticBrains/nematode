@@ -436,6 +436,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             parameter_initializer_config=parameter_initializer_config,
             theme=theme,
             perf_mgmt=perf_mgmt,
+            config_name=Path(config_file).stem if config_file else "",
         )
         return
 
@@ -1529,6 +1530,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     parameter_initializer_config: ParameterInitializerConfig,
     theme: Theme,
     perf_mgmt: Any | None = None,  # noqa: ANN401 - RunnableQiskitFunction conditional import
+    config_name: str = "",
 ) -> None:
     """Run a multi-agent simulation session.
 
@@ -1740,6 +1742,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     success=(agent_result.termination_reason.value == "completed_all_food"),
                     satiety_remaining=result.per_agent_satiety.get(aid, 0.0),
                     foods_available=environment_config.get_foraging_config().target_foods_to_collect,
+                    config_name=config_name,
                 )
                 # Track per-agent success
                 if agent_result.termination_reason.value == "completed_all_food":
@@ -1762,6 +1765,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 food_sharing_events=result.food_sharing_events,
                 territorial_index=result.territorial_index,
                 alarm_response_rate=result.alarm_response_rate,
+                config_name=config_name,
             )
             total_food_all_runs += result.total_food_collected
             total_competition_all_runs += result.food_competition_events
