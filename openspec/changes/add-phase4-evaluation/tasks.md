@@ -140,7 +140,7 @@
   - Food Gini trajectory (from Campaign E data — scarcity creates inequality)
   - Territorial index (tracked but near-zero across all campaigns)
 
-- [ ] 4.9 Best-response analysis (deferred — requires additional infrastructure)
+- [x] 4.9 Best-response analysis (deferred — requires additional infrastructure)
 
   - Deferred: multi-agent weight loading + freeze-at-step-0 not yet implemented
 
