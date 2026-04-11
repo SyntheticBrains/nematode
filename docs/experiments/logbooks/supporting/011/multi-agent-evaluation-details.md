@@ -1,4 +1,4 @@
-# 011: Multi-Agent Phase 4 Evaluation — Supporting Detail
+# 011: Multi-Agent Evaluation — Supporting Detail
 
 ## Bug Timeline
 

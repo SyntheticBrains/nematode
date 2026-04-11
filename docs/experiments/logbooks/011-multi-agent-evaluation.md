@@ -1,4 +1,4 @@
-# 011: Multi-Agent Phase 4 — Coordination, Social Dynamics, and Pheromone Evaluation
+# 011: Multi-Agent — Coordination, Social Dynamics, and Pheromone Evaluation
 
 **Status**: `in-progress`
 
@@ -10,11 +10,11 @@
 
 ## Objective
 
-Evaluate the complete Phase 4 multi-agent infrastructure (Deliverables 1-3) through a comprehensive campaign measuring: classical coordination strain, social feeding effectiveness, pheromone communication value, collective predator response, and emergent behavior potential. Assess Phase 4 exit criteria and quantum checkpoint trigger.
+Evaluate the multi-agent infrastructure through a comprehensive campaign measuring: classical coordination strain, social feeding effectiveness, pheromone communication value, collective predator response, and emergent behavior potential. Assess exit criteria and quantum checkpoint trigger.
 
 ## Background
 
-Phase 4 delivered multi-agent infrastructure in three deliverables:
+Multi-agent infrastructure was delivered in three deliverables:
 
 - **D1**: Multi-agent orchestrator (2-10 agents, food competition, termination policies)
 - **D2**: Pheromone communication (food-marking, alarm, oracle/temporal sensing, STAM 6-channel)
@@ -31,7 +31,7 @@ A third bug (STAM dimension mismatch with pheromone temporal modules) was found 
 
 ## Hypotheses
 
-1. Multi-agent coordination creates measurable performance strain versus single-agent baselines (Phase 4 exit criterion)
+1. Multi-agent coordination creates measurable performance strain versus single-agent baselines
 2. Social feeding (satiety decay reduction) improves survival when food is scarce
 3. Pheromone communication (alarm, aggregation) improves foraging or survival in temporal sensing mode
 4. Alarm pheromones improve collective predator survival
@@ -140,7 +140,7 @@ Campaign E produced the clearest positive result: **+35% food, +46% survival, +3
 
 Campaign G definitively showed that with food scaled proportionally to agent count (3 food per agent), MLP PPO achieves identical per-agent performance at 1, 2, and 5 agents (9.98-10.00 food/agent/ep). Episodes actually get shorter with more agents (more food items = shorter paths).
 
-**Significance**: The B1 "classical strain" (19.7% at 10 agents) is entirely resource scarcity, not coordination difficulty. Classical MLP PPO has no computational overhead from multi-agent coordination in oracle mode. The quantum checkpoint trigger ("ceiling <85%") is not met by genuine coordination complexity.
+**Significance**: The B1 "classical strain" (19.7% at 10 agents) is entirely resource scarcity, not coordination difficulty. Classical MLP PPO has no computational overhead from multi-agent coordination in oracle mode. The quantum checkpoint trigger ("ceiling \<85%") is not met by genuine coordination complexity.
 
 ### Finding 4: Pheromones Are Consistently Neutral
 
@@ -168,7 +168,7 @@ Issues #112 and #115 (same bug class: backward-compat properties in multi-agent 
 | 4 | Alarm pheromones improve collective predator survival | **Not supported** — neutral in oracle pursuit mode |
 | 5 | Emergent social behaviors arise | **Not supported** — mechanical effects observed (clustering from social feeding), but no learned social strategies |
 
-## Phase 4 Exit Criteria Assessment
+## Exit Criteria Assessment (Roadmap Phase 4)
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
@@ -177,9 +177,9 @@ Issues #112 and #115 (same bug class: backward-compat properties in multi-agent 
 | Pheromone communication functional | ✅ Met | Infrastructure works correctly. Neutral results are valid findings. |
 | Classical strain on coordination | ⚠️ Partially met | Strain from resource scarcity (-19.7% at 10 agents) but zero genuine coordination overhead with proportional resources |
 
-## Quantum Checkpoint Assessment
+## Quantum Checkpoint Assessment (Roadmap Phase 4)
 
-**Trigger condition**: Classical approaches show measurable difficulty on coordination tasks (aspirational: ceiling <85%).
+**Trigger condition**: Classical approaches show measurable difficulty on coordination tasks (aspirational: ceiling \<85%).
 
 **Result**: The 80.2% of ceiling at 10 agents (B1-v2) meets the numerical threshold, but Campaign G proved this is resource allocation difficulty, not computational complexity. With proportional resources, classical MLP PPO achieves 100% of ceiling at all scales. There is no exponential state space explosion or coordination-specific difficulty for quantum approaches to exploit.
 
@@ -200,6 +200,25 @@ Issues #112 and #115 (same bug class: backward-compat properties in multi-agent 
 6. **No emergent learned social strategies** observed — all positive effects are mechanical (decay reduction) or statistical (parallel search), not learned coordination.
 
 7. **Two critical bugs** (#112, #115) invalidated pre-fix evaluation data and highlight the importance of correctness verification before performance evaluation.
+
+## Artifacts
+
+Experiment sessions were run without `--track-experiment` flag, so no experiment JSONs were generated. Multi-agent sessions do not save per-agent weights by default.
+
+Artifacts for this logbook consist of:
+
+- **Configs**: All evaluation configs are committed to `configs/scenarios/` (multi_agent_foraging/, multi_agent_pursuit/, foraging/)
+- **CSV data**: Session exports in `exports/` (not git-tracked — see session IDs in supporting detail)
+- **Scratchpad**: Running evaluation notes at `tmp/evaluations/multi_agent_infrastructure/multi_agent_scratchpad.md`
+
+Key session timestamp ranges:
+
+| Campaign | Timestamp Prefix | Episodes |
+|----------|-----------------|----------|
+| A-v2 + B1-v2 | `20260410_1551*` | 2000/4000 |
+| B2+D-v2 | `20260411_0400*` | 2000 |
+| C | `20260411_0624*` | 2000 |
+| E + F + G | `20260411_1031*` | 2000 |
 
 ## Future Work (Open)
 
