@@ -180,19 +180,35 @@ class MultiAgentEpisodeResult:
     per_agent_satiety: dict[str, float] = field(default_factory=dict)
 
 
-def _compute_gini(values: list[int]) -> float:
-    """Compute Gini coefficient for a list of non-negative integers."""
+def _compute_gini_values(values: list[float]) -> float:
+    """Compute Gini coefficient for a list of non-negative values.
+
+    Parameters
+    ----------
+    values : list[float]
+        Non-negative values (int or float).
+
+    Returns
+    -------
+    float
+        Gini coefficient in [0, 1]. 0 = perfect equality, 1 = maximum inequality.
+    """
     if not values or all(v == 0 for v in values):
         return 0.0
     sorted_vals = sorted(values)
     n = len(sorted_vals)
     total = sum(sorted_vals)
-    cumulative = 0.0
+    if total == 0:
+        return 0.0
     weighted_sum = 0.0
     for i, v in enumerate(sorted_vals):
-        cumulative += v
         weighted_sum += (2 * (i + 1) - n - 1) * v
-    return weighted_sum / (n * total) if total > 0 else 0.0
+    return weighted_sum / (n * total)
+
+
+def _compute_gini(values: list[int]) -> float:
+    """Compute Gini coefficient for a list of non-negative integers."""
+    return _compute_gini_values([float(v) for v in values])
 
 
 def _compute_aggregation_index(
@@ -270,16 +286,7 @@ def _compute_territorial_index(
     if len(spreads) < 2:  # noqa: PLR2004
         return 0.0
 
-    # Gini coefficient of spreads
-    sorted_spreads = sorted(spreads)
-    n = len(sorted_spreads)
-    total = sum(sorted_spreads)
-    if total == 0:
-        return 0.0
-    weighted_sum = 0.0
-    for i, v in enumerate(sorted_spreads):
-        weighted_sum += (2 * (i + 1) - n - 1) * v
-    return weighted_sum / (n * total)
+    return _compute_gini_values(spreads)
 
 
 # ── Multi-Agent Simulation Orchestrator ──────────────────────────────────────
