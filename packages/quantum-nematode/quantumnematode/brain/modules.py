@@ -1038,7 +1038,37 @@ def extract_classical_features(
     return np.array(features, dtype=np.float32)
 
 
-def get_classical_feature_dimension(modules: list[ModuleName]) -> int:
+def _infer_stam_dim(modules: list[ModuleName]) -> int | None:
+    """Infer STAM memory dimension from sensory modules list.
+
+    Returns the correct STAM dimension based on which pheromone temporal
+    modules are present. Returns None if STAM is not in the module list.
+    """
+    if ModuleName.STAM not in modules:
+        return None
+
+    from quantumnematode.agent.stam import (
+        CHANNELS_BASE,
+        CHANNELS_PHEROMONE,
+        CHANNELS_PHEROMONE_FULL,
+        compute_memory_dim,
+    )
+
+    has_pheromone_food = ModuleName.PHEROMONE_FOOD_TEMPORAL in modules
+    has_pheromone_alarm = ModuleName.PHEROMONE_ALARM_TEMPORAL in modules
+    has_pheromone_aggregation = ModuleName.PHEROMONE_AGGREGATION_TEMPORAL in modules
+
+    if has_pheromone_aggregation:
+        return compute_memory_dim(CHANNELS_PHEROMONE_FULL)
+    if has_pheromone_food or has_pheromone_alarm:
+        return compute_memory_dim(CHANNELS_PHEROMONE)
+    return compute_memory_dim(CHANNELS_BASE)
+
+
+def get_classical_feature_dimension(
+    modules: list[ModuleName],
+    stam_dim_override: int | None = None,
+) -> int:
     """Get the dimension of the classical feature vector for given modules.
 
     Classical features output either 2 or 3 values per module depending on
@@ -1049,17 +1079,28 @@ def get_classical_feature_dimension(modules: list[ModuleName]) -> int:
     ----------
     modules : list[ModuleName]
         List of modules.
+    stam_dim_override : int or None, optional
+        Override for STAM module classical_dim. When pheromones are enabled,
+        STAM produces more channels (15 for 6-channel, 17 for 7-channel)
+        instead of the default 11. Pass the actual STAM memory dimension
+        to get the correct total feature dimension.
 
     Returns
     -------
     int
         Total number of features across all modules.
     """
+    # Auto-infer STAM dimension from pheromone modules if no override given
+    effective_stam_dim = stam_dim_override or _infer_stam_dim(modules)
+
     total = 0
     for module in modules:
         sensory_module = SENSORY_MODULES.get(module)
         if sensory_module is not None:
-            total += sensory_module.classical_dim
+            if module == ModuleName.STAM and effective_stam_dim is not None:
+                total += effective_stam_dim
+            else:
+                total += sensory_module.classical_dim
         else:
             total += 2  # Default for unknown modules
     return total
