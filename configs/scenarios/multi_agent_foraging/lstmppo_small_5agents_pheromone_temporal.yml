@@ -1,0 +1,101 @@
+# Multi-Agent Temporal — 5 Agents, Alarm + Aggregation Pheromones (Treatment)
+# LSTM PPO GRU with Phase 3 proven brain hyperparams
+# Phase 4 evaluation Campaign D: pheromone value in temporal mode
+#
+# Pheromone modules: alarm_temporal + aggregation_temporal
+# Food-marking pheromone excluded: stale signal (see issue #116)
+#
+# Environment params match no-pheromone control exactly
+
+max_steps: 1000
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+    sensory_modules:
+      - food_chemotaxis_temporal
+      - proprioception
+      - pheromone_alarm_temporal
+      - pheromone_aggregation_temporal
+      - stam
+
+body_length: 2
+
+multi_agent:
+  enabled: true
+  count: 5
+  food_competition: first_arrival
+  social_detection_radius: 5
+  termination_policy: freeze
+  min_agent_distance: 3
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 400.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: temporal
+    pheromone_alarm_mode: temporal
+    pheromone_aggregation_mode: temporal
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 4.0
+    gradient_strength: 1.0
+
+  pheromones:
+    enabled: true
+    alarm:
+      emission_strength: 2.0
+      spatial_decay_constant: 5.0
+      temporal_half_life: 20
+      max_sources: 50
+    aggregation:
+      emission_strength: 0.5
+      spatial_decay_constant: 10.0
+      temporal_half_life: 10
+      max_sources: 200

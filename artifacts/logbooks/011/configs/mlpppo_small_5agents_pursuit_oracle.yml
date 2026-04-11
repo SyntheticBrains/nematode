@@ -1,0 +1,88 @@
+# Multi-Agent Pursuit — 5 Agents, Alarm Pheromones Enabled
+# Tests collective predator response via alarm signaling
+# Phase 4 evaluation Campaign C: alarm-enabled group
+
+max_steps: 300
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - pheromone_alarm
+
+body_length: 2
+
+multi_agent:
+  enabled: true
+  count: 5
+  food_competition: first_arrival
+  social_detection_radius: 5
+  termination_policy: freeze
+  min_agent_distance: 3
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.1
+  penalty_health_damage: 0.5
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 3
+    target_foods_to_collect: 10
+    min_food_distance: 2
+    agent_exclusion_radius: 2
+    gradient_decay_constant: 4.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    predator_type: pursuit
+    speed: 0.5
+    detection_radius: 8
+    damage_radius: 1
+
+  health:
+    max_hp: 100.0
+    predator_damage: 10.0
+    food_healing: 5.0
+
+  pheromones:
+    enabled: true
+    alarm:
+      emission_strength: 2.0
+      spatial_decay_constant: 5.0
+      temporal_half_life: 20
+      max_sources: 50

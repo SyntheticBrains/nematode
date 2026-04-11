@@ -39,13 +39,14 @@ class RewardCalculator:
         """
         self.config = config
 
-    def calculate_reward(
+    def calculate_reward(  # noqa: PLR0913
         self,
         env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
         stuck_position_count: int = 0,
         current_step: int = 0,
         max_steps: int = 100,
+        agent_id: str = "default",
     ) -> float:
         """Calculate reward based on the agent's movement toward the goal.
 
@@ -63,6 +64,8 @@ class RewardCalculator:
             Current step number for efficiency calculation, by default 0.
         max_steps : int, optional
             Maximum steps for efficiency calculation, by default 100.
+        agent_id : str, optional
+            Agent identifier for multi-agent reward computation, by default "default".
 
         Returns
         -------
@@ -70,18 +73,18 @@ class RewardCalculator:
             Reward value based on the agent's performance.
         """
         reward = 0.0
-        distance_reward = 0.0
         anti_dither_penalty = 0.0
-        exploration_bonus = 0.0
-        goal_bonus = 0.0
+
+        # Resolve agent position
+        agent_pos = env.agents[agent_id].position
 
         # Handle distance-based rewards for foraging environment
-        distance_reward = self._calculate_foraging_distance_reward(env, path)
-        exploration_bonus = self._calculate_exploration_bonus(env)
+        distance_reward = self._calculate_foraging_distance_reward(env, path, agent_id)
+        exploration_bonus = self._calculate_exploration_bonus(env, agent_id)
         reward += distance_reward + exploration_bonus
 
         # Anti-dithering: penalize if agent oscillates (returns to previous cell)
-        if len(path) > 2 and env.agent_pos == path[-3]:  # noqa: PLR2004
+        if len(path) > 2 and agent_pos == path[-3]:  # noqa: PLR2004
             anti_dither_penalty = self.config.penalty_anti_dithering
             reward -= anti_dither_penalty
             logger.debug(
@@ -95,8 +98,8 @@ class RewardCalculator:
 
         # Distance-scaled predator evasion: reward for moving away, penalize for closer
         # Also applies a contact penalty when predator is on or adjacent to agent
-        if env.predator.enabled and env.is_agent_in_danger():
-            curr_pred_dist = env.get_nearest_predator_distance()
+        if env.predator.enabled and env.is_agent_in_danger_for(agent_id):
+            curr_pred_dist = env.get_nearest_predator_distance_for(agent_id)
             if curr_pred_dist is not None and len(path) > 1:
                 prev_pos = path[-2]
                 prev_pred_distances = [
@@ -126,11 +129,11 @@ class RewardCalculator:
                 )
 
         # Distance-scaled temperature avoidance: reward for moving toward cultivation temp
-        reward += self._calculate_temperature_avoidance_reward(env, path)
+        reward += self._calculate_temperature_avoidance_reward(env, path, agent_id)
 
         # Boundary collision penalty (mechanosensation)
         # Penalizes when agent attempts to move into a wall, not just for being at edge
-        if env.wall_collision_occurred:
+        if env.agents[agent_id].wall_collision_occurred:
             boundary_penalty = self.config.penalty_boundary_collision
             reward -= boundary_penalty
             logger.debug(
@@ -153,7 +156,7 @@ class RewardCalculator:
             )
 
         # Bonus for reaching the goal, scaled by efficiency
-        if env.reached_goal():
+        if env.reached_goal_for(agent_id):
             efficiency = max(0.1, 1 - (current_step / max_steps))
             goal_bonus = self.config.reward_goal * efficiency
             reward += goal_bonus
@@ -168,6 +171,7 @@ class RewardCalculator:
         self,
         env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
+        agent_id: str = "default",
     ) -> float:
         """Calculate distance-based reward for foraging environments.
 
@@ -177,13 +181,15 @@ class RewardCalculator:
             The foraging environment.
         path : list[tuple[int, ...]]
             The agent's path history.
+        agent_id : str, optional
+            Agent identifier, by default "default".
 
         Returns
         -------
         float
             Distance-based reward.
         """
-        curr_dist = env.get_nearest_food_distance()
+        curr_dist = env.get_nearest_food_distance_for(agent_id)
         if curr_dist is None or len(path) <= 1:
             return 0.0
 
@@ -207,6 +213,7 @@ class RewardCalculator:
     def _calculate_exploration_bonus(
         self,
         env: DynamicForagingEnvironment,
+        agent_id: str = "default",
     ) -> float:
         """Calculate exploration bonus for visiting new cells.
 
@@ -214,16 +221,19 @@ class RewardCalculator:
         ----------
         env : DynamicForagingEnvironment
             The foraging environment.
+        agent_id : str, optional
+            Agent identifier, by default "default".
 
         Returns
         -------
         float
             Exploration bonus.
         """
-        curr_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
-        if curr_pos_tuple not in env.visited_cells:
+        agent_state = env.agents[agent_id]
+        curr_pos_tuple = (agent_state.position[0], agent_state.position[1])
+        if curr_pos_tuple not in agent_state.visited_cells:
             exploration_bonus = self.config.reward_exploration
-            env.visited_cells.add(curr_pos_tuple)
+            agent_state.visited_cells.add(curr_pos_tuple)
             logger.debug(f"[Reward] Exploration bonus: {exploration_bonus}")
             return exploration_bonus
 
@@ -233,6 +243,7 @@ class RewardCalculator:
         self,
         env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
+        agent_id: str = "default",
     ) -> float:
         """Calculate distance-scaled temperature avoidance reward.
 
@@ -246,6 +257,8 @@ class RewardCalculator:
             The environment instance.
         path : list[tuple[int, ...]]
             The agent's path history.
+        agent_id : str, optional
+            Agent identifier, by default "default".
 
         Returns
         -------
@@ -261,11 +274,12 @@ class RewardCalculator:
         ):
             return 0.0
 
-        zone = env.get_temperature_zone()
+        zone = env.get_temperature_zone_for(agent_id)
         if zone is None or zone == TemperatureZone.COMFORT:
             return 0.0
 
-        curr_temp = env.get_temperature()
+        agent_pos = env.agents[agent_id].position
+        curr_temp = env.get_temperature(agent_pos)
         prev_pos = (path[-2][0], path[-2][1])
         prev_temp = env.get_temperature(prev_pos)
         if curr_temp is None or prev_temp is None:

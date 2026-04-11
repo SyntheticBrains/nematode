@@ -1340,14 +1340,20 @@ def export_predator_session_metrics_to_csv(  # pragma: no cover
 
 _MULTI_AGENT_RESULTS_FIELDNAMES = [
     "run",
+    "config_name",
     "agent_id",
     "steps",
     "termination_reason",
     "foods_collected",
+    "total_reward",
+    "success",
+    "satiety_remaining",
+    "foods_available",
 ]
 
 _MULTI_AGENT_SUMMARY_FIELDNAMES = [
     "run",
+    "config_name",
     "total_food",
     "food_competition_events",
     "proximity_events",
@@ -1358,6 +1364,8 @@ _MULTI_AGENT_SUMMARY_FIELDNAMES = [
     "aggregation_index",
     "alarm_evasion_events",
     "food_sharing_events",
+    "territorial_index",
+    "alarm_response_rate",
 ]
 
 
@@ -1391,15 +1399,26 @@ def write_multi_agent_result_row(  # noqa: PLR0913
     termination_reason: str,
     foods_collected: int,
     csvfile: IO[str] | None = None,
+    total_reward: float = 0.0,
+    *,
+    success: bool = False,
+    satiety_remaining: float = 0.0,
+    foods_available: int = 0,
+    config_name: str = "",
 ) -> None:
     """Write one per-agent result row to the multi-agent CSV."""
     writer.writerow(
         {
             "run": run,
+            "config_name": config_name,
             "agent_id": agent_id,
             "steps": steps,
             "termination_reason": termination_reason,
             "foods_collected": foods_collected,
+            "total_reward": f"{total_reward:.4f}",
+            "success": success,
+            "satiety_remaining": f"{satiety_remaining:.2f}",
+            "foods_available": foods_available,
         },
     )
     if csvfile is not None:
@@ -1442,11 +1461,15 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
     aggregation_index: float = 0.0,
     alarm_evasion_events: int = 0,
     food_sharing_events: int = 0,
+    territorial_index: float = 0.0,
+    alarm_response_rate: float = 0.0,
+    config_name: str = "",
 ) -> None:
     """Write one episode summary row to the multi-agent summary CSV."""
     writer.writerow(
         {
             "run": run,
+            "config_name": config_name,
             "total_food": total_food,
             "food_competition_events": food_competition_events,
             "proximity_events": proximity_events,
@@ -1457,6 +1480,8 @@ def write_multi_agent_summary_row(  # noqa: PLR0913
             "aggregation_index": f"{aggregation_index:.4f}",
             "alarm_evasion_events": alarm_evasion_events,
             "food_sharing_events": food_sharing_events,
+            "territorial_index": f"{territorial_index:.4f}",
+            "alarm_response_rate": f"{alarm_response_rate:.4f}",
         },
     )
     if csvfile is not None:

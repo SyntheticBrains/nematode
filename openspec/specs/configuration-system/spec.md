@@ -698,3 +698,14 @@ The environment config SHALL support pheromone parameters.
 
 - `AgentConfig.social_phenotype`: "social" (default) or "solitary"
 - Homogeneous configs default all agents to "social"
+
+### Requirement: Evaluation Scenario Configs
+
+Scenario configs SHALL exist for multi-agent evaluation campaigns.
+
+- Single-agent baselines for both oracle and temporal modes with environment params matching multi-agent configs
+- Agent scaling series (1, 2, 5, 10 agents) on identical grid with identical parameters
+- Pursuit predator configs with matched alarm-enabled and alarm-disabled controls
+- Temporal mode configs with LSTM PPO GRU, Phase 3 proven brain hyperparams, and variants with/without pheromone modules
+- Extreme scarcity configs (1 food, high decay) for social feeding evaluation
+- Proportional food configs (food scaled to agent count) for coordination overhead measurement

@@ -57,7 +57,7 @@ ______________________________________________________________________
 | **1** | Q1 - Q2 2026 | Sensory & Threat Complexity | ✅ COMPLETE | Thermotaxis, enhanced predators, mechanosensation, HP system |
 | **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
 | **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | ✅ SUBSTANTIALLY COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A achieves 94% L500 on hardest environment. Oxygen sensing (aerotaxis) implemented with 5-zone system and combined thermal+oxygen environments. |
-| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | 🔨 IN PROGRESS | Multi-agent infrastructure (Deliverable 1 complete). Pheromone communication (Deliverable 2): PheromoneField with point-source decay, food-marking + alarm pheromones, 4 sensing modules (oracle + temporal), STAM 6-channel extension, CSV export with agent_id. Social dynamics (Deliverable 3): social feeding via satiety decay reduction (npr-1), aggregation pheromones (continuous ascaroside emission), 4 collective behavior metrics (aggregation index, alarm evasion, food sharing, social feeding events), STAM 7-channel extension. Competitive foraging and game-theoretic analysis pending. |
+| **4** | Q3 - Q4 2026 | Multi-Agent Complexity | ✅ SUBSTANTIALLY COMPLETE | Deliverables 1-3 merged (infrastructure, pheromones, social dynamics). Evaluation campaign (Logbook 011): temporal collective exploration advantage (+14.3%), social feeding +35% food under scarcity, zero coordination overhead with proportional resources, pheromones neutral. Two critical bugs found and fixed (#112, #115). Quantum checkpoint not triggered — no genuine coordination complexity. Food spatial persistence deferred (issue #116). |
 | **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
 | **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
 | **7** | Q2 - Q4 2027 | Community & Publication | 🔲 PLANNED | NematodeBench launch, publication campaign, external collaboration |
@@ -440,6 +440,14 @@ Multi-agent scenarios create exponential state spaces (state × number of agents
    - Information sharing about predator locations
    - Collective aggregation as defense strategy
 
+6. **Food Spatial Persistence** [DEFERRED — prerequisite for food-marking pheromone evaluation]
+
+   - Current food respawns uniformly random after consumption, making food-marking pheromone trails point to stale locations (misleading signal)
+   - **Food patches/hotspots**: Define regions where food spawns preferentially, modeled on bacterial lawns. Pheromone trails then correctly signal "productive region"
+   - **Satiety-dependent foraging**: Agents should reduce food-seeking when sated (biological: npr-1 dwelling behavior). Prevents local monopoly where one agent depletes a patch before pheromone-guided agents arrive
+   - **Biased respawn**: Food respawns with spatial correlation to consumed position (configurable locality parameter)
+   - Required for meaningful food-marking pheromone evaluation; alarm and aggregation pheromones have valid signals without this
+
 #### Metrics Focus
 
 - **Emergent phenomena**: Identify behaviors not explicitly programmed (spontaneous aggregation, division of labor, communication strategies)
@@ -449,10 +457,10 @@ Multi-agent scenarios create exponential state spaces (state × number of agents
 
 #### Phase 4 Exit Criteria
 
-- ✅ ≥5 agents running stably with independent brains
-- ✅ ≥1 emergent behavior documented (spontaneous aggregation, information sharing, etc.)
-- ✅ Pheromone communication functional (at least alarm + food-marking)
-- ✅ Classical approaches show measurable strain on coordination tasks (quantified difficulty increase vs. single-agent baseline)
+- ✅ ≥5 agents running stably with independent brains — *5 and 10-agent configurations run reliably across all evaluation campaigns (Logbook 011)*
+- ⚠️ ≥1 emergent behavior documented — *Partially met. Temporal collective exploration advantage (+14.3%) is emergent (not programmed). Social feeding clustering is mechanical, not learned. No learned social strategies observed.*
+- ✅ Pheromone communication functional (at least alarm + food-marking) — *Infrastructure works correctly. Pheromones are neutral across all tested scenarios (oracle sensing and collective exploration make them redundant). Food-marking evaluation deferred pending food spatial persistence (issue #116).*
+- ⚠️ Classical approaches show measurable strain on coordination tasks — *Partially met. 19.7% degradation at 10 agents with scarce resources (B1-v2), but zero coordination overhead with proportional resources (Campaign G). Strain is from resource scarcity, not coordination complexity.*
 
 #### Quantum Checkpoint (Phase 4)
 
@@ -464,11 +472,11 @@ Evaluate:
 - **Quantum game theory approaches**: Do quantum-enhanced Nash equilibrium solvers outperform classical?
 - If classical approaches show measurable difficulty on coordination tasks (aspirational: ceiling \<85%), launch targeted quantum evaluation campaign
 
+**Assessment (Logbook 011)**: The 80.2% ceiling at 10 agents meets the numerical threshold, but Campaign G proved this is resource allocation difficulty, not computational complexity. With proportional resources, classical MLP PPO achieves 100% of ceiling at all scales. **Recommendation: do not trigger quantum multi-agent evaluation.** The environment does not yet create genuine coordination complexity that would favor quantum approaches. Conditions that could create it: food spatial persistence requiring learned communication, satiety-dependent foraging requiring strategy switching, or partial observability requiring information sharing.
+
 #### Go/No-Go Decision
 
-**GO if**: Multi-agent scenarios reveal interesting emergent phenomena OR create measurably harder coordination problems.
-**PIVOT if**: Multi-agent complexity too high or unstable → Deepen single-agent complexity (richer sensing, longer horizons).
-**STOP if**: Infrastructure can't handle ≥3 agents → Re-architect for scalability before proceeding.
+**GO**: Multi-agent infrastructure is complete and functional. Temporal collective exploration advantage is a novel finding. Social feeding works under biological conditions (scarcity pressure). However, genuine coordination complexity and emergent social strategies require environment enhancements (food spatial persistence, satiety-dependent foraging) before deeper investigation. **Proceed to Phase 5 in parallel with deferred multi-agent environment work.**
 
 ______________________________________________________________________
 
