@@ -1042,7 +1042,18 @@ def _infer_stam_dim(modules: list[ModuleName]) -> int | None:
     """Infer STAM memory dimension from sensory modules list.
 
     Returns the correct STAM dimension based on which pheromone temporal
-    modules are present. Returns None if STAM is not in the module list.
+    modules are present. Oracle pheromone modules do not add STAM channels
+    (pheromone data goes through the oracle module's to_classical, not STAM).
+
+    Parameters
+    ----------
+    modules : list[ModuleName]
+        List of sensory modules to check for STAM and pheromone presence.
+
+    Returns
+    -------
+    int or None
+        Inferred STAM memory dimension, or None if STAM is not in the list.
     """
     if ModuleName.STAM not in modules:
         return None

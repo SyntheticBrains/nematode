@@ -156,6 +156,10 @@ class MultiAgentEpisodeResult:
     alarm_response_rate : float
         Fraction of alarm response opportunities where a nearby agent changed
         direction within ALARM_RESPONSE_WINDOW steps of an alarm emission.
+    per_agent_reward : dict[str, float]
+        Total accumulated reward per agent over the episode.
+    per_agent_satiety : dict[str, float]
+        Satiety remaining per agent at episode end.
     """
 
     agent_results: dict[str, EpisodeResult]
@@ -728,6 +732,10 @@ class MultiAgentSimulation:
                 self._alarm_response_buffer,
             ):
                 if current_step - emit_step > ALARM_RESPONSE_WINDOW:
+                    # Count remaining tracked agents as non-responses before expiring
+                    for oid in list(nearby_dirs):
+                        if oid in self.env.agents:
+                            self._alarm_response_opportunities += 1
                     expired.append(idx)
                     continue
                 if current_step - emit_step < 1:

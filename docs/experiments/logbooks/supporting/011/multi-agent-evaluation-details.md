@@ -7,7 +7,7 @@
 | 2026-04-06 | #112 Sensing position | All agents read sensory data from default agent | PR #113 |
 | 2026-04-11 | #115 Reward calculator | All agents receive rewards from default agent position | Commit a6c86fca |
 | 2026-04-11 | STAM dimension mismatch | Brain input_dim wrong with pheromone temporal modules | Commit a1b47493 |
-| 2026-04-11 | food_sharing_buffer ungated | food_sharing_events fires without pheromones | Commit edab23f4 |
+| 2026-04-11 | food_marking_buffer ungated | food_sharing_events fires without pheromones | Commit edab23f4 |
 
 ## Campaign A-v2 Per-Session Data (Post-Fix)
 

@@ -226,7 +226,7 @@ The following items are planned for a subsequent PR to enable deeper multi-agent
 
 ## Data References
 
-- Artifacts: `artifacts/logbooks/011/` (CSV data, configs, weights)
+- Artifacts: `artifacts/logbooks/011/` (configs and weights only; CSVs are reproducible from configs)
 - Config files: `configs/scenarios/multi_agent_foraging/`, `configs/scenarios/multi_agent_pursuit/`, `configs/scenarios/foraging/`
 - Supporting detail: `docs/experiments/logbooks/supporting/011/`
 - Issues: #112 (sensing position), #115 (reward calculator), #116 (food spatial persistence)

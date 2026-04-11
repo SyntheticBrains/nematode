@@ -1,5 +1,8 @@
 """Tests for the reward calculation system."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import pytest
@@ -8,8 +11,16 @@ from quantumnematode.agent.reward_calculator import RewardCalculator
 from quantumnematode.env import DynamicForagingEnvironment
 from quantumnematode.env.temperature import TemperatureZone
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
-def _make_agent_state(position, visited_cells=None, *, wall_collision=False):
+
+def _make_agent_state(
+    position: Sequence[int],
+    visited_cells: set[tuple[int, ...]] | None = None,
+    *,
+    wall_collision: bool = False,
+) -> Mock:
     """Create a mock AgentState with position and visited_cells."""
     state = Mock()
     state.position = tuple(position)
@@ -18,7 +29,13 @@ def _make_agent_state(position, visited_cells=None, *, wall_collision=False):
     return state
 
 
-def _make_base_env(agent_pos, *, visited_cells=None, wall_collision=False, agent_id="default"):
+def _make_base_env(
+    agent_pos: Sequence[int],
+    *,
+    visited_cells: set[tuple[int, ...]] | None = None,
+    wall_collision: bool = False,
+    agent_id: str = "default",
+) -> Mock:
     """Create a base mock env for reward calculator tests."""
     env = Mock(spec=DynamicForagingEnvironment)
     state = _make_agent_state(agent_pos, visited_cells, wall_collision=wall_collision)
@@ -158,8 +175,8 @@ class TestMultiAgentReward:
         # Far agent moved from (15,14) to (15,15) — farther from food at (5,6)
         r_far = calculator.calculate_reward(env, [(15, 14), (15, 15)], agent_id="far")
 
-        # Near should have better reward than far
-        assert r_near != r_far
+        # Near agent gets positive distance reward (moved closer), far gets negative
+        assert r_near > r_far
 
 
 class TestAntiDitheringPenalty:
