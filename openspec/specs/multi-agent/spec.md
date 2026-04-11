@@ -123,3 +123,25 @@ The system SHALL provide a `MultiAgentSimulation` orchestrator that coordinates 
 
 - Per-agent sub-seeds: `blake2b(session_seed + agent_id)` deterministic
 - FIRST_ARRIVAL policy: same agent wins same contested food across reruns
+
+### Requirement: Territorial Index Metric
+
+MultiAgentEpisodeResult SHALL include a territorial index measuring spatial foraging specialization.
+
+- Gini coefficient of per-agent foraging spreads (mean Manhattan distance of food collection positions from centroid)
+- Value in \[0, 1\]: 0 = equal foraging patterns, 1 = maximal specialization
+- 0.0 when fewer than 2 agents collected food
+- Single food per agent: spread = 0.0
+
+### Requirement: Alarm Response Rate Metric
+
+MultiAgentEpisodeResult SHALL include an alarm response rate measuring causal reaction to alarm pheromone emissions.
+
+- When alarm emitted at step T by agent A, count nearby agents (within `social_detection_radius`) that change direction within ALARM_RESPONSE_WINDOW (5) steps
+- Rate = direction changes / opportunities; 0.0 when no opportunities
+- Emitting agent excluded from response opportunities
+
+### Requirement: CSV Export of Evaluation Metrics
+
+- `multi_agent_summary.csv` SHALL include `territorial_index` and `alarm_response_rate` columns
+- `simulation_results.csv` SHALL include `config_name`, `total_reward`, `success`, `satiety_remaining`, `foods_available` columns
