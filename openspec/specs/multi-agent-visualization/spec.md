@@ -26,11 +26,11 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 
 - WHEN `render_multi_agent_frame()` is called with a list of `AgentRenderState` objects
 
-- THEN the renderer SHALL draw all agents whose positions fall within the viewport bounds
+- THEN the renderer SHALL draw all agents whose positions fall within the viewport bounds, including dead agents
 
 - AND each agent SHALL be rendered with a distinct color from the 8-color palette based on their `color_index`
 
-- AND dead/frozen agents SHALL be rendered with a gray overlay
+- AND dead agents SHALL be rendered with a semi-transparent gray overlay applied on top of the base colored sprite
 
 - WHEN the followed agent's viewport is computed
 
@@ -44,25 +44,29 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 
 - WHEN the user presses the right arrow key during a multi-agent rendering session
 
-- THEN the viewport SHALL switch to follow the next agent in order (wrapping from last to first)
+- THEN the viewport SHALL switch to follow the next agent in the `AgentRenderState` list order (wrapping from last to first)
 
 - WHEN the user presses the left arrow key during a multi-agent rendering session
 
-- THEN the viewport SHALL switch to follow the previous agent in order (wrapping from first to last)
+- THEN the viewport SHALL switch to follow the previous agent in the `AgentRenderState` list order (wrapping from first to last)
 
 - WHEN the user presses number key N (1-9) during a multi-agent rendering session
 
-- THEN the viewport SHALL switch to follow agent N-1 (agent_0 through agent_8)
+- THEN the viewport SHALL switch to follow the agent at index N-1 in the `AgentRenderState` list (if present)
 
-- AND if agent N-1 does not exist, the keypress SHALL be ignored
+- AND if index N-1 does not exist, the keypress SHALL be ignored
 
 - WHEN the followed agent changes via any input method
 
 - THEN the status bar SHALL update to show the newly followed agent's metrics
 
+- WHEN the followed agent is removed from the `AgentRenderState` list between frames
+
+- THEN the renderer SHALL fall back to following the first agent in the list
+
 - WHEN `render_multi_agent_frame()` returns
 
-- THEN it SHALL return the current followed agent ID (which may have changed due to keyboard input)
+- THEN it SHALL return the current followed agent ID (which may have changed due to keyboard input or fallback)
 
 ## ADDED Requirement: Colored Agent Sprites
 
@@ -72,7 +76,7 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 
 - AND the sprites SHALL be 32x32 pixels with SRCALPHA transparency
 
-- AND the color index SHALL be computed as `agent_index % 8` to support arbitrary agent counts
+- AND the `color_index` SHALL be computed as `agent_index % 8` to support arbitrary agent counts
 
 - WHEN body segments are rendered for a colored agent
 
@@ -140,3 +144,5 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 - AND it SHALL display a compact summary line for all agents (ID, food count, alive/dead)
 
 - AND it SHALL display the agent switcher indicator ("Following: agent_N [N/total]", "\</> to switch, 1-9 to jump")
+
+- AND lines exceeding the available window width SHALL be word-wrapped across multiple lines, with character-level breaking as fallback for single tokens wider than the window
