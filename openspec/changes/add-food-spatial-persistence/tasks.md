@@ -20,10 +20,10 @@
 
 ## 4. Satiety-Gated Food Collection
 
-- [ ] 4.1 Add satiety gate in `check_and_consume_food()` (food_handler.py) — check agent satiety against `env.foraging.satiety_food_threshold * max_satiety` before calling `env.consume_food()`, return food_consumed=False if sated
+- [ ] 4.1 Add satiety gate in `check_and_consume_food()` (food_handler.py) — check agent satiety against `env.foraging.satiety_food_threshold * max_satiety` before calling `env.consume_food()` (note: single-agent uses `consume_food()`, not `consume_food_for()`), return food_consumed=False if sated
 - [ ] 4.2 Add satiety gate in `_resolve_food_step()` (multi_agent.py) — pre-filter sated agents from the `contested` map so they don't compete for food, leaving food available for hungry agents
 - [ ] 4.3 Add `can_eat: bool = True` parameter to `calculate_reward()` (reward_calculator.py) — suppress goal bonus when can_eat=False. Callers pass False when agent is on food but sated
-- [ ] 4.4 Pass `can_eat=False` from single-agent runner and multi-agent step loop when satiety gate blocks consumption
+- [ ] 4.4 Pass `can_eat=False` through the reward chain: `agent.calculate_reward()` (agent.py:922) delegates to `RewardCalculator.calculate_reward()` — add `can_eat` parameter to both. Single-agent runner (runners.py) and multi-agent step loop pass False when satiety gate blocks consumption
 
 ## 5. Config Loader
 
