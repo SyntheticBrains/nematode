@@ -51,25 +51,25 @@ When multiple hotspots exist, the sampling first selects which hotspot to target
 
 **Rationale:** Minimal implementation. Changes episode dynamics fundamentally (finite food supply, shorter episodes) but requires no reward or brain changes.
 
-### Decision 6: Satiety-gated food collection as environment constraint
+### Decision 6: Satiety gate in caller layer, not environment
 
-Satiety-dependent foraging is implemented as a simple environment gate: `consume_food_for()` checks agent satiety against `satiety_food_threshold` and refuses collection if satiety exceeds the threshold. This is not a reward signal — the agent physically cannot pick up food when sated.
+Satiety lives on `QuantumNematodeAgent._satiety_manager`, not on `AgentState` in the environment. Therefore the satiety gate is checked in the two callers of `consume_food_for()`: `FoodConsumptionHandler.check_and_consume_food()` (single-agent) and `_resolve_food_step()` (multi-agent). Both have access to the agent object and thus satiety. The environment's `consume_food_for()` remains a pure grid/food operation.
 
-**Rationale:** Prevents the local monopolist problem where one agent depletes a hotspot before pheromone-guided agents arrive. Biologically grounded in C. elegans npr-1-mediated dwelling behavior (sated worms reduce pharyngeal pumping). As an environment constraint rather than reward shaping, it doesn't require brain changes — agents learn to move away when they can't eat.
+**Rationale:** Keeps the environment layer as a pure grid manager. Satiety is agent-layer state — the environment doesn't know about it and shouldn't need to.
 
-**Alternative rejected:** Reward-based approaches (movement penalties when sated, no-reward-when-full) require tuning reward weights and may interfere with existing reward signals. The environmental gate is simpler and more predictable.
+**Alternative rejected:** Adding satiety to `AgentState` or passing it to `consume_food_for()` would leak agent-layer concerns into the environment.
 
-### Decision 7: Multi-agent food re-offer when sated winner can't eat
+### Decision 7: Pre-filter sated agents from food competition
 
-In `_resolve_food_step()`, if the competition winner can't consume due to the satiety gate, the food must be re-offered to other contestants at the same position. Without this, a sated agent blocks hungry agents from eating.
+In `_resolve_food_step()`, sated agents are excluded from the `contested` map before competition resolution. They don't enter the competition at all — food at their position is available to hungry agents.
 
-**Rationale:** The satiety gate would otherwise create a worse problem than it solves — a sated agent sitting on food prevents anyone from eating it.
+**Rationale:** Simpler than re-offering after a sated winner is selected. Avoids retry loops. A sated agent standing on food simply doesn't compete, leaving it for hungry agents.
 
-### Decision 8: Suppress goal bonus for sated agents on food
+### Decision 8: Suppress goal bonus via `can_eat` parameter
 
-The reward calculator gives a goal bonus when `env.reached_goal_for(agent_id)` returns true (agent standing on food). Without suppression, a sated agent standing on food would receive this bonus every step — a perverse incentive to stay near food without eating.
+Add `can_eat: bool = True` parameter to `calculate_reward()`. Callers pass `False` when the agent is on food but can't eat due to satiety gate. The goal bonus at `reward_calculator.py:159` is gated on `can_eat`. Defaults to `True` for backward compatibility — existing callers are unaffected.
 
-**Rationale:** The goal bonus should only fire when the agent can actually consume. The environment exposes the satiety gate state so the reward calculator can check it.
+**Rationale:** Clean interface. The reward calculator doesn't need to know about satiety directly — it just needs to know whether the agent can consume this step.
 
 ### Decision 9: Hotspot bias composes with safe_zone_food_bias
 

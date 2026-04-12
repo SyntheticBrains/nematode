@@ -30,18 +30,36 @@ Biologically grounded: C. elegans on bacterial lawns reduce pharyngeal pumping w
 
 ### 4. Configuration
 
+Medium (50×50) example:
+
 ```yaml
 environment:
+  grid_size: 50
   foraging:
     foods_on_grid: 15
     food_hotspots:
-      - [12, 12, 1.0]    # patch near center-left
-      - [38, 38, 1.0]    # patch near center-right
+      - [12, 12, 1.0]    # patch near top-left
+      - [38, 38, 1.0]    # patch near bottom-right
       - [12, 38, 0.5]    # weaker patch
     food_hotspot_bias: 0.8
     food_hotspot_decay: 8.0
     satiety_food_threshold: 0.8  # can't eat above 80% satiety
     no_respawn: false
+```
+
+Small (20×20) example — hotspots closer together due to grid size:
+
+```yaml
+environment:
+  grid_size: 20
+  foraging:
+    foods_on_grid: 8
+    food_hotspots:
+      - [6, 6, 1.0]
+      - [14, 14, 1.0]
+    food_hotspot_bias: 0.8
+    food_hotspot_decay: 5.0  # tighter decay for smaller grid
+    satiety_food_threshold: 0.8
 ```
 
 ## Capabilities
@@ -53,9 +71,10 @@ environment:
 **Core code:**
 
 - `quantumnematode/dtypes.py` — `FoodHotspot` type alias
-- `quantumnematode/env/env.py` — Extend `ForagingParams`, add `_sample_hotspot_candidate()`, modify `_initialize_foods()`, `spawn_food()`, and `consume_food_for()`
-- `quantumnematode/agent/multi_agent.py` — Update `_resolve_food_step()` to re-offer food when sated winner can't eat
-- `quantumnematode/agent/reward_calculator.py` — Suppress goal bonus when agent is on food but can't eat due to satiety gate
+- `quantumnematode/env/env.py` — Extend `ForagingParams`, add `_sample_hotspot_candidate()`, modify `_initialize_foods()` and `spawn_food()`
+- `quantumnematode/agent/food_handler.py` — Add satiety gate check before `env.consume_food()` in `check_and_consume_food()`
+- `quantumnematode/agent/multi_agent.py` — Pre-filter sated agents from food competition in `_resolve_food_step()`
+- `quantumnematode/agent/reward_calculator.py` — Add `can_eat` parameter to `calculate_reward()`, suppress goal bonus when False
 - `quantumnematode/utils/config_loader.py` — Extend `ForagingConfig` with hotspot YAML fields
 - `quantumnematode/env/__init__.py` — Export `FoodHotspot`
 

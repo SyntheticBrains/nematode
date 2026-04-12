@@ -20,10 +20,10 @@
 
 ## 4. Satiety-Gated Food Collection
 
-- [ ] 4.1 Add `satiety_food_threshold` check in `consume_food_for()` (env.py) — refuse collection when agent satiety > threshold × max_satiety, return None
-- [ ] 4.2 Update `_resolve_food_step()` in `multi_agent.py` — if winner can't eat due to satiety gate, re-offer food to other contestants at same position
-- [ ] 4.3 Suppress goal bonus in `reward_calculator.py` when agent is on food but can't eat due to satiety gate (avoid perverse reward for standing on food while sated)
-- [ ] 4.4 Pass `satiety_food_threshold` from ForagingParams to the satiety check (env has access to both agent satiety via agent state and foraging config)
+- [ ] 4.1 Add satiety gate in `check_and_consume_food()` (food_handler.py) — check agent satiety against `env.foraging.satiety_food_threshold * max_satiety` before calling `env.consume_food()`, return food_consumed=False if sated
+- [ ] 4.2 Add satiety gate in `_resolve_food_step()` (multi_agent.py) — pre-filter sated agents from the `contested` map so they don't compete for food, leaving food available for hungry agents
+- [ ] 4.3 Add `can_eat: bool = True` parameter to `calculate_reward()` (reward_calculator.py) — suppress goal bonus when can_eat=False. Callers pass False when agent is on food but sated
+- [ ] 4.4 Pass `can_eat=False` from single-agent runner and multi-agent step loop when satiety gate blocks consumption
 
 ## 5. Config Loader
 
@@ -44,7 +44,7 @@
 - [ ] 6.9 Test satiety gate: agent at high satiety cannot consume food (food remains on grid)
 - [ ] 6.10 Test satiety gate: agent below threshold can consume normally
 - [ ] 6.11 Test satiety gate disabled (None): no restriction on consumption
-- [ ] 6.12 Test multi-agent satiety gate: sated winner's food re-offered to hungry contestant
+- [ ] 6.12 Test multi-agent satiety gate: sated agents excluded from food competition, hungry agent at same position gets food
 - [ ] 6.13 Test reward suppression: no goal bonus when agent on food but can't eat
 
 ## 7. Example Configs
