@@ -820,7 +820,7 @@ class PygameRenderer:
                     px, py = self._cell_to_pixel(seg[0], seg[1], viewport)
                     self._screen.blit(self._dead_overlay, (px, py))
 
-    def _render_multi_agent_status_bar(  # noqa: C901
+    def _render_multi_agent_status_bar(  # noqa: C901, PLR0912
         self,
         *,
         agents: list[AgentRenderState],
@@ -889,15 +889,56 @@ class PygameRenderer:
         if self._pheromone_overlay_enabled:
             lines.append(("[P] Pheromone overlay ON", STATUS_SAFE_COLOR))
 
-        line_height = STATUS_FONT_SIZE + 2
+        # Wrap long lines to fit window width
+        wrapped: list[tuple[str, tuple[int, int, int]]] = []
+        max_text_width = self._width - STATUS_PADDING * 2
         antialias = True
-        for i, (text, color) in enumerate(lines):
+        for text, color in lines:
+            if not text:
+                wrapped.append(("", color))
+                continue
+            # Check if text fits
+            text_surf = self._font.render(text, antialias, color)
+            if text_surf.get_width() <= max_text_width:
+                wrapped.append((text, color))
+            else:
+                # Word-wrap the text
+                wrapped.extend(self._wrap_text(text, color, max_text_width))
+
+        self._resize_if_needed(len(wrapped))
+
+        line_height = STATUS_FONT_SIZE + 2
+        for i, (text, color) in enumerate(wrapped):
             if text:
                 text_surf = self._font.render(text, antialias, color)
                 self._screen.blit(
                     text_surf,
                     (STATUS_PADDING, bar_y + 4 + i * line_height),
                 )
+
+    def _wrap_text(
+        self,
+        text: str,
+        color: tuple[int, int, int],
+        max_width: int,
+    ) -> list[tuple[str, tuple[int, int, int]]]:
+        """Word-wrap text to fit within max_width pixels."""
+        words = text.split()
+        result: list[tuple[str, tuple[int, int, int]]] = []
+        current_line = ""
+        antialias = True
+        for word in words:
+            candidate = f"{current_line} {word}".strip()
+            surf = self._font.render(candidate, antialias, color)
+            if surf.get_width() <= max_width:
+                current_line = candidate
+            else:
+                if current_line:
+                    result.append((current_line, color))
+                current_line = word
+        if current_line:
+            result.append((current_line, color))
+        return result or [("", color)]
 
     def close(self) -> None:
         """Clean up Pygame resources."""
