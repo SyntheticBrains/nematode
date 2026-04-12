@@ -392,13 +392,19 @@ class TestTemporalSensingIntegration:
         params = agent._create_brain_params()
         assert params.food_dconcentration_dt is not None
 
-    def test_stam_state_is_11_floats(self) -> None:
-        """Test that STAM state is an 11-float tuple on BrainParams."""
+    def test_stam_state_matches_active_channels(self) -> None:
+        """Test that STAM state dimension matches active channel count.
+
+        Foraging-only env has 1 channel (food), so MEMORY_DIM = 2*1 + 3 = 5.
+        """
+        from quantumnematode.agent.stam import compute_memory_dim
+
         sensing = SensingConfig(stam_enabled=True)
         agent = self._create_temporal_agent(sensing)
         params = agent._create_brain_params()
         assert params.stam_state is not None
-        assert len(params.stam_state) == 11
+        expected_dim = compute_memory_dim(len(agent._active_channels))
+        assert len(params.stam_state) == expected_dim
         assert all(isinstance(v, float) for v in params.stam_state)
 
     def test_oracle_mode_leaves_temporal_fields_none(self) -> None:
@@ -429,7 +435,7 @@ class TestTemporalSensingIntegration:
         agent._previous_position = None
 
         state = agent._stam.get_memory_state()
-        np.testing.assert_array_equal(state, np.zeros(11, dtype=np.float32))
+        np.testing.assert_array_equal(state, np.zeros(agent._stam.MEMORY_DIM, dtype=np.float32))
 
     def test_mixed_modes_per_modality(self) -> None:
         """Test that different modes can be used for different modalities."""

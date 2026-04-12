@@ -222,5 +222,8 @@ class TestTemporalModuleIntegration:
             ModuleName.STAM,
         ]
         dim = get_classical_feature_dimension(modules)
-        # 2 + 2 + 3 + 11 = 18
-        assert dim == 18
+        # STAM infers 3 channels from temporal modules: food + predator + temperature
+        from quantumnematode.agent.stam import compute_memory_dim
+
+        stam_dim = compute_memory_dim(3)  # food + predator + temperature
+        assert dim == 2 + 2 + 3 + stam_dim

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from pydantic import BaseModel
 
-from quantumnematode.agent.stam import STAMBuffer
+from quantumnematode.agent.stam import STAMBuffer, STAMChannelDef
 from quantumnematode.agent.tracker import EpisodeTracker
 from quantumnematode.brain.actions import ActionData  # noqa: TC001 - needed at runtime
 from quantumnematode.brain.arch import Brain, BrainParams, QuantumBrain
@@ -62,6 +62,54 @@ _ACTION_TO_IDX: dict[str, int] = {
     "forward-left": 4,
     "forward-right": 5,
 }
+
+# Type alias for STAM channel value fetchers
+ChannelFetcher = Any  # Callable[[tuple[int, int], int], float] — (position, step) -> float
+
+
+def _build_channel_fetchers(
+    env: DynamicForagingEnvironment,
+    channels: tuple[STAMChannelDef, ...],
+) -> list[ChannelFetcher]:
+    """Build value-fetcher callables for each active STAM channel.
+
+    Each fetcher takes (position, current_step) and returns a float scalar.
+
+    Parameters
+    ----------
+    env : DynamicForagingEnvironment
+        Environment to read values from.
+    channels : tuple[STAMChannelDef, ...]
+        Active channel definitions.
+
+    Returns
+    -------
+    list[ChannelFetcher]
+        One callable per channel, in the same order as channels.
+    """
+    fetcher_map: dict[str, ChannelFetcher] = {
+        "food": lambda pos, _step: env.get_food_concentration(position=pos),
+        "temperature": lambda pos, _step: env.get_temperature(pos) or 0.0,
+        "predator": lambda pos, _step: env.get_predator_concentration(position=pos),
+        "oxygen": lambda pos, _step: (
+            env.get_oxygen_concentration(position=pos) if env.aerotaxis.enabled else 0.0
+        ),
+        "pheromone_food": lambda pos, step: env.get_pheromone_food_concentration(
+            position=pos,
+            current_step=step,
+        ),
+        "pheromone_alarm": lambda pos, step: env.get_pheromone_alarm_concentration(
+            position=pos,
+            current_step=step,
+        ),
+        "pheromone_aggregation": lambda pos, step: env.get_pheromone_aggregation_concentration(
+            position=pos,
+            current_step=step,
+        ),
+    }
+    return [fetcher_map[ch.name] for ch in channels]
+
+
 DEFAULT_SATIETY_INITIAL = 200.0
 DEFAULT_SATIETY_DECAY_RATE = 1.0
 DEFAULT_SATIETY_GAIN_PER_FOOD = 0.2
@@ -190,31 +238,18 @@ class QuantumNematodeAgent:
         self.satiety_config = satiety_config or SatietyConfig()
         self.sensing_config: SensingConfig = sensing_config or SensingConfig()
 
-        # Initialize STAM buffer when enabled
+        # Initialize STAM buffer when enabled — channels resolved from env config
         self._stam: STAMBuffer | None = None
+        self._active_channels: tuple[STAMChannelDef, ...] = ()
+        self._channel_fetchers: list[ChannelFetcher] = []
         if self.sensing_config.stam_enabled:
-            from quantumnematode.agent.stam import (
-                CHANNELS_BASE,
-                CHANNELS_PHEROMONE,
-                CHANNELS_PHEROMONE_FULL,
-            )
+            from quantumnematode.agent.stam import resolve_active_channels
 
-            pheromones_enabled = (
-                env is not None and hasattr(env, "pheromones") and env.pheromones.enabled
-            )
-            aggregation_enabled = (
-                pheromones_enabled and env is not None and env.pheromones.aggregation is not None
-            )
-            if aggregation_enabled:
-                num_channels = CHANNELS_PHEROMONE_FULL
-            elif pheromones_enabled:
-                num_channels = CHANNELS_PHEROMONE
-            else:
-                num_channels = CHANNELS_BASE
+            self._active_channels = resolve_active_channels(env)
             self._stam = STAMBuffer(
                 buffer_size=self.sensing_config.stam_buffer_size,
                 decay_rate=self.sensing_config.stam_decay_rate,
-                num_channels=num_channels,
+                num_channels=len(self._active_channels),
             )
         self._previous_position: tuple[int, ...] | None = None
 
@@ -227,6 +262,10 @@ class QuantumNematodeAgent:
             )
         else:
             self.env = env
+
+        # Build channel fetchers now that self.env is set
+        if self._active_channels:
+            self._channel_fetchers = _build_channel_fetchers(self.env, self._active_channels)
 
         _init_pos = self.env.agents[self.agent_id].position
         self.path: list[GridPosition] = [(_init_pos[0], _init_pos[1])]
@@ -393,10 +432,10 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
-    def _compute_temporal_data(  # noqa: C901, PLR0912, PLR0915
+    def _compute_temporal_data(  # noqa: C901, PLR0912
         self,
         sensing: SensingConfig,
-        temperature: float | None,
+        temperature: float | None,  # noqa: ARG002
         separated_grads: dict[str, Any],
         action: ActionData | None,
     ) -> dict[str, Any]:
@@ -444,28 +483,23 @@ class QuantumNematodeAgent:
 
         # (a) Get scalar concentrations from environment at this agent's position
         agent_pos = self.env.agents[self.agent_id].position
-        food_conc_val = self.env.get_food_concentration(position=agent_pos)
-        pred_conc_val = self.env.get_predator_concentration(position=agent_pos)
-        temp_val = temperature if temperature is not None else 0.0
 
         if sensing.chemotaxis_mode != SensingMode.ORACLE:
-            result["food_concentration"] = food_conc_val
+            result["food_concentration"] = self.env.get_food_concentration(position=agent_pos)
             separated_grads.pop("food_gradient_strength", None)
             separated_grads.pop("food_gradient_direction", None)
 
         if sensing.nociception_mode != SensingMode.ORACLE:
-            result["predator_concentration"] = pred_conc_val
+            result["predator_concentration"] = self.env.get_predator_concentration(
+                position=agent_pos,
+            )
             separated_grads.pop("predator_gradient_strength", None)
             separated_grads.pop("predator_gradient_direction", None)
 
-        # Oxygen scalar concentration (raw percentage, not tanh-normalized)
-        o2_val = 0.0
-        if self.env.aerotaxis.enabled:
-            o2_raw = self.env.get_oxygen_concentration(position=agent_pos)
-            o2_val = o2_raw if o2_raw is not None else 0.0
-            if sensing.aerotaxis_mode != SensingMode.ORACLE:
-                separated_grads.pop("oxygen_gradient_strength", None)
-                separated_grads.pop("oxygen_gradient_direction", None)
+        # Oxygen: suppress oracle keys when in temporal/derivative mode
+        if self.env.aerotaxis.enabled and sensing.aerotaxis_mode != SensingMode.ORACLE:
+            separated_grads.pop("oxygen_gradient_strength", None)
+            separated_grads.pop("oxygen_gradient_direction", None)
 
         # Pheromone temporal concentrations (when not oracle mode)
         step = self._episode_tracker.steps
@@ -501,34 +535,15 @@ class QuantumNematodeAgent:
             )
         self._previous_position = current_pos
 
-        # (c) Record to STAM
+        # (c) Record to STAM — dynamic channel fetchers
         if self._stam is not None:
             action_idx = 0
             if action is not None:
                 action_str = str(action.action) if action.action is not None else "stay"
                 action_idx = _ACTION_TO_IDX.get(action_str, 0)
 
-            # Build scalar array — extend with pheromone channels when enabled
-            scalars = [food_conc_val, temp_val, pred_conc_val, o2_val]
-            if self._stam.num_channels > 4:  # noqa: PLR2004
-                # Pheromone channels (indices 4, 5)
-                pos_2d = (int(current_pos[0]), int(current_pos[1]))
-                pheromone_food_val = self.env.get_pheromone_food_concentration(
-                    position=pos_2d,
-                    current_step=step,
-                )
-                pheromone_alarm_val = self.env.get_pheromone_alarm_concentration(
-                    position=pos_2d,
-                    current_step=step,
-                )
-                scalars.extend([pheromone_food_val, pheromone_alarm_val])
-                # Aggregation pheromone channel (index 6)
-                if self._stam.num_channels > 6:  # noqa: PLR2004
-                    pheromone_agg_val = self.env.get_pheromone_aggregation_concentration(
-                        position=pos_2d,
-                        current_step=step,
-                    )
-                    scalars.append(pheromone_agg_val)
+            pos_2d = (int(current_pos[0]), int(current_pos[1]))
+            scalars = [fetcher(pos_2d, step) for fetcher in self._channel_fetchers]
 
             self._stam.record(
                 np.array(scalars),
@@ -536,35 +551,12 @@ class QuantumNematodeAgent:
                 action_idx,
             )
 
-            # (d) Get temporal derivatives from STAM
-            if sensing.chemotaxis_mode == SensingMode.DERIVATIVE:
-                result["food_dconcentration_dt"] = self._stam.compute_temporal_derivative(0)
-            if sensing.thermotaxis_mode == SensingMode.DERIVATIVE:
-                result["temperature_ddt"] = self._stam.compute_temporal_derivative(1)
-            if sensing.nociception_mode == SensingMode.DERIVATIVE:
-                result["predator_dconcentration_dt"] = self._stam.compute_temporal_derivative(2)
-            if sensing.aerotaxis_mode == SensingMode.DERIVATIVE:
-                result["oxygen_dconcentration_dt"] = self._stam.compute_temporal_derivative(3)
-            # Pheromone derivatives (channels 4, 5)
-            if self._stam.num_channels > 4:  # noqa: PLR2004
-                pheromone_food_mode = getattr(sensing, "pheromone_food_mode", None)
-                pheromone_alarm_mode = getattr(sensing, "pheromone_alarm_mode", None)
-                if pheromone_food_mode == SensingMode.DERIVATIVE:
-                    result["pheromone_food_dconcentration_dt"] = (
-                        self._stam.compute_temporal_derivative(4)
-                    )
-                if pheromone_alarm_mode == SensingMode.DERIVATIVE:
-                    result["pheromone_alarm_dconcentration_dt"] = (
-                        self._stam.compute_temporal_derivative(5)
-                    )
-                # Aggregation pheromone derivative (channel 6)
-                if (
-                    self._stam.num_channels > 6  # noqa: PLR2004
-                    and pheromone_aggregation_mode == SensingMode.DERIVATIVE
-                ):
-                    result["pheromone_aggregation_dconcentration_dt"] = (
-                        self._stam.compute_temporal_derivative(6)
-                    )
+            # (d) Get temporal derivatives from STAM — dynamic per active channel
+            for idx, ch_def in enumerate(self._active_channels):
+                if ch_def.derivative_key and ch_def.sensing_mode_attr:
+                    mode = getattr(sensing, ch_def.sensing_mode_attr, SensingMode.ORACLE)
+                    if mode == SensingMode.DERIVATIVE:
+                        result[ch_def.derivative_key] = self._stam.compute_temporal_derivative(idx)
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
 
@@ -986,6 +978,8 @@ class QuantumNematodeAgent:
 
         # Update component references to new environment instance
         self._food_handler.env = self.env
+        if self._active_channels:
+            self._channel_fetchers = _build_channel_fetchers(self.env, self._active_channels)
 
         # Reset satiety manager to initial satiety
         self._satiety_manager.reset()
