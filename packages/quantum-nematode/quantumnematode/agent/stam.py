@@ -115,13 +115,13 @@ def resolve_active_channels(
     channels: list[STAMChannelDef] = [CHANNEL_REGISTRY["food"]]  # Always present
 
     if env is not None:
-        if hasattr(env, "thermotaxis") and env.thermotaxis.enabled:
+        if env.thermotaxis.enabled:
             channels.append(CHANNEL_REGISTRY["temperature"])
-        if hasattr(env, "predator") and env.predator.enabled:
+        if env.predator.enabled:
             channels.append(CHANNEL_REGISTRY["predator"])
-        if hasattr(env, "aerotaxis") and env.aerotaxis.enabled:
+        if env.aerotaxis.enabled:
             channels.append(CHANNEL_REGISTRY["oxygen"])
-        if hasattr(env, "pheromones") and env.pheromones.enabled:
+        if env.pheromones.enabled:
             channels.append(CHANNEL_REGISTRY["pheromone_food"])
             channels.append(CHANNEL_REGISTRY["pheromone_alarm"])
             if env.pheromones.aggregation is not None:
