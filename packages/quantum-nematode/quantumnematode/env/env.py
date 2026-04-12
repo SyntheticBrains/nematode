@@ -21,7 +21,7 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.dtypes import GradientPolar, GridPosition, OxygenSpot, TemperatureSpot
+from quantumnematode.dtypes import FoodHotspot, GradientPolar, GridPosition, OxygenSpot, TemperatureSpot
 from quantumnematode.env.oxygen import (
     OxygenField,
     OxygenZone,
@@ -115,6 +115,20 @@ class ForagingParams:
         Probability (0.0-1.0) that food spawns in safe temperature zones
         (COMFORT or DISCOMFORT). Set to 0.0 to disable (uniform spawning).
         Requires thermotaxis to be enabled; ignored otherwise.
+    food_hotspots : list[FoodHotspot] or None
+        List of (x, y, weight) centers defining spawn probability patches.
+        Weight controls relative spawn density. None = uniform spawning.
+    food_hotspot_bias : float
+        Probability (0.0-1.0) that a given food spawn targets a hotspot
+        rather than uniform random. 0.0 = disabled (backward compatible).
+    food_hotspot_decay : float
+        Exponential decay constant controlling how quickly spawn probability
+        drops with distance from hotspot center.
+    no_respawn : bool
+        When True, consumed food is not replaced (static food mode).
+    satiety_food_threshold : float or None
+        Fraction of max satiety (0.0-1.0) above which agents cannot consume
+        food. None = disabled (no satiety gate).
     """
 
     foods_on_grid: int = 10
@@ -124,6 +138,11 @@ class ForagingParams:
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
     safe_zone_food_bias: float = 0.0
+    food_hotspots: list[FoodHotspot] | None = None
+    food_hotspot_bias: float = 0.0
+    food_hotspot_decay: float = 8.0
+    no_respawn: bool = False
+    satiety_food_threshold: float | None = None
 
 
 @dataclass
