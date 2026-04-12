@@ -850,17 +850,42 @@ class MultiAgentSimulation:
         return self._build_result()
 
     def _is_agent_sated(self, agent: QuantumNematodeAgent) -> bool:
-        """Check if an agent's satiety exceeds the food consumption threshold."""
+        """Check if an agent's satiety exceeds the food consumption threshold.
+
+        Parameters
+        ----------
+        agent : QuantumNematodeAgent
+            The agent to check.
+
+        Returns
+        -------
+        bool
+            True if the agent cannot eat (satiety above threshold), False otherwise.
+            Always False when satiety_food_threshold is not configured.
+        """
         return not agent.can_eat
 
-    def _resolve_food_step(
+    def _resolve_food_step(  # noqa: C901
         self,
         alive_agents: list[QuantumNematodeAgent],
         current_step: int,
     ) -> None:
         """Resolve food collection with competition for this step."""
-        # Build map: food_position -> list of agent_ids at that position
-        # Pre-filter sated agents so they don't compete for food
+        # Build co-location map (all agents at food, regardless of satiety)
+        # for accurate competition event counting
+        co_located: dict[tuple[int, int], list[str]] = {}
+        for agent in alive_agents:
+            aid = agent.agent_id
+            pos = self.env.agents[aid].position
+            if self.env.reached_goal_for(aid):
+                co_located.setdefault(pos, []).append(aid)
+
+        # Count competition events from raw co-location
+        for agents_at_food in co_located.values():
+            if len(agents_at_food) > 1:
+                self._food_competition_events += 1
+
+        # Build eligible map (only agents that can eat)
         contested: dict[tuple[int, int], list[str]] = {}
         for agent in alive_agents:
             aid = agent.agent_id
@@ -871,12 +896,7 @@ class MultiAgentSimulation:
         if not contested:
             return
 
-        # Count competition events
-        for agents_at_food in contested.values():
-            if len(agents_at_food) > 1:
-                self._food_competition_events += 1
-
-        # Resolve competition
+        # Resolve competition among eligible agents
         winners = resolve_food_competition(contested, self.food_policy, self.env.rng)
 
         # Process winners
