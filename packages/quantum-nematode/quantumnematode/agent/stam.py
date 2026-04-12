@@ -21,8 +21,131 @@ Timescale mapping:
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from quantumnematode.env import DynamicForagingEnvironment
+
+
+@dataclass(frozen=True)
+class STAMChannelDef:
+    """Definition of a single STAM sensory channel.
+
+    Attributes
+    ----------
+    name : str
+        Unique channel identifier (e.g., "food", "pheromone_alarm").
+    derivative_key : str or None
+        Key in the temporal data result dict for dC/dt (e.g., "food_dconcentration_dt").
+    sensing_mode_attr : str or None
+        Attribute name on SensingConfig controlling this channel's mode
+        (e.g., "chemotaxis_mode"). Used to determine if derivative should be computed.
+    """
+
+    name: str
+    derivative_key: str | None = None
+    sensing_mode_attr: str | None = None
+
+
+# ── Channel Registry ────────────────────────────────────────────────────────
+# All possible STAM channels. Active channels are resolved at runtime
+# from environment config via resolve_active_channels().
+
+CHANNEL_REGISTRY: dict[str, STAMChannelDef] = {
+    "food": STAMChannelDef(
+        name="food",
+        derivative_key="food_dconcentration_dt",
+        sensing_mode_attr="chemotaxis_mode",
+    ),
+    "temperature": STAMChannelDef(
+        name="temperature",
+        derivative_key="temperature_ddt",
+        sensing_mode_attr="thermotaxis_mode",
+    ),
+    "predator": STAMChannelDef(
+        name="predator",
+        derivative_key="predator_dconcentration_dt",
+        sensing_mode_attr="nociception_mode",
+    ),
+    "oxygen": STAMChannelDef(
+        name="oxygen",
+        derivative_key="oxygen_dconcentration_dt",
+        sensing_mode_attr="aerotaxis_mode",
+    ),
+    "pheromone_food": STAMChannelDef(
+        name="pheromone_food",
+        derivative_key="pheromone_food_dconcentration_dt",
+        sensing_mode_attr="pheromone_food_mode",
+    ),
+    "pheromone_alarm": STAMChannelDef(
+        name="pheromone_alarm",
+        derivative_key="pheromone_alarm_dconcentration_dt",
+        sensing_mode_attr="pheromone_alarm_mode",
+    ),
+    "pheromone_aggregation": STAMChannelDef(
+        name="pheromone_aggregation",
+        derivative_key="pheromone_aggregation_dconcentration_dt",
+        sensing_mode_attr="pheromone_aggregation_mode",
+    ),
+}
+
+
+def resolve_active_channels(
+    env: DynamicForagingEnvironment | None,
+) -> tuple[STAMChannelDef, ...]:
+    """Determine active STAM channels from environment configuration.
+
+    Channels are included only when their corresponding environment feature
+    is enabled. A foraging-only config gets 1 channel (food); a full config
+    with thermotaxis, predators, aerotaxis, and all pheromones gets 7.
+
+    Parameters
+    ----------
+    env : DynamicForagingEnvironment or None
+        Environment instance. None returns food-only (1 channel).
+
+    Returns
+    -------
+    tuple[STAMChannelDef, ...]
+        Active channel definitions in recording order.
+    """
+    channels: list[STAMChannelDef] = [CHANNEL_REGISTRY["food"]]  # Always present
+
+    if env is not None:
+        if env.thermotaxis.enabled:
+            channels.append(CHANNEL_REGISTRY["temperature"])
+        if env.predator.enabled:
+            channels.append(CHANNEL_REGISTRY["predator"])
+        if env.aerotaxis.enabled:
+            channels.append(CHANNEL_REGISTRY["oxygen"])
+        if env.pheromones.enabled:
+            channels.append(CHANNEL_REGISTRY["pheromone_food"])
+            channels.append(CHANNEL_REGISTRY["pheromone_alarm"])
+            if env.pheromones.aggregation is not None:
+                channels.append(CHANNEL_REGISTRY["pheromone_aggregation"])
+
+    return tuple(channels)
+
+
+def stam_dim_from_env(env: DynamicForagingEnvironment | None) -> int:
+    """Compute STAM memory dimension for a given environment.
+
+    Convenience function combining resolve_active_channels + compute_memory_dim.
+
+    Parameters
+    ----------
+    env : DynamicForagingEnvironment or None
+        Environment instance.
+
+    Returns
+    -------
+    int
+        STAM memory state dimension.
+    """
+    return compute_memory_dim(len(resolve_active_channels(env)))
 
 
 def compute_memory_dim(num_channels: int) -> int:
@@ -44,23 +167,8 @@ def compute_memory_dim(num_channels: int) -> int:
     return num_channels * 2 + 3
 
 
-# Standard channel configurations
-CHANNELS_BASE = 4  # food, temperature, predator, oxygen
-CHANNELS_PHEROMONE = 6  # + pheromone_food, pheromone_alarm
-CHANNELS_PHEROMONE_FULL = 7  # + pheromone_aggregation
-
-# Channel indices (base 4-channel mode)
-IDX_FOOD = 0
-IDX_TEMP = 1
-IDX_PRED = 2
-IDX_OXYGEN = 3
-
-# Additional channel indices (6-channel pheromone mode)
-IDX_PHEROMONE_FOOD = 4
-IDX_PHEROMONE_ALARM = 5
-
-# Additional channel index (7-channel aggregation mode)
-IDX_PHEROMONE_AGGREGATION = 6
+# Minimum channel count (food is always present)
+MIN_CHANNELS = 1
 
 
 class STAMBuffer:
@@ -77,28 +185,23 @@ class STAMBuffer:
         Exponential decay lambda per step (default 0.1).
         Weight for entry i steps ago: w[i] = exp(-decay_rate * i).
     num_channels : int
-        Number of scalar sensory channels.
-        4 = base (food, temperature, predator, oxygen).
-        6 = with pheromones (+ pheromone_food, pheromone_alarm).
+        Number of scalar sensory channels. Determined dynamically from
+        environment config via resolve_active_channels(). Minimum 1 (food only).
 
     Attributes
     ----------
     MEMORY_DIM : int
         Dimension of the memory state vector (2*num_channels + 3).
-        11 for 4 channels, 15 for 6 channels.
     """
 
     def __init__(
         self,
         buffer_size: int = 30,
         decay_rate: float = 0.1,
-        num_channels: int = CHANNELS_BASE,
+        num_channels: int = MIN_CHANNELS,
     ) -> None:
-        if num_channels < CHANNELS_BASE:
-            msg = (
-                f"STAMBuffer requires at least {CHANNELS_BASE} channels "
-                f"(food, temperature, predator, oxygen). Got {num_channels}."
-            )
+        if num_channels < MIN_CHANNELS:
+            msg = f"STAMBuffer requires at least {MIN_CHANNELS} channel. Got {num_channels}."
             raise ValueError(msg)
 
         self._buffer_size = buffer_size
@@ -131,9 +234,8 @@ class STAMBuffer:
         ----------
         scalars : np.ndarray
             Scalar readings for each channel, shape (num_channels,).
-            Base order: [food, temperature, predator, oxygen].
-            With pheromones: [food, temp, predator, oxygen, pheromone_food, pheromone_alarm].
-            Disabled channels should pass 0.0.
+            Channel order is determined at runtime by resolve_active_channels().
+            Only active channels are included — no zero-padding for disabled features.
         position_delta : tuple[float, float]
             Step-to-step position change (dx, dy) — proprioceptive movement
             signal. NOT absolute grid coordinates.
@@ -170,8 +272,8 @@ class STAMBuffer:
         Parameters
         ----------
         channel : int
-            Channel index (0=food, 1=temperature, 2=predator, 3=oxygen,
-            4=pheromone_food, 5=pheromone_alarm when pheromones enabled).
+            Channel index into the active channels list (determined at
+            runtime by resolve_active_channels). Index 0 is always food.
 
         Returns
         -------

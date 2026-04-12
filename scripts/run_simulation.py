@@ -1701,6 +1701,14 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     )
                 for agent in agents:
                     agent.env = env
+                    # Rebuild STAM channel fetchers for the new env instance
+                    if agent._active_channels:
+                        from quantumnematode.agent.agent import _build_channel_fetchers
+
+                        agent._channel_fetchers = _build_channel_fetchers(
+                            env,
+                            agent._active_channels,
+                        )
                     pos = env.agents[agent.agent_id].position
                     agent.path = [(pos[0], pos[1])]
                     agent.food_history = [list(env.foods)]

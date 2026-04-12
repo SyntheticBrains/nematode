@@ -12,33 +12,33 @@ class TestSTAMBufferBasics:
 
     def test_initial_state(self) -> None:
         """Test that a new buffer is empty with correct memory dimension."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         assert len(buf) == 0
         assert buf.memory_dimension == 11
 
     def test_record_single_entry(self) -> None:
         """Test that recording a single entry increments the buffer length."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         buf.record(np.array([0.5, 0.3, 0.1, 0.0]), (1.0, 0.0), 0)
         assert len(buf) == 1
 
     def test_record_multiple_entries(self) -> None:
         """Test that recording multiple entries tracks buffer length correctly."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for i in range(5):
             buf.record(np.array([float(i), 0.0, 0.0, 0.0]), (1.0, 0.0), 0)
         assert len(buf) == 5
 
     def test_buffer_size_limit(self) -> None:
         """Test that the buffer does not exceed its configured size limit."""
-        buf = STAMBuffer(buffer_size=5, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=5, decay_rate=0.1, num_channels=4)
         for i in range(10):
             buf.record(np.array([float(i), 0.0, 0.0, 0.0]), (1.0, 0.0), 0)
         assert len(buf) == 5
 
     def test_reset_clears_buffer(self) -> None:
         """Test that reset empties the buffer and zeroes the memory state."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for i in range(5):
             buf.record(np.array([float(i), 0.0, 0.0, 0.0]), (1.0, 0.0), 0)
         buf.reset()
@@ -52,26 +52,26 @@ class TestDecayWeights:
 
     def test_weights_decrease_with_age(self) -> None:
         """Test that decay weights decrease monotonically with age."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for i in range(1, len(buf._weights)):
             assert buf._weights[i] < buf._weights[i - 1]
 
     def test_most_recent_weight_is_one(self) -> None:
         """Test that the most recent entry has a weight of 1.0."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         assert buf._weights[0] == pytest.approx(1.0)
 
     def test_weight_formula(self) -> None:
         """Test that weights follow the exponential decay formula."""
         decay_rate = 0.2
-        buf = STAMBuffer(buffer_size=5, decay_rate=decay_rate)
+        buf = STAMBuffer(buffer_size=5, decay_rate=decay_rate, num_channels=4)
         for i in range(5):
             expected = np.exp(-decay_rate * i)
             assert buf._weights[i] == pytest.approx(expected)
 
     def test_weighted_mean_emphasizes_recent(self) -> None:
         """Test that the weighted mean is biased toward recent entries."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.5)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.5, num_channels=4)
         # Record: old value 0.0, then recent value 1.0
         buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         buf.record(np.array([1.0, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
@@ -85,7 +85,7 @@ class TestTemporalDerivative:
 
     def test_insufficient_history_returns_zero(self) -> None:
         """Test that temporal derivative returns zero with insufficient history."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         assert buf.compute_temporal_derivative(0) == 0.0
 
         buf.record(np.array([0.5, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
@@ -93,7 +93,7 @@ class TestTemporalDerivative:
 
     def test_positive_derivative_increasing_concentration(self) -> None:
         """Test that increasing concentration produces a positive derivative."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         # Older: 0.2, newer: 0.8 → concentration increased → positive derivative
         buf.record(np.array([0.2, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         buf.record(np.array([0.8, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
@@ -102,7 +102,7 @@ class TestTemporalDerivative:
 
     def test_negative_derivative_decreasing_concentration(self) -> None:
         """Test that decreasing concentration produces a negative derivative."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         # Older: 0.8, newer: 0.2 → concentration decreased → negative derivative
         buf.record(np.array([0.8, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         buf.record(np.array([0.2, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
@@ -111,7 +111,7 @@ class TestTemporalDerivative:
 
     def test_zero_derivative_stationary(self) -> None:
         """Test that stationary concentration produces a zero derivative."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for _ in range(5):
             buf.record(np.array([0.5, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         deriv = buf.compute_temporal_derivative(0)
@@ -119,7 +119,7 @@ class TestTemporalDerivative:
 
     def test_derivative_per_channel(self) -> None:
         """Test that derivatives are computed independently per channel."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         # Food increasing, temp decreasing, predator constant
         buf.record(np.array([0.2, 0.8, 0.5, 0.0]), (0.0, 0.0), 0)
         buf.record(np.array([0.8, 0.2, 0.5, 0.0]), (0.0, 0.0), 0)
@@ -129,7 +129,7 @@ class TestTemporalDerivative:
 
     def test_derivative_exact_value_two_entries(self) -> None:
         """Test that the derivative matches the expected exact value with two entries."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         buf.record(np.array([0.3, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         buf.record(np.array([0.7, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         # With 2 entries, only one diff: C[0] - C[1] = 0.7 - 0.3 = 0.4
@@ -143,7 +143,7 @@ class TestMemoryState:
 
     def test_empty_buffer_returns_zeros(self) -> None:
         """Test that an empty buffer returns a zero-filled memory state."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         state = buf.get_memory_state()
         assert state.shape == (11,)
         assert state.dtype == np.float32
@@ -151,7 +151,7 @@ class TestMemoryState:
 
     def test_shape_always_11(self) -> None:
         """Test that memory state shape is always 11 regardless of buffer contents."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for i in range(7):
             buf.record(np.array([float(i), 0.0, 0.0, 0.0]), (1.0, 0.0), i % 4)
             state = buf.get_memory_state()
@@ -159,7 +159,7 @@ class TestMemoryState:
 
     def test_weighted_means_in_first_four(self) -> None:
         """Test that the first four state elements contain weighted means of channels."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.0)  # No decay = equal weights
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.0, num_channels=4)  # No decay = equal weights
         buf.record(np.array([0.2, 0.4, 0.6, 0.8]), (0.0, 0.0), 0)
         buf.record(np.array([0.8, 0.6, 0.4, 0.2]), (0.0, 0.0), 0)
         state = buf.get_memory_state()
@@ -171,7 +171,7 @@ class TestMemoryState:
 
     def test_derivatives_in_indices_4_to_7(self) -> None:
         """Test that state indices 4-7 contain per-channel temporal derivatives."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         buf.record(np.array([0.2, 0.8, 0.5, 0.0]), (0.0, 0.0), 0)
         buf.record(np.array([0.8, 0.2, 0.5, 0.0]), (0.0, 0.0), 0)
         state = buf.get_memory_state()
@@ -182,7 +182,7 @@ class TestMemoryState:
 
     def test_partially_filled_buffer(self) -> None:
         """Test that a partially filled buffer produces correct weighted means."""
-        buf = STAMBuffer(buffer_size=30, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=30, decay_rate=0.1, num_channels=4)
         buf.record(np.array([0.5, 0.3, 0.1, 0.2]), (1.0, 0.0), 0)
         state = buf.get_memory_state()
         assert state.shape == (11,)
@@ -198,7 +198,7 @@ class TestPositionDeltas:
 
     def test_single_entry_zero_deviation(self) -> None:
         """Test that a single entry produces zero position deviation."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (1.0, 0.0), 0)
         state = buf.get_memory_state()
         # Only one entry → deviation from mean is 0
@@ -207,7 +207,7 @@ class TestPositionDeltas:
 
     def test_consistent_movement_zero_deviation(self) -> None:
         """Test that consistent movement produces zero deviation from the mean."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.0)  # Equal weights
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.0, num_channels=4)  # Equal weights
         for _ in range(5):
             buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (1.0, 0.0), 0)
         state = buf.get_memory_state()
@@ -217,7 +217,7 @@ class TestPositionDeltas:
 
     def test_direction_change_nonzero_deviation(self) -> None:
         """Test that a sudden direction change produces nonzero deviation."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.0)  # Equal weights
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.0, num_channels=4)  # Equal weights
         # Consistent rightward movement
         for _ in range(4):
             buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (1.0, 0.0), 0)
@@ -230,7 +230,7 @@ class TestPositionDeltas:
 
     def test_uses_deltas_not_absolute_positions(self) -> None:
         """Verify we store step-to-step movement, not absolute coords."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         # These are (dx, dy) per step, not positions
         buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (1.0, 0.0), 0)  # Moved right
         buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (-1.0, 0.0), 0)  # Moved left
@@ -246,7 +246,7 @@ class TestActionEntropy:
 
     def test_single_action_zero_entropy(self) -> None:
         """Test that repeating a single action produces zero entropy."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for _ in range(5):
             buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         state = buf.get_memory_state()
@@ -254,7 +254,7 @@ class TestActionEntropy:
 
     def test_diverse_actions_positive_entropy(self) -> None:
         """Test that diverse actions produce positive entropy."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for i in range(8):
             buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (0.0, 0.0), i % 4)
         state = buf.get_memory_state()
@@ -262,7 +262,7 @@ class TestActionEntropy:
 
     def test_maximum_diversity(self) -> None:
         """Test that equally distributed actions produce maximum entropy."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         # Equal distribution across 4 actions
         for i in range(8):
             buf.record(np.array([0.0, 0.0, 0.0, 0.0]), (0.0, 0.0), i % 4)
@@ -276,7 +276,7 @@ class TestEpisodeReset:
 
     def test_reset_produces_zero_state(self) -> None:
         """Test that reset returns the memory state to all zeros."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         for i in range(5):
             buf.record(np.array([float(i), float(i), float(i), float(i)]), (1.0, 1.0), i)
         buf.reset()
@@ -285,7 +285,7 @@ class TestEpisodeReset:
 
     def test_reset_allows_fresh_recording(self) -> None:
         """Test that recording after reset is not influenced by pre-reset data."""
-        buf = STAMBuffer(buffer_size=10, decay_rate=0.1)
+        buf = STAMBuffer(buffer_size=10, decay_rate=0.1, num_channels=4)
         buf.record(np.array([1.0, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)
         buf.reset()
         buf.record(np.array([0.5, 0.0, 0.0, 0.0]), (0.0, 0.0), 0)

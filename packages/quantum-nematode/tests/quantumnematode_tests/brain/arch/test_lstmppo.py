@@ -578,8 +578,11 @@ class TestLSTMPPOBrainSensoryModules:
             ModuleName.STAM,
         ]
         brain = _make_brain(sensory_modules=modules)
-        # STAM has classical_dim=11, plus 2 per normal module = 4 + 11 = 15
-        expected_dim = 2 + 2 + 11  # food_chemotaxis_temporal + proprioception + STAM
+        # With only food temporal module, STAM infers 1 channel
+        from quantumnematode.agent.stam import compute_memory_dim
+
+        stam_dim = compute_memory_dim(1)  # Only food channel inferred
+        expected_dim = 2 + 2 + stam_dim
         assert brain.input_dim == expected_dim
 
         brain.prepare_episode()
@@ -589,7 +592,7 @@ class TestLSTMPPOBrainSensoryModules:
             agent_direction=Direction.UP,
             food_concentration=0.7,
             food_dconcentration_dt=0.1,
-            stam_state=(0.1,) * 11,
+            stam_state=(0.1,) * stam_dim,
         )
         actions = brain.run_brain(params, top_only=False, top_randomize=False)
         assert len(actions) == 1

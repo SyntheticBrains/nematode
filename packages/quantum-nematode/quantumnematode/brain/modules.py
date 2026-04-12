@@ -1038,42 +1038,64 @@ def extract_classical_features(
     return np.array(features, dtype=np.float32)
 
 
-def _infer_stam_dim(modules: list[ModuleName]) -> int | None:
-    """Infer STAM memory dimension from sensory modules list.
+def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
+    """Infer STAM memory dimension from the sensory modules list.
 
-    Returns the correct STAM dimension based on which pheromone temporal
-    modules are present. Oracle pheromone modules do not add STAM channels
-    (pheromone data goes through the oracle module's to_classical, not STAM).
+    Counts how many STAM-relevant channels are implied by the module list:
+    - Base channels (food is always 1; temperature/predator/oxygen if their
+      temporal modules are present)
+    - Pheromone channels (if pheromone temporal modules present)
+
+    This is a fallback for brain construction where env is not available.
+    Callers with env access should use ``stam_dim_from_env(env)`` instead.
 
     Parameters
     ----------
     modules : list[ModuleName]
-        List of sensory modules to check for STAM and pheromone presence.
+        Sensory modules list.
 
     Returns
     -------
     int or None
-        Inferred STAM memory dimension, or None if STAM is not in the list.
+        Inferred STAM dimension, or None if STAM not in modules.
     """
     if ModuleName.STAM not in modules:
         return None
 
-    from quantumnematode.agent.stam import (
-        CHANNELS_BASE,
-        CHANNELS_PHEROMONE,
-        CHANNELS_PHEROMONE_FULL,
-        compute_memory_dim,
-    )
+    from quantumnematode.agent.stam import compute_memory_dim
 
-    has_pheromone_food = ModuleName.PHEROMONE_FOOD_TEMPORAL in modules
-    has_pheromone_alarm = ModuleName.PHEROMONE_ALARM_TEMPORAL in modules
-    has_pheromone_aggregation = ModuleName.PHEROMONE_AGGREGATION_TEMPORAL in modules
+    # Count channels implied by the module list
+    # Food is always present (1 channel minimum)
+    num_channels = 1
 
-    if has_pheromone_aggregation:
-        return compute_memory_dim(CHANNELS_PHEROMONE_FULL)
-    if has_pheromone_food or has_pheromone_alarm:
-        return compute_memory_dim(CHANNELS_PHEROMONE)
-    return compute_memory_dim(CHANNELS_BASE)
+    # Each modality adds at most one STAM channel (collapse oracle/temporal pairs)
+    modality_pairs = [
+        (ModuleName.THERMOTAXIS, ModuleName.THERMOTAXIS_TEMPORAL),
+        (ModuleName.NOCICEPTION, ModuleName.NOCICEPTION_TEMPORAL),
+        (ModuleName.AEROTAXIS, ModuleName.AEROTAXIS_TEMPORAL),
+    ]
+    modules_set = set(modules)
+    for oracle_mod, temporal_mod in modality_pairs:
+        if oracle_mod in modules_set or temporal_mod in modules_set:
+            num_channels += 1
+
+    # Pheromone channels: when any pheromone module is present, food+alarm
+    # channels are always added (resolve_active_channels adds all enabled types).
+    pheromone_pairs = [
+        (ModuleName.PHEROMONE_FOOD, ModuleName.PHEROMONE_FOOD_TEMPORAL),
+        (ModuleName.PHEROMONE_ALARM, ModuleName.PHEROMONE_ALARM_TEMPORAL),
+        (ModuleName.PHEROMONE_AGGREGATION, ModuleName.PHEROMONE_AGGREGATION_TEMPORAL),
+    ]
+    has_any_pheromone = any(o in modules_set or t in modules_set for o, t in pheromone_pairs)
+    if has_any_pheromone:
+        num_channels += 2  # pheromone_food + pheromone_alarm always present
+        if (
+            ModuleName.PHEROMONE_AGGREGATION in modules_set
+            or ModuleName.PHEROMONE_AGGREGATION_TEMPORAL in modules_set
+        ):
+            num_channels += 1  # aggregation optional
+
+    return compute_memory_dim(num_channels)
 
 
 def get_classical_feature_dimension(
@@ -1091,18 +1113,16 @@ def get_classical_feature_dimension(
     modules : list[ModuleName]
         List of modules.
     stam_dim_override : int or None, optional
-        Override for STAM module classical_dim. When pheromones are enabled,
-        STAM produces more channels (15 for 6-channel, 17 for 7-channel)
-        instead of the default 11. Pass the actual STAM memory dimension
-        to get the correct total feature dimension.
+        Override for STAM module classical_dim. Callers with env access
+        should pass ``stam_dim_from_env(env)`` from ``quantumnematode.agent.stam``.
+        If not provided, auto-infers from the modules list.
 
     Returns
     -------
     int
         Total number of features across all modules.
     """
-    # Auto-infer STAM dimension from pheromone modules if no override given
-    effective_stam_dim = stam_dim_override or _infer_stam_dim(modules)
+    effective_stam_dim = stam_dim_override or _infer_stam_dim_from_modules(modules)
 
     total = 0
     for module in modules:
