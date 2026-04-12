@@ -670,6 +670,7 @@ class StandardEpisodeRunner(EpisodeRunner):
                 agent.path,
                 max_steps=max_steps,
                 stuck_position_count=stuck_position_count,
+                can_eat=agent.can_eat,
             )
             agent._episode_tracker.track_reward(reward)
 

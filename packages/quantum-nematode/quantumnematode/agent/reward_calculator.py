@@ -47,6 +47,8 @@ class RewardCalculator:
         current_step: int = 0,
         max_steps: int = 100,
         agent_id: str = "default",
+        *,
+        can_eat: bool = True,
     ) -> float:
         """Calculate reward based on the agent's movement toward the goal.
 
@@ -66,6 +68,9 @@ class RewardCalculator:
             Maximum steps for efficiency calculation, by default 100.
         agent_id : str, optional
             Agent identifier for multi-agent reward computation, by default "default".
+        can_eat : bool, optional
+            Whether the agent can consume food this step. When False (sated),
+            the goal bonus is suppressed. By default True.
 
         Returns
         -------
@@ -156,7 +161,8 @@ class RewardCalculator:
             )
 
         # Bonus for reaching the goal, scaled by efficiency
-        if env.reached_goal_for(agent_id):
+        # Suppressed when agent cannot eat (sated above satiety_food_threshold)
+        if can_eat and env.reached_goal_for(agent_id):
             efficiency = max(0.1, 1 - (current_step / max_steps))
             goal_bonus = self.config.reward_goal * efficiency
             reward += goal_bonus

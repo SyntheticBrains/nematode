@@ -719,6 +719,7 @@ class MultiAgentSimulation:
                     agent.path,
                     max_steps=max_steps,
                     stuck_position_count=0,
+                    can_eat=not self._is_agent_sated(agent),
                 )
                 self._per_agent_total_reward[aid] += reward_per_agent[aid]
                 action_per_agent[aid] = actions.get(aid)
@@ -845,6 +846,13 @@ class MultiAgentSimulation:
 
         return self._build_result()
 
+    def _is_agent_sated(self, agent: QuantumNematodeAgent) -> bool:
+        """Check if an agent's satiety exceeds the food consumption threshold."""
+        threshold = self.env.foraging.satiety_food_threshold
+        if threshold is None:
+            return False
+        return agent.current_satiety > threshold * agent.max_satiety
+
     def _resolve_food_step(
         self,
         alive_agents: list[QuantumNematodeAgent],
@@ -852,11 +860,12 @@ class MultiAgentSimulation:
     ) -> None:
         """Resolve food collection with competition for this step."""
         # Build map: food_position -> list of agent_ids at that position
+        # Pre-filter sated agents so they don't compete for food
         contested: dict[tuple[int, int], list[str]] = {}
         for agent in alive_agents:
             aid = agent.agent_id
             pos = self.env.agents[aid].position
-            if self.env.reached_goal_for(aid):
+            if self.env.reached_goal_for(aid) and not self._is_agent_sated(agent):
                 contested.setdefault(pos, []).append(aid)
 
         if not contested:
