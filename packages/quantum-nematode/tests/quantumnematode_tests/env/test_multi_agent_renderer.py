@@ -146,3 +146,50 @@ class TestTintedSprites:
         assert all(0 <= c <= 255 for c in bc)
         assert all(0 <= c <= 255 for c in oc)
         assert all(0 <= c <= 255 for c in hc)
+
+
+class TestAgentRenderState:
+    """Tests for AgentRenderState dataclass."""
+
+    def test_construction(self) -> None:
+        """Test that AgentRenderState can be constructed with all fields."""
+        from quantumnematode.env.pygame_renderer import AgentRenderState
+
+        state = AgentRenderState(
+            agent_id="agent_0",
+            position=(5, 10),
+            body=[(4, 10), (3, 10)],
+            direction="up",
+            alive=True,
+            hp=80.0,
+            max_hp=100.0,
+            foods_collected=3,
+            satiety=50.0,
+            max_satiety=100.0,
+            color_index=1,
+        )
+        assert state.agent_id == "agent_0"
+        assert state.position == (5, 10)
+        assert state.direction == "up"
+        assert state.alive is True
+        assert state.color_index == 1
+
+    def test_frozen(self) -> None:
+        """Test that AgentRenderState is immutable."""
+        from quantumnematode.env.pygame_renderer import AgentRenderState
+
+        state = AgentRenderState(
+            agent_id="a",
+            position=(0, 0),
+            body=[],
+            direction="up",
+            alive=True,
+            hp=100.0,
+            max_hp=100.0,
+            foods_collected=0,
+            satiety=100.0,
+            max_satiety=100.0,
+            color_index=0,
+        )
+        with pytest.raises(AttributeError):
+            state.agent_id = "b"  # type: ignore[misc]

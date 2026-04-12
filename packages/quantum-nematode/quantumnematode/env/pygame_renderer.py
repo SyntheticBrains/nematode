@@ -11,18 +11,44 @@ Renders the simulation in a Pygame window with layered surfaces:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from quantumnematode.env.sprites import (
+    AGENT_COLOR_PALETTE,
     CELL_SIZE,
+    create_dead_agent_overlay,
     create_sprites,
+    create_tinted_head_sprites,
     create_zone_overlay,
     draw_body_segment,
+    tint_body_colors,
 )
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
     from quantumnematode.env.env import DynamicForagingEnvironment, Viewport
+
+
+@dataclass(frozen=True)
+class AgentRenderState:
+    """Lightweight snapshot of per-agent state for rendering.
+
+    Built by the orchestrator before each render call. Keeps the renderer
+    decoupled from QuantumNematodeAgent internals.
+    """
+
+    agent_id: str
+    position: tuple[int, int]
+    body: list[tuple[int, int]]
+    direction: str  # Direction enum .value ("up", "down", "left", "right")
+    alive: bool
+    hp: float
+    max_hp: float
+    foods_collected: int
+    satiety: float
+    max_satiety: float
+    color_index: int  # index into AGENT_COLOR_PALETTE (cycles via % 8)
 
 # Status bar configuration
 STATUS_BAR_HEIGHT = 120
@@ -96,6 +122,14 @@ class PygameRenderer:
 
         self._closed = False
         self._last_status_line_count = 0
+
+        # Multi-agent state (lazily populated)
+        self._tinted_sprites: dict[int, dict[str, Any]] = {}
+        self._tinted_body_colors: dict[
+            int, tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]
+        ] = {}
+        self._dead_overlay = create_dead_agent_overlay(pygame)
+        self._pheromone_overlay_enabled = False
         logger.info(
             f"PygameRenderer initialized: {self._width}x{self._height} "
             f"({viewport_size[0]}x{viewport_size[1]} cells @ {cell_size}px)",
@@ -481,6 +515,379 @@ class PygameRenderer:
             if text:
                 text_surf = self._font.render(text, antialias, color)
                 self._screen.blit(text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height))
+
+    # ── Multi-agent rendering ─────────────────────────────────────────
+
+    def render_multi_agent_frame(  # noqa: PLR0913
+        self,
+        env: DynamicForagingEnvironment,
+        agents: list[AgentRenderState],
+        followed_agent_id: str,
+        *,
+        step: int = 0,
+        max_steps: int = 0,
+        current_step: int = 0,
+        session_text: str | None = None,
+    ) -> str:
+        """Render one complete multi-agent frame.
+
+        Parameters
+        ----------
+        env : DynamicForagingEnvironment
+            Shared environment (for foods, predators, zones, pheromones).
+        agents : list[AgentRenderState]
+            Per-agent rendering snapshots.
+        followed_agent_id : str
+            Agent the viewport is currently following.
+        step : int
+            Current step within the episode.
+        max_steps : int
+            Maximum steps for the episode.
+        current_step : int
+            Simulation step for pheromone concentration queries.
+        session_text : str or None
+            Additional session-level text for the status bar.
+
+        Returns
+        -------
+        str
+            The (possibly updated) followed_agent_id after keyboard input.
+        """
+        if self._closed:
+            return followed_agent_id
+
+        new_followed, pheromone_toggle = self._pump_multi_agent_events(
+            agents, followed_agent_id
+        )
+        followed_agent_id = new_followed
+
+        if self._closed:
+            return followed_agent_id
+
+        if pheromone_toggle:
+            self._pheromone_overlay_enabled = not self._pheromone_overlay_enabled
+
+        # Find the followed agent for status bar
+        followed = next((a for a in agents if a.agent_id == followed_agent_id), None)
+        if followed is None and agents:
+            followed = agents[0]
+            followed_agent_id = followed.agent_id
+
+        # Estimate status line count and resize
+        session_lines = 0
+        if session_text:
+            session_lines = (
+                sum(
+                    1
+                    for line in session_text.strip().splitlines()
+                    if line.strip() and not line.strip().startswith("--")
+                )
+                + 1
+            )
+        # 8 base lines + 1 agent summary + 1 switcher
+        self._resize_if_needed(session_lines + 10)
+
+        viewport = env.get_viewport_bounds_for(followed_agent_id)
+
+        # Clear screen
+        self._screen.fill(STATUS_BG_COLOR)
+
+        # Reuse existing layer renderers
+        self._render_background(viewport)
+        self._render_temperature_zones(env, viewport)
+        self._render_oxygen_zones(env, viewport)
+        self._render_toxic_zones(env, viewport)
+
+        # Pheromone overlay (between zones and entities)
+        if self._pheromone_overlay_enabled:
+            self._render_pheromone_overlay(env, viewport, current_step)
+
+        # Multi-agent entities
+        self._render_multi_agent_entities(env, agents, followed_agent_id, viewport)
+
+        # Multi-agent status bar
+        self._render_multi_agent_status_bar(
+            agents=agents,
+            followed=followed,
+            step=step,
+            max_steps=max_steps,
+            session_text=session_text,
+        )
+
+        self._pg.display.flip()
+        self._clock.tick(30)
+
+        return followed_agent_id
+
+    def _pump_multi_agent_events(
+        self,
+        agents: list[AgentRenderState],
+        followed_agent_id: str,
+    ) -> tuple[str, bool]:
+        """Process Pygame events for multi-agent mode.
+
+        Returns
+        -------
+        tuple[str, bool]
+            (new_followed_agent_id, pheromone_toggle_requested)
+        """
+        pheromone_toggle = False
+        agent_ids = [a.agent_id for a in agents]
+
+        for event in self._pg.event.get():
+            if event.type == self._pg.QUIT:
+                self.close()
+                return followed_agent_id, False
+
+            if event.type != self._pg.KEYDOWN:
+                continue
+
+            # Arrow keys: cycle through agents
+            if event.key == self._pg.K_RIGHT and agent_ids:
+                try:
+                    idx = agent_ids.index(followed_agent_id)
+                except ValueError:
+                    idx = -1
+                followed_agent_id = agent_ids[(idx + 1) % len(agent_ids)]
+
+            elif event.key == self._pg.K_LEFT and agent_ids:
+                try:
+                    idx = agent_ids.index(followed_agent_id)
+                except ValueError:
+                    idx = 1
+                followed_agent_id = agent_ids[(idx - 1) % len(agent_ids)]
+
+            # Number keys 1-9: jump to agent
+            elif self._pg.K_1 <= event.key <= self._pg.K_9:
+                target_idx = event.key - self._pg.K_1
+                if target_idx < len(agent_ids):
+                    followed_agent_id = agent_ids[target_idx]
+
+            # P key: toggle pheromone overlay
+            elif event.key == self._pg.K_p:
+                pheromone_toggle = True
+
+        return followed_agent_id, pheromone_toggle
+
+    def _render_pheromone_overlay(
+        self,
+        env: DynamicForagingEnvironment,
+        viewport: Viewport,
+        current_step: int,
+    ) -> None:
+        """Render pheromone concentration as colored semi-transparent overlays."""
+        min_x, min_y, max_x, max_y = viewport
+
+        # Map pheromone fields to overlay colors (R, G, B)
+        fields: list[tuple[Any, tuple[int, int, int]]] = []
+        if env.pheromone_field_food is not None:
+            fields.append((env.pheromone_field_food, (60, 200, 60)))  # green
+        if env.pheromone_field_alarm is not None:
+            fields.append((env.pheromone_field_alarm, (220, 60, 60)))  # red
+        if env.pheromone_field_aggregation is not None:
+            fields.append((env.pheromone_field_aggregation, (60, 120, 220)))  # blue
+
+        if not fields:
+            return
+
+        for gy in range(min_y, max_y):
+            for gx in range(min_x, max_x):
+                pos = (gx, gy)
+                for field, color in fields:
+                    conc = field.get_concentration(pos, current_step)
+                    if conc < 0.01:
+                        continue
+                    # Alpha proportional to concentration (max 160 to stay readable)
+                    alpha = int(min(conc, 1.0) * 160)
+                    overlay = self._pg.Surface(
+                        (self._cell_size, self._cell_size), self._pg.SRCALPHA
+                    )
+                    overlay.fill((*color, alpha))
+                    px, py = self._cell_to_pixel(gx, gy, viewport)
+                    self._screen.blit(overlay, (px, py))
+
+    def _render_multi_agent_entities(
+        self,
+        env: DynamicForagingEnvironment,
+        agents: list[AgentRenderState],
+        followed_agent_id: str,
+        viewport: Viewport,
+    ) -> None:
+        """Render food, predators, and all agent bodies/heads."""
+        min_x, min_y, max_x, max_y = viewport
+
+        def _in_view(x: int, y: int) -> bool:
+            return min_x <= x < max_x and min_y <= y < max_y
+
+        # Food
+        food_sprite = self._sprites["food"]
+        for food_pos in env.foods:
+            if _in_view(food_pos[0], food_pos[1]):
+                px, py = self._cell_to_pixel(food_pos[0], food_pos[1], viewport)
+                self._screen.blit(food_sprite, (px, py))
+
+        # Predators
+        self._render_predator_sprites(env, viewport, _in_view)
+
+        # All agents (body + head)
+        for agent in agents:
+            self._render_single_agent(agent, followed_agent_id, viewport, _in_view)
+
+    def _render_single_agent(
+        self,
+        agent: AgentRenderState,
+        followed_agent_id: str,
+        viewport: Viewport,
+        in_view_fn: Any,  # noqa: ANN401
+    ) -> None:
+        """Render one agent's body and head with appropriate coloring."""
+        color_idx = agent.color_index % len(AGENT_COLOR_PALETTE)
+        tint = AGENT_COLOR_PALETTE[color_idx]
+
+        # Get or create tinted sprites for this color
+        if color_idx not in self._tinted_sprites:
+            self._tinted_sprites[color_idx] = create_tinted_head_sprites(self._pg, tint)
+        head_sprites = self._tinted_sprites[color_idx]
+
+        # Get tinted body colors
+        if color_idx not in self._tinted_body_colors:
+            self._tinted_body_colors[color_idx] = tint_body_colors(tint)
+        bc, oc, hc = self._tinted_body_colors[color_idx]
+
+        # Build position set for body connector lookup
+        head_pos = agent.position
+        body_positions = {(seg[0], seg[1]) for seg in agent.body}
+        all_positions = body_positions | {head_pos}
+
+        # Render body segments
+        for i, seg in enumerate(agent.body):
+            sx, sy = seg[0], seg[1]
+            if not in_view_fn(sx, sy):
+                continue
+            px, py = self._cell_to_pixel(sx, sy, viewport)
+            is_tail = i == len(agent.body) - 1
+            draw_body_segment(
+                self._pg,
+                self._screen,
+                px,
+                py,
+                connect_up=(sx, sy + 1) in all_positions,
+                connect_down=(sx, sy - 1) in all_positions,
+                connect_left=(sx - 1, sy) in all_positions,
+                connect_right=(sx + 1, sy) in all_positions,
+                is_tail=is_tail,
+                body_color=bc,
+                outline_color=oc,
+                highlight_color=hc,
+            )
+
+        # Render head
+        ax, ay = head_pos
+        if in_view_fn(ax, ay):
+            head_key = f"head_{agent.direction}"
+            if head_key not in head_sprites:
+                head_key = "head_up"
+            px, py = self._cell_to_pixel(ax, ay, viewport)
+            self._screen.blit(head_sprites[head_key], (px, py))
+
+            # Followed agent highlight ring
+            if agent.agent_id == followed_agent_id:
+                c = self._cell_size // 2
+                self._pg.draw.circle(
+                    self._screen,
+                    (255, 255, 255, 120),
+                    (px + c, py + c),
+                    self._cell_size // 2 + 2,
+                    2,
+                )
+
+        # Dead agent overlay
+        if not agent.alive:
+            # Overlay on head position
+            if in_view_fn(ax, ay):
+                px, py = self._cell_to_pixel(ax, ay, viewport)
+                self._screen.blit(self._dead_overlay, (px, py))
+            # Overlay on body segments
+            for seg in agent.body:
+                if in_view_fn(seg[0], seg[1]):
+                    px, py = self._cell_to_pixel(seg[0], seg[1], viewport)
+                    self._screen.blit(self._dead_overlay, (px, py))
+
+    def _render_multi_agent_status_bar(  # noqa: PLR0913
+        self,
+        *,
+        agents: list[AgentRenderState],
+        followed: AgentRenderState | None,
+        step: int,
+        max_steps: int,
+        session_text: str | None = None,
+    ) -> None:
+        """Render multi-agent status bar below the grid."""
+        bar_y = self._viewport_size[1] * self._cell_size
+        self._pg.draw.rect(
+            self._screen,
+            STATUS_BG_COLOR,
+            (0, bar_y, self._width, self._height - bar_y),
+        )
+
+        lines: list[tuple[str, tuple[int, int, int]]] = []
+
+        # Session-level info
+        if session_text:
+            for raw_line in session_text.strip().splitlines():
+                stripped = raw_line.strip()
+                if stripped and not stripped.startswith("--"):
+                    lines.append((stripped, STATUS_SESSION_COLOR))
+            lines.append(("", STATUS_TEXT_COLOR))
+
+        # Agent switcher indicator
+        if followed is not None:
+            agent_ids = [a.agent_id for a in agents]
+            try:
+                idx = agent_ids.index(followed.agent_id) + 1
+            except ValueError:
+                idx = 0
+            total = len(agents)
+            lines.append((
+                f"Following: {followed.agent_id} [{idx}/{total}]"
+                f" \u2014 \u2190 \u2192 to switch, 1-9 to jump",
+                STATUS_SESSION_COLOR,
+            ))
+
+        # Followed agent metrics
+        if followed is not None:
+            lines.append((f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR))
+            lines.append((f"Food: {followed.foods_collected}", STATUS_TEXT_COLOR))
+            lines.append(
+                (f"HP: {followed.hp:.0f}/{followed.max_hp:.0f}", STATUS_TEXT_COLOR)
+            )
+            lines.append(
+                (
+                    f"Satiety: {followed.satiety:.0f}/{followed.max_satiety:.0f}",
+                    STATUS_TEXT_COLOR,
+                )
+            )
+
+        # All-agent summary
+        parts = []
+        for a in agents:
+            status = "alive" if a.alive else "DEAD"
+            parts.append(f"{a.agent_id}: {a.foods_collected}F {status}")
+        if parts:
+            lines.append((" | ".join(parts), STATUS_TEXT_COLOR))
+
+        # Pheromone overlay indicator
+        if self._pheromone_overlay_enabled:
+            lines.append(("[P] Pheromone overlay ON", STATUS_SAFE_COLOR))
+
+        line_height = STATUS_FONT_SIZE + 2
+        antialias = True
+        for i, (text, color) in enumerate(lines):
+            if text:
+                text_surf = self._font.render(text, antialias, color)
+                self._screen.blit(
+                    text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height)
+                )
 
     def close(self) -> None:
         """Clean up Pygame resources."""
