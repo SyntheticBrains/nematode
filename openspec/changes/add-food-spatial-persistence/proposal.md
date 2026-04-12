@@ -54,16 +54,18 @@ environment:
 
 - `quantumnematode/dtypes.py` — `FoodHotspot` type alias
 - `quantumnematode/env/env.py` — Extend `ForagingParams`, add `_sample_hotspot_candidate()`, modify `_initialize_foods()`, `spawn_food()`, and `consume_food_for()`
+- `quantumnematode/agent/multi_agent.py` — Update `_resolve_food_step()` to re-offer food when sated winner can't eat
+- `quantumnematode/agent/reward_calculator.py` — Suppress goal bonus when agent is on food but can't eat due to satiety gate
 - `quantumnematode/utils/config_loader.py` — Extend `ForagingConfig` with hotspot YAML fields
 - `quantumnematode/env/__init__.py` — Export `FoodHotspot`
 
 **Configs:**
 
-- `configs/scenarios/multi_agent_foraging/` — Example hotspot configs
+- `configs/scenarios/multi_agent_foraging/` — Small (20×20) config for mechanics verification and logbook 011 baseline comparison; medium (50×50) config for primary pheromone evaluation
 
 **Tests:**
 
-- New tests for hotspot spawning, no-respawn mode, satiety-gated consumption, YAML loading
+- New tests for hotspot spawning, no-respawn mode, satiety-gated consumption, multi-agent food re-offer, reward suppression, YAML loading
 
 ## Breaking Changes
 

@@ -32,6 +32,16 @@ Defines requirements for food spatial persistence via configurable hotspot regio
 
 - AND the agent SHALL still occupy the food cell without consuming it
 
+- WHEN a sated agent wins food competition in multi-agent mode but cannot eat
+
+- THEN the food SHALL be re-offered to other contestants at the same position
+
+- AND if no contestant can eat, the food SHALL remain on the grid unconsumed
+
+- WHEN an agent is on food but cannot eat due to satiety gate
+
+- THEN the reward calculator SHALL NOT award the goal bonus for that step
+
 - WHEN `ForagingParams.satiety_food_threshold` is None (default)
 
 - THEN food collection SHALL behave identically to current behavior (no satiety gate)

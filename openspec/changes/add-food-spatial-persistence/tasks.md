@@ -20,8 +20,10 @@
 
 ## 4. Satiety-Gated Food Collection
 
-- [ ] 4.1 Add satiety threshold check in `consume_food_for()` — refuse collection when agent satiety > threshold * max_satiety
-- [ ] 4.2 Ensure refused consumption leaves food on grid and returns None (no satiety restoration)
+- [ ] 4.1 Add `satiety_food_threshold` check in `consume_food_for()` (env.py) — refuse collection when agent satiety > threshold × max_satiety, return None
+- [ ] 4.2 Update `_resolve_food_step()` in `multi_agent.py` — if winner can't eat due to satiety gate, re-offer food to other contestants at same position
+- [ ] 4.3 Suppress goal bonus in `reward_calculator.py` when agent is on food but can't eat due to satiety gate (avoid perverse reward for standing on food while sated)
+- [ ] 4.4 Pass `satiety_food_threshold` from ForagingParams to the satiety check (env has access to both agent satiety via agent state and foraging config)
 
 ## 5. Config Loader
 
@@ -39,16 +41,20 @@
 - [ ] 6.6 Test partial bias (0.5): mix of hotspot and uniform spawning
 - [ ] 6.7 Test YAML config loading with food_hotspots and satiety_food_threshold
 - [ ] 6.8 Test hotspot bias composes with safe_zone_food_bias
-- [ ] 6.9 Test satiety gate: agent at high satiety cannot consume food
+- [ ] 6.9 Test satiety gate: agent at high satiety cannot consume food (food remains on grid)
 - [ ] 6.10 Test satiety gate: agent below threshold can consume normally
 - [ ] 6.11 Test satiety gate disabled (None): no restriction on consumption
+- [ ] 6.12 Test multi-agent satiety gate: sated winner's food re-offered to hungry contestant
+- [ ] 6.13 Test reward suppression: no goal bonus when agent on food but can't eat
 
 ## 7. Example Configs
 
-- [ ] 7.1 Create multi-agent hotspot config with satiety gate for food-marking pheromone evaluation
+- [ ] 7.1 Create small (20×20) multi-agent hotspot + satiety gate config for mechanics verification and logbook 011 baseline comparison
+- [ ] 7.2 Create medium (50×50) multi-agent hotspot + satiety gate config for food-marking pheromone evaluation (primary evaluation environment)
 
 ## 8. Verification
 
 - [ ] 8.1 All existing tests pass (`uv run pytest -m "not nightly"`)
 - [ ] 8.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
-- [ ] 8.3 Smoke test: multi-agent with hotspot + satiety gate config runs without error
+- [ ] 8.3 Smoke test: small multi-agent hotspot config runs without error
+- [ ] 8.4 Smoke test: medium multi-agent hotspot config runs without error
