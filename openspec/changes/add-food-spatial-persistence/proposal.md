@@ -75,8 +75,9 @@ environment:
 - `quantumnematode/agent/food_handler.py` — Add satiety gate check before `env.consume_food()` in `check_and_consume_food()`
 - `quantumnematode/agent/multi_agent.py` — Pre-filter sated agents from food competition in `_resolve_food_step()`
 - `quantumnematode/agent/reward_calculator.py` — Add `can_eat` parameter to `calculate_reward()`, suppress goal bonus when False
+- `quantumnematode/agent/agent.py` — Add `can_eat` property and propagate `can_eat` parameter through `calculate_reward()`
+- `quantumnematode/agent/runners.py` — Pass `can_eat=agent.can_eat` from single-agent runner
 - `quantumnematode/utils/config_loader.py` — Extend `ForagingConfig` with hotspot YAML fields
-- `quantumnematode/env/__init__.py` — Export `FoodHotspot`
 
 **Configs:**
 
@@ -97,3 +98,11 @@ Existing configs produce identical behavior. No food parameters change defaults.
 ## Dependencies
 
 None. Uses existing NumPy RNG (`self.rng`) for sampling.
+
+## Post-Implementation Notes
+
+- `FoodHotspot` type stays in `dtypes.py` (same pattern as `TemperatureSpot`/`OxygenSpot`), not re-exported from `env/__init__.py`.
+- `agent.py` needed a `can_eat` property and `calculate_reward()` parameter propagation — not originally listed in Impact but required for the reward chain.
+- `runners.py` needed a one-line change to pass `can_eat=agent.can_eat` — not originally listed but required.
+- Existing food handler tests (`test_food_handler.py`) needed mock fixes — `MagicMock(spec=DynamicForagingEnvironment)` doesn't auto-create `env.foraging`, so `env.foraging = MagicMock(satiety_food_threshold=None)` was added to 10 mocks.
+- `_generate_food_candidate()` was extracted as a shared helper used by both `_initialize_foods()` and `spawn_food()`, keeping the hotspot bias logic in one place.
