@@ -857,8 +857,13 @@ class PygameRenderer:
             total = len(agents)
             lines.append(
                 (
-                    f"Following: {followed.agent_id} [{idx}/{total}]"
-                    f" -- </> to switch, 1-9 to jump",
+                    f"Following: {followed.agent_id} [{idx}/{total}]",
+                    STATUS_SESSION_COLOR,
+                ),
+            )
+            lines.append(
+                (
+                    "</> to switch, 1-9 to jump",
                     STATUS_SESSION_COLOR,
                 ),
             )
