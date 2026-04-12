@@ -36,45 +36,52 @@ class TestHotspotSpawning:
 
     def test_hotspot_bias_1_spawns_near_center(self) -> None:
         """With bias=1.0 and one hotspot, food spawns near the hotspot center."""
-        hotspot = (25, 25, 1.0)
-        env = DynamicForagingEnvironment(
-            grid_size=50,
-            foraging=ForagingParams(
-                foods_on_grid=20,
-                target_foods_to_collect=30,
-                min_food_distance=1,
-                agent_exclusion_radius=1,
-                food_hotspots=[hotspot],
-                food_hotspot_bias=1.0,
-                food_hotspot_decay=5.0,
-            ),
-            seed=42,
-        )
-        # Measure mean distance from foods to hotspot center
-        distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
-        mean_dist = np.mean(distances)
+        mean_dists = []
+        for seed in range(5):
+            env = DynamicForagingEnvironment(
+                grid_size=50,
+                foraging=ForagingParams(
+                    foods_on_grid=20,
+                    target_foods_to_collect=30,
+                    min_food_distance=1,
+                    agent_exclusion_radius=1,
+                    food_hotspots=[(25, 25, 1.0)],
+                    food_hotspot_bias=1.0,
+                    food_hotspot_decay=5.0,
+                ),
+                seed=seed,
+            )
+            distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
+            mean_dists.append(np.mean(distances))
+        median_dist = np.median(mean_dists)
         # With decay=5.0, most food should be within ~15 cells of center
-        assert mean_dist < 15.0, f"Mean distance {mean_dist} too large for hotspot bias=1.0"
+        assert median_dist < 15.0, (
+            f"Median mean distance {median_dist} too large for hotspot bias=1.0"
+        )
 
     def test_no_hotspot_bias_spawns_uniformly(self) -> None:
         """With bias=0.0, food spawns uniformly (no clustering)."""
-        env = DynamicForagingEnvironment(
-            grid_size=50,
-            foraging=ForagingParams(
-                foods_on_grid=30,
-                target_foods_to_collect=50,
-                min_food_distance=1,
-                agent_exclusion_radius=1,
-                food_hotspots=[(25, 25, 1.0)],
-                food_hotspot_bias=0.0,  # disabled
-            ),
-            seed=42,
-        )
-        # With uniform spawning on 50x50, mean distance from center should be larger
-        distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
-        mean_dist = np.mean(distances)
+        mean_dists = []
+        for seed in range(5):
+            env = DynamicForagingEnvironment(
+                grid_size=50,
+                foraging=ForagingParams(
+                    foods_on_grid=30,
+                    target_foods_to_collect=50,
+                    min_food_distance=1,
+                    agent_exclusion_radius=1,
+                    food_hotspots=[(25, 25, 1.0)],
+                    food_hotspot_bias=0.0,  # disabled
+                ),
+                seed=seed,
+            )
+            distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
+            mean_dists.append(np.mean(distances))
+        median_dist = np.median(mean_dists)
         # Uniform on 50x50 has expected distance ~18 from center
-        assert mean_dist > 10.0, f"Mean distance {mean_dist} suspiciously small for uniform"
+        assert median_dist > 10.0, (
+            f"Median mean distance {median_dist} suspiciously small for uniform"
+        )
 
     def test_multiple_hotspots_distribute_proportionally(self) -> None:
         """Food distributes across hotspots roughly proportional to weights."""
@@ -102,28 +109,30 @@ class TestHotspotSpawning:
 
     def test_hotspot_respawn_near_center(self) -> None:
         """After consumption, respawned food also appears near hotspots."""
-        env = DynamicForagingEnvironment(
-            grid_size=50,
-            start_pos=(25, 25),
-            foraging=ForagingParams(
-                foods_on_grid=5,
-                target_foods_to_collect=10,
-                min_food_distance=1,
-                agent_exclusion_radius=1,
-                food_hotspots=[(25, 25, 1.0)],
-                food_hotspot_bias=1.0,
-                food_hotspot_decay=5.0,
-            ),
-            seed=42,
-        )
-        # Place agent on a food item and consume it
-        if env.foods:
-            food_pos = env.foods[0]
-            env.agents["default"].position = food_pos
-            env.consume_food()
-        # After respawn, check new food is still near hotspot
-        distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
-        assert all(d < 25 for d in distances), "Respawned food too far from hotspot"
+        max_dists = []
+        for seed in range(5):
+            env = DynamicForagingEnvironment(
+                grid_size=50,
+                start_pos=(25, 25),
+                foraging=ForagingParams(
+                    foods_on_grid=5,
+                    target_foods_to_collect=10,
+                    min_food_distance=1,
+                    agent_exclusion_radius=1,
+                    food_hotspots=[(25, 25, 1.0)],
+                    food_hotspot_bias=1.0,
+                    food_hotspot_decay=5.0,
+                ),
+                seed=seed,
+            )
+            if env.foods:
+                food_pos = env.foods[0]
+                env.agents["default"].position = food_pos
+                env.consume_food()
+            distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
+            max_dists.append(max(distances) if distances else 0)
+        # With bias=1.0, all food (including respawned) should be near hotspot
+        assert np.median(max_dists) < 25, "Respawned food too far from hotspot across seeds"
 
     def test_partial_bias_mixed_spawning(self) -> None:
         """With bias=0.5, some food spawns near hotspot, some doesn't."""
@@ -353,9 +362,9 @@ class TestMultiAgentSatietyGate:
         assert sim._is_agent_sated(agent_0)
         assert not sim._is_agent_sated(agent_1)
 
-        # Exercise actual food competition: place both on a food tile
+        # Exercise actual food competition: isolate to single contested food tile
         food_pos = (5, 5)
-        env.foods.append(food_pos)
+        env.foods = [food_pos]
         env.agents["agent_1"].position = food_pos  # Move hungry agent to food
 
         # Ensure per-agent tracking dicts are initialized

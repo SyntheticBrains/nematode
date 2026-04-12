@@ -603,6 +603,9 @@ class MultiAgentSimulation:
                     self.env.emit_aggregation_pheromone(agent_pos, current_step, aid)
 
             # ── 3. FOOD COMPETITION ──────────────────────────────
+            # Snapshot can_eat BEFORE food resolution and satiety decay,
+            # so reward gating uses the same eligibility as food competition
+            can_eat_snapshot = {agent.agent_id: agent.can_eat for agent in alive}
             self._resolve_food_step(alive, current_step)
 
             # ── 4. PREDATORS ─────────────────────────────────────
@@ -719,7 +722,7 @@ class MultiAgentSimulation:
                     agent.path,
                     max_steps=max_steps,
                     stuck_position_count=0,
-                    can_eat=not self._is_agent_sated(agent),
+                    can_eat=can_eat_snapshot.get(aid, True),
                 )
                 self._per_agent_total_reward[aid] += reward_per_agent[aid]
                 action_per_agent[aid] = actions.get(aid)
