@@ -193,3 +193,83 @@ class TestAgentRenderState:
         )
         with pytest.raises(AttributeError):
             state.agent_id = "b"  # type: ignore[misc]
+
+
+class TestMultiAgentSimulationRendering:
+    """Tests for MultiAgentSimulation rendering integration."""
+
+    def test_render_step_builds_agent_states(self) -> None:
+        """Test that _render_step builds AgentRenderState from env state."""
+        from unittest.mock import MagicMock, patch
+
+        from quantumnematode.agent import QuantumNematodeAgent, SatietyConfig
+        from quantumnematode.agent.multi_agent import MultiAgentSimulation
+        from quantumnematode.brain.arch.qvarcircuit import (
+            QVarCircuitBrain,
+            QVarCircuitBrainConfig,
+        )
+        from quantumnematode.brain.modules import ModuleName
+        from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
+
+        env = DynamicForagingEnvironment(
+            grid_size=20,
+            foraging=ForagingParams(foods_on_grid=3, target_foods_to_collect=5),
+            seed=42,
+        )
+        brain_config = QVarCircuitBrainConfig(
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]}, num_layers=1
+        )
+
+        agents = []
+        for i in range(2):
+            aid = f"agent_{i}"
+            env.add_agent(aid, position=None, max_body_length=3)
+            brain = QVarCircuitBrain(config=brain_config, shots=10)
+            agent = QuantumNematodeAgent(
+                brain=brain, env=env, agent_id=aid,
+                satiety_config=SatietyConfig(),
+            )
+            agents.append(agent)
+
+        mock_renderer = MagicMock()
+        mock_renderer.closed = False
+        mock_renderer.render_multi_agent_frame.return_value = "agent_0"
+
+        sim = MultiAgentSimulation(env=env, agents=agents, renderer=mock_renderer)
+        sim._per_agent_food = {"agent_0": 2, "agent_1": 1}
+
+        sim._render_step(current_step=5, step=5, max_steps=100)
+
+        mock_renderer.render_multi_agent_frame.assert_called_once()
+        call_kwargs = mock_renderer.render_multi_agent_frame.call_args
+        agents_arg = call_kwargs.kwargs.get("agents") or call_kwargs[1].get("agents")
+        # If positional
+        if agents_arg is None:
+            agents_arg = call_kwargs[0][1]
+        assert len(agents_arg) == 2
+        assert agents_arg[0].agent_id == "agent_0"
+        assert agents_arg[0].foods_collected == 2
+        assert agents_arg[1].agent_id == "agent_1"
+        assert agents_arg[1].color_index == 1
+
+    def test_renderer_closed_sets_flag(self) -> None:
+        """Test that renderer_closed flag is set when renderer reports closed."""
+        from unittest.mock import MagicMock
+
+        from quantumnematode.agent.multi_agent import MultiAgentSimulation
+
+        sim = MultiAgentSimulation.__new__(MultiAgentSimulation)
+        sim._renderer_closed = False
+        sim._followed_agent_id = ""
+        sim._per_agent_food = {}
+
+        mock_renderer = MagicMock()
+        mock_renderer.closed = True
+        mock_renderer.render_multi_agent_frame.return_value = ""
+        sim.renderer = mock_renderer
+        sim.env = MagicMock()
+        sim.env.agents = {}
+        sim.agents = []
+
+        sim._render_step(0, 0, 100)
+        assert sim.renderer_closed is True
