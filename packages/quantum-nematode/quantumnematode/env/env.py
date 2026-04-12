@@ -2984,20 +2984,36 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
     def get_viewport_bounds(self) -> tuple[int, int, int, int]:
         """
-        Calculate viewport bounds centered on the agent.
+        Calculate viewport bounds centered on the default agent.
 
         Returns
         -------
         tuple[int, int, int, int]
             Viewport bounds (min_x, min_y, max_x, max_y).
         """
+        return self.get_viewport_bounds_for(DEFAULT_AGENT_ID)
+
+    def get_viewport_bounds_for(self, agent_id: str) -> tuple[int, int, int, int]:
+        """Calculate viewport bounds centered on a specific agent.
+
+        Parameters
+        ----------
+        agent_id : str
+            The agent to center the viewport on.
+
+        Returns
+        -------
+        tuple[int, int, int, int]
+            Viewport bounds (min_x, min_y, max_x, max_y).
+        """
+        pos = self.agents[agent_id].position
         half_width = self.viewport_size[0] // 2
         half_height = self.viewport_size[1] // 2
 
-        min_x = max(0, self.agent_pos[0] - half_width)
-        min_y = max(0, self.agent_pos[1] - half_height)
-        max_x = min(self.grid_size, self.agent_pos[0] + half_width + 1)
-        max_y = min(self.grid_size, self.agent_pos[1] + half_height + 1)
+        min_x = max(0, pos[0] - half_width)
+        min_y = max(0, pos[1] - half_height)
+        max_x = min(self.grid_size, pos[0] + half_width + 1)
+        max_y = min(self.grid_size, pos[1] + half_height + 1)
 
         return min_x, min_y, max_x, max_y
 
