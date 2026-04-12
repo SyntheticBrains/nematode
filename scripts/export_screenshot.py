@@ -277,11 +277,14 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.both:
-        _export_single_agent(args.output_path or "docs/assets/images/pixel_theme.png")
-        _export_multi_agent(
-            "docs/assets/images/pixel_theme_multi_agent.png",
+    if args.both and args.output_path:
+        parser.error(
+            "Cannot specify output_path with --both. Use defaults or run modes separately."
         )
+
+    if args.both:
+        _export_single_agent("docs/assets/images/pixel_theme.png")
+        _export_multi_agent("docs/assets/images/pixel_theme_multi_agent.png")
     elif args.multi_agent:
         _export_multi_agent(
             args.output_path or "docs/assets/images/pixel_theme_multi_agent.png",
