@@ -49,12 +49,12 @@
 
 ## 7. Example Configs
 
-- [ ] 7.1 Create small (20×20) multi-agent hotspot + satiety gate config for mechanics verification and logbook 011 baseline comparison
-- [ ] 7.2 Create medium (50×50) multi-agent hotspot + satiety gate config for food-marking pheromone evaluation (primary evaluation environment)
+- [x] 7.1 Create small (20×20) multi-agent hotspot + satiety gate config for mechanics verification and logbook 011 baseline comparison
+- [x] 7.2 Create medium (50×50) multi-agent hotspot + satiety gate config for food-marking pheromone evaluation (primary evaluation environment)
 
 ## 8. Verification
 
-- [ ] 8.1 All existing tests pass (`uv run pytest -m "not nightly"`)
-- [ ] 8.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
-- [ ] 8.3 Smoke test: small multi-agent hotspot config runs without error
-- [ ] 8.4 Smoke test: medium multi-agent hotspot config runs without error
+- [x] 8.1 All existing tests pass (`uv run pytest -m "not nightly"`)
+- [x] 8.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
+- [x] 8.3 Smoke test: small multi-agent hotspot config runs without error
+- [x] 8.4 Smoke test: medium multi-agent hotspot config runs without error
