@@ -279,7 +279,7 @@ def main() -> None:
 
     if args.both and args.output_path:
         parser.error(
-            "Cannot specify output_path with --both. Use defaults or run modes separately."
+            "Cannot specify output_path with --both. Use defaults or run modes separately.",
         )
 
     if args.both:
