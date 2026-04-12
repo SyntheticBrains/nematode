@@ -1387,9 +1387,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         dx = round(distance * np.cos(angle))
         dy = round(distance * np.sin(angle))
 
-        # Clamp to grid bounds
-        x = max(0, min(self.grid_size - 1, hx + dx))
-        y = max(0, min(self.grid_size - 1, hy + dy))
+        # Clamp to grid bounds (explicit int() for consistent Python int types)
+        x = int(max(0, min(self.grid_size - 1, hx + dx)))
+        y = int(max(0, min(self.grid_size - 1, hy + dy)))
         return (x, y)
 
     def _generate_food_candidate(self) -> tuple[int, int]:

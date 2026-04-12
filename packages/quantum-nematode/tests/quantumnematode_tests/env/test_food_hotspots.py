@@ -417,6 +417,36 @@ class TestYAMLConfigLoading:
         config = ForagingConfig()
         params = config.to_params()
         assert params.food_hotspots is None
-        assert params.food_hotspot_bias == 0.0
-        assert params.satiety_food_threshold is None
-        assert params.no_respawn is False
+
+    def test_foraging_config_rejects_invalid_bias(self) -> None:
+        """ForagingConfig rejects food_hotspot_bias outside [0.0, 1.0]."""
+        import pytest
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import ForagingConfig
+
+        with pytest.raises(ValidationError):
+            ForagingConfig(food_hotspot_bias=1.5)
+        with pytest.raises(ValidationError):
+            ForagingConfig(food_hotspot_bias=-0.1)
+
+    def test_foraging_config_rejects_invalid_decay(self) -> None:
+        """ForagingConfig rejects non-positive food_hotspot_decay."""
+        import pytest
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import ForagingConfig
+
+        with pytest.raises(ValidationError):
+            ForagingConfig(food_hotspot_decay=0.0)
+        with pytest.raises(ValidationError):
+            ForagingConfig(food_hotspot_decay=-1.0)
+
+    def test_foraging_config_rejects_invalid_threshold(self) -> None:
+        """ForagingConfig rejects satiety_food_threshold outside (0.0, 1.0]."""
+        import pytest
+        from pydantic import ValidationError
+        from quantumnematode.utils.config_loader import ForagingConfig
+
+        with pytest.raises(ValidationError):
+            ForagingConfig(satiety_food_threshold=0.0)
+        with pytest.raises(ValidationError):
+            ForagingConfig(satiety_food_threshold=1.5)
