@@ -493,6 +493,10 @@ class MultiAgentSimulation:
             if not alive:
                 break
 
+            # Reset per-step reward accumulator (effects + calculator rewards)
+            for aid in reward_per_agent:
+                reward_per_agent[aid] = 0.0
+
             # ── 1. PERCEPTION + DECISION ─────────────────────────
             actions: dict[str, ActionData] = {}
             for agent in alive:
@@ -532,9 +536,6 @@ class MultiAgentSimulation:
                 agent.path.append((pos[0], pos[1]))
                 agent.food_history.append(list(self.env.foods))
                 agent._food_handler.track_step()
-
-                # Update visited cells
-                self.env.agents[aid].visited_cells.add(pos)
 
             # ── 2b. AGGREGATION PHEROMONE EMISSION ───────────────
             if pheromones_enabled and self.env.pheromone_field_aggregation is not None:
@@ -653,8 +654,8 @@ class MultiAgentSimulation:
             # ── 6. LEARNING ──────────────────────────────────────
             for agent in self._alive_agents:
                 aid = agent.agent_id
-                # Compute reward for this step
-                reward_per_agent[aid] = agent.calculate_reward(
+                # Compute reward for this step (adds to effects-phase rewards)
+                reward_per_agent[aid] += agent.calculate_reward(
                     reward_config,
                     agent.env,
                     agent.path,
