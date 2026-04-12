@@ -50,6 +50,10 @@ class AgentRenderState:
     max_satiety: float
     color_index: int  # index into AGENT_COLOR_PALETTE (cycles via % 8)
 
+
+# Minimum pheromone concentration to render an overlay cell
+PHEROMONE_RENDER_THRESHOLD = 0.01
+
 # Status bar configuration
 STATUS_BAR_HEIGHT = 120
 STATUS_FONT_SIZE = 14
@@ -126,7 +130,8 @@ class PygameRenderer:
         # Multi-agent state (lazily populated)
         self._tinted_sprites: dict[int, dict[str, Any]] = {}
         self._tinted_body_colors: dict[
-            int, tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]
+            int,
+            tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]],
         ] = {}
         self._dead_overlay = create_dead_agent_overlay(pygame)
         self._pheromone_overlay_enabled = False
@@ -557,7 +562,8 @@ class PygameRenderer:
             return followed_agent_id
 
         new_followed, pheromone_toggle = self._pump_multi_agent_events(
-            agents, followed_agent_id
+            agents,
+            followed_agent_id,
         )
         followed_agent_id = new_followed
 
@@ -619,7 +625,7 @@ class PygameRenderer:
 
         return followed_agent_id
 
-    def _pump_multi_agent_events(
+    def _pump_multi_agent_events(  # noqa: C901
         self,
         agents: list[AgentRenderState],
         followed_agent_id: str,
@@ -695,12 +701,13 @@ class PygameRenderer:
                 pos = (gx, gy)
                 for field, color in fields:
                     conc = field.get_concentration(pos, current_step)
-                    if conc < 0.01:
+                    if conc < PHEROMONE_RENDER_THRESHOLD:
                         continue
                     # Alpha proportional to concentration (max 160 to stay readable)
                     alpha = int(min(conc, 1.0) * 160)
                     overlay = self._pg.Surface(
-                        (self._cell_size, self._cell_size), self._pg.SRCALPHA
+                        (self._cell_size, self._cell_size),
+                        self._pg.SRCALPHA,
                     )
                     overlay.fill((*color, alpha))
                     px, py = self._cell_to_pixel(gx, gy, viewport)
@@ -733,7 +740,7 @@ class PygameRenderer:
         for agent in agents:
             self._render_single_agent(agent, followed_agent_id, viewport, _in_view)
 
-    def _render_single_agent(
+    def _render_single_agent(  # noqa: C901
         self,
         agent: AgentRenderState,
         followed_agent_id: str,
@@ -813,7 +820,7 @@ class PygameRenderer:
                     px, py = self._cell_to_pixel(seg[0], seg[1], viewport)
                     self._screen.blit(self._dead_overlay, (px, py))
 
-    def _render_multi_agent_status_bar(  # noqa: PLR0913
+    def _render_multi_agent_status_bar(  # noqa: C901
         self,
         *,
         agents: list[AgentRenderState],
@@ -848,24 +855,26 @@ class PygameRenderer:
             except ValueError:
                 idx = 0
             total = len(agents)
-            lines.append((
-                f"Following: {followed.agent_id} [{idx}/{total}]"
-                f" \u2014 \u2190 \u2192 to switch, 1-9 to jump",
-                STATUS_SESSION_COLOR,
-            ))
+            lines.append(
+                (
+                    f"Following: {followed.agent_id} [{idx}/{total}]"
+                    f" \u2014 \u2190 \u2192 to switch, 1-9 to jump",
+                    STATUS_SESSION_COLOR,
+                ),
+            )
 
         # Followed agent metrics
         if followed is not None:
             lines.append((f"Step: {step}/{max_steps}", STATUS_TEXT_COLOR))
             lines.append((f"Food: {followed.foods_collected}", STATUS_TEXT_COLOR))
             lines.append(
-                (f"HP: {followed.hp:.0f}/{followed.max_hp:.0f}", STATUS_TEXT_COLOR)
+                (f"HP: {followed.hp:.0f}/{followed.max_hp:.0f}", STATUS_TEXT_COLOR),
             )
             lines.append(
                 (
                     f"Satiety: {followed.satiety:.0f}/{followed.max_satiety:.0f}",
                     STATUS_TEXT_COLOR,
-                )
+                ),
             )
 
         # All-agent summary
@@ -886,7 +895,8 @@ class PygameRenderer:
             if text:
                 text_surf = self._font.render(text, antialias, color)
                 self._screen.blit(
-                    text_surf, (STATUS_PADDING, bar_y + 4 + i * line_height)
+                    text_surf,
+                    (STATUS_PADDING, bar_y + 4 + i * line_height),
                 )
 
     def close(self) -> None:

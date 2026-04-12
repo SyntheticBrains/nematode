@@ -447,7 +447,7 @@ class MultiAgentSimulation:
                     satiety=agent.current_satiety,
                     max_satiety=agent.max_satiety,
                     color_index=i % 8,
-                )
+                ),
             )
 
         # Default followed agent to first if not set

@@ -49,7 +49,8 @@ class TestGetViewportBoundsFor:
         assert min_y <= 5 <= max_y - 1
 
     def test_different_agents_different_viewports(
-        self, env: DynamicForagingEnvironment
+        self,
+        env: DynamicForagingEnvironment,
     ) -> None:
         """Test that different agents produce different viewport bounds."""
         bounds_0 = env.get_viewport_bounds_for("agent_0")
@@ -200,7 +201,7 @@ class TestMultiAgentSimulationRendering:
 
     def test_render_step_builds_agent_states(self) -> None:
         """Test that _render_step builds AgentRenderState from env state."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         from quantumnematode.agent import QuantumNematodeAgent, SatietyConfig
         from quantumnematode.agent.multi_agent import MultiAgentSimulation
@@ -217,7 +218,8 @@ class TestMultiAgentSimulationRendering:
             seed=42,
         )
         brain_config = QVarCircuitBrainConfig(
-            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]}, num_layers=1
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
+            num_layers=1,
         )
 
         agents = []
@@ -226,7 +228,9 @@ class TestMultiAgentSimulationRendering:
             env.add_agent(aid, position=None, max_body_length=3)
             brain = QVarCircuitBrain(config=brain_config, shots=10)
             agent = QuantumNematodeAgent(
-                brain=brain, env=env, agent_id=aid,
+                brain=brain,
+                env=env,
+                agent_id=aid,
                 satiety_config=SatietyConfig(),
             )
             agents.append(agent)

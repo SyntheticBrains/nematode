@@ -321,7 +321,7 @@ def _make_predator_pursuit(pg: Any) -> Any:  # noqa: ANN401
 def create_tinted_head_sprites(
     pg: Any,  # noqa: ANN401
     tint_color: tuple[int, int, int],
-) -> dict[str, Any]:  # noqa: ANN401
+) -> dict[str, Any]:
     """Create directional head sprites tinted to the given color.
 
     Generates the base head sprite for each direction, then applies
