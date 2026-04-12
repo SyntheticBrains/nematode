@@ -23,7 +23,7 @@
 - [x] 4.2 Add `_pump_multi_agent_events()` method handling agent switching (left/right arrows to cycle, 1-9 keys to jump) and pheromone toggle ('P')
 - [x] 4.3 Add `_render_pheromone_overlay()` method computing per-cell concentration for active pheromone fields
 - [x] 4.4 Add `_render_multi_agent_entities()` method rendering all agents with colored sprites
-- [x] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics, all-agent summary, and switcher text ("← → to switch, 1-9 to jump")
+- [x] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics, all-agent summary, switcher text ("</> to switch, 1-9 to jump"), and word-wrapping for long lines
 - [x] 4.6 Add `render_multi_agent_frame()` public method accepting `current_step` (for pheromone queries), compositing all layers, and returning followed_agent_id
 - [x] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
 - [x] 4.8 Add test for agent switching (arrow keys cycle, number keys jump)

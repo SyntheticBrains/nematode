@@ -84,3 +84,9 @@ Multi-agent rendering does not support the `--show-last-frame-only` flag. In mul
 2. **Pygame event loop in step loop**: The renderer processes events synchronously, adding ~1ms per step. Negligible compared to brain inference time.
 
 3. **Sprite memory**: 8 colors × 4 directions × 32x32px = 32 head sprites. Plus body color variants. Total \<100KB — negligible.
+
+## Post-Implementation Notes
+
+- The monospace font from `pygame.font.SysFont("monospace", 14)` lacks glyphs for Unicode arrows and em dash. Replaced `← → —` with ASCII `</> --` in the status bar text.
+- Added `_wrap_text()` word-wrapping helper and used it in `_render_multi_agent_status_bar()` to handle long lines that overflow the window width (the "Following:" indicator and all-agent summary line both exceed 352px on 4+ agents).
+- Added `PLR0912` noqa to `_render_multi_agent_status_bar()` — the branch count increased with the wrapping logic but the method is inherently sequential.

@@ -72,3 +72,10 @@ All existing behavior preserved. Multi-agent defaults to headless. PIXEL theme m
 ## Dependencies
 
 None beyond Pygame (already an optional dependency used by single-agent PIXEL theme).
+
+## Post-Implementation Notes
+
+- Unicode arrow characters (`←` `→` `—`) rendered as squares in the monospace pygame font. Replaced with ASCII equivalents (`</>`, `--`) in the status bar.
+- Long status bar text (agent switcher indicator, all-agent summary) overflowed the window. Added word-wrapping that splits lines to fit within the available pixel width.
+- Extended `scripts/export_screenshot.py` with `--multi-agent` and `--both` flags for documentation screenshots.
+- Updated `README.md` and `CONTRIBUTING.md` to document multi-agent features, visualization controls, and testing examples.

@@ -139,4 +139,4 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 
 - AND it SHALL display a compact summary line for all agents (ID, food count, alive/dead)
 
-- AND it SHALL display the agent switcher indicator ("Following: agent_N [N/total] — ← → to switch, 1-9 to jump")
+- AND it SHALL display the agent switcher indicator ("Following: agent_N [N/total] -- </> to switch, 1-9 to jump")
