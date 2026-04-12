@@ -438,7 +438,7 @@ class MultiAgentSimulation:
                 AgentRenderState(
                     agent_id=aid,
                     position=env_state.position,
-                    body=list(env_state.body),
+                    body=tuple(env_state.body),
                     direction=env_state.direction.value,
                     alive=env_state.alive,
                     hp=env_state.hp,
@@ -832,11 +832,14 @@ class MultiAgentSimulation:
                 self._alarm_response_buffer.pop(idx)
 
         # ── EPISODE END ──────────────────────────────────────────
-        # Terminate remaining alive agents (max_steps reached)
+        # Terminate remaining alive agents
+        termination = (
+            TerminationReason.INTERRUPTED if self._renderer_closed else TerminationReason.MAX_STEPS
+        )
         for agent in list(self._alive_agents):
             self._handle_termination(
                 agent,
-                TerminationReason.MAX_STEPS,
+                termination,
                 nearby_agents_count=nearby_per_agent.get(agent.agent_id, 0),
             )
 

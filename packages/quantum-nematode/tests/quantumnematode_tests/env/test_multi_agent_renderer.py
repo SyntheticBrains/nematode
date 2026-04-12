@@ -159,7 +159,7 @@ class TestAgentRenderState:
         state = AgentRenderState(
             agent_id="agent_0",
             position=(5, 10),
-            body=[(4, 10), (3, 10)],
+            body=((4, 10), (3, 10)),
             direction="up",
             alive=True,
             hp=80.0,
@@ -182,7 +182,7 @@ class TestAgentRenderState:
         state = AgentRenderState(
             agent_id="a",
             position=(0, 0),
-            body=[],
+            body=(),
             direction="up",
             alive=True,
             hp=100.0,

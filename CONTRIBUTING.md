@@ -234,6 +234,8 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit
 
 ##### Testing Multi-Agent Simulations
 
+> **Note**: The `--theme pixel` option requires Pygame. Install with `--extra pixel` (e.g., `uv sync --extra cpu --extra pixel`).
+
 ```bash
 # Multi-agent cooperative foraging with Pygame visualization
 uv run ./scripts/run_simulation.py --runs 3 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_social_oracle.yml --theme pixel

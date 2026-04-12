@@ -224,7 +224,7 @@ def _export_multi_agent(output_path: str) -> None:
             AgentRenderState(
                 agent_id=aid,
                 position=state.position,
-                body=list(state.body),
+                body=tuple(state.body),
                 direction=state.direction.value,
                 alive=i != 3,  # agent_3 is dead for demo
                 hp=80.0 - i * 15,

@@ -40,7 +40,7 @@ class AgentRenderState:
 
     agent_id: str
     position: tuple[int, int]
-    body: list[tuple[int, int]]
+    body: tuple[tuple[int, int], ...]
     direction: str  # Direction enum .value ("up", "down", "left", "right")
     alive: bool
     hp: float
@@ -579,19 +579,15 @@ class PygameRenderer:
             followed = agents[0]
             followed_agent_id = followed.agent_id
 
-        # Estimate status line count and resize
-        session_lines = 0
-        if session_text:
-            session_lines = (
-                sum(
-                    1
-                    for line in session_text.strip().splitlines()
-                    if line.strip() and not line.strip().startswith("--")
-                )
-                + 1
-            )
-        # 8 base lines + 1 agent summary + 1 switcher
-        self._resize_if_needed(session_lines + 10)
+        # Pre-compute status bar lines and resize BEFORE drawing
+        status_lines = self._build_multi_agent_status_lines(
+            agents=agents,
+            followed=followed,
+            step=step,
+            max_steps=max_steps,
+            session_text=session_text,
+        )
+        self._resize_if_needed(len(status_lines))
 
         viewport = env.get_viewport_bounds_for(followed_agent_id)
 
@@ -611,14 +607,8 @@ class PygameRenderer:
         # Multi-agent entities
         self._render_multi_agent_entities(env, agents, followed_agent_id, viewport)
 
-        # Multi-agent status bar
-        self._render_multi_agent_status_bar(
-            agents=agents,
-            followed=followed,
-            step=step,
-            max_steps=max_steps,
-            session_text=session_text,
-        )
+        # Blit pre-computed status bar
+        self._blit_status_lines(status_lines)
 
         self._pg.display.flip()
         self._clock.tick(30)
@@ -820,7 +810,7 @@ class PygameRenderer:
                     px, py = self._cell_to_pixel(seg[0], seg[1], viewport)
                     self._screen.blit(self._dead_overlay, (px, py))
 
-    def _render_multi_agent_status_bar(  # noqa: C901, PLR0912
+    def _build_multi_agent_status_lines(  # noqa: C901, PLR0912
         self,
         *,
         agents: list[AgentRenderState],
@@ -828,15 +818,8 @@ class PygameRenderer:
         step: int,
         max_steps: int,
         session_text: str | None = None,
-    ) -> None:
-        """Render multi-agent status bar below the grid."""
-        bar_y = self._viewport_size[1] * self._cell_size
-        self._pg.draw.rect(
-            self._screen,
-            STATUS_BG_COLOR,
-            (0, bar_y, self._width, self._height - bar_y),
-        )
-
+    ) -> list[tuple[str, tuple[int, int, int]]]:
+        """Build and wrap status bar lines. Returns wrapped lines ready to blit."""
         lines: list[tuple[str, tuple[int, int, int]]] = []
 
         # Session-level info
@@ -902,17 +885,27 @@ class PygameRenderer:
             if not text:
                 wrapped.append(("", color))
                 continue
-            # Check if text fits
             text_surf = self._font.render(text, antialias, color)
             if text_surf.get_width() <= max_text_width:
                 wrapped.append((text, color))
             else:
-                # Word-wrap the text
                 wrapped.extend(self._wrap_text(text, color, max_text_width))
 
-        self._resize_if_needed(len(wrapped))
+        return wrapped
 
+    def _blit_status_lines(
+        self,
+        wrapped: list[tuple[str, tuple[int, int, int]]],
+    ) -> None:
+        """Blit pre-computed status lines onto the screen."""
+        bar_y = self._viewport_size[1] * self._cell_size
+        self._pg.draw.rect(
+            self._screen,
+            STATUS_BG_COLOR,
+            (0, bar_y, self._width, self._height - bar_y),
+        )
         line_height = STATUS_FONT_SIZE + 2
+        antialias = True
         for i, (text, color) in enumerate(wrapped):
             if text:
                 text_surf = self._font.render(text, antialias, color)
@@ -927,7 +920,11 @@ class PygameRenderer:
         color: tuple[int, int, int],
         max_width: int,
     ) -> list[tuple[str, tuple[int, int, int]]]:
-        """Word-wrap text to fit within max_width pixels."""
+        """Word-wrap text to fit within max_width pixels.
+
+        Falls back to character-level breaking for single tokens wider
+        than max_width.
+        """
         words = text.split()
         result: list[tuple[str, tuple[int, int, int]]] = []
         current_line = ""
@@ -940,7 +937,22 @@ class PygameRenderer:
             else:
                 if current_line:
                     result.append((current_line, color))
-                current_line = word
+                # Check if the word itself exceeds max_width
+                word_surf = self._font.render(word, antialias, color)
+                if word_surf.get_width() > max_width:
+                    # Character-level breaking
+                    chunk = ""
+                    for ch in word:
+                        test = chunk + ch
+                        if self._font.render(test, antialias, color).get_width() > max_width:
+                            if chunk:
+                                result.append((chunk, color))
+                            chunk = ch
+                        else:
+                            chunk = test
+                    current_line = chunk
+                else:
+                    current_line = word
         if current_line:
             result.append((current_line, color))
         return result or [("", color)]

@@ -132,7 +132,7 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 # Quantum variational circuit brain
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/qvarcircuit_medium_oracle.yml --theme emoji
 
-# Multi-agent cooperative foraging (4 agents with social feeding)
+# Multi-agent cooperative foraging (5 agents with social feeding)
 uv run ./scripts/run_simulation.py --log-level INFO --runs 10 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_social_oracle.yml --theme pixel
 
 # Quantum hardware (IBM QPU) with dynamic foraging

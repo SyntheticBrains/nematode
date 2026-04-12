@@ -65,9 +65,10 @@ ZONE_LETHAL_HYPEROXIA = (40, 180, 220, 90)  # bright cyan
 ZONE_TOXIC = (140, 60, 180, 80)
 
 # Multi-agent color palette (8 distinct colors for agent differentiation)
-# Index 0 matches the default single-agent cream. Indices cycle for >8 agents.
+# Index 0 is neutral white (identity tint) preserving original cream sprites.
+# Indices cycle for >8 agents.
 AGENT_COLOR_PALETTE: tuple[tuple[int, int, int], ...] = (
-    (220, 195, 160),  # 0: cream (default, matches NEMATODE_HEAD_COLOR)
+    (255, 255, 255),  # 0: neutral (identity tint, preserves original cream)
     (100, 150, 220),  # 1: blue
     (100, 200, 100),  # 2: green
     (220, 90, 80),  # 3: red
