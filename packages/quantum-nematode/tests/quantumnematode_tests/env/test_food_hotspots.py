@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 from quantumnematode.agent import QuantumNematodeAgent, RewardConfig, SatietyConfig
 from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
 from quantumnematode.brain.modules import ModuleName
@@ -52,9 +51,7 @@ class TestHotspotSpawning:
             seed=42,
         )
         # Measure mean distance from foods to hotspot center
-        distances = [
-            np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods
-        ]
+        distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
         mean_dist = np.mean(distances)
         # With decay=5.0, most food should be within ~15 cells of center
         assert mean_dist < 15.0, f"Mean distance {mean_dist} too large for hotspot bias=1.0"
@@ -74,9 +71,7 @@ class TestHotspotSpawning:
             seed=42,
         )
         # With uniform spawning on 50x50, mean distance from center should be larger
-        distances = [
-            np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods
-        ]
+        distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
         mean_dist = np.mean(distances)
         # Uniform on 50x50 has expected distance ~18 from center
         assert mean_dist > 10.0, f"Mean distance {mean_dist} suspiciously small for uniform"
@@ -127,14 +122,11 @@ class TestHotspotSpawning:
             env.agents["default"].position = food_pos
             env.consume_food()
         # After respawn, check new food is still near hotspot
-        distances = [
-            np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods
-        ]
+        distances = [np.sqrt((f[0] - 25) ** 2 + (f[1] - 25) ** 2) for f in env.foods]
         assert all(d < 25 for d in distances), "Respawned food too far from hotspot"
 
     def test_partial_bias_mixed_spawning(self) -> None:
         """With bias=0.5, some food spawns near hotspot, some doesn't."""
-        rng = np.random.default_rng(42)
         near_counts = []
         for seed in range(10):
             env = DynamicForagingEnvironment(
@@ -150,9 +142,7 @@ class TestHotspotSpawning:
                 ),
                 seed=seed,
             )
-            near = sum(
-                1 for f in env.foods if np.sqrt((f[0] - 10) ** 2 + (f[1] - 10) ** 2) < 12
-            )
+            near = sum(1 for f in env.foods if np.sqrt((f[0] - 10) ** 2 + (f[1] - 10) ** 2) < 12)
             near_counts.append(near)
         # With 50% bias, expect some runs with clustering and some without
         mean_near = np.mean(near_counts)
@@ -244,7 +234,8 @@ class TestSatietyGate:
             seed=42,
         )
         brain_config = QVarCircuitBrainConfig(
-            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]}, num_layers=1,
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
+            num_layers=1,
         )
         brain = QVarCircuitBrain(config=brain_config, shots=10)
         agent = QuantumNematodeAgent(
@@ -325,14 +316,17 @@ class TestMultiAgentSatietyGate:
             seed=42,
         )
         brain_config = QVarCircuitBrainConfig(
-            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]}, num_layers=1,
+            modules={ModuleName.FOOD_CHEMOTAXIS: [0, 1]},
+            num_layers=1,
         )
 
         # Agent 0: sated (high satiety)
         env.add_agent("agent_0", position=(5, 5), max_body_length=3)
         brain_0 = QVarCircuitBrain(config=brain_config, shots=10)
         agent_0 = QuantumNematodeAgent(
-            brain=brain_0, env=env, agent_id="agent_0",
+            brain=brain_0,
+            env=env,
+            agent_id="agent_0",
             satiety_config=SatietyConfig(initial_satiety=200.0),
         )
 
@@ -340,7 +334,9 @@ class TestMultiAgentSatietyGate:
         env.add_agent("agent_1", position=(6, 5), max_body_length=3)
         brain_1 = QVarCircuitBrain(config=brain_config, shots=10)
         agent_1 = QuantumNematodeAgent(
-            brain=brain_1, env=env, agent_id="agent_1",
+            brain=brain_1,
+            env=env,
+            agent_id="agent_1",
             satiety_config=SatietyConfig(initial_satiety=200.0),
         )
         # Decay agent_1's satiety to make it hungry
@@ -375,10 +371,14 @@ class TestRewardSuppression:
             env.agents["default"].position = env.foods[0]
 
         reward_can_eat = calc.calculate_reward(
-            env=env, path=[(10, 10)], can_eat=True,
+            env=env,
+            path=[(10, 10)],
+            can_eat=True,
         )
         reward_cant_eat = calc.calculate_reward(
-            env=env, path=[(10, 10)], can_eat=False,
+            env=env,
+            path=[(10, 10)],
+            can_eat=False,
         )
         # The can_eat=True version should have higher reward (goal bonus)
         assert reward_can_eat > reward_cant_eat

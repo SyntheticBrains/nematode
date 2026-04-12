@@ -931,7 +931,7 @@ class QuantumNematodeAgent:
             session_text=render_text,
         )
 
-    def calculate_reward(
+    def calculate_reward(  # noqa: PLR0913
         self,
         config: RewardConfig,
         env: DynamicForagingEnvironment,

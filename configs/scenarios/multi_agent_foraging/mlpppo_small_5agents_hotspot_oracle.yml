@@ -1,0 +1,95 @@
+# Multi-Agent Foraging with Food Hotspots — 5 Agents, Small (20×20), Oracle Mode
+# Mechanics verification config for food spatial persistence (issue #116)
+# Comparison baseline against logbook 011 small-grid campaigns
+
+max_steps: 500
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis
+      - social_proximity
+      - pheromone_food
+      - pheromone_alarm
+      - pheromone_aggregation
+
+body_length: 2
+
+multi_agent:
+  enabled: true
+  count: 5
+  food_competition: first_arrival
+  social_detection_radius: 5
+  termination_policy: freeze
+  min_agent_distance: 3
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 8
+    target_foods_to_collect: 15
+    min_food_distance: 2
+    agent_exclusion_radius: 3
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+    food_hotspots:
+      - [6, 6, 1.0]
+      - [14, 14, 1.0]
+    food_hotspot_bias: 0.8
+    food_hotspot_decay: 5.0
+    satiety_food_threshold: 0.8
+
+  pheromones:
+    enabled: true
+    food_marking:
+      emission_strength: 1.0
+      spatial_decay_constant: 5.0
+      temporal_half_life: 30
+      max_sources: 50
+    alarm:
+      emission_strength: 2.0
+      spatial_decay_constant: 5.0
+      temporal_half_life: 20
+      max_sources: 50
+    aggregation:
+      emission_strength: 0.5
+      spatial_decay_constant: 8.0
+      temporal_half_life: 10
+      max_sources: 100
+
+  social_feeding:
+    enabled: true
+    decay_reduction: 0.7
+    solitary_decay: 1.0
