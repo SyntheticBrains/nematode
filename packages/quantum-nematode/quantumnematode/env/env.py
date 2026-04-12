@@ -21,7 +21,13 @@ from rich.table import Table
 from rich.text import Text as RichText
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action
-from quantumnematode.dtypes import FoodHotspot, GradientPolar, GridPosition, OxygenSpot, TemperatureSpot
+from quantumnematode.dtypes import (
+    FoodHotspot,
+    GradientPolar,
+    GridPosition,
+    OxygenSpot,
+    TemperatureSpot,
+)
 from quantumnematode.env.oxygen import (
     OxygenField,
     OxygenZone,
@@ -1356,29 +1362,69 @@ class DynamicForagingEnvironment(BaseEnvironment):
     def total_aerotaxis_steps(self, value: int) -> None:
         self.agents[DEFAULT_AGENT_ID].total_aerotaxis_steps = value
 
+    def _sample_hotspot_candidate(self) -> tuple[int, int]:
+        """Sample a food candidate position biased toward a food hotspot.
+
+        Selects a hotspot weighted by weight values, then samples a position
+        from an exponential distribution centered on the chosen hotspot.
+        """
+        hotspots = self.foraging.food_hotspots
+        if not hotspots:
+            msg = "_sample_hotspot_candidate called without food_hotspots"
+            raise ValueError(msg)
+
+        # Select hotspot weighted by weight
+        weights = np.array([h[2] for h in hotspots], dtype=np.float64)
+        weights /= weights.sum()
+        idx = int(self.rng.choice(len(hotspots), p=weights))
+        hx, hy, _ = hotspots[idx]
+
+        # Sample position with exponential decay from center
+        decay = self.foraging.food_hotspot_decay
+        # Use exponential distribution for distance, uniform for angle
+        distance = self.rng.exponential(scale=decay)
+        angle = self.rng.uniform(0, 2 * np.pi)
+        dx = round(distance * np.cos(angle))
+        dy = round(distance * np.sin(angle))
+
+        # Clamp to grid bounds
+        x = max(0, min(self.grid_size - 1, hx + dx))
+        y = max(0, min(self.grid_size - 1, hy + dy))
+        return (x, y)
+
+    def _generate_food_candidate(self) -> tuple[int, int]:
+        """Generate a food candidate position, applying hotspot bias if configured."""
+        if (
+            self.foraging.food_hotspots
+            and self.foraging.food_hotspot_bias > 0
+            and self.rng.random() < self.foraging.food_hotspot_bias
+        ):
+            return self._sample_hotspot_candidate()
+        return (
+            int(self.rng.integers(self.grid_size)),
+            int(self.rng.integers(self.grid_size)),
+        )
+
     def _initialize_foods(self) -> None:
         """
         Initialize food sources using Poisson disk sampling.
 
-        Respects safe_zone_food_bias: with probability `bias`, food is only
-        placed in safe temperature zones (COMFORT or DISCOMFORT). Otherwise,
-        food can be placed anywhere valid.
+        Respects food_hotspot_bias and safe_zone_food_bias: hotspot bias
+        controls the sampling distribution, safe zone bias acts as a
+        rejection filter afterward.
         """
         self.foods = []
         attempts = 0
         max_total_attempts = MAX_POISSON_ATTEMPTS * self.foraging.foods_on_grid
-        bias = self.foraging.safe_zone_food_bias
+        safe_bias = self.foraging.safe_zone_food_bias
 
         while len(self.foods) < self.foraging.foods_on_grid and attempts < max_total_attempts:
-            candidate = (
-                int(self.rng.integers(self.grid_size)),
-                int(self.rng.integers(self.grid_size)),
-            )
+            candidate = self._generate_food_candidate()
 
             if self._is_valid_food_position(candidate):
                 # Apply safe zone bias if thermotaxis is enabled
-                if bias > 0 and self.thermotaxis.enabled:
-                    require_safe_zone = self.rng.random() < bias
+                if safe_bias > 0 and self.thermotaxis.enabled:
+                    require_safe_zone = self.rng.random() < safe_bias
                     if require_safe_zone and not self._is_safe_temperature_zone(candidate):
                         attempts += 1
                         continue
@@ -1485,28 +1531,30 @@ class DynamicForagingEnvironment(BaseEnvironment):
         Always attempts to maintain foods_on_grid count on the grid.
         Food spawns immediately after collection to ensure constant supply.
 
-        Respects safe_zone_food_bias: with probability `bias`, food is only
-        placed in safe temperature zones (COMFORT or DISCOMFORT). Otherwise,
-        food can be placed anywhere valid.
+        Respects food_hotspot_bias and safe_zone_food_bias: hotspot bias
+        controls the sampling distribution, safe zone bias acts as a
+        rejection filter afterward.
 
         Returns
         -------
         bool
             True if food was spawned, False otherwise.
         """
+        if self.foraging.no_respawn:
+            return False
+
         # Check if we're already at target grid capacity
         if len(self.foods) >= self.foraging.foods_on_grid:
             return False
 
-        bias = self.foraging.safe_zone_food_bias
-        require_safe_zone = bias > 0 and self.thermotaxis.enabled and self.rng.random() < bias
+        safe_bias = self.foraging.safe_zone_food_bias
+        require_safe_zone = (
+            safe_bias > 0 and self.thermotaxis.enabled and self.rng.random() < safe_bias
+        )
 
         # Attempt to spawn food at valid location
         for _ in range(MAX_POISSON_ATTEMPTS):
-            candidate = (
-                int(self.rng.integers(self.grid_size)),
-                int(self.rng.integers(self.grid_size)),
-            )
+            candidate = self._generate_food_candidate()
 
             if self._is_valid_food_position(candidate):
                 # Check safe zone requirement if applicable
