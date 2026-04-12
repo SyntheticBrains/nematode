@@ -14,7 +14,7 @@
 
 ## 3. Rendering Data Contract
 
-- [ ] 3.1 Add `AgentRenderState` frozen dataclass to `pygame_renderer.py` (agent_id, position, body, direction, alive, hp, max_hp, foods_collected, satiety, max_satiety, color_index)
+- [ ] 3.1 Add `AgentRenderState` frozen dataclass to `pygame_renderer.py` (agent_id, position, body, direction as str via Direction.value, alive, hp, max_hp, foods_collected, satiety, max_satiety, color_index)
 - [ ] 3.2 Add unit test for `AgentRenderState` construction
 
 ## 4. Multi-Agent Renderer Extension
@@ -23,7 +23,7 @@
 - [ ] 4.2 Add `_pump_multi_agent_events()` method handling agent switching (left/right arrows to cycle, 1-9 keys to jump) and pheromone toggle ('P')
 - [ ] 4.3 Add `_render_pheromone_overlay()` method computing per-cell concentration for active pheromone fields
 - [ ] 4.4 Add `_render_multi_agent_entities()` method rendering all agents with colored sprites
-- [ ] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics and all-agent summary
+- [ ] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics, all-agent summary, and switcher text ("← → to switch, 1-9 to jump")
 - [ ] 4.6 Add `render_multi_agent_frame()` public method compositing all layers and returning followed_agent_id
 - [ ] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
 - [ ] 4.8 Add test for agent switching (arrow keys cycle, number keys jump)
@@ -31,11 +31,11 @@
 
 ## 5. MultiAgentSimulation Integration
 
-- [ ] 5.1 Add optional `renderer` parameter to `MultiAgentSimulation.__init__()`
-- [ ] 5.2 Add `_followed_agent_id` field defaulting to first agent ID
-- [ ] 5.3 Add `_render_step()` method building `AgentRenderState` list and calling renderer
-- [ ] 5.4 Insert render call in step loop after learning phase
-- [ ] 5.5 Handle renderer window closure — terminate episode and stop simulation (match single-agent behavior)
+- [ ] 5.1 Add `renderer: PygameRenderer | None = None` dataclass field with `TYPE_CHECKING` import guard (after existing defaulted fields)
+- [ ] 5.2 Add `_followed_agent_id` and `_renderer_closed` runtime fields (init=False)
+- [ ] 5.3 Add `_render_step()` method building `AgentRenderState` list from `self.env` and per-agent trackers, converting `Direction` enum to `.value` string
+- [ ] 5.4 Insert render call in step loop after learning phase; check `renderer.closed` after call and set `_renderer_closed` flag + return early from `run_episode()`
+- [ ] 5.5 Add `renderer_closed` property for `_run_multi_agent()` to check after each episode
 - [ ] 5.6 Add unit test for `_render_step()` data assembly
 
 ## 6. run_simulation.py Integration
@@ -43,7 +43,9 @@
 - [ ] 6.1 Add renderer creation when `theme == Theme.PIXEL` in `_run_multi_agent()`
 - [ ] 6.2 Add theme validation — warn and fall back to headless for unsupported themes
 - [ ] 6.3 Add renderer cleanup (close) after run loop completes
-- [ ] 6.4 Manual smoke test: multi-agent foraging with `--theme pixel`
+- [ ] 6.4 Check `sim.renderer_closed` after each episode and break the run loop if true
+- [ ] 6.5 Ignore `--show-last-frame-only` for multi-agent (render every frame or not at all)
+- [ ] 6.6 Manual smoke test: multi-agent foraging with `--theme pixel`
 
 ## 7. Verification
 

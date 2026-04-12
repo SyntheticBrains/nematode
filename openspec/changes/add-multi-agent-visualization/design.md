@@ -43,6 +43,8 @@ A `AgentRenderState` frozen dataclass carries the minimum data needed to render 
 
 **Rationale:** Multi-agent rendering must show all agents simultaneously. Per-agent rendering would be confusing and waste frames.
 
+Note: `MultiAgentSimulation` is a `@dataclass`. The renderer field is declared as `renderer: PygameRenderer | None = None` (with `TYPE_CHECKING` guard to avoid making pygame a hard dependency). It is placed after existing defaulted fields.
+
 ### Decision 4: Pheromone overlay is togglable, default off
 
 Computing pheromone concentration per viewport cell (≈121 cells × 3 fields × up to 200 sources each) is O(72k) per frame. Acceptable at 30fps in Python but non-trivial. Default off avoids surprising slowdowns; 'P' key toggles it.
@@ -65,7 +67,15 @@ Left/right arrow keys cycle through agents sequentially (wrapping at boundaries)
 
 Closing the Pygame window terminates the current episode and stops the simulation, matching single-agent behavior (see `runners.py:782`, `run_simulation.py:778`).
 
+Signal propagation: `render_multi_agent_frame()` sets `self._closed` on the renderer → `MultiAgentSimulation` checks `renderer.closed` after each render call and sets a `self._renderer_closed` flag → `run_episode()` checks the flag and returns early → `_run_multi_agent()` checks `sim.renderer_closed` after each episode and breaks the run loop.
+
 **Rationale:** Consistency with single-agent UX. Users expect closing the window to stop the program, not silently continue headless.
+
+### Decision 8: No support for `--show-last-frame-only` in multi-agent
+
+Multi-agent rendering does not support the `--show-last-frame-only` flag. In multi-agent mode, rendering is either fully on (PIXEL) or fully off (HEADLESS). The flag is ignored for multi-agent runs.
+
+**Rationale:** The value of multi-agent visualization is observing agent interactions over time, not just the final state. Rendering only the last frame defeats the purpose. Keeps the implementation simpler.
 
 ## Risks / Trade-offs
 

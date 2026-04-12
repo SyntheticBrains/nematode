@@ -98,13 +98,6 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 
 - THEN no pheromone concentration computation or rendering SHALL occur
 
-## ADDED Requirement: Multi-Agent Status Bar
-
-- WHEN the multi-agent status bar is rendered
-- THEN it SHALL display the followed agent's full metrics (step, food collected, HP, satiety)
-- AND it SHALL display a compact summary line for all agents (ID, food count, alive/dead)
-- AND it SHALL display the agent switcher indicator ("Following: agent_N [N/total] — Press 1-N to switch")
-
 ## ADDED Requirement: Viewport Bounds for Arbitrary Agents
 
 - WHEN `get_viewport_bounds_for(agent_id)` is called on the environment
@@ -116,14 +109,34 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 
 - WHEN `MultiAgentSimulation` is created with a renderer parameter
 
-- THEN the renderer SHALL be called once per step after all agent effects are applied
+- THEN the renderer field SHALL be a dataclass field typed `PygameRenderer | None = None` with a `TYPE_CHECKING` import guard
 
-- AND the rendering data SHALL be assembled from `env.agents` and per-agent tracking state
+- AND the renderer SHALL be called once per step via `_render_step()` after all agent effects are applied
+
+- AND the rendering data SHALL be assembled from `self.env` (current env reference) and per-agent tracking state
+
+- AND `AgentRenderState.direction` SHALL be converted from the `Direction` enum to its `.value` string when building snapshots
 
 - WHEN the renderer window is closed by the user
 
-- THEN the current episode SHALL be terminated
+- THEN `renderer.closed` SHALL become True
 
-- AND the simulation run loop SHALL stop (no further episodes)
+- AND `MultiAgentSimulation` SHALL set a `_renderer_closed` flag and return early from `run_episode()`
+
+- AND `_run_multi_agent()` SHALL check `sim.renderer_closed` after each episode and break the run loop
 
 - AND this SHALL match the single-agent window close behavior
+
+- WHEN a multi-agent simulation is started with `--show-last-frame-only`
+
+- THEN the flag SHALL be ignored for multi-agent rendering (render every frame or not at all)
+
+## ADDED Requirement: Multi-Agent Status Bar
+
+- WHEN the multi-agent status bar is rendered
+
+- THEN it SHALL display the followed agent's full metrics (step, food collected, HP, satiety)
+
+- AND it SHALL display a compact summary line for all agents (ID, food count, alive/dead)
+
+- AND it SHALL display the agent switcher indicator ("Following: agent_N [N/total] — ← → to switch, 1-9 to jump")
