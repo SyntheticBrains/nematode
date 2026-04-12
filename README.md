@@ -18,12 +18,14 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 - ✅ **Temporal Sensing**: Biologically-accurate sensing modes replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with Short-Term Associative Memory (STAM) buffers
 - ✅ **Thermotaxis**: Temperature-guided navigation with comfort/discomfort/danger zones and scattered hot/cold spots
 - ✅ **Aerotaxis**: Oxygen-guided navigation with asymmetric hypoxia/hyperoxia danger zones (5-12% O2 comfort range, URX/BAG neuron-inspired)
+- ✅ **Multi-Agent Simulations**: Cooperative and competitive foraging with pheromone communication (food-marking, alarm, aggregation), social feeding (npr-1 mediated), food competition policies, and collective behavior metrics
 - ✅ **Modular Quantum Brain**: Parameterized quantum circuits with 2+ qubits for decision-making
 - ✅ **Classical ML Alternatives**: REINFORCE, PPO, DQN, LSTM/GRU PPO, and spiking neural network brain architectures
 - ✅ **Quantum Learning**: Parameter-shift rule for gradient-based optimization
 - ✅ **Hardware Support**: Classical simulation (AerSimulator) and real quantum hardware (IBM QPU)
 - ✅ **Comprehensive Tracking**: Per-run and session-level metrics, plots, and CSV exports
 - ✅ **Interactive Workflows**: CLI scripts with flexible configuration
+- ✅ **Multi-Agent Visualization**: Real-time Pygame rendering of multi-agent simulations with per-agent colored sprites, viewport agent switching, and pheromone concentration overlays
 - 🚧 **Expandable Framework**: Modular design for research and experimentation
 
 ## 🧠 Brain Architectures
@@ -129,6 +131,9 @@ uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --tr
 
 # Quantum variational circuit brain
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 50 --config ./configs/scenarios/foraging/qvarcircuit_medium_oracle.yml --theme emoji
+
+# Multi-agent cooperative foraging (5 agents with social feeding)
+uv run ./scripts/run_simulation.py --log-level INFO --runs 10 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_social_oracle.yml --theme pixel
 
 # Quantum hardware (IBM QPU) with dynamic foraging
 uv run ./scripts/run_simulation.py --log-level DEBUG --show-last-frame-only --track-per-run --runs 1 --config ./configs/scenarios/foraging/qvarcircuit_small_oracle.yml --theme emoji --device qpu
@@ -265,9 +270,25 @@ See [BENCHMARKS.md](BENCHMARKS.md) for complete leaderboards and submission guid
 
 ## 📊 Simulation Visualization
 
-The default Pixel theme renders the simulation in a Pygame window with biologically accurate sprites inspired by real *C. elegans* ecology:
+The default Pixel theme renders the simulation in a Pygame window with biologically accurate sprites inspired by real *C. elegans* ecology.
+
+### Single-Agent Mode
 
 ![Pixel Theme](docs/assets/images/pixel_theme.png)
+
+### Multi-Agent Mode
+
+Multi-agent simulations render all agents with distinct colors. The viewport follows one agent at a time, with keyboard controls to switch between agents and toggle pheromone concentration overlays.
+
+![Multi-Agent Pixel Theme](docs/assets/images/pixel_theme_multi_agent.png)
+
+**Controls:**
+
+| Key | Action |
+|-----|--------|
+| `←` `→` | Cycle between agents |
+| `1`-`9` | Jump to agent by number |
+| `P` | Toggle pheromone concentration overlay (food=green, alarm=red, aggregation=blue) |
 
 ### Entities
 
@@ -275,6 +296,8 @@ The default Pixel theme renders the simulation in a Pygame window with biologica
 |--------|--------|-----------------|
 | **Nematode head** | Translucent rounded head with pharynx bulb, directional facing | *C. elegans* head morphology |
 | **Nematode body** | Connected tan/cream segments with tapered tail | *C. elegans* body coloring |
+| **Multi-agent colors** | 8-color palette (cream, blue, green, red, orange, purple, cyan, yellow) | Visual differentiation for 2+ agents |
+| **Dead agent** | Gray overlay with red X marker | Agent terminated (starved, killed, frozen) |
 | **Food** | Green clustered dots | *E. coli* / OP50 bacterial lawns |
 | **Random predator** | Purple branching tendrils | Nematode-trapping fungi (*Arthrobotrys oligospora*) |
 | **Stationary predator** | Purple ring/net structure with toxic zone | Constricting ring traps (*Drechslerella*) |
@@ -288,14 +311,15 @@ The default Pixel theme renders the simulation in a Pygame window with biologica
 | **Temperature zones** | Blue (cold) through neutral to red/orange (hot) overlays based on thermal gradient |
 | **Oxygen zones** | Red (hypoxia) through neutral to cyan (hyperoxia) overlays based on O2 concentration |
 | **Toxic zones** | Purple overlay around stationary predators indicating damage radius |
+| **Pheromone overlay** | Togglable colored overlay showing pheromone concentration (green=food, red=alarm, blue=aggregation) |
 
 ### Status Bar
 
-The status bar displays session-level information (run progress, cumulative wins, total food eaten, average steps) and run-level information (current step, food collected, health, satiety, danger status, temperature zone, oxygen zone).
+The status bar displays session-level information (run progress, cumulative wins, total food eaten, average steps) and run-level information (current step, food collected, health, satiety, danger status, temperature zone, oxygen zone). In multi-agent mode, it additionally shows the followed agent indicator, per-agent food counts, and alive/dead status.
 
 ### Alternative Themes
 
-Console-based themes (ASCII, Emoji, Rich, etc.) are available for terminal rendering. A dedicated `headless` theme skips all rendering entirely for maximum performance in batch training and CI:
+Console-based themes (ASCII, Emoji, Rich, etc.) are available for terminal rendering in single-agent mode. A dedicated `headless` theme skips all rendering entirely for maximum performance in batch training and CI. Multi-agent simulations support `pixel` and `headless` themes only.
 
 ```bash
 # Headless mode — no rendering overhead, fastest for training
@@ -346,6 +370,7 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Recently Completed
 
+- **Multi-Agent Simulations**: Cooperative and competitive foraging with pheromone communication (food-marking, alarm, aggregation), social feeding (npr-1 mediated satiety modulation), food competition policies, collective behavior metrics (aggregation index, alarm evasion, food sharing), and real-time Pygame visualization with per-agent colored sprites and pheromone overlays
 - **Temporal Sensing**: Biologically-accurate sensing replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with STAM temporal memory buffers
 - **LSTM/GRU PPO Brain**: Recurrent architecture with chunk-based truncated BPTT for temporal sensing tasks — achieves oracle-level converged performance with scalar-only sensing
 - **Aerotaxis**: Oxygen sensing with asymmetric 5-zone system (URX/BAG neuron-inspired), combined thermal+oxygen environments with orthogonal gradients
@@ -354,7 +379,6 @@ See [docs/roadmap.md](docs/roadmap.md) for the comprehensive project roadmap.
 
 ### Upcoming Features
 
-- **Multi-Agent Scenarios**: Cooperative and competitive foraging with pheromone communication and emergent behaviors
 - **Evolution & Breeding**: Genetic algorithms, Baldwin effect, co-evolution of predators and prey
 - **Continuous Physics & Connectome**: Continuous 2D movement, realistic locomotion, 302-neuron connectome-constrained architectures
 - **Advanced Quantum Algorithms**: VQE, QAOA, quantum error mitigation, and hardware deployment
@@ -379,9 +403,9 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ### Areas We Need Help With
 
 - **Quantum Algorithm Development**: New quantum learning techniques for foraging
-- **Foraging Environment Extensions**: Social behaviors, food quality, temperature gradients
-- **Multi-Agent Scenarios**: Cooperative and competitive foraging dynamics
-- **Visualization Tools**: Real-time learning analysis and environment rendering
+- **Foraging Environment Extensions**: Food quality variations, food spatial persistence, continuous action spaces
+- **Multi-Agent Evolution**: Genetic algorithms, co-evolution, predator-prey dynamics
+- **Visualization Enhancements**: Agent trail visualization, frame recording/video export, heatmaps
 - **Documentation**: Tutorials and examples for dynamic environments
 - **Testing**: Performance benchmarks and foraging strategy analysis
 

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from quantumnematode.brain.actions import ActionData
     from quantumnematode.dtypes import GridPosition
     from quantumnematode.env import DynamicForagingEnvironment
+    from quantumnematode.env.pygame_renderer import PygameRenderer
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -320,8 +321,11 @@ class MultiAgentSimulation:
     social_detection_radius: int = 5
     termination_policy: str = "freeze"
     agent_phenotypes: dict[str, str] = field(default_factory=dict)
+    renderer: PygameRenderer | None = None
 
     # Runtime tracking (not init params)
+    _followed_agent_id: str = field(default="", init=False)
+    _renderer_closed: bool = field(default=False, init=False)
     _food_competition_events: int = field(default=0, init=False)
     _proximity_events: int = field(default=0, init=False)
     _social_feeding_events: int = field(default=0, init=False)
@@ -407,6 +411,60 @@ class MultiAgentSimulation:
             for a in self.agents
             if a.agent_id in self.env.agents and self.env.agents[a.agent_id].alive
         ]
+
+    @property
+    def renderer_closed(self) -> bool:
+        """Whether the renderer window has been closed by the user."""
+        return self._renderer_closed
+
+    def _render_step(self, current_step: int, step: int, max_steps: int) -> None:
+        """Render one frame of the multi-agent simulation.
+
+        Builds AgentRenderState snapshots from current env state and
+        per-agent trackers, then delegates to the renderer.
+        """
+        if self.renderer is None or self._renderer_closed:
+            return
+
+        from quantumnematode.env.pygame_renderer import AgentRenderState
+
+        agents_state: list[AgentRenderState] = []
+        for i, agent in enumerate(self.agents):
+            aid = agent.agent_id
+            if aid not in self.env.agents:
+                continue
+            env_state = self.env.agents[aid]
+            agents_state.append(
+                AgentRenderState(
+                    agent_id=aid,
+                    position=env_state.position,
+                    body=tuple(env_state.body),
+                    direction=env_state.direction.value,
+                    alive=env_state.alive,
+                    hp=env_state.hp,
+                    max_hp=self.env.health.max_hp,
+                    foods_collected=self._per_agent_food.get(aid, 0),
+                    satiety=agent.current_satiety,
+                    max_satiety=agent.max_satiety,
+                    color_index=i % 8,
+                ),
+            )
+
+        # Default followed agent to first if not set
+        if not self._followed_agent_id and agents_state:
+            self._followed_agent_id = agents_state[0].agent_id
+
+        self._followed_agent_id = self.renderer.render_multi_agent_frame(
+            env=self.env,
+            agents=agents_state,
+            followed_agent_id=self._followed_agent_id,
+            step=step,
+            max_steps=max_steps,
+            current_step=current_step,
+        )
+
+        if self.renderer.closed:
+            self._renderer_closed = True
 
     def _compute_nearby_agents_count(self, agent_id: str) -> int:
         """Count other agents (alive and frozen) within social detection radius.
@@ -677,6 +735,11 @@ class MultiAgentSimulation:
                     )
                 agent.brain.update_memory(reward_per_agent[aid])
 
+            # ── 7. RENDER ───────────────────────────────────────────
+            self._render_step(current_step, current_step, max_steps)
+            if self._renderer_closed:
+                break
+
             # ── PHEROMONE FIELD UPDATE ────────────────────────────
             if pheromones_enabled:
                 self.env.update_pheromone_fields(current_step)
@@ -769,11 +832,14 @@ class MultiAgentSimulation:
                 self._alarm_response_buffer.pop(idx)
 
         # ── EPISODE END ──────────────────────────────────────────
-        # Terminate remaining alive agents (max_steps reached)
+        # Terminate remaining alive agents
+        termination = (
+            TerminationReason.INTERRUPTED if self._renderer_closed else TerminationReason.MAX_STEPS
+        )
         for agent in list(self._alive_agents):
             self._handle_termination(
                 agent,
-                TerminationReason.MAX_STEPS,
+                termination,
                 nearby_agents_count=nearby_per_agent.get(agent.agent_id, 0),
             )
 

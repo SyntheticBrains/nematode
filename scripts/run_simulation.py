@@ -1640,6 +1640,23 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     # Create orchestrator
     food_policy = FoodCompetitionPolicy(multi_agent_config.food_competition)
     phenotypes = {ac.id: ac.social_phenotype for ac in agent_configs}
+    # Create renderer for PIXEL theme; fall back to headless for unsupported themes
+    ma_renderer = None
+    if theme == Theme.PIXEL:
+        try:
+            from quantumnematode.env.pygame_renderer import PygameRenderer
+
+            ma_renderer = PygameRenderer(viewport_size=env.viewport_size)
+        except (ImportError, OSError, RuntimeError):  # pragma: no cover
+            logger.warning(
+                "Failed to create Pygame renderer for multi-agent. Running headless.",
+                exc_info=True,
+            )
+    elif theme != Theme.HEADLESS:
+        logger.warning(
+            f"Theme '{theme.value}' not supported for multi-agent. Falling back to headless.",
+        )
+
     sim = MultiAgentSimulation(
         env=env,
         agents=agents,
@@ -1647,6 +1664,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
         social_detection_radius=multi_agent_config.social_detection_radius,
         termination_policy=multi_agent_config.termination_policy,
         agent_phenotypes=phenotypes,
+        renderer=ma_renderer,
     )
 
     # Set up export directories
@@ -1672,6 +1690,7 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     total_food_all_runs = 0
     total_competition_all_runs = 0
     per_agent_successes: dict[str, int] = {ac.id: 0 for ac in agent_configs}
+    completed_runs = 0
 
     print(f"\n{'=' * 60}")
     print(f"Multi-Agent Simulation: {num_agents} agents")
@@ -1777,7 +1796,18 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             )
             total_food_all_runs += result.total_food_collected
             total_competition_all_runs += result.food_competition_events
+            completed_runs += 1
+
+            # Stop simulation if renderer window was closed
+            if sim.renderer_closed:
+                logger.info(
+                    f"Pygame window closed - stopping simulation after run {run + 1}/{runs}.",
+                )
+                break
     finally:
+        # Close renderer if it exists
+        if ma_renderer is not None and not ma_renderer.closed:
+            ma_renderer.close()
         # Close CSV files
         results_csv_file.close()
         summary_csv_file.close()
@@ -1798,13 +1828,13 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     print(f"\n{'=' * 60}")
     print("Session Summary")
     print(f"{'=' * 60}")
-    print(f"Episodes: {runs}")
-    if runs > 0:
-        print(f"Mean food/episode: {total_food_all_runs / runs:.1f}")
-        print(f"Mean competition events/episode: {total_competition_all_runs / runs:.1f}")
+    print(f"Episodes: {completed_runs}/{runs}")
+    if completed_runs > 0:
+        print(f"Mean food/episode: {total_food_all_runs / completed_runs:.1f}")
+        print(f"Mean competition events/episode: {total_competition_all_runs / completed_runs:.1f}")
         print("Per-agent success rates:")
         for aid in sorted(per_agent_successes.keys()):
-            rate = per_agent_successes[aid] / runs * 100
+            rate = per_agent_successes[aid] / completed_runs * 100
             print(f"  {aid}: {rate:.0f}%")
     print(f"\nResults in exports/{session_id}/")
 

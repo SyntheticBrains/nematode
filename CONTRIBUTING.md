@@ -232,6 +232,18 @@ uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit
 uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/qsnnreinforce_small_oracle.yml --theme emoji
 ```
 
+##### Testing Multi-Agent Simulations
+
+> **Note**: The `--theme pixel` option requires Pygame. Install with `--extra pixel` (e.g., `uv sync --extra cpu --extra pixel`).
+
+```bash
+# Multi-agent cooperative foraging with Pygame visualization
+uv run ./scripts/run_simulation.py --runs 3 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_social_oracle.yml --theme pixel
+
+# Multi-agent with pheromones (headless for batch training)
+uv run ./scripts/run_simulation.py --runs 10 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_full_social_oracle.yml --theme headless
+```
+
 ### Experiment Tracking and Benchmarks
 
 The project includes a comprehensive experiment tracking and benchmark management system to facilitate reproducibility and performance comparison.
@@ -598,10 +610,10 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 
 1. **Dynamic Foraging Enhancements**
 
-   - Temperature gradient integration
    - Food quality variations and preferences
-   - Social foraging behaviors (multi-agent)
+   - Food spatial persistence for pheromone trail effectiveness
    - Realistic chemotaxis modeling
+   - Continuous action spaces
 
 2. **Quantum Hardware Integration**
 
@@ -617,17 +629,18 @@ class ExtendedForagingEnvironment(DynamicForagingEnvironment):
 
 4. **Visualization and Analysis**
 
-   - Real-time foraging trajectory visualization
+   - Agent trail/path visualization in multi-agent mode
    - Satiety and efficiency heatmaps
+   - Frame recording and video export
    - Comparative analysis tools (quantum vs classical)
 
 ### Medium Priority
 
-1. **Environment Extensions**
+1. **Multi-Agent Extensions**
 
-   - Multi-agent cooperative foraging
-   - Competitive foraging scenarios
-   - Continuous action spaces
+   - Evolution and breeding (genetic algorithms, co-evolution)
+   - Predator-prey multi-agent dynamics
+   - Heterogeneous brain architectures in multi-agent competitions
 
 2. **Monitoring and Logging**
 
