@@ -25,9 +25,9 @@
 - [x] 4.4 Add `_render_multi_agent_entities()` method rendering all agents with colored sprites
 - [x] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics, all-agent summary, and switcher text ("← → to switch, 1-9 to jump")
 - [x] 4.6 Add `render_multi_agent_frame()` public method accepting `current_step` (for pheromone queries), compositing all layers, and returning followed_agent_id
-- [ ] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
-- [ ] 4.8 Add test for agent switching (arrow keys cycle, number keys jump)
-- [ ] 4.9 Add test for pheromone overlay toggle
+- [x] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
+- [x] 4.8 Add test for agent switching (arrow keys cycle, number keys jump)
+- [x] 4.9 Add test for pheromone overlay toggle
 
 ## 5. MultiAgentSimulation Integration
 
@@ -49,8 +49,8 @@
 
 ## 7. Verification
 
-- [ ] 7.1 All existing tests pass (`uv run pytest -m "not nightly"`)
-- [ ] 7.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
+- [x] 7.1 All existing tests pass (`uv run pytest -m "not nightly"`)
+- [x] 7.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
 - [ ] 7.3 Manual test: agents render with distinct colors
 - [ ] 7.4 Manual test: arrow keys and number keys switch followed agent
 - [ ] 7.5 Manual test: 'P' toggles pheromone overlay
