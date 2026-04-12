@@ -12,14 +12,15 @@ Extend the existing `PygameRenderer` with a `render_multi_agent_frame()` method 
 
 - Renders all agents visible within the viewport with distinct per-agent colors
 - Reuses existing rendering layers (background, temperature zones, oxygen zones, toxic zones, food, predators)
-- Adds per-agent colored head sprites and body segments (8-color palette)
+- Adds per-agent colored head sprites and body segments (8-color palette, cycling for >8 agents)
 - Dead/frozen agents rendered with gray overlay
 - Followed agent gets a subtle highlight marker
+- Closing the Pygame window terminates the simulation (matches single-agent behavior)
 
 ### 2. Viewport with Agent Switching
 
 - Viewport follows one agent at a time (default: first agent), identical to single-agent behavior
-- Keyboard controls: number keys 1-9 to switch between agents being followed
+- Keyboard controls: left/right arrow keys to cycle between agents, number keys 1-9 for direct jump
 - `get_viewport_bounds_for(agent_id)` added to environment for flexible viewport targeting
 
 ### 3. Pheromone Overlay (Togglable)

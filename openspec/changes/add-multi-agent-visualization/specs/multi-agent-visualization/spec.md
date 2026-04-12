@@ -5,59 +5,97 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 ## MODIFIED Requirement: Theme Support for Multi-Agent
 
 - WHEN a multi-agent simulation is started with `--theme pixel`
+
 - THEN the system SHALL create a PygameRenderer and pass it to the MultiAgentSimulation orchestrator
+
 - AND the renderer SHALL display all visible agents within the viewport
 
 - WHEN a multi-agent simulation is started with `--theme headless`
+
 - THEN no renderer SHALL be created
+
 - AND behavior SHALL be identical to current headless multi-agent mode
 
 - WHEN a multi-agent simulation is started with any other theme
+
 - THEN the system SHALL log a warning
+
 - AND fall back to headless mode
 
 ## ADDED Requirement: Multi-Agent Frame Rendering
 
 - WHEN `render_multi_agent_frame()` is called with a list of `AgentRenderState` objects
+
 - THEN the renderer SHALL draw all agents whose positions fall within the viewport bounds
+
 - AND each agent SHALL be rendered with a distinct color from the 8-color palette based on their `color_index`
+
 - AND dead/frozen agents SHALL be rendered with a gray overlay
 
 - WHEN the followed agent's viewport is computed
+
 - THEN the viewport SHALL be centered on the followed agent's position
+
 - AND the viewport SHALL clamp to grid boundaries (no wraparound)
+
 - AND existing rendering layers (background, temperature zones, oxygen zones, toxic zones, food, predators) SHALL render identically to single-agent mode
 
 ## ADDED Requirement: Agent Switching
 
+- WHEN the user presses the right arrow key during a multi-agent rendering session
+
+- THEN the viewport SHALL switch to follow the next agent in order (wrapping from last to first)
+
+- WHEN the user presses the left arrow key during a multi-agent rendering session
+
+- THEN the viewport SHALL switch to follow the previous agent in order (wrapping from first to last)
+
 - WHEN the user presses number key N (1-9) during a multi-agent rendering session
+
 - THEN the viewport SHALL switch to follow agent N-1 (agent_0 through agent_8)
-- AND the status bar SHALL update to show the newly followed agent's metrics
+
 - AND if agent N-1 does not exist, the keypress SHALL be ignored
 
+- WHEN the followed agent changes via any input method
+
+- THEN the status bar SHALL update to show the newly followed agent's metrics
+
 - WHEN `render_multi_agent_frame()` returns
+
 - THEN it SHALL return the current followed agent ID (which may have changed due to keyboard input)
 
 ## ADDED Requirement: Colored Agent Sprites
 
 - WHEN tinted head sprites are generated for a color index
+
 - THEN the system SHALL produce 4 directional sprites (up, down, left, right) tinted to the palette color
+
 - AND the sprites SHALL be 32x32 pixels with SRCALPHA transparency
 
+- AND the color index SHALL be computed as `agent_index % 8` to support arbitrary agent counts
+
 - WHEN body segments are rendered for a colored agent
+
 - THEN the body color, outline, and highlight SHALL be tinted to match the agent's palette color
+
 - AND the existing `draw_body_segment()` function SHALL accept optional color parameters with backward-compatible defaults
 
 ## ADDED Requirement: Pheromone Overlay
 
 - WHEN the pheromone overlay is enabled (toggled by 'P' key)
+
 - THEN the renderer SHALL compute pheromone concentration at each viewport cell for each active pheromone field
+
 - AND food pheromone concentration SHALL be displayed as green semi-transparent overlay
+
 - AND alarm pheromone concentration SHALL be displayed as red semi-transparent overlay
+
 - AND aggregation pheromone concentration SHALL be displayed as blue semi-transparent overlay
+
 - AND overlay alpha SHALL be proportional to the concentration value
 
 - WHEN the pheromone overlay is disabled (default state)
+
 - THEN no pheromone concentration computation or rendering SHALL occur
 
 ## ADDED Requirement: Multi-Agent Status Bar
@@ -77,9 +115,15 @@ Defines requirements for rendering multi-agent simulations in the Pygame pixel t
 ## ADDED Requirement: Orchestrator Rendering Integration
 
 - WHEN `MultiAgentSimulation` is created with a renderer parameter
+
 - THEN the renderer SHALL be called once per step after all agent effects are applied
+
 - AND the rendering data SHALL be assembled from `env.agents` and per-agent tracking state
 
 - WHEN the renderer window is closed by the user
-- THEN the simulation SHALL continue in headless mode
-- AND no further render calls SHALL be made
+
+- THEN the current episode SHALL be terminated
+
+- AND the simulation run loop SHALL stop (no further episodes)
+
+- AND this SHALL match the single-agent window close behavior

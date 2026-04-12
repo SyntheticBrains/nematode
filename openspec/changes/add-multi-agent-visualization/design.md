@@ -49,17 +49,23 @@ Computing pheromone concentration per viewport cell (≈121 cells × 3 fields ×
 
 **Rationale:** Users who want to observe pheromone dynamics can enable it. Users debugging agent behavior get a clean view by default.
 
-### Decision 5: Agent color palette with 8 fixed colors
+### Decision 5: Agent color palette with 8 fixed colors, cycled for >8 agents
 
-Agents are assigned colors by index (0-7) from a fixed palette. Color 0 is the default cream (matching single-agent appearance). Colors 1-7 are distinct hues (blue, green, red, orange, purple, cyan, yellow).
+Agents are assigned colors by index from a fixed 8-color palette. Color 0 is the default cream (matching single-agent appearance). Colors 1-7 are distinct hues (blue, green, red, orange, purple, cyan, yellow). For agents beyond 8, the palette cycles (`color_index = agent_index % 8`).
 
-**Rationale:** 8 colors is sufficient for the max practical agent count. Dynamic color generation would add complexity with no benefit. Fixed palette ensures consistent visuals across runs.
+**Rationale:** 8 colors provides good visual distinction for the typical 2-8 agent range. Cycling handles arbitrary agent counts without added complexity. Two agents with the same color are still distinguishable by position and status bar labeling.
 
-### Decision 6: Agent switching via number keys
+### Decision 6: Agent switching via arrow keys and number keys
 
-Keys 1-9 switch to agent_0 through agent_8. The event is processed in the renderer's `pump_events()` and the new followed agent ID is returned to the orchestrator.
+Left/right arrow keys cycle through agents sequentially (wrapping at boundaries). Number keys 1-9 jump directly to agent_0 through agent_8. Events are processed in the renderer's `pump_events()` and the new followed agent ID is returned to the orchestrator.
 
-**Rationale:** Simple, discoverable. The renderer doesn't own agent management — it just reports the user's intent. The orchestrator decides whether the requested agent exists and is alive.
+**Rationale:** Arrow keys provide intuitive navigation regardless of agent count (especially >9). Number keys are a shortcut for quick access. The renderer doesn't own agent management — it just reports the user's intent. The orchestrator decides whether the requested agent exists.
+
+### Decision 7: Window close terminates the simulation
+
+Closing the Pygame window terminates the current episode and stops the simulation, matching single-agent behavior (see `runners.py:782`, `run_simulation.py:778`).
+
+**Rationale:** Consistency with single-agent UX. Users expect closing the window to stop the program, not silently continue headless.
 
 ## Risks / Trade-offs
 
@@ -67,4 +73,4 @@ Keys 1-9 switch to agent_0 through agent_8. The event is processed in the render
 
 2. **Pygame event loop in step loop**: The renderer processes events synchronously, adding ~1ms per step. Negligible compared to brain inference time.
 
-3. **Sprite memory**: 8 colors × 4 directions × 32x32px = 32 head sprites. Plus body color variants. Total <100KB — negligible.
+3. **Sprite memory**: 8 colors × 4 directions × 32x32px = 32 head sprites. Plus body color variants. Total \<100KB — negligible.

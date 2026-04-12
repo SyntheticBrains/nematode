@@ -19,14 +19,14 @@
 
 ## 4. Multi-Agent Renderer Extension
 
-- [ ] 4.1 Add tinted sprite caching to `PygameRenderer.__init__()` (lazily populated dict[int, dict[str, Surface]])
-- [ ] 4.2 Add `_pump_multi_agent_events()` method handling agent switching (1-9 keys) and pheromone toggle ('P')
+- [ ] 4.1 Add tinted sprite caching to `PygameRenderer.__init__()` (lazily populated dict\[int, dict[str, Surface]\])
+- [ ] 4.2 Add `_pump_multi_agent_events()` method handling agent switching (left/right arrows to cycle, 1-9 keys to jump) and pheromone toggle ('P')
 - [ ] 4.3 Add `_render_pheromone_overlay()` method computing per-cell concentration for active pheromone fields
 - [ ] 4.4 Add `_render_multi_agent_entities()` method rendering all agents with colored sprites
 - [ ] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics and all-agent summary
 - [ ] 4.6 Add `render_multi_agent_frame()` public method compositing all layers and returning followed_agent_id
 - [ ] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
-- [ ] 4.8 Add test for agent switching key event handling
+- [ ] 4.8 Add test for agent switching (arrow keys cycle, number keys jump)
 - [ ] 4.9 Add test for pheromone overlay toggle
 
 ## 5. MultiAgentSimulation Integration
@@ -35,7 +35,7 @@
 - [ ] 5.2 Add `_followed_agent_id` field defaulting to first agent ID
 - [ ] 5.3 Add `_render_step()` method building `AgentRenderState` list and calling renderer
 - [ ] 5.4 Insert render call in step loop after learning phase
-- [ ] 5.5 Handle renderer window closure (set renderer to None, continue headless)
+- [ ] 5.5 Handle renderer window closure — terminate episode and stop simulation (match single-agent behavior)
 - [ ] 5.6 Add unit test for `_render_step()` data assembly
 
 ## 6. run_simulation.py Integration
