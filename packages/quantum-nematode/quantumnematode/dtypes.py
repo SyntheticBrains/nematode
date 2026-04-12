@@ -37,6 +37,10 @@ TemperatureSpot = tuple[int, int, float]
 # Intensity is O2 percentage delta (positive for high-O2, used as-is for low-O2)
 OxygenSpot = tuple[int, int, float]
 
+# Food hotspot definition: (x, y, weight)
+# Weight controls relative spawn probability density (higher = more food spawns nearby)
+FoodHotspot = tuple[int, int, float]
+
 # =============================================================================
 # Path and History Types
 # =============================================================================

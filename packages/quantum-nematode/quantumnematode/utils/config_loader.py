@@ -274,9 +274,23 @@ class ForagingConfig(BaseModel):
     gradient_decay_constant: float = 10.0
     gradient_strength: float = 1.0
     safe_zone_food_bias: float = 0.0
+    food_hotspots: list[list[float]] | None = None
+    food_hotspot_bias: float = Field(default=0.0, ge=0.0, le=1.0)
+    food_hotspot_decay: float = Field(default=8.0, gt=0.0)
+    no_respawn: bool = False
+    satiety_food_threshold: float | None = Field(default=None, gt=0.0, le=1.0)
 
     def to_params(self) -> ForagingParams:
         """Convert to ForagingParams for environment initialization."""
+        from quantumnematode.dtypes import FoodHotspot
+
+        food_hotspot_tuples: list[FoodHotspot] | None = None
+        if self.food_hotspots is not None:
+            food_hotspot_tuples = [
+                _validate_and_convert_spot(spot, "food_hotspot", i)
+                for i, spot in enumerate(self.food_hotspots)
+            ]
+
         return ForagingParams(
             foods_on_grid=self.foods_on_grid,
             target_foods_to_collect=self.target_foods_to_collect,
@@ -285,6 +299,11 @@ class ForagingConfig(BaseModel):
             gradient_decay_constant=self.gradient_decay_constant,
             gradient_strength=self.gradient_strength,
             safe_zone_food_bias=self.safe_zone_food_bias,
+            food_hotspots=food_hotspot_tuples,
+            food_hotspot_bias=self.food_hotspot_bias,
+            food_hotspot_decay=self.food_hotspot_decay,
+            no_respawn=self.no_respawn,
+            satiety_food_threshold=self.satiety_food_threshold,
         )
 
 

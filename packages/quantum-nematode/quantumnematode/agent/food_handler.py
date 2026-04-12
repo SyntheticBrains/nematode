@@ -118,6 +118,19 @@ class FoodConsumptionHandler:
                 health_restored=0.0,
             )
 
+        # Satiety gate: refuse consumption when agent is too sated
+        threshold = self.env.foraging.satiety_food_threshold
+        if threshold is not None:
+            max_allowed = threshold * self.satiety_manager.max_satiety
+            if self.satiety_manager.current_satiety > max_allowed:
+                return FoodConsumptionResult(
+                    food_consumed=False,
+                    satiety_restored=0.0,
+                    reward=0.0,
+                    distance_efficiency=None,
+                    health_restored=0.0,
+                )
+
         # Food is present - consume it
         distance_efficiency = None
         health_restored = 0.0

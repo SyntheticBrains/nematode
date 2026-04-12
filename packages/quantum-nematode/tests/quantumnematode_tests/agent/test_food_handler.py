@@ -82,6 +82,7 @@ class TestFoodConsumptionDynamicEnvironment:
     def test_consume_food_dynamic_environment(self):
         """Test consuming food in dynamic environment."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 15
@@ -100,6 +101,7 @@ class TestFoodConsumptionDynamicEnvironment:
     def test_consume_food_perfect_efficiency(self):
         """Test consuming food with perfect distance efficiency."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 20
@@ -116,6 +118,7 @@ class TestFoodConsumptionDynamicEnvironment:
     def test_consume_food_resets_step_counter(self):
         """Test that consuming food resets the step counter."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 15
@@ -131,6 +134,7 @@ class TestFoodConsumptionDynamicEnvironment:
     def test_consume_food_updates_initial_distance(self):
         """Test that consuming food updates initial distance for next food."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 25
@@ -146,6 +150,7 @@ class TestFoodConsumptionDynamicEnvironment:
     def test_no_food_consumed_in_dynamic_env(self):
         """Test when env.consume_food returns False."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = False
 
@@ -164,6 +169,7 @@ class TestDistanceEfficiencyCalculation:
     def test_efficiency_with_zero_steps(self):
         """Test efficiency when steps is zero (shouldn't happen but handle gracefully)."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 10
@@ -180,6 +186,7 @@ class TestDistanceEfficiencyCalculation:
     def test_efficiency_with_none_initial_distance(self):
         """Test when initial distance is None."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 10
@@ -196,6 +203,7 @@ class TestDistanceEfficiencyCalculation:
     def test_efficiency_with_zero_initial_distance(self):
         """Test when initial distance is zero."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 10
@@ -216,6 +224,7 @@ class TestSatietyRestoration:
     def test_satiety_restored_to_max(self):
         """Test that satiety is clamped at max when restored."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 10
@@ -235,6 +244,7 @@ class TestSatietyRestoration:
     def test_satiety_restored_from_low(self):
         """Test satiety restoration from very low level."""
         env = MagicMock(spec=DynamicForagingEnvironment)
+        env.foraging = MagicMock(satiety_food_threshold=None)
         env.reached_goal.return_value = True
         env.consume_food.return_value = True
         env.get_nearest_food_distance.return_value = 10

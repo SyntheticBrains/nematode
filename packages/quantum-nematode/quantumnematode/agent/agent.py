@@ -321,6 +321,18 @@ class QuantumNematodeAgent:
         """
         return self._satiety_manager.max_satiety
 
+    @property
+    def can_eat(self) -> bool:
+        """Whether the agent can consume food based on satiety threshold.
+
+        Returns True if no satiety gate is configured or if the agent's
+        satiety is at or below the threshold.
+        """
+        threshold = self.env.foraging.satiety_food_threshold
+        if threshold is None:
+            return True
+        return self.current_satiety <= threshold * self.max_satiety
+
     def run_episode(
         self,
         reward_config: RewardConfig,
@@ -919,18 +931,26 @@ class QuantumNematodeAgent:
             session_text=render_text,
         )
 
-    def calculate_reward(
+    def calculate_reward(  # noqa: PLR0913
         self,
         config: RewardConfig,
         env: DynamicForagingEnvironment,
         path: list[tuple[int, ...]],
         max_steps: int,
         stuck_position_count: int = 0,
+        *,
+        can_eat: bool = True,
     ) -> float:
         """
         Calculate reward based on the agent's movement toward the goal.
 
         Handles DynamicForagingEnvironment (multiple foods)
+
+        Parameters
+        ----------
+        can_eat : bool, optional
+            Whether the agent can consume food this step. When False (sated
+            above satiety_food_threshold), the goal bonus is suppressed.
 
         Returns
         -------
@@ -946,6 +966,7 @@ class QuantumNematodeAgent:
             current_step=self._episode_tracker.steps,
             max_steps=max_steps,
             agent_id=self.agent_id,
+            can_eat=can_eat,
         )
 
     def reset_environment(self) -> None:
