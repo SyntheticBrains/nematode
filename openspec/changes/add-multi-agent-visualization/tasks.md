@@ -1,0 +1,56 @@
+## 1. Environment Viewport Support
+
+- [ ] 1.1 Add `get_viewport_bounds_for(agent_id: str)` method to `DynamicForagingEnvironment`
+- [ ] 1.2 Refactor existing `get_viewport_bounds()` to delegate to `get_viewport_bounds_for(DEFAULT_AGENT_ID)`
+- [ ] 1.3 Add unit tests for `get_viewport_bounds_for()` with multiple agent positions
+
+## 2. Agent Color Palette and Sprites
+
+- [ ] 2.1 Define `AGENT_COLOR_PALETTE` constant (8 colors) in `sprites.py`
+- [ ] 2.2 Add `create_tinted_head_sprites(pg, tint_color)` function returning dict of 4 directional sprites
+- [ ] 2.3 Add optional `body_color`, `outline_color`, `highlight_color` kwargs to `draw_body_segment()` with backward-compatible defaults
+- [ ] 2.4 Add `create_dead_agent_overlay(pg)` for gray semi-transparent overlay
+- [ ] 2.5 Add unit tests for tinted sprite size and surface format
+
+## 3. Rendering Data Contract
+
+- [ ] 3.1 Add `AgentRenderState` frozen dataclass to `pygame_renderer.py` (agent_id, position, body, direction, alive, hp, max_hp, foods_collected, satiety, max_satiety, color_index)
+- [ ] 3.2 Add unit test for `AgentRenderState` construction
+
+## 4. Multi-Agent Renderer Extension
+
+- [ ] 4.1 Add tinted sprite caching to `PygameRenderer.__init__()` (lazily populated dict[int, dict[str, Surface]])
+- [ ] 4.2 Add `_pump_multi_agent_events()` method handling agent switching (1-9 keys) and pheromone toggle ('P')
+- [ ] 4.3 Add `_render_pheromone_overlay()` method computing per-cell concentration for active pheromone fields
+- [ ] 4.4 Add `_render_multi_agent_entities()` method rendering all agents with colored sprites
+- [ ] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics and all-agent summary
+- [ ] 4.6 Add `render_multi_agent_frame()` public method compositing all layers and returning followed_agent_id
+- [ ] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
+- [ ] 4.8 Add test for agent switching key event handling
+- [ ] 4.9 Add test for pheromone overlay toggle
+
+## 5. MultiAgentSimulation Integration
+
+- [ ] 5.1 Add optional `renderer` parameter to `MultiAgentSimulation.__init__()`
+- [ ] 5.2 Add `_followed_agent_id` field defaulting to first agent ID
+- [ ] 5.3 Add `_render_step()` method building `AgentRenderState` list and calling renderer
+- [ ] 5.4 Insert render call in step loop after learning phase
+- [ ] 5.5 Handle renderer window closure (set renderer to None, continue headless)
+- [ ] 5.6 Add unit test for `_render_step()` data assembly
+
+## 6. run_simulation.py Integration
+
+- [ ] 6.1 Add renderer creation when `theme == Theme.PIXEL` in `_run_multi_agent()`
+- [ ] 6.2 Add theme validation — warn and fall back to headless for unsupported themes
+- [ ] 6.3 Add renderer cleanup (close) after run loop completes
+- [ ] 6.4 Manual smoke test: multi-agent foraging with `--theme pixel`
+
+## 7. Verification
+
+- [ ] 7.1 All existing tests pass (`uv run pytest -m "not nightly"`)
+- [ ] 7.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
+- [ ] 7.3 Manual test: agents render with distinct colors
+- [ ] 7.4 Manual test: number keys switch followed agent
+- [ ] 7.5 Manual test: 'P' toggles pheromone overlay
+- [ ] 7.6 Manual test: dead agents render with gray overlay
+- [ ] 7.7 Manual test: closing window continues simulation headless
