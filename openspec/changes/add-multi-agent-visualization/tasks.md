@@ -24,7 +24,7 @@
 - [ ] 4.3 Add `_render_pheromone_overlay()` method computing per-cell concentration for active pheromone fields
 - [ ] 4.4 Add `_render_multi_agent_entities()` method rendering all agents with colored sprites
 - [ ] 4.5 Add `_render_multi_agent_status_bar()` with followed agent metrics, all-agent summary, and switcher text ("← → to switch, 1-9 to jump")
-- [ ] 4.6 Add `render_multi_agent_frame()` public method compositing all layers and returning followed_agent_id
+- [ ] 4.6 Add `render_multi_agent_frame()` public method accepting `current_step` (for pheromone queries), compositing all layers, and returning followed_agent_id
 - [ ] 4.7 Add smoke test for `render_multi_agent_frame()` with mock pygame (2-8 agents)
 - [ ] 4.8 Add test for agent switching (arrow keys cycle, number keys jump)
 - [ ] 4.9 Add test for pheromone overlay toggle
@@ -33,7 +33,7 @@
 
 - [ ] 5.1 Add `renderer: PygameRenderer | None = None` dataclass field with `TYPE_CHECKING` import guard (after existing defaulted fields)
 - [ ] 5.2 Add `_followed_agent_id` and `_renderer_closed` runtime fields (init=False)
-- [ ] 5.3 Add `_render_step()` method building `AgentRenderState` list from `self.env` and per-agent trackers, converting `Direction` enum to `.value` string
+- [ ] 5.3 Add `_render_step()` method building `AgentRenderState` list from `self.env` and per-agent trackers, converting `Direction` enum to `.value` string, passing `current_step` to renderer for pheromone queries
 - [ ] 5.4 Insert render call in step loop after learning phase; check `renderer.closed` after call and set `_renderer_closed` flag + return early from `run_episode()`
 - [ ] 5.5 Add `renderer_closed` property for `_run_multi_agent()` to check after each episode
 - [ ] 5.6 Add unit test for `_render_step()` data assembly
@@ -52,7 +52,7 @@
 - [ ] 7.1 All existing tests pass (`uv run pytest -m "not nightly"`)
 - [ ] 7.2 Pre-commit hooks pass (`uv run pre-commit run -a`)
 - [ ] 7.3 Manual test: agents render with distinct colors
-- [ ] 7.4 Manual test: number keys switch followed agent
+- [ ] 7.4 Manual test: arrow keys and number keys switch followed agent
 - [ ] 7.5 Manual test: 'P' toggles pheromone overlay
 - [ ] 7.6 Manual test: dead agents render with gray overlay
-- [ ] 7.7 Manual test: closing window continues simulation headless
+- [ ] 7.7 Manual test: closing window terminates simulation
