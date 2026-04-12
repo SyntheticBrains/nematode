@@ -2,8 +2,27 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from quantumnematode.env import DynamicForagingEnvironment, ForagingParams
+
+# Check if pygame is importable
+_pg: Any = None
+_has_pygame = False
+
+try:
+    import pygame as _pygame_mod
+
+    _pg = _pygame_mod
+    _has_pygame = True
+except ImportError:
+    pass
+
+requires_pygame = pytest.mark.skipif(
+    not _has_pygame,
+    reason="pygame not installed",
+)
 
 
 class TestGetViewportBoundsFor:
@@ -71,3 +90,59 @@ class TestGetViewportBoundsFor:
         """Test that requesting bounds for a nonexistent agent raises KeyError."""
         with pytest.raises(KeyError):
             env.get_viewport_bounds_for("nonexistent")
+
+
+@requires_pygame
+class TestTintedSprites:
+    """Tests for tinted sprite generation."""
+
+    def test_tinted_head_sprites_keys(self) -> None:
+        """Test that tinted head sprites return all 4 directions."""
+        from quantumnematode.env.sprites import create_tinted_head_sprites
+
+        sprites = create_tinted_head_sprites(_pg, (100, 150, 220))
+        assert set(sprites.keys()) == {"head_up", "head_down", "head_left", "head_right"}
+
+    def test_tinted_head_sprites_size(self) -> None:
+        """Test that tinted head sprites are CELL_SIZE x CELL_SIZE."""
+        from quantumnematode.env.sprites import CELL_SIZE, create_tinted_head_sprites
+
+        sprites = create_tinted_head_sprites(_pg, (100, 150, 220))
+        for name, surf in sprites.items():
+            assert surf.get_width() == CELL_SIZE, f"{name} width"
+            assert surf.get_height() == CELL_SIZE, f"{name} height"
+
+    def test_tinted_head_sprites_have_alpha(self) -> None:
+        """Test that tinted head sprites have SRCALPHA."""
+        from quantumnematode.env.sprites import create_tinted_head_sprites
+
+        sprites = create_tinted_head_sprites(_pg, (100, 150, 220))
+        for name, surf in sprites.items():
+            assert surf.get_flags() & _pg.SRCALPHA, f"{name} should have SRCALPHA"
+
+    def test_dead_agent_overlay_size(self) -> None:
+        """Test that dead agent overlay is CELL_SIZE x CELL_SIZE with alpha."""
+        from quantumnematode.env.sprites import CELL_SIZE, create_dead_agent_overlay
+
+        surf = create_dead_agent_overlay(_pg)
+        assert surf.get_width() == CELL_SIZE
+        assert surf.get_height() == CELL_SIZE
+        assert surf.get_flags() & _pg.SRCALPHA
+
+    def test_agent_color_palette_length(self) -> None:
+        """Test that the palette has exactly 8 colors."""
+        from quantumnematode.env.sprites import AGENT_COLOR_PALETTE
+
+        assert len(AGENT_COLOR_PALETTE) == 8
+
+    def test_tint_body_colors(self) -> None:
+        """Test that tint_body_colors returns 3-tuple of RGB tuples."""
+        from quantumnematode.env.sprites import tint_body_colors
+
+        bc, oc, hc = tint_body_colors((100, 150, 220))
+        assert len(bc) == 3
+        assert len(oc) == 3
+        assert len(hc) == 3
+        assert all(0 <= c <= 255 for c in bc)
+        assert all(0 <= c <= 255 for c in oc)
+        assert all(0 <= c <= 255 for c in hc)

@@ -64,6 +64,19 @@ ZONE_LETHAL_HYPEROXIA = (40, 180, 220, 90)  # bright cyan
 # Toxic zone overlay
 ZONE_TOXIC = (140, 60, 180, 80)
 
+# Multi-agent color palette (8 distinct colors for agent differentiation)
+# Index 0 matches the default single-agent cream. Indices cycle for >8 agents.
+AGENT_COLOR_PALETTE: tuple[tuple[int, int, int], ...] = (
+    (220, 195, 160),  # 0: cream (default, matches NEMATODE_HEAD_COLOR)
+    (100, 150, 220),  # 1: blue
+    (100, 200, 100),  # 2: green
+    (220, 90, 80),  # 3: red
+    (230, 170, 70),  # 4: orange
+    (170, 110, 200),  # 5: purple
+    (80, 200, 200),  # 6: cyan
+    (220, 210, 80),  # 7: yellow
+)
+
 CELL_SIZE = 32
 
 # Body segment radius and connector half-width
@@ -194,6 +207,9 @@ def draw_body_segment(  # noqa: PLR0913
     connect_left: bool = False,
     connect_right: bool = False,
     is_tail: bool = False,
+    body_color: tuple[int, int, int] | None = None,
+    outline_color: tuple[int, int, int] | None = None,
+    highlight_color: tuple[int, int, int] | None = None,
 ) -> None:
     """Draw a body segment at pixel position with connectors to neighbors.
 
@@ -209,31 +225,41 @@ def draw_body_segment(  # noqa: PLR0913
         Whether to draw a connector bar in that direction.
     is_tail : bool
         If True, draw a tapered tail tip instead of a full circle.
+    body_color : tuple[int, int, int] or None
+        Override body fill color. Defaults to NEMATODE_BODY_COLOR.
+    outline_color : tuple[int, int, int] or None
+        Override outline color. Defaults to NEMATODE_BODY_OUTLINE.
+    highlight_color : tuple[int, int, int] or None
+        Override highlight color. Defaults to NEMATODE_BODY_HIGHLIGHT.
     """
+    bc = body_color or NEMATODE_BODY_COLOR
+    oc = outline_color or NEMATODE_BODY_OUTLINE
+    hc = highlight_color or NEMATODE_BODY_HIGHLIGHT
+
     c = CELL_SIZE // 2
     cx, cy = px + c, py + c
     hw = _CONNECTOR_HALF_W
 
     # Draw connector bars first (behind the circle)
     if connect_up:
-        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (cx - hw, py, hw * 2, c))
+        pg.draw.rect(surface, bc, (cx - hw, py, hw * 2, c))
     if connect_down:
-        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (cx - hw, cy, hw * 2, c))
+        pg.draw.rect(surface, bc, (cx - hw, cy, hw * 2, c))
     if connect_left:
-        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (px, cy - hw, c, hw * 2))
+        pg.draw.rect(surface, bc, (px, cy - hw, c, hw * 2))
     if connect_right:
-        pg.draw.rect(surface, NEMATODE_BODY_COLOR, (cx, cy - hw, c, hw * 2))
+        pg.draw.rect(surface, bc, (cx, cy - hw, c, hw * 2))
 
     # Draw the central segment
     if is_tail:
         radius = _BODY_RADIUS - 2
-        pg.draw.circle(surface, NEMATODE_BODY_COLOR, (cx, cy), radius)
-        pg.draw.circle(surface, NEMATODE_BODY_OUTLINE, (cx, cy), radius, 1)
+        pg.draw.circle(surface, bc, (cx, cy), radius)
+        pg.draw.circle(surface, oc, (cx, cy), radius, 1)
     else:
-        pg.draw.circle(surface, NEMATODE_BODY_COLOR, (cx, cy), _BODY_RADIUS)
-        pg.draw.circle(surface, NEMATODE_BODY_OUTLINE, (cx, cy), _BODY_RADIUS, 1)
+        pg.draw.circle(surface, bc, (cx, cy), _BODY_RADIUS)
+        pg.draw.circle(surface, oc, (cx, cy), _BODY_RADIUS, 1)
         # Highlight
-        pg.draw.circle(surface, NEMATODE_BODY_HIGHLIGHT, (cx - 2, cy - 2), 3)
+        pg.draw.circle(surface, hc, (cx - 2, cy - 2), 3)
 
 
 def _make_predator_random(pg: Any) -> Any:  # noqa: ANN401
@@ -290,6 +316,94 @@ def _make_predator_pursuit(pg: Any) -> Any:  # noqa: ANN401
     pg.draw.circle(surf, (40, 20, 20), (c - 2, c - 12), 1)
     pg.draw.circle(surf, (40, 20, 20), (c + 2, c - 12), 1)
     return surf
+
+
+def create_tinted_head_sprites(
+    pg: Any,  # noqa: ANN401
+    tint_color: tuple[int, int, int],
+) -> dict[str, Any]:  # noqa: ANN401
+    """Create directional head sprites tinted to the given color.
+
+    Generates the base head sprite for each direction, then applies
+    the tint via multiplicative blending.
+
+    Parameters
+    ----------
+    pg : module
+        The pygame module.
+    tint_color : tuple[int, int, int]
+        RGB color to tint the sprites to.
+
+    Returns
+    -------
+    dict[str, Any]
+        Mapping of "head_up", "head_down", "head_left", "head_right"
+        to tinted pygame.Surface objects.
+    """
+    result: dict[str, Any] = {}
+    # Create a tint overlay surface
+    tint_surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
+    tint_surf.fill((*tint_color, 255))
+
+    for direction in ("up", "down", "left", "right"):
+        base = _make_head(pg, direction)
+        # Apply multiplicative tint: multiply each pixel's RGB by tint/255
+        tinted = base.copy()
+        tinted.blit(tint_surf, (0, 0), special_flags=pg.BLEND_RGB_MULT)
+        result[f"head_{direction}"] = tinted
+    return result
+
+
+def create_dead_agent_overlay(pg: Any) -> Any:  # noqa: ANN401
+    """Create a semi-transparent gray overlay for dead/frozen agents.
+
+    Returns
+    -------
+    Any
+        A CELL_SIZE x CELL_SIZE SRCALPHA surface with gray tint and X marker.
+    """
+    surf = pg.Surface((CELL_SIZE, CELL_SIZE), pg.SRCALPHA)
+    surf.fill((80, 80, 80, 120))
+    # Draw X marker
+    margin = 8
+    line_color = (200, 60, 60, 180)
+    pg.draw.line(surf, line_color, (margin, margin), (CELL_SIZE - margin, CELL_SIZE - margin), 2)
+    pg.draw.line(surf, line_color, (CELL_SIZE - margin, margin), (margin, CELL_SIZE - margin), 2)
+    return surf
+
+
+def _tint_body_color(
+    base: tuple[int, int, int],
+    tint: tuple[int, int, int],
+) -> tuple[int, int, int]:
+    """Apply multiplicative tint to a single RGB color."""
+    return (
+        base[0] * tint[0] // 255,
+        base[1] * tint[1] // 255,
+        base[2] * tint[2] // 255,
+    )
+
+
+def tint_body_colors(
+    tint_color: tuple[int, int, int],
+) -> tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]:
+    """Compute tinted body colors for a given agent color.
+
+    Parameters
+    ----------
+    tint_color : tuple[int, int, int]
+        RGB color to tint to.
+
+    Returns
+    -------
+    tuple
+        (body_color, outline_color, highlight_color) tinted versions.
+    """
+    return (
+        _tint_body_color(NEMATODE_BODY_COLOR, tint_color),
+        _tint_body_color(NEMATODE_BODY_OUTLINE, tint_color),
+        _tint_body_color(NEMATODE_BODY_HIGHLIGHT, tint_color),
+    )
 
 
 def create_zone_overlay(
