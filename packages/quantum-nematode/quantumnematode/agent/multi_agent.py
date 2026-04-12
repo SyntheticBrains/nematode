@@ -848,10 +848,7 @@ class MultiAgentSimulation:
 
     def _is_agent_sated(self, agent: QuantumNematodeAgent) -> bool:
         """Check if an agent's satiety exceeds the food consumption threshold."""
-        threshold = self.env.foraging.satiety_food_threshold
-        if threshold is None:
-            return False
-        return agent.current_satiety > threshold * agent.max_satiety
+        return not agent.can_eat
 
     def _resolve_food_step(
         self,

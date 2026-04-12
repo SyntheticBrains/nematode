@@ -1375,6 +1375,12 @@ class DynamicForagingEnvironment(BaseEnvironment):
 
         # Select hotspot weighted by weight
         weights = np.array([h[2] for h in hotspots], dtype=np.float64)
+        if not np.all(np.isfinite(weights)) or np.any(weights <= 0):
+            msg = (
+                f"All food hotspot weights must be positive and finite, "
+                f"got weights={weights.tolist()}"
+            )
+            raise ValueError(msg)
         weights /= weights.sum()
         idx = int(self.rng.choice(len(hotspots), p=weights))
         hx, hy, _ = hotspots[idx]
@@ -1419,15 +1425,17 @@ class DynamicForagingEnvironment(BaseEnvironment):
         safe_bias = self.foraging.safe_zone_food_bias
 
         while len(self.foods) < self.foraging.foods_on_grid and attempts < max_total_attempts:
+            # Decide safe zone requirement once per food item (not per candidate)
+            require_safe_zone = (
+                safe_bias > 0 and self.thermotaxis.enabled and self.rng.random() < safe_bias
+            )
+
             candidate = self._generate_food_candidate()
 
             if self._is_valid_food_position(candidate):
-                # Apply safe zone bias if thermotaxis is enabled
-                if safe_bias > 0 and self.thermotaxis.enabled:
-                    require_safe_zone = self.rng.random() < safe_bias
-                    if require_safe_zone and not self._is_safe_temperature_zone(candidate):
-                        attempts += 1
-                        continue
+                if require_safe_zone and not self._is_safe_temperature_zone(candidate):
+                    attempts += 1
+                    continue
                 self.foods.append(candidate)
 
             attempts += 1

@@ -148,9 +148,12 @@ class TestHotspotSpawning:
         mean_near = np.mean(near_counts)
         assert 2 < mean_near < 9, f"Partial bias mean near count {mean_near} outside expected range"
 
-    def test_hotspot_composes_with_safe_zone_bias(self) -> None:
-        """Both hotspot bias and safe_zone_food_bias can be active simultaneously."""
-        # Just verify the environment initializes without error
+    def test_hotspot_initializes_with_safe_zone_bias(self) -> None:
+        """Environment initializes without error when both biases are configured.
+
+        Note: safe_zone_food_bias only takes effect when thermotaxis is enabled.
+        This test verifies the parameters don't conflict, not the combined behavior.
+        """
         env = DynamicForagingEnvironment(
             grid_size=50,
             foraging=ForagingParams(
@@ -349,6 +352,23 @@ class TestMultiAgentSatietyGate:
         # Agent 1 is hungry after decay (~80 <= 100)
         assert sim._is_agent_sated(agent_0)
         assert not sim._is_agent_sated(agent_1)
+
+        # Exercise actual food competition: place both on a food tile
+        food_pos = (5, 5)
+        env.foods.append(food_pos)
+        env.agents["agent_1"].position = food_pos  # Move hungry agent to food
+
+        # Ensure per-agent tracking dicts are initialized
+        for aid in ("agent_0", "agent_1"):
+            sim._per_agent_food.setdefault(aid, 0)
+            sim._per_agent_food_positions.setdefault(aid, [])
+
+        food_before = sim._per_agent_food.copy()
+        sim._resolve_food_step([agent_0, agent_1], current_step=0)
+
+        # Hungry agent_1 should have eaten, sated agent_0 should not
+        assert sim._per_agent_food["agent_1"] == food_before.get("agent_1", 0) + 1
+        assert sim._per_agent_food["agent_0"] == food_before.get("agent_0", 0)
 
 
 class TestRewardSuppression:
