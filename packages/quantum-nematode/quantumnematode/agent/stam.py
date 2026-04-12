@@ -234,9 +234,8 @@ class STAMBuffer:
         ----------
         scalars : np.ndarray
             Scalar readings for each channel, shape (num_channels,).
-            Base order: [food, temperature, predator, oxygen].
-            With pheromones: [food, temp, predator, oxygen, pheromone_food, pheromone_alarm].
-            Disabled channels should pass 0.0.
+            Channel order is determined at runtime by resolve_active_channels().
+            Only active channels are included — no zero-padding for disabled features.
         position_delta : tuple[float, float]
             Step-to-step position change (dx, dy) — proprioceptive movement
             signal. NOT absolute grid coordinates.
@@ -273,8 +272,8 @@ class STAMBuffer:
         Parameters
         ----------
         channel : int
-            Channel index (0=food, 1=temperature, 2=predator, 3=oxygen,
-            4=pheromone_food, 5=pheromone_alarm when pheromones enabled).
+            Channel index into the active channels list (determined at
+            runtime by resolve_active_channels). Index 0 is always food.
 
         Returns
         -------

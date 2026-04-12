@@ -1068,41 +1068,32 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
     # Food is always present (1 channel minimum)
     num_channels = 1
 
-    # Non-pheromone modules that add STAM channels (temporal or oracle)
-    env_channel_modules = {
-        ModuleName.THERMOTAXIS_TEMPORAL: 1,
-        ModuleName.THERMOTAXIS: 1,
-        ModuleName.NOCICEPTION_TEMPORAL: 1,
-        ModuleName.NOCICEPTION: 1,
-        ModuleName.AEROTAXIS_TEMPORAL: 1,
-        ModuleName.AEROTAXIS: 1,
-    }
-
-    for mod, count in env_channel_modules.items():
-        if mod in modules:
-            num_channels += count
-
-    # Pheromone channels: when any pheromone module is present, ALL pheromone
-    # types get STAM channels (resolve_active_channels adds all enabled types).
-    # Count individual pheromone types present.
-    pheromone_modules = {
-        ModuleName.PHEROMONE_FOOD_TEMPORAL,
-        ModuleName.PHEROMONE_ALARM_TEMPORAL,
-        ModuleName.PHEROMONE_AGGREGATION_TEMPORAL,
-        ModuleName.PHEROMONE_FOOD,
-        ModuleName.PHEROMONE_ALARM,
-        ModuleName.PHEROMONE_AGGREGATION,
-    }
-    has_any_pheromone = bool(pheromone_modules & set(modules))
-    if has_any_pheromone:
-        # When pheromones are enabled, food+alarm channels are always present
-        num_channels += 2  # pheromone_food + pheromone_alarm
-        # Aggregation is optional
-        if (
-            ModuleName.PHEROMONE_AGGREGATION_TEMPORAL in modules
-            or ModuleName.PHEROMONE_AGGREGATION in modules
-        ):
+    # Each modality adds at most one STAM channel (collapse oracle/temporal pairs)
+    modality_pairs = [
+        (ModuleName.THERMOTAXIS, ModuleName.THERMOTAXIS_TEMPORAL),
+        (ModuleName.NOCICEPTION, ModuleName.NOCICEPTION_TEMPORAL),
+        (ModuleName.AEROTAXIS, ModuleName.AEROTAXIS_TEMPORAL),
+    ]
+    modules_set = set(modules)
+    for oracle_mod, temporal_mod in modality_pairs:
+        if oracle_mod in modules_set or temporal_mod in modules_set:
             num_channels += 1
+
+    # Pheromone channels: when any pheromone module is present, food+alarm
+    # channels are always added (resolve_active_channels adds all enabled types).
+    pheromone_pairs = [
+        (ModuleName.PHEROMONE_FOOD, ModuleName.PHEROMONE_FOOD_TEMPORAL),
+        (ModuleName.PHEROMONE_ALARM, ModuleName.PHEROMONE_ALARM_TEMPORAL),
+        (ModuleName.PHEROMONE_AGGREGATION, ModuleName.PHEROMONE_AGGREGATION_TEMPORAL),
+    ]
+    has_any_pheromone = any(o in modules_set or t in modules_set for o, t in pheromone_pairs)
+    if has_any_pheromone:
+        num_channels += 2  # pheromone_food + pheromone_alarm always present
+        if (
+            ModuleName.PHEROMONE_AGGREGATION in modules_set
+            or ModuleName.PHEROMONE_AGGREGATION_TEMPORAL in modules_set
+        ):
+            num_channels += 1  # aggregation optional
 
     return compute_memory_dim(num_channels)
 
