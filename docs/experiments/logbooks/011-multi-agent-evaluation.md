@@ -164,7 +164,7 @@ Issues #112 and #115 (same bug class: backward-compat properties in multi-agent 
 |---|-----------|--------|
 | 1 | Multi-agent creates measurable coordination strain | **Partially supported** — strain exists with scarce resources (-19.7% at 10 agents) but is zero with proportional resources. Strain is resource competition, not coordination complexity. |
 | 2 | Social feeding improves survival under scarcity | **Supported** — +35% food, +46% survival under extreme scarcity (Campaign E) |
-| 3 | Pheromones improve temporal foraging/survival | **Not supported** — neutral across all tested scenarios including with food hotspots (Campaigns H1-H4). Root cause: temporal sensing lacks klinotaxis (issue #125). |
+| 3 | Pheromones improve temporal foraging/survival | **Not supported** — neutral across all tested scenarios including with food hotspots (Campaigns H1-H3; H4 is the uniform-food control). Root cause: temporal sensing lacks klinotaxis (issue #125). |
 | 4 | Alarm pheromones improve collective predator survival | **Not supported** — neutral in oracle pursuit mode. Temporal pursuit deferred pending klinotaxis. |
 | 5 | Emergent social behaviors arise | **Not supported** — mechanical effects observed (clustering from social feeding), but no learned social strategies |
 
@@ -205,7 +205,7 @@ Issues #112 and #115 (same bug class: backward-compat properties in multi-agent 
 
 9. **Two critical bugs** (#112, #115) invalidated pre-fix evaluation data and highlight the importance of correctness verification before performance evaluation.
 
-## Food Hotspot Evaluation (Campaigns H1-H7)
+## Food Hotspot Evaluation (Campaigns H1-H6)
 
 Following the initial evaluation, food spatial persistence (issue #116, PR #124) was implemented: configurable food hotspots with exponential decay sampling, satiety-gated consumption (agents can't eat above 80% satiety), and static food mode. This enabled re-evaluation of food-marking pheromones.
 

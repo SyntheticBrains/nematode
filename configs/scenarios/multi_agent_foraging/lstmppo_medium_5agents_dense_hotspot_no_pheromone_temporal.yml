@@ -3,7 +3,7 @@
 # Dense patch network: 8 hotspots covering ~85% of grid within radius 10
 # Biologically models bacterial lawn foraging — food everywhere, denser in patches
 #
-# Approach A: agents always have food signal, pheromones guide to densest areas
+# Approach A: agents always have food signal but no pheromone modules (control)
 
 max_steps: 1000
 brain:

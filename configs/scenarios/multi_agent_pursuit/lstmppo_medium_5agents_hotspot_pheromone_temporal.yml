@@ -1,10 +1,11 @@
 # Multi-Agent Temporal + Hotspots + Pursuit — 5 Agents, ALL Pheromones
 # LSTM PPO GRU with Phase 3 proven brain hyperparams
-# Food-marking pheromone evaluation Campaign H7: alarm pheromone value
-# with temporal nociception
+# Food-marking pheromone evaluation Campaign H7: full pheromone stack with predators
 #
-# Tests whether alarm pheromones help when predator sensing is indirect
-# (temporal mode: scalar concentration only, no direction gradient)
+# All three pheromone channels enabled (food-marking, alarm, aggregation temporal)
+# Pursuit predators with temporal nociception (scalar concentration only, no gradient)
+# Tests pheromone value when both food and predator sensing are indirect
+# Differs from H2 (alarm+agg only, no predators) by adding predators + food-marking
 # Logbook 011 Campaign C found alarm neutral in oracle mode
 
 max_steps: 1000
