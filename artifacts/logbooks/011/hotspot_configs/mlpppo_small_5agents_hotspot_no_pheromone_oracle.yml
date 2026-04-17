@@ -1,8 +1,11 @@
-# Multi-Agent Foraging with Food Hotspots — 5 Agents, Medium (50×50), Oracle Mode
-# Primary evaluation config for food-marking pheromone assessment (issue #116)
-# Larger grid provides spatial separation for meaningful pheromone trail distances
+# Multi-Agent Oracle + Hotspots — 5 Agents, No Pheromones (Control)
+# MLP PPO for oracle mode
+# Food-marking pheromone evaluation Campaign H6: oracle hotspot without pheromones
+#
+# Comparison with H5 (mlpppo_small_5agents_hotspot_oracle.yml) shows
+# pheromone contribution in oracle mode with hotspots
 
-max_steps: 1000
+max_steps: 500
 brain:
   name: mlpppo
   config:
@@ -23,9 +26,6 @@ brain:
     sensory_modules:
       - food_chemotaxis
       - social_proximity
-      - pheromone_food
-      - pheromone_alarm
-      - pheromone_aggregation
 
 body_length: 2
 
@@ -35,7 +35,7 @@ multi_agent:
   food_competition: first_arrival
   social_detection_radius: 5
   termination_policy: freeze
-  min_agent_distance: 5
+  min_agent_distance: 3
 
 reward:
   reward_goal: 2.0
@@ -49,46 +49,27 @@ reward:
   penalty_boundary_collision: 0.02
 
 satiety:
-  initial_satiety: 600.0
+  initial_satiety: 200.0
   satiety_decay_rate: 1.0
-  satiety_gain_per_food: 0.15
+  satiety_gain_per_food: 0.2
 
 environment:
-  grid_size: 50
+  grid_size: 20
   viewport_size: [11, 11]
 
   foraging:
-    foods_on_grid: 25
-    target_foods_to_collect: 40
-    min_food_distance: 3
-    agent_exclusion_radius: 5
-    gradient_decay_constant: 10.0
+    foods_on_grid: 8
+    target_foods_to_collect: 15
+    min_food_distance: 2
+    agent_exclusion_radius: 3
+    gradient_decay_constant: 8.0
     gradient_strength: 1.0
     food_hotspots:
-      - [12, 12, 1.0]
-      - [38, 38, 1.0]
-      - [12, 38, 0.5]
+      - [6, 6, 1.0]
+      - [14, 14, 1.0]
     food_hotspot_bias: 0.8
-    food_hotspot_decay: 8.0
+    food_hotspot_decay: 5.0
     satiety_food_threshold: 0.8
-
-  pheromones:
-    enabled: true
-    food_marking:
-      emission_strength: 1.0
-      spatial_decay_constant: 8.0
-      temporal_half_life: 50
-      max_sources: 100
-    alarm:
-      emission_strength: 2.0
-      spatial_decay_constant: 5.0
-      temporal_half_life: 20
-      max_sources: 50
-    aggregation:
-      emission_strength: 0.5
-      spatial_decay_constant: 10.0
-      temporal_half_life: 10
-      max_sources: 200
 
   social_feeding:
     enabled: true
