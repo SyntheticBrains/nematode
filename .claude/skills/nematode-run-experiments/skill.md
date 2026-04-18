@@ -77,5 +77,6 @@ Run parallel experiment groups with multiple seeds for evaluation.
 - **Always include a control/baseline** — either the current best config or oracle
 - **Oracle baselines need fewer episodes** (1000 is usually sufficient) since MLP PPO converges fast
 - **Temporal experiments need more episodes** than derivative (typically 2x or more)
+- **Klinotaxis experiments** need similar episode counts to derivative — the lateral gradient signal accelerates learning compared to temporal-only
 - **Large environment experiments** (100×100) take significantly longer per episode than small (20×20)
 - **Check episode counts against LR schedule** — ensure lr_decay_episodes covers the training duration

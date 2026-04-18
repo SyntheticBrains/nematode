@@ -163,7 +163,7 @@ class TestKlinotaxisFeatureExtraction:
         ]
         stam_dim = compute_memory_dim(2)  # food + predator
         dim = get_classical_feature_dimension(modules, stam_dim_override=stam_dim)
-        # food_klinotaxis (3) + nociception_klinotaxis (3) + stam (7)
+        # Two klinotaxis modules at 3 features each, plus STAM
         assert dim == 3 + 3 + stam_dim
 
 
@@ -172,7 +172,7 @@ class TestKlinotaxisIntegration:
 
     def test_klinotaxis_populates_lateral_gradient(self) -> None:
         """Klinotaxis mode populates food_lateral_gradient on BrainParams."""
-        from quantumnematode.agent import QuantumNematodeAgent, SatietyConfig
+        from quantumnematode.agent import QuantumNematodeAgent
         from quantumnematode.brain.arch.qvarcircuit import (
             QVarCircuitBrain,
             QVarCircuitBrainConfig,
@@ -193,7 +193,9 @@ class TestKlinotaxisIntegration:
         brain_config = QVarCircuitBrainConfig(seed=42)
         brain = QVarCircuitBrain(brain_config)
         agent = QuantumNematodeAgent(
-            brain=brain, env=env, sensing_config=sensing,
+            brain=brain,
+            env=env,
+            sensing_config=sensing,
         )
         params = agent._create_brain_params()
         assert params.food_lateral_gradient is not None

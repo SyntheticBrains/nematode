@@ -440,13 +440,18 @@ Multi-agent scenarios create exponential state spaces (state × number of agents
    - Information sharing about predator locations
    - Collective aggregation as defense strategy
 
-6. **Food Spatial Persistence** [DEFERRED — prerequisite for food-marking pheromone evaluation]
+6. **Food Spatial Persistence** [IMPLEMENTED — PR #124]
 
-   - Current food respawns uniformly random after consumption, making food-marking pheromone trails point to stale locations (misleading signal)
-   - **Food patches/hotspots**: Define regions where food spawns preferentially, modeled on bacterial lawns. Pheromone trails then correctly signal "productive region"
-   - **Satiety-dependent foraging**: Agents should reduce food-seeking when sated (biological: npr-1 dwelling behavior). Prevents local monopoly where one agent depletes a patch before pheromone-guided agents arrive
-   - **Biased respawn**: Food respawns with spatial correlation to consumed position (configurable locality parameter)
-   - Required for meaningful food-marking pheromone evaluation; alarm and aggregation pheromones have valid signals without this
+   - ✅ **Food patches/hotspots**: Configurable regions where food spawns preferentially with exponential decay sampling
+   - ✅ **Satiety-dependent foraging**: Agents cannot eat above satiety threshold (environmental gate)
+   - Evaluation showed pheromones still neutral due to temporal sensing limitation (klinokinesis only — see D7)
+
+7. **Klinotaxis Sensing** [IMPLEMENTED — issue #125]
+
+   - ✅ **Head-sweep sensing mode**: Samples concentration at left/right offsets from heading direction, providing local spatial gradient + temporal derivative
+   - Biologically most accurate mode — models ASE neuron bilateral comparison during head sweeps
+   - Applies to all 7 gradient modalities (food, predator, temperature, oxygen, 3 pheromones)
+   - Evaluation pending — expected to enable pheromone trail-following that was impossible with temporal-only sensing
 
 #### Metrics Focus
 
