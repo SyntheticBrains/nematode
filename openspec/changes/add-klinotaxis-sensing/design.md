@@ -63,13 +63,15 @@ Change from `!= SensingMode.ORACLE` to explicit mode matching:
 
 **Rationale:** The existing `!= ORACLE` pattern would incorrectly map klinotaxis to `*_temporal` modules. Explicit matching is safer and more readable.
 
-### Decision 7: Temperature and oxygen klinotaxis
+### Decision 7: Temperature and oxygen klinotaxis with per-modality normalization
 
-Temperature klinotaxis: strength = |temp_deviation / 15.0|, angle = lateral thermal gradient (normalized temp difference), binary = dT/dt. The lateral gradient uses raw temperature values at left/right positions, with the same deviation normalization as the center value.
+Each modality normalizes its lateral gradient by the SAME divisor used for the center value, ensuring `lateral_scale` works consistently across modalities:
 
-Oxygen klinotaxis: strength = O2 concentration normalized, angle = lateral O2 gradient, binary = dO2/dt.
+- **Chemical modalities** (food, predator, pheromones): tanh-normalized [0,1]. Lateral gradient = `right - left` (raw, typically ~0.001-0.01). `lateral_scale=50.0` produces useful signal.
+- **Temperature**: raw °C. Lateral gradient = `(temp_right - temp_left) / 15.0` — same divisor as center deviation normalization. Brings difference into ~0.007-0.07 range, compatible with `lateral_scale=50.0`.
+- **Oxygen**: raw O2 percentage (0-21%). Lateral gradient = `(o2_right - o2_left) / 21.0` — normalizes to fractional scale. Compatible with `lateral_scale=50.0`.
 
-**Rationale:** Head-sweep sensing is biologically documented for thermotaxis (AFD neurons) and aerotaxis (URX/BAG neurons). The same mechanical behavior (lateral head movement) applies to all gradient-sensing modalities.
+**Rationale:** Without per-modality normalization, a single `lateral_scale` would saturate for temperature (raw differences ~0.5°C × 50 → tanh ≈ 1.0) while being appropriate for concentrations. Normalizing inside each extraction function before applying `lateral_scale` makes the parameter work universally.
 
 ### Decision 8: All 7 modalities get klinotaxis, not just chemical
 
@@ -86,3 +88,7 @@ Klinotaxis applies to food, predator, temperature, oxygen, and all 3 pheromone t
 3. **classical_dim=3 vs 2**: Klinotaxis modules have larger feature dimension than temporal modules. Configs cannot be swapped in-place during training without resetting weights (different network input size).
 
 4. **apply_sensing_mode behavioral change**: Refining the `!= ORACLE` pattern to explicit matching. Must verify no existing temporal/derivative configs break.
+
+5. **`_infer_stam_dim_from_modules()` must handle klinotaxis**: This function infers STAM dimension from module names when env is not available (e.g., brain construction during weight loading). It currently only checks oracle and temporal module variants. Klinotaxis variants must be added to `modality_pairs` and `pheromone_pairs` — each pair becomes a triple. Failure to do this causes the same STAM dimension mismatch bug class as issue #118.
+
+6. **Oracle gradient suppression**: When klinotaxis mode is active, oracle gradient fields (e.g., `food_gradient_strength`, `food_gradient_direction`) must be suppressed — same as temporal/derivative modes. The existing `!= SensingMode.ORACLE` check in `_compute_temporal_data()` naturally handles this, but must be verified with a test.

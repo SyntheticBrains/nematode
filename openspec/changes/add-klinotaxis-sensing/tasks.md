@@ -22,15 +22,17 @@
 - [ ] 3.6 Ensure klinotaxis mode triggers STAM derivative computation (same as DERIVATIVE mode)
 - [ ] 3.7 Add tests for `_compute_lateral_offsets()` — all directions, STAY fallback, edge clamping
 - [ ] 3.8 Add integration test: klinotaxis mode populates lateral gradient fields in BrainParams
+- [ ] 3.9 Add test: klinotaxis mode suppresses oracle gradient fields (food_gradient_strength/direction = None)
 
 ## 4. Klinotaxis Sensory Modules
 
 - [ ] 4.1 Add 7 ModuleName entries: FOOD_CHEMOTAXIS_KLINOTAXIS, NOCICEPTION_KLINOTAXIS, THERMOTAXIS_KLINOTAXIS, AEROTAXIS_KLINOTAXIS, PHEROMONE_FOOD_KLINOTAXIS, PHEROMONE_ALARM_KLINOTAXIS, PHEROMONE_AGGREGATION_KLINOTAXIS
 - [ ] 4.2 Add extraction functions for each module (strength=concentration, angle=lateral gradient, binary=dC/dt) with classical_dim=3
 - [ ] 4.3 Register all 7 modules in SENSORY_MODULES dict
-- [ ] 4.4 Handle thermotaxis klinotaxis: strength=|temp_deviation/15|, angle=lateral temp gradient normalized, binary=dT/dt
-- [ ] 4.5 Handle aerotaxis klinotaxis: strength=O2 concentration, angle=lateral O2 gradient, binary=dO2/dt
-- [ ] 4.6 Add tests: module registration, feature extraction, classical_dim=3, None field handling
+- [ ] 4.4 Handle thermotaxis klinotaxis: strength=|temp_deviation/15|, angle=tanh((temp_right - temp_left) / 15.0 * lateral_scale), binary=dT/dt — normalize lateral gradient by same divisor (15.0) as center value
+- [ ] 4.5 Handle aerotaxis klinotaxis: strength=O2 concentration, angle=tanh((o2_right - o2_left) / 21.0 * lateral_scale), binary=dO2/dt — normalize lateral gradient by 21.0 to match O2 percentage scale
+- [ ] 4.6 Update `_infer_stam_dim_from_modules()` to include klinotaxis variants in modality_pairs and pheromone_pairs (each pair becomes a triple: oracle, temporal, klinotaxis)
+- [ ] 4.7 Add tests: module registration, feature extraction, classical_dim=3, None field handling, STAM dim inference with klinotaxis modules
 
 ## 5. Single-Agent Evaluation Configs
 
