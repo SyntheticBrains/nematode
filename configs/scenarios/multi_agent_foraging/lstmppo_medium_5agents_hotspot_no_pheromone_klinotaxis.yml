@@ -33,7 +33,7 @@ brain:
     lr_decay_episodes: 1500
     lr_decay_end: 0.00003
     sensory_modules:
-      - food_chemotaxis_temporal
+      - food_chemotaxis
       - proprioception
       - stam
 

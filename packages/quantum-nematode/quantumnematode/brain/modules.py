@@ -1024,7 +1024,9 @@ def _thermotaxis_klinotaxis_core(params: BrainParams) -> CoreFeatures:
     if params.temperature is None:
         return CoreFeatures()
 
-    cultivation_temp = params.cultivation_temperature or 20.0
+    cultivation_temp = (
+        20.0 if params.cultivation_temperature is None else params.cultivation_temperature
+    )
     temp_deviation = (params.temperature - cultivation_temp) / 15.0
     temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
     strength = abs(temp_deviation)

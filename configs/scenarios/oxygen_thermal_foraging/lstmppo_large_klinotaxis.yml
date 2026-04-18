@@ -1,13 +1,13 @@
-# Derivative Sensing (Mode B) - LSTM PPO with Aerotaxis + Thermotaxis + Foraging - Large Configuration
+# Klinotaxis Sensing (Mode C) - LSTM PPO with Aerotaxis + Thermotaxis + Foraging - Large Configuration
 # Phase 3: LSTM PPO with biologically-plausible klinotaxis sensing on combined environment
 #
 # Architecture: Features -> LayerNorm -> GRU(64) -> Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Triple-sensory foraging on 100x100 grid:
-#   - chemotaxis: klinotaxis (Mode B) — scalar food concentration + dC/dt
-#   - thermotaxis: klinotaxis (Mode B) — temperature + dT/dt
-#   - aerotaxis: klinotaxis (Mode B) — oxygen + dO2/dt
+#   - chemotaxis: klinotaxis (Mode C) — scalar food concentration + dC/dt
+#   - thermotaxis: klinotaxis (Mode C) — temperature + dT/dt
+#   - aerotaxis: klinotaxis (Mode C) — oxygen + dO2/dt
 #   - Agent gets rate-of-change (dC/dt, dT/dt, dO2/dt) but no directional gradients
 #
 # Dual environmental gradients (orthogonal):
@@ -15,15 +15,15 @@
 # - Oxygen increases northward (pi/2 rad)
 #
 # Environment matches mlpppo_large_oracle.yml (oracle baseline)
-# except: klinotaxis sensing (Mode B), steeper gradients, + proprioception module
+# except: klinotaxis sensing (Mode C), steeper gradients, + proprioception module
 
 max_steps: 2000
 brain:
   name: lstmppo
   config:
-    rnn_type: gru  # GRU outperforms LSTM on temporal tasks
+    rnn_type: gru  # GRU outperforms LSTM on klinotaxis tasks
     lstm_hidden_dim: 64
-    bptt_chunk_length: 128  # Long chunks for temporal inference on 100x100 grid
+    bptt_chunk_length: 128  # Long chunks for klinotaxis inference on 100x100 grid
 
     # Actor/Critic MLP
     actor_hidden_dim: 128
@@ -49,16 +49,16 @@ brain:
     entropy_coef_end: 0.01
     entropy_decay_episodes: 4000
 
-    # LR schedule (extended for temporal's slower convergence)
+    # LR schedule (extended for klinotaxis convergence)
     lr_warmup_episodes: 100
     lr_warmup_start: 0.00003
     lr_decay_episodes: 6000
     lr_decay_end: 0.00003
 
     sensory_modules:
-      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal (handles both Mode A/B)
-      - thermotaxis         # Auto-translated to thermotaxis_temporal (handles both Mode A/B)
-      - aerotaxis           # Auto-translated to aerotaxis_temporal (handles both Mode A/B)
+      - food_chemotaxis     # Auto-translated to food_chemotaxis_klinotaxis (klinotaxis mode)
+      - thermotaxis         # Auto-translated to thermotaxis_klinotaxis (klinotaxis mode)
+      - aerotaxis           # Auto-translated to aerotaxis_klinotaxis (klinotaxis mode)
       - proprioception      # Heading direction — critical for correlating concentration with movement
 
 body_length: 2
@@ -87,9 +87,9 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: klinotaxis       # Mode B: scalar + dC/dt
-    thermotaxis_mode: klinotaxis      # Mode B: temperature + dT/dt
-    aerotaxis_mode: klinotaxis        # Mode B: oxygen + dO2/dt
+    chemotaxis_mode: klinotaxis       # Mode C: scalar + lateral gradient + dC/dt
+    thermotaxis_mode: klinotaxis      # Mode C: scalar + lateral gradient + dT/dt
+    aerotaxis_mode: klinotaxis        # Mode C: scalar + lateral gradient + dO2/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1

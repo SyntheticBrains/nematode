@@ -38,7 +38,7 @@ from quantumnematode.brain.arch.dtypes import (
     DeviceType,
 )
 from quantumnematode.brain.weights import WeightPersistence, load_weights, save_weights
-from quantumnematode.env import MIN_GRID_SIZE
+from quantumnematode.env import MIN_GRID_SIZE, Direction
 from quantumnematode.env.theme import DEFAULT_THEME, Theme
 from quantumnematode.experiment import capture_experiment_metadata, save_experiment
 from quantumnematode.logging_config import (
@@ -1735,6 +1735,8 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     agent._satiety_manager.reset()
                     agent._food_handler.reset()
                     agent._episode_tracker.reset()
+                    agent._previous_position = None
+                    agent._last_heading = Direction.UP
                     agent.reset_brain()
                 sim.env = env
 

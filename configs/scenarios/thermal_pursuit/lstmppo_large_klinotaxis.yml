@@ -1,13 +1,13 @@
-# Derivative Sensing - LSTM PPO with Thermotaxis + Pursuit Predators - Large Configuration
+# Klinotaxis Sensing - LSTM PPO with Thermotaxis + Pursuit Predators - Large Configuration
 # Phase 3: LSTM PPO with biologically-plausible klinotaxis sensing on the hardest task
 #
 # Architecture: Features → LayerNorm → GRU(64) → Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Triple-objective task on 100x100 grid:
-#   - chemotaxis: klinotaxis (Mode B) — scalar food concentration + dC/dt
-#   - nociception: klinotaxis (Mode B) — scalar predator concentration + dC/dt
-#   - thermotaxis: klinotaxis (Mode B) — temperature + dT/dt
+#   - chemotaxis: klinotaxis (Mode C) — scalar food concentration + dC/dt
+#   - nociception: klinotaxis (Mode C) — scalar predator concentration + dC/dt
+#   - thermotaxis: klinotaxis (Mode C) — temperature + dT/dt
 #
 # 4 pursuit predators, scattered temperature zones, 45 foods
 # Environment matches mlpppo_thermotaxis_pursuit_predators_large.yml (oracle baseline)
@@ -23,7 +23,7 @@ brain:
   config:
     rnn_type: gru  # GRU outperforms LSTM by ~5pp overall on large pursuit predators
     lstm_hidden_dim: 64
-    bptt_chunk_length: 96  # Long chunks for multi-step evasion + foraging temporal patterns
+    bptt_chunk_length: 96  # Long chunks for multi-step evasion + foraging klinotaxis patterns
 
     # Actor/Critic MLP
     actor_hidden_dim: 128
@@ -56,10 +56,10 @@ brain:
     lr_decay_end: 0.00003
 
     sensory_modules:
-      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal (handles both Mode A/B)
-      - nociception         # Auto-translated to nociception_temporal (handles both Mode A/B)
+      - food_chemotaxis     # Auto-translated to food_chemotaxis_klinotaxis (klinotaxis mode)
+      - nociception         # Auto-translated to nociception_klinotaxis (klinotaxis mode)
       - mechanosensation    # Physical contact detection
-      - thermotaxis         # Auto-translated to thermotaxis_temporal (handles both Mode A/B)
+      - thermotaxis         # Auto-translated to thermotaxis_klinotaxis (klinotaxis mode)
       - proprioception      # Heading direction — critical for correlating klinotaxiss with movement
 
 body_length: 2
@@ -90,9 +90,9 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: klinotaxis     # Mode B: scalar + dC/dt
-    nociception_mode: klinotaxis    # Mode B: scalar + dC/dt
-    thermotaxis_mode: klinotaxis    # Mode B: temperature + dT/dt
+    chemotaxis_mode: klinotaxis     # Mode C: scalar + lateral gradient + dC/dt
+    nociception_mode: klinotaxis    # Mode C: scalar + lateral gradient + dC/dt
+    thermotaxis_mode: klinotaxis    # Mode C: scalar + lateral gradient + dT/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1

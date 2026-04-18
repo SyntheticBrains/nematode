@@ -2,7 +2,7 @@
 # LSTM PPO GRU with Phase 3 proven brain hyperparams
 # Food-marking pheromone evaluation Campaign H1: full stack
 #
-# Pheromone modules: food-marking + alarm + aggregation (all temporal)
+# Pheromone modules: food-marking + alarm + aggregation (all klinotaxis)
 # Food hotspots: 3 patches on 50x50 grid with satiety gate
 # Primary evaluation config for issue #116
 
@@ -34,11 +34,11 @@ brain:
     lr_decay_episodes: 1500
     lr_decay_end: 0.00003
     sensory_modules:
-      - food_chemotaxis_temporal
+      - food_chemotaxis
       - proprioception
-      - pheromone_food_temporal
-      - pheromone_alarm_temporal
-      - pheromone_aggregation_temporal
+      - pheromone_food
+      - pheromone_alarm
+      - pheromone_aggregation
       - stam
 
 body_length: 2

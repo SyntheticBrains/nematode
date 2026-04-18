@@ -78,7 +78,7 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: klinotaxis  # Mode B: scalar + dC/dt
+    chemotaxis_mode: klinotaxis  # Mode C: scalar + lateral gradient + dC/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1

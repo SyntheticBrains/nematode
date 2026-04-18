@@ -139,6 +139,8 @@ class TestKlinotaxisFeatureExtraction:
         features = module.to_classical(params)
         assert features.shape == (3,)
         assert features[0] == pytest.approx(5.0 / 15.0)  # |deviation/15|
+        assert features[1] == pytest.approx(np.tanh(0.03 * 50.0))  # lateral
+        assert features[2] == pytest.approx(np.tanh(0.01 * 50.0))  # dT/dt
 
     def test_aerotaxis_klinotaxis_features(self) -> None:
         """Aerotaxis klinotaxis: strength=O2/21, normalized lateral."""
@@ -151,6 +153,8 @@ class TestKlinotaxisFeatureExtraction:
         features = module.to_classical(params)
         assert features.shape == (3,)
         assert features[0] == pytest.approx(10.5 / 21.0)
+        assert features[1] == pytest.approx(np.tanh(0.02 * 50.0))  # lateral
+        assert features[2] == pytest.approx(np.tanh(0.005 * 50.0))  # dO2/dt
 
     def test_feature_dimension_with_klinotaxis(self) -> None:
         """Total feature dimension sums correctly with klinotaxis modules."""

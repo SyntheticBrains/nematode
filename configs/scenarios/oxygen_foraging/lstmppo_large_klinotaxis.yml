@@ -1,12 +1,12 @@
-# Derivative Sensing (Mode B) - LSTM PPO with Aerotaxis + Foraging - Large Configuration
+# Klinotaxis Sensing (Mode C) - LSTM PPO with Aerotaxis + Foraging - Large Configuration
 # Phase 3: LSTM PPO with biologically-plausible klinotaxis sensing for oxygen navigation
 #
 # Architecture: Features -> LayerNorm -> GRU(64) -> Actor MLP / Critic MLP (detached h)
 # Training: Chunk-based truncated BPTT with separate actor/critic optimizers
 #
 # Sensing modes:
-#   - chemotaxis: klinotaxis (Mode B) — scalar food concentration + dC/dt
-#   - aerotaxis: klinotaxis (Mode B) — oxygen scalar + dO2/dt
+#   - chemotaxis: klinotaxis (Mode C) — scalar food concentration + dC/dt
+#   - aerotaxis: klinotaxis (Mode C) — oxygen scalar + dO2/dt
 #   - Agent gets rate-of-change information but no directional gradients
 #
 # Large environment (100x100 grid):
@@ -55,8 +55,8 @@ brain:
     lr_decay_end: 0.00003
 
     sensory_modules:
-      - food_chemotaxis     # Auto-translated to food_chemotaxis_temporal (handles both Mode A/B)
-      - aerotaxis           # Auto-translated to aerotaxis_temporal (handles both Mode A/B)
+      - food_chemotaxis     # Auto-translated to food_chemotaxis_klinotaxis (klinotaxis mode)
+      - aerotaxis           # Auto-translated to aerotaxis_klinotaxis (klinotaxis mode)
       - proprioception      # Heading direction — critical for correlating dC/dt with movement
 
 body_length: 2
@@ -84,8 +84,8 @@ environment:
   viewport_size: [11, 11]
 
   sensing:
-    chemotaxis_mode: klinotaxis    # Mode B: scalar + dC/dt
-    aerotaxis_mode: klinotaxis     # Mode B: oxygen scalar + dO2/dt
+    chemotaxis_mode: klinotaxis    # Mode C: scalar + lateral gradient + dC/dt
+    aerotaxis_mode: klinotaxis     # Mode C: scalar + lateral gradient + dO2/dt
     stam_enabled: true
     stam_buffer_size: 30
     stam_decay_rate: 0.1
