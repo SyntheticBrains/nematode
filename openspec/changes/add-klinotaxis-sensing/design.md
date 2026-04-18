@@ -47,13 +47,26 @@ Sample concentration at ±1 cell perpendicular to heading. At the biological sca
 
 **Rationale:** Biologically accurate and computationally simple. Larger offsets would give stronger signals but less realistic sensing.
 
-### Decision 5: Track last non-STAY heading for STAY direction
+### Decision 5: Pre-computed lateral gradient, not raw bilateral values
+
+The agent computes `right - left` before passing to the sensory module, rather than passing raw left and right concentrations separately. The module receives: center concentration (strength), lateral gradient (angle), and temporal derivative (binary).
+
+**Rationale:** This matches the biological signal processing. Real C. elegans ASE neurons produce a differential signal — ASEL fires for concentration increases, ASER for decreases. The amphid ganglia compute the bilateral comparison before the signal reaches interneurons that drive motor decisions. The nervous system receives the comparison result, not the raw bilateral readings independently.
+
+**Alternatives considered:**
+
+- Passing raw (left, center, right) as 3 separate features: gives the brain more information but adds a feature per modality and forces the network to learn the subtraction — trivial for an MLP but wastes capacity and doesn't match the biology.
+- Passing (center, gradient) without dC/dt: loses temporal information that real worms use simultaneously.
+
+The current approach (center + gradient + dC/dt = 3 features) provides exactly the information available to C. elegans interneurons after amphid processing.
+
+### Decision 6: Track last non-STAY heading for STAY direction
 
 When Direction is STAY (agent didn't move), use the last non-STAY heading for lateral offset computation. Store `_last_heading` on the agent, updated whenever direction != STAY.
 
 **Rationale:** An agent that chooses STAY should still be able to "sweep its head" based on its facing direction. Using a consistent fallback avoids zero-gradient artifacts at episode start.
 
-### Decision 6: apply_sensing_mode() refinement
+### Decision 7: apply_sensing_mode() refinement
 
 Change from `!= SensingMode.ORACLE` to explicit mode matching:
 
@@ -63,7 +76,7 @@ Change from `!= SensingMode.ORACLE` to explicit mode matching:
 
 **Rationale:** The existing `!= ORACLE` pattern would incorrectly map klinotaxis to `*_temporal` modules. Explicit matching is safer and more readable.
 
-### Decision 7: Temperature and oxygen klinotaxis with per-modality normalization
+### Decision 8: Temperature and oxygen klinotaxis with per-modality normalization
 
 Each modality normalizes its lateral gradient by the SAME divisor used for the center value, ensuring `lateral_scale` works consistently across modalities:
 
@@ -73,7 +86,7 @@ Each modality normalizes its lateral gradient by the SAME divisor used for the c
 
 **Rationale:** Without per-modality normalization, a single `lateral_scale` would saturate for temperature (raw differences ~0.5°C × 50 → tanh ≈ 1.0) while being appropriate for concentrations. Normalizing inside each extraction function before applying `lateral_scale` makes the parameter work universally.
 
-### Decision 8: All 7 modalities get klinotaxis, not just chemical
+### Decision 9: All 7 modalities get klinotaxis, not just chemical
 
 Klinotaxis applies to food, predator, temperature, oxygen, and all 3 pheromone types. Each modality can independently select its sensing mode.
 
