@@ -15,7 +15,7 @@ This project simulates a simplified nematode (C. elegans) navigating dynamic for
 
 - ✅ **Dynamic Foraging Environment**: Realistic multi-food foraging with satiety management and distance efficiency tracking
 - ✅ **Predator Evasion**: Multi-objective learning with pursuit/stationary predators and gradient-based danger perception
-- ✅ **Temporal Sensing**: Biologically-accurate sensing modes replacing oracle spatial gradients — scalar concentration (Mode A) and derivative (Mode B) with Short-Term Associative Memory (STAM) buffers
+- ✅ **Temporal Sensing**: Biologically-accurate sensing modes replacing oracle spatial gradients — scalar concentration (Mode A), derivative (Mode B), and klinotaxis head-sweep (Mode C) with Short-Term Associative Memory (STAM) buffers
 - ✅ **Thermotaxis**: Temperature-guided navigation with comfort/discomfort/danger zones and scattered hot/cold spots
 - ✅ **Aerotaxis**: Oxygen-guided navigation with asymmetric hypoxia/hyperoxia danger zones (5-12% O2 comfort range, URX/BAG neuron-inspired)
 - ✅ **Multi-Agent Simulations**: Cooperative and competitive foraging with pheromone communication (food-marking, alarm, aggregation), social feeding (npr-1 mediated), food competition policies, and collective behavior metrics
@@ -202,8 +202,9 @@ The predator evasion system adds a challenging multi-objective learning task whe
 **Perception Modes:**
 
 - **Oracle sensing** (default): Directional gradients — food attraction and predator repulsion via spatial gradient vectors
+- **Klinotaxis sensing** (Mode C): Scalar concentration + lateral head-sweep gradient + temporal derivative (dC/dt) — most biologically complete, models C. elegans ASE neuron head sweeps with STAM temporal memory
 - **Derivative sensing** (Mode B): Scalar concentration + temporal derivative (dC/dt) — biologically plausible, models sensory neuron temporal detection
-- **Temporal sensing** (Mode A): Scalar concentration only — most biologically honest, agent infers direction from LSTM/GRU memory of movement-concentration correlations
+- **Temporal sensing** (Mode A): Scalar concentration only — biologically honest klinokinesis, agent infers direction from LSTM/GRU memory of movement-concentration correlations
 - **STAM (Short-Term Associative Memory)**: Exponential-decay buffer storing recent sensory readings, position deltas, and action entropy for temporal integration
 
 **Learning Dynamics:**
