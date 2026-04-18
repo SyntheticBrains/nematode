@@ -586,16 +586,28 @@ class QuantumNematodeAgent:
             )
 
         # (a2) Klinotaxis: compute lateral gradients from head-sweep sampling
-        agent_state = self.env.agents[self.agent_id]
-        heading = agent_state.direction
-        if heading != Direction.STAY:
-            self._last_heading = heading
-        effective_heading = self._last_heading
-        left_pos, right_pos = _compute_lateral_offsets(
-            effective_heading,
-            agent_pos,
-            self.env.grid_size,
+        any_klinotaxis = SensingMode.KLINOTAXIS in (
+            sensing.chemotaxis_mode,
+            sensing.nociception_mode,
+            sensing.thermotaxis_mode,
+            sensing.aerotaxis_mode,
+            pheromone_food_mode,
+            pheromone_alarm_mode,
+            pheromone_aggregation_mode,
         )
+        if any_klinotaxis:
+            agent_state = self.env.agents[self.agent_id]
+            heading = agent_state.direction
+            if heading != Direction.STAY:
+                self._last_heading = heading
+            effective_heading = self._last_heading
+            left_pos, right_pos = _compute_lateral_offsets(
+                effective_heading,
+                agent_pos,
+                self.env.grid_size,
+            )
+        else:
+            left_pos = right_pos = agent_pos  # unused, avoids unbound variable
 
         if sensing.chemotaxis_mode == SensingMode.KLINOTAXIS:
             left_c = self.env.get_food_concentration(position=left_pos)

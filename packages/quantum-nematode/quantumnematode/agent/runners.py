@@ -642,6 +642,7 @@ class StandardEpisodeRunner(EpisodeRunner):
         if agent._stam is not None:
             agent._stam.reset()
         agent._previous_position = None
+        agent._last_heading = Direction.UP
 
         # Reset food handler tracking for new episode
         agent._food_handler.reset()
