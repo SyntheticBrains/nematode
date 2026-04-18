@@ -57,6 +57,7 @@ def _export_main_results(
     all_results: list[SimulationResult],
     data_dir: Path,
     file_prefix: str,
+    config_name: str = "",
 ) -> None:
     """Export main simulation results to CSV."""
     filename = f"{file_prefix}simulation_results.csv"
@@ -67,7 +68,7 @@ def _export_main_results(
         writer.writeheader()
 
         for result in all_results:
-            writer.writerow(_simulation_result_to_row(result))
+            writer.writerow(_simulation_result_to_row(result, config_name=config_name))
 
 
 def _export_run_metrics(
@@ -152,6 +153,7 @@ def _export_path_data(
 
 _SIMULATION_RESULTS_FIELDNAMES = [
     "run",
+    "config_name",
     "steps",
     "total_reward",
     "last_total_reward",
@@ -169,10 +171,14 @@ _SIMULATION_RESULTS_FIELDNAMES = [
 ]
 
 
-def _simulation_result_to_row(result: SimulationResult) -> dict[str, object]:
+def _simulation_result_to_row(
+    result: SimulationResult,
+    config_name: str = "",
+) -> dict[str, object]:
     """Convert a SimulationResult to a dict suitable for CSV writing."""
     return {
         "run": result.run,
+        "config_name": config_name,
         "steps": result.steps,
         "total_reward": result.total_reward,
         "last_total_reward": result.last_total_reward,
@@ -229,6 +235,7 @@ def write_simulation_result_row(
     writer: csv.DictWriter,
     result: SimulationResult,
     csvfile: IO[str] | None = None,
+    config_name: str = "",
 ) -> None:
     """Write a single simulation result row to an already-open CSV writer.
 
@@ -240,8 +247,10 @@ def write_simulation_result_row(
         Simulation result for one episode.
     csvfile : file object, optional
         File handle to flush after writing. If None, no flush is performed.
+    config_name : str, optional
+        Config file stem for identification in CSV output.
     """
-    writer.writerow(_simulation_result_to_row(result))
+    writer.writerow(_simulation_result_to_row(result, config_name=config_name))
     if csvfile is not None:
         csvfile.flush()
 

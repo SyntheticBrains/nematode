@@ -749,7 +749,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
 
             # --- Incremental exports (before data flush) ---
             # Write simulation results and path data to CSV incrementally
-            write_simulation_result_row(sim_results_csv_writer, result, sim_results_csv_file)
+            write_simulation_result_row(
+                sim_results_csv_writer,
+                result,
+                sim_results_csv_file,
+                config_name=Path(config_file).stem if config_file else "",
+            )
             write_path_data_row(path_csv_writer, result)
 
             # Write detailed brain tracking data incrementally
