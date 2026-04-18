@@ -436,7 +436,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             parameter_initializer_config=parameter_initializer_config,
             theme=theme,
             perf_mgmt=perf_mgmt,
-            config_name=f"{Path(config_file).parent.name}/{Path(config_file).stem}" if config_file else "",
+            config_name=f"{Path(config_file).parent.name}/{Path(config_file).stem}"
+            if config_file
+            else "",
         )
         return
 
@@ -753,7 +755,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 sim_results_csv_writer,
                 result,
                 sim_results_csv_file,
-                config_name=f"{Path(config_file).parent.name}/{Path(config_file).stem}" if config_file else "",
+                config_name=f"{Path(config_file).parent.name}/{Path(config_file).stem}"
+                if config_file
+                else "",
             )
             write_path_data_row(path_csv_writer, result)
 
