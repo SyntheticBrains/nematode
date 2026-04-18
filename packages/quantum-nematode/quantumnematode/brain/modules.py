@@ -101,6 +101,15 @@ class ModuleName(StrEnum):
     PHEROMONE_AGGREGATION = "pheromone_aggregation"
     PHEROMONE_AGGREGATION_TEMPORAL = "pheromone_aggregation_temporal"
 
+    # Klinotaxis (head-sweep) sensing modules
+    FOOD_CHEMOTAXIS_KLINOTAXIS = "food_chemotaxis_klinotaxis"
+    NOCICEPTION_KLINOTAXIS = "nociception_klinotaxis"
+    THERMOTAXIS_KLINOTAXIS = "thermotaxis_klinotaxis"
+    AEROTAXIS_KLINOTAXIS = "aerotaxis_klinotaxis"
+    PHEROMONE_FOOD_KLINOTAXIS = "pheromone_food_klinotaxis"
+    PHEROMONE_ALARM_KLINOTAXIS = "pheromone_alarm_klinotaxis"
+    PHEROMONE_AGGREGATION_KLINOTAXIS = "pheromone_aggregation_klinotaxis"
+
 
 # =============================================================================
 # Helper Functions
@@ -972,6 +981,170 @@ SENSORY_MODULES[ModuleName.PHEROMONE_AGGREGATION_TEMPORAL] = SensoryModule(
     classical_dim=2,
 )
 
+# =============================================================================
+# Klinotaxis (Head-Sweep) Sensing Modules
+# =============================================================================
+
+
+def _food_chemotaxis_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis food chemotaxis features (concentration + lateral + dC/dt).
+
+    Head-sweep sensing (ASE neurons, ASEL/ASER) encodes:
+    - strength: food concentration at agent's position
+    - angle: lateral gradient tanh((right - left) * lateral_scale)
+    - binary: temporal derivative dC/dt tanh(derivative * derivative_scale)
+    """
+    strength = float(params.food_concentration or 0.0)
+    raw_lateral = float(params.food_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+    raw_deriv = float(params.food_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _nociception_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis nociception features (predator concentration + lateral + dC/dt).
+
+    Head-sweep sensing (ASH neurons) for predator avoidance.
+    """
+    strength = float(params.predator_concentration or 0.0)
+    raw_lateral = float(params.predator_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+    raw_deriv = float(params.predator_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _thermotaxis_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis thermotaxis features (temperature deviation + lateral + dT/dt).
+
+    Head-sweep sensing (AFD neurons) for temperature navigation.
+    Lateral gradient normalized by 15.0 (same as center deviation).
+    """
+    if params.temperature is None:
+        return CoreFeatures()
+
+    cultivation_temp = (
+        20.0 if params.cultivation_temperature is None else params.cultivation_temperature
+    )
+    temp_deviation = (params.temperature - cultivation_temp) / 15.0
+    temp_deviation = float(np.clip(temp_deviation, -1.0, 1.0))
+    strength = abs(temp_deviation)
+
+    raw_lateral = float(params.temperature_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+
+    raw_deriv = float(params.temperature_ddt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _aerotaxis_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis aerotaxis features (O2 concentration + lateral + dO2/dt).
+
+    Head-sweep sensing (URX/BAG neurons) for oxygen navigation.
+    Lateral gradient normalized by 21.0 (O2 percentage scale).
+    """
+    if params.oxygen_concentration is None:
+        return CoreFeatures()
+
+    strength = float(params.oxygen_concentration / 21.0)
+    strength = float(np.clip(strength, 0.0, 1.0))
+
+    raw_lateral = float(params.oxygen_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+
+    raw_deriv = float(params.oxygen_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _pheromone_food_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis food pheromone features (concentration + lateral + dC/dt)."""
+    strength = float(params.pheromone_food_concentration or 0.0)
+    raw_lateral = float(params.pheromone_food_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+    raw_deriv = float(params.pheromone_food_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _pheromone_alarm_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis alarm pheromone features (concentration + lateral + dC/dt)."""
+    strength = float(params.pheromone_alarm_concentration or 0.0)
+    raw_lateral = float(params.pheromone_alarm_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+    raw_deriv = float(params.pheromone_alarm_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+def _pheromone_aggregation_klinotaxis_core(params: BrainParams) -> CoreFeatures:
+    """Extract klinotaxis aggregation pheromone features (concentration + lateral + dC/dt)."""
+    strength = float(params.pheromone_aggregation_concentration or 0.0)
+    raw_lateral = float(params.pheromone_aggregation_lateral_gradient or 0.0)
+    angle = float(np.tanh(raw_lateral * params.lateral_scale))
+    raw_deriv = float(params.pheromone_aggregation_dconcentration_dt or 0.0)
+    binary = float(np.tanh(raw_deriv * params.derivative_scale))
+    return CoreFeatures(strength=strength, angle=angle, binary=binary)
+
+
+# Register klinotaxis modules
+SENSORY_MODULES[ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS,
+    extract=_food_chemotaxis_klinotaxis_core,
+    description=(
+        "Klinotaxis food chemotaxis (ASE head-sweep). Concentration + lateral "
+        "gradient + dC/dt. Most biologically accurate sensing mode."
+    ),
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.NOCICEPTION_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.NOCICEPTION_KLINOTAXIS,
+    extract=_nociception_klinotaxis_core,
+    description=(
+        "Klinotaxis nociception (ASH head-sweep). Predator concentration + "
+        "lateral gradient + dC/dt."
+    ),
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.THERMOTAXIS_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.THERMOTAXIS_KLINOTAXIS,
+    extract=_thermotaxis_klinotaxis_core,
+    description=(
+        "Klinotaxis thermotaxis (AFD head-sweep). Temperature deviation + "
+        "lateral thermal gradient (÷15) + dT/dt."
+    ),
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.AEROTAXIS_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.AEROTAXIS_KLINOTAXIS,
+    extract=_aerotaxis_klinotaxis_core,
+    description=(
+        "Klinotaxis aerotaxis (URX/BAG head-sweep). O2 concentration + "
+        "lateral O2 gradient (÷21) + dO2/dt."
+    ),
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.PHEROMONE_FOOD_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.PHEROMONE_FOOD_KLINOTAXIS,
+    extract=_pheromone_food_klinotaxis_core,
+    description="Klinotaxis food pheromone. Concentration + lateral gradient + dC/dt.",
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.PHEROMONE_ALARM_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.PHEROMONE_ALARM_KLINOTAXIS,
+    extract=_pheromone_alarm_klinotaxis_core,
+    description="Klinotaxis alarm pheromone. Concentration + lateral gradient + dC/dt.",
+    classical_dim=3,
+)
+SENSORY_MODULES[ModuleName.PHEROMONE_AGGREGATION_KLINOTAXIS] = SensoryModule(
+    name=ModuleName.PHEROMONE_AGGREGATION_KLINOTAXIS,
+    extract=_pheromone_aggregation_klinotaxis_core,
+    description="Klinotaxis aggregation pheromone. Concentration + lateral gradient + dC/dt.",
+    classical_dim=3,
+)
+
 SENSORY_MODULES[ModuleName.STAM] = STAMSensoryModule(
     name=ModuleName.STAM,
     extract=lambda _params: CoreFeatures(),  # Not used — overridden by to_classical/to_quantum
@@ -1068,31 +1241,49 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
     # Food is always present (1 channel minimum)
     num_channels = 1
 
-    # Each modality adds at most one STAM channel (collapse oracle/temporal pairs)
-    modality_pairs = [
-        (ModuleName.THERMOTAXIS, ModuleName.THERMOTAXIS_TEMPORAL),
-        (ModuleName.NOCICEPTION, ModuleName.NOCICEPTION_TEMPORAL),
-        (ModuleName.AEROTAXIS, ModuleName.AEROTAXIS_TEMPORAL),
+    # Each modality adds at most one STAM channel (collapse oracle/temporal/klinotaxis)
+    modality_triples = [
+        (
+            ModuleName.THERMOTAXIS,
+            ModuleName.THERMOTAXIS_TEMPORAL,
+            ModuleName.THERMOTAXIS_KLINOTAXIS,
+        ),
+        (
+            ModuleName.NOCICEPTION,
+            ModuleName.NOCICEPTION_TEMPORAL,
+            ModuleName.NOCICEPTION_KLINOTAXIS,
+        ),
+        (ModuleName.AEROTAXIS, ModuleName.AEROTAXIS_TEMPORAL, ModuleName.AEROTAXIS_KLINOTAXIS),
     ]
     modules_set = set(modules)
-    for oracle_mod, temporal_mod in modality_pairs:
-        if oracle_mod in modules_set or temporal_mod in modules_set:
+    for mods in modality_triples:
+        if any(m in modules_set for m in mods):
             num_channels += 1
 
     # Pheromone channels: when any pheromone module is present, food+alarm
     # channels are always added (resolve_active_channels adds all enabled types).
-    pheromone_pairs = [
-        (ModuleName.PHEROMONE_FOOD, ModuleName.PHEROMONE_FOOD_TEMPORAL),
-        (ModuleName.PHEROMONE_ALARM, ModuleName.PHEROMONE_ALARM_TEMPORAL),
-        (ModuleName.PHEROMONE_AGGREGATION, ModuleName.PHEROMONE_AGGREGATION_TEMPORAL),
+    pheromone_triples = [
+        (
+            ModuleName.PHEROMONE_FOOD,
+            ModuleName.PHEROMONE_FOOD_TEMPORAL,
+            ModuleName.PHEROMONE_FOOD_KLINOTAXIS,
+        ),
+        (
+            ModuleName.PHEROMONE_ALARM,
+            ModuleName.PHEROMONE_ALARM_TEMPORAL,
+            ModuleName.PHEROMONE_ALARM_KLINOTAXIS,
+        ),
+        (
+            ModuleName.PHEROMONE_AGGREGATION,
+            ModuleName.PHEROMONE_AGGREGATION_TEMPORAL,
+            ModuleName.PHEROMONE_AGGREGATION_KLINOTAXIS,
+        ),
     ]
-    has_any_pheromone = any(o in modules_set or t in modules_set for o, t in pheromone_pairs)
+    has_any_pheromone = any(any(m in modules_set for m in triple) for triple in pheromone_triples)
     if has_any_pheromone:
         num_channels += 2  # pheromone_food + pheromone_alarm always present
-        if (
-            ModuleName.PHEROMONE_AGGREGATION in modules_set
-            or ModuleName.PHEROMONE_AGGREGATION_TEMPORAL in modules_set
-        ):
+        agg_mods = pheromone_triples[2]
+        if any(m in modules_set for m in agg_mods):
             num_channels += 1  # aggregation optional
 
     return compute_memory_dim(num_channels)

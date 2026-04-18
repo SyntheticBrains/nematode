@@ -677,13 +677,15 @@ class SensingMode(StrEnum):
     ORACLE = "oracle"  # Spatial gradients (existing behavior)
     TEMPORAL = "temporal"  # Mode A: raw scalar only, agent uses STAM
     DERIVATIVE = "derivative"  # Mode B: scalar + dC/dt
+    KLINOTAXIS = "klinotaxis"  # Mode C: head-sweep lateral gradient + dC/dt
 
 
 class SensingConfig(BaseModel):
     """Configuration for temporal sensing modes and STAM memory.
 
     Each gradient-based modality (chemotaxis, thermotaxis, nociception,
-    pheromones) can independently use oracle, temporal, or derivative mode.
+    pheromones) can independently use oracle, temporal, derivative,
+    or klinotaxis mode.
     """
 
     chemotaxis_mode: SensingMode = SensingMode.ORACLE
@@ -706,19 +708,36 @@ class SensingConfig(BaseModel):
             "Default 50.0 maps a raw derivative of 0.01 to tanh(0.5) ≈ 0.46."
         ),
     )
+    lateral_scale: float = Field(
+        default=50.0,
+        gt=0.0,
+        description=(
+            "Scaling factor applied to lateral (head-sweep) gradients before tanh "
+            "normalization in klinotaxis mode. Applied as tanh((right - left) * scale). "
+            "Default 50.0."
+        ),
+    )
+
+
+def _module_suffix_for_mode(mode: SensingMode) -> str:
+    """Return the module name suffix for a given sensing mode."""
+    if mode == SensingMode.KLINOTAXIS:
+        return "_klinotaxis"
+    if mode != SensingMode.ORACLE:
+        return "_temporal"
+    return ""
 
 
 def apply_sensing_mode(
     sensory_modules: list[str],
     sensing: SensingConfig,
 ) -> list[str]:
-    """Auto-replace oracle sensory module names with temporal variants.
+    """Auto-replace oracle sensory module names with temporal or klinotaxis variants.
 
     Handles:
-    - food_chemotaxis → food_chemotaxis_temporal when chemotaxis_mode != oracle
-    - nociception → nociception_temporal when nociception_mode != oracle
-    - thermotaxis → thermotaxis_temporal when thermotaxis_mode != oracle
-    - chemotaxis (combined) → food_chemotaxis_temporal + nociception split
+    - food_chemotaxis → food_chemotaxis_temporal (temporal/derivative) or
+      food_chemotaxis_klinotaxis (klinotaxis)
+    - Same pattern for nociception, thermotaxis, aerotaxis, pheromones
     - Appends stam module when stam_enabled
 
     Parameters
@@ -731,28 +750,26 @@ def apply_sensing_mode(
     Returns
     -------
     list[str]
-        Updated sensory module names with temporal substitutions applied.
+        Updated sensory module names with mode substitutions applied.
     """
+    # Map oracle module names to their mode config attribute
+    mode_map: dict[str, SensingMode] = {
+        "food_chemotaxis": sensing.chemotaxis_mode,
+        "nociception": sensing.nociception_mode,
+        "thermotaxis": sensing.thermotaxis_mode,
+        "aerotaxis": sensing.aerotaxis_mode,
+        "pheromone_food": sensing.pheromone_food_mode,
+        "pheromone_alarm": sensing.pheromone_alarm_mode,
+        "pheromone_aggregation": sensing.pheromone_aggregation_mode,
+    }
+
     result = []
 
     for module in sensory_modules:
-        if module == "food_chemotaxis" and sensing.chemotaxis_mode != SensingMode.ORACLE:
-            result.append("food_chemotaxis_temporal")
-        elif module == "nociception" and sensing.nociception_mode != SensingMode.ORACLE:
-            result.append("nociception_temporal")
-        elif module == "thermotaxis" and sensing.thermotaxis_mode != SensingMode.ORACLE:
-            result.append("thermotaxis_temporal")
-        elif module == "aerotaxis" and sensing.aerotaxis_mode != SensingMode.ORACLE:
-            result.append("aerotaxis_temporal")
-        elif module == "pheromone_food" and sensing.pheromone_food_mode != SensingMode.ORACLE:
-            result.append("pheromone_food_temporal")
-        elif module == "pheromone_alarm" and sensing.pheromone_alarm_mode != SensingMode.ORACLE:
-            result.append("pheromone_alarm_temporal")
-        elif (
-            module == "pheromone_aggregation"
-            and sensing.pheromone_aggregation_mode != SensingMode.ORACLE
-        ):
-            result.append("pheromone_aggregation_temporal")
+        if module in mode_map:
+            mode = mode_map[module]
+            suffix = _module_suffix_for_mode(mode)
+            result.append(f"{module}{suffix}" if suffix else module)
         else:
             result.append(module)
 
@@ -776,35 +793,24 @@ def validate_sensing_config(sensing: SensingConfig) -> SensingConfig:
     SensingConfig
         Validated/updated sensing configuration.
     """
-    any_derivative = any(
-        mode == SensingMode.DERIVATIVE
-        for mode in (
-            sensing.chemotaxis_mode,
-            sensing.thermotaxis_mode,
-            sensing.nociception_mode,
-            sensing.aerotaxis_mode,
-            sensing.pheromone_food_mode,
-            sensing.pheromone_alarm_mode,
-            sensing.pheromone_aggregation_mode,
-        )
+    all_modes = (
+        sensing.chemotaxis_mode,
+        sensing.thermotaxis_mode,
+        sensing.nociception_mode,
+        sensing.aerotaxis_mode,
+        sensing.pheromone_food_mode,
+        sensing.pheromone_alarm_mode,
+        sensing.pheromone_aggregation_mode,
     )
-    any_temporal = any(
-        mode == SensingMode.TEMPORAL
-        for mode in (
-            sensing.chemotaxis_mode,
-            sensing.thermotaxis_mode,
-            sensing.nociception_mode,
-            sensing.aerotaxis_mode,
-            sensing.pheromone_food_mode,
-            sensing.pheromone_alarm_mode,
-            sensing.pheromone_aggregation_mode,
-        )
-    )
+    any_derivative = any(mode == SensingMode.DERIVATIVE for mode in all_modes)
+    any_temporal = any(mode == SensingMode.TEMPORAL for mode in all_modes)
+    any_klinotaxis = any(mode == SensingMode.KLINOTAXIS for mode in all_modes)
 
-    # Derivative mode requires STAM — auto-enable if not set
-    if any_derivative and not sensing.stam_enabled:
+    # Derivative and klinotaxis modes require STAM — auto-enable if not set
+    if (any_derivative or any_klinotaxis) and not sensing.stam_enabled:
+        mode_name = "Klinotaxis" if any_klinotaxis else "Derivative"
         logger.info(
-            "Derivative sensing mode requires temporal history — "
+            f"{mode_name} sensing mode requires temporal history — "
             "auto-enabling STAM with default parameters "
             f"(buffer_size={sensing.stam_buffer_size}, "
             f"decay_rate={sensing.stam_decay_rate}).",

@@ -244,6 +244,16 @@ uv run ./scripts/run_simulation.py --runs 3 --config ./configs/scenarios/multi_a
 uv run ./scripts/run_simulation.py --runs 10 --config ./configs/scenarios/multi_agent_foraging/mlpppo_medium_5agents_full_social_oracle.yml --theme headless
 ```
 
+##### Testing with Klinotaxis (Head-Sweep) Sensing
+
+```bash
+# Klinotaxis sensing — biologically accurate head-sweep mode
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/foraging/lstmppo_small_klinotaxis.yml --theme headless
+
+# Klinotaxis with pursuit predators
+uv run ./scripts/run_simulation.py --runs 5 --config ./configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml --theme headless
+```
+
 ### Experiment Tracking and Benchmarks
 
 The project includes a comprehensive experiment tracking and benchmark management system to facilitate reproducibility and performance comparison.

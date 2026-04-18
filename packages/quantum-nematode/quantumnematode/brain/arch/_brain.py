@@ -246,6 +246,40 @@ class BrainParams(BaseModel):
         description="Scaling factor for temporal derivatives before tanh normalization.",
     )
 
+    # --- Klinotaxis (head-sweep) lateral gradients ---
+    food_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral food concentration gradient from head sweep (right - left).",
+    )
+    predator_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral predator concentration gradient from head sweep (right - left).",
+    )
+    temperature_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral temperature gradient from head sweep, normalized by 15.0.",
+    )
+    oxygen_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral oxygen gradient from head sweep, normalized by 21.0.",
+    )
+    pheromone_food_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral food pheromone concentration gradient from head sweep.",
+    )
+    pheromone_alarm_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral alarm pheromone concentration gradient from head sweep.",
+    )
+    pheromone_aggregation_lateral_gradient: float | None = Field(
+        default=None,
+        description="Lateral aggregation pheromone concentration gradient from head sweep.",
+    )
+    lateral_scale: float = Field(
+        default=50.0,
+        description="Scaling factor for lateral gradients before tanh normalization.",
+    )
+
     # --- Social sensing (multi-agent, oracle mode) ---
     nearby_agents_count: int | None = Field(
         default=None,

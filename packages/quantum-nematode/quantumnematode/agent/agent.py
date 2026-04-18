@@ -18,6 +18,7 @@ from quantumnematode.env import (
     DEFAULT_AGENT_ID,
     DynamicForagingEnvironment,
 )
+from quantumnematode.env.env import Direction
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
 from quantumnematode.report.dtypes import PerformanceMetrics
@@ -62,6 +63,52 @@ _ACTION_TO_IDX: dict[str, int] = {
     "forward-left": 4,
     "forward-right": 5,
 }
+
+
+def _compute_lateral_offsets(
+    direction: Direction,
+    position: tuple[int, int],
+    grid_size: int,
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Compute left and right head-sweep sample positions.
+
+    For a given heading direction, compute positions 1 cell perpendicular
+    to the left and right of the agent's heading. Clamps to grid bounds.
+
+    Parameters
+    ----------
+    direction : Direction
+        Agent's current facing direction.
+    position : tuple[int, int]
+        Agent's current (x, y) position.
+    grid_size : int
+        Grid dimension for boundary clamping.
+
+    Returns
+    -------
+    tuple[tuple[int, int], tuple[int, int]]
+        (left_position, right_position) clamped to [0, grid_size-1].
+    """
+    x, y = position
+    max_idx = grid_size - 1
+    if direction == Direction.UP:
+        left = (max(0, x - 1), y)
+        right = (min(max_idx, x + 1), y)
+    elif direction == Direction.RIGHT:
+        left = (x, min(max_idx, y + 1))
+        right = (x, max(0, y - 1))
+    elif direction == Direction.DOWN:
+        left = (min(max_idx, x + 1), y)
+        right = (max(0, x - 1), y)
+    elif direction == Direction.LEFT:
+        left = (x, max(0, y - 1))
+        right = (x, min(max_idx, y + 1))
+    else:
+        # STAY: default to UP-like offsets (caller should use _last_heading)
+        left = (max(0, x - 1), y)
+        right = (min(max_idx, x + 1), y)
+    return left, right
+
 
 # Type alias for STAM channel value fetchers
 ChannelFetcher = Any  # Callable[[tuple[int, int], int], float] — (position, step) -> float
@@ -252,6 +299,7 @@ class QuantumNematodeAgent:
                 num_channels=len(self._active_channels),
             )
         self._previous_position: tuple[int, ...] | None = None
+        self._last_heading: Direction = Direction.UP
 
         if env is None:
             self.env = DynamicForagingEnvironment(
@@ -444,7 +492,7 @@ class QuantumNematodeAgent:
             return [float(gradient_strength)] * self.brain.num_qubits
         return None
 
-    def _compute_temporal_data(  # noqa: C901, PLR0912
+    def _compute_temporal_data(  # noqa: C901, PLR0912, PLR0915
         self,
         sensing: SensingConfig,
         temperature: float | None,  # noqa: ARG002
@@ -495,6 +543,7 @@ class QuantumNematodeAgent:
 
         # (a) Get scalar concentrations from environment at this agent's position
         agent_pos = self.env.agents[self.agent_id].position
+        step = self._episode_tracker.steps
 
         if sensing.chemotaxis_mode != SensingMode.ORACLE:
             result["food_concentration"] = self.env.get_food_concentration(position=agent_pos)
@@ -514,7 +563,6 @@ class QuantumNematodeAgent:
             separated_grads.pop("oxygen_gradient_direction", None)
 
         # Pheromone temporal concentrations (when not oracle mode)
-        step = self._episode_tracker.steps
         if self.env.pheromones.enabled and pheromone_food_mode != SensingMode.ORACLE:
             result["pheromone_food_concentration"] = self.env.get_pheromone_food_concentration(
                 position=agent_pos,
@@ -536,6 +584,86 @@ class QuantumNematodeAgent:
                     current_step=step,
                 )
             )
+
+        # (a2) Klinotaxis: compute lateral gradients from head-sweep sampling
+        any_klinotaxis = SensingMode.KLINOTAXIS in (
+            sensing.chemotaxis_mode,
+            sensing.nociception_mode,
+            sensing.thermotaxis_mode,
+            sensing.aerotaxis_mode,
+            pheromone_food_mode,
+            pheromone_alarm_mode,
+            pheromone_aggregation_mode,
+        )
+        if any_klinotaxis:
+            agent_state = self.env.agents[self.agent_id]
+            heading = agent_state.direction
+            if heading != Direction.STAY:
+                self._last_heading = heading
+            effective_heading = self._last_heading
+            left_pos, right_pos = _compute_lateral_offsets(
+                effective_heading,
+                agent_pos,
+                self.env.grid_size,
+            )
+        else:
+            left_pos = right_pos = agent_pos  # unused, avoids unbound variable
+
+        if sensing.chemotaxis_mode == SensingMode.KLINOTAXIS:
+            left_c = self.env.get_food_concentration(position=left_pos)
+            right_c = self.env.get_food_concentration(position=right_pos)
+            result["food_lateral_gradient"] = right_c - left_c
+
+        if sensing.nociception_mode == SensingMode.KLINOTAXIS:
+            left_c = self.env.get_predator_concentration(position=left_pos)
+            right_c = self.env.get_predator_concentration(position=right_pos)
+            result["predator_lateral_gradient"] = right_c - left_c
+
+        if self.env.thermotaxis.enabled and sensing.thermotaxis_mode == SensingMode.KLINOTAXIS:
+            left_t = self.env.get_temperature(position=left_pos)
+            right_t = self.env.get_temperature(position=right_pos)
+            if left_t is not None and right_t is not None:
+                result["temperature_lateral_gradient"] = (right_t - left_t) / 15.0
+
+        if self.env.aerotaxis.enabled and sensing.aerotaxis_mode == SensingMode.KLINOTAXIS:
+            left_o = self.env.get_oxygen_concentration(position=left_pos)
+            right_o = self.env.get_oxygen_concentration(position=right_pos)
+            if left_o is not None and right_o is not None:
+                result["oxygen_lateral_gradient"] = (right_o - left_o) / 21.0
+
+        if self.env.pheromones.enabled and pheromone_food_mode == SensingMode.KLINOTAXIS:
+            left_c = self.env.get_pheromone_food_concentration(position=left_pos, current_step=step)
+            right_c = self.env.get_pheromone_food_concentration(
+                position=right_pos,
+                current_step=step,
+            )
+            result["pheromone_food_lateral_gradient"] = right_c - left_c
+
+        if self.env.pheromones.enabled and pheromone_alarm_mode == SensingMode.KLINOTAXIS:
+            left_c = self.env.get_pheromone_alarm_concentration(
+                position=left_pos,
+                current_step=step,
+            )
+            right_c = self.env.get_pheromone_alarm_concentration(
+                position=right_pos,
+                current_step=step,
+            )
+            result["pheromone_alarm_lateral_gradient"] = right_c - left_c
+
+        if (
+            self.env.pheromones.enabled
+            and self.env.pheromone_field_aggregation is not None
+            and pheromone_aggregation_mode == SensingMode.KLINOTAXIS
+        ):
+            left_c = self.env.get_pheromone_aggregation_concentration(
+                position=left_pos,
+                current_step=step,
+            )
+            right_c = self.env.get_pheromone_aggregation_concentration(
+                position=right_pos,
+                current_step=step,
+            )
+            result["pheromone_aggregation_lateral_gradient"] = right_c - left_c
 
         # (b) Compute position delta from previous position
         current_pos = tuple(agent_pos)
@@ -567,7 +695,7 @@ class QuantumNematodeAgent:
             for idx, ch_def in enumerate(self._active_channels):
                 if ch_def.derivative_key and ch_def.sensing_mode_attr:
                     mode = getattr(sensing, ch_def.sensing_mode_attr, SensingMode.ORACLE)
-                    if mode == SensingMode.DERIVATIVE:
+                    if mode in (SensingMode.DERIVATIVE, SensingMode.KLINOTAXIS):
                         result[ch_def.derivative_key] = self._stam.compute_temporal_derivative(idx)
 
             result["stam_state"] = tuple(self._stam.get_memory_state().tolist())
@@ -774,6 +902,17 @@ class QuantumNematodeAgent:
             temperature_ddt=temporal.get("temperature_ddt"),
             stam_state=temporal.get("stam_state"),
             derivative_scale=sensing.derivative_scale,
+            lateral_scale=sensing.lateral_scale,
+            # Klinotaxis lateral gradients
+            food_lateral_gradient=temporal.get("food_lateral_gradient"),
+            predator_lateral_gradient=temporal.get("predator_lateral_gradient"),
+            temperature_lateral_gradient=temporal.get("temperature_lateral_gradient"),
+            oxygen_lateral_gradient=temporal.get("oxygen_lateral_gradient"),
+            pheromone_food_lateral_gradient=temporal.get("pheromone_food_lateral_gradient"),
+            pheromone_alarm_lateral_gradient=temporal.get("pheromone_alarm_lateral_gradient"),
+            pheromone_aggregation_lateral_gradient=temporal.get(
+                "pheromone_aggregation_lateral_gradient",
+            ),
             # Agent proprioception
             agent_position=(float(agent_pos[0]), float(agent_pos[1])),
             agent_direction=agent_state.direction,
