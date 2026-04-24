@@ -1,0 +1,109 @@
+# Multi-Agent Klinotaxis — Single Cluster, Aggregation Pheromone Only
+# LSTM PPO GRU with Phase 3 proven brain hyperparams
+#
+# Round 3 channel-isolation ablation. Same environment as R5 strong-pheromone
+# config (emission=3.0, spatial_decay=12.0, half_life=100) but agents' brains
+# drop pheromone_food from sensory_modules. Tests whether conspecific-follow-
+# ing (aggregation pheromone) alone is sufficient, or whether the R5 effect
+# is driven specifically by food-marking trails.
+
+max_steps: 1500
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+    sensory_modules:
+      - food_chemotaxis
+      - proprioception
+      - pheromone_aggregation
+      - stam
+
+body_length: 2
+
+multi_agent:
+  enabled: true
+  count: 5
+  food_competition: first_arrival
+  social_detection_radius: 5
+  termination_policy: freeze
+  min_agent_distance: 10
+
+reward:
+  reward_goal: 5.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.1
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 800.0
+  satiety_decay_rate: 0.5
+  satiety_gain_per_food: 0.5
+
+environment:
+  grid_size: 100
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    pheromone_aggregation_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 1
+    min_food_distance: 1
+    agent_exclusion_radius: 3
+    gradient_decay_constant: 2.0
+    gradient_strength: 1.0
+    food_hotspots:
+      - [50, 50, 1.0]
+    food_hotspot_bias: 1.0
+    food_hotspot_decay: 2.0
+    no_respawn: true
+
+  pheromones:
+    enabled: true
+    food_marking:
+      emission_strength: 3.0
+      spatial_decay_constant: 12.0
+      temporal_half_life: 100
+      max_sources: 50
+    aggregation:
+      emission_strength: 0.5
+      spatial_decay_constant: 10.0
+      temporal_half_life: 10
+      max_sources: 200
+
+  social_feeding:
+    enabled: true
+    decay_reduction: 0.7
+    solitary_decay: 1.0
