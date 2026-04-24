@@ -1591,6 +1591,14 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
         theme=theme,
     )
 
+    # Set STAM dim context from env so heterogeneous brains (e.g. loners that
+    # omit pheromone modules while the env still enables pheromones) size
+    # their LayerNorms to match the shared runtime STAM state length.
+    from quantumnematode.agent.stam import stam_dim_from_env
+    from quantumnematode.brain.modules import set_stam_dim_context
+
+    set_stam_dim_context(stam_dim_from_env(env))
+
     # Create agents with independent brains
     agents: list[QuantumNematodeAgent] = []
 
@@ -1645,6 +1653,9 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
             agent_id=ac.id,
         )
         agents.append(agent)
+
+    # Clear STAM dim context after all brains are constructed.
+    set_stam_dim_context(None)
 
     # Create orchestrator
     food_policy = FoodCompetitionPolicy(multi_agent_config.food_competition)

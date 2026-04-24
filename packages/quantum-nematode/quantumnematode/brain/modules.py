@@ -1289,6 +1289,24 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
     return compute_memory_dim(num_channels)
 
 
+# Ambient STAM dim, set once before brain construction when env is known.
+# Heterogeneous multi-agent configs must set this so each agent's LayerNorm
+# matches the env-resolved STAM memory layout — per-brain inference from
+# sensory_modules is wrong when a brain omits pheromone modules that the
+# environment nonetheless enables.
+_STAM_DIM_CONTEXT: int | None = None
+
+
+def set_stam_dim_context(stam_dim: int | None) -> None:
+    """Set the ambient STAM dim used by brain construction.
+
+    Call once after env creation with ``stam_dim_from_env(env)``, then call
+    with ``None`` to clear after all brains are constructed.
+    """
+    global _STAM_DIM_CONTEXT  # noqa: PLW0603
+    _STAM_DIM_CONTEXT = stam_dim
+
+
 def get_classical_feature_dimension(
     modules: list[ModuleName],
     stam_dim_override: int | None = None,
@@ -1306,14 +1324,21 @@ def get_classical_feature_dimension(
     stam_dim_override : int or None, optional
         Override for STAM module classical_dim. Callers with env access
         should pass ``stam_dim_from_env(env)`` from ``quantumnematode.agent.stam``.
-        If not provided, auto-infers from the modules list.
+        If not provided, falls back to the STAM dim context set via
+        ``set_stam_dim_context`` (used by multi-agent code), and finally to
+        auto-inference from the modules list.
 
     Returns
     -------
     int
         Total number of features across all modules.
     """
-    effective_stam_dim = stam_dim_override or _infer_stam_dim_from_modules(modules)
+    if stam_dim_override is not None:
+        effective_stam_dim = stam_dim_override
+    elif _STAM_DIM_CONTEXT is not None:
+        effective_stam_dim = _STAM_DIM_CONTEXT
+    else:
+        effective_stam_dim = _infer_stam_dim_from_modules(modules)
 
     total = 0
     for module in modules:
