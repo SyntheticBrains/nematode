@@ -45,7 +45,7 @@ New `EvolutionConfig` Pydantic model added to [config_loader.py](packages/quantu
 
 New directory `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
 
-- `test_brain_factory.py` — `instantiate_brain_from_sim_config` returns the correct brain type for `mlpppo` and `lstmppo` configs
+- `test_brain_factory.py` — `instantiate_brain_from_sim_config` returns the correct brain type for `mlpppo` and `lstmppo` configs; verifies the wrapper patches `BrainConfig.seed` (not `SimulationConfig.seed`) when `seed` is supplied; verifies the wrapper forces `weights_path = None` so disk-cached weights are never loaded for evolution
 - `test_encoders.py` — round-trip determinism (MLPPPO + LSTMPPO), genome dim correctness, `_episode_count` reset + LR sync guard, registry membership, dynamic component discovery (proves `gate_weights` and `layer_norm` are picked up), denylist exclusion
 - `test_lineage.py` — CSV append correctness across generations, gen-0 empty parent_ids, 0-based generation indexing
 - `test_fitness.py` — fitness in [0, 1] for an arbitrary genome; deterministic for fixed seed; `FrozenEvalRunner` never calls `brain.learn()` (including on the success path that the standard runner would default to `learn=True`); success detection uses `TerminationReason.COMPLETED_ALL_FOOD`

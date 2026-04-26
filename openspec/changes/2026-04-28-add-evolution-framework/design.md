@@ -367,4 +367,4 @@ For M0's frozen-weight fitness this is irrelevant — the buffer is consumed by 
 - reach into `brain.buffer.rng` and reseed it too, or
 - add a `brain.reseed(seed)` method that handles both `self.rng` and `self.buffer.rng`
 
-Note: M0's seeding pattern (`sim_config.model_copy(update={"seed": seed})` before `encoder.decode()`) sidesteps this entirely because the brain's constructor creates a fresh `RolloutBuffer` with the new RNG. M2 only hits this if it tries to reseed a *post-construction* brain.
+Note: M0's seeding pattern (`encoder.decode(genome, sim_config, seed=seed)` → wrapper patches `BrainConfig.seed` → brain constructor creates a fresh `RolloutBuffer` with the new RNG) sidesteps this entirely. M2 only hits the buffer-reseed concern if it tries to reseed a *post-construction* brain (e.g. between training and eval phases of a single fitness evaluation).
