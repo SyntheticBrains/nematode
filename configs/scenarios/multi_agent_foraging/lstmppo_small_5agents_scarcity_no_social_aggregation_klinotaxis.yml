@@ -1,0 +1,96 @@
+# Multi-Agent Klinotaxis — Scarcity + Aggregation Pheromone, No Social Feeding
+# LSTM PPO GRU with Phase 3 proven brain hyperparams
+#
+# Isolates the aggregation pheromone channel from the social_feeding mechanic.
+# Same as R5c but with social_feeding disabled. Pairs with R4d (no social,
+# no aggregation) — together with R4c and R5c forms a 2x2 factorial:
+#   - R4c: social ON, aggregation OFF  (Campaign E klinotaxis port)
+#   - R4d: social OFF, aggregation OFF (baseline scarcity)
+#   - R5c: social ON, aggregation ON
+#   - R5d: social OFF, aggregation ON (this config)
+
+max_steps: 1000
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 64
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+    sensory_modules:
+      - food_chemotaxis
+      - pheromone_aggregation
+      - proprioception
+      - stam
+
+body_length: 2
+
+multi_agent:
+  enabled: true
+  count: 5
+  food_competition: first_arrival
+  social_detection_radius: 5
+  termination_policy: freeze
+  min_agent_distance: 3
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 2.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    pheromone_aggregation_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 1
+    target_foods_to_collect: 10
+    min_food_distance: 2
+    agent_exclusion_radius: 2
+    gradient_decay_constant: 4.0
+    gradient_strength: 1.0
+
+  pheromones:
+    enabled: true
+    aggregation:
+      emission_strength: 0.5
+      spatial_decay_constant: 10.0
+      temporal_half_life: 10
+      max_sources: 200
