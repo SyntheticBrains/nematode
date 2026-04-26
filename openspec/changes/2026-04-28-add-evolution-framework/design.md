@@ -37,9 +37,19 @@ class GenomeEncoder(Protocol):
     def genome_dim(self, sim_config: SimulationConfig) -> int: ...
 ```
 
-Encoders delegate the actual brain construction to a thin helper at `evolution/brain_factory.py`:
+Encoders delegate the actual brain construction to a thin helper at `evolution/brain_factory.py`. The wrapper reuses the existing `configure_*` helpers from [`utils/config_loader.py`](packages/quantum-nematode/quantumnematode/utils/config_loader.py) for the type conversions `setup_brain_model` requires — `sim_config.learning_rate` is a `LearningRateConfig` Pydantic model, but `setup_brain_model` takes a *runtime* learning-rate object (one of `ConstantLearningRate | DynamicLearningRate | AdamLearningRate | PerformanceBasedLearningRate`). The same applies to `gradient_method` and `parameter_initializer_config`. `configure_learning_rate(sim_config)` etc. perform these conversions:
 
 ```python
+from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
+from quantumnematode.utils.brain_factory import setup_brain_model
+from quantumnematode.utils.config_loader import (
+    configure_brain,
+    configure_gradient_method,
+    configure_learning_rate,
+    configure_parameter_initializer,
+)
+
+
 def instantiate_brain_from_sim_config(
     sim_config: SimulationConfig,
     *,
@@ -53,25 +63,35 @@ def instantiate_brain_from_sim_config(
     self.rng = get_rng(seed)), forces weights_path=None (the genome is the
     weight source, not a disk file), and dispatches to setup_brain_model().
     """
-    brain_config = configure_brain(sim_config)  # returns BrainConfig
-    overrides = {"weights_path": None}          # never load pretrained for evolution
+    # Patch BrainConfig.seed (NOT SimulationConfig.seed) and force weights_path=None
+    brain_config = configure_brain(sim_config)
+    overrides: dict[str, object] = {"weights_path": None}
     if seed is not None:
-        overrides["seed"] = seed                # patch BrainConfig.seed (NOT SimulationConfig.seed)
+        overrides["seed"] = seed
     brain_config = brain_config.model_copy(update=overrides)
+
+    # Convert config-shaped fields to runtime objects via existing helpers
+    learning_rate = configure_learning_rate(sim_config)
+    gradient_method = configure_gradient_method(sim_config)
+    parameter_initializer_config = configure_parameter_initializer(sim_config)
+    gradient_max_norm = sim_config.gradient.max_norm if sim_config.gradient else None
+
     return setup_brain_model(
-        brain_type=...,                         # derived from sim_config.brain.name
+        brain_type=BrainType(sim_config.brain.name),  # str → enum coercion
         brain_config=brain_config,
-        shots=sim_config.shots or DEFAULT_SHOTS,
-        qubits=sim_config.qubits or 0,
-        device=DeviceType.CPU,                  # fixed for evolution fitness eval
-        learning_rate=...,                      # extracted from sim_config.learning_rate
-        gradient_method=...,                    # extracted from sim_config.gradient
-        gradient_max_norm=...,
-        parameter_initializer_config=sim_config.parameter_initializer,
+        shots=sim_config.shots or 1024,               # quantum-only; classical brains ignore
+        qubits=sim_config.qubits or 0,                # quantum-only
+        device=DeviceType.CPU,                        # fixed for evolution fitness eval
+        learning_rate=learning_rate,
+        gradient_method=gradient_method,
+        gradient_max_norm=gradient_max_norm,
+        parameter_initializer_config=parameter_initializer_config,
     )
 ```
 
 This wrapper exists so encoders don't each duplicate the 8-argument call to `setup_brain_model`. If `setup_brain_model`'s signature changes, the wrapper absorbs it.
+
+**Field-name watch:** `GradientConfig.max_norm` (not `gradient_max_norm`) is the actual field name on the config; only `setup_brain_model`'s parameter is called `gradient_max_norm`. The wrapper bridges the two.
 
 **Why patch `BrainConfig.seed`, not `SimulationConfig.seed`:** the brain's `__init__` reads `config.seed` from its `BrainConfig` (mlpppo.py:168 `self.seed = ensure_seed(config.seed)`), not from the top-level `SimulationConfig.seed`. The established pattern in `scripts/run_simulation.py` is `brain_config = brain_config.model_copy(update={"seed": simulation_seed})`. The wrapper follows this pattern. An earlier draft of this design tried to patch `SimulationConfig.seed` instead and silently failed to propagate the seed to the brain; the wrapper-level patching avoids that trap.
 
