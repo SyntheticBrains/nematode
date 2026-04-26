@@ -96,7 +96,16 @@ The `EpisodicSuccessRate` fitness function SHALL evaluate a genome by running it
 - **GIVEN** the same `genome`, `sim_config`, `encoder`, `episodes`, and `seed`
 - **WHEN** `evaluate()` is invoked twice
 - **THEN** the two returned fitness values SHALL be byte-identical
-- **AND** the fitness function SHALL apply `seed` to (a) the environment via `create_env_from_config(env_config, seed=seed)`, (b) the brain's numpy RNG via `brain.rng = np.random.default_rng(seed)`, and (c) torch via `torch.manual_seed(seed)` — all three sources, not just one
+- **AND** the fitness function SHALL apply `seed` by calling `sim_config.model_copy(update={"seed": seed})` BEFORE invoking `encoder.decode()`, so the brain's `__init__` (which calls `set_global_seed(self.seed)` and `get_rng(self.seed)`) seeds numpy global, torch global, and the brain's local RNG to the fitness `seed`
+- **AND** the fitness function SHALL pass the same `seed` to `create_env_from_config(env_config, seed=seed)` for environment RNG
+- **AND** the fitness function SHALL NOT call `torch.manual_seed(seed)` or assign `brain.rng` directly — those would either be no-ops (clobbered by the brain's constructor) or duplicates of work the brain already does
+
+#### Scenario: Fitness `seed` parameter overrides `sim_config.seed`
+
+- **GIVEN** a `sim_config` whose `seed` field is `0`
+- **WHEN** `evaluate()` is invoked with `seed=1` and again with `seed=2`
+- **THEN** the two fitness values MAY differ
+- **AND** this proves the fitness function's `seed` parameter — not the YAML-configured `sim_config.seed` — controls the per-evaluation RNG state
 
 ### Requirement: Lineage Tracking
 
@@ -116,6 +125,14 @@ The system SHALL maintain a single CSV file per evolution run recording every fi
 - **WHEN** the row is read
 - **THEN** the `parent_ids` field SHALL be a `;`-joined string of parent genome IDs from generation `N-1`
 - **AND** for `generation == 0`, `parent_ids` SHALL be empty
+
+#### Scenario: parent_ids convention for CMA-ES and GA
+
+- **GIVEN** an evolution run using either CMA-ES or GA (neither optimiser exposes per-child parent provenance)
+- **WHEN** lineage rows are written for generation N (where N > 0) with population size P
+- **THEN** every gen-N row's `parent_ids` SHALL be the `;`-joined set of ALL P genome IDs from generation N-1 (not just a subset)
+- **AND** this SHALL be true regardless of which optimiser is in use — the convention is uniform across CMA-ES and GA so downstream tooling does not need an algorithm-specific code path
+- **AND** for CMA-ES this is semantically accurate (every gen-N-1 candidate contributes to the distribution that samples gen-N); for GA it is a slight over-approximation since true crossover parents are a 2-element subset, but the GA optimiser does not expose them
 
 #### Scenario: Append mode preserves history across resume
 

@@ -47,6 +47,8 @@ def instantiate_brain_from_sim_config(sim_config: SimulationConfig) -> Brain:
 
 This wrapper exists so encoders don't each duplicate the 8-argument call to `setup_brain_model`. If `setup_brain_model`'s signature changes, the wrapper absorbs it.
 
+**Note on `genome_dim()` cost:** `genome_dim(sim_config)` constructs a fresh brain to introspect its weight components — `MLPPPOBrain.input_dim` is computed at `__init__` time from `sensory_modules` ([mlpppo.py:177](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L177)), so it can't be derived statically from `MLPPPOBrainConfig` alone. This makes `genome_dim()` a full PyTorch model construction, not a cheap lookup. The optimiser calls it once at startup to set `num_params`, so the cost is amortised. Implementations should NOT call `genome_dim()` per-generation or inside hot loops.
+
 **Why pass `sim_config` rather than a narrower `EvolutionContext`:** `sim_config` is what the YAML config parses into and what gets pickled across worker processes anyway. Introducing a narrower context type adds a translation layer that isn't load-bearing.
 
 **Why a dedicated `evolution/brain_factory.py` rather than calling `setup_brain_model` directly:** evolution-specific concerns — fixed `device=CPU` for fitness eval, ignoring quantum-only fields like `shots` for classical brains, defaulting `parameter_initializer_config` when not specified — live in one place. Future Phase 6 quantum encoder support will extend this wrapper, not every encoder.
@@ -104,8 +106,6 @@ For M0, fitness evaluates a brain initialised from the genome and run for K epis
 **Sketch:**
 
 ```python
-import numpy as np
-import torch
 from quantumnematode.agent.agent import QuantumNematodeAgent
 from quantumnematode.agent.runners import StandardEpisodeRunner
 from quantumnematode.report.dtypes import TerminationReason
@@ -144,10 +144,13 @@ def _build_agent(brain, env, sim_config) -> QuantumNematodeAgent:
 
 class EpisodicSuccessRate:
     def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
-        # Apply seed everywhere a per-episode trajectory consumes RNG (see Decision 3a)
-        torch.manual_seed(seed)
+        # Override sim_config.seed with the fitness function's seed BEFORE decode.
+        # The brain's __init__ calls set_global_seed(self.seed) which seeds both
+        # numpy and torch globals, AND get_rng(self.seed) which seeds brain.rng.
+        # By overriding sim_config.seed we use the brain's existing seeding
+        # infrastructure rather than fighting it (see Decision 3a).
+        sim_config = sim_config.model_copy(update={"seed": seed})
         brain = encoder.decode(genome, sim_config)
-        brain.rng = np.random.default_rng(seed)  # MLPPPO/LSTMPPO have a numpy Generator
         env = create_env_from_config(sim_config.environment, seed=seed)
 
         agent = _build_agent(brain, env, sim_config)
@@ -164,21 +167,35 @@ class EpisodicSuccessRate:
 
 **Note on agent constructor args:** `QuantumNematodeAgent.__init__` ([agent.py:245](packages/quantum-nematode/quantumnematode/agent/agent.py#L245)) takes 9 keyword args. The fitness function passes `brain`, `env`, `satiety_config=sim_config.satiety`, and `sensing_config=sim_config.environment.sensing` (or `None` if `sim_config.environment` is itself None). Other args use defaults — `theme`, `rich_style_config` are presentation-only; `agent_id` defaults to `"default"`; `maze_grid_size` and `max_body_length` are unused when an explicit `env` is provided. The private helper `_build_agent(brain, env, sim_config)` in `evolution/fitness.py` centralises this.
 
-### Decision 3a: Seed application is the fitness function's responsibility
+### Decision 3a: Seed application via `sim_config.model_copy(update={"seed": seed})`
 
-The `evaluate()` signature includes `seed: int`. Three RNG sources determine episode trajectories and must all be seeded for `seed` to actually produce determinism:
+The `evaluate()` signature includes `seed: int`. The fitness function applies it by **overriding `sim_config.seed` before calling `encoder.decode()`**, then forwarding the same `seed` to the env factory. Concretely:
 
-1. **Environment RNG**: `create_env_from_config(sim_config.environment, seed=seed)` — controls food spawn positions, predator placement, and any stochastic env events
-2. **Brain numpy RNG**: `brain.rng = np.random.default_rng(seed)` — `MLPPPOBrain` ([mlpppo.py:169](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L169)) and `LSTMPPOBrain` (analogous) hold a `numpy.random.Generator` for action sampling. The brain's own constructor seeds this from a config param, but evolution overrides it post-construction so each genome+seed pair is independent of the constructor's seed source
-3. **Torch RNG**: `torch.manual_seed(seed)` — covers any nn.Module-internal randomness (dropout, parameter init reuse). M0's brains don't use dropout in eval, but `torch.manual_seed` is cheap insurance and required for the round-trip determinism guarantee in Decision 1
+```python
+sim_config = sim_config.model_copy(update={"seed": seed})  # Pydantic v2 model_copy
+brain = encoder.decode(genome, sim_config)                  # brain.__init__ now seeds globals to OUR seed
+env = create_env_from_config(sim_config.environment, seed=seed)  # env RNG seeded directly
+```
+
+**Why this works:** `MLPPPOBrain.__init__` ([mlpppo.py:168-170](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L168)) does:
+
+```python
+self.seed = ensure_seed(config.seed)
+self.rng = get_rng(self.seed)         # seeds the brain's local numpy Generator
+set_global_seed(self.seed)            # seeds np.random AND torch.manual_seed globals
+```
+
+`set_global_seed` ([seeding.py:65-90](packages/quantum-nematode/quantumnematode/utils/seeding.py#L65)) calls `np.random.seed(seed)` and `torch.manual_seed(seed)`. So by the time `decode()` returns, all three RNG sources (brain's local Generator, global numpy, global torch) are seeded with the fitness function's `seed`. We then seed the env RNG directly via `create_env_from_config(..., seed=seed)`.
+
+**The bug an earlier sketch had:** doing `torch.manual_seed(seed)` *before* `decode()` was a no-op — the brain's constructor immediately re-seeded torch globally to `config.seed` (the YAML-configured seed, not the fitness function's `seed`). The fix is to override `config.seed` itself, so the brain's constructor uses the right value when it does its own seeding.
+
+**Why use the brain's existing seeding rather than seeding ourselves:** the brain already seeds correctly for fresh construction. By overriding `sim_config.seed`, we re-use that infrastructure instead of fighting it — fewer manual `torch.manual_seed` calls, no order-of-operations traps, and any future addition to the brain's `__init__` seeding (e.g. CUDA RNG) propagates automatically.
+
+**Why `model_copy` rather than mutating sim_config:** Pydantic v2 models are immutable by default. `model_copy(update={...})` is the v2 idiomatic way to produce a modified copy, used elsewhere in the codebase ([config_loader.py:818](packages/quantum-nematode/quantumnematode/utils/config_loader.py#L818)). Mutating in place would also mutate the caller's sim_config, which is undesirable across worker processes.
 
 **Why the fitness function does this and not the encoder:** the encoder produces a brain from a genome — it shouldn't know about the seed of the *current evaluation*. Each call to `evaluate()` is its own seeded trial; the encoder is genome→brain regardless of which seed will be used for the trial.
 
-**Why all three, not just one:** missing any one of the three creates a leak. Forgetting `torch.manual_seed` means GPU/CPU RNG drift between identical-seed evaluations of the same genome on different machines (less of a concern in CPU-only CI). Forgetting `brain.rng` means action sampling is non-deterministic. Forgetting the env seed means food positions vary.
-
-**Caveat for M2 (out of scope here, recorded for future reference):** `MLPPPOBrain` and `LSTMPPOBrain` both construct a `RolloutBuffer` that captures `self.rng` by reference at construction time ([mlpppo.py:246](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L246), [lstmppo.py:430](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py#L430)). Overwriting `brain.rng = np.random.default_rng(seed)` post-construction does NOT propagate to the buffer's reference. For M0 frozen-weight fitness this is irrelevant — the buffer is consumed by `.learn()` which we never call. For M2's `LearnedPerformanceFitness`, fitness evaluations that include training will need to either reach into `brain.buffer.rng` and reseed it too, or add a `brain.reseed(seed)` method that handles both. Recording this so M2 doesn't trip.
-
-Determinism is the contract the framework promises so that genome quality is meaningfully comparable across the population. M2's `LearnedPerformanceFitness` will use the same three-RNG seeding pattern.
+Determinism is the contract the framework promises so that genome quality is meaningfully comparable across the population. M2's `LearnedPerformanceFitness` will use the same `model_copy` pattern.
 
 **Why a runner subclass rather than a fork of the per-step loop:** the per-step loop in `StandardEpisodeRunner` is non-trivial (rewards, sensory prep, STAM updates, predator handling, termination conditions). Forking risks behavioural drift from the standard runner — exactly the maintenance debt that justified deleting the legacy script. Subclassing and overriding only `_terminate_episode` keeps the step semantics identical and makes the frozen guarantee visible at the type level.
 
@@ -207,6 +224,22 @@ Columns: `generation, child_id, parent_ids, fitness, brain_type`. `parent_ids` i
 **Generation indexing is 0-based.** A run with `generations: G` populates rows for generations `0, 1, ..., G-1` (inclusive lower, exclusive upper — Python's range convention). Total row count is `P × G` where `P` is `population_size`. Generation 0 rows have empty `parent_ids` (no prior generation to attribute to).
 
 **Why CSV not JSON Lines:** existing experiment tracking uses CSV (artifacts/logbooks/011/). Tooling and human inspection are CSV-native. Append mode plays nicely with resume: the file just keeps growing.
+
+### Decision 5a: parent_ids convention — every member of generation N-1 is a parent of every member of generation N
+
+Neither `CMAESOptimizer.ask()` nor `GeneticAlgorithmOptimizer.ask()` exposes parent→child provenance to the loop. CMA-ES samples a population from a Gaussian whose mean and covariance are updated by all of generation N-1's fitnesses — there are no discrete parents. GA does internal tournament selection but the optimiser interface returns only the candidate solutions, not the parents that produced them.
+
+**Convention:** for both algorithms, the lineage tracker records **every member of generation N-1 as a parent of every member of generation N**. So a row for a gen-N candidate has `parent_ids` listing all P genome IDs from gen N-1, `;`-joined.
+
+**Why this convention:**
+
+- For CMA-ES, this is semantically accurate: every previous candidate contributed (weighted by fitness rank) to the distribution that sampled the new generation.
+- For GA, it's a slight over-approximation (a child only has 2 actual parents via crossover), but the optimiser doesn't expose those, and the over-approximation is harmless — downstream lineage analysis can still reconstruct fitness gradients across generations. If GA's true parent provenance becomes load-bearing for an analysis, we'd modify `GeneticAlgorithmOptimizer.ask()` to return parent indices alongside candidates — out of M0 scope.
+- For generation 0, `parent_ids` is empty (no prior generation).
+
+**Cost:** `parent_ids` strings get long. With population P=20, each gen-N row has a 20-UUID-long `parent_ids` field — about 720 chars (UUID is 36 chars + separator). For typical campaigns (50 gens × 20 pop = 1000 rows), the lineage CSV is ~750 KB. Acceptable.
+
+**Why not omit `parent_ids` for CMA-ES:** keeping the convention uniform across algorithms means downstream tooling (lineage visualisations, fitness gradient analysis) doesn't need an algorithm-specific code path. The tracker writes the same CSV shape regardless of optimiser type.
 
 ### Decision 6: Encoder registry is a static dict, not a plugin discovery system
 
@@ -257,3 +290,18 @@ Both `mlpppo_foraging_small.yml` and `lstmppo_foraging_small_klinotaxis.yml` shi
 `evolution/` depends on `optimizers/` (uses `CMAESOptimizer`, `GeneticAlgorithmOptimizer`, `EvolutionResult`), `brain/` (uses `Brain`, `WeightPersistence`, concrete brain classes), `agent/` (uses `QuantumNematodeAgent`), `env/` (uses `create_env_from_config`), and `utils/` (uses `SimulationConfig`, `setup_brain_model`).
 
 **`optimizers/` MUST NOT import from `evolution/`** — one-way dependency. The optimisers are general-purpose (CMA-ES on a sphere function works without any evolution framework); they pre-date this module and remain reusable independently. Any temptation to add evolution-specific helpers to `optimizers/evolutionary.py` is a smell — put them in `evolution/`.
+
+## Forward-looking notes (out of M0 scope)
+
+Recorded here so future Phase 5 milestones don't re-discover these.
+
+### RolloutBuffer captures `brain.rng` by reference (M2 concern)
+
+`MLPPPOBrain` and `LSTMPPOBrain` both construct a `RolloutBuffer` that captures `self.rng` by reference at construction time ([mlpppo.py:246](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L246), [lstmppo.py:430](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py#L430)).
+
+For M0's frozen-weight fitness this is irrelevant — the buffer is consumed by `.learn()` which we never call. For M2's `LearnedPerformanceFitness`, fitness evaluations that include training will need to either:
+
+- reach into `brain.buffer.rng` and reseed it too, or
+- add a `brain.reseed(seed)` method that handles both `self.rng` and `self.buffer.rng`
+
+Note: M0's seeding pattern (`sim_config.model_copy(update={"seed": seed})` before `encoder.decode()`) sidesteps this entirely because the brain's constructor creates a fresh `RolloutBuffer` with the new RNG. M2 only hits this if it tries to reseed a *post-construction* brain.
