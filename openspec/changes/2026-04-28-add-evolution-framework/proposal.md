@@ -15,11 +15,12 @@ M0 ships **frozen-weight fitness only** (`EpisodicSuccessRate` — runs the brai
 
 ### 1. New `quantumnematode.evolution` Module
 
-Five files under `packages/quantum-nematode/quantumnematode/evolution/`:
+Six files under `packages/quantum-nematode/quantumnematode/evolution/`:
 
 - `genome.py` — `Genome` dataclass (`params: np.ndarray`, `genome_id`, `parent_ids`, `generation`, `birth_metadata`) plus a deterministic `genome_id_for(generation, index, parent_ids)` helper
-- `encoders.py` — `GenomeEncoder` protocol (`initial_genome`, `decode`, `genome_dim`) plus two concrete encoders (`MLPPPOEncoder`, `LSTMPPOEncoder`) plus `ENCODER_REGISTRY: dict[str, type[GenomeEncoder]]`. Encoders use the existing `WeightPersistence` protocol from [brain/weights.py](packages/quantum-nematode/quantumnematode/brain/weights.py). Components are discovered **dynamically** via `get_weight_components()` and filtered by a fixed **denylist** of non-genome state: `{"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}`. This picks up *all* learned-weight components automatically — including conditional ones like MLPPPO's `gate_weights` (when `_feature_gating` is enabled) and LSTMPPO's `layer_norm` — and survives future component additions without encoder changes
-- `fitness.py` — `FitnessFunction` protocol plus `EpisodicSuccessRate` (frozen weights, no `.learn()` call). Lifts ~80 LOC from the per-episode loop pattern in [scripts/run_simulation.py](scripts/run_simulation.py) without rendering or CSV export
+- `brain_factory.py` — thin wrapper `instantiate_brain_from_sim_config(sim_config: SimulationConfig) -> Brain` that gathers all the arguments [`utils/brain_factory.setup_brain_model()`](packages/quantum-nematode/quantumnematode/utils/brain_factory.py#L51) needs (`shots`, `qubits`, `device`, `learning_rate`, `gradient_method`, `gradient_max_norm`, `parameter_initializer_config`) from a `SimulationConfig` and returns a fresh `Brain` instance. Encoders call this — they do not call `setup_brain_model` directly. Single source of truth for "how to build a fresh brain for evolution from a config"
+- `encoders.py` — `GenomeEncoder` protocol whose methods take **the full `SimulationConfig`** (not just `BrainConfig`), since brain instantiation needs more than `BrainConfig` provides (`shots`, `device`, learning rate config, etc.). Signatures: `initial_genome(sim_config) -> Genome`, `decode(genome, sim_config) -> Brain`, `genome_dim(sim_config) -> int`. Plus two concrete encoders (`MLPPPOEncoder`, `LSTMPPOEncoder`) and `ENCODER_REGISTRY: dict[str, type[GenomeEncoder]]`. Encoders use the existing `WeightPersistence` protocol from [brain/weights.py](packages/quantum-nematode/quantumnematode/brain/weights.py). Components are discovered **dynamically** via `get_weight_components()` and filtered by a fixed **denylist** of non-genome state: `{"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}`. This picks up *all* learned-weight components automatically — including conditional ones like MLPPPO's `gate_weights` (when `_feature_gating` is enabled) and LSTMPPO's `layer_norm` — and survives future component additions without encoder changes
+- `fitness.py` — `FitnessFunction` protocol plus `EpisodicSuccessRate` (frozen weights, no `.learn()` call). **Implementation reuses the existing [`QuantumNematodeAgent.run_episode()`](packages/quantum-nematode/quantumnematode/agent/agent.py#L384) directly** — does NOT re-implement the per-step loop. ~30 LOC total: decode genome → build env via `create_env_from_config` → instantiate `QuantumNematodeAgent` → loop `episodes` calls to `agent.run_episode(reward_config, max_steps)` → return mean success rate
 - `lineage.py` — `LineageTracker` writing a single CSV at `evolution_results/<session_id>/lineage.csv` with columns `generation, child_id, parent_ids, fitness, brain_type`. Append mode so resume works seamlessly
 - `loop.py` — `EvolutionLoop` class with `run(*, resume_from)` method. Wraps the existing optimisers and provides parallel fitness eval (multiprocessing.Pool with the SIGINT-ignore worker pattern from the legacy script) plus pickle checkpoint/resume
 
@@ -44,11 +45,12 @@ New `EvolutionConfig` Pydantic model added to [config_loader.py](packages/quantu
 
 New directory `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
 
-- `test_encoders.py` — round-trip determinism (MLPPPO + LSTMPPO), genome dim correctness, `_episode_count` reset guard, registry membership, dynamic component discovery (proves `gate_weights` and `layer_norm` are picked up)
-- `test_lineage.py` — CSV append correctness across generations, gen-0 empty parent_ids
-- `test_fitness.py` — fitness function returns a float in [0, 1] for an arbitrary genome; deterministic for fixed seed
+- `test_brain_factory.py` — `instantiate_brain_from_sim_config` returns the correct brain type for `mlpppo` and `lstmppo` configs
+- `test_encoders.py` — round-trip determinism (MLPPPO + LSTMPPO), genome dim correctness, `_episode_count` reset + LR sync guard, registry membership, dynamic component discovery (proves `gate_weights` and `layer_norm` are picked up), denylist exclusion
+- `test_lineage.py` — CSV append correctness across generations, gen-0 empty parent_ids, 0-based generation indexing
+- `test_fitness.py` — fitness function returns a float in [0, 1] for an arbitrary genome; deterministic for fixed seed; never calls `brain.learn()`
 - `test_loop_smoke.py` — 3-generation MLPPPO run end-to-end, checkpoint resume, checkpoint key shape, unknown brain name error
-- `test_config.py` — existing scenario configs load with `evolution=None`; `evolution:` block parses correctly; CLI overrides YAML
+- `test_config.py` — existing scenario configs load with `evolution=None`; `evolution:` block parses correctly; CLI overrides YAML (subprocess test)
 
 CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a new `@pytest.mark.smoke test_run_evolution_smoke_mlpppo` that runs the new `scripts/run_evolution.py` against `configs/evolution/mlpppo_foraging_small.yml` with minimal parameters (1 gen, pop 4, 2 episodes). The legacy `test_run_evolution_smoke` is **deleted** as part of legacy script removal.
 
@@ -60,7 +62,7 @@ CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a n
 
 **Code:**
 
-- `packages/quantum-nematode/quantumnematode/evolution/{__init__,genome,encoders,fitness,lineage,loop}.py` — new module
+- `packages/quantum-nematode/quantumnematode/evolution/{__init__,genome,brain_factory,encoders,fitness,lineage,loop}.py` — new module
 - `scripts/run_evolution.py` — fresh CLI replaces legacy QVarCircuit-only script (legacy deleted, not preserved)
 - `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — `EvolutionConfig` model + optional field on `SimulationConfig`
 
@@ -72,7 +74,7 @@ CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a n
 
 **Tests:**
 
-- `packages/quantum-nematode/tests/quantumnematode_tests/evolution/{__init__,test_encoders,test_lineage,test_fitness,test_loop_smoke,test_config}.py` (new)
+- `packages/quantum-nematode/tests/quantumnematode_tests/evolution/{__init__,test_brain_factory,test_encoders,test_lineage,test_fitness,test_loop_smoke,test_config}.py` (new)
 - `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` — `test_run_evolution_smoke` deleted; `test_run_evolution_smoke_mlpppo` added
 
 **Docs:**

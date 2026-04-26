@@ -10,36 +10,40 @@
 - [ ] 1.3 Add `genome_id_for(generation: int, index: int, parent_ids: list[str]) -> str` helper. **Implementation**: use `uuid.uuid5(uuid.NAMESPACE_OID, f"gen{generation}-idx{index}-parents{','.join(sorted(parent_ids))}")` so identical inputs produce identical IDs and any input change produces a different ID
 - [ ] 1.4 Unit tests: `test_genome_id_deterministic` (same inputs → same UUID), `test_genome_id_distinct_for_distinct_inputs` (any input change → different UUID), `test_genome_id_format_is_uuid` (returned string parses as a valid UUID)
 
-## Phase 2: Encoder Protocol and Concrete Encoders
+## Phase 2: Encoder Protocol, Brain Factory Wrapper, and Concrete Encoders
 
 **Dependencies**: Phase 1
 **Parallelizable**: No
 
-- [ ] 2.1 Create `encoders.py` with `GenomeEncoder` protocol (methods: `initial_genome`, `decode`, `genome_dim`) and module-level constant `NON_GENOME_COMPONENTS = {"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}` (the denylist)
-- [ ] 2.2 Implement private `_flatten_components(components: dict[str, WeightComponent]) -> tuple[np.ndarray, dict]` (returns flat array + shape map for unflatten — walks components in deterministic key-sorted order)
-- [ ] 2.3 Implement private `_unflatten_components(params: np.ndarray, shape_map: dict) -> dict[str, WeightComponent]`
-- [ ] 2.4 Implement `MLPPPOEncoder`: `brain_name = "mlpppo"`. **Dynamic discovery**: calls `brain.get_weight_components()` then filters out `NON_GENOME_COMPONENTS`. This automatically picks up `policy`, `value`, and conditional `gate_weights` (when feature gating is enabled). After `load_weight_components`, explicitly sets `brain._episode_count = 0`
-- [ ] 2.5 Implement `LSTMPPOEncoder`: `brain_name = "lstmppo"`. Same dynamic-discovery + denylist pattern. Picks up `lstm`, `layer_norm`, `policy`, `value`. After load, resets `brain._episode_count = 0`. (Per-episode hidden state `_pending_h_state` / `_pending_c_state` is not part of weight components and resets on `prepare_episode()` already.)
-- [ ] 2.6 Define `ENCODER_REGISTRY: dict[str, type[GenomeEncoder]] = {"mlpppo": MLPPPOEncoder, "lstmppo": LSTMPPOEncoder}`
-- [ ] 2.7 Unit test: `test_mlpppo_encoder_roundtrip` (encode → decode → identical first-step action on seeded input)
-- [ ] 2.8 Unit test: `test_lstmppo_encoder_roundtrip` (same with recurrent brain — verifies all four components round-trip including `layer_norm`)
-- [ ] 2.9 Unit test: `test_genome_dim_matches_flattened_state` (for both encoders)
-- [ ] 2.10 Unit test: `test_episode_count_resets_on_decode` (verify the determinism guard for both brains)
-- [ ] 2.11 Unit test: `test_mlpppo_with_feature_gating_includes_gate_weights` (sanity: when `_feature_gating: true`, the genome dim is larger than without, and round-trip preserves gate behaviour)
-- [ ] 2.12 Unit test: `test_encoder_registry_membership` (asserts `"mlpppo" in ENCODER_REGISTRY` and `"lstmppo" in ENCODER_REGISTRY` and that `ENCODER_REGISTRY[name]()` produces a working encoder for both)
-- [ ] 2.13 Unit test: `test_encoder_excludes_denylist_components` (verifies `optimizer`, `actor_optimizer`, `critic_optimizer`, `training_state` are NEVER in the genome regardless of brain)
+- [ ] 2.1 Create `evolution/brain_factory.py` with `instantiate_brain_from_sim_config(sim_config: SimulationConfig) -> Brain`. Pulls `shots`, `qubits`, `device`, `learning_rate`, `gradient_method`, `gradient_max_norm`, `parameter_initializer_config` out of `sim_config` and dispatches to `quantumnematode.utils.brain_factory.setup_brain_model()`. Hardcodes `device=DeviceType.CPU` for evolution fitness eval. Default fallbacks for fields the YAML omits (e.g. `parameter_initializer_config=None`)
+- [ ] 2.2 Unit test: `test_instantiate_mlpppo_from_sim_config` (load a fixture sim_config, call wrapper, assert `isinstance(brain, MLPPPOBrain)` and `brain._episode_count == 0`)
+- [ ] 2.3 Unit test: `test_instantiate_lstmppo_from_sim_config` (same with LSTMPPO)
+- [ ] 2.4 Create `encoders.py` with `GenomeEncoder` protocol whose methods take **the full `SimulationConfig`**: `initial_genome(sim_config: SimulationConfig, *, rng) -> Genome`, `decode(genome, sim_config) -> Brain`, `genome_dim(sim_config) -> int`. Plus module-level constant `NON_GENOME_COMPONENTS = {"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}` (the denylist)
+- [ ] 2.5 Implement private `_flatten_components(components: dict[str, WeightComponent]) -> tuple[np.ndarray, dict]` (returns flat array + shape map for unflatten — walks components in deterministic key-sorted order)
+- [ ] 2.6 Implement private `_unflatten_components(params: np.ndarray, shape_map: dict) -> dict[str, WeightComponent]`
+- [ ] 2.7 Implement `MLPPPOEncoder`: `brain_name = "mlpppo"`. `decode()` calls `instantiate_brain_from_sim_config(sim_config)` to get a fresh brain, then `load_weight_components()` to apply the genome. **Dynamic discovery**: filters `get_weight_components()` output by `NON_GENOME_COMPONENTS`. Picks up `policy`, `value`, and conditional `gate_weights`. After `load_weight_components`, sets `brain._episode_count = 0` AND calls `brain._update_learning_rate()` (so the LR matches the reset count — see Decision 2)
+- [ ] 2.8 Implement `LSTMPPOEncoder`: `brain_name = "lstmppo"`. Same dynamic-discovery + denylist pattern. Picks up `lstm`, `layer_norm`, `policy`, `value`. Same `_episode_count = 0` + `_update_learning_rate()` after load. (Per-episode hidden state resets on `prepare_episode()` already.)
+- [ ] 2.9 Define `ENCODER_REGISTRY: dict[str, type[GenomeEncoder]] = {"mlpppo": MLPPPOEncoder, "lstmppo": LSTMPPOEncoder}`
+- [ ] 2.10 Unit test: `test_mlpppo_encoder_roundtrip` (encode → decode → identical first-step action on seeded input)
+- [ ] 2.11 Unit test: `test_lstmppo_encoder_roundtrip` (same with recurrent brain — verifies all four components round-trip including `layer_norm`)
+- [ ] 2.12 Unit test: `test_genome_dim_matches_flattened_state` (for both encoders)
+- [ ] 2.13 Unit test: `test_episode_count_resets_and_lr_synced_on_decode` (verify both `_episode_count == 0` AND the LR matches what a freshly constructed brain has, for both brain types)
+- [ ] 2.14 Unit test: `test_mlpppo_with_feature_gating_includes_gate_weights` (sanity: when `_feature_gating: true`, the genome dim is larger than without, and round-trip preserves gate behaviour)
+- [ ] 2.15 Unit test: `test_encoder_registry_membership` (asserts `"mlpppo" in ENCODER_REGISTRY` and `"lstmppo" in ENCODER_REGISTRY` and that `ENCODER_REGISTRY[name]()` produces a working encoder for both)
+- [ ] 2.16 Unit test: `test_encoder_excludes_denylist_components` (verifies `optimizer`, `actor_optimizer`, `critic_optimizer`, `training_state` are NEVER in the genome regardless of brain)
 
 ## Phase 3: Fitness Function
 
 **Dependencies**: Phase 2
 **Parallelizable**: Can start in parallel with Phase 4
 
-- [ ] 3.1 Create `fitness.py` with `FitnessFunction` protocol (single `evaluate(genome, brain_config, sim_config, encoder, *, episodes, seed) -> float` method)
-- [ ] 3.2 Implement `EpisodicSuccessRate`: decodes genome → instantiates env via existing `create_env_from_config` → runs `episodes` complete episodes → returns mean foods_collected / target ratio
-- [ ] 3.3 **Frozen weights only**: do NOT call `brain.learn()` or `update_memory()`. M0 scope. (LearnedPerformanceFitness is M2.)
-- [ ] 3.4 Reuse the per-step action loop pattern from `scripts/run_simulation.py` lines 240-1200 — strip rendering, CSV export, and learning calls
+- [ ] 3.1 Create `fitness.py` with `FitnessFunction` protocol (single `evaluate(genome: Genome, sim_config: SimulationConfig, encoder: GenomeEncoder, *, episodes: int, seed: int) -> float` method). Note: signature takes the full `SimulationConfig`, matching the encoder API
+- [ ] 3.2 Implement `EpisodicSuccessRate`: decode genome via encoder → build env via `create_env_from_config(sim_config.environment)` → instantiate `QuantumNematodeAgent(brain=brain, env=env, ...)` (constructor args pulled from sim_config) → loop `episodes` calls to `agent.run_episode(sim_config.reward, sim_config.max_steps)` → return mean `result.episode_success` rate
+- [ ] 3.3 **Reuse `agent.run_episode()` directly** ([agent.py:384](packages/quantum-nematode/quantumnematode/agent/agent.py#L384)). Do NOT re-implement the per-step loop. Total fitness function should be ~30 LOC, not the ~80 LOC the legacy script's parallel implementation took
+- [ ] 3.4 **Frozen weights only**: the agent's `run_episode()` is called as-is, but `brain.learn()` is never invoked because no learning hook is wired up. The brain's `post_process_episode()` is still called (per agent contract) — this advances `_episode_count` but does not change weights. (LearnedPerformanceFitness is M2.)
 - [ ] 3.5 Unit test: `test_episodic_success_rate_returns_float_in_unit_interval` (fitness is a finite float in `[0.0, 1.0]` for an arbitrary genome — no assumption that random brains fail)
 - [ ] 3.6 Unit test: `test_episodic_success_rate_deterministic_for_seeded_genome` (same genome + seed → same fitness across two invocations)
+- [ ] 3.7 Unit test: `test_episodic_success_rate_does_not_call_learn` (mock or assertion that `brain.learn()` is never called during fitness eval)
 
 ## Phase 4: Lineage Tracker
 
@@ -50,9 +54,10 @@
 - [ ] 4.2 `record(genome: Genome, fitness: float, brain_type: str)` appends a CSV row
 - [ ] 4.3 CSV columns: `generation, child_id, parent_ids, fitness, brain_type` (parent_ids `;`-joined for CSV-safety)
 - [ ] 4.4 Append mode (not write mode) so resume works without recreating. On `__init__`, check whether the file exists: if yes, skip writing the header; if no, write it
-- [ ] 4.5 Unit test: `test_lineage_csv_appends_across_generations` (record gens 0-5 × population 4, verify row count = 24 + 1 header row and parent_ids correctly populated)
+- [ ] 4.5 Unit test: `test_lineage_csv_appends_across_generations` (record gens `0..4` inclusive — i.e. 5 generations × population 4 = 20 data rows + 1 header row; parent_ids correctly populated for gen >= 1)
 - [ ] 4.6 Unit test: `test_lineage_csv_gen_zero_has_empty_parent_ids` (gen 0 rows have empty `parent_ids` field)
 - [ ] 4.7 Unit test: `test_lineage_csv_header_only_written_once` (instantiate tracker → record → close; reinstantiate same path → record → close; assert header appears exactly once)
+- [ ] 4.8 Unit test: `test_lineage_generation_indexing_is_zero_based` (a run with `generations: G` produces rows whose `generation` column takes values in `[0, G-1]`, each appearing exactly P times)
 
 ## Phase 5: Evolution Loop
 
@@ -63,7 +68,7 @@
 - [ ] 5.2 Implement `run(*, resume_from: Path | None = None) -> EvolutionResult`
 - [ ] 5.3 Generation loop: `optimizer.ask()` → wrap each candidate as a `Genome` with proper parent_ids → parallel fitness eval → `optimizer.tell()` → record lineage → checkpoint every N gens
 - [ ] 5.4 Multiprocessing: reuse the worker pattern from legacy `run_evolution.py:452-470` (SIGINT-ignore, per-worker logger config)
-- [ ] 5.5 Worker function takes picklable args only (params array, sim_config dict, brain_config dict, episodes, seed) and reconstructs brain inside worker via the encoder
+- [ ] 5.5 Worker function takes picklable args only (params array, **full sim_config dict**, episodes, seed) and reconstructs the brain inside the worker via `encoder.decode(genome, sim_config)`. No separate `brain_config` arg — sim_config carries everything `instantiate_brain_from_sim_config` needs
 - [ ] 5.6 Pickle checkpoint: dump `{optimizer, generation, rng_state, lineage_path, checkpoint_version: 1}` to `output_dir/checkpoint.pkl`
 - [ ] 5.7 Resume: load pickle, validate `checkpoint_version`, restore optimizer state, continue from saved generation
 - [ ] 5.8 On completion: write `best_params.json` (compatible with legacy artifact contract) and `history.csv` to `output_dir`
@@ -114,7 +119,7 @@
 
 - [ ] 9.1 Run: `uv run python scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml` — completes without error
 - [ ] 9.2 Verify `evolution_results/<session>/best_params.json` exists; load it and decode back into a working `MLPPPOBrain` (test or one-off script)
-- [ ] 9.3 Verify `evolution_results/<session>/lineage.csv` has 80 rows + header (10 gens × pop 8) with parent_ids populated from gen 1 onwards
+- [ ] 9.3 Verify `evolution_results/<session>/lineage.csv` has 80 data rows + 1 header row (10 generations × pop 8 = 80; generation column takes values 0..9 inclusive) with `parent_ids` empty for gen 0 and populated for gens 1..9
 - [ ] 9.4 Run: `uv run python scripts/run_evolution.py --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml` — completes without error
 - [ ] 9.5 Same artifact verification for the LSTMPPO smoke
 - [ ] 9.6 Resume test: run smoke #1, kill at gen ~5, resume with `--resume evolution_results/<session>/checkpoint.pkl`, verify completes 10 gens total

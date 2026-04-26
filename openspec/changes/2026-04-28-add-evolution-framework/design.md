@@ -23,6 +23,34 @@ M0 is the brain-agnostic evolution framework that unblocks every subsequent Phas
 
 ## Design Decisions
 
+### Decision 0: Encoder API takes the full SimulationConfig
+
+Constructing a fresh brain requires more than a `BrainConfig`. [`utils/brain_factory.setup_brain_model()`](packages/quantum-nematode/quantumnematode/utils/brain_factory.py#L51) needs `brain_type`, `brain_config`, `shots`, `qubits`, `device`, `learning_rate`, `gradient_method`, `gradient_max_norm`, and `parameter_initializer_config` — these live across multiple top-level fields of `SimulationConfig`.
+
+The encoder protocol's methods therefore take **the full `SimulationConfig`** (not just a brain config):
+
+```python
+class GenomeEncoder(Protocol):
+    brain_name: str
+    def initial_genome(self, sim_config: SimulationConfig, *, rng: np.random.Generator) -> Genome: ...
+    def decode(self, genome: Genome, sim_config: SimulationConfig) -> Brain: ...
+    def genome_dim(self, sim_config: SimulationConfig) -> int: ...
+```
+
+Encoders delegate the actual brain construction to a thin helper at `evolution/brain_factory.py`:
+
+```python
+def instantiate_brain_from_sim_config(sim_config: SimulationConfig) -> Brain:
+    """Single source of truth for fresh-brain construction in the evolution loop.
+    Pulls all setup_brain_model arguments out of sim_config and dispatches."""
+```
+
+This wrapper exists so encoders don't each duplicate the 8-argument call to `setup_brain_model`. If `setup_brain_model`'s signature changes, the wrapper absorbs it.
+
+**Why pass `sim_config` rather than a narrower `EvolutionContext`:** `sim_config` is what the YAML config parses into and what gets pickled across worker processes anyway. Introducing a narrower context type adds a translation layer that isn't load-bearing.
+
+**Why a dedicated `evolution/brain_factory.py` rather than calling `setup_brain_model` directly:** evolution-specific concerns — fixed `device=CPU` for fitness eval, ignoring quantum-only fields like `shots` for classical brains, defaulting `parameter_initializer_config` when not specified — live in one place. Future Phase 6 quantum encoder support will extend this wrapper, not every encoder.
+
 ### Decision 1: WeightPersistence with dynamic component discovery via denylist
 
 `MLPPPOBrain` and `LSTMPPOBrain` already implement `WeightPersistence` (mlpppo.py:660, lstmppo.py:895). Their `get_weight_components()` returns a `dict[str, WeightComponent]` where each component bundles a name, a state dict, and metadata. Encoders use this protocol — they do **not** reach inside the brain to grab `actor.state_dict()` directly.
@@ -50,21 +78,48 @@ genome_components = {k: v for k, v in all_components.items() if k not in NON_GEN
 
 **Alternative considered:** flatten brain by walking `brain.actor.state_dict() | brain.critic.state_dict()` directly. Rejected because it duplicates knowledge that already lives in `get_weight_components()` and would silently drift if a brain adds a head.
 
-### Decision 2: Reset `_episode_count = 0` explicitly on decode
+### Decision 2: Reset `_episode_count = 0` and call `_update_learning_rate()` on decode
 
 The exploration phase flagged that `MLPPPOBrain._episode_count` is part of `training_state` but is consulted by the LR scheduler at runtime. If a genome captured at episode 800 (with `_episode_count = 800`) is decoded into a fresh evolution run, the new brain inherits a stale episode count and the LR scheduler is in the wrong regime.
 
-The encoder excludes `training_state` from the genome, but `load_weight_components` won't reset attributes the genome doesn't supply. So the encoder explicitly sets `brain._episode_count = 0` after `load_weight_components`. Same for any analogous attributes on LSTMPPOBrain (verified during exploration: hidden state already resets at `prepare_episode()`, no extra handling needed).
+The encoder excludes `training_state` from the genome, but `load_weight_components` won't reset attributes the genome doesn't supply. So after `load_weight_components()`, the encoder explicitly:
+
+1. Sets `brain._episode_count = 0`
+2. Calls `brain._update_learning_rate()` to bring the LR into sync with the reset count
+
+Without step 2, `_episode_count` is 0 but the LR is whatever the scheduler had computed at the previous `_update_learning_rate()` call (typically the last call from the source brain's lifetime). For M0's frozen-weight fitness this doesn't break anything — LR is unused without `.learn()` — but the contract is "decode produces a brain in the same state as a freshly constructed one", and a freshly constructed brain has both `_episode_count = 0` AND its initial LR. M2's `LearnedPerformanceFitness` depends on this contract.
+
+LSTMPPOBrain has the same `_episode_count` + `_update_learning_rate()` pair, handled identically. The recurrent hidden state (`_pending_h_state`, `_pending_c_state`) resets at `prepare_episode()` per existing brain code, so no extra encoder handling.
 
 **Why:** evolution evaluations need to start each genome at a known initial state. Without this reset, fitness would silently depend on which generation the genome was born in. This is the kind of bug that doesn't fail tests but invalidates a campaign.
 
-### Decision 3: EpisodicSuccessRate is frozen — no `.learn()` call
+### Decision 3: EpisodicSuccessRate is frozen — no `.learn()` call, reuses agent.run_episode()
 
 For M0, fitness evaluates a brain initialised from the genome and run for K episodes **without** learning. The brain's weights stay fixed; we measure how good the genome's initial weights are.
 
+**Implementation reuses [`QuantumNematodeAgent.run_episode()`](packages/quantum-nematode/quantumnematode/agent/agent.py#L384) directly** rather than re-implementing the per-step action loop. The legacy `scripts/run_evolution.py` had a parallel re-implementation (lines 248-383) that drifted from the agent's canonical loop — this is one of the reasons the user authorised deletion. The fitness function is approximately:
+
+```python
+def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
+    brain = encoder.decode(genome, sim_config)
+    env = create_env_from_config(sim_config.environment)
+    agent = QuantumNematodeAgent(brain=brain, env=env, ...)  # constructor args pulled from sim_config
+    successes = 0
+    for _ in range(episodes):
+        agent.prepare_episode()
+        result = agent.run_episode(sim_config.reward, sim_config.max_steps)
+        successes += int(result.episode_success)
+        agent.post_process_episode(episode_success=result.episode_success)
+    return successes / episodes
+```
+
 **Why:** this is the cleanest possible fitness signal for proving the framework works. It also separates concerns: M2 introduces `LearnedPerformanceFitness` (learn for N episodes, then evaluate frozen) which has its own design questions (when does the LR scheduler reset, how is optimiser state seeded). Putting both in M0 forces M2's design decisions before M0 is even merged. Per the user-confirmed scope choice, M0 ships the simpler primitive.
 
+**Note on intra-evaluation state drift:** `post_process_episode()` increments `_episode_count` and calls `_update_learning_rate()` between episodes within a single fitness evaluation. With frozen weights this does NOT affect reproducibility — the LR is unused without `.learn()`, the action distribution depends only on weights and seeded RNG, and identical inputs produce identical fitness. But the brain is not strictly stateless across episodes; only weight-stateless. M2's `LearnedPerformanceFitness` will need to be careful here.
+
 **Alternative considered:** ship both fitness modes. Rejected: M0 grows by ~150 LOC and we make M2 design decisions prematurely.
+
+**Alternative considered:** lift the per-step loop from `scripts/run_simulation.py`. Rejected once spec review uncovered that `agent.run_episode()` is a one-line equivalent. The original spec's "lift ~80 LOC" guidance was a holdover from the legacy script's parallel re-implementation.
 
 ### Decision 4: Pickle resume preserved in M0
 
@@ -74,9 +129,11 @@ The legacy script has mature pickle-based optimiser checkpoint/resume (run_evolu
 
 **What we add:** the checkpoint also stores the RNG state and lineage CSV path so resume reconstructs the full evaluation context, not just the optimiser.
 
-### Decision 5: Lineage CSV columns
+### Decision 5: Lineage CSV columns and generation indexing
 
 Columns: `generation, child_id, parent_ids, fitness, brain_type`. `parent_ids` is a `;`-joined string (CSV-friendly). `brain_type` is included so that future co-evolution runs (M5) — where predator and prey populations are interleaved in the same evolution_results directory — can be sliced by species.
+
+**Generation indexing is 0-based.** A run with `generations: G` populates rows for generations `0, 1, ..., G-1` (inclusive lower, exclusive upper — Python's range convention). Total row count is `P × G` where `P` is `population_size`. Generation 0 rows have empty `parent_ids` (no prior generation to attribute to).
 
 **Why CSV not JSON Lines:** existing experiment tracking uses CSV (artifacts/logbooks/011/). Tooling and human inspection are CSV-native. Append mode plays nicely with resume: the file just keeps growing.
 
@@ -106,7 +163,10 @@ Both `mlpppo_foraging_small.yml` and `lstmppo_foraging_small_klinotaxis.yml` shi
 
 1. **Encoder round-trip determinism.** Round-trip tests fix `torch.manual_seed(0)` before encode and again before decode, then assert that both brains produce identical actions on the same seeded input. CI runs CPU-only so cuDNN/CUDA non-determinism doesn't apply here. If a brain ever introduces eval-time stochasticity (e.g. dropout left on outside training mode), the test catches it.
 
-2. **Pickle resume couples optimiser internals to a Python version.** CMA-ES library updates can break pickle compatibility. Mitigation: version-tag the checkpoint file (`checkpoint_version: int`) and validate on load. Reject incompatible checkpoints with a clear error rather than silent corruption.
+2. **Pickle resume couples optimiser internals to a Python/library version.** Two distinct concerns:
+
+   - **Schema changes we make** (e.g. add a new key to the checkpoint dict): mitigated by `checkpoint_version: int`, validated on load, with a clear error on mismatch.
+   - **Python minor version drift or `cma` library updates**: pickle is best-effort across these. We don't try to handle this — recommendation is "single Python version per evolution campaign". Pin via `pyproject.toml` already (`python = ">=3.12,<3.13"`).
 
 3. **`evolution:` block schema diverges from CLI flag defaults.** Easy to introduce drift where YAML default disagrees with CLI default. Mitigation: CLI flags default to `None` and only override the YAML value when explicitly passed. Single source of truth lives in `EvolutionConfig` Pydantic defaults.
 
@@ -120,3 +180,9 @@ Both `mlpppo_foraging_small.yml` and `lstmppo_foraging_small_klinotaxis.yml` shi
 - Adding `LearnedPerformanceFitness` (M2) is a new class in `fitness.py`; the encoder protocol does not change
 - Inheritance strategies (M3 Lamarckian, M4 Baldwin) live in a future `evolution/inheritance.py`; they consume the encoder + fitness protocols without modifying them
 - The `2026-04-28-add-evolution-framework` change archives on merge (unlike the M-1 tracking change which stays open until M7)
+
+## Module dependency direction
+
+`evolution/` depends on `optimizers/` (uses `CMAESOptimizer`, `GeneticAlgorithmOptimizer`, `EvolutionResult`), `brain/` (uses `Brain`, `WeightPersistence`, concrete brain classes), `agent/` (uses `QuantumNematodeAgent`), `env/` (uses `create_env_from_config`), and `utils/` (uses `SimulationConfig`, `setup_brain_model`).
+
+**`optimizers/` MUST NOT import from `evolution/`** — one-way dependency. The optimisers are general-purpose (CMA-ES on a sphere function works without any evolution framework); they pre-date this module and remain reusable independently. Any temptation to add evolution-specific helpers to `optimizers/evolutionary.py` is a smell — put them in `evolution/`.

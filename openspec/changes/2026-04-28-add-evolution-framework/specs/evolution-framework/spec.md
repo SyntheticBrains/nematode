@@ -2,20 +2,28 @@
 
 ### Requirement: Genome Encoder Protocol
 
-The system SHALL provide a `GenomeEncoder` protocol allowing any brain implementing `WeightPersistence` to be serialized into a flat parameter genome and reconstructed from one. Concrete encoders SHALL be registered in a central `ENCODER_REGISTRY` keyed by the brain's name.
+The system SHALL provide a `GenomeEncoder` protocol allowing any brain implementing `WeightPersistence` to be serialized into a flat parameter genome and reconstructed from one. Concrete encoders SHALL be registered in a central `ENCODER_REGISTRY` keyed by the brain's name. Encoder methods SHALL take the full `SimulationConfig` (not just `BrainConfig`), since fresh-brain construction requires fields scattered across multiple top-level config sections (`shots`, `qubits`, `device`, `learning_rate`, `gradient`, `parameter_initializer`).
+
+#### Scenario: Encoder methods accept SimulationConfig
+
+- **GIVEN** an encoder for a registered brain
+- **WHEN** the encoder methods are called
+- **THEN** their signatures SHALL be `initial_genome(sim_config: SimulationConfig, *, rng) -> Genome`, `decode(genome: Genome, sim_config: SimulationConfig) -> Brain`, and `genome_dim(sim_config: SimulationConfig) -> int`
+- **AND** brain construction inside `decode` SHALL be delegated to a single helper `evolution.brain_factory.instantiate_brain_from_sim_config(sim_config)` so all encoders share one source of truth for fresh-brain construction
 
 #### Scenario: Encoder round-trip preserves brain behaviour
 
-- **GIVEN** a `MLPPPOBrain` instance built from a known config
-- **WHEN** the brain is encoded to a `Genome` via `MLPPPOEncoder.initial_genome()` and decoded back via `MLPPPOEncoder.decode()`
+- **GIVEN** a `MLPPPOBrain` instance built from a known `SimulationConfig`
+- **WHEN** the brain is encoded to a `Genome` via `MLPPPOEncoder.initial_genome(sim_config)` and decoded back via `MLPPPOEncoder.decode(genome, sim_config)`
 - **THEN** the decoded brain SHALL produce identical first-step actions as the original brain on identical seeded inputs
 
-#### Scenario: Encoder excludes runtime training state from the genome
+#### Scenario: Encoder excludes runtime training state from the genome and resets it on decode
 
 - **GIVEN** a brain with `training_state` containing a non-zero `_episode_count`
 - **WHEN** the brain is encoded to a `Genome`
 - **THEN** the genome `params` array SHALL NOT include `_episode_count` or any optimizer state
-- **AND** when the genome is decoded, the resulting brain SHALL have `_episode_count` reset to `0`
+- **AND** when the genome is decoded, the resulting brain SHALL have `_episode_count == 0`
+- **AND** the resulting brain SHALL have its learning rate updated to match `_episode_count == 0` (i.e. the encoder calls `_update_learning_rate()` after the count reset, so a freshly-decoded brain is in the same state as a freshly-constructed one)
 
 #### Scenario: Genome dimension matches flattened weight component shape
 
@@ -54,27 +62,28 @@ The system SHALL provide a `GenomeEncoder` protocol allowing any brain implement
 
 ### Requirement: Lineage Tracking
 
-The system SHALL maintain a single CSV file per evolution run recording every fitness evaluation with parent→child genealogy, written in append mode so resume operations do not lose history.
+The system SHALL maintain a single CSV file per evolution run recording every fitness evaluation with parent→child genealogy, written in append mode so resume operations do not lose history. Generation indexing SHALL be 0-based: a run with `generations: G` populates rows for generations `0, 1, …, G-1`.
 
 #### Scenario: Lineage CSV records every fitness evaluation
 
-- **GIVEN** an evolution run with population P and G generations
+- **GIVEN** an evolution run with `population_size = P` and `generations = G`
 - **WHEN** the run completes
-- **THEN** `evolution_results/<session_id>/lineage.csv` SHALL contain `P × G` rows (plus one header row)
+- **THEN** `evolution_results/<session_id>/lineage.csv` SHALL contain exactly `P × G` data rows (plus one header row)
+- **AND** the `generation` column SHALL take values in the inclusive range `[0, G-1]` with each value appearing exactly `P` times
 - **AND** each row SHALL have columns `generation, child_id, parent_ids, fitness, brain_type`
 
 #### Scenario: parent_ids is populated for non-zero generations
 
 - **GIVEN** a lineage CSV row with `generation > 0`
 - **WHEN** the row is read
-- **THEN** the `parent_ids` field SHALL be a `;`-joined string of parent genome IDs from generation N-1
-- **AND** for generation 0, `parent_ids` SHALL be empty
+- **THEN** the `parent_ids` field SHALL be a `;`-joined string of parent genome IDs from generation `N-1`
+- **AND** for `generation == 0`, `parent_ids` SHALL be empty
 
 #### Scenario: Append mode preserves history across resume
 
-- **GIVEN** an evolution run that wrote 5 generations to lineage.csv before crashing
-- **WHEN** the run is resumed and completes the remaining 5 generations
-- **THEN** the final CSV SHALL contain all 10 generations of rows in chronological order
+- **GIVEN** an evolution run with `generations: 10` that wrote rows for generations `0..4` to lineage.csv before crashing (5 generations × P rows = 5P rows + header)
+- **WHEN** the run is resumed and completes the remaining generations `5..9`
+- **THEN** the final CSV SHALL contain `10 × P` data rows in chronological generation order
 - **AND** the header row SHALL appear exactly once
 
 ### Requirement: Evolution Loop Checkpoint and Resume
