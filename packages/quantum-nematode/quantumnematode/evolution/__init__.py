@@ -18,11 +18,19 @@ from quantumnematode.evolution.encoders import (
     MLPPPOEncoder,
     get_encoder,
 )
+from quantumnematode.evolution.fitness import (
+    EpisodicSuccessRate,
+    FitnessFunction,
+    FrozenEvalRunner,
+)
 from quantumnematode.evolution.genome import Genome, genome_id_for
 
 __all__ = [
     "ENCODER_REGISTRY",
     "NON_GENOME_COMPONENTS",
+    "EpisodicSuccessRate",
+    "FitnessFunction",
+    "FrozenEvalRunner",
     "Genome",
     "GenomeEncoder",
     "LSTMPPOEncoder",

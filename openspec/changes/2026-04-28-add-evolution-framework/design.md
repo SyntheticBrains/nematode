@@ -160,7 +160,14 @@ For M0, fitness evaluates a brain initialised from the genome and run for K epis
 
 **The implementation cannot just call `agent.run_episode()` directly** — spec review uncovered that [`StandardEpisodeRunner._terminate_episode`](packages/quantum-nematode/quantumnematode/agent/runners.py#L155) defaults `learn=True` and the success path ([runners.py:817-823](packages/quantum-nematode/quantumnematode/agent/runners.py#L817)) does not override it. Every successful episode calls `brain.learn()`, which for `MLPPPOBrain`/`LSTMPPOBrain` runs a real PPO update and mutates weights. That breaks the M0 frozen-weight contract.
 
-**Solution: a `FrozenEvalRunner` in `evolution/fitness.py`** that mirrors `StandardEpisodeRunner.run()` but explicitly passes `learn=False, update_memory=False` on every termination path. Composition over copy-paste: it reuses the runner's helper methods (`_terminate_episode`, reward calc, sensory prep) by extending or wrapping `StandardEpisodeRunner`, not by re-implementing the per-step loop. ~60 LOC, well below the legacy script's ~80 LOC re-implementation, and the loop logic stays in one place (the standard runner).
+**Solution: a `FrozenEvalRunner` in `evolution/fitness.py`** that mirrors `StandardEpisodeRunner.run()` but neutralises `brain.learn` and `brain.update_memory` for the duration of each episode. Composition over copy-paste: it reuses the runner's helper methods by extending `StandardEpisodeRunner`, not by re-implementing the per-step loop. ~80 LOC.
+
+**Two override points are needed** because the standard runner calls `learn` in two places (discovered during implementation):
+
+1. **Per-step**, inside the main loop ([runners.py:747](packages/quantum-nematode/quantumnematode/agent/runners.py#L747)): every step the runner calls `agent.brain.learn(...)` for `ClassicalBrain` instances. The termination-time override does NOT catch this.
+2. **Per-termination**, via `_terminate_episode` ([runners.py:182](packages/quantum-nematode/quantumnematode/agent/runners.py#L182)): the success path defaults `learn=True`.
+
+To intercept both, `FrozenEvalRunner.run()` temporarily replaces `agent.brain.learn` and `agent.brain.update_memory` with no-op functions for the duration of the episode, then restores them in a `finally` block. `_terminate_episode` also forces `learn=False, update_memory=False` as a belt-and-braces guard (and to preserve the `food_history=...` Ellipsis sentinel by passing kwargs through unchanged).
 
 **Sketch:**
 
