@@ -58,7 +58,7 @@ ______________________________________________________________________
 | **2** | Q2 - Q3 2026 | Architecture Analysis | ✅ SUBSTANTIALLY COMPLETE | 300+ session quantum evaluation, brain renaming, statistical framework |
 | **3** | Q2 - Q3 2026 | Temporal Sensing & Memory | ✅ SUBSTANTIALLY COMPLETE | Temporal/derivative sensing, STAM, LSTM/GRU PPO brain (19th architecture). Temporal Mode A achieves 94% L500 on hardest environment. Oxygen sensing (aerotaxis) implemented with 5-zone system and combined thermal+oxygen environments. |
 | **4** | Q3 - Q4 2026 | Multi-Agent Complexity | ✅ SUBSTANTIALLY COMPLETE | Deliverables 1-3 merged (infrastructure, pheromones, social dynamics). Evaluation campaign (Logbook 011): temporal collective exploration advantage (+14.3%), social feeding +35% food under scarcity, zero coordination overhead with proportional resources, pheromones neutral. Two critical bugs found and fixed (#112, #115). Quantum checkpoint not triggered — no genuine coordination complexity. Food spatial persistence deferred (issue #116). |
-| **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🔲 PLANNED | Baldwin Effect, co-evolution, transgenerational memory |
+| **5** | Q4 2026 - Q1 2027 | Evolution & Adaptation | 🟡 IN PROGRESS | Baldwin Effect, co-evolution, transgenerational memory |
 | **6** | Q1 - Q3 2027 | Continuous Physics & Connectome | 🔲 PLANNED | Continuous 2D, realistic locomotion, full 302-neuron connectome |
 | **7** | Q2 - Q4 2027 | Community & Publication | 🔲 PLANNED | NematodeBench launch, publication campaign, external collaboration |
 | **8** | Late 2027+ | Integration & Evaluation | 🔲 PLANNED | Full integration, definitive quantum vs. classical comparison |
@@ -494,6 +494,25 @@ ______________________________________________________________________
 **Prerequisites**: Phase 3 (memory infrastructure for transgenerational memory). Phase 4 multi-agent infrastructure required only for co-evolution (deliverable 4) — other deliverables can begin in parallel with Phase 4.
 
 **Pilot-Then-Focus Approach**: Start with lightweight pilots of 2-3 evolutionary approaches using small populations and few generations. Based on pilot results, select 1-2 approaches for deep investigation.
+
+#### Phase 5 Milestone Tracker
+
+Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). The living checklist with sub-task granularity lives in [openspec/changes/2026-04-26-phase5-tracking/tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md). Three Phase 5 design decisions are recorded in that change's [proposal.md](../openspec/changes/2026-04-26-phase5-tracking/proposal.md): pilot-first, no QVarCircuit backwards compatibility, and LSTMPPO+klinotaxis as the first-class brain for headline scientific milestones (M4/M5/M6).
+
+| # | Milestone | Bio fidelity | Status |
+|---|-----------|--------------|--------|
+| M-1 | Phase 5 tracking scaffold | — | 🟡 in progress |
+| M0 | Brain-agnostic evolution framework (fresh build) | LOW | 🔲 not started |
+| M1 | Predator-as-brain refactor | MEDIUM | 🔲 not started |
+| M2 | Hyperparameter evolution pilot | LOW | 🔲 not started |
+| M3 | Lamarckian evolution pilot | MEDIUM | 🔲 not started |
+| M4 | Baldwin effect demonstration (gated on M3) | MEDIUM | 🔲 not started |
+| M5 | Co-evolution arms race | HIGH | 🔲 not started |
+| M6 | Transgenerational memory (gated on M3 + M4/M5) | HIGH | 🔲 not started |
+| M6.5 | NEAT topology evolution (optional) | LOW | 🔲 not started |
+| M7 | Phase 5 synthesis logbook | — | 🔲 not started |
+
+**How to orient**: a fresh AI session resuming Phase 5 work should read this tracker first to identify the current milestone, then open the [tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md) checklist for sub-task detail, then any active per-milestone OpenSpec change (e.g. `openspec/changes/2026-04-28-add-evolution-framework/`) for the in-flight scope.
 
 #### Deliverables
 

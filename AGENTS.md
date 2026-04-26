@@ -64,4 +64,10 @@ Three tiers:
 
 Always run `uv run pytest -m "not nightly"` after changes. Run `uv run pre-commit run -a` before committing.
 
+## Pull Requests
+
+PR titles MUST use [Conventional Commits](https://www.conventionalcommits.org/) prefixes. Common types in this repo: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`. Use `!` after the type for breaking changes (e.g. `feat!: remove legacy preprocessing mode`). Examples from project history: `feat: Add aerotaxis (oxygen sensing) system`, `fix: multi-agent sensing - use agent's own position in BrainParams`, `docs: Klinotaxis Era multi-agent pheromone evaluation (Logbook 011)`.
+
+Commit messages do not require this prefix — only PR titles do.
+
 <!-- markdownlint-disable MD025 -->
