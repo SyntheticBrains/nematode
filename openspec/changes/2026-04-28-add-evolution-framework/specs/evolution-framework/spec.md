@@ -91,6 +91,13 @@ The `EpisodicSuccessRate` fitness function SHALL evaluate a genome by running it
 - **THEN** the value SHALL equal `S / K` exactly
 - **AND** SHALL be a finite float in `[0.0, 1.0]`
 
+#### Scenario: Fitness is deterministic given a fixed seed
+
+- **GIVEN** the same `genome`, `sim_config`, `encoder`, `episodes`, and `seed`
+- **WHEN** `evaluate()` is invoked twice
+- **THEN** the two returned fitness values SHALL be byte-identical
+- **AND** the fitness function SHALL apply `seed` to (a) the environment via `create_env_from_config(env_config, seed=seed)`, (b) the brain's numpy RNG via `brain.rng = np.random.default_rng(seed)`, and (c) torch via `torch.manual_seed(seed)` — all three sources, not just one
+
 ### Requirement: Lineage Tracking
 
 The system SHALL maintain a single CSV file per evolution run recording every fitness evaluation with parent→child genealogy, written in append mode so resume operations do not lose history. Generation indexing SHALL be 0-based: a run with `generations: G` populates rows for generations `0, 1, …, G-1`.

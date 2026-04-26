@@ -104,28 +104,53 @@ For M0, fitness evaluates a brain initialised from the genome and run for K epis
 **Sketch:**
 
 ```python
+import numpy as np
+import torch
+from quantumnematode.agent.agent import QuantumNematodeAgent
+from quantumnematode.agent.runners import StandardEpisodeRunner
+from quantumnematode.report.dtypes import TerminationReason
+from quantumnematode.utils.config_loader import create_env_from_config
+
+
 class FrozenEvalRunner(StandardEpisodeRunner):
-    """Runs an episode without ever calling brain.learn() or update_memory()."""
-    def _terminate_episode(self, agent, params, reward, *, success, termination_reason, **kwargs):
-        # Force frozen behaviour regardless of what the parent runner would have done
-        return super()._terminate_episode(
-            agent, params, reward,
-            success=success, termination_reason=termination_reason,
-            learn=False, update_memory=False,
-            food_history=kwargs.get("food_history"),
-        )
+    """Runs an episode without ever calling brain.learn() or update_memory().
+
+    Overrides only `_terminate_episode` and forwards all other kwargs to the
+    parent. This preserves the parent's `food_history=...` Ellipsis sentinel
+    (which falls back to `agent.food_history` when omitted), avoiding silent
+    data loss seen in earlier sketches that called `kwargs.get("food_history")`
+    and converted the sentinel to None.
+    """
+
+    def _terminate_episode(self, agent, params, reward, **kwargs):
+        # Force frozen behaviour regardless of caller's intent. All other
+        # kwargs (success, termination_reason, food_history sentinel, etc.)
+        # pass through unchanged.
+        kwargs["learn"] = False
+        kwargs["update_memory"] = False
+        return super()._terminate_episode(agent, params, reward, **kwargs)
+
+
+def _build_agent(brain, env, sim_config) -> QuantumNematodeAgent:
+    """Centralise QuantumNematodeAgent construction for fitness eval."""
+    sensing = sim_config.environment.sensing if sim_config.environment else None
+    return QuantumNematodeAgent(
+        brain=brain,
+        env=env,
+        satiety_config=sim_config.satiety,
+        sensing_config=sensing,
+    )
+
 
 class EpisodicSuccessRate:
     def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
-        from quantumnematode.agent.dtypes import TerminationReason  # exists in report.dtypes
+        # Apply seed everywhere a per-episode trajectory consumes RNG (see Decision 3a)
+        torch.manual_seed(seed)
         brain = encoder.decode(genome, sim_config)
-        env = create_env_from_config(sim_config.environment)
-        agent = QuantumNematodeAgent(
-            brain=brain,
-            env=env,
-            satiety_config=sim_config.satiety,
-            sensing_config=_extract_sensing_config(sim_config),
-        )
+        brain.rng = np.random.default_rng(seed)  # MLPPPO/LSTMPPO have a numpy Generator
+        env = create_env_from_config(sim_config.environment, seed=seed)
+
+        agent = _build_agent(brain, env, sim_config)
         runner = FrozenEvalRunner()
         successes = 0
         for _ in range(episodes):
@@ -137,7 +162,23 @@ class EpisodicSuccessRate:
 
 **Note on success detection:** `EpisodeResult` ([runners.py:69](packages/quantum-nematode/quantumnematode/agent/runners.py#L69)) has fields `agent_path`, `termination_reason`, `food_history` — no `episode_success` attribute. The codebase convention is `result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD` (used in [experiment/tracker.py:304](packages/quantum-nematode/quantumnematode/experiment/tracker.py#L304) and [multi_agent.py:949](packages/quantum-nematode/quantumnematode/agent/multi_agent.py#L949)). The fitness function uses the same convention.
 
-**Note on agent constructor args:** `QuantumNematodeAgent.__init__` ([agent.py:245](packages/quantum-nematode/quantumnematode/agent/agent.py#L245)) takes 9 keyword args. The fitness function passes `brain`, `env`, `satiety_config=sim_config.satiety`, and `sensing_config` (extracted from `sim_config.environment.sensing` if present). Other args use defaults — `theme`, `rich_style_config` are presentation-only; `agent_id` defaults to `"default"`; `maze_grid_size` and `max_body_length` are unused when an explicit `env` is provided. A small private helper `_build_agent(brain, env, sim_config)` in `evolution/fitness.py` centralises this.
+**Note on agent constructor args:** `QuantumNematodeAgent.__init__` ([agent.py:245](packages/quantum-nematode/quantumnematode/agent/agent.py#L245)) takes 9 keyword args. The fitness function passes `brain`, `env`, `satiety_config=sim_config.satiety`, and `sensing_config=sim_config.environment.sensing` (or `None` if `sim_config.environment` is itself None). Other args use defaults — `theme`, `rich_style_config` are presentation-only; `agent_id` defaults to `"default"`; `maze_grid_size` and `max_body_length` are unused when an explicit `env` is provided. The private helper `_build_agent(brain, env, sim_config)` in `evolution/fitness.py` centralises this.
+
+### Decision 3a: Seed application is the fitness function's responsibility
+
+The `evaluate()` signature includes `seed: int`. Three RNG sources determine episode trajectories and must all be seeded for `seed` to actually produce determinism:
+
+1. **Environment RNG**: `create_env_from_config(sim_config.environment, seed=seed)` — controls food spawn positions, predator placement, and any stochastic env events
+2. **Brain numpy RNG**: `brain.rng = np.random.default_rng(seed)` — `MLPPPOBrain` ([mlpppo.py:169](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L169)) and `LSTMPPOBrain` (analogous) hold a `numpy.random.Generator` for action sampling. The brain's own constructor seeds this from a config param, but evolution overrides it post-construction so each genome+seed pair is independent of the constructor's seed source
+3. **Torch RNG**: `torch.manual_seed(seed)` — covers any nn.Module-internal randomness (dropout, parameter init reuse). M0's brains don't use dropout in eval, but `torch.manual_seed` is cheap insurance and required for the round-trip determinism guarantee in Decision 1
+
+**Why the fitness function does this and not the encoder:** the encoder produces a brain from a genome — it shouldn't know about the seed of the *current evaluation*. Each call to `evaluate()` is its own seeded trial; the encoder is genome→brain regardless of which seed will be used for the trial.
+
+**Why all three, not just one:** missing any one of the three creates a leak. Forgetting `torch.manual_seed` means GPU/CPU RNG drift between identical-seed evaluations of the same genome on different machines (less of a concern in CPU-only CI). Forgetting `brain.rng` means action sampling is non-deterministic. Forgetting the env seed means food positions vary.
+
+**Caveat for M2 (out of scope here, recorded for future reference):** `MLPPPOBrain` and `LSTMPPOBrain` both construct a `RolloutBuffer` that captures `self.rng` by reference at construction time ([mlpppo.py:246](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L246), [lstmppo.py:430](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py#L430)). Overwriting `brain.rng = np.random.default_rng(seed)` post-construction does NOT propagate to the buffer's reference. For M0 frozen-weight fitness this is irrelevant — the buffer is consumed by `.learn()` which we never call. For M2's `LearnedPerformanceFitness`, fitness evaluations that include training will need to either reach into `brain.buffer.rng` and reseed it too, or add a `brain.reseed(seed)` method that handles both. Recording this so M2 doesn't trip.
+
+Determinism is the contract the framework promises so that genome quality is meaningfully comparable across the population. M2's `LearnedPerformanceFitness` will use the same three-RNG seeding pattern.
 
 **Why a runner subclass rather than a fork of the per-step loop:** the per-step loop in `StandardEpisodeRunner` is non-trivial (rewards, sensory prep, STAM updates, predator handling, termination conditions). Forking risks behavioural drift from the standard runner — exactly the maintenance debt that justified deleting the legacy script. Subclassing and overriding only `_terminate_episode` keeps the step semantics identical and makes the frozen guarantee visible at the type level.
 
