@@ -29,7 +29,7 @@ to mark sub-tasks complete as part of its diff.
 **Brain target**: MLPPPO (smoke) + LSTMPPO+klinotaxis (smoke)
 **Dependencies**: M-1
 
-- [ ] M0.1 Create `packages/quantum-nematode/quantumnematode/evolution/` module: `genome.py`, `encoders.py`, `lineage.py`, `loop.py`, `fitness.py`
+- [ ] M0.1 Create `packages/quantum-nematode/quantumnematode/evolution/` module: `genome.py`, `brain_factory.py`, `encoders.py`, `fitness.py`, `lineage.py`, `loop.py`
 - [ ] M0.2 Implement `GenomeEncoder` protocol + `MLPPPOEncoder` + `LSTMPPOEncoder` + `ENCODER_REGISTRY` (no `QVarCircuitEncoder`)
 - [ ] M0.3 Implement `LineageTracker` writing `evolution_results/<session>/lineage.csv`
 - [ ] M0.4 Implement `EvolutionLoop` class (fresh, not extracted from old script)

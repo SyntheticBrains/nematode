@@ -56,7 +56,7 @@ CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a n
 
 ## Capabilities
 
-**Added**: `evolution-framework` (new) — five requirements covering the encoder protocol, lineage tracking, checkpoint/resume, configuration schema, and the encoder registry.
+**Added**: `evolution-framework` (new) — six requirements covering the encoder protocol, frozen-weight fitness evaluation, lineage tracking, checkpoint/resume, configuration schema, and the encoder registry.
 
 ## Impact
 
