@@ -501,8 +501,8 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 
 | # | Milestone | Bio fidelity | Status |
 |---|-----------|--------------|--------|
-| M-1 | Phase 5 tracking scaffold | — | 🟡 in progress |
-| M0 | Brain-agnostic evolution framework (fresh build) | LOW | 🔲 not started |
+| M-1 | Phase 5 tracking scaffold | — | ✅ complete |
+| M0 | Brain-agnostic evolution framework (fresh build) | LOW | 🟡 in progress (PR open) |
 | M1 | Predator-as-brain refactor | MEDIUM | 🔲 not started |
 | M2 | Hyperparameter evolution pilot | LOW | 🔲 not started |
 | M3 | Lamarckian evolution pilot | MEDIUM | 🔲 not started |

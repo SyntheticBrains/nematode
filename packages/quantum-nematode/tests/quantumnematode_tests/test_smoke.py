@@ -121,3 +121,82 @@ def test_run_evolution_smoke_mlpppo(tmp_path: Path) -> None:
         f"stderr:\n{result.stderr[-2000:]}"
     )
     assert "Traceback" not in result.stderr, f"Traceback in stderr:\n{result.stderr[-2000:]}"
+
+
+@pytest.mark.smoke
+def test_run_evolution_smoke_mlpppo_resume(tmp_path: Path) -> None:
+    """Verify the ``--resume`` CLI flag exercises the resume code path end-to-end.
+
+    The Python-level resume contract is verified by
+    ``test_loop_resume_from_checkpoint`` in the evolution unit tests; this
+    smoke test confirms the CLI wiring.  Sequence: run 1 generation with
+    checkpoint_every=1 (forces a checkpoint), then resume from that
+    checkpoint and run more generations.
+    """
+    config_path = CONFIGS_DIR / "evolution" / "mlpppo_foraging_small.yml"
+    output_root = tmp_path / "evolution_results"
+
+    # First session: 1 generation, force checkpoint.
+    first = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(config_path),
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--episodes",
+            "1",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(output_root),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert first.returncode == 0, f"First run failed:\n{first.stderr[-2000:]}"
+
+    # Locate the session directory and its checkpoint.
+    session_dirs = list(output_root.iterdir())
+    assert len(session_dirs) == 1, f"Expected 1 session dir, got {session_dirs}"
+    checkpoint = session_dirs[0] / "checkpoint.pkl"
+    assert checkpoint.exists(), f"Checkpoint not found: {checkpoint}"
+
+    # Second session: resume and run 1 more generation.
+    resume = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(config_path),
+            "--generations",
+            "2",
+            "--population",
+            "4",
+            "--episodes",
+            "1",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(output_root),
+            "--resume",
+            str(checkpoint),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert resume.returncode == 0, f"Resume run failed:\n{resume.stderr[-2000:]}"
+    assert "Traceback" not in resume.stderr, f"Traceback in resume:\n{resume.stderr[-2000:]}"
