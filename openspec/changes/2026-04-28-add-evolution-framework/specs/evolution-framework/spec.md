@@ -60,6 +60,37 @@ The system SHALL provide a `GenomeEncoder` protocol allowing any brain implement
 - **THEN** a `ValueError` SHALL be raised whose message lists the registered brain names
 - **AND** the message SHALL note that quantum brain support is deferred to a future Phase 6 re-evaluation
 
+### Requirement: Frozen-Weight Fitness Evaluation
+
+The `EpisodicSuccessRate` fitness function SHALL evaluate a genome by running its decoded brain through `episodes_per_eval` complete episodes WITHOUT calling `brain.learn()` or `brain.update_memory()` on any termination path. Calling `agent.run_episode()` directly is insufficient because [`StandardEpisodeRunner._terminate_episode`](packages/quantum-nematode/quantumnematode/agent/runners.py#L155) defaults `learn=True` on the success path. The framework SHALL provide a `FrozenEvalRunner` class that subclasses `StandardEpisodeRunner` and forces `learn=False, update_memory=False` on every termination.
+
+#### Scenario: Fitness function never invokes brain.learn()
+
+- **GIVEN** a `MLPPPOBrain` or `LSTMPPOBrain` (both `ClassicalBrain` subclasses)
+- **WHEN** `EpisodicSuccessRate.evaluate()` runs `episodes_per_eval` episodes (including episodes that succeed)
+- **THEN** `brain.learn()` SHALL NOT be called at any point during the evaluation
+- **AND** `brain.update_memory()` SHALL NOT be called at any point during the evaluation
+
+#### Scenario: Fitness function never invokes brain.learn() even on successful episodes
+
+- **GIVEN** a genome whose decoded brain successfully completes the foraging task (terminates with `TerminationReason.COMPLETED_ALL_FOOD`)
+- **WHEN** `EpisodicSuccessRate.evaluate()` processes that episode
+- **THEN** `brain.learn()` SHALL NOT be called (even though the standard runner would default to `learn=True` on this path)
+
+#### Scenario: Success detection uses TerminationReason
+
+- **GIVEN** an `EpisodeResult` returned by `FrozenEvalRunner.run()`
+- **WHEN** the fitness function determines whether the episode succeeded
+- **THEN** success SHALL be defined as `result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD`
+- **AND** the fitness function SHALL NOT reference any `result.episode_success` attribute (which does not exist on `EpisodeResult`)
+
+#### Scenario: Fitness returns ratio in unit interval
+
+- **GIVEN** an evaluation of `episodes_per_eval = K` episodes where `S` succeed
+- **WHEN** the fitness is returned
+- **THEN** the value SHALL equal `S / K` exactly
+- **AND** SHALL be a finite float in `[0.0, 1.0]`
+
 ### Requirement: Lineage Tracking
 
 The system SHALL maintain a single CSV file per evolution run recording every fitness evaluation with parent→child genealogy, written in append mode so resume operations do not lose history. Generation indexing SHALL be 0-based: a run with `generations: G` populates rows for generations `0, 1, …, G-1`.

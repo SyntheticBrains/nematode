@@ -93,33 +93,63 @@ LSTMPPOBrain has the same `_episode_count` + `_update_learning_rate()` pair, han
 
 **Why:** evolution evaluations need to start each genome at a known initial state. Without this reset, fitness would silently depend on which generation the genome was born in. This is the kind of bug that doesn't fail tests but invalidates a campaign.
 
-### Decision 3: EpisodicSuccessRate is frozen — no `.learn()` call, reuses agent.run_episode()
+### Decision 3: EpisodicSuccessRate is frozen — uses a `FrozenEvalRunner` that bypasses `agent.run_episode()`
 
 For M0, fitness evaluates a brain initialised from the genome and run for K episodes **without** learning. The brain's weights stay fixed; we measure how good the genome's initial weights are.
 
-**Implementation reuses [`QuantumNematodeAgent.run_episode()`](packages/quantum-nematode/quantumnematode/agent/agent.py#L384) directly** rather than re-implementing the per-step action loop. The legacy `scripts/run_evolution.py` had a parallel re-implementation (lines 248-383) that drifted from the agent's canonical loop — this is one of the reasons the user authorised deletion. The fitness function is approximately:
+**The implementation cannot just call `agent.run_episode()` directly** — spec review uncovered that [`StandardEpisodeRunner._terminate_episode`](packages/quantum-nematode/quantumnematode/agent/runners.py#L155) defaults `learn=True` and the success path ([runners.py:817-823](packages/quantum-nematode/quantumnematode/agent/runners.py#L817)) does not override it. Every successful episode calls `brain.learn()`, which for `MLPPPOBrain`/`LSTMPPOBrain` runs a real PPO update and mutates weights. That breaks the M0 frozen-weight contract.
+
+**Solution: a `FrozenEvalRunner` in `evolution/fitness.py`** that mirrors `StandardEpisodeRunner.run()` but explicitly passes `learn=False, update_memory=False` on every termination path. Composition over copy-paste: it reuses the runner's helper methods (`_terminate_episode`, reward calc, sensory prep) by extending or wrapping `StandardEpisodeRunner`, not by re-implementing the per-step loop. ~60 LOC, well below the legacy script's ~80 LOC re-implementation, and the loop logic stays in one place (the standard runner).
+
+**Sketch:**
 
 ```python
-def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
-    brain = encoder.decode(genome, sim_config)
-    env = create_env_from_config(sim_config.environment)
-    agent = QuantumNematodeAgent(brain=brain, env=env, ...)  # constructor args pulled from sim_config
-    successes = 0
-    for _ in range(episodes):
-        agent.prepare_episode()
-        result = agent.run_episode(sim_config.reward, sim_config.max_steps)
-        successes += int(result.episode_success)
-        agent.post_process_episode(episode_success=result.episode_success)
-    return successes / episodes
+class FrozenEvalRunner(StandardEpisodeRunner):
+    """Runs an episode without ever calling brain.learn() or update_memory()."""
+    def _terminate_episode(self, agent, params, reward, *, success, termination_reason, **kwargs):
+        # Force frozen behaviour regardless of what the parent runner would have done
+        return super()._terminate_episode(
+            agent, params, reward,
+            success=success, termination_reason=termination_reason,
+            learn=False, update_memory=False,
+            food_history=kwargs.get("food_history"),
+        )
+
+class EpisodicSuccessRate:
+    def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
+        from quantumnematode.agent.dtypes import TerminationReason  # exists in report.dtypes
+        brain = encoder.decode(genome, sim_config)
+        env = create_env_from_config(sim_config.environment)
+        agent = QuantumNematodeAgent(
+            brain=brain,
+            env=env,
+            satiety_config=sim_config.satiety,
+            sensing_config=_extract_sensing_config(sim_config),
+        )
+        runner = FrozenEvalRunner()
+        successes = 0
+        for _ in range(episodes):
+            result = runner.run(agent, sim_config.reward, sim_config.max_steps)
+            if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
+                successes += 1
+        return successes / episodes
 ```
 
-**Why:** this is the cleanest possible fitness signal for proving the framework works. It also separates concerns: M2 introduces `LearnedPerformanceFitness` (learn for N episodes, then evaluate frozen) which has its own design questions (when does the LR scheduler reset, how is optimiser state seeded). Putting both in M0 forces M2's design decisions before M0 is even merged. Per the user-confirmed scope choice, M0 ships the simpler primitive.
+**Note on success detection:** `EpisodeResult` ([runners.py:69](packages/quantum-nematode/quantumnematode/agent/runners.py#L69)) has fields `agent_path`, `termination_reason`, `food_history` — no `episode_success` attribute. The codebase convention is `result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD` (used in [experiment/tracker.py:304](packages/quantum-nematode/quantumnematode/experiment/tracker.py#L304) and [multi_agent.py:949](packages/quantum-nematode/quantumnematode/agent/multi_agent.py#L949)). The fitness function uses the same convention.
 
-**Note on intra-evaluation state drift:** `post_process_episode()` increments `_episode_count` and calls `_update_learning_rate()` between episodes within a single fitness evaluation. With frozen weights this does NOT affect reproducibility — the LR is unused without `.learn()`, the action distribution depends only on weights and seeded RNG, and identical inputs produce identical fitness. But the brain is not strictly stateless across episodes; only weight-stateless. M2's `LearnedPerformanceFitness` will need to be careful here.
+**Note on agent constructor args:** `QuantumNematodeAgent.__init__` ([agent.py:245](packages/quantum-nematode/quantumnematode/agent/agent.py#L245)) takes 9 keyword args. The fitness function passes `brain`, `env`, `satiety_config=sim_config.satiety`, and `sensing_config` (extracted from `sim_config.environment.sensing` if present). Other args use defaults — `theme`, `rich_style_config` are presentation-only; `agent_id` defaults to `"default"`; `maze_grid_size` and `max_body_length` are unused when an explicit `env` is provided. A small private helper `_build_agent(brain, env, sim_config)` in `evolution/fitness.py` centralises this.
 
-**Alternative considered:** ship both fitness modes. Rejected: M0 grows by ~150 LOC and we make M2 design decisions prematurely.
+**Why a runner subclass rather than a fork of the per-step loop:** the per-step loop in `StandardEpisodeRunner` is non-trivial (rewards, sensory prep, STAM updates, predator handling, termination conditions). Forking risks behavioural drift from the standard runner — exactly the maintenance debt that justified deleting the legacy script. Subclassing and overriding only `_terminate_episode` keeps the step semantics identical and makes the frozen guarantee visible at the type level.
 
-**Alternative considered:** lift the per-step loop from `scripts/run_simulation.py`. Rejected once spec review uncovered that `agent.run_episode()` is a one-line equivalent. The original spec's "lift ~80 LOC" guidance was a holdover from the legacy script's parallel re-implementation.
+**Why:** clean separation of concerns. `FrozenEvalRunner` is M0's primitive; M2's `LearnedPerformanceFitness` will use the standard runner with `learn=True` for K training episodes then a `FrozenEvalRunner` for L eval episodes — the same primitive composes both.
+
+**Note on intra-evaluation state drift:** `post_process_episode()` is called by `_terminate_episode` ([runners.py:187](packages/quantum-nematode/quantumnematode/agent/runners.py#L187)) regardless of `learn`. It increments `_episode_count` and calls `_update_learning_rate()` between episodes within a single fitness evaluation. With `learn=False` enforced this does NOT affect reproducibility — the LR is unused without `.learn()`, action distribution depends only on weights and seeded RNG, and identical inputs produce identical fitness. The brain is weight-stateless across episodes but not counter-stateless.
+
+**Alternative considered:** call `agent.run_episode()` directly and accept that successful episodes update weights. Rejected: it makes M0 fitness "minimal-learning fitness, learning happens only on successes" which collapses the M0 vs M2 distinction and surprises users (the same genome scores higher on episode 2 than episode 1 if it succeeded).
+
+**Alternative considered:** add a `learn: bool` parameter to the public `agent.run_episode()` method. Rejected: bigger blast radius (changes a method other code depends on); subclassing achieves the same without touching the agent API.
+
+**Alternative considered:** ship both fitness modes (frozen + learn-then-eval) in M0. Rejected: M0 grows by ~150 LOC and we make M2 design decisions prematurely.
 
 ### Decision 4: Pickle resume preserved in M0
 

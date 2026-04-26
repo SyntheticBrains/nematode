@@ -38,12 +38,15 @@
 **Parallelizable**: Can start in parallel with Phase 4
 
 - [ ] 3.1 Create `fitness.py` with `FitnessFunction` protocol (single `evaluate(genome: Genome, sim_config: SimulationConfig, encoder: GenomeEncoder, *, episodes: int, seed: int) -> float` method). Note: signature takes the full `SimulationConfig`, matching the encoder API
-- [ ] 3.2 Implement `EpisodicSuccessRate`: decode genome via encoder → build env via `create_env_from_config(sim_config.environment)` → instantiate `QuantumNematodeAgent(brain=brain, env=env, ...)` (constructor args pulled from sim_config) → loop `episodes` calls to `agent.run_episode(sim_config.reward, sim_config.max_steps)` → return mean `result.episode_success` rate
-- [ ] 3.3 **Reuse `agent.run_episode()` directly** ([agent.py:384](packages/quantum-nematode/quantumnematode/agent/agent.py#L384)). Do NOT re-implement the per-step loop. Total fitness function should be ~30 LOC, not the ~80 LOC the legacy script's parallel implementation took
-- [ ] 3.4 **Frozen weights only**: the agent's `run_episode()` is called as-is, but `brain.learn()` is never invoked because no learning hook is wired up. The brain's `post_process_episode()` is still called (per agent contract) — this advances `_episode_count` but does not change weights. (LearnedPerformanceFitness is M2.)
-- [ ] 3.5 Unit test: `test_episodic_success_rate_returns_float_in_unit_interval` (fitness is a finite float in `[0.0, 1.0]` for an arbitrary genome — no assumption that random brains fail)
-- [ ] 3.6 Unit test: `test_episodic_success_rate_deterministic_for_seeded_genome` (same genome + seed → same fitness across two invocations)
-- [ ] 3.7 Unit test: `test_episodic_success_rate_does_not_call_learn` (mock or assertion that `brain.learn()` is never called during fitness eval)
+- [ ] 3.2 Implement `FrozenEvalRunner(StandardEpisodeRunner)` in `fitness.py`: subclass of [`StandardEpisodeRunner`](packages/quantum-nematode/quantumnematode/agent/runners.py#L599) that overrides `_terminate_episode` to always pass `learn=False, update_memory=False` to its parent `super()._terminate_episode(...)`, regardless of what the caller's kwargs say. This bypasses the standard runner's default `learn=True` on the success path ([runners.py:817-823](packages/quantum-nematode/quantumnematode/agent/runners.py#L817)). All step-loop logic is inherited unchanged
+- [ ] 3.3 Implement private helper `_build_agent(brain: Brain, env: DynamicForagingEnvironment, sim_config: SimulationConfig) -> QuantumNematodeAgent` in `fitness.py`: passes `brain`, `env`, `satiety_config=sim_config.satiety`, and `sensing_config=sim_config.environment.sensing` (or `None` if absent). Other `QuantumNematodeAgent.__init__` args use defaults (theme/rich_style_config are presentation-only; agent_id defaults to `"default"`)
+- [ ] 3.4 Implement `EpisodicSuccessRate.evaluate()`: decode genome via encoder → build env via `create_env_from_config(sim_config.environment)` → call `_build_agent(brain, env, sim_config)` → instantiate `FrozenEvalRunner` → loop `episodes` calls to `runner.run(agent, sim_config.reward, sim_config.max_steps)` → count successes via `result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD` → return `successes / episodes`. Success detection uses `TerminationReason.COMPLETED_ALL_FOOD` (codebase convention, see [experiment/tracker.py:304](packages/quantum-nematode/quantumnematode/experiment/tracker.py#L304)) — **NOT** a non-existent `result.episode_success` attribute
+- [ ] 3.5 **Frozen-weight contract**: with `FrozenEvalRunner`, `brain.learn()` and `brain.update_memory()` are never called regardless of episode outcome. `prepare_episode()` and `post_process_episode()` are still called by the inherited per-step logic — this advances `_episode_count` but does not change weights. (LearnedPerformanceFitness is M2.)
+- [ ] 3.6 Unit test: `test_episodic_success_rate_returns_float_in_unit_interval` (fitness is a finite float in `[0.0, 1.0]` for an arbitrary genome — no assumption that random brains fail)
+- [ ] 3.7 Unit test: `test_episodic_success_rate_deterministic_for_seeded_genome` (same genome + seed → same fitness across two invocations)
+- [ ] 3.8 Unit test: `test_frozen_eval_runner_never_calls_learn` (mock `brain.learn` and `brain.update_memory`; run a successful episode via `FrozenEvalRunner.run()`; assert neither was called)
+- [ ] 3.9 Unit test: `test_frozen_eval_runner_never_calls_learn_on_success` (specifically construct a scenario where the standard runner *would* default to `learn=True` — i.e. `TerminationReason.COMPLETED_ALL_FOOD` — and verify the override forces `learn=False`)
+- [ ] 3.10 Unit test: `test_episodic_success_rate_uses_termination_reason_for_success` (mock the runner to return `EpisodeResult` with `COMPLETED_ALL_FOOD`; assert fitness counts it as success. Repeat with `MAX_STEPS`; assert it's not counted)
 
 ## Phase 4: Lineage Tracker
 
@@ -68,7 +71,7 @@
 - [ ] 5.2 Implement `run(*, resume_from: Path | None = None) -> EvolutionResult`
 - [ ] 5.3 Generation loop: `optimizer.ask()` → wrap each candidate as a `Genome` with proper parent_ids → parallel fitness eval → `optimizer.tell()` → record lineage → checkpoint every N gens
 - [ ] 5.4 Multiprocessing: reuse the worker pattern from legacy `run_evolution.py:452-470` (SIGINT-ignore, per-worker logger config)
-- [ ] 5.5 Worker function takes picklable args only (params array, **full sim_config dict**, episodes, seed) and reconstructs the brain inside the worker via `encoder.decode(genome, sim_config)`. No separate `brain_config` arg — sim_config carries everything `instantiate_brain_from_sim_config` needs
+- [ ] 5.5 Worker function takes picklable args (`params: np.ndarray`, `sim_config: SimulationConfig` Pydantic model, `episodes: int`, `seed: int`) and reconstructs the brain inside the worker via `encoder.decode(genome, sim_config)`. **Pass the Pydantic model directly, not a dict** — Pydantic v2 models pickle cleanly via `__getstate__`/`__setstate__`, so workers get a typed `SimulationConfig` without re-parsing. No separate `brain_config` arg — sim_config carries everything `instantiate_brain_from_sim_config` needs
 - [ ] 5.6 Pickle checkpoint: dump `{optimizer, generation, rng_state, lineage_path, checkpoint_version: 1}` to `output_dir/checkpoint.pkl`
 - [ ] 5.7 Resume: load pickle, validate `checkpoint_version`, restore optimizer state, continue from saved generation
 - [ ] 5.8 On completion: write `best_params.json` (compatible with legacy artifact contract) and `history.csv` to `output_dir`
@@ -97,12 +100,13 @@
 - [ ] 7.1 **Delete** existing `scripts/run_evolution.py` (per Phase 5 decision: no `scripts/legacy/` fallback). Git history preserves it via `git log -- scripts/run_evolution.py`
 - [ ] 7.2 **Delete** existing `configs/evolution/qvarcircuit_foraging_small.yml` (no consumer remains)
 - [ ] 7.3 **Delete** existing `test_run_evolution_smoke` from `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` (CI smoke test for the deleted script)
-- [ ] 7.4 Create new `scripts/run_evolution.py` (~150 LOC): argparse → load config → instantiate encoder via registry → instantiate optimiser → instantiate `EvolutionLoop` → run
-- [ ] 7.5 CLI flags: `--config`, `--generations`, `--population`, `--episodes`, `--algorithm`, `--sigma`, `--parallel`, `--seed`, `--resume`, `--output-dir`, `--log-level`
-- [ ] 7.6 CLI flags default to `None` and only override YAML when explicitly passed (single-source-of-truth = `EvolutionConfig` defaults)
-- [ ] 7.7 On startup, log prominently: `Brain type: <name>`, `Algorithm: <cmaes|ga>`, `Population: <N>`, `Generations: <M>`
-- [ ] 7.8 Error message if `brain.name` is not in `ENCODER_REGISTRY`: `f"No encoder for brain '{name}'. Registered: {sorted(ENCODER_REGISTRY)}. Quantum brain support is deferred to a Phase 6 re-evaluation."`
-- [ ] 7.9 Subprocess test: `test_cli_overrides_yaml_for_generations` — invoke the new script via `subprocess.run` with `--config <yaml-with-generations:50> --generations 2`, assert run completes with exactly 2 generations recorded in lineage CSV
+- [ ] 7.4 In the same `test_smoke.py` edit, add `test_run_evolution_smoke_mlpppo`: `@pytest.mark.smoke`, runs `scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml --generations 1 --population 4 --episodes 2 --seed 42 --output-dir <tmp>` via `subprocess.run`, asserts `returncode == 0` and no `Traceback` in stderr. Same pattern as the deleted test. (Grouping deletion + replacement in one task avoids a window of reduced smoke coverage between Phase 7 and Phase 9.) Note: this test exercises the new script which is created in tasks 7.5+, so verify it's wired up before running it locally
+- [ ] 7.5 Create new `scripts/run_evolution.py` (~150 LOC): argparse → load config → instantiate encoder via registry → instantiate optimiser → instantiate `EvolutionLoop` → run
+- [ ] 7.6 CLI flags: `--config`, `--generations`, `--population`, `--episodes`, `--algorithm`, `--sigma`, `--parallel`, `--seed`, `--resume`, `--output-dir`, `--log-level`
+- [ ] 7.7 CLI flags default to `None` and only override YAML when explicitly passed (single-source-of-truth = `EvolutionConfig` defaults)
+- [ ] 7.8 On startup, log prominently: `Brain type: <name>`, `Algorithm: <cmaes|ga>`, `Population: <N>`, `Generations: <M>`
+- [ ] 7.9 Error message if `brain.name` is not in `ENCODER_REGISTRY`: `f"No encoder for brain '{name}'. Registered: {sorted(ENCODER_REGISTRY)}. Quantum brain support is deferred to a Phase 6 re-evaluation."`
+- [ ] 7.10 Subprocess test: `test_cli_overrides_yaml_for_generations` — invoke the new script via `subprocess.run` with `--config <yaml-with-generations:50> --generations 2`, assert run completes with exactly 2 generations recorded in lineage CSV
 
 ## Phase 8: Pilot Configs
 
@@ -123,8 +127,7 @@
 - [ ] 9.4 Run: `uv run python scripts/run_evolution.py --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml` — completes without error
 - [ ] 9.5 Same artifact verification for the LSTMPPO smoke
 - [ ] 9.6 Resume test: run smoke #1, kill at gen ~5, resume with `--resume evolution_results/<session>/checkpoint.pkl`, verify completes 10 gens total
-- [ ] 9.7 Add `test_run_evolution_smoke_mlpppo` to `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py`: `@pytest.mark.smoke`, runs `scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml --generations 1 --population 4 --episodes 2 --seed 42 --output-dir <tmp>` via `subprocess.run`, asserts `returncode == 0` and no `Traceback` in stderr. Uses the same pattern as the deleted `test_run_evolution_smoke`
-- [ ] 9.8 Run `uv run pytest -m smoke -v` — all green including the new MLPPPO smoke
+- [ ] 9.7 Run `uv run pytest -m smoke -v` — all green including the new MLPPPO smoke (`test_run_evolution_smoke_mlpppo` was added in task 7.4)
 
 ## Phase 10: M-1 Invariant — Cross-Phase Tracking Updates
 
