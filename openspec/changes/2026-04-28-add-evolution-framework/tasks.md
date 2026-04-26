@@ -92,11 +92,11 @@
 **Dependencies**: None (can be done in parallel with Phases 1-5)
 **Parallelizable**: Yes
 
-- [ ] 6.1 In `packages/quantum-nematode/quantumnematode/utils/config_loader.py`, add `EvolutionConfig` Pydantic model
-- [ ] 6.2 Fields: `algorithm: Literal["cmaes", "ga"] = "cmaes"`, `population_size: int = 20`, `generations: int = 50`, `episodes_per_eval: int = 15`, `sigma0: float = math.pi/2`, `elite_fraction: float = 0.2`, `mutation_rate: float = 0.1`, `crossover_rate: float = 0.8`, `parallel_workers: int = 1`, `checkpoint_every: int = 10`
-- [ ] 6.3 Add `evolution: EvolutionConfig | None = None` field to `SimulationConfig`
-- [ ] 6.4 Unit test: `test_existing_scenario_config_loads_without_evolution_block` (e.g. load `configs/scenarios/foraging/mlpppo_small_oracle.yml`; assert `SimulationConfig.evolution is None`)
-- [ ] 6.5 Unit test: `test_evolution_block_parses_into_populated_config` (load a fixture with `evolution:` block; assert all fields populated; assert unspecified fields use defaults)
+- [x] 6.1 In `packages/quantum-nematode/quantumnematode/utils/config_loader.py`, add `EvolutionConfig` Pydantic model
+- [x] 6.2 Fields: `algorithm: Literal["cmaes", "ga"] = "cmaes"`, `population_size: int = 20`, `generations: int = 50`, `episodes_per_eval: int = 15`, `sigma0: float = math.pi/2`, `elite_fraction: float = 0.2`, `mutation_rate: float = 0.1`, `crossover_rate: float = 0.8`, `parallel_workers: int = 1`, `checkpoint_every: int = 10`
+- [x] 6.3 Add `evolution: EvolutionConfig | None = None` field to `SimulationConfig`
+- [x] 6.4 Unit test: `test_existing_scenario_config_loads_without_evolution_block` (e.g. load `configs/scenarios/foraging/mlpppo_small_oracle.yml`; assert `SimulationConfig.evolution is None`)
+- [x] 6.5 Unit test: `test_evolution_block_parses_into_populated_config` (load a fixture with `evolution:` block; assert all fields populated; assert unspecified fields use defaults)
 
 ## Phase 7: New CLI Script (legacy deleted, not preserved)
 

@@ -1,6 +1,7 @@
 # pyright: reportUnusedFunction=false
 """Load and configure simulation settings from a YAML file."""
 
+import math
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -930,6 +931,31 @@ class MultiAgentConfig(BaseModel):
         return self
 
 
+class EvolutionConfig(BaseModel):
+    """Configuration for the M0 evolution loop.
+
+    Optional sub-block of :class:`SimulationConfig`.  When absent (the default
+    for non-evolution configs), :class:`SimulationConfig.evolution` is
+    ``None`` and the evolution-loop CLI must rely on its own defaults.
+
+    Field defaults are chosen for full-scale campaigns (50 generations,
+    population 20).  Pilot configs (``configs/evolution/*_small*.yml``)
+    typically override these to ``generations: 10, population_size: 8,
+    episodes_per_eval: 3`` for fast smoke-testing.
+    """
+
+    algorithm: Literal["cmaes", "ga"] = "cmaes"
+    population_size: int = 20
+    generations: int = 50
+    episodes_per_eval: int = 15
+    sigma0: float = math.pi / 2  # CMA-ES initial step size; matches legacy default
+    elite_fraction: float = 0.2  # GA-only
+    mutation_rate: float = 0.1  # GA-only
+    crossover_rate: float = 0.8  # GA-only
+    parallel_workers: int = 1
+    checkpoint_every: int = 10
+
+
 class SimulationConfig(BaseModel):
     """Configuration for the simulation environment."""
 
@@ -948,6 +974,7 @@ class SimulationConfig(BaseModel):
     manyworlds_mode: ManyworldsModeConfig | None = None
     environment: EnvironmentConfig | None = None
     multi_agent: MultiAgentConfig | None = None
+    evolution: EvolutionConfig | None = None
 
 
 class PlasticityPhaseConfig(BaseModel):
