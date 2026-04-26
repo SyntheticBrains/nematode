@@ -117,17 +117,17 @@ Cannot distinguish baseline/pheromone from social/full-stack within CSV. Grouped
 | Temporal (5 food) | 8.33 | 9.52 | +14.3% (collective benefit) |
 | Oracle proportional (15 food) | 9.98 | 10.00 | +0.2% (no overhead) |
 
----
+______________________________________________________________________
 
-# Klinotaxis Era Campaign — Per-Seed Detail
+## Klinotaxis Era Campaign — Per-Seed Detail
 
 All Klinotaxis Era sessions used LSTM PPO GRU (Phase 3 brain hyperparams) with klinotaxis sensing, 4 seeds (42-45) per config, 1000 episodes per session unless stated. Variance reported as standard deviation across the 4 seeds.
 
-## K1 — Single-Cluster Pheromone Evaluation (5 and 10 agents)
+### K1 — Single-Cluster Pheromone Evaluation (5 and 10 agents)
 
 100×100 grid, 1 food cluster at (50,50), `no_respawn=true`, food gradient_decay=2.0, hotspot_decay=2.0, strong food-marking pheromones (emission=3.0, spatial_decay=12.0, temporal_half_life=100). 5 agents target 1 food/agent (foods_on_grid=5); 10 agents target 1 food/agent (foods_on_grid=10).
 
-### K1 5-agent pheromone — per-seed agents-fed and all-fed
+#### K1 5-agent pheromone — per-seed agents-fed and all-fed
 
 | Seed | Agents-fed Overall | Agents-fed L100 | All-fed Overall | All-fed L100 |
 |------|--------------------|------------------|-----------------|---------------|
@@ -137,7 +137,7 @@ All Klinotaxis Era sessions used LSTM PPO GRU (Phase 3 brain hyperparams) with k
 | 45 | 80.9% | 85.8% | 58.1% | 66.0% |
 | **Mean** | **82.2 ± 1.1%** | **89.2 ± 2.3%** | **62.4 ± 3.1%** | **72.8 ± 6.4%** |
 
-### K1 5-agent control (no pheromones) — per-seed
+#### K1 5-agent control (no pheromones) — per-seed
 
 | Seed | Agents-fed Overall | Agents-fed L100 | All-fed Overall | All-fed L100 |
 |------|--------------------|------------------|-----------------|---------------|
@@ -147,7 +147,7 @@ All Klinotaxis Era sessions used LSTM PPO GRU (Phase 3 brain hyperparams) with k
 | 45 | 41.1% | 49.0% | 0.6% | 3.0% |
 | **Mean** | **41.4 ± 0.5%** | **50.4 ± 1.5%** | **0.6 ± 0.1%** | **2.0 ± 1.4%** |
 
-### K1 10-agent pheromone — per-seed
+#### K1 10-agent pheromone — per-seed
 
 | Seed | Agents-fed Overall | Agents-fed L100 | All-fed Overall | All-fed L100 |
 |------|--------------------|------------------|-----------------|---------------|
@@ -157,7 +157,7 @@ All Klinotaxis Era sessions used LSTM PPO GRU (Phase 3 brain hyperparams) with k
 | 45 | 92.0% | 92.9% | 64.5% | 62.0% |
 | **Mean** | **92.4 ± 0.6%** | **92.8 ± 0.6%** | **67.6 ± 2.7%** | **67.2 ± 4.6%** |
 
-### K1 10-agent control — per-seed
+#### K1 10-agent control — per-seed
 
 | Seed | Agents-fed Overall | Agents-fed L100 | All-fed Overall | All-fed L100 |
 |------|--------------------|------------------|-----------------|---------------|
@@ -167,11 +167,11 @@ All Klinotaxis Era sessions used LSTM PPO GRU (Phase 3 brain hyperparams) with k
 | 45 | 45.9% | 54.3% | 0.0% | 0.0% |
 | **Mean** | **45.8 ± 0.2%** | **52.8 ± 1.9%** | **0.0 ± 0.0%** | **0.0 ± 0.0%** |
 
-## K2A — Pheromone-Only Mechanism Isolation
+### K2A — Pheromone-Only Mechanism Isolation
 
 Same K1 environment but `food_chemotaxis` removed from sensory_modules. K2A control further removes `pheromone_food` (no food-related sensing at all).
 
-### K2A pheromone_only — per-seed
+#### K2A pheromone_only — per-seed
 
 | Seed | Agents-fed Overall | Agents-fed L100 | All-fed Overall | All-fed L100 |
 |------|--------------------|------------------|-----------------|---------------|
@@ -181,7 +181,7 @@ Same K1 environment but `food_chemotaxis` removed from sensory_modules. K2A cont
 | 45 | 37.6% | 47.2% | 10.2% | 16.0% |
 | **Mean** | **39.3 ± 1.8%** | **45.9 ± 4.9%** | **11.8 ± 1.6%** | **18.2 ± 2.6%** |
 
-### K2A no-food-sensing — per-seed
+#### K2A no-food-sensing — per-seed
 
 | Seed | Agents-fed Overall | Agents-fed L100 | All-fed Overall | All-fed L100 |
 |------|--------------------|------------------|-----------------|---------------|
@@ -191,12 +191,12 @@ Same K1 environment but `food_chemotaxis` removed from sensory_modules. K2A cont
 | 45 | 16.3% | 17.2% | 0.0% | 0.0% |
 | **Mean** | **16.1 ± 0.2%** | **18.9 ± 1.9%** | **0.0 ± 0.0%** | **0.0 ± 0.0%** |
 
-### K2A learning-curve detail (seed 42, agents-fed % per 100-run window)
+#### K2A learning-curve detail (seed 42, agents-fed % per 100-run window)
 
 - Pheromone_only: 26.8 → 36.8 → 40.2 → 39.4 → 44.0 → 40.4 → 46.2 → 39.6 → 48.0 → 40.6
 - No-food-sensing: 15.0 → 13.2 → 15.2 → 15.2 → 16.4 → 14.4 → 16.8 → 17.0 → 17.2 → 20.0
 
-## K2B — Klinotaxis Pursuit Alarm
+### K2B — Klinotaxis Pursuit Alarm
 
 20×20 grid, 5 agents, 2 pursuit predators, klinotaxis nociception. 1000 episodes, max_steps=1000.
 
@@ -213,11 +213,11 @@ Same K1 environment but `food_chemotaxis` removed from sensory_modules. K2A cont
 | No-alarm 45 | 9.72 | 2.0% | 94.0% | 292 |
 | **No-alarm mean** | **9.76 ± 0.10** | **1.90 ± 0.77%** | **94.8 ± 1.9%** | **269 ± 20** |
 
-## K3 — Mixed-Phenotype Evaluation
+### K3 — Mixed-Phenotype Evaluation
 
 K1 environment with heterogeneous brains: followers have `pheromone_food` perception, loners do not. STAM dim auto-resolution fix (commit `bbfb3293`) enabled this campaign.
 
-### K3 mixed_3F_2L — per-seed L100 (3 followers + 2 loners)
+#### K3 mixed_3F_2L — per-seed L100 (3 followers + 2 loners)
 
 | Seed | Followers L100 | Loners L100 | All-fed L100 |
 |------|---------------|-------------|--------------|
@@ -227,7 +227,7 @@ K1 environment with heterogeneous brains: followers have `pheromone_food` percep
 | 45 | 87.0% | 44.5% | 14.0% |
 | **Mean** | **90.5 ± 3.0%** | **45.6 ± 1.8%** | **16.2 ± 2.9%** |
 
-### K3 mixed_1F_4L — per-seed L100 (1 follower + 4 loners)
+#### K3 mixed_1F_4L — per-seed L100 (1 follower + 4 loners)
 
 | Seed | Followers L100 | Loners L100 | All-fed L100 |
 |------|---------------|-------------|--------------|
@@ -237,7 +237,7 @@ K1 environment with heterogeneous brains: followers have `pheromone_food` percep
 | 45 | 95.0% | 49.2% | 0.0% |
 | **Mean** | **93.2 ± 3.6%** | **48.6 ± 3.5%** | **2.8 ± 2.8%** |
 
-### K3 mixed_4F_1L — per-seed L100 (4 followers + 1 loner)
+#### K3 mixed_4F_1L — per-seed L100 (4 followers + 1 loner)
 
 | Seed | Followers L100 | Loners L100 | All-fed L100 |
 |------|---------------|-------------|--------------|
@@ -247,7 +247,7 @@ K1 environment with heterogeneous brains: followers have `pheromone_food` percep
 | 45 | 84.8% | 50.0% | 47.0% |
 | **Mean** | **89.9 ± 3.6%** | **51.0 ± 3.7%** | **44.8 ± 2.1%** |
 
-### K3 weak-pheromone control (5 followers, original pre-strengthened pheromone params)
+#### K3 weak-pheromone control (5 followers, original pre-strengthened pheromone params)
 
 | Seed | Agents-fed L100 | All-fed L100 |
 |------|-----------------|--------------|
@@ -257,7 +257,7 @@ K1 environment with heterogeneous brains: followers have `pheromone_food` percep
 | 45 | 60.8% | 6.0% |
 | **Mean** | **62.1 ± 2.4%** | **12.8 ± 5.0%** |
 
-## K4 — Mechanism Dissection (single-cluster pheromone parameter ablations)
+### K4 — Mechanism Dissection (single-cluster pheromone parameter ablations)
 
 K1 environment, varying one parameter at a time on the strong-pheromone recipe.
 
@@ -272,9 +272,9 @@ K1 environment, varying one parameter at a time on the strong-pheromone recipe.
 
 Per-seed K4 detail available in `artifacts/logbooks/011/klinotaxis_configs/k4_*/sessions/*.csv`.
 
-## K5 — Stationary Predator Alarm Pheromones (3 variants)
+### K5 — Stationary Predator Alarm Pheromones (3 variants)
 
-### K5 v1 (small 20×20, 3 stationary predators, alarm spatial_decay=12, detection_radius=3)
+#### K5 v1 (small 20×20, 3 stationary predators, alarm spatial_decay=12, detection_radius=3)
 
 Small grid was too cramped — 85% of grid covered by predator gradient, alarm pheromone reaches whole grid. Death rate ~52% indicates env over-determined.
 
@@ -283,7 +283,7 @@ Small grid was too cramped — 85% of grid covered by predator gradient, alarm p
 | Alarm | 6.76 ± 0.08 | 52.55 ± 2.59% | 45.25 ± 3.12% |
 | No-alarm | 6.83 ± 0.08 | 52.15 ± 1.54% | 46.20 ± 2.54% |
 
-### K5 v2 (medium 50×50, 3 stationary predators, alarm spatial_decay=6, detection_radius=6)
+#### K5 v2 (medium 50×50, 3 stationary predators, alarm spatial_decay=6, detection_radius=6)
 
 Re-tuned env. Healthy training: 88% completion, 10% death rate, 0% starvation.
 
@@ -292,7 +292,7 @@ Re-tuned env. Healthy training: 88% completion, 10% death rate, 0% starvation.
 | Alarm | 9.51 ± 0.11 | 10.10 ± 2.07% | 88.80 ± 1.64% |
 | No-alarm | 9.46 ± 0.02 | 10.60 ± 0.59% | 88.60 ± 0.33% |
 
-### K5 v3 (medium 50×50, biologically faithful — no nociception module, alarm spatial_decay=8)
+#### K5 v3 (medium 50×50, biologically faithful — no nociception module, alarm spatial_decay=8)
 
 Removes nociception entirely from the brain to match C. elegans biology where threat detection is contact-based and alarm signals are the natural long-range threat info channel.
 
@@ -303,7 +303,7 @@ Removes nociception entirely from the brain to match C. elegans biology where th
 
 All three variants null. Alarm channel is informationally inert across cramped, well-tuned, and biologically faithful conditions.
 
-## K6 — Social Feeding Klinotaxis Port
+### K6 — Social Feeding Klinotaxis Port
 
 20×20, 5 agents, 1 food, satiety_decay_rate=2.0, initial_satiety=200.
 
@@ -314,9 +314,9 @@ All three variants null. Alarm channel is informationally inert across cramped, 
 | **Δ vs OFF** | **+47.8%** | **+54.5%** | **+110%** |
 | Campaign E (oracle ref) | +35% | +46% | n/a |
 
-## K7 — Multi-Cluster + Aggregation 2×2 (Gap-Closing Round)
+### K7 — Multi-Cluster + Aggregation 2×2 (Gap-Closing Round)
 
-### K7a/b — Multi-cluster (2 hotspots at (25,25) and (75,75), 6 food, 5 agents)
+#### K7a/b — Multi-cluster (2 hotspots at (25,25) and (75,75), 6 food, 5 agents)
 
 | Variant | Agents-fed L100 | All-fed L100 |
 |---------|-----------------|--------------|
@@ -327,7 +327,7 @@ All three variants null. Alarm channel is informationally inert across cramped, 
 
 Multi-cluster pheromone benefit: +2.7pp on agents-fed (vs +38.8pp single-cluster), +16pp on all-fed (vs +70.8pp single-cluster). Generalisation partial — the all-fed metric still shows ~1.6× lift.
 
-### K7c/d — Scarcity 2×2 factorial (social feeding × aggregation perception)
+#### K7c/d — Scarcity 2×2 factorial (social feeding × aggregation perception)
 
 K6 environment plus `pheromone_aggregation` in sensory_modules (K7c, K7d).
 
@@ -346,9 +346,9 @@ Marginal effects:
 - Aggregation (with social OFF): +2.9% food (within noise)
 - Interaction: ~0pp
 
-## Klinotaxis Era Cross-Campaign Summary
+### Klinotaxis Era Cross-Campaign Summary
 
-### Pheromone channel value matrix
+#### Pheromone channel value matrix
 
 | Channel | Single-cluster food | Multi-cluster food | Scarcity (with social feeding) | Stationary predator |
 |---------|---------------------|--------------------|--------------------------------|---------------------|
@@ -356,7 +356,7 @@ Marginal effects:
 | Aggregation pheromone | neutral (K4) | (untested separately) | **0pp** (K7) | n/a |
 | Alarm pheromone | n/a | n/a | n/a | **0pp** (K5 v1/v2/v3) |
 
-### Mechanism criteria for collective pheromone benefit (refined across K1–K7)
+#### Mechanism criteria for collective pheromone benefit (refined across K1–K7)
 
 1. Signal source spatially persistent
 2. Direct sensing insufficient at long range
@@ -365,7 +365,7 @@ Marginal effects:
 5. Channel is food-marking specifically (not aggregation, not alarm)
 6. Single dominant attractor rather than multiple competing ones
 
-### Aggregate session count
+#### Aggregate session count
 
 - 104 multi-agent sessions across K1-K7
 - 4 seeds per config, 1000 eps per session
