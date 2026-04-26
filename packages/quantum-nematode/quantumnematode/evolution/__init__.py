@@ -25,12 +25,15 @@ from quantumnematode.evolution.fitness import (
 )
 from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.lineage import CSV_HEADER, LineageTracker
+from quantumnematode.evolution.loop import CHECKPOINT_VERSION, EvolutionLoop
 
 __all__ = [
+    "CHECKPOINT_VERSION",
     "CSV_HEADER",
     "ENCODER_REGISTRY",
     "NON_GENOME_COMPONENTS",
     "EpisodicSuccessRate",
+    "EvolutionLoop",
     "FitnessFunction",
     "FrozenEvalRunner",
     "Genome",

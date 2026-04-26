@@ -72,20 +72,20 @@
 **Dependencies**: Phases 2, 3, 4
 **Parallelizable**: No
 
-- [ ] 5.1 Create `loop.py` with `EvolutionLoop` class taking `optimizer`, `encoder`, `fitness`, `sim_config`, `evolution_config`, `output_dir`, `rng`
-- [ ] 5.2 Implement `run(*, resume_from: Path | None = None) -> EvolutionResult`
-- [ ] 5.3 Generation loop: `optimizer.ask()` → wrap each candidate as a `Genome` whose `parent_ids` is the list of ALL genome IDs from the previous generation (per Decision 5a — uniform convention for both CMA-ES and GA, since neither optimiser exposes per-child parent provenance). For generation 0, `parent_ids = []`. Then parallel fitness eval → `optimizer.tell()` → record lineage → checkpoint every N gens
-- [ ] 5.4 Multiprocessing: reuse the worker pattern from legacy `run_evolution.py:452-470` (SIGINT-ignore, per-worker logger config)
-- [ ] 5.5 Worker function takes picklable args (`params: np.ndarray`, `sim_config: SimulationConfig` Pydantic model, `episodes: int`, `seed: int`) and reconstructs the brain inside the worker via `encoder.decode(genome, sim_config)`. **Pass the Pydantic model directly, not a dict** — Pydantic v2 models pickle cleanly via `__getstate__`/`__setstate__`, so workers get a typed `SimulationConfig` without re-parsing. No separate `brain_config` arg — sim_config carries everything `instantiate_brain_from_sim_config` needs
-- [ ] 5.6 Pickle checkpoint: dump `{optimizer, generation, rng_state, lineage_path, checkpoint_version: 1}` to `output_dir/checkpoint.pkl`
-- [ ] 5.7 Resume: load pickle, validate `checkpoint_version`, restore optimizer state, continue from saved generation
-- [ ] 5.8 On completion: write `best_params.json` (compatible with legacy artifact contract) and `history.csv` to `output_dir`
-- [ ] 5.9 Unit test: `test_loop_runs_3_generations_mlpppo` (minimal config, 3 gens, pop 4, 1 episode each — completes and produces best_params.json)
-- [ ] 5.10 Unit test: `test_loop_resume_from_checkpoint` (run 2 gens → kill → resume → run 3 more — total 5 gens in lineage CSV)
-- [ ] 5.11 Unit test: `test_loop_rejects_incompatible_checkpoint_version`
-- [ ] 5.12 Unit test: `test_checkpoint_contains_required_keys` (load a written checkpoint pickle and assert exact keys: `{"optimizer", "generation", "rng_state", "lineage_path", "checkpoint_version"}`)
-- [ ] 5.13 Unit test: `test_unknown_brain_name_raises_with_helpful_message` (instantiate `EvolutionLoop` with a brain config whose `name` is not in `ENCODER_REGISTRY`; assert `ValueError` whose message lists the registered brain names and notes Phase 6 deferral)
-- [ ] 5.14 Unit test: `test_lineage_parent_ids_lists_all_prev_generation_ids` — run a 3-gen × pop 4 loop, parse the resulting lineage CSV, assert that for every gen-1 row `parent_ids` is the `;`-joined set of all 4 gen-0 `child_id`s, and for every gen-2 row `parent_ids` is the set of all 4 gen-1 `child_id`s. Verifies Decision 5a's convention
+- [x] 5.1 Create `loop.py` with `EvolutionLoop` class taking `optimizer`, `encoder`, `fitness`, `sim_config`, `evolution_config`, `output_dir`, `rng`
+- [x] 5.2 Implement `run(*, resume_from: Path | None = None) -> EvolutionResult`
+- [x] 5.3 Generation loop: `optimizer.ask()` → wrap each candidate as a `Genome` whose `parent_ids` is the list of ALL genome IDs from the previous generation (per Decision 5a — uniform convention for both CMA-ES and GA, since neither optimiser exposes per-child parent provenance). For generation 0, `parent_ids = []`. Then parallel fitness eval → `optimizer.tell()` → record lineage → checkpoint every N gens
+- [x] 5.4 Multiprocessing: reuse the worker pattern from legacy `run_evolution.py:452-470` (SIGINT-ignore, per-worker logger config)
+- [x] 5.5 Worker function takes picklable args (`params: np.ndarray`, `sim_config: SimulationConfig` Pydantic model, `episodes: int`, `seed: int`) and reconstructs the brain inside the worker via `encoder.decode(genome, sim_config)`. **Pass the Pydantic model directly, not a dict** — Pydantic v2 models pickle cleanly via `__getstate__`/`__setstate__`, so workers get a typed `SimulationConfig` without re-parsing. No separate `brain_config` arg — sim_config carries everything `instantiate_brain_from_sim_config` needs
+- [x] 5.6 Pickle checkpoint: dump `{optimizer, generation, rng_state, lineage_path, checkpoint_version: 1}` to `output_dir/checkpoint.pkl`
+- [x] 5.7 Resume: load pickle, validate `checkpoint_version`, restore optimizer state, continue from saved generation
+- [x] 5.8 On completion: write `best_params.json` (compatible with legacy artifact contract) and `history.csv` to `output_dir`
+- [x] 5.9 Unit test: `test_loop_runs_3_generations_mlpppo` (minimal config, 3 gens, pop 4, 1 episode each — completes and produces best_params.json)
+- [x] 5.10 Unit test: `test_loop_resume_from_checkpoint` (run 2 gens → kill → resume → run 3 more — total 5 gens in lineage CSV)
+- [x] 5.11 Unit test: `test_loop_rejects_incompatible_checkpoint_version`
+- [x] 5.12 Unit test: `test_checkpoint_contains_required_keys` (load a written checkpoint pickle and assert exact keys: `{"optimizer", "generation", "rng_state", "lineage_path", "checkpoint_version"}`)
+- [x] 5.13 Unit test: `test_unknown_brain_name_raises_with_helpful_message` (instantiate `EvolutionLoop` with a brain config whose `name` is not in `ENCODER_REGISTRY`; assert `ValueError` whose message lists the registered brain names and notes Phase 6 deferral)
+- [x] 5.14 Unit test: `test_lineage_parent_ids_lists_all_prev_generation_ids` — run a 3-gen × pop 4 loop, parse the resulting lineage CSV, assert that for every gen-1 row `parent_ids` is the `;`-joined set of all 4 gen-0 `child_id`s, and for every gen-2 row `parent_ids` is the set of all 4 gen-1 `child_id`s. Verifies Decision 5a's convention
 
 ## Phase 6: Configuration Schema Extension
 
