@@ -34,7 +34,7 @@ to mark sub-tasks complete as part of its diff.
 - [ ] M0.3 Implement `LineageTracker` writing `evolution_results/<session>/lineage.csv`
 - [ ] M0.4 Implement `EvolutionLoop` class (fresh, not extracted from old script)
 - [ ] M0.5 Implement `FitnessFunction` protocol with `EpisodicSuccessRate` (frozen weights, no `.learn()`). `LearnedPerformanceFitness` deferred to M2.
-- [ ] M0.6 Move existing `scripts/run_evolution.py` → `scripts/legacy/run_evolution_qvarcircuit.py`
+- [ ] M0.6 Delete existing `scripts/run_evolution.py`, `configs/evolution/qvarcircuit_foraging_small.yml`, and `test_run_evolution_smoke` (no `scripts/legacy/` fallback — git history is the archive)
 - [ ] M0.7 Write fresh `scripts/run_evolution.py` as a thin CLI wiring loop + encoder + fitness
 - [ ] M0.8 Extend `config_loader.py` with an `evolution:` block schema
 - [ ] M0.9 Create `configs/evolution/mlpppo_foraging_small.yml`

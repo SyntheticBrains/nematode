@@ -7,24 +7,27 @@
 
 - [ ] 1.1 Create `packages/quantum-nematode/quantumnematode/evolution/` directory with `__init__.py` exporting public API
 - [ ] 1.2 Create `genome.py`: `Genome` dataclass (`params: np.ndarray`, `genome_id: str`, `parent_ids: list[str]`, `generation: int`, `birth_metadata: dict[str, Any]`)
-- [ ] 1.3 Add `genome_id_for(generation: int, index: int, parent_ids: list[str]) -> str` helper (deterministic UUID derived from inputs)
-- [ ] 1.4 Unit tests: `test_genome_id_deterministic`, `test_genome_id_distinct_for_distinct_inputs`
+- [ ] 1.3 Add `genome_id_for(generation: int, index: int, parent_ids: list[str]) -> str` helper. **Implementation**: use `uuid.uuid5(uuid.NAMESPACE_OID, f"gen{generation}-idx{index}-parents{','.join(sorted(parent_ids))}")` so identical inputs produce identical IDs and any input change produces a different ID
+- [ ] 1.4 Unit tests: `test_genome_id_deterministic` (same inputs → same UUID), `test_genome_id_distinct_for_distinct_inputs` (any input change → different UUID), `test_genome_id_format_is_uuid` (returned string parses as a valid UUID)
 
 ## Phase 2: Encoder Protocol and Concrete Encoders
 
 **Dependencies**: Phase 1
 **Parallelizable**: No
 
-- [ ] 2.1 Create `encoders.py` with `GenomeEncoder` protocol (methods: `initial_genome`, `decode`, `genome_dim`)
-- [ ] 2.2 Implement private `_flatten_components(components: dict[str, WeightComponent]) -> tuple[np.ndarray, dict]` (returns flat array + shape map for unflatten)
+- [ ] 2.1 Create `encoders.py` with `GenomeEncoder` protocol (methods: `initial_genome`, `decode`, `genome_dim`) and module-level constant `NON_GENOME_COMPONENTS = {"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}` (the denylist)
+- [ ] 2.2 Implement private `_flatten_components(components: dict[str, WeightComponent]) -> tuple[np.ndarray, dict]` (returns flat array + shape map for unflatten — walks components in deterministic key-sorted order)
 - [ ] 2.3 Implement private `_unflatten_components(params: np.ndarray, shape_map: dict) -> dict[str, WeightComponent]`
-- [ ] 2.4 Implement `MLPPPOEncoder`: `brain_name = "mlpppo"`; uses components `{"policy", "value"}`; resets `brain._episode_count = 0` after `load_weight_components`
-- [ ] 2.5 Implement `LSTMPPOEncoder`: `brain_name = "lstmppo"`; uses components `{"lstm", "actor", "critic"}`; resets `brain._episode_count = 0` after load
+- [ ] 2.4 Implement `MLPPPOEncoder`: `brain_name = "mlpppo"`. **Dynamic discovery**: calls `brain.get_weight_components()` then filters out `NON_GENOME_COMPONENTS`. This automatically picks up `policy`, `value`, and conditional `gate_weights` (when feature gating is enabled). After `load_weight_components`, explicitly sets `brain._episode_count = 0`
+- [ ] 2.5 Implement `LSTMPPOEncoder`: `brain_name = "lstmppo"`. Same dynamic-discovery + denylist pattern. Picks up `lstm`, `layer_norm`, `policy`, `value`. After load, resets `brain._episode_count = 0`. (Per-episode hidden state `_pending_h_state` / `_pending_c_state` is not part of weight components and resets on `prepare_episode()` already.)
 - [ ] 2.6 Define `ENCODER_REGISTRY: dict[str, type[GenomeEncoder]] = {"mlpppo": MLPPPOEncoder, "lstmppo": LSTMPPOEncoder}`
-- [ ] 2.7 Unit tests: `test_mlpppo_encoder_roundtrip` (encode → decode → identical first-step action on seeded input)
-- [ ] 2.8 Unit tests: `test_lstmppo_encoder_roundtrip` (same with recurrent brain)
-- [ ] 2.9 Unit tests: `test_genome_dim_matches_flattened_state` (for both encoders)
-- [ ] 2.10 Unit tests: `test_episode_count_resets_on_decode` (verify the determinism guard)
+- [ ] 2.7 Unit test: `test_mlpppo_encoder_roundtrip` (encode → decode → identical first-step action on seeded input)
+- [ ] 2.8 Unit test: `test_lstmppo_encoder_roundtrip` (same with recurrent brain — verifies all four components round-trip including `layer_norm`)
+- [ ] 2.9 Unit test: `test_genome_dim_matches_flattened_state` (for both encoders)
+- [ ] 2.10 Unit test: `test_episode_count_resets_on_decode` (verify the determinism guard for both brains)
+- [ ] 2.11 Unit test: `test_mlpppo_with_feature_gating_includes_gate_weights` (sanity: when `_feature_gating: true`, the genome dim is larger than without, and round-trip preserves gate behaviour)
+- [ ] 2.12 Unit test: `test_encoder_registry_membership` (asserts `"mlpppo" in ENCODER_REGISTRY` and `"lstmppo" in ENCODER_REGISTRY` and that `ENCODER_REGISTRY[name]()` produces a working encoder for both)
+- [ ] 2.13 Unit test: `test_encoder_excludes_denylist_components` (verifies `optimizer`, `actor_optimizer`, `critic_optimizer`, `training_state` are NEVER in the genome regardless of brain)
 
 ## Phase 3: Fitness Function
 
@@ -35,20 +38,21 @@
 - [ ] 3.2 Implement `EpisodicSuccessRate`: decodes genome → instantiates env via existing `create_env_from_config` → runs `episodes` complete episodes → returns mean foods_collected / target ratio
 - [ ] 3.3 **Frozen weights only**: do NOT call `brain.learn()` or `update_memory()`. M0 scope. (LearnedPerformanceFitness is M2.)
 - [ ] 3.4 Reuse the per-step action loop pattern from `scripts/run_simulation.py` lines 240-1200 — strip rendering, CSV export, and learning calls
-- [ ] 3.5 Unit test: `test_episodic_success_rate_returns_zero_for_random_brain` (sanity: a brain initialised to zero weights should fail to forage)
-- [ ] 3.6 Unit test: `test_episodic_success_rate_deterministic_for_seeded_genome` (same genome + seed → same fitness)
+- [ ] 3.5 Unit test: `test_episodic_success_rate_returns_float_in_unit_interval` (fitness is a finite float in `[0.0, 1.0]` for an arbitrary genome — no assumption that random brains fail)
+- [ ] 3.6 Unit test: `test_episodic_success_rate_deterministic_for_seeded_genome` (same genome + seed → same fitness across two invocations)
 
 ## Phase 4: Lineage Tracker
 
 **Dependencies**: Phase 1
 **Parallelizable**: Yes
 
-- [ ] 4.1 Create `lineage.py` with `LineageTracker(output_path: Path)` class
+- [ ] 4.1 Create `lineage.py` with `LineageTracker(output_path: Path)` class. The tracker is owned by the **parent process only** — workers report fitnesses back to the parent, and the parent calls `record()`. Workers MUST NOT instantiate or write to the tracker directly (no concurrent-write hazard)
 - [ ] 4.2 `record(genome: Genome, fitness: float, brain_type: str)` appends a CSV row
 - [ ] 4.3 CSV columns: `generation, child_id, parent_ids, fitness, brain_type` (parent_ids `;`-joined for CSV-safety)
-- [ ] 4.4 Append mode (not write mode) so resume works without recreating
-- [ ] 4.5 Unit test: `test_lineage_csv_appends_across_generations` (record gens 0-5, verify row count and parent_ids)
-- [ ] 4.6 Unit test: `test_lineage_csv_header_only_written_once` (resume scenario)
+- [ ] 4.4 Append mode (not write mode) so resume works without recreating. On `__init__`, check whether the file exists: if yes, skip writing the header; if no, write it
+- [ ] 4.5 Unit test: `test_lineage_csv_appends_across_generations` (record gens 0-5 × population 4, verify row count = 24 + 1 header row and parent_ids correctly populated)
+- [ ] 4.6 Unit test: `test_lineage_csv_gen_zero_has_empty_parent_ids` (gen 0 rows have empty `parent_ids` field)
+- [ ] 4.7 Unit test: `test_lineage_csv_header_only_written_once` (instantiate tracker → record → close; reinstantiate same path → record → close; assert header appears exactly once)
 
 ## Phase 5: Evolution Loop
 
@@ -66,6 +70,8 @@
 - [ ] 5.9 Unit test: `test_loop_runs_3_generations_mlpppo` (minimal config, 3 gens, pop 4, 1 episode each — completes and produces best_params.json)
 - [ ] 5.10 Unit test: `test_loop_resume_from_checkpoint` (run 2 gens → kill → resume → run 3 more — total 5 gens in lineage CSV)
 - [ ] 5.11 Unit test: `test_loop_rejects_incompatible_checkpoint_version`
+- [ ] 5.12 Unit test: `test_checkpoint_contains_required_keys` (load a written checkpoint pickle and assert exact keys: `{"optimizer", "generation", "rng_state", "lineage_path", "checkpoint_version"}`)
+- [ ] 5.13 Unit test: `test_unknown_brain_name_raises_with_helpful_message` (instantiate `EvolutionLoop` with a brain config whose `name` is not in `ENCODER_REGISTRY`; assert `ValueError` whose message lists the registered brain names and notes Phase 6 deferral)
 
 ## Phase 6: Configuration Schema Extension
 
@@ -75,20 +81,23 @@
 - [ ] 6.1 In `packages/quantum-nematode/quantumnematode/utils/config_loader.py`, add `EvolutionConfig` Pydantic model
 - [ ] 6.2 Fields: `algorithm: Literal["cmaes", "ga"] = "cmaes"`, `population_size: int = 20`, `generations: int = 50`, `episodes_per_eval: int = 15`, `sigma0: float = math.pi/2`, `elite_fraction: float = 0.2`, `mutation_rate: float = 0.1`, `crossover_rate: float = 0.8`, `parallel_workers: int = 1`, `checkpoint_every: int = 10`
 - [ ] 6.3 Add `evolution: EvolutionConfig | None = None` field to `SimulationConfig`
-- [ ] 6.4 Verify (test): existing scenario configs without `evolution:` block still load cleanly
-- [ ] 6.5 Verify (test): a config with `evolution:` block parses into a populated `EvolutionConfig`
+- [ ] 6.4 Unit test: `test_existing_scenario_config_loads_without_evolution_block` (e.g. load `configs/scenarios/foraging/mlpppo_small_oracle.yml`; assert `SimulationConfig.evolution is None`)
+- [ ] 6.5 Unit test: `test_evolution_block_parses_into_populated_config` (load a fixture with `evolution:` block; assert all fields populated; assert unspecified fields use defaults)
 
-## Phase 7: New CLI Script
+## Phase 7: New CLI Script (legacy deleted, not preserved)
 
 **Dependencies**: Phases 5, 6
 **Parallelizable**: No
 
-- [ ] 7.1 First: `git mv scripts/run_evolution.py scripts/legacy/run_evolution_qvarcircuit.py` (preserve legacy)
-- [ ] 7.2 Create new `scripts/run_evolution.py` (~150 LOC): argparse → load config → instantiate encoder via registry → instantiate optimiser → instantiate `EvolutionLoop` → run
-- [ ] 7.3 CLI flags: `--config`, `--generations`, `--population`, `--episodes`, `--algorithm`, `--sigma`, `--parallel`, `--seed`, `--resume`, `--output-dir`, `--log-level`
-- [ ] 7.4 CLI flags default to `None` and only override YAML when explicitly passed (single-source-of-truth = `EvolutionConfig` defaults)
-- [ ] 7.5 On startup, log prominently: `Brain type: <name>`, `Algorithm: <cmaes|ga>`, `Population: <N>`, `Generations: <M>`
-- [ ] 7.6 Error message if `brain.name` is not in `ENCODER_REGISTRY`: `f"No encoder for brain '{name}'. Registered: {list(ENCODER_REGISTRY)}. For QVarCircuit support use scripts/legacy/run_evolution_qvarcircuit.py"`
+- [ ] 7.1 **Delete** existing `scripts/run_evolution.py` (per Phase 5 decision: no `scripts/legacy/` fallback). Git history preserves it via `git log -- scripts/run_evolution.py`
+- [ ] 7.2 **Delete** existing `configs/evolution/qvarcircuit_foraging_small.yml` (no consumer remains)
+- [ ] 7.3 **Delete** existing `test_run_evolution_smoke` from `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` (CI smoke test for the deleted script)
+- [ ] 7.4 Create new `scripts/run_evolution.py` (~150 LOC): argparse → load config → instantiate encoder via registry → instantiate optimiser → instantiate `EvolutionLoop` → run
+- [ ] 7.5 CLI flags: `--config`, `--generations`, `--population`, `--episodes`, `--algorithm`, `--sigma`, `--parallel`, `--seed`, `--resume`, `--output-dir`, `--log-level`
+- [ ] 7.6 CLI flags default to `None` and only override YAML when explicitly passed (single-source-of-truth = `EvolutionConfig` defaults)
+- [ ] 7.7 On startup, log prominently: `Brain type: <name>`, `Algorithm: <cmaes|ga>`, `Population: <N>`, `Generations: <M>`
+- [ ] 7.8 Error message if `brain.name` is not in `ENCODER_REGISTRY`: `f"No encoder for brain '{name}'. Registered: {sorted(ENCODER_REGISTRY)}. Quantum brain support is deferred to a Phase 6 re-evaluation."`
+- [ ] 7.9 Subprocess test: `test_cli_overrides_yaml_for_generations` — invoke the new script via `subprocess.run` with `--config <yaml-with-generations:50> --generations 2`, assert run completes with exactly 2 generations recorded in lineage CSV
 
 ## Phase 8: Pilot Configs
 
@@ -109,6 +118,8 @@
 - [ ] 9.4 Run: `uv run python scripts/run_evolution.py --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml` — completes without error
 - [ ] 9.5 Same artifact verification for the LSTMPPO smoke
 - [ ] 9.6 Resume test: run smoke #1, kill at gen ~5, resume with `--resume evolution_results/<session>/checkpoint.pkl`, verify completes 10 gens total
+- [ ] 9.7 Add `test_run_evolution_smoke_mlpppo` to `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py`: `@pytest.mark.smoke`, runs `scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml --generations 1 --population 4 --episodes 2 --seed 42 --output-dir <tmp>` via `subprocess.run`, asserts `returncode == 0` and no `Traceback` in stderr. Uses the same pattern as the deleted `test_run_evolution_smoke`
+- [ ] 9.8 Run `uv run pytest -m smoke -v` — all green including the new MLPPPO smoke
 
 ## Phase 10: M-1 Invariant — Cross-Phase Tracking Updates
 

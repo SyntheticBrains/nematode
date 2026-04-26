@@ -23,11 +23,30 @@ M0 is the brain-agnostic evolution framework that unblocks every subsequent Phas
 
 ## Design Decisions
 
-### Decision 1: WeightPersistence as the encoder primitive, not torch state_dict directly
+### Decision 1: WeightPersistence with dynamic component discovery via denylist
 
 `MLPPPOBrain` and `LSTMPPOBrain` already implement `WeightPersistence` (mlpppo.py:660, lstmppo.py:895). Their `get_weight_components()` returns a `dict[str, WeightComponent]` where each component bundles a name, a state dict, and metadata. Encoders use this protocol — they do **not** reach inside the brain to grab `actor.state_dict()` directly.
 
-**Why:** the protocol is the contract. If we go around it, the encoder breaks the moment a brain refactors its internal module structure. The protocol also lets us select components — encoders explicitly request `{"policy", "value"}` for MLPPPO and `{"lstm", "actor", "critic"}` for LSTMPPO, **deliberately excluding** `optimizer` / `actor_optimizer` / `critic_optimizer` (Adam state, not part of the genome) and `training_state` (episode counters, runtime state). This separation is the right primitive for M3 Lamarckian inheritance later: M3 may choose to inherit optimiser state too, and the protocol lets it do so by widening the component set.
+**The actual component sets** (verified during spec review):
+
+- MLPPPO: `{"policy", "value", "optimizer", "training_state"}` plus a conditional `{"gate_weights"}` when `_feature_gating: true` is configured
+- LSTMPPO: `{"lstm", "layer_norm", "policy", "value", "actor_optimizer", "critic_optimizer", "training_state"}` (note: there is **no** "actor" or "critic" component — the names are "policy" and "value" matching MLPPPO; "layer_norm" wraps a real LayerNorm tensor that MUST be in the genome)
+
+**Discovery strategy — denylist, not allowlist:** encoders call `get_weight_components()` to retrieve all available components, then filter out a fixed denylist of non-genome state:
+
+```python
+NON_GENOME_COMPONENTS = {"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}
+genome_components = {k: v for k, v in all_components.items() if k not in NON_GENOME_COMPONENTS}
+```
+
+**Why dynamic discovery:**
+
+- Picks up MLPPPO's conditional `gate_weights` automatically (when feature gating is enabled, those weights are real and must be in the genome)
+- Picks up LSTMPPO's `layer_norm` without the encoder needing to know about it explicitly
+- Survives future component additions to either brain without an encoder change
+- The denylist is brain-architecture-agnostic — any future classical brain that follows the existing optimizer-naming conventions (`*_optimizer`, `training_state`) gets the right behaviour automatically
+
+**Alternative considered:** explicit allowlist per encoder (e.g. `{"policy", "value"}` for MLPPPO). Rejected because it silently drops conditional components and creates encoder/brain coupling. A reviewer caught this gap in spec review — the original allowlist was wrong for both brains.
 
 **Alternative considered:** flatten brain by walking `brain.actor.state_dict() | brain.critic.state_dict()` directly. Rejected because it duplicates knowledge that already lives in `get_weight_components()` and would silently drift if a brain adds a head.
 
@@ -73,15 +92,19 @@ Both `mlpppo_foraging_small.yml` and `lstmppo_foraging_small_klinotaxis.yml` shi
 
 **Why both now:** if only the MLPPPO config ships, M3 has to add the LSTMPPO+klinotaxis config plus prove the LSTMPPO encoder works at the same time, mixing framework concerns with science concerns. Shipping both in M0 means M3's PR is purely about Lamarckian inheritance, not "does the framework even work for LSTMPPO?"
 
-### Decision 8: Move the legacy script under `scripts/legacy/`, do not delete
+### Decision 8: Delete the legacy script entirely
 
-**Why preserve:** the legacy script has running history, configs, and pickle artefacts that someone may want to re-run for comparison. Deleting it forces a git archaeology exercise to recover anything. Moving it costs nothing and signals "no maintenance" via the directory name.
+**The user's stated rationale (review feedback):** retaining legacy code under `scripts/legacy/` would tie M0 to suboptimal implementation choices — there'd be a temptation to mirror the old script's structure, copy its CLI flags verbatim, or maintain bug-compatibility "just in case." Deleting it cleanly signals that the new framework is free to make better choices.
 
-**Why under `scripts/legacy/`:** any directory name signals deprecation. `legacy/` matches industry convention. We don't add to test coverage there; we don't refactor it; if it breaks, that's fine.
+**What we lose:** the existing CI smoke test (`test_run_evolution_smoke`) that exercised the QVarCircuit path. Replaced by a new MLPPPO smoke against the new framework — different brain, but the assertion ("CLI doesn't crash with minimal parameters") is the same.
+
+**What we keep:** git history. `git log -- scripts/run_evolution.py` and `git show <commit>:scripts/run_evolution.py` retrieve the old code if anyone needs it for comparison. The `configs/evolution/qvarcircuit_foraging_small.yml` config is also deleted — no consumer remains.
+
+**Future quantum brain support:** if a Phase 6 quantum re-evaluation needs evolution, a `QVarCircuitEncoder` is added cleanly to the new framework's registry (a one-class change). It will not resurrect the legacy script.
 
 ## Risks
 
-1. **Encoder round-trip determinism is fragile.** Brains can have non-deterministic decode (e.g. `torch.nn.Module` parameter init uses CUDA RNG state on GPU). Mitigation: round-trip tests use `torch.manual_seed(0)` before encode and after decode, and assert action equality on a fixed seeded input. If a brain has hidden non-determinism (cuDNN modes, dropout in eval), tests catch it before merge.
+1. **Encoder round-trip determinism.** Round-trip tests fix `torch.manual_seed(0)` before encode and again before decode, then assert that both brains produce identical actions on the same seeded input. CI runs CPU-only so cuDNN/CUDA non-determinism doesn't apply here. If a brain ever introduces eval-time stochasticity (e.g. dropout left on outside training mode), the test catches it.
 
 2. **Pickle resume couples optimiser internals to a Python version.** CMA-ES library updates can break pickle compatibility. Mitigation: version-tag the checkpoint file (`checkpoint_version: int`) and validate on load. Reject incompatible checkpoints with a clear error rather than silent corruption.
 
@@ -89,7 +112,7 @@ Both `mlpppo_foraging_small.yml` and `lstmppo_foraging_small_klinotaxis.yml` shi
 
 4. **Smoke runs are slow if `episodes_per_eval` is too high.** A 10-gen × 8-pop × 15-eps smoke is 1200 episode-runs and could be 5+ minutes. Mitigation: pilot configs use `episodes_per_eval: 3` (the minimum that gives a meaningful fitness signal) so the smoke is sub-2-minute.
 
-5. **The new `scripts/run_evolution.py` will surprise anyone with muscle memory** (running a Phase 5 mlpppo evolution where they expected QVarCircuit). Mitigation: the script logs `Brain type: mlpppo` prominently on startup; the legacy script is one `legacy/` path away with identical flags.
+5. **Anyone with muscle memory of the legacy script will be surprised.** The legacy script is deleted (not preserved under `scripts/legacy/`). Mitigation: the new script logs `Brain type: <name>` prominently on startup; if someone runs it with the old QVarCircuit config, the error message names the registered brains and the breakage is immediate and obvious. Git history retrieves the old script if absolutely needed.
 
 ## Maintenance
 

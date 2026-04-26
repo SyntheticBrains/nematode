@@ -23,17 +23,34 @@ The system SHALL provide a `GenomeEncoder` protocol allowing any brain implement
 - **WHEN** `encoder.genome_dim(brain_config)` is called
 - **THEN** the returned integer SHALL equal the total number of float parameters across all weight components selected by the encoder
 
-#### Scenario: Encoder registry is the single dispatch point
+#### Scenario: Encoders discover weight components dynamically via denylist
 
-- **GIVEN** a brain name `"mlpppo"` that is registered in `ENCODER_REGISTRY`
-- **WHEN** the evolution loop instantiates an encoder for that brain name
-- **THEN** the encoder SHALL be obtained via `ENCODER_REGISTRY[brain_name]()` with no other lookup mechanism
+- **GIVEN** any brain implementing `WeightPersistence`
+- **WHEN** the encoder serializes the brain
+- **THEN** the encoder SHALL call `brain.get_weight_components()` to retrieve the full set of components
+- **AND** SHALL include in the genome every component whose name is NOT in the denylist `{"optimizer", "actor_optimizer", "critic_optimizer", "training_state"}`
+- **AND** SHALL NOT hardcode an allowlist of component names
+
+#### Scenario: Conditional weight components are picked up automatically
+
+- **GIVEN** a `MLPPPOBrain` configured with `_feature_gating: true` (which adds a `gate_weights` component)
+- **WHEN** the encoder serializes the brain
+- **THEN** the genome `params` array SHALL include the parameters from `gate_weights`
+- **AND** decode SHALL restore them correctly so that the gated and ungated brain produce identical first-step actions
+
+#### Scenario: Encoder registry membership is sufficient for dispatch
+
+- **GIVEN** any brain name X registered in `ENCODER_REGISTRY`
+- **WHEN** `ENCODER_REGISTRY[X]()` is invoked
+- **THEN** the call SHALL produce a working `GenomeEncoder` instance for that brain
+- **AND** that encoder SHALL be the single dispatch point used by `EvolutionLoop`
 
 #### Scenario: Unsupported brain name fails clearly
 
 - **GIVEN** a brain name (e.g. `"qvarcircuit"`) NOT in `ENCODER_REGISTRY`
 - **WHEN** the evolution loop attempts to construct an encoder
-- **THEN** an error SHALL be raised that lists the registered brain names AND directs the user to `scripts/legacy/run_evolution_qvarcircuit.py` for the QVarCircuit case
+- **THEN** a `ValueError` SHALL be raised whose message lists the registered brain names
+- **AND** the message SHALL note that quantum brain support is deferred to a future Phase 6 re-evaluation
 
 ### Requirement: Lineage Tracking
 
@@ -126,10 +143,10 @@ The encoder registry SHALL include `MLPPPOEncoder` and `LSTMPPOEncoder` at minim
 - **WHEN** `ENCODER_REGISTRY["lstmppo"]` is accessed
 - **THEN** the value SHALL be the `LSTMPPOEncoder` class
 
-#### Scenario: LSTMPPO encoder handles recurrent components
+#### Scenario: LSTMPPO encoder includes all recurrent and feed-forward components
 
-- **GIVEN** an `LSTMPPOBrain` instance
+- **GIVEN** an `LSTMPPOBrain` instance (whose `get_weight_components()` returns `{"lstm", "layer_norm", "policy", "value", "actor_optimizer", "critic_optimizer", "training_state"}`)
 - **WHEN** the encoder serializes the brain
-- **THEN** the serialized weight components SHALL include `"lstm"`, `"actor"`, and `"critic"`
-- **AND** SHALL NOT include `"actor_optimizer"`, `"critic_optimizer"`, or `"training_state"`
-- **AND** the per-episode hidden state (`_pending_h_state`, `_pending_c_state`) SHALL NOT be part of the genome
+- **THEN** the serialized weight components SHALL include `"lstm"`, `"layer_norm"`, `"policy"`, and `"value"` (all four learned-weight components)
+- **AND** SHALL NOT include `"actor_optimizer"`, `"critic_optimizer"`, or `"training_state"` (denylist)
+- **AND** the per-episode hidden state (`_pending_h_state`, `_pending_c_state`) SHALL NOT be part of the genome (it is reset at `prepare_episode()` per existing brain code)
