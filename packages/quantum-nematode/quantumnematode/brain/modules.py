@@ -1294,7 +1294,7 @@ def _infer_stam_dim_from_modules(modules: list[ModuleName]) -> int | None:
 # matches the env-resolved STAM memory layout — per-brain inference from
 # sensory_modules is wrong when a brain omits pheromone modules that the
 # environment nonetheless enables.
-_STAM_DIM_CONTEXT: int | None = None
+_stam_dim_context: int | None = None
 
 
 def set_stam_dim_context(stam_dim: int | None) -> None:
@@ -1303,8 +1303,8 @@ def set_stam_dim_context(stam_dim: int | None) -> None:
     Call once after env creation with ``stam_dim_from_env(env)``, then call
     with ``None`` to clear after all brains are constructed.
     """
-    global _STAM_DIM_CONTEXT  # noqa: PLW0603
-    _STAM_DIM_CONTEXT = stam_dim
+    global _stam_dim_context  # noqa: PLW0603
+    _stam_dim_context = stam_dim
 
 
 def get_classical_feature_dimension(
@@ -1335,8 +1335,8 @@ def get_classical_feature_dimension(
     """
     if stam_dim_override is not None:
         effective_stam_dim = stam_dim_override
-    elif _STAM_DIM_CONTEXT is not None:
-        effective_stam_dim = _STAM_DIM_CONTEXT
+    elif _stam_dim_context is not None:
+        effective_stam_dim = _stam_dim_context
     else:
         effective_stam_dim = _infer_stam_dim_from_modules(modules)
 
