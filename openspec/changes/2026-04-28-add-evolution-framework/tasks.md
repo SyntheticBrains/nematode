@@ -58,14 +58,14 @@
 **Dependencies**: Phase 1
 **Parallelizable**: Yes
 
-- [ ] 4.1 Create `lineage.py` with `LineageTracker(output_path: Path)` class. The tracker is owned by the **parent process only** — workers report fitnesses back to the parent, and the parent calls `record()`. Workers MUST NOT instantiate or write to the tracker directly (no concurrent-write hazard)
-- [ ] 4.2 `record(genome: Genome, fitness: float, brain_type: str)` appends a CSV row
-- [ ] 4.3 CSV columns: `generation, child_id, parent_ids, fitness, brain_type` (parent_ids `;`-joined for CSV-safety)
-- [ ] 4.4 Append mode (not write mode) so resume works without recreating. On `__init__`, check whether the file exists: if yes, skip writing the header; if no, write it
-- [ ] 4.5 Unit test: `test_lineage_csv_appends_across_generations` (record gens `0..4` inclusive — i.e. 5 generations × population 4 = 20 data rows + 1 header row; parent_ids correctly populated for gen >= 1)
-- [ ] 4.6 Unit test: `test_lineage_csv_gen_zero_has_empty_parent_ids` (gen 0 rows have empty `parent_ids` field)
-- [ ] 4.7 Unit test: `test_lineage_csv_header_only_written_once` (instantiate tracker → record → close; reinstantiate same path → record → close; assert header appears exactly once)
-- [ ] 4.8 Unit test: `test_lineage_generation_indexing_is_zero_based` (a run with `generations: G` produces rows whose `generation` column takes values in `[0, G-1]`, each appearing exactly P times)
+- [x] 4.1 Create `lineage.py` with `LineageTracker(output_path: Path)` class. The tracker is owned by the **parent process only** — workers report fitnesses back to the parent, and the parent calls `record()`. Workers MUST NOT instantiate or write to the tracker directly (no concurrent-write hazard)
+- [x] 4.2 `record(genome: Genome, fitness: float, brain_type: str)` appends a CSV row
+- [x] 4.3 CSV columns: `generation, child_id, parent_ids, fitness, brain_type` (parent_ids `;`-joined for CSV-safety)
+- [x] 4.4 Append mode (not write mode) so resume works without recreating. On `__init__`, check whether the file exists: if yes, skip writing the header; if no, write it
+- [x] 4.5 Unit test: `test_lineage_csv_appends_across_generations` (record gens `0..4` inclusive — i.e. 5 generations × population 4 = 20 data rows + 1 header row; parent_ids correctly populated for gen >= 1)
+- [x] 4.6 Unit test: `test_lineage_csv_gen_zero_has_empty_parent_ids` (gen 0 rows have empty `parent_ids` field)
+- [x] 4.7 Unit test: `test_lineage_csv_header_only_written_once` (instantiate tracker → record → close; reinstantiate same path → record → close; assert header appears exactly once)
+- [x] 4.8 Unit test: `test_lineage_generation_indexing_is_zero_based` (a run with `generations: G` produces rows whose `generation` column takes values in `[0, G-1]`, each appearing exactly P times)
 
 ## Phase 5: Evolution Loop
 

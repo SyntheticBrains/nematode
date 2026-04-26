@@ -24,8 +24,10 @@ from quantumnematode.evolution.fitness import (
     FrozenEvalRunner,
 )
 from quantumnematode.evolution.genome import Genome, genome_id_for
+from quantumnematode.evolution.lineage import CSV_HEADER, LineageTracker
 
 __all__ = [
+    "CSV_HEADER",
     "ENCODER_REGISTRY",
     "NON_GENOME_COMPONENTS",
     "EpisodicSuccessRate",
@@ -34,6 +36,7 @@ __all__ = [
     "Genome",
     "GenomeEncoder",
     "LSTMPPOEncoder",
+    "LineageTracker",
     "MLPPPOEncoder",
     "genome_id_for",
     "get_encoder",
