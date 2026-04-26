@@ -4,7 +4,7 @@ Phase 4 (multi-agent complexity) is complete. Phase 5 (Evolution & Adaptation) b
 
 Phase 4 used the per-milestone OpenSpec change directory and Logbook 011 to coordinate work, but lacked a single living checklist tying milestones together. This change introduces that scaffold for Phase 5 so any AI session can resume Phase 5 work by reading two files: this change's `tasks.md` and the roadmap Phase 5 block.
 
-This is a **process-only change**: no code, no spec capability changes, no behavioural impact. It exists so subsequent Phase 5 milestone PRs have a place to update progress.
+This change adds a new `phase5-tracking` spec capability whose requirements commit the project to (a) maintaining a single living checklist for all of Phase 5, (b) keeping the roadmap status block in sync with that checklist, and (c) recording Phase 5 design decisions in this change directory rather than re-deriving them per session. There is no runtime / source-code impact — the commitment is documentation discipline enforced by future PR review.
 
 ## What Changes
 
@@ -31,7 +31,7 @@ The plan that generated these milestones made three decisions that should be vis
 
 ## Capabilities
 
-**No spec capability changes** — process scaffold only.
+**Added**: `phase5-tracking` (new) — three requirements covering the living milestone checklist, the roadmap Phase 5 status block, and the Phase 5 decision record. This capability lives until M7 archives alongside it.
 
 ## Impact
 
@@ -40,6 +40,7 @@ The plan that generated these milestones made three decisions that should be vis
 - `openspec/changes/2026-04-26-phase5-tracking/proposal.md` — this file
 - `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — living Phase 5 milestone checklist
 - `openspec/changes/2026-04-26-phase5-tracking/design.md` — tracking strategy notes
+- `openspec/changes/2026-04-26-phase5-tracking/specs/phase5-tracking/spec.md` — new capability
 - `docs/roadmap.md` — Phase 5 status → IN PROGRESS, milestone tracker sub-section
 
 **Code:** None.
@@ -52,4 +53,4 @@ None.
 
 ## Backward Compatibility
 
-Process-only change. No runtime behaviour affected.
+No runtime behaviour affected. The new `phase5-tracking` capability is documentation-only and has no consumers in code.

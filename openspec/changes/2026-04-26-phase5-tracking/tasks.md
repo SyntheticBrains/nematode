@@ -4,7 +4,7 @@ This is the living checklist for all of Phase 5. Each milestone (M0–M7) has it
 OpenSpec change directory listed below. Each milestone PR MUST update this file
 to mark sub-tasks complete as part of its diff.
 
-**Status legend**: `[ ]` not started, `[~]` in progress, `[x]` complete
+**Status legend**: `[ ]` not started, `[x]` complete. Milestone-level "in progress" status lives in the **Status** header of each milestone section (matches the roadmap milestone tracker emoji column).
 
 ## M-1: Phase 5 Tracking Scaffold (THIS CHANGE)
 
