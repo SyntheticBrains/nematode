@@ -8,8 +8,10 @@ The system SHALL provide a `GenomeEncoder` protocol allowing any brain implement
 
 - **GIVEN** an encoder for a registered brain
 - **WHEN** the encoder methods are called
-- **THEN** their signatures SHALL be `initial_genome(sim_config: SimulationConfig, *, rng) -> Genome`, `decode(genome: Genome, sim_config: SimulationConfig) -> Brain`, and `genome_dim(sim_config: SimulationConfig) -> int`
-- **AND** brain construction inside `decode` SHALL be delegated to a single helper `evolution.brain_factory.instantiate_brain_from_sim_config(sim_config)` so all encoders share one source of truth for fresh-brain construction
+- **THEN** their signatures SHALL be `initial_genome(sim_config: SimulationConfig, *, rng) -> Genome`, `decode(genome: Genome, sim_config: SimulationConfig, *, seed: int | None = None) -> Brain`, and `genome_dim(sim_config: SimulationConfig) -> int`
+- **AND** brain construction inside `decode` SHALL be delegated to a single helper `evolution.brain_factory.instantiate_brain_from_sim_config(sim_config, *, seed=seed)` so all encoders share one source of truth for fresh-brain construction
+- **AND** the wrapper SHALL patch `BrainConfig.seed` (extracted from `sim_config.brain.config`) when `seed` is supplied, NOT `SimulationConfig.seed` — the brain reads its seed from `BrainConfig.seed`, matching the established pattern in `scripts/run_simulation.py`
+- **AND** the wrapper SHALL force `BrainConfig.weights_path = None` so the genome (loaded via `load_weight_components` after construction) is the sole weight source
 
 #### Scenario: Encoder round-trip preserves brain behaviour
 
@@ -96,16 +98,16 @@ The `EpisodicSuccessRate` fitness function SHALL evaluate a genome by running it
 - **GIVEN** the same `genome`, `sim_config`, `encoder`, `episodes`, and `seed`
 - **WHEN** `evaluate()` is invoked twice
 - **THEN** the two returned fitness values SHALL be byte-identical
-- **AND** the fitness function SHALL apply `seed` by calling `sim_config.model_copy(update={"seed": seed})` BEFORE invoking `encoder.decode()`, so the brain's `__init__` (which calls `set_global_seed(self.seed)` and `get_rng(self.seed)`) seeds numpy global, torch global, and the brain's local RNG to the fitness `seed`
+- **AND** the fitness function SHALL apply `seed` by calling `encoder.decode(genome, sim_config, seed=seed)`, which forwards `seed` through `instantiate_brain_from_sim_config(sim_config, seed=seed)` to patch `BrainConfig.seed` before brain construction
 - **AND** the fitness function SHALL pass the same `seed` to `create_env_from_config(env_config, seed=seed)` for environment RNG
-- **AND** the fitness function SHALL NOT call `torch.manual_seed(seed)` or assign `brain.rng` directly — those would either be no-ops (clobbered by the brain's constructor) or duplicates of work the brain already does
+- **AND** the fitness function SHALL NOT call `torch.manual_seed(seed)` or assign `brain.rng` directly, AND SHALL NOT call `sim_config.model_copy(update={"seed": seed})` — those would either be no-ops (the brain's `set_global_seed` later clobbers them, or `SimulationConfig.seed` is not the field the brain reads) or duplicates of work the wrapper does
 
-#### Scenario: Fitness `seed` parameter overrides `sim_config.seed`
+#### Scenario: Fitness `seed` parameter overrides BrainConfig.seed from YAML
 
-- **GIVEN** a `sim_config` whose `seed` field is `0`
+- **GIVEN** a `sim_config` whose nested `brain.config.seed` field is `0`
 - **WHEN** `evaluate()` is invoked with `seed=1` and again with `seed=2`
 - **THEN** the two fitness values MAY differ
-- **AND** this proves the fitness function's `seed` parameter — not the YAML-configured `sim_config.seed` — controls the per-evaluation RNG state
+- **AND** this proves the fitness function's `seed` parameter — not the YAML-configured `BrainConfig.seed` — controls the per-evaluation RNG state via the wrapper's seed-patching
 
 ### Requirement: Lineage Tracking
 

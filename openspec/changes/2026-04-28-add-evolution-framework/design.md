@@ -27,25 +27,55 @@ M0 is the brain-agnostic evolution framework that unblocks every subsequent Phas
 
 Constructing a fresh brain requires more than a `BrainConfig`. [`utils/brain_factory.setup_brain_model()`](packages/quantum-nematode/quantumnematode/utils/brain_factory.py#L51) needs `brain_type`, `brain_config`, `shots`, `qubits`, `device`, `learning_rate`, `gradient_method`, `gradient_max_norm`, and `parameter_initializer_config` — these live across multiple top-level fields of `SimulationConfig`.
 
-The encoder protocol's methods therefore take **the full `SimulationConfig`** (not just a brain config):
+The encoder protocol's methods therefore take **the full `SimulationConfig`** (not just a brain config). `decode` also accepts an optional `seed` so the fitness function can override the brain's RNG seed for that specific evaluation:
 
 ```python
 class GenomeEncoder(Protocol):
     brain_name: str
     def initial_genome(self, sim_config: SimulationConfig, *, rng: np.random.Generator) -> Genome: ...
-    def decode(self, genome: Genome, sim_config: SimulationConfig) -> Brain: ...
+    def decode(self, genome: Genome, sim_config: SimulationConfig, *, seed: int | None = None) -> Brain: ...
     def genome_dim(self, sim_config: SimulationConfig) -> int: ...
 ```
 
 Encoders delegate the actual brain construction to a thin helper at `evolution/brain_factory.py`:
 
 ```python
-def instantiate_brain_from_sim_config(sim_config: SimulationConfig) -> Brain:
+def instantiate_brain_from_sim_config(
+    sim_config: SimulationConfig,
+    *,
+    seed: int | None = None,
+) -> Brain:
     """Single source of truth for fresh-brain construction in the evolution loop.
-    Pulls all setup_brain_model arguments out of sim_config and dispatches."""
+
+    Extracts BrainConfig from sim_config, patches it with the per-evaluation
+    seed (so MLPPPOBrain.__init__ reads the fitness function's seed via
+    config.seed → ensure_seed(config.seed) → set_global_seed(seed) +
+    self.rng = get_rng(seed)), forces weights_path=None (the genome is the
+    weight source, not a disk file), and dispatches to setup_brain_model().
+    """
+    brain_config = configure_brain(sim_config)  # returns BrainConfig
+    overrides = {"weights_path": None}          # never load pretrained for evolution
+    if seed is not None:
+        overrides["seed"] = seed                # patch BrainConfig.seed (NOT SimulationConfig.seed)
+    brain_config = brain_config.model_copy(update=overrides)
+    return setup_brain_model(
+        brain_type=...,                         # derived from sim_config.brain.name
+        brain_config=brain_config,
+        shots=sim_config.shots or DEFAULT_SHOTS,
+        qubits=sim_config.qubits or 0,
+        device=DeviceType.CPU,                  # fixed for evolution fitness eval
+        learning_rate=...,                      # extracted from sim_config.learning_rate
+        gradient_method=...,                    # extracted from sim_config.gradient
+        gradient_max_norm=...,
+        parameter_initializer_config=sim_config.parameter_initializer,
+    )
 ```
 
 This wrapper exists so encoders don't each duplicate the 8-argument call to `setup_brain_model`. If `setup_brain_model`'s signature changes, the wrapper absorbs it.
+
+**Why patch `BrainConfig.seed`, not `SimulationConfig.seed`:** the brain's `__init__` reads `config.seed` from its `BrainConfig` (mlpppo.py:168 `self.seed = ensure_seed(config.seed)`), not from the top-level `SimulationConfig.seed`. The established pattern in `scripts/run_simulation.py` is `brain_config = brain_config.model_copy(update={"seed": simulation_seed})`. The wrapper follows this pattern. An earlier draft of this design tried to patch `SimulationConfig.seed` instead and silently failed to propagate the seed to the brain; the wrapper-level patching avoids that trap.
+
+**Why force `weights_path=None`:** `BrainConfig.weights_path` (dtypes.py:68-72) allows loading pre-trained weights from disk at brain construction time. For evolution, the genome IS the weight source — the encoder's `decode()` calls `load_weight_components()` immediately after construction. Loading a `weights_path` would be wasted I/O at best, or load incorrect weights (relative paths from worker cwd) at worst. Forcing it to None makes the contract explicit: the wrapper is the only place weights come from, and they come from the genome.
 
 **Note on `genome_dim()` cost:** `genome_dim(sim_config)` constructs a fresh brain to introspect its weight components — `MLPPPOBrain.input_dim` is computed at `__init__` time from `sensory_modules` ([mlpppo.py:177](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L177)), so it can't be derived statically from `MLPPPOBrainConfig` alone. This makes `genome_dim()` a full PyTorch model construction, not a cheap lookup. The optimiser calls it once at startup to set `num_params`, so the cost is amortised. Implementations should NOT call `genome_dim()` per-generation or inside hot loops.
 
@@ -144,13 +174,11 @@ def _build_agent(brain, env, sim_config) -> QuantumNematodeAgent:
 
 class EpisodicSuccessRate:
     def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
-        # Override sim_config.seed with the fitness function's seed BEFORE decode.
-        # The brain's __init__ calls set_global_seed(self.seed) which seeds both
-        # numpy and torch globals, AND get_rng(self.seed) which seeds brain.rng.
-        # By overriding sim_config.seed we use the brain's existing seeding
-        # infrastructure rather than fighting it (see Decision 3a).
-        sim_config = sim_config.model_copy(update={"seed": seed})
-        brain = encoder.decode(genome, sim_config)
+        # Pass seed through encoder.decode() → instantiate_brain_from_sim_config(seed=seed)
+        # → patches BrainConfig.seed → MLPPPOBrain.__init__ reads it and calls
+        # set_global_seed(seed) + self.rng = get_rng(seed).
+        # See Decision 3a for the rationale.
+        brain = encoder.decode(genome, sim_config, seed=seed)
         env = create_env_from_config(sim_config.environment, seed=seed)
 
         agent = _build_agent(brain, env, sim_config)
@@ -167,35 +195,41 @@ class EpisodicSuccessRate:
 
 **Note on agent constructor args:** `QuantumNematodeAgent.__init__` ([agent.py:245](packages/quantum-nematode/quantumnematode/agent/agent.py#L245)) takes 9 keyword args. The fitness function passes `brain`, `env`, `satiety_config=sim_config.satiety`, and `sensing_config=sim_config.environment.sensing` (or `None` if `sim_config.environment` is itself None). Other args use defaults — `theme`, `rich_style_config` are presentation-only; `agent_id` defaults to `"default"`; `maze_grid_size` and `max_body_length` are unused when an explicit `env` is provided. The private helper `_build_agent(brain, env, sim_config)` in `evolution/fitness.py` centralises this.
 
-### Decision 3a: Seed application via `sim_config.model_copy(update={"seed": seed})`
+### Decision 3a: Seed application via `encoder.decode(seed=seed)` → `BrainConfig.seed` patch
 
-The `evaluate()` signature includes `seed: int`. The fitness function applies it by **overriding `sim_config.seed` before calling `encoder.decode()`**, then forwarding the same `seed` to the env factory. Concretely:
-
-```python
-sim_config = sim_config.model_copy(update={"seed": seed})  # Pydantic v2 model_copy
-brain = encoder.decode(genome, sim_config)                  # brain.__init__ now seeds globals to OUR seed
-env = create_env_from_config(sim_config.environment, seed=seed)  # env RNG seeded directly
-```
-
-**Why this works:** `MLPPPOBrain.__init__` ([mlpppo.py:168-170](packages/quantum-nematode/quantumnematode/brain/arch/mlpppo.py#L168)) does:
+The `evaluate()` signature includes `seed: int`. The fitness function applies it by **passing `seed` through the encoder/wrapper layer to patch `BrainConfig.seed` before brain construction**, then forwarding the same `seed` to the env factory:
 
 ```python
-self.seed = ensure_seed(config.seed)
-self.rng = get_rng(self.seed)         # seeds the brain's local numpy Generator
-set_global_seed(self.seed)            # seeds np.random AND torch.manual_seed globals
+brain = encoder.decode(genome, sim_config, seed=seed)              # patches BrainConfig.seed in the wrapper
+env = create_env_from_config(sim_config.environment, seed=seed)    # env RNG seeded directly
 ```
 
-`set_global_seed` ([seeding.py:65-90](packages/quantum-nematode/quantumnematode/utils/seeding.py#L65)) calls `np.random.seed(seed)` and `torch.manual_seed(seed)`. So by the time `decode()` returns, all three RNG sources (brain's local Generator, global numpy, global torch) are seeded with the fitness function's `seed`. We then seed the env RNG directly via `create_env_from_config(..., seed=seed)`.
+**Threading path** (5 layers, each justified):
 
-**The bug an earlier sketch had:** doing `torch.manual_seed(seed)` *before* `decode()` was a no-op — the brain's constructor immediately re-seeded torch globally to `config.seed` (the YAML-configured seed, not the fitness function's `seed`). The fix is to override `config.seed` itself, so the brain's constructor uses the right value when it does its own seeding.
+1. `evaluate(genome, sim_config, encoder, *, episodes, seed)` — fitness function is the seed authority
+2. `encoder.decode(genome, sim_config, *, seed)` — encoder forwards seed to the wrapper
+3. `instantiate_brain_from_sim_config(sim_config, *, seed)` — wrapper patches `BrainConfig.seed`
+4. `setup_brain_model(brain_config=patched, ...)` — existing factory unchanged
+5. `MLPPPOBrain.__init__(config=patched_brain_config)` — reads `config.seed`, calls `set_global_seed(seed)` + `self.rng = get_rng(seed)`
 
-**Why use the brain's existing seeding rather than seeding ourselves:** the brain already seeds correctly for fresh construction. By overriding `sim_config.seed`, we re-use that infrastructure instead of fighting it — fewer manual `torch.manual_seed` calls, no order-of-operations traps, and any future addition to the brain's `__init__` seeding (e.g. CUDA RNG) propagates automatically.
+By the time `decode()` returns, all three RNG sources (brain's local Generator, global numpy, global torch) are seeded with the fitness function's `seed`. We then seed the env RNG directly via `create_env_from_config(..., seed=seed)`.
 
-**Why `model_copy` rather than mutating sim_config:** Pydantic v2 models are immutable by default. `model_copy(update={...})` is the v2 idiomatic way to produce a modified copy, used elsewhere in the codebase ([config_loader.py:818](packages/quantum-nematode/quantumnematode/utils/config_loader.py#L818)). Mutating in place would also mutate the caller's sim_config, which is undesirable across worker processes.
+**Why the wrapper does the patching, not the fitness function directly:** patching the right field requires reaching through `sim_config.brain.config` (a doubly-nested Pydantic field). Two earlier drafts of this design got the field wrong — first targeting the wrong scope (`torch.manual_seed` before brain construction, which the brain's `set_global_seed` clobbered), then targeting the wrong field (`SimulationConfig.seed` instead of `BrainConfig.seed`). The wrapper centralises the correct patch in one place; the fitness function just passes `seed` through without needing to know the nested-field structure.
 
-**Why the fitness function does this and not the encoder:** the encoder produces a brain from a genome — it shouldn't know about the seed of the *current evaluation*. Each call to `evaluate()` is its own seeded trial; the encoder is genome→brain regardless of which seed will be used for the trial.
+**Why pass `seed` as an explicit kwarg through the protocol rather than mutating sim_config:** Pydantic v2 models are immutable by default. The kwarg pattern (`encoder.decode(..., seed=seed)`) is cleaner than `sim_config.model_copy(update={"brain": sim_config.brain.model_copy(update={"config": sim_config.brain.config.model_copy(update={"seed": seed})})})` and matches the existing seed-patching pattern in `scripts/run_simulation.py:configure_brain` flow.
 
-Determinism is the contract the framework promises so that genome quality is meaningfully comparable across the population. M2's `LearnedPerformanceFitness` will use the same `model_copy` pattern.
+**The pattern from `scripts/run_simulation.py`:**
+
+```python
+brain_config = configure_brain(config)
+brain_config = brain_config.model_copy(update={"seed": simulation_seed})
+```
+
+This is exactly what `instantiate_brain_from_sim_config(sim_config, seed=seed)` does internally. The evolution framework re-uses this established convention.
+
+**Why the fitness function — not the encoder, not the loop — owns seed application:** the encoder produces a brain from a genome — it shouldn't pick the seed itself, but it must *forward* the fitness function's seed. Each call to `evaluate()` is its own seeded trial; the encoder is genome→brain regardless of which seed will be used for the trial. The loop uses different seeds per generation/individual to avoid spurious correlations across evaluations.
+
+Determinism is the contract the framework promises so that genome quality is meaningfully comparable across the population. M2's `LearnedPerformanceFitness` will use the same `encoder.decode(seed=seed)` pattern.
 
 **Why a runner subclass rather than a fork of the per-step loop:** the per-step loop in `StandardEpisodeRunner` is non-trivial (rewards, sensory prep, STAM updates, predator handling, termination conditions). Forking risks behavioural drift from the standard runner — exactly the maintenance debt that justified deleting the legacy script. Subclassing and overriding only `_terminate_episode` keeps the step semantics identical and makes the frozen guarantee visible at the type level.
 
