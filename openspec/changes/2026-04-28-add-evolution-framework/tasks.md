@@ -103,37 +103,37 @@
 **Dependencies**: Phases 5, 6
 **Parallelizable**: No
 
-- [ ] 7.1 **Delete** existing `scripts/run_evolution.py` (per Phase 5 decision: no `scripts/legacy/` fallback). Git history preserves it via `git log -- scripts/run_evolution.py`
-- [ ] 7.2 **Delete** existing `configs/evolution/qvarcircuit_foraging_small.yml` (no consumer remains)
-- [ ] 7.3 **Delete** existing `test_run_evolution_smoke` from `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` (CI smoke test for the deleted script)
-- [ ] 7.4 In the same `test_smoke.py` edit, add `test_run_evolution_smoke_mlpppo`: `@pytest.mark.smoke`, runs `scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml --generations 1 --population 4 --episodes 2 --seed 42 --output-dir <tmp>` via `subprocess.run`, asserts `returncode == 0` and no `Traceback` in stderr. Same pattern as the deleted test. (Smoke test edits live alongside script deletion since they touch the same file.) Note: this test exercises the new script which is created in tasks 7.5+, so the test will fail until 7.5 lands — fine within the same PR, but order accordingly when running locally
-- [ ] 7.5 Create new `scripts/run_evolution.py` (~150 LOC): argparse → load config → instantiate encoder via registry → instantiate optimiser → instantiate `EvolutionLoop` → run
-- [ ] 7.6 CLI flags: `--config`, `--generations`, `--population`, `--episodes`, `--algorithm`, `--sigma`, `--parallel`, `--seed`, `--resume`, `--output-dir`, `--log-level`
-- [ ] 7.7 CLI flags default to `None` and only override YAML when explicitly passed (single-source-of-truth = `EvolutionConfig` defaults)
-- [ ] 7.8 On startup, log prominently: `Brain type: <name>`, `Algorithm: <cmaes|ga>`, `Population: <N>`, `Generations: <M>`
-- [ ] 7.9 Error message if `brain.name` is not in `ENCODER_REGISTRY`: `f"No encoder for brain '{name}'. Registered: {sorted(ENCODER_REGISTRY)}. Quantum brain support is deferred to a Phase 6 re-evaluation."`
-- [ ] 7.10 Subprocess test: `test_cli_overrides_yaml_for_generations` — invoke the new script via `subprocess.run` with `--config <yaml-with-generations:50> --generations 2`, assert run completes with exactly 2 generations recorded in lineage CSV
+- [x] 7.1 **Delete** existing `scripts/run_evolution.py` (per Phase 5 decision: no `scripts/legacy/` fallback). Git history preserves it via `git log -- scripts/run_evolution.py`
+- [x] 7.2 **Delete** existing `configs/evolution/qvarcircuit_foraging_small.yml` (no consumer remains)
+- [x] 7.3 **Delete** existing `test_run_evolution_smoke` from `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` (CI smoke test for the deleted script)
+- [x] 7.4 In the same `test_smoke.py` edit, add `test_run_evolution_smoke_mlpppo`: `@pytest.mark.smoke`, runs `scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml --generations 1 --population 4 --episodes 2 --seed 42 --output-dir <tmp>` via `subprocess.run`, asserts `returncode == 0` and no `Traceback` in stderr. Same pattern as the deleted test. (Smoke test edits live alongside script deletion since they touch the same file.) Note: this test exercises the new script which is created in tasks 7.5+, so the test will fail until 7.5 lands — fine within the same PR, but order accordingly when running locally
+- [x] 7.5 Create new `scripts/run_evolution.py` (~150 LOC): argparse → load config → instantiate encoder via registry → instantiate optimiser → instantiate `EvolutionLoop` → run
+- [x] 7.6 CLI flags: `--config`, `--generations`, `--population`, `--episodes`, `--algorithm`, `--sigma`, `--parallel`, `--seed`, `--resume`, `--output-dir`, `--log-level`
+- [x] 7.7 CLI flags default to `None` and only override YAML when explicitly passed (single-source-of-truth = `EvolutionConfig` defaults)
+- [x] 7.8 On startup, log prominently: `Brain type: <name>`, `Algorithm: <cmaes|ga>`, `Population: <N>`, `Generations: <M>`
+- [x] 7.9 Error message if `brain.name` is not in `ENCODER_REGISTRY`: `f"No encoder for brain '{name}'. Registered: {sorted(ENCODER_REGISTRY)}. Quantum brain support is deferred to a Phase 6 re-evaluation."`
+- [x] 7.10 Subprocess test: `test_cli_overrides_yaml_for_generations` — invoke the new script via `subprocess.run` with `--config <yaml-with-generations:50> --generations 2`, assert run completes with exactly 2 generations recorded in lineage CSV
 
 ## Phase 8: Pilot Configs
 
 **Dependencies**: Phase 6
 **Parallelizable**: Yes
 
-- [ ] 8.1 Create `configs/evolution/mlpppo_foraging_small.yml`: `mlpppo` brain, 20×20 grid, oracle sensing, target_foods_to_collect ≈ 5, `evolution: {generations: 10, population_size: 8, episodes_per_eval: 3}`. **Do NOT specify `brain.config.weights_path`** — the wrapper forces it to `None` (genome is the sole weight source), so any value would be ignored. **Do NOT rely on `brain.config.seed`** — the fitness function's `seed` parameter overrides it per evaluation
-- [ ] 8.2 Create `configs/evolution/lstmppo_foraging_small_klinotaxis.yml`: copy brain block from `configs/scenarios/foraging/lstmppo_small_klinotaxis.yml` (gru, lstm_hidden_dim=64, klinotaxis sensing, STAM enabled), same minimal `evolution:` block. Same `weights_path` and `seed` notes as 8.1
+- [x] 8.1 Create `configs/evolution/mlpppo_foraging_small.yml`: `mlpppo` brain, 20×20 grid, oracle sensing, target_foods_to_collect ≈ 5, `evolution: {generations: 10, population_size: 8, episodes_per_eval: 3}`. **Do NOT specify `brain.config.weights_path`** — the wrapper forces it to `None` (genome is the sole weight source), so any value would be ignored. **Do NOT rely on `brain.config.seed`** — the fitness function's `seed` parameter overrides it per evaluation
+- [x] 8.2 Create `configs/evolution/lstmppo_foraging_small_klinotaxis.yml`: copy brain block from `configs/scenarios/foraging/lstmppo_small_klinotaxis.yml` (gru, lstm_hidden_dim=64, klinotaxis sensing, STAM enabled), same minimal `evolution:` block. Same `weights_path` and `seed` notes as 8.1
 
 ## Phase 9: End-to-End Smoke Verification
 
 **Dependencies**: Phases 7, 8
 **Parallelizable**: No
 
-- [ ] 9.1 Run: `uv run python scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml` — completes without error
-- [ ] 9.2 Verify `evolution_results/<session>/best_params.json` exists; load it and decode back into a working `MLPPPOBrain` (test or one-off script)
-- [ ] 9.3 Verify `evolution_results/<session>/lineage.csv` has 80 data rows + 1 header row (10 generations × pop 8 = 80; generation column takes values 0..9 inclusive) with `parent_ids` empty for gen 0 and populated for gens 1..9
-- [ ] 9.4 Run: `uv run python scripts/run_evolution.py --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml` — completes without error
-- [ ] 9.5 Same artifact verification for the LSTMPPO smoke
-- [ ] 9.6 Resume test: run smoke #1, kill at gen ~5, resume with `--resume evolution_results/<session>/checkpoint.pkl`, verify completes 10 gens total
-- [ ] 9.7 Run `uv run pytest -m smoke -v` — all green including the new MLPPPO smoke (`test_run_evolution_smoke_mlpppo` was added in task 7.4)
+- [x] 9.1 Run: `uv run python scripts/run_evolution.py --config configs/evolution/mlpppo_foraging_small.yml` — completes without error
+- [x] 9.2 Verify `evolution_results/<session>/best_params.json` exists; load it and decode back into a working `MLPPPOBrain` (test or one-off script)
+- [x] 9.3 Verify `evolution_results/<session>/lineage.csv` has 80 data rows + 1 header row (10 generations × pop 8 = 80; generation column takes values 0..9 inclusive) with `parent_ids` empty for gen 0 and populated for gens 1..9
+- [x] 9.4 Run: `uv run python scripts/run_evolution.py --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml` — completes without error
+- [x] 9.5 Same artifact verification for the LSTMPPO smoke
+- [x] 9.6 Resume test: run smoke #1, kill at gen ~5, resume with `--resume evolution_results/<session>/checkpoint.pkl`, verify completes 10 gens total
+- [x] 9.7 Run `uv run pytest -m smoke -v` — all green including the new MLPPPO smoke (`test_run_evolution_smoke_mlpppo` was added in task 7.4)
 
 ## Phase 10: M-1 Invariant — Cross-Phase Tracking Updates
 

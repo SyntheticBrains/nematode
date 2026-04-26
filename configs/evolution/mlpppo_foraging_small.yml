@@ -1,0 +1,75 @@
+# Evolution pilot config: MLPPPO + small oracle foraging
+#
+# Smallest viable evolution loop — used for framework smoke testing and as
+# the M2 hyperparameter pilot's cheap proof-of-concept brain.  Headline
+# scientific milestones (M3 Lamarckian onward) target the LSTMPPO+klinotaxis
+# config instead.
+#
+# Brain block mirrors configs/scenarios/foraging/mlpppo_small_oracle.yml.
+# DO NOT specify brain.config.weights_path — the framework forces it to
+# None per Decision 0 (genome is the sole weight source).
+# DO NOT rely on brain.config.seed — the loop's --seed (or the per-evaluation
+# seed derived from it) overrides BrainConfig.seed via the wrapper.
+
+max_steps: 500
+
+brain:
+  name: mlpppo
+  config:
+    actor_hidden_dim: 64
+    critic_hidden_dim: 64
+    num_hidden_layers: 2
+
+    # Core PPO hyperparameters
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    entropy_coef: 0.02
+    learning_rate: 0.001
+    rollout_buffer_size: 256
+    num_epochs: 10
+    num_minibatches: 2
+    max_grad_norm: 0.5
+    normalize_advantages: true
+    sensory_modules:
+      - food_chemotaxis
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+
+satiety:
+  initial_satiety: 200.0
+  satiety_decay_rate: 1.0
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  foraging:
+    foods_on_grid: 5
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+# Evolution-specific knobs.  CLI flags override these when explicitly passed.
+evolution:
+  algorithm: cmaes
+  generations: 10
+  population_size: 8
+  episodes_per_eval: 3
+  parallel_workers: 1
+  checkpoint_every: 5

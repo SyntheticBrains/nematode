@@ -79,9 +79,14 @@ def test_run_simulation_smoke(config_name: str, tmp_path: Path) -> None:
 
 
 @pytest.mark.smoke
-def test_run_evolution_smoke(tmp_path: Path) -> None:
-    """Verify run_evolution.py exits cleanly with minimal parameters."""
-    config_path = CONFIGS_DIR / "evolution" / "qvarcircuit_foraging_small.yml"
+def test_run_evolution_smoke_mlpppo(tmp_path: Path) -> None:
+    """Verify the new run_evolution.py exits cleanly against the MLPPPO pilot config.
+
+    Replaces the legacy QVarCircuit smoke test (removed alongside the legacy
+    script in M0 Phase 7).  The new framework targets classical brains; quantum
+    brain support is deferred to a future Phase 6 re-evaluation.
+    """
+    config_path = CONFIGS_DIR / "evolution" / "mlpppo_foraging_small.yml"
     assert config_path.exists(), f"Config not found: {config_path}"
 
     result = subprocess.run(  # noqa: S603
