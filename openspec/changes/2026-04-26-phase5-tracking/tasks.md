@@ -18,8 +18,8 @@ to mark sub-tasks complete as part of its diff.
 - [x] M-1.4 Update `docs/roadmap.md` Phase 5 row in Timeline Overview to `🟡 IN PROGRESS`
 - [x] M-1.5 Add "Phase 5 Milestone Tracker" sub-section to `docs/roadmap.md` Phase 5 block
 - [x] M-1.6 Validate change: `openspec validate --changes 2026-04-26-phase5-tracking --strict`
-- [ ] M-1.7 Run `uv run pre-commit run -a` clean
-- [ ] M-1.8 Open PR
+- [x] M-1.7 Run `uv run pre-commit run -a` clean
+- [x] M-1.8 Open PR
 
 ## M0: Brain-Agnostic Evolution Framework (Fresh Build)
 
