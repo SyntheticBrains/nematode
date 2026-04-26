@@ -1593,7 +1593,10 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     # Set STAM dim context from env so heterogeneous brains (e.g. loners that
     # omit pheromone modules while the env still enables pheromones) size
-    # their LayerNorms to match the shared runtime STAM state length.
+    # their LayerNorms to match the shared runtime STAM state length. The
+    # context is module-level state, so the try/finally guarantees it is
+    # cleared even if brain construction raises — preventing leakage into
+    # subsequent invocations or test runs.
     from quantumnematode.agent.stam import stam_dim_from_env
     from quantumnematode.brain.modules import set_stam_dim_context
 
@@ -1602,60 +1605,63 @@ def _run_multi_agent(  # noqa: C901, PLR0912, PLR0913, PLR0915
     # Create agents with independent brains
     agents: list[QuantumNematodeAgent] = []
 
-    for ac in agent_configs:
-        # Derive per-agent seed (stable across runs, unlike Python's hash())
-        agent_seed = int.from_bytes(
-            hashlib.blake2b(f"{simulation_seed}:{ac.id}".encode(), digest_size=4).digest(),
-            "little",
-        )
+    try:
+        for ac in agent_configs:
+            # Derive per-agent seed (stable across runs, unlike Python's hash())
+            agent_seed = int.from_bytes(
+                hashlib.blake2b(f"{simulation_seed}:{ac.id}".encode(), digest_size=4).digest(),
+                "little",
+            )
 
-        # Configure brain for this agent
-        agent_brain_config = _configure_brain_for_agent(ac.brain, agent_seed, sensing_config)
+            # Configure brain for this agent
+            agent_brain_config = _configure_brain_for_agent(ac.brain, agent_seed, sensing_config)
 
-        agent_brain = setup_brain_model(
-            brain_type=BrainType(ac.brain.name),
-            brain_config=agent_brain_config,
-            shots=shots,
-            qubits=qubits,
-            device=device,
-            learning_rate=learning_rate,
-            gradient_method=gradient_method,
-            gradient_max_norm=gradient_max_norm,
-            parameter_initializer_config=parameter_initializer_config,
-            perf_mgmt=perf_mgmt,
-        )
+            agent_brain = setup_brain_model(
+                brain_type=BrainType(ac.brain.name),
+                brain_config=agent_brain_config,
+                shots=shots,
+                qubits=qubits,
+                device=device,
+                learning_rate=learning_rate,
+                gradient_method=gradient_method,
+                gradient_max_norm=gradient_max_norm,
+                parameter_initializer_config=parameter_initializer_config,
+                perf_mgmt=perf_mgmt,
+            )
 
-        # Load pre-trained weights if specified
-        if ac.weights_path:
-            if not isinstance(agent_brain, WeightPersistence):
-                msg = (
-                    f"Agent '{ac.id}' brain {type(agent_brain).__name__} does not implement "
-                    f"WeightPersistence. Cannot load weights from {ac.weights_path}."
-                )
-                raise TypeError(msg)
-            load_weights(agent_brain, Path(ac.weights_path))
+            # Load pre-trained weights if specified
+            if ac.weights_path:
+                if not isinstance(agent_brain, WeightPersistence):
+                    msg = (
+                        f"Agent '{ac.id}' brain {type(agent_brain).__name__} does not "
+                        f"implement WeightPersistence. Cannot load weights from "
+                        f"{ac.weights_path}."
+                    )
+                    raise TypeError(msg)
+                load_weights(agent_brain, Path(ac.weights_path))
 
-        # Add agent to environment with min_distance separation
-        env.add_agent(
-            agent_id=ac.id,
-            position=None,
-            max_body_length=body_length,
-            min_distance=multi_agent_config.min_agent_distance,
-        )
+            # Add agent to environment with min_distance separation
+            env.add_agent(
+                agent_id=ac.id,
+                position=None,
+                max_body_length=body_length,
+                min_distance=multi_agent_config.min_agent_distance,
+            )
 
-        agent = QuantumNematodeAgent(
-            brain=agent_brain,
-            env=env,
-            max_body_length=body_length,
-            theme=theme,
-            satiety_config=satiety_config,
-            sensing_config=sensing_config,
-            agent_id=ac.id,
-        )
-        agents.append(agent)
-
-    # Clear STAM dim context after all brains are constructed.
-    set_stam_dim_context(None)
+            agent = QuantumNematodeAgent(
+                brain=agent_brain,
+                env=env,
+                max_body_length=body_length,
+                theme=theme,
+                satiety_config=satiety_config,
+                sensing_config=sensing_config,
+                agent_id=ac.id,
+            )
+            agents.append(agent)
+    finally:
+        # Clear STAM dim context after all brains are constructed (or if the
+        # loop raised) — never leak module-level state to other call sites.
+        set_stam_dim_context(None)
 
     # Create orchestrator
     food_policy = FoodCompetitionPolicy(multi_agent_config.food_competition)
