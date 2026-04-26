@@ -41,6 +41,7 @@ Encoders delegate the actual brain construction to a thin helper at `evolution/b
 
 ```python
 from quantumnematode.brain.arch.dtypes import BrainType, DeviceType
+from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod
 from quantumnematode.utils.brain_factory import setup_brain_model
 from quantumnematode.utils.config_loader import (
     configure_brain,
@@ -70,11 +71,19 @@ def instantiate_brain_from_sim_config(
         overrides["seed"] = seed
     brain_config = brain_config.model_copy(update=overrides)
 
-    # Convert config-shaped fields to runtime objects via existing helpers
+    # Convert config-shaped fields to runtime objects via existing helpers.
+    # configure_gradient_method takes a default + sim_config and returns a
+    # (method, max_norm) tuple — matching the canonical pattern in run_simulation.py.
+    # GradientCalculationMethod.RAW is a no-op default; classical brains in
+    # evolution don't actually use gradient methods (no .learn() in fitness eval),
+    # so any sensible default works. The helper's job here is to extract any
+    # max_norm clipping value the user configured in sim_config.gradient.
     learning_rate = configure_learning_rate(sim_config)
-    gradient_method = configure_gradient_method(sim_config)
+    gradient_method, gradient_max_norm = configure_gradient_method(
+        GradientCalculationMethod.RAW,
+        sim_config,
+    )
     parameter_initializer_config = configure_parameter_initializer(sim_config)
-    gradient_max_norm = sim_config.gradient.max_norm if sim_config.gradient else None
 
     return setup_brain_model(
         brain_type=BrainType(sim_config.brain.name),  # str → enum coercion
@@ -91,7 +100,7 @@ def instantiate_brain_from_sim_config(
 
 This wrapper exists so encoders don't each duplicate the 8-argument call to `setup_brain_model`. If `setup_brain_model`'s signature changes, the wrapper absorbs it.
 
-**Field-name watch:** `GradientConfig.max_norm` (not `gradient_max_norm`) is the actual field name on the config; only `setup_brain_model`'s parameter is called `gradient_max_norm`. The wrapper bridges the two.
+**Field-name watch:** `GradientConfig.max_norm` (not `gradient_max_norm`) is the actual field name on the config; only `setup_brain_model`'s parameter is called `gradient_max_norm`. We don't access `sim_config.gradient.max_norm` directly — `configure_gradient_method` returns the value via tuple unpacking, which insulates the wrapper from this naming asymmetry.
 
 **Why patch `BrainConfig.seed`, not `SimulationConfig.seed`:** the brain's `__init__` reads `config.seed` from its `BrainConfig` (mlpppo.py:168 `self.seed = ensure_seed(config.seed)`), not from the top-level `SimulationConfig.seed`. The established pattern in `scripts/run_simulation.py` is `brain_config = brain_config.model_copy(update={"seed": simulation_seed})`. The wrapper follows this pattern. An earlier draft of this design tried to patch `SimulationConfig.seed` instead and silently failed to propagate the seed to the brain; the wrapper-level patching avoids that trap.
 
