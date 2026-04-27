@@ -30,7 +30,6 @@
 - [x] 2.11 Unit test: `test_lstmppo_encoder_roundtrip` (same with recurrent brain — verifies all four components round-trip including `layer_norm`)
 - [x] 2.12 Unit test: `test_genome_dim_matches_flattened_state` (for both encoders)
 - [x] 2.13 Unit test: `test_episode_count_resets_and_lr_synced_on_decode` (verify both `_episode_count == 0` AND the LR matches what a freshly constructed brain has, for both brain types)
-- [ ] 2.14 Unit test: `test_mlpppo_with_feature_gating_includes_gate_weights` (sanity: when `_feature_gating: true`, the genome dim is larger than without, and round-trip preserves gate behaviour) — NOTE: deferred. Standard MLPPPO config has `feature_gating: False` and we don't have a `_feature_gating: true` config to fixture against. Will be reinstated when M2 hyperparameter pilot exposes feature_gating as an evolvable hyperparam.
 - [x] 2.15 Unit test: `test_encoder_registry_membership` (asserts `"mlpppo" in ENCODER_REGISTRY` and `"lstmppo" in ENCODER_REGISTRY` and that `ENCODER_REGISTRY[name]()` produces a working encoder for both)
 - [x] 2.16 Unit test: `test_encoder_excludes_denylist_components` (verifies `optimizer`, `actor_optimizer`, `critic_optimizer`, `training_state` are NEVER in the genome regardless of brain)
 
@@ -152,3 +151,9 @@
 > 2. Merge the PR
 > 3. On `main`, run `openspec archive 2026-04-28-add-evolution-framework` to move this change into `openspec/changes/archive/` and update the project's main specs with the new `evolution-framework` capability
 > 4. In a follow-up commit on `main`, flip the `docs/roadmap.md` Phase 5 Milestone Tracker M0 row from `🟡 in progress` to `✅ complete`
+
+## Deferred to M2
+
+These items belong to the brain-agnostic evolution framework's spec but are deliberately deferred to a later milestone, NOT left undone:
+
+- **Test for "Conditional weight components are picked up automatically"** (the `_feature_gating: true` round-trip case from `specs/evolution-framework/spec.md`). The dynamic-discovery code path is already in place (`MLPPPOEncoder` uses the denylist filter, and the unrelated `test_encoder_excludes_denylist_components` exercises it on the standard config). The missing piece is a fixture config with `_feature_gating: true` plus an assertion that the genome dim is larger and the gated/ungated brains produce identical post-decode actions. Standard MLPPPO configs have `feature_gating: False` and there is no consumer of feature-gated MLPPPO in M0. The test will be added as part of M2 (hyperparameter pilot), where feature_gating becomes an evolvable hyperparam and the fixture config becomes load-bearing.
