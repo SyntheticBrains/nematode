@@ -99,6 +99,8 @@ These constraints fire at YAML load time. A schema entry with `{type: float, val
 
 `birth_metadata["param_schema"]` stores the same entries as a list of **plain dicts** (NOT Pydantic model instances), produced via `entry.model_dump()`. The dicts pickle cheaply, decouple worker decode from a Pydantic-import dependency, and trivially survive Pydantic version upgrades. The loop is responsible for populating this metadata when constructing genomes — see Phase 4.5 in `tasks.md` and the spec scenario "Schema travels with the genome to workers".
 
+**Coexistence with M0's `birth_metadata`:** M0 weight encoders populate `birth_metadata={"shape_map": ..., "brain_name": ...}` ([encoders.py:237](packages/quantum-nematode/quantumnematode/evolution/encoders.py#L237)). M2's `HyperparameterEncoder` populates `birth_metadata={"param_schema": [...]}`. The two key sets are independent and never coexist on the same genome — encoders are mutually exclusive per Decision 0 (`select_encoder` returns exactly one of them based on `hyperparam_schema` presence). The loop's wiring in Phase 4.5 reflects this: it populates `param_schema` when `sim_config.hyperparam_schema is not None`, and otherwise leaves `birth_metadata` empty (the M0 fallback in `_ClassicalPPOEncoder.decode` then derives `shape_map` from the fresh template at decode time — see [encoders.py:252-257](packages/quantum-nematode/quantumnematode/evolution/encoders.py#L252)).
+
 ### Decision 5: `LearnedPerformanceFitness` reuses both runners, no fork; rebuilds env between train and eval
 
 Train phase = `StandardEpisodeRunner` (M0 standard contract — calls `learn` per-step + on success). Eval phase = `FrozenEvalRunner` (M0 dual-override). No new runner subclass is introduced.
@@ -113,8 +115,16 @@ Per-evaluation flow:
 
 ```python
 def evaluate(self, genome, sim_config, encoder, *, episodes, seed):
+    # Defensive guards — mirror M0's EpisodicSuccessRate.evaluate which
+    # guards `environment` and `reward` similarly (fitness.py:207-221).
     if sim_config.evolution is None:
         msg = "LearnedPerformanceFitness requires an `evolution:` block in the YAML ..."
+        raise ValueError(msg)
+    if sim_config.environment is None:
+        msg = "LearnedPerformanceFitness.evaluate requires sim_config.environment to be set."
+        raise ValueError(msg)
+    if sim_config.reward is None:
+        msg = "LearnedPerformanceFitness.evaluate requires sim_config.reward to be set."
         raise ValueError(msg)
     evolution_config = sim_config.evolution  # alias for ergonomic reads below
 

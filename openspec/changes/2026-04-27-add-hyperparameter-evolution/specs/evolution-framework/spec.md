@@ -76,6 +76,14 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **THEN** a `ValueError` SHALL be raised before any episode runs
 - **AND** the error message SHALL name the missing `evolution:` YAML block as the cause and `learn_episodes_per_eval` as the field that needs setting
 
+#### Scenario: Missing environment or reward block raises with a clear error
+
+- **GIVEN** a `SimulationConfig` whose `environment` field is `None` OR whose `reward` field is `None` (with `evolution` populated so the first guard passes)
+- **WHEN** `LearnedPerformanceFitness.evaluate` is invoked
+- **THEN** a `ValueError` SHALL be raised before any episode runs, with the same load-time-clear-error contract as the missing `evolution:` block scenario
+- **AND** the error message style SHALL mirror M0's `EpisodicSuccessRate.evaluate` (which guards the same two fields), so users see a consistent message across both fitness functions
+- **AND** the function SHALL NOT crash with a raw `AttributeError` from `create_env_from_config(None, ...)` or `runner.run(agent, None, ...)`
+
 #### Scenario: eval_episodes_per_eval=None falls back to the episodes kwarg
 
 - **GIVEN** an `EvolutionConfig` with `learn_episodes_per_eval=10, eval_episodes_per_eval=None`
