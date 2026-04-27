@@ -51,8 +51,8 @@
 **Parallelizable**: Yes
 
 - [ ] 4.1 Add `LearnedPerformanceFitness` class to [packages/quantum-nematode/quantumnematode/evolution/fitness.py](packages/quantum-nematode/quantumnematode/evolution/fitness.py) as a peer of `EpisodicSuccessRate`
-- [ ] 4.2 Implement `evaluate(genome, sim_config, encoder, *, episodes, seed)` per Decision 5. The `episodes` kwarg is part of the `FitnessFunction` protocol but is unused by this fitness — document this in the docstring. The episode budget comes from `sim_config.evolution.learn_episodes_per_eval` and `sim_config.evolution.eval_episodes_per_eval`
-- [ ] 4.3 Reject `evolution_config.learn_episodes_per_eval == 0` with a `ValueError` whose message mentions `EpisodicSuccessRate` as the correct alternative
+- [ ] 4.2 Implement `evaluate(genome, sim_config, encoder, *, episodes, seed)` per Decision 5. The `episodes` kwarg is part of the `FitnessFunction` protocol but is unused by this fitness — document this in the docstring. The episode budget comes from `sim_config.evolution.learn_episodes_per_eval` and `sim_config.evolution.eval_episodes_per_eval`. **First**, defensively guard against `sim_config.evolution is None` (it's typed `EvolutionConfig | None` and the loop forwards the raw `sim_config` to fitness — see [evolution/loop.py:130,297](packages/quantum-nematode/quantumnematode/evolution/loop.py#L130)): if None, raise a `ValueError` whose message says that `LearnedPerformanceFitness` requires an `evolution:` block in the YAML to set `learn_episodes_per_eval`
+- [ ] 4.3 After the None guard, reject `evolution_config.learn_episodes_per_eval == 0` with a `ValueError` whose message mentions `EpisodicSuccessRate` as the correct alternative
 - [ ] 4.4 Eval phase falls back to `evolution_config.episodes_per_eval` when `eval_episodes_per_eval is None`
 - [ ] 4.5 Build the train env via `create_env_from_config(sim_config.environment, seed=seed, theme=Theme.HEADLESS)` and a `train_agent = _build_agent(brain, train_env, sim_config)`. Use M0's `_build_agent` helper unchanged
 - [ ] 4.6 Train phase: `StandardEpisodeRunner()` × K episodes — standard contract, brain.learn fires per-step
@@ -60,6 +60,7 @@
 - [ ] 4.8 Eval phase: `FrozenEvalRunner()` × L episodes — M0's existing dual-override; success counted via `result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD`
 - [ ] 4.9 Unit test: `test_learned_performance_smoke_K2_L1` — call `evaluate` with K=2, L=1; verify it returns a float in `[0, 1]` without error
 - [ ] 4.10 Unit test: `test_learned_performance_eval_env_is_fresh` — patch `create_env_from_config` with a counting mock; assert it's called exactly twice during a single `evaluate()` invocation (once for train env, once for eval env). This locks Decision 5's invariant in
+- [ ] 4.10a Unit test: `test_learned_performance_no_evolution_block_raises` — invoke `evaluate` with a `SimulationConfig` whose `evolution` field is `None`; assert `ValueError` is raised whose message mentions the missing `evolution:` block (per task 4.2's None guard). Locks Decision 5's defensive contract in
 - [ ] 4.11 Unit test: `test_learned_performance_K0_raises` — `evolution_config.learn_episodes_per_eval=0` raises `ValueError` mentioning `EpisodicSuccessRate`
 - [ ] 4.12 Unit test: `test_learned_performance_eval_episodes_falls_back` — `eval_episodes_per_eval=None`, `episodes_per_eval=5` → eval phase runs exactly 5 episodes (use a mocked runner to count calls)
 - [ ] 4.13 Unit test: `test_learned_performance_train_phase_calls_learn` — patch `MLPPPOBrain.learn` with a `Mock`; assert it's called > 0 times during the K train episodes
@@ -74,7 +75,7 @@
 - [ ] 5.1 Add `--fitness` flag to `scripts/run_evolution.py` with choices `{"success_rate", "learned_performance"}`, default `"success_rate"`
 - [ ] 5.2 Pick fitness class in `main()` based on the flag — instantiate `EpisodicSuccessRate()` or `LearnedPerformanceFitness()`
 - [ ] 5.3 When `--fitness learned_performance`, validate (a) that `sim_config.hyperparam_schema is not None` (per Decision 0 — combining weight encoder + learned-performance fitness would silently be Lamarckian inheritance, which is M3 scope); (b) that `evolution_config.learn_episodes_per_eval > 0`. If either check fails, log a clear error pointing the user to the right next step and `return 1`
-- [ ] 5.4 Update encoder dispatch: when `sim_config.hyperparam_schema is not None`, use `ENCODER_REGISTRY["hyperparam"]`; otherwise use the existing `brain.name` lookup. Per Decision 0, no separate `--encoder` flag
+- [ ] 5.4 Extract a private helper `_select_encoder(sim_config: SimulationConfig) -> GenomeEncoder` in `scripts/run_evolution.py`. Logic: when `sim_config.hyperparam_schema is not None`, return `ENCODER_REGISTRY["hyperparam"]()`; otherwise return `get_encoder(sim_config.brain.name)` (the existing M0 path). Per Decision 0, no separate `--encoder` flag. Extracting into a named helper (rather than inlining in `main()`) makes the dispatch unit-testable in isolation — see task 6.5
 - [ ] 5.5 Subprocess test: `test_run_evolution_cli_fitness_flag_default_is_success_rate` — invoke without `--fitness`, verify it runs (back-compat)
 - [ ] 5.6 Subprocess test: `test_run_evolution_cli_fitness_learned_performance_requires_K` — invoke `--fitness learned_performance` against a config with `learn_episodes_per_eval=0`, verify exit code is 1 and stderr mentions the field
 - [ ] 5.7 Subprocess test: `test_run_evolution_cli_fitness_learned_performance_requires_hyperparam_schema` — invoke `--fitness learned_performance` against `configs/evolution/mlpppo_foraging_small.yml` (which has no `hyperparam_schema`), verify exit code is 1 and stderr names "hyperparam_schema" and "Lamarckian inheritance" / "M3" in the rationale
@@ -95,7 +96,7 @@
 - [ ] 6.2 `evolution:` block — `algorithm: cmaes`, `population_size: 12`, `generations: 20`, `learn_episodes_per_eval: 30`, `eval_episodes_per_eval: 5`, `parallel_workers: 4`, `checkpoint_every: 2`, `cma_diagonal: false` (n=7 is well within full-cov tractability — opting OUT of diagonal here is the intentional M2 hyperparam-evolution default)
 - [ ] 6.3 Pilot-config YAML comment header: explains the schema rationale, the cma_diagonal opt-out, and the decision-gate criteria
 - [ ] 6.4 Unit test: `test_mlpppo_pilot_config_loads` — `load_simulation_config` against the pilot YAML succeeds; `cfg.hyperparam_schema` is populated; `cfg.evolution.learn_episodes_per_eval == 30`
-- [ ] 6.5 Unit test: `test_mlpppo_pilot_config_dispatch_routes_to_hyperparam_encoder` — given the loaded pilot config, verify the encoder dispatch (per Decision 0) selects `HyperparameterEncoder`
+- [ ] 6.5 Unit test: `test_mlpppo_pilot_config_dispatch_routes_to_hyperparam_encoder` — load the pilot YAML, call `_select_encoder(cfg)` (the helper added in task 5.4), assert it returns a `HyperparameterEncoder` instance. Also assert that loading `configs/evolution/mlpppo_foraging_small.yml` (no `hyperparam_schema`) and calling `_select_encoder` returns an `MLPPPOEncoder` instance — back-compat with M0 dispatch
 
 ## Phase 7: Smoke test
 
@@ -133,7 +134,7 @@
 - [ ] 10.2 Update `docs/roadmap.md` Phase 5 Milestone Tracker — flip M2 row from `🔲 not started` to `🟡 in progress` (LSTMPPO arm pending in PR 3). Will flip to `✅ complete` in PR 3. Also: the "Phase 5 research questions" paragraph after the milestone tracker is added in this same edit — already done as part of drafting; verify present
 - [ ] 10.3 Run `openspec validate 2026-04-27-add-hyperparameter-evolution --strict` — passes
 - [ ] 10.4 Run `uv run pre-commit run -a` — clean
-- [ ] 10.5 Run `uv run pytest -m "not nightly"` — all green. M0+perf baseline is 2193; this PR adds ~30 new unit/subprocess tests (Phases 1-7) so the new total is ≈ 2223
+- [ ] 10.5 Run `uv run pytest -m "not nightly"` — all green. M0+perf baseline is 2193; this PR adds ~31 new unit/subprocess tests (Phases 1-7) so the new total is ≈ 2224
 - [ ] 10.6 Archive in-branch: run `openspec archive 2026-04-27-add-hyperparameter-evolution -y`. The change moves into `openspec/changes/archive/` and the spec deltas are merged into `openspec/specs/evolution-framework/spec.md`. Same pattern as M0's PR
 - [ ] 10.7 Manually verify: pilot logbook references the right session directories; convergence-curve plot is committed (or LFS-tracked)
 

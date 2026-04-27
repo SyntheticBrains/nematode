@@ -30,6 +30,8 @@ The simplest API would be a CLI flag `--encoder {weights,hyperparam}` that selec
 
 **Convention:** when `sim_config.hyperparam_schema is not None`, dispatch to `HyperparameterEncoder`. Otherwise, dispatch by `sim_config.brain.name` as M0 does. The CLI gains no new encoder flag.
 
+**Implementation note:** the dispatch logic lives in a small private helper `_select_encoder(sim_config: SimulationConfig) -> GenomeEncoder` in `scripts/run_evolution.py`, rather than being inlined into `main()`. Reason: keeps `main()` thin AND makes the dispatch testable in isolation (see task 6.5 — without the helper, the only test surface is subprocess-invoking the CLI).
+
 The `--fitness` flag IS added (for `success_rate` vs `learned_performance`) because there's still one real choice: a hyperparameter pilot could use `EpisodicSuccessRate` for a sanity baseline (frozen-weight eval of the random-init brain — useful to confirm the schema decode path before committing to a 30-train-episodes-per-genome budget). The reverse combination — weight encoder + `LearnedPerformanceFitness` — would amount to Lamarckian inheritance (the genome carries weights, the train phase further mutates them), which is M3's milestone responsibility, not this PR's. To avoid silently shipping a half-formed M3 prototype, M2's CLI rejects `--fitness learned_performance` when `hyperparam_schema is None`. M3 will revisit and either lift this restriction or replace `LearnedPerformanceFitness` with a Lamarckian-aware variant.
 
 **Why:** matches the YAML-as-source-of-truth pattern from M0 (the `cma_diagonal: true` setting in the LSTMPPO pilot YAML doesn't need a CLI flag either — it just is what the campaign needs).
@@ -144,6 +146,12 @@ The `episodes` arg from the `FitnessFunction` protocol is **ignored** by `Learne
 **Why ignore `episodes` instead of repurposing it:** the `FitnessFunction` protocol is shared across M0/M2/future fitness types. Repurposing `episodes` to mean "train+eval total" for one variant and "eval only" for another would be confusing and force callers to know the variant. Cleaner to add evolution-config fields and document the protocol-level kwarg's semantics per fitness.
 
 **Why same seed for train and eval env:** the two envs sample the same initial food layout, agent start position, etc. The brain has already "seen" that layout during training — but it has only *learned weights* from that experience, not memoised the layout (the brain's runtime state is reset by `prepare_episode` between every run). Same-seed eval is the standard approach for evaluating learned policy quality on a known landscape; differentiating train and eval seeds would test generalisation, which is M5's co-evolution / M6's transgenerational concern, not M2's. If a future variant wants train/eval seed split (e.g. for held-out generalisation measurement), it should be a peer fitness class rather than a knob on this one.
+
+**Train→eval brain-state carryover (acknowledged but benign):**
+
+- `MLPPPOBrain.buffer` (the `RolloutBuffer` constructed once at `__init__`) may carry residual transitions into the eval phase if the train phase finished without firing a final PPO update (i.e. `is_full()` was False AND `len(buffer) < num_minibatches` at the last train episode's end). Eval doesn't read or write the buffer (`FrozenEvalRunner` neuters `agent.brain.learn`), so the residual transitions are never observed. No fitness impact.
+- `MLPPPOBrain._episode_count` increments via `post_process_episode` on every episode, including eval. By the end of `evaluate(K=30, L=5)` it equals 35 and the LR scheduler has been called 35 times. Eval doesn't use LR for action selection (only for weight updates, which don't happen), so action distributions are unaffected. No fitness impact.
+- Both observations are recorded here so a future review pass that spots them can confirm they're already-considered rather than re-discovered.
 
 ### Decision 6: Train phase runs in the same process as eval, not on a separate Pool
 

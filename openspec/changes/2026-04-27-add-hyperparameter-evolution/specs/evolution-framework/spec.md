@@ -67,6 +67,13 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **THEN** a `ValueError` SHALL be raised
 - **AND** the error message SHALL state that `EpisodicSuccessRate` is the correct fitness for frozen-weight evaluation
 
+#### Scenario: Missing evolution block raises with a clear error
+
+- **GIVEN** a `SimulationConfig` whose `evolution` field is `None` (i.e. the YAML omitted the `evolution:` block)
+- **WHEN** `LearnedPerformanceFitness.evaluate` is invoked
+- **THEN** a `ValueError` SHALL be raised before any episode runs
+- **AND** the error message SHALL name the missing `evolution:` YAML block as the cause and `learn_episodes_per_eval` as the field that needs setting
+
 #### Scenario: eval_episodes_per_eval=None falls back to episodes_per_eval
 
 - **GIVEN** an `EvolutionConfig` with `learn_episodes_per_eval=10, eval_episodes_per_eval=None, episodes_per_eval=5`
