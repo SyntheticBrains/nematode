@@ -72,3 +72,12 @@ evolution:
   episodes_per_eval: 3
   parallel_workers: 1
   checkpoint_every: 5
+  # MLPPPO weight genome is ~9k dims — borderline tractable for full-cov
+  # CMA-ES.  Kept at the framework default (false) here to preserve
+  # byte-identical behaviour with the M0 framework smoke test
+  # (`test_run_evolution_smoke_mlpppo`), which other tooling depends on.
+  # For real M2-scale campaigns evolving MLPPPO weights, set this to true:
+  # full-cov at n=9k still costs ~seconds per `tell()` while diagonal is
+  # ~milliseconds, and the per-generation convergence trade-off is
+  # typically negligible at this dim.
+  cma_diagonal: false

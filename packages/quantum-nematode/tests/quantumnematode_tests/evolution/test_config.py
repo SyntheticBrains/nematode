@@ -96,3 +96,53 @@ def test_simulation_config_extra_unknown_keys_ignored(tmp_path: Path) -> None:
     cfg = load_simulation_config(str(yaml_path))
     assert isinstance(cfg, SimulationConfig)
     assert cfg.max_steps == 100
+
+
+def test_lstmppo_pilot_config_enables_cma_diagonal() -> None:
+    """The shipped LSTMPPO+klinotaxis pilot SHALL set ``cma_diagonal: true``.
+
+    Regression guard: at LSTMPPO weight scale (~47k dims) full-cov CMA-ES
+    is intractable (each ``tell()`` takes minutes).  If this regresses,
+    anyone running the pilot will hit the multi-minute hang.
+    """
+    pilot_path = PROJECT_ROOT / "configs/evolution/lstmppo_foraging_small_klinotaxis.yml"
+    cfg = load_simulation_config(str(pilot_path))
+    assert cfg.evolution is not None
+    assert cfg.evolution.cma_diagonal is True
+
+
+def test_cma_diagonal_yaml_propagates_to_optimizer_options(tmp_path: Path) -> None:
+    """``cma_diagonal: true`` SHALL propagate from YAML to the cma library option.
+
+    Locks in the full chain: YAML → ``EvolutionConfig`` → ``CMAESOptimizer``
+    → ``cma.CMAEvolutionStrategy.opts['CMA_diagonal']``.  Without this, a
+    future refactor could silently break the plumbing while leaving the
+    config-level field intact.
+    """
+    from quantumnematode.optimizers.evolutionary import CMAESOptimizer
+
+    yaml_content = {
+        "max_steps": 100,
+        "evolution": {
+            "algorithm": "cmaes",
+            "population_size": 4,
+            "cma_diagonal": True,
+        },
+    }
+    yaml_path = tmp_path / "diag.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+
+    cfg = load_simulation_config(str(yaml_path))
+    assert cfg.evolution is not None
+    assert cfg.evolution.cma_diagonal is True
+
+    # Same construction path as scripts/run_evolution.py:_build_optimizer
+    opt = CMAESOptimizer(
+        num_params=8,
+        population_size=cfg.evolution.population_size,
+        sigma0=cfg.evolution.sigma0,
+        seed=42,
+        diagonal=cfg.evolution.cma_diagonal,
+    )
+    # cma library translates True to True in the options dict.
+    assert opt._es.opts.get("CMA_diagonal") is True

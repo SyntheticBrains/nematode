@@ -21,16 +21,17 @@ Examples
 
 Timing
 ------
-LSTMPPO + klinotaxis episodes run up to ``max_steps: 1000`` with a GRU
-forward pass per step (~30-60 s per episode).  Even a one-generation
-smoke against ``lstmppo_foraging_small_klinotaxis.yml`` exceeds 2 minutes,
-which is longer than the default 120 s timeout that an AI agent's Bash
-tool uses.  AI sessions invoking this script for LSTMPPO should run in
-the background or extend the tool timeout.  See the
-``nematode-run-evolution`` skill for the full playbook.
+Per-episode cost is ~50 ms for MLPPPO and ~100 ms for LSTMPPO+klinotaxis at
+``max_steps: 1000``.  Smoke runs of either brain complete in single-digit
+seconds.
 
-MLPPPO + oracle/temporal episodes are ~50 ms each and a smoke completes
-in ~4-10 s, so foreground invocations are safe for that brain.
+The one perf footgun: ``cma_diagonal`` MUST be ``true`` for any campaign
+with a genome dim >~1000 (e.g. LSTMPPO weight evolution at n≈47k).  Full-
+covariance CMA-ES ``tell()`` is O(n²) and at that size becomes minutes per
+generation, regardless of episode count.  The shipped LSTMPPO pilot config
+sets this; if you create a new config evolving brain weights at scale, set
+it on yours too.  See the ``nematode-run-evolution`` skill's "When to
+enable cma_diagonal" decision table.
 """
 
 from __future__ import annotations

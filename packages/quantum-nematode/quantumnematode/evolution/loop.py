@@ -73,18 +73,23 @@ def _init_worker(log_level: int) -> None:
       forked worker would otherwise default to multi-threaded BLAS,
       oversubscribing the CPU and slowing every worker down.  Single
       thread per worker leaves coordination to ``multiprocessing.Pool``.
-    - Per-step logging in ``StandardEpisodeRunner`` and
-      ``QuantumNematodeAgent`` is silenced to WARNING.  Fitness eval
-      doesn't need step-level traces, and the f-string construction was
-      visible in profiling for 1000-step LSTMPPO episodes.  Scope is
-      explicit (only the two agent loggers) so genuine warnings still
-      surface and the evolution loop's own progress logs are unaffected.
+    - Per-step agent/runner logging is silenced to WARNING by setting the
+      shared ``quantumnematode.logging_config`` logger.  Both
+      ``agent.runners`` and ``agent.agent`` import that logger by name
+      (``from quantumnematode.logging_config import logger``), so it's
+      the level on that one shared logger that controls per-step output.
+      Without this, the ``isEnabledFor(INFO)`` gates in
+      ``StandardEpisodeRunner.run`` (runners.py:773-784, 734-737) would
+      still fire and build f-strings every step at ``--log-level INFO``,
+      defeating the perf gate.  The evolution loop's own progress logs
+      are unaffected because they go through this module's own logger.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    logger.setLevel(log_level)
     torch.set_num_threads(1)
-    logging.getLogger("quantumnematode.agent.runners").setLevel(logging.WARNING)
-    logging.getLogger("quantumnematode.agent.agent").setLevel(logging.WARNING)
+    logging.getLogger("quantumnematode.logging_config").setLevel(logging.WARNING)
+    # Loop-module logger keeps the parent's verbosity so generation-level
+    # progress still surfaces in the worker logs.
+    logger.setLevel(log_level)
 
 
 def _evaluate_in_worker(args: tuple) -> float:

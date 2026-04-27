@@ -179,10 +179,12 @@ class TestCMAESOptimizer:
         """``diagonal`` SHALL default to False (back-compat with full-cov)."""
         optimizer = CMAESOptimizer(num_params=4, population_size=8)
         # No public attribute for diagonal mode; verify by introspecting
-        # the underlying cma options.  The default for ``CMA_diagonal`` is 0
-        # (never use diagonal); we want to confirm we did NOT set it.
+        # the underlying cma options.  We did NOT set ``CMA_diagonal``, so
+        # whatever the cma library's "off" sentinel is — currently 0/0.0,
+        # but the library reserves the right to change to None/False — the
+        # value must be falsy.
         opts = optimizer._es.opts
-        assert opts.get("CMA_diagonal") == 0  # cma's "off" sentinel
+        assert not opts.get("CMA_diagonal")
 
 
 class TestGeneticAlgorithmOptimizer:
