@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from quantumnematode.agent.runners import StandardEpisodeRunner
 from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
 from quantumnematode.evolution.encoders import MLPPPOEncoder
 from quantumnematode.evolution.fitness import EpisodicSuccessRate, FrozenEvalRunner
@@ -218,7 +219,7 @@ def test_frozen_eval_runner_preserves_food_history_sentinel() -> None:
         captured.update(kwargs)
 
     with patch.object(
-        FrozenEvalRunner.__bases__[0],
+        StandardEpisodeRunner,
         "_terminate_episode",
         autospec=True,
         side_effect=fake_super,
