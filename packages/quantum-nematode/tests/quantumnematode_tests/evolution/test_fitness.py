@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import numpy as np
@@ -11,7 +12,10 @@ from quantumnematode.brain.arch.mlpppo import MLPPPOBrain
 from quantumnematode.evolution.encoders import MLPPPOEncoder
 from quantumnematode.evolution.fitness import EpisodicSuccessRate, FrozenEvalRunner
 from quantumnematode.report.dtypes import TerminationReason
-from quantumnematode.utils.config_loader import load_simulation_config
+from quantumnematode.utils.config_loader import SimulationConfig, load_simulation_config
+
+if TYPE_CHECKING:
+    from quantumnematode.evolution.genome import Genome
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.yml"
@@ -22,7 +26,9 @@ MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.y
 # ---------------------------------------------------------------------------
 
 
-def _make_genome_for(config_path: Path) -> tuple:
+def _make_genome_for(
+    config_path: Path,
+) -> tuple[SimulationConfig, MLPPPOEncoder, Genome]:
     """Build ``(sim_config, encoder, genome)`` from a YAML config path."""
     sim_config = load_simulation_config(str(config_path))
     encoder = MLPPPOEncoder()
@@ -152,7 +158,7 @@ def test_evaluate_passes_seed_to_encoder_decode() -> None:
     assert captured_env["seed"] == 99
 
 
-def test_evaluate_seed_overrides_brain_config_seed_changes_fitness() -> None:
+def test_evaluate_fitness_seed_overrides_brain_config_seed() -> None:
     """Fitness ``seed`` overrides ``brain.config.seed`` and reaches the runtime RNG.
 
     Sets ``brain.config.seed = 0`` in sim_config, then runs evaluate with
