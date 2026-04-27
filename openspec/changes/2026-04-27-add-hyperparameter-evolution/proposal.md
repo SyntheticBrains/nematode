@@ -90,12 +90,12 @@ Three new requirements added to the existing `evolution-framework` capability (d
 
 Per the Phase 5 tracking change's invariant ([`2026-04-26-phase5-tracking/specs/phase5-tracking/spec.md`](../2026-04-26-phase5-tracking/specs/phase5-tracking/spec.md)), the same PR diff updates:
 
-- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — tick `M2.1`-`M2.5` and `M2.7` (MLPPPO arm of the milestone).
+- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — tick `M2.1`, `M2.2`, `M2.3`, `M2.5` (MLPPPO campaign script — per the per-brain split documented in M2.5's body), and `M2.7` (MLPPPO logbook published). Leave `M2.4` (LSTMPPO pilot config), `M2.6` (LSTMPPO arm of the pilot run — MLPPPO arm runs in PR 2 but the line item itself isn't ticked until both arms complete), and `M2.8` (final checklist + roadmap flip) for PR 3.
 - `docs/roadmap.md` Phase 5 Milestone Tracker — set M2 row to `🟡 in progress` (LSTMPPO arm pending PR 3).
 
 ### 11. Tests (new)
 
-Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/` and `tests/quantumnematode_tests/`:
+Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/` and `packages/quantum-nematode/tests/quantumnematode_tests/`:
 
 - `test_hyperparam_encoder.py` — round-trip determinism per type; categorical bin-boundary; log-scale round-trip; schema name validation rejects bogus fields; encoder is **not** in `ENCODER_REGISTRY` (per Decision 0 + spec scenario "Hyperparameter encoder is NOT in the brain-keyed registry"); encoder produces a brain whose `BrainConfig` matches the decoded values within float tolerance.
 - `test_learned_fitness.py` — K=2/L=1 smoke; K=0 raises; missing `evolution`/`environment`/`reward` blocks raise; `eval_episodes_per_eval=None` falls back to `episodes_per_eval`; train phase actually mutates weights (anti-regression); eval phase doesn't (uses FrozenEvalRunner).
@@ -132,7 +132,9 @@ Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/` and `te
 - `packages/quantum-nematode/tests/quantumnematode_tests/evolution/test_hyperparam_encoder.py` (new)
 - `packages/quantum-nematode/tests/quantumnematode_tests/evolution/test_learned_fitness.py` (new)
 - `packages/quantum-nematode/tests/quantumnematode_tests/evolution/test_config.py` (extended)
-- `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` (extended)
+- `packages/quantum-nematode/tests/quantumnematode_tests/evolution/test_encoders.py` (extended — `select_encoder` dispatch tests + `build_birth_metadata` helper contract)
+- `packages/quantum-nematode/tests/quantumnematode_tests/evolution/test_loop_smoke.py` (extended — Phase 4.5 wiring + `brain_type` fallback)
+- `packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py` (extended — new hyperparam smoke + Phase 5 subprocess CLI tests)
 
 **Scripts:**
 
