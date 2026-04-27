@@ -54,6 +54,8 @@ def test_episodic_success_rate_rejects_zero_episodes() -> None:
     fitness = EpisodicSuccessRate()
     with pytest.raises(ValueError, match="episodes must be positive"):
         fitness.evaluate(genome, sim_config, encoder, episodes=0, seed=42)
+    with pytest.raises(ValueError, match="episodes must be positive"):
+        fitness.evaluate(genome, sim_config, encoder, episodes=-1, seed=42)
 
 
 # ---------------------------------------------------------------------------
@@ -117,21 +119,37 @@ def test_episodic_success_rate_uses_termination_reason_for_success() -> None:
 
 
 def test_evaluate_passes_seed_to_encoder_decode() -> None:
-    """``evaluate(seed=X)`` SHALL forward ``X`` to ``encoder.decode``."""
+    """``evaluate(seed=X)`` SHALL forward ``X`` to BOTH the encoder and the env factory.
+
+    Specifically, ``encoder.decode`` and ``create_env_from_config`` MUST both
+    receive the same ``seed`` value the fitness function was invoked with.
+    """
     sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
     fitness = EpisodicSuccessRate()
 
-    captured: dict[str, int | None] = {}
+    captured_decode: dict[str, int | None] = {}
+    captured_env: dict[str, int | None] = {}
     real_decode = encoder.decode
+    from quantumnematode.evolution import fitness as fitness_module
+
+    real_env_factory = fitness_module.create_env_from_config
 
     def spy_decode(g, cfg, *, seed=None):
-        captured["seed"] = seed
+        captured_decode["seed"] = seed
         return real_decode(g, cfg, seed=seed)
 
-    with patch.object(MLPPPOEncoder, "decode", side_effect=spy_decode):
+    def spy_env_factory(env_config, *, seed=None):
+        captured_env["seed"] = seed
+        return real_env_factory(env_config, seed=seed)
+
+    with (
+        patch.object(MLPPPOEncoder, "decode", side_effect=spy_decode),
+        patch.object(fitness_module, "create_env_from_config", side_effect=spy_env_factory),
+    ):
         fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=99)
 
-    assert captured["seed"] == 99
+    assert captured_decode["seed"] == 99
+    assert captured_env["seed"] == 99
 
 
 def test_evaluate_seed_overrides_brain_config_seed_changes_fitness() -> None:

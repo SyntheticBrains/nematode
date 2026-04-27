@@ -932,7 +932,7 @@ class MultiAgentConfig(BaseModel):
 
 
 class EvolutionConfig(BaseModel):
-    """Configuration for the M0 evolution loop.
+    """Configuration for the evolution loop.
 
     Optional sub-block of :class:`SimulationConfig`.  When absent (the default
     for non-evolution configs), :class:`SimulationConfig.evolution` is
@@ -945,15 +945,15 @@ class EvolutionConfig(BaseModel):
     """
 
     algorithm: Literal["cmaes", "ga"] = "cmaes"
-    population_size: int = 20
-    generations: int = 50
-    episodes_per_eval: int = 15
-    sigma0: float = math.pi / 2  # CMA-ES initial step size; matches legacy default
-    elite_fraction: float = 0.2  # GA-only
-    mutation_rate: float = 0.1  # GA-only
-    crossover_rate: float = 0.8  # GA-only
-    parallel_workers: int = 1
-    checkpoint_every: int = 10
+    population_size: int = Field(default=20, ge=1)
+    generations: int = Field(default=50, ge=1)
+    episodes_per_eval: int = Field(default=15, ge=1)
+    sigma0: float = Field(default=math.pi / 2, gt=0.0)  # CMA-ES initial step size
+    elite_fraction: float = Field(default=0.2, ge=0.0, le=1.0)  # GA-only
+    mutation_rate: float = Field(default=0.1, ge=0.0, le=1.0)  # GA-only
+    crossover_rate: float = Field(default=0.8, ge=0.0, le=1.0)  # GA-only
+    parallel_workers: int = Field(default=1, ge=1)
+    checkpoint_every: int = Field(default=10, ge=1)
 
 
 class SimulationConfig(BaseModel):

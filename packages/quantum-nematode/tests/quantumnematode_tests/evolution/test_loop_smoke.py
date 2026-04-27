@@ -181,7 +181,7 @@ def test_loop_resume_from_checkpoint(tmp_path: Path) -> None:
         checkpoint_every=1,
     )
     result = loop2.run(resume_from=checkpoint)
-    assert result.generations >= 3
+    assert result.generations == 3
 
     # Lineage now has all 3 generations.
     with (tmp_path / "lineage.csv").open(encoding="utf-8") as handle:

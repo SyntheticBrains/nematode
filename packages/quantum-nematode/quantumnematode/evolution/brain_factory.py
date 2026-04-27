@@ -89,11 +89,18 @@ def instantiate_brain_from_sim_config(
     )
     parameter_initializer_config = configure_parameter_initializer(sim_config)
 
+    # Use is-not-None checks rather than truthy fallback: shots/qubits are
+    # typed ``int | None``, so ``None`` is the only "unset" sentinel; an
+    # explicit ``shots: 0`` from YAML must reach the brain factory unchanged
+    # rather than being silently replaced by the default.
+    shots = sim_config.shots if sim_config.shots is not None else DEFAULT_SHOTS
+    qubits = sim_config.qubits if sim_config.qubits is not None else DEFAULT_QUBITS
+
     return setup_brain_model(
         brain_type=BrainType(sim_config.brain.name),
         brain_config=brain_config,
-        shots=sim_config.shots or DEFAULT_SHOTS,
-        qubits=sim_config.qubits or DEFAULT_QUBITS,
+        shots=shots,
+        qubits=qubits,
         device=DeviceType.CPU,
         learning_rate=learning_rate,
         gradient_method=gradient_method,

@@ -214,7 +214,7 @@ class EpisodicSuccessRate:
         if sim_config.reward is None:
             msg = "EpisodicSuccessRate.evaluate requires sim_config.reward to be set."
             raise ValueError(msg)
-        max_steps = sim_config.max_steps or 500
+        max_steps = sim_config.max_steps if sim_config.max_steps is not None else 500
 
         successes = 0
         for _ in range(episodes):
