@@ -124,6 +124,21 @@ The `SimulationConfig` SHALL accept an optional top-level `hyperparam_schema:` l
 - **THEN** YAML loading SHALL raise a Pydantic `ValidationError`
 - **AND** the error message SHALL name the offending field (`actor_hidden_dimm`) and SHALL list at least three valid alternatives from the resolved brain config's `model_fields`
 
+#### Scenario: Schema requires a brain block
+
+- **GIVEN** a YAML with `hyperparam_schema:` populated but no `brain:` block (i.e. `sim_config.brain is None`)
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a `ValidationError` whose message names `brain:` as the required missing block
+- **AND** the validator SHALL NOT crash with a raw `AttributeError` on `None.name`
+
+#### Scenario: Schema with unknown brain name fails clearly
+
+- **GIVEN** a YAML with `hyperparam_schema:` populated and `brain.name: bogus_brain` (not in `BRAIN_CONFIG_MAP`)
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a `ValidationError` whose message names the unknown brain
+- **AND** the message SHALL list the registered brain names from `BRAIN_CONFIG_MAP` so the user can correct the typo
+- **AND** the validator SHALL NOT crash with a raw `KeyError` on the registry lookup
+
 #### Scenario: Schema entry with type-mismatched metadata is rejected
 
 - **GIVEN** a `hyperparam_schema` entry with `type: float` but missing `bounds`
