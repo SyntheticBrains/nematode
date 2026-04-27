@@ -111,6 +111,11 @@ Per-evaluation flow:
 
 ```python
 def evaluate(self, genome, sim_config, encoder, *, episodes, seed):
+    if sim_config.evolution is None:
+        msg = "LearnedPerformanceFitness requires an `evolution:` block in the YAML ..."
+        raise ValueError(msg)
+    evolution_config = sim_config.evolution  # alias for ergonomic reads below
+
     if evolution_config.learn_episodes_per_eval == 0:
         msg = "LearnedPerformanceFitness requires learn_episodes_per_eval > 0; ..."
         raise ValueError(msg)

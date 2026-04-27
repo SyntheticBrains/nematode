@@ -43,7 +43,7 @@ The system SHALL provide a `HyperparameterEncoder` that conforms to the existing
 
 ### Requirement: Learned-Performance Fitness
 
-The system SHALL provide a `LearnedPerformanceFitness` that conforms to the existing `FitnessFunction` protocol and computes a genome's fitness by running `learn_episodes_per_eval` training episodes (where `brain.learn()` IS called) followed by `eval_episodes_per_eval` frozen eval episodes (using the existing `FrozenEvalRunner`). The score SHALL be the eval-phase success ratio: `eval_successes / L` where `L = eval_episodes_per_eval`. `LearnedPerformanceFitness` SHALL be a peer of M0's `EpisodicSuccessRate` and the choice between them SHALL be controllable from the CLI.
+The system SHALL provide a `LearnedPerformanceFitness` that conforms to the existing `FitnessFunction` protocol and computes a genome's fitness by running K training episodes (where `brain.learn()` IS called) followed by L frozen eval episodes (using the existing `FrozenEvalRunner`). K is read from `evolution.learn_episodes_per_eval` (no CLI override). L is `evolution.eval_episodes_per_eval` if set in YAML, else falls back to the protocol's `episodes` kwarg (which the loop wires from the resolved `evolution_config.episodes_per_eval`, including any `--episodes` CLI override). The score SHALL be the eval-phase success ratio `eval_successes / L`. `LearnedPerformanceFitness` SHALL be a peer of M0's `EpisodicSuccessRate` and the choice between them SHALL be controllable from the CLI.
 
 #### Scenario: Train phase mutates weights, eval phase does not
 
