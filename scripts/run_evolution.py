@@ -2,7 +2,9 @@
 r"""Run brain-agnostic evolution with CMA-ES or GA.
 
 Replaces the legacy QVarCircuit-only script.  See M0 of the Phase 5 plan
-(``openspec/changes/2026-04-28-add-evolution-framework/``).
+(archived OpenSpec change:
+``openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/``;
+the resulting capability lives at ``openspec/specs/evolution-framework/``).
 
 Examples
 --------
@@ -19,6 +21,19 @@ Examples
     uv run python scripts/run_evolution.py \
         --config configs/evolution/mlpppo_foraging_small.yml \
         --resume evolution_results/<session>/checkpoint.pkl
+
+Timing
+------
+LSTMPPO + klinotaxis episodes run up to ``max_steps: 1000`` with a GRU
+forward pass per step (~30-60 s per episode).  Even a one-generation
+smoke against ``lstmppo_foraging_small_klinotaxis.yml`` exceeds 2 minutes,
+which is longer than the default 120 s timeout that an AI agent's Bash
+tool uses.  AI sessions invoking this script for LSTMPPO should run in
+the background or extend the tool timeout.  See the
+``nematode-run-evolution`` skill for the full playbook.
+
+MLPPPO + oracle/temporal episodes are ~50 ms each and a smoke completes
+in ~4-10 s, so foreground invocations are safe for that brain.
 """
 
 from __future__ import annotations
