@@ -153,10 +153,14 @@ def test_evaluate_passes_seed_to_encoder_decode() -> None:
 
 
 def test_evaluate_seed_overrides_brain_config_seed_changes_fitness() -> None:
-    """Different fitness ``seed`` values SHALL produce different fitness.
+    """Fitness ``seed`` overrides ``brain.config.seed`` and reaches the runtime RNG.
 
     Sets ``brain.config.seed = 0`` in sim_config, then runs evaluate with
-    seed=1 and seed=2.  The two results may differ — proving the fitness
+    seed=1 and seed=2.  The two results MAY differ but aren't guaranteed to
+    — random brains can both score 0.0.  What we DO guarantee, and assert
+    here, is (a) seed=1 twice produces byte-identical fitness, and (b) a
+    different seed runs without error.  Combined with
+    ``test_evaluate_passes_seed_to_encoder_decode``, this proves the fitness
     seed (not the YAML BrainConfig.seed) controls per-evaluation RNG.
     """
     sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
