@@ -132,6 +132,10 @@ def evaluate(self, genome, sim_config, encoder, *, episodes, seed):
         msg = "LearnedPerformanceFitness requires learn_episodes_per_eval > 0; ..."
         raise ValueError(msg)
 
+    # Resolve max_steps with the same fallback as M0's EpisodicSuccessRate
+    # (fitness.py:222) — sim_config.max_steps is Optional, default 500.
+    max_steps = sim_config.max_steps if sim_config.max_steps is not None else 500
+
     brain = encoder.decode(genome, sim_config, seed=seed)  # fresh, hyperparam-set brain
 
     # Train phase — fresh env; brain's weights mutate as it learns
@@ -253,7 +257,7 @@ This PR uses CMA-ES (the M0-default optimiser) for hyperparameter evolution. Tha
 
 ## Maintenance
 
-- Adding a new param type (e.g. `set` for one-of-many) is a `Literal` extension to `ParamSchemaEntry.type` plus an `_decode_<type>` branch in `HyperparameterEncoder._decode_one`. The protocol is unchanged.
+- Adding a new param type (e.g. `set` for one-of-many) is a `Literal` extension to `ParamSchemaEntry.type` plus a new `case "<type>":` (or `elif entry.type == "<type>":`) branch INSIDE the single dispatch method `HyperparameterEncoder._decode_one` (per task 3.3a — single-method dispatch, not a method per type). The protocol is unchanged.
 - Adding `LearnedPerformanceFitness` variants (e.g. with curriculum, with replay buffer reset between train and eval) follows the same fitness-class pattern. The shared `_build_agent` helper from M0 is reused.
 - The `2026-04-27-add-hyperparameter-evolution` change archives in this PR, alongside implementation, per the M0 in-branch-archive pattern.
 

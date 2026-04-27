@@ -11,6 +11,14 @@ The system SHALL provide a `HyperparameterEncoder` that conforms to the existing
 - **THEN** `"hyperparam"` SHALL NOT be a key in `ENCODER_REGISTRY`
 - **AND** `ENCODER_REGISTRY` SHALL contain only brain-name keys (`"mlpppo"`, `"lstmppo"`)
 - **AND** `HyperparameterEncoder` SHALL be importable directly from `quantumnematode.evolution.encoders` for callers that construct it explicitly
+- **AND** `HyperparameterEncoder.brain_name` SHALL equal the empty string `""` (to satisfy the `runtime_checkable` `GenomeEncoder` protocol's `brain_name: str` typing while signalling brain-agnosticism)
+
+#### Scenario: Hyperparameter run records the actual brain name in lineage and best_params
+
+- **GIVEN** a hyperparameter-evolution run where `HyperparameterEncoder` is selected (its `brain_name == ""`) and the YAML's `brain.name` is e.g. `"mlpppo"`
+- **WHEN** the loop writes a `lineage.csv` row OR writes `best_params.json`
+- **THEN** the `brain_type` field in both artefacts SHALL be the YAML's `sim_config.brain.name` (`"mlpppo"` in this example), NOT the encoder's empty `brain_name`
+- **AND** the loop SHALL resolve the field via `self.encoder.brain_name or self.sim_config.brain.name` so that brain-keyed M0 encoders continue to write their own `brain_name` (M0 back-compat) while brain-agnostic M2 encoders fall through to the YAML
 
 #### Scenario: Per-type decode transforms
 
