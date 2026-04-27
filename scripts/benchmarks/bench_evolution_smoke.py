@@ -68,6 +68,19 @@ def main() -> int:
     """Run a one-generation benchmark and print wall-clock numbers."""
     args = _parse_args()
 
+    # Validate sizing args at the CLI boundary.  Pydantic's Field(ge=1) on
+    # EvolutionConfig protects the loop, but model_copy(update={...}) bypasses
+    # those constraints in Pydantic v2 — so a value <= 0 here would only
+    # surface as a confusing cma library error mid-run.  Fail fast instead.
+    for name, value in (
+        ("--population", args.population),
+        ("--episodes", args.episodes),
+        ("--parallel", args.parallel),
+    ):
+        if value <= 0:
+            print(f"{name} must be >= 1, got {value}", file=sys.stderr)
+            return 1
+
     # Import inside main so --help is fast.
     from quantumnematode.evolution import (
         ENCODER_REGISTRY,
