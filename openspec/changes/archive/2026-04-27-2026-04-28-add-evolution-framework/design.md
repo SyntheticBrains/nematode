@@ -367,7 +367,7 @@ Both `mlpppo_foraging_small.yml` and `lstmppo_foraging_small_klinotaxis.yml` shi
 - Every new encoder is one entry in `ENCODER_REGISTRY` plus one round-trip test
 - Adding `LearnedPerformanceFitness` (M2) is a new class in `fitness.py`; the encoder protocol does not change
 - Inheritance strategies (M3 Lamarckian, M4 Baldwin) live in a future `evolution/inheritance.py`; they consume the encoder + fitness protocols without modifying them
-- The `2026-04-28-add-evolution-framework` change archives on merge (unlike the M-1 tracking change which stays open until M7)
+- The `2026-04-28-add-evolution-framework` change archives **on this branch** as the final Phase 10 task (10.6), so the M0 PR diff includes the archive move and the resulting `evolution-framework` capability under `openspec/specs/` (unlike the M-1 tracking change which stays open until M7)
 
 ## Module dependency direction
 

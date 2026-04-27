@@ -140,17 +140,16 @@
 **Parallelizable**: No (these are the final checks before the PR is opened — every task here MUST be `[x]` before opening the PR or archiving the change)
 
 - [x] 10.1 Update `openspec/changes/2026-04-26-phase5-tracking/tasks.md`: marked M0.1 → M0.14 complete (`[x]`); M0 status header set to `complete` in the milestone scaffold
-- [x] 10.2 Update `docs/roadmap.md` Phase 5 Milestone Tracker table: M0 row set to `🟡 in progress` while the PR is in review. The row flips to `✅ complete` on PR merge — that flip is performed in a follow-up commit on `main` (or as part of a subsequent milestone PR) per the M-1 invariant pattern, NOT as a task within this change
+- [x] 10.2 Update `docs/roadmap.md` Phase 5 Milestone Tracker table: M0 row set to `✅ complete` in this PR (the PR's merge IS the M0 completion event, so the row flip ships in the same diff as the framework code)
 - [x] 10.3 Run `openspec validate --changes 2026-04-28-add-evolution-framework --strict` — passes
 - [x] 10.4 Run `uv run pre-commit run -a` — clean (all 10 hooks passed: large files, EOF fix, YAML/TOML check, mdformat, markdownlint-cli2, ruff check, ruff format, pyright, tests)
 - [x] 10.5 Run `uv run pytest -m "not nightly"` — all green (2188 passed in 95.37 s)
+- [x] 10.6 Run `openspec archive 2026-04-28-add-evolution-framework -y` on this branch. This moves the change into `openspec/changes/archive/` and applies the `evolution-framework` capability deltas to the project's main specs under `openspec/specs/`. Archiving on the feature branch (not on `main` post-merge) keeps the PR a single self-contained unit: code + spec + archive land in one diff
 
 > **Out-of-task actions** (performed after all 10.x tasks are checked, NOT tracked as tasks in this change):
 >
 > 1. Open the PR with Conventional Commits prefix per AGENTS.md: `feat: add brain-agnostic evolution framework (M0)`
-> 2. Merge the PR
-> 3. On `main`, run `openspec archive 2026-04-28-add-evolution-framework` to move this change into `openspec/changes/archive/` and update the project's main specs with the new `evolution-framework` capability
-> 4. In a follow-up commit on `main`, flip the `docs/roadmap.md` Phase 5 Milestone Tracker M0 row from `🟡 in progress` to `✅ complete`
+> 2. Merge the PR — no follow-up commits on `main` are required; the archive and the roadmap row flip already shipped inside the PR
 
 ## Deferred to M2
 

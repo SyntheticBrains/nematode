@@ -80,11 +80,11 @@ CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a n
 **Docs:**
 
 - `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — M0.1 → M0.14 sub-tasks marked `[x]` per the M-1 invariant. The phase5-tracking change itself is **not** archived (it spans M-1 → M7 and stays open until M7 ships)
-- `docs/roadmap.md` Phase 5 Milestone Tracker — M0 status updated per the M-1 invariant. The row reads `🟡 in progress` while the PR is open and flips to `✅ complete` in a follow-up commit on `main` after merge
+- `docs/roadmap.md` Phase 5 Milestone Tracker — M0 row flipped to `✅ complete` in this PR (the PR's merge IS the M0 completion event, so the row flip ships in the same diff as the framework code)
 
 ## PR + archive flow
 
-This change archives on M0 PR merge (per design.md "Maintenance" section). All Phase 10 sub-tasks (`tasks.md`) — pre-commit clean, full non-nightly pytest green, openspec validate strict, M-1 cross-phase tracking updates — MUST be `[x]` before the PR is opened. The PR-open, PR-merge, `openspec archive`, and roadmap-row-flip-to-complete actions are explicitly **out of task scope** for this change (see the `Out-of-task actions` block at the bottom of `tasks.md`); they are normal repo workflow that runs after all tasks are checked.
+This change archives **on this branch** as the final Phase 10 task (10.6 — `openspec archive 2026-04-28-add-evolution-framework -y`), so the PR diff contains: (a) the implementation, (b) the M0 OpenSpec change in `openspec/changes/archive/`, (c) the `evolution-framework` capability under `openspec/specs/`, and (d) the M-1 invariant updates. All Phase 10 sub-tasks (`tasks.md` 10.1–10.6) — pre-commit clean, full non-nightly pytest green, openspec validate strict, M-1 cross-phase tracking updates, and the archive itself — MUST be `[x]` before the PR is opened. The only out-of-task actions are PR-open and PR-merge (see the `Out-of-task actions` block at the bottom of `tasks.md`); no follow-up commit on `main` is required.
 
 ## Breaking Changes
 

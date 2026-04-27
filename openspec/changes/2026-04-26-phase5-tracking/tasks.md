@@ -23,8 +23,8 @@ to mark sub-tasks complete as part of its diff.
 
 ## M0: Brain-Agnostic Evolution Framework (Fresh Build)
 
-**OpenSpec change**: `2026-04-28-add-evolution-framework` (implemented, awaiting merge)
-**Status**: implemented (49/49 tests passing)
+**OpenSpec change**: `2026-04-28-add-evolution-framework` — archived in the M0 PR (see `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`); the `evolution-framework` capability is now under `openspec/specs/`
+**Status**: complete (archived)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO (smoke) + LSTMPPO+klinotaxis (smoke)
 **Dependencies**: M-1

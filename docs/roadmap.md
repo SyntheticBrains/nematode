@@ -502,7 +502,7 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 | # | Milestone | Bio fidelity | Status |
 |---|-----------|--------------|--------|
 | M-1 | Phase 5 tracking scaffold | — | ✅ complete |
-| M0 | Brain-agnostic evolution framework (fresh build) | LOW | 🟡 in progress |
+| M0 | Brain-agnostic evolution framework (fresh build) | LOW | ✅ complete |
 | M1 | Predator-as-brain refactor | MEDIUM | 🔲 not started |
 | M2 | Hyperparameter evolution pilot | LOW | 🔲 not started |
 | M3 | Lamarckian evolution pilot | MEDIUM | 🔲 not started |
@@ -512,7 +512,7 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 | M6.5 | NEAT topology evolution (optional) | LOW | 🔲 not started |
 | M7 | Phase 5 synthesis logbook | — | 🔲 not started |
 
-**How to orient**: a fresh AI session resuming Phase 5 work should read this tracker first to identify the current milestone, then open the [tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md) checklist for sub-task detail, then any active per-milestone OpenSpec change (e.g. `openspec/changes/2026-04-28-add-evolution-framework/`) for the in-flight scope.
+**How to orient**: a fresh AI session resuming Phase 5 work should read this tracker first to identify the current milestone, then open the [tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md) checklist for sub-task detail, then any active per-milestone OpenSpec change under `openspec/changes/` for the in-flight scope (archived per-milestone changes live under `openspec/changes/archive/` — for example, M0's archived change at `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`).
 
 #### Deliverables
 
