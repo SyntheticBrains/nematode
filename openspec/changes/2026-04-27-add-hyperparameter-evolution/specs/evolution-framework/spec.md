@@ -143,6 +143,7 @@ The `SimulationConfig` SHALL accept an optional top-level `hyperparam_schema:` l
 #### Scenario: Schema travels with the genome to workers
 
 - **GIVEN** a parallel evolution run with `parallel_workers > 1` and a populated `hyperparam_schema`
-- **WHEN** a genome is sent to a worker process for fitness evaluation
-- **THEN** the genome's `birth_metadata["param_schema"]` SHALL contain the same schema entries that were authored in the YAML
-- **AND** the worker's encoder SHALL decode using that metadata WITHOUT requiring a separate side-channel or re-load of the YAML
+- **WHEN** the `EvolutionLoop` constructs a `Genome` for the optimiser's sampled parameter vector
+- **THEN** the loop SHALL populate `genome.birth_metadata["param_schema"]` with a list of plain dicts (NOT Pydantic model instances) — one per schema entry, produced via `entry.model_dump()` — so the genome pickles cheaply across worker processes without requiring a Pydantic dependency in the worker's decode path
+- **AND** the worker's `HyperparameterEncoder.decode` SHALL read the schema from `genome.birth_metadata["param_schema"]` WITHOUT requiring a separate side-channel or re-loading the YAML
+- **AND** when `hyperparam_schema is None` on `SimulationConfig`, the loop SHALL leave `genome.birth_metadata` empty (preserves M0 weight-evolution behaviour)

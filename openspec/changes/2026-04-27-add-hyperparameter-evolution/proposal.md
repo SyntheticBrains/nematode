@@ -112,6 +112,7 @@ Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
 
 - `packages/quantum-nematode/quantumnematode/evolution/encoders.py` — add `HyperparameterEncoder` + register
 - `packages/quantum-nematode/quantumnematode/evolution/fitness.py` — add `LearnedPerformanceFitness`
+- `packages/quantum-nematode/quantumnematode/evolution/loop.py` — wire `birth_metadata["param_schema"]` from `sim_config.hyperparam_schema` at both `Genome` construction sites (worker handoff + lineage record). Without this, hyperparameter genomes reach workers with empty `birth_metadata` and `HyperparameterEncoder.decode` cannot recover the schema. See Phase 4.5 in `tasks.md`
 - `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — add `ParamSchemaEntry` model; add `hyperparam_schema` field on `SimulationConfig`; add `learn_episodes_per_eval` + `eval_episodes_per_eval` on `EvolutionConfig`; add cross-field validator for schema-name correctness
 - `scripts/run_evolution.py` — add `--fitness` flag + dispatch; auto-select `HyperparameterEncoder` when `hyperparam_schema` is set
 

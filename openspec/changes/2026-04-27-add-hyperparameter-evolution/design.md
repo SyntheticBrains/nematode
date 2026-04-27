@@ -95,7 +95,7 @@ A `model_validator(mode="after")` enforces:
 
 These constraints fire at YAML load time. A schema entry with `{type: float, values: [a,b]}` is a contradiction and gets rejected immediately.
 
-`birth_metadata["param_schema"]` stores the same entries in JSON-friendly form (`type` as string, `bounds` as 2-tuple) so `Genome` pickles cleanly across worker processes.
+`birth_metadata["param_schema"]` stores the same entries as a list of **plain dicts** (NOT Pydantic model instances), produced via `entry.model_dump()`. The dicts pickle cheaply, decouple worker decode from a Pydantic-import dependency, and trivially survive Pydantic version upgrades. The loop is responsible for populating this metadata when constructing genomes — see Phase 4.5 in `tasks.md` and the spec scenario "Schema travels with the genome to workers".
 
 ### Decision 5: `LearnedPerformanceFitness` reuses both runners, no fork; rebuilds env between train and eval
 
