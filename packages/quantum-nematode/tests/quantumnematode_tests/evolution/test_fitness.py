@@ -170,11 +170,14 @@ def test_evaluate_fitness_seed_overrides_brain_config_seed() -> None:
     seed (not the YAML BrainConfig.seed) controls per-evaluation RNG.
     """
     sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
-    # Pin the YAML brain config seed to 0; under the round-6 pattern, the
-    # fitness function's seed kwarg overrides this.
-    bogus_brain_cfg = sim_config.brain.config.model_copy(update={"seed": 0})  # type: ignore[union-attr]
+    # Pin the YAML brain config seed to 0; the fitness function's seed kwarg
+    # overrides this via encoder.decode → instantiate_brain_from_sim_config.
+    assert sim_config.brain is not None  # narrows Optional for type checker
+    bogus_brain_cfg = sim_config.brain.config.model_copy(update={"seed": 0})
     sim_config = sim_config.model_copy(
-        update={"brain": sim_config.brain.model_copy(update={"config": bogus_brain_cfg})},  # type: ignore[union-attr]
+        update={
+            "brain": sim_config.brain.model_copy(update={"config": bogus_brain_cfg}),
+        },
     )
 
     fitness = EpisodicSuccessRate()
