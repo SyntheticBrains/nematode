@@ -514,6 +514,8 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 
 **How to orient**: a fresh AI session resuming Phase 5 work should read this tracker first to identify the current milestone, then open the [tasks.md](../openspec/changes/2026-04-26-phase5-tracking/tasks.md) checklist for sub-task detail, then any active per-milestone OpenSpec change under `openspec/changes/` for the in-flight scope (archived per-milestone changes live under `openspec/changes/archive/` — for example, M0's archived change at `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`).
 
+**Phase 5 research questions**: open questions that don't fit cleanly under any single milestone are tracked in the same `tasks.md` checklist under the "Phase 5 Research Questions" section. Each has a concrete trigger condition; the section is the place to look before assuming a Phase 5 design choice (e.g. "why CMA-ES?") is settled.
+
 #### Deliverables
 
 1. **Hyperparameter Evolution** [Priority: Pilot First]
