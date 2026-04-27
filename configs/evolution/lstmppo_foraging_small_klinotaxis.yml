@@ -97,3 +97,11 @@ evolution:
   episodes_per_eval: 3
   parallel_workers: 1
   checkpoint_every: 5
+  # LSTMPPO weight genome is ~47k dims — full-cov CMA-ES is intractable at
+  # that size (each tell() takes minutes).  Diagonal mode (sep-CMA-ES)
+  # drops tell() to O(n) and makes the campaign feasible.  Trade-off:
+  # per-generation convergence is slower (typically 2-10x more generations
+  # to reach the same fitness on non-separable problems), but at this
+  # genome dim full-cov isn't actually a competing option, so net
+  # wall-clock to convergence is dramatically faster.
+  cma_diagonal: true

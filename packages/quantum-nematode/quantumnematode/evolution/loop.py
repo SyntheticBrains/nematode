@@ -31,6 +31,7 @@ from multiprocessing import Pool
 from typing import TYPE_CHECKING
 
 import numpy as np
+import torch
 
 from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.lineage import LineageTracker
@@ -64,9 +65,30 @@ def _init_worker(log_level: int) -> None:
 
     Workers ignore SIGINT so the parent process handles Ctrl+C gracefully.
     Without this, each worker would crash with KeyboardInterrupt and spew
-    a traceback.  Pattern lifted from the legacy run_evolution.py:452-470.
+    a traceback.
+
+    Performance setup:
+
+    - ``torch.set_num_threads(1)``: with ``parallel_workers > 1`` each
+      forked worker would otherwise default to multi-threaded BLAS,
+      oversubscribing the CPU and slowing every worker down.  Single
+      thread per worker leaves coordination to ``multiprocessing.Pool``.
+    - Per-step agent/runner logging is silenced to WARNING by setting the
+      shared ``quantumnematode.logging_config`` logger.  Both
+      ``agent.runners`` and ``agent.agent`` import that logger by name
+      (``from quantumnematode.logging_config import logger``), so it's
+      the level on that one shared logger that controls per-step output.
+      Without this, the ``isEnabledFor(INFO)`` gates in
+      ``StandardEpisodeRunner.run`` (runners.py:773-784, 734-737) would
+      still fire and build f-strings every step at ``--log-level INFO``,
+      defeating the perf gate.  The evolution loop's own progress logs
+      are unaffected because they go through this module's own logger.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    torch.set_num_threads(1)
+    logging.getLogger("quantumnematode.logging_config").setLevel(logging.WARNING)
+    # Loop-module logger keeps the parent's verbosity so generation-level
+    # progress still surfaces in the worker logs.
     logger.setLevel(log_level)
 
 

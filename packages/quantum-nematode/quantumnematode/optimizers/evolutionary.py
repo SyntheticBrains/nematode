@@ -107,13 +107,15 @@ class CMAESOptimizer(EvolutionaryOptimizer):
     - Standard in variational quantum circuit literature
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         num_params: int,
         x0: list[float] | None = None,
         population_size: int = 20,
         sigma0: float = 0.5,
         seed: int | None = None,
+        *,
+        diagonal: bool = False,
     ) -> None:
         """Initialize CMA-ES optimizer.
 
@@ -123,6 +125,24 @@ class CMAESOptimizer(EvolutionaryOptimizer):
             population_size: Population size (lambda). Defaults to 20.
             sigma0: Initial step size. Defaults to 0.5.
             seed: Random seed for reproducibility.
+            diagonal: If True, restrict the covariance matrix to its
+                diagonal (sep-CMA-ES; sets ``CMA_diagonal=True`` in the
+                underlying ``cma`` library).  Drops ``tell()`` cost from
+                O(n²) to O(n) — a tractability requirement for large
+                genomes (e.g. neuroevolution at n>~1000), where
+                full-covariance ``tell()`` becomes minutes per generation.
+
+                Trade-off: gives up off-diagonal covariance adaptation,
+                so per-generation convergence is slower — typically 2-10x
+                more generations are needed to reach the same fitness
+                target on non-separable problems (Ros & Hansen 2008).  At
+                large n, full-cov is NOT a competing option (it doesn't
+                fit in memory or finish a generation in finite time), so
+                net wall-clock to convergence is dramatically faster
+                despite the slower per-generation convergence.
+
+                Defaults to False (full covariance).  Use False for small
+                genomes (n<~100); True for neural-network weight evolution.
         """
         super().__init__(num_params, population_size, sigma0)
 
@@ -132,6 +152,8 @@ class CMAESOptimizer(EvolutionaryOptimizer):
         options: dict = {"popsize": population_size, "verbose": -9}
         if seed is not None:
             options["seed"] = seed
+        if diagonal:
+            options["CMA_diagonal"] = True
 
         self._es: cma.CMAEvolutionStrategy = cma.CMAEvolutionStrategy(
             x0,

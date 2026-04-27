@@ -150,6 +150,42 @@ class TestCMAESOptimizer:
             for sol1, sol2 in zip(gen1, gen2, strict=False):
                 assert sol1 == sol2, f"Mismatch at generation {gen_idx}"
 
+    def test_cmaes_diagonal_full_loop(self):
+        """``diagonal=True`` SHALL produce a working optimiser.
+
+        Diagonal mode restricts the covariance matrix to its diagonal,
+        making `tell()` O(n) instead of O(n²) — necessary for tractable
+        wall time at large genome dim (e.g. neuroevolution).  Verify the
+        optimiser still ask/tells, advances generation, and records
+        history.
+        """
+        optimizer = CMAESOptimizer(
+            num_params=5,
+            population_size=10,
+            sigma0=0.5,
+            seed=42,
+            diagonal=True,
+        )
+        for _ in range(3):
+            solutions = optimizer.ask()
+            assert len(solutions) == 10
+            assert all(len(sol) == 5 for sol in solutions)
+            fitnesses = [np.sum(np.array(sol) ** 2) for sol in solutions]
+            optimizer.tell(solutions, fitnesses)
+        assert optimizer.generation == 3
+        assert len(optimizer.result.history) == 3
+
+    def test_cmaes_diagonal_default_off(self):
+        """``diagonal`` SHALL default to False (back-compat with full-cov)."""
+        optimizer = CMAESOptimizer(num_params=4, population_size=8)
+        # No public attribute for diagonal mode; verify by introspecting
+        # the underlying cma options.  We did NOT set ``CMA_diagonal``, so
+        # whatever the cma library's "off" sentinel is — currently 0/0.0,
+        # but the library reserves the right to change to None/False — the
+        # value must be falsy.
+        opts = optimizer._es.opts
+        assert not opts.get("CMA_diagonal")
+
 
 class TestGeneticAlgorithmOptimizer:
     """Tests for Genetic Algorithm optimizer."""

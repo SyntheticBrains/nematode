@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from dataclasses import dataclass
@@ -730,9 +731,10 @@ class StandardEpisodeRunner(EpisodeRunner):
             if result is not None:
                 return result
 
-            logger.debug(
-                f"Satiety: {agent.current_satiety:.1f}/{agent.max_satiety}",
-            )
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    f"Satiety: {agent.current_satiety:.1f}/{agent.max_satiety}",
+                )
 
             # Starvation check
             result, reward = self._handle_starvation_check(agent, reward_config, params, reward)
@@ -764,18 +766,23 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Track step for food distance efficiency calculation
             agent._food_handler.track_step()
 
-            logger.info(
-                f"Step {agent._episode_tracker.steps}: "
-                f"Action={top_action.action.value}, Reward={reward}",
-            )
-
-            # Log cumulative reward and average reward per step
-            if agent._episode_tracker.steps > 0:
-                average_reward = agent._episode_tracker.rewards / agent._episode_tracker.steps
+            # Skip the f-string construction entirely when INFO is filtered.
+            # Each f-string call here is cheap individually but fitness eval
+            # runs this loop ~1000 times per episode, so the saved string
+            # formatting is visible in 30-60 s LSTMPPO episodes.
+            if logger.isEnabledFor(logging.INFO):
                 logger.info(
-                    f"Cumulative reward: {agent._episode_tracker.rewards}, "
-                    f"Average reward per step: {average_reward}",
+                    f"Step {agent._episode_tracker.steps}: "
+                    f"Action={top_action.action.value}, Reward={reward}",
                 )
+
+                # Log cumulative reward and average reward per step
+                if agent._episode_tracker.steps > 0:
+                    average_reward = agent._episode_tracker.rewards / agent._episode_tracker.steps
+                    logger.info(
+                        f"Cumulative reward: {agent._episode_tracker.rewards}, "
+                        f"Average reward per step: {average_reward}",
+                    )
 
             # Render current step
             agent._render_step(max_steps, render_text, show_last_frame_only=show_last_frame_only)

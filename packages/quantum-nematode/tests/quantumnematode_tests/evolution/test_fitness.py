@@ -130,12 +130,16 @@ def test_evaluate_passes_seed_to_encoder_decode() -> None:
 
     Specifically, ``encoder.decode`` and ``create_env_from_config`` MUST both
     receive the same ``seed`` value the fitness function was invoked with.
+    Also asserts the env factory receives ``theme=Theme.HEADLESS`` so workers
+    don't pay per-step rendering cost.
     """
+    from quantumnematode.env.theme import Theme
+
     sim_config, encoder, genome = _make_genome_for(MLPPPO_CONFIG)
     fitness = EpisodicSuccessRate()
 
     captured_decode: dict[str, int | None] = {}
-    captured_env: dict[str, int | None] = {}
+    captured_env: dict[str, object] = {}
     real_decode = encoder.decode
     from quantumnematode.evolution import fitness as fitness_module
 
@@ -145,9 +149,10 @@ def test_evaluate_passes_seed_to_encoder_decode() -> None:
         captured_decode["seed"] = seed
         return real_decode(g, cfg, seed=seed)
 
-    def spy_env_factory(env_config, *, seed=None):
+    def spy_env_factory(env_config, *, seed=None, theme=None, **kwargs):
         captured_env["seed"] = seed
-        return real_env_factory(env_config, seed=seed)
+        captured_env["theme"] = theme
+        return real_env_factory(env_config, seed=seed, theme=theme, **kwargs)
 
     with (
         patch.object(MLPPPOEncoder, "decode", side_effect=spy_decode),
@@ -157,6 +162,7 @@ def test_evaluate_passes_seed_to_encoder_decode() -> None:
 
     assert captured_decode["seed"] == 99
     assert captured_env["seed"] == 99
+    assert captured_env["theme"] == Theme.HEADLESS
 
 
 def test_evaluate_fitness_seed_overrides_brain_config_seed() -> None:

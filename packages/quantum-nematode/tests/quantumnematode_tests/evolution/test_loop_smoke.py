@@ -248,3 +248,56 @@ def test_lineage_parent_ids_lists_all_prev_generation_ids(tmp_path: Path) -> Non
         parent_ids = sorted(next(iter(cells)).split(";"))
         prev_child_ids = sorted(row[1] for row in rows_by_gen[gen - 1])
         assert parent_ids == prev_child_ids
+
+
+# ---------------------------------------------------------------------------
+# Worker initialisation policy
+# ---------------------------------------------------------------------------
+
+
+def test_init_worker_sets_perf_policy() -> None:
+    """``_init_worker`` SHALL apply the documented perf settings.
+
+    Locks in the contract that fitness-eval workers run with single-thread
+    BLAS (no oversubscription at parallel_workers > 1) and per-step agent
+    logging silenced (no f-string overhead at INFO level filter).
+
+    The logger assertion imports the actual runtime logger used by
+    ``runners.py`` and ``agent.py`` (both ``from
+    quantumnematode.logging_config import logger``) and asserts
+    ``isEnabledFor(INFO)`` is False — this is the actual contract the
+    per-step ``isEnabledFor`` gates depend on.  Asserting on the level
+    of phantom logger names like ``quantumnematode.agent.runners`` would
+    pass even if the real logger were unaffected (which is exactly the
+    bug we want this test to catch).
+    """
+    import torch
+    from quantumnematode.agent.runners import logger as runtime_logger
+    from quantumnematode.evolution.loop import _init_worker
+
+    # Save and restore so the test doesn't leak state into the rest of the
+    # test session.  We also force root to INFO and the runtime logger to
+    # NOTSET so the only thing that can filter INFO out is _init_worker
+    # setting the runtime logger's level explicitly.  Without this, the
+    # global pytest WARNING level on root would mask the bug we're
+    # testing for.
+    original_threads = torch.get_num_threads()
+    original_runtime_level = runtime_logger.level
+    original_root_level = logging.getLogger().level
+    logging.getLogger().setLevel(logging.INFO)
+    runtime_logger.setLevel(logging.NOTSET)
+    try:
+        # Sanity: pre-init, INFO is allowed (proves our setup actually
+        # exposes the bug we want to catch).
+        assert runtime_logger.isEnabledFor(logging.INFO)
+
+        _init_worker(logging.INFO)
+
+        assert torch.get_num_threads() == 1
+        # The runtime logger SHALL be filtered at WARNING after init,
+        # regardless of root's level.
+        assert not runtime_logger.isEnabledFor(logging.INFO)
+    finally:
+        torch.set_num_threads(original_threads)
+        runtime_logger.setLevel(original_runtime_level)
+        logging.getLogger().setLevel(original_root_level)

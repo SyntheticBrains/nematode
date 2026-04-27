@@ -12,18 +12,32 @@ Run brain-agnostic evolutionary optimisation via [scripts/run_evolution.py](../.
 
 ## Critical timing pitfalls (read first)
 
-The Bash tool defaults to a 120 s timeout per command. Several evolution invocations exceed that and get SIGKILL'd (exit code 137):
+The Bash tool defaults to a 120 s timeout per command. Most evolution invocations are fast enough today, but two things can still blow past 120 s:
 
-- **MLPPPO + oracle/temporal sensing**: episodes are fast (~50 ms each). A `--generations 1 --population 4 --episodes 2` smoke completes in ~4–10 s. Safe to run in foreground with the default timeout.
+1. **`cma_diagonal: false` (the default) on a brain-weight genome**. CMA-ES `tell()` is O(n²); at LSTMPPO weight scale (~47k params) a single `tell()` takes ~3 minutes per generation, regardless of episode count. Symptom: the generation appears to hang after the last episode finishes. **Fix: set `cma_diagonal: true` in the YAML's `evolution:` block.** See the "When to enable cma_diagonal" section below for the rule.
 
-- **LSTMPPO + klinotaxis** (the headline biological brain): each episode runs up to `max_steps: 1000` with a GRU forward pass per step, so a single episode is ~30–60 s. Even the *minimum* smoke (`--generations 1 --population 2 --episodes 1`) takes 1–3 minutes and WILL get SIGKILL'd at 120 s. Use one of:
+2. **Long real campaigns**: even at sub-second per generation, 50 gens × pop 16 × 4 seeds × multiple brains is hours. Always background long campaigns.
 
-  1. `run_in_background=true` on the Bash tool call (preferred — you get a notification on completion and can do other work).
-  2. Explicit `timeout: 600000` (up to 10 min) on the Bash call.
+Per-episode cost (post-perf fixes, both brains):
 
-- **Any non-trivial campaign** (e.g. `--generations 10 --population 8 --episodes 3` for either brain) takes minutes to hours — always background it.
+- MLPPPO + oracle/temporal: ~50 ms/episode at `max_steps: 500`.
+- LSTMPPO + klinotaxis: ~100 ms/episode at `max_steps: 1000`.
 
-Multiplier rule of thumb for total runtime: `generations × population × episodes × per-episode-cost / parallel_workers`.
+Multiplier rule of thumb for total wall time: `generations × population × episodes × per-episode-cost / parallel_workers + per-generation optimiser overhead`. With `cma_diagonal: true`, the per-generation optimiser overhead is negligible. Without it, on weight-evolution genomes, the optimiser overhead dominates everything else.
+
+## When to enable `cma_diagonal`
+
+`cma_diagonal: true` switches CMA-ES to diagonal-only covariance (sep-CMA-ES). It's an `EvolutionConfig` field set in the YAML's `evolution:` block.
+
+| Genome dim | Recommended `cma_diagonal` | Why |
+|---|---|---|
+| n < ~100 | **false** (default) | Full-cov is cheap and adapts to off-diagonal dependencies. Use this for hyperparameter evolution (e.g. small `HyperparameterEncoder` runs at n\<20). |
+| n in ~100-1000 | **true** | Full-cov is borderline; diagonal is safer wall-clock and convergence is comparable for most fitness landscapes. |
+| n > ~1000 | **true** (mandatory) | Full-cov is intractable: the n×n covariance matrix doesn't fit in memory and `tell()` takes minutes-to-hours per generation. Includes all neural-network weight evolution (MLPPPO ~9k, LSTMPPO ~47k). |
+
+**Trade-off**: diagonal mode gives up off-diagonal covariance adaptation, so per-generation convergence is slower — typically 2-10× more generations to reach the same fitness on non-separable problems. But at large n, full-cov isn't a competing option (you can't run it long enough to find out), so net wall-clock to convergence is dramatically faster with diagonal anyway.
+
+The shipped `configs/evolution/lstmppo_foraging_small_klinotaxis.yml` already sets `cma_diagonal: true`. The shipped `mlpppo_foraging_small.yml` does not (n≈9k would benefit from diagonal, but `false` is preserved for back-compat with M0 expectations). If you create a new pilot config that evolves brain weights at scale, set `cma_diagonal: true` in its `evolution:` block.
 
 ## Don't kill background processes by pattern matching
 
@@ -33,32 +47,36 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 
 1. **Pick the config**
 
-   - Smoke tests / framework verification: `configs/evolution/mlpppo_foraging_small.yml` (fast, MLPPPO).
-   - Headline biological brain: `configs/evolution/lstmppo_foraging_small_klinotaxis.yml` (slow, plan accordingly).
-   - For new pilot configs, copy from one of the above and edit only the brain hyperparams + the `evolution:` block.
+   - Smoke tests / framework verification: `configs/evolution/mlpppo_foraging_small.yml` (fast, small MLPPPO).
+   - Headline biological brain: `configs/evolution/lstmppo_foraging_small_klinotaxis.yml` (also fast post-perf-fixes thanks to `cma_diagonal: true`).
+   - For new pilot configs, copy from one of the above and edit only the brain hyperparams + the `evolution:` block. Set `cma_diagonal: true` if your genome dim is >~1000 (see the table above).
 
 2. **Compute expected runtime**
 
-   Example: LSTMPPO, 10 gen × pop 8 × 3 episodes, no parallel = 240 episodes × ~45 s = ~3 hours. With `--parallel 4` ≈ 45 min. Tell the user the estimate before launching.
+   Use the multiplier from the timing-pitfalls section: `generations × population × episodes × per-episode-cost / parallel_workers`. Per-episode is ~50 ms (MLPPPO) or ~100 ms (LSTMPPO). Per-generation optimiser overhead is negligible with `cma_diagonal: true`.
+
+   Example: LSTMPPO, 10 gen × pop 8 × 3 episodes, parallel 1 = 240 episodes × 0.1 s ≈ 24 s. With `--parallel 4` ≈ 6 s.
+
+   Tell the user the estimate before launching anything that's expected to take more than a couple minutes.
 
 3. **Launch (foreground or background)**
 
-   Fast (MLPPPO smoke):
+   Smoke runs (any brain):
 
    ```bash
    uv run python scripts/run_evolution.py \
      --config configs/evolution/mlpppo_foraging_small.yml \
      --generations 1 --population 4 --episodes 2 --seed 42 \
-     --output-dir /tmp/m0_smoke_$(date +%s)
+     --output-dir /tmp/smoke_$(date +%s)
    ```
 
-   Slow (LSTMPPO or any real campaign) — always background:
+   Real campaigns (always background since they may take hours regardless of brain):
 
    ```bash
    # Bash tool call: run_in_background=true
    uv run python scripts/run_evolution.py \
      --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml \
-     --generations 10 --population 8 --episodes 3 --parallel 4 --seed 42 \
+     --generations 50 --population 16 --episodes 5 --parallel 4 --seed 42 \
      --output-dir evolution_results
    ```
 
