@@ -50,6 +50,8 @@ The system SHALL provide a `HyperparameterEncoder` that conforms to the existing
 - **WHEN** `evolution.encoders.select_encoder(sim_config)` is called (the public dispatch entry point used by `scripts/run_evolution.py` and any programmatic caller)
 - **THEN** `HyperparameterEncoder` SHALL be returned regardless of `sim_config.brain.name`
 - **AND** when `hyperparam_schema is None`, `select_encoder` SHALL fall back to `get_encoder(sim_config.brain.name)` — the existing M0 brain-name → encoder lookup
+- **AND** the dispatch SHALL succeed even for brains that exist in `BRAIN_CONFIG_MAP` but NOT in `ENCODER_REGISTRY` (e.g., a future hyperparameter pilot against a brain like `qvarcircuit` that has no weight encoder), so brain-agnostic hyperparameter evolution works for any brain with a registered config
+- **AND** the existing M0 gate at `scripts/run_evolution.py` (which rejects brain names not in `ENCODER_REGISTRY`) SHALL be replaced by a `select_encoder` call that subsumes both the dispatch and the error-surfacing — preserving the M0 user-facing error (registered-brains list) when `hyperparam_schema is None` and the brain has no weight encoder
 
 ### Requirement: Learned-Performance Fitness
 
