@@ -187,6 +187,42 @@ def _build_optimizer(
     raise ValueError(msg)
 
 
+def _resolve_output_dir(
+    output_dir_arg: str,
+    resume_path: Path | None,
+) -> tuple[str, Path] | None:
+    """Pick the session id + output directory.
+
+    When ``resume_path`` is given, the resumed run MUST write into the
+    original session's directory so ``lineage.csv`` stays a single
+    chronological history (per the evolution-framework spec scenario
+    "Append mode preserves history across resume").  We derive both the
+    session id and the output directory from the checkpoint's parent
+    directory; a fresh session id is only minted for new runs.  Returns
+    ``None`` to signal a startup error (the caller propagates exit 1).
+    """
+    if resume_path is None:
+        session_id = generate_session_id()
+        return session_id, Path(output_dir_arg) / session_id
+
+    if not resume_path.exists():
+        logger.error("Checkpoint not found: %s", resume_path)
+        return None
+    output_dir = resume_path.parent.resolve()
+    explicit_root = Path(output_dir_arg).resolve()
+    if explicit_root != output_dir.parent:
+        # We always prefer the checkpoint's location to preserve lineage
+        # continuity; warn the user that the explicit --output-dir is
+        # being ignored on resume.
+        logger.warning(
+            "--output-dir %s ignored on resume; writing into the "
+            "checkpoint's session directory %s instead.",
+            output_dir_arg,
+            output_dir,
+        )
+    return output_dir.name, output_dir
+
+
 def main() -> int:
     """Entry point."""
     args = parse_arguments()
@@ -211,9 +247,11 @@ def main() -> int:
     encoder = get_encoder(brain_name)
     fitness = EpisodicSuccessRate()
 
-    # Per-session output directory.
-    session_id = generate_session_id()
-    output_dir = Path(args.output_dir) / session_id
+    resume_path = Path(args.resume) if args.resume else None
+    resolved = _resolve_output_dir(args.output_dir, resume_path)
+    if resolved is None:
+        return 1
+    session_id, output_dir = resolved
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Mirror run_simulation.py: write a per-session log file under logs/ for
@@ -252,7 +290,6 @@ def main() -> int:
         log_level=log_level_int,
     )
 
-    resume_path = Path(args.resume) if args.resume else None
     result = loop.run(resume_from=resume_path)
 
     logger.info("=" * 60)

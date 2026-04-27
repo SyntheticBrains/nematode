@@ -200,3 +200,19 @@ def test_run_evolution_smoke_mlpppo_resume(tmp_path: Path) -> None:
     )
     assert resume.returncode == 0, f"Resume run failed:\n{resume.stderr[-2000:]}"
     assert "Traceback" not in resume.stderr, f"Traceback in resume:\n{resume.stderr[-2000:]}"
+
+    # Resume MUST write into the original session directory so lineage.csv
+    # stays a single chronological history — per the evolution-framework
+    # spec scenario "Append mode preserves history across resume".  A
+    # second session directory would mean the resumed half fragmented away
+    # from the original, breaking lineage continuity.
+    session_dirs_after = sorted(output_root.iterdir())
+    assert len(session_dirs_after) == 1, (
+        f"Resume created a new session dir; lineage is fragmented. Got: {session_dirs_after}"
+    )
+    # Both generations end up in the same lineage.csv: 1 header row +
+    # (population * generations) data rows = 1 + 4 * 2 = 9 lines.
+    lineage = session_dirs_after[0] / "lineage.csv"
+    assert lineage.exists(), f"lineage.csv missing: {lineage}"
+    line_count = sum(1 for _ in lineage.open())
+    assert line_count == 9, f"Expected 9 lineage lines (1 header + 8 data), got {line_count}"
