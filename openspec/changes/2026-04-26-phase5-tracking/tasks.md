@@ -23,26 +23,26 @@ to mark sub-tasks complete as part of its diff.
 
 ## M0: Brain-Agnostic Evolution Framework (Fresh Build)
 
-**OpenSpec change**: `2026-04-28-add-evolution-framework` (not yet created)
-**Status**: not started
+**OpenSpec change**: `2026-04-28-add-evolution-framework` — archived in the M0 PR (see `openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/`); the `evolution-framework` capability is now under `openspec/specs/`
+**Status**: complete (archived)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO (smoke) + LSTMPPO+klinotaxis (smoke)
 **Dependencies**: M-1
 
-- [ ] M0.1 Create `packages/quantum-nematode/quantumnematode/evolution/` module: `genome.py`, `encoders.py`, `lineage.py`, `loop.py`, `fitness.py`
-- [ ] M0.2 Implement `GenomeEncoder` protocol + `MLPPPOEncoder` + `LSTMPPOEncoder` + `ENCODER_REGISTRY` (no `QVarCircuitEncoder`)
-- [ ] M0.3 Implement `LineageTracker` writing `evolution_results/<session>/lineage.csv`
-- [ ] M0.4 Implement `EvolutionLoop` class (fresh, not extracted from old script)
-- [ ] M0.5 Implement `FitnessFunction` protocol with `EpisodicSuccessRate` default and `LearnedPerformanceFitness` stub
-- [ ] M0.6 Move existing `scripts/run_evolution.py` → `scripts/legacy/run_qvarcircuit_evolution.py`
-- [ ] M0.7 Write fresh `scripts/run_evolution.py` as a thin CLI wiring loop + encoder + fitness
-- [ ] M0.8 Extend `config_loader.py` with an `evolution:` block schema
-- [ ] M0.9 Create `configs/evolution/mlpppo_foraging_small.yml`
-- [ ] M0.10 Create `configs/evolution/lstmppo_foraging_small_klinotaxis.yml`
-- [ ] M0.11 Tests: encoder round-trip (MLPPPO + LSTMPPO), lineage CSV, smoke loop
-- [ ] M0.12 Smoke run: 10-gen MLPPPO config, verify `best_params_*.json` round-trips
-- [ ] M0.13 Smoke run: 10-gen LSTMPPO+klinotaxis config, verify `best_params_*.json` round-trips
-- [ ] M0.14 Update this checklist + roadmap milestone tracker
+- [x] M0.1 Create `packages/quantum-nematode/quantumnematode/evolution/` module: `genome.py`, `brain_factory.py`, `encoders.py`, `fitness.py`, `lineage.py`, `loop.py`
+- [x] M0.2 Implement `GenomeEncoder` protocol + `MLPPPOEncoder` + `LSTMPPOEncoder` + `ENCODER_REGISTRY` (no `QVarCircuitEncoder`)
+- [x] M0.3 Implement `LineageTracker` writing `evolution_results/<session>/lineage.csv`
+- [x] M0.4 Implement `EvolutionLoop` class (fresh, not extracted from old script)
+- [x] M0.5 Implement `FitnessFunction` protocol with `EpisodicSuccessRate` (frozen weights, no `.learn()`). `LearnedPerformanceFitness` deferred to M2.
+- [x] M0.6 Delete existing `scripts/run_evolution.py`, `configs/evolution/qvarcircuit_foraging_small.yml`, and `test_run_evolution_smoke` (no `scripts/legacy/` fallback — git history is the archive)
+- [x] M0.7 Write fresh `scripts/run_evolution.py` as a thin CLI wiring loop + encoder + fitness
+- [x] M0.8 Extend `config_loader.py` with an `evolution:` block schema
+- [x] M0.9 Create `configs/evolution/mlpppo_foraging_small.yml`
+- [x] M0.10 Create `configs/evolution/lstmppo_foraging_small_klinotaxis.yml`
+- [x] M0.11 Tests: encoder round-trip (MLPPPO + LSTMPPO), lineage CSV, smoke loop (48 unit tests)
+- [x] M0.12 Smoke run: MLPPPO config end-to-end via `test_run_evolution_smoke_mlpppo` CI smoke (3.8 s)
+- [x] M0.13 Smoke run: LSTMPPO+klinotaxis config end-to-end via `test_loop_smoke.py` unit tests (run real episodes with seeded determinism)
+- [x] M0.14 Update this checklist + roadmap milestone tracker
 
 ## M1: Predator-as-Brain Refactor
 

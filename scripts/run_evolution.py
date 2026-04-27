@@ -1,829 +1,301 @@
 # pragma: no cover
+r"""Run brain-agnostic evolution with CMA-ES or GA.
 
-"""Run evolutionary optimization for quantum brain parameters.
+The capability spec lives at ``openspec/specs/evolution-framework/``.
 
-This script uses population-based search (CMA-ES or GA) to find optimal
-quantum circuit parameters, bypassing noisy gradient-based learning.
+Examples
+--------
+::
 
-Example usage:
-    python scripts/run_evolution.py --config configs/evolution.yml --generations 50
-    python scripts/run_evolution.py --config configs/evolution.yml --algorithm ga --population 50
+    uv run python scripts/run_evolution.py \
+        --config configs/evolution/mlpppo_foraging_small.yml
+
+    uv run python scripts/run_evolution.py \
+        --config configs/evolution/lstmppo_foraging_small_klinotaxis.yml \
+        --generations 50 --population 16 --parallel 4
+
+    # Resume an interrupted run
+    uv run python scripts/run_evolution.py \
+        --config configs/evolution/mlpppo_foraging_small.yml \
+        --resume evolution_results/<session>/checkpoint.pkl
+
+Timing
+------
+LSTMPPO + klinotaxis episodes run up to ``max_steps: 1000`` with a GRU
+forward pass per step (~30-60 s per episode).  Even a one-generation
+smoke against ``lstmppo_foraging_small_klinotaxis.yml`` exceeds 2 minutes,
+which is longer than the default 120 s timeout that an AI agent's Bash
+tool uses.  AI sessions invoking this script for LSTMPPO should run in
+the background or extend the tool timeout.  See the
+``nematode-run-evolution`` skill for the full playbook.
+
+MLPPPO + oracle/temporal episodes are ~50 ms each and a smoke completes
+in ~4-10 s, so foreground invocations are safe for that brain.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import logging
-import math
-import pickle
-import random
-import signal
-import time
-from multiprocessing import Pool
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
-from quantumnematode.brain.arch import BrainParams
-from quantumnematode.brain.arch.dtypes import DeviceType
-from quantumnematode.brain.arch.qvarcircuit import QVarCircuitBrain, QVarCircuitBrainConfig
+from quantumnematode.evolution import (
+    ENCODER_REGISTRY,
+    EpisodicSuccessRate,
+    EvolutionLoop,
+    get_encoder,
+)
 from quantumnematode.logging_config import configure_file_logging, logger
 from quantumnematode.optimizers.evolutionary import (
     CMAESOptimizer,
-    EvolutionResult,
+    EvolutionaryOptimizer,
     GeneticAlgorithmOptimizer,
 )
 from quantumnematode.utils.config_loader import (
-    configure_brain,
-    configure_environment,
-    configure_satiety,
-    create_env_from_config,
+    EvolutionConfig,
     load_simulation_config,
 )
-from quantumnematode.utils.interrupt_handler import prompt_interrupt
-from quantumnematode.utils.seeding import derive_episode_seed
 from quantumnematode.utils.session import generate_session_id
-
-if TYPE_CHECKING:
-    from quantumnematode.env import DynamicForagingEnvironment
-    from quantumnematode.optimizers.evolutionary import EvolutionaryOptimizer
-
-DEFAULT_GENERATIONS = 50
-DEFAULT_POPULATION_SIZE = 20
-DEFAULT_EPISODES_PER_EVAL = 15
-# Default sigma covers [-π, π] range for quantum circuit parameters
-# π/2 ≈ 1.57 means ~95% of initial samples fall within [-π, π]
-DEFAULT_SIGMA0 = math.pi / 2
-DEFAULT_PARALLEL_WORKERS = 1
 
 
 def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Evolutionary optimization for quantum brain parameters.",
+        description="Brain-agnostic evolutionary optimization.",
     )
-    parser.add_argument(
-        "--config",
-        type=str,
-        required=True,
-        help="Path to the YAML configuration file.",
-    )
+    parser.add_argument("--config", type=str, required=True, help="Path to YAML config file.")
     parser.add_argument(
         "--generations",
         type=int,
-        default=DEFAULT_GENERATIONS,
-        help=f"Number of generations to evolve (default: {DEFAULT_GENERATIONS}).",
+        default=None,
+        help="Override evolution.generations.",
     )
     parser.add_argument(
         "--population",
         type=int,
-        default=DEFAULT_POPULATION_SIZE,
-        help=f"Population size (default: {DEFAULT_POPULATION_SIZE}).",
+        default=None,
+        help="Override evolution.population_size.",
     )
     parser.add_argument(
         "--episodes",
         type=int,
-        default=DEFAULT_EPISODES_PER_EVAL,
-        help=f"Episodes per fitness evaluation (default: {DEFAULT_EPISODES_PER_EVAL}).",
+        default=None,
+        help="Override evolution.episodes_per_eval.",
     )
     parser.add_argument(
         "--algorithm",
         type=str,
-        default="cmaes",
         choices=["cmaes", "ga"],
-        help="Evolutionary algorithm to use (default: cmaes).",
+        default=None,
+        help="Override evolution.algorithm.",
     )
     parser.add_argument(
         "--sigma",
         type=float,
-        default=DEFAULT_SIGMA0,
-        help=f"Initial step size / mutation std (default: π/2 ≈ {DEFAULT_SIGMA0:.2f}, "
-        "covers [-π, π] range for quantum params).",
+        default=None,
+        help="Override evolution.sigma0 (CMA-ES initial step size).",
     )
     parser.add_argument(
         "--parallel",
         type=int,
-        default=DEFAULT_PARALLEL_WORKERS,
-        help=f"Number of parallel workers (default: {DEFAULT_PARALLEL_WORKERS}).",
+        default=None,
+        help="Override evolution.parallel_workers.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Master seed for the loop (per-evaluation seeds derived from this).",
     )
     parser.add_argument(
         "--resume",
         type=str,
-        help="Path to checkpoint file to resume from. WARNING: Only use trusted files "
-        "(uses pickle which can execute arbitrary code).",
-    )
-    parser.add_argument(
-        "--init-params",
-        type=str,
-        help="Path to JSON file with initial parameters (e.g., best_params_*.json).",
+        default=None,
+        help="Path to a checkpoint.pkl file to resume from.",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default="evolution_results",
-        help="Directory to save results (default: evolution_results).",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        help="Random seed for reproducibility.",
+        help="Directory to write per-session subdirectory and artefacts (default: evolution_results).",
     )
     parser.add_argument(
         "--log-level",
         type=str,
-        default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Logging level (default: INFO).",
+        default="INFO",
+        help="Logging level.",
     )
-
     return parser.parse_args()
 
 
-def _validate_args(args: argparse.Namespace) -> None:
-    """Validate CLI arguments for sensible values.
+def _resolve_evolution_config(
+    sim_config_evolution: EvolutionConfig | None,
+    args: argparse.Namespace,
+) -> EvolutionConfig:
+    """Compose the effective :class:`EvolutionConfig` for this run.
 
-    Args:
-        args: Parsed command-line arguments.
-
-    Raises
-    ------
-        ValueError: If any argument has an invalid value.
+    Precedence: CLI flags (when explicitly set) > YAML ``evolution:`` block
+    > :class:`EvolutionConfig` defaults.
     """
-    if args.episodes <= 0:
-        msg = "--episodes must be > 0"
-        raise ValueError(msg)
-    if args.generations <= 0:
-        msg = "--generations must be > 0"
-        raise ValueError(msg)
-    if args.population <= 0:
-        msg = "--population must be > 0"
-        raise ValueError(msg)
-    if args.parallel <= 0:
-        msg = "--parallel must be > 0"
-        raise ValueError(msg)
-    if args.sigma <= 0:
-        msg = "--sigma must be > 0"
-        raise ValueError(msg)
+    base = sim_config_evolution if sim_config_evolution is not None else EvolutionConfig()
+    overrides: dict[str, object] = {}
+    if args.generations is not None:
+        overrides["generations"] = args.generations
+    if args.population is not None:
+        overrides["population_size"] = args.population
+    if args.episodes is not None:
+        overrides["episodes_per_eval"] = args.episodes
+    if args.algorithm is not None:
+        overrides["algorithm"] = args.algorithm
+    if args.sigma is not None:
+        overrides["sigma0"] = args.sigma
+    if args.parallel is not None:
+        overrides["parallel_workers"] = args.parallel
+    return base.model_copy(update=overrides) if overrides else base
 
 
-def load_init_params(init_params_path: str, param_keys: list[str]) -> list[float]:
-    """Load initial parameters from a JSON file.
-
-    Supports two formats:
-    1. best_params_*.json format: {"best_params": {"θ_rx1_0": 0.1, ...}, ...}
-    2. Simple dict format: {"θ_rx1_0": 0.1, ...}
-
-    Args:
-        init_params_path: Path to JSON file with parameters.
-        param_keys: Expected parameter names in order (from brain.parameter_values.keys()).
-
-    Returns
-    -------
-        List of parameter values in the correct order.
-    """
-    # Load the JSON file
-    with Path(init_params_path).open() as f:
-        data = json.load(f)
-
-    # Handle both formats
-    params_dict = data.get("best_params", data)
-
-    # Map loaded params to the expected order
-    param_array = []
-    for key in param_keys:
-        if key in params_dict:
-            param_array.append(float(params_dict[key]))
-        else:
-            msg = f"Parameter '{key}' not found in {init_params_path}"
-            raise KeyError(msg)
-
-    return param_array
-
-
-def create_brain_from_config(
-    config_path: str,
-    param_array: list[float] | None = None,
-) -> QVarCircuitBrain:
-    """Create a QVarCircuitBrain from config, optionally with specific parameters.
-
-    Args:
-        config_path: Path to YAML config file.
-        param_array: Optional flat array of parameter values.
-
-    Returns
-    -------
-        Configured QVarCircuitBrain instance.
-    """
-    config = load_simulation_config(config_path)
-
-    # Use configure_brain to get the properly typed brain config
-    brain_config = configure_brain(config)
-    logger.debug(f"Initializing brain config: {brain_config}")
-
-    # Ensure we have a QVarCircuitBrainConfig
-    if not isinstance(brain_config, QVarCircuitBrainConfig):
-        msg = f"Evolution requires QVarCircuitBrain, got {type(brain_config).__name__}"
-        raise TypeError(msg)
-
-    # Create brain with no learning (we're using evolution)
-    brain = QVarCircuitBrain(
-        config=brain_config,
-        device=DeviceType.CPU,
-        shots=config.shots or 1024,
-    )
-
-    # Set parameters if provided
-    if param_array is not None:
-        param_keys = list(brain.parameter_values.keys())
-        if len(param_array) != len(param_keys):
-            msg = f"Parameter array length {len(param_array)} != expected {len(param_keys)}"
-            raise ValueError(msg)
-        for i, key in enumerate(param_keys):
-            brain.parameter_values[key] = param_array[i]
-
-    return brain
-
-
-def run_episode(  # noqa: C901, PLR0912, PLR0913, PLR0915
-    brain: QVarCircuitBrain,
-    env: DynamicForagingEnvironment,
-    max_steps: int,
-    initial_satiety: float = 200.0,
-    satiety_decay_rate: float = 1.0,
-    satiety_gain_per_food: float = 0.2,
-) -> bool:
-    """Run a single episode and return whether it was successful.
-
-    Args:
-        brain: Brain instance to use for decisions.
-        env: Environment instance.
-        max_steps: Maximum steps per episode.
-        initial_satiety: Starting satiety level.
-        satiety_decay_rate: Satiety decay per step.
-        satiety_gain_per_food: Fraction of initial_satiety restored per food.
-
-    Returns
-    -------
-        True if episode was successful (collected target foods).
-    """
-    brain.prepare_episode()
-    success = False
-    foods_collected = 0
-    satiety = initial_satiety
-
-    try:
-        for _ in range(max_steps):
-            # Get state from environment
-            position = (env.agent_pos[0], env.agent_pos[1])
-
-            # Get separated food/predator gradients
-            separated_grads = env.get_separated_gradients(position, disable_log=True)
-            food_gradient_strength = separated_grads.get("food_gradient_strength")
-            food_gradient_direction = separated_grads.get("food_gradient_direction")
-            predator_gradient_strength = separated_grads.get("predator_gradient_strength")
-            predator_gradient_direction = separated_grads.get("predator_gradient_direction")
-
-            # Get thermotaxis state if enabled
-            temperature = None
-            temperature_gradient_strength = None
-            temperature_gradient_direction = None
-            cultivation_temperature = None
-            if env.thermotaxis.enabled:
-                temperature = env.get_temperature(position)
-                temp_grad = env.get_temperature_gradient(position)
-                if temp_grad is not None:
-                    temperature_gradient_strength = temp_grad[0]
-                    temperature_gradient_direction = temp_grad[1]
-                cultivation_temperature = env.thermotaxis.cultivation_temperature
-
-            # Get health state
-            health = env.agent_hp
-            max_health = env.health.max_hp
-
-            # Mechanosensation
-            boundary_contact = env.is_agent_at_boundary()
-            predator_contact = env.is_agent_in_predator_contact()
-
-            # Build BrainParams with all available sensory information
-            params = BrainParams(
-                food_gradient_strength=food_gradient_strength,
-                food_gradient_direction=food_gradient_direction,
-                predator_gradient_strength=predator_gradient_strength,
-                predator_gradient_direction=predator_gradient_direction,
-                satiety=satiety,
-                agent_direction=env.current_direction,
-                agent_position=(float(position[0]), float(position[1])),
-                temperature=temperature,
-                temperature_gradient_strength=temperature_gradient_strength,
-                temperature_gradient_direction=temperature_gradient_direction,
-                cultivation_temperature=cultivation_temperature,
-                health=health,
-                max_health=max_health,
-                boundary_contact=boundary_contact,
-                predator_contact=predator_contact,
-            )
-
-            # Get action from brain (no reward, no learning)
-            actions = brain.run_brain(params, reward=None)
-            if not actions:
-                break
-
-            action = actions[0].action
-
-            # Move agent
-            env.move_agent(action)
-
-            # Check for food collection
-            agent_pos_tuple = (env.agent_pos[0], env.agent_pos[1])
-            if agent_pos_tuple in env.foods:
-                env.foods.remove(agent_pos_tuple)
-                foods_collected += 1
-                satiety_gain = initial_satiety * satiety_gain_per_food
-                satiety = min(satiety + satiety_gain, initial_satiety)
-                env.spawn_food()  # Spawn new food
-
-                # Apply food healing
-                env.apply_food_healing()
-
-                # Check for success (collected target foods)
-                if foods_collected >= env.foraging.target_foods_to_collect:
-                    success = True
-                    return True
-
-            # Check predator damage before and after movement
-            if env.predator.enabled:
-                # Check before predators move (agent may have walked into radius)
-                if env.is_agent_in_damage_radius():
-                    env.apply_predator_damage()
-                    if env.is_health_depleted():
-                        return False  # Died from HP depletion
-
-                env.update_predators()
-
-                # Check after predators move (predator may have stepped onto agent)
-                if env.is_agent_in_damage_radius():
-                    env.apply_predator_damage()
-                    if env.is_health_depleted():
-                        return False  # Died from HP depletion
-
-            # Apply temperature effects (rewards and HP damage) if thermotaxis enabled
-            if env.thermotaxis.enabled:
-                _reward_delta, _hp_damage = env.apply_temperature_effects()
-                if env.is_health_depleted():
-                    return False  # Died from temperature damage
-
-            # Decay satiety
-            satiety -= satiety_decay_rate
-            if satiety <= 0:
-                return False  # Starved
-
-        return False  # Max steps reached without success
-    finally:
-        brain.post_process_episode(episode_success=success)
-
-
-def evaluate_fitness(  # noqa: PLR0913
-    param_array: list[float],
-    config_path: str,
-    episodes: int,
-    base_seed: int | None = None,
-    gen: int = 0,
-    candidate_idx: int = 0,
-) -> float:
-    """Evaluate fitness of a parameter set.
-
-    Runs episodes and returns negative success rate (for minimization).
-
-    Args:
-        param_array: Flat array of parameter values.
-        config_path: Path to YAML config file.
-        episodes: Number of episodes to run.
-        base_seed: Optional base seed for reproducibility. When provided,
-            each episode gets a deterministic seed derived from
-            (base_seed, gen, candidate_idx, episode). This seeds numpy RNG
-            to ensure independent randomness across parallel workers. Note:
-            environment uses secrets module for food/predator placement,
-            which is not seedable by design.
-        gen: Generation number (used for seed derivation).
-        candidate_idx: Index of candidate in population (used for seed derivation).
-
-    Returns
-    -------
-        Negative success rate (lower is better).
-    """
-    brain = create_brain_from_config(config_path, param_array)
-    config = load_simulation_config(config_path)
-    satiety_config = configure_satiety(config)
-    env_config = configure_environment(config)
-
-    # Get max_steps from config
-    max_steps = config.max_steps or 500
-
-    successes = 0
-
-    for ep in range(episodes):
-        episode_seed: int | None = None
-        # Seed RNGs for reproducibility when base_seed is provided
-        if base_seed is not None:
-            episode_seed = derive_episode_seed(base_seed, gen, candidate_idx, ep)
-            np.random.seed(episode_seed)  # noqa: NPY002
-            random.seed(episode_seed)
-
-        env = create_env_from_config(
-            env_config,
-            seed=episode_seed,
-            max_body_length=config.body_length,
+def _build_optimizer(
+    evolution_config: EvolutionConfig,
+    num_params: int,
+    seed: int | None,
+) -> EvolutionaryOptimizer:
+    """Construct the optimiser specified by ``evolution_config.algorithm``."""
+    if evolution_config.algorithm == "cmaes":
+        return CMAESOptimizer(
+            num_params=num_params,
+            population_size=evolution_config.population_size,
+            sigma0=evolution_config.sigma0,
+            seed=seed,
         )
-        if run_episode(
-            brain,
-            env,
-            max_steps,
-            initial_satiety=satiety_config.initial_satiety,
-            satiety_decay_rate=satiety_config.satiety_decay_rate,
-            satiety_gain_per_food=satiety_config.satiety_gain_per_food,
-        ):
-            successes += 1
-
-    success_rate = successes / episodes
-    return -success_rate  # Negate for minimization
-
-
-def _init_worker(log_level: int) -> None:
-    """Initialize logging in worker processes and ignore SIGINT.
-
-    Workers ignore SIGINT so the parent process handles Ctrl+C gracefully.
-    This prevents worker processes from crashing with KeyboardInterrupt
-    and spewing stack traces when the user interrupts.
-
-    Args:
-        log_level: Logging level to use in worker.
-    """
-    # Ignore SIGINT in workers - parent will handle it and terminate pool
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-    # Import logger in worker to configure it
-    from quantumnematode.logging_config import logger as worker_logger
-
-    worker_logger.setLevel(log_level)
-    for handler in worker_logger.handlers:
-        handler.setLevel(log_level)
-
-
-def run_evolution(  # noqa: C901, PLR0912, PLR0913, PLR0915
-    optimizer: EvolutionaryOptimizer,
-    config_path: str,
-    generations: int,
-    episodes: int,
-    output_dir: Path,
-    parallel_workers: int = 1,
-    log_level: int = logging.WARNING,
-    base_seed: int | None = None,
-) -> tuple[EvolutionResult, bool]:
-    """Run evolutionary optimization loop.
-
-    Args:
-        optimizer: Evolutionary optimizer instance.
-        config_path: Path to YAML config file.
-        generations: Number of generations to run.
-        episodes: Episodes per fitness evaluation.
-        output_dir: Directory to save results.
-        parallel_workers: Number of parallel workers.
-        log_level: Logging level for worker processes.
-        base_seed: Optional base seed for reproducible episode evaluation.
-            When provided, each episode gets a deterministic seed.
-
-    Returns
-    -------
-        Tuple of (EvolutionResult with best parameters, should_save flag).
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    logger.info(f"Starting evolution for {generations} generations")
-    logger.info(f"Population size: {optimizer.population_size}")
-    logger.info(f"Episodes per evaluation: {episodes}")
-    logger.info(f"Parallel workers: {parallel_workers}")
-
-    start_time = time.time()
-    should_save = True
-    interrupted = False
-    session_best_fitness = float("inf")  # Track best fitness across all generations
-
-    # Create pool once outside the loop to avoid process spawn overhead per generation
-    pool = None
-    if parallel_workers > 1:
-        pool = Pool(
-            processes=parallel_workers,
-            initializer=_init_worker,
-            initargs=(log_level,),
+    if evolution_config.algorithm == "ga":
+        return GeneticAlgorithmOptimizer(
+            num_params=num_params,
+            population_size=evolution_config.population_size,
+            sigma0=evolution_config.sigma0,
+            elite_fraction=evolution_config.elite_fraction,
+            mutation_rate=evolution_config.mutation_rate,
+            crossover_rate=evolution_config.crossover_rate,
+            seed=seed,
         )
-
-    try:
-        for gen in range(generations):
-            gen_start = time.time()
-
-            try:
-                # Get candidate solutions
-                solutions = optimizer.ask()
-
-                # Evaluate fitness
-                if pool is not None:
-                    eval_args = [
-                        (sol, config_path, episodes, base_seed, gen, idx)
-                        for idx, sol in enumerate(solutions)
-                    ]
-                    fitnesses = pool.starmap(evaluate_fitness, eval_args)
-                else:
-                    fitnesses = [
-                        evaluate_fitness(
-                            sol,
-                            config_path,
-                            episodes,
-                            base_seed=base_seed,
-                            gen=gen,
-                            candidate_idx=idx,
-                        )
-                        for idx, sol in enumerate(solutions)
-                    ]
-
-                # Report fitness to optimizer
-                optimizer.tell(solutions, fitnesses)
-
-            except KeyboardInterrupt:
-                # Terminate pool immediately to stop workers
-                if pool is not None:
-                    pool.terminate()
-                    pool.join()
-                    pool = None  # Mark as terminated so finally block doesn't try again
-
-                logger.warning(f"Interrupted during generation {gen + 1}")
-                choice = prompt_interrupt()
-
-                if choice == "c":
-                    # Recreate pool for continuing
-                    if parallel_workers > 1:
-                        pool = Pool(
-                            processes=parallel_workers,
-                            initializer=_init_worker,
-                            initargs=(log_level,),
-                        )
-                    logger.info("Continuing evolution...")
-                    continue
-                if choice == "n":
-                    should_save = False
-
-                interrupted = True
-                # Save checkpoint at interruption point
-                if should_save:
-                    checkpoint_path = output_dir / f"checkpoint_gen{gen}_interrupted.pkl"
-                    save_checkpoint(optimizer, checkpoint_path)
-                    logger.info(f"Saved interrupt checkpoint: {checkpoint_path}")
-                break
-
-            # Log progress
-            gen_time = time.time() - gen_start
-            best_fitness = min(fitnesses)
-            best_idx = fitnesses.index(best_fitness)
-            best_params_this_gen = solutions[best_idx]
-            mean_fitness = float(np.mean(fitnesses))
-            std_fitness = float(np.std(fitnesses))
-
-            # Convert to success rate for readability
-            best_success = -best_fitness
-            mean_success = -mean_fitness
-
-            logger.info(
-                f"Gen {gen + 1:3d}/{generations}: "
-                f"best={best_success:5.1%}, mean={mean_success:5.1%}, "
-                f"std={std_fitness:.3f}, time={gen_time:5.1f}s",
-            )
-
-            # Log best parameters for this generation at debug level
-            logger.debug(f"Gen {gen + 1} best params: {best_params_this_gen}")
-
-            # Check if this is a new session best
-            if best_fitness < session_best_fitness:
-                session_best_fitness = best_fitness
-                logger.info(
-                    f"New session best: {-session_best_fitness:.1%} - params: {best_params_this_gen}",
-                )
-
-            # Save checkpoint every 10 generations
-            if (gen + 1) % 10 == 0:
-                checkpoint_path = output_dir / f"checkpoint_gen{gen + 1}.pkl"
-                save_checkpoint(optimizer, checkpoint_path)
-                logger.info(f"Saved checkpoint: {checkpoint_path}")
-
-            # Check for convergence (CMA-ES only)
-            # Only stop early if we've run at least 10 generations and have non-zero fitness
-            if gen >= 10 and best_fitness < 0 and optimizer.stop():
-                logger.info(f"Optimizer converged at generation {gen + 1}")
-                break
-    finally:
-        # Ensure pool is properly closed (if not already terminated by interrupt handler)
-        if pool is not None:
-            pool.close()
-            pool.join()
-
-    total_time = time.time() - start_time
-    result = optimizer.result
-
-    if interrupted:
-        logger.info(f"Evolution interrupted after {total_time:.1f}s")
-    else:
-        logger.info(f"Evolution complete in {total_time:.1f}s")
-
-    logger.info(f"Best success rate: {-result.best_fitness:.1%}")
-    logger.info(f"Best parameters: {result.best_params}")
-
-    return result, should_save
+    msg = f"Unknown algorithm: {evolution_config.algorithm!r}"
+    raise ValueError(msg)
 
 
-def save_checkpoint(optimizer: EvolutionaryOptimizer, path: Path) -> None:
-    """Save optimizer state to checkpoint file."""
-    with path.open("wb") as f:
-        pickle.dump(optimizer, f)
+def _resolve_output_dir(
+    output_dir_arg: str,
+    resume_path: Path | None,
+) -> tuple[str, Path] | None:
+    """Pick the session id + output directory.
 
-
-def load_checkpoint(path: Path) -> EvolutionaryOptimizer:
-    """Load optimizer state from checkpoint file.
-
-    SECURITY WARNING: This uses pickle.load which can execute arbitrary code.
-    Only load checkpoint files that you created yourself or from trusted sources.
-    Do not load checkpoints from untrusted or unknown origins.
+    When ``resume_path`` is given, the resumed run MUST write into the
+    original session's directory so ``lineage.csv`` stays a single
+    chronological history (per the evolution-framework spec scenario
+    "Append mode preserves history across resume").  We derive both the
+    session id and the output directory from the checkpoint's parent
+    directory; a fresh session id is only minted for new runs.  Returns
+    ``None`` to signal a startup error (the caller propagates exit 1).
     """
-    logger.warning(
-        f"Loading checkpoint from {path} using pickle. "
-        "Only load checkpoints from trusted sources (pickle can execute arbitrary code).",
-    )
-    with path.open("rb") as f:
-        return pickle.load(f)  # noqa: S301
+    if resume_path is None:
+        session_id = generate_session_id()
+        return session_id, Path(output_dir_arg) / session_id
 
-
-def save_results(
-    result: EvolutionResult,
-    config_path: str,
-    output_dir: Path,
-    session_id: str,
-) -> None:
-    """Save evolution results to files."""
-    # Ensure output directory exists (defensive - should already exist from main/run_evolution)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Save best parameters as JSON
-    brain = create_brain_from_config(config_path)
-    param_keys = list(brain.parameter_values.keys())
-    # Cast to float to ensure JSON serialization (handles numpy.float64)
-    best_params_list = [float(x) for x in result.best_params]
-    best_params_dict = dict(zip(param_keys, best_params_list, strict=False))
-
-    results_file = output_dir / f"best_params_{session_id}.json"
-    with results_file.open("w") as f:
-        json.dump(
-            {
-                "best_params": best_params_dict,
-                "param_keys": param_keys,  # Preserve key order for self-describing artifact
-                "best_success_rate": -result.best_fitness,
-                "generations": result.generations,
-                "session_id": session_id,
-            },
-            f,
-            indent=2,
+    if not resume_path.exists():
+        logger.error("Checkpoint not found: %s", resume_path)
+        return None
+    output_dir = resume_path.parent.resolve()
+    explicit_root = Path(output_dir_arg).resolve()
+    if explicit_root != output_dir.parent:
+        # We always prefer the checkpoint's location to preserve lineage
+        # continuity; warn the user that the explicit --output-dir is
+        # being ignored on resume.
+        logger.warning(
+            "--output-dir %s ignored on resume; writing into the "
+            "checkpoint's session directory %s instead.",
+            output_dir_arg,
+            output_dir,
         )
-    logger.info(f"Saved best parameters: {results_file}")
-
-    # Save history as CSV
-    history_file = output_dir / f"history_{session_id}.csv"
-    with history_file.open("w") as f:
-        f.write("generation,best_fitness,mean_fitness,std_fitness\n")
-        f.writelines(
-            f"{entry['generation']},"
-            f"{entry['best_fitness']},"
-            f"{entry['mean_fitness']},"
-            f"{entry['std_fitness']}\n"
-            for entry in result.history
-        )
-    logger.info(f"Saved history: {history_file}")
+    return output_dir.name, output_dir
 
 
-def main() -> None:  # noqa: PLR0915
-    """Run evolutionary optimization."""
+def main() -> int:
+    """Entry point."""
     args = parse_arguments()
-    _validate_args(args)
+    logger.setLevel(args.log_level)
 
-    # Generate unique session ID and configure file logging early
-    session_id = generate_session_id()
-    configure_file_logging(session_id)
+    sim_config = load_simulation_config(args.config)
+    evolution_config = _resolve_evolution_config(sim_config.evolution, args)
 
-    # Configure logging with console output
-    log_level = getattr(logging, args.log_level)
-    logger.setLevel(log_level)
+    if sim_config.brain is None or sim_config.brain.name is None:
+        logger.error("Config must specify brain.name.")
+        return 1
 
-    # Update file handler on root logger to use the specified log level
-    for handler in logging.getLogger().handlers:
-        if isinstance(handler, logging.FileHandler):
-            handler.setLevel(log_level)
+    brain_name = sim_config.brain.name
+    if brain_name not in ENCODER_REGISTRY:
+        # Surfaces the helpful error message from get_encoder.
+        try:
+            get_encoder(brain_name)
+        except ValueError as exc:
+            logger.error(str(exc))
+        return 1
 
-    # Add console handler if not already present
-    if not any(
-        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
-        for h in logger.handlers
-    ):
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(log_level)
-        console_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"),
-        )
-        logger.addHandler(console_handler)
+    encoder = get_encoder(brain_name)
+    fitness = EpisodicSuccessRate()
 
-    # Set random seed if provided
-    if args.seed is not None:
-        np.random.seed(args.seed)  # noqa: NPY002
-
-    # Create output directory
-    output_dir = Path(args.output_dir) / session_id
+    resume_path = Path(args.resume) if args.resume else None
+    resolved = _resolve_output_dir(args.output_dir, resume_path)
+    if resolved is None:
+        return 1
+    session_id, output_dir = resolved
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Session ID: {session_id}")
-    logger.info(f"Config file: {args.config}")
-    logger.info(f"Output directory: {output_dir}")
+    # Mirror run_simulation.py: write a per-session log file under logs/ for
+    # parity with the rest of the project.
+    log_path = configure_file_logging(session_id)
+    if log_path is not None:
+        logger.info("Log file: %s", log_path)
 
-    # Log all run arguments for reproducibility
-    logger.info(f"Algorithm: {args.algorithm.upper()}")
-    logger.info(f"Generations: {args.generations}")
-    logger.info(f"Population size: {args.population}")
-    logger.info(f"Episodes per eval: {args.episodes}")
-    logger.info(f"Sigma (step size): {args.sigma}")
-    logger.info(f"Parallel workers: {args.parallel}")
-    logger.info(f"Random seed: {args.seed}")
+    # Prominent startup logging (per task 7.7).
+    logger.info("=" * 60)
+    logger.info("Brain type:    %s", brain_name)
+    logger.info("Algorithm:     %s", evolution_config.algorithm)
+    logger.info("Population:    %d", evolution_config.population_size)
+    logger.info("Generations:   %d", evolution_config.generations)
+    logger.info("Eps per eval:  %d", evolution_config.episodes_per_eval)
+    logger.info("Parallel:      %d", evolution_config.parallel_workers)
+    logger.info("Output dir:    %s", output_dir)
+    logger.info("=" * 60)
 
-    # Get number of parameters from brain
-    brain = create_brain_from_config(args.config)
-    param_keys = list(brain.parameter_values.keys())
-    num_params = len(param_keys)
-    logger.info(f"Number of parameters: {num_params}")
+    # Determine genome dim by constructing a brain (call once).
+    num_params = encoder.genome_dim(sim_config)
+    logger.info("Genome dimension: %d", num_params)
 
-    # Get initial parameters
-    if args.init_params:
-        logger.info(f"Loading initial parameters from: {args.init_params}")
-        x0 = load_init_params(args.init_params, param_keys)
-        logger.info(f"Initial parameters: {x0}")
-    else:
-        # Use current values from brain (typically random small init)
-        x0 = list(brain.parameter_values.values())
+    optimizer = _build_optimizer(evolution_config, num_params, seed=args.seed)
+    rng = np.random.default_rng(args.seed)
 
-    # Create or load optimizer
-    optimizer: EvolutionaryOptimizer
-    if args.resume:
-        logger.info(f"Resuming from checkpoint: {args.resume}")
-        optimizer = load_checkpoint(Path(args.resume))
-    elif args.algorithm == "cmaes":
-        optimizer = CMAESOptimizer(
-            num_params=num_params,
-            x0=x0,
-            population_size=args.population,
-            sigma0=args.sigma,
-            seed=args.seed,
-        )
-    else:
-        optimizer = GeneticAlgorithmOptimizer(
-            num_params=num_params,
-            x0=x0,
-            population_size=args.population,
-            sigma0=args.sigma,
-            seed=args.seed,
-        )
-
-    logger.info(f"Using algorithm: {args.algorithm.upper()}")
-
-    # Run evolution
-    result, should_save = run_evolution(
+    log_level_int = getattr(logging, args.log_level)
+    loop = EvolutionLoop(
         optimizer=optimizer,
-        config_path=args.config,
-        generations=args.generations,
-        episodes=args.episodes,
+        encoder=encoder,
+        fitness=fitness,
+        sim_config=sim_config,
+        evolution_config=evolution_config,
         output_dir=output_dir,
-        parallel_workers=args.parallel,
-        log_level=log_level,
-        base_seed=args.seed,
+        rng=rng,
+        log_level=log_level_int,
     )
 
-    # Save results (unless user chose not to on interrupt)
-    if should_save:
-        save_results(result, args.config, output_dir, session_id)
+    result = loop.run(resume_from=resume_path)
 
-    # Print final summary
-    print("\n" + "=" * 60)
-    print("EVOLUTION COMPLETE" if should_save else "EVOLUTION ABORTED")
-    print("=" * 60)
-    print(f"Best success rate: {-result.best_fitness:.1%}")
-    print(f"Generations: {result.generations}")
-    if should_save:
-        print(f"Results saved to: {output_dir}")
-    else:
-        print("Results NOT saved (user requested no save)")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Best fitness: %.6f", result.best_fitness)
+    logger.info("Generations:  %d", result.generations)
+    logger.info("Artefacts:    %s/", output_dir)
+    logger.info("=" * 60)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

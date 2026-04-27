@@ -26,7 +26,7 @@ Edit `docs/roadmap.md` Phase 5 section:
 The plan that generated these milestones made three decisions that should be visible in `proposal.md` and `design.md` so they aren't re-litigated:
 
 - **Pilot-first**: M2 hyperparameter + M3 Lamarckian as lightweight pilots (20-30 gens, small population). Subsequent scientific milestones (M4 Baldwin, M5 co-evolution, M6 transgenerational) are gated on pilot evidence.
-- **No QVarCircuit backwards compatibility**: existing `scripts/run_evolution.py` is hardcoded to `QVarCircuitBrain` — the M0 framework rebuild does not preserve byte-equivalent behaviour. Old script moves to `scripts/legacy/` unmaintained. Quantum brain support deferred to Phase 6.
+- **No QVarCircuit backwards compatibility, no legacy fallback**: existing `scripts/run_evolution.py` is hardcoded to `QVarCircuitBrain` — the M0 framework rebuild does not preserve byte-equivalent behaviour. The old script is **deleted entirely** (along with its smoke test and config); git history preserves it for archaeology. The user explicitly declined a `scripts/legacy/` fallback to keep M0 free of suboptimal legacy choices. Quantum brain support deferred to Phase 6.
 - **LSTMPPO + klinotaxis as first-class brain**: M2/M3 use cheap MLPPPO for fast iteration, but the headline scientific milestones (M4/M5/M6) all target LSTMPPO+klinotaxis because Phase 4 produced 20+ validated configs with this combination, recurrent state allows transmission of meaningful priors (relevant for Lamarckian/Baldwin/transgenerational), and bilateral head-sweep sensing is the most biologically realistic configuration we have.
 
 ## Capabilities
