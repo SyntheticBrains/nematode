@@ -79,8 +79,12 @@ CI smoke test added to existing `tests/quantumnematode_tests/test_smoke.py`: a n
 
 **Docs:**
 
-- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — M0.1 → M0.14 sub-tasks marked `[x]` per the M-1 invariant
-- `docs/roadmap.md` Phase 5 Milestone Tracker — M0 status updated per the M-1 invariant
+- `openspec/changes/2026-04-26-phase5-tracking/tasks.md` — M0.1 → M0.14 sub-tasks marked `[x]` per the M-1 invariant. The phase5-tracking change itself is **not** archived (it spans M-1 → M7 and stays open until M7 ships)
+- `docs/roadmap.md` Phase 5 Milestone Tracker — M0 status updated per the M-1 invariant. The row reads `🟡 in progress` while the PR is open and flips to `✅ complete` in a follow-up commit on `main` after merge
+
+## PR + archive flow
+
+This change archives on M0 PR merge (per design.md "Maintenance" section). All Phase 10 sub-tasks (`tasks.md`) — pre-commit clean, full non-nightly pytest green, openspec validate strict, M-1 cross-phase tracking updates — MUST be `[x]` before the PR is opened. The PR-open, PR-merge, `openspec archive`, and roadmap-row-flip-to-complete actions are explicitly **out of task scope** for this change (see the `Out-of-task actions` block at the bottom of `tasks.md`); they are normal repo workflow that runs after all tasks are checked.
 
 ## Breaking Changes
 
