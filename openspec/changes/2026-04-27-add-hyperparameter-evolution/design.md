@@ -216,7 +216,7 @@ Per the approved plan and the M-1 decision-gate framing:
 - **PIVOT** if marginal: fitness rising but separation < 3pp, or separation > 3pp but flat by gen 20
 - **STOP** if no separation: < 1pp or worse than baseline
 
-The hand-tuned MLPPPO baseline is the existing `configs/scenarios/foraging/mlpppo_small_oracle.yml` running for the same eval-episode count under matched seeds.
+The hand-tuned MLPPPO baseline is the existing `configs/scenarios/foraging/mlpppo_small_oracle.yml` evaluated against the trained baseline brain for 100 eval episodes per seed across 4 matched seeds — a static measurement of the hand-tuned brain's plateau performance, not a 1:1 episode-budget match with the pilot (the pilot evaluates ~1200 episodes per seed across genome × generation slots; the baseline doesn't have genomes, so episode-volume parity isn't meaningful). See task 8.3 in `tasks.md` for the exact baseline-run procedure.
 
 The pilot is run during the spec-review window (after spec is approved, before/during implementation review) so the actual GO/PIVOT/STOP decision is in the PR body when the merge decision happens.
 
@@ -226,11 +226,11 @@ The pilot is run during the spec-review window (after spec is approved, before/d
 
 2. **Categorical convergence plateau** — CMA-ES sees flat fitness across categorical bins. Bounded blast radius for this PR (no categoricals in MLPPPO pilot); documented for PR 3 (LSTMPPO has `rnn_type`).
 
-3. **Train-phase wall time at large K** — `learn_episodes_per_eval: 30` × 12 genomes × 4 seeds × 20 generations = 28,800 train episodes per pilot. At ~50 ms/episode (post-perf-fix MLPPPO), that's ~24 minutes wall time at parallel 1, or ~6 min at parallel 4. Acceptable. If the pilot decides to bump K, recompute.
+3. **Train-phase wall time at large K** — `learn_episodes_per_eval: 30` × 12 genomes × 4 seeds × 20 generations = 28,800 train episodes per pilot. The post-perf-fix MLPPPO **eval-only** rate is ~50 ms/episode, but train-phase episodes carry PPO backprop cost which is materially higher and varies with `num_epochs` and `actor_hidden_dim` (both evolved). A plausible range based on prior MLPPPO training runs is 100-500 ms/train-episode, giving 2,880-14,400 s = 48 min to 4 hours at parallel 1, or 12 min to 1 hour at parallel 4. Task 8.2 specifies a calibration smoke before the headline run to firm up the estimate. Acceptable as long as the pilot completes within a single dev session.
 
 4. **Pilot fitness landscape too flat over 20 generations** — pop 12 × n=7 evolved hyperparams may not separate from baseline. Mitigation: bounds tightened around hand-tuned values (so the pilot is searching neighbourhoods, not the universe); decision gate explicitly accepts "fitness still rising" as a PIVOT signal rather than requiring a converged win.
 
-5. **Worker pickling of schemas** — `param_schema` travels in `Genome.birth_metadata` for every genome. Schema is small (≤8 entries) and uses Pydantic models that pickle cleanly. Mitigation: extend the existing pickle round-trip test to cover this.
+5. **Worker pickling of schemas** — `param_schema` travels in `Genome.birth_metadata` for every genome. Schema is small (≤8 entries) and stored as plain dicts (per Decision 4 — `entry.model_dump()`, NOT Pydantic instances), which pickle trivially without requiring a Pydantic dependency in the worker decode path. Mitigation: task 3.15 adds a new `test_hyperparam_encoder_pickles_with_schema` test that pickles a `Genome` with populated `birth_metadata["param_schema"]` and verifies round-trip integrity.
 
 6. **Train-phase stops mid-rollout** — `StandardEpisodeRunner.run()` calls `brain.learn()` per-step. If the train phase terminates early (max_steps, all food collected), the rollout buffer has partial data. This is the standard contract — same as how regular `run_simulation.py` handles short episodes — so no special handling. The eval phase starts with the brain in whatever state the train phase left it.
 
