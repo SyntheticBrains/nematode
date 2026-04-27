@@ -215,3 +215,174 @@ def test_run_evolution_smoke_mlpppo_resume(tmp_path: Path) -> None:
     assert lineage.exists(), f"lineage.csv missing: {lineage}"
     line_count = sum(1 for _ in lineage.open())
     assert line_count == 9, f"Expected 9 lineage lines (1 header + 8 data), got {line_count}"
+
+
+# ============================================================================
+# Phase 7 (M2 hyperparameter evolution): smoke + Phase 5 CLI guard tests
+# ============================================================================
+
+
+@pytest.mark.smoke
+def test_run_evolution_smoke_hyperparam_mlpppo(tmp_path: Path) -> None:
+    """Verify run_evolution.py exits cleanly with --fitness learned_performance.
+
+    Uses a tmp YAML override for K=2/L=1 since Phase 5 doesn't add CLI flags
+    for learn_episodes_per_eval / eval_episodes_per_eval.
+    """
+    import yaml as _yaml
+
+    pilot_path = CONFIGS_DIR / "evolution" / "hyperparam_mlpppo_pilot.yml"
+    assert pilot_path.exists(), f"Pilot config not found: {pilot_path}"
+
+    # Copy to tmp_path with K=2/L=1 override.
+    pilot_data = _yaml.safe_load(pilot_path.read_text())
+    pilot_data["evolution"]["learn_episodes_per_eval"] = 2
+    pilot_data["evolution"]["eval_episodes_per_eval"] = 1
+    smoke_config = tmp_path / "smoke_hyperparam.yml"
+    smoke_config.write_text(_yaml.safe_dump(pilot_data))
+
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(smoke_config),
+            "--fitness",
+            "learned_performance",
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(tmp_path / "evolution_results"),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+
+    assert result.returncode == 0, (
+        f"run_evolution.py failed.\n"
+        f"stdout:\n{result.stdout[-2000:]}\n"
+        f"stderr:\n{result.stderr[-2000:]}"
+    )
+    assert "Traceback" not in result.stderr, f"Traceback in stderr:\n{result.stderr[-2000:]}"
+
+
+@pytest.mark.smoke
+def test_run_evolution_cli_fitness_default_is_success_rate(tmp_path: Path) -> None:
+    """Without --fitness, M0 EpisodicSuccessRate behaviour SHALL be preserved."""
+    config_path = CONFIGS_DIR / "evolution" / "mlpppo_foraging_small.yml"
+    assert config_path.exists()
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(config_path),
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--episodes",
+            "1",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(tmp_path / "evolution_results"),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert result.returncode == 0, f"M0 default behaviour broken.\nstderr:\n{result.stderr[-2000:]}"
+
+
+@pytest.mark.smoke
+def test_run_evolution_cli_learned_performance_requires_hyperparam_schema(
+    tmp_path: Path,
+) -> None:
+    """--fitness learned_performance with no schema SHALL exit 1 with M3 hint."""
+    config_path = CONFIGS_DIR / "evolution" / "mlpppo_foraging_small.yml"
+    assert config_path.exists()
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(config_path),
+            "--fitness",
+            "learned_performance",
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(tmp_path / "evolution_results"),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 1
+    combined = result.stdout + result.stderr
+    assert "hyperparam_schema" in combined
+    # The error SHALL mention Lamarckian inheritance and M3
+    assert "Lamarckian" in combined or "M3" in combined
+
+
+@pytest.mark.smoke
+def test_run_evolution_cli_learned_performance_requires_k(tmp_path: Path) -> None:
+    """--fitness learned_performance with K=0 SHALL exit 1 with field hint."""
+    import yaml as _yaml
+
+    pilot_path = CONFIGS_DIR / "evolution" / "hyperparam_mlpppo_pilot.yml"
+    pilot_data = _yaml.safe_load(pilot_path.read_text())
+    pilot_data["evolution"]["learn_episodes_per_eval"] = 0
+    smoke_config = tmp_path / "k0.yml"
+    smoke_config.write_text(_yaml.safe_dump(pilot_data))
+
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(smoke_config),
+            "--fitness",
+            "learned_performance",
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(tmp_path / "evolution_results"),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 1
+    combined = result.stdout + result.stderr
+    assert "learn_episodes_per_eval" in combined

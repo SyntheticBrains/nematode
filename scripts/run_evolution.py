@@ -43,10 +43,10 @@ from pathlib import Path
 
 import numpy as np
 from quantumnematode.evolution import (
-    ENCODER_REGISTRY,
     EpisodicSuccessRate,
     EvolutionLoop,
-    get_encoder,
+    LearnedPerformanceFitness,
+    select_encoder,
 )
 from quantumnematode.logging_config import configure_file_logging, logger
 from quantumnematode.optimizers.evolutionary import (
@@ -128,6 +128,19 @@ def parse_arguments() -> argparse.Namespace:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
         help="Logging level.",
+    )
+    parser.add_argument(
+        "--fitness",
+        type=str,
+        choices=["success_rate", "learned_performance"],
+        default="success_rate",
+        help=(
+            "Fitness function to evolve against. 'success_rate' "
+            "(EpisodicSuccessRate, M0 default) is frozen-weight evaluation. "
+            "'learned_performance' (LearnedPerformanceFitness, M2) runs K "
+            "training episodes followed by L frozen eval episodes per "
+            "genome — only valid with hyperparam_schema set."
+        ),
     )
     return parser.parse_args()
 
@@ -235,16 +248,47 @@ def main() -> int:
         return 1
 
     brain_name = sim_config.brain.name
-    if brain_name not in ENCODER_REGISTRY:
-        # Surfaces the helpful error message from get_encoder.
-        try:
-            get_encoder(brain_name)
-        except ValueError as exc:
-            logger.error(str(exc))
+    # M2: select_encoder dispatches by hyperparam_schema presence.
+    # When set, returns HyperparameterEncoder regardless of registry
+    # membership (so brains without weight encoders are still
+    # reachable for hyperparameter evolution — see Decision 0 in
+    # design.md).  When None, falls back to the M0
+    # get_encoder(brain.name) path which raises ValueError for brains
+    # not in ENCODER_REGISTRY.
+    try:
+        encoder = select_encoder(sim_config)
+    except ValueError as exc:
+        logger.error(str(exc))
         return 1
 
-    encoder = get_encoder(brain_name)
-    fitness = EpisodicSuccessRate()
+    # M2: --fitness flag dispatches between EpisodicSuccessRate (M0
+    # default, frozen-weight) and LearnedPerformanceFitness (K train +
+    # L eval).  When learned_performance is selected, validate guards:
+    # hyperparam_schema must be set (otherwise we'd combine a weight
+    # encoder with LearnedPerformanceFitness — Lamarckian inheritance,
+    # M3 scope), AND learn_episodes_per_eval must be > 0.
+    if args.fitness == "learned_performance":
+        if sim_config.hyperparam_schema is None:
+            logger.error(
+                "--fitness learned_performance requires hyperparam_schema "
+                "to be set in the YAML.  Combining a weight encoder with "
+                "LearnedPerformanceFitness would amount to Lamarckian "
+                "inheritance, which is M3 scope.  For weight-evolution "
+                "campaigns, use --fitness success_rate (EpisodicSuccessRate, "
+                "the default).  To switch to hyperparameter evolution, "
+                "author a hyperparam_schema: block in the YAML.",
+            )
+            return 1
+        if evolution_config.learn_episodes_per_eval == 0:
+            logger.error(
+                "--fitness learned_performance requires "
+                "evolution.learn_episodes_per_eval > 0; got 0.  Set "
+                "learn_episodes_per_eval in the evolution: block.",
+            )
+            return 1
+        fitness = LearnedPerformanceFitness()
+    else:
+        fitness = EpisodicSuccessRate()
 
     resume_path = Path(args.resume) if args.resume else None
     resolved = _resolve_output_dir(args.output_dir, resume_path)
