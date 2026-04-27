@@ -234,6 +234,8 @@ The pilot is run during the spec-review window (after spec is approved, before/d
 
 6. **Train-phase stops mid-rollout** — `StandardEpisodeRunner.run()` calls `brain.learn()` per-step. If the train phase terminates early (max_steps, all food collected), the rollout buffer has partial data. This is the standard contract — same as how regular `run_simulation.py` handles short episodes — so no special handling. The eval phase starts with the brain in whatever state the train phase left it.
 
+7. **Schema mutation across resume** — `EvolutionLoop._save_checkpoint` ([loop.py:195-209](packages/quantum-nematode/quantumnematode/evolution/loop.py#L195)) pickles the optimiser instance, which has `num_params` baked into its internal state (CMA-ES covariance matrix dim, GA population shape). On resume, the YAML is reloaded and `select_encoder(sim_config).genome_dim(sim_config)` returns `len(hyperparam_schema)`. If `hyperparam_schema` is modified between the original run and the resume (e.g., a new param added), the pickled optimiser samples vectors of the OLD length but `decode` walks the NEW schema — silently desynced. M2 inherits M0's checkpoint contract: `--resume` requires the YAML to be schema-compatible with the original run. The `nematode-run-evolution` skill's "operational pitfalls" note (added in this PR per Phase 10's docs scope) calls this out for users. Future PR could add a schema-hash check to the checkpoint payload (bumping `CHECKPOINT_VERSION`); out of M2 scope.
+
 ## Considered Alternatives — Optimiser choice for hyperparameter evolution
 
 This PR uses CMA-ES (the M0-default optimiser) for hyperparameter evolution. That is a **pragmatic, not optimal** choice and worth flagging.

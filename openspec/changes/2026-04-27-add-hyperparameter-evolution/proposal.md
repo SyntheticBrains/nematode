@@ -95,12 +95,14 @@ Per the Phase 5 tracking change's invariant ([`2026-04-26-phase5-tracking/specs/
 
 ### 11. Tests (new)
 
-Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
+Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/` and `tests/quantumnematode_tests/`:
 
-- `test_hyperparam_encoder.py` — round-trip determinism per type; categorical bin-boundary; log-scale round-trip; schema name validation rejects bogus fields; encoder is **not** in `ENCODER_REGISTRY` (per Decision 0 + spec scenario "Hyperparameter encoder is NOT in the brain-keyed registry"); `select_encoder(sim_config)` dispatches correctly; encoder produces a brain whose `BrainConfig` matches the decoded values within float tolerance.
-- `test_learned_fitness.py` — K=2/L=1 smoke; K=0 raises; `eval_episodes_per_eval=None` falls back to `episodes_per_eval`; train phase actually mutates weights (anti-regression); eval phase doesn't (uses FrozenEvalRunner).
-- `test_config.py` extension — `hyperparam_schema:` YAML parses, name validation catches typos, schema fields present in `Genome.birth_metadata` after encode.
-- `test_smoke.py` extension — new `@pytest.mark.smoke test_run_evolution_smoke_hyperparam_mlpppo` exercising the CLI end-to-end with `--fitness learned_performance` against the pilot config (1 gen × pop 4 × K=2 / L=1).
+- `test_hyperparam_encoder.py` — round-trip determinism per type; categorical bin-boundary; log-scale round-trip; schema name validation rejects bogus fields; encoder is **not** in `ENCODER_REGISTRY` (per Decision 0 + spec scenario "Hyperparameter encoder is NOT in the brain-keyed registry"); encoder produces a brain whose `BrainConfig` matches the decoded values within float tolerance.
+- `test_learned_fitness.py` — K=2/L=1 smoke; K=0 raises; missing `evolution`/`environment`/`reward` blocks raise; `eval_episodes_per_eval=None` falls back to `episodes_per_eval`; train phase actually mutates weights (anti-regression); eval phase doesn't (uses FrozenEvalRunner).
+- `test_config.py` extension — `ParamSchemaEntry` type-conditional metadata validation; `hyperparam_schema:` YAML parses; name validation catches typos; schema requires brain block; unknown brain name fails clearly; `EvolutionConfig.learn_episodes_per_eval`/`eval_episodes_per_eval` defaults and bounds.
+- `test_encoders.py` extension (existing M0 file) — `select_encoder(sim_config)` dispatch tests including the brain-agnostic case for brains in `BRAIN_CONFIG_MAP` but NOT in `ENCODER_REGISTRY` (e.g., `qvarcircuit`); `build_birth_metadata` helper contract.
+- `test_loop_smoke.py` extension (existing M0 file) — Phase 4.5 wiring tests covering `birth_metadata["param_schema"]` population at both `Genome` construction sites and the `brain_type` fallback for hyperparameter runs (`encoder.brain_name == ""` falls through to `sim_config.brain.name`); existing M0 assertions (e.g. `artefact["brain_type"] == "mlpppo"`) MUST remain green.
+- `test_smoke.py` extension — new `@pytest.mark.smoke test_run_evolution_smoke_hyperparam_mlpppo` exercising the CLI end-to-end with `--fitness learned_performance` against the pilot config (1 gen × pop 4 × K=2 / L=1); plus subprocess CLI tests for `--fitness` flag default, K=0 rejection (schema-then-K guard ordering), and missing-`hyperparam_schema` rejection with the Lamarckian-inheritance/M3 rationale.
 
 ## Capabilities
 
@@ -116,7 +118,10 @@ Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
   - **`birth_metadata` wiring** (tasks 4.5.1-4.5.2): populate `birth_metadata["param_schema"]` from `sim_config.hyperparam_schema` at both `Genome` construction sites (worker handoff + lineage record) via the shared `build_birth_metadata(sim_config)` helper. Without this, hyperparameter genomes reach workers with empty `birth_metadata` and `HyperparameterEncoder.decode` cannot recover the schema.
   - **`brain_type` fallback** (task 4.5.7): the two `self.encoder.brain_name` reads at [loop.py:262](packages/quantum-nematode/quantumnematode/evolution/loop.py#L262) (`lineage.csv` rows) and [loop.py:378](packages/quantum-nematode/quantumnematode/evolution/loop.py#L378) (`best_params.json`) gain a fallback to `self.sim_config.brain.name` so that hyperparameter runs (whose encoder has `brain_name == ""`) still record the YAML's brain name, not the empty string.
 - `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — add `ParamSchemaEntry` model; add `hyperparam_schema` field on `SimulationConfig`; add `learn_episodes_per_eval` + `eval_episodes_per_eval` on `EvolutionConfig`; add cross-field validator for schema-name correctness
-- `scripts/run_evolution.py` — add `--fitness` flag + dispatch; call `select_encoder(sim_config)` from `evolution.encoders` rather than inlining the encoder dispatch logic
+- `scripts/run_evolution.py` — three edits in `main()`, all in Phase 5:
+  - Add `--fitness {success_rate, learned_performance}` argparse flag (default `success_rate` preserves M0 behaviour).
+  - Replace the M0 brain-registry gate at [run_evolution.py:237-246](scripts/run_evolution.py#L237) (`if brain_name not in ENCODER_REGISTRY: ...; encoder = get_encoder(brain_name)`) with a single `encoder = select_encoder(sim_config)` call wrapped in try/except for `ValueError` surfacing. Without this replacement, the M0 gate would reject hyperparameter runs against any brain in `BRAIN_CONFIG_MAP` but not `ENCODER_REGISTRY` (e.g., `qvarcircuit`), defeating Decision 0's brain-agnostic dispatch design.
+  - When `--fitness learned_performance`, validate `hyperparam_schema is not None` (first guard, the more fundamental check) and `evolution_config.learn_episodes_per_eval > 0` (second guard); reject with exit code 1 otherwise.
 
 **Configs:**
 
