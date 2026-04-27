@@ -74,12 +74,14 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **THEN** a `ValueError` SHALL be raised before any episode runs
 - **AND** the error message SHALL name the missing `evolution:` YAML block as the cause and `learn_episodes_per_eval` as the field that needs setting
 
-#### Scenario: eval_episodes_per_eval=None falls back to episodes_per_eval
+#### Scenario: eval_episodes_per_eval=None falls back to the episodes kwarg
 
-- **GIVEN** an `EvolutionConfig` with `learn_episodes_per_eval=10, eval_episodes_per_eval=None, episodes_per_eval=5`
+- **GIVEN** an `EvolutionConfig` with `learn_episodes_per_eval=10, eval_episodes_per_eval=None`
+- **AND** the fitness function is invoked with `episodes=5` (the protocol kwarg, which the `EvolutionLoop` wires from its resolved `evolution_config.episodes_per_eval`, including any CLI overrides such as `--episodes`)
 - **WHEN** `LearnedPerformanceFitness.evaluate` is invoked
 - **THEN** the eval phase SHALL run exactly 5 episodes
 - **AND** the returned fitness SHALL be `eval_successes / 5`
+- **AND** when `evolution.eval_episodes_per_eval` IS set in YAML, that value SHALL win over the `episodes` kwarg (the YAML field is the explicit-override path for hyperparameter pilots that want different train and eval budgets)
 
 #### Scenario: Score uses TerminationReason for success counting
 

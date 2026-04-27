@@ -132,7 +132,15 @@ def evaluate(self, genome, sim_config, encoder, *, episodes, seed):
     eval_env = create_env_from_config(sim_config.environment, seed=seed, theme=Theme.HEADLESS)
     eval_agent = _build_agent(brain, eval_env, sim_config)
     eval_runner = FrozenEvalRunner()
-    L = evolution_config.eval_episodes_per_eval or evolution_config.episodes_per_eval
+    # L resolution:
+    #  - if YAML set evolution.eval_episodes_per_eval, use that (no CLI override exists)
+    #  - else fall back to the `episodes` kwarg, which is the loop's already-resolved
+    #    `evolution_config.episodes_per_eval` (CLI overrides like `--episodes` are
+    #    applied by `_resolve_evolution_config` in run_evolution.py BEFORE the loop
+    #    is constructed, so `episodes` here is the user's effective value).  Reading
+    #    `sim_config.evolution.episodes_per_eval` directly would miss CLI overrides.
+    eval_eps = sim_config.evolution.eval_episodes_per_eval
+    L = eval_eps if eval_eps is not None else episodes
     successes = 0
     for _ in range(L):
         result = eval_runner.run(eval_agent, sim_config.reward, max_steps)
@@ -141,9 +149,11 @@ def evaluate(self, genome, sim_config, encoder, *, episodes, seed):
     return successes / L
 ```
 
-The `episodes` arg from the `FitnessFunction` protocol is **ignored** by `LearnedPerformanceFitness` — its episode budget comes from `learn_episodes_per_eval` + `eval_episodes_per_eval` instead. The protocol still requires the kwarg (M0 contract); we accept it and document that it's superseded for this fitness.
+The `episodes` arg from the `FitnessFunction` protocol is **the eval-phase fallback** for `LearnedPerformanceFitness` — used when `evolution.eval_episodes_per_eval` is None. The kwarg is already CLI-override-aware (the loop passes the loop's own resolved `evolution_config.episodes_per_eval`), so this fallback respects `--episodes`.
 
-**Why ignore `episodes` instead of repurposing it:** the `FitnessFunction` protocol is shared across M0/M2/future fitness types. Repurposing `episodes` to mean "train+eval total" for one variant and "eval only" for another would be confusing and force callers to know the variant. Cleaner to add evolution-config fields and document the protocol-level kwarg's semantics per fitness.
+**Asymmetry:** `learn_episodes_per_eval` (K) is read directly from `sim_config.evolution.learn_episodes_per_eval` because there's no CLI override for it. Only `episodes_per_eval` is CLI-overridable today (via `--episodes`); if a future PR adds `--learn-episodes-per-eval` and `--eval-episodes-per-eval` flags, the resolution paths for K and L should converge.
+
+**Why use the protocol kwarg rather than mutating `sim_config`:** the loop holds the resolved `evolution_config` on itself but does NOT patch `sim_config.evolution` to match. Fitness functions that need the resolved value have two options: (a) read the protocol's `episodes` kwarg (which the loop already passes from its resolved config), or (b) require the loop to also pass `evolution_config` as a new kwarg (broader protocol change). Option (a) keeps the protocol unchanged; option (b) would be cleaner long-term but is broader-scope and not needed for M2. We choose (a) and document the asymmetry.
 
 **Why same seed for train and eval env:** the two envs sample the same initial food layout, agent start position, etc. The brain has already "seen" that layout during training — but it has only *learned weights* from that experience, not memoised the layout (the brain's runtime state is reset by `prepare_episode` between every run). Same-seed eval is the standard approach for evaluating learned policy quality on a known landscape; differentiating train and eval seeds would test generalisation, which is M5's co-evolution / M6's transgenerational concern, not M2's. If a future variant wants train/eval seed split (e.g. for held-out generalisation measurement), it should be a peer fitness class rather than a knob on this one.
 
