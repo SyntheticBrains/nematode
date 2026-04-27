@@ -137,8 +137,12 @@ def main() -> int:
     )
     rng = np.random.default_rng(args.seed)
 
-    # Use a tmp output directory under the project so we don't pollute
-    # repo state.  No commit-tracked artefacts are written.
+    # Project-local scratch dir so artefacts (lineage.csv, best_params.json,
+    # etc.) survive the run for inspection.  Gitignored via `.bench_evolution_tmp/`
+    # in the repo .gitignore so it doesn't show up as untracked.  Kept here
+    # rather than tempfile.TemporaryDirectory() to preserve outputs across
+    # invocations — the whole point of the bench harness is to inspect what
+    # the loop produced.
     tmp_dir = PROJECT_ROOT / ".bench_evolution_tmp"
     tmp_dir.mkdir(exist_ok=True)
 
