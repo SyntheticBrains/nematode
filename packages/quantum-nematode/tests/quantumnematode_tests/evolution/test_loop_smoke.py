@@ -248,3 +248,34 @@ def test_lineage_parent_ids_lists_all_prev_generation_ids(tmp_path: Path) -> Non
         parent_ids = sorted(next(iter(cells)).split(";"))
         prev_child_ids = sorted(row[1] for row in rows_by_gen[gen - 1])
         assert parent_ids == prev_child_ids
+
+
+# ---------------------------------------------------------------------------
+# Worker initialisation policy
+# ---------------------------------------------------------------------------
+
+
+def test_init_worker_sets_perf_policy() -> None:
+    """``_init_worker`` SHALL apply the documented perf settings.
+
+    Locks in the contract that fitness-eval workers run with single-thread
+    BLAS (no oversubscription at parallel_workers > 1) and per-step agent
+    logging silenced (no f-string overhead at INFO level filter).
+    """
+    import torch
+    from quantumnematode.evolution.loop import _init_worker
+
+    # Save and restore so the test doesn't leak state into the rest of the
+    # test session.
+    original_threads = torch.get_num_threads()
+    original_runners_level = logging.getLogger("quantumnematode.agent.runners").level
+    original_agent_level = logging.getLogger("quantumnematode.agent.agent").level
+    try:
+        _init_worker(logging.INFO)
+        assert torch.get_num_threads() == 1
+        assert logging.getLogger("quantumnematode.agent.runners").level == logging.WARNING
+        assert logging.getLogger("quantumnematode.agent.agent").level == logging.WARNING
+    finally:
+        torch.set_num_threads(original_threads)
+        logging.getLogger("quantumnematode.agent.runners").setLevel(original_runners_level)
+        logging.getLogger("quantumnematode.agent.agent").setLevel(original_agent_level)

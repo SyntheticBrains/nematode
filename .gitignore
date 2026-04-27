@@ -24,6 +24,9 @@ experiments/*
 # Evolution results
 evolution_results/*
 
+# Bench harness scratch (scripts/benchmarks/bench_evolution_smoke.py output)
+.bench_evolution_tmp/
+
 # Configuration files
 configs/*.yml
 !configs/scenarios/**/*.yml

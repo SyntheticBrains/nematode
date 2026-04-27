@@ -31,6 +31,7 @@ from multiprocessing import Pool
 from typing import TYPE_CHECKING
 
 import numpy as np
+import torch
 
 from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.lineage import LineageTracker
@@ -64,10 +65,26 @@ def _init_worker(log_level: int) -> None:
 
     Workers ignore SIGINT so the parent process handles Ctrl+C gracefully.
     Without this, each worker would crash with KeyboardInterrupt and spew
-    a traceback.  Pattern lifted from the legacy run_evolution.py:452-470.
+    a traceback.
+
+    Performance setup:
+
+    - ``torch.set_num_threads(1)``: with ``parallel_workers > 1`` each
+      forked worker would otherwise default to multi-threaded BLAS,
+      oversubscribing the CPU and slowing every worker down.  Single
+      thread per worker leaves coordination to ``multiprocessing.Pool``.
+    - Per-step logging in ``StandardEpisodeRunner`` and
+      ``QuantumNematodeAgent`` is silenced to WARNING.  Fitness eval
+      doesn't need step-level traces, and the f-string construction was
+      visible in profiling for 1000-step LSTMPPO episodes.  Scope is
+      explicit (only the two agent loggers) so genuine warnings still
+      surface and the evolution loop's own progress logs are unaffected.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     logger.setLevel(log_level)
+    torch.set_num_threads(1)
+    logging.getLogger("quantumnematode.agent.runners").setLevel(logging.WARNING)
+    logging.getLogger("quantumnematode.agent.agent").setLevel(logging.WARNING)
 
 
 def _evaluate_in_worker(args: tuple) -> float:

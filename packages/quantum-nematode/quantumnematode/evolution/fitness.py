@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from quantumnematode.agent.agent import QuantumNematodeAgent
 from quantumnematode.agent.runners import StandardEpisodeRunner
+from quantumnematode.env.theme import Theme
 from quantumnematode.report.dtypes import TerminationReason
 from quantumnematode.utils.config_loader import create_env_from_config
 
@@ -206,7 +207,11 @@ class EpisodicSuccessRate:
         if sim_config.environment is None:
             msg = "EpisodicSuccessRate.evaluate requires sim_config.environment to be set."
             raise ValueError(msg)
-        env = create_env_from_config(sim_config.environment, seed=seed)
+        # HEADLESS theme short-circuits per-step rendering in
+        # `agent._render_step` (agent.py:958).  Worker processes have no
+        # terminal, so any other theme would render to a discarded stdout
+        # — wasted work paid every step.
+        env = create_env_from_config(sim_config.environment, seed=seed, theme=Theme.HEADLESS)
 
         agent = _build_agent(brain, env, sim_config)
         runner = FrozenEvalRunner()

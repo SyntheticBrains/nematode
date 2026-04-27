@@ -97,3 +97,7 @@ evolution:
   episodes_per_eval: 3
   parallel_workers: 1
   checkpoint_every: 5
+  # LSTMPPO weight genome is ~47k dims — full-cov CMA-ES is intractable at
+  # that size (each tell() takes minutes).  Diagonal mode drops tell() to
+  # O(n) and makes the campaign feasible.
+  cma_diagonal: true

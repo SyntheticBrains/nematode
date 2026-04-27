@@ -954,6 +954,12 @@ class EvolutionConfig(BaseModel):
     crossover_rate: float = Field(default=0.8, ge=0.0, le=1.0)  # GA-only
     parallel_workers: int = Field(default=1, ge=1)
     checkpoint_every: int = Field(default=10, ge=1)
+    # CMA-ES-only: restrict covariance to diagonal (CMA_diagonal=True).
+    # MUST be enabled for any campaign with a genome dim >~1000 — full-cov
+    # CMA-ES `tell()` is O(n²) and becomes minutes per generation at the
+    # weight-evolution scale of LSTMPPO / large MLPPPO networks.  Default
+    # False to preserve back-compat for small-genome campaigns.
+    cma_diagonal: bool = False
 
 
 class SimulationConfig(BaseModel):

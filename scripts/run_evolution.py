@@ -169,6 +169,7 @@ def _build_optimizer(
             population_size=evolution_config.population_size,
             sigma0=evolution_config.sigma0,
             seed=seed,
+            diagonal=evolution_config.cma_diagonal,
         )
     if evolution_config.algorithm == "ga":
         return GeneticAlgorithmOptimizer(

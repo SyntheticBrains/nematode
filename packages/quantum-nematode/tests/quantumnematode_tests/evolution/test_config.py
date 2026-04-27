@@ -64,6 +64,7 @@ def test_evolution_config_defaults() -> None:
     assert ec.crossover_rate == 0.8
     assert ec.parallel_workers == 1
     assert ec.checkpoint_every == 10
+    assert ec.cma_diagonal is False  # Off by default for back-compat
 
 
 def test_evolution_config_algorithm_literal() -> None:
