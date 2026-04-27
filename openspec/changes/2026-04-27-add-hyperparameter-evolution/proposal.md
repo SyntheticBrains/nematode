@@ -29,7 +29,7 @@ Per-slot supported types: `float` (with optional `log_scale`), `int`, `bool`, `c
 
 **The hyperparameter genome does NOT include weights.** Weights are freshly initialised at every fitness evaluation and adapted during the train phase of `LearnedPerformanceFitness`. This is the central distinction from `MLPPPOEncoder` / `LSTMPPOEncoder`.
 
-`HyperparameterEncoder` registers in `ENCODER_REGISTRY` under the key `"hyperparam"`. The encoder picks the encoder class by reading `sim_config.hyperparam_schema` rather than `sim_config.brain.name` — see Decision 0 in `design.md` for the dispatch rationale.
+`HyperparameterEncoder` is **not** registered in `ENCODER_REGISTRY` — that registry is keyed by brain name (`"mlpppo"`, `"lstmppo"`) and is reserved for brain-specific encoders. `HyperparameterEncoder` is brain-agnostic; the dispatch layer (`evolution.encoders.select_encoder`) constructs it directly when `sim_config.hyperparam_schema is not None` and falls back to the M0 `get_encoder(brain.name)` path otherwise. See Decision 0 in `design.md` for the rationale.
 
 ### 2. `LearnedPerformanceFitness` in `evolution/fitness.py`
 
@@ -97,7 +97,7 @@ Per the Phase 5 tracking change's invariant ([`2026-04-26-phase5-tracking/specs/
 
 Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
 
-- `test_hyperparam_encoder.py` — round-trip determinism per type; categorical bin-boundary; log-scale round-trip; schema name validation rejects bogus fields; encoder is registered; encoder produces a brain whose `BrainConfig` matches the decoded values within float tolerance.
+- `test_hyperparam_encoder.py` — round-trip determinism per type; categorical bin-boundary; log-scale round-trip; schema name validation rejects bogus fields; encoder is **not** in `ENCODER_REGISTRY` (per Decision 0 + spec scenario "Hyperparameter encoder is NOT in the brain-keyed registry"); `select_encoder(sim_config)` dispatches correctly; encoder produces a brain whose `BrainConfig` matches the decoded values within float tolerance.
 - `test_learned_fitness.py` — K=2/L=1 smoke; K=0 raises; `eval_episodes_per_eval=None` falls back to `episodes_per_eval`; train phase actually mutates weights (anti-regression); eval phase doesn't (uses FrozenEvalRunner).
 - `test_config.py` extension — `hyperparam_schema:` YAML parses, name validation catches typos, schema fields present in `Genome.birth_metadata` after encode.
 - `test_smoke.py` extension — new `@pytest.mark.smoke test_run_evolution_smoke_hyperparam_mlpppo` exercising the CLI end-to-end with `--fitness learned_performance` against the pilot config (1 gen × pop 4 × K=2 / L=1).
@@ -110,11 +110,11 @@ Under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/`:
 
 **Code:**
 
-- `packages/quantum-nematode/quantumnematode/evolution/encoders.py` — add `HyperparameterEncoder` + register
+- `packages/quantum-nematode/quantumnematode/evolution/encoders.py` — add `HyperparameterEncoder` (NOT registered in `ENCODER_REGISTRY` — see Decision 0); add public `select_encoder(sim_config)` dispatch helper peer of M0's `get_encoder`
 - `packages/quantum-nematode/quantumnematode/evolution/fitness.py` — add `LearnedPerformanceFitness`
 - `packages/quantum-nematode/quantumnematode/evolution/loop.py` — wire `birth_metadata["param_schema"]` from `sim_config.hyperparam_schema` at both `Genome` construction sites (worker handoff + lineage record). Without this, hyperparameter genomes reach workers with empty `birth_metadata` and `HyperparameterEncoder.decode` cannot recover the schema. See Phase 4.5 in `tasks.md`
 - `packages/quantum-nematode/quantumnematode/utils/config_loader.py` — add `ParamSchemaEntry` model; add `hyperparam_schema` field on `SimulationConfig`; add `learn_episodes_per_eval` + `eval_episodes_per_eval` on `EvolutionConfig`; add cross-field validator for schema-name correctness
-- `scripts/run_evolution.py` — add `--fitness` flag + dispatch; auto-select `HyperparameterEncoder` when `hyperparam_schema` is set
+- `scripts/run_evolution.py` — add `--fitness` flag + dispatch; call `select_encoder(sim_config)` from `evolution.encoders` rather than inlining the encoder dispatch logic
 
 **Configs:**
 

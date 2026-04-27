@@ -2,13 +2,15 @@
 
 ### Requirement: Hyperparameter Encoding
 
-The system SHALL provide a `HyperparameterEncoder` that conforms to the existing `GenomeEncoder` protocol and encodes brain hyperparameters (rather than weights) as a flat float vector with a per-slot schema stored in `Genome.birth_metadata`. The encoder SHALL register in `ENCODER_REGISTRY` under the key `"hyperparam"`. Each genome SHALL produce a fresh brain from the genome's hyperparameter values via `model_copy(update={...})` on the brain config + `instantiate_brain_from_sim_config`; no weights from the genome are loaded.
+The system SHALL provide a `HyperparameterEncoder` that conforms to the existing `GenomeEncoder` protocol and encodes brain hyperparameters (rather than weights) as a flat float vector with a per-slot schema stored in `Genome.birth_metadata`. The encoder SHALL be brain-agnostic — it works for any brain via `sim_config.brain.config` patching — and therefore SHALL NOT be registered in `ENCODER_REGISTRY` (which is keyed by brain name). Encoder selection happens at the dispatch layer (`evolution.encoders.select_encoder`), not via registry lookup. Each genome SHALL produce a fresh brain from the genome's hyperparameter values via `model_copy(update={...})` on the brain config + `instantiate_brain_from_sim_config`; no weights from the genome are loaded.
 
-#### Scenario: Hyperparameter encoder is registered
+#### Scenario: Hyperparameter encoder is NOT in the brain-keyed registry
 
 - **GIVEN** the `quantumnematode.evolution` module is imported
-- **WHEN** `ENCODER_REGISTRY["hyperparam"]` is accessed
-- **THEN** the value SHALL be the `HyperparameterEncoder` class
+- **WHEN** `ENCODER_REGISTRY` is inspected
+- **THEN** `"hyperparam"` SHALL NOT be a key in `ENCODER_REGISTRY`
+- **AND** `ENCODER_REGISTRY` SHALL contain only brain-name keys (`"mlpppo"`, `"lstmppo"`)
+- **AND** `HyperparameterEncoder` SHALL be importable directly from `quantumnematode.evolution.encoders` for callers that construct it explicitly
 
 #### Scenario: Per-type decode transforms
 
@@ -37,9 +39,9 @@ The system SHALL provide a `HyperparameterEncoder` that conforms to the existing
 #### Scenario: Encoder dispatch when hyperparam_schema is set
 
 - **GIVEN** a `SimulationConfig` whose top-level `hyperparam_schema` field is not `None`
-- **WHEN** the evolution loop selects an encoder via the same dispatch path used by `scripts/run_evolution.py`
-- **THEN** `HyperparameterEncoder` SHALL be selected regardless of `sim_config.brain.name`
-- **AND** when `hyperparam_schema is None`, dispatch SHALL fall back to the existing `brain.name` → encoder lookup (M0 behaviour)
+- **WHEN** `evolution.encoders.select_encoder(sim_config)` is called (the public dispatch entry point used by `scripts/run_evolution.py` and any programmatic caller)
+- **THEN** `HyperparameterEncoder` SHALL be returned regardless of `sim_config.brain.name`
+- **AND** when `hyperparam_schema is None`, `select_encoder` SHALL fall back to `get_encoder(sim_config.brain.name)` — the existing M0 brain-name → encoder lookup
 
 ### Requirement: Learned-Performance Fitness
 
