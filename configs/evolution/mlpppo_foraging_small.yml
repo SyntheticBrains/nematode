@@ -1,13 +1,12 @@
 # Evolution pilot config: MLPPPO + small oracle foraging
 #
 # Smallest viable evolution loop — used for framework smoke testing and as
-# the M2 hyperparameter pilot's cheap proof-of-concept brain.  Headline
-# scientific milestones (M3 Lamarckian onward) target the LSTMPPO+klinotaxis
-# config instead.
+# a cheap proof-of-concept brain.  Slower recurrent brains target the
+# lstmppo_foraging_small_klinotaxis.yml config instead.
 #
 # Brain block mirrors configs/scenarios/foraging/mlpppo_small_oracle.yml.
 # DO NOT specify brain.config.weights_path — the framework forces it to
-# None per Decision 0 (genome is the sole weight source).
+# None (genome is the sole weight source).
 # DO NOT rely on brain.config.seed — the loop's --seed (or the per-evaluation
 # seed derived from it) overrides BrainConfig.seed via the wrapper.
 

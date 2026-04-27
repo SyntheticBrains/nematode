@@ -77,7 +77,7 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 
    - `best_params.json` — top genome weights (round-trips back to a working brain via the encoder)
    - `history.csv` — per-generation fitness summary
-   - `lineage.csv` — every fitness evaluation, with `parent_ids` per Decision 5a
+   - `lineage.csv` — every fitness evaluation, with `parent_ids` listing every member of the previous generation
    - `checkpoint.pkl` — resume point (written every `checkpoint_every` generations)
 
    Quick sanity: `wc -l evolution_results/<session>/lineage.csv` should equal `1 + generations × population_size`.
@@ -88,12 +88,12 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 
 ## Constraints
 
-- **Frozen weights only** in M0: `EpisodicSuccessRate` runs episodes via `FrozenEvalRunner` which neuters `brain.learn` and `brain.update_memory`. Do NOT add `LearnedPerformanceFitness` or any learning-during-evaluation behaviour without checking that's the milestone you're on (M2 is where learn-then-eval lands).
-- **Only `mlpppo` and `lstmppo` brains** are registered in `ENCODER_REGISTRY` as of M0. Quantum brain support (e.g. `qvarcircuit`) is deferred to a future Phase 6 re-evaluation — running the script against a quantum-brain config will fail with a clear error listing the registered names.
+- **Frozen weights only**: `EpisodicSuccessRate` runs episodes via `FrozenEvalRunner` which neuters `brain.learn` and `brain.update_memory`. The framework deliberately does not ship a learn-then-evaluate fitness in this version.
+- **Only `mlpppo` and `lstmppo` brains** are registered in `ENCODER_REGISTRY`. Running the script against a quantum-brain config (e.g. `qvarcircuit`) will fail with a clear error listing the registered names.
 - **`--parallel N` uses `multiprocessing.Pool`**: workers fork the parent process. Don't run with `--parallel > os.cpu_count()`. Workers ignore SIGINT — Ctrl-C the parent to stop everything cleanly.
 
 ## Tips
 
 - For seeded reproducibility, always pass `--seed`; the per-evaluation seed is derived from this. Two runs with the same seed produce byte-identical lineage CSVs and best_params.
-- The MLPPPO config uses `feature_gating: False`; if you need to evolve a feature-gated MLPPPO, check if M2 has landed first (M0 doesn't ship a feature-gated fixture).
+- The MLPPPO config uses `feature_gating: False`. There is no shipped fixture for `feature_gating: true` evolution.
 - The smoke test [test_run_evolution_smoke_mlpppo](../../packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py) is the canonical "did I break the framework" check. Runs in ~4 s.

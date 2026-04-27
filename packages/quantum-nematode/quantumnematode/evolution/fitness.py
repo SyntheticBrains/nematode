@@ -1,9 +1,9 @@
 """Fitness functions for the evolution loop.
 
-M0 ships :class:`EpisodicSuccessRate` (frozen-weight fitness): decode a genome
-into a fresh brain, run it for ``episodes_per_eval`` complete episodes, count
-successes, return the ratio.  No learning happens — the brain's weights are
-fixed by the genome.
+This module provides :class:`EpisodicSuccessRate` — a frozen-weight fitness
+that decodes a genome into a fresh brain, runs it for ``episodes_per_eval``
+complete episodes, counts successes, and returns the ratio.  No learning
+happens during evaluation; the brain's weights are fixed by the genome.
 
 Calling :meth:`agent.run_episode` directly is insufficient because
 :class:`~quantumnematode.agent.runners.StandardEpisodeRunner._terminate_episode`
@@ -13,8 +13,6 @@ episodes within a single fitness evaluation, breaking the frozen-weight
 contract.  :class:`FrozenEvalRunner` subclasses the standard runner and forces
 ``learn=False, update_memory=False`` on every termination path while
 otherwise inheriting all step-loop logic unchanged.
-
-See ``Decision 3`` and ``Decision 3a`` in the change's ``design.md``.
 """
 
 from __future__ import annotations
@@ -55,10 +53,12 @@ class FitnessFunction(Protocol):
     ) -> float:
         """Return a fitness value for ``genome``.
 
-        ``seed`` controls per-evaluation determinism (see Decision 3a).  ``encoder``
-        is responsible for decoding the genome into a brain; the fitness function
-        does NOT call ``setup_brain_model`` or other brain-construction code
-        directly.
+        ``seed`` controls per-evaluation determinism: implementations propagate
+        it through ``encoder.decode(seed=seed)`` so the brain's RNG, numpy
+        global, and torch global all start from the same point.  ``encoder``
+        is responsible for decoding the genome into a brain; the fitness
+        function does NOT call ``setup_brain_model`` or other brain-construction
+        code directly.
         """
         ...
 
@@ -202,7 +202,6 @@ class EpisodicSuccessRate:
         # before brain construction, so the brain's __init__ calls
         # set_global_seed(seed) and self.rng = get_rng(seed) — seeding numpy
         # global, torch global, and the brain's local RNG to OUR seed.
-        # See Decision 3a.
         brain = encoder.decode(genome, sim_config, seed=seed)
         if sim_config.environment is None:
             msg = "EpisodicSuccessRate.evaluate requires sim_config.environment to be set."

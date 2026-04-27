@@ -32,10 +32,11 @@ class Genome:
         ``parent_ids`` via :func:`genome_id_for`.
     parent_ids
         IDs of the genomes from generation ``N-1`` that contributed to this
-        candidate.  See ``Decision 5a`` in the change's ``design.md``: the
-        framework records every member of generation ``N-1`` as a parent of
-        every member of generation ``N`` (uniform across CMA-ES and GA).
-        Empty for ``generation == 0``.
+        candidate.  The framework records every member of generation ``N-1``
+        as a parent of every member of generation ``N`` — a uniform
+        convention across CMA-ES and GA, since neither optimiser exposes
+        per-child parent provenance to the loop.  Empty for
+        ``generation == 0``.
     generation
         Zero-based generation index.  A run with ``generations: G`` populates
         rows for generations ``0, 1, ..., G-1``.

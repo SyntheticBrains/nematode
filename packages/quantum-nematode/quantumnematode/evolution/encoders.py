@@ -16,8 +16,6 @@ Component selection is **dynamic**: encoders ask the brain for all weight
 components and filter out the denylist :data:`NON_GENOME_COMPONENTS`.  This
 picks up conditional components like MLPPPO's ``gate_weights`` automatically
 and survives future component additions without encoder changes.
-
-See ``Decision 0`` and ``Decision 1`` in the change's ``design.md``.
 """
 
 from __future__ import annotations
@@ -261,10 +259,14 @@ class _ClassicalPPOEncoder:
         wp.load_weight_components(components)
 
         # Reset runtime state so a freshly-decoded brain matches a freshly-
-        # constructed one.  See Decision 2.  These attributes belong to the
-        # concrete brain subclass (MLPPPOBrain / LSTMPPOBrain), not to the
-        # general Brain protocol — hence the type: ignore.  Direct private
-        # access is intentional: there is no public reset API on the brain.
+        # constructed one.  ``_episode_count`` belongs to ``training_state``
+        # (deliberately excluded from the genome) but is consulted by the LR
+        # scheduler at runtime; without resetting it, a genome captured at
+        # episode 800 would inherit a stale count and the LR scheduler would
+        # be in the wrong regime.  Calling ``_update_learning_rate()`` after
+        # the count reset brings the LR back into sync.  These attributes
+        # belong to the concrete brain subclass (MLPPPOBrain / LSTMPPOBrain),
+        # not to the general Brain protocol — hence the type: ignore.
         brain._episode_count = 0  # type: ignore[attr-defined]  # noqa: SLF001
         brain._update_learning_rate()  # type: ignore[attr-defined]  # noqa: SLF001
 
@@ -326,15 +328,14 @@ def get_encoder(brain_name: str) -> GenomeEncoder:
     ------
     ValueError
         If ``brain_name`` is not registered.  The error message lists the
-        registered names and notes that quantum brain support is deferred to
-        a future Phase 6 re-evaluation.
+        registered names.
     """
     encoder_cls = ENCODER_REGISTRY.get(brain_name)
     if encoder_cls is None:
         registered = sorted(ENCODER_REGISTRY)
         msg = (
             f"No encoder for brain {brain_name!r}. Registered: {registered}. "
-            "Quantum brain support is deferred to a future Phase 6 re-evaluation."
+            "Quantum brains are not currently supported."
         )
         raise ValueError(msg)
     return encoder_cls()

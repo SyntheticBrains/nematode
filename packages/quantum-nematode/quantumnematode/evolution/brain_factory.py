@@ -7,8 +7,6 @@ for fitness eval, and converting config-shaped fields to runtime objects via the
 existing ``configure_*`` helpers in :mod:`quantumnematode.utils.config_loader`.
 
 Encoders call this — they do not call ``setup_brain_model`` directly.
-
-See ``Decision 0`` and ``Decision 3a`` in the change's ``design.md``.
 """
 
 from __future__ import annotations

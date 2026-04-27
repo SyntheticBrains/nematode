@@ -1,10 +1,7 @@
 # pragma: no cover
 r"""Run brain-agnostic evolution with CMA-ES or GA.
 
-Replaces the legacy QVarCircuit-only script.  See M0 of the Phase 5 plan
-(archived OpenSpec change:
-``openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/``;
-the resulting capability lives at ``openspec/specs/evolution-framework/``).
+The capability spec lives at ``openspec/specs/evolution-framework/``.
 
 Examples
 --------

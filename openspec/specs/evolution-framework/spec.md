@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Brain-agnostic evolutionary optimisation of classical brain initial-weight genomes. Provides the encoder protocol (any brain implementing `WeightPersistence` plugs in via a one-class registration), the frozen-weight fitness function (`EpisodicSuccessRate` — runs episodes via `FrozenEvalRunner` without ever calling `.learn()`), append-only lineage tracking, parallel fitness evaluation, and pickle checkpoint/resume. Shipped in M0 of Phase 5 with `MLPPPOEncoder` and `LSTMPPOEncoder` registered. Subsequent Phase 5 milestones (M2 hyperparameter pilot, M3 Lamarckian, M4 Baldwin, M5 co-evolution, M6 transgenerational memory) build on this framework without further framework changes — they add encoders, fitness functions, or inheritance strategies behind the existing protocols.
+Brain-agnostic evolutionary optimisation of classical brain initial-weight genomes. Provides the encoder protocol (any brain implementing `WeightPersistence` plugs in via a one-class registration), the frozen-weight fitness function (`EpisodicSuccessRate` — runs episodes via `FrozenEvalRunner` without ever calling `.learn()`), append-only lineage tracking, parallel fitness evaluation, and pickle checkpoint/resume. `MLPPPOEncoder` and `LSTMPPOEncoder` are registered out of the box; future inheritance strategies (Lamarckian, Baldwin), co-evolution loops, and additional encoders extend this framework behind the existing protocols.
 
 ## Requirements
 
@@ -66,7 +66,7 @@ The system SHALL provide a `GenomeEncoder` protocol allowing any brain implement
 - **GIVEN** a brain name (e.g. `"qvarcircuit"`) NOT in `ENCODER_REGISTRY`
 - **WHEN** the evolution loop attempts to construct an encoder
 - **THEN** a `ValueError` SHALL be raised whose message lists the registered brain names
-- **AND** the message SHALL note that quantum brain support is deferred to a future Phase 6 re-evaluation
+- **AND** the message SHALL state that quantum brains are not currently supported
 
 ### Requirement: Frozen-Weight Fitness Evaluation
 
@@ -199,9 +199,9 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 - **THEN** the loop SHALL run for 10 generations
 - **AND** the YAML value SHALL be ignored for that field only
 
-### Requirement: First-Class Encoder Coverage for Phase 5 Brains
+### Requirement: First-Class Encoder Coverage for Classical Brains
 
-The encoder registry SHALL include `MLPPPOEncoder` and `LSTMPPOEncoder` at minimum, so that Phase 5 milestones M2 (hyperparameter pilot), M3 (Lamarckian pilot), M4 (Baldwin), M5 (co-evolution prey), and M6 (transgenerational memory) can target classical brains without further framework changes.
+The encoder registry SHALL include `MLPPPOEncoder` and `LSTMPPOEncoder` at minimum, so that downstream evolutionary work — hyperparameter sweeps, inheritance-strategy pilots, co-evolution, and transgenerational memory experiments — can target classical brains without further framework changes.
 
 #### Scenario: MLPPPO encoder is registered
 

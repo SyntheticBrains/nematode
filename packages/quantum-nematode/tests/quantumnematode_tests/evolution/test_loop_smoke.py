@@ -67,7 +67,7 @@ def _make_loop(
 
 
 # ---------------------------------------------------------------------------
-# 3-generation MLPPPO smoke (Phase 5 task 5.9)
+# 3-generation MLPPPO smoke
 # ---------------------------------------------------------------------------
 
 
@@ -120,7 +120,7 @@ def test_loop_writes_p_times_g_lineage_rows(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Checkpoint contains required keys (Phase 5 task 5.12)
+# Checkpoint contains required keys
 # ---------------------------------------------------------------------------
 
 
@@ -145,7 +145,7 @@ def test_checkpoint_contains_required_keys(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Resume from checkpoint (Phase 5 task 5.10)
+# Resume from checkpoint
 # ---------------------------------------------------------------------------
 
 
@@ -194,7 +194,7 @@ def test_loop_resume_from_checkpoint(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Incompatible checkpoint version (Phase 5 task 5.11)
+# Incompatible checkpoint version
 # ---------------------------------------------------------------------------
 
 
@@ -219,14 +219,16 @@ def test_loop_rejects_incompatible_checkpoint_version(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# parent_ids convention (Decision 5a)
+# parent_ids convention
 # ---------------------------------------------------------------------------
 
 
 def test_lineage_parent_ids_lists_all_prev_generation_ids(tmp_path: Path) -> None:
     """Every gen-N row's ``parent_ids`` SHALL be the joined set of all gen-(N-1) child_ids.
 
-    Verifies Decision 5a's convention.
+    Verifies the framework's parent_ids convention: every member of generation
+    N-1 is recorded as a parent of every member of generation N (uniform across
+    CMA-ES and GA, since neither optimiser exposes per-child parent provenance).
     """
     loop = _make_loop(tmp_path, generations=3, population_size=4, episodes_per_eval=1)
     loop.run()

@@ -6,17 +6,15 @@ append-mode so resume operations continue writing to the same file without
 truncating prior history.
 
 Generation indexing is 0-based: a run with ``generations: G`` populates rows
-for generations ``0, 1, ..., G-1``.  Per Decision 5a, every member of
-generation ``N-1`` is recorded as a parent of every member of generation
-``N`` (uniform across CMA-ES and GA, since neither optimiser exposes
-per-child parent provenance).  Generation 0 rows have empty ``parent_ids``.
+for generations ``0, 1, ..., G-1``.  Every member of generation ``N-1`` is
+recorded as a parent of every member of generation ``N`` (uniform across
+CMA-ES and GA, since neither optimiser exposes per-child parent provenance
+to the loop).  Generation 0 rows have empty ``parent_ids``.
 
 The tracker is owned by the **parent process only** — workers report
 fitnesses back to the parent and the parent calls :meth:`record`.  Workers
 MUST NOT instantiate or write to the tracker directly (no concurrent-write
 hazard).
-
-See ``Decision 5`` and ``Decision 5a`` in the change's ``design.md``.
 """
 
 from __future__ import annotations
@@ -80,7 +78,8 @@ class LineageTracker:
             :class:`EpisodicSuccessRate`).
         brain_type
             Brain identifier (e.g. ``"mlpppo"``, ``"lstmppo"``).  Included
-            so future co-evolution runs (M5) can slice the CSV by species.
+            so future co-evolution runs (where two brain populations share
+            an output directory) can slice the CSV by species.
         """
         with self.output_path.open("a", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)

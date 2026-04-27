@@ -4,11 +4,12 @@ The :class:`EvolutionLoop` ties everything together:
 
 - Asks the optimiser for a population of candidate parameter vectors.
 - Wraps each candidate as a :class:`Genome` with a deterministic ID and
-  parent_ids per Decision 5a (every gen-N candidate has all gen-N-1 IDs as
-  parents).
+  ``parent_ids`` listing every member of the previous generation (a
+  uniform convention across CMA-ES and GA, since neither optimiser
+  exposes per-child parent provenance to the loop).
 - Evaluates fitness in parallel via ``multiprocessing.Pool`` (when
-  ``parallel_workers > 1``), reusing the SIGINT-ignore worker pattern from
-  the legacy script.
+  ``parallel_workers > 1``), with a SIGINT-ignore worker init so Ctrl-C
+  cleanly stops the parent.
 - Reports the **negated** fitness to the optimiser (which minimises) since
   our fitness functions return success rate which we maximise.
 - Records each evaluation in the lineage CSV.
@@ -17,8 +18,6 @@ The :class:`EvolutionLoop` ties everything together:
 
 Resume reconstructs the optimiser, RNG, lineage path, and current generation
 from a pickle checkpoint without re-running prior generations.
-
-See ``Decision 4`` and ``Decision 5a`` in the change's ``design.md``.
 """
 
 from __future__ import annotations
@@ -257,8 +256,9 @@ class EvolutionLoop:
                 solutions = self.optimizer.ask()
 
                 # Wrap as Genomes with deterministic IDs and shared parent_ids.
-                # Per Decision 5a: every gen-N candidate has the entire gen-(N-1)
-                # ID list as parents (uniform across CMA-ES and GA).
+                # Every gen-N candidate has the entire gen-(N-1) ID list as
+                # parents — a uniform convention across CMA-ES and GA, since
+                # neither optimiser exposes per-child parent provenance.
                 parent_ids = list(self._prev_generation_ids)
                 gen_ids: list[str] = []
                 eval_args: list[tuple] = []

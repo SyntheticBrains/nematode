@@ -161,7 +161,7 @@ def test_genome_dim_matches_flattened_state_lstmppo() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Episode count + LR sync (Decision 2)
+# Episode count + LR sync on decode
 # ---------------------------------------------------------------------------
 
 
@@ -229,8 +229,9 @@ def test_unknown_brain_name_raises_with_helpful_message() -> None:
     with pytest.raises(ValueError, match="qvarcircuit") as excinfo:
         get_encoder("qvarcircuit")
     msg = str(excinfo.value)
-    assert "mlpppo" in msg or "lstmppo" in msg
-    assert "Phase 6" in msg
+    assert "mlpppo" in msg
+    assert "lstmppo" in msg
+    assert "Quantum brains are not currently supported." in msg
 
 
 # ---------------------------------------------------------------------------

@@ -112,7 +112,7 @@ def test_episodic_success_rate_uses_termination_reason_for_success() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Seed propagation (Decision 3a)
+# Seed propagation
 # ---------------------------------------------------------------------------
 
 

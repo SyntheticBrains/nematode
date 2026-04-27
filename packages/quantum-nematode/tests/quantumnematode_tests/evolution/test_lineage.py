@@ -36,8 +36,9 @@ def _read_rows(path: Path) -> list[list[str]]:
 def test_lineage_csv_appends_across_generations(tmp_path: Path) -> None:
     """Recording 5 generations x population 4 SHALL yield 20 rows + header.
 
-    Per Decision 5a, every gen-N child shares the same ``parent_ids`` list
-    (all of gen N-1's child_ids).  Verify that data is correctly written.
+    Every gen-N child shares the same ``parent_ids`` list (all of gen N-1's
+    child_ids) per the framework's parent_ids convention.  Verify that data
+    is correctly written.
     """
     csv_path = tmp_path / "lineage.csv"
     tracker = LineageTracker(csv_path)
@@ -159,7 +160,8 @@ def test_csv_header_columns(tmp_path: Path) -> None:
 def test_record_writes_brain_type_column(tmp_path: Path) -> None:
     """The ``brain_type`` column SHALL hold the value passed to ``record``.
 
-    This is what enables M5's co-evolution to slice a single CSV by species.
+    This is what enables future co-evolution runs (where two brain populations
+    share an output directory) to slice a single CSV by species.
     """
     csv_path = tmp_path / "lineage.csv"
     tracker = LineageTracker(csv_path)

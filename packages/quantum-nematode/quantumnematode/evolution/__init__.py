@@ -1,13 +1,11 @@
-"""Brain-agnostic evolution framework for Phase 5.
+"""Brain-agnostic evolution framework.
 
 Provides genome encoding, fitness evaluation, lineage tracking, and an
 optimisation loop with checkpoint/resume. The framework is brain-agnostic:
 any classical brain implementing ``WeightPersistence`` can be plugged in
 via a one-class encoder registration.
 
-See ``openspec/specs/evolution-framework/`` for the live capability spec
-and ``openspec/changes/archive/2026-04-27-2026-04-28-add-evolution-framework/``
-for the original M0 design notes and rationale.
+See ``openspec/specs/evolution-framework/`` for the capability spec.
 """
 
 from quantumnematode.evolution.brain_factory import instantiate_brain_from_sim_config
