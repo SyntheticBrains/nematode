@@ -301,3 +301,174 @@ def test_init_worker_sets_perf_policy() -> None:
         torch.set_num_threads(original_threads)
         runtime_logger.setLevel(original_runtime_level)
         logging.getLogger().setLevel(original_root_level)
+
+
+# =============================================================================
+# Phase 4.5: birth_metadata wiring + brain_type fallback
+# =============================================================================
+
+
+def test_loop_populates_param_schema_in_birth_metadata(tmp_path: Path) -> None:
+    """Loop SHALL populate birth_metadata['param_schema'] when hyperparam_schema set.
+
+    Records the genome instance the fitness sees and asserts the dict
+    payload from build_birth_metadata is wired through.
+    """
+    from quantumnematode.evolution.encoders import HyperparameterEncoder
+    from quantumnematode.utils.config_loader import ParamSchemaEntry
+
+    captured_genomes: list = []
+
+    class _RecordingFitness:
+        def evaluate(
+            self,
+            genome,
+            sim_config,
+            encoder,
+            *,
+            episodes,
+            seed,
+        ) -> float:
+            captured_genomes.append(genome)
+            return 0.0
+
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG)).model_copy(
+        update={
+            "hyperparam_schema": [
+                ParamSchemaEntry(
+                    name="learning_rate",
+                    type="float",
+                    bounds=(1e-5, 1e-2),
+                ),
+            ],
+        },
+    )
+
+    encoder = HyperparameterEncoder()
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=2,
+        generations=1,
+        episodes_per_eval=1,
+        parallel_workers=1,
+    )
+    dim = encoder.genome_dim(sim_config)
+    optimizer = CMAESOptimizer(num_params=dim, population_size=2, sigma0=ecfg.sigma0, seed=42)
+    loop = EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder,
+        fitness=_RecordingFitness(),  # type: ignore[arg-type]
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=tmp_path,
+        rng=np.random.default_rng(42),
+    )
+    loop.run()
+
+    assert len(captured_genomes) > 0
+    for g in captured_genomes:
+        assert "param_schema" in g.birth_metadata
+        # Schema travels as a list of plain dicts
+        assert isinstance(g.birth_metadata["param_schema"], list)
+        assert all(isinstance(e, dict) for e in g.birth_metadata["param_schema"])
+        names = [e["name"] for e in g.birth_metadata["param_schema"]]
+        assert "learning_rate" in names
+
+
+def test_loop_birth_metadata_empty_when_no_hyperparam_schema(tmp_path: Path) -> None:
+    """Without hyperparam_schema, birth_metadata SHALL be empty (M0 behaviour)."""
+    captured: list = []
+
+    class _RecordingFitness:
+        def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
+            captured.append(genome)
+            return 0.0
+
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG))
+    assert sim_config.hyperparam_schema is None  # M0 config
+
+    encoder = MLPPPOEncoder()
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=2,
+        generations=1,
+        episodes_per_eval=1,
+    )
+    dim = encoder.genome_dim(sim_config)
+    optimizer = CMAESOptimizer(num_params=dim, population_size=2, sigma0=ecfg.sigma0, seed=42)
+    loop = EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder,
+        fitness=_RecordingFitness(),  # type: ignore[arg-type]
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=tmp_path,
+        rng=np.random.default_rng(42),
+    )
+    loop.run()
+
+    assert len(captured) > 0
+    # M0 back-compat: birth_metadata is the empty dict (since no schema)
+    for g in captured:
+        assert g.birth_metadata == {}
+
+
+def test_lineage_brain_type_uses_sim_config_brain_name_for_hyperparam_run(
+    tmp_path: Path,
+) -> None:
+    """Hyperparam run SHALL record sim_config.brain.name (not encoder's '') in lineage."""
+    from quantumnematode.evolution.encoders import HyperparameterEncoder
+    from quantumnematode.utils.config_loader import ParamSchemaEntry
+
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG)).model_copy(
+        update={
+            "hyperparam_schema": [
+                ParamSchemaEntry(
+                    name="learning_rate",
+                    type="float",
+                    bounds=(1e-5, 1e-2),
+                ),
+            ],
+        },
+    )
+
+    encoder = HyperparameterEncoder()
+    assert encoder.brain_name == ""  # confirms the empty-string contract
+
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=2,
+        generations=1,
+        episodes_per_eval=1,
+    )
+    fitness = EpisodicSuccessRate()
+    dim = encoder.genome_dim(sim_config)
+    optimizer = CMAESOptimizer(num_params=dim, population_size=2, sigma0=ecfg.sigma0, seed=42)
+    loop = EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder,
+        fitness=fitness,
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=tmp_path,
+        rng=np.random.default_rng(42),
+    )
+    loop.run()
+
+    # Lineage CSV
+    lineage_path = tmp_path / "lineage.csv"
+    assert lineage_path.exists()
+    with lineage_path.open() as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) > 0
+    for row in rows:
+        assert row["brain_type"] == "mlpppo", (
+            f"Expected lineage row brain_type=mlpppo (from sim_config.brain.name); "
+            f"got {row['brain_type']!r}"
+        )
+
+    # best_params.json
+    best_params_path = tmp_path / "best_params.json"
+    assert best_params_path.exists()
+    artefact = json.loads(best_params_path.read_text())
+    assert artefact["brain_type"] == "mlpppo"
