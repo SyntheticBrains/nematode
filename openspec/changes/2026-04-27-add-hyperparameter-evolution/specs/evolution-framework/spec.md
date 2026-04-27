@@ -122,6 +122,7 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **WHEN** the user invokes the CLI with `--fitness learned_performance`
 - **THEN** startup SHALL fail with a clear error stating that learned-performance fitness is only valid for hyperparameter evolution, with the rationale that the weight-encoder + learned-performance combination would amount to Lamarckian inheritance (M3 scope, not M2)
 - **AND** the error SHALL point the user to `EpisodicSuccessRate` (frozen-weight) for weight-evolution campaigns or to authoring a `hyperparam_schema:` block to switch to hyperparameter evolution
+- **AND** the schema-presence check SHALL fire BEFORE the `learn_episodes_per_eval > 0` check, so a config with neither `hyperparam_schema` nor `learn_episodes_per_eval` set produces the schema-missing error (the more fundamental issue), not the field-missing error
 
 ### Requirement: Hyperparameter Schema YAML
 
