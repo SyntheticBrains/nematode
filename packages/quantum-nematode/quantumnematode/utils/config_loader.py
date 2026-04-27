@@ -954,11 +954,24 @@ class EvolutionConfig(BaseModel):
     crossover_rate: float = Field(default=0.8, ge=0.0, le=1.0)  # GA-only
     parallel_workers: int = Field(default=1, ge=1)
     checkpoint_every: int = Field(default=10, ge=1)
-    # CMA-ES-only: restrict covariance to diagonal (CMA_diagonal=True).
-    # MUST be enabled for any campaign with a genome dim >~1000 — full-cov
-    # CMA-ES `tell()` is O(n²) and becomes minutes per generation at the
-    # weight-evolution scale of LSTMPPO / large MLPPPO networks.  Default
-    # False to preserve back-compat for small-genome campaigns.
+    # CMA-ES-only: restrict covariance to diagonal (sep-CMA-ES; sets
+    # cma's CMA_diagonal=True option).  MUST be enabled for any campaign
+    # with a genome dim >~1000 — full-cov CMA-ES `tell()` is O(n²) and
+    # becomes minutes per generation at the weight-evolution scale of
+    # LSTMPPO / large MLPPPO networks.
+    #
+    # Trade-off: diagonal mode gives up off-diagonal covariance adaptation,
+    # so per-generation convergence is slower (typically 2-10x more
+    # generations to reach the same fitness target on non-separable
+    # problems; comparable or faster on separable ones — Ros & Hansen
+    # 2008).  At n>~1000, full-cov is not actually a competing option (it
+    # doesn't fit in memory or finish a generation in finite time), so
+    # net wall-clock to convergence is dramatically faster with diagonal
+    # despite the slower per-generation convergence.
+    #
+    # Default False to preserve back-compat for small-genome campaigns
+    # (e.g. M2's HyperparameterEncoder runs at n<20 where full-cov is
+    # cheap and probably preferable).
     cma_diagonal: bool = False
 
 

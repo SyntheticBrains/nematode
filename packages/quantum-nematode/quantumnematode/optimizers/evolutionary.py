@@ -126,13 +126,23 @@ class CMAESOptimizer(EvolutionaryOptimizer):
             sigma0: Initial step size. Defaults to 0.5.
             seed: Random seed for reproducibility.
             diagonal: If True, restrict the covariance matrix to its
-                diagonal (``CMA_diagonal=True``).  Drops ``tell()`` cost
-                from O(n²) to O(n) — a tractability requirement for
-                large genomes (e.g. neuroevolution at n>~1000), where
-                full-covariance ``tell()`` becomes minutes per
-                generation.  Trade-off: gives up off-diagonal covariance
-                adaptation, so convergence is slower per generation.
-                Defaults to False (full covariance).
+                diagonal (sep-CMA-ES; sets ``CMA_diagonal=True`` in the
+                underlying ``cma`` library).  Drops ``tell()`` cost from
+                O(n²) to O(n) — a tractability requirement for large
+                genomes (e.g. neuroevolution at n>~1000), where
+                full-covariance ``tell()`` becomes minutes per generation.
+
+                Trade-off: gives up off-diagonal covariance adaptation,
+                so per-generation convergence is slower — typically 2-10x
+                more generations are needed to reach the same fitness
+                target on non-separable problems (Ros & Hansen 2008).  At
+                large n, full-cov is NOT a competing option (it doesn't
+                fit in memory or finish a generation in finite time), so
+                net wall-clock to convergence is dramatically faster
+                despite the slower per-generation convergence.
+
+                Defaults to False (full covariance).  Use False for small
+                genomes (n<~100); True for neural-network weight evolution.
         """
         super().__init__(num_params, population_size, sigma0)
 
