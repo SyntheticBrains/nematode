@@ -181,17 +181,31 @@ from quantumnematode.utils.config_loader import create_env_from_config
 class FrozenEvalRunner(StandardEpisodeRunner):
     """Runs an episode without ever calling brain.learn() or update_memory().
 
-    Overrides only `_terminate_episode` and forwards all other kwargs to the
-    parent. This preserves the parent's `food_history=...` Ellipsis sentinel
-    (which falls back to `agent.food_history` when omitted), avoiding silent
-    data loss seen in earlier sketches that called `kwargs.get("food_history")`
-    and converted the sentinel to None.
+    Overrides BOTH `run()` (to neutralise the per-step `agent.brain.learn`
+    call at runners.py:747) and `_terminate_episode` (to force `learn=False`
+    on the success path while preserving the `food_history=...` Ellipsis
+    sentinel by passing kwargs through unchanged).
     """
 
+    def run(self, agent, reward_config, max_steps, **kwargs):
+        # Per-step `agent.brain.learn(...)` at runners.py:747 fires regardless
+        # of any kwarg, so we monkey-patch the brain's learn/update_memory
+        # methods for the duration of the episode and restore them in finally.
+        original_learn = agent.brain.learn
+        original_update_memory = agent.brain.update_memory
+        agent.brain.learn = lambda *_a, **_k: None
+        agent.brain.update_memory = lambda *_a, **_k: None
+        try:
+            return super().run(agent, reward_config, max_steps, **kwargs)
+        finally:
+            agent.brain.learn = original_learn
+            agent.brain.update_memory = original_update_memory
+
     def _terminate_episode(self, agent, params, reward, **kwargs):
-        # Force frozen behaviour regardless of caller's intent. All other
-        # kwargs (success, termination_reason, food_history sentinel, etc.)
-        # pass through unchanged.
+        # Belt-and-braces: even with the brain methods neutered above, force
+        # the kwargs to False so the parent's success path doesn't try to
+        # invoke them. All other kwargs (food_history sentinel, etc.) pass
+        # through unchanged.
         kwargs["learn"] = False
         kwargs["update_memory"] = False
         return super()._terminate_episode(agent, params, reward, **kwargs)
@@ -267,7 +281,7 @@ This is exactly what `instantiate_brain_from_sim_config(sim_config, seed=seed)` 
 
 Determinism is the contract the framework promises so that genome quality is meaningfully comparable across the population. M2's `LearnedPerformanceFitness` will use the same `encoder.decode(seed=seed)` pattern.
 
-**Why a runner subclass rather than a fork of the per-step loop:** the per-step loop in `StandardEpisodeRunner` is non-trivial (rewards, sensory prep, STAM updates, predator handling, termination conditions). Forking risks behavioural drift from the standard runner — exactly the maintenance debt that justified deleting the legacy script. Subclassing and overriding only `_terminate_episode` keeps the step semantics identical and makes the frozen guarantee visible at the type level.
+**Why a runner subclass rather than a fork of the per-step loop:** the per-step loop in `StandardEpisodeRunner` is non-trivial (rewards, sensory prep, STAM updates, predator handling, termination conditions). Forking risks behavioural drift from the standard runner — exactly the maintenance debt that justified deleting the legacy script. Subclassing and overriding `run()` plus `_terminate_episode` keeps the step semantics identical (the standard `super().run()` runs all the per-step logic) and makes the frozen guarantee visible at the type level. The two override points are needed because the standard runner calls `learn` in two places (per-step and per-termination) and a `_terminate_episode`-only override would silently miss the per-step call.
 
 **Why:** clean separation of concerns. `FrozenEvalRunner` is M0's primitive; M2's `LearnedPerformanceFitness` will use the standard runner with `learn=True` for K training episodes then a `FrozenEvalRunner` for L eval episodes — the same primitive composes both.
 
