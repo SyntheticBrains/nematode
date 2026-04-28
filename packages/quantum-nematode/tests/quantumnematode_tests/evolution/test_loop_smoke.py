@@ -7,6 +7,7 @@ import json
 import logging
 import pickle
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -21,6 +22,11 @@ from quantumnematode.utils.config_loader import (
     EvolutionConfig,
     load_simulation_config,
 )
+
+if TYPE_CHECKING:
+    from quantumnematode.evolution.encoders import GenomeEncoder
+    from quantumnematode.evolution.genome import Genome
+    from quantumnematode.utils.config_loader import SimulationConfig
 
 PROJECT_ROOT = Path(__file__).resolve().parents[5]
 MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.yml"
@@ -317,17 +323,17 @@ def test_loop_populates_param_schema_in_birth_metadata(tmp_path: Path) -> None:
     from quantumnematode.evolution.encoders import HyperparameterEncoder
     from quantumnematode.utils.config_loader import ParamSchemaEntry
 
-    captured_genomes: list = []
+    captured_genomes: list[Genome] = []
 
     class _RecordingFitness:
         def evaluate(
             self,
-            genome,
-            sim_config,
-            encoder,
+            genome: Genome,
+            sim_config: SimulationConfig,
+            encoder: GenomeEncoder,
             *,
-            episodes,
-            seed,
+            episodes: int,
+            seed: int,
         ) -> float:
             captured_genomes.append(genome)
             return 0.0
@@ -377,10 +383,18 @@ def test_loop_populates_param_schema_in_birth_metadata(tmp_path: Path) -> None:
 
 def test_loop_birth_metadata_empty_when_no_hyperparam_schema(tmp_path: Path) -> None:
     """Without hyperparam_schema, birth_metadata SHALL be empty (weight-evolution behaviour)."""
-    captured: list = []
+    captured: list[Genome] = []
 
     class _RecordingFitness:
-        def evaluate(self, genome, sim_config, encoder, *, episodes, seed) -> float:
+        def evaluate(
+            self,
+            genome: Genome,
+            sim_config: SimulationConfig,
+            encoder: GenomeEncoder,
+            *,
+            episodes: int,
+            seed: int,
+        ) -> float:
             captured.append(genome)
             return 0.0
 

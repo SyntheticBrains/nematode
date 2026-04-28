@@ -287,7 +287,9 @@ class LearnedPerformanceFitness:
     evaluation).
     """
 
-    def evaluate(
+    # C901: linear pipeline (decode → train env → train loop → eval env → eval loop)
+    # with multiple defensive guards — splitting into helpers fragments the flow.
+    def evaluate(  # noqa: C901
         self,
         genome: Genome,
         sim_config: SimulationConfig,
@@ -364,6 +366,13 @@ class LearnedPerformanceFitness:
         # CLI-override-aware episodes_per_eval).
         eval_eps = evolution_config.eval_episodes_per_eval
         eval_count = eval_eps if eval_eps is not None else episodes
+        # Guard against zero/negative eval_count.  evolution.eval_episodes_per_eval
+        # is Field(ge=1) so when set it's always positive, but the protocol's
+        # `episodes` kwarg has no validation — a programmatic caller could pass
+        # 0 or negative.  Mirrors EpisodicSuccessRate.evaluate's guard above.
+        if eval_count <= 0:
+            msg = f"eval_count must be > 0, got {eval_count}"
+            raise ValueError(msg)
 
         successes = 0
         for ep_idx in range(eval_count):

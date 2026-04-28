@@ -1025,6 +1025,8 @@ class ParamSchemaEntry(BaseModel):
                     "set 'values' (use 'bounds' instead)."
                 )
                 raise ValueError(msg)
+            self._validate_bounds_range()
+            self._validate_log_scale_positivity()
         elif self.type == "int":
             if self.bounds is None:
                 msg = (
@@ -1044,6 +1046,7 @@ class ParamSchemaEntry(BaseModel):
                     "set 'log_scale=True' (log_scale is only meaningful for float)."
                 )
                 raise ValueError(msg)
+            self._validate_bounds_range()
         elif self.type == "bool":
             if self.bounds is not None:
                 msg = (
@@ -1064,12 +1067,7 @@ class ParamSchemaEntry(BaseModel):
                 )
                 raise ValueError(msg)
         elif self.type == "categorical":
-            if self.values is None or len(self.values) < 2:  # noqa: PLR2004
-                msg = (
-                    f"hyperparam_schema entry {self.name!r} of type 'categorical' "
-                    "requires 'values' to be set with at least 2 distinct items."
-                )
-                raise ValueError(msg)
+            self._validate_categorical_values()
             if self.bounds is not None:
                 msg = (
                     f"hyperparam_schema entry {self.name!r} of type 'categorical' "
@@ -1083,6 +1081,59 @@ class ParamSchemaEntry(BaseModel):
                 )
                 raise ValueError(msg)
         return self
+
+    def _validate_bounds_range(self) -> None:
+        """Bounds SHALL be a strictly-increasing pair (low < high).
+
+        Pydantic's ``tuple[float, float]`` typing only enforces "two
+        numeric items"; ``bounds: [10, 5]`` would type-check but
+        produce nonsense at sample/decode time.  Reject explicitly.
+        """
+        if self.bounds is None:  # pragma: no cover — caller-checked
+            return
+        low, high = self.bounds
+        if low >= high:
+            msg = (
+                f"hyperparam_schema entry {self.name!r}: bounds ({low}, {high}) "
+                "must be strictly increasing (low < high)."
+            )
+            raise ValueError(msg)
+
+    def _validate_log_scale_positivity(self) -> None:
+        """When ``log_scale=True``, both bounds SHALL be > 0.
+
+        log(0) is -inf, log(<0) is NaN — either silently corrupts
+        sampling and decode.  Catch at YAML-load time.
+        """
+        if not self.log_scale or self.bounds is None:
+            return
+        low, high = self.bounds
+        if low <= 0 or high <= 0:
+            msg = (
+                f"hyperparam_schema entry {self.name!r}: log_scale=True requires "
+                f"both bounds to be > 0; got ({low}, {high})."
+            )
+            raise ValueError(msg)
+
+    def _validate_categorical_values(self) -> None:
+        """Categorical entries SHALL have ≥2 distinct values.
+
+        ``values: ["lstm", "lstm"]`` would pass the length-2 check
+        but offer no real choice at decode time.
+        """
+        if self.values is None or len(self.values) < 2:  # noqa: PLR2004
+            msg = (
+                f"hyperparam_schema entry {self.name!r} of type 'categorical' "
+                "requires 'values' to be set with at least 2 distinct items."
+            )
+            raise ValueError(msg)
+        if len(set(self.values)) < 2:  # noqa: PLR2004
+            msg = (
+                f"hyperparam_schema entry {self.name!r} of type 'categorical': "
+                f"values {self.values!r} contains duplicates; need at least 2 "
+                "distinct items."
+            )
+            raise ValueError(msg)
 
 
 class SimulationConfig(BaseModel):

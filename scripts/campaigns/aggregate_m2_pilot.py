@@ -67,7 +67,7 @@ def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
     return rates
 
 
-def _format_summary(  # noqa: PLR0913
+def _format_summary(  # noqa: PLR0913, PLR0915
     pilot_seeds: list[int],
     pilot_history: dict[int, list[dict[str, float]]],
     pilot_best: dict[int, dict[str, object]],
@@ -81,8 +81,17 @@ def _format_summary(  # noqa: PLR0913
     lines.append("")
     lines.append("## Per-seed best fitness (eval-phase success rate, L=5)")
     lines.append("")
+    # Detect the actual last generation rather than hard-coding "20" —
+    # truncated runs (e.g. crash recovery, --generations override) and
+    # other budgets would otherwise mislabel their results.  Use the
+    # max seen across all seeds so the column header is accurate even
+    # if seeds report different lengths (shouldn't happen but defend).
+    last_gen = max(
+        int(pilot_history[seed][-1].get("generation", len(pilot_history[seed])))
+        for seed in pilot_seeds
+    )
     lines.append(
-        "| Seed | Gen 1 best | Gen 20 best | Mean across gens | Best params (lr, gamma, ...) |",
+        f"| Seed | Gen 1 best | Gen {last_gen} best | Mean across gens | Best params (lr, gamma, ...) |",
     )
     lines.append(
         "|------|-----------|-------------|------------------|------------------------------|",
@@ -91,22 +100,22 @@ def _format_summary(  # noqa: PLR0913
     for seed in pilot_seeds:
         hist = pilot_history[seed]
         gen1 = hist[0]["best_fitness"]
-        gen20 = hist[-1]["best_fitness"]
+        last = hist[-1]["best_fitness"]
         mean_across = float(np.mean([row["best_fitness"] for row in hist]))
-        pilot_finals.append(gen20)
+        pilot_finals.append(last)
         bp_raw = pilot_best[seed]["best_params"]
         # best_params.json stores best_params as a list[float]; the dict[str, object]
         # type loses that, so narrow explicitly.
         bp: list[float] = bp_raw if isinstance(bp_raw, list) else []
         bp_short = f"[{', '.join(f'{x:.2f}' for x in bp[:3])}, ...]"
         lines.append(
-            f"| {seed} | {gen1:.3f} | {gen20:.3f} | {mean_across:.3f} | {bp_short} |",
+            f"| {seed} | {gen1:.3f} | {last:.3f} | {mean_across:.3f} | {bp_short} |",
         )
     lines.append("")
     pilot_mean = float(np.mean(pilot_finals))
     pilot_std = float(np.std(pilot_finals))
     lines.append(
-        f"**Pilot mean (gen-20 best across seeds)**: {pilot_mean:.3f} ± {pilot_std:.3f}",
+        f"**Pilot mean (gen-{last_gen} best across seeds)**: {pilot_mean:.3f} ± {pilot_std:.3f}",
     )
     lines.append("")
 
@@ -186,7 +195,19 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
         pilot_best[seed] = _read_best(seed_dir)
 
     baseline_rates = _baseline_success_rates(args.baseline_root)
-    baseline_values = list(baseline_rates.values())
+    # Validate that we have a baseline rate for every requested seed.
+    # Silently averaging over a subset would understate or overstate
+    # the baseline mean and corrupt the GO threshold.
+    missing_baseline = sorted(set(args.seeds) - set(baseline_rates))
+    if missing_baseline:
+        msg = (
+            f"Missing baseline success rate(s) for seed(s) {missing_baseline}. "
+            f"Expected logs at {args.baseline_root}/seed-<SEED>.log with a "
+            "'Success rate: NN.NN%' line.  Found rates for: "
+            f"{sorted(baseline_rates)}."
+        )
+        raise SystemExit(msg)
+    baseline_values = [baseline_rates[seed] for seed in args.seeds]
     baseline_mean = float(np.mean(baseline_values))
     go_threshold = baseline_mean + args.gate_pp
 

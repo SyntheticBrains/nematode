@@ -370,3 +370,18 @@ def test_env_resets_between_eval_episodes() -> None:
     # 1 train ep → 0 train transitions.  4 eval eps → 3 eval transitions.
     expected_eval_resets = 3
     assert reset_call_count == expected_eval_resets
+
+
+def test_eval_count_zero_raises() -> None:
+    """``eval_count <= 0`` SHALL raise ValueError before the eval loop runs.
+
+    This is reachable when a programmatic caller passes ``episodes=0``
+    AND ``evolution.eval_episodes_per_eval`` is None — Pydantic's
+    ge=1 constraint on the field can't catch the protocol kwarg.
+    """
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=None)
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+    with pytest.raises(ValueError, match="eval_count must be > 0"):
+        fitness.evaluate(genome, sim_config, encoder, episodes=0, seed=42)

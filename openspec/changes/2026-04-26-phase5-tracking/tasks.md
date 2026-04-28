@@ -63,8 +63,8 @@ to mark sub-tasks complete as part of its diff.
 
 ## M2: Hyperparameter Evolution Pilot
 
-**OpenSpec change**: `2026-05-12-add-hyperparameter-evolution` (not yet created)
-**Status**: not started
+**OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-28-2026-04-27-add-hyperparameter-evolution`)
+**Status**: in progress (MLPPPO arm complete; LSTMPPO+klinotaxis arm pending in PR 3)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO + LSTMPPO+klinotaxis
 **Dependencies**: M0

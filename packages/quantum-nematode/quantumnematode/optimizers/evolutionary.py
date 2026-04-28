@@ -15,6 +15,7 @@ Key advantages over gradient-based learning:
 - Fewer hyperparameters to tune
 """
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -107,7 +108,7 @@ class CMAESOptimizer(EvolutionaryOptimizer):
     - Standard in variational quantum circuit literature
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, C901 — input-validation branches push complexity past the threshold
         self,
         num_params: int,
         x0: list[float] | None = None,
@@ -161,6 +162,20 @@ class CMAESOptimizer(EvolutionaryOptimizer):
 
         if x0 is None:
             x0 = [0.0] * num_params
+        else:
+            # Defensive: cma library would fail downstream with cryptic
+            # errors if x0 is wrong-length or contains NaN/inf.  Catch
+            # at construction time with a clear message.
+            if len(x0) != num_params:
+                msg = f"CMAESOptimizer: x0 length {len(x0)} does not match num_params {num_params}."
+                raise ValueError(msg)
+            for i, value in enumerate(x0):
+                if not math.isfinite(value):
+                    msg = (
+                        f"CMAESOptimizer: x0[{i}] is not finite ({value!r}); "
+                        "all entries must be finite real numbers."
+                    )
+                    raise ValueError(msg)
 
         options: dict = {"popsize": population_size, "verbose": -9}
         if seed is not None:
@@ -174,6 +189,13 @@ class CMAESOptimizer(EvolutionaryOptimizer):
                     f"num_params {num_params}."
                 )
                 raise ValueError(msg)
+            for i, value in enumerate(stds):
+                if not math.isfinite(value) or value <= 0:
+                    msg = (
+                        f"CMAESOptimizer: stds[{i}] = {value!r}; per-parameter "
+                        "stds must be finite and strictly positive."
+                    )
+                    raise ValueError(msg)
             options["CMA_stds"] = list(stds)
 
         self._es: cma.CMAEvolutionStrategy = cma.CMAEvolutionStrategy(

@@ -42,6 +42,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from pydantic import ValidationError
 from quantumnematode.evolution import (
     EpisodicSuccessRate,
     EvolutionLoop,
@@ -153,6 +154,12 @@ def _resolve_evolution_config(
 
     Precedence: CLI flags (when explicitly set) > YAML ``evolution:`` block
     > :class:`EvolutionConfig` defaults.
+
+    CLI overrides go through full Pydantic re-validation so invalid
+    values (e.g. ``--generations -5``) are rejected with a clear error
+    rather than silently bypassing field constraints.  ``model_copy
+    (update=...)`` skips validation, so we round-trip through
+    ``model_dump`` + ``EvolutionConfig(**merged)`` instead.
     """
     base = sim_config_evolution if sim_config_evolution is not None else EvolutionConfig()
     overrides: dict[str, object] = {}
@@ -168,7 +175,18 @@ def _resolve_evolution_config(
         overrides["sigma0"] = args.sigma
     if args.parallel is not None:
         overrides["parallel_workers"] = args.parallel
-    return base.model_copy(update=overrides) if overrides else base
+    if not overrides:
+        return base
+    merged = {**base.model_dump(), **overrides}
+    try:
+        return EvolutionConfig(**merged)
+    except ValidationError as exc:
+        msg = (
+            f"Invalid CLI override for evolution config: {exc}.  "
+            "Check --generations, --population, --episodes, --sigma, "
+            "and --parallel are within their accepted ranges."
+        )
+        raise SystemExit(msg) from exc
 
 
 def _build_optimizer(

@@ -335,3 +335,36 @@ def test_evolution_config_learn_eval_bounds() -> None:
     cfg = EvolutionConfig(learn_episodes_per_eval=30, eval_episodes_per_eval=5)
     assert cfg.learn_episodes_per_eval == 30
     assert cfg.eval_episodes_per_eval == 5
+
+
+def test_param_schema_entry_rejects_inverted_bounds() -> None:
+    """``bounds`` SHALL require strictly increasing (low < high)."""
+    with pytest.raises(ValidationError, match="must be strictly increasing"):
+        ParamSchemaEntry(name="lr", type="float", bounds=(1e-2, 1e-5))
+    with pytest.raises(ValidationError, match="must be strictly increasing"):
+        ParamSchemaEntry(name="hidden", type="int", bounds=(256, 32))
+    # Equal-bounds also rejected
+    with pytest.raises(ValidationError, match="must be strictly increasing"):
+        ParamSchemaEntry(name="x", type="float", bounds=(1.0, 1.0))
+
+
+def test_param_schema_entry_log_scale_requires_positive_bounds() -> None:
+    """``log_scale=True`` SHALL require both bounds to be > 0."""
+    with pytest.raises(ValidationError, match="log_scale=True requires"):
+        ParamSchemaEntry(name="x", type="float", bounds=(0.0, 1.0), log_scale=True)
+    with pytest.raises(ValidationError, match="log_scale=True requires"):
+        ParamSchemaEntry(name="x", type="float", bounds=(-1.0, 1.0), log_scale=True)
+    # Valid: positive bounds with log_scale
+    e = ParamSchemaEntry(name="lr", type="float", bounds=(1e-5, 1e-2), log_scale=True)
+    assert e.log_scale is True
+
+
+def test_param_schema_entry_categorical_rejects_duplicates() -> None:
+    """Categorical SHALL require ≥2 *distinct* values, not just len ≥ 2."""
+    with pytest.raises(ValidationError, match="duplicates"):
+        ParamSchemaEntry(name="rnn", type="categorical", values=["lstm", "lstm"])
+    with pytest.raises(ValidationError, match="duplicates"):
+        ParamSchemaEntry(name="rnn", type="categorical", values=["a", "a", "a"])
+    # Valid: distinct values
+    e = ParamSchemaEntry(name="rnn", type="categorical", values=["lstm", "gru"])
+    assert e.values == ["lstm", "gru"]
