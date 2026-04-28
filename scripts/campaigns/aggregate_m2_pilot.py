@@ -1,5 +1,5 @@
 # pragma: no cover
-"""Aggregate M2 hyperparameter-pilot results across 4 seeds.
+r"""Aggregate M2 hyperparameter-pilot results across 4 seeds.
 
 Reads per-seed history.csv and best_params.json from each session
 directory and produces:
@@ -11,9 +11,9 @@ directory and produces:
 - A markdown summary block ready to paste into the logbook
 
 Usage:
-    uv run python scripts/campaigns/aggregate_m2_pilot.py \\
-        --pilot-root tmp/evaluations/evolution/m2_pilot \\
-        --baseline-root tmp/evaluations/evolution/m2_baseline \\
+    uv run python scripts/campaigns/aggregate_m2_pilot.py \
+        --pilot-root tmp/evaluations/evolution/m2_pilot \
+        --baseline-root tmp/evaluations/evolution/m2_baseline \
         --output-dir tmp/evaluations/evolution/m2_pilot_summary
 """
 
@@ -39,12 +39,9 @@ def _read_history(seed_dir: Path) -> list[dict[str, float]]:
     if not history_path.exists():
         msg = f"No history.csv at {history_path}"
         raise FileNotFoundError(msg)
-    rows: list[dict[str, float]] = []
     with history_path.open() as f:
         reader = csv.DictReader(f)
-        for row in reader:
-            rows.append({k: float(v) for k, v in row.items()})
-    return rows
+        return [{k: float(v) for k, v in row.items()} for row in reader]
 
 
 def _read_best(seed_dir: Path) -> dict[str, object]:
@@ -84,8 +81,12 @@ def _format_summary(  # noqa: PLR0913
     lines.append("")
     lines.append("## Per-seed best fitness (eval-phase success rate, L=5)")
     lines.append("")
-    lines.append("| Seed | Gen 1 best | Gen 20 best | Mean across gens | Best params (lr, gamma, ...) |")
-    lines.append("|------|-----------|-------------|------------------|------------------------------|")
+    lines.append(
+        "| Seed | Gen 1 best | Gen 20 best | Mean across gens | Best params (lr, gamma, ...) |",
+    )
+    lines.append(
+        "|------|-----------|-------------|------------------|------------------------------|",
+    )
     pilot_finals: list[float] = []
     for seed in pilot_seeds:
         hist = pilot_history[seed]
@@ -93,7 +94,10 @@ def _format_summary(  # noqa: PLR0913
         gen20 = hist[-1]["best_fitness"]
         mean_across = float(np.mean([row["best_fitness"] for row in hist]))
         pilot_finals.append(gen20)
-        bp = pilot_best[seed]["best_params"]
+        bp_raw = pilot_best[seed]["best_params"]
+        # best_params.json stores best_params as a list[float]; the dict[str, object]
+        # type loses that, so narrow explicitly.
+        bp: list[float] = bp_raw if isinstance(bp_raw, list) else []
         bp_short = f"[{', '.join(f'{x:.2f}' for x in bp[:3])}, ...]"
         lines.append(
             f"| {seed} | {gen1:.3f} | {gen20:.3f} | {mean_across:.3f} | {bp_short} |",
@@ -102,8 +106,7 @@ def _format_summary(  # noqa: PLR0913
     pilot_mean = float(np.mean(pilot_finals))
     pilot_std = float(np.std(pilot_finals))
     lines.append(
-        f"**Pilot mean (gen-20 best across seeds)**: "
-        f"{pilot_mean:.3f} ± {pilot_std:.3f}",
+        f"**Pilot mean (gen-20 best across seeds)**: {pilot_mean:.3f} ± {pilot_std:.3f}",
     )
     lines.append("")
 
@@ -111,8 +114,7 @@ def _format_summary(  # noqa: PLR0913
     lines.append("")
     lines.append("| Seed | Success rate |")
     lines.append("|------|--------------|")
-    for seed in sorted(baseline_rates):
-        lines.append(f"| {seed} | {baseline_rates[seed]:.3f} |")
+    lines.extend(f"| {seed} | {baseline_rates[seed]:.3f} |" for seed in sorted(baseline_rates))
     lines.append("")
     lines.append(f"**Baseline mean**: {baseline_mean:.3f}")
     lines.append("")
@@ -122,7 +124,9 @@ def _format_summary(  # noqa: PLR0913
     lines.append(f"- Baseline mean: **{baseline_mean:.3f}**")
     lines.append(f"- GO threshold (≥3pp over baseline): **{go_threshold:.3f}**")
     lines.append(f"- Pilot mean (gen-20 best): **{pilot_mean:.3f}**")
-    lines.append(f"- Separation: {pilot_mean - baseline_mean:+.3f} ({(pilot_mean - baseline_mean) * 100:+.1f}pp)")
+    lines.append(
+        f"- Separation: {pilot_mean - baseline_mean:+.3f} ({(pilot_mean - baseline_mean) * 100:+.1f}pp)",
+    )
     lines.append("")
     if pilot_mean >= go_threshold:
         lines.append("**Decision**: GO ✅")
@@ -152,7 +156,7 @@ def _format_summary(  # noqa: PLR0913
     return "\n".join(lines)
 
 
-def main() -> int:
+def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts readability
     """Aggregate pilot + baseline results."""
     parser = argparse.ArgumentParser(description="Aggregate M2 pilot results.")
     parser.add_argument("--pilot-root", type=Path, required=True)
@@ -202,9 +206,9 @@ def main() -> int:
 
     # Plot convergence curves
     try:
-        import matplotlib
+        import matplotlib as mpl
 
-        matplotlib.use("Agg")
+        mpl.use("Agg")
         import matplotlib.pyplot as plt
 
         fig, (ax_best, ax_mean) = plt.subplots(1, 2, figsize=(16, 6))

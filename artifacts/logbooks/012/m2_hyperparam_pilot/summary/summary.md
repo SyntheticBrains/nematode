@@ -31,4 +31,4 @@
 
 **Decision**: GO ✅
 
-Hyperparameter evolution beats the hand-tuned baseline by 5.5pp.  Mean across 4 seeds clears the 3pp gate threshold.
+Hyperparameter evolution beats the hand-tuned baseline by 5.5pp. Mean across 4 seeds clears the 3pp gate threshold.
