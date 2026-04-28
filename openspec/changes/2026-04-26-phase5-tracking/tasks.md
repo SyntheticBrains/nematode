@@ -70,13 +70,13 @@ to mark sub-tasks complete as part of its diff.
 **Dependencies**: M0
 **Decision gate**: GO if either brain ≥3pp over hand-tuned baseline AND fitness still rising at gen 20
 
-- [ ] M2.1 Implement `HyperparameterEncoder` in `evolution/encoders.py` (encodes config dict, not weights)
-- [ ] M2.2 Implement `LearnedPerformanceFitness` in `evolution/fitness.py`
-- [ ] M2.3 Create `configs/evolution/hyperparam_mlpppo_pilot.yml`
+- [x] M2.1 Implement `HyperparameterEncoder` in `evolution/encoders.py` (encodes config dict, not weights)
+- [x] M2.2 Implement `LearnedPerformanceFitness` in `evolution/fitness.py`
+- [x] M2.3 Create `configs/evolution/hyperparam_mlpppo_pilot.yml`
 - [ ] M2.4 Create `configs/evolution/hyperparam_lstmppo_klinotaxis_pilot.yml`
-- [ ] M2.5 Create campaign script(s) under `scripts/campaigns/`. The MLPPPO PR ships `phase5_m2_hyperparam_mlpppo.sh`; the LSTMPPO PR ships `phase5_m2_hyperparam_lstmppo.sh`. Per-brain split (rather than a single combined script) lets PR 3 ship cleanly even if PR 2's pilot decides STOP/PIVOT
+- [x] M2.5 Create campaign script(s) under `scripts/campaigns/`. The MLPPPO PR ships `phase5_m2_hyperparam_mlpppo.sh`; the LSTMPPO PR ships `phase5_m2_hyperparam_lstmppo.sh`. Per-brain split (rather than a single combined script) lets PR 3 ship cleanly even if PR 2's pilot decides STOP/PIVOT
 - [ ] M2.6 Run pilot: 20 gens × population 12 × 4 seeds × 2 brains. MLPPPO arm runs in PR 2; LSTMPPO arm runs in PR 3 (only if PR 2's decision is GO/PIVOT)
-- [ ] M2.7 Publish per-brain logbooks under `artifacts/logbooks/012/`: `hyperparam_pilot_mlpppo.md` (PR 2) and, conditionally, `hyperparam_pilot_lstmppo.md` (PR 3). Each logbook records its arm's GO/PIVOT/STOP decision against the gate
+- [x] M2.7 Publish per-brain logbooks under `artifacts/logbooks/012/`: `hyperparam_pilot_mlpppo.md` (PR 2) and, conditionally, `hyperparam_pilot_lstmppo.md` (PR 3). Each logbook records its arm's GO/PIVOT/STOP decision against the gate
 - [ ] M2.8 Update this checklist + roadmap milestone tracker
 
 ## M3: Lamarckian Evolution Pilot
