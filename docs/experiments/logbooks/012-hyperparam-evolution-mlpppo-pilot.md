@@ -73,7 +73,7 @@ Aggregator ([`scripts/campaigns/aggregate_m2_pilot.py`](../../../scripts/campaig
 - **Modified**: `evolution/loop.py` — populates `Genome.birth_metadata["param_schema"]` at both genome-construction sites; falls back to `sim_config.brain.name` when the encoder's `brain_name` is empty so lineage records the actual brain identity.
 - **Modified**: `optimizers/evolutionary.py::CMAESOptimizer` accepts optional per-param `stds` (threaded as cma's `CMA_stds`).
 
-Spec change: [`openspec/changes/2026-04-27-add-hyperparameter-evolution/`](../../../openspec/changes/2026-04-27-add-hyperparameter-evolution/) (proposal, design, tasks, spec deltas).
+Spec change: [`openspec/changes/archive/2026-04-28-2026-04-27-add-hyperparameter-evolution/`](../../../openspec/changes/archive/2026-04-28-2026-04-27-add-hyperparameter-evolution/) (proposal, design, tasks, spec deltas).
 
 ### Bugs uncovered by pre-pilot calibration
 
@@ -200,5 +200,5 @@ The LSTMPPO+klinotaxis pilot in the next PR is naturally harder: LSTMPPO trains 
 - **Baseline logs**: [`artifacts/logbooks/012/m2_hyperparam_pilot/baseline/`](../../../artifacts/logbooks/012/m2_hyperparam_pilot/baseline/) — `seed-{42-45}.log`.
 - **Aggregated summary**: [`artifacts/logbooks/012/m2_hyperparam_pilot/summary/`](../../../artifacts/logbooks/012/m2_hyperparam_pilot/summary/) — `summary.md`, `convergence.png`.
 - **Pilot config**: [`configs/evolution/hyperparam_mlpppo_pilot.yml`](../../../configs/evolution/hyperparam_mlpppo_pilot.yml) (also archived under `artifacts/logbooks/012/m2_hyperparam_pilot/`).
-- **Spec change**: [`openspec/changes/2026-04-27-add-hyperparameter-evolution/`](../../../openspec/changes/2026-04-27-add-hyperparameter-evolution/) (proposal, design, tasks, spec deltas).
+- **Spec change**: [`openspec/changes/archive/2026-04-28-2026-04-27-add-hyperparameter-evolution/`](../../../openspec/changes/archive/2026-04-28-2026-04-27-add-hyperparameter-evolution/) (proposal, design, tasks, spec deltas).
 - **Supporting appendix**: [`docs/experiments/logbooks/supporting/012/hyperparam-evolution-mlpppo-pilot-details.md`](supporting/012/hyperparam-evolution-mlpppo-pilot-details.md) — full investigation traces, per-seed history tables, and bug-fix narratives.
