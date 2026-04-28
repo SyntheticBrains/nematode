@@ -1,14 +1,23 @@
 # pragma: no cover
-r"""Aggregate M2 hyperparameter-pilot results across 4 seeds.
+r"""Aggregate M2 hyperparameter-pilot results across an arbitrary seed set.
 
-Reads per-seed history.csv and best_params.json from each session
-directory and produces:
+Reads per-seed ``history.csv`` and ``best_params.json`` from the latest
+session directory under each ``seed-N/`` and produces (all outputs adapt
+to the seeds and final generation actually found in the inputs — nothing
+about the workflow is hard-coded):
 
-- A summary table (per-seed best fitness, gen-1 fitness, gen-20 fitness)
-- Mean / std across seeds at each generation
-- A plot of the convergence curves (best fitness per generation per seed,
-  plus the mean and the baseline threshold band)
-- A markdown summary block ready to paste into the logbook
+- A summary table over the seeds passed via ``--seeds`` (defaults to
+  ``42 43 44 45``), with one column for the gen-1 best fitness and one
+  for the unified target generation derived from the histories
+  (``min`` of each seed's last ``generation`` field, so every column
+  corresponds to the same generation across seeds).
+- Mean / std across the supplied seeds at the target generation.
+- A plot of the convergence curves: per-seed best/mean fitness per
+  generation, plus an across-seed mean line whose label reflects the
+  actual seed count, and a baseline-mean / GO-threshold reference band.
+- A markdown summary block ready to paste into the logbook.  Decision
+  labels (``GO`` / ``PIVOT`` / ``STOP``) and the gate-pp text derive
+  from ``--gate-pp`` (default 3pp).
 
 Usage:
     uv run python scripts/campaigns/aggregate_m2_pilot.py \
@@ -143,16 +152,19 @@ def _format_summary(  # noqa: PLR0913, PLR0915
         mean_across = float(np.mean([row["best_fitness"] for row in hist]))
         pilot_finals.append(last)
         bp_raw = pilot_best[seed]["best_params"]
-        # ``best_params.json`` is supposed to store a list[float].  Failing
-        # fast here surfaces upstream corruption (missing key, wrong type,
-        # non-numeric element) instead of silently emitting "[, ...]" in the
-        # markdown table.
+        # ``best_params.json`` is supposed to store a non-empty list[float].
+        # Failing fast here surfaces upstream corruption (missing key, wrong
+        # type, empty list, non-numeric element) instead of silently emitting
+        # "[, ...]" in the markdown table.
         if not isinstance(bp_raw, list):
             msg = (
                 f"best_params for seed {seed} is not a list (got "
                 f"{type(bp_raw).__name__}); cannot format summary."
             )
             raise TypeError(msg)
+        if not bp_raw:
+            msg = f"best_params for seed {seed} is empty; cannot format summary."
+            raise ValueError(msg)
         bp: list[float] = []
         for i, x in enumerate(bp_raw):
             try:
@@ -163,7 +175,10 @@ def _format_summary(  # noqa: PLR0913, PLR0915
                     f"(got {x!r}); cannot format summary."
                 )
                 raise ValueError(msg) from exc
-        bp_short = f"[{', '.join(f'{x:.2f}' for x in bp[:3])}, ...]"
+        # Only append the truncation marker when there's something to
+        # truncate; otherwise show the full list verbatim.
+        bp_preview = ", ".join(f"{x:.2f}" for x in bp[:3])
+        bp_short = f"[{bp_preview}, ...]" if len(bp) > 3 else f"[{bp_preview}]"
         lines.append(
             f"| {seed} | {gen1:.3f} | {last:.3f} | {mean_across:.3f} | {bp_short} |",
         )
