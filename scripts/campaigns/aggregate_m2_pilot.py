@@ -74,8 +74,22 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     baseline_rates: dict[int, float],
     baseline_mean: float,
     go_threshold: float,
+    gate_pp: float,
 ) -> str:
-    """Build a markdown summary block for the logbook."""
+    """Build a markdown summary block for the logbook.
+
+    All quantitative labels (last generation, GO threshold percentage,
+    seed count) are derived from the inputs rather than hard-coded so
+    the summary remains accurate under truncated runs, non-default
+    ``--gate-pp``, and arbitrary seed counts.
+    """
+    # PIVOT decision needs a positive-but-below-GO band.  1pp is a
+    # reasonable floor for "this didn't separate from baseline at all";
+    # below that we call STOP.  Lifted to a named constant so future
+    # reviewers don't have to grep for the magic number.
+    pivot_min_pp = 0.01
+    seed_count = len(pilot_seeds)
+    gate_pp_label = f"{gate_pp * 100:.1f}".rstrip("0").rstrip(".") + "pp"
     lines: list[str] = []
     lines.append("# M2 Hyperparameter-Evolution Pilot — Summary")
     lines.append("")
@@ -123,7 +137,14 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     lines.append("")
     lines.append("| Seed | Success rate |")
     lines.append("|------|--------------|")
-    lines.extend(f"| {seed} | {baseline_rates[seed]:.3f} |" for seed in sorted(baseline_rates))
+    # Filter the table to the requested seed list — stale logs under
+    # baseline_root from prior runs would otherwise clutter the table
+    # even though they don't enter baseline_mean.
+    requested_seeds = set(pilot_seeds)
+    lines.extend(
+        f"| {seed} | {baseline_rates[seed]:.3f} |"
+        for seed in sorted(requested_seeds & baseline_rates.keys())
+    )
     lines.append("")
     lines.append(f"**Baseline mean**: {baseline_mean:.3f}")
     lines.append("")
@@ -131,8 +152,8 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     lines.append("## Decision gate")
     lines.append("")
     lines.append(f"- Baseline mean: **{baseline_mean:.3f}**")
-    lines.append(f"- GO threshold (≥3pp over baseline): **{go_threshold:.3f}**")
-    lines.append(f"- Pilot mean (gen-20 best): **{pilot_mean:.3f}**")
+    lines.append(f"- GO threshold (≥{gate_pp_label} over baseline): **{go_threshold:.3f}**")
+    lines.append(f"- Pilot mean (gen-{last_gen} best): **{pilot_mean:.3f}**")
     lines.append(
         f"- Separation: {pilot_mean - baseline_mean:+.3f} ({(pilot_mean - baseline_mean) * 100:+.1f}pp)",
     )
@@ -142,18 +163,19 @@ def _format_summary(  # noqa: PLR0913, PLR0915
         lines.append("")
         lines.append(
             "Hyperparameter evolution beats the hand-tuned baseline by "
-            f"{(pilot_mean - baseline_mean) * 100:.1f}pp.  Mean across 4 "
-            "seeds clears the 3pp gate threshold.",
+            f"{(pilot_mean - baseline_mean) * 100:.1f}pp.  Mean across "
+            f"{seed_count} seed{'s' if seed_count != 1 else ''} clears "
+            f"the {gate_pp_label} gate threshold.",
         )
-    elif pilot_mean >= baseline_mean + 0.01:
+    elif pilot_mean >= baseline_mean + pivot_min_pp:
         lines.append("**Decision**: PIVOT 🟡")
         lines.append("")
         lines.append(
             "Hyperparameter evolution shows positive separation from "
             f"baseline ({(pilot_mean - baseline_mean) * 100:+.1f}pp) but "
-            "doesn't clear the 3pp GO threshold.  Worth investigating "
-            "schema/budget tweaks before either greenlighting or "
-            "abandoning.",
+            f"doesn't clear the {gate_pp_label} GO threshold.  Worth "
+            "investigating schema/budget tweaks before either "
+            "greenlighting or abandoning.",
         )
     else:
         lines.append("**Decision**: STOP ❌")
@@ -218,6 +240,7 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
         baseline_rates,
         baseline_mean,
         go_threshold,
+        args.gate_pp,
     )
     summary_path = args.output_dir / "summary.md"
     summary_path.write_text(summary_md + "\n")

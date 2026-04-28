@@ -368,3 +368,40 @@ def test_param_schema_entry_categorical_rejects_duplicates() -> None:
     # Valid: distinct values
     e = ParamSchemaEntry(name="rnn", type="categorical", values=["lstm", "gru"])
     assert e.values == ["lstm", "gru"]
+
+
+def test_hyperparam_schema_rejects_empty_list(tmp_path: Path) -> None:
+    """An empty ``hyperparam_schema:`` list SHALL fail YAML load.
+
+    Falls into a useless state otherwise — select_encoder would return
+    a HyperparameterEncoder with genome_dim=0.
+    """
+    yaml_content = {
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
+        "hyperparam_schema": [],
+    }
+    yaml_path = tmp_path / "empty.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="empty"):
+        load_simulation_config(str(yaml_path))
+
+
+def test_hyperparam_schema_rejects_duplicate_names(tmp_path: Path) -> None:
+    """Duplicate ``entry.name`` SHALL fail YAML load.
+
+    Two entries pointing at the same brain-config field would silently
+    let the second one's value win at decode (model_copy(update=) is
+    last-write-wins on duplicate keys), making the first slot's evolved
+    genome value invisible.
+    """
+    yaml_content = {
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
+        "hyperparam_schema": [
+            {"name": "learning_rate", "type": "float", "bounds": [1e-5, 1e-2]},
+            {"name": "learning_rate", "type": "float", "bounds": [1e-4, 1e-1]},
+        ],
+    }
+    yaml_path = tmp_path / "dup.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="duplicate"):
+        load_simulation_config(str(yaml_path))

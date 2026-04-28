@@ -1183,6 +1183,34 @@ class SimulationConfig(BaseModel):
         if self.hyperparam_schema is None:
             return self
 
+        if not self.hyperparam_schema:
+            msg = (
+                "hyperparam_schema is set but empty.  Either remove the "
+                "hyperparam_schema: key entirely (to fall back to weight evolution) "
+                "or add at least one entry."
+            )
+            raise ValueError(msg)
+
+        # Reject duplicate entry names: each schema entry maps to a brain
+        # config field, and decode applies values via model_copy(update={...}).
+        # Duplicate names would silently let the second entry's value win,
+        # making the first slot's evolved genome value invisible.
+        names = [entry.name for entry in self.hyperparam_schema]
+        seen: set[str] = set()
+        duplicates: list[str] = []
+        for name in names:
+            if name in seen and name not in duplicates:
+                duplicates.append(name)
+            seen.add(name)
+        if duplicates:
+            msg = (
+                f"hyperparam_schema contains duplicate entry name(s): {duplicates}.  "
+                "Each entry must map to a distinct field on the brain config — "
+                "duplicate names would silently let one slot's value override the "
+                "other at decode time."
+            )
+            raise ValueError(msg)
+
         if self.brain is None:
             msg = (
                 "hyperparam_schema requires a 'brain:' block in the YAML to resolve "
