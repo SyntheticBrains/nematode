@@ -36,6 +36,12 @@ from pathlib import Path
 
 import numpy as np
 
+# PIVOT decision needs a positive-but-below-GO band.  1pp is a reasonable
+# floor for "this didn't separate from baseline at all"; below that we
+# call STOP.  Module-level so reviewers can see the threshold at the
+# top of the file rather than grepping into ``_format_summary``.
+PIVOT_MIN_PP = 0.01
+
 
 def _latest_session(seed_dir: Path) -> Path:
     """Return the most recently modified subdirectory under ``seed_dir``.
@@ -66,6 +72,9 @@ def _read_history(seed_dir: Path) -> list[dict[str, float]]:
 def _read_best(seed_dir: Path) -> dict[str, object]:
     """Read the single session under seed_dir's best_params.json."""
     best_path = _latest_session(seed_dir) / "best_params.json"
+    if not best_path.exists():
+        msg = f"No best_params.json at {best_path}"
+        raise FileNotFoundError(msg)
     return json.loads(best_path.read_text())
 
 
@@ -101,11 +110,6 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     the summary remains accurate under truncated runs, non-default
     ``--gate-pp``, and arbitrary seed counts.
     """
-    # PIVOT decision needs a positive-but-below-GO band.  1pp is a
-    # reasonable floor for "this didn't separate from baseline at all";
-    # below that we call STOP.  Lifted to a named constant so future
-    # reviewers don't have to grep for the magic number.
-    pivot_min_pp = 0.01
     seed_count = len(pilot_seeds)
     gate_pp_label = f"{gate_pp * 100:.1f}".rstrip("0").rstrip(".") + "pp"
     lines: list[str] = []
@@ -224,7 +228,7 @@ def _format_summary(  # noqa: PLR0913, PLR0915
             f"{seed_count} seed{'s' if seed_count != 1 else ''} clears "
             f"the {gate_pp_label} gate threshold.",
         )
-    elif pilot_mean >= baseline_mean + pivot_min_pp:
+    elif pilot_mean >= baseline_mean + PIVOT_MIN_PP:
         lines.append("**Decision**: PIVOT 🟡")
         lines.append("")
         lines.append(
