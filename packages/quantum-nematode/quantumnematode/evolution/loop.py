@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import torch
 
+from quantumnematode.evolution.encoders import build_birth_metadata
 from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.lineage import LineageTracker
 from quantumnematode.optimizers.evolutionary import EvolutionResult
@@ -126,6 +127,7 @@ def _evaluate_in_worker(args: tuple) -> float:
         genome_id=genome_id_for(generation, index, parent_ids),
         parent_ids=parent_ids,
         generation=generation,
+        birth_metadata=build_birth_metadata(sim_config),
     )
     return fitness.evaluate(genome, sim_config, encoder, episodes=episodes, seed=seed)
 
@@ -259,7 +261,16 @@ class EvolutionLoop:
             )
 
         cfg = self.evolution_config
-        brain_type = self.encoder.brain_name
+        # Brain-keyed encoders set brain_name to a real brain name
+        # (e.g. "mlpppo"); brain-agnostic encoders use the empty string.
+        # Fall back to sim_config.brain.name in the empty case so all
+        # runs record the actual brain identity in lineage.csv and
+        # best_params.json regardless of encoder type.  sim_config.brain
+        # is guaranteed non-None here: the CLI entry point validates it
+        # before constructing the loop.
+        brain_type = self.encoder.brain_name or (
+            self.sim_config.brain.name if self.sim_config.brain else ""
+        )
 
         pool: PoolType | None = None
         if cfg.parallel_workers > 1:
@@ -318,6 +329,7 @@ class EvolutionLoop:
                         genome_id=gid,
                         parent_ids=parent_ids,
                         generation=gen,
+                        birth_metadata=build_birth_metadata(self.sim_config),
                     )
                     self._lineage.record(genome, fitness=fit, brain_type=brain_type)
 
@@ -375,7 +387,8 @@ class EvolutionLoop:
                     "best_params": list(result.best_params),
                     "best_fitness": result.best_fitness,
                     "generations": result.generations,
-                    "brain_type": self.encoder.brain_name,
+                    "brain_type": self.encoder.brain_name
+                    or (self.sim_config.brain.name if self.sim_config.brain else ""),
                     "checkpoint_version": CHECKPOINT_VERSION,
                 },
                 handle,

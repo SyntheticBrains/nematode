@@ -20,7 +20,7 @@ and survives future component additions without encoder changes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 import numpy as np
 import torch
@@ -32,7 +32,7 @@ from quantumnematode.evolution.genome import Genome
 if TYPE_CHECKING:
     from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.brain.weights import WeightComponent
-    from quantumnematode.utils.config_loader import SimulationConfig
+    from quantumnematode.utils.config_loader import ParamSchemaEntry, SimulationConfig
 
 
 # Components that are NOT part of the genome.  Optimizer state belongs to
@@ -97,6 +97,21 @@ class GenomeEncoder(Protocol):
 
         Constructs a fresh brain to count parameters; call once at loop
         initialisation, not per-generation.
+        """
+        ...
+
+    def genome_stds(self, sim_config: SimulationConfig) -> list[float] | None:
+        """Return per-parameter standard deviations for the optimiser, or None.
+
+        When None, the optimiser uses a uniform sigma across all
+        dimensions — appropriate when genome dimensions cluster around
+        zero with similar variance (e.g. neural network weights).
+
+        When the dimensions live on materially different scales (e.g.
+        mixed hyperparameter schemas with log-scale floats, tight
+        linear floats, and ints), encoders SHOULD return per-parameter
+        stds so the optimiser explores each dimension proportionally
+        to its bound range.
         """
         ...
 
@@ -279,6 +294,19 @@ class _ClassicalPPOEncoder:
         params, _ = _flatten_components(components)
         return int(params.size)
 
+    def genome_stds(
+        self,
+        sim_config: SimulationConfig,  # noqa: ARG002
+    ) -> list[float] | None:
+        """Weight encoders use uniform sigma across all dimensions.
+
+        Network weights are roughly normalised by initialisation and
+        cluster around zero with similar variance — uniform sigma is
+        appropriate.  Returning None tells the optimiser to use its
+        default sigma scaling.
+        """
+        return None
+
 
 class MLPPPOEncoder(_ClassicalPPOEncoder):
     """Encoder for :class:`~quantumnematode.brain.arch.mlpppo.MLPPPOBrain`.
@@ -339,3 +367,294 @@ def get_encoder(brain_name: str) -> GenomeEncoder:
         )
         raise ValueError(msg)
     return encoder_cls()
+
+
+# ---------------------------------------------------------------------------
+# Hyperparameter encoder + dispatch
+# ---------------------------------------------------------------------------
+
+
+def build_birth_metadata(sim_config: SimulationConfig) -> dict[str, Any]:
+    """Build the birth_metadata dict for a hyperparameter-evolution genome.
+
+    Single source of truth shared between
+    :meth:`HyperparameterEncoder.initial_genome` and the EvolutionLoop's
+    Genome-construction sites.  Returns a dict with a ``param_schema``
+    key containing a list of plain dicts (NOT Pydantic instances) so it
+    pickles cheaply across worker processes without requiring a Pydantic
+    dependency on the worker decode path.
+
+    When ``sim_config.hyperparam_schema is None`` (weight-evolution
+    runs), returns an empty dict so the empty-``birth_metadata``
+    behaviour used by weight encoders is preserved verbatim.
+    """
+    if sim_config.hyperparam_schema is None:
+        return {}
+    return {
+        "param_schema": [entry.model_dump() for entry in sim_config.hyperparam_schema],
+    }
+
+
+class HyperparameterEncoder:
+    """Brain-agnostic encoder that evolves brain-config hyperparameters.
+
+    Each :class:`Genome` slot corresponds to one entry in
+    ``sim_config.hyperparam_schema``; the encoder reads the schema from
+    ``Genome.birth_metadata["param_schema"]`` (the genome is the source
+    of truth in worker processes) and applies the type-appropriate
+    transform:
+
+    - float: clip to bounds, then exp() if log_scale=True
+    - int: clip to bounds, then int(round(value))
+    - bool: value > 0.0
+    - categorical: values[int(round(value)) mod len(values)]
+
+    The decoded values are applied to ``sim_config.brain.config`` via
+    ``model_copy(update={...})`` and a fresh brain is constructed via
+    :func:`instantiate_brain_from_sim_config`.  No weights are loaded —
+    the brain is freshly initialised on every evaluation, and the
+    train phase of :class:`LearnedPerformanceFitness` brings it from
+    random init to learned policy.
+
+    The encoder is brain-agnostic: it works for any brain via
+    ``sim_config.brain.config`` patching.  ``brain_name`` is set to the
+    empty string ``""`` to satisfy the runtime_checkable GenomeEncoder
+    protocol's ``brain_name: str`` typing while signalling
+    brain-agnosticism — the empty string never collides with a real
+    brain name.
+
+    This encoder is selected via :func:`select_encoder` based on
+    ``sim_config.hyperparam_schema`` presence, not via
+    :data:`ENCODER_REGISTRY` lookup — that registry is reserved for
+    brain-keyed encoders.
+    """
+
+    brain_name: str = ""
+
+    def initial_genome(
+        self,
+        sim_config: SimulationConfig,
+        *,
+        rng: np.random.Generator,
+    ) -> Genome:
+        """Sample one float per schema slot from the per-type initial distribution."""
+        if sim_config.hyperparam_schema is None:
+            msg = (
+                "HyperparameterEncoder.initial_genome requires "
+                "sim_config.hyperparam_schema to be set."
+            )
+            raise ValueError(msg)
+
+        params = np.empty(len(sim_config.hyperparam_schema), dtype=np.float32)
+        for i, entry in enumerate(sim_config.hyperparam_schema):
+            params[i] = self._sample_initial(entry, rng)
+
+        return Genome(
+            params=params,
+            genome_id="",  # filled in by the loop via genome_id_for
+            parent_ids=[],
+            generation=0,
+            birth_metadata=build_birth_metadata(sim_config),
+        )
+
+    def decode(
+        self,
+        genome: Genome,
+        sim_config: SimulationConfig,
+        *,
+        seed: int | None = None,
+    ) -> Brain:
+        """Patch sim_config.brain.config with decoded values, build fresh brain."""
+        schema_dump = genome.birth_metadata.get("param_schema")
+        if schema_dump is None:
+            msg = (
+                "HyperparameterEncoder.decode requires "
+                "genome.birth_metadata['param_schema'] to be populated. "
+                "Did the EvolutionLoop call build_birth_metadata when "
+                "constructing the Genome?"
+            )
+            raise ValueError(msg)
+        if sim_config.brain is None:
+            msg = "HyperparameterEncoder.decode requires sim_config.brain to be set."
+            raise ValueError(msg)
+
+        if len(genome.params) != len(schema_dump):
+            msg = (
+                f"Genome param length ({len(genome.params)}) does not match "
+                f"birth_metadata param_schema length ({len(schema_dump)})."
+            )
+            raise ValueError(msg)
+
+        updates: dict[str, Any] = {}
+        for entry_dict, value in zip(schema_dump, genome.params, strict=True):
+            updates[entry_dict["name"]] = self._decode_one(entry_dict, float(value))
+
+        # Construct a fresh SimulationConfig with the patched brain config.
+        # NEVER mutate the input sim_config in place.
+        new_brain_cfg = sim_config.brain.config.model_copy(update=updates)
+        new_container = sim_config.brain.model_copy(update={"config": new_brain_cfg})
+        new_sim_config = sim_config.model_copy(update={"brain": new_container})
+
+        return instantiate_brain_from_sim_config(new_sim_config, seed=seed)
+
+    def genome_dim(self, sim_config: SimulationConfig) -> int:
+        """Return the number of evolved hyperparameter slots.
+
+        Equal to ``len(sim_config.hyperparam_schema)``.  Does NOT
+        construct a brain — fast path for loop initialisation.
+        """
+        if sim_config.hyperparam_schema is None:
+            msg = (
+                "HyperparameterEncoder.genome_dim requires sim_config.hyperparam_schema to be set."
+            )
+            raise ValueError(msg)
+        return len(sim_config.hyperparam_schema)
+
+    def genome_stds(self, sim_config: SimulationConfig) -> list[float] | None:
+        """Return per-parameter standard deviations matched to bound widths.
+
+        For each schema entry:
+
+        - float (linear): std = (high - low) / 6, so ±3 stds at sigma=1.0
+          spans the full bound range.
+        - float (log_scale): std = (log(high) - log(low)) / 6, since
+          the genome lives in log-space.
+        - int: std = (high - low) / 6, treating the integer range as
+          continuous.  Decode clips and rounds.
+        - bool: std = 1.0 (genome value is ±1; sigma=1 gives full
+          coverage of both poles in expectation).
+        - categorical: std = max(1.0, len(values) / 6) so ±3 stds spans
+          all categorical bins.
+
+        Without per-parameter stds, a single uniform sigma cannot be
+        appropriate across mixed-scale dimensions: too large for tight
+        ranges (samples saturate at bounds) or too small for wide
+        ranges (no exploration).
+        """
+        if sim_config.hyperparam_schema is None:
+            msg = (
+                "HyperparameterEncoder.genome_stds requires sim_config.hyperparam_schema to be set."
+            )
+            raise ValueError(msg)
+        # ±3 stds should cover the full bound range, so std = width / 6.
+        bound_coverage_std_divisor = 6.0
+        stds: list[float] = []
+        for entry in sim_config.hyperparam_schema:
+            if entry.type in {"float", "int"}:
+                if entry.bounds is None:  # pragma: no cover — validator-enforced
+                    msg = f"{entry.type} entry missing bounds"
+                    raise ValueError(msg)
+                low, high = entry.bounds
+                width = float(np.log(high) - np.log(low)) if entry.log_scale else float(high - low)
+                stds.append(width / bound_coverage_std_divisor)
+            elif entry.type == "bool":
+                stds.append(1.0)
+            elif entry.type == "categorical":
+                if entry.values is None:  # pragma: no cover — validator-enforced
+                    msg = "categorical entry missing values"
+                    raise ValueError(msg)
+                stds.append(max(1.0, len(entry.values) / bound_coverage_std_divisor))
+            else:  # pragma: no cover — validator-enforced
+                msg = f"Unknown param schema type: {entry.type!r}"
+                raise ValueError(msg)
+        return stds
+
+    @staticmethod
+    def _sample_initial(
+        entry: ParamSchemaEntry,
+        rng: np.random.Generator,
+    ) -> float:
+        """Sample one initial genome float for ``entry`` from the per-type prior.
+
+        - float: uniform-in-bounds (or log-uniform when ``log_scale=True``)
+        - int: uniform-in-bounds (returned as float, decode rounds)
+        - bool: ±1 uniform (decode thresholds at 0)
+        - categorical: random index in ``[0, len(values))``
+        """
+        # ParamSchemaEntry validator guarantees bounds is set for float/int
+        # and values is set for categorical, but the type checker doesn't
+        # see that — explicit branches with locals satisfy both.
+        if entry.type == "float":
+            if entry.bounds is None:  # pragma: no cover — validator-enforced invariant
+                msg = "float entry missing bounds (validator should prevent this)"
+                raise ValueError(msg)
+            low, high = entry.bounds
+            if entry.log_scale:
+                return float(rng.uniform(np.log(low), np.log(high)))
+            return float(rng.uniform(low, high))
+        if entry.type == "int":
+            if entry.bounds is None:  # pragma: no cover — validator-enforced invariant
+                msg = "int entry missing bounds (validator should prevent this)"
+                raise ValueError(msg)
+            low, high = entry.bounds
+            return float(rng.uniform(low, high))
+        if entry.type == "bool":
+            return float(rng.choice([-1.0, 1.0]))
+        # categorical
+        if entry.values is None:  # pragma: no cover — validator-enforced invariant
+            msg = "categorical entry missing values (validator should prevent this)"
+            raise ValueError(msg)
+        return float(rng.integers(0, len(entry.values)))
+
+    @staticmethod
+    def _decode_one(entry_dict: dict[str, Any], value: float) -> Any:  # noqa: ANN401
+        """Apply the per-type decode transform.
+
+        Single-method dispatch by ``entry_dict['type']``.  Adding a new
+        type means adding a new branch here plus a Literal extension to
+        :class:`ParamSchemaEntry.type`.
+        """
+        entry_type = entry_dict["type"]
+        if entry_type == "float":
+            low, high = entry_dict["bounds"]
+            if entry_dict.get("log_scale", False):
+                # genome value is in log-space; clip in log-space then exp.
+                log_low, log_high = float(np.log(low)), float(np.log(high))
+                clipped_log = max(log_low, min(log_high, value))
+                return float(np.exp(clipped_log))
+            # Linear float: clip in linear-space.
+            return float(max(low, min(high, value)))
+        if entry_type == "int":
+            low, high = entry_dict["bounds"]
+            clipped = max(low, min(high, value))
+            return round(clipped)
+        if entry_type == "bool":
+            return value > 0.0
+        if entry_type == "categorical":
+            values = entry_dict["values"]
+            idx = round(value) % len(values)
+            return values[idx]
+        msg = f"Unknown param schema type: {entry_type!r}"
+        raise ValueError(msg)
+
+
+def select_encoder(sim_config: SimulationConfig) -> GenomeEncoder:
+    """Public dispatch helper: pick the right encoder for a sim_config.
+
+    - When ``sim_config.hyperparam_schema is not None``, return a
+      :class:`HyperparameterEncoder` directly (NOT via registry —
+      brain-agnostic encoders don't pollute the brain-keyed registry).
+      This works for any brain in ``BRAIN_CONFIG_MAP`` even if the
+      brain has no weight encoder in :data:`ENCODER_REGISTRY`.
+    - Otherwise (the weight-evolution path), return
+      :func:`get_encoder(sim_config.brain.name)`.
+
+    Raises
+    ------
+    ValueError
+        If ``hyperparam_schema is None`` and the brain name has no
+        weight encoder.  Same message as :func:`get_encoder`.
+    """
+    if sim_config.hyperparam_schema is not None:
+        return HyperparameterEncoder()
+    # Weight-evolution path: caller is responsible for ensuring
+    # sim_config.brain is non-None (the CLI entry point guards this
+    # before loop construction).
+    if sim_config.brain is None:  # pragma: no cover — caller-precondition violation
+        msg = (
+            "select_encoder requires sim_config.brain to be set when "
+            "hyperparam_schema is None.  The CLI entry point guards this "
+            "at startup; programmatic callers must do the same."
+        )
+        raise ValueError(msg)
+    return get_encoder(sim_config.brain.name)

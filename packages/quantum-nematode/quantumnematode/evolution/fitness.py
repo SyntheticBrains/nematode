@@ -211,7 +211,12 @@ class EpisodicSuccessRate:
         # `agent._render_step` (agent.py:958).  Worker processes have no
         # terminal, so any other theme would render to a discarded stdout
         # — wasted work paid every step.
-        env = create_env_from_config(sim_config.environment, seed=seed, theme=Theme.HEADLESS)
+        env = create_env_from_config(
+            sim_config.environment,
+            seed=seed,
+            theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
+        )
 
         agent = _build_agent(brain, env, sim_config)
         runner = FrozenEvalRunner()
@@ -222,9 +227,160 @@ class EpisodicSuccessRate:
         max_steps = sim_config.max_steps if sim_config.max_steps is not None else 500
 
         successes = 0
-        for _ in range(episodes):
+        for ep_idx in range(episodes):
+            # Reset the env between episodes so each starts from a clean
+            # initial state (food respawn, agent at start position, full
+            # satiety).  Without this, a failed episode leaves the env
+            # in a starved/exhausted state and subsequent episodes
+            # inherit the failure.  Matches the agent.reset_environment
+            # pattern used by run_simulation.py between runs.
+            if ep_idx > 0:
+                agent.reset_environment()
             result = runner.run(agent, sim_config.reward, max_steps)
             if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
                 successes += 1
 
         return successes / episodes
+
+
+# ---------------------------------------------------------------------------
+# LearnedPerformanceFitness
+# ---------------------------------------------------------------------------
+
+# Default max_steps when sim_config.max_steps is None — matches the
+# fallback used by EpisodicSuccessRate.
+_DEFAULT_MAX_STEPS = 500
+
+
+class LearnedPerformanceFitness:
+    """Train-then-eval fitness: K train episodes followed by L frozen eval episodes.
+
+    Per-evaluation flow:
+
+    1. Decode the genome into a fresh brain (the encoder builds a brain
+       with the genome's hyperparameters; weights are freshly initialised).
+    2. Train phase: run K = ``evolution.learn_episodes_per_eval`` episodes
+       via :class:`StandardEpisodeRunner` (calls ``brain.learn()`` per-step
+       under the standard contract).
+    3. Build a SECOND, fresh environment for the eval phase (same seed),
+       reusing the trained brain.  Critical: post-train env state is
+       arbitrary (food consumed, agent in some corner) and would corrupt
+       the eval measurement.  The brain carries over with its learned
+       weights; the env starts clean.
+    4. Eval phase: run L episodes via :class:`FrozenEvalRunner`.  Count
+       successes via
+       ``result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD``.
+    5. Return ``successes / L``.
+
+    Episode-count resolution:
+
+    - K reads from ``sim_config.evolution.learn_episodes_per_eval`` directly
+      (no CLI override exists for it today).
+    - L reads from ``sim_config.evolution.eval_episodes_per_eval`` if set
+      in YAML, else falls back to the protocol's ``episodes`` kwarg —
+      which the loop wires from its CLI-override-aware
+      ``evolution_config.episodes_per_eval``.  This makes ``--episodes``
+      work consistently for both fitness functions.
+
+    K=0 raises ``ValueError`` with a clear pointer to
+    :class:`EpisodicSuccessRate` (the correct fitness for frozen-weight
+    evaluation).
+    """
+
+    # C901: linear pipeline (decode → train env → train loop → eval env → eval loop)
+    # with multiple defensive guards — splitting into helpers fragments the flow.
+    def evaluate(  # noqa: C901
+        self,
+        genome: Genome,
+        sim_config: SimulationConfig,
+        encoder: GenomeEncoder,
+        *,
+        episodes: int,
+        seed: int,
+    ) -> float:
+        """Run K train + L eval and return ``eval_successes / L``."""
+        # Defensive guards mirroring EpisodicSuccessRate.evaluate, plus
+        # the evolution-block guard specific to learned-performance fitness.
+        if sim_config.evolution is None:
+            msg = (
+                "LearnedPerformanceFitness requires an `evolution:` block in "
+                "the YAML to set learn_episodes_per_eval. The loop forwards "
+                "the raw sim_config to fitness; sim_config.evolution is None "
+                "so we have no K to use."
+            )
+            raise ValueError(msg)
+        if sim_config.environment is None:
+            msg = "LearnedPerformanceFitness.evaluate requires sim_config.environment to be set."
+            raise ValueError(msg)
+        if sim_config.reward is None:
+            msg = "LearnedPerformanceFitness.evaluate requires sim_config.reward to be set."
+            raise ValueError(msg)
+
+        evolution_config = sim_config.evolution
+        if evolution_config.learn_episodes_per_eval == 0:
+            msg = (
+                "LearnedPerformanceFitness requires learn_episodes_per_eval > 0; "
+                "got 0. Use EpisodicSuccessRate for frozen-weight evaluation, "
+                "or set learn_episodes_per_eval in the evolution: block."
+            )
+            raise ValueError(msg)
+
+        max_steps = sim_config.max_steps if sim_config.max_steps is not None else _DEFAULT_MAX_STEPS
+
+        # Decode the genome → fresh brain with the evolved hyperparameters.
+        brain = encoder.decode(genome, sim_config, seed=seed)
+
+        # Train phase: fresh env, brain weights mutate as it learns.
+        train_env = create_env_from_config(
+            sim_config.environment,
+            seed=seed,
+            theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
+        )
+        train_agent = _build_agent(brain, train_env, sim_config)
+        train_runner = StandardEpisodeRunner()
+        for ep_idx in range(evolution_config.learn_episodes_per_eval):
+            # Reset env between episodes so training samples come from
+            # clean initial states rather than from whatever post-failure
+            # state the previous episode left behind.  Brain weights
+            # persist (they're learned across episodes); env state does
+            # not.  Matches the run_simulation.py per-run reset pattern.
+            if ep_idx > 0:
+                train_agent.reset_environment()
+            train_runner.run(train_agent, sim_config.reward, max_steps)
+
+        # Eval phase: SECOND fresh env (same seed) — post-train env state
+        # is arbitrary and would corrupt the eval measurement.  Brain
+        # carries over with its learned weights.
+        eval_env = create_env_from_config(
+            sim_config.environment,
+            seed=seed,
+            theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
+        )
+        eval_agent = _build_agent(brain, eval_env, sim_config)
+        eval_runner = FrozenEvalRunner()
+
+        # L resolution: YAML override wins; else fall back to the
+        # protocol's `episodes` kwarg (which is the loop's
+        # CLI-override-aware episodes_per_eval).
+        eval_eps = evolution_config.eval_episodes_per_eval
+        eval_count = eval_eps if eval_eps is not None else episodes
+        # Guard against zero/negative eval_count.  evolution.eval_episodes_per_eval
+        # is Field(ge=1) so when set it's always positive, but the protocol's
+        # `episodes` kwarg has no validation — a programmatic caller could pass
+        # 0 or negative.  Mirrors EpisodicSuccessRate.evaluate's guard above.
+        if eval_count <= 0:
+            msg = f"eval_count must be > 0, got {eval_count}"
+            raise ValueError(msg)
+
+        successes = 0
+        for ep_idx in range(eval_count):
+            # Reset env between eval episodes so each starts from a
+            # clean initial state — same rationale as the train loop.
+            if ep_idx > 0:
+                eval_agent.reset_environment()
+            result = eval_runner.run(eval_agent, sim_config.reward, max_steps)
+            if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
+                successes += 1
+        return successes / eval_count

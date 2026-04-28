@@ -970,9 +970,170 @@ class EvolutionConfig(BaseModel):
     # despite the slower per-generation convergence.
     #
     # Default False to preserve back-compat for small-genome campaigns
-    # (e.g. M2's HyperparameterEncoder runs at n<20 where full-cov is
-    # cheap and probably preferable).
+    # — at small n (<20) where the HyperparameterEncoder operates,
+    # full-cov is cheap and probably preferable.
     cma_diagonal: bool = False
+    # Hyperparameter-evolution train/eval split for
+    # LearnedPerformanceFitness.  When learn_episodes_per_eval > 0 and
+    # the CLI selects --fitness learned_performance, each genome
+    # evaluation runs K = learn_episodes_per_eval training episodes
+    # (brain.learn() fires) followed by L = eval_episodes_per_eval
+    # frozen eval episodes.  Default learn_episodes_per_eval=0 means
+    # LearnedPerformanceFitness.evaluate raises — preserving the
+    # default behaviour where EpisodicSuccessRate ignores both fields.
+    learn_episodes_per_eval: int = Field(default=0, ge=0)
+    # None means "fall back to episodes_per_eval" — preserves the
+    # default behaviour for that field.
+    eval_episodes_per_eval: int | None = Field(default=None, ge=1)
+
+
+class ParamSchemaEntry(BaseModel):
+    """One slot in a hyperparameter-evolution genome.
+
+    Each entry declares which brain-config field is evolved, its type,
+    and the type-appropriate metadata (bounds for float/int, values
+    for categorical, log_scale for float).  Validated at YAML load
+    time both for type-conditional metadata correctness (this
+    validator) and for field-name correctness against the resolved
+    brain config (the SimulationConfig validator).
+    """
+
+    name: str
+    type: Literal["float", "int", "bool", "categorical"]
+    # float/int: required (low, high).  bool/categorical: must be None.
+    bounds: tuple[float, float] | None = None
+    # categorical: required, len >= 2.  Other types: must be None.
+    values: list[str] | None = None
+    # float only: when True, the genome value is in log-space and
+    # decode applies exp(value).  bool/categorical/int: must be False.
+    log_scale: bool = False
+
+    # PLR0912/C901: explicit per-type dispatch with distinct error
+    # messages is clearer here than abstraction.
+    @model_validator(mode="after")
+    def _validate_type_conditional_metadata(self) -> "ParamSchemaEntry":  # noqa: PLR0912, C901
+        if self.type == "float":
+            if self.bounds is None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'float' requires "
+                    "'bounds' to be set as (low, high)."
+                )
+                raise ValueError(msg)
+            if self.values is not None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'float' must not "
+                    "set 'values' (use 'bounds' instead)."
+                )
+                raise ValueError(msg)
+            self._validate_bounds_range()
+            self._validate_log_scale_positivity()
+        elif self.type == "int":
+            if self.bounds is None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'int' requires "
+                    "'bounds' to be set as (low, high)."
+                )
+                raise ValueError(msg)
+            if self.values is not None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'int' must not "
+                    "set 'values' (use 'bounds' instead)."
+                )
+                raise ValueError(msg)
+            if self.log_scale:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'int' must not "
+                    "set 'log_scale=True' (log_scale is only meaningful for float)."
+                )
+                raise ValueError(msg)
+            self._validate_bounds_range()
+        elif self.type == "bool":
+            if self.bounds is not None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'bool' must not "
+                    "set 'bounds' (bool is sampled as ±1 then thresholded by '> 0')."
+                )
+                raise ValueError(msg)
+            if self.values is not None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'bool' must not "
+                    "set 'values' (use type 'categorical' for explicit value lists)."
+                )
+                raise ValueError(msg)
+            if self.log_scale:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'bool' must not "
+                    "set 'log_scale=True' (log_scale is only meaningful for float)."
+                )
+                raise ValueError(msg)
+        elif self.type == "categorical":
+            self._validate_categorical_values()
+            if self.bounds is not None:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'categorical' "
+                    "must not set 'bounds' (use 'values' instead)."
+                )
+                raise ValueError(msg)
+            if self.log_scale:
+                msg = (
+                    f"hyperparam_schema entry {self.name!r} of type 'categorical' "
+                    "must not set 'log_scale=True' (log_scale is only meaningful for float)."
+                )
+                raise ValueError(msg)
+        return self
+
+    def _validate_bounds_range(self) -> None:
+        """Bounds SHALL be a strictly-increasing pair (low < high).
+
+        Pydantic's ``tuple[float, float]`` typing only enforces "two
+        numeric items"; ``bounds: [10, 5]`` would type-check but
+        produce nonsense at sample/decode time.  Reject explicitly.
+        """
+        if self.bounds is None:  # pragma: no cover — caller-checked
+            return
+        low, high = self.bounds
+        if low >= high:
+            msg = (
+                f"hyperparam_schema entry {self.name!r}: bounds ({low}, {high}) "
+                "must be strictly increasing (low < high)."
+            )
+            raise ValueError(msg)
+
+    def _validate_log_scale_positivity(self) -> None:
+        """When ``log_scale=True``, both bounds SHALL be > 0.
+
+        log(0) is -inf, log(<0) is NaN — either silently corrupts
+        sampling and decode.  Catch at YAML-load time.
+        """
+        if not self.log_scale or self.bounds is None:
+            return
+        low, high = self.bounds
+        if low <= 0 or high <= 0:
+            msg = (
+                f"hyperparam_schema entry {self.name!r}: log_scale=True requires "
+                f"both bounds to be > 0; got ({low}, {high})."
+            )
+            raise ValueError(msg)
+
+    def _validate_categorical_values(self) -> None:
+        """Categorical entries SHALL have ≥2 distinct values.
+
+        ``values: ["lstm", "lstm"]`` would pass the length-2 check
+        but offer no real choice at decode time.
+        """
+        if self.values is None or len(self.values) < 2:  # noqa: PLR2004
+            msg = (
+                f"hyperparam_schema entry {self.name!r} of type 'categorical' "
+                "requires 'values' to be set with at least 2 distinct items."
+            )
+            raise ValueError(msg)
+        if len(set(self.values)) < 2:  # noqa: PLR2004
+            msg = (
+                f"hyperparam_schema entry {self.name!r} of type 'categorical': "
+                f"values {self.values!r} contains duplicates; need at least 2 "
+                "distinct items."
+            )
+            raise ValueError(msg)
 
 
 class SimulationConfig(BaseModel):
@@ -994,6 +1155,96 @@ class SimulationConfig(BaseModel):
     environment: EnvironmentConfig | None = None
     multi_agent: MultiAgentConfig | None = None
     evolution: EvolutionConfig | None = None
+    # Hyperparameter-evolution schema: top-level list of param-schema
+    # entries.  When None (the default), runs use weight-evolution
+    # dispatch.  When set, the run is a hyperparameter-evolution run
+    # and select_encoder() returns a HyperparameterEncoder regardless
+    # of brain.name.  See the evolution-framework capability spec for
+    # the full contract.
+    hyperparam_schema: list[ParamSchemaEntry] | None = None
+
+    @model_validator(mode="after")
+    def _validate_hyperparam_schema(self) -> "SimulationConfig":
+        """Cross-check hyperparam_schema entries against the brain config.
+
+        Three defensive cases handled up-front (so users get clear
+        errors instead of raw AttributeError/KeyError on malformed
+        YAML):
+
+        1. brain block missing — hyperparam_schema is meaningless without
+           a brain to evolve hyperparameters for.
+        2. brain name unknown — the user picked a brain that isn't in
+           BRAIN_CONFIG_MAP (typo).
+        3. brain name valid — walk the schema entries and check every
+           entry.name is a real field on the resolved brain config
+           Pydantic model.  Without this, Pydantic v2 model_copy(update=)
+           silently no-ops typos and produces unevolved genomes.
+        """
+        if self.hyperparam_schema is None:
+            return self
+
+        if not self.hyperparam_schema:
+            msg = (
+                "hyperparam_schema is set but empty.  Either remove the "
+                "hyperparam_schema: key entirely (to fall back to weight evolution) "
+                "or add at least one entry."
+            )
+            raise ValueError(msg)
+
+        # Reject duplicate entry names: each schema entry maps to a brain
+        # config field, and decode applies values via model_copy(update={...}).
+        # Duplicate names would silently let the second entry's value win,
+        # making the first slot's evolved genome value invisible.
+        names = [entry.name for entry in self.hyperparam_schema]
+        seen: set[str] = set()
+        duplicates: list[str] = []
+        for name in names:
+            if name in seen and name not in duplicates:
+                duplicates.append(name)
+            seen.add(name)
+        if duplicates:
+            msg = (
+                f"hyperparam_schema contains duplicate entry name(s): {duplicates}.  "
+                "Each entry must map to a distinct field on the brain config — "
+                "duplicate names would silently let one slot's value override the "
+                "other at decode time."
+            )
+            raise ValueError(msg)
+
+        if self.brain is None:
+            msg = (
+                "hyperparam_schema requires a 'brain:' block in the YAML to resolve "
+                "the field-name validation against. Add a brain block specifying "
+                "brain.name and (optionally) brain.config."
+            )
+            raise ValueError(msg)
+
+        brain_name = self.brain.name
+        if brain_name not in BRAIN_CONFIG_MAP:
+            registered = sorted(BRAIN_CONFIG_MAP)
+            msg = (
+                f"hyperparam_schema references brain.name {brain_name!r}, which is "
+                f"not a registered brain. Registered brains: {registered}."
+            )
+            raise ValueError(msg)
+
+        brain_config_cls = BRAIN_CONFIG_MAP[brain_name]
+        brain_fields = set(brain_config_cls.model_fields.keys())
+        max_alternatives_to_surface = 10
+        for entry in self.hyperparam_schema:
+            if entry.name not in brain_fields:
+                # Surface 3+ valid alternatives so the user can spot a typo.
+                alternatives = sorted(brain_fields)
+                preview = alternatives[:max_alternatives_to_surface]
+                truncated = "..." if len(alternatives) > max_alternatives_to_surface else ""
+                msg = (
+                    f"hyperparam_schema entry {entry.name!r} is not a field on "
+                    f"{brain_config_cls.__name__}. Valid alternatives include: "
+                    f"{preview}{truncated}."
+                )
+                raise ValueError(msg)
+
+        return self
 
 
 class PlasticityPhaseConfig(BaseModel):

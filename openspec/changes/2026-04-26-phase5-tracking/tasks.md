@@ -63,20 +63,20 @@ to mark sub-tasks complete as part of its diff.
 
 ## M2: Hyperparameter Evolution Pilot
 
-**OpenSpec change**: `2026-05-12-add-hyperparameter-evolution` (not yet created)
-**Status**: not started
+**OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-28-2026-04-27-add-hyperparameter-evolution`)
+**Status**: in progress (MLPPPO arm complete; LSTMPPO+klinotaxis arm pending in PR 3)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO + LSTMPPO+klinotaxis
 **Dependencies**: M0
 **Decision gate**: GO if either brain ≥3pp over hand-tuned baseline AND fitness still rising at gen 20
 
-- [ ] M2.1 Implement `HyperparameterEncoder` in `evolution/encoders.py` (encodes config dict, not weights)
-- [ ] M2.2 Implement `LearnedPerformanceFitness` in `evolution/fitness.py`
-- [ ] M2.3 Create `configs/evolution/hyperparam_mlpppo_pilot.yml`
+- [x] M2.1 Implement `HyperparameterEncoder` in `evolution/encoders.py` (encodes config dict, not weights)
+- [x] M2.2 Implement `LearnedPerformanceFitness` in `evolution/fitness.py`
+- [x] M2.3 Create `configs/evolution/hyperparam_mlpppo_pilot.yml`
 - [ ] M2.4 Create `configs/evolution/hyperparam_lstmppo_klinotaxis_pilot.yml`
-- [ ] M2.5 Create campaign script `scripts/campaigns/phase5_m2_hyperparam.sh`
-- [ ] M2.6 Run pilot: 20 gens × population 12 × 4 seeds × 2 brains
-- [ ] M2.7 Publish `artifacts/logbooks/012/m2_hyperparam_pilot.md` with GO/PIVOT/STOP decision
+- [x] M2.5 Create campaign script(s) under `scripts/campaigns/`. The MLPPPO PR ships `phase5_m2_hyperparam_mlpppo.sh`; the LSTMPPO PR ships `phase5_m2_hyperparam_lstmppo.sh`. Per-brain split (rather than a single combined script) lets PR 3 ship cleanly even if PR 2's pilot decides STOP/PIVOT
+- [ ] M2.6 Run pilot: 20 gens × population 12 × 4 seeds × 2 brains. MLPPPO arm runs in PR 2; LSTMPPO arm runs in PR 3 (only if PR 2's decision is GO/PIVOT)
+- [x] M2.7 Publish per-brain logbooks under `artifacts/logbooks/012/`: `hyperparam_pilot_mlpppo.md` (PR 2) and, conditionally, `hyperparam_pilot_lstmppo.md` (PR 3). Each logbook records its arm's GO/PIVOT/STOP decision against the gate
 - [ ] M2.8 Update this checklist + roadmap milestone tracker
 
 ## M3: Lamarckian Evolution Pilot
@@ -174,3 +174,23 @@ to mark sub-tasks complete as part of its diff.
 - [ ] M7.5 Publish `artifacts/logbooks/016/synthesis.md`
 - [ ] M7.6 Update `docs/roadmap.md` Phase 5 status → COMPLETE; record exit criterion outcomes
 - [ ] M7.7 Archive `2026-04-26-phase5-tracking` alongside `2026-07-21-add-phase5-evaluation`
+
+## Phase 5 Research Questions
+
+Open research questions surfaced during Phase 5 milestones that don't fit cleanly under any single milestone but are worth tracking. Each question has a concrete trigger condition for escalation; nothing here commits us to work upfront.
+
+### RQ1: Optimiser portfolio re-evaluation
+
+**Status**: open (raised during M2 spec drafting, 2026-04-27)
+**Trigger**: M2 pilot completes
+**Bounded follow-up scope**: a single OpenSpec change that adds one optimiser adapter (Optuna or similar) alongside the existing CMA-ES + GA, with a comparison run on the M2 pilot config
+
+The framework's current optimisers (CMA-ES, GA) were chosen in earlier roadmap phases for brain-weight evolution at large genome dim (n=9k–47k), where CMA-ES diagonal mode is genuinely the right tool. M2's hyperparameter-evolution use case is fundamentally different — n=7–20, few-hundred-evaluation budgets, mixed-type genomes (float / int / bool / categorical), conditional parameter dependencies. The broader ML community standard for that regime is Bayesian Optimisation (BO) or Tree-structured Parzen Estimator (TPE) — Optuna's default. Compared to CMA-ES at the M2 scale, TPE/BO handles categoricals natively (no bin-plateau), handles log-scale floats natively, and is generally more sample-efficient.
+
+We ship M2 with CMA-ES anyway because (a) it's the path of minimum framework change from M0, and (b) M2 is a pilot — its job is to exercise the framework and produce a GO/PIVOT/STOP signal, not to find globally-optimal configs. But this leaves the door open for follow-up work.
+
+**Escalation rule**: after M2's MLPPPO pilot reports its decision, run the same pilot config (same seeds, same budget, same fitness function) under Optuna's TPE sampler. If TPE substantially outperforms — heuristic: mean final fitness across seeds is ≥5pp higher than CMA-ES's at the same evaluation budget — open a follow-up change `<DATE>-add-optuna-optimizer` that adds an `OptunaOptimizer` adapter alongside the existing two. If TPE is comparable or worse, close this RQ; CMA-ES stays the default and Optuna isn't worth the dependency.
+
+**Related future need**: M6.5 (NEAT topology evolution) inherently requires a NEAT-specific optimiser, not CMA-ES or BO. So an "optimiser portfolio" will exist in the Phase 5 future regardless of this RQ's outcome — the M2-driven question is whether to add one optimiser earlier (BO/TPE for hyperparameters) or wait until M6.5 to expand the portfolio.
+
+**Recorded by**: M2 OpenSpec change `2026-04-27-add-hyperparameter-evolution` (`design.md` § Considered Alternatives — Optimiser choice for hyperparameter evolution).

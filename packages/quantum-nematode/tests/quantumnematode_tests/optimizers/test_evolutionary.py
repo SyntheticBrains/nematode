@@ -434,3 +434,45 @@ class TestEvolutionaryOptimizerComparison:
 
             # Should improve (lower fitness is better)
             assert best_so_far <= first_best, f"{optimizer_class.__name__} didn't improve"
+
+
+# ---------------------------------------------------------------------------
+# CMAESOptimizer input validation
+# ---------------------------------------------------------------------------
+
+
+def test_cmaes_optimizer_rejects_x0_length_mismatch() -> None:
+    """``len(x0) != num_params`` SHALL raise ValueError at construction."""
+    import pytest
+    from quantumnematode.optimizers.evolutionary import CMAESOptimizer
+
+    with pytest.raises(ValueError, match="x0 length"):
+        CMAESOptimizer(num_params=3, x0=[0.0, 0.0])  # too short
+
+
+def test_cmaes_optimizer_rejects_nonfinite_x0() -> None:
+    """``x0`` entries that are NaN or inf SHALL raise ValueError."""
+    import math
+
+    import pytest
+    from quantumnematode.optimizers.evolutionary import CMAESOptimizer
+
+    with pytest.raises(ValueError, match="not finite"):
+        CMAESOptimizer(num_params=3, x0=[0.0, float("nan"), 0.0])
+    with pytest.raises(ValueError, match="not finite"):
+        CMAESOptimizer(num_params=3, x0=[0.0, math.inf, 0.0])
+
+
+def test_cmaes_optimizer_rejects_nonpositive_or_nonfinite_stds() -> None:
+    """Per-param ``stds`` SHALL be finite and strictly positive."""
+    import pytest
+    from quantumnematode.optimizers.evolutionary import CMAESOptimizer
+
+    with pytest.raises(ValueError, match="finite and strictly positive"):
+        CMAESOptimizer(num_params=3, stds=[1.0, 0.0, 1.0])  # zero
+    with pytest.raises(ValueError, match="finite and strictly positive"):
+        CMAESOptimizer(num_params=3, stds=[1.0, -0.5, 1.0])  # negative
+    with pytest.raises(ValueError, match="finite and strictly positive"):
+        CMAESOptimizer(num_params=3, stds=[1.0, float("nan"), 1.0])  # NaN
+    with pytest.raises(ValueError, match="stds length"):
+        CMAESOptimizer(num_params=3, stds=[1.0])  # wrong length

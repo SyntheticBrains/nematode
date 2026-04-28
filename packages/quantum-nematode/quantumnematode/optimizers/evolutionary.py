@@ -15,6 +15,7 @@ Key advantages over gradient-based learning:
 - Fewer hyperparameters to tune
 """
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -107,7 +108,7 @@ class CMAESOptimizer(EvolutionaryOptimizer):
     - Standard in variational quantum circuit literature
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, C901 — input-validation branches push complexity past the threshold
         self,
         num_params: int,
         x0: list[float] | None = None,
@@ -116,6 +117,7 @@ class CMAESOptimizer(EvolutionaryOptimizer):
         seed: int | None = None,
         *,
         diagonal: bool = False,
+        stds: list[float] | None = None,
     ) -> None:
         """Initialize CMA-ES optimizer.
 
@@ -143,17 +145,58 @@ class CMAESOptimizer(EvolutionaryOptimizer):
 
                 Defaults to False (full covariance).  Use False for small
                 genomes (n<~100); True for neural-network weight evolution.
+            stds: Per-parameter standard deviations.  When provided,
+                CMA-ES uses ``stds[i] * sigma0`` as the initial step
+                size for parameter i.  Necessary when parameters live
+                on different scales — e.g. mixed hyperparameter schemas
+                with log-scale floats (range ~6 in log-units), tight
+                linear floats like gamma (range ~0.1), and ints
+                (range ~200).  Without per-parameter scaling, a single
+                uniform sigma cannot be appropriate for all dimensions:
+                too large for tight ranges (samples saturate at bounds)
+                or too small for wide ranges (no exploration).  Length
+                must equal num_params.  Defaults to None (uniform
+                sigma across all dimensions).
         """
         super().__init__(num_params, population_size, sigma0)
 
         if x0 is None:
             x0 = [0.0] * num_params
+        else:
+            # Defensive: cma library would fail downstream with cryptic
+            # errors if x0 is wrong-length or contains NaN/inf.  Catch
+            # at construction time with a clear message.
+            if len(x0) != num_params:
+                msg = f"CMAESOptimizer: x0 length {len(x0)} does not match num_params {num_params}."
+                raise ValueError(msg)
+            for i, value in enumerate(x0):
+                if not math.isfinite(value):
+                    msg = (
+                        f"CMAESOptimizer: x0[{i}] is not finite ({value!r}); "
+                        "all entries must be finite real numbers."
+                    )
+                    raise ValueError(msg)
 
         options: dict = {"popsize": population_size, "verbose": -9}
         if seed is not None:
             options["seed"] = seed
         if diagonal:
             options["CMA_diagonal"] = True
+        if stds is not None:
+            if len(stds) != num_params:
+                msg = (
+                    f"CMAESOptimizer: stds length {len(stds)} does not match "
+                    f"num_params {num_params}."
+                )
+                raise ValueError(msg)
+            for i, value in enumerate(stds):
+                if not math.isfinite(value) or value <= 0:
+                    msg = (
+                        f"CMAESOptimizer: stds[{i}] = {value!r}; per-parameter "
+                        "stds must be finite and strictly positive."
+                    )
+                    raise ValueError(msg)
+            options["CMA_stds"] = list(stds)
 
         self._es: cma.CMAEvolutionStrategy = cma.CMAEvolutionStrategy(
             x0,

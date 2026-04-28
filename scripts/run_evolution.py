@@ -42,11 +42,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from pydantic import ValidationError
 from quantumnematode.evolution import (
-    ENCODER_REGISTRY,
     EpisodicSuccessRate,
     EvolutionLoop,
-    get_encoder,
+    LearnedPerformanceFitness,
+    select_encoder,
 )
 from quantumnematode.logging_config import configure_file_logging, logger
 from quantumnematode.optimizers.evolutionary import (
@@ -129,6 +130,19 @@ def parse_arguments() -> argparse.Namespace:
         default="INFO",
         help="Logging level.",
     )
+    parser.add_argument(
+        "--fitness",
+        type=str,
+        choices=["success_rate", "learned_performance"],
+        default="success_rate",
+        help=(
+            "Fitness function to evolve against. 'success_rate' "
+            "(EpisodicSuccessRate, the default) is frozen-weight "
+            "evaluation. 'learned_performance' (LearnedPerformanceFitness) "
+            "runs K training episodes followed by L frozen eval episodes "
+            "per genome — only valid with hyperparam_schema set."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -140,6 +154,12 @@ def _resolve_evolution_config(
 
     Precedence: CLI flags (when explicitly set) > YAML ``evolution:`` block
     > :class:`EvolutionConfig` defaults.
+
+    CLI overrides go through full Pydantic re-validation so invalid
+    values (e.g. ``--generations -5``) are rejected with a clear error
+    rather than silently bypassing field constraints.  ``model_copy
+    (update=...)`` skips validation, so we round-trip through
+    ``model_dump`` + ``EvolutionConfig(**merged)`` instead.
     """
     base = sim_config_evolution if sim_config_evolution is not None else EvolutionConfig()
     overrides: dict[str, object] = {}
@@ -155,26 +175,59 @@ def _resolve_evolution_config(
         overrides["sigma0"] = args.sigma
     if args.parallel is not None:
         overrides["parallel_workers"] = args.parallel
-    return base.model_copy(update=overrides) if overrides else base
+    if not overrides:
+        return base
+    merged = {**base.model_dump(), **overrides}
+    try:
+        return EvolutionConfig(**merged)
+    except ValidationError as exc:
+        msg = (
+            f"Invalid CLI override for evolution config: {exc}.  "
+            "Check --generations, --population, --episodes, --sigma, "
+            "and --parallel are within their accepted ranges."
+        )
+        raise SystemExit(msg) from exc
 
 
 def _build_optimizer(
     evolution_config: EvolutionConfig,
     num_params: int,
     seed: int | None,
+    *,
+    x0: list[float] | None = None,
+    stds: list[float] | None = None,
 ) -> EvolutionaryOptimizer:
-    """Construct the optimiser specified by ``evolution_config.algorithm``."""
+    """Construct the optimiser specified by ``evolution_config.algorithm``.
+
+    ``x0`` seeds the optimiser's initial mean (for CMA-ES) or first
+    individual (for GA).  If ``None``, both optimisers default to zeros,
+    which is appropriate for weight-evolution (network weights cluster
+    around zero) but invalid for hyperparameter evolution where the
+    schema's bounds may sit far from the origin (e.g. log-scale
+    learning_rate has bounds in [-11.5, -4.6]).  Callers that have a
+    valid in-bounds starting point — typically the encoder's
+    ``initial_genome().params`` — SHOULD pass it as ``x0``.
+
+    ``stds`` (CMA-ES only) supplies per-parameter standard deviations.
+    Required when genome dimensions live on materially different scales
+    (e.g. mixed hyperparameter schemas where one slot has range ~7 in
+    log-units and another has range ~0.1).  Currently ignored by the
+    GA optimiser, which uses ``sigma0`` uniformly.
+    """
     if evolution_config.algorithm == "cmaes":
         return CMAESOptimizer(
             num_params=num_params,
+            x0=x0,
             population_size=evolution_config.population_size,
             sigma0=evolution_config.sigma0,
             seed=seed,
             diagonal=evolution_config.cma_diagonal,
+            stds=stds,
         )
     if evolution_config.algorithm == "ga":
         return GeneticAlgorithmOptimizer(
             num_params=num_params,
+            x0=x0,
             population_size=evolution_config.population_size,
             sigma0=evolution_config.sigma0,
             elite_fraction=evolution_config.elite_fraction,
@@ -222,7 +275,7 @@ def _resolve_output_dir(
     return output_dir.name, output_dir
 
 
-def main() -> int:
+def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hurts readability
     """Entry point."""
     args = parse_arguments()
     logger.setLevel(args.log_level)
@@ -235,16 +288,48 @@ def main() -> int:
         return 1
 
     brain_name = sim_config.brain.name
-    if brain_name not in ENCODER_REGISTRY:
-        # Surfaces the helpful error message from get_encoder.
-        try:
-            get_encoder(brain_name)
-        except ValueError as exc:
-            logger.error(str(exc))
+    # select_encoder dispatches by hyperparam_schema presence.  When
+    # set, returns HyperparameterEncoder regardless of registry
+    # membership — so brains without weight encoders are still
+    # reachable for hyperparameter evolution.  When None, falls back
+    # to get_encoder(brain.name) which raises ValueError for brains
+    # not in ENCODER_REGISTRY.
+    try:
+        encoder = select_encoder(sim_config)
+    except ValueError as exc:
+        logger.error(str(exc))
         return 1
 
-    encoder = get_encoder(brain_name)
-    fitness = EpisodicSuccessRate()
+    # --fitness flag dispatches between EpisodicSuccessRate (the
+    # default, frozen-weight) and LearnedPerformanceFitness (K train +
+    # L eval).  When learned_performance is selected, validate guards:
+    # hyperparam_schema must be set (otherwise we'd combine a weight
+    # encoder with LearnedPerformanceFitness — Lamarckian inheritance,
+    # which is out of scope here), AND learn_episodes_per_eval must
+    # be > 0.
+    if args.fitness == "learned_performance":
+        if sim_config.hyperparam_schema is None:
+            logger.error(
+                "--fitness learned_performance requires hyperparam_schema "
+                "to be set in the YAML.  Combining a weight encoder with "
+                "LearnedPerformanceFitness would amount to Lamarckian "
+                "inheritance, which is out of scope for this fitness.  "
+                "For weight-evolution campaigns, use --fitness success_rate "
+                "(EpisodicSuccessRate, the default).  To switch to "
+                "hyperparameter evolution, author a hyperparam_schema: "
+                "block in the YAML.",
+            )
+            return 1
+        if evolution_config.learn_episodes_per_eval == 0:
+            logger.error(
+                "--fitness learned_performance requires "
+                "evolution.learn_episodes_per_eval > 0; got 0.  Set "
+                "learn_episodes_per_eval in the evolution: block.",
+            )
+            return 1
+        fitness = LearnedPerformanceFitness()
+    else:
+        fitness = EpisodicSuccessRate()
 
     resume_path = Path(args.resume) if args.resume else None
     resolved = _resolve_output_dir(args.output_dir, resume_path)
@@ -259,7 +344,7 @@ def main() -> int:
     if log_path is not None:
         logger.info("Log file: %s", log_path)
 
-    # Prominent startup logging (per task 7.7).
+    # Prominent startup logging.
     logger.info("=" * 60)
     logger.info("Brain type:    %s", brain_name)
     logger.info("Algorithm:     %s", evolution_config.algorithm)
@@ -274,8 +359,31 @@ def main() -> int:
     num_params = encoder.genome_dim(sim_config)
     logger.info("Genome dimension: %d", num_params)
 
-    optimizer = _build_optimizer(evolution_config, num_params, seed=args.seed)
     rng = np.random.default_rng(args.seed)
+
+    # Seed the optimiser with a valid in-bounds starting point sampled
+    # from the encoder.  Without this the optimiser's mean defaults to
+    # zeros, which is invalid for hyperparameter encoders whose schema
+    # bounds sit far from the origin (e.g. log-scale learning_rate).
+    # For weight encoders this still produces a valid x0 (the brain's
+    # actual freshly-initialised weights), which is a more principled
+    # starting point than zeros.
+    initial_genome = encoder.initial_genome(sim_config, rng=rng)
+    x0 = list(initial_genome.params.astype(float))
+
+    # Per-parameter standard deviations let the optimiser explore each
+    # genome dimension proportionally to its bound range.  Critical for
+    # hyperparameter schemas with mixed-scale dimensions; weight
+    # encoders return None to keep CMA-ES's default uniform sigma.
+    stds = encoder.genome_stds(sim_config)
+
+    optimizer = _build_optimizer(
+        evolution_config,
+        num_params,
+        seed=args.seed,
+        x0=x0,
+        stds=stds,
+    )
 
     log_level_int = getattr(logging, args.log_level)
     loop = EvolutionLoop(

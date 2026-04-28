@@ -5,9 +5,12 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+import pytest
 import yaml
+from pydantic import ValidationError
 from quantumnematode.utils.config_loader import (
     EvolutionConfig,
+    ParamSchemaEntry,
     SimulationConfig,
     load_simulation_config,
 )
@@ -146,3 +149,259 @@ def test_cma_diagonal_yaml_propagates_to_optimizer_options(tmp_path: Path) -> No
     )
     # cma library translates True to True in the options dict.
     assert opt._es.opts.get("CMA_diagonal") is True
+
+
+# =============================================================================
+# ParamSchemaEntry + SimulationConfig.hyperparam_schema
+# =============================================================================
+
+
+def test_param_schema_entry_validates_type_metadata() -> None:
+    """``ParamSchemaEntry`` SHALL reject mismatched type/metadata combinations."""
+    # float without bounds
+    with pytest.raises(ValidationError, match="requires 'bounds'"):
+        ParamSchemaEntry(name="lr", type="float")
+
+    # int without bounds
+    with pytest.raises(ValidationError, match="requires 'bounds'"):
+        ParamSchemaEntry(name="hidden", type="int")
+
+    # categorical with 1 value
+    with pytest.raises(ValidationError, match="at least 2"):
+        ParamSchemaEntry(name="rnn", type="categorical", values=["lstm"])
+
+    # categorical with no values
+    with pytest.raises(ValidationError, match="at least 2"):
+        ParamSchemaEntry(name="rnn", type="categorical")
+
+    # bool with log_scale=True
+    with pytest.raises(ValidationError, match="log_scale"):
+        ParamSchemaEntry(name="gating", type="bool", log_scale=True)
+
+    # bool with bounds
+    with pytest.raises(ValidationError, match="bounds"):
+        ParamSchemaEntry(name="gating", type="bool", bounds=(0.0, 1.0))
+
+    # categorical with bounds
+    with pytest.raises(ValidationError, match="bounds"):
+        ParamSchemaEntry(
+            name="rnn",
+            type="categorical",
+            values=["lstm", "gru"],
+            bounds=(0.0, 1.0),
+        )
+
+    # int with log_scale=True
+    with pytest.raises(ValidationError, match="log_scale"):
+        ParamSchemaEntry(name="hidden", type="int", bounds=(32, 256), log_scale=True)
+
+    # float with values
+    with pytest.raises(ValidationError, match="values"):
+        ParamSchemaEntry(name="lr", type="float", bounds=(1e-5, 1e-2), values=["a"])
+
+
+def test_param_schema_entry_valid_examples() -> None:
+    """Valid combinations SHALL parse without error."""
+    # float with bounds
+    e1 = ParamSchemaEntry(name="lr", type="float", bounds=(1e-5, 1e-2))
+    assert e1.name == "lr"
+    assert e1.log_scale is False
+
+    # float with bounds + log_scale
+    e2 = ParamSchemaEntry(name="lr", type="float", bounds=(1e-5, 1e-2), log_scale=True)
+    assert e2.log_scale is True
+
+    # int with bounds
+    e3 = ParamSchemaEntry(name="hidden", type="int", bounds=(32, 256))
+    assert e3.type == "int"
+
+    # bool with no metadata
+    e4 = ParamSchemaEntry(name="gating", type="bool")
+    assert e4.type == "bool"
+
+    # categorical with values
+    e5 = ParamSchemaEntry(name="rnn", type="categorical", values=["lstm", "gru"])
+    assert e5.values == ["lstm", "gru"]
+
+
+def test_hyperparam_schema_yaml_parses(tmp_path: Path) -> None:
+    """A YAML with mixed-type ``hyperparam_schema`` SHALL load into ``ParamSchemaEntry``."""
+    yaml_content = {
+        "brain": {"name": "mlpppo", "config": {}},
+        "hyperparam_schema": [
+            {"name": "actor_hidden_dim", "type": "int", "bounds": [32, 256]},
+            {
+                "name": "learning_rate",
+                "type": "float",
+                "bounds": [1.0e-5, 1.0e-2],
+                "log_scale": True,
+            },
+            {"name": "feature_gating", "type": "bool"},
+        ],
+    }
+    yaml_path = tmp_path / "schema.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+
+    cfg = load_simulation_config(str(yaml_path))
+    assert cfg.hyperparam_schema is not None
+    assert len(cfg.hyperparam_schema) == 3
+    assert all(isinstance(e, ParamSchemaEntry) for e in cfg.hyperparam_schema)
+    assert cfg.hyperparam_schema[0].name == "actor_hidden_dim"
+    assert cfg.hyperparam_schema[1].log_scale is True
+
+
+def test_hyperparam_schema_rejects_typo(tmp_path: Path) -> None:
+    """A schema entry with a name not on the brain config SHALL fail load.
+
+    Must list valid alternatives so the user can correct the typo.
+    """
+    yaml_content = {
+        "brain": {"name": "mlpppo", "config": {}},
+        "hyperparam_schema": [
+            {"name": "actor_hidden_dimm", "type": "int", "bounds": [32, 256]},
+        ],
+    }
+    yaml_path = tmp_path / "typo.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+
+    with pytest.raises(ValidationError) as exc_info:
+        load_simulation_config(str(yaml_path))
+    msg = str(exc_info.value)
+    assert "actor_hidden_dimm" in msg
+    # Should list valid alternatives — at minimum the real field
+    # actor_hidden_dim should appear.
+    assert "actor_hidden_dim" in msg
+
+
+def test_hyperparam_schema_absence_preserves_m0_behaviour() -> None:
+    """Existing scenario configs without ``hyperparam_schema`` SHALL load with ``None``."""
+    cfg = load_simulation_config(str(MLPPPO_CONFIG))
+    assert cfg.hyperparam_schema is None
+
+
+def test_hyperparam_schema_requires_brain_block(tmp_path: Path) -> None:
+    """A YAML with ``hyperparam_schema`` but no ``brain:`` SHALL fail clearly."""
+    yaml_content = {
+        "hyperparam_schema": [
+            {"name": "anything", "type": "int", "bounds": [1, 10]},
+        ],
+    }
+    yaml_path = tmp_path / "no_brain.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+
+    with pytest.raises(ValidationError) as exc_info:
+        load_simulation_config(str(yaml_path))
+    msg = str(exc_info.value)
+    assert "brain:" in msg
+
+
+def test_hyperparam_schema_unknown_brain_name(tmp_path: Path) -> None:
+    """A YAML with ``brain.name: bogus_brain`` SHALL fail with registered-brain hint."""
+    yaml_content = {
+        "brain": {"name": "bogus_brain", "config": {}},
+        "hyperparam_schema": [
+            {"name": "anything", "type": "int", "bounds": [1, 10]},
+        ],
+    }
+    yaml_path = tmp_path / "bogus.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+
+    with pytest.raises(ValidationError) as exc_info:
+        load_simulation_config(str(yaml_path))
+    msg = str(exc_info.value)
+    assert "bogus_brain" in msg
+    assert "mlpppo" in msg  # at least one registered brain in the message
+
+
+# =============================================================================
+# EvolutionConfig.learn_episodes_per_eval + eval_episodes_per_eval
+# =============================================================================
+
+
+def test_evolution_config_learn_eval_defaults() -> None:
+    """The new fields SHALL default to ``0`` and ``None``."""
+    cfg = EvolutionConfig()
+    assert cfg.learn_episodes_per_eval == 0
+    assert cfg.eval_episodes_per_eval is None
+
+
+def test_evolution_config_learn_eval_bounds() -> None:
+    """Pydantic SHALL enforce ge=0 on learn and ge=1 on eval (None allowed)."""
+    with pytest.raises(ValidationError):
+        EvolutionConfig(learn_episodes_per_eval=-1)
+    with pytest.raises(ValidationError):
+        EvolutionConfig(eval_episodes_per_eval=0)
+    # Valid: positive values + None
+    cfg = EvolutionConfig(learn_episodes_per_eval=30, eval_episodes_per_eval=5)
+    assert cfg.learn_episodes_per_eval == 30
+    assert cfg.eval_episodes_per_eval == 5
+
+
+def test_param_schema_entry_rejects_inverted_bounds() -> None:
+    """``bounds`` SHALL require strictly increasing (low < high)."""
+    with pytest.raises(ValidationError, match="must be strictly increasing"):
+        ParamSchemaEntry(name="lr", type="float", bounds=(1e-2, 1e-5))
+    with pytest.raises(ValidationError, match="must be strictly increasing"):
+        ParamSchemaEntry(name="hidden", type="int", bounds=(256, 32))
+    # Equal-bounds also rejected
+    with pytest.raises(ValidationError, match="must be strictly increasing"):
+        ParamSchemaEntry(name="x", type="float", bounds=(1.0, 1.0))
+
+
+def test_param_schema_entry_log_scale_requires_positive_bounds() -> None:
+    """``log_scale=True`` SHALL require both bounds to be > 0."""
+    with pytest.raises(ValidationError, match="log_scale=True requires"):
+        ParamSchemaEntry(name="x", type="float", bounds=(0.0, 1.0), log_scale=True)
+    with pytest.raises(ValidationError, match="log_scale=True requires"):
+        ParamSchemaEntry(name="x", type="float", bounds=(-1.0, 1.0), log_scale=True)
+    # Valid: positive bounds with log_scale
+    e = ParamSchemaEntry(name="lr", type="float", bounds=(1e-5, 1e-2), log_scale=True)
+    assert e.log_scale is True
+
+
+def test_param_schema_entry_categorical_rejects_duplicates() -> None:
+    """Categorical SHALL require ≥2 *distinct* values, not just len ≥ 2."""
+    with pytest.raises(ValidationError, match="duplicates"):
+        ParamSchemaEntry(name="rnn", type="categorical", values=["lstm", "lstm"])
+    with pytest.raises(ValidationError, match="duplicates"):
+        ParamSchemaEntry(name="rnn", type="categorical", values=["a", "a", "a"])
+    # Valid: distinct values
+    e = ParamSchemaEntry(name="rnn", type="categorical", values=["lstm", "gru"])
+    assert e.values == ["lstm", "gru"]
+
+
+def test_hyperparam_schema_rejects_empty_list(tmp_path: Path) -> None:
+    """An empty ``hyperparam_schema:`` list SHALL fail YAML load.
+
+    Falls into a useless state otherwise — select_encoder would return
+    a HyperparameterEncoder with genome_dim=0.
+    """
+    yaml_content = {
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
+        "hyperparam_schema": [],
+    }
+    yaml_path = tmp_path / "empty.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="empty"):
+        load_simulation_config(str(yaml_path))
+
+
+def test_hyperparam_schema_rejects_duplicate_names(tmp_path: Path) -> None:
+    """Duplicate ``entry.name`` SHALL fail YAML load.
+
+    Two entries pointing at the same brain-config field would silently
+    let the second one's value win at decode (model_copy(update=) is
+    last-write-wins on duplicate keys), making the first slot's evolved
+    genome value invisible.
+    """
+    yaml_content = {
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
+        "hyperparam_schema": [
+            {"name": "learning_rate", "type": "float", "bounds": [1e-5, 1e-2]},
+            {"name": "learning_rate", "type": "float", "bounds": [1e-4, 1e-1]},
+        ],
+    }
+    yaml_path = tmp_path / "dup.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="duplicate"):
+        load_simulation_config(str(yaml_path))

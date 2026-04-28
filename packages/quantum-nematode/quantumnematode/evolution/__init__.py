@@ -13,14 +13,18 @@ from quantumnematode.evolution.encoders import (
     ENCODER_REGISTRY,
     NON_GENOME_COMPONENTS,
     GenomeEncoder,
+    HyperparameterEncoder,
     LSTMPPOEncoder,
     MLPPPOEncoder,
+    build_birth_metadata,
     get_encoder,
+    select_encoder,
 )
 from quantumnematode.evolution.fitness import (
     EpisodicSuccessRate,
     FitnessFunction,
     FrozenEvalRunner,
+    LearnedPerformanceFitness,
 )
 from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.lineage import CSV_HEADER, LineageTracker
@@ -37,10 +41,14 @@ __all__ = [
     "FrozenEvalRunner",
     "Genome",
     "GenomeEncoder",
+    "HyperparameterEncoder",
     "LSTMPPOEncoder",
+    "LearnedPerformanceFitness",
     "LineageTracker",
     "MLPPPOEncoder",
+    "build_birth_metadata",
     "genome_id_for",
     "get_encoder",
     "instantiate_brain_from_sim_config",
+    "select_encoder",
 ]
