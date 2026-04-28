@@ -28,14 +28,24 @@ from pathlib import Path
 import numpy as np
 
 
-def _read_history(seed_dir: Path) -> list[dict[str, float]]:
-    """Read the single session under seed_dir's history.csv into rows."""
-    sessions = sorted(seed_dir.iterdir())
+def _latest_session(seed_dir: Path) -> Path:
+    """Return the most recently modified subdirectory under ``seed_dir``.
+
+    Filtering to directories (rather than relying on lexicographic order over
+    ``iterdir()``) avoids stray files (``.DS_Store``, log tails, etc.) being
+    mistaken for a session.  Selecting by ``stat().st_mtime`` instead of name
+    means we don't depend on a particular session-id format ordering.
+    """
+    sessions = [p for p in seed_dir.iterdir() if p.is_dir()]
     if not sessions:
         msg = f"No session directory under {seed_dir}"
         raise FileNotFoundError(msg)
-    # Take the latest session if multiple exist (e.g. resumed run)
-    history_path = sessions[-1] / "history.csv"
+    return max(sessions, key=lambda p: p.stat().st_mtime)
+
+
+def _read_history(seed_dir: Path) -> list[dict[str, float]]:
+    """Read the single session under seed_dir's history.csv into rows."""
+    history_path = _latest_session(seed_dir) / "history.csv"
     if not history_path.exists():
         msg = f"No history.csv at {history_path}"
         raise FileNotFoundError(msg)
@@ -46,8 +56,7 @@ def _read_history(seed_dir: Path) -> list[dict[str, float]]:
 
 def _read_best(seed_dir: Path) -> dict[str, object]:
     """Read the single session under seed_dir's best_params.json."""
-    sessions = sorted(seed_dir.iterdir())
-    best_path = sessions[-1] / "best_params.json"
+    best_path = _latest_session(seed_dir) / "best_params.json"
     return json.loads(best_path.read_text())
 
 
@@ -95,12 +104,14 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     lines.append("")
     lines.append("## Per-seed best fitness (eval-phase success rate, L=5)")
     lines.append("")
-    # Detect the actual last generation rather than hard-coding "20" —
+    # Detect a unified target generation rather than hard-coding "20" —
     # truncated runs (e.g. crash recovery, --generations override) and
     # other budgets would otherwise mislabel their results.  Use the
-    # max seen across all seeds so the column header is accurate even
-    # if seeds report different lengths (shouldn't happen but defend).
-    last_gen = max(
+    # *minimum* last-generation across seeds so every per-seed row in
+    # the table genuinely corresponds to the same generation; with
+    # ``max`` a truncated seed would silently fall back to its own
+    # earlier generation while the header read "Gen 20 best".
+    last_gen = min(
         int(pilot_history[seed][-1].get("generation", len(pilot_history[seed])))
         for seed in pilot_seeds
     )
@@ -110,17 +121,48 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     lines.append(
         "|------|-----------|-------------|------------------|------------------------------|",
     )
+    # Build a {seed: {generation: row}} lookup so per-seed picks for the
+    # "Gen N best" column always correspond to the same ``last_gen``.
+    # The defensive ``.get(last_gen, hist[-1])`` below guards against
+    # missing/non-monotonic ``generation`` fields; with the ``min``
+    # selection above every seed should normally have the row.
+    seed_rows_by_gen: dict[int, dict[int, dict[str, float]]] = {
+        seed: {
+            int(row.get("generation", idx + 1)): row for idx, row in enumerate(pilot_history[seed])
+        }
+        for seed in pilot_seeds
+    }
     pilot_finals: list[float] = []
     for seed in pilot_seeds:
         hist = pilot_history[seed]
         gen1 = hist[0]["best_fitness"]
-        last = hist[-1]["best_fitness"]
+        # Pick the row matching the unified target generation; fall back to
+        # the seed's actual final row if it was truncated below ``last_gen``.
+        target_row = seed_rows_by_gen[seed].get(last_gen, hist[-1])
+        last = target_row["best_fitness"]
         mean_across = float(np.mean([row["best_fitness"] for row in hist]))
         pilot_finals.append(last)
         bp_raw = pilot_best[seed]["best_params"]
-        # best_params.json stores best_params as a list[float]; the dict[str, object]
-        # type loses that, so narrow explicitly.
-        bp: list[float] = bp_raw if isinstance(bp_raw, list) else []
+        # ``best_params.json`` is supposed to store a list[float].  Failing
+        # fast here surfaces upstream corruption (missing key, wrong type,
+        # non-numeric element) instead of silently emitting "[, ...]" in the
+        # markdown table.
+        if not isinstance(bp_raw, list):
+            msg = (
+                f"best_params for seed {seed} is not a list (got "
+                f"{type(bp_raw).__name__}); cannot format summary."
+            )
+            raise TypeError(msg)
+        bp: list[float] = []
+        for i, x in enumerate(bp_raw):
+            try:
+                bp.append(float(x))
+            except (TypeError, ValueError) as exc:
+                msg = (
+                    f"best_params[{i}] for seed {seed} is not numeric "
+                    f"(got {x!r}); cannot format summary."
+                )
+                raise ValueError(msg) from exc
         bp_short = f"[{', '.join(f'{x:.2f}' for x in bp[:3])}, ...]"
         lines.append(
             f"| {seed} | {gen1:.3f} | {last:.3f} | {mean_across:.3f} | {bp_short} |",
@@ -278,7 +320,11 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
             best_curves.append(best)
             mean_curves.append(mean)
 
-        # Mean across seeds (assumes equal length)
+        # Mean across seeds (assumes equal length).  The label reflects
+        # the actual seed count rather than a hard-coded "4" so custom
+        # ``--seeds`` invocations don't mislabel.
+        seed_count = len(args.seeds)
+        seed_label = f"Mean ({seed_count} seed{'s' if seed_count != 1 else ''})"
         if len({len(c) for c in best_curves}) == 1:
             mean_best = np.mean(best_curves, axis=0)
             ax_best.plot(
@@ -286,7 +332,7 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
                 mean_best,
                 color="black",
                 linewidth=2.5,
-                label="Mean (4 seeds)",
+                label=seed_label,
             )
         if len({len(c) for c in mean_curves}) == 1:
             mean_mean = np.mean(mean_curves, axis=0)
@@ -295,7 +341,7 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
                 mean_mean,
                 color="black",
                 linewidth=2.5,
-                label="Mean (4 seeds)",
+                label=seed_label,
             )
 
         for ax, title in [
@@ -321,7 +367,11 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI driver; splitting hurts r
             ax.legend(loc="lower right", fontsize=8)
             ax.grid(visible=True, alpha=0.3)
 
-        fig.suptitle("M2 Hyperparameter Pilot — convergence (4 seeds)", fontsize=14)
+        fig.suptitle(
+            f"M2 Hyperparameter Pilot — convergence ({seed_count} "
+            f"seed{'s' if seed_count != 1 else ''})",
+            fontsize=14,
+        )
         plot_path = args.output_dir / "convergence.png"
         fig.tight_layout()
         fig.savefig(plot_path, dpi=120)
