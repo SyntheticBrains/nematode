@@ -391,6 +391,99 @@ def test_genome_dim_matches_schema_length_no_brain_constructed() -> None:
 
 
 # ---------------------------------------------------------------------------
+# genome_stds — per-parameter standard deviations
+# ---------------------------------------------------------------------------
+
+
+def test_genome_stds_scales_to_bound_widths() -> None:
+    """``genome_stds`` SHALL return std = bound-width / 6 for each slot.
+
+    With ±3 stds at sigma=1.0 spanning the full bound range, the optimiser
+    can explore each dimension proportionally without saturating tight
+    bounds or under-exploring wide ones.
+    """
+    schema = [
+        # Linear float, range 0.099
+        ParamSchemaEntry(name="gamma", type="float", bounds=(0.9, 0.999)),
+        # Log-scale float, log-range 6.908
+        ParamSchemaEntry(
+            name="learning_rate",
+            type="float",
+            bounds=(1e-5, 1e-2),
+            log_scale=True,
+        ),
+        # Int, range 224
+        ParamSchemaEntry(name="actor_hidden_dim", type="int", bounds=(32, 256)),
+    ]
+    sim_config = _make_mlpppo_sim_config(schema)
+    enc = HyperparameterEncoder()
+    stds = enc.genome_stds(sim_config)
+    assert stds is not None
+    assert len(stds) == 3
+    # Linear float
+    assert stds[0] == pytest.approx((0.999 - 0.9) / 6, rel=1e-6)
+    # Log-scale float — std in log-space
+    assert stds[1] == pytest.approx((np.log(1e-2) - np.log(1e-5)) / 6, rel=1e-6)
+    # Int — treated as continuous
+    assert stds[2] == pytest.approx((256 - 32) / 6, rel=1e-6)
+
+
+def test_genome_stds_bool_is_unit() -> None:
+    """``bool`` slots SHALL get std=1.0 (covers the ±1 range)."""
+    schema = [ParamSchemaEntry(name="feature_gating", type="bool")]
+    sim_config = _make_mlpppo_sim_config(schema)
+    enc = HyperparameterEncoder()
+    stds = enc.genome_stds(sim_config)
+    assert stds == [1.0]
+
+
+def test_genome_stds_categorical_scales_to_n_values() -> None:
+    """Categorical slots SHALL get std = max(1, len(values) / 6) so ±3 stds spans bins."""
+    schema_small = [
+        ParamSchemaEntry(name="rnn_type", type="categorical", values=["lstm", "gru"]),
+    ]
+    sim_config_small = _make_mlpppo_sim_config(schema_small)
+    enc = HyperparameterEncoder()
+    stds_small = enc.genome_stds(sim_config_small)
+    # 2 values, so max(1.0, 2/6) = 1.0
+    assert stds_small == [1.0]
+
+    # Hypothetical schema with 12 values: max(1.0, 12/6) = 2.0
+    schema_big = [
+        ParamSchemaEntry(
+            name="some_categorical",
+            type="categorical",
+            values=[f"v{i}" for i in range(12)],
+        ),
+    ]
+    sim_config_big = _make_mlpppo_sim_config(schema_big)
+    stds_big = enc.genome_stds(sim_config_big)
+    assert stds_big == [2.0]
+
+
+def test_genome_stds_no_schema_raises() -> None:
+    """No schema → clear error from genome_stds."""
+    cfg = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": {}}})
+    enc = HyperparameterEncoder()
+    with pytest.raises(ValueError, match="hyperparam_schema"):
+        enc.genome_stds(cfg)
+
+
+def test_weight_encoder_genome_stds_returns_none() -> None:
+    """Weight encoders (M0 path) SHALL return None — no per-param scaling."""
+    cfg = SimulationConfig.model_validate(
+        {
+            "brain": {
+                "name": "mlpppo",
+                "config": {"sensory_modules": ["food_chemotaxis"]},
+            },
+        },
+    )
+    enc = MLPPPOEncoder()
+    assert enc.genome_stds(cfg) is None
+
+
+# ---------------------------------------------------------------------------
 # Pickling — schemas travel to workers
 # ---------------------------------------------------------------------------
 

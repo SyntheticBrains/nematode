@@ -211,7 +211,12 @@ class EpisodicSuccessRate:
         # `agent._render_step` (agent.py:958).  Worker processes have no
         # terminal, so any other theme would render to a discarded stdout
         # — wasted work paid every step.
-        env = create_env_from_config(sim_config.environment, seed=seed, theme=Theme.HEADLESS)
+        env = create_env_from_config(
+            sim_config.environment,
+            seed=seed,
+            theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
+        )
 
         agent = _build_agent(brain, env, sim_config)
         runner = FrozenEvalRunner()
@@ -222,7 +227,15 @@ class EpisodicSuccessRate:
         max_steps = sim_config.max_steps if sim_config.max_steps is not None else 500
 
         successes = 0
-        for _ in range(episodes):
+        for ep_idx in range(episodes):
+            # Reset the env between episodes so each starts from a clean
+            # initial state (food respawn, agent at start position, full
+            # satiety).  Without this, a failed episode leaves the env
+            # in a starved/exhausted state and subsequent episodes
+            # inherit the failure.  Matches the agent.reset_environment
+            # pattern used by run_simulation.py between runs.
+            if ep_idx > 0:
+                agent.reset_environment()
             result = runner.run(agent, sim_config.reward, max_steps)
             if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
                 successes += 1
@@ -320,10 +333,18 @@ class LearnedPerformanceFitness:
             sim_config.environment,
             seed=seed,
             theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
         )
         train_agent = _build_agent(brain, train_env, sim_config)
         train_runner = StandardEpisodeRunner()
-        for _ in range(evolution_config.learn_episodes_per_eval):
+        for ep_idx in range(evolution_config.learn_episodes_per_eval):
+            # Reset env between episodes so training samples come from
+            # clean initial states rather than from whatever post-failure
+            # state the previous episode left behind.  Brain weights
+            # persist (they're learned across episodes); env state does
+            # not.  Matches the run_simulation.py per-run reset pattern.
+            if ep_idx > 0:
+                train_agent.reset_environment()
             train_runner.run(train_agent, sim_config.reward, max_steps)
 
         # Eval phase: SECOND fresh env (same seed) — post-train env state
@@ -333,6 +354,7 @@ class LearnedPerformanceFitness:
             sim_config.environment,
             seed=seed,
             theme=Theme.HEADLESS,
+            max_body_length=sim_config.body_length,
         )
         eval_agent = _build_agent(brain, eval_env, sim_config)
         eval_runner = FrozenEvalRunner()
@@ -344,7 +366,11 @@ class LearnedPerformanceFitness:
         eval_count = eval_eps if eval_eps is not None else episodes
 
         successes = 0
-        for _ in range(eval_count):
+        for ep_idx in range(eval_count):
+            # Reset env between eval episodes so each starts from a
+            # clean initial state — same rationale as the train loop.
+            if ep_idx > 0:
+                eval_agent.reset_environment()
             result = eval_runner.run(eval_agent, sim_config.reward, max_steps)
             if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
                 successes += 1

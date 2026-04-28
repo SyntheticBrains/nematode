@@ -91,6 +91,14 @@ evolution:
   episodes_per_eval: 5  # Used as L fallback when eval_episodes_per_eval is None
   learn_episodes_per_eval: 30  # K — train phase episodes per genome
   eval_episodes_per_eval: 5    # L — eval phase episodes per genome
+  # sigma0=1.0 pairs with the encoder's per-param genome_stds (each std
+  # equals bound-width/6).  Effective per-param sigma is sigma0*std, so
+  # ±3 stds at sigma0=1.0 spans roughly the full bound range — reasonable
+  # initial exploration.  The default math.pi/2 is too aggressive for
+  # log-scale and tight-bound dimensions: it pushes most samples
+  # outside the schema's bounds, where decode clips them to the
+  # extremes.
+  sigma0: 1.0
   parallel_workers: 4
   checkpoint_every: 2
   cma_diagonal: false

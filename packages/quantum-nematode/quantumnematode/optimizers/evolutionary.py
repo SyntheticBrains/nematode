@@ -116,6 +116,7 @@ class CMAESOptimizer(EvolutionaryOptimizer):
         seed: int | None = None,
         *,
         diagonal: bool = False,
+        stds: list[float] | None = None,
     ) -> None:
         """Initialize CMA-ES optimizer.
 
@@ -143,6 +144,18 @@ class CMAESOptimizer(EvolutionaryOptimizer):
 
                 Defaults to False (full covariance).  Use False for small
                 genomes (n<~100); True for neural-network weight evolution.
+            stds: Per-parameter standard deviations.  When provided,
+                CMA-ES uses ``stds[i] * sigma0`` as the initial step
+                size for parameter i.  Necessary when parameters live
+                on different scales — e.g. mixed hyperparameter schemas
+                with log-scale floats (range ~6 in log-units), tight
+                linear floats like gamma (range ~0.1), and ints
+                (range ~200).  Without per-parameter scaling, a single
+                uniform sigma cannot be appropriate for all dimensions:
+                too large for tight ranges (samples saturate at bounds)
+                or too small for wide ranges (no exploration).  Length
+                must equal num_params.  Defaults to None (uniform
+                sigma across all dimensions).
         """
         super().__init__(num_params, population_size, sigma0)
 
@@ -154,6 +167,14 @@ class CMAESOptimizer(EvolutionaryOptimizer):
             options["seed"] = seed
         if diagonal:
             options["CMA_diagonal"] = True
+        if stds is not None:
+            if len(stds) != num_params:
+                msg = (
+                    f"CMAESOptimizer: stds length {len(stds)} does not match "
+                    f"num_params {num_params}."
+                )
+                raise ValueError(msg)
+            options["CMA_stds"] = list(stds)
 
         self._es: cma.CMAEvolutionStrategy = cma.CMAEvolutionStrategy(
             x0,

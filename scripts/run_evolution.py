@@ -175,19 +175,41 @@ def _build_optimizer(
     evolution_config: EvolutionConfig,
     num_params: int,
     seed: int | None,
+    *,
+    x0: list[float] | None = None,
+    stds: list[float] | None = None,
 ) -> EvolutionaryOptimizer:
-    """Construct the optimiser specified by ``evolution_config.algorithm``."""
+    """Construct the optimiser specified by ``evolution_config.algorithm``.
+
+    ``x0`` seeds the optimiser's initial mean (for CMA-ES) or first
+    individual (for GA).  If ``None``, both optimisers default to zeros,
+    which is appropriate for weight-evolution (network weights cluster
+    around zero) but invalid for hyperparameter evolution where the
+    schema's bounds may sit far from the origin (e.g. log-scale
+    learning_rate has bounds in [-11.5, -4.6]).  Callers that have a
+    valid in-bounds starting point — typically the encoder's
+    ``initial_genome().params`` — SHOULD pass it as ``x0``.
+
+    ``stds`` (CMA-ES only) supplies per-parameter standard deviations.
+    Required when genome dimensions live on materially different scales
+    (e.g. mixed hyperparameter schemas where one slot has range ~7 in
+    log-units and another has range ~0.1).  Currently ignored by the
+    GA optimiser, which uses ``sigma0`` uniformly.
+    """
     if evolution_config.algorithm == "cmaes":
         return CMAESOptimizer(
             num_params=num_params,
+            x0=x0,
             population_size=evolution_config.population_size,
             sigma0=evolution_config.sigma0,
             seed=seed,
             diagonal=evolution_config.cma_diagonal,
+            stds=stds,
         )
     if evolution_config.algorithm == "ga":
         return GeneticAlgorithmOptimizer(
             num_params=num_params,
+            x0=x0,
             population_size=evolution_config.population_size,
             sigma0=evolution_config.sigma0,
             elite_fraction=evolution_config.elite_fraction,
@@ -235,7 +257,7 @@ def _resolve_output_dir(
     return output_dir.name, output_dir
 
 
-def main() -> int:
+def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hurts readability
     """Entry point."""
     args = parse_arguments()
     logger.setLevel(args.log_level)
@@ -319,8 +341,31 @@ def main() -> int:
     num_params = encoder.genome_dim(sim_config)
     logger.info("Genome dimension: %d", num_params)
 
-    optimizer = _build_optimizer(evolution_config, num_params, seed=args.seed)
     rng = np.random.default_rng(args.seed)
+
+    # Seed the optimiser with a valid in-bounds starting point sampled
+    # from the encoder.  Without this the optimiser's mean defaults to
+    # zeros, which is invalid for hyperparameter encoders whose schema
+    # bounds sit far from the origin (e.g. log-scale learning_rate).
+    # For weight encoders this still produces a valid x0 (the brain's
+    # actual freshly-initialised weights), which is a more principled
+    # starting point than zeros.
+    initial_genome = encoder.initial_genome(sim_config, rng=rng)
+    x0 = list(initial_genome.params.astype(float))
+
+    # Per-parameter standard deviations let the optimiser explore each
+    # genome dimension proportionally to its bound range.  Critical for
+    # hyperparameter schemas with mixed-scale dimensions; weight
+    # encoders return None to keep CMA-ES's default uniform sigma.
+    stds = encoder.genome_stds(sim_config)
+
+    optimizer = _build_optimizer(
+        evolution_config,
+        num_params,
+        seed=args.seed,
+        x0=x0,
+        stds=stds,
+    )
 
     log_level_int = getattr(logging, args.log_level)
     loop = EvolutionLoop(

@@ -100,6 +100,21 @@ class GenomeEncoder(Protocol):
         """
         ...
 
+    def genome_stds(self, sim_config: SimulationConfig) -> list[float] | None:
+        """Return per-parameter standard deviations for the optimiser, or None.
+
+        When None, the optimiser uses a uniform sigma across all
+        dimensions — appropriate when genome dimensions cluster around
+        zero with similar variance (e.g. neural network weights).
+
+        When the dimensions live on materially different scales (e.g.
+        mixed hyperparameter schemas with log-scale floats, tight
+        linear floats, and ints), encoders SHOULD return per-parameter
+        stds so the optimiser explores each dimension proportionally
+        to its bound range.
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Flatten / unflatten helpers (private)
@@ -278,6 +293,19 @@ class _ClassicalPPOEncoder:
         components = _select_genome_components(wp.get_weight_components())
         params, _ = _flatten_components(components)
         return int(params.size)
+
+    def genome_stds(
+        self,
+        sim_config: SimulationConfig,  # noqa: ARG002
+    ) -> list[float] | None:
+        """Weight encoders use uniform sigma across all dimensions.
+
+        Network weights are roughly normalised by initialisation and
+        cluster around zero with similar variance — uniform sigma is
+        appropriate.  Returning None tells the optimiser to use its
+        default sigma scaling.
+        """
+        return None
 
 
 class MLPPPOEncoder(_ClassicalPPOEncoder):
@@ -481,6 +509,55 @@ class HyperparameterEncoder:
             )
             raise ValueError(msg)
         return len(sim_config.hyperparam_schema)
+
+    def genome_stds(self, sim_config: SimulationConfig) -> list[float] | None:
+        """Return per-parameter standard deviations matched to bound widths.
+
+        For each schema entry:
+
+        - float (linear): std = (high - low) / 6, so ±3 stds at sigma=1.0
+          spans the full bound range.
+        - float (log_scale): std = (log(high) - log(low)) / 6, since
+          the genome lives in log-space.
+        - int: std = (high - low) / 6, treating the integer range as
+          continuous.  Decode clips and rounds.
+        - bool: std = 1.0 (genome value is ±1; sigma=1 gives full
+          coverage of both poles in expectation).
+        - categorical: std = max(1.0, len(values) / 6) so ±3 stds spans
+          all categorical bins.
+
+        Without per-parameter stds, a single uniform sigma cannot be
+        appropriate across mixed-scale dimensions: too large for tight
+        ranges (samples saturate at bounds) or too small for wide
+        ranges (no exploration).
+        """
+        if sim_config.hyperparam_schema is None:
+            msg = (
+                "HyperparameterEncoder.genome_stds requires sim_config.hyperparam_schema to be set."
+            )
+            raise ValueError(msg)
+        # ±3 stds should cover the full bound range, so std = width / 6.
+        bound_coverage_std_divisor = 6.0
+        stds: list[float] = []
+        for entry in sim_config.hyperparam_schema:
+            if entry.type in {"float", "int"}:
+                if entry.bounds is None:  # pragma: no cover — validator-enforced
+                    msg = f"{entry.type} entry missing bounds"
+                    raise ValueError(msg)
+                low, high = entry.bounds
+                width = float(np.log(high) - np.log(low)) if entry.log_scale else float(high - low)
+                stds.append(width / bound_coverage_std_divisor)
+            elif entry.type == "bool":
+                stds.append(1.0)
+            elif entry.type == "categorical":
+                if entry.values is None:  # pragma: no cover — validator-enforced
+                    msg = "categorical entry missing values"
+                    raise ValueError(msg)
+                stds.append(max(1.0, len(entry.values) / bound_coverage_std_divisor))
+            else:  # pragma: no cover — validator-enforced
+                msg = f"Unknown param schema type: {entry.type!r}"
+                raise ValueError(msg)
+        return stds
 
     @staticmethod
     def _sample_initial(

@@ -307,3 +307,66 @@ def test_train_phase_runs_k_episodes() -> None:
     # StandardEpisodeRunner so its dispatch goes through the patch too,
     # but the type-check filters it).
     assert train_run_count == 3
+
+
+# ---------------------------------------------------------------------------
+# Env reset between episodes (both train and eval phases)
+# ---------------------------------------------------------------------------
+
+
+def test_env_resets_between_train_episodes() -> None:
+    """Train phase SHALL call ``agent.reset_environment()`` between episodes.
+
+    Without per-episode reset, a failed episode (e.g. starvation) leaves
+    the env in a degraded state that subsequent episodes inherit.  The
+    brain weights persist across episodes (that's training); the env
+    state must NOT.
+    """
+    from quantumnematode.agent.agent import QuantumNematodeAgent
+
+    sim_config = _make_sim_config_with_schema(learn_eps=3, eval_eps=1)
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    reset_call_count = 0
+    original_reset = QuantumNematodeAgent.reset_environment
+
+    def _counting_reset(self) -> None:
+        nonlocal reset_call_count
+        reset_call_count += 1
+        return original_reset(self)
+
+    with patch.object(QuantumNematodeAgent, "reset_environment", _counting_reset):
+        fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+
+    # 3 train episodes → 2 resets (between ep 0→1 and ep 1→2).
+    # 1 eval episode → 0 additional resets.
+    # Total: 2 (train transitions) + 0 (eval is single ep) = 2.
+    expected_train_resets = 2
+    assert reset_call_count == expected_train_resets
+
+
+def test_env_resets_between_eval_episodes() -> None:
+    """Eval phase SHALL also reset env between episodes."""
+    from quantumnematode.agent.agent import QuantumNematodeAgent
+
+    sim_config = _make_sim_config_with_schema(learn_eps=1, eval_eps=4)
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    reset_call_count = 0
+    original_reset = QuantumNematodeAgent.reset_environment
+
+    def _counting_reset(self) -> None:
+        nonlocal reset_call_count
+        reset_call_count += 1
+        return original_reset(self)
+
+    with patch.object(QuantumNematodeAgent, "reset_environment", _counting_reset):
+        fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+
+    # 1 train ep → 0 train transitions.  4 eval eps → 3 eval transitions.
+    expected_eval_resets = 3
+    assert reset_call_count == expected_eval_resets
