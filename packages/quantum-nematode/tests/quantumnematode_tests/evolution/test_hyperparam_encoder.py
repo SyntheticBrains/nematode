@@ -1,4 +1,4 @@
-"""Tests for :class:`HyperparameterEncoder` and the M2 dispatch helpers."""
+"""Tests for :class:`HyperparameterEncoder` and the dispatch helpers."""
 
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ def test_build_birth_metadata_no_schema_returns_empty() -> None:
 def test_hyperparam_encoder_not_in_brain_registry() -> None:
     """``HyperparameterEncoder`` is brain-agnostic; SHALL NOT pollute registry."""
     assert "hyperparam" not in ENCODER_REGISTRY
-    # Registry SHALL only contain real brain names from M0
+    # Registry SHALL only contain real brain-keyed encoder names
     assert set(ENCODER_REGISTRY.keys()) == {"mlpppo", "lstmppo"}
     # Encoder SHALL still be importable for programmatic callers
     enc = HyperparameterEncoder()
@@ -398,8 +398,9 @@ def test_genome_dim_matches_schema_length_no_brain_constructed() -> None:
 def test_genome_pickles_with_param_schema() -> None:
     """A Genome with ``birth_metadata['param_schema']`` SHALL pickle round-trip.
 
-    Workers receive the schema this way (per Decision 4 — plain dicts
-    in birth_metadata, not Pydantic instances).
+    Workers receive the schema this way: plain dicts in birth_metadata,
+    not Pydantic instances, so worker decode has no Pydantic-import
+    dependency.
     """
     schema = [
         ParamSchemaEntry(name="actor_hidden_dim", type="int", bounds=(32, 256)),
@@ -442,7 +443,7 @@ def test_select_encoder_with_hyperparam_schema_returns_hyperparam_encoder() -> N
 
 
 def test_select_encoder_without_schema_falls_back_to_brain_encoder() -> None:
-    """Without ``hyperparam_schema``, ``select_encoder`` SHALL return M0 encoder."""
+    """Without ``hyperparam_schema``, ``select_encoder`` SHALL return brain-keyed encoder."""
     cfg = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": {}}})
     enc = select_encoder(cfg)
     assert isinstance(enc, MLPPPOEncoder)
@@ -458,7 +459,7 @@ def test_select_encoder_brain_without_weight_encoder_works_under_hyperparam_sche
     ``BRAIN_CONFIG_MAP`` includes brains like ``qvarcircuit`` that have no
     weight encoder in ``ENCODER_REGISTRY``.  Under ``hyperparam_schema``,
     select_encoder bypasses the registry — that's the point of
-    brain-agnostic dispatch (Decision 0).
+    brain-agnostic dispatch.
     """
     # qvarcircuit is in BRAIN_CONFIG_MAP but NOT in ENCODER_REGISTRY
     yaml_dict = {"brain": {"name": "qvarcircuit", "config": {}}}

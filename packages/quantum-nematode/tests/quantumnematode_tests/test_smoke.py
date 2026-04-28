@@ -218,7 +218,7 @@ def test_run_evolution_smoke_mlpppo_resume(tmp_path: Path) -> None:
 
 
 # ============================================================================
-# Phase 7 (M2 hyperparameter evolution): smoke + Phase 5 CLI guard tests
+# Hyperparameter-evolution smoke + CLI guard tests
 # ============================================================================
 
 
@@ -226,8 +226,8 @@ def test_run_evolution_smoke_mlpppo_resume(tmp_path: Path) -> None:
 def test_run_evolution_smoke_hyperparam_mlpppo(tmp_path: Path) -> None:
     """Verify run_evolution.py exits cleanly with --fitness learned_performance.
 
-    Uses a tmp YAML override for K=2/L=1 since Phase 5 doesn't add CLI flags
-    for learn_episodes_per_eval / eval_episodes_per_eval.
+    Uses a tmp YAML override for K=2/L=1 since the CLI doesn't expose
+    flags for learn_episodes_per_eval / eval_episodes_per_eval.
     """
     import yaml as _yaml
 
@@ -277,7 +277,7 @@ def test_run_evolution_smoke_hyperparam_mlpppo(tmp_path: Path) -> None:
 
 @pytest.mark.smoke
 def test_run_evolution_cli_fitness_default_is_success_rate(tmp_path: Path) -> None:
-    """Without --fitness, M0 EpisodicSuccessRate behaviour SHALL be preserved."""
+    """Without --fitness, default EpisodicSuccessRate behaviour SHALL be preserved."""
     config_path = CONFIGS_DIR / "evolution" / "mlpppo_foraging_small.yml"
     assert config_path.exists()
     result = subprocess.run(  # noqa: S603
@@ -312,7 +312,7 @@ def test_run_evolution_cli_fitness_default_is_success_rate(tmp_path: Path) -> No
 def test_run_evolution_cli_learned_performance_requires_hyperparam_schema(
     tmp_path: Path,
 ) -> None:
-    """--fitness learned_performance with no schema SHALL exit 1 with M3 hint."""
+    """--fitness learned_performance with no schema SHALL exit 1 with Lamarckian hint."""
     config_path = CONFIGS_DIR / "evolution" / "mlpppo_foraging_small.yml"
     assert config_path.exists()
     result = subprocess.run(  # noqa: S603
@@ -343,8 +343,8 @@ def test_run_evolution_cli_learned_performance_requires_hyperparam_schema(
     assert result.returncode == 1
     combined = result.stdout + result.stderr
     assert "hyperparam_schema" in combined
-    # The error SHALL mention Lamarckian inheritance and M3
-    assert "Lamarckian" in combined or "M3" in combined
+    # The error SHALL mention Lamarckian inheritance as the rationale
+    assert "Lamarckian" in combined
 
 
 @pytest.mark.smoke

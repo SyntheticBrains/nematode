@@ -261,13 +261,13 @@ class EvolutionLoop:
             )
 
         cfg = self.evolution_config
-        # M0 weight encoders set brain_name to "mlpppo"/"lstmppo"; the M2
-        # HyperparameterEncoder is brain-agnostic and sets brain_name="".
-        # Fall back to sim_config.brain.name in the empty case so
-        # hyperparameter runs still record the actual brain identity in
-        # lineage.csv and best_params.json.  See task 4.5.7 in the spec.
-        # sim_config.brain is guaranteed non-None here:
-        # scripts/run_evolution.py:233 guards it before loop construction.
+        # Brain-keyed encoders set brain_name to a real brain name
+        # (e.g. "mlpppo"); brain-agnostic encoders use the empty string.
+        # Fall back to sim_config.brain.name in the empty case so all
+        # runs record the actual brain identity in lineage.csv and
+        # best_params.json regardless of encoder type.  sim_config.brain
+        # is guaranteed non-None here: the CLI entry point validates it
+        # before constructing the loop.
         brain_type = self.encoder.brain_name or (
             self.sim_config.brain.name if self.sim_config.brain else ""
         )

@@ -234,8 +234,8 @@ class EpisodicSuccessRate:
 # LearnedPerformanceFitness
 # ---------------------------------------------------------------------------
 
-# Default max_steps when sim_config.max_steps is None — matches M0
-# EpisodicSuccessRate.evaluate's fallback at line 222.
+# Default max_steps when sim_config.max_steps is None — matches the
+# fallback used by EpisodicSuccessRate.
 _DEFAULT_MAX_STEPS = 500
 
 
@@ -244,23 +244,22 @@ class LearnedPerformanceFitness:
 
     Per-evaluation flow:
 
-    1. Decode the genome into a fresh brain (HyperparameterEncoder.decode
-       constructs a brain with the genome's hyperparameters; weights are
-       freshly initialised).
+    1. Decode the genome into a fresh brain (the encoder builds a brain
+       with the genome's hyperparameters; weights are freshly initialised).
     2. Train phase: run K = ``evolution.learn_episodes_per_eval`` episodes
-       via :class:`StandardEpisodeRunner` (M0 standard contract — calls
-       ``brain.learn()`` per-step).
+       via :class:`StandardEpisodeRunner` (calls ``brain.learn()`` per-step
+       under the standard contract).
     3. Build a SECOND, fresh environment for the eval phase (same seed),
        reusing the trained brain.  Critical: post-train env state is
        arbitrary (food consumed, agent in some corner) and would corrupt
        the eval measurement.  The brain carries over with its learned
        weights; the env starts clean.
-    4. Eval phase: run L episodes via :class:`FrozenEvalRunner` (M0
-       dual-override).  Count successes via
+    4. Eval phase: run L episodes via :class:`FrozenEvalRunner`.  Count
+       successes via
        ``result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD``.
     5. Return ``successes / L``.
 
-    L resolution (Decision 5's "Asymmetry"):
+    Episode-count resolution:
 
     - K reads from ``sim_config.evolution.learn_episodes_per_eval`` directly
       (no CLI override exists for it today).
@@ -273,10 +272,6 @@ class LearnedPerformanceFitness:
     K=0 raises ``ValueError`` with a clear pointer to
     :class:`EpisodicSuccessRate` (the correct fitness for frozen-weight
     evaluation).
-
-    See ``openspec/specs/evolution-framework/spec.md`` requirement
-    "Learned-Performance Fitness" and ``design.md`` Decision 5 for the
-    full contract.
     """
 
     def evaluate(
@@ -289,8 +284,8 @@ class LearnedPerformanceFitness:
         seed: int,
     ) -> float:
         """Run K train + L eval and return ``eval_successes / L``."""
-        # Defensive guards mirroring M0's EpisodicSuccessRate.evaluate
-        # (fitness.py:207-221) plus the M2-specific evolution-block guard.
+        # Defensive guards mirroring EpisodicSuccessRate.evaluate, plus
+        # the evolution-block guard specific to learned-performance fitness.
         if sim_config.evolution is None:
             msg = (
                 "LearnedPerformanceFitness requires an `evolution:` block in "

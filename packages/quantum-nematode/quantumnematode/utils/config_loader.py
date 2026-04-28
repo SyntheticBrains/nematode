@@ -970,19 +970,19 @@ class EvolutionConfig(BaseModel):
     # despite the slower per-generation convergence.
     #
     # Default False to preserve back-compat for small-genome campaigns
-    # (e.g. M2's HyperparameterEncoder runs at n<20 where full-cov is
-    # cheap and probably preferable).
+    # — at small n (<20) where the HyperparameterEncoder operates,
+    # full-cov is cheap and probably preferable.
     cma_diagonal: bool = False
-    # M2 hyperparameter-evolution: extra train/eval split for
+    # Hyperparameter-evolution train/eval split for
     # LearnedPerformanceFitness.  When learn_episodes_per_eval > 0 and
     # the CLI selects --fitness learned_performance, each genome
     # evaluation runs K = learn_episodes_per_eval training episodes
     # (brain.learn() fires) followed by L = eval_episodes_per_eval
     # frozen eval episodes.  Default learn_episodes_per_eval=0 means
-    # LearnedPerformanceFitness.evaluate raises (M0 default behaviour
-    # preserved — EpisodicSuccessRate ignores both fields).
+    # LearnedPerformanceFitness.evaluate raises — preserving the
+    # default behaviour where EpisodicSuccessRate ignores both fields.
     learn_episodes_per_eval: int = Field(default=0, ge=0)
-    # None means "fall back to episodes_per_eval" — preserves M0
+    # None means "fall back to episodes_per_eval" — preserves the
     # default behaviour for that field.
     eval_episodes_per_eval: int | None = Field(default=None, ge=1)
 
@@ -996,9 +996,6 @@ class ParamSchemaEntry(BaseModel):
     time both for type-conditional metadata correctness (this
     validator) and for field-name correctness against the resolved
     brain config (the SimulationConfig validator).
-
-    See ``openspec/specs/evolution-framework/spec.md`` requirement
-    "Hyperparameter Schema YAML" for the full contract.
     """
 
     name: str
@@ -1107,12 +1104,12 @@ class SimulationConfig(BaseModel):
     environment: EnvironmentConfig | None = None
     multi_agent: MultiAgentConfig | None = None
     evolution: EvolutionConfig | None = None
-    # M2 hyperparameter evolution: top-level list of param-schema entries.
-    # When None (the default), runs use M0 weight-evolution dispatch.
-    # When set, the run is a hyperparameter-evolution run and
-    # select_encoder() returns a HyperparameterEncoder regardless of
-    # brain.name.  See ``openspec/specs/evolution-framework/spec.md``
-    # requirement "Hyperparameter Schema YAML" for the full contract.
+    # Hyperparameter-evolution schema: top-level list of param-schema
+    # entries.  When None (the default), runs use weight-evolution
+    # dispatch.  When set, the run is a hyperparameter-evolution run
+    # and select_encoder() returns a HyperparameterEncoder regardless
+    # of brain.name.  See the evolution-framework capability spec for
+    # the full contract.
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")
@@ -1130,8 +1127,7 @@ class SimulationConfig(BaseModel):
         3. brain name valid — walk the schema entries and check every
            entry.name is a real field on the resolved brain config
            Pydantic model.  Without this, Pydantic v2 model_copy(update=)
-           silently no-ops typos and produces unevolved genomes (see
-           Decision 2 in design.md).
+           silently no-ops typos and produces unevolved genomes.
         """
         if self.hyperparam_schema is None:
             return self

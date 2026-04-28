@@ -136,10 +136,10 @@ def parse_arguments() -> argparse.Namespace:
         default="success_rate",
         help=(
             "Fitness function to evolve against. 'success_rate' "
-            "(EpisodicSuccessRate, M0 default) is frozen-weight evaluation. "
-            "'learned_performance' (LearnedPerformanceFitness, M2) runs K "
-            "training episodes followed by L frozen eval episodes per "
-            "genome — only valid with hyperparam_schema set."
+            "(EpisodicSuccessRate, the default) is frozen-weight "
+            "evaluation. 'learned_performance' (LearnedPerformanceFitness) "
+            "runs K training episodes followed by L frozen eval episodes "
+            "per genome — only valid with hyperparam_schema set."
         ),
     )
     return parser.parse_args()
@@ -248,12 +248,11 @@ def main() -> int:
         return 1
 
     brain_name = sim_config.brain.name
-    # M2: select_encoder dispatches by hyperparam_schema presence.
-    # When set, returns HyperparameterEncoder regardless of registry
-    # membership (so brains without weight encoders are still
-    # reachable for hyperparameter evolution — see Decision 0 in
-    # design.md).  When None, falls back to the M0
-    # get_encoder(brain.name) path which raises ValueError for brains
+    # select_encoder dispatches by hyperparam_schema presence.  When
+    # set, returns HyperparameterEncoder regardless of registry
+    # membership — so brains without weight encoders are still
+    # reachable for hyperparameter evolution.  When None, falls back
+    # to get_encoder(brain.name) which raises ValueError for brains
     # not in ENCODER_REGISTRY.
     try:
         encoder = select_encoder(sim_config)
@@ -261,22 +260,24 @@ def main() -> int:
         logger.error(str(exc))
         return 1
 
-    # M2: --fitness flag dispatches between EpisodicSuccessRate (M0
+    # --fitness flag dispatches between EpisodicSuccessRate (the
     # default, frozen-weight) and LearnedPerformanceFitness (K train +
     # L eval).  When learned_performance is selected, validate guards:
     # hyperparam_schema must be set (otherwise we'd combine a weight
     # encoder with LearnedPerformanceFitness — Lamarckian inheritance,
-    # M3 scope), AND learn_episodes_per_eval must be > 0.
+    # which is out of scope here), AND learn_episodes_per_eval must
+    # be > 0.
     if args.fitness == "learned_performance":
         if sim_config.hyperparam_schema is None:
             logger.error(
                 "--fitness learned_performance requires hyperparam_schema "
                 "to be set in the YAML.  Combining a weight encoder with "
                 "LearnedPerformanceFitness would amount to Lamarckian "
-                "inheritance, which is M3 scope.  For weight-evolution "
-                "campaigns, use --fitness success_rate (EpisodicSuccessRate, "
-                "the default).  To switch to hyperparameter evolution, "
-                "author a hyperparam_schema: block in the YAML.",
+                "inheritance, which is out of scope for this fitness.  "
+                "For weight-evolution campaigns, use --fitness success_rate "
+                "(EpisodicSuccessRate, the default).  To switch to "
+                "hyperparameter evolution, author a hyperparam_schema: "
+                "block in the YAML.",
             )
             return 1
         if evolution_config.learn_episodes_per_eval == 0:
@@ -303,7 +304,7 @@ def main() -> int:
     if log_path is not None:
         logger.info("Log file: %s", log_path)
 
-    # Prominent startup logging (per task 7.7).
+    # Prominent startup logging.
     logger.info("=" * 60)
     logger.info("Brain type:    %s", brain_name)
     logger.info("Algorithm:     %s", evolution_config.algorithm)

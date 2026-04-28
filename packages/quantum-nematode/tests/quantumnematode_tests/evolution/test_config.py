@@ -152,7 +152,7 @@ def test_cma_diagonal_yaml_propagates_to_optimizer_options(tmp_path: Path) -> No
 
 
 # =============================================================================
-# Phase 1: ParamSchemaEntry + SimulationConfig.hyperparam_schema
+# ParamSchemaEntry + SimulationConfig.hyperparam_schema
 # =============================================================================
 
 
@@ -314,7 +314,7 @@ def test_hyperparam_schema_unknown_brain_name(tmp_path: Path) -> None:
 
 
 # =============================================================================
-# Phase 2: EvolutionConfig.learn_episodes_per_eval + eval_episodes_per_eval
+# EvolutionConfig.learn_episodes_per_eval + eval_episodes_per_eval
 # =============================================================================
 
 

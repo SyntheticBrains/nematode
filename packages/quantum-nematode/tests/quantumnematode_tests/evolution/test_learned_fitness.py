@@ -105,7 +105,7 @@ def test_no_evolution_block_raises() -> None:
 
 
 def test_no_environment_raises() -> None:
-    """Missing environment: block SHALL raise (mirrors M0 EpisodicSuccessRate)."""
+    """Missing environment: block SHALL raise (mirrors EpisodicSuccessRate)."""
     sim_config = _make_sim_config_with_schema(learn_eps=2)
     sim_config = sim_config.model_copy(update={"environment": None})
     encoder = HyperparameterEncoder()
@@ -116,7 +116,7 @@ def test_no_environment_raises() -> None:
 
 
 def test_no_reward_raises() -> None:
-    """Missing reward: block SHALL raise (mirrors M0 EpisodicSuccessRate)."""
+    """Missing reward: block SHALL raise (mirrors EpisodicSuccessRate)."""
     sim_config = _make_sim_config_with_schema(learn_eps=2)
     sim_config = sim_config.model_copy(update={"reward": None})
     encoder = HyperparameterEncoder()
@@ -144,7 +144,7 @@ def test_k0_raises_with_episodic_success_rate_hint() -> None:
 def test_eval_env_is_fresh_create_env_called_twice() -> None:
     """``create_env_from_config`` SHALL be called exactly twice per evaluate.
 
-    Once for train env, once for eval env.  Locks Decision 5's
+    Once for train env, once for eval env.  Locks the
     fresh-env-on-eval invariant in.
     """
     sim_config = _make_sim_config_with_schema(learn_eps=1, eval_eps=1)
@@ -166,7 +166,7 @@ def test_eval_env_is_fresh_create_env_called_twice() -> None:
 def test_eval_phase_does_not_call_learn() -> None:
     """During L eval episodes, brain.learn() SHALL NOT be called.
 
-    Mirrors M0's test_frozen_eval_runner_never_calls_learn approach.
+    Mirrors the test_frozen_eval_runner_never_calls_learn approach.
     """
     sim_config = _make_sim_config_with_schema(learn_eps=1, eval_eps=2)
     encoder = HyperparameterEncoder()

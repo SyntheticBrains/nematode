@@ -102,7 +102,7 @@ def test_loop_best_params_json_round_trips_back_to_brain(tmp_path: Path) -> None
 
 
 # ---------------------------------------------------------------------------
-# Lineage row count (Phase 9 verification)
+# Lineage row count
 # ---------------------------------------------------------------------------
 
 
@@ -304,7 +304,7 @@ def test_init_worker_sets_perf_policy() -> None:
 
 
 # =============================================================================
-# Phase 4.5: birth_metadata wiring + brain_type fallback
+# Hyperparameter-evolution wiring: birth_metadata + brain_type fallback
 # =============================================================================
 
 
@@ -376,7 +376,7 @@ def test_loop_populates_param_schema_in_birth_metadata(tmp_path: Path) -> None:
 
 
 def test_loop_birth_metadata_empty_when_no_hyperparam_schema(tmp_path: Path) -> None:
-    """Without hyperparam_schema, birth_metadata SHALL be empty (M0 behaviour)."""
+    """Without hyperparam_schema, birth_metadata SHALL be empty (weight-evolution behaviour)."""
     captured: list = []
 
     class _RecordingFitness:
@@ -385,7 +385,7 @@ def test_loop_birth_metadata_empty_when_no_hyperparam_schema(tmp_path: Path) -> 
             return 0.0
 
     sim_config = load_simulation_config(str(MLPPPO_CONFIG))
-    assert sim_config.hyperparam_schema is None  # M0 config
+    assert sim_config.hyperparam_schema is None  # weight-evolution config
 
     encoder = MLPPPOEncoder()
     ecfg = EvolutionConfig(
@@ -408,7 +408,7 @@ def test_loop_birth_metadata_empty_when_no_hyperparam_schema(tmp_path: Path) -> 
     loop.run()
 
     assert len(captured) > 0
-    # M0 back-compat: birth_metadata is the empty dict (since no schema)
+    # Back-compat: birth_metadata is the empty dict (since no schema)
     for g in captured:
         assert g.birth_metadata == {}
 

@@ -342,7 +342,7 @@ def get_encoder(brain_name: str) -> GenomeEncoder:
 
 
 # ---------------------------------------------------------------------------
-# M2: Hyperparameter encoder + dispatch
+# Hyperparameter encoder + dispatch
 # ---------------------------------------------------------------------------
 
 
@@ -356,9 +356,9 @@ def build_birth_metadata(sim_config: SimulationConfig) -> dict[str, Any]:
     pickles cheaply across worker processes without requiring a Pydantic
     dependency on the worker decode path.
 
-    When ``sim_config.hyperparam_schema is None`` (the M0 weight-evolution
-    path), returns an empty dict so the M0 empty-``birth_metadata``
-    behaviour is preserved verbatim.
+    When ``sim_config.hyperparam_schema is None`` (weight-evolution
+    runs), returns an empty dict so the empty-``birth_metadata``
+    behaviour used by weight encoders is preserved verbatim.
     """
     if sim_config.hyperparam_schema is None:
         return {}
@@ -374,7 +374,7 @@ class HyperparameterEncoder:
     ``sim_config.hyperparam_schema``; the encoder reads the schema from
     ``Genome.birth_metadata["param_schema"]`` (the genome is the source
     of truth in worker processes) and applies the type-appropriate
-    transform per Decision 3:
+    transform:
 
     - float: clip to bounds, then exp() if log_scale=True
     - int: clip to bounds, then int(round(value))
@@ -384,9 +384,9 @@ class HyperparameterEncoder:
     The decoded values are applied to ``sim_config.brain.config`` via
     ``model_copy(update={...})`` and a fresh brain is constructed via
     :func:`instantiate_brain_from_sim_config`.  No weights are loaded —
-    the brain is freshly initialised on every evaluation, and
-    LearnedPerformanceFitness's K-train phase brings it from random
-    init to learned policy.
+    the brain is freshly initialised on every evaluation, and the
+    train phase of :class:`LearnedPerformanceFitness` brings it from
+    random init to learned policy.
 
     The encoder is brain-agnostic: it works for any brain via
     ``sim_config.brain.config`` patching.  ``brain_name`` is set to the
@@ -395,10 +395,10 @@ class HyperparameterEncoder:
     brain-agnosticism — the empty string never collides with a real
     brain name.
 
-    Per Decision 0 in design.md, this encoder is selected via
-    :func:`select_encoder` based on ``sim_config.hyperparam_schema``
-    presence, not via :data:`ENCODER_REGISTRY` lookup.  See the spec
-    scenario "Hyperparameter encoder is NOT in the brain-keyed registry".
+    This encoder is selected via :func:`select_encoder` based on
+    ``sim_config.hyperparam_schema`` presence, not via
+    :data:`ENCODER_REGISTRY` lookup — that registry is reserved for
+    brain-keyed encoders.
     """
 
     brain_name: str = ""
@@ -487,7 +487,7 @@ class HyperparameterEncoder:
         entry: ParamSchemaEntry,
         rng: np.random.Generator,
     ) -> float:
-        """Sample one initial genome float for ``entry`` per Decision 3.
+        """Sample one initial genome float for ``entry`` from the per-type prior.
 
         - float: uniform-in-bounds (or log-uniform when ``log_scale=True``)
         - int: uniform-in-bounds (returned as float, decode rounds)
@@ -521,7 +521,7 @@ class HyperparameterEncoder:
 
     @staticmethod
     def _decode_one(entry_dict: dict[str, Any], value: float) -> Any:  # noqa: ANN401
-        """Apply per-type decode transform per Decision 3.
+        """Apply the per-type decode transform.
 
         Single-method dispatch by ``entry_dict['type']``.  Adding a new
         type means adding a new branch here plus a Literal extension to
@@ -554,14 +554,12 @@ class HyperparameterEncoder:
 def select_encoder(sim_config: SimulationConfig) -> GenomeEncoder:
     """Public dispatch helper: pick the right encoder for a sim_config.
 
-    Per Decision 0 in design.md:
-
     - When ``sim_config.hyperparam_schema is not None``, return a
       :class:`HyperparameterEncoder` directly (NOT via registry —
       brain-agnostic encoders don't pollute the brain-keyed registry).
       This works for any brain in ``BRAIN_CONFIG_MAP`` even if the
       brain has no weight encoder in :data:`ENCODER_REGISTRY`.
-    - Otherwise (the M0 weight-evolution path), return
+    - Otherwise (the weight-evolution path), return
       :func:`get_encoder(sim_config.brain.name)`.
 
     Raises
@@ -572,14 +570,14 @@ def select_encoder(sim_config: SimulationConfig) -> GenomeEncoder:
     """
     if sim_config.hyperparam_schema is not None:
         return HyperparameterEncoder()
-    # M0 path: assume sim_config.brain is non-None (run_evolution.py:233
-    # guards this before loop construction; programmatic callers are
-    # responsible for the same precondition).
+    # Weight-evolution path: caller is responsible for ensuring
+    # sim_config.brain is non-None (the CLI entry point guards this
+    # before loop construction).
     if sim_config.brain is None:  # pragma: no cover — caller-precondition violation
         msg = (
             "select_encoder requires sim_config.brain to be set when "
-            "hyperparam_schema is None.  scripts/run_evolution.py guards "
-            "this at startup; programmatic callers must do the same."
+            "hyperparam_schema is None.  The CLI entry point guards this "
+            "at startup; programmatic callers must do the same."
         )
         raise ValueError(msg)
     return get_encoder(sim_config.brain.name)

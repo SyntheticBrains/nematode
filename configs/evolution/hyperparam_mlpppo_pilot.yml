@@ -1,9 +1,9 @@
-# M2 Hyperparameter Evolution Pilot — MLPPPO arm
+# Hyperparameter Evolution Pilot — MLPPPO
 # ============================================================================
 #
-# This config exercises the M2 framework end-to-end: evolves 7 MLPPPO
-# hyperparameters (3 architectural ints, 4 PPO floats) under
-# LearnedPerformanceFitness against the small-scale foraging baseline.
+# Evolves 7 MLPPPO hyperparameters (3 architectural ints, 4 PPO
+# floats) under LearnedPerformanceFitness against the small-scale
+# foraging baseline.
 #
 # Each genome evaluation:
 #   1. HyperparameterEncoder.decode patches MLPPPOBrainConfig with the
@@ -13,7 +13,7 @@
 #   3. L = eval_episodes_per_eval (5) frozen eval episodes via
 #      FrozenEvalRunner — score = COMPLETED_ALL_FOOD count / L.
 #
-# Decision gate (per Phase 5 milestone tracking M2 section):
+# Decision gate:
 #   - GO if mean success rate across 4 seeds ≥3pp over the hand-tuned
 #     MLPPPO baseline AND fitness still rising at gen 20.
 #   - PIVOT if marginal: rising but separation < 3pp, or > 3pp but flat.
@@ -21,15 +21,12 @@
 #
 # Baseline reference: configs/scenarios/foraging/mlpppo_small_oracle.yml
 # evaluated against the trained brain for 100 eval episodes per seed
-# (static measurement; not 1:1 episode-budget match — see task 8.3).
+# (a static plateau measurement; not a 1:1 episode-budget match with
+# the pilot, since the baseline has no genomes).
 #
-# cma_diagonal: false — n=7 is well within full-cov tractability.  This
-# explicitly matches the EvolutionConfig field default at
-# config_loader.py:975, but writing it in the YAML is intentional
-# documentation: the field-level comment says the default is aligned
-# with M2's HyperparameterEncoder.  PR 3's LSTMPPO pilot will set
-# cma_diagonal: true for its larger genome — having the symmetric
-# value here makes the choice explicit and self-documenting.
+# cma_diagonal: false — n=7 is well within full-cov tractability.
+# This matches the EvolutionConfig field default; writing it
+# explicitly here keeps the pilot YAML self-documenting.
 
 max_steps: 500
 
@@ -37,7 +34,7 @@ brain:
   name: mlpppo
   config:
     # Baseline values mirror configs/scenarios/foraging/mlpppo_small_oracle.yml
-    # (the source of the M2 baseline).  Fields named in hyperparam_schema
+    # (the comparison baseline).  Fields named in hyperparam_schema
     # below are EVOLVED — the values here are starting points / fallbacks
     # for fields NOT in the schema (e.g. clip_epsilon, gae_lambda).
     actor_hidden_dim: 64
