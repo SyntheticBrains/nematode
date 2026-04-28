@@ -3,7 +3,9 @@
 ## Purpose
 
 Brain-agnostic evolutionary optimisation of classical brain initial-weight genomes. Provides the encoder protocol (any brain implementing `WeightPersistence` plugs in via a one-class registration), the frozen-weight fitness function (`EpisodicSuccessRate` — runs episodes via `FrozenEvalRunner` without ever calling `.learn()`), append-only lineage tracking, parallel fitness evaluation, and pickle checkpoint/resume. `MLPPPOEncoder` and `LSTMPPOEncoder` are registered out of the box; future inheritance strategies (Lamarckian, Baldwin), co-evolution loops, and additional encoders extend this framework behind the existing protocols.
+
 ## Requirements
+
 ### Requirement: Genome Encoder Protocol
 
 The system SHALL provide a `GenomeEncoder` protocol allowing any brain implementing `WeightPersistence` to be serialized into a flat parameter genome and reconstructed from one. Concrete encoders SHALL be registered in a central `ENCODER_REGISTRY` keyed by the brain's name. Encoder methods SHALL take the full `SimulationConfig` (not just `BrainConfig`), since fresh-brain construction requires fields scattered across multiple top-level config sections (`shots`, `qubits`, `device`, `learning_rate`, `gradient`, `parameter_initializer`).
@@ -406,4 +408,3 @@ The `SimulationConfig` SHALL accept an optional top-level `hyperparam_schema:` l
 - **THEN** the loop SHALL populate `genome.birth_metadata["param_schema"]` with a list of plain dicts (NOT Pydantic model instances) — one per schema entry, produced via `entry.model_dump()` — so the genome pickles cheaply across worker processes without requiring a Pydantic dependency in the worker's decode path
 - **AND** the worker's `HyperparameterEncoder.decode` SHALL read the schema from `genome.birth_metadata["param_schema"]` WITHOUT requiring a separate side-channel or re-loading the YAML
 - **AND** when `hyperparam_schema is None` on `SimulationConfig`, the loop SHALL leave `genome.birth_metadata` empty (preserves M0 weight-evolution behaviour)
-
