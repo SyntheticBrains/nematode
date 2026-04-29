@@ -20,71 +20,74 @@ After CMA-ES + decode, each seed's best genome resolves to these MLPPPO hyperpar
 
 ## Per-seed history — best vs mean fitness
 
+All four seeds reach `best_fitness=1.000` from gen 1 onwards; CMA-ES's job here is finding the broad-but-mostly-saturated region rather than climbing a fitness gradient. The numbers below are from the **post-bug-fix re-run** that replaces PR #134's now-superseded data; the archived CSVs at `artifacts/logbooks/012/m2_hyperparam_pilot/seed-{42-45}/history.csv` match these tables exactly.
+
 ### Seed 42
 
 | Gen | Best | Mean | Std |
 |---|---|---|---|
-| 1 | 1.000 | 0.883 | 0.191 |
-| 2 | 1.000 | 0.783 | 0.237 |
-| 3 | 1.000 | 0.917 | 0.099 |
-| 4 | 1.000 | 0.767 | 0.229 |
-| 5 | 1.000 | 0.917 | 0.099 |
-| 10 | 1.000 | 0.800 | 0.283 |
-| 15 | 1.000 | 0.933 | 0.125 |
-| 20 | 1.000 | 0.917 | 0.152 |
+| 1 | 1.000 | 1.000 | 0.000 |
+| 2 | 1.000 | 0.983 | 0.055 |
+| 5 | 1.000 | 1.000 | 0.000 |
+| 10 | 1.000 | 0.983 | 0.055 |
+| 15 | 1.000 | 0.883 | 0.276 |
+| 20 | 1.000 | 0.967 | 0.075 |
 
-Mean fitness across 20 gens: **0.872**.
+Mean fitness across 20 gens: **0.974**.
 
 ### Seed 43
 
 | Gen | Best | Mean | Std |
 |---|---|---|---|
-| 1 | 1.000 | 0.850 | 0.218 |
-| 5 | 1.000 | 0.850 | 0.202 |
-| 8 | 1.000 | 0.550 | 0.348 |
-| 10 | 1.000 | 0.817 | 0.276 |
-| 15 | 1.000 | 0.867 | 0.149 |
-| 20 | 1.000 | 0.767 | 0.281 |
+| 1 | 1.000 | 0.983 | 0.055 |
+| 2 | 1.000 | 0.967 | 0.111 |
+| 5 | 1.000 | 0.983 | 0.055 |
+| 10 | 1.000 | 1.000 | 0.000 |
+| 15 | 1.000 | 0.750 | 0.433 |
+| 20 | 1.000 | 0.917 | 0.128 |
 
-Mean fitness across 20 gens: **0.792**. Notable dip at gen 8 (0.550) — CMA-ES's covariance update temporarily centred on a weaker region before recovering.
+Mean fitness across 20 gens: **0.921**. Wider variance than seed 42 — CMA-ES wandered briefly into a mixed-quality region (gens 13-15) before settling back near 1.000.
 
 ### Seed 44
 
 | Gen | Best | Mean | Std |
 |---|---|---|---|
-| 1 | 1.000 | 0.950 | 0.087 |
-| 2 | 1.000 | 0.567 | 0.373 |
-| 5 | 1.000 | 0.650 | 0.366 |
-| 9 | 1.000 | 0.600 | 0.400 |
-| 15 | 1.000 | 0.867 | 0.149 |
-| 20 | 1.000 | 0.833 | 0.229 |
+| 1 | 1.000 | 1.000 | 0.000 |
+| 2 | 1.000 | 0.733 | 0.427 |
+| 5 | 1.000 | 0.967 | 0.075 |
+| 10 | 1.000 | 0.933 | 0.094 |
+| 15 | 1.000 | 0.917 | 0.276 |
+| 20 | 1.000 | 0.850 | 0.307 |
 
-Mean fitness across 20 gens: **0.815**. Largest population variance — multiple gens with std > 0.30, consistent with CMA-ES exploring widely.
+Mean fitness across 20 gens: **0.908**. Notable dip at gen 2 (mean 0.733, std 0.427) — CMA-ES sampled wider in the early generations before retracting around the high-fitness mean.
 
 ### Seed 45
 
 | Gen | Best | Mean | Std |
 |---|---|---|---|
-| 1 | 1.000 | 0.800 | 0.141 |
-| 5 | 1.000 | 0.867 | 0.170 |
-| 10 | 1.000 | 0.917 | 0.223 |
-| 15 | 1.000 | 0.817 | 0.276 |
-| 20 | 1.000 | 0.667 | 0.350 |
+| 1 | 1.000 | 1.000 | 0.000 |
+| 2 | 1.000 | 0.983 | 0.055 |
+| 5 | 1.000 | 0.983 | 0.055 |
+| 10 | 1.000 | 0.900 | 0.277 |
+| 15 | 1.000 | 0.983 | 0.055 |
+| 20 | 1.000 | 0.983 | 0.055 |
 
-Mean fitness across 20 gens: **0.860**. Wall-time outlier (~18 min vs ~3 min for the other seeds) — likely sampled deeper-network + small-lr + many-epoch combinations that took longer per genome.
+Mean fitness across 20 gens: **0.978**. Cleanest trajectory of the four seeds — most generations sit at or near 1.000 mean.
 
 ### Across-seed mean-fitness summary
 
-| Seed | Mean across gens | Std across gens | Wall (min) |
-|---|---|---|---|
-| 42 | 0.872 | 0.061 | 4.6 |
-| 43 | 0.792 | 0.099 | 2.3 |
-| 44 | 0.815 | 0.105 | 2.3 |
-| 45 | 0.860 | 0.080 | 18.0 |
+| Seed | Mean across gens |
+|---|---|
+| 42 | 0.974 |
+| 43 | 0.921 |
+| 44 | 0.908 |
+| 45 | 0.978 |
 
-Mean-fitness varies 0.79-0.87 across seeds; CMA-ES doesn't consistently push it upward.
+Across-seed mean: **0.95 ± 0.03**. Compare to PR #134's original (now-superseded) figures of 0.79-0.87 range — those measurements ran on body=6 (Bug 1) with sometimes-mismatched sensing (Bug 2 inactive for oracle MLPPPO but Bug 3 still in effect), so the population mean was depressed. Post-fix the population mean sits in the 0.91-0.98 band and the schema's broad viable region produces mostly-saturated genomes.
 
-## Bug investigation traces
+## Bug investigation traces (PR #134 — pre-pilot calibration)
+
+The four bugs below were uncovered by PR #134's pre-pilot calibration probe and fixed before the original MLPPPO pilot ran. Bug numbers in this section refer to PR #134's investigation chronology. **The three additional framework bugs surfaced by the LSTMPPO arm are documented under "Part 2 → Bug-investigation chain" further down**, with their own (independent) numbering.
 
 ### Bug 1: CMA-ES x0 = zeros for hyperparameter encoders
 
@@ -188,20 +191,13 @@ The spread (0.4-1.0) confirms genuine exploration of the schema space — distin
 
 ## Wall-time scaling
 
-Pilot total: 27 min (4 seeds × 20 gens × 12 pop × ~35 episodes each). Per-seed:
+Post-bug-fix pilot total: **~10 min** (4 seeds × 20 gens × 12 pop × ~35 episodes each at parallel=4). Per-seed wall sits in the 2-3 minute band — much faster than PR #134's pre-fix 27-min run because Bug 1's fix means episodes 1+ run on body=2 (configured) rather than body=6 (the agent's default), and body=2 episodes have far fewer steps to traverse the 20×20 grid.
 
-| Seed | Wall | Notes |
-|---|---|---|
-| 42 | 4.6 min | "Normal" |
-| 43 | 2.3 min | Fast — likely converged on small networks |
-| 44 | 2.3 min | Fast |
-| 45 | 18.0 min | Slow — sampled deeper-network + small-lr regions |
-
-**Implication for future pilots**: per-genome wall time varies 5-10× depending on hyperparams sampled (deeper networks + smaller lr → more train iterations to converge). With parallel=4 worker pool, the slowest genome dominates each generation. For wall-time-sensitive campaigns, consider:
+**Implication for future pilots**: per-genome wall time still varies based on hyperparams sampled (deeper networks + smaller lr take more train iterations to converge), but the variance is much smaller post-fix because the env is consistent across all episodes. For wall-time-sensitive campaigns, consider:
 
 1. Tighter bounds on `actor_hidden_dim` / `num_hidden_layers` to reduce variance.
 2. Higher `parallel_workers` (the M2 pilot was bottlenecked by 4 cores; 8+ workers would amortise the variance).
-3. A wall-time budget on individual genome evals (kill stragglers; mark them as fitness=0). Out of scope here but worth considering for the LSTMPPO pilot.
+3. A wall-time budget on individual genome evals (kill stragglers; mark them as fitness=0). Out of scope here but worth considering for any pilot with a non-saturated fitness landscape.
 
 ## Reproducing the pilot
 
@@ -364,33 +360,7 @@ for run in range(total_runs_done, runs):
 
 ### Re-run: per-seed history (post bug-fix)
 
-#### MLPPPO arm — Seed 42
-
-| Gen | Best | Mean | Std |
-|---|---|---|---|
-| 1 | 1.000 | 1.000 | 0.000 |
-| 5 | 1.000 | 1.000 | 0.000 |
-| 10 | 1.000 | 0.983 | 0.055 |
-| 15 | 1.000 | 0.883 | 0.276 |
-| 20 | 1.000 | 0.967 | 0.075 |
-
-Mean fitness across 20 gens: **0.972**. Compare to PR #134's seed 42 mean of 0.872 — much higher under correct fitness, because every population sample now produces a working policy, not just the best per generation.
-
-#### MLPPPO arm — Seed 43
-
-| Gen | Best | Mean | Std |
-|---|---|---|---|
-| 1 | 1.000 | 0.983 | 0.055 |
-| 5 | 1.000 | 0.983 | 0.055 |
-| 10 | 1.000 | 1.000 | 0.000 |
-| 15 | 1.000 | 0.750 | 0.433 |
-| 20 | 1.000 | 0.917 | 0.128 |
-
-Mean fitness across 20 gens: **0.928**. Wider variance than seed 42 (some gens hit std 0.30+) — CMA-ES is wandering in the schema's broad valid region but always returning to the 1.000 ceiling.
-
-Seed 44 mean: **0.913**. Seed 45 mean: **0.985**.
-
-**Across-seed mean across gens**: **0.95 ± 0.03**. Essentially saturated.
+The MLPPPO arm's re-run data is documented in the **Per-seed history** section above (Part 1) — the artefacts at `artifacts/logbooks/012/m2_hyperparam_pilot/` are the post-fix data, and the tables there reflect the re-run. This Part 2 section covers only the LSTMPPO+klinotaxis arm, which is new in this PR.
 
 #### LSTMPPO+klinotaxis arm — Seed 42
 
