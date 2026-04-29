@@ -115,7 +115,7 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     lines: list[str] = []
     lines.append("# M2 Hyperparameter-Evolution Pilot — Summary")
     lines.append("")
-    lines.append("## Per-seed best fitness (eval-phase success rate, L=5)")
+    lines.append("## Per-seed best fitness (frozen-eval success rate)")
     lines.append("")
     # Detect a unified target generation rather than hard-coding "20" —
     # truncated runs (e.g. crash recovery, --generations override) and
@@ -194,7 +194,7 @@ def _format_summary(  # noqa: PLR0913, PLR0915
     )
     lines.append("")
 
-    lines.append("## Baseline (hand-tuned MLPPPO, 100 episodes per seed)")
+    lines.append("## Baseline (hand-tuned brain, 100 episodes per seed)")
     lines.append("")
     lines.append("| Seed | Success rate |")
     lines.append("|------|--------------|")

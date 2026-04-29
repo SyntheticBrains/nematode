@@ -22,10 +22,12 @@ from quantumnematode.brain.arch.dtypes import (
 from quantumnematode.optimizers.gradient_methods import GradientCalculationMethod
 from quantumnematode.utils.brain_factory import setup_brain_model
 from quantumnematode.utils.config_loader import (
+    apply_sensing_mode,
     configure_brain,
     configure_gradient_method,
     configure_learning_rate,
     configure_parameter_initializer,
+    validate_sensing_config,
 )
 
 if TYPE_CHECKING:
@@ -74,6 +76,28 @@ def instantiate_brain_from_sim_config(
     if seed is not None:
         overrides["seed"] = seed
     brain_config = brain_config.model_copy(update=overrides)
+
+    # Sensing-mode translation: when the env's chemotaxis_mode (or any
+    # other sensing mode) is non-oracle, the brain's ``sensory_modules``
+    # MUST be translated from the oracle name (e.g. ``food_chemotaxis``)
+    # to the mode-specific name (e.g. ``food_chemotaxis_klinotaxis``).
+    # Without this translation the brain receives oracle gradient inputs
+    # while the env runs in klinotaxis mode — feature dimensions don't
+    # match and learning silently fails.  ``run_simulation.py`` does this
+    # at [run_simulation.py:381]; we mirror that pattern here.
+    if sim_config.environment is not None and sim_config.environment.sensing is not None:
+        sensing_config = validate_sensing_config(sim_config.environment.sensing)
+        sensory_modules_attr = getattr(brain_config, "sensory_modules", None)
+        if sensory_modules_attr is not None:
+            from quantumnematode.brain.modules import ModuleName
+
+            original_modules = [m.value for m in sensory_modules_attr]
+            translated = apply_sensing_mode(original_modules, sensing_config)
+            translated_modules = [ModuleName(m) for m in translated]
+            if translated_modules != list(sensory_modules_attr):
+                brain_config = brain_config.model_copy(
+                    update={"sensory_modules": translated_modules},
+                )
 
     # Convert config-shaped fields to runtime objects via existing helpers.
     # configure_gradient_method takes a default + sim_config and returns a

@@ -1,17 +1,17 @@
 # M2 Hyperparameter-Evolution Pilot — Summary
 
-## Per-seed best fitness (eval-phase success rate, L=5)
+## Per-seed best fitness (frozen-eval success rate)
 
 | Seed | Gen 1 best | Gen 20 best | Mean across gens | Best params (lr, gamma, ...) |
 |------|-----------|-------------|------------------|------------------------------|
 | 42 | 1.000 | 1.000 | 1.000 | [223.91, 125.15, 2.93, ...] |
 | 43 | 1.000 | 1.000 | 1.000 | [187.72, 7.89, 0.91, ...] |
 | 44 | 1.000 | 1.000 | 1.000 | [31.43, 138.96, 2.23, ...] |
-| 45 | 1.000 | 1.000 | 1.000 | [127.78, 165.09, 2.84, ...] |
+| 45 | 1.000 | 1.000 | 1.000 | [161.37, 160.10, 2.40, ...] |
 
 **Pilot mean (gen-20 best across seeds)**: 1.000 ± 0.000
 
-## Baseline (hand-tuned MLPPPO, 100 episodes per seed)
+## Baseline (hand-tuned brain, 100 episodes per seed)
 
 | Seed | Success rate |
 |------|--------------|

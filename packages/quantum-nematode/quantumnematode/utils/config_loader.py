@@ -985,6 +985,18 @@ class EvolutionConfig(BaseModel):
     # None means "fall back to episodes_per_eval" — preserves the
     # default behaviour for that field.
     eval_episodes_per_eval: int | None = Field(default=None, ge=1)
+    # Optional warm-start checkpoint for LearnedPerformanceFitness.  When
+    # set, every genome's brain is loaded with the checkpoint's weights
+    # AFTER ``encoder.decode`` and BEFORE the K train phase, so the K
+    # episodes fine-tune the checkpoint under the genome's evolved
+    # hyperparameters rather than training from scratch.  Incompatible
+    # with hyperparam_schema entries that change tensor shapes
+    # (architecture fields like ``actor_hidden_dim``, ``lstm_hidden_dim``,
+    # ``rnn_type``); those are rejected at YAML load time by
+    # ``SimulationConfig._validate_hyperparam_schema``.  When None
+    # (default), behaviour is unchanged: fresh-init weights from
+    # ``encoder.decode``, no load step.
+    warm_start_path: Path | None = None
 
 
 class ParamSchemaEntry(BaseModel):
@@ -1164,7 +1176,12 @@ class SimulationConfig(BaseModel):
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")
-    def _validate_hyperparam_schema(self) -> "SimulationConfig":
+    def _validate_hyperparam_schema(self) -> "SimulationConfig":  # noqa: C901
+        # C901 (too complex): this validator is a sequence of independent
+        # guards (None-skip, empty-list, duplicate-name, brain-block-missing,
+        # brain-name-unknown, field-name-unknown, warm-start-arch-incompat).
+        # Splitting into helpers fragments the contract; each guard is a
+        # single small block that's easier to read in sequence.
         """Cross-check hyperparam_schema entries against the brain config.
 
         Three defensive cases handled up-front (so users get clear
@@ -1244,7 +1261,56 @@ class SimulationConfig(BaseModel):
                 )
                 raise ValueError(msg)
 
+        # Warm-start incompatibility: an evolved architecture field would
+        # reshape some layer's state_dict, which ``load_weights`` would then
+        # either crash on or silently mis-load.  Reject at load time so the
+        # 100-genome x 20-generation campaign doesn't discover the problem
+        # mid-run.
+        if self.evolution is not None and self.evolution.warm_start_path is not None:
+            offenders = sorted(
+                {entry.name for entry in self.hyperparam_schema} & _ARCHITECTURE_CHANGING_FIELDS,
+            )
+            if offenders:
+                msg = (
+                    "evolution.warm_start_path is set but hyperparam_schema "
+                    f"contains architecture-changing entries: {offenders}.  "
+                    "Warm-start loads a fixed-shape checkpoint; the genome "
+                    "cannot reshape the brain at the same time.  Either "
+                    "(a) drop the architecture entries from the schema and "
+                    "evolve only non-architecture fields (learning rates, "
+                    "gamma, entropy, etc.), or (b) drop warm_start_path and "
+                    "let each genome train from a fresh init."
+                )
+                raise ValueError(msg)
+
         return self
+
+
+# Brain-config fields whose values change tensor shapes (and therefore the
+# ``state_dict`` layout) when the brain is constructed.  A warm-start
+# checkpoint is saved with one specific shape; loading it into a brain that
+# the genome has reshaped via one of these fields would either crash with a
+# state_dict mismatch or silently load the wrong slices.  Rejected at YAML
+# load time when ``evolution.warm_start_path`` is set.
+#
+# This list is intentionally hand-curated rather than introspected.  The
+# alternative (instantiate two brains with two values, diff state_dicts)
+# is significantly more code for a constant that changes very rarely —
+# new architecture fields land via PR review.  Update this set when
+# adding architecture-changing fields to a brain config.
+_ARCHITECTURE_CHANGING_FIELDS: frozenset[str] = frozenset(
+    {
+        # MLPPPO
+        "actor_hidden_dim",
+        "critic_hidden_dim",
+        "num_hidden_layers",
+        # LSTMPPO
+        "actor_num_layers",
+        "critic_num_layers",
+        "lstm_hidden_dim",
+        "rnn_type",
+    },
+)
 
 
 class PlasticityPhaseConfig(BaseModel):

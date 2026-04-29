@@ -278,7 +278,7 @@ The system SHALL provide a `HyperparameterEncoder` that conforms to the existing
 
 ### Requirement: Learned-Performance Fitness
 
-The system SHALL provide a `LearnedPerformanceFitness` that conforms to the existing `FitnessFunction` protocol and computes a genome's fitness by running K training episodes (where `brain.learn()` IS called) followed by L frozen eval episodes (using the existing `FrozenEvalRunner`). K is read from `evolution.learn_episodes_per_eval` (no CLI override). L is `evolution.eval_episodes_per_eval` if set in YAML, else falls back to the protocol's `episodes` kwarg (which the loop wires from the resolved `evolution_config.episodes_per_eval`, including any `--episodes` CLI override). The score SHALL be the eval-phase success ratio `eval_successes / L`. `LearnedPerformanceFitness` SHALL be a peer of M0's `EpisodicSuccessRate` and the choice between them SHALL be controllable from the CLI.
+The system SHALL provide a `LearnedPerformanceFitness` that conforms to the existing `FitnessFunction` protocol and computes a genome's fitness by running K training episodes (where `brain.learn()` IS called) followed by L frozen eval episodes (using the existing `FrozenEvalRunner`). K is read from `evolution.learn_episodes_per_eval` (no CLI override). L is `evolution.eval_episodes_per_eval` if set in YAML, else falls back to the protocol's `episodes` kwarg (which the loop wires from the resolved `evolution_config.episodes_per_eval`, including any `--episodes` CLI override). The score SHALL be the eval-phase success ratio `eval_successes / L`. `LearnedPerformanceFitness` SHALL be a peer of M0's `EpisodicSuccessRate` and the choice between them SHALL be controllable from the CLI. Optionally, `evolution.warm_start_path` MAY name a `.pt` checkpoint (produced by the existing `save_weights` helper); when set, each genome's brain SHALL be loaded with the checkpoint's weights AFTER `encoder.decode` and BEFORE the K train phase, so the K episodes fine-tune the checkpoint under the genome's evolved hyperparameters rather than training from scratch.
 
 #### Scenario: Train phase mutates weights, eval phase does not
 
@@ -348,6 +348,31 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **THEN** startup SHALL fail with a clear error stating that learned-performance fitness is only valid for hyperparameter evolution, with the rationale that the weight-encoder + learned-performance combination would amount to Lamarckian inheritance (M3 scope, not M2)
 - **AND** the error SHALL point the user to `EpisodicSuccessRate` (frozen-weight) for weight-evolution campaigns or to authoring a `hyperparam_schema:` block to switch to hyperparameter evolution
 - **AND** the schema-presence check SHALL fire BEFORE the `learn_episodes_per_eval > 0` check, so a config with neither `hyperparam_schema` nor `learn_episodes_per_eval` set produces the schema-missing error (the more fundamental issue), not the field-missing error
+
+#### Scenario: Warm-start path loads weights before train phase
+
+- **GIVEN** an `EvolutionConfig` with `warm_start_path` set to a valid `.pt` checkpoint produced by `save_weights`
+- **AND** a `hyperparam_schema` whose entries name only non-architecture brain-config fields (i.e. fields that do not change tensor shapes — `actor_lr`, `critic_lr`, `gamma`, `entropy_coef`, `num_epochs`, etc.; NOT `actor_hidden_dim`, `lstm_hidden_dim`, `rnn_type`, `num_hidden_layers`)
+- **WHEN** `LearnedPerformanceFitness.evaluate` is invoked
+- **THEN** after `encoder.decode(genome)` produces the fresh brain and BEFORE the first train episode, `load_weights(brain, warm_start_path)` SHALL be called
+- **AND** the K train episodes SHALL run against the warm-started brain (so per-genome learning starts from the checkpointed weights, not random init)
+- **AND** the genome's evolved hyperparameters (e.g. `actor_lr`) SHALL govern the K train episodes — optimiser state on the loaded checkpoint is reset by the existing `load_weights` semantics, so each genome fine-tunes from the checkpointed weights under its own hyperparameters
+- **AND** when `warm_start_path is None` (the default), behaviour SHALL be identical to today: fresh random weights from `encoder.decode`, no load step
+
+#### Scenario: Warm-start incompatible with architecture-changing schema entries
+
+- **GIVEN** a `SimulationConfig` with `evolution.warm_start_path` set
+- **AND** a `hyperparam_schema` containing at least one entry whose `name` references a brain-config field that changes tensor shapes (e.g. `actor_hidden_dim`, `critic_hidden_dim`, `num_hidden_layers`, `actor_num_layers`, `critic_num_layers`, `lstm_hidden_dim`, `rnn_type`)
+- **WHEN** the `SimulationConfig` is validated at YAML load time
+- **THEN** validation SHALL fail with a clear error naming the offending fields and explaining that warm-start cannot load a fixed-shape checkpoint into a brain whose architecture varies per-genome
+- **AND** the error SHALL point the user to either (a) drop the architecture fields from the schema, or (b) drop `warm_start_path` (returning to fresh-init evaluation)
+
+#### Scenario: Warm-start path missing or unreadable raises a clear error
+
+- **GIVEN** an `EvolutionConfig` with `warm_start_path` set to a path that does not exist on disk
+- **WHEN** the first `LearnedPerformanceFitness.evaluate` call begins
+- **THEN** a `FileNotFoundError` SHALL be raised with a message naming `warm_start_path` and the resolved absolute path
+- **AND** the error SHALL fire BEFORE any train or eval episode runs (so a 100-genome × 20-generation run does not waste hours discovering a missing file mid-campaign)
 
 ### Requirement: Hyperparameter Schema YAML
 

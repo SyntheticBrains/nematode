@@ -19,11 +19,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from quantumnematode.agent.agent import QuantumNematodeAgent
+from quantumnematode.agent.agent import DEFAULT_MAX_AGENT_BODY_LENGTH, QuantumNematodeAgent
 from quantumnematode.agent.runners import StandardEpisodeRunner
+from quantumnematode.brain.weights import load_weights
 from quantumnematode.env.theme import Theme
 from quantumnematode.report.dtypes import TerminationReason
 from quantumnematode.utils.config_loader import create_env_from_config
+from quantumnematode.utils.seeding import derive_run_seed, get_rng, set_global_seed
 
 if TYPE_CHECKING:
     from quantumnematode.agent.runners import EpisodeResult
@@ -149,13 +151,47 @@ def _build_agent(
 
     Pulls ``satiety_config`` and ``sensing_config`` from ``sim_config``; other
     constructor kwargs use defaults (theme/rich_style_config are presentation-
-    only; agent_id defaults to "default"; maze_grid_size and max_body_length
-    are unused when an explicit ``env`` is provided).
+    only; agent_id defaults to "default"; maze_grid_size is unused when an
+    explicit ``env`` is provided).
+
+    ``max_body_length`` MUST be threaded through from ``sim_config`` because
+    although the explicit ``env`` already has the correct body length, the
+    agent stores its own ``self.max_body_length`` and uses it when
+    ``agent.reset_environment()`` rebuilds the env between episodes
+    ([agent.py:1122]).  Omitting this kwarg lets the agent default to
+    ``DEFAULT_MAX_AGENT_BODY_LENGTH = 6``, so the FIRST episode runs against
+    the configured body length but every SUBSEQUENT episode silently runs
+    with body=6 — a fundamentally different (much harder) task.  This
+    silently corrupted every multi-episode fitness evaluation prior to this
+    fix.
     """
-    sensing = sim_config.environment.sensing if sim_config.environment else None
+    # Mirror run_simulation.py's pattern: pass the validated sensing
+    # config (which auto-enables STAM when klinotaxis/derivative modes
+    # are active) rather than the raw env-block sensing.  Most pilot
+    # YAMLs set ``stam_enabled: true`` explicitly so this is usually a
+    # no-op, but matching the canonical path means evolution configs
+    # behave identically to scenario configs even if a user forgets the
+    # explicit ``stam_enabled`` line.
+    if sim_config.environment is not None and sim_config.environment.sensing is not None:
+        from quantumnematode.utils.config_loader import validate_sensing_config
+
+        sensing = validate_sensing_config(sim_config.environment.sensing)
+    else:
+        sensing = None
+    # ``sim_config.body_length`` is ``int | None`` (default ``None``); the
+    # agent constructor expects a non-optional ``int`` and applies its own
+    # default when the YAML omitted the field.  Mirror that fallback here
+    # so pyright stays happy and the runtime behaviour for unset YAML is
+    # unchanged.
+    body_length = (
+        sim_config.body_length
+        if sim_config.body_length is not None
+        else DEFAULT_MAX_AGENT_BODY_LENGTH
+    )
     return QuantumNematodeAgent(
         brain=brain,
         env=env,
+        max_body_length=body_length,
         satiety_config=sim_config.satiety,
         sensing_config=sensing,
     )
@@ -228,6 +264,12 @@ class EpisodicSuccessRate:
 
         successes = 0
         for ep_idx in range(episodes):
+            # Per-episode seed derivation matches run_simulation.py's
+            # per-run pattern.  Without it the global RNG drifts
+            # monotonically and every reset rebuilds the env from the
+            # original seed → identical layouts every episode.
+            run_seed = derive_run_seed(seed, ep_idx)
+            set_global_seed(run_seed)
             # Reset the env between episodes so each starts from a clean
             # initial state (food respawn, agent at start position, full
             # satiety).  Without this, a failed episode leaves the env
@@ -235,6 +277,8 @@ class EpisodicSuccessRate:
             # inherit the failure.  Matches the agent.reset_environment
             # pattern used by run_simulation.py between runs.
             if ep_idx > 0:
+                agent.env.seed = run_seed
+                agent.env.rng = get_rng(run_seed)
                 agent.reset_environment()
             result = runner.run(agent, sim_config.reward, max_steps)
             if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:
@@ -330,6 +374,19 @@ class LearnedPerformanceFitness:
         # Decode the genome → fresh brain with the evolved hyperparameters.
         brain = encoder.decode(genome, sim_config, seed=seed)
 
+        # Optional warm-start: load a pre-trained checkpoint AFTER the fresh
+        # brain is constructed and BEFORE the train phase.  Each genome's
+        # K train episodes then fine-tune the checkpoint under the genome's
+        # evolved hyperparameters.  Validator already guarantees that the
+        # schema does not contain architecture-changing fields when this
+        # is set, so state_dict shapes match.  Path is resolved from
+        # ``sim_config.evolution.warm_start_path``; ``load_weights`` itself
+        # raises ``FileNotFoundError`` if the path doesn't exist, with a
+        # clear message — that error fires on the first genome's evaluation
+        # so a missing checkpoint kills the run before generation 1 finishes.
+        if evolution_config.warm_start_path is not None:
+            load_weights(brain, evolution_config.warm_start_path)
+
         # Train phase: fresh env, brain weights mutate as it learns.
         train_env = create_env_from_config(
             sim_config.environment,
@@ -340,12 +397,23 @@ class LearnedPerformanceFitness:
         train_agent = _build_agent(brain, train_env, sim_config)
         train_runner = StandardEpisodeRunner()
         for ep_idx in range(evolution_config.learn_episodes_per_eval):
+            # Per-episode seed derivation matches run_simulation.py's
+            # per-run pattern.  Without it, the global RNG drifts
+            # monotonically across all K train episodes and every reset
+            # rebuilds the env from the same original seed → identical
+            # layouts every episode (food positions, agent start).  The
+            # brain trains on one specific layout repeatedly rather than
+            # the population of layouts the standard run loop produces.
+            run_seed = derive_run_seed(seed, ep_idx)
+            set_global_seed(run_seed)
             # Reset env between episodes so training samples come from
             # clean initial states rather than from whatever post-failure
             # state the previous episode left behind.  Brain weights
             # persist (they're learned across episodes); env state does
             # not.  Matches the run_simulation.py per-run reset pattern.
             if ep_idx > 0:
+                train_agent.env.seed = run_seed
+                train_agent.env.rng = get_rng(run_seed)
                 train_agent.reset_environment()
             train_runner.run(train_agent, sim_config.reward, max_steps)
 
@@ -376,9 +444,22 @@ class LearnedPerformanceFitness:
 
         successes = 0
         for ep_idx in range(eval_count):
+            # Per-episode seed derivation — same rationale as the train
+            # loop above.  Eval episodes use a different base offset
+            # (``seed + K + ep_idx``) so eval layouts don't replay the
+            # last K train layouts; otherwise the brain would be eval'd
+            # on layouts identical to its most recent training, which
+            # over-optimistically scores it.
+            run_seed = derive_run_seed(
+                seed + evolution_config.learn_episodes_per_eval,
+                ep_idx,
+            )
+            set_global_seed(run_seed)
             # Reset env between eval episodes so each starts from a
             # clean initial state — same rationale as the train loop.
             if ep_idx > 0:
+                eval_agent.env.seed = run_seed
+                eval_agent.env.rng = get_rng(run_seed)
                 eval_agent.reset_environment()
             result = eval_runner.run(eval_agent, sim_config.reward, max_steps)
             if result.termination_reason == TerminationReason.COMPLETED_ALL_FOOD:

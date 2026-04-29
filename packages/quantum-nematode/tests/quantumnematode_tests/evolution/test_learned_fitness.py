@@ -385,3 +385,81 @@ def test_eval_count_zero_raises() -> None:
     fitness = LearnedPerformanceFitness()
     with pytest.raises(ValueError, match="eval_count must be > 0"):
         fitness.evaluate(genome, sim_config, encoder, episodes=0, seed=42)
+
+
+# ---------------------------------------------------------------------------
+# Warm-start
+# ---------------------------------------------------------------------------
+
+
+def test_warm_start_loads_weights_before_train(tmp_path: Path) -> None:
+    """``warm_start_path`` set → ``load_weights`` called with that path.
+
+    Mocks ``load_weights`` so the test stays unit-scoped (no real checkpoint
+    on disk).  Asserts the load is invoked with the brain (decoded from the
+    genome) and the configured warm-start path.
+    """
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=1)
+    fake_path = tmp_path / "fake_checkpoint.pt"
+    assert sim_config.evolution is not None
+    sim_config = sim_config.model_copy(
+        update={
+            "evolution": sim_config.evolution.model_copy(
+                update={"warm_start_path": fake_path},
+            ),
+        },
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    with patch("quantumnematode.evolution.fitness.load_weights") as mock_load:
+        fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+
+    mock_load.assert_called_once()
+    # ``load_weights(brain, path)`` — second positional is the path.
+    assert mock_load.call_args.args[1] == fake_path
+
+
+def test_warm_start_unset_skips_load() -> None:
+    """``warm_start_path is None`` (default) → ``load_weights`` NOT called.
+
+    Preserves M2 part-1 behaviour: fresh-init weights from
+    ``encoder.decode``, no extra step.
+    """
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=1)
+    assert sim_config.evolution is not None
+    assert sim_config.evolution.warm_start_path is None
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    with patch("quantumnematode.evolution.fitness.load_weights") as mock_load:
+        fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
+
+    mock_load.assert_not_called()
+
+
+def test_warm_start_missing_path_raises(tmp_path: Path) -> None:
+    """``warm_start_path`` pointing at a missing file → ``FileNotFoundError``.
+
+    Error originates in ``brain.weights.load_weights`` (NOT mocked here)
+    and must surface to the caller — fitness.evaluate must not swallow
+    or remap the exception.
+    """
+    sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=1)
+    missing_path = tmp_path / "does_not_exist.pt"
+    assert sim_config.evolution is not None
+    sim_config = sim_config.model_copy(
+        update={
+            "evolution": sim_config.evolution.model_copy(
+                update={"warm_start_path": missing_path},
+            ),
+        },
+    )
+    encoder = HyperparameterEncoder()
+    genome = _make_genome(sim_config)
+    fitness = LearnedPerformanceFitness()
+
+    with pytest.raises(FileNotFoundError, match="Weight file not found"):
+        fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)

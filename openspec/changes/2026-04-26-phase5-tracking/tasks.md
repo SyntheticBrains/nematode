@@ -64,7 +64,7 @@ to mark sub-tasks complete as part of its diff.
 ## M2: Hyperparameter Evolution Pilot
 
 **OpenSpec change**: `2026-04-27-add-hyperparameter-evolution` (archived as `2026-04-28-2026-04-27-add-hyperparameter-evolution`)
-**Status**: in progress (MLPPPO arm complete; LSTMPPO+klinotaxis arm pending in PR 3)
+**Status**: complete (MLPPPO GO +5.5pp, LSTMPPO+klinotaxis GO +7.5pp; three framework bugs fixed in PR 3 — see logbook 012)
 **Bio fidelity**: LOW
 **Brain target**: MLPPPO + LSTMPPO+klinotaxis
 **Dependencies**: M0
@@ -73,11 +73,11 @@ to mark sub-tasks complete as part of its diff.
 - [x] M2.1 Implement `HyperparameterEncoder` in `evolution/encoders.py` (encodes config dict, not weights)
 - [x] M2.2 Implement `LearnedPerformanceFitness` in `evolution/fitness.py`
 - [x] M2.3 Create `configs/evolution/hyperparam_mlpppo_pilot.yml`
-- [ ] M2.4 Create `configs/evolution/hyperparam_lstmppo_klinotaxis_pilot.yml`
-- [x] M2.5 Create campaign script(s) under `scripts/campaigns/`. The MLPPPO PR ships `phase5_m2_hyperparam_mlpppo.sh`; the LSTMPPO PR ships `phase5_m2_hyperparam_lstmppo.sh`. Per-brain split (rather than a single combined script) lets PR 3 ship cleanly even if PR 2's pilot decides STOP/PIVOT
-- [ ] M2.6 Run pilot: 20 gens × population 12 × 4 seeds × 2 brains. MLPPPO arm runs in PR 2; LSTMPPO arm runs in PR 3 (only if PR 2's decision is GO/PIVOT)
-- [x] M2.7 Publish per-brain logbooks under `artifacts/logbooks/012/`: `hyperparam_pilot_mlpppo.md` (PR 2) and, conditionally, `hyperparam_pilot_lstmppo.md` (PR 3). Each logbook records its arm's GO/PIVOT/STOP decision against the gate
-- [ ] M2.8 Update this checklist + roadmap milestone tracker
+- [x] M2.4 Create `configs/evolution/hyperparam_lstmppo_klinotaxis_pilot.yml`
+- [x] M2.5 Create campaign script(s) under `scripts/campaigns/`. The MLPPPO PR ships `phase5_m2_hyperparam_mlpppo.sh`; the LSTMPPO PR ships `phase5_m2_hyperparam_lstmppo_klinotaxis.sh` + matching baseline script. Per-brain split (rather than a single combined script) lets PR 3 ship cleanly even if PR 2's pilot decides STOP/PIVOT
+- [x] M2.6 Run pilot: MLPPPO 20 gens × pop 12 × 4 seeds (PR 2 / re-run in PR 3); LSTMPPO+klinotaxis 20 gens × pop 12 × 2 seeds (PR 3). Both arms decide **GO** (MLPPPO +5.5pp, LSTMPPO+klinotaxis +7.5pp); recorded per-arm in logbook 012
+- [x] M2.7 Publish combined logbook under `artifacts/logbooks/012/`. Single integrated logbook covers both arms (Part 1 = MLPPPO from PR 2, Part 2 = LSTMPPO+klinotaxis from PR 3 + bug-fix narrative) at `docs/experiments/logbooks/012-hyperparam-evolution-mlpppo-pilot.md` + supporting appendix; combined rather than per-arm because the bug-fix story spans both
+- [x] M2.8 Update this checklist + roadmap milestone tracker
 
 ## M3: Lamarckian Evolution Pilot
 

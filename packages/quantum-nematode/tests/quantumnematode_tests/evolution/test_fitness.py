@@ -247,3 +247,56 @@ def test_frozen_eval_runner_preserves_food_history_sentinel() -> None:
     # food_history was NOT injected by the override (sentinel preserved by
     # virtue of not being in kwargs at all)
     assert "food_history" not in captured
+
+
+# ---------------------------------------------------------------------------
+# Regression: ``_build_agent`` threads ``max_body_length`` through.
+#
+# Pre-fix: ``_build_agent`` did not pass ``max_body_length``, so the agent
+# defaulted to ``DEFAULT_MAX_AGENT_BODY_LENGTH = 6``.  Episode 0 ran
+# against the explicit env (correct body length) but ``reset_environment``
+# rebuilt the env using ``self.max_body_length = 6`` between episodes,
+# silently switching to a fundamentally different (much harder) task.
+# This test pins the fix in place.
+# ---------------------------------------------------------------------------
+
+
+def test_build_agent_threads_max_body_length() -> None:
+    """The agent's ``max_body_length`` SHALL match ``sim_config.body_length``.
+
+    Otherwise multi-episode fitness evaluations silently switch tasks
+    between episode 0 (configured body) and episodes 1+ (default body=6)
+    via the ``reset_environment`` rebuild path.
+    """
+    from quantumnematode.evolution.fitness import _build_agent
+    from quantumnematode.utils.config_loader import create_env_from_config
+
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG))
+    # Force a non-default body length so we can detect the bug —
+    # mlpppo_small_oracle defaults to 2; pin to 3 here.
+    sim_config = sim_config.model_copy(update={"body_length": 3})
+    # ``environment`` is typed ``EnvironmentConfig | None``; the YAML always
+    # populates it for evolution configs, so the assert documents the
+    # invariant for pyright.
+    assert sim_config.environment is not None
+    env = create_env_from_config(
+        sim_config.environment,
+        seed=42,
+        max_body_length=sim_config.body_length,
+    )
+    encoder = MLPPPOEncoder()
+    rng = np.random.default_rng(0)
+    genome = encoder.initial_genome(sim_config, rng=rng)
+    from quantumnematode.evolution.brain_factory import instantiate_brain_from_sim_config
+
+    brain = instantiate_brain_from_sim_config(sim_config, seed=42)
+    encoder.decode(genome, sim_config, seed=42)
+    agent = _build_agent(brain, env, sim_config)
+
+    # The agent's stored max_body_length governs reset_environment's rebuild.
+    # Must match the configured body_length, NOT the agent's default of 6.
+    assert agent.max_body_length == sim_config.body_length, (
+        f"agent.max_body_length={agent.max_body_length} != "
+        f"sim_config.body_length={sim_config.body_length} — "
+        "_build_agent regressed: episodes 1+ will silently switch body length"
+    )
