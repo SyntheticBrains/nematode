@@ -1,6 +1,6 @@
 # 012: Hyperparameter Evolution — M2 (MLPPPO + LSTMPPO+klinotaxis)
 
-**Status**: `completed`
+**Status**: `in progress` — pilots GO but saturated; M2.11 predator arm opens a non-saturated landscape before M3 starts
 
 **Branches**: `feat/m2-hyperparameter-evolution` (Part 1, MLPPPO — merged as PR #134), `feat/m2-hyperparameter-evolution-lstmppo` (this PR — bug fixes + LSTMPPO+klinotaxis arm)
 
@@ -258,9 +258,11 @@ M3 (Lamarckian inheritance) and M4 (Baldwin effect) both require non-trivial fit
 ## Next Steps
 
 - [x] M2 close-out: tick `M2.4`, `M2.6`, `M2.8` in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md); flip `docs/roadmap.md` M2 row to `✅ complete`.
+- [ ] **Next PR** (M2 hardening, before M3): add a third M2 arm — **LSTMPPO + klinotaxis + pursuit predators** — to produce a non-saturated fitness landscape. Both current arms hit 1.000 in essentially every generation, which makes the pilot's GO decision vacuous (everything works, evolution never had to climb anything) and would carry that vacuousness into M3's Lamarckian inheritance pilot if not addressed. Predator pressure forces the brain to balance foraging and survival — the classic regime where gamma/entropy/lr settings differentiate policies. Same brain + sensing + scripts as the existing LSTMPPO arm; just adds predator config and a re-run. Estimated wall: ~2.5 hr.
+- [ ] **Decision after that PR lands**: revisit whether to also add a LSTMPPO + klinotaxis + thermotaxis/aerotaxis (multi-modality) arm, or jump to M3. Multi-modality is genuinely harder per [logbook 010](010-aerotaxis-baselines.md) (99% L100 single-modality vs 89% L100 triple-modality) but pulls in additional sensing modules that probably belong with M3's hypothesis space, not M2's.
 - [ ] **Future PR** (M3 prerequisite): use `evolution.warm_start_path` to evolve fine-tuning hyperparameters from a pre-trained checkpoint, asking "what fine-tunes a strong baseline best" rather than "what reaches a usable policy fastest".
 - [ ] **Future PR** (post-M2): "sanity probe" CLI flag — runs gen 1 only and reports population fitness distribution before committing the full gen budget. Cheap to add and would have flagged both arms' flatness immediately.
-- [ ] **Optimiser-portfolio re-evaluation** (already RQ1 in the Phase 5 tracking change). Optuna/TPE on a non-flat landscape (M3 fitness) would let us check whether CMA-ES is still the right default at small genome dim with mixed types.
+- [ ] **Optimiser-portfolio re-evaluation** (already RQ1 in the Phase 5 tracking change). Optuna/TPE on a non-flat landscape (M3 fitness, or the predator arm above) would let us check whether CMA-ES is still the right default at small genome dim with mixed types.
 
 ## Data References
 
