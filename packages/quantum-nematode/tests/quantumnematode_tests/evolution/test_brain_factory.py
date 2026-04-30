@@ -90,3 +90,74 @@ def test_instantiate_brain_requires_brain_config() -> None:
     sim_config = sim_config.model_copy(update={"brain": None})
     with pytest.raises(ValueError, match=r"brain\.name"):
         instantiate_brain_from_sim_config(sim_config)
+
+
+# ---------------------------------------------------------------------------
+# Regression: ``instantiate_brain_from_sim_config`` applies sensing-mode
+# translation, mirroring ``run_simulation.py``'s ``apply_sensing_mode`` step.
+#
+# Pre-fix: the wrapper called ``configure_brain`` only, which does NOT
+# translate ``food_chemotaxis`` → ``food_chemotaxis_klinotaxis`` for a
+# klinotaxis-mode env.  The brain therefore ran with oracle gradient
+# inputs while the env was in klinotaxis mode — feature dimensions
+# silently mismatched and learning failed.  ``run_simulation.py`` does
+# this translation at [run_simulation.py:381]; the evolution wrapper
+# inherits the gap unless we explicitly mirror it.
+# ---------------------------------------------------------------------------
+
+
+def test_instantiate_brain_translates_klinotaxis_modules() -> None:
+    """LSTMPPO+klinotaxis config SHALL produce a brain with translated modules.
+
+    The YAML names ``food_chemotaxis`` (the oracle module name) but
+    ``chemotaxis_mode: klinotaxis`` is set on the env.  The wrapper SHALL
+    translate to ``food_chemotaxis_klinotaxis`` and append ``stam`` (since
+    klinotaxis sensing requires temporal history that STAM provides).
+
+    Pre-fix the wrapper would leave the modules as ``[food_chemotaxis,
+    proprioception]`` — silently corrupting every evolution fitness eval
+    that ran against a klinotaxis env.
+    """
+    from quantumnematode.brain.modules import ModuleName
+
+    sim_config = load_simulation_config(str(LSTMPPO_CONFIG))
+    brain = instantiate_brain_from_sim_config(sim_config, seed=42)
+    assert isinstance(brain, LSTMPPOBrain)
+    modules = list(brain.sensory_modules) if brain.sensory_modules else []
+    # The translated klinotaxis module MUST be present.
+    assert ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS in modules, (
+        f"klinotaxis env did not translate food_chemotaxis → "
+        f"food_chemotaxis_klinotaxis; modules={modules}"
+    )
+    # The original (oracle) module MUST NOT be present.
+    assert ModuleName.FOOD_CHEMOTAXIS not in modules, (
+        f"oracle food_chemotaxis still present after klinotaxis translation; modules={modules}"
+    )
+    # STAM MUST be auto-appended since klinotaxis requires it.
+    assert ModuleName.STAM in modules, (
+        f"STAM not auto-appended for klinotaxis-mode env; modules={modules}"
+    )
+
+
+def test_instantiate_brain_oracle_modules_unchanged() -> None:
+    """MLPPPO+oracle config SHALL leave ``food_chemotaxis`` untranslated.
+
+    Sensing-mode translation only fires for non-oracle modes.  Oracle is
+    the default and means "no translation" — the brain keeps
+    ``food_chemotaxis`` as-is.  This guards against the validator
+    over-translating common configs.
+    """
+    from quantumnematode.brain.modules import ModuleName
+
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG))
+    brain = instantiate_brain_from_sim_config(sim_config, seed=42)
+    assert isinstance(brain, MLPPPOBrain)
+    modules = list(brain.sensory_modules) if brain.sensory_modules else []
+    # Oracle env keeps the bare module name.
+    assert ModuleName.FOOD_CHEMOTAXIS in modules, (
+        f"oracle env should keep food_chemotaxis; modules={modules}"
+    )
+    # No klinotaxis translation should have happened.
+    assert ModuleName.FOOD_CHEMOTAXIS_KLINOTAXIS not in modules, (
+        f"oracle env got klinotaxis-translated; modules={modules}"
+    )

@@ -25,14 +25,46 @@ MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.y
 LSTMPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/lstmppo_small_klinotaxis.yml"
 
 
-def _make_seeded_brain_params(brain) -> BrainParams:
-    """Build a deterministic BrainParams for round-trip action comparison."""
-    # Use a fixed sensory snapshot.  Values here don't matter for correctness;
-    # what matters is that two brains with identical weights produce the same
-    # action when fed the same input.
+def _make_seeded_brain_params(brain: LSTMPPOBrain | MLPPPOBrain) -> BrainParams:
+    """Build a deterministic BrainParams for round-trip action comparison.
+
+    Populates fields covering oracle, klinotaxis, and STAM input paths so
+    the same params object works for any LSTMPPO/MLPPPO config — including
+    the klinotaxis pilot (which appends STAM after sensing-mode translation).
+
+    Values here don't matter for correctness; what matters is that two brains
+    with identical weights produce the same action when fed the same input.
+
+    The STAM dim must match what ``brain.input_dim`` infers — for klinotaxis
+    + proprioception + STAM that's 5 (1 channel, ``compute_memory_dim(1)``).
+    Pre-bug-fix, the evolution flow's brain factory bypassed
+    ``apply_sensing_mode`` so klinotaxis configs silently ran on oracle
+    sensing without STAM and the test only needed the oracle fields.
+    """
+    # STAM zero-vector sized to match the brain's expected input.  We compute
+    # this from the brain's own input_dim so the test stays robust if the
+    # underlying feature extraction changes.
+    klino_dim = 3  # food_chemotaxis_klinotaxis core
+    proprio_dim = 2  # proprioception core
+    inferred_stam_dim = max(brain.input_dim - klino_dim - proprio_dim, 0)
+    # ``BrainParams.stam_state`` is typed ``tuple[float, ...] | None`` — pass a
+    # tuple rather than an ndarray.  Both serialise the same way through
+    # ``extract_classical_features`` (which calls ``np.array`` on the input).
+    stam_state: tuple[float, ...] | None = (
+        tuple([0.0] * inferred_stam_dim) if inferred_stam_dim > 0 else None
+    )
     return BrainParams(
+        # Oracle chemotaxis (food_chemotaxis module)
         food_gradient_strength=0.5,
         food_gradient_direction=1.0,
+        # Klinotaxis chemotaxis (food_chemotaxis_klinotaxis module)
+        food_concentration=0.5,
+        food_lateral_gradient=0.1,
+        food_dconcentration_dt=0.05,
+        lateral_scale=1.0,
+        derivative_scale=1.0,
+        # STAM memory state — sized to the brain's expected input dim
+        stam_state=stam_state,
     )
 
 
