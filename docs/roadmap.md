@@ -504,7 +504,7 @@ Phase 5 is broken into 8 milestones (M0–M7) plus a tracking scaffold (M-1). Th
 | M-1 | Phase 5 tracking scaffold | — | ✅ complete |
 | M0 | Brain-agnostic evolution framework (fresh build) | LOW | ✅ complete |
 | M1 | Predator-as-brain refactor | MEDIUM | 🔲 not started |
-| M2 | Hyperparameter evolution pilot | LOW | 🟡 in progress (MLPPPO + LSTMPPO+klinotaxis arms GO but saturated; predator-arm follow-up M2.11 opens non-saturated landscape before M3 — see logbook 012) |
+| M2 | Hyperparameter evolution pilot | LOW | 🟡 in progress (3 arms GO under CMA-ES; predator arm +47pp on 4 seeds; M2.12 closes RQ1 with Optuna/TPE on the predator config before M3 — see logbook 012) |
 | M3 | Lamarckian evolution pilot | MEDIUM | 🔲 not started |
 | M4 | Baldwin effect demonstration (gated on M3) | MEDIUM | 🔲 not started |
 | M5 | Co-evolution arms race | HIGH | 🔲 not started |

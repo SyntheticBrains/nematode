@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# Hand-tuned MLPPPO baseline for the M2 hyperparameter pilot
+# Hand-tuned LSTMPPO+klinotaxis+predator baseline for M2.11
 # ============================================================================
 #
-# Trains a single MLPPPO agent on the small-foraging baseline config for
-# 100 episodes per seed across 4 matched seeds.  This is the comparison
-# point for the hyperparameter pilot's decision gate (≥3pp over baseline
-# mean → GO).  STATIC measurement; not a 1:1 episode-budget match with
-# the pilot — the baseline has no genomes, so episode-volume parity is
-# not meaningful.
+# Trains a single LSTMPPO+klinotaxis+predator agent on the small-foraging
+# pursuit baseline config for 100 episodes per seed across 4 matched
+# seeds (42-45).  This is the comparison point for the predator pilot's
+# decision gate (>=3pp over baseline mean -> GO).
+#
+# Reference baseline config: configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml
+# — same predator block (count=2, pursuit, detection_radius=6) and same
+# health/reward/satiety blocks as the pilot, so pilot vs baseline
+# differs only on the hyperparameter axis CMA-ES is evolving.
 #
 # Usage:
-#   scripts/campaigns/phase5_m2_hyperparam_baseline.sh
+#   scripts/campaigns/phase5_m2_hyperparam_lstmppo_klinotaxis_predator_baseline.sh
 
 set -euo pipefail
 
-OUTPUT_ROOT="${OUTPUT_ROOT:-evolution_results/m2_hyperparam_baseline}"
-CONFIG="configs/scenarios/foraging/mlpppo_small_oracle.yml"
+OUTPUT_ROOT="${OUTPUT_ROOT:-evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline}"
+CONFIG="configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml"
 SEEDS=(42 43 44 45)
 EPISODES=100
 
@@ -39,9 +42,12 @@ for SEED in "${SEEDS[@]}"; do
         --theme headless \
         --log-level WARNING \
         > "${SEED_LOG}" 2>&1
-    # Extract success rate from the run summary tail.  Fail fast if the
-    # parse fails (most likely a pre-summary crash or log-format change);
-    # the previous `|| echo "PARSE_FAIL"` swallowed the failure silently.
+    # Fail fast on parse failure: previously this was `grep ... || echo
+    # "PARSE_FAIL"` which swallowed grep's non-zero exit so the campaign
+    # silently continued past a broken seed.  An empty SUCCESS_RATE means
+    # the simulation didn't print the expected summary line — most likely
+    # the run crashed before completion or the log format changed.  Either
+    # way we want the script to halt rather than report a stale aggregate.
     SUCCESS_RATE=$(grep -E "^Success rate:" "${SEED_LOG}" | tail -1 || true)
     if [ -z "${SUCCESS_RATE}" ]; then
         echo "ERROR: failed to parse 'Success rate:' line from ${SEED_LOG} (seed ${SEED})." >&2
