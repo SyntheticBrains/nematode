@@ -19,7 +19,7 @@ set -euo pipefail
 
 OUTPUT_ROOT="${OUTPUT_ROOT:-evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline}"
 CONFIG="configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml"
-SEEDS=(42 43)
+SEEDS=(42 43 44 45)
 EPISODES=100
 
 mkdir -p "${OUTPUT_ROOT}"

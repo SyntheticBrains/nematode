@@ -14,10 +14,9 @@
 # part-2 arm — only the env's predator/nociception/health blocks
 # differ.
 #
-# Wall-time estimate (post bug-fixes for body_length / sensing-mode /
-# per-episode reseed): ~2-3 hr per seed at parallel=4 — predators add
-# nociception sensing channels and active enemies that may slow per-step
-# vs. foraging-only, but body=2 and the post-fix env keep cost bounded.
+# Wall-time (measured): ~10-15 min per seed at parallel=4 — much
+# faster than the LSTMPPO foraging arm (~50 min/seed) because predator
+# deaths shorten episodes.  4 seeds total ~50 min.
 # Outputs land under ``${OUTPUT_ROOT}/seed-${SEED}/<session>/``.  Each
 # session produces best_params.json, history.csv, lineage.csv, and
 # checkpoint.pkl.  ``checkpoint_every: 2`` in the YAML caps crash-loss
@@ -33,7 +32,7 @@ set -euo pipefail
 
 OUTPUT_ROOT="${OUTPUT_ROOT:-evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator}"
 CONFIG="configs/evolution/hyperparam_lstmppo_klinotaxis_predator_pilot.yml"
-SEEDS=(42 43)
+SEEDS=(42 43 44 45)
 
 mkdir -p "${OUTPUT_ROOT}"
 echo "Output root: ${OUTPUT_ROOT}"
