@@ -3,8 +3,8 @@
 # ============================================================================
 #
 # Trains a single LSTMPPO+klinotaxis+predator agent on the small-foraging
-# pursuit baseline config for 100 episodes per seed across 2 matched
-# seeds.  This is the comparison point for the predator pilot's
+# pursuit baseline config for 100 episodes per seed across 4 matched
+# seeds (42-45).  This is the comparison point for the predator pilot's
 # decision gate (>=3pp over baseline mean -> GO).
 #
 # Reference baseline config: configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml
@@ -42,7 +42,18 @@ for SEED in "${SEEDS[@]}"; do
         --theme headless \
         --log-level WARNING \
         > "${SEED_LOG}" 2>&1
-    SUCCESS_RATE=$(grep -E "^Success rate:" "${SEED_LOG}" | tail -1 || echo "Success rate: PARSE_FAIL")
+    # Fail fast on parse failure: previously this was `grep ... || echo
+    # "PARSE_FAIL"` which swallowed grep's non-zero exit so the campaign
+    # silently continued past a broken seed.  An empty SUCCESS_RATE means
+    # the simulation didn't print the expected summary line — most likely
+    # the run crashed before completion or the log format changed.  Either
+    # way we want the script to halt rather than report a stale aggregate.
+    SUCCESS_RATE=$(grep -E "^Success rate:" "${SEED_LOG}" | tail -1 || true)
+    if [ -z "${SUCCESS_RATE}" ]; then
+        echo "ERROR: failed to parse 'Success rate:' line from ${SEED_LOG} (seed ${SEED})." >&2
+        echo "  Inspect the log for crashes or format changes; aborting campaign." >&2
+        exit 1
+    fi
     echo "Seed ${SEED}: ${SUCCESS_RATE}"
     echo "Seed ${SEED} — done: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo

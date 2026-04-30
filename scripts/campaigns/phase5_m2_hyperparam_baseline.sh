@@ -39,8 +39,15 @@ for SEED in "${SEEDS[@]}"; do
         --theme headless \
         --log-level WARNING \
         > "${SEED_LOG}" 2>&1
-    # Extract success rate from the run summary tail
-    SUCCESS_RATE=$(grep -E "^Success rate:" "${SEED_LOG}" | tail -1 || echo "Success rate: PARSE_FAIL")
+    # Extract success rate from the run summary tail.  Fail fast if the
+    # parse fails (most likely a pre-summary crash or log-format change);
+    # the previous `|| echo "PARSE_FAIL"` swallowed the failure silently.
+    SUCCESS_RATE=$(grep -E "^Success rate:" "${SEED_LOG}" | tail -1 || true)
+    if [ -z "${SUCCESS_RATE}" ]; then
+        echo "ERROR: failed to parse 'Success rate:' line from ${SEED_LOG} (seed ${SEED})." >&2
+        echo "  Inspect the log for crashes or format changes; aborting campaign." >&2
+        exit 1
+    fi
     echo "Seed ${SEED}: ${SUCCESS_RATE}"
     echo "Seed ${SEED} — done: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo
