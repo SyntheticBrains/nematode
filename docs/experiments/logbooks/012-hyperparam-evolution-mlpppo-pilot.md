@@ -1,12 +1,12 @@
 # 012: Hyperparameter Evolution — M2 (MLPPPO + LSTMPPO+klinotaxis + LSTMPPO+klinotaxis+predator)
 
-**Status**: `completed` — all three M2 arms GO; M2.11 predator arm produced the non-saturated fitness landscape M3 needed
+**Status**: `in progress` — three M2 arms GO under CMA-ES; M2.12 (Optuna/TPE on the predator arm) closes RQ1 before M3 starts
 
 **Branches**: `feat/m2-hyperparameter-evolution` (Part 1, MLPPPO — merged as PR #134), `feat/m2-hyperparameter-evolution-lstmppo` (Part 2 + bug fixes — merged as PR #135), `feat/m2-predator-arm` (Part 3 — this PR)
 
 **Date Started**: 2026-04-27
 
-**Date Completed**: 2026-05-01 — all three M2 arms shipped, predator arm produced the non-saturated landscape that M3's inheritance pilot needs as a prerequisite
+**Date Last Updated**: 2026-05-01 — three M2 arms shipped under CMA-ES; final M2 completion gated on M2.12 (Optuna/TPE comparison on the predator config) in the next PR
 
 This logbook covers Phase 5 M2 in full across three PRs and three arms. Two distinct headlines:
 
@@ -329,12 +329,12 @@ M2 closes with a mechanically correct framework AND a non-saturated arm to inher
 
 ## Next Steps
 
-- [x] M2 close-out: tick all `M2.x` (M2.1-M2.11) in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md); flip [`docs/roadmap.md`](../../../docs/roadmap.md) M2 row to `✅ complete`.
-- [ ] **Decision before M3**: revisit whether to also add a LSTMPPO + klinotaxis + thermotaxis/aerotaxis (multi-modality) arm before M3 starts. Multi-modality is genuinely harder per [logbook 010](010-aerotaxis-baselines.md) (99% L100 single-modality vs 89% L100 triple-modality), but with the predator arm now providing a non-saturated landscape, multi-modality probably belongs in M3's hypothesis space rather than M2's. Lean: skip and go to M3.
-- [ ] **M3 starts on the predator arm config**: same brain, same schema, same K/L budget — just with Lamarckian inheritance enabled. The pilot's confirmed properties (non-saturated, reproducible-with-noise, CMA-ES-trainable, with a known dead-zone failure mode) make the "does inheritance accelerate evolution?" question answerable.
+- [x] This-PR M2 invariants: tick `M2.4`, `M2.6`, `M2.7`, `M2.8`, `M2.9`, `M2.10`, `M2.11` in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md); add `M2.12` (Optuna/TPE follow-up); roadmap M2 row stays at `🟡 in progress` until M2.12 lands.
+- [ ] **Next PR — M2.12 (RQ1 close-out, before M3)**: add an Optuna/TPE optimiser adapter and re-run the predator pilot under it. Same brain + sensing + 6-field schema + K/L + 4 seeds — only the optimiser changes from CMA-ES to Optuna's TPE sampler. Seed 43's dead-zone failure (CMA-ES converged on `actor_lr=1e-5` clip + `entropy≈0`) is the canonical pathology TPE's tree-structured prior + early pruning are designed to handle. Decision per RQ1 escalation rule: if TPE ≥+5pp over CMA-ES's 0.640 mean OR rescues seed 43, open `<DATE>-add-optuna-optimizer` and M3 uses TPE; else CMA-ES stays the default and M3 uses it. Bounded scope: ~half day code + ~40 min re-run + logbook addendum. After this, M2 is fully closed.
+- [ ] **Decision before M3** (post-M2.12): revisit whether to also add a LSTMPPO + klinotaxis + thermotaxis/aerotaxis (multi-modality) arm before M3 starts. Multi-modality is genuinely harder per [logbook 010](010-aerotaxis-baselines.md) (99% L100 single-modality vs 89% L100 triple-modality), but with the predator arm providing a non-saturated landscape and TPE/CMA-ES question settled by M2.12, multi-modality probably belongs in M3's hypothesis space rather than M2's. Lean: skip and go to M3.
+- [ ] **M3 starts on the predator arm config** with whichever optimiser M2.12 selects: same brain, same schema, same K/L budget — just with Lamarckian inheritance enabled. The pilot's confirmed properties (non-saturated, reproducible-with-noise, optimiser-trainable, with a known dead-zone failure mode) make the "does inheritance accelerate evolution?" question answerable.
 - [ ] **Future PR** (post-M3): use `evolution.warm_start_path` to evolve fine-tuning hyperparameters from a pre-trained checkpoint. Relevant if M3's from-scratch trajectories prove insufficient and a curriculum is warranted.
 - [ ] **Future PR** (post-M2): "sanity probe" CLI flag — runs gen 1 only and reports population fitness distribution before committing the full gen budget. Would have flagged Parts 1 + 2's flatness immediately and would also surface seed-43-style dead-zone trajectories early.
-- [ ] **Optimiser-portfolio re-evaluation** (already RQ1 in the Phase 5 tracking change). Optuna/TPE on the predator arm's non-flat landscape would let us check whether CMA-ES is still the right default at small genome dim with mixed types — or whether TPE's better handling of categoricals (`rnn_type`) and conditional dependencies would have rescued seed 43's dead-zone trajectory.
 
 ## Data References
 
