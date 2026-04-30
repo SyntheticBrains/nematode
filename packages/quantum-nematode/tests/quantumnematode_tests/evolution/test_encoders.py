@@ -25,7 +25,7 @@ MLPPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/mlpppo_small_oracle.y
 LSTMPPO_CONFIG = PROJECT_ROOT / "configs/scenarios/foraging/lstmppo_small_klinotaxis.yml"
 
 
-def _make_seeded_brain_params(brain) -> BrainParams:
+def _make_seeded_brain_params(brain: LSTMPPOBrain | MLPPPOBrain) -> BrainParams:
     """Build a deterministic BrainParams for round-trip action comparison.
 
     Populates fields covering oracle, klinotaxis, and STAM input paths so

@@ -393,12 +393,20 @@ def test_eval_count_zero_raises() -> None:
 
 
 def test_warm_start_loads_weights_before_train(tmp_path: Path) -> None:
-    """``warm_start_path`` set → ``load_weights`` called with that path.
+    """``warm_start_path`` set → ``load_weights`` called BEFORE the K train episodes run.
 
-    Mocks ``load_weights`` so the test stays unit-scoped (no real checkpoint
-    on disk).  Asserts the load is invoked with the brain (decoded from the
-    genome) and the configured warm-start path.
+    Mocks ``load_weights`` (no real checkpoint on disk needed) AND patches
+    ``StandardEpisodeRunner.run`` so we can verify the call ordering: the
+    warm-start load MUST happen before the first train-phase ``run()``
+    call, otherwise the K train episodes would be running against
+    fresh-init weights instead of the checkpoint.  Both mocks attach to
+    a single ``MagicMock`` parent so their interleaved call order is
+    captured in ``parent.mock_calls`` for direct inspection.
     """
+    from unittest.mock import MagicMock
+
+    from quantumnematode.agent.runners import StandardEpisodeRunner
+
     sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=1)
     fake_path = tmp_path / "fake_checkpoint.pt"
     assert sim_config.evolution is not None
@@ -413,12 +421,40 @@ def test_warm_start_loads_weights_before_train(tmp_path: Path) -> None:
     genome = _make_genome(sim_config)
     fitness = LearnedPerformanceFitness()
 
-    with patch("quantumnematode.evolution.fitness.load_weights") as mock_load:
+    # Build a parent MagicMock so both children record into a single
+    # ordered ``mock_calls`` list — that's what we assert ordering on.
+    parent = MagicMock()
+    # Eval phase still needs a real return so we don't crash there;
+    # ``side_effect=Exception`` would short-circuit but obscure the
+    # ordering assertion.  The simplest path is to let the eval
+    # ``FrozenEvalRunner.run`` pass through unmocked since this test is
+    # only about train-phase ordering.
+    with (
+        patch("quantumnematode.evolution.fitness.load_weights", parent.load) as mock_load,
+        patch.object(StandardEpisodeRunner, "run", parent.train_run),
+    ):
         fitness.evaluate(genome, sim_config, encoder, episodes=1, seed=42)
 
     mock_load.assert_called_once()
     # ``load_weights(brain, path)`` — second positional is the path.
     assert mock_load.call_args.args[1] == fake_path
+
+    # Ordering check: in the parent's ``mock_calls`` list, the first call
+    # SHALL be ``parent.load(...)`` (the warm-start load) and any
+    # ``parent.train_run(...)`` calls SHALL come strictly after.
+    call_names = [call[0] for call in parent.mock_calls]
+    assert call_names, "no calls recorded — both mocks were skipped"
+    assert call_names[0] == "load", (
+        f"warm-start load must be the FIRST recorded call; got order: {call_names}"
+    )
+    assert "train_run" in call_names, (
+        "no train-phase StandardEpisodeRunner.run was recorded; the train loop didn't execute"
+    )
+    assert call_names.index("load") < call_names.index("train_run"), (
+        f"warm-start load ({call_names.index('load')}) must come strictly "
+        f"before the first train_run ({call_names.index('train_run')}); "
+        f"got order: {call_names}"
+    )
 
 
 def test_warm_start_unset_skips_load() -> None:

@@ -228,7 +228,7 @@ ______________________________________________________________________
 
 ## Part 2 (post bug-fix re-run): MLPPPO + LSTMPPO+klinotaxis
 
-This Part 2 covers the bug-fix investigation that started during the LSTMPPO arm and the re-runs that followed. The "Part 1" tables above are PR #134's original (now-superseded) MLPPPO data; the same numbers reproduce post-fix because MLPPPO+oracle is easy enough that the bugs didn't change the gen-20 ceiling.
+This Part 2 covers the bug-fix investigation that started during the LSTMPPO arm and the re-runs that followed. The "Part 1" tables above were refreshed to the post-bug-fix re-run data in commit `d33ffa9c` (matching the archived CSVs at `artifacts/logbooks/012/m2_hyperparam_pilot/seed-{42-45}/history.csv`). The MLPPPO arm's gen-20 best ceiling holds at 1.000 both pre- and post-fix because MLPPPO+oracle is easy enough that the bugs didn't change the headline decision — but the population-mean trajectories differ noticeably (post-fix means sit in 0.91-0.98 vs pre-fix 0.79-0.87), which is why the tables needed refreshing.
 
 ### Bug-investigation chain
 

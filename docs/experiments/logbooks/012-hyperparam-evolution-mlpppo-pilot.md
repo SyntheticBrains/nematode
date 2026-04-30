@@ -6,7 +6,7 @@
 
 **Date Started**: 2026-04-27
 
-**Date Completed**: 2026-04-30
+**Date Last Updated**: 2026-04-30 — pilot arms shipped and re-run under bug-fixed framework; final M2 completion gated on M2.11 (predator arm) in the next PR
 
 This logbook covers Phase 5 M2 in full. The headline finding is **not** the pilot results themselves — both arms hit the metric ceiling under the bug-fixed framework. The headline is the **three silent bugs in M2's fitness-evaluation code path**, surfaced when the LSTMPPO+klinotaxis arm produced impossibly bad numbers and an investigation chain pointed at the framework rather than the pilot. PR #134 (MLPPPO arm) had already been merged when these bugs were discovered.
 
@@ -257,7 +257,7 @@ M3 (Lamarckian inheritance) and M4 (Baldwin effect) both require non-trivial fit
 
 ## Next Steps
 
-- [x] M2 close-out: tick `M2.4`, `M2.6`, `M2.8` in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md); flip `docs/roadmap.md` M2 row to `✅ complete`.
+- [x] This-PR M2 invariants: tick `M2.4`, `M2.6`, `M2.7`, `M2.8`, `M2.9`, `M2.10` (everything except `M2.11`) in [`openspec/changes/2026-04-26-phase5-tracking/tasks.md`](../../../openspec/changes/2026-04-26-phase5-tracking/tasks.md). `docs/roadmap.md` M2 row stays at `🟡 in progress` — full ✅ flip is gated on `M2.11` (the predator arm in the next PR).
 - [ ] **Next PR** (M2 hardening, before M3): add a third M2 arm — **LSTMPPO + klinotaxis + pursuit predators** — to produce a non-saturated fitness landscape. Both current arms hit 1.000 in essentially every generation, which makes the pilot's GO decision vacuous (everything works, evolution never had to climb anything) and would carry that vacuousness into M3's Lamarckian inheritance pilot if not addressed. Predator pressure forces the brain to balance foraging and survival — the classic regime where gamma/entropy/lr settings differentiate policies. Same brain + sensing + scripts as the existing LSTMPPO arm; just adds predator config and a re-run. Estimated wall: ~2.5 hr.
 - [ ] **Decision after that PR lands**: revisit whether to also add a LSTMPPO + klinotaxis + thermotaxis/aerotaxis (multi-modality) arm, or jump to M3. Multi-modality is genuinely harder per [logbook 010](010-aerotaxis-baselines.md) (99% L100 single-modality vs 89% L100 triple-modality) but pulls in additional sensing modules that probably belong with M3's hypothesis space, not M2's.
 - [ ] **Future PR** (M3 prerequisite): use `evolution.warm_start_path` to evolve fine-tuning hyperparameters from a pre-trained checkpoint, asking "what fine-tunes a strong baseline best" rather than "what reaches a usable policy fastest".
