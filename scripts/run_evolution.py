@@ -403,7 +403,8 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
     # Per-parameter bounds are required by TPE (which samples uniformly
     # from a bounded prior) and ignored by CMA-ES (unbounded).  Weight
     # encoders return None — TPE-on-weights isn't a supported
-    # combination at the M2 scale anyway (n>>schema dim).
+    # combination (n>>schema dim makes the bounded-prior assumption
+    # untenable).
     bounds = encoder.genome_bounds(sim_config)
 
     optimizer = _build_optimizer(

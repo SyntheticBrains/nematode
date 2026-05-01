@@ -10,7 +10,7 @@ Supported algorithms:
 - Genetic Algorithm (GA) - simpler, more interpretable
 - Optuna TPE (Tree-structured Parzen Estimator) - Bayesian-style sampler
   for small-genome bounded hyperparameter search; especially relevant for
-  M2-style schemas with mixed-scale dimensions and narrow viable regions
+  schemas with mixed-scale dimensions and narrow viable regions
 
 Key advantages over gradient-based learning:
 - No gradient noise from parameter-shift rule
@@ -471,25 +471,26 @@ class OptunaTPEOptimizer(EvolutionaryOptimizer):
 
     TPE = Tree-structured Parzen Estimator.
 
-    Why TPE rather than CMA-ES for some M2-shaped problems:
+    Why TPE rather than CMA-ES for some hyperparameter-shaped problems:
 
     - **Bounded sampling**.  CMA-ES samples from an unbounded Gaussian and
       relies on the encoder to clip out-of-bounds values at decode.  When
-      the schema has narrow viable regions (e.g. ``actor_lr`` with a
-      lower bound of 1e-5 right at the dead-zone boundary), CMA-ES's
-      covariance adaptation can collapse the search distribution onto
-      that boundary and clip every sample there.  TPE samples from a
-      uniform prior over the configured bounds and never clips — a
-      genome at the bound is just one point of many, not the destination
-      the search converges toward.
+      the schema has narrow viable regions (e.g. a learning rate with a
+      lower bound right at a dead-zone boundary), CMA-ES's covariance
+      adaptation can collapse the search distribution onto that boundary
+      and clip every sample there.  TPE samples from a uniform prior over
+      the configured bounds and never clips — a genome at the bound is
+      just one point of many, not the destination the search converges
+      toward.
     - **Per-parameter mixed scales handled natively**.  CMA-ES needs
       explicit ``CMA_stds`` to handle log-scale lr (range ~7) alongside
       tight-range gamma (range ~0.1).  TPE's KDE is fit independently
       per parameter, so no per-parameter scaling tuning is required.
     - **Sample-efficient at small genome dim**.  TPE's kernel density
       estimate over good vs bad trials directly biases sampling toward
-      promising regions — at the M2 scale (n ≈ 6-7 evolved fields, few
-      hundred evaluations) this typically converges faster than CMA-ES.
+      promising regions — at small evolved-field counts (n on the order
+      of a handful, with low-hundreds of evaluations) this typically
+      converges faster than CMA-ES.
 
     Why we still call it "evolutionary" and use ask/tell:
 
