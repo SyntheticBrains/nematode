@@ -407,14 +407,24 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
     # untenable).
     bounds = encoder.genome_bounds(sim_config)
 
-    optimizer = _build_optimizer(
-        evolution_config,
-        num_params,
-        seed=args.seed,
-        x0=x0,
-        stds=stds,
-        bounds=bounds,
-    )
+    try:
+        optimizer = _build_optimizer(
+            evolution_config,
+            num_params,
+            seed=args.seed,
+            x0=x0,
+            stds=stds,
+            bounds=bounds,
+        )
+    except ValueError as exc:
+        msg = (
+            f"Invalid optimiser configuration: {exc}.  "
+            "Check evolution.algorithm in the YAML matches the encoder "
+            "(weight encoders → cmaes/ga; HyperparameterEncoder → "
+            "cmaes/ga/tpe) and that any bounds in hyperparam_schema are "
+            "finite with low < high."
+        )
+        raise SystemExit(msg) from exc
 
     log_level_int = getattr(logging, args.log_level)
     loop = EvolutionLoop(
