@@ -624,34 +624,35 @@ class HyperparameterEncoder:
                 "sim_config.hyperparam_schema to be set."
             )
             raise ValueError(msg)
-        bounds: list[tuple[float, float]] = []
-        for entry in sim_config.hyperparam_schema:
-            if entry.type == "float":
-                if entry.bounds is None:  # pragma: no cover — validator-enforced
-                    msg = "float entry missing bounds"
-                    raise ValueError(msg)
-                low, high = entry.bounds
-                if entry.log_scale:
-                    bounds.append((float(np.log(low)), float(np.log(high))))
-                else:
-                    bounds.append((float(low), float(high)))
-            elif entry.type == "int":
-                if entry.bounds is None:  # pragma: no cover — validator-enforced
-                    msg = "int entry missing bounds"
-                    raise ValueError(msg)
-                low, high = entry.bounds
-                bounds.append((float(low), float(high)))
-            elif entry.type == "bool":
-                bounds.append((-1.0, 1.0))
-            elif entry.type == "categorical":
-                if entry.values is None:  # pragma: no cover — validator-enforced
-                    msg = "categorical entry missing values"
-                    raise ValueError(msg)
-                bounds.append((0.0, float(len(entry.values))))
-            else:  # pragma: no cover — validator-enforced
-                msg = f"Unknown param schema type: {entry.type!r}"
+        return [self._entry_bounds(entry) for entry in sim_config.hyperparam_schema]
+
+    @staticmethod
+    def _entry_bounds(entry: ParamSchemaEntry) -> tuple[float, float]:
+        """Return genome-space ``(low, high)`` for one schema entry."""
+        if entry.type == "float":
+            if entry.bounds is None:  # pragma: no cover — validator-enforced
+                msg = "float entry missing bounds"
                 raise ValueError(msg)
-        return bounds
+            low, high = entry.bounds
+            if entry.log_scale:
+                return (float(np.log(low)), float(np.log(high)))
+            return (float(low), float(high))
+        if entry.type == "int":
+            if entry.bounds is None:  # pragma: no cover — validator-enforced
+                msg = "int entry missing bounds"
+                raise ValueError(msg)
+            low, high = entry.bounds
+            return (float(low), float(high))
+        if entry.type == "bool":
+            return (-1.0, 1.0)
+        if entry.type == "categorical":
+            if entry.values is None:  # pragma: no cover — validator-enforced
+                msg = "categorical entry missing values"
+                raise ValueError(msg)
+            return (0.0, float(len(entry.values)))
+        # pragma: no cover — validator-enforced
+        msg = f"Unknown param schema type: {entry.type!r}"
+        raise ValueError(msg)
 
     @staticmethod
     def _sample_initial(

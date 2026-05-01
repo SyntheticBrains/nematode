@@ -467,8 +467,9 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
 
 
 class OptunaTPEOptimizer(EvolutionaryOptimizer):
-    """Optuna TPE (Tree-structured Parzen Estimator) sampler wrapped in the
-    population-based ``ask``/``tell`` interface.
+    """Optuna TPE sampler wrapped in the population-based ask/tell interface.
+
+    TPE = Tree-structured Parzen Estimator.
 
     Why TPE rather than CMA-ES for some M2-shaped problems:
 

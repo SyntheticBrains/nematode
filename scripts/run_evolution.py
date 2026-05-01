@@ -190,7 +190,7 @@ def _resolve_evolution_config(
         raise SystemExit(msg) from exc
 
 
-def _build_optimizer(
+def _build_optimizer(  # noqa: PLR0913 - x0/stds/bounds are orthogonal per-optimiser inputs
     evolution_config: EvolutionConfig,
     num_params: int,
     seed: int | None,
