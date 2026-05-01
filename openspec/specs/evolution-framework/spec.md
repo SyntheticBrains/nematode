@@ -199,6 +199,33 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 - **THEN** the loop SHALL run for 10 generations
 - **AND** the YAML value SHALL be ignored for that field only
 
+### Requirement: Optimiser Portfolio
+
+The framework SHALL provide multiple optimisers behind a uniform `EvolutionaryOptimizer` ask/tell interface so the loop is optimiser-agnostic. At minimum: `CMAESOptimizer` (recommended for unbounded continuous search at moderate-to-large genome dim, including weight evolution at n>~100), `GeneticAlgorithmOptimizer` (simpler, more interpretable), and `OptunaTPEOptimizer` (Bayesian-style sampler for small-genome bounded hyperparameter search). The user-facing `evolution.algorithm` field SHALL accept `"cmaes"`, `"ga"`, or `"tpe"`. Each optimiser SHALL respect the framework's minimisation sign convention (lower fitness = better; the loop pre-negates success rates upstream).
+
+#### Scenario: TPE optimiser is selectable via the algorithm field
+
+- **GIVEN** an `EvolutionConfig` with `algorithm: "tpe"` and a `hyperparam_schema` block defining bounded parameters
+- **WHEN** the loop constructs the optimiser
+- **THEN** an `OptunaTPEOptimizer` SHALL be instantiated with per-parameter bounds derived from the encoder's `genome_bounds(sim_config)`
+- **AND** the optimiser SHALL implement the same `ask`/`tell`/`stop`/`result` contract as `CMAESOptimizer` and `GeneticAlgorithmOptimizer`
+- **AND** the loop's per-generation flow SHALL be identical regardless of which optimiser is in use
+
+#### Scenario: Encoders expose per-parameter bounds via genome_bounds
+
+- **GIVEN** the `GenomeEncoder` protocol
+- **WHEN** an encoder is asked for `genome_bounds(sim_config)`
+- **THEN** it SHALL return a `list[tuple[float, float]] | None` where each entry is the `(low, high)` range for the corresponding genome dimension, in the SAME float-space the genome itself lives in (e.g. log-space for `log_scale=True` schema entries; bin-index range for categoricals)
+- **AND** weight encoders (whose genomes are unbounded network weights) SHALL return `None`
+- **AND** the `HyperparameterEncoder` SHALL return a fully-populated list whose length matches `genome_dim(sim_config)`
+
+#### Scenario: TPE rejects unbounded encoders at construction
+
+- **GIVEN** a config selecting `algorithm: "tpe"` paired with an encoder whose `genome_bounds` returns `None` (e.g. a weight encoder)
+- **WHEN** the loop attempts to construct the optimiser
+- **THEN** construction SHALL fail with a clear error stating that TPE requires per-parameter bounds, and pointing the user to CMA-ES or GA for unbounded weight evolution
+- **AND** the error SHALL fire BEFORE any fitness evaluation runs
+
 ### Requirement: First-Class Encoder Coverage for Classical Brains
 
 The encoder registry SHALL include `MLPPPOEncoder` and `LSTMPPOEncoder` at minimum, so that downstream evolutionary work — hyperparameter sweeps, inheritance-strategy pilots, co-evolution, and transgenerational memory experiments — can target classical brains without further framework changes.

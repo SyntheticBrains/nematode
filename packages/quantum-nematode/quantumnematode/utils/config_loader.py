@@ -944,7 +944,7 @@ class EvolutionConfig(BaseModel):
     episodes_per_eval: 3`` for fast smoke-testing.
     """
 
-    algorithm: Literal["cmaes", "ga"] = "cmaes"
+    algorithm: Literal["cmaes", "ga", "tpe"] = "cmaes"
     population_size: int = Field(default=20, ge=1)
     generations: int = Field(default=50, ge=1)
     episodes_per_eval: int = Field(default=15, ge=1)

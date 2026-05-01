@@ -115,6 +115,26 @@ class GenomeEncoder(Protocol):
         """
         ...
 
+    def genome_bounds(
+        self,
+        sim_config: SimulationConfig,
+    ) -> list[tuple[float, float]] | None:
+        """Return per-parameter ``(low, high)`` bounds for the optimiser, or None.
+
+        When None, the optimiser is unbounded — appropriate for CMA-ES
+        on weight evolution (weights cluster around zero, no schema-
+        defined bounds).
+
+        When the genome IS bounded (e.g. hyperparameter schemas with
+        ``[low, high]`` per slot), encoders SHOULD return the bounds
+        in the same float-space the genome itself lives in (i.e.
+        log-space for ``log_scale=True`` slots; bin index range for
+        categoricals).  Required by ``OptunaTPEOptimizer`` (TPE
+        samples from a uniform-in-bounds prior); ignored by CMA-ES
+        (which is unbounded).
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Flatten / unflatten helpers (private)
@@ -304,6 +324,20 @@ class _ClassicalPPOEncoder:
         cluster around zero with similar variance — uniform sigma is
         appropriate.  Returning None tells the optimiser to use its
         default sigma scaling.
+        """
+        return None
+
+    def genome_bounds(
+        self,
+        sim_config: SimulationConfig,  # noqa: ARG002
+    ) -> list[tuple[float, float]] | None:
+        """Weight encoders are unbounded.
+
+        Network weights are unbounded (any finite value is a valid
+        weight).  TPE-based optimisers can't be used with weight
+        encoders for this reason; CMA-ES handles unbounded search
+        natively.  Returning None signals "no bounds available" to the
+        optimiser dispatch.
         """
         return None
 
@@ -558,6 +592,67 @@ class HyperparameterEncoder:
                 msg = f"Unknown param schema type: {entry.type!r}"
                 raise ValueError(msg)
         return stds
+
+    def genome_bounds(
+        self,
+        sim_config: SimulationConfig,
+    ) -> list[tuple[float, float]] | None:
+        """Return per-parameter genome-space bounds matched to the schema.
+
+        Mirrors ``_sample_initial``'s genome-space mapping per type:
+
+        - float (linear): ``(low, high)`` straight from the schema.
+        - float (log_scale): ``(log(low), log(high))`` — the genome
+          lives in log-space.
+        - int: ``(low, high)`` continuous; decode rounds.
+        - bool: ``(-1.0, 1.0)`` — decode thresholds at 0.
+        - categorical: ``(0.0, len(values))`` — decode floors to a
+          bin index.  Upper bound is exclusive at decode but TPE's
+          ``suggest_float`` is inclusive; the encoder's clip handles
+          the high-edge case (``floor(min(value, len-1))``).
+
+        Returns
+        -------
+        list[tuple[float, float]]
+            Always a populated list when the schema is set;
+            ``OptunaTPEOptimizer`` requires non-None bounds and will
+            error at construction otherwise.
+        """
+        if sim_config.hyperparam_schema is None:
+            msg = (
+                "HyperparameterEncoder.genome_bounds requires "
+                "sim_config.hyperparam_schema to be set."
+            )
+            raise ValueError(msg)
+        return [self._entry_bounds(entry) for entry in sim_config.hyperparam_schema]
+
+    @staticmethod
+    def _entry_bounds(entry: ParamSchemaEntry) -> tuple[float, float]:
+        """Return genome-space ``(low, high)`` for one schema entry."""
+        if entry.type == "float":
+            if entry.bounds is None:  # pragma: no cover — validator-enforced
+                msg = "float entry missing bounds"
+                raise ValueError(msg)
+            low, high = entry.bounds
+            if entry.log_scale:
+                return (float(np.log(low)), float(np.log(high)))
+            return (float(low), float(high))
+        if entry.type == "int":
+            if entry.bounds is None:  # pragma: no cover — validator-enforced
+                msg = "int entry missing bounds"
+                raise ValueError(msg)
+            low, high = entry.bounds
+            return (float(low), float(high))
+        if entry.type == "bool":
+            return (-1.0, 1.0)
+        if entry.type == "categorical":
+            if entry.values is None:  # pragma: no cover — validator-enforced
+                msg = "categorical entry missing values"
+                raise ValueError(msg)
+            return (0.0, float(len(entry.values)))
+        # pragma: no cover — validator-enforced
+        msg = f"Unknown param schema type: {entry.type!r}"
+        raise ValueError(msg)
 
     @staticmethod
     def _sample_initial(

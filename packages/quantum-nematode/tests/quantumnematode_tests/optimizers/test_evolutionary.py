@@ -476,3 +476,160 @@ def test_cmaes_optimizer_rejects_nonpositive_or_nonfinite_stds() -> None:
         CMAESOptimizer(num_params=3, stds=[1.0, float("nan"), 1.0])  # NaN
     with pytest.raises(ValueError, match="stds length"):
         CMAESOptimizer(num_params=3, stds=[1.0])  # wrong length
+
+
+# ---------------------------------------------------------------------------
+# OptunaTPEOptimizer
+# ---------------------------------------------------------------------------
+
+
+def test_tpe_optimizer_ask_returns_population_in_bounds() -> None:
+    """``ask()`` SHALL return ``population_size`` solutions, each in-bounds."""
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    bounds = [(-1.0, 1.0), (0.0, 10.0), (0.5, 0.99)]
+    opt = OptunaTPEOptimizer(num_params=3, bounds=bounds, population_size=4, seed=42)
+    sols = opt.ask()
+    assert len(sols) == 4
+    for sol in sols:
+        assert len(sol) == 3
+        for value, (low, high) in zip(sol, bounds, strict=True):
+            assert low <= value <= high, f"value {value} outside [{low}, {high}]"
+
+
+def test_tpe_optimizer_seed_reproducibility() -> None:
+    """Same seed + same fitness sequence -> same suggestion sequence."""
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    bounds = [(-1.0, 1.0), (0.0, 10.0)]
+
+    def run() -> list[list[float]]:
+        opt = OptunaTPEOptimizer(num_params=2, bounds=bounds, population_size=3, seed=99)
+        gen1 = opt.ask()
+        opt.tell(gen1, [-0.1, -0.5, -0.3])
+        gen2 = opt.ask()
+        opt.tell(gen2, [-0.4, -0.2, -0.7])
+        return gen1 + gen2
+
+    a = run()
+    b = run()
+    assert a == b, "TPE with same seed + same fitnesses must produce identical suggestions"
+
+
+def test_tpe_optimizer_tracks_best_fitness_minimisation() -> None:
+    """``result.best_fitness`` SHALL be the minimum fitness ever told.
+
+    Confirms the minimisation sign convention (lower is better, matches
+    CMA-ES + the framework's ``-success_rate`` upstream convention).
+    """
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    opt = OptunaTPEOptimizer(
+        num_params=2,
+        bounds=[(-1.0, 1.0), (0.0, 10.0)],
+        population_size=3,
+        seed=7,
+    )
+    sols = opt.ask()
+    opt.tell(sols, [-0.1, -0.5, -0.3])  # best of gen 1: -0.5
+    assert opt.result.best_fitness == pytest.approx(-0.5)
+
+    sols = opt.ask()
+    opt.tell(sols, [-0.2, -0.4, -0.1])  # gen 2 best -0.4 — worse than gen-1 -0.5
+    assert opt.result.best_fitness == pytest.approx(-0.5), (
+        "best_fitness must NOT regress when a later generation produces only worse values"
+    )
+
+    sols = opt.ask()
+    opt.tell(sols, [-0.9, -0.1, -0.3])  # gen 3 best -0.9 — new global best
+    assert opt.result.best_fitness == pytest.approx(-0.9)
+
+
+def test_tpe_optimizer_double_ask_without_tell_fails() -> None:
+    """Calling ``ask()`` twice without ``tell()`` SHALL raise.
+
+    Prevents silently leaking Optuna trial objects when the loop's
+    ask/tell pairing is broken.
+    """
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    opt = OptunaTPEOptimizer(
+        num_params=2,
+        bounds=[(0.0, 1.0), (0.0, 1.0)],
+        population_size=2,
+        seed=1,
+    )
+    opt.ask()
+    with pytest.raises(RuntimeError, match="without a preceding tell"):
+        opt.ask()
+
+
+def test_tpe_optimizer_tell_length_mismatch_fails() -> None:
+    """``tell()`` with wrong-length fitnesses SHALL raise."""
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    opt = OptunaTPEOptimizer(
+        num_params=2,
+        bounds=[(0.0, 1.0), (0.0, 1.0)],
+        population_size=3,
+        seed=1,
+    )
+    sols = opt.ask()
+    with pytest.raises(RuntimeError, match="ask/tell pairing broken"):
+        opt.tell(sols, [-0.1, -0.2])  # 2 fitnesses for 3 trials
+
+
+def test_tpe_optimizer_rejects_invalid_bounds() -> None:
+    """Bounds wrong-length, non-finite, or low>=high SHALL raise."""
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    with pytest.raises(ValueError, match="bounds length"):
+        OptunaTPEOptimizer(num_params=3, bounds=[(0.0, 1.0)])
+    with pytest.raises(ValueError, match="must be finite"):
+        OptunaTPEOptimizer(num_params=2, bounds=[(0.0, float("inf")), (0.0, 1.0)])
+    with pytest.raises(ValueError, match="low must be strictly less than high"):
+        OptunaTPEOptimizer(num_params=2, bounds=[(0.5, 0.5), (0.0, 1.0)])
+    with pytest.raises(ValueError, match="low must be strictly less than high"):
+        OptunaTPEOptimizer(num_params=2, bounds=[(1.0, 0.5), (0.0, 1.0)])
+
+
+def test_tpe_optimizer_result_before_tell_returns_sentinel() -> None:
+    """``result`` SHALL return a default sentinel when no tell() has happened.
+
+    Avoids crashing the loop's logging path if it queries ``result``
+    before the first generation completes.
+    """
+    import pytest
+    from quantumnematode.optimizers.evolutionary import OptunaTPEOptimizer
+
+    pytest.importorskip("optuna")
+
+    opt = OptunaTPEOptimizer(
+        num_params=4,
+        bounds=[(0.0, 1.0)] * 4,
+        population_size=2,
+        seed=1,
+    )
+    r = opt.result
+    assert r.best_params == [0.0] * 4
+    assert r.best_fitness == float("inf")
+    assert r.generations == 0
+    assert r.history == []
