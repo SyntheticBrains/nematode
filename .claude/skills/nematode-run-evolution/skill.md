@@ -1,6 +1,6 @@
 ---
 name: nematode-run-evolution
-description: Launch evolutionary optimisation runs via scripts/run_evolution.py. Use when the user wants to evolve brain weights with CMA-ES or GA, or when running evolution-framework smoke/pilot configs. Covers the timing pitfalls that crashed earlier sessions.
+description: Launch evolutionary optimisation runs via scripts/run_evolution.py. Use when the user wants to evolve brain weights with CMA-ES or GA, evolve hyperparameters with CMA-ES or Optuna/TPE, or run evolution-framework smoke/pilot configs. Covers the timing pitfalls that crashed earlier sessions.
 metadata:
   author: nematode
   version: '1.0'
@@ -8,7 +8,7 @@ metadata:
 
 Run brain-agnostic evolutionary optimisation via [scripts/run_evolution.py](../../scripts/run_evolution.py).
 
-**Input**: A YAML config (typically under `configs/evolution/`) specifying `brain` and `evolution` blocks. Optionally specify `--generations`, `--population`, `--episodes`, `--seed`, `--parallel`, `--algorithm` (cmaes|ga), `--resume`, or `--output-dir` to override the YAML.
+**Input**: A YAML config (typically under `configs/evolution/`) specifying `brain` and `evolution` blocks. Optionally specify `--generations`, `--population`, `--episodes`, `--seed`, `--parallel`, `--algorithm` (cmaes|ga|tpe), `--resume`, or `--output-dir` to override the YAML. TPE (Optuna's Tree-structured Parzen Estimator) is for hyperparameter evolution only — it requires the encoder to expose `genome_bounds`, which `HyperparameterEncoder` does but the weight encoders do not.
 
 ## Critical timing pitfalls (read first)
 
