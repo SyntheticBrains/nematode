@@ -54,6 +54,7 @@ from quantumnematode.optimizers.evolutionary import (
     CMAESOptimizer,
     EvolutionaryOptimizer,
     GeneticAlgorithmOptimizer,
+    OptunaTPEOptimizer,
 )
 from quantumnematode.utils.config_loader import (
     EvolutionConfig,
@@ -89,7 +90,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--algorithm",
         type=str,
-        choices=["cmaes", "ga"],
+        choices=["cmaes", "ga", "tpe"],
         default=None,
         help="Override evolution.algorithm.",
     )
@@ -196,6 +197,7 @@ def _build_optimizer(
     *,
     x0: list[float] | None = None,
     stds: list[float] | None = None,
+    bounds: list[tuple[float, float]] | None = None,
 ) -> EvolutionaryOptimizer:
     """Construct the optimiser specified by ``evolution_config.algorithm``.
 
@@ -213,6 +215,12 @@ def _build_optimizer(
     (e.g. mixed hyperparameter schemas where one slot has range ~7 in
     log-units and another has range ~0.1).  Currently ignored by the
     GA optimiser, which uses ``sigma0`` uniformly.
+
+    ``bounds`` (TPE only) supplies per-parameter ``(low, high)`` ranges.
+    Required by ``OptunaTPEOptimizer`` (TPE samples from a uniform-in-
+    bounds prior); ignored by CMA-ES and GA which sample from
+    Gaussian / mutation distributions.  Length must equal ``num_params``
+    when set.
     """
     if evolution_config.algorithm == "cmaes":
         return CMAESOptimizer(
@@ -233,6 +241,21 @@ def _build_optimizer(
             elite_fraction=evolution_config.elite_fraction,
             mutation_rate=evolution_config.mutation_rate,
             crossover_rate=evolution_config.crossover_rate,
+            seed=seed,
+        )
+    if evolution_config.algorithm == "tpe":
+        if bounds is None:
+            msg = (
+                "TPE optimiser requires per-parameter bounds, but the encoder "
+                "returned None.  TPE is only supported for bounded-search "
+                "configs (typically HyperparameterEncoder); weight encoders "
+                "return None and should use CMA-ES or GA instead."
+            )
+            raise ValueError(msg)
+        return OptunaTPEOptimizer(
+            num_params=num_params,
+            bounds=bounds,
+            population_size=evolution_config.population_size,
             seed=seed,
         )
     msg = f"Unknown algorithm: {evolution_config.algorithm!r}"
@@ -377,12 +400,19 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
     # encoders return None to keep CMA-ES's default uniform sigma.
     stds = encoder.genome_stds(sim_config)
 
+    # Per-parameter bounds are required by TPE (which samples uniformly
+    # from a bounded prior) and ignored by CMA-ES (unbounded).  Weight
+    # encoders return None — TPE-on-weights isn't a supported
+    # combination at the M2 scale anyway (n>>schema dim).
+    bounds = encoder.genome_bounds(sim_config)
+
     optimizer = _build_optimizer(
         evolution_config,
         num_params,
         seed=args.seed,
         x0=x0,
         stds=stds,
+        bounds=bounds,
     )
 
     log_level_int = getattr(logging, args.log_level)

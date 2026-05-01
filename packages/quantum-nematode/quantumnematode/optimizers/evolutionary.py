@@ -5,8 +5,12 @@ gradient-based learning entirely. Instead of computing noisy parameter-shift
 gradients, these optimizers use fitness evaluation over multiple episodes.
 
 Supported algorithms:
-- CMA-ES (Covariance Matrix Adaptation Evolution Strategy) - recommended
+- CMA-ES (Covariance Matrix Adaptation Evolution Strategy) - recommended for
+  unbounded continuous search at moderate-to-large genome dim
 - Genetic Algorithm (GA) - simpler, more interpretable
+- Optuna TPE (Tree-structured Parzen Estimator) - Bayesian-style sampler
+  for small-genome bounded hyperparameter search; especially relevant for
+  M2-style schemas with mixed-scale dimensions and narrow viable regions
 
 Key advantages over gradient-based learning:
 - No gradient noise from parameter-shift rule
@@ -456,6 +460,240 @@ class GeneticAlgorithmOptimizer(EvolutionaryOptimizer):
         """
         return EvolutionResult(
             best_params=self._best_individual.copy(),
+            best_fitness=self._best_fitness,
+            generations=self.generation,
+            history=self._history,
+        )
+
+
+class OptunaTPEOptimizer(EvolutionaryOptimizer):
+    """Optuna TPE (Tree-structured Parzen Estimator) sampler wrapped in the
+    population-based ``ask``/``tell`` interface.
+
+    Why TPE rather than CMA-ES for some M2-shaped problems:
+
+    - **Bounded sampling**.  CMA-ES samples from an unbounded Gaussian and
+      relies on the encoder to clip out-of-bounds values at decode.  When
+      the schema has narrow viable regions (e.g. ``actor_lr`` with a
+      lower bound of 1e-5 right at the dead-zone boundary), CMA-ES's
+      covariance adaptation can collapse the search distribution onto
+      that boundary and clip every sample there.  TPE samples from a
+      uniform prior over the configured bounds and never clips — a
+      genome at the bound is just one point of many, not the destination
+      the search converges toward.
+    - **Per-parameter mixed scales handled natively**.  CMA-ES needs
+      explicit ``CMA_stds`` to handle log-scale lr (range ~7) alongside
+      tight-range gamma (range ~0.1).  TPE's KDE is fit independently
+      per parameter, so no per-parameter scaling tuning is required.
+    - **Sample-efficient at small genome dim**.  TPE's kernel density
+      estimate over good vs bad trials directly biases sampling toward
+      promising regions — at the M2 scale (n ≈ 6-7 evolved fields, few
+      hundred evaluations) this typically converges faster than CMA-ES.
+
+    Why we still call it "evolutionary" and use ask/tell:
+
+    - The framework's ``EvolutionLoop`` is a population-based ask/tell
+      loop and we want optimisers to be drop-in.  Optuna's native
+      ``study.optimize(func, n_trials=N)`` doesn't fit that surface, but
+      Optuna also exposes ``study.ask()`` / ``study.tell(trial, value)``
+      which does.  Per generation we ``ask()`` ``population_size`` trials,
+      hand the suggested params back to the loop, then ``tell()`` each
+      trial its fitness once the loop reports back.
+
+    Sign convention:
+
+    - ``EvolutionLoop`` minimises (lower fitness is better; it negates
+      success rates upstream).  ``OptunaTPEOptimizer`` configures the
+      Optuna study with ``direction="minimize"`` so the dispatch site
+      doesn't need to know which optimiser is in use.
+
+    Bounds requirement:
+
+    - TPE genuinely needs per-parameter ``[low, high]`` bounds — unlike
+      CMA-ES which can run unbounded.  Callers MUST pass ``bounds`` or
+      construction fails clearly at init time.  The
+      ``HyperparameterEncoder`` already knows these via the schema; the
+      CLI threads them through ``_build_optimizer``.
+    """
+
+    def __init__(
+        self,
+        num_params: int,
+        *,
+        bounds: list[tuple[float, float]],
+        population_size: int = 12,
+        seed: int | None = None,
+    ) -> None:
+        """Initialise the Optuna TPE optimiser.
+
+        Args:
+            num_params: Number of parameters to optimise.
+            bounds: Per-parameter ``(low, high)`` ranges.  Length MUST equal
+                ``num_params``.  TPE samples from these bounds via
+                ``trial.suggest_float``; out-of-bounds values are
+                impossible by construction (vs CMA-ES which clips at
+                decode time).
+            population_size: Number of trials per generation.  TPE's
+                ``ask()`` is normally serial, but we batch
+                ``population_size`` trials per generation to match the
+                ``EvolutionLoop`` interface.
+            seed: Seed for the underlying ``TPESampler``.  When provided,
+                reproduces the same trial-suggestion sequence given the
+                same fitness values.
+        """
+        # Lazy import: optuna is an optional-but-installed dependency we
+        # want to avoid at module-import time so test collection stays
+        # fast even on environments without optuna available.  At
+        # construction time we genuinely need it.
+        import optuna
+
+        super().__init__(num_params, population_size, sigma0=0.0)
+
+        if len(bounds) != num_params:
+            msg = (
+                f"OptunaTPEOptimizer: bounds length {len(bounds)} does not "
+                f"match num_params {num_params}."
+            )
+            raise ValueError(msg)
+        for i, (low, high) in enumerate(bounds):
+            if not (math.isfinite(low) and math.isfinite(high)):
+                msg = (
+                    f"OptunaTPEOptimizer: bounds[{i}] = ({low!r}, {high!r}); "
+                    "all bounds must be finite real numbers."
+                )
+                raise ValueError(msg)
+            if low >= high:
+                msg = (
+                    f"OptunaTPEOptimizer: bounds[{i}] = ({low}, {high}); "
+                    "low must be strictly less than high."
+                )
+                raise ValueError(msg)
+
+        self._bounds = list(bounds)
+        # Silence Optuna's default per-trial INFO logs — at population_size *
+        # generations trials per run, the volume drowns the loop's own logs.
+        # Users who want them can re-enable via OPTUNA_LOG_LEVEL env or
+        # ``optuna.logging.set_verbosity(...)`` directly.
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+        sampler = optuna.samplers.TPESampler(seed=seed)
+        self._study = optuna.create_study(
+            direction="minimize",
+            sampler=sampler,
+        )
+        # Trial objects we've ``ask()``'d for the current generation but
+        # haven't ``tell()``'d yet.  Keyed by the position in the
+        # population so ``tell(solutions, fitnesses)`` can correlate the
+        # caller's solutions list with the underlying Trial.
+        self._pending_trials: list = []
+        self._best_params: list[float] | None = None
+        self._best_fitness: float = float("inf")
+        self._history: list[dict] = []
+
+    def ask(self) -> list[list[float]]:
+        """Request ``population_size`` candidate solutions from TPE.
+
+        Each call corresponds to one generation in the framework's
+        loop.  The Optuna trials are stashed in ``self._pending_trials``
+        so the next ``tell()`` can correlate fitness values back to
+        their originating trial.
+        """
+        # If a previous ask() was made without a tell(), the user is
+        # double-asking — that's a contract violation and we'd silently
+        # leak Trial objects.  Surface it.
+        if self._pending_trials:
+            msg = (
+                "OptunaTPEOptimizer.ask() called without a preceding tell(); "
+                "the loop must call tell() with the previous generation's "
+                "fitnesses before requesting a new generation."
+            )
+            raise RuntimeError(msg)
+
+        solutions: list[list[float]] = []
+        for _ in range(self.population_size):
+            trial = self._study.ask()
+            params = [
+                trial.suggest_float(f"x{i}", low, high)
+                for i, (low, high) in enumerate(self._bounds)
+            ]
+            self._pending_trials.append(trial)
+            solutions.append(params)
+        return solutions
+
+    def tell(self, solutions: list[list[float]], fitnesses: list[float]) -> None:
+        """Report fitness values for the most recent ``ask()`` solutions.
+
+        Args:
+            solutions: Parameter arrays from the most recent ``ask()``.
+                Length must equal ``population_size``.  The arrays
+                themselves are NOT used for the tell — Optuna correlates
+                via the trial objects stashed in ``self._pending_trials``
+                — but a length check on ``solutions`` catches a
+                miscount on the caller's side.
+            fitnesses: Corresponding fitness values (lower is better).
+        """
+        if len(self._pending_trials) != len(fitnesses):
+            msg = (
+                "OptunaTPEOptimizer.tell(): "
+                f"have {len(self._pending_trials)} pending trials but "
+                f"{len(fitnesses)} fitnesses; ask/tell pairing broken."
+            )
+            raise RuntimeError(msg)
+        if len(solutions) != len(fitnesses):
+            msg = (
+                "OptunaTPEOptimizer.tell(): "
+                f"solutions length {len(solutions)} does not match "
+                f"fitnesses length {len(fitnesses)}."
+            )
+            raise ValueError(msg)
+
+        for trial, params, fitness in zip(
+            self._pending_trials,
+            solutions,
+            fitnesses,
+            strict=True,
+        ):
+            self._study.tell(trial, fitness)
+            if fitness < self._best_fitness:
+                self._best_fitness = fitness
+                self._best_params = list(params)
+
+        # Mirror CMA-ES's history schema (generation/best_fitness/
+        # mean_fitness/std_fitness) so the aggregator script and any
+        # downstream tooling that reads history.csv works regardless of
+        # which optimiser produced the run.  All three are in the
+        # framework's minimisation-space (lower = better) — the loop's
+        # ``_write_artefacts`` flips them to "positive = better" before
+        # writing the CSV, so optimisers MUST store minimisation-space
+        # values here.  ``best_fitness`` is the global running min;
+        # mean/std are computed over THIS generation's fitnesses.
+        self._history.append(
+            {
+                "generation": self.generation + 1,
+                "best_fitness": self._best_fitness,
+                "mean_fitness": float(np.mean(fitnesses)) if fitnesses else 0.0,
+                "std_fitness": float(np.std(fitnesses)) if fitnesses else 0.0,
+            },
+        )
+        self._pending_trials = []
+        self.generation += 1
+
+    def stop(self) -> bool:
+        """TPE has no internal stopping criterion; the loop's gen budget governs."""
+        return False
+
+    @property
+    def result(self) -> EvolutionResult:
+        """Best params + fitness across all generations seen so far."""
+        # Defensive: if ``result`` is queried before any ``tell()`` has
+        # landed, ``_best_params`` is still None.  Return a sentinel
+        # rather than raise so the caller's logging path doesn't crash
+        # (CMA-ES exposes an analogous default through ``cma``).
+        best = (
+            self._best_params.copy() if self._best_params is not None else [0.0] * self.num_params
+        )
+        return EvolutionResult(
+            best_params=best,
             best_fitness=self._best_fitness,
             generations=self.generation,
             history=self._history,
