@@ -85,21 +85,25 @@ to mark sub-tasks complete as part of its diff.
 
 ## M3: Lamarckian Evolution Pilot
 
-**OpenSpec change**: `2026-05-19-add-lamarckian-evolution` (not yet created)
-**Status**: not started
+**OpenSpec change**: `add-lamarckian-evolution` (open; will archive as `<DATE>-add-lamarckian-evolution` on PR merge)
+**Status**: complete. Speed gate +5.25 gens (lamarckian mean gen-to-0.92 = 4.50 vs control = 9.75; passes by 1.3× the +4 threshold). All 4 lamarckian seeds reach best fitness 1.00; control tops at 0.88-0.96 with seed 42 saturated at 0.88. Population mean climbs to 0.83-0.90 sustained vs control's 0.05-0.50. Inheritance rescues TPE-unlucky seed 42 — direct analogue of M2.12 rescuing M2.11's seed-43 dead-zone. Cross-schema check rules out the 4-vs-6-field schema simplification as a confounder (worth ~0 gens). 18 LSTMPPO trained tensors round-trip bit-exact through `save_weights → load_weights`. **M4 (Baldwin Effect) starts on this configuration.** See logbook 013
 **Bio fidelity**: MEDIUM
-**Brain target**: MLPPPO (cheap) + LSTMPPO+klinotaxis (headline)
-**Dependencies**: M0
-**Decision gate**: GO to M4 if LSTMPPO+klinotaxis shows ≥10pp faster convergence AND F1 eval-only success > random init
+**Brain target**: LSTMPPO+klinotaxis (predator arm only — M2 saturated arms can't measure inheritance signal)
+**Dependencies**: M0, M2 (TPE optimiser from M2.12)
+**Decision gate**: GO to M4 if LSTMPPO+klinotaxis shows ≥10pp faster convergence AND F1 eval-only success > random init — translated to the predator arm as: GO if mean_gen_lamarckian_to_092 + 4 ≤ mean_gen_control_to_092 AND mean_gen2_lamarckian ≥ mean_gen3_control (gen-2 reference, not gen-1, because gen-0-from-scratch is identical between arms by construction)
 
-- [ ] M3.1 Create `evolution/inheritance.py` with `LamarckianInheritance` strategy
-- [ ] M3.2 Wire through `EvolutionLoop` via `--inheritance lamarckian` CLI flag
-- [ ] M3.3 Encoder round-trip serialization for MLPPPO + LSTMPPO via `WeightPersistence`
-- [ ] M3.4 Create `configs/evolution/lamarckian_mlpppo_pilot.yml`
-- [ ] M3.5 Create `configs/evolution/lamarckian_lstmppo_klinotaxis_pilot.yml`
-- [ ] M3.6 Run pilot: 30 gens × population 16 × 4 seeds × 2 brains
-- [ ] M3.7 Publish `artifacts/logbooks/012/m3_lamarckian_pilot.md` with GO/PIVOT/STOP decision
-- [ ] M3.8 Update this checklist + roadmap milestone tracker
+Scope changed from the original 8 sub-tasks (which assumed MLPPPO + LSTMPPO arms with a `2026-05-19-` date prefix and CMA-ES base) to the actual M3 scope after planning (predator arm only, TPE base optimiser, single-elite-broadcast, within-experiment from-scratch control instead of MLPPPO companion arm). The expanded checklist:
+
+- [x] M3.1 Create `evolution/inheritance.py` with `InheritanceStrategy` Protocol + `NoInheritance` + `LamarckianInheritance` strategies
+- [x] M3.2 Wire through `EvolutionLoop` via `--inheritance {none,lamarckian}` CLI flag with CLI guard rejecting `inheritance + --fitness success_rate` mismatch at startup
+- [x] M3.3 Per-genome warm-start via `LearnedPerformanceFitness`'s new `warm_start_path_override` + `weight_capture_path` kwargs; checkpoint via `save_weights`/`load_weights` (round-trip bit-exact for LSTMPPO trained tensors); two-phase GC bounds disk usage to `2 * inheritance_elite_count` files
+- [x] M3.4 ~~Create `configs/evolution/lamarckian_mlpppo_pilot.yml`~~ — DROPPED. M2 saturated arms (MLPPPO+oracle, LSTMPPO foraging) saturate at 1.000 from gen 1 and can't measure inheritance signal. Predator-arm-only scope decided during planning
+- [x] M3.5 Create `configs/evolution/lamarckian_lstmppo_klinotaxis_predator_pilot.yml` (renamed from `lamarckian_lstmppo_klinotaxis_pilot.yml`) + `lamarckian_lstmppo_klinotaxis_predator_control.yml` (within-experiment from-scratch control) + matching campaign scripts under `scripts/campaigns/phase5_m3_*.sh`. Schema dropped `rnn_type` + `lstm_hidden_dim` (architecture-changing fields incompatible with per-genome warm-start; validator rejects)
+- [x] M3.6 Run pilot: 4 seeds × 20 gens × pop 12 × K=50/L=25 under TPE base optimiser. Both arms re-run baseline (`scripts/campaigns/phase5_m2_hyperparam_lstmppo_klinotaxis_predator_baseline.sh` under M3 revision; reproduces M2.11's published 0.15/0.16/0.15/0.22 mean 0.170 — confirms run_simulation.py path is unchanged). Pre-pilot smoke (3 gens × pop 6 × seed 42) ran on both arms before committing to the 2-hour full-pilot wall
+- [x] M3.7 Publish `artifacts/logbooks/013/m3_lamarckian_pilot/` (per-seed lamarckian + control + baseline + final-gen winner checkpoints) and `docs/experiments/logbooks/013-lamarckian-inheritance-pilot.md` (main + supporting appendix at `supporting/013/lamarckian-inheritance-pilot-details.md`). Aggregator at `scripts/campaigns/aggregate_m3_pilot.py` produces `summary.md` + `convergence.png` + `convergence_speed.csv`. Decision gate translated to two metrics: speed (+5.25 gens, PASS) and floor (corrected gen-2 reference: +0.42pp population mean, PASS)
+- [x] M3.8 Update this checklist + roadmap milestone tracker (this file + `docs/roadmap.md`)
+- [x] M3.9 Aggregator + within-experiment control YAML/script — added during planning so the lamarckian-vs-control comparison is confounder-free (no Python/dep/machine drift between M2.12's results and M3's). Cross-schema check (M3-control vs M2.12 6-field TPE: +0.25 gens speed margin) empirically rules out the 4-field-vs-6-field schema simplification as a confounder
+- [x] M3.10 Pre-pilot smoke (task group 9b in the M3 OpenSpec change) — added during planning to validate framework correctness at real K=50/L=25 + parallel=4 scale before committing to the ~2-hour full-pilot wall. Both arms passed all mechanical assertions in ~85s + ~65s
 
 ## M4: Baldwin Effect Demonstration
 
@@ -114,8 +118,8 @@ to mark sub-tasks complete as part of its diff.
 - [ ] M4.2 Implement learning-blocked F1 control cohort (config fields: `control_cohort_interval`, `control_cohort_fraction`)
 - [ ] M4.3 Create `configs/evolution/baldwin_lstmppo_klinotaxis_full.yml`
 - [ ] M4.4 Create `configs/evolution/baldwin_comparison_campaign.yml`
-- [ ] M4.5 Run head-to-head: from-scratch vs Lamarckian (M3) vs Baldwin × 50 gens × 4 seeds
-- [ ] M4.6 Publish `artifacts/logbooks/013/` with full Baldwin Effect findings
+- [ ] M4.5 Run head-to-head: from-scratch vs Lamarckian (M3) vs Baldwin × 50 gens × 4 seeds — M3's predator config + TPE + the new Baldwin strategy are the inheritable starting point. M3's per-seed final-gen winner checkpoints under `artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-N/inheritance/` are valid hand-off points if M4 wants to start from M3's best-known policies rather than re-evolving from scratch
+- [ ] M4.6 Publish `artifacts/logbooks/014/` with full Baldwin Effect findings (note: changed from `013/` to `014/` since M3 took 013)
 - [ ] M4.7 Update this checklist + roadmap milestone tracker
 
 ## M5: Co-Evolution Arms Race
