@@ -21,13 +21,15 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from quantumnematode.agent.agent import DEFAULT_MAX_AGENT_BODY_LENGTH, QuantumNematodeAgent
 from quantumnematode.agent.runners import StandardEpisodeRunner
-from quantumnematode.brain.weights import load_weights
+from quantumnematode.brain.weights import load_weights, save_weights
 from quantumnematode.env.theme import Theme
 from quantumnematode.report.dtypes import TerminationReason
 from quantumnematode.utils.config_loader import create_env_from_config
 from quantumnematode.utils.seeding import derive_run_seed, get_rng, set_global_seed
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from quantumnematode.agent.runners import EpisodeResult
     from quantumnematode.brain.arch._brain import Brain
     from quantumnematode.env import DynamicForagingEnvironment
@@ -333,7 +335,11 @@ class LearnedPerformanceFitness:
 
     # C901: linear pipeline (decode → train env → train loop → eval env → eval loop)
     # with multiple defensive guards — splitting into helpers fragments the flow.
-    def evaluate(  # noqa: C901
+    # PLR0913: the kwarg surface (genome, sim_config, encoder, episodes, seed,
+    # warm_start_path_override, weight_capture_path) is the documented Protocol
+    # contract; collapsing into a config object would obscure the per-genome
+    # call shape the loop uses.
+    def evaluate(  # noqa: C901, PLR0913
         self,
         genome: Genome,
         sim_config: SimulationConfig,
@@ -341,8 +347,27 @@ class LearnedPerformanceFitness:
         *,
         episodes: int,
         seed: int,
+        warm_start_path_override: Path | None = None,
+        weight_capture_path: Path | None = None,
     ) -> float:
-        """Run K train + L eval and return ``eval_successes / L``."""
+        """Run K train + L eval and return ``eval_successes / L``.
+
+        Two optional kwargs that the :class:`EvolutionLoop` MAY pass
+        per-genome (defaulting to ``None`` when omitted, preserving the
+        existing single-arg call shape):
+
+        - ``warm_start_path_override``: when set, the brain is loaded
+          from this path INSTEAD of ``evolution_config.warm_start_path``.
+          The two are mutually exclusive at YAML load time, so in
+          practice only one is ever active.  The override exists so the
+          loop's inheritance step can supply per-genome parent
+          checkpoints without mutating run-wide config.
+        - ``weight_capture_path``: when set, the post-K-train brain
+          weights are written to this path via ``save_weights`` AFTER
+          the K train loop completes and BEFORE the L eval phase begins.
+          This captures the policy as-trained (not as-eval'd).  The
+          path's parent directory is created if missing.
+        """
         # Defensive guards mirroring EpisodicSuccessRate.evaluate, plus
         # the evolution-block guard specific to learned-performance fitness.
         if sim_config.evolution is None:
@@ -378,14 +403,23 @@ class LearnedPerformanceFitness:
         # brain is constructed and BEFORE the train phase.  Each genome's
         # K train episodes then fine-tune the checkpoint under the genome's
         # evolved hyperparameters.  Validator already guarantees that the
-        # schema does not contain architecture-changing fields when this
-        # is set, so state_dict shapes match.  Path is resolved from
-        # ``sim_config.evolution.warm_start_path``; ``load_weights`` itself
-        # raises ``FileNotFoundError`` if the path doesn't exist, with a
-        # clear message — that error fires on the first genome's evaluation
-        # so a missing checkpoint kills the run before generation 1 finishes.
-        if evolution_config.warm_start_path is not None:
-            load_weights(brain, evolution_config.warm_start_path)
+        # schema does not contain architecture-changing fields when either
+        # source is set, so state_dict shapes match.
+        #
+        # Two sources, mutually exclusive at YAML load time:
+        #   (a) ``warm_start_path_override`` (per-genome, set by the loop's
+        #       inheritance step) — wins when present.
+        #   (b) ``sim_config.evolution.warm_start_path`` (run-wide static
+        #       checkpoint, set in YAML) — used otherwise.
+        # ``load_weights`` raises ``FileNotFoundError`` with a clear
+        # message if the resolved path doesn't exist.
+        warm_start_path = (
+            warm_start_path_override
+            if warm_start_path_override is not None
+            else evolution_config.warm_start_path
+        )
+        if warm_start_path is not None:
+            load_weights(brain, warm_start_path)
 
         # Train phase: fresh env, brain weights mutate as it learns.
         train_env = create_env_from_config(
@@ -416,6 +450,18 @@ class LearnedPerformanceFitness:
                 train_agent.env.rng = get_rng(run_seed)
                 train_agent.reset_environment()
             train_runner.run(train_agent, sim_config.reward, max_steps)
+
+        # Optional weight capture: persist the post-K-train brain weights
+        # to ``weight_capture_path`` BEFORE the eval phase begins.  This
+        # captures the policy as-trained, not as-eval'd (the eval phase
+        # never mutates weights under FrozenEvalRunner, but capturing
+        # before eval keeps the contract simple: "trained weights" =
+        # weights at the moment train ended).  Used by the Lamarckian
+        # inheritance loop to checkpoint each genome for the next
+        # generation's children to inherit from.
+        if weight_capture_path is not None:
+            weight_capture_path.parent.mkdir(parents=True, exist_ok=True)
+            save_weights(brain, weight_capture_path)
 
         # Eval phase: SECOND fresh env (same seed) — post-train env state
         # is arbitrary and would corrupt the eval measurement.  Brain

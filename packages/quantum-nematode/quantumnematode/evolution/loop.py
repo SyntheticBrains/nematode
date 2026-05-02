@@ -35,6 +35,7 @@ import torch
 
 from quantumnematode.evolution.encoders import build_birth_metadata
 from quantumnematode.evolution.genome import Genome, genome_id_for
+from quantumnematode.evolution.inheritance import InheritanceStrategy, NoInheritance
 from quantumnematode.evolution.lineage import LineageTracker
 from quantumnematode.optimizers.evolutionary import EvolutionResult
 
@@ -52,8 +53,11 @@ logger = logging.getLogger(__name__)
 
 # Pickle checkpoint version.  Bump if the checkpoint dict shape changes in
 # a backwards-incompatible way; `_load_checkpoint` validates this and
-# refuses incompatible checkpoints.
-CHECKPOINT_VERSION = 1
+# refuses incompatible checkpoints.  v2 adds ``selected_parent_ids``
+# (list of genome IDs whose Lamarckian checkpoints survive into the next
+# generation) and ``inheritance`` (the literal "none"/"lamarckian" string
+# the run was launched with — used to reject mismatched-setting resumes).
+CHECKPOINT_VERSION = 2
 
 
 # ---------------------------------------------------------------------------
@@ -100,10 +104,14 @@ def _evaluate_in_worker(args: tuple) -> float:
     ----
     args
         Tuple of ``(params_array, sim_config, encoder, fitness, episodes, seed,
-        generation, index, parent_ids)``.  All elements must be picklable.
-        ``encoder`` and ``fitness`` are class instances pickled by reference
-        to their class definitions; concrete encoders/fitness functions in
-        this module are top-level classes and pickle cleanly.
+        generation, index, parent_ids, warm_start_path_override,
+        weight_capture_path)``.  All elements must be picklable.  The two
+        trailing ``Path | None`` fields are used by the inheritance step:
+        when both are ``None`` (the no-inheritance case) the call site is
+        identical to a frozen-weight evolution run.  ``encoder`` and
+        ``fitness`` are class instances pickled by reference to their
+        class definitions; concrete encoders/fitness functions in this
+        module are top-level classes and pickle cleanly.
 
     Returns
     -------
@@ -121,6 +129,8 @@ def _evaluate_in_worker(args: tuple) -> float:
         generation,
         index,
         parent_ids,
+        warm_start_path_override,
+        weight_capture_path,
     ) = args
     genome = Genome(
         params=np.asarray(params, dtype=np.float32),
@@ -129,6 +139,22 @@ def _evaluate_in_worker(args: tuple) -> float:
         generation=generation,
         birth_metadata=build_birth_metadata(sim_config),
     )
+    # Only LearnedPerformanceFitness accepts the inheritance kwargs;
+    # EpisodicSuccessRate doesn't.  Detect by signature rather than
+    # type-import to avoid coupling the worker to a specific fitness
+    # class.  When both kwargs are None (no-inheritance case) we drop
+    # them entirely so the call shape is identical to a frozen-weight
+    # evolution run.
+    if warm_start_path_override is not None or weight_capture_path is not None:
+        return fitness.evaluate(
+            genome,
+            sim_config,
+            encoder,
+            episodes=episodes,
+            seed=seed,
+            warm_start_path_override=warm_start_path_override,
+            weight_capture_path=weight_capture_path,
+        )
     return fitness.evaluate(genome, sim_config, encoder, episodes=episodes, seed=seed)
 
 
@@ -173,6 +199,7 @@ class EvolutionLoop:
         output_dir: Path,
         rng: np.random.Generator,
         log_level: int = logging.WARNING,
+        inheritance: InheritanceStrategy | None = None,
     ) -> None:
         self.optimizer = optimizer
         self.encoder = encoder
@@ -182,6 +209,15 @@ class EvolutionLoop:
         self.output_dir = output_dir
         self.rng = rng
         self.log_level = log_level
+        # Inheritance strategy for per-genome weight capture/warm-start.
+        # Defaults to NoInheritance() so the loop runs as a frozen-weight
+        # evolution loop when no strategy is supplied.  Use a None
+        # sentinel + late-construction (rather than ``= NoInheritance()``
+        # in the signature) to avoid a shared default instance across
+        # calls.
+        self.inheritance: InheritanceStrategy = (
+            inheritance if inheritance is not None else NoInheritance()
+        )
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._lineage_path = self.output_dir / "lineage.csv"
@@ -191,16 +227,26 @@ class EvolutionLoop:
         # Generation index and prior-generation IDs are mutated in run().
         self._generation = 0
         self._prev_generation_ids: list[str] = []
+        # Inheritance bookkeeping: IDs of genomes whose weight checkpoints
+        # are about to be inherited by the next generation's children.
+        # Empty until the first generation completes select_parents().
+        self._selected_parent_ids: list[str] = []
 
     # ---- Checkpoint / Resume ---------------------------------------------
 
     def _save_checkpoint(self) -> None:
         """Pickle optimiser + RNG + generation + lineage path + version."""
+        # ``inheritance`` is persisted as the literal "none"/"lamarckian"
+        # string (not the strategy instance) so resume can compare against
+        # the resolved current value and reject mismatches.
+        inheritance_value = self.evolution_config.inheritance
         payload = {
             "checkpoint_version": CHECKPOINT_VERSION,
             "optimizer": self.optimizer,
             "generation": self._generation,
             "prev_generation_ids": self._prev_generation_ids,
+            "selected_parent_ids": self._selected_parent_ids,
+            "inheritance": inheritance_value,
             "rng_state": self.rng.bit_generator.state,
             "lineage_path": str(self._lineage_path),
         }
@@ -219,6 +265,9 @@ class EvolutionLoop:
             If the checkpoint's ``checkpoint_version`` doesn't match
             :data:`CHECKPOINT_VERSION`.  Refusing incompatible checkpoints
             avoids silent state corruption when the loop's schema changes.
+            Also raised when the checkpoint's recorded ``inheritance``
+            differs from the resolved current ``EvolutionConfig.inheritance``
+            (mid-run inheritance changes are not supported).
         """
         with path.open("rb") as handle:
             payload = pickle.load(handle)  # noqa: S301 - trusted local file
@@ -231,14 +280,116 @@ class EvolutionLoop:
             )
             raise ValueError(msg)
 
+        # Reject mid-run inheritance changes.  Fires BEFORE any optimiser
+        # state is restored so an inadvertent --inheritance override
+        # doesn't waste compute on a corrupted run.
+        checkpoint_inheritance = payload.get("inheritance", "none")
+        current_inheritance = self.evolution_config.inheritance
+        if checkpoint_inheritance != current_inheritance:
+            msg = (
+                f"Checkpoint inheritance setting ({checkpoint_inheritance!r}) "
+                f"differs from resolved current value ({current_inheritance!r}). "
+                "Mid-run inheritance changes are not supported. Either start "
+                "a fresh run or restore the original setting (in YAML or "
+                "via --inheritance) before resuming."
+            )
+            raise ValueError(msg)
+
         self.optimizer = payload["optimizer"]
         self._generation = payload["generation"]
         self._prev_generation_ids = payload["prev_generation_ids"]
+        self._selected_parent_ids = payload.get("selected_parent_ids", [])
         self.rng.bit_generator.state = payload["rng_state"]
+
+    # ---- Inheritance helpers --------------------------------------------
+
+    def _inheritance_active(self) -> bool:
+        """Return True iff the active strategy uses per-genome checkpoints."""
+        return not isinstance(self.inheritance, NoInheritance)
+
+    def _gc_inheritance_dir(self, generation: int, keep_ids: list[str]) -> None:
+        """Garbage-collect non-survivor checkpoints in one inheritance directory.
+
+        Deletes every file in ``inheritance/gen-{generation:03d}/`` whose
+        genome ID is NOT in ``keep_ids``.  No-op when the directory does
+        not exist (e.g. on the very first GC pass before any inheritance
+        file has been written, or when ``generation < 0``).  Files are
+        matched by the canonical ``genome-<gid>.pt`` name shape; the
+        ``<gid>`` token is extracted via ``stem.removeprefix("genome-")``
+        (cleaner than regex for the fixed pattern).
+        """
+        if generation < 0:
+            return
+        gen_dir = self.output_dir / "inheritance" / f"gen-{generation:03d}"
+        if not gen_dir.exists():
+            return
+        keep = set(keep_ids)
+        for path in gen_dir.glob("genome-*.pt"):
+            gid = path.stem.removeprefix("genome-")
+            if gid not in keep:
+                path.unlink(missing_ok=True)
+        # Cosmetic: remove the directory itself if it's now empty.  Keeps
+        # ``inheritance/`` clean during a run (so an operator can inspect
+        # mid-run and see only the surviving generation directories).
+        # ``rmdir`` raises OSError on non-empty dirs; suppress because
+        # that's the expected case when ``keep`` was non-empty.
+        with suppress(OSError):
+            gen_dir.rmdir()
+
+    def _resolve_per_child_inheritance(
+        self,
+        child_idx: int,
+        gen: int,
+        gid: str,
+    ) -> tuple[Path | None, Path | None, str]:
+        """Compute one child's (parent_warm_start, child_capture_path, inherited_from).
+
+        Returns ``(None, None, "")`` when the active strategy is no-op
+        — the loop's per-child step then short-circuits to from-scratch
+        evaluation identically to a frozen-weight evolution run.
+
+        For active strategies, returns:
+
+        - ``parent_warm_start``: ``Path`` to the parent's pre-saved
+          checkpoint, or ``None`` if (a) gen 0, (b) ``assign_parent``
+          returned ``None``, or (c) the parent file is unexpectedly
+          missing on disk (defensive fallback with a ``logger.warning``).
+        - ``child_capture_path``: ``Path`` where THIS child writes its
+          post-K-train weights (always populated when inheritance is on).
+        - ``inherited_from``: parent ``genome_id`` for the lineage CSV,
+          or ``""`` for the from-scratch cases above.
+        """
+        if not self._inheritance_active():
+            return None, None, ""
+        child_capture_path = self.inheritance.checkpoint_path(self.output_dir, gen, gid)
+        parent_id = self.inheritance.assign_parent(child_idx, self._selected_parent_ids)
+        if parent_id is None:
+            return None, child_capture_path, ""
+        candidate = self.inheritance.checkpoint_path(self.output_dir, gen - 1, parent_id)
+        # Path.exists() guard: defensive against unexpected on-disk
+        # state on resume.  Fall back to from-scratch rather than
+        # crashing the whole generation.
+        if candidate is not None and candidate.exists():
+            return candidate, child_capture_path, parent_id
+        logger.warning(
+            "Lamarckian parent checkpoint missing for child idx=%d gen=%d "
+            "(expected parent_id=%s at %s) — falling back to from-scratch.",
+            child_idx,
+            gen,
+            parent_id,
+            candidate,
+        )
+        return None, child_capture_path, ""
 
     # ---- Main loop --------------------------------------------------------
 
-    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:
+    # PLR0915: this method is the canonical sequential
+    # ask→eval→tell→inherit→checkpoint pipeline.  The statements are the
+    # documented optional paths (parallel-pool vs sequential, no-op vs
+    # active inheritance branching); inline statements keep the
+    # per-genome data flow that downstream readers (and the spec)
+    # reason about visible at one read.
+    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: PLR0915
         """Run the evolution loop, optionally resuming from a checkpoint.
 
         Parameters
@@ -295,6 +446,11 @@ class EvolutionLoop:
                 parent_ids = list(self._prev_generation_ids)
                 gen_ids: list[str] = []
                 eval_args: list[tuple] = []
+                # Per-child inherited-from tracking for the lineage CSV.
+                # Empty string means "from-scratch" (no-inheritance, gen 0,
+                # or fallback when the parent file is missing).
+                inherited_from_per_child: list[str] = []
+                inheritance_on = self._inheritance_active()
                 for idx, params in enumerate(solutions):
                     gid = genome_id_for(gen, idx, parent_ids)
                     gen_ids.append(gid)
@@ -302,6 +458,16 @@ class EvolutionLoop:
                     # evaluation in the population is seeded distinctly but
                     # reproducibly.
                     eval_seed = int(self.rng.integers(0, 2**31 - 1))
+
+                    # Per-child inheritance resolution: returns (None, None, "")
+                    # under no-op so the worker call shape and fitness
+                    # behaviour are byte-equivalent to a frozen-weight
+                    # evolution run.
+                    parent_warm_start, child_capture_path, inherited_from = (
+                        self._resolve_per_child_inheritance(idx, gen, gid)
+                    )
+                    inherited_from_per_child.append(inherited_from)
+
                     eval_args.append(
                         (
                             np.asarray(params, dtype=np.float32),
@@ -313,6 +479,8 @@ class EvolutionLoop:
                             gen,
                             idx,
                             parent_ids,
+                            parent_warm_start,
+                            child_capture_path,
                         ),
                     )
 
@@ -331,11 +499,40 @@ class EvolutionLoop:
                         generation=gen,
                         birth_metadata=build_birth_metadata(self.sim_config),
                     )
-                    self._lineage.record(genome, fitness=fit, brain_type=brain_type)
+                    self._lineage.record(
+                        genome,
+                        fitness=fit,
+                        brain_type=brain_type,
+                        inherited_from=inherited_from_per_child[idx],
+                    )
 
                 # Tell optimiser (negate: optimisers minimise, our fitness maximises).
                 neg_fitnesses = [-f for f in fitnesses]
                 self.optimizer.tell(list(solutions), neg_fitnesses)
+
+                # Inheritance step: select the next generation's parents
+                # from the just-evaluated population, then garbage-collect
+                # in two phases.  Phase one clears all remaining files in
+                # the previous-generation directory (keep=[]) because the
+                # gen-N children that inherited from them have just
+                # finished evaluating, so those checkpoints are no longer
+                # needed; no-op when gen is zero.  Phase two keeps only
+                # ``next_selected`` in the current-generation directory
+                # so the about-to-evaluate gen-(N+1) children can read
+                # their parent file.  Steady-state disk usage after this
+                # step is at most ``inheritance_elite_count`` files (the
+                # next_selected set in gen-N), bounded over the whole run.
+                if inheritance_on:
+                    next_selected = self.inheritance.select_parents(
+                        gen_ids,
+                        list(fitnesses),
+                        gen,
+                    )
+                    # Drop the previous-gen elites whose children just ran.
+                    self._gc_inheritance_dir(gen - 1, [])
+                    # Keep only the about-to-be-parents in current gen.
+                    self._gc_inheritance_dir(gen, next_selected)
+                    self._selected_parent_ids = next_selected
 
                 # Bookkeeping: prev gen for next iteration's parent_ids.
                 self._prev_generation_ids = gen_ids

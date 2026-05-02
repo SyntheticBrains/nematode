@@ -117,7 +117,7 @@ The `EpisodicSuccessRate` fitness function SHALL evaluate a genome by running it
 
 ### Requirement: Lineage Tracking
 
-The system SHALL maintain a single CSV file per evolution run recording every fitness evaluation with parent→child genealogy, written in append mode so resume operations do not lose history. Generation indexing SHALL be 0-based: a run with `generations: G` populates rows for generations `0, 1, …, G-1`.
+The system SHALL maintain an append-only `lineage.csv` per evolution run that records, for every evaluated genome, the generation index, genome ID, parent IDs, fitness score, brain type, and the parent genome ID this child inherited weights from (`inherited_from`). The `inherited_from` column SHALL be the empty string when the strategy is `NoInheritance` OR when the child is in generation 0 OR when the child fell back to from-scratch due to a missing parent file. Generation indexing SHALL be 0-based: a run with `generations: G` populates rows for generations `0, 1, …, G-1`. CSV writes SHALL survive process kill and resume — appending continues from the last-written row on reload.
 
 #### Scenario: Lineage CSV records every fitness evaluation
 
@@ -125,7 +125,7 @@ The system SHALL maintain a single CSV file per evolution run recording every fi
 - **WHEN** the run completes
 - **THEN** `evolution_results/<session_id>/lineage.csv` SHALL contain exactly `P × G` data rows (plus one header row)
 - **AND** the `generation` column SHALL take values in the inclusive range `[0, G-1]` with each value appearing exactly `P` times
-- **AND** each row SHALL have columns `generation, child_id, parent_ids, fitness, brain_type`
+- **AND** each row SHALL have columns `generation, child_id, parent_ids, fitness, brain_type, inherited_from`
 
 #### Scenario: parent_ids is populated for non-zero generations
 
@@ -148,6 +148,22 @@ The system SHALL maintain a single CSV file per evolution run recording every fi
 - **WHEN** the run is resumed and completes the remaining generations `5..9`
 - **THEN** the final CSV SHALL contain `10 × P` data rows in chronological generation order
 - **AND** the header row SHALL appear exactly once
+
+#### Scenario: inherited_from column is populated under Lamarckian inheritance
+
+- **GIVEN** a Lamarckian run with `inheritance_elite_count: 1`, `population_size: 4`, `generations: 3`
+- **WHEN** the run completes
+- **THEN** `lineage.csv` SHALL include an `inherited_from` column in its header
+- **AND** all 4 gen-0 rows SHALL have `inherited_from` empty
+- **AND** all 4 gen-1 rows SHALL have `inherited_from` equal to the genome ID of gen 0's highest-fitness genome
+- **AND** all 4 gen-2 rows SHALL have `inherited_from` equal to the genome ID of gen 1's highest-fitness genome
+
+#### Scenario: inherited_from column is empty under NoInheritance
+
+- **GIVEN** an `inheritance: none` run (or a run with no `inheritance` key — same default)
+- **WHEN** the run completes
+- **THEN** `lineage.csv` SHALL still include the `inherited_from` column in its header (single fixed schema across runs)
+- **AND** every row's `inherited_from` field SHALL be the empty string
 
 ### Requirement: Evolution Loop Checkpoint and Resume
 
@@ -176,7 +192,14 @@ The `EvolutionLoop` SHALL pickle optimiser state at a configurable interval and 
 
 ### Requirement: Evolution Configuration Block
 
-The `SimulationConfig` SHALL accept an optional `evolution` block; existing scenario configs without an `evolution` block SHALL load unchanged.
+The `SimulationConfig` SHALL accept an optional `evolution` block; existing scenario configs without an `evolution` block SHALL load unchanged. The `evolution` block SHALL include `inheritance: Literal["none", "lamarckian"]` (default `"none"`) and `inheritance_elite_count: int >= 1` (default 1). Validators SHALL reject the following invalid combinations at YAML load time, before any optimiser code runs:
+
+1. `inheritance != "none"` AND `learn_episodes_per_eval == 0`.
+2. `inheritance != "none"` AND `warm_start_path is not None`.
+3. `inheritance != "none"` AND `hyperparam_schema is None`.
+4. `inheritance != "none"` AND `hyperparam_schema` contains any field in `_ARCHITECTURE_CHANGING_FIELDS` (the existing denylist that M2.10's static warm-start uses).
+5. `inheritance_elite_count > population_size`.
+6. `inheritance != "none"` AND `inheritance_elite_count != 1` (M3-only restriction; multi-elite parent selection is M4-or-later scope, see "Multi-elite inheritance is rejected in this milestone" scenario).
 
 #### Scenario: Existing scenario config loads without evolution block
 
@@ -190,7 +213,7 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 - **GIVEN** a YAML file with an `evolution:` block specifying `algorithm`, `population_size`, `generations`, `episodes_per_eval`
 - **WHEN** the config is loaded
 - **THEN** `SimulationConfig.evolution` SHALL be an `EvolutionConfig` instance with the specified fields populated
-- **AND** unspecified fields SHALL fall back to `EvolutionConfig` defaults
+- **AND** unspecified fields SHALL fall back to `EvolutionConfig` defaults (including `inheritance: "none"` and `inheritance_elite_count: 1`)
 
 #### Scenario: CLI flags override YAML for the same field
 
@@ -198,6 +221,15 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 - **WHEN** the user invokes `scripts/run_evolution.py --config <yaml> --generations 10`
 - **THEN** the loop SHALL run for 10 generations
 - **AND** the YAML value SHALL be ignored for that field only
+- **AND** the same override pattern SHALL apply to `--inheritance {none,lamarckian}` against `evolution.inheritance`
+
+#### Scenario: Inheritance fields default to no-op
+
+- **GIVEN** a YAML evolution block that omits both `inheritance` and `inheritance_elite_count`
+- **WHEN** the config is loaded
+- **THEN** `EvolutionConfig.inheritance` SHALL equal `"none"`
+- **AND** `EvolutionConfig.inheritance_elite_count` SHALL equal `1`
+- **AND** the run SHALL be byte-equivalent to a pre-M3 run with the same other fields
 
 ### Requirement: Optimiser Portfolio
 
@@ -307,6 +339,13 @@ The system SHALL provide a `HyperparameterEncoder` that conforms to the existing
 
 The system SHALL provide a `LearnedPerformanceFitness` that conforms to the existing `FitnessFunction` protocol and computes a genome's fitness by running K training episodes (where `brain.learn()` IS called) followed by L frozen eval episodes (using the existing `FrozenEvalRunner`). K is read from `evolution.learn_episodes_per_eval` (no CLI override). L is `evolution.eval_episodes_per_eval` if set in YAML, else falls back to the protocol's `episodes` kwarg (which the loop wires from the resolved `evolution_config.episodes_per_eval`, including any `--episodes` CLI override). The score SHALL be the eval-phase success ratio `eval_successes / L`. `LearnedPerformanceFitness` SHALL be a peer of M0's `EpisodicSuccessRate` and the choice between them SHALL be controllable from the CLI. Optionally, `evolution.warm_start_path` MAY name a `.pt` checkpoint (produced by the existing `save_weights` helper); when set, each genome's brain SHALL be loaded with the checkpoint's weights AFTER `encoder.decode` and BEFORE the K train phase, so the K episodes fine-tune the checkpoint under the genome's evolved hyperparameters rather than training from scratch.
 
+The `evaluate` method SHALL additionally accept two optional kwargs that the `EvolutionLoop` MAY pass per-genome (defaulting to `None` when omitted, preserving the existing single-arg call shape):
+
+- `warm_start_path_override: Path | None` — when set, the brain SHALL be loaded from this path INSTEAD of `evolution_config.warm_start_path`. The two SHALL be mutually exclusive at YAML load time (validator on `EvolutionConfig` rejects the combination), so in practice only one of the two paths is ever active. The override exists so the loop's inheritance step can supply per-genome parent checkpoints without mutating run-wide config.
+- `weight_capture_path: Path | None` — when set, the post-K-train brain weights SHALL be written to this path via `save_weights` AFTER the K train loop completes and BEFORE the L eval phase begins. This captures the policy as-trained, not as-eval'd. The path's parent directory SHALL be created if missing. When `None` (default), no capture occurs (M2 behaviour).
+
+`EpisodicSuccessRate.evaluate` does NOT accept these kwargs and the loop SHALL NOT pass them when `--fitness success_rate` is selected — the new kwargs are specific to the train+eval split that `LearnedPerformanceFitness` exposes.
+
 #### Scenario: Train phase mutates weights, eval phase does not
 
 - **GIVEN** a fitness evaluation invoked with `learn_episodes_per_eval=K, eval_episodes_per_eval=L` (both > 0)
@@ -372,7 +411,7 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 
 - **GIVEN** a `SimulationConfig` with `hyperparam_schema is None` (i.e. a weight-evolution config — the M0 pattern)
 - **WHEN** the user invokes the CLI with `--fitness learned_performance`
-- **THEN** startup SHALL fail with a clear error stating that learned-performance fitness is only valid for hyperparameter evolution, with the rationale that the weight-encoder + learned-performance combination would amount to Lamarckian inheritance (M3 scope, not M2)
+- **THEN** startup SHALL fail with a clear error stating that learned-performance fitness is only valid for hyperparameter evolution
 - **AND** the error SHALL point the user to `EpisodicSuccessRate` (frozen-weight) for weight-evolution campaigns or to authoring a `hyperparam_schema:` block to switch to hyperparameter evolution
 - **AND** the schema-presence check SHALL fire BEFORE the `learn_episodes_per_eval > 0` check, so a config with neither `hyperparam_schema` nor `learn_episodes_per_eval` set produces the schema-missing error (the more fundamental issue), not the field-missing error
 
@@ -384,7 +423,7 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **THEN** after `encoder.decode(genome)` produces the fresh brain and BEFORE the first train episode, `load_weights(brain, warm_start_path)` SHALL be called
 - **AND** the K train episodes SHALL run against the warm-started brain (so per-genome learning starts from the checkpointed weights, not random init)
 - **AND** the genome's evolved hyperparameters (e.g. `actor_lr`) SHALL govern the K train episodes — optimiser state on the loaded checkpoint is reset by the existing `load_weights` semantics, so each genome fine-tunes from the checkpointed weights under its own hyperparameters
-- **AND** when `warm_start_path is None` (the default), behaviour SHALL be identical to today: fresh random weights from `encoder.decode`, no load step
+- **AND** when `warm_start_path is None` AND no `warm_start_path_override` is passed (the default), behaviour SHALL be identical to M0: fresh random weights from `encoder.decode`, no load step
 
 #### Scenario: Warm-start incompatible with architecture-changing schema entries
 
@@ -400,6 +439,23 @@ The system SHALL provide a `LearnedPerformanceFitness` that conforms to the exis
 - **WHEN** the first `LearnedPerformanceFitness.evaluate` call begins
 - **THEN** a `FileNotFoundError` SHALL be raised with a message naming `warm_start_path` and the resolved absolute path
 - **AND** the error SHALL fire BEFORE any train or eval episode runs (so a 100-genome × 20-generation run does not waste hours discovering a missing file mid-campaign)
+
+#### Scenario: warm_start_path_override takes precedence per-genome
+
+- **GIVEN** an `EvolutionConfig` where `warm_start_path` is `None` and the loop is using a Lamarckian inheritance strategy
+- **WHEN** the loop invokes `LearnedPerformanceFitness.evaluate(..., warm_start_path_override=Path("inheritance/gen-002/genome-abc.pt"))` for a particular child
+- **THEN** that child's brain SHALL be loaded from the override path (NOT from `evolution_config.warm_start_path`, which is `None` anyway under the validator)
+- **AND** OTHER children in the same generation invoked with `warm_start_path_override=Path("inheritance/gen-002/genome-xyz.pt")` SHALL be loaded from THEIR own override path (the override is per-call, not run-wide)
+- **AND** when `warm_start_path_override=None` is passed (e.g. for gen-0 children), the brain SHALL be fresh-init from `encoder.decode` (no load step)
+
+#### Scenario: weight_capture_path captures post-train weights before eval
+
+- **GIVEN** a fitness evaluation invoked with `weight_capture_path=Path("inheritance/gen-005/genome-xyz.pt")` and `learn_episodes_per_eval=10`
+- **WHEN** the K=10 train phase completes
+- **THEN** `save_weights(brain, weight_capture_path)` SHALL be called BEFORE the L eval phase begins
+- **AND** the file at `weight_capture_path` SHALL be a valid `.pt` checkpoint that round-trips via `load_weights` into a brain whose first-step action matches the captured brain's first-step action under identical sensory input
+- **AND** the capture SHALL occur exactly once per genome evaluation, regardless of K (including K=1)
+- **AND** when `weight_capture_path=None` (default), no file SHALL be written
 
 ### Requirement: Hyperparameter Schema YAML
 
@@ -460,3 +516,121 @@ The `SimulationConfig` SHALL accept an optional top-level `hyperparam_schema:` l
 - **THEN** the loop SHALL populate `genome.birth_metadata["param_schema"]` with a list of plain dicts (NOT Pydantic model instances) — one per schema entry, produced via `entry.model_dump()` — so the genome pickles cheaply across worker processes without requiring a Pydantic dependency in the worker's decode path
 - **AND** the worker's `HyperparameterEncoder.decode` SHALL read the schema from `genome.birth_metadata["param_schema"]` WITHOUT requiring a separate side-channel or re-loading the YAML
 - **AND** when `hyperparam_schema is None` on `SimulationConfig`, the loop SHALL leave `genome.birth_metadata` empty (preserves M0 weight-evolution behaviour)
+
+### Requirement: Inheritance Strategy
+
+The system SHALL provide an `InheritanceStrategy` Protocol in `quantumnematode/evolution/inheritance.py` with three methods (`select_parents`, `assign_parent`, `checkpoint_path`) and at least two concrete implementations: `NoInheritance` (the default no-op) and `LamarckianInheritance(elite_count: int = 1)`. When a non-`NoInheritance` strategy is active, the `EvolutionLoop` SHALL: (1) capture each genome's post-K-train brain weights to a per-genome `.pt` file via `LearnedPerformanceFitness`'s `weight_capture_path` kwarg; (2) after each generation completes its `optimizer.tell` call, ask the strategy to select parents from the prior generation's `(genome, fitness)` pairs; (3) before the next generation's fitness evaluation, warm-start each child's brain from its assigned parent's checkpoint via `LearnedPerformanceFitness`'s `warm_start_path_override` kwarg; (4) garbage-collect any per-genome checkpoint that is not selected as a parent for the next generation. Steady-state disk usage SHALL be at most `2 * inheritance_elite_count` `.pt` files across the entire run.
+
+The `EvolutionLoop` SHALL persist the resolved `inheritance` value (the literal `"none"` / `"lamarckian"` string, not the strategy instance) and the selected parent IDs in its checkpoint pickle dict, so that resume-time validation can reject mismatched inheritance settings (see "Resume rejects mismatched inheritance setting" scenario below).
+
+The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "lamarckian"]` in YAML and overridable via the `--inheritance` CLI flag on `scripts/run_evolution.py`. The `evolution.inheritance_elite_count` field is structurally `int >= 1` (default 1) but in this milestone the validator SHALL reject any value other than 1 when `inheritance: lamarckian` (single-elite-broadcast only — multi-elite parent selection is reserved for M4 or later). When `inheritance: none` (the default), the loop, fitness, and lineage code paths SHALL be byte-equivalent to the M2.12 baseline — no `inheritance/` directory created, no per-genome checkpoints written, no GC step performed.
+
+#### Scenario: Lamarckian inheritance is selectable via config and CLI
+
+- **GIVEN** an `EvolutionConfig` with `inheritance: lamarckian` and `inheritance_elite_count: 1`
+- **WHEN** the loop runs for ≥ 2 generations
+- **THEN** every child genome of generation N (for N ≥ 1) SHALL have its brain loaded with the previous generation's selected-parent weights via `load_weights` BEFORE the K train phase begins
+- **AND** the parent SHALL be the prior generation's single highest-fitness genome (broken by genome ID lexicographic order on ties)
+- **AND** the CLI flag `--inheritance lamarckian` SHALL override the YAML field with the same behaviour
+- **AND** `--inheritance none` SHALL force the no-op path even when the YAML sets `lamarckian`
+
+#### Scenario: First generation runs from-scratch under any inheritance strategy
+
+- **GIVEN** a Lamarckian config with any `inheritance_elite_count`
+- **WHEN** generation 0 evaluates
+- **THEN** every gen-0 child SHALL be from-scratch — `LearnedPerformanceFitness.evaluate` SHALL be invoked with `warm_start_path_override=None` for every gen-0 genome
+- **AND** the `lineage.csv` `inherited_from` column SHALL be empty for every gen-0 row
+- **AND** the gen-0 fitness scores SHALL be bit-for-bit identical to an `inheritance: none` run with the same seed (modulo the side-effect `save_weights` write that captures each genome's post-train weights for gen-1 to inherit from — fitness arithmetic is unaffected by that write)
+
+#### Scenario: Per-genome weight checkpoints are captured and garbage-collected
+
+- **GIVEN** a Lamarckian run with `inheritance_elite_count: 1`, `population_size: 12`, `generations: 5` (i.e. generations 0 through 4 inclusive)
+- **WHEN** the run completes
+- **THEN** during generation N's evaluation, exactly 12 `.pt` files SHALL have been written under `<output_dir>/inheritance/gen-{N:03d}/`
+- **AND** after generation N's `optimizer.tell` returns and the strategy selects the next-generation parent, the GC step SHALL delete all 11 non-selected files in `gen-{N:03d}/`; additionally when N ≥ 1 it SHALL delete all remaining files in `gen-{N-1:03d}/` (whose children have just finished evaluating, so those parent checkpoints are no longer needed). For N = 0 the second clause no-ops because no `gen-{-1}/` directory exists.
+- **AND** at the moment generation N+1's evaluation begins, exactly one file SHALL exist in `gen-{N:03d}/` (the selected parent for the about-to-evaluate children)
+- **AND** when the run completes after generation 4 (the final generation), the loop SHALL still run `select_parents` on gen 4's results and the GC step SHALL still delete gen 3's surviving parent — so the only surviving file SHALL be the selected parent of the final generation, under `inheritance/gen-004/`. This file is intentionally NOT deleted by GC: it is the final winner's trained policy, available for forensic inspection or downstream warm-start by the next milestone (e.g. M4 Baldwin)
+
+#### Scenario: Inheritance requires a training phase
+
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.learn_episodes_per_eval: 0`
+- **WHEN** the YAML is loaded via `load_simulation_config`
+- **THEN** loading SHALL raise a Pydantic `ValidationError`
+- **AND** the error message SHALL state that Lamarckian inheritance requires a non-zero train phase to produce weights to inherit
+- **AND** the message SHALL point the user to either set `learn_episodes_per_eval > 0` or set `inheritance: none`
+
+#### Scenario: Inheritance is mutually exclusive with static warm-start
+
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.warm_start_path: /some/path.pt`
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a Pydantic `ValidationError`
+- **AND** the error message SHALL state that `warm_start_path` (run-wide static checkpoint) and `inheritance` (per-genome dynamic checkpoint) both load weights into the same brain slot before the K train phase, and that exactly one MAY be set
+- **AND** the message SHALL point the user to drop one of the two
+
+#### Scenario: Inheritance requires hyperparameter encoding
+
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `hyperparam_schema is None` (i.e. a weight-evolution config)
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a Pydantic `ValidationError`
+- **AND** the error message SHALL state that Lamarckian inheritance over weight encoders would double-count weights as both genome and substrate
+- **AND** the message SHALL point the user to either drop `inheritance` (returning to weight evolution) or add a `hyperparam_schema` (switching to hyperparameter evolution + Lamarckian)
+
+#### Scenario: Inheritance incompatible with architecture-changing schema entries
+
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND a `hyperparam_schema` containing at least one entry whose `name` references a brain-config field that changes tensor shapes (e.g. `actor_hidden_dim`, `lstm_hidden_dim`, `rnn_type`, `actor_num_layers` — the same set the existing static warm-start rejects)
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a Pydantic `ValidationError` naming the offending fields
+- **AND** the error SHALL share the same `_ARCHITECTURE_CHANGING_FIELDS` denylist that M2.10's static warm-start already uses (single source of truth)
+- **AND** the message SHALL explain that per-genome checkpoints cannot be loaded into a child whose architecture differs from the parent's
+
+#### Scenario: Multi-elite inheritance is rejected in this milestone
+
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.inheritance_elite_count: 2` (or any value other than 1, including values that would also exceed `population_size`)
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a Pydantic `ValidationError` stating that `inheritance_elite_count` MUST be 1 when `inheritance: lamarckian`
+- **AND** the message SHALL state that multi-elite parent selection (round-robin or tournament) is reserved for a future milestone (M4 Baldwin or later) and that the field exists structurally so future strategies can populate it without a config-schema migration
+- **AND** the field's `Field(default=1, ge=1)` constraint SHALL still permit values >1 in the schema (so M4 can lift this validator without breaking config-load semantics); the rejection is enforced by the model validator only when `inheritance != "none"`
+- **AND** a separate validator SHALL also reject `inheritance_elite_count > population_size` (e.g. 20 > 12) with a distinct error — this rule is structurally needed for M4 when `!= 1` is lifted, and exists in M3 even though the `!= 1` rule strictly subsumes it (the two validators are independent so M4 can drop just the `!= 1` rule cleanly)
+
+#### Scenario: Inheritance defaults preserve M2.12 behaviour byte-equivalently
+
+- **GIVEN** any existing M2 evolution YAML with no `inheritance:` key under `evolution:`
+- **WHEN** loaded and run via `scripts/run_evolution.py`
+- **THEN** `EvolutionConfig.inheritance` SHALL be `"none"` and `EvolutionConfig.inheritance_elite_count` SHALL be `1`
+- **AND** the loop SHALL construct a `NoInheritance` strategy
+- **AND** no `inheritance/` directory SHALL be created under the output directory
+- **AND** `LearnedPerformanceFitness.evaluate` SHALL be invoked with `warm_start_path_override=None` and `weight_capture_path=None` for every genome
+- **AND** the `lineage.csv` `inherited_from` column SHALL be empty for every row
+
+#### Scenario: Resume from checkpoint preserves selected parent IDs
+
+- **GIVEN** a Lamarckian run that wrote a checkpoint at end of generation N with `_selected_parent_ids = [pid_a]`
+- **WHEN** the run resumes via `--resume <checkpoint>`
+- **THEN** the loaded loop's `_selected_parent_ids` SHALL equal `[pid_a]`
+- **AND** generation N+1's children SHALL warm-start from `inheritance/gen-{N:03d}/genome-{pid_a}.pt`
+- **AND** if that file is unexpectedly missing on resume, the affected children SHALL fall back to from-scratch with a `logger.warning` (the loop SHALL NOT crash)
+
+#### Scenario: Checkpoint version 1 cannot be resumed under M3
+
+- **GIVEN** a checkpoint pickle file whose `version` field is 1 (M2-vintage)
+- **WHEN** the M3 loop attempts to load it via `--resume`
+- **THEN** loading SHALL raise the existing version-mismatch error
+- **AND** the user SHALL be advised to start the run fresh (no automated converter is provided in this PR)
+
+#### Scenario: Resume rejects mismatched inheritance setting
+
+- **GIVEN** a checkpoint produced under one inheritance setting (e.g. `inheritance: lamarckian`) AND a resume invocation whose resolved `EvolutionConfig.inheritance` is different (e.g. `inheritance: none`, whether via YAML or `--inheritance` CLI override)
+- **WHEN** the loop attempts to resume
+- **THEN** loading SHALL raise a clear error stating that the resumed run's inheritance setting differs from the original and that mid-run inheritance changes are not supported
+- **AND** the message SHALL list both the checkpoint's recorded inheritance and the resolved current value so the user can decide which to keep
+- **AND** the rejection SHALL fire BEFORE the loop reaches the first generation iteration (so an inadvertent CLI override doesn't waste compute on a corrupted run)
+- **AND** this rejection SHALL apply to `--resume` invocations only — for fresh runs, `--inheritance` overrides the YAML field normally per the "Lamarckian inheritance is selectable via config and CLI" scenario above (the `--inheritance` flag itself is not broken, it just cannot change a run's inheritance mid-flight)
+
+#### Scenario: CLI rejects inheritance + --fitness success_rate at startup
+
+- **GIVEN** a YAML or CLI invocation with `evolution.inheritance != "none"` AND `--fitness success_rate` (the default when `--fitness` is omitted)
+- **WHEN** `scripts/run_evolution.py` parses arguments and resolves the `EvolutionConfig`
+- **THEN** the script SHALL exit with code 1 BEFORE constructing the optimiser or the loop
+- **AND** the error message SHALL state that inheritance writes per-genome weight checkpoints after each train phase, and `EpisodicSuccessRate` is frozen-weight with no train phase
+- **AND** the message SHALL point the user to `--fitness learned_performance` or to setting `inheritance: none`
+- **AND** the guard fires in the CLI (not in `EvolutionConfig._validate_inheritance`) because the `--fitness` flag is not visible to the Pydantic validator — without this guard, the loop would compute `weight_capture_path` for every child, the worker would pass it as a kwarg, and `EpisodicSuccessRate.evaluate` (which doesn't accept the kwarg) would raise `TypeError` mid-evaluation, crashing the multiprocessing pool

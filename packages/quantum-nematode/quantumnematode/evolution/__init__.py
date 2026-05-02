@@ -27,6 +27,11 @@ from quantumnematode.evolution.fitness import (
     LearnedPerformanceFitness,
 )
 from quantumnematode.evolution.genome import Genome, genome_id_for
+from quantumnematode.evolution.inheritance import (
+    InheritanceStrategy,
+    LamarckianInheritance,
+    NoInheritance,
+)
 from quantumnematode.evolution.lineage import CSV_HEADER, LineageTracker
 from quantumnematode.evolution.loop import CHECKPOINT_VERSION, EvolutionLoop
 
@@ -42,10 +47,13 @@ __all__ = [
     "Genome",
     "GenomeEncoder",
     "HyperparameterEncoder",
+    "InheritanceStrategy",
     "LSTMPPOEncoder",
+    "LamarckianInheritance",
     "LearnedPerformanceFitness",
     "LineageTracker",
     "MLPPPOEncoder",
+    "NoInheritance",
     "build_birth_metadata",
     "genome_id_for",
     "get_encoder",

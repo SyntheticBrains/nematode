@@ -34,6 +34,7 @@ CSV_HEADER: tuple[str, ...] = (
     "parent_ids",
     "fitness",
     "brain_type",
+    "inherited_from",
 )
 
 
@@ -65,7 +66,13 @@ class LineageTracker:
             writer = csv.writer(handle)
             writer.writerow(CSV_HEADER)
 
-    def record(self, genome: Genome, fitness: float, brain_type: str) -> None:
+    def record(
+        self,
+        genome: Genome,
+        fitness: float,
+        brain_type: str,
+        inherited_from: str = "",
+    ) -> None:
         """Append one row for a fitness evaluation.
 
         Parameters
@@ -80,6 +87,12 @@ class LineageTracker:
             Brain identifier (e.g. ``"mlpppo"``, ``"lstmppo"``).  Included
             so future co-evolution runs (where two brain populations share
             an output directory) can slice the CSV by species.
+        inherited_from
+            Genome ID this child inherited weights from, or the empty
+            string when (a) the strategy is ``NoInheritance``, (b) the
+            child is in generation 0, or (c) the child fell back to
+            from-scratch due to a missing parent file.  Default ``""``
+            preserves the original contract for callers that don't pass it.
         """
         with self.output_path.open("a", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
@@ -90,5 +103,6 @@ class LineageTracker:
                     ";".join(genome.parent_ids),
                     f"{fitness:.6f}",
                     brain_type,
+                    inherited_from,
                 ),
             )
