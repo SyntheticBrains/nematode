@@ -41,10 +41,10 @@ Single PR. Order is dependency-first: Protocol + config + validators land before
 
 ## 6. CLI wiring
 
-- [ ] 6.1 Add `--inheritance {none,lamarckian}` argparse flag to `parse_arguments` in `scripts/run_evolution.py` (mirrors `--algorithm`).
-- [ ] 6.2 Thread the override into `_resolve_evolution_config` (`if args.inheritance is not None: overrides["inheritance"] = args.inheritance`). Pydantic re-validation catches invalid combinations at startup.
-- [ ] 6.3 In `main()`, after `evolution_config` is resolved, construct the strategy: `LamarckianInheritance(elite_count=evolution_config.inheritance_elite_count)` if `evolution_config.inheritance == "lamarckian"` else `NoInheritance()`. Pass `inheritance=strategy` into the `EvolutionLoop` constructor.
-- [ ] 6.4 Update the existing comment near `run_evolution.py:336-345` that says "Lamarckian inheritance, which is out of scope" — note that Lamarckian is now in scope via `evolution.inheritance`, but the existing weight-encoder + LearnedPerformanceFitness guard stays (the validator now also rejects `inheritance: lamarckian` + weight encoder for the same reason).
+- [x] 6.1 Add `--inheritance {none,lamarckian}` argparse flag to `parse_arguments` in `scripts/run_evolution.py` (mirrors `--algorithm`).
+- [x] 6.2 Thread the override into `_resolve_evolution_config` (`if args.inheritance is not None: overrides["inheritance"] = args.inheritance`). Pydantic re-validation catches invalid combinations at startup.
+- [x] 6.3 In `main()`, after `evolution_config` is resolved, construct the strategy: `LamarckianInheritance(elite_count=evolution_config.inheritance_elite_count)` if `evolution_config.inheritance == "lamarckian"` else `NoInheritance()`. Pass `inheritance=strategy` into the `EvolutionLoop` constructor.
+- [x] 6.4 Update the existing comment near `run_evolution.py:336-345` that says "Lamarckian inheritance, which is out of scope" — note that Lamarckian is now in scope via `evolution.inheritance`, but the existing weight-encoder + LearnedPerformanceFitness guard stays (the validator now also rejects `inheritance: lamarckian` + weight encoder for the same reason).
 
 ## 7. Tests
 

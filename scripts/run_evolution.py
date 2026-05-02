@@ -46,7 +46,9 @@ from pydantic import ValidationError
 from quantumnematode.evolution import (
     EpisodicSuccessRate,
     EvolutionLoop,
+    LamarckianInheritance,
     LearnedPerformanceFitness,
+    NoInheritance,
     select_encoder,
 )
 from quantumnematode.logging_config import configure_file_logging, logger
@@ -93,6 +95,18 @@ def parse_arguments() -> argparse.Namespace:
         choices=["cmaes", "ga", "tpe"],
         default=None,
         help="Override evolution.algorithm.",
+    )
+    parser.add_argument(
+        "--inheritance",
+        type=str,
+        choices=["none", "lamarckian"],
+        default=None,
+        help=(
+            "Override evolution.inheritance. 'lamarckian' enables per-genome "
+            "warm-start from the prior generation's elite parent. Requires "
+            "hyperparam_schema and learn_episodes_per_eval > 0; mutually "
+            "exclusive with warm_start_path. See evolution-framework spec."
+        ),
     )
     parser.add_argument(
         "--sigma",
@@ -172,6 +186,8 @@ def _resolve_evolution_config(
         overrides["episodes_per_eval"] = args.episodes
     if args.algorithm is not None:
         overrides["algorithm"] = args.algorithm
+    if args.inheritance is not None:
+        overrides["inheritance"] = args.inheritance
     if args.sigma is not None:
         overrides["sigma0"] = args.sigma
     if args.parallel is not None:
@@ -185,7 +201,7 @@ def _resolve_evolution_config(
         msg = (
             f"Invalid CLI override for evolution config: {exc}.  "
             "Check --generations, --population, --episodes, --sigma, "
-            "and --parallel are within their accepted ranges."
+            "--parallel, --inheritance are within their accepted ranges."
         )
         raise SystemExit(msg) from exc
 
@@ -327,16 +343,19 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
     # default, frozen-weight) and LearnedPerformanceFitness (K train +
     # L eval).  When learned_performance is selected, validate guards:
     # hyperparam_schema must be set (otherwise we'd combine a weight
-    # encoder with LearnedPerformanceFitness — Lamarckian inheritance,
-    # which is out of scope here), AND learn_episodes_per_eval must
-    # be > 0.
+    # encoder with LearnedPerformanceFitness, which would double-count
+    # weights as both genome and substrate under Lamarckian inheritance —
+    # the EvolutionConfig validator catches the same case from the
+    # inheritance side, but this guard fires earlier and gives a more
+    # focused error for the --fitness path), AND
+    # learn_episodes_per_eval must be > 0.
     if args.fitness == "learned_performance":
         if sim_config.hyperparam_schema is None:
             logger.error(
                 "--fitness learned_performance requires hyperparam_schema "
                 "to be set in the YAML.  Combining a weight encoder with "
-                "LearnedPerformanceFitness would amount to Lamarckian "
-                "inheritance, which is out of scope for this fitness.  "
+                "LearnedPerformanceFitness would double-count weights as "
+                "both genome and substrate under Lamarckian inheritance.  "
                 "For weight-evolution campaigns, use --fitness success_rate "
                 "(EpisodicSuccessRate, the default).  To switch to "
                 "hyperparameter evolution, author a hyperparam_schema: "
@@ -426,6 +445,18 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
         )
         raise SystemExit(msg) from exc
 
+    # Construct the inheritance strategy from the resolved evolution
+    # config.  Default "none" → NoInheritance() (loop is byte-equivalent
+    # to pre-M3); "lamarckian" → LamarckianInheritance with the
+    # configured elite count.  Validators on EvolutionConfig already
+    # rejected unsafe combinations at YAML/CLI parse time.
+    if evolution_config.inheritance == "lamarckian":
+        inheritance = LamarckianInheritance(
+            elite_count=evolution_config.inheritance_elite_count,
+        )
+    else:
+        inheritance = NoInheritance()
+
     log_level_int = getattr(logging, args.log_level)
     loop = EvolutionLoop(
         optimizer=optimizer,
@@ -436,6 +467,7 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
         output_dir=output_dir,
         rng=rng,
         log_level=log_level_int,
+        inheritance=inheritance,
     )
 
     result = loop.run(resume_from=resume_path)
