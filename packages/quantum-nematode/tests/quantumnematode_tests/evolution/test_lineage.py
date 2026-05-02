@@ -150,11 +150,18 @@ def test_lineage_generation_indexing_is_zero_based(tmp_path: Path) -> None:
 
 
 def test_csv_header_columns(tmp_path: Path) -> None:
-    """Header SHALL be ``generation, child_id, parent_ids, fitness, brain_type``."""
+    """Header SHALL be the canonical 6-column schema."""
     csv_path = tmp_path / "lineage.csv"
     LineageTracker(csv_path)
     rows = _read_rows(csv_path)
-    assert tuple(rows[0]) == ("generation", "child_id", "parent_ids", "fitness", "brain_type")
+    assert tuple(rows[0]) == (
+        "generation",
+        "child_id",
+        "parent_ids",
+        "fitness",
+        "brain_type",
+        "inherited_from",
+    )
 
 
 def test_record_writes_brain_type_column(tmp_path: Path) -> None:

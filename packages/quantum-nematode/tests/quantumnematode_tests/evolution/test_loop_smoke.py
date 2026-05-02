@@ -143,11 +143,16 @@ def test_checkpoint_contains_required_keys(tmp_path: Path) -> None:
         "optimizer",
         "generation",
         "prev_generation_ids",
+        "selected_parent_ids",
+        "inheritance",
         "rng_state",
         "lineage_path",
     }
     assert set(payload.keys()) == expected_keys
     assert payload["checkpoint_version"] == CHECKPOINT_VERSION
+    # Default no-inheritance run records the literal "none" + empty set.
+    assert payload["inheritance"] == "none"
+    assert payload["selected_parent_ids"] == []
 
 
 # ---------------------------------------------------------------------------
