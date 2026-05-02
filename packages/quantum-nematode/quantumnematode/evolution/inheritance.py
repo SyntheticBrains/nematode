@@ -1,21 +1,27 @@
 """Inheritance strategies for the evolution loop.
 
-Provides the :class:`InheritanceStrategy` Protocol and two concrete
+Provides the :class:`InheritanceStrategy` Protocol and three concrete
 implementations:
 
 - :class:`NoInheritance` (the default): every child is from-scratch; no
   per-genome weight checkpoints written, no GC, no inheritance directory.
   The loop, fitness, and lineage code paths are byte-equivalent to a
-  pre-inheritance run when this strategy is active.
+  frozen-weight evolution run when this strategy is active.
 - :class:`LamarckianInheritance`: each child of generation N+1 inherits
   trained weights from a *selected parent* of generation N (the highest
   fitness genome by default; ties broken on genome_id lexicographic
   order).  The hyperparameter genome continues to evolve via TPE — weights
   flow as a side-channel substrate keyed by parent ``genome_id``.
+- :class:`BaldwinInheritance`: trait-only inheritance — the prior
+  generation's elite genome ID is recorded as ``inherited_from`` for
+  every child of the next generation (so the lineage CSV captures the
+  evolutionary trace), but no per-genome weight checkpoints are written.
+  Mechanically equivalent to :class:`NoInheritance` on the weight-IO
+  path; differs only by populating lineage rows from gen 1 onwards.
 
-The Protocol intentionally exposes three methods so future strategies
-(tournament, fitness-proportionate "roulette", soft-elite top-k sampling)
-can plug in without touching the loop:
+The Protocol exposes four methods so future strategies (tournament,
+fitness-proportionate "roulette", soft-elite top-k sampling) can plug
+in without touching the loop:
 
 - ``select_parents`` — pick which prior-gen genomes survive into the
   next generation as inheritance sources.
@@ -24,20 +30,24 @@ can plug in without touching the loop:
   Lamarckian; sampling in tournament/roulette/soft-elite variants).
 - ``checkpoint_path`` — single canonical path-builder used by both the
   capture (writer) and warm-start (reader) sides so the two cannot drift.
+- ``kind`` — returns one of ``"none"``, ``"weights"``, or ``"trait"``
+  so the loop branches on intent rather than ``isinstance`` checks.
+  ``"none"`` skips both lineage-tracking and weight-IO; ``"weights"``
+  enables both; ``"trait"`` enables lineage-tracking only.
 
-Future-work strategies (Baldwin Effect, tournament selection, roulette
-sampling, soft-elite top-k) are NOT implemented here — they each become
-a new ``InheritanceStrategy`` subclass and a new ``Literal`` extension on
-``EvolutionConfig.inheritance``.  Currently only single-elite-broadcast
-is shipped; the validator on ``EvolutionConfig`` rejects
-``inheritance_elite_count != 1`` when ``inheritance: lamarckian``, so
-multi-elite paths are unreachable from YAML even though the round-robin
-code path exists structurally below.
+Future-work strategies (tournament selection, roulette sampling,
+soft-elite top-k) are NOT implemented here — they each become a new
+``InheritanceStrategy`` subclass and a new ``Literal`` extension on
+``EvolutionConfig.inheritance``.  Single-elite-broadcast is currently
+the only Lamarckian configuration shipped; the validator on
+``EvolutionConfig`` rejects ``inheritance_elite_count != 1`` when
+``inheritance: lamarckian``, so multi-elite paths are unreachable from
+YAML even though the round-robin code path exists structurally below.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -50,12 +60,15 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class InheritanceStrategy(Protocol):
-    """Pluggable strategy controlling per-genome weight inheritance.
+    """Pluggable strategy controlling per-genome inheritance.
 
-    Implementations decide (a) which prior-generation genomes propagate
-    weights into the next generation (``select_parents``), (b) which of
-    those parents each child inherits from (``assign_parent``), and (c)
-    where per-genome weight checkpoints live on disk (``checkpoint_path``).
+    Implementations decide (a) which prior-generation genomes survive
+    into the next generation as inheritance sources (``select_parents``),
+    (b) which of those parents each child inherits from
+    (``assign_parent``), (c) where per-genome weight checkpoints live
+    on disk (``checkpoint_path`` — may return ``None`` for strategies
+    with no on-disk substrate), and (d) what kind of inheritance the
+    strategy implements (``kind`` — gates loop behaviour).
     """
 
     def select_parents(
@@ -64,7 +77,7 @@ class InheritanceStrategy(Protocol):
         fitnesses: list[float],
         generation: int,
     ) -> list[str]:
-        """Return the IDs whose checkpoints survive into the next generation.
+        """Return the IDs that survive into the next generation as inheritance sources.
 
         Called by the loop AFTER ``optimizer.tell`` returns for the just-
         completed generation, so ``gen_ids`` and ``fitnesses`` describe
@@ -99,10 +112,35 @@ class InheritanceStrategy(Protocol):
         """Return the canonical on-disk path for one genome's checkpoint.
 
         Returning ``None`` signals that this strategy does not use
-        per-genome checkpoints (the no-op case).  Non-no-op strategies
-        return a deterministic path used by both the capture (writer)
-        and warm-start (reader) sides; the loop uses ``Path.exists()``
-        to guard reads.
+        per-genome checkpoints (the no-op case OR the trait-only case).
+        Non-``None`` strategies return a deterministic path used by both
+        the capture (writer) and warm-start (reader) sides; the loop uses
+        ``Path.exists()`` to guard reads.
+        """
+        ...
+
+    def kind(self) -> Literal["none", "weights", "trait"]:
+        """Return the inheritance kind so the loop can branch on intent.
+
+        Three values, each gating different code paths:
+
+        - ``"none"`` (e.g. :class:`NoInheritance`) — loop skips ALL
+          inheritance code paths.  No `select_parents` call, no
+          `_selected_parent_ids` update, no GC, no warm-start, no
+          per-child `inherited_from` write.
+        - ``"weights"`` (e.g. :class:`LamarckianInheritance`) — loop
+          captures per-genome trained-weight checkpoints, calls
+          `select_parents`, GCs non-selected files, and warm-starts
+          each next-gen child from its assigned parent's checkpoint.
+        - ``"trait"`` (e.g. :class:`BaldwinInheritance`) — loop calls
+          `select_parents` and writes `inherited_from` to lineage rows
+          (so the elite-parent ID flows in lineage), but does NOT
+          capture or GC any weight checkpoints.
+
+        The loop's ``_inheritance_active()`` helper SHALL evaluate
+        ``kind() == "weights"`` (gates weight-IO code paths).  The loop's
+        ``_inheritance_records_lineage()`` helper SHALL evaluate
+        ``kind() != "none"`` (gates lineage-tracking + `select_parents`).
         """
         ...
 
@@ -116,11 +154,12 @@ class NoInheritance:
     """No-op strategy — keeps the loop in frozen-weight evolution mode.
 
     ``select_parents`` always returns ``[]``, ``assign_parent`` always
-    returns ``None``, and ``checkpoint_path`` returns ``None`` (the loop
-    guards with ``isinstance(strategy, NoInheritance)`` so this method
-    is never invoked under no-op).  Returning ``None`` rather than
-    raising keeps the Protocol method shape uniform and avoids tripping
-    type-checkers.
+    returns ``None``, ``checkpoint_path`` returns ``None``, and
+    ``kind`` returns ``"none"`` (the loop guards with
+    ``strategy.kind() == "none"`` so the weight-IO and lineage-tracking
+    code paths are never invoked under no-op).  Returning ``None``
+    rather than raising keeps the Protocol method shape uniform and
+    avoids tripping type-checkers.
     """
 
     def select_parents(
@@ -148,6 +187,10 @@ class NoInheritance:
     ) -> Path | None:
         """Return ``None`` — no-op strategy uses no checkpoint paths."""
         return None
+
+    def kind(self) -> Literal["none"]:
+        """Return ``"none"`` — gates the loop into the no-inheritance code path."""
+        return "none"
 
 
 class LamarckianInheritance:
@@ -210,3 +253,7 @@ class LamarckianInheritance:
     ) -> Path | None:
         """Return the canonical ``inheritance/gen-NNN/genome-<gid>.pt`` path."""
         return output_dir / "inheritance" / f"gen-{generation:03d}" / f"genome-{genome_id}.pt"
+
+    def kind(self) -> Literal["weights"]:
+        """Return ``"weights"`` — gates the loop into the weight-IO code path."""
+        return "weights"

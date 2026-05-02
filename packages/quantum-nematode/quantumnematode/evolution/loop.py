@@ -304,8 +304,24 @@ class EvolutionLoop:
     # ---- Inheritance helpers --------------------------------------------
 
     def _inheritance_active(self) -> bool:
-        """Return True iff the active strategy uses per-genome checkpoints."""
-        return not isinstance(self.inheritance, NoInheritance)
+        """Return True iff the active strategy uses per-genome weight checkpoints.
+
+        Gates the weight-IO code paths in the loop: per-genome
+        ``checkpoint_path`` computation, the GC step, and the
+        warm-start lookup.  Currently only :class:`LamarckianInheritance`
+        returns ``"weights"`` from ``kind()``.
+        """
+        return self.inheritance.kind() == "weights"
+
+    def _inheritance_records_lineage(self) -> bool:
+        """Return True iff the active strategy populates the lineage CSV's `inherited_from`.
+
+        Gates the per-generation ``select_parents`` call and the
+        ``_selected_parent_ids`` update.  Both :class:`LamarckianInheritance`
+        and :class:`BaldwinInheritance` return ``True`` here; only
+        :class:`NoInheritance` returns ``False``.
+        """
+        return self.inheritance.kind() != "none"
 
     def _gc_inheritance_dir(self, generation: int, keep_ids: list[str]) -> None:
         """Garbage-collect non-survivor checkpoints in one inheritance directory.

@@ -1,11 +1,11 @@
 ## 1. Protocol extension
 
-- [ ] 1.1 Add `kind() -> Literal["none", "weights", "trait"]` method to the `InheritanceStrategy` Protocol in `packages/quantum-nematode/quantumnematode/evolution/inheritance.py`. Include in the docstring an explanation of the three semantics (no-op / weight-flow / trait-flow) and that the loop branches on this value.
-- [ ] 1.2 Implement `NoInheritance.kind() -> "none"` and `LamarckianInheritance.kind() -> "weights"` to maintain existing behaviour.
-- [ ] 1.3 Pre-implementation grep: find every `isinstance(.*, NoInheritance)` and `isinstance(.*, LamarckianInheritance)` call site in the codebase. Document the list (expected: `_inheritance_active` in loop.py at line ~308; possibly resume validation; possibly the GC step's no-op guard).
-- [ ] 1.4 Refactor `_inheritance_active()` in `loop.py` from `not isinstance(self.inheritance, NoInheritance)` to `self.inheritance.kind() == "weights"`. Add a sibling helper `_inheritance_records_lineage()` returning `self.inheritance.kind() != "none"`.
-- [ ] 1.5 Refactor any other `isinstance(...)` checks found in 1.3 to use `kind()`. Pre-implementation grep confirms the only other site is a docstring reference at `inheritance.py:120` ('guards with `isinstance(strategy, NoInheritance)`') — update the docstring text to reflect the `kind()`-based gate (e.g. 'guards with `strategy.kind() == "none"`').
-- [ ] 1.6 Add `test_inheritance_kind` test family to `test_inheritance.py`: assert all three impls return their declared literal; assert the literal is exactly one of the three (no leakage of new values).
+- [x] 1.1 Add `kind() -> Literal["none", "weights", "trait"]` method to the `InheritanceStrategy` Protocol in `packages/quantum-nematode/quantumnematode/evolution/inheritance.py`. Include in the docstring an explanation of the three semantics (no-op / weight-flow / trait-flow) and that the loop branches on this value.
+- [x] 1.2 Implement `NoInheritance.kind() -> "none"` and `LamarckianInheritance.kind() -> "weights"` to maintain existing behaviour.
+- [x] 1.3 Pre-implementation grep: find every `isinstance(.*, NoInheritance)` and `isinstance(.*, LamarckianInheritance)` call site in the codebase. Confirmed: 1 production-code site (`_inheritance_active` at loop.py:308) and 1 docstring reference (inheritance.py:120). Resume validation and GC step do not use isinstance — they read `_inheritance_active()` indirectly.
+- [x] 1.4 Refactor `_inheritance_active()` in `loop.py` from `not isinstance(self.inheritance, NoInheritance)` to `self.inheritance.kind() == "weights"`. Add a sibling helper `_inheritance_records_lineage()` returning `self.inheritance.kind() != "none"`.
+- [x] 1.5 Refactor any other `isinstance(...)` checks found in 1.3 to use `kind()`. Pre-implementation grep confirms the only other site is a docstring reference at `inheritance.py:120` ('guards with `isinstance(strategy, NoInheritance)`') — updated the docstring text to reflect the `kind()`-based gate (now: 'guards with `strategy.kind() == "none"`').
+- [x] 1.6 Add `test_inheritance_kind` test family to `test_inheritance.py`: assert all three impls return their declared literal; assert the literal is exactly one of the three (no leakage of new values). Note: BaldwinInheritance kind test added in task 2.5.
 
 ## 2. BaldwinInheritance implementation
 

@@ -137,3 +137,30 @@ def test_lamarckian_rejects_zero_or_negative_elite_count() -> None:
         LamarckianInheritance(elite_count=0)
     with pytest.raises(ValueError, match="elite_count must be >= 1"):
         LamarckianInheritance(elite_count=-1)
+
+
+# ---------------------------------------------------------------------------
+# kind() Protocol method
+# ---------------------------------------------------------------------------
+
+
+def test_no_inheritance_kind() -> None:
+    """``NoInheritance.kind`` SHALL return the literal ``"none"``."""
+    assert NoInheritance().kind() == "none"
+
+
+def test_lamarckian_kind() -> None:
+    """``LamarckianInheritance.kind`` SHALL return the literal ``"weights"``."""
+    assert LamarckianInheritance().kind() == "weights"
+    assert LamarckianInheritance(elite_count=3).kind() == "weights"
+
+
+def test_kind_values_are_in_known_set() -> None:
+    """All shipped strategies SHALL return a value from the known kind set.
+
+    Guards against future strategies leaking new literals without
+    updating the loop's branching logic.
+    """
+    known = {"none", "weights", "trait"}
+    assert NoInheritance().kind() in known
+    assert LamarckianInheritance().kind() in known
