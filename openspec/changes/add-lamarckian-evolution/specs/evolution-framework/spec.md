@@ -28,7 +28,7 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **GIVEN** a Lamarckian run with `inheritance_elite_count: 1`, `population_size: 12`, `generations: 5` (i.e. generations 0 through 4 inclusive)
 - **WHEN** the run completes
 - **THEN** during generation N's evaluation, exactly 12 `.pt` files SHALL have been written under `<output_dir>/inheritance/gen-{N:03d}/`
-- **AND** after generation N's `optimizer.tell` returns and the strategy selects the next-generation parent, the GC step SHALL delete all 11 non-selected files in `gen-{N:03d}/` AND all remaining files in `gen-{N-1:03d}/` (whose children have just finished evaluating, so those parent checkpoints are no longer needed)
+- **AND** after generation N's `optimizer.tell` returns and the strategy selects the next-generation parent, the GC step SHALL delete all 11 non-selected files in `gen-{N:03d}/`; additionally when N ≥ 1 it SHALL delete all remaining files in `gen-{N-1:03d}/` (whose children have just finished evaluating, so those parent checkpoints are no longer needed). For N = 0 the second clause no-ops because no `gen-{-1}/` directory exists.
 - **AND** at the moment generation N+1's evaluation begins, exactly one file SHALL exist in `gen-{N:03d}/` (the selected parent for the about-to-evaluate children)
 - **AND** when the run completes after generation 4 (the final generation), the loop SHALL still run `select_parents` on gen 4's results and the GC step SHALL still delete gen 3's surviving parent — so the only surviving file SHALL be the selected parent of the final generation, under `inheritance/gen-004/`. This file is intentionally NOT deleted by GC: it is the final winner's trained policy, available for forensic inspection or downstream warm-start by the next milestone (e.g. M4 Baldwin)
 
@@ -94,6 +94,15 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **WHEN** the M3 loop attempts to load it via `--resume`
 - **THEN** loading SHALL raise the existing version-mismatch error
 - **AND** the user SHALL be advised to start the run fresh (no automated converter is provided in this PR)
+
+#### Scenario: Resume rejects mismatched inheritance setting
+
+- **GIVEN** a checkpoint produced under one inheritance setting (e.g. `inheritance: lamarckian`) AND a resume invocation whose resolved `EvolutionConfig.inheritance` is different (e.g. `inheritance: none`, whether via YAML or `--inheritance` CLI override)
+- **WHEN** the loop attempts to resume
+- **THEN** loading SHALL raise a clear error stating that the resumed run's inheritance setting differs from the original and that mid-run inheritance changes are not supported
+- **AND** the message SHALL list both the checkpoint's recorded inheritance and the resolved current value so the user can decide which to keep
+- **AND** the rejection SHALL fire BEFORE the loop reaches the first generation iteration (so an inadvertent CLI override doesn't waste compute on a corrupted run)
+- **AND** the loop SHALL persist `inheritance` (the literal `"none"` / `"lamarckian"` value, not the strategy instance) in the checkpoint pickle alongside `selected_parent_ids` so this comparison is possible at load time
 
 ## MODIFIED Requirements
 
@@ -216,7 +225,7 @@ The `evaluate` method SHALL additionally accept two optional kwargs that the `Ev
 - **WHEN** the K=10 train phase completes
 - **THEN** `save_weights(brain, weight_capture_path)` SHALL be called BEFORE the L eval phase begins
 - **AND** the file at `weight_capture_path` SHALL be a valid `.pt` checkpoint that round-trips via `load_weights` into a brain whose first-step action matches the captured brain's first-step action under identical sensory input
-- **AND** the capture SHALL occur exactly once per genome evaluation, regardless of K
+- **AND** the capture SHALL occur exactly once per genome evaluation, regardless of K (including K=1)
 - **AND** when `weight_capture_path=None` (default), no file SHALL be written
 
 ### Requirement: Evolution Configuration Block
