@@ -109,6 +109,17 @@ def parse_arguments() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--early-stop-on-saturation",
+        type=int,
+        default=None,
+        help=(
+            "Override evolution.early_stop_on_saturation. When set to a positive "
+            "integer N, the loop exits if best_fitness has not strictly improved "
+            "for N consecutive generations. Default behaviour (unset or None in "
+            "YAML) runs the full generations budget."
+        ),
+    )
+    parser.add_argument(
         "--sigma",
         type=float,
         default=None,
@@ -161,7 +172,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _resolve_evolution_config(
+def _resolve_evolution_config(  # noqa: C901
     sim_config_evolution: EvolutionConfig | None,
     args: argparse.Namespace,
 ) -> EvolutionConfig:
@@ -188,6 +199,11 @@ def _resolve_evolution_config(
         overrides["algorithm"] = args.algorithm
     if args.inheritance is not None:
         overrides["inheritance"] = args.inheritance
+    if args.early_stop_on_saturation is not None:
+        if args.early_stop_on_saturation < 1:
+            msg = f"--early-stop-on-saturation must be >= 1, got {args.early_stop_on_saturation}."
+            raise SystemExit(msg)
+        overrides["early_stop_on_saturation"] = args.early_stop_on_saturation
     if args.sigma is not None:
         overrides["sigma0"] = args.sigma
     if args.parallel is not None:
@@ -201,7 +217,8 @@ def _resolve_evolution_config(
         msg = (
             f"Invalid CLI override for evolution config: {exc}.  "
             "Check --generations, --population, --episodes, --sigma, "
-            "--parallel, --inheritance are within their accepted ranges."
+            "--parallel, --inheritance, --early-stop-on-saturation are "
+            "within their accepted ranges."
         )
         raise SystemExit(msg) from exc
 

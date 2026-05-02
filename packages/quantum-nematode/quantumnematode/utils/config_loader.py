@@ -1017,6 +1017,14 @@ class EvolutionConfig(BaseModel):
     # strategies (round-robin, tournament, soft-elite top-k) can be
     # added later without a config-schema migration.
     inheritance_elite_count: int = Field(default=1, ge=1)
+    # Optional early-stop on saturation: when set to a positive integer
+    # N, the loop exits if best_fitness has not strictly improved for N
+    # consecutive generations.  Default None preserves existing
+    # full-budget behaviour byte-equivalently.  CLI override:
+    # --early-stop-on-saturation N on scripts/run_evolution.py.
+    # Persisted in the checkpoint pickle (CHECKPOINT_VERSION 3) so
+    # resume preserves the saturation-tracking state.
+    early_stop_on_saturation: int | None = Field(default=None, ge=1)
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":

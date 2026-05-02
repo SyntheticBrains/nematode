@@ -145,6 +145,8 @@ def test_checkpoint_contains_required_keys(tmp_path: Path) -> None:
         "prev_generation_ids",
         "selected_parent_ids",
         "inheritance",
+        "gens_without_improvement",
+        "last_best_fitness",
         "rng_state",
         "lineage_path",
     }
@@ -153,6 +155,11 @@ def test_checkpoint_contains_required_keys(tmp_path: Path) -> None:
     # Default no-inheritance run records the literal "none" + empty set.
     assert payload["inheritance"] == "none"
     assert payload["selected_parent_ids"] == []
+    # Early-stop counter is always tracked (active or not).
+    assert isinstance(payload["gens_without_improvement"], int)
+    assert payload["gens_without_improvement"] >= 0
+    # last_best_fitness is set after at least gen 1 evaluates.
+    assert payload["last_best_fitness"] is not None or payload["generation"] == 0
 
 
 # ---------------------------------------------------------------------------

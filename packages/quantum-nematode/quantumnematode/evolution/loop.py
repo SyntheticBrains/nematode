@@ -57,7 +57,11 @@ logger = logging.getLogger(__name__)
 # (list of genome IDs whose Lamarckian checkpoints survive into the next
 # generation) and ``inheritance`` (the literal "none"/"lamarckian" string
 # the run was launched with — used to reject mismatched-setting resumes).
-CHECKPOINT_VERSION = 2
+# v3 adds ``gens_without_improvement`` (int counter for the early-stop
+# check) and ``last_best_fitness`` (float | None — the previous
+# generation's best, used by the counter to detect strict improvement on
+# resume) and extends the ``inheritance`` literal to include "baldwin".
+CHECKPOINT_VERSION = 3
 
 
 # ---------------------------------------------------------------------------
@@ -231,6 +235,15 @@ class EvolutionLoop:
         # are about to be inherited by the next generation's children.
         # Empty until the first generation completes select_parents().
         self._selected_parent_ids: list[str] = []
+        # Early-stop bookkeeping: counter incremented each generation in
+        # which best_fitness fails to strictly improve over the previous
+        # generation's best.  Reset to 0 on any strict improvement.
+        # ``_last_best_fitness`` is None until gen 1 completes (gen-1
+        # bootstrap branch in the counter-update logic treats the first
+        # generation as an "improvement").  Both persisted in the
+        # checkpoint pickle so resume preserves the saturation state.
+        self._gens_without_improvement: int = 0
+        self._last_best_fitness: float | None = None
 
     # ---- Checkpoint / Resume ---------------------------------------------
 
@@ -247,6 +260,8 @@ class EvolutionLoop:
             "prev_generation_ids": self._prev_generation_ids,
             "selected_parent_ids": self._selected_parent_ids,
             "inheritance": inheritance_value,
+            "gens_without_improvement": self._gens_without_improvement,
+            "last_best_fitness": self._last_best_fitness,
             "rng_state": self.rng.bit_generator.state,
             "lineage_path": str(self._lineage_path),
         }
@@ -299,6 +314,8 @@ class EvolutionLoop:
         self._generation = payload["generation"]
         self._prev_generation_ids = payload["prev_generation_ids"]
         self._selected_parent_ids = payload.get("selected_parent_ids", [])
+        self._gens_without_improvement = payload.get("gens_without_improvement", 0)
+        self._last_best_fitness = payload.get("last_best_fitness")
         self.rng.bit_generator.state = payload["rng_state"]
 
     # ---- Inheritance helpers --------------------------------------------
@@ -413,7 +430,7 @@ class EvolutionLoop:
     # active inheritance branching); inline statements keep the
     # per-genome data flow that downstream readers (and the spec)
     # reason about visible at one read.
-    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: C901, PLR0915
+    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: C901, PLR0912, PLR0915
         """Run the evolution loop, optionally resuming from a checkpoint.
 
         Parameters
@@ -533,6 +550,20 @@ class EvolutionLoop:
                 neg_fitnesses = [-f for f in fitnesses]
                 self.optimizer.tell(list(solutions), neg_fitnesses)
 
+                # Early-stop counter update.  Placed BEFORE the inheritance
+                # guards so the counter reflects the just-evaluated
+                # generation by the time the early-stop check fires at the
+                # end of the body.  ``_last_best_fitness is None`` is the
+                # gen-1 bootstrap branch: no previous to compare against,
+                # treat as an "improvement" (counter stays 0) and record
+                # the bootstrap value for gen-2's comparison.
+                current_best = max(fitnesses)
+                if self._last_best_fitness is None or current_best > self._last_best_fitness:
+                    self._gens_without_improvement = 0
+                    self._last_best_fitness = current_best
+                else:
+                    self._gens_without_improvement += 1
+
                 # Inheritance step (two-guard split):
                 #
                 # 1. Lineage-tracking guard: any non-no-op strategy
@@ -571,6 +602,40 @@ class EvolutionLoop:
                 if self._generation % cfg.checkpoint_every == 0:
                     self._save_checkpoint()
                     logger.info("Checkpoint saved at generation %d", self._generation)
+
+                # Early-stop check at the END of the body, AFTER both
+                # inheritance guards (so Baldwin's _selected_parent_ids
+                # is populated for resume invariants and Lamarckian's GC
+                # has preserved the surviving elite checkpoint), AFTER
+                # _generation += 1 (so the saved checkpoint records the
+                # post-evaluation increment value), and AFTER the
+                # checkpoint_every save.  The existing post-loop final
+                # _save_checkpoint() handles persistence of the
+                # early-stopped state — control flows out of `while` via
+                # break and through the existing post-loop save site.
+                # On resume, _generation < cfg.generations re-enters the
+                # loop with the saturation counter intact.
+                if (
+                    cfg.early_stop_on_saturation is not None
+                    and self._gens_without_improvement >= cfg.early_stop_on_saturation
+                ):
+                    # 1-indexed gen labels for human readability (matches
+                    # the spec scenarios + the aggregator's gen-to-0.92
+                    # convention).  ``last_improvement_gen`` is the gen
+                    # index at which _last_best_fitness was last updated.
+                    last_improvement_gen = self._generation - self._gens_without_improvement
+                    last_improvement_label = (
+                        str(last_improvement_gen)
+                        if self._last_best_fitness is not None
+                        else "no improvement observed"
+                    )
+                    logger.info(
+                        "Early-stop: best_fitness has not improved for %d "
+                        "generations (last improvement at gen %s)",
+                        cfg.early_stop_on_saturation,
+                        last_improvement_label,
+                    )
+                    break
         finally:
             if pool is not None:
                 pool.close()
