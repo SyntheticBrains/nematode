@@ -37,17 +37,23 @@ The framework as built already runs evolution-of-learning-hyperparameters from-s
 
 **Rationale**: M3 deliberately left this seam ([M3 design.md openspec/changes/archive/2026-05-02-add-lamarckian-evolution/design.md] noted future-work strategies "would need a Protocol extension or special-case path"). Doing the Protocol extension now (a) makes Baldwin a 50-line strategy rather than a 200-line loop refactor, (b) tests that the M3 Protocol shape actually scales, and (c) front-loads the architectural work so M5/M6 inherit a clean extension point. The cost is ~1 hour of refactoring `_inheritance_active` call sites.
 
-### Decision 2: `BaldwinInheritance` records `inherited_from` even though it has no weight substrate
+### Decision 2: `BaldwinInheritance` records `inherited_from` even though it has no weight substrate, reusing `_selected_parent_ids`
 
 **Choice**: When `kind() == "trait"`, the loop tracks the prior generation's elite genome ID (top fitness, lex-tie-broken — same selection rule as Lamarckian) and writes it to the lineage CSV's `inherited_from` column for every child of the next generation. No file IO; no checkpoint substrate.
 
-**Alternative considered**: Leave `inherited_from` empty for Baldwin runs (since no weights actually flow). Cleaner from a "data should reflect physical reality" standpoint.
+`BaldwinInheritance.select_parents` returns `[best_genome_id]` (single-element list, same shape as Lamarckian's single-elite case). The loop's existing `self._selected_parent_ids: list[str]` attribute carries the elite ID forward — no new instance attribute is needed. The per-child resolver `_resolve_per_child_inheritance` is refactored to a three-branch switch on `kind()`:
 
-**Rationale**: TPE's posterior is biased toward observed-good hyperparameter regions, so the prior generation's elite genome IS the conceptual parent of the next generation's children — even though the underlying optimiser is what propagates that bias, not a code path in our loop. Recording the elite ID makes the lineage CSV uniform across `LamarckianInheritance` and `BaldwinInheritance`, and the post-pilot analysis can actually trace which elite genome each child shares hyperparameters with via TPE's posterior. Empty `inherited_from` would lose information that's trivially derivable.
+- `kind() == "none"` → returns `(None, None, "")` (existing behaviour).
+- `kind() == "trait"` → returns `(None, None, parent_id)` where `parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""`. No checkpoint paths computed.
+- `kind() == "weights"` → existing logic (compute `child_capture_path`, look up parent's checkpoint, fall back on missing file).
+
+**Alternative considered**: Add a new `self._baldwin_elite_id: str | None` attribute parallel to `_selected_parent_ids`. Then have `BaldwinInheritance.select_parents` return `[]` (no checkpoint to track) and route the elite ID through the new attribute.
+
+**Rationale**: The new-attribute design adds a redundant data structure — `_baldwin_elite_id` would always equal `_selected_parent_ids[0]` for the single-elite case (which is the only configuration shipping). Reusing `_selected_parent_ids` keeps the loop's parent-tracking code path uniform across strategies and makes the kind()-switch in `_resolve_per_child_inheritance` the single point of difference. The post-pilot analysis can trace which elite genome each child shares hyperparameters with via TPE's posterior — empty `inherited_from` would lose information that's trivially derivable.
 
 ### Decision 3: `weight_init_scale` is the only NEW brain field; `entropy_decay_episodes` is exposed via schema only
 
-**Choice**: Add `weight_init_scale: float = 1.0` (validator `[0.1, 5.0]`) to LSTMPPO brain config. Implementation: at construction, after layers are built but before training, multiply each `nn.Linear.weight` and LSTM weight tensor's std by this scale. `entropy_decay_episodes` already exists in `_reservoir_lstm_base.py:159`; just reference it in the Baldwin pilot's `hyperparam_schema`.
+**Choice**: Add `weight_init_scale: float = 1.0` (validator `[0.1, 5.0]`) to `LSTMPPOBrainConfig` ([brain/arch/lstmppo.py](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py)). Implementation respects the existing orthogonal-init pattern at [lstmppo.py:471-488](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py#L471-L488): the actor's hidden Linear layers and the critic's Linear layers use `nn.init.orthogonal_(weight, gain=np.sqrt(2))` — multiply that `gain` by `weight_init_scale`. The actor's output layer uses `gain=0.01` deliberately (standard PPO trick for stable initial policy) and SHALL NOT be scaled. The LSTM/GRU module (`self.rnn` at [lstmppo.py:349](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py#L349)) is not touched by `_initialize_weights` and uses PyTorch's default — out of scope for this knob. `entropy_decay_episodes` already exists in `LSTMPPOBrainConfig` (default 500 at [lstmppo.py:102](packages/quantum-nematode/quantumnematode/brain/arch/lstmppo.py#L102)); just reference it in the Baldwin pilot's `hyperparam_schema`.
 
 **Alternative considered**: Add several richer-schema fields (`value_loss_coef`, `lr_warmup_episodes`, etc.). Could plausibly produce a larger Baldwin signal.
 
@@ -63,13 +69,13 @@ The choice of `weight_init_scale` ∈ `[0.5, 2.0]` schema bounds (vs the wider `
 
 **Rationale**: `best_fitness` is the metric the speed gate uses (`mean_gen_to_092` is computed from per-generation `best_fitness` ≥ 0.92). Triggering on the same metric as the gate keeps the truncation honest. Population-mean saturation lags best-fitness saturation by several generations and would let the loop run longer than necessary. Moving-average plateau detection is cleaner statistically but adds tunable parameters (window size, plateau threshold) — one knob (N consecutive non-improving generations) is enough.
 
-### Decision 5: Bump `CHECKPOINT_VERSION` 2 → 3, persist `_gens_without_improvement` and `_baldwin_elite_id`
+### Decision 5: Bump `CHECKPOINT_VERSION` 2 → 3, persist `_gens_without_improvement` + `_last_best_fitness`
 
-**Choice**: Add two fields to the checkpoint pickle: `gens_without_improvement: int` (the early-stop counter) and `baldwin_elite_id: str` (the prior-generation elite ID for Baldwin lineage). Bump `CHECKPOINT_VERSION` to 3. M3 (v2) checkpoints cannot be resumed under M4 — clear error advised.
+**Choice**: Add two fields to the checkpoint pickle: `gens_without_improvement: int` (the early-stop counter) and `last_best_fitness: float | None` (the previous-generation best, needed so the post-resume comparison correctly detects whether the resumed generation is an improvement). Bump `CHECKPOINT_VERSION` to 3. M3 (v2) checkpoints cannot be resumed under M4 — clear error advised. Baldwin's elite ID rides on the existing `selected_parent_ids` field per Decision 2; no separate `baldwin_elite_id` key needed.
 
-**Alternative considered**: Reuse the existing `selected_parent_ids` field for `baldwin_elite_id` (since Baldwin's "selected parent" is a single ID). Avoid the version bump.
+**Alternative considered**: No version bump — recompute the early-stop counter from the loaded `optimizer.history` on resume rather than persisting it explicitly.
 
-**Rationale**: Reusing the field would make the pickle ambiguous — `selected_parent_ids` has a different semantic meaning (Lamarckian: parents of the about-to-evaluate generation; Baldwin: elite ID of the just-evaluated generation, used for lineage only). Two distinct fields keep the resume code path explicit. Same pattern as M2 → M3 (v1 → v2).
+**Rationale**: Recomputing from history requires the resume code to walk the entire history with the comparison rule and re-derive the counter. Cheap (O(generations)) but adds a code path that has to stay consistent with the in-loop counter logic — easy to drift. Persisting both `gens_without_improvement` and `last_best_fitness` explicitly is two extra ints in the pickle and zero extra logic. Same pattern as M3's `selected_parent_ids` addition (M2 → M3 was v1 → v2 for this exact reason).
 
 ### Decision 6: F1 control is post-hoc, not interleaved
 
@@ -89,7 +95,7 @@ The choice of `weight_init_scale` ∈ `[0.5, 2.0]` schema bounds (vs the wider `
 
 ## Risks / Trade-offs
 
-\[Risk 1: TPE converges on `weight_init_scale ≈ 1.0` and `entropy_decay_episodes ≈ 800` (the M3 defaults) for all 4 seeds, making the new fields uninformative\]
+\[Risk 1: TPE converges on `weight_init_scale ≈ 1.0` and `entropy_decay_episodes ≈ 500` (the brain defaults) for all 4 seeds, making the new fields uninformative\]
 → Mitigation: Canary check at gen 5 — if all 4 seeds cluster within ±5% of defaults, the speed gate will likely fail, and the next iteration should widen schema bounds (e.g., `weight_init_scale ∈ [0.1, 5.0]` and `entropy_decay_episodes ∈ [50, 5000]`) before scaling to longer runs. Documented in the logbook's Risk section so the verdict captures whether the fields were genuinely tested.
 
 [Risk 2: F1 innate-only is at floor — the elite genome's hyperparameters can't produce useful behaviour without K=50 training]
@@ -101,11 +107,19 @@ The choice of `weight_init_scale` ∈ `[0.5, 2.0]` schema bounds (vs the wider `
 [Risk 4: TPE posterior collapse — Baldwin-rich saturates by gen 3-4 with low diversity in evolved hyperparameters across seeds]
 → Mitigation: This would actually be evidence FOR genetic assimilation (single basin of attraction = strong Baldwin signal). If the speed gate fails because saturation is too fast (no room to be 2 gens faster than control), fall back to comparing F1 innate-only across arms — a cleaner signal anyway. The logbook captures whichever pattern the data shows.
 
-\[Risk 5: `weight_init_scale` implementation bugs — multiplying init std at construction may interact with PyTorch's existing init logic in non-obvious ways\]
-→ Mitigation: Unit test asserts that `weight_init_scale=1.0` produces tensors bit-identical to current init (no-op) and `weight_init_scale=2.0` produces tensors with std exactly 2× the baseline. Pre-pilot smoke (3 gens × pop 6, single seed) under Baldwin will catch any cascading effects on training stability.
+\[Risk 5: `weight_init_scale` implementation bugs — scaling the orthogonal `gain` may interact with PyTorch's existing init logic in non-obvious ways\]
+→ Mitigation: Unit test asserts that `weight_init_scale=1.0` produces tensors bit-identical to current init (no-op for the actor's hidden Linears, the actor's small-init output layer, the critic's Linears, and the LSTM/GRU defaults). For `weight_init_scale=2.0` assert the actor's hidden Linears and the critic's Linears were initialised with `gain=2*np.sqrt(2)` (i.e. doubled `gain`) while the actor's output layer's `gain=0.01` is unchanged and the LSTM/GRU's parameters are unchanged from PyTorch defaults. Pre-pilot smoke (3 gens × pop 6, single seed) under Baldwin will catch any cascading effects on training stability.
 
 \[Risk 6: The Protocol extension is not actually as clean as expected — adding `kind()` may surface other `isinstance(strategy, NoInheritance)` checks elsewhere in the codebase\]
-→ Mitigation: Pre-implementation grep for `isinstance.*NoInheritance` and `isinstance.*LamarckianInheritance` to find every site. Plan-level estimate: 2-3 sites total (`_inheritance_active`, possibly the resume check, possibly the GC step). All refactor to `kind()` switches in the same commit.
+→ Mitigation: Pre-implementation grep performed during review found exactly 1 production-code site (`_inheritance_active` at loop.py:308) and 1 docstring reference (inheritance.py:120). Both refactor to `kind()` switches in the same commit. The resume validation and GC step do NOT use isinstance — they read `_inheritance_active()` indirectly.
+
+### Gate calibration against M3 published numbers
+
+The aggregator's three gates are calibrated against M3's published `convergence_speed.csv` so the verdict has empirical grounding:
+
+- **Speed gate** `mean_gen_baldwin_to_092 + 2 ≤ mean_gen_control_to_092`: M3 published `mean_gen_control_to_092 = 9.75`; passing the gate means Baldwin reaches 0.92 in ≤ 7.75 mean generations. M3's lamarckian arm reached 4.5 — substantial headroom. A Baldwin signal that is ~half the strength of Lamarckian (around gen 7) still passes. Calibrated as "noticeably faster than from-scratch" without setting an unrealistic bar.
+- **Genetic-assimilation gate** `mean_f1_baldwin > mean_baseline + 0.10`: M3 published `mean_baseline = 0.170` (run_simulation.py 100-episode hand-tuned). Passing the gate means F1 innate-only ≥ 0.27. The threshold is calibrated as "genome alone (no learning) produces noticeably better policies than the hand-tuned baseline" — modest but clearly above noise.
+- **Comparative gate** `mean_gen_baldwin_to_092 ≤ mean_gen_lamarckian_to_092 + 4`: at M3's published lamarckian 4.5, this means Baldwin ≤ 8.5. Note this is essentially redundant with the speed gate (control 9.75 → speed-gate-passing Baldwin ≤ 7.75 → automatically ≤ Lamarckian + 4 if Lamarckian rerun reproduces M3's 4.5). The comparative gate's job is a sanity tripwire if Lamarckian's M4 rerun underperforms its M3 published numbers.
 
 ## Migration Plan
 

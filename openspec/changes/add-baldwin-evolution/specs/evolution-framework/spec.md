@@ -220,20 +220,21 @@ The early-stop counter SHALL be persisted in the checkpoint pickle as `gens_with
 
 #### Scenario: Early-stop fires after N consecutive non-improving generations
 
-- **GIVEN** an evolution YAML with `evolution.early_stop_on_saturation: 3` and `generations: 20`, on a run where `best_fitness` is monotonically increasing through gen 5 (e.g. 0.3, 0.5, 0.7, 0.85, 0.95) and then plateaus exactly at 0.95 from gen 6 onwards
-- **WHEN** the loop runs
-- **THEN** the counter SHALL increment at gens 7, 8, 9 (three non-improving generations after the last improvement at gen 6 — wait, last improvement was gen 5 to gen 6 if 0.95 first appears at gen 6; counter resets at gen 6, then increments at 7, 8, 9; counter = 3 at gen 9, triggering early-stop after gen 9 evaluates)
-- **AND** the loop SHALL break after gen 9's evaluation completes (i.e. gen 9 IS recorded in lineage; gen 10 is NOT)
-- **AND** the log SHALL contain "Early-stop: best_fitness has not improved for 3 generations (last improvement at gen 6)"
-- **AND** the lineage CSV SHALL contain exactly 9 generations × population_size rows
-- **AND** the history CSV SHALL contain exactly 9 rows
+- **GIVEN** an evolution YAML with `evolution.early_stop_on_saturation: 3` and `generations: 20`, on a run where `best_fitness` per generation is `[0.3, 0.5, 0.7, 0.85, 0.95, 0.95, 0.95, 0.95, ...]` (strict-increasing through gen 5, then plateauing at 0.95 from gen 6 onwards)
+- **WHEN** the loop runs and the comparison rule is "current best_fitness is strictly greater than the previous generation's best_fitness"
+- **THEN** the counter SHALL be 0 at gen 1 (no previous), 0 at gens 2-5 (all strict improvements), 1 at gen 6, 2 at gen 7, 3 at gen 8 (three consecutive non-improving generations after the last strict improvement at gen 5)
+- **AND** when the counter reaches 3 at gen 8, the loop SHALL break AFTER gen 8's full evaluation completes (i.e. gen 8 IS recorded in lineage; gen 9 is NOT)
+- **AND** the log SHALL contain "Early-stop: best_fitness has not improved for 3 generations (last improvement at gen 5)"
+- **AND** the lineage CSV SHALL contain exactly `8 * population_size` rows
+- **AND** the history CSV SHALL contain exactly 8 rows
+- **AND** the loop SHALL save a final checkpoint before breaking (regardless of `checkpoint_every` schedule), so a subsequent `--resume` would correctly observe the run as complete rather than rewind to the last `checkpoint_every`-aligned save
 
-#### Scenario: Counter resets on any positive improvement
+#### Scenario: Counter resets on any strict improvement
 
-- **GIVEN** an evolution YAML with `early_stop_on_saturation: 5`
-- **WHEN** the loop runs and `best_fitness` follows the trajectory: 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5
-- **THEN** the counter SHALL increment at gens 3, 4 (two non-improving), reset to 0 at gen 5 (improvement to 0.5), then increment at gens 6, 7, 8, 9 (four non-improving)
-- **AND** the loop SHALL NOT trigger early-stop because the counter never reaches 5 within this trajectory
+- **GIVEN** an evolution YAML with `early_stop_on_saturation: 5` and `generations: 9`
+- **WHEN** the loop runs and `best_fitness` per generation is `[0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5]`
+- **THEN** the counter SHALL be 0 at gen 1 (no previous), 0 at gen 2 (strict improvement), 1 at gen 3, 2 at gen 4, 0 at gen 5 (strict improvement, counter reset), 1 at gen 6, 2 at gen 7, 3 at gen 8, 4 at gen 9
+- **AND** the loop SHALL NOT trigger early-stop because the counter never reaches 5 within this trajectory; the run completes the full `generations: 9` budget normally
 
 #### Scenario: CLI override for early-stop
 
@@ -245,11 +246,11 @@ The early-stop counter SHALL be persisted in the checkpoint pickle as `gens_with
 
 #### Scenario: Resume preserves the early-stop counter
 
-- **GIVEN** a Lamarckian or Baldwin run with `early_stop_on_saturation: 3` that wrote a checkpoint at end of generation N with `gens_without_improvement: 2`
+- **GIVEN** a Lamarckian or Baldwin run with `early_stop_on_saturation: 3` that wrote a checkpoint at end of generation N with `gens_without_improvement: 2` and `last_best_fitness: 0.95`
 - **WHEN** the run resumes via `--resume <checkpoint>`
-- **THEN** the loaded loop's `_gens_without_improvement` SHALL equal `2`
-- **AND** if generation N+1's `best_fitness` is no improvement, the counter SHALL increment to 3 and the loop SHALL early-stop after gen N+1
-- **AND** if generation N+1 IS an improvement, the counter SHALL reset to 0 and the loop SHALL continue to the full `generations` budget
+- **THEN** the loaded loop's `_gens_without_improvement` SHALL equal `2` and `_last_best_fitness` SHALL equal `0.95`
+- **AND** if generation N+1's `best_fitness <= 0.95` (no strict improvement), the counter SHALL increment to 3 and the loop SHALL early-stop after gen N+1
+- **AND** if generation N+1's `best_fitness > 0.95` (strict improvement), the counter SHALL reset to 0 and the loop SHALL continue to the full `generations` budget
 
 #### Scenario: Early-stop applies to all inheritance strategies
 
