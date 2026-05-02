@@ -21,16 +21,16 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **WHEN** generation 0 evaluates
 - **THEN** every gen-0 child SHALL be from-scratch — `LearnedPerformanceFitness.evaluate` SHALL be invoked with `warm_start_path_override=None` for every gen-0 genome
 - **AND** the `lineage.csv` `inherited_from` column SHALL be empty for every gen-0 row
-- **AND** the gen-0 fitness distribution SHALL be statistically indistinguishable from an `inheritance: none` run with the same seed (it is the same code path)
+- **AND** the gen-0 fitness scores SHALL be bit-for-bit identical to an `inheritance: none` run with the same seed (modulo the side-effect `save_weights` write that captures each genome's post-train weights for gen-1 to inherit from — fitness arithmetic is unaffected by that write)
 
 #### Scenario: Per-genome weight checkpoints are captured and garbage-collected
 
-- **GIVEN** a Lamarckian run with `inheritance_elite_count: 1`, `population_size: 12`, `generations: 5`
+- **GIVEN** a Lamarckian run with `inheritance_elite_count: 1`, `population_size: 12`, `generations: 5` (i.e. generations 0 through 4 inclusive)
 - **WHEN** the run completes
 - **THEN** during generation N's evaluation, exactly 12 `.pt` files SHALL have been written under `<output_dir>/inheritance/gen-{N:03d}/`
-- **AND** after generation N's `optimizer.tell` returns and the strategy selects the next-generation parent, the GC step SHALL delete all 11 non-selected files in `gen-{N:03d}/` AND all remaining files in `gen-{N-1:03d}/` (whose children have just finished evaluating)
+- **AND** after generation N's `optimizer.tell` returns and the strategy selects the next-generation parent, the GC step SHALL delete all 11 non-selected files in `gen-{N:03d}/` AND all remaining files in `gen-{N-1:03d}/` (whose children have just finished evaluating, so those parent checkpoints are no longer needed)
 - **AND** at the moment generation N+1's evaluation begins, exactly one file SHALL exist in `gen-{N:03d}/` (the selected parent for the about-to-evaluate children)
-- **AND** when the run completes after generation 4, the only surviving file SHALL be the selected parent for the (never-evaluated) generation 5
+- **AND** when the run completes after generation 4 (the final generation), the loop SHALL still run `select_parents` on gen 4's results and the GC step SHALL still delete gen 3's surviving parent — so the only surviving file SHALL be the selected parent of the final generation, under `inheritance/gen-004/`. This file is intentionally NOT deleted by GC: it is the final winner's trained policy, available for forensic inspection or downstream warm-start by the next milestone (e.g. M4 Baldwin)
 
 #### Scenario: Inheritance requires a training phase
 
