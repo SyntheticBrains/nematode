@@ -58,10 +58,10 @@
 
 ## 9. Campaign scripts
 
-- [ ] 9.1 Create `scripts/campaigns/phase5_m4_baldwin_lstmppo_klinotaxis_predator.sh`. 4-seed (42-45) loop, output to `evolution_results/m4_baldwin_lstmppo_klinotaxis_predator/`. Mirrors M3's lamarckian campaign script structure.
-- [ ] 9.2 Create `scripts/campaigns/phase5_m4_lamarckian_rerun.sh`. Reuses M3's `lamarckian_lstmppo_klinotaxis_predator_pilot.yml`, output to `evolution_results/m4_lamarckian_lstmppo_klinotaxis_predator/`. Same 4 seeds. Header comment explains why the rerun (confounder-free 4-arm comparison on M4 revision).
-- [ ] 9.3 Create `scripts/campaigns/phase5_m4_control_rerun.sh`. Reuses M3's `lamarckian_lstmppo_klinotaxis_predator_control.yml`, output to `evolution_results/m4_control_lstmppo_klinotaxis_predator/`. Same 4 seeds. Header comment explains the rerun rationale.
-- [ ] 9.4 The hand-tuned baseline reuses M2.11's existing run (`evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline/`) — no script needed; just point the aggregator at it.
+- [x] 9.1 Created `scripts/campaigns/phase5_m4_baldwin_lstmppo_klinotaxis_predator.sh`. 4-seed (42-45) loop, output to `evolution_results/m4_baldwin_lstmppo_klinotaxis_predator/`. Header comments document the 4-arm comparison structure and the F1 post-pilot evaluator.
+- [x] 9.2 Created `scripts/campaigns/phase5_m4_lamarckian_rerun.sh`. Reuses M3's `lamarckian_lstmppo_klinotaxis_predator_pilot.yml`, adds `--early-stop-on-saturation 5` at runtime to match the Baldwin pilot's behaviour. Output to `evolution_results/m4_lamarckian_lstmppo_klinotaxis_predator/`.
+- [x] 9.3 Created `scripts/campaigns/phase5_m4_control_rerun.sh`. Reuses M3's `lamarckian_lstmppo_klinotaxis_predator_control.yml`, adds `--early-stop-on-saturation 5` at runtime. Output to `evolution_results/m4_control_lstmppo_klinotaxis_predator/`.
+- [x] 9.4 The hand-tuned baseline reuses M2.11's existing run (`evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline/`) — no script needed; the aggregator points at it via `--baseline-root`.
 
 ## 10. Run pilot
 
@@ -70,10 +70,10 @@
 
 ## 11. F1 post-pilot evaluator
 
-- [ ] 11.1 Create `scripts/campaigns/baldwin_f1_postpilot_eval.py`. Args: `--baldwin-root` (the M4 Baldwin output root), `--config` (the Baldwin pilot YAML — needed to reconstruct the schema), `--seeds 42 43 44 45`, `--episodes 25` (default L=25), `--output-dir`.
-- [ ] 11.2 For each seed, the script SHALL: (a) read `best_params.json` to get `best_params: list[float]`; (b) load the YAML via `load_simulation_config(args.config)` to get `sim_config` with `hyperparam_schema` populated; (c) construct a synthetic `Genome(params=np.array(best_params, dtype=np.float32), genome_id="f1_elite", parent_ids=[], generation=0, birth_metadata=build_birth_metadata(sim_config))` — `build_birth_metadata` populates the `param_schema` key the encoder needs at decode time (see `encoders.py:502-510`); (d) run `EpisodicSuccessRate().evaluate(genome, sim_config, HyperparameterEncoder(), episodes=args.episodes, seed=seed)` for the frozen-eval pass — `evaluate` calls `encoder.decode(genome, sim_config, seed=seed)` internally at `fitness.py:244` so no separate `decode` step is needed.
-- [ ] 11.3 Write `f1_innate_only.csv` with columns `seed, success_rate, elite_genome_id` (one row per seed).
-- [ ] 11.4 Smoke test: run the script against the smoke output from task 7.1; verify it produces a CSV with one row containing a numeric success rate in [0.0, 1.0].
+- [x] 11.1 Created `scripts/campaigns/baldwin_f1_postpilot_eval.py` with all required args (`--baldwin-root`, `--config`, `--seeds`, `--episodes`, `--output-dir`).
+- [x] 11.2 Implemented per-seed flow: (a) read `best_params.json` from `<baldwin_root>/seed-N/<latest_session>/best_params.json`; (b) load YAML for the `hyperparam_schema`; (c) construct a synthetic `Genome` with `birth_metadata=build_birth_metadata(sim_config)` so the encoder's schema-required `param_schema` key is populated; (d) call `EpisodicSuccessRate().evaluate(...)` which internally invokes `encoder.decode` for brain construction.
+- [x] 11.3 Writes `f1_innate_only.csv` with columns `seed, success_rate, elite_genome_id`. Also prints the mean F1 success rate to stdout for easy aggregation against the baseline.
+- [x] 11.4 Smoke-tested against the Baldwin pre-pilot smoke output: produced a valid CSV with success_rate in [0.0, 1.0] and confirmed the script handles the per-seed `seed-N/<session>/` directory structure produced by the campaign script.
 
 ## 12. Aggregator + verdict
 
