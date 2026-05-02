@@ -4,7 +4,9 @@
 
 The system SHALL provide an `InheritanceStrategy` Protocol in `quantumnematode/evolution/inheritance.py` with three methods (`select_parents`, `assign_parent`, `checkpoint_path`) and at least two concrete implementations: `NoInheritance` (the default no-op) and `LamarckianInheritance(elite_count: int = 1)`. When a non-`NoInheritance` strategy is active, the `EvolutionLoop` SHALL: (1) capture each genome's post-K-train brain weights to a per-genome `.pt` file via `LearnedPerformanceFitness`'s `weight_capture_path` kwarg; (2) after each generation completes its `optimizer.tell` call, ask the strategy to select parents from the prior generation's `(genome, fitness)` pairs; (3) before the next generation's fitness evaluation, warm-start each child's brain from its assigned parent's checkpoint via `LearnedPerformanceFitness`'s `warm_start_path_override` kwarg; (4) garbage-collect any per-genome checkpoint that is not selected as a parent for the next generation. Steady-state disk usage SHALL be at most `2 * inheritance_elite_count` `.pt` files across the entire run.
 
-The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "lamarckian"]` in YAML and overridable via the `--inheritance` CLI flag on `scripts/run_evolution.py`. The number of elites SHALL be configurable via `evolution.inheritance_elite_count: int >= 1` (default 1). When `inheritance: none` (the default), the loop, fitness, and lineage code paths SHALL be byte-equivalent to the M2.12 baseline — no `inheritance/` directory created, no per-genome checkpoints written, no GC step performed.
+The `EvolutionLoop` SHALL persist the resolved `inheritance` value (the literal `"none"` / `"lamarckian"` string, not the strategy instance) and the selected parent IDs in its checkpoint pickle dict, so that resume-time validation can reject mismatched inheritance settings (see "Resume rejects mismatched inheritance setting" scenario below).
+
+The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "lamarckian"]` in YAML and overridable via the `--inheritance` CLI flag on `scripts/run_evolution.py`. The `evolution.inheritance_elite_count` field is structurally `int >= 1` (default 1) but in this milestone the validator SHALL reject any value other than 1 when `inheritance: lamarckian` (single-elite-broadcast only — multi-elite parent selection is reserved for M4 or later). When `inheritance: none` (the default), the loop, fitness, and lineage code paths SHALL be byte-equivalent to the M2.12 baseline — no `inheritance/` directory created, no per-genome checkpoints written, no GC step performed.
 
 #### Scenario: Lamarckian inheritance is selectable via config and CLI
 
@@ -70,6 +72,14 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **WHEN** the YAML is loaded
 - **THEN** loading SHALL raise a Pydantic `ValidationError` stating that `inheritance_elite_count` MUST be ≤ `population_size`
 
+#### Scenario: Multi-elite inheritance is rejected in this milestone
+
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.inheritance_elite_count: 2` (or any value other than 1)
+- **WHEN** the YAML is loaded
+- **THEN** loading SHALL raise a Pydantic `ValidationError` stating that `inheritance_elite_count` MUST be 1 when `inheritance: lamarckian`
+- **AND** the message SHALL state that multi-elite parent selection (round-robin or tournament) is reserved for a future milestone (M4 Baldwin or later) and that the field exists structurally so future strategies can populate it without a config-schema migration
+- **AND** the field's `Field(default=1, ge=1)` constraint SHALL still permit values >1 in the schema (so M4 can lift this validator without breaking config-load semantics); the rejection is enforced by the model validator only when `inheritance != "none"`
+
 #### Scenario: Inheritance defaults preserve M2.12 behaviour byte-equivalently
 
 - **GIVEN** any existing M2 evolution YAML with no `inheritance:` key under `evolution:`
@@ -102,7 +112,7 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **THEN** loading SHALL raise a clear error stating that the resumed run's inheritance setting differs from the original and that mid-run inheritance changes are not supported
 - **AND** the message SHALL list both the checkpoint's recorded inheritance and the resolved current value so the user can decide which to keep
 - **AND** the rejection SHALL fire BEFORE the loop reaches the first generation iteration (so an inadvertent CLI override doesn't waste compute on a corrupted run)
-- **AND** the loop SHALL persist `inheritance` (the literal `"none"` / `"lamarckian"` value, not the strategy instance) in the checkpoint pickle alongside `selected_parent_ids` so this comparison is possible at load time
+- **AND** this rejection SHALL apply to `--resume` invocations only — for fresh runs, `--inheritance` overrides the YAML field normally per the "Lamarckian inheritance is selectable via config and CLI" scenario above (the `--inheritance` flag itself is not broken, it just cannot change a run's inheritance mid-flight)
 
 ## MODIFIED Requirements
 
