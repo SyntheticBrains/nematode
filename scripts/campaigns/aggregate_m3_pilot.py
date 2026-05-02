@@ -130,10 +130,25 @@ def _gen_n_mean_best(
     seeds: list[int],
     gen_index_1based: int,
 ) -> float:
-    """Mean across-seed best_fitness at the 1-indexed generation."""
+    """Mean across-seed best_fitness at the 1-indexed generation.
+
+    Raises ``ValueError`` listing the offending seeds if any seed's
+    history is shorter than ``gen_index_1based`` — silently dropping
+    them would mask a missing-data bug and let the floor gate read
+    from a partial sample without warning.
+    """
     gen_idx = gen_index_1based - 1
-    values = [h[gen_idx]["best_fitness"] for h in (histories[s] for s in seeds) if gen_idx < len(h)]
-    return float(np.mean(values)) if values else 0.0
+    missing = [s for s in seeds if gen_idx >= len(histories[s])]
+    if missing:
+        msg = (
+            f"Cannot compute floor mean at 1-indexed generation "
+            f"{gen_index_1based}: seeds {missing} have shorter histories "
+            f"(lengths {[len(histories[s]) for s in missing]}).  Re-run "
+            f"the campaign for these seeds or shorten the floor reference."
+        )
+        raise ValueError(msg)
+    values = [histories[s][gen_idx]["best_fitness"] for s in seeds]
+    return float(np.mean(values))
 
 
 def _format_summary(  # noqa: PLR0913
@@ -274,15 +289,23 @@ def _plot_convergence(
         return None
 
     def _stack(histories: dict[int, list[dict[str, float]]]) -> np.ndarray:
+        # Per-seed histories may have unequal lengths if a run was
+        # killed mid-checkpoint or some seeds reached an early-stop
+        # condition.  Truncate every seed to the shortest length so
+        # np.array sees a rectangular nested list (otherwise it
+        # raises on the jagged input).
+        min_len = min(len(histories[s]) for s in seeds)
         return np.array(
-            [[row["best_fitness"] for row in histories[s]] for s in seeds],
+            [[row["best_fitness"] for row in histories[s][:min_len]] for s in seeds],
             dtype=np.float64,
         )
 
     lam = _stack(lam_history)
     ctrl = _stack(ctrl_history)
     if lam.shape[1] != ctrl.shape[1]:
-        # Different generation counts → align to the shorter run for the plot.
+        # Different generation counts BETWEEN arms → align to the
+        # shorter arm for the plot (within-arm jaggedness is already
+        # normalised by _stack).
         n = min(lam.shape[1], ctrl.shape[1])
         lam = lam[:, :n]
         ctrl = ctrl[:, :n]

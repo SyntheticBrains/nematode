@@ -97,13 +97,15 @@ Per task 9b, before committing ~2.5 hours of full-pilot wall-time, ran a reduced
 
 **Lamarckian arm (4 seeds × 20 generations):**
 
+All "Gen first reaches X" columns use the aggregator's 1-indexed convention (history-CSV gen + 1) for consistency with `convergence_speed.csv` and the speed-gate margin numbers above.
+
 | Seed | Gen 1 best | Gen 20 best | Gen first reaches 0.92 | Gen first reaches 1.00 |
 |---|---|---|---|---|
-| 42 | 0.84 | **1.00** | 3 | 2 (climbed from 0.84 → 1.00 in one gen) |
-| 43 | 0.56 | **1.00** | 4 | 6 |
-| 44 | 0.64 | **1.00** | 4 | 5 |
-| 45 | 0.84 | **1.00** | 7 | 6 |
-| **mean** | **0.72** | **1.00** | **4.50** | **4.75** |
+| 42 | 0.84 | **1.00** | 3 | 3 (climbed from 0.84 → 1.00 in one gen) |
+| 43 | 0.56 | **1.00** | 4 | 7 |
+| 44 | 0.64 | **1.00** | 4 | 6 |
+| 45 | 0.84 | **1.00** | 7 | 7 |
+| **mean** | **0.72** | **1.00** | **4.50** | **5.75** |
 
 **Control arm (4 seeds × 20 generations):**
 
@@ -211,7 +213,7 @@ The gate passes under all reasonable treatments. The "exclude seed 42 (n=3)" cas
 | 0.88 | [3, 3, 3, 4] | **[19, 5, 3, 5]** | **+4.75** |
 | 0.92 | [3, 4, 4, 7] | [—, 5, 5, 8] | +5.25 |
 
-**Inheritance's value is concentrated at the harder thresholds (0.88+).** Both arms reach "decent" policies (0.80) equally fast — TPE's first-gen samples land in the viable region quickly regardless of inheritance. Lamarckian's payoff is reaching "near-perfect" policies fast, where TPE-without-inheritance can stall (control seed 42 took 19 gens to reach 0.88; lamarckian seed 42 reached 0.88 at gen 3 then climbed to 1.00 at gen 2).
+**Inheritance's value is concentrated at the harder thresholds (0.88+).** Both arms reach "decent" policies (0.80) equally fast — TPE's first-gen samples land in the viable region quickly regardless of inheritance. Lamarckian's payoff is reaching "near-perfect" policies fast, where TPE-without-inheritance can stall (control seed 42 took 19 gens to reach 0.88; lamarckian seed 42 reached 0.88 and 1.00 in the same generation, gen 3).
 
 ### Save/load round-trip integrity
 
