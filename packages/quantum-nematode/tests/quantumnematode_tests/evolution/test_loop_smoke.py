@@ -491,3 +491,140 @@ def test_lineage_brain_type_uses_sim_config_brain_name_for_hyperparam_run(
     assert best_params_path.exists()
     artefact = json.loads(best_params_path.read_text())
     assert artefact["brain_type"] == "mlpppo"
+
+
+# ---------------------------------------------------------------------------
+# Lamarckian inheritance smoke
+# ---------------------------------------------------------------------------
+
+
+def _make_lamarckian_loop(
+    output_dir: Path,
+    *,
+    generations: int,
+    population_size: int = 4,
+) -> EvolutionLoop:
+    """Build a small lamarckian-inheritance loop for fast smoke tests.
+
+    Uses HyperparameterEncoder + LearnedPerformanceFitness with K=2/L=1
+    to exercise the actual inheritance code path (per-genome warm-start
+    + post-train weight capture + GC) at minimum cost.
+    """
+    from quantumnematode.evolution.encoders import HyperparameterEncoder
+    from quantumnematode.evolution.fitness import LearnedPerformanceFitness
+    from quantumnematode.evolution.inheritance import LamarckianInheritance
+    from quantumnematode.utils.config_loader import ParamSchemaEntry
+
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=population_size,
+        generations=generations,
+        episodes_per_eval=1,
+        learn_episodes_per_eval=2,
+        eval_episodes_per_eval=1,
+        parallel_workers=1,
+        inheritance="lamarckian",
+        inheritance_elite_count=1,
+    )
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG)).model_copy(
+        update={
+            "hyperparam_schema": [
+                ParamSchemaEntry(
+                    name="learning_rate",
+                    type="float",
+                    bounds=(1e-5, 1e-2),
+                    log_scale=True,
+                ),
+            ],
+            "evolution": ecfg,
+        },
+    )
+    encoder = HyperparameterEncoder()
+    fitness = LearnedPerformanceFitness()
+    optimizer = CMAESOptimizer(
+        num_params=encoder.genome_dim(sim_config),
+        population_size=population_size,
+        sigma0=ecfg.sigma0,
+        seed=42,
+    )
+    return EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder,
+        fitness=fitness,
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=output_dir,
+        rng=np.random.default_rng(42),
+        log_level=logging.WARNING,
+        inheritance=LamarckianInheritance(elite_count=1),
+    )
+
+
+def test_loop_with_lamarckian_inheritance_3_gens(tmp_path: Path) -> None:
+    """3-gen × pop 4 lamarckian smoke: lineage + GC + checkpoint behaviour.
+
+    Spec scenarios "Lamarckian inheritance is selectable via config and
+    CLI" + "First generation runs from-scratch under any inheritance
+    strategy" + "Per-genome weight checkpoints are captured and
+    garbage-collected".
+    """
+    loop = _make_lamarckian_loop(tmp_path, generations=3, population_size=4)
+    loop.run()
+
+    # Lineage: 12 rows total, gen 0 empty inherited_from, gen 1+ shares one parent.
+    with (tmp_path / "lineage.csv").open() as h:
+        rows = list(csv.DictReader(h))
+    assert len(rows) == 12
+    by_gen: dict[int, list[dict[str, str]]] = {}
+    for r in rows:
+        by_gen.setdefault(int(r["generation"]), []).append(r)
+    for r in by_gen[0]:
+        assert r["inherited_from"] == ""
+    for gen in (1, 2):
+        ifrom = {r["inherited_from"] for r in by_gen[gen]}
+        assert ifrom != {""}, f"gen {gen} should have non-empty inherited_from"
+        assert len(ifrom) == 1, f"single elite → all gen {gen} children share one parent"
+
+    # Inheritance dir state: only gen-002 survives (the final winner).
+    inh = tmp_path / "inheritance"
+    assert inh.exists()
+    surviving = sorted(p.name for p in inh.iterdir())
+    assert surviving == ["gen-002"]
+    files = list((inh / "gen-002").glob("genome-*.pt"))
+    assert len(files) == 1
+
+
+def test_inheritance_directory_garbage_collection(tmp_path: Path) -> None:
+    """4-gen smoke: GC SHALL remove all but the final-gen surviving parent.
+
+    Spec scenario "Per-genome weight checkpoints are captured and
+    garbage-collected" — final clause about steady-state disk usage.
+    """
+    loop = _make_lamarckian_loop(tmp_path, generations=4, population_size=4)
+    loop.run()
+
+    inh = tmp_path / "inheritance"
+    surviving = sorted(p.name for p in inh.iterdir())
+    # Earlier-generation directories were deleted (empty after GC).
+    assert surviving == ["gen-003"]
+    # Exactly one file in the final generation: the elite parent.
+    assert len(list((inh / "gen-003").glob("genome-*.pt"))) == 1
+
+
+def test_lamarckian_resume_rejects_inheritance_mismatch(tmp_path: Path) -> None:
+    """Resume with a different ``inheritance`` setting SHALL raise.
+
+    Spec scenario "Resume rejects mismatched inheritance setting".
+    """
+    # First session: lamarckian, save checkpoint.
+    loop = _make_lamarckian_loop(tmp_path, generations=2, population_size=4)
+    loop.run()
+    checkpoint = tmp_path / "checkpoint.pkl"
+    assert checkpoint.exists()
+
+    # Build a fresh loop with the SAME output dir but inheritance: none —
+    # i.e. the user accidentally drops --inheritance on resume.  Use the
+    # default _make_loop helper which sets inheritance: none implicitly.
+    loop2 = _make_loop(tmp_path, generations=4, population_size=4, episodes_per_eval=1)
+    with pytest.raises(ValueError, match="inheritance setting"):
+        loop2.run(resume_from=checkpoint)

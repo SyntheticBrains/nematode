@@ -179,3 +179,54 @@ def test_record_writes_brain_type_column(tmp_path: Path) -> None:
     rows = _read_rows(csv_path)
     assert rows[1][4] == "mlpppo"
     assert rows[2][4] == "lstmppo"
+
+
+def test_lineage_records_inherited_from(tmp_path: Path) -> None:
+    """``inherited_from`` SHALL round-trip through the CSV as the 6th column.
+
+    Spec scenario "inherited_from column is populated under Lamarckian
+    inheritance".
+    """
+    csv_path = tmp_path / "lineage.csv"
+    tracker = LineageTracker(csv_path)
+
+    # Gen 0: from-scratch (empty inherited_from).
+    tracker.record(_make_genome(0, 0, []), fitness=0.3, brain_type="lstmppo")
+    # Gen 1: inherited from a known parent.
+    tracker.record(
+        _make_genome(1, 0, ["g0"]),
+        fitness=0.7,
+        brain_type="lstmppo",
+        inherited_from="parent-abc",
+    )
+    # Gen 2: another parent.
+    tracker.record(
+        _make_genome(2, 0, ["g1"]),
+        fitness=0.9,
+        brain_type="lstmppo",
+        inherited_from="parent-xyz",
+    )
+
+    rows = _read_rows(csv_path)
+    # Column 5 is inherited_from
+    assert rows[1][5] == ""
+    assert rows[2][5] == "parent-abc"
+    assert rows[3][5] == "parent-xyz"
+
+
+def test_lineage_inherited_from_defaults_to_empty(tmp_path: Path) -> None:
+    """Callers that omit ``inherited_from`` SHALL get the empty string.
+
+    Spec scenario "inherited_from column is empty under NoInheritance" —
+    pre-M3 callers (or no-inheritance loop iterations) don't pass the
+    parameter at all; the default keeps the schema fixed.
+    """
+    csv_path = tmp_path / "lineage.csv"
+    tracker = LineageTracker(csv_path)
+
+    tracker.record(_make_genome(0, 0, []), fitness=0.5, brain_type="mlpppo")
+    tracker.record(_make_genome(1, 0, ["g0"]), fitness=0.6, brain_type="mlpppo")
+
+    rows = _read_rows(csv_path)
+    assert rows[1][5] == ""
+    assert rows[2][5] == ""

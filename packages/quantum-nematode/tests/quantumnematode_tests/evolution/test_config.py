@@ -495,3 +495,142 @@ def test_warm_start_unset_allows_arch_changing_entries(tmp_path: Path) -> None:
     # specific error to confirm.
     with pytest.raises(ValidationError, match="lstm_hidden_dim"):
         load_simulation_config(str(yaml_path))
+
+
+# ---------------------------------------------------------------------------
+# Inheritance validators (M3)
+# ---------------------------------------------------------------------------
+
+
+def test_inheritance_lamarckian_with_learn_episodes_zero_raises() -> None:
+    """``inheritance: lamarckian`` + ``learn_episodes_per_eval: 0`` SHALL raise.
+
+    Spec scenario "Inheritance requires a training phase".
+    """
+    with pytest.raises(ValidationError, match="learn_episodes_per_eval"):
+        EvolutionConfig(inheritance="lamarckian", learn_episodes_per_eval=0)
+
+
+def test_inheritance_lamarckian_with_warm_start_path_raises(tmp_path: Path) -> None:
+    """``inheritance: lamarckian`` + ``warm_start_path`` SHALL raise.
+
+    Spec scenario "Inheritance is mutually exclusive with static warm-start".
+    """
+    fake_path = tmp_path / "fake.pt"
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        EvolutionConfig(
+            inheritance="lamarckian",
+            learn_episodes_per_eval=10,
+            warm_start_path=fake_path,
+        )
+
+
+def test_inheritance_lamarckian_without_hyperparam_schema_raises(tmp_path: Path) -> None:
+    """``inheritance: lamarckian`` requires ``hyperparam_schema`` SHALL raise.
+
+    Spec scenario "Inheritance requires hyperparameter encoding".
+    """
+    yaml_content = {
+        "max_steps": 100,
+        "brain": {"name": "mlpppo", "config": {}},
+        "evolution": {
+            "inheritance": "lamarckian",
+            "learn_episodes_per_eval": 10,
+            "population_size": 4,
+        },
+    }
+    yaml_path = tmp_path / "no_schema.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="no hyperparam_schema is set"):
+        load_simulation_config(str(yaml_path))
+
+
+def test_inheritance_lamarckian_with_architecture_field_in_schema_raises(
+    tmp_path: Path,
+) -> None:
+    """``inheritance: lamarckian`` + arch-changing schema field SHALL raise.
+
+    Spec scenario "Inheritance incompatible with architecture-changing schema entries".
+    """
+    yaml_content = {
+        "max_steps": 100,
+        "brain": {"name": "mlpppo", "config": {}},
+        "evolution": {
+            "inheritance": "lamarckian",
+            "learn_episodes_per_eval": 10,
+            "population_size": 4,
+        },
+        "hyperparam_schema": [
+            {"name": "actor_hidden_dim", "type": "int", "bounds": [32, 128]},
+        ],
+    }
+    yaml_path = tmp_path / "arch_schema.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="architecture-changing entries"):
+        load_simulation_config(str(yaml_path))
+
+
+def test_inheritance_elite_count_exceeds_population_size_raises() -> None:
+    """``inheritance_elite_count > population_size`` SHALL raise.
+
+    This rule is enforced even with ``inheritance: none`` so that M4 can
+    lift only the ``!= 1`` rule cleanly without exposing this trivially-
+    impossible combination.  Use ``inheritance: none`` with elite_count=20
+    and population=12 so we exercise the population-size check rather
+    than the M3-only != 1 check.
+    """
+    with pytest.raises(ValidationError, match="exceeds evolution.population_size"):
+        EvolutionConfig(
+            inheritance="none",
+            inheritance_elite_count=20,
+            population_size=12,
+        )
+
+
+def test_inheritance_lamarckian_elite_count_not_one_raises() -> None:
+    """``inheritance: lamarckian`` + ``inheritance_elite_count != 1`` SHALL raise.
+
+    Spec scenario "Multi-elite inheritance is rejected in this milestone".
+    M3 ships single-elite-broadcast only; the field permits values >1
+    structurally so M4 can lift just this rule.
+    """
+    with pytest.raises(ValidationError, match="MUST be 1"):
+        EvolutionConfig(
+            inheritance="lamarckian",
+            learn_episodes_per_eval=10,
+            inheritance_elite_count=2,
+            population_size=12,
+        )
+
+
+def test_inheritance_lamarckian_happy_path_loads(tmp_path: Path) -> None:
+    """A well-formed lamarckian YAML SHALL load without error."""
+    yaml_content = {
+        "max_steps": 100,
+        "brain": {"name": "mlpppo", "config": {}},
+        "evolution": {
+            "algorithm": "tpe",
+            "inheritance": "lamarckian",
+            "inheritance_elite_count": 1,
+            "learn_episodes_per_eval": 10,
+            "eval_episodes_per_eval": 5,
+            "population_size": 4,
+            "generations": 3,
+        },
+        "hyperparam_schema": [
+            {"name": "learning_rate", "type": "float", "bounds": [1e-5, 1e-2], "log_scale": True},
+        ],
+    }
+    yaml_path = tmp_path / "happy.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    cfg = load_simulation_config(str(yaml_path))
+    assert cfg.evolution is not None
+    assert cfg.evolution.inheritance == "lamarckian"
+    assert cfg.evolution.inheritance_elite_count == 1
+
+
+def test_inheritance_defaults_preserve_pre_m3_behaviour() -> None:
+    """An ``EvolutionConfig`` with default fields SHALL be ``inheritance: none``."""
+    cfg = EvolutionConfig()
+    assert cfg.inheritance == "none"
+    assert cfg.inheritance_elite_count == 1
