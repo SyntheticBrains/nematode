@@ -477,8 +477,8 @@ def test_warm_start_with_non_arch_schema_passes(tmp_path: Path) -> None:
 def test_warm_start_unset_allows_arch_changing_entries(tmp_path: Path) -> None:
     """``warm_start_path`` unset → arch-changing entries SHALL load fine.
 
-    Architecture-evolution without warm-start (the M2 part-1 pattern)
-    must remain supported — the validator must not over-restrict.
+    Architecture-evolution without warm-start must remain supported —
+    the validator must not over-restrict.
     """
     yaml_content = {
         "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
@@ -498,7 +498,7 @@ def test_warm_start_unset_allows_arch_changing_entries(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Inheritance validators (M3)
+# Inheritance validators
 # ---------------------------------------------------------------------------
 
 
@@ -573,11 +573,11 @@ def test_inheritance_lamarckian_with_architecture_field_in_schema_raises(
 def test_inheritance_elite_count_exceeds_population_size_raises() -> None:
     """``inheritance_elite_count > population_size`` SHALL raise.
 
-    This rule is enforced even with ``inheritance: none`` so that M4 can
-    lift only the ``!= 1`` rule cleanly without exposing this trivially-
-    impossible combination.  Use ``inheritance: none`` with elite_count=20
-    and population=12 so we exercise the population-size check rather
-    than the M3-only != 1 check.
+    This rule is enforced even with ``inheritance: none`` so that
+    future strategies can lift the ``!= 1`` restriction without
+    re-exposing this trivially-impossible combination.  Use
+    ``inheritance: none`` with elite_count=20 and population=12 so we
+    exercise the population-size check rather than the != 1 check.
     """
     with pytest.raises(ValidationError, match=r"exceeds evolution\.population_size"):
         EvolutionConfig(
@@ -590,9 +590,9 @@ def test_inheritance_elite_count_exceeds_population_size_raises() -> None:
 def test_inheritance_lamarckian_elite_count_not_one_raises() -> None:
     """``inheritance: lamarckian`` + ``inheritance_elite_count != 1`` SHALL raise.
 
-    Spec scenario "Multi-elite inheritance is rejected in this milestone".
-    M3 ships single-elite-broadcast only; the field permits values >1
-    structurally so M4 can lift just this rule.
+    Single-elite-broadcast is currently the only supported variant;
+    the field permits values >1 structurally so a future strategy can
+    lift just this rule.
     """
     with pytest.raises(ValidationError, match="MUST be 1"):
         EvolutionConfig(

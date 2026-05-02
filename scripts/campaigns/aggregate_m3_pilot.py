@@ -1,5 +1,5 @@
 # pragma: no cover
-r"""Aggregate M3 lamarckian-vs-control results across an arbitrary seed set.
+r"""Aggregate Lamarckian-vs-control evolution results across an arbitrary seed set.
 
 Reads per-seed ``history.csv`` from BOTH the lamarckian and the
 within-experiment from-scratch control arms (each laid out under
@@ -14,7 +14,7 @@ driven hand-tuned baseline (per-seed log files), and produces:
 - A per-seed convergence-speed table written as ``convergence_speed.csv``:
   ``seed, lamarckian_gen_to_092, control_gen_to_092``.  Empty cell
   when a seed never reached the 0.92 threshold within the run.
-- A markdown summary with the M3 GO/PIVOT/STOP verdict.  Decision logic:
+- A markdown summary with the GO/PIVOT/STOP verdict.  Decision logic:
     GO if BOTH:
       (a) Speed: mean_gen_lamarckian_to_092 + 4 <= mean_gen_control_to_092
       (b) Floor: mean_gen1_lamarckian >= mean_gen3_control
@@ -38,20 +38,23 @@ from pathlib import Path
 
 import numpy as np
 
-# The 0.92 best-fitness threshold matches M2.12's documented saturation
-# ceiling on the predator arm (3 of 4 seeds reached 0.92 by gen 6-12).
-# Module-level so reviewers see the constant without grepping.
+# Best-fitness threshold for the Speed metric.  0.92 is calibrated to
+# the predator-arm fitness landscape's documented saturation ceiling
+# (the typical "near-perfect" plateau the from-scratch arm reaches in
+# the latter half of its generation budget).  Module-level so reviewers
+# see the constant without grepping.
 TARGET_FITNESS = 0.92
 
-# Speed-metric tolerance: M3 GOs if it reaches TARGET_FITNESS at least
-# this many generations earlier on average than the control.  4 = 20%
-# of M2's 20-gen budget = the "10pp faster convergence" gate from the
-# Phase 5 tracker, translated to the predator arm's saturation speed.
+# Speed-metric tolerance: lamarckian GOs if it reaches TARGET_FITNESS
+# at least this many generations earlier on average than the control.
+# 4 generations is roughly 20% of a typical 20-generation pilot
+# budget — translates the "≥10pp faster convergence" tracker gate to
+# the predator arm's saturation-speed axis.
 SPEED_GAIN_GENERATIONS = 4
 
-# Floor-metric reference generation: M3 gen-1 mean must beat the
-# control's gen-N mean (1-indexed in the table; 3 = "two generations
-# of head start").
+# Floor-metric reference generation: lamarckian gen-1 mean must beat
+# the control's gen-N mean (1-indexed in the table; 3 = "two
+# generations of head start").
 FLOOR_REFERENCE_GEN = 3
 
 
@@ -138,8 +141,8 @@ def _format_summary(  # noqa: PLR0913
     """Render the GO/PIVOT/STOP verdict + per-seed details."""
     # Speed metric: across-seed mean of generations-to-0.92.  Treat
     # never-reached as the run's max generation + 1 so the metric is
-    # bounded; this is conservative for the GO check (M3 doesn't get
-    # credit for "would have" reached eventually).
+    # bounded; this is conservative for the GO check (lamarckian
+    # doesn't get credit for "would have" reached eventually).
     max_gens = max(len(h) for h in (*lam_history.values(), *ctrl_history.values()))
     fallback_gen = max_gens + 1
 
@@ -159,15 +162,15 @@ def _format_summary(  # noqa: PLR0913
         verdict_text = (
             "Lamarckian inheritance both accelerates convergence (speed gate) "
             "AND lifts the gen-1 floor over the control's gen-3 baseline. "
-            "M3 graduates; M4 (Baldwin Effect) starts on this configuration."
+            "Inheritance is doing real work — proceed to the next experiment."
         )
     elif speed_gate_passes or floor_gate_passes:
         verdict = "PIVOT ⚠️"
         passed = "speed" if speed_gate_passes else "floor"
         verdict_text = (
             f"Only the {passed} gate passed.  Inheritance helps in one "
-            "direction but not the other; treat M3 as inconclusive and "
-            "review the per-seed trajectories before committing M4 scope."
+            "direction but not the other; treat as inconclusive and review "
+            "the per-seed trajectories before committing follow-up scope."
         )
     else:
         verdict = "STOP ❌"
@@ -175,11 +178,12 @@ def _format_summary(  # noqa: PLR0913
             "Neither gate passed: inheritance does not accelerate convergence "
             "and does not lift the gen-1 floor over the control.  Either "
             "the schema is too narrow for inheritance to help, or the "
-            "predator arm is the wrong testbed.  Re-evaluate before M4."
+            "fitness landscape is the wrong testbed.  Re-evaluate before "
+            "committing to follow-up scope."
         )
 
     lines: list[str] = [
-        "## M3 Lamarckian Inheritance Pilot — Summary",
+        "## Lamarckian Inheritance Pilot — Summary",
         "",
         f"**Seeds**: {seeds}",
         f"**Hand-tuned baseline mean**: {baseline_mean:.3f}",
@@ -305,7 +309,7 @@ def _plot_convergence(
     ax.set_xlabel("Generation")
     ax.set_ylabel("Best fitness across population")
     ax.set_title(
-        f"M3 Lamarckian inheritance pilot — convergence "
+        f"Lamarckian inheritance pilot — convergence "
         f"({len(seeds)} seed{'s' if len(seeds) != 1 else ''})",
     )
     ax.set_ylim(0, 1.05)
@@ -320,7 +324,7 @@ def _plot_convergence(
 
 def main() -> int:
     """Aggregate lamarckian + control + baseline; emit summary + plot + speed table."""
-    parser = argparse.ArgumentParser(description="Aggregate M3 lamarckian pilot results.")
+    parser = argparse.ArgumentParser(description="Aggregate Lamarckian pilot results.")
     parser.add_argument("--lamarckian-root", type=Path, required=True)
     parser.add_argument("--control-root", type=Path, required=True)
     parser.add_argument(
@@ -329,9 +333,9 @@ def main() -> int:
         required=True,
         help=(
             "Path to the run_simulation.py-driven hand-tuned baseline tree, "
-            "produced by phase5_m2_hyperparam_lstmppo_klinotaxis_predator_baseline.sh "
-            "(re-run under the M3 revision per task 9.6).  Default canonical "
-            "location: evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline/"
+            "produced by the lstmppo-klinotaxis-predator baseline campaign script. "
+            "Default canonical location: "
+            "evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline/"
         ),
     )
     parser.add_argument("--output-dir", type=Path, required=True)

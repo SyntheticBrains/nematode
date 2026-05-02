@@ -2,37 +2,37 @@
 # Lamarckian inheritance pilot — LSTMPPO + klinotaxis + pursuit predators
 # ============================================================================
 #
-# M3.  Per-genome warm-start from the prior generation's elite parent.
-# Same brain (LSTMPPO + klinotaxis sensing + 2 pursuit predators), same
-# K=50/L=25 budget, same TPE base optimiser, same 4 seeds (42-45) as
-# M2.12 — only inheritance is added.
+# Per-genome warm-start from the prior generation's elite parent.  Same
+# brain (LSTMPPO + klinotaxis sensing + 2 pursuit predators), same
+# K=50/L=25 episode budget, same TPE base optimiser, same 4 seeds
+# (42-45) as the no-inheritance control — only inheritance is added.
 #
-# Pilot config drops rnn_type + lstm_hidden_dim from the schema (those
-# are architecture-changing; per-genome warm-start cannot load a
+# The pilot config drops rnn_type + lstm_hidden_dim from the schema
+# (those are architecture-changing; per-genome warm-start cannot load a
 # parent's LSTM weights into a child with a different shape — the
 # validator on SimulationConfig._validate_hyperparam_schema rejects the
 # combination).  rnn_type defaults to "gru" and lstm_hidden_dim to 64
-# in the brain block, matching M2.12.
+# in the brain block.
 #
 # The lamarckian-vs-control comparison runs against the sibling script
 # phase5_m3_lamarckian_lstmppo_klinotaxis_predator_control.sh, which
-# re-runs the same config with inheritance: none under the M3 revision
-# so the comparison is confounder-free.  The aggregator
+# re-runs the same config with inheritance: none on the same code
+# revision so the comparison is confounder-free.  The aggregator
 # scripts/campaigns/aggregate_m3_pilot.py reads both arms head-to-head.
 #
-# Wall-time (estimated): comparable to M2.12 at ~12-15 min/seed
-# (~50 min total at parallel=4).  Per-genome torch.save adds ~10 ms
-# per evaluation — negligible vs the K=50 train phase.
+# Wall-time (estimated): ~12-15 min/seed (~50 min total at parallel=4).
+# Per-genome torch.save adds ~10 ms per evaluation — negligible vs the
+# K=50 train phase.
 #
 # Outputs land under ``${OUTPUT_ROOT}/seed-${SEED}/<session>/``.  Each
 # session produces best_params.json, history.csv, lineage.csv,
 # checkpoint.pkl, and an inheritance/ subdirectory containing the final
 # winner's weight checkpoint (intermediate checkpoints are GC'd).
 #
-# Baseline is the M2.11 run_simulation.py-driven run, expected to be
-# present at evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline/
-# (re-produce via phase5_m2_hyperparam_lstmppo_klinotaxis_predator_baseline.sh
-# under the M3 revision before running the aggregator — see M3 task 9.6).
+# Baseline is the run_simulation.py-driven hand-tuned run, expected at
+# evolution_results/m2_hyperparam_lstmppo_klinotaxis_predator_baseline/
+# (produced by the lstmppo-klinotaxis-predator baseline campaign script
+# on the same code revision before running the aggregator).
 #
 # Usage:
 #   scripts/campaigns/phase5_m3_lamarckian_lstmppo_klinotaxis_predator.sh

@@ -25,13 +25,14 @@ can plug in without touching the loop:
 - ``checkpoint_path`` — single canonical path-builder used by both the
   capture (writer) and warm-start (reader) sides so the two cannot drift.
 
-Future-work strategies (M4 Baldwin, tournament selection, roulette
+Future-work strategies (Baldwin Effect, tournament selection, roulette
 sampling, soft-elite top-k) are NOT implemented here — they each become
 a new ``InheritanceStrategy`` subclass and a new ``Literal`` extension on
-``EvolutionConfig.inheritance``.  M3 ships single-elite-broadcast only;
-the validator on ``EvolutionConfig`` rejects ``inheritance_elite_count != 1``
-when ``inheritance: lamarckian``, so multi-elite paths are unreachable in
-M3 even though the round-robin code path exists structurally.
+``EvolutionConfig.inheritance``.  Currently only single-elite-broadcast
+is shipped; the validator on ``EvolutionConfig`` rejects
+``inheritance_elite_count != 1`` when ``inheritance: lamarckian``, so
+multi-elite paths are unreachable from YAML even though the round-robin
+code path exists structurally below.
 """
 
 from __future__ import annotations
@@ -112,7 +113,7 @@ class InheritanceStrategy(Protocol):
 
 
 class NoInheritance:
-    """No-op strategy — keeps the loop byte-equivalent to pre-M3 runs.
+    """No-op strategy — keeps the loop in frozen-weight evolution mode.
 
     ``select_parents`` always returns ``[]``, ``assign_parent`` always
     returns ``None``, and ``checkpoint_path`` returns ``None`` (the loop
@@ -159,9 +160,10 @@ class LamarckianInheritance:
     ``elite_count=1`` every child of the next generation inherits from
     the same single best parent.
 
-    The validator on ``EvolutionConfig`` rejects ``elite_count != 1``
-    when ``inheritance: lamarckian`` in M3, so the round-robin path is
-    documented future-work behaviour rather than shipped behaviour.
+    The validator on ``EvolutionConfig`` currently rejects
+    ``elite_count != 1`` when ``inheritance: lamarckian``, so the
+    round-robin path is documented future-work behaviour rather than
+    shipped behaviour from YAML.
     """
 
     def __init__(self, elite_count: int = 1) -> None:

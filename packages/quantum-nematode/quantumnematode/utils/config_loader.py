@@ -1000,8 +1000,9 @@ class EvolutionConfig(BaseModel):
     # Per-genome Lamarckian inheritance: when set to "lamarckian", each
     # child of generation N+1 warm-starts its brain from a *selected*
     # parent of generation N (per the InheritanceStrategy in
-    # ``quantumnematode.evolution.inheritance``).  Default "none"
-    # preserves pre-M3 behaviour byte-for-byte.  Mutually exclusive with
+    # ``quantumnematode.evolution.inheritance``).  Default "none" leaves
+    # the loop, fitness, and lineage code paths byte-equivalent to a
+    # frozen-weight evolution run.  Mutually exclusive with
     # warm_start_path; requires hyperparam_schema (rejecting weight
     # encoders, which would double-count weights as both genome and
     # substrate); requires learn_episodes_per_eval > 0 (no train phase
@@ -1010,17 +1011,18 @@ class EvolutionConfig(BaseModel):
     # model validators below + ``SimulationConfig._validate_hyperparam_schema``.
     inheritance: Literal["none", "lamarckian"] = "none"
     # Number of prior-generation elites whose checkpoints survive into
-    # the next generation.  Default 1 (single-elite-broadcast).  M3
-    # rejects values other than 1 when inheritance is active, but the
-    # field accepts >=1 in the schema so M4 can lift the validator
-    # without a config-schema migration.
+    # the next generation.  Default 1 (single-elite-broadcast).  Only
+    # 1 is currently accepted when inheritance is active; the field
+    # accepts >=1 in the schema so multi-elite parent-selection
+    # strategies (round-robin, tournament, soft-elite top-k) can be
+    # added later without a config-schema migration.
     inheritance_elite_count: int = Field(default=1, ge=1)
 
     @model_validator(mode="after")
     def _validate_inheritance(self) -> "EvolutionConfig":
-        """Enforce M3's inheritance rules at YAML load time.
+        """Enforce inheritance configuration rules at YAML load time.
 
-        Five rules:
+        Four rules:
 
         1. ``inheritance != "none"`` AND ``learn_episodes_per_eval == 0``
            — no train phase means no weights to inherit.
@@ -1028,10 +1030,12 @@ class EvolutionConfig(BaseModel):
            — both load weights into the same brain slot before the K
            train phase; exactly one may be set.
         3. ``inheritance != "none"`` AND ``inheritance_elite_count != 1``
-           — M3 ships single-elite only; multi-elite is M4-or-later.
+           — single-elite-broadcast is the only currently-supported
+           parent-selection rule for Lamarckian inheritance.
         4. ``inheritance_elite_count > population_size`` — trivially
            impossible to keep more elites than there are genomes.
-           Independent of rule 3 so M4 can lift just rule 3 cleanly.
+           Independent of rule 3 so the multi-elite restriction can
+           be lifted without dropping this structural check.
         """
         if self.inheritance != "none":
             if self.learn_episodes_per_eval == 0:
@@ -1059,9 +1063,9 @@ class EvolutionConfig(BaseModel):
                     f"but evolution.inheritance is {self.inheritance!r}. "
                     "inheritance_elite_count MUST be 1 when inheritance: lamarckian. "
                     "Multi-elite parent selection (round-robin or tournament) "
-                    "is reserved for a future milestone (M4 Baldwin or later); "
-                    "the field exists structurally so future strategies can "
-                    "populate it without a config-schema migration."
+                    "is not currently supported; the field exists structurally "
+                    "so future strategies can populate it without a "
+                    "config-schema migration."
                 )
                 raise ValueError(msg)
         if self.inheritance_elite_count > self.population_size:

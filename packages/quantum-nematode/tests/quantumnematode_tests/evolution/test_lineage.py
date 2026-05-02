@@ -218,8 +218,9 @@ def test_lineage_inherited_from_defaults_to_empty(tmp_path: Path) -> None:
     """Callers that omit ``inherited_from`` SHALL get the empty string.
 
     Spec scenario "inherited_from column is empty under NoInheritance" —
-    pre-M3 callers (or no-inheritance loop iterations) don't pass the
-    parameter at all; the default keeps the schema fixed.
+    callers that don't pass the parameter (no-inheritance loop
+    iterations and any pre-existing call sites) get the default, which
+    keeps the schema fixed.
     """
     csv_path = tmp_path / "lineage.csv"
     tracker = LineageTracker(csv_path)

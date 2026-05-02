@@ -305,7 +305,9 @@ def test_run_evolution_cli_fitness_default_is_success_rate(tmp_path: Path) -> No
         text=True,
         timeout=300,
     )
-    assert result.returncode == 0, f"M0 default behaviour broken.\nstderr:\n{result.stderr[-2000:]}"
+    assert result.returncode == 0, (
+        f"Frozen-weight evolution default behaviour broken.\nstderr:\n{result.stderr[-2000:]}"
+    )
 
 
 @pytest.mark.smoke

@@ -1,8 +1,8 @@
 """Tests for the per-genome warm-start override + weight-capture kwargs.
 
-Both kwargs were added in M3 to plumb Lamarckian inheritance through the
-existing ``LearnedPerformanceFitness.evaluate`` signature without
-mutating run-wide config or changing the ``FitnessFunction`` Protocol.
+Both kwargs plumb Lamarckian inheritance through the existing
+``LearnedPerformanceFitness.evaluate`` signature without mutating
+run-wide config or changing the ``FitnessFunction`` Protocol.
 """
 
 from __future__ import annotations

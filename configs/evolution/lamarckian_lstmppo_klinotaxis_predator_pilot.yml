@@ -1,59 +1,59 @@
 # Lamarckian Inheritance Pilot — LSTMPPO + klinotaxis + pursuit predators
 # ============================================================================
 #
-# M3: per-genome warm-start from the prior generation's best parent.
-# Each child of generation N+1 starts its K=50 train episodes from the
+# Per-genome warm-start from the prior generation's best parent.  Each
+# child of generation N+1 starts its K=50 train episodes from the
 # weights of generation N's highest-fitness genome (single-elite
 # broadcast, validated via inheritance_elite_count: 1).  The
 # hyperparameter genome continues to evolve via TPE — weights flow as a
 # side-channel substrate keyed by parent genome_id.
 #
-# The closest-corresponding from-scratch arm is M2.12
-# (configs/evolution/hyperparam_lstmppo_klinotaxis_predator_pilot_tpe.yml).
-# This config is structurally that one, with two changes:
+# Two structural choices distinguish this from a vanilla TPE
+# hyperparameter-evolution config on the same brain:
 #
 # 1. ``evolution.inheritance: lamarckian`` + ``inheritance_elite_count: 1``.
-# 2. ``rnn_type`` and ``lstm_hidden_dim`` schema entries DROPPED — those
-#    are architecture-changing fields, and per-genome warm-start cannot
-#    load a parent's LSTM weights into a child with a different shape.
-#    The validator on SimulationConfig._validate_hyperparam_schema
-#    rejects the combination at YAML load time.
+# 2. ``rnn_type`` and ``lstm_hidden_dim`` schema entries are NOT
+#    evolved — those are architecture-changing fields, and per-genome
+#    warm-start cannot load a parent's LSTM weights into a child with a
+#    different shape.  The validator on
+#    SimulationConfig._validate_hyperparam_schema rejects the
+#    combination at YAML load time.
 #
-# So the M3 schema evolves 4 non-arch fields: actor_lr, critic_lr,
-# gamma, entropy_coef.  rnn_type defaults to "gru" and lstm_hidden_dim
-# defaults to 64 (matched to the M2.12 brain block) — the same fixed
-# values M2.12 spent generations 1+ converging away from in any case.
+# So the schema evolves 4 non-arch fields: actor_lr, critic_lr, gamma,
+# entropy_coef.  rnn_type defaults to "gru" and lstm_hidden_dim
+# defaults to 64 in the brain block.
 #
-# Wall-time per seed: comparable to M2.12 (~12-15 min/seed at
-# parallel=4) — inheritance adds ~10 ms/genome of save_weights overhead
-# but otherwise the train+eval cost is identical.
+# Wall-time per seed: ~12-15 min/seed at parallel=4 — inheritance adds
+# ~10 ms/genome of save_weights overhead but otherwise the train+eval
+# cost is identical to a no-inheritance run.
 #
-# Decision gate (per the M3 OpenSpec change):
+# Decision gate (recorded with the original change proposal):
 #   - GO if both:
 #       (a) Speed: mean_gen_lamarckian_to_092 + 4 <= mean_gen_control_to_092
-#           (M3 reaches the 0.92 ceiling at least 4 generations earlier
-#           than the from-scratch control on average).
+#           (lamarckian reaches the 0.92 ceiling at least 4 generations
+#           earlier than the from-scratch control on average).
 #       (b) Floor: mean_gen1_lamarckian >= mean_gen3_control
-#           (M3's gen-1 children — warm-started from gen-0 elites — are
-#           already ahead of where the control arm is two generations
-#           later, proving inheritance does real work).
+#           (lamarckian gen-1 children — warm-started from gen-0
+#           elites — are already ahead of where the control arm is two
+#           generations later, proving inheritance does real work).
 #   - PIVOT if exactly one of (a)/(b) holds.
 #   - STOP if neither.
 #
 # Within-experiment from-scratch control: the sibling campaign script
-# phase5_m3_lamarckian_lstmppo_klinotaxis_predator_control.sh re-runs
-# the M2.12 TPE config under the M3 revision (no inheritance, dropped
-# rnn_type + lstm_hidden_dim from the schema for parity) so the
-# comparison is confounder-free.
+# phase5_m3_lamarckian_lstmppo_klinotaxis_predator_control.sh runs the
+# matching no-inheritance config on the same code revision (with the
+# same dropped schema entries for parity) so the comparison is
+# confounder-free.
 
 max_steps: 1000  # klinotaxis sensing + predators need more steps than oracle
 
 brain:
   name: lstmppo
   config:
-    # rnn_type / lstm_hidden_dim are FIXED for M3 (architecture-changing
-    # fields; not evolvable under inheritance).  Values matched to the
-    # M2.12 brain block.
+    # rnn_type / lstm_hidden_dim are FIXED here (architecture-changing
+    # fields; not evolvable under inheritance, since per-genome
+    # warm-start needs identical weight shapes between parent and
+    # child).
     rnn_type: gru
     lstm_hidden_dim: 64
     bptt_chunk_length: 16
@@ -149,10 +149,11 @@ evolution:
   population_size: 12
   generations: 20
   # Note: episodes_per_eval is the protocol fallback used when
-  # eval_episodes_per_eval is None.  Both are set to 25 here, redundantly,
-  # to match M2.12's config exactly so the YAMLs are diff-comparable
-  # field-for-field.  eval_episodes_per_eval wins (per the
-  # Learned-Performance Fitness scenario in evolution-framework/spec.md).
+  # eval_episodes_per_eval is None.  Both are set to 25 here,
+  # redundantly, so the YAML is diff-comparable field-for-field with
+  # the matching no-inheritance control config.
+  # eval_episodes_per_eval wins (per the Learned-Performance Fitness
+  # scenario in evolution-framework/spec.md).
   episodes_per_eval: 25
   learn_episodes_per_eval: 50  # K — train phase
   eval_episodes_per_eval: 25   # L — eval phase
@@ -161,19 +162,18 @@ evolution:
   checkpoint_every: 2
   cma_diagonal: false
 
-  # M3: per-genome Lamarckian inheritance.  Each child of generation N+1
+  # Per-genome Lamarckian inheritance.  Each child of generation N+1
   # warm-starts its brain from the prior gen's best-fitness genome.
-  # inheritance_elite_count: 1 (single-elite broadcast) is the only
-  # value the validator accepts in M3.  Multi-elite (round-robin /
-  # tournament) is reserved for M4.
+  # inheritance_elite_count: 1 (single-elite broadcast) is currently
+  # the only value the validator accepts; multi-elite (round-robin /
+  # tournament) is reserved for future strategies.
   inheritance: lamarckian
   inheritance_elite_count: 1
 
 hyperparam_schema:
-  # Four non-arch fields (M2.12's schema minus rnn_type + lstm_hidden_dim,
-  # which are architecture-changing and incompatible with per-genome
-  # warm-start).  rnn_type and lstm_hidden_dim are fixed at the brain
-  # block above to the same values M2.12 used as defaults.
+  # Four non-arch fields.  rnn_type and lstm_hidden_dim are excluded
+  # because they are architecture-changing and incompatible with
+  # per-genome warm-start; both are fixed at the brain block above.
   - name: actor_lr
     type: float
     bounds: [1.0e-5, 1.0e-3]

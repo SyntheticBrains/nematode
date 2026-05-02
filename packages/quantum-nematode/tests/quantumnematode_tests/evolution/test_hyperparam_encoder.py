@@ -470,7 +470,7 @@ def test_genome_stds_no_schema_raises() -> None:
 
 
 def test_weight_encoder_genome_stds_returns_none() -> None:
-    """Weight encoders (M0 path) SHALL return None — no per-param scaling."""
+    """Weight encoders SHALL return None — no per-param scaling."""
     cfg = SimulationConfig.model_validate(
         {
             "brain": {

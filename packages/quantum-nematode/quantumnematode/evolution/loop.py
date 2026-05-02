@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 # Pickle checkpoint version.  Bump if the checkpoint dict shape changes in
 # a backwards-incompatible way; `_load_checkpoint` validates this and
-# refuses incompatible checkpoints.  v2 (M3) adds ``selected_parent_ids``
+# refuses incompatible checkpoints.  v2 adds ``selected_parent_ids``
 # (list of genome IDs whose Lamarckian checkpoints survive into the next
 # generation) and ``inheritance`` (the literal "none"/"lamarckian" string
 # the run was launched with — used to reject mismatched-setting resumes).
@@ -108,10 +108,10 @@ def _evaluate_in_worker(args: tuple) -> float:
         weight_capture_path)``.  All elements must be picklable.  The two
         trailing ``Path | None`` fields are used by the inheritance step:
         when both are ``None`` (the no-inheritance case) the call site is
-        identical to pre-M3.  ``encoder`` and ``fitness`` are class
-        instances pickled by reference to their class definitions;
-        concrete encoders/fitness functions in this module are top-level
-        classes and pickle cleanly.
+        identical to a frozen-weight evolution run.  ``encoder`` and
+        ``fitness`` are class instances pickled by reference to their
+        class definitions; concrete encoders/fitness functions in this
+        module are top-level classes and pickle cleanly.
 
     Returns
     -------
@@ -143,7 +143,8 @@ def _evaluate_in_worker(args: tuple) -> float:
     # EpisodicSuccessRate doesn't.  Detect by signature rather than
     # type-import to avoid coupling the worker to a specific fitness
     # class.  When both kwargs are None (no-inheritance case) we drop
-    # them entirely so the call shape is identical to pre-M3.
+    # them entirely so the call shape is identical to a frozen-weight
+    # evolution run.
     if warm_start_path_override is not None or weight_capture_path is not None:
         return fitness.evaluate(
             genome,
@@ -209,10 +210,11 @@ class EvolutionLoop:
         self.rng = rng
         self.log_level = log_level
         # Inheritance strategy for per-genome weight capture/warm-start.
-        # Defaults to NoInheritance() so the loop is byte-equivalent to
-        # pre-M3 when no strategy is supplied.  Use a None sentinel +
-        # late-construction (rather than ``= NoInheritance()`` in the
-        # signature) to avoid a shared default instance across calls.
+        # Defaults to NoInheritance() so the loop runs as a frozen-weight
+        # evolution loop when no strategy is supplied.  Use a None
+        # sentinel + late-construction (rather than ``= NoInheritance()``
+        # in the signature) to avoid a shared default instance across
+        # calls.
         self.inheritance: InheritanceStrategy = (
             inheritance if inheritance is not None else NoInheritance()
         )
@@ -344,7 +346,7 @@ class EvolutionLoop:
 
         Returns ``(None, None, "")`` when the active strategy is no-op
         — the loop's per-child step then short-circuits to from-scratch
-        evaluation byte-equivalently to pre-M3.
+        evaluation identically to a frozen-weight evolution run.
 
         For active strategies, returns:
 
@@ -459,7 +461,8 @@ class EvolutionLoop:
 
                     # Per-child inheritance resolution: returns (None, None, "")
                     # under no-op so the worker call shape and fitness
-                    # behaviour are byte-equivalent to pre-M3.
+                    # behaviour are byte-equivalent to a frozen-weight
+                    # evolution run.
                     parent_warm_start, child_capture_path, inherited_from = (
                         self._resolve_per_child_inheritance(idx, gen, gid)
                     )

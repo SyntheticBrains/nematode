@@ -92,7 +92,7 @@ class LineageTracker:
             string when (a) the strategy is ``NoInheritance``, (b) the
             child is in generation 0, or (c) the child fell back to
             from-scratch due to a missing parent file.  Default ``""``
-            preserves the pre-M3 contract for callers that don't pass it.
+            preserves the original contract for callers that don't pass it.
         """
         with self.output_path.open("a", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)

@@ -460,8 +460,8 @@ def test_warm_start_loads_weights_before_train(tmp_path: Path) -> None:
 def test_warm_start_unset_skips_load() -> None:
     """``warm_start_path is None`` (default) → ``load_weights`` NOT called.
 
-    Preserves M2 part-1 behaviour: fresh-init weights from
-    ``encoder.decode``, no extra step.
+    The default code path uses fresh-init weights from
+    ``encoder.decode`` with no extra load step.
     """
     sim_config = _make_sim_config_with_schema(learn_eps=2, eval_eps=1)
     assert sim_config.evolution is not None

@@ -465,10 +465,10 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0915 — sequential CLI entry poin
         raise SystemExit(msg) from exc
 
     # Construct the inheritance strategy from the resolved evolution
-    # config.  Default "none" → NoInheritance() (loop is byte-equivalent
-    # to pre-M3); "lamarckian" → LamarckianInheritance with the
-    # configured elite count.  Validators on EvolutionConfig already
-    # rejected unsafe combinations at YAML/CLI parse time.
+    # config.  Default "none" → NoInheritance() (loop runs as a
+    # frozen-weight evolution loop); "lamarckian" → LamarckianInheritance
+    # with the configured elite count.  Validators on EvolutionConfig
+    # already rejected unsafe combinations at YAML/CLI parse time.
     if evolution_config.inheritance == "lamarckian":
         inheritance = LamarckianInheritance(
             elite_count=evolution_config.inheritance_elite_count,
