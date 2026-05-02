@@ -30,7 +30,7 @@ This is biologically Lamarckian (acquired traits inherited) and unlocks M4 (Bald
 2. **Speed gate**: lamarckian's mean-generation-to-best ≥ 0.92 is at least 4 generations earlier than the from-scratch control (translates the Phase 5 tracker's "≥10pp faster convergence" gate to the predator arm's saturation-speed metric).
 3. **Floor gate**: lamarckian's gen-N children, warm-started from gen-(N-1) elites, are already meaningfully ahead of where the control arm is two generations later (proves inheritance does real work, not just re-uses the last gen's information).
 4. **No regression on `inheritance: none`**: any pre-M3 evolution config runs byte-for-byte identically under the M3 framework when inheritance is disabled (no `inheritance/` directory created, no extra fitness kwargs passed, lineage CSV writes unchanged for `NoInheritance` strategy).
-5. **TPE posterior collapse risk** ([design.md](../../../openspec/changes/add-lamarckian-evolution/design.md) Risk 2): broadcasting weights from one elite parent while TPE simultaneously narrows around that parent's hyperparams may shrink diversity faster than M2.12, raising premature-convergence risk. Symptom would be: lamarckian saturates by gen 3-4 with a different (lower?) ceiling than M2.12.
+5. **TPE posterior collapse risk** ([design.md](../../../openspec/changes/archive/2026-05-02-add-lamarckian-evolution/design.md) Risk 2): broadcasting weights from one elite parent while TPE simultaneously narrows around that parent's hyperparams may shrink diversity faster than M2.12, raising premature-convergence risk. Symptom would be: lamarckian saturates by gen 3-4 with a different (lower?) ceiling than M2.12.
 
 Hypothesis 1 → confirmed (round-trip verification: 18 LSTMPPO trained tensors round-trip bit-exact).
 Hypothesis 2 → confirmed (+5.25 generations; PASS by 1.3× the gate).
@@ -78,7 +78,7 @@ Re-ran the M2.11 baseline campaign under the M3 revision (task 9.6) so the aggre
 - **`scripts/run_evolution.py`**: `--inheritance {none,lamarckian}` CLI flag. CLI guard rejects `inheritance != "none" + --fitness success_rate` at startup (would otherwise crash the multiprocessing pool with TypeError).
 - **30 new tests** under `packages/quantum-nematode/tests/quantumnematode_tests/evolution/` covering strategy semantics, weight-capture/warm-start kwarg behaviour, loop GC + lineage column, and 6 validator rejection rules. Full suite: 148 evolution tests + 22 smoke tests, all pass.
 
-Spec change directory (open until M3 archive): [`openspec/changes/add-lamarckian-evolution/`](../../../openspec/changes/add-lamarckian-evolution/).
+Spec change directory (archived in the M3 PR): [`openspec/changes/archive/2026-05-02-add-lamarckian-evolution/`](../../../openspec/changes/archive/2026-05-02-add-lamarckian-evolution/). The deltas were synced into the main capability spec at [`openspec/specs/evolution-framework/spec.md`](../../../openspec/specs/evolution-framework/spec.md) before archive.
 
 ### Campaign scripts
 
@@ -330,8 +330,8 @@ These are M3 implementation details that M4 will hit early. Documenting now so M
 
 ### Framework artefacts
 
-- **Spec change**: [`openspec/changes/add-lamarckian-evolution/`](../../../openspec/changes/add-lamarckian-evolution/) — proposal, design, tasks, spec deltas. Pending archive after this PR merges.
-- **Spec deltas** in [`openspec/specs/evolution-framework/spec.md`](../../../openspec/specs/evolution-framework/spec.md) (post-archive):
+- **Spec change** (archived): [`openspec/changes/archive/2026-05-02-add-lamarckian-evolution/`](../../../openspec/changes/archive/2026-05-02-add-lamarckian-evolution/) — proposal, design, tasks, spec deltas. Archived in this PR; deltas synced into the main capability spec.
+- **Spec deltas** synced into [`openspec/specs/evolution-framework/spec.md`](../../../openspec/specs/evolution-framework/spec.md):
   - **Inheritance Strategy** requirement (M3) — new Protocol + `LamarckianInheritance` semantics + GC contract + 10 scenarios.
   - **Learned-Performance Fitness** requirement extended with `warm_start_path_override` and `weight_capture_path` kwargs (2 new scenarios).
   - **Evolution Configuration Block** requirement extended with `inheritance` + `inheritance_elite_count` fields and 6 validator rejection rules.

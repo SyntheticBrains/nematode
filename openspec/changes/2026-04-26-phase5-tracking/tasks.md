@@ -85,7 +85,7 @@ to mark sub-tasks complete as part of its diff.
 
 ## M3: Lamarckian Evolution Pilot
 
-**OpenSpec change**: `add-lamarckian-evolution` (open; will archive as `<DATE>-add-lamarckian-evolution` on PR merge)
+**OpenSpec change**: `2026-05-02-add-lamarckian-evolution` (archived in this PR; deltas synced into `openspec/specs/evolution-framework/spec.md`)
 **Status**: complete. Speed gate +5.25 gens (lamarckian mean gen-to-0.92 = 4.50 vs control = 9.75; passes by 1.3× the +4 threshold). All 4 lamarckian seeds reach best fitness 1.00; control tops at 0.88-0.96 with seed 42 saturated at 0.88. Population mean climbs to 0.83-0.90 sustained vs control's 0.05-0.50. Inheritance rescues TPE-unlucky seed 42 — direct analogue of M2.12 rescuing M2.11's seed-43 dead-zone. Cross-schema check rules out the 4-vs-6-field schema simplification as a confounder (worth ~0 gens). 18 LSTMPPO trained tensors round-trip bit-exact through `save_weights → load_weights`. **M4 (Baldwin Effect) starts on this configuration.** See logbook 013
 **Bio fidelity**: MEDIUM
 **Brain target**: LSTMPPO+klinotaxis (predator arm only — M2 saturated arms can't measure inheritance signal)
