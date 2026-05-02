@@ -66,19 +66,14 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **AND** the error SHALL share the same `_ARCHITECTURE_CHANGING_FIELDS` denylist that M2.10's static warm-start already uses (single source of truth)
 - **AND** the message SHALL explain that per-genome checkpoints cannot be loaded into a child whose architecture differs from the parent's
 
-#### Scenario: Elite count cannot exceed population size
-
-- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.inheritance_elite_count: 20` AND `evolution.population_size: 12`
-- **WHEN** the YAML is loaded
-- **THEN** loading SHALL raise a Pydantic `ValidationError` stating that `inheritance_elite_count` MUST be ≤ `population_size`
-
 #### Scenario: Multi-elite inheritance is rejected in this milestone
 
-- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.inheritance_elite_count: 2` (or any value other than 1)
+- **GIVEN** a YAML with `evolution.inheritance: lamarckian` AND `evolution.inheritance_elite_count: 2` (or any value other than 1, including values that would also exceed `population_size`)
 - **WHEN** the YAML is loaded
 - **THEN** loading SHALL raise a Pydantic `ValidationError` stating that `inheritance_elite_count` MUST be 1 when `inheritance: lamarckian`
 - **AND** the message SHALL state that multi-elite parent selection (round-robin or tournament) is reserved for a future milestone (M4 Baldwin or later) and that the field exists structurally so future strategies can populate it without a config-schema migration
 - **AND** the field's `Field(default=1, ge=1)` constraint SHALL still permit values >1 in the schema (so M4 can lift this validator without breaking config-load semantics); the rejection is enforced by the model validator only when `inheritance != "none"`
+- **AND** a separate validator SHALL also reject `inheritance_elite_count > population_size` (e.g. 20 > 12) with a distinct error — this rule is structurally needed for M4 when `!= 1` is lifted, and exists in M3 even though the `!= 1` rule strictly subsumes it (the two validators are independent so M4 can drop just the `!= 1` rule cleanly)
 
 #### Scenario: Inheritance defaults preserve M2.12 behaviour byte-equivalently
 
@@ -247,6 +242,7 @@ The `SimulationConfig` SHALL accept an optional `evolution` block; existing scen
 3. `inheritance != "none"` AND `hyperparam_schema is None`.
 4. `inheritance != "none"` AND `hyperparam_schema` contains any field in `_ARCHITECTURE_CHANGING_FIELDS` (the existing denylist that M2.10's static warm-start uses).
 5. `inheritance_elite_count > population_size`.
+6. `inheritance != "none"` AND `inheritance_elite_count != 1` (M3-only restriction; multi-elite parent selection is M4-or-later scope, see "Multi-elite inheritance is rejected in this milestone" scenario).
 
 #### Scenario: Existing scenario config loads without evolution block
 

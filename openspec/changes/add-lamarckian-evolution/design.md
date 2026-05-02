@@ -39,11 +39,13 @@ Three pieces of M0/M2 framework already do most of the work: `WeightPersistence`
 
 **Alternatives considered:** (a) Return a `dict[genome_id, weights]` from the worker. Rejected — multiprocessing pickle overhead grows with population size; disk is cheaper and persists across resume. (b) Use a shared `multiprocessing.Manager()` dict. Rejected — adds a manager process, cross-platform fragility, no resume support.
 
-### Decision 3: Default elite_count = 1 (single elite, broadcast to all next-gen children)
+### Decision 3: M3 ships single-elite only; multi-elite reserved for M4
 
-`LamarckianInheritance(elite_count: int = 1)`. With the default, every child of generation N+1 inherits from the single best parent of generation N. With `elite_count > 1`, parents broadcast round-robin (`parent_ids[child_index % len(parent_ids)]`).
+`LamarckianInheritance(elite_count: int = 1)`. M3 ships single-elite-broadcast only — every child of generation N+1 inherits from the single best parent of generation N. The validator rejects `inheritance_elite_count != 1` when `inheritance: lamarckian`, so multi-elite paths are unreachable in M3 even though the field exists structurally.
 
-**Why this is the right default for the pilot:** the pilot's job is decision-gate, not optimisation. Single-elite is the strongest possible inheritance signal — if Lamarckian doesn't help when every child gets the best-known parent, it won't help with sampling-style parent selection either. Pilot result interpretation is also clean: any acceleration over M2.12 can be attributed unambiguously to inherited weights, not to an elite-count tuning knob.
+The implementation supports `elite_count > 1` semantically (round-robin broadcast: `parent_ids[child_index % len(parent_ids)]`) so M4-or-later can lift the validator without an algorithm rewrite — but the path is documented behaviour, not shipped behaviour, in M3.
+
+**Why ship single-elite only:** the pilot's job is decision-gate, not optimisation. Single-elite is the strongest possible inheritance signal — if Lamarckian doesn't help when every child gets the best-known parent, it won't help with sampling-style parent selection either. Pilot result interpretation is also clean: any acceleration over M2.12 can be attributed unambiguously to inherited weights, not to an elite-count tuning knob. Restricting at the validator (rather than just defaulting) prevents an experimenter from accidentally enabling an untested code path.
 
 **Alternatives considered:** Tournament selection (`tournament_k=3`), fitness-proportionate ("roulette") sampling, soft-elite (each child draws independently from the top-k). All are listed in the module docstring as future-work strategies behind the same Protocol — adding any of them post-pilot is a new file, not a refactor.
 
