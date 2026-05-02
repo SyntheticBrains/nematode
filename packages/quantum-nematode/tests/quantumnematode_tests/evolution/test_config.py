@@ -579,7 +579,7 @@ def test_inheritance_elite_count_exceeds_population_size_raises() -> None:
     and population=12 so we exercise the population-size check rather
     than the M3-only != 1 check.
     """
-    with pytest.raises(ValidationError, match="exceeds evolution.population_size"):
+    with pytest.raises(ValidationError, match=r"exceeds evolution\.population_size"):
         EvolutionConfig(
             inheritance="none",
             inheritance_elite_count=20,

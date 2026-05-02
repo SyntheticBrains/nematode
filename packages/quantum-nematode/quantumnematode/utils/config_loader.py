@@ -1251,12 +1251,13 @@ class SimulationConfig(BaseModel):
     hyperparam_schema: list[ParamSchemaEntry] | None = None
 
     @model_validator(mode="after")
-    def _validate_hyperparam_schema(self) -> "SimulationConfig":  # noqa: C901
-        # C901 (too complex): this validator is a sequence of independent
-        # guards (None-skip, empty-list, duplicate-name, brain-block-missing,
-        # brain-name-unknown, field-name-unknown, warm-start-arch-incompat,
-        # inheritance-no-schema, inheritance-arch-incompat).  Splitting into
-        # helpers fragments the contract; each guard is a single small block
+    def _validate_hyperparam_schema(self) -> "SimulationConfig":  # noqa: C901, PLR0912
+        # C901/PLR0912 (too complex / too many branches): this validator
+        # is a sequence of independent guards (None-skip, empty-list,
+        # duplicate-name, brain-block-missing, brain-name-unknown,
+        # field-name-unknown, warm-start-arch-incompat, inheritance-no-
+        # schema, inheritance-arch-incompat).  Splitting into helpers
+        # fragments the contract; each guard is a single small block
         # that's easier to read in sequence.
         """Cross-check hyperparam_schema entries against the brain config.
 

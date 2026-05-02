@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from quantumnematode.evolution.inheritance import (
@@ -10,6 +10,8 @@ from quantumnematode.evolution.inheritance import (
     NoInheritance,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # NoInheritance
@@ -31,10 +33,10 @@ def test_no_inheritance_assign_parent_returns_none() -> None:
     assert n.assign_parent(99, ["a"]) is None
 
 
-def test_no_inheritance_checkpoint_path_returns_none() -> None:
+def test_no_inheritance_checkpoint_path_returns_none(tmp_path: Path) -> None:
     """``NoInheritance.checkpoint_path`` SHALL always return ``None``."""
     n = NoInheritance()
-    assert n.checkpoint_path(Path("/tmp/x"), 0, "gid") is None
+    assert n.checkpoint_path(tmp_path, 0, "gid") is None
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +117,7 @@ def test_lamarckian_checkpoint_path_format_round_trips(tmp_path: Path) -> None:
     """Path follows ``output_dir/inheritance/gen-NNN/genome-<gid>.pt``."""
     l1 = LamarckianInheritance()
     p = l1.checkpoint_path(tmp_path, 7, "abc-123")
+    assert p is not None  # narrow Path | None for the type-checker
     assert p == tmp_path / "inheritance" / "gen-007" / "genome-abc-123.pt"
     # Generation index is 3-digit zero-padded
     p2 = l1.checkpoint_path(tmp_path, 0, "x")

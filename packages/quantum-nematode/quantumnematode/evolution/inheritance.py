@@ -128,6 +128,7 @@ class NoInheritance:
         fitnesses: list[float],  # noqa: ARG002
         generation: int,  # noqa: ARG002
     ) -> list[str]:
+        """Return ``[]`` — no-op strategy never selects parents."""
         return []
 
     def assign_parent(
@@ -135,6 +136,7 @@ class NoInheritance:
         child_index: int,  # noqa: ARG002
         parent_ids: list[str],  # noqa: ARG002
     ) -> str | None:
+        """Return ``None`` — no-op strategy never assigns a parent."""
         return None
 
     def checkpoint_path(
@@ -143,6 +145,7 @@ class NoInheritance:
         generation: int,  # noqa: ARG002
         genome_id: str,  # noqa: ARG002
     ) -> Path | None:
+        """Return ``None`` — no-op strategy uses no checkpoint paths."""
         return None
 
 
@@ -173,6 +176,7 @@ class LamarckianInheritance:
         fitnesses: list[float],
         generation: int,  # noqa: ARG002
     ) -> list[str]:
+        """Return the top ``elite_count`` IDs by fitness, lex-tie-broken."""
         if len(gen_ids) != len(fitnesses):
             msg = (
                 f"select_parents requires len(gen_ids) == len(fitnesses); "
@@ -191,6 +195,7 @@ class LamarckianInheritance:
         child_index: int,
         parent_ids: list[str],
     ) -> str | None:
+        """Round-robin: return ``parent_ids[child_index % len(parent_ids)]`` or ``None``."""
         if not parent_ids:
             return None
         return parent_ids[child_index % len(parent_ids)]
@@ -201,4 +206,5 @@ class LamarckianInheritance:
         generation: int,
         genome_id: str,
     ) -> Path | None:
+        """Return the canonical ``inheritance/gen-NNN/genome-<gid>.pt`` path."""
         return output_dir / "inheritance" / f"gen-{generation:03d}" / f"genome-{genome_id}.pt"

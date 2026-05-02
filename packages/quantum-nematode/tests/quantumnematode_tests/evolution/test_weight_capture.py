@@ -153,6 +153,7 @@ def test_learned_performance_override_wins_over_evolution_warm_start(tmp_path: P
     sim_config = _make_sim_config(learn_eps=2, eval_eps=1)
     # Bypass EvolutionConfig._validate_inheritance by post-update — testing
     # the fitness function's resolution rule, not the validator.
+    assert sim_config.evolution is not None  # narrow Optional for type-checker
     sim_config.evolution.warm_start_path = tmp_path / "static.pt"
     (tmp_path / "static.pt").touch()
     override_path = tmp_path / "override.pt"
@@ -178,6 +179,7 @@ def test_learned_performance_override_wins_over_evolution_warm_start(tmp_path: P
 def test_learned_performance_no_load_when_both_none(tmp_path: Path) -> None:
     """When neither override nor static path is set, no load SHALL happen."""
     sim_config = _make_sim_config(learn_eps=2, eval_eps=1)
+    assert sim_config.evolution is not None
     assert sim_config.evolution.warm_start_path is None
     encoder = HyperparameterEncoder()
     genome = _make_genome(sim_config)

@@ -561,7 +561,7 @@ def _make_lamarckian_loop(
 
 
 def test_loop_with_lamarckian_inheritance_3_gens(tmp_path: Path) -> None:
-    """3-gen × pop 4 lamarckian smoke: lineage + GC + checkpoint behaviour.
+    """3-gen by pop 4 lamarckian smoke: lineage + GC + checkpoint behaviour.
 
     Spec scenarios "Lamarckian inheritance is selectable via config and
     CLI" + "First generation runs from-scratch under any inheritance

@@ -335,7 +335,11 @@ class LearnedPerformanceFitness:
 
     # C901: linear pipeline (decode → train env → train loop → eval env → eval loop)
     # with multiple defensive guards — splitting into helpers fragments the flow.
-    def evaluate(  # noqa: C901
+    # PLR0913: the kwarg surface (genome, sim_config, encoder, episodes, seed,
+    # warm_start_path_override, weight_capture_path) is the documented Protocol
+    # contract; collapsing into a config object would obscure the per-genome
+    # call shape the loop uses.
+    def evaluate(  # noqa: C901, PLR0913
         self,
         genome: Genome,
         sim_config: SimulationConfig,

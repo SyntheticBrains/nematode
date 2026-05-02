@@ -115,11 +115,7 @@ def _gen_n_mean_best(
 ) -> float:
     """Mean across-seed best_fitness at the 1-indexed generation."""
     gen_idx = gen_index_1based - 1
-    values = [
-        h[gen_idx]["best_fitness"]
-        for h in (histories[s] for s in seeds)
-        if gen_idx < len(h)
-    ]
+    values = [h[gen_idx]["best_fitness"] for h in (histories[s] for s in seeds) if gen_idx < len(h)]
     return float(np.mean(values)) if values else 0.0
 
 
@@ -189,8 +185,7 @@ def _format_summary(  # noqa: PLR0913
         f"{'PASS' if speed_gate_passes else 'FAIL'}",
         f"  - Lamarckian mean gen-to-{TARGET_FITNESS}: {speed_mean_lam:.1f}",
         f"  - Control mean gen-to-{TARGET_FITNESS}: {speed_mean_ctrl:.1f}",
-        f"  - Margin: {speed_mean_ctrl - speed_mean_lam:+.1f} "
-        f"(need >= {SPEED_GAIN_GENERATIONS})",
+        f"  - Margin: {speed_mean_ctrl - speed_mean_lam:+.1f} (need >= {SPEED_GAIN_GENERATIONS})",
         "",
         f"- **Floor gate** (mean_gen1_lamarckian >= mean_gen{FLOOR_REFERENCE_GEN}_control): "
         f"{'PASS' if floor_gate_passes else 'FAIL'}",
@@ -240,7 +235,7 @@ def _write_speed_csv(
     return path
 
 
-def _plot_convergence(  # noqa: PLR0913
+def _plot_convergence(
     output_dir: Path,
     seeds: list[int],
     lam_history: dict[int, list[dict[str, float]]],
