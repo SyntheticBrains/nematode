@@ -109,6 +109,15 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **AND** the rejection SHALL fire BEFORE the loop reaches the first generation iteration (so an inadvertent CLI override doesn't waste compute on a corrupted run)
 - **AND** this rejection SHALL apply to `--resume` invocations only — for fresh runs, `--inheritance` overrides the YAML field normally per the "Lamarckian inheritance is selectable via config and CLI" scenario above (the `--inheritance` flag itself is not broken, it just cannot change a run's inheritance mid-flight)
 
+#### Scenario: CLI rejects inheritance + --fitness success_rate at startup
+
+- **GIVEN** a YAML or CLI invocation with `evolution.inheritance != "none"` AND `--fitness success_rate` (the default when `--fitness` is omitted)
+- **WHEN** `scripts/run_evolution.py` parses arguments and resolves the `EvolutionConfig`
+- **THEN** the script SHALL exit with code 1 BEFORE constructing the optimiser or the loop
+- **AND** the error message SHALL state that inheritance writes per-genome weight checkpoints after each train phase, and `EpisodicSuccessRate` is frozen-weight with no train phase
+- **AND** the message SHALL point the user to `--fitness learned_performance` or to setting `inheritance: none`
+- **AND** the guard fires in the CLI (not in `EvolutionConfig._validate_inheritance`) because the `--fitness` flag is not visible to the Pydantic validator — without this guard, the loop would compute `weight_capture_path` for every child, the worker would pass it as a kwarg, and `EpisodicSuccessRate.evaluate` (which doesn't accept the kwarg) would raise `TypeError` mid-evaluation, crashing the multiprocessing pool
+
 ## MODIFIED Requirements
 
 ### Requirement: Learned-Performance Fitness
