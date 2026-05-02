@@ -360,23 +360,31 @@ class EvolutionLoop:
     ) -> tuple[Path | None, Path | None, str]:
         """Compute one child's (parent_warm_start, child_capture_path, inherited_from).
 
-        Returns ``(None, None, "")`` when the active strategy is no-op
-        — the loop's per-child step then short-circuits to from-scratch
-        evaluation identically to a frozen-weight evolution run.
+        Three-branch switch on the strategy's ``kind()``:
 
-        For active strategies, returns:
-
-        - ``parent_warm_start``: ``Path`` to the parent's pre-saved
-          checkpoint, or ``None`` if (a) gen 0, (b) ``assign_parent``
-          returned ``None``, or (c) the parent file is unexpectedly
-          missing on disk (defensive fallback with a ``logger.warning``).
-        - ``child_capture_path``: ``Path`` where THIS child writes its
-          post-K-train weights (always populated when inheritance is on).
-        - ``inherited_from``: parent ``genome_id`` for the lineage CSV,
-          or ``""`` for the from-scratch cases above.
+        - ``"none"`` → returns ``(None, None, "")``.  The loop's
+          per-child step short-circuits to from-scratch evaluation
+          identically to a frozen-weight evolution run.
+        - ``"trait"`` (Baldwin) → returns ``(None, None, parent_id)``
+          where ``parent_id`` is the prior generation's elite
+          (``self._selected_parent_ids[0]`` if set, else ``""`` for
+          gen 0).  No checkpoint paths are computed; the child trains
+          from-scratch but its lineage row records the elite ID.
+        - ``"weights"`` (Lamarckian) → returns the full
+          ``(parent_warm_start, child_capture_path, parent_id)``
+          tuple.  ``parent_warm_start`` is the ``Path`` to the parent's
+          pre-saved checkpoint, or ``None`` if (a) gen 0, (b)
+          ``assign_parent`` returned ``None``, or (c) the parent file
+          is unexpectedly missing on disk (defensive fallback with a
+          ``logger.warning``).
         """
-        if not self._inheritance_active():
+        kind = self.inheritance.kind()
+        if kind == "none":
             return None, None, ""
+        if kind == "trait":
+            parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""
+            return None, None, parent_id
+        # The remaining branch handles ``kind == "weights"`` (Lamarckian).
         child_capture_path = self.inheritance.checkpoint_path(self.output_dir, gen, gid)
         parent_id = self.inheritance.assign_parent(child_idx, self._selected_parent_ids)
         if parent_id is None:
@@ -405,7 +413,7 @@ class EvolutionLoop:
     # active inheritance branching); inline statements keep the
     # per-genome data flow that downstream readers (and the spec)
     # reason about visible at one read.
-    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: PLR0915
+    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: C901, PLR0915
         """Run the evolution loop, optionally resuming from a checkpoint.
 
         Parameters
@@ -466,7 +474,6 @@ class EvolutionLoop:
                 # Empty string means "from-scratch" (no-inheritance, gen 0,
                 # or fallback when the parent file is missing).
                 inherited_from_per_child: list[str] = []
-                inheritance_on = self._inheritance_active()
                 for idx, params in enumerate(solutions):
                     gid = genome_id_for(gen, idx, parent_ids)
                     gen_ids.append(gid)
@@ -526,29 +533,36 @@ class EvolutionLoop:
                 neg_fitnesses = [-f for f in fitnesses]
                 self.optimizer.tell(list(solutions), neg_fitnesses)
 
-                # Inheritance step: select the next generation's parents
-                # from the just-evaluated population, then garbage-collect
-                # in two phases.  Phase one clears all remaining files in
-                # the previous-generation directory (keep=[]) because the
-                # gen-N children that inherited from them have just
-                # finished evaluating, so those checkpoints are no longer
-                # needed; no-op when gen is zero.  Phase two keeps only
-                # ``next_selected`` in the current-generation directory
-                # so the about-to-evaluate gen-(N+1) children can read
-                # their parent file.  Steady-state disk usage after this
-                # step is at most ``inheritance_elite_count`` files (the
-                # next_selected set in gen-N), bounded over the whole run.
-                if inheritance_on:
+                # Inheritance step (two-guard split):
+                #
+                # 1. Lineage-tracking guard: any non-no-op strategy
+                #    (Lamarckian OR Baldwin) updates ``_selected_parent_ids``
+                #    so the next generation's children can populate the
+                #    lineage CSV's ``inherited_from`` column.
+                # 2. Weight-IO GC guard: only weight-flow strategies
+                #    (Lamarckian) write per-genome checkpoints, so only
+                #    they need GC.  Phase one clears all remaining files
+                #    in the previous-generation directory (keep=[]) because
+                #    the gen-N children that inherited from them have just
+                #    finished evaluating, so those checkpoints are no
+                #    longer needed; no-op when gen is zero.  Phase two
+                #    keeps only ``next_selected`` in the current-generation
+                #    directory so the about-to-evaluate gen-(N+1) children
+                #    can read their parent file.  Steady-state disk usage
+                #    after this step is at most ``inheritance_elite_count``
+                #    files, bounded over the whole run.
+                if self._inheritance_records_lineage():
                     next_selected = self.inheritance.select_parents(
                         gen_ids,
                         list(fitnesses),
                         gen,
                     )
-                    # Drop the previous-gen elites whose children just ran.
-                    self._gc_inheritance_dir(gen - 1, [])
-                    # Keep only the about-to-be-parents in current gen.
-                    self._gc_inheritance_dir(gen, next_selected)
                     self._selected_parent_ids = next_selected
+                    if self._inheritance_active():
+                        # Drop the previous-gen elites whose children just ran.
+                        self._gc_inheritance_dir(gen - 1, [])
+                        # Keep only the about-to-be-parents in current gen.
+                        self._gc_inheritance_dir(gen, next_selected)
 
                 # Bookkeeping: prev gen for next iteration's parent_ids.
                 self._prev_generation_ids = gen_ids

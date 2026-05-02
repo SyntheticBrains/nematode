@@ -257,3 +257,78 @@ class LamarckianInheritance:
     def kind(self) -> Literal["weights"]:
         """Return ``"weights"`` — gates the loop into the weight-IO code path."""
         return "weights"
+
+
+class BaldwinInheritance:
+    """Trait-only inheritance — the genome flows, the weights do NOT.
+
+    The hyperparameter genome continues to evolve via TPE; the loop
+    records the prior generation's elite genome ID as ``inherited_from``
+    for every child of the next generation, so the lineage CSV captures
+    the evolutionary trace.  Mechanically equivalent to
+    :class:`NoInheritance` on the weight-IO path: no per-genome ``.pt``
+    files written, no GC, no warm-start.
+
+    The Baldwin Effect (in evolutionary biology): lifetime learning
+    guides genetic evolution toward genomes that learn fast, *without*
+    the genome ever encoding the learned policy directly.  In this
+    implementation, the K-train phase still runs from-scratch for every
+    child; the elite-ID lineage trace exists so post-pilot analysis can
+    identify which prior-gen elite each child shares hyperparameters
+    with via TPE's posterior.
+
+    The ``inheritance_elite_count`` config field is unused under
+    Baldwin (Baldwin is conceptually single-elite by construction; the
+    field exists for forward-compatibility with future multi-elite
+    Baldwin variants).  ``select_parents`` returns ``[best_genome_id]``
+    using the same selection rule as :class:`LamarckianInheritance`
+    with ``elite_count=1`` (top fitness, lex-tie-broken on
+    ``genome_id``) so the loop's existing ``_selected_parent_ids``
+    array carries the elite ID forward.
+    """
+
+    def select_parents(
+        self,
+        gen_ids: list[str],
+        fitnesses: list[float],
+        generation: int,  # noqa: ARG002
+    ) -> list[str]:
+        """Return ``[best_genome_id]`` (single-element list, lex-tie-broken).
+
+        Same selection rule as :class:`LamarckianInheritance` with
+        ``elite_count=1`` — they're factored as separate methods rather
+        than shared because the strategies are conceptually distinct
+        (Baldwin doesn't broadcast weights to descendants; it only
+        records the lineage trace).
+        """
+        if len(gen_ids) != len(fitnesses):
+            msg = (
+                f"select_parents requires len(gen_ids) == len(fitnesses); "
+                f"got {len(gen_ids)} vs {len(fitnesses)}."
+            )
+            raise ValueError(msg)
+        if not gen_ids:
+            return []
+        ranked = sorted(zip(gen_ids, fitnesses, strict=True), key=lambda x: (-x[1], x[0]))
+        return [ranked[0][0]]
+
+    def assign_parent(
+        self,
+        child_index: int,  # noqa: ARG002
+        parent_ids: list[str],  # noqa: ARG002
+    ) -> str | None:
+        """Return ``None`` — Baldwin doesn't warm-start any child."""
+        return None
+
+    def checkpoint_path(
+        self,
+        output_dir: Path,  # noqa: ARG002
+        generation: int,  # noqa: ARG002
+        genome_id: str,  # noqa: ARG002
+    ) -> Path | None:
+        """Return ``None`` — Baldwin uses no on-disk checkpoint substrate."""
+        return None
+
+    def kind(self) -> Literal["trait"]:
+        """Return ``"trait"`` — gates the loop into the lineage-only code path."""
+        return "trait"

@@ -28,6 +28,7 @@ from quantumnematode.evolution.fitness import (
 )
 from quantumnematode.evolution.genome import Genome, genome_id_for
 from quantumnematode.evolution.inheritance import (
+    BaldwinInheritance,
     InheritanceStrategy,
     LamarckianInheritance,
     NoInheritance,
@@ -40,6 +41,7 @@ __all__ = [
     "CSV_HEADER",
     "ENCODER_REGISTRY",
     "NON_GENOME_COMPONENTS",
+    "BaldwinInheritance",
     "EpisodicSuccessRate",
     "EvolutionLoop",
     "FitnessFunction",
