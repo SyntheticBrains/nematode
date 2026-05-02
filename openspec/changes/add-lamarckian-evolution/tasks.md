@@ -12,9 +12,9 @@ Single PR. Order is dependency-first: Protocol + config + validators land before
 
 ## 2. EvolutionConfig + validators
 
-- [ ] 2.1 Add `inheritance: Literal["none", "lamarckian"] = "none"` and `inheritance_elite_count: int = Field(default=1, ge=1)` to `EvolutionConfig` in `packages/quantum-nematode/quantumnematode/utils/config_loader.py` (after `warm_start_path`).
-- [ ] 2.2 Add a `model_validator(mode="after")` on `EvolutionConfig` rejecting: `inheritance != "none"` AND `learn_episodes_per_eval == 0`; `inheritance != "none"` AND `warm_start_path is not None`; `inheritance_elite_count > population_size`; `inheritance != "none"` AND `inheritance_elite_count != 1` (M3 ships single-elite-broadcast only — multi-elite parent selection is M4-or-later scope). Error messages match the wording in the spec scenarios.
-- [ ] 2.3 Extend `SimulationConfig._validate_hyperparam_schema` (or add a sibling `model_validator`) to reject: `inheritance != "none"` AND `hyperparam_schema is None`; `inheritance != "none"` AND any field in `hyperparam_schema` is in `_ARCHITECTURE_CHANGING_FIELDS` (reuse the existing constant — single source of truth).
+- [x] 2.1 Add `inheritance: Literal["none", "lamarckian"] = "none"` and `inheritance_elite_count: int = Field(default=1, ge=1)` to `EvolutionConfig` in `packages/quantum-nematode/quantumnematode/utils/config_loader.py` (after `warm_start_path`).
+- [x] 2.2 Add a `model_validator(mode="after")` on `EvolutionConfig` rejecting: `inheritance != "none"` AND `learn_episodes_per_eval == 0`; `inheritance != "none"` AND `warm_start_path is not None`; `inheritance_elite_count > population_size`; `inheritance != "none"` AND `inheritance_elite_count != 1` (M3 ships single-elite-broadcast only — multi-elite parent selection is M4-or-later scope). Error messages match the wording in the spec scenarios.
+- [x] 2.3 Extend `SimulationConfig._validate_hyperparam_schema` (or add a sibling `model_validator`) to reject: `inheritance != "none"` AND `hyperparam_schema is None`; `inheritance != "none"` AND any field in `hyperparam_schema` is in `_ARCHITECTURE_CHANGING_FIELDS` (reuse the existing constant — single source of truth).
 
 ## 3. LearnedPerformanceFitness kwargs
 
