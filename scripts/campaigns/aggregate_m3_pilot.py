@@ -76,7 +76,13 @@ def _read_history(seed_dir: Path) -> list[dict[str, float]]:
 
 
 def _baseline_success_rates(baseline_root: Path) -> dict[int, float]:
-    """Extract per-seed success rates from the run_simulation.py log files."""
+    """Extract per-seed success rates from the run_simulation.py log files.
+
+    Returns ``{seed: rate}`` for every ``seed-N.log`` whose contents
+    contain a ``Success rate: NN.NN%`` line.  Logs that exist but lack
+    the expected line are silently dropped from the result; the caller
+    raises a clear error naming the missing seeds.
+    """
     rates: dict[int, float] = {}
     for log in sorted(baseline_root.glob("seed-*.log")):
         seed_match = re.search(r"seed-(\d+)\.log", log.name)
@@ -349,10 +355,18 @@ def main() -> int:
     baseline_rates = _baseline_success_rates(args.baseline_root)
     missing = sorted(set(args.seeds) - set(baseline_rates))
     if missing:
+        # Two distinct failure modes share the same error-handling path:
+        # (a) the seed-N.log file is absent, or (b) it exists but does
+        # not contain the expected "Success rate: NN.NN%" line (run
+        # crashed before completion, or run_simulation.py's output
+        # format changed).  Inspect the per-seed logs to disambiguate.
         msg = (
-            f"Missing baseline success rate(s) for seed(s) {missing}.  Re-run "
+            f"Missing baseline success rate(s) for seed(s) {missing}.  Either "
+            f"(a) the per-seed log files are absent — re-run "
             f"phase5_m2_hyperparam_lstmppo_klinotaxis_predator_baseline.sh to "
-            f"populate {args.baseline_root}."
+            f"populate {args.baseline_root}, or (b) the logs exist but lack a "
+            f"'Success rate: NN.NN%' line — inspect "
+            f"{args.baseline_root}/seed-N.log for crashes or format changes."
         )
         raise SystemExit(msg)
     baseline_mean = float(np.mean([baseline_rates[s] for s in args.seeds]))

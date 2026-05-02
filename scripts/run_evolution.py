@@ -314,7 +314,7 @@ def _resolve_output_dir(
     return output_dir.name, output_dir
 
 
-def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hurts readability
+def main() -> int:  # noqa: C901, PLR0911, PLR0915 — sequential CLI entry point; splitting hurts readability
     """Entry point."""
     args = parse_arguments()
     logger.setLevel(args.log_level)
@@ -372,6 +372,25 @@ def main() -> int:  # noqa: PLR0915 — sequential CLI entry point; splitting hu
         fitness = LearnedPerformanceFitness()
     else:
         fitness = EpisodicSuccessRate()
+
+    # Inheritance + --fitness success_rate is a TypeError waiting to
+    # happen: the loop computes weight_capture_path for every child
+    # (because inheritance is active), the worker forwards it as a
+    # kwarg, and EpisodicSuccessRate.evaluate doesn't accept the
+    # kwarg.  Catch the combination at startup with a clear pointer
+    # to --fitness learned_performance.  EvolutionConfig validators
+    # don't see the --fitness flag, so this guard belongs in the CLI.
+    if evolution_config.inheritance != "none" and args.fitness == "success_rate":
+        logger.error(
+            "evolution.inheritance is %r but --fitness success_rate (the "
+            "default) is selected. Inheritance writes per-genome weight "
+            "checkpoints after each train phase; EpisodicSuccessRate is "
+            "frozen-weight and has no train phase.  Use --fitness "
+            "learned_performance, or set inheritance: none in the "
+            "evolution: block (or via --inheritance none).",
+            evolution_config.inheritance,
+        )
+        return 1
 
     resume_path = Path(args.resume) if args.resume else None
     resolved = _resolve_output_dir(args.output_dir, resume_path)

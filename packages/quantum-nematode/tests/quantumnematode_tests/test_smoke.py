@@ -386,3 +386,44 @@ def test_run_evolution_cli_learned_performance_requires_k(tmp_path: Path) -> Non
     assert result.returncode == 1
     combined = result.stdout + result.stderr
     assert "learn_episodes_per_eval" in combined
+
+
+@pytest.mark.smoke
+def test_run_evolution_cli_inheritance_rejects_success_rate_fitness(tmp_path: Path) -> None:
+    """``inheritance: lamarckian`` + ``--fitness success_rate`` SHALL exit 1 at startup.
+
+    Prevents the worker from crashing with a TypeError mid-evaluation
+    (``EpisodicSuccessRate.evaluate`` doesn't accept the inheritance
+    kwargs the loop forwards).  EvolutionConfig validators don't see
+    the ``--fitness`` flag, so the CLI catches the combination here.
+    """
+    pilot_path = CONFIGS_DIR / "evolution" / "lamarckian_lstmppo_klinotaxis_predator_pilot.yml"
+    assert pilot_path.exists()
+    # Default --fitness is success_rate (no flag passed).
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "run_evolution.py"),
+            "--config",
+            str(pilot_path),
+            "--generations",
+            "1",
+            "--population",
+            "4",
+            "--seed",
+            "42",
+            "--log-level",
+            "WARNING",
+            "--output-dir",
+            str(tmp_path / "evolution_results"),
+        ],
+        check=False,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 1
+    combined = result.stdout + result.stderr
+    assert "inheritance" in combined.lower()
+    assert "learned_performance" in combined  # error points the user to the fix

@@ -148,7 +148,12 @@ evolution:
   algorithm: tpe
   population_size: 12
   generations: 20
-  episodes_per_eval: 25  # L fallback when eval_episodes_per_eval is None
+  # Note: episodes_per_eval is the protocol fallback used when
+  # eval_episodes_per_eval is None.  Both are set to 25 here, redundantly,
+  # to match M2.12's config exactly so the YAMLs are diff-comparable
+  # field-for-field.  eval_episodes_per_eval wins (per the
+  # Learned-Performance Fitness scenario in evolution-framework/spec.md).
+  episodes_per_eval: 25
   learn_episodes_per_eval: 50  # K — train phase
   eval_episodes_per_eval: 25   # L — eval phase
   sigma0: 1.0

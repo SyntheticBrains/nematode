@@ -122,6 +122,9 @@ evolution:
   algorithm: tpe
   population_size: 12
   generations: 20
+  # episodes_per_eval is the protocol fallback when
+  # eval_episodes_per_eval is None.  Both are set to 25, redundantly,
+  # to match M2.12 + the lamarckian pilot YAML field-for-field.
   episodes_per_eval: 25
   learn_episodes_per_eval: 50
   eval_episodes_per_eval: 25

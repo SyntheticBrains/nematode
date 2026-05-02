@@ -334,15 +334,60 @@ class EvolutionLoop:
         with suppress(OSError):
             gen_dir.rmdir()
 
+    def _resolve_per_child_inheritance(
+        self,
+        child_idx: int,
+        gen: int,
+        gid: str,
+    ) -> tuple[Path | None, Path | None, str]:
+        """Compute one child's (parent_warm_start, child_capture_path, inherited_from).
+
+        Returns ``(None, None, "")`` when the active strategy is no-op
+        — the loop's per-child step then short-circuits to from-scratch
+        evaluation byte-equivalently to pre-M3.
+
+        For active strategies, returns:
+
+        - ``parent_warm_start``: ``Path`` to the parent's pre-saved
+          checkpoint, or ``None`` if (a) gen 0, (b) ``assign_parent``
+          returned ``None``, or (c) the parent file is unexpectedly
+          missing on disk (defensive fallback with a ``logger.warning``).
+        - ``child_capture_path``: ``Path`` where THIS child writes its
+          post-K-train weights (always populated when inheritance is on).
+        - ``inherited_from``: parent ``genome_id`` for the lineage CSV,
+          or ``""`` for the from-scratch cases above.
+        """
+        if not self._inheritance_active():
+            return None, None, ""
+        child_capture_path = self.inheritance.checkpoint_path(self.output_dir, gen, gid)
+        parent_id = self.inheritance.assign_parent(child_idx, self._selected_parent_ids)
+        if parent_id is None:
+            return None, child_capture_path, ""
+        candidate = self.inheritance.checkpoint_path(self.output_dir, gen - 1, parent_id)
+        # Path.exists() guard: defensive against unexpected on-disk
+        # state on resume.  Fall back to from-scratch rather than
+        # crashing the whole generation.
+        if candidate is not None and candidate.exists():
+            return candidate, child_capture_path, parent_id
+        logger.warning(
+            "Lamarckian parent checkpoint missing for child idx=%d gen=%d "
+            "(expected parent_id=%s at %s) — falling back to from-scratch.",
+            child_idx,
+            gen,
+            parent_id,
+            candidate,
+        )
+        return None, child_capture_path, ""
+
     # ---- Main loop --------------------------------------------------------
 
-    # C901/PLR0912/PLR0915: this method is the canonical sequential
-    # ask→eval→tell→inherit→checkpoint pipeline.  The branches are the
+    # PLR0915: this method is the canonical sequential
+    # ask→eval→tell→inherit→checkpoint pipeline.  The statements are the
     # documented optional paths (parallel-pool vs sequential, no-op vs
-    # active inheritance, gen-0 vs gen-N+1 parent resolution); pulling
-    # them into helpers fragments the loop and obscures the per-genome
-    # data flow that downstream readers (and the spec) reason about.
-    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: C901, PLR0912, PLR0915
+    # active inheritance branching); inline statements keep the
+    # per-genome data flow that downstream readers (and the spec)
+    # reason about visible at one read.
+    def run(self, *, resume_from: Path | None = None) -> EvolutionResult:  # noqa: PLR0915
         """Run the evolution loop, optionally resuming from a checkpoint.
 
         Parameters
@@ -412,50 +457,12 @@ class EvolutionLoop:
                     # reproducibly.
                     eval_seed = int(self.rng.integers(0, 2**31 - 1))
 
-                    # Inheritance-step path resolution.  When the strategy
-                    # is no-op we pass ``None`` for both paths so the
-                    # worker call shape and fitness behaviour are
-                    # byte-equivalent to pre-M3.
-                    parent_warm_start = None
-                    child_capture_path = None
-                    inherited_from = ""
-                    if inheritance_on:
-                        # Where THIS child writes its post-train weights.
-                        child_capture_path = self.inheritance.checkpoint_path(
-                            self.output_dir,
-                            gen,
-                            gid,
-                        )
-                        # Which parent (if any) THIS child inherits from.
-                        parent_id = self.inheritance.assign_parent(
-                            idx,
-                            self._selected_parent_ids,
-                        )
-                        if parent_id is not None:
-                            candidate = self.inheritance.checkpoint_path(
-                                self.output_dir,
-                                gen - 1,
-                                parent_id,
-                            )
-                            # Path.exists() guard: on resume the parent
-                            # file may be missing if the run was killed
-                            # before GC ran or before all checkpoints
-                            # finished writing.  Fall back to from-scratch
-                            # for that one child rather than crashing the
-                            # whole generation.
-                            if candidate is not None and candidate.exists():
-                                parent_warm_start = candidate
-                                inherited_from = parent_id
-                            else:
-                                logger.warning(
-                                    "Lamarckian parent checkpoint missing for "
-                                    "child idx=%d gen=%d (expected parent_id=%s "
-                                    "at %s) — falling back to from-scratch.",
-                                    idx,
-                                    gen,
-                                    parent_id,
-                                    candidate,
-                                )
+                    # Per-child inheritance resolution: returns (None, None, "")
+                    # under no-op so the worker call shape and fitness
+                    # behaviour are byte-equivalent to pre-M3.
+                    parent_warm_start, child_capture_path, inherited_from = (
+                        self._resolve_per_child_inheritance(idx, gen, gid)
+                    )
                     inherited_from_per_child.append(inherited_from)
 
                     eval_args.append(
@@ -501,23 +508,26 @@ class EvolutionLoop:
                 self.optimizer.tell(list(solutions), neg_fitnesses)
 
                 # Inheritance step: select the next generation's parents
-                # from the just-evaluated population, then garbage-collect.
-                # Order matters: we GC the OLD selected set from gen-1
-                # FIRST (whose children just finished evaluating, so the
-                # checkpoints are no longer needed) and THEN the
-                # not-newly-selected files in gen (keeping only the
-                # next_selected set for the about-to-evaluate children).
-                # Both calls no-op cleanly when inheritance is no-op or
-                # when the relevant directory does not exist.
+                # from the just-evaluated population, then garbage-collect
+                # in two phases.  Phase one clears all remaining files in
+                # the previous-generation directory (keep=[]) because the
+                # gen-N children that inherited from them have just
+                # finished evaluating, so those checkpoints are no longer
+                # needed; no-op when gen is zero.  Phase two keeps only
+                # ``next_selected`` in the current-generation directory
+                # so the about-to-evaluate gen-(N+1) children can read
+                # their parent file.  Steady-state disk usage after this
+                # step is at most ``inheritance_elite_count`` files (the
+                # next_selected set in gen-N), bounded over the whole run.
                 if inheritance_on:
                     next_selected = self.inheritance.select_parents(
                         gen_ids,
                         list(fitnesses),
                         gen,
                     )
-                    # Old-set cleanup (gen - 1).  No-op for gen == 0.
+                    # Drop the previous-gen elites whose children just ran.
                     self._gc_inheritance_dir(gen - 1, [])
-                    # Current-gen cleanup: keep only the next_selected.
+                    # Keep only the about-to-be-parents in current gen.
                     self._gc_inheritance_dir(gen, next_selected)
                     self._selected_parent_ids = next_selected
 
