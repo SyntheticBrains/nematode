@@ -228,7 +228,9 @@ The early-stop counter SHALL be persisted in the checkpoint pickle as `gens_with
 - **AND** the log SHALL contain "Early-stop: best_fitness has not improved for 3 generations (last improvement at gen 5)"
 - **AND** the lineage CSV SHALL contain exactly `8 * population_size` rows
 - **AND** the history CSV SHALL contain exactly 8 rows
-- **AND** the loop SHALL save a final checkpoint before breaking (regardless of `checkpoint_every` schedule), so a subsequent `--resume` would correctly observe the run as complete rather than rewind to the last `checkpoint_every`-aligned save
+- **AND** the existing post-loop final `_save_checkpoint()` SHALL persist the early-stopped state — no additional save call inside the loop is needed, because control flows out of the `while` via `break` and through the existing post-loop save site
+- **AND** the persisted state SHALL include `_generation` (set to the post-evaluation increment value, i.e. 9 in this scenario), `_gens_without_improvement` (the value that triggered the break, i.e. 3), and `_last_best_fitness` (the plateau value, i.e. 0.95)
+- **AND** subsequent `--resume` SHALL re-enter the main loop because `_generation (9) < cfg.generations (20)`; the run continues with the saturation counter intact, and if `--early-stop-on-saturation N` is passed again on resume the gate retriggers within zero or one further generations
 
 #### Scenario: Counter resets on any strict improvement
 
