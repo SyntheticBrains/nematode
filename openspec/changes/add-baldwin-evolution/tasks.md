@@ -47,14 +47,14 @@
 
 ## 7. Pre-pilot smoke
 
-- [ ] 7.1 Run a Baldwin smoke at `--generations 3 --population 6 --seed 42` (single seed, full K=50/L=25) on the Baldwin pilot YAML. Mirrors M3's task 9b smoke. Wall-time estimate: ~85s. Output to `evolution_results/m4_smoke_baldwin/`.
-- [ ] 7.2 Verify smoke artefacts: lineage.csv has 18 rows (3 gens × 6 pop); gen-0 rows have empty `inherited_from`; gen-1+ rows have non-empty `inherited_from` equal to the prior gen's top-fitness genome ID; history.csv has 3 rows; NO `inheritance/` directory exists.
-- [ ] 7.3 Run a 4-gen smoke that exercises the early-stop flag (e.g. `--early-stop-on-saturation 2 --generations 10 --population 4`) on a tiny config; verify the loop terminates before gen 10 if best_fitness plateaus.
+- [x] 7.1 Ran the Baldwin smoke at `--generations 3 --population 6 --seed 42` on the Baldwin pilot YAML. Output to `evolution_results/m4_smoke_baldwin/`. Wall-time ~90s.
+- [x] 7.2 Verified smoke artefacts: lineage.csv has 18 rows + header (3 gens × 6 pop = 18 ✓); gen-0 rows have empty `inherited_from` ✓; gen-1 children all share `inherited_from = 8fee7485...` (the gen-0 elite with fitness 0.84) ✓; gen-2 children all share `inherited_from = 14e14e32...` (the gen-1 elite — all gen-1 children had fitness 0.0 so lex-tie-break selected the lex-first ID, confirming the selection rule) ✓; history.csv has 3 rows ✓; NO `inheritance/` directory exists ✓.
+- [x] 7.3 Ran a 4-gen smoke exercising `--early-stop-on-saturation 2 --generations 10 --population 4` on the small MLPPPO config. History trajectory: `[0.0, 0.0, 0.5, 0.0, 0.0]` — counter walked 0 (bootstrap), 1, 0 (improvement at gen 3), 1, 2 → fired after gen 5 ✓. Loop terminated at 5 gens (well before the 10-gen budget).
 
 ## 8. Pilot configs
 
-- [ ] 8.1 Create `configs/evolution/baldwin_lstmppo_klinotaxis_predator_pilot.yml`. Structurally identical to `configs/evolution/lamarckian_lstmppo_klinotaxis_predator_control.yml` (the M3 control YAML with same brain/env/budget/seeds/TPE) with three diffs: (a) `inheritance: baldwin`, (b) add `weight_init_scale` and `entropy_decay_episodes` to `hyperparam_schema`, (c) add `early_stop_on_saturation: 5`.
-- [ ] 8.2 Header comments explain the Baldwin framing (no weight inheritance, evolves richer learnability schema), point to the comparable arms (M3 lamarckian + M3 control), and note the new evolvable knobs.
+- [x] 8.1 Created `configs/evolution/baldwin_lstmppo_klinotaxis_predator_pilot.yml`. Structurally identical to `configs/evolution/lamarckian_lstmppo_klinotaxis_predator_control.yml` (the M3 control YAML with same brain/env/budget/seeds/TPE) with three diffs: (a) `inheritance: baldwin`, (b) added `weight_init_scale` (bounds [0.5, 2.0]) and `entropy_decay_episodes` (bounds [200, 2000]) to `hyperparam_schema`, (c) added `early_stop_on_saturation: 5`. YAML loads cleanly under all validators.
+- [x] 8.2 Header comments explain the Baldwin framing (trait-only inheritance, no weight checkpoints), enumerate the three diffs vs the M3 control YAML, document the new evolvable knobs, and embed the GO/PIVOT/STOP decision-gate framing.
 
 ## 9. Campaign scripts
 
