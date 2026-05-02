@@ -145,7 +145,7 @@ The per-generation across-seed mean of `mean_fitness` (population mean) tells a 
 
 After gen-1's by-construction parity, lamarckian's population mean **never drops below 0.67** while control bounces in the 0.05-0.50 range. The +0.40-0.55pp lift is sustained across all 19 post-inheritance generations — not a transient artefact.
 
-**Convergence plot**: ![M3 convergence](../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence.png)
+**Convergence plot**: ![M3 convergence](../../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence.png)
 
 ### Wall-time
 
@@ -261,7 +261,7 @@ M4 (Baldwin Effect) starts on the M3 predator-arm config + TPE + a Baldwin-style
 2. **`InheritanceStrategy` Protocol is already pluggable** — `BaldwinInheritance` becomes a new strategy class implementing the same three methods. No loop changes required.
 3. **The "rescue seed" pattern gives M4 a clear structural prediction**: if Baldwin-style learnability inheritance reproduces the speed gain without weight transfer, expect another 1-of-4 seed to be saved compared to M3.
 4. **The gen-1/gen-2 reference clarification carries forward**: M4's analogous "floor metric" should compare gen-2 (the first post-inheritance gen) not gen-1.
-5. **Each lamarckian seed's final-gen winner checkpoint is preserved** under [`artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-N/inheritance/genome-*.pt`](../../artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/) — these are valid hand-off points if M4 wants to start from M3's best-known policies rather than from scratch.
+5. **Each lamarckian seed's final-gen winner checkpoint is preserved** under [`artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-N/inheritance/genome-*.pt`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/) — these are valid hand-off points if M4 wants to start from M3's best-known policies rather than from scratch.
 
 ## Conclusions
 
@@ -297,7 +297,7 @@ These are M3 implementation details that M4 will hit early. Documenting now so M
 - **Protocol-extension consideration for `BaldwinInheritance`**. The M3 loop's `_inheritance_active()` check uses `not isinstance(strategy, NoInheritance)` to decide whether to compute weight checkpoint paths. Baldwin Effect typically does not use per-genome weight files at all — the "ability to learn" can be encoded into the genome itself (genome bias toward learnable initial conditions, learning-rate schedules, initial weight statistics) and evolved via TPE without a weight substrate. If `BaldwinInheritance.checkpoint_path` returns `None`, the M3 loop will still compute paths, get `None` back, and fall through to from-scratch for every child — making `inherited_from` empty even though Baldwin inheritance is conceptually happening. Two options for M4 to consider: (a) extend the Protocol with a `kind() -> Literal["none","weights","trait"]` method and refactor `_inheritance_active` to switch on the kind; (b) write a dedicated `_baldwin_resolve` path in the loop alongside `_resolve_per_child_inheritance`. (a) is cleaner long-term; (b) is faster to ship.
 - **Worker-tuple bloat consideration**. M3 grew the `_evaluate_in_worker` tuple from 9 to 11 elements (added `parent_warm_start` and `child_capture_path` at positions 9-10). If M4 needs to thread additional metadata through the worker (e.g. a Baldwin-specific learnability bias or a `BaldwinInheritance` strategy reference), consider converting the tuple to a `dataclass` or `TypedDict` before adding more fields. The ~11-element positional tuple is at the readable limit; one more field crosses into "what was position 8 again?" territory.
 - **Revised M4 generation budget**. The Phase 5 tracker originally assigned M4 a 50-gen budget per arm. M3's lamarckian seeds saturated at fitness 1.00 by gen 5-7; the next 13-15 gens produced no new information. **M4 should match M3's 20-gen budget** for the inheritance-comparison phase to keep wall-time bounded (~3 arms × 4 seeds × 20 gens × ~15 min/seed ≈ 3 hours total instead of ~7.5 hours). Optional longer runs for M4.2's learning-blocked F1 control if the F1-vs-F0 retention question needs more generations.
-- **M3's per-seed final-gen winner checkpoints are valid Baldwin starting points** if M4 wants to start from M3's best-known policies rather than re-evolving from scratch. Located at [`artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-N/inheritance/genome-*.pt`](../../artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/) (each is the M3 elite that lasted through gen 19 → gen 20).
+- **M3's per-seed final-gen winner checkpoints are valid Baldwin starting points** if M4 wants to start from M3's best-known policies rather than re-evolving from scratch. Located at [`artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-N/inheritance/genome-*.pt`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/) (each is the M3 elite that lasted through gen 19 → gen 20).
 
 ### Deferred follow-ups (post-M4)
 
@@ -309,24 +309,24 @@ These are M3 implementation details that M4 will hit early. Documenting now so M
 
 ### Lamarckian arm (M3 main result)
 
-- **Per-seed artefacts**: [`artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-{42,43,44,45}/`](../../artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/) — `best_params.json`, `history.csv`, `lineage.csv`, `checkpoint.pkl` per seed, plus `inheritance/genome-*.pt` (the final-gen winner's trained weights — preserved as the M4 hand-off point).
+- **Per-seed artefacts**: [`artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/seed-{42,43,44,45}/`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/) — `best_params.json`, `history.csv`, `lineage.csv`, `checkpoint.pkl` per seed, plus `inheritance/genome-*.pt` (the final-gen winner's trained weights — preserved as the M4 hand-off point).
 - **Pilot config**: [`configs/evolution/lamarckian_lstmppo_klinotaxis_predator_pilot.yml`](../../../configs/evolution/lamarckian_lstmppo_klinotaxis_predator_pilot.yml) (also archived under `artifacts/logbooks/013/m3_lamarckian_pilot/lamarckian/`).
 
 ### Control arm (within-experiment from-scratch)
 
-- **Per-seed artefacts**: [`artifacts/logbooks/013/m3_lamarckian_pilot/control/seed-{42,43,44,45}/`](../../artifacts/logbooks/013/m3_lamarckian_pilot/control/) — same file set as lamarckian, no `inheritance/` subdir.
+- **Per-seed artefacts**: [`artifacts/logbooks/013/m3_lamarckian_pilot/control/seed-{42,43,44,45}/`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/control/) — same file set as lamarckian, no `inheritance/` subdir.
 - **Control config**: [`configs/evolution/lamarckian_lstmppo_klinotaxis_predator_control.yml`](../../../configs/evolution/lamarckian_lstmppo_klinotaxis_predator_control.yml).
 
 ### Hand-tuned baseline
 
-- **Per-seed logs**: [`artifacts/logbooks/013/m3_lamarckian_pilot/baseline/seed-{42-45}.log`](../../artifacts/logbooks/013/m3_lamarckian_pilot/baseline/) — re-run under the M3 revision (task 9.6); identical to M2.11's published numbers.
+- **Per-seed logs**: [`artifacts/logbooks/013/m3_lamarckian_pilot/baseline/seed-{42-45}.log`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/baseline/) — re-run under the M3 revision (task 9.6); identical to M2.11's published numbers.
 - **Reference baseline scenario**: [`configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml`](../../../configs/scenarios/pursuit/lstmppo_small_klinotaxis.yml) (unchanged from M2.11).
 
 ### Aggregator outputs
 
-- **Summary**: [`artifacts/logbooks/013/m3_lamarckian_pilot/summary/summary.md`](../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/summary.md) — GO/PIVOT/STOP verdict + per-seed convergence-speed table.
-- **Convergence plot**: [`artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence.png`](../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence.png) — best_fitness across-seed mean ± 1 std band, lamarckian vs control + baseline + 0.92 target line.
-- **Convergence-speed CSV**: [`artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence_speed.csv`](../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence_speed.csv).
+- **Summary**: [`artifacts/logbooks/013/m3_lamarckian_pilot/summary/summary.md`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/summary.md) — GO/PIVOT/STOP verdict + per-seed convergence-speed table.
+- **Convergence plot**: [`artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence.png`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence.png) — best_fitness across-seed mean ± 1 std band, lamarckian vs control + baseline + 0.92 target line.
+- **Convergence-speed CSV**: [`artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence_speed.csv`](../../../artifacts/logbooks/013/m3_lamarckian_pilot/summary/convergence_speed.csv).
 
 ### Framework artefacts
 

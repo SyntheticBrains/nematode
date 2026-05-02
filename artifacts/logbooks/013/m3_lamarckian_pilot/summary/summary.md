@@ -1,3 +1,9 @@
+# Final decision: GO ✅ (post-pilot corrected interpretation)
+
+The aggregator block below shows **PIVOT** because its floor metric was specified one generation off — see § Post-pilot interpretation at the bottom of this file, and [logbook 013](../../../../../docs/experiments/logbooks/013-lamarckian-inheritance-pilot.md) for the full analysis. The original aggregator output is preserved verbatim below for traceability.
+
+______________________________________________________________________
+
 ## M3 Lamarckian Inheritance Pilot — Summary
 
 **Seeds**: [42, 43, 44, 45]
@@ -34,7 +40,7 @@ ______________________________________________________________________
 
 ## Post-pilot interpretation: GO ✅ (logbook 013 supersedes the literal verdict above)
 
-The literal aggregator verdict above is **PIVOT**. The settled-on M3 verdict is **GO** — see [logbook 013](../../../../docs/experiments/logbooks/013-lamarckian-inheritance-pilot.md) for the full analysis. The discrepancy is a planning-time mistake corrected post-hoc:
+The literal aggregator verdict above is **PIVOT**. The settled-on M3 verdict is **GO** — see [logbook 013](../../../../../docs/experiments/logbooks/013-lamarckian-inheritance-pilot.md) for the full analysis. The discrepancy is a planning-time mistake corrected post-hoc:
 
 **Why the floor metric reads FAIL above:**
 

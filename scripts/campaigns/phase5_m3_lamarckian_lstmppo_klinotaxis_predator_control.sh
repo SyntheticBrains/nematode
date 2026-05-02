@@ -47,6 +47,7 @@ for SEED in "${SEEDS[@]}"; do
     uv run python scripts/run_evolution.py \
         --config "${CONFIG}" \
         --fitness learned_performance \
+        --inheritance none \
         --seed "${SEED}" \
         --log-level WARNING \
         --output-dir "${SEED_DIR}"

@@ -17,7 +17,7 @@ driven hand-tuned baseline (per-seed log files), and produces:
 - A markdown summary with the GO/PIVOT/STOP verdict.  Decision logic:
     GO if BOTH:
       (a) Speed: mean_gen_lamarckian_to_092 + 4 <= mean_gen_control_to_092
-      (b) Floor: mean_gen1_lamarckian >= mean_gen3_control
+      (b) Floor: mean_gen2_lamarckian >= mean_gen3_control
     PIVOT if exactly one of (a)/(b) holds.
     STOP if neither.
 
@@ -52,10 +52,18 @@ TARGET_FITNESS = 0.92
 # the predator arm's saturation-speed axis.
 SPEED_GAIN_GENERATIONS = 4
 
-# Floor-metric reference generation: lamarckian gen-1 mean must beat
-# the control's gen-N mean (1-indexed in the table; 3 = "two
-# generations of head start").
-FLOOR_REFERENCE_GEN = 3
+# Floor-metric reference generations (1-indexed in the table).
+# Generation 1 is the from-scratch initial population — the
+# lamarckian and control arms are by construction identical at gen 1
+# (gen 0's elites are selected for inheritance only AFTER gen 1
+# evaluates), so a floor metric anchored at gen-1 is meaningless.
+# Inheritance kicks in at gen 2 (the first generation whose children
+# warm-start from the prior gen's elite).  The right comparison is
+# therefore "lamarckian gen-2 mean >= control gen-3 mean": one
+# generation of inheritance head-start is required to beat one
+# generation of from-scratch progress.
+FLOOR_LAMARCKIAN_GEN = 2
+FLOOR_CONTROL_GEN = 3
 
 
 def _latest_session(seed_dir: Path) -> Path:
@@ -161,8 +169,9 @@ def _format_summary(  # noqa: PLR0913
         verdict = "GO ✅"
         verdict_text = (
             "Lamarckian inheritance both accelerates convergence (speed gate) "
-            "AND lifts the gen-1 floor over the control's gen-3 baseline. "
-            "Inheritance is doing real work — proceed to the next experiment."
+            f"AND lifts the gen-{FLOOR_LAMARCKIAN_GEN} floor over the control's "
+            f"gen-{FLOOR_CONTROL_GEN} baseline.  Inheritance is doing real "
+            "work — proceed to the next experiment."
         )
     elif speed_gate_passes or floor_gate_passes:
         verdict = "PIVOT ⚠️"
@@ -176,10 +185,11 @@ def _format_summary(  # noqa: PLR0913
         verdict = "STOP ❌"
         verdict_text = (
             "Neither gate passed: inheritance does not accelerate convergence "
-            "and does not lift the gen-1 floor over the control.  Either "
-            "the schema is too narrow for inheritance to help, or the "
-            "fitness landscape is the wrong testbed.  Re-evaluate before "
-            "committing to follow-up scope."
+            f"and does not lift the gen-{FLOOR_LAMARCKIAN_GEN} floor over the "
+            f"control's gen-{FLOOR_CONTROL_GEN} baseline.  Either the schema "
+            "is too narrow for inheritance to help, or the fitness landscape "
+            "is the wrong testbed.  Re-evaluate before committing to follow-up "
+            "scope."
         )
 
     lines: list[str] = [
@@ -197,10 +207,11 @@ def _format_summary(  # noqa: PLR0913
         f"  - Control mean gen-to-{TARGET_FITNESS}: {speed_mean_ctrl:.1f}",
         f"  - Margin: {speed_mean_ctrl - speed_mean_lam:+.1f} (need >= {SPEED_GAIN_GENERATIONS})",
         "",
-        f"- **Floor gate** (mean_gen1_lamarckian >= mean_gen{FLOOR_REFERENCE_GEN}_control): "
+        f"- **Floor gate** (mean_gen{FLOOR_LAMARCKIAN_GEN}_lamarckian >= "
+        f"mean_gen{FLOOR_CONTROL_GEN}_control): "
         f"{'PASS' if floor_gate_passes else 'FAIL'}",
-        f"  - Lamarckian gen-1 mean: {floor_lam:.3f}",
-        f"  - Control gen-{FLOOR_REFERENCE_GEN} mean: {floor_ctrl:.3f}",
+        f"  - Lamarckian gen-{FLOOR_LAMARCKIAN_GEN} mean: {floor_lam:.3f}",
+        f"  - Control gen-{FLOOR_CONTROL_GEN} mean: {floor_ctrl:.3f}",
         f"  - Margin: {floor_lam - floor_ctrl:+.3f}",
         "",
         f"**Decision**: {verdict}",
@@ -379,9 +390,13 @@ def main() -> int:
     speed_lam = {s: _gen_first_reaches_target(lam_history[s]) for s in args.seeds}
     speed_ctrl = {s: _gen_first_reaches_target(ctrl_history[s]) for s in args.seeds}
 
-    # Floor metric: gen-1 mean (lamarckian) vs gen-FLOOR_REFERENCE_GEN mean (control).
-    floor_lam = _gen_n_mean_best(lam_history, args.seeds, 1)
-    floor_ctrl = _gen_n_mean_best(ctrl_history, args.seeds, FLOOR_REFERENCE_GEN)
+    # Floor metric: gen-FLOOR_LAMARCKIAN_GEN mean (lamarckian) vs
+    # gen-FLOOR_CONTROL_GEN mean (control).  Anchored at the first
+    # post-inheritance generation on the lamarckian side (gen 1 is
+    # by-construction identical between arms — see the
+    # FLOOR_LAMARCKIAN_GEN constant docstring above).
+    floor_lam = _gen_n_mean_best(lam_history, args.seeds, FLOOR_LAMARCKIAN_GEN)
+    floor_ctrl = _gen_n_mean_best(ctrl_history, args.seeds, FLOOR_CONTROL_GEN)
 
     summary_md = _format_summary(
         args.seeds,
