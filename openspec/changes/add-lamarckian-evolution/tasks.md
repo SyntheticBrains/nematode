@@ -70,6 +70,17 @@ Single PR. Order is dependency-first: Protocol + config + validators land before
 - [ ] 9.4 Decision verdict per the spec / plan: GO if both `mean_gen_lamarckian_to_092 + 4 ≤ mean_gen_control_to_092` AND `mean_gen1_lamarckian ≥ mean_gen3_control`. PIVOT if exactly one. STOP if neither. Write to `summary.md`.
 - [ ] 9.5 Optional: hyperparameter-spread-across-seeds plot as the canary for design.md Risk 2 (TPE posterior collapse). Decide during implementation based on what the pilot data looks like.
 
+## 9.5 Pre-pilot smoke (reduced K=50/L=25 run)
+
+Mechanical correctness check at real per-episode budget before committing ~100 min of full pilot wall-time. Catches silent failures of the kind logbook 012 documented (env mis-construction, sensing-mode mismatch, per-episode reseed bugs) AND the new M3 risks (parent checkpoint round-trip on a real LSTMPPO brain, multiprocessing serialisation under `parallel_workers=4`, GC race with concurrent worker writes).
+
+- [ ] 9.5.1 Lamarckian smoke: run `phase5_m3_lamarckian_lstmppo_klinotaxis_predator.sh` with overrides `--generations 3 --population-size 6 --seed 42` (single seed, full K=50/L=25). Expected wall-time ~12-15 min. Output to `evolution_results/m3_smoke_lamarckian/`.
+- [ ] 9.5.2 Control smoke: same overrides against `phase5_m3_lamarckian_lstmppo_klinotaxis_predator_control.sh`. Output to `evolution_results/m3_smoke_control/`.
+- [ ] 9.5.3 Verify lamarckian smoke artefacts: `lineage.csv` has 18 rows (3 gens × 6 pop), gen-0 rows have empty `inherited_from`, gen-1+ rows have non-empty `inherited_from` equal to the prior gen's top-fitness genome ID, `history.csv` has 3 rows with monotonic-or-near-monotonic best fitness, `inheritance/gen-002/` exists with exactly 1 file (selected parent), `inheritance/gen-000/` and `gen-001/` have been GC'd.
+- [ ] 9.5.4 Verify control smoke produces fitness numbers in roughly the same range as M2.12's gen-0 to gen-2 (~0.5-0.8 mean) — large deviations indicate a regression in the `inheritance: none` code path.
+- [ ] 9.5.5 Smoke wall-time per generation roughly matches M2.12's per-generation wall-time (within 30%). Significantly slower → multiprocessing/IO regression worth investigating before launching the full pilot. Significantly faster → suspicious; check that K=50 train episodes actually ran.
+- [ ] 9.5.6 If any check fails, fix and re-smoke before proceeding to task 10. Smoke artefacts are throwaway — delete `evolution_results/m3_smoke_*` after both pilot runs complete.
+
 ## 10. Pilot run + logbook
 
 - [ ] 10.1 Run the lamarckian campaign: `OUTPUT_ROOT=evolution_results/m3_lamarckian_lstmppo_klinotaxis_predator scripts/campaigns/phase5_m3_lamarckian_lstmppo_klinotaxis_predator.sh`. Expected wall-time: ~50 min (4 seeds × ~12-14 min/seed at parallel=4, comparable to M2.12).
