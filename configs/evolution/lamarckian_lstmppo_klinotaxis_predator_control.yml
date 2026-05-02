@@ -1,0 +1,154 @@
+# Within-experiment from-scratch control — LSTMPPO + klinotaxis + predators
+# ============================================================================
+#
+# M3 control arm.  Identical to lamarckian_lstmppo_klinotaxis_predator_pilot.yml
+# in every respect EXCEPT ``evolution.inheritance: none``.  Run under the
+# M3 revision so the lamarckian-vs-control comparison is confounder-free
+# (no Python/dep/machine drift; both arms exercise the same M3 loop code
+# with inheritance flipped off).
+#
+# Why not reuse M2.12's TPE config directly:
+#   1. The schema differs: M3 drops rnn_type + lstm_hidden_dim because
+#      they're architecture-changing (the validator rejects them under
+#      inheritance).  Comparing M3 vs M2.12 would conflate "inheritance
+#      added" with "schema shrunk".  The control here uses the M3 schema
+#      so the only variable is inheritance.
+#   2. M2.12 was produced on an earlier revision; comparing across
+#      revisions invites drift confounders.
+#
+# This control's expected behaviour:
+#   - Fitness numbers should be in the M2.12 ballpark on the 4 retained
+#     fields (M2.12's mean was 0.96 across 4 seeds; the 4-field schema
+#     is a strict subset so fitness should be similar — possibly
+#     slightly lower if rnn_type/lstm_hidden_dim were doing useful work).
+#   - This becomes the apples-to-apples baseline for the M3 GO gate.
+
+max_steps: 1000
+
+brain:
+  name: lstmppo
+  config:
+    rnn_type: gru
+    lstm_hidden_dim: 64
+    bptt_chunk_length: 16
+
+    actor_hidden_dim: 64
+    critic_hidden_dim: 128
+    actor_num_layers: 2
+    critic_num_layers: 2
+
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+
+    clip_epsilon: 0.2
+    gamma: 0.99
+    gae_lambda: 0.95
+    value_loss_coef: 0.5
+    rollout_buffer_size: 512
+    num_epochs: 4
+    max_grad_norm: 0.5
+
+    entropy_coef: 0.02
+    entropy_coef_end: 0.005
+    entropy_decay_episodes: 800
+
+    lr_warmup_episodes: 50
+    lr_warmup_start: 0.00003
+    lr_decay_episodes: 1500
+    lr_decay_end: 0.00003
+
+    sensory_modules:
+      - food_chemotaxis
+      - nociception
+      - mechanosensation
+      - proprioception
+
+body_length: 2
+
+reward:
+  reward_goal: 2.0
+  reward_distance_scale: 0.5
+  reward_exploration: 0.05
+  penalty_step: 0.005
+  penalty_anti_dithering: 0.02
+  penalty_stuck_position: 0
+  penalty_starvation: 10.0
+  penalty_predator_death: 10.0
+  penalty_predator_proximity: 0.15
+  stuck_position_threshold: 0
+  penalty_boundary_collision: 0.02
+  penalty_health_damage: 0.5
+  reward_health_gain: 0.1
+
+satiety:
+  initial_satiety: 300.0
+  satiety_decay_rate: 0.8
+  satiety_gain_per_food: 0.2
+
+environment:
+  grid_size: 20
+  viewport_size: [11, 11]
+
+  sensing:
+    chemotaxis_mode: klinotaxis
+    nociception_mode: klinotaxis
+    stam_enabled: true
+    stam_buffer_size: 30
+    stam_decay_rate: 0.1
+
+  foraging:
+    foods_on_grid: 6
+    target_foods_to_collect: 10
+    min_food_distance: 3
+    agent_exclusion_radius: 5
+    gradient_decay_constant: 8.0
+    gradient_strength: 1.0
+
+  predators:
+    enabled: true
+    count: 2
+    speed: 0.5
+    movement_pattern: pursuit
+    detection_radius: 6
+    gradient_decay_constant: 10.0
+    gradient_strength: 1.0
+
+  health:
+    max_hp: 100.0
+    predator_damage: 20.0
+    food_healing: 10.0
+
+evolution:
+  algorithm: tpe
+  population_size: 12
+  generations: 20
+  episodes_per_eval: 25
+  learn_episodes_per_eval: 50
+  eval_episodes_per_eval: 25
+  sigma0: 1.0
+  parallel_workers: 4
+  checkpoint_every: 2
+  cma_diagonal: false
+  # Control arm: inheritance disabled.  Same as the M3 default but
+  # spelled out for clarity and to make the diff vs the lamarckian
+  # config trivial to inspect.
+  inheritance: none
+
+hyperparam_schema:
+  # Same 4-field schema as the lamarckian arm (rnn_type +
+  # lstm_hidden_dim dropped for parity).
+  - name: actor_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: critic_lr
+    type: float
+    bounds: [1.0e-5, 1.0e-3]
+    log_scale: true
+  - name: gamma
+    type: float
+    bounds: [0.9, 0.999]
+  - name: entropy_coef
+    type: float
+    bounds: [1.0e-4, 0.1]
+    log_scale: true
