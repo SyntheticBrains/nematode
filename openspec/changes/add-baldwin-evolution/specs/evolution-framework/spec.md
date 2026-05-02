@@ -38,6 +38,7 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **AND** after generation N's `optimizer.tell` returns and the strategy selects the next-generation parent, the GC step SHALL delete all 11 non-selected files in `gen-{N:03d}/`; additionally when N ≥ 1 it SHALL delete all remaining files in `gen-{N-1:03d}/` (whose children have just finished evaluating, so those parent checkpoints are no longer needed). For N = 0 the second clause no-ops because no `gen-{-1}/` directory exists.
 - **AND** at the moment generation N+1's evaluation begins, exactly one file SHALL exist in `gen-{N:03d}/` (the selected parent for the about-to-evaluate children)
 - **AND** when the run completes after generation 4 (the final generation), the loop SHALL still run `select_parents` on gen 4's results and the GC step SHALL still delete gen 3's surviving parent — so the only surviving file SHALL be the selected parent of the final generation, under `inheritance/gen-004/`. This file is intentionally NOT deleted by GC: it is the final winner's trained policy, available for forensic inspection or downstream warm-start by future work.
+- **AND** if the run terminates via `early_stop_on_saturation` (rather than reaching `generations`), the same invariant holds: the loop runs `select_parents` + GC for the final-evaluated generation BEFORE the early-stop break (per task 4.4's ordering — break fires at end of body, after the GC guard), so the surviving file is the elite of the early-stop generation rather than `gen-004`
 
 #### Scenario: Inheritance requires a training phase
 
@@ -261,5 +262,5 @@ The early-stop counter SHALL be persisted in the checkpoint pickle as `gens_with
 - **WHEN** all three runs use the same seed and trajectory
 - **THEN** all three SHALL trigger early-stop at the same generation (the trigger is a function of `best_fitness` only, not of the inheritance strategy)
 - **AND** the early-stop break SHALL fire AFTER both inheritance guards run for the final-evaluated generation
-- **AND** under Baldwin, the lineage-tracking guard (`_inheritance_records_lineage()`) SHALL run `select_parents` and update `_selected_parent_ids` so the resume invariant holds even though the run never resumes
+- **AND** under Baldwin, the lineage-tracking guard (`_inheritance_records_lineage()`) SHALL run `select_parents` and update `_selected_parent_ids` for the final-evaluated generation, preserving lineage CSV correctness AND keeping the resume invariant intact in case the user resumes the early-stopped run
 - **AND** under Lamarckian, the weight-IO GC guard (`_inheritance_active()`) SHALL still run for the final-evaluated generation, preserving the surviving elite checkpoint per the "Per-genome weight checkpoints are captured and garbage-collected" scenario above
