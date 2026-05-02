@@ -134,7 +134,8 @@ The strategy SHALL be selectable via `evolution.inheritance: Literal["none", "la
 - **AND** `LamarckianInheritance.kind()` SHALL return `"weights"`
 - **AND** `BaldwinInheritance.kind()` SHALL return `"trait"`
 - **AND** the loop's `_inheritance_active()` helper (which decides whether to compute weight checkpoint paths and run the GC step) SHALL evaluate `strategy.kind() == "weights"`
-- **AND** the loop's `_inheritance_records_lineage()` helper (which decides whether to write `inherited_from` in lineage rows) SHALL evaluate `strategy.kind() != "none"`
+- **AND** the loop's `_inheritance_records_lineage()` helper (which decides whether to write `inherited_from` in lineage rows AND whether to call `select_parents` to update `_selected_parent_ids`) SHALL evaluate `strategy.kind() != "none"`
+- **AND** the post-`tell` block in the main loop SHALL use TWO distinct guards: the lineage-tracking guard (`_inheritance_records_lineage()`) wraps the `select_parents` call and the `_selected_parent_ids` assignment so it fires for both Lamarckian and Baldwin; the weight-IO GC guard (`_inheritance_active()`) wraps the two `_gc_inheritance_dir` calls so it fires only for Lamarckian
 
 ## ADDED Requirements
 
@@ -257,4 +258,6 @@ The early-stop counter SHALL be persisted in the checkpoint pickle as `gens_with
 - **GIVEN** the same `early_stop_on_saturation: 3` setting under three different inheritance strategies (`none`, `lamarckian`, `baldwin`)
 - **WHEN** all three runs use the same seed and trajectory
 - **THEN** all three SHALL trigger early-stop at the same generation (the trigger is a function of `best_fitness` only, not of the inheritance strategy)
-- **AND** Lamarckian's GC step SHALL still run for the final-evaluated generation (preserving the surviving elite checkpoint per existing behaviour)
+- **AND** the early-stop break SHALL fire AFTER both inheritance guards run for the final-evaluated generation
+- **AND** under Baldwin, the lineage-tracking guard (`_inheritance_records_lineage()`) SHALL run `select_parents` and update `_selected_parent_ids` so the resume invariant holds even though the run never resumes
+- **AND** under Lamarckian, the weight-IO GC guard (`_inheritance_active()`) SHALL still run for the final-evaluated generation, preserving the surviving elite checkpoint per the "Per-genome weight checkpoints are captured and garbage-collected" scenario above

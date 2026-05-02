@@ -47,6 +47,22 @@ The framework as built already runs evolution-of-learning-hyperparameters from-s
 - `kind() == "trait"` → returns `(None, None, parent_id)` where `parent_id = self._selected_parent_ids[0] if self._selected_parent_ids else ""`. No checkpoint paths computed.
 - `kind() == "weights"` → existing logic (compute `child_capture_path`, look up parent's checkpoint, fall back on missing file).
 
+The post-`tell` block at [loop.py:525-535](packages/quantum-nematode/quantumnematode/evolution/loop.py#L525-L535) splits into two distinct guards because `select_parents` (which populates `_selected_parent_ids`) needs to run for both Lamarckian and Baldwin, while the GC step runs only for Lamarckian:
+
+```python
+# Strategy lineage tracking (Lamarckian + Baldwin).
+if self._inheritance_records_lineage():  # kind() != "none"
+    next_selected = self.inheritance.select_parents(gen_ids, list(fitnesses), gen)
+    self._selected_parent_ids = next_selected
+
+# Weight-IO GC (Lamarckian only).
+if self._inheritance_active():  # kind() == "weights"
+    self._gc_inheritance_dir(gen - 1, [])
+    self._gc_inheritance_dir(gen, self._selected_parent_ids)
+```
+
+Without this split, the M3 single-guard pattern would skip `select_parents` for Baldwin (because `_inheritance_active()` is False under `kind() == "trait"`), `_selected_parent_ids` would stay empty, and the per-child trait branch would emit empty `inherited_from` for every Baldwin row — silently breaking the lineage scenario.
+
 **Alternative considered**: Add a new `self._baldwin_elite_id: str | None` attribute parallel to `_selected_parent_ids`. Then have `BaldwinInheritance.select_parents` return `[]` (no checkpoint to track) and route the elite ID through the new attribute.
 
 **Rationale**: The new-attribute design adds a redundant data structure — `_baldwin_elite_id` would always equal `_selected_parent_ids[0]` for the single-elite case (which is the only configuration shipping). Reusing `_selected_parent_ids` keeps the loop's parent-tracking code path uniform across strategies and makes the kind()-switch in `_resolve_per_child_inheritance` the single point of difference. The post-pilot analysis can trace which elite genome each child shares hyperparameters with via TPE's posterior — empty `inherited_from` would lose information that's trivially derivable.
@@ -75,7 +91,7 @@ The choice of `weight_init_scale` ∈ `[0.5, 2.0]` schema bounds (vs the wider `
 
 **Alternative considered**: No version bump — recompute the early-stop counter from the loaded `optimizer.history` on resume rather than persisting it explicitly.
 
-**Rationale**: Recomputing from history requires the resume code to walk the entire history with the comparison rule and re-derive the counter. Cheap (O(generations)) but adds a code path that has to stay consistent with the in-loop counter logic — easy to drift. Persisting both `gens_without_improvement` and `last_best_fitness` explicitly is two extra ints in the pickle and zero extra logic. Same pattern as M3's `selected_parent_ids` addition (M2 → M3 was v1 → v2 for this exact reason).
+**Rationale**: Recomputing from history requires the resume code to walk the entire history with the comparison rule and re-derive the counter. Cheap (O(generations)) but adds a code path that has to stay consistent with the in-loop counter logic — easy to drift. Persisting both `gens_without_improvement` (int) and `last_best_fitness` (float | None) explicitly is two extra fields in the pickle and zero extra logic. Same pattern as M3's `selected_parent_ids` addition (M2 → M3 was v1 → v2 for this exact reason).
 
 ### Decision 6: F1 control is post-hoc, not interleaved
 
