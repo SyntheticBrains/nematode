@@ -4,11 +4,11 @@ Single PR. Order is dependency-first: Protocol + config + validators land before
 
 ## 1. InheritanceStrategy Protocol + implementations
 
-- [ ] 1.1 Create `packages/quantum-nematode/quantumnematode/evolution/inheritance.py` with the `InheritanceStrategy` Protocol (`select_parents`, `assign_parent`, `checkpoint_path`).
-- [ ] 1.2 Implement `NoInheritance` (default no-op): `select_parents` returns `[]`, `assign_parent` returns `None`, `checkpoint_path` returns `None`. The loop's per-child step at task 4.2 guards with `isinstance(strategy, NoInheritance)` so `checkpoint_path` is never invoked under no-op. Returning `None` (rather than raising) keeps the Protocol method shape uniform and avoids tripping type-checkers that flag a `NotImplementedError`-raising method as broken.
-- [ ] 1.3 Implement `LamarckianInheritance(elite_count: int = 1)`: `select_parents(gen_ids: list[str], fitnesses: list[float], generation: int) -> list[str]` zips the two lists, sorts by fitness desc and breaks ties on `genome_id` lexicographic order, returns the top-`elite_count` IDs; `assign_parent(child_index: int, parent_ids: list[str]) -> str | None` returns `parent_ids[child_index % len(parent_ids)]` or `None` when `parent_ids == []`; `checkpoint_path(output_dir: Path, generation: int, genome_id: str) -> Path` returns `output_dir / "inheritance" / f"gen-{generation:03d}" / f"genome-{genome_id}.pt"`.
-- [ ] 1.4 Re-export `InheritanceStrategy`, `NoInheritance`, `LamarckianInheritance` from `quantumnematode/evolution/__init__.py`.
-- [ ] 1.5 Module docstring lists tournament / roulette / soft-elite as future strategies behind the same Protocol (so M4's BaldwinInheritance has a documented home to slot into).
+- [x] 1.1 Create `packages/quantum-nematode/quantumnematode/evolution/inheritance.py` with the `InheritanceStrategy` Protocol (`select_parents`, `assign_parent`, `checkpoint_path`).
+- [x] 1.2 Implement `NoInheritance` (default no-op): `select_parents` returns `[]`, `assign_parent` returns `None`, `checkpoint_path` returns `None`. The loop's per-child step at task 4.2 guards with `isinstance(strategy, NoInheritance)` so `checkpoint_path` is never invoked under no-op. Returning `None` (rather than raising) keeps the Protocol method shape uniform and avoids tripping type-checkers that flag a `NotImplementedError`-raising method as broken.
+- [x] 1.3 Implement `LamarckianInheritance(elite_count: int = 1)`: `select_parents(gen_ids: list[str], fitnesses: list[float], generation: int) -> list[str]` zips the two lists, sorts by fitness desc and breaks ties on `genome_id` lexicographic order, returns the top-`elite_count` IDs; `assign_parent(child_index: int, parent_ids: list[str]) -> str | None` returns `parent_ids[child_index % len(parent_ids)]` or `None` when `parent_ids == []`; `checkpoint_path(output_dir: Path, generation: int, genome_id: str) -> Path` returns `output_dir / "inheritance" / f"gen-{generation:03d}" / f"genome-{genome_id}.pt"`.
+- [x] 1.4 Re-export `InheritanceStrategy`, `NoInheritance`, `LamarckianInheritance` from `quantumnematode/evolution/__init__.py`.
+- [x] 1.5 Module docstring lists tournament / roulette / soft-elite as future strategies behind the same Protocol (so M4's BaldwinInheritance has a documented home to slot into).
 
 ## 2. EvolutionConfig + validators
 
