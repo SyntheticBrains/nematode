@@ -635,3 +635,97 @@ def test_lamarckian_resume_rejects_inheritance_mismatch(tmp_path: Path) -> None:
     loop2 = _make_loop(tmp_path, generations=4, population_size=4, episodes_per_eval=1)
     with pytest.raises(ValueError, match="inheritance setting"):
         loop2.run(resume_from=checkpoint)
+
+
+# ---------------------------------------------------------------------------
+# Baldwin inheritance smoke
+# ---------------------------------------------------------------------------
+
+
+def _make_baldwin_loop(
+    output_dir: Path,
+    *,
+    generations: int,
+    population_size: int = 4,
+) -> EvolutionLoop:
+    """Build a small Baldwin-inheritance loop for fast smoke tests.
+
+    Mirrors ``_make_lamarckian_loop`` but with ``inheritance: baldwin``
+    so the lineage-tracking guard fires (populating ``_selected_parent_ids``
+    and the per-child ``inherited_from``) without writing weight
+    checkpoints to disk.
+    """
+    from quantumnematode.evolution.encoders import HyperparameterEncoder
+    from quantumnematode.evolution.fitness import LearnedPerformanceFitness
+    from quantumnematode.evolution.inheritance import BaldwinInheritance
+    from quantumnematode.utils.config_loader import ParamSchemaEntry
+
+    ecfg = EvolutionConfig(
+        algorithm="cmaes",
+        population_size=population_size,
+        generations=generations,
+        episodes_per_eval=1,
+        learn_episodes_per_eval=2,
+        eval_episodes_per_eval=1,
+        parallel_workers=1,
+        inheritance="baldwin",
+    )
+    sim_config = load_simulation_config(str(MLPPPO_CONFIG)).model_copy(
+        update={
+            "hyperparam_schema": [
+                ParamSchemaEntry(
+                    name="learning_rate",
+                    type="float",
+                    bounds=(1e-5, 1e-2),
+                    log_scale=True,
+                ),
+            ],
+            "evolution": ecfg,
+        },
+    )
+    encoder = HyperparameterEncoder()
+    fitness = LearnedPerformanceFitness()
+    optimizer = CMAESOptimizer(
+        num_params=encoder.genome_dim(sim_config),
+        population_size=population_size,
+        sigma0=ecfg.sigma0,
+        seed=42,
+    )
+    return EvolutionLoop(
+        optimizer=optimizer,
+        encoder=encoder,
+        fitness=fitness,
+        sim_config=sim_config,
+        evolution_config=ecfg,
+        output_dir=output_dir,
+        rng=np.random.default_rng(42),
+        log_level=logging.WARNING,
+        inheritance=BaldwinInheritance(),
+    )
+
+
+def test_loop_with_baldwin_inheritance_3_gens(tmp_path: Path) -> None:
+    """3-gen by pop 4 Baldwin smoke: lineage populated, NO inheritance dir.
+
+    Spec scenarios "Baldwin is selectable via config and CLI" +
+    "Baldwin records lineage but creates no inheritance directory".
+    """
+    loop = _make_baldwin_loop(tmp_path, generations=3, population_size=4)
+    loop.run()
+
+    # Lineage: 12 rows total, gen 0 empty inherited_from, gen 1+ shares one parent.
+    with (tmp_path / "lineage.csv").open() as h:
+        rows = list(csv.DictReader(h))
+    assert len(rows) == 12
+    by_gen: dict[int, list[dict[str, str]]] = {}
+    for r in rows:
+        by_gen.setdefault(int(r["generation"]), []).append(r)
+    for r in by_gen[0]:
+        assert r["inherited_from"] == ""
+    for gen in (1, 2):
+        ifrom = {r["inherited_from"] for r in by_gen[gen]}
+        assert ifrom != {""}, f"gen {gen} should have non-empty inherited_from"
+        assert len(ifrom) == 1, f"single elite → all gen {gen} children share one parent"
+
+    # NO inheritance directory under Baldwin (mechanically a no-op on weight IO).
+    assert not (tmp_path / "inheritance").exists()

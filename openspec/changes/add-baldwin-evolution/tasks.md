@@ -32,18 +32,18 @@
 
 ## 5. Config + CLI for Baldwin
 
-- [ ] 5.1 Extend `EvolutionConfig.inheritance` Literal in `config_loader.py` to `Literal["none", "lamarckian", "baldwin"]`.
-- [ ] 5.2 Extend `_validate_inheritance` for Baldwin: same rules as Lamarckian for `learn_episodes_per_eval > 0`, `warm_start_path is None`, `hyperparam_schema is not None`. Skip the architecture-changing-fields rejection (Baldwin doesn't load weights). Skip the `inheritance_elite_count != 1` rejection (Baldwin doesn't use the field; document this in the field comment).
-- [ ] 5.3 Extend `--inheritance` CLI flag choices in `scripts/run_evolution.py` to include `"baldwin"`.
-- [ ] 5.4 Extend the strategy construction in `scripts/run_evolution.py` `main()` (currently a 2-branch `if/else` for `lamarckian` vs `none`): add the third arm `case "baldwin": return BaldwinInheritance()`.
-- [ ] 5.5 Extend the existing CLI guard at startup that rejects `inheritance != "none" + --fitness success_rate`. Update the error message to mention Baldwin's reason ("Baldwin records elite-parent lineage from the trained-elite-fitness signal — frozen-eval has no train phase to produce that signal").
-- [ ] 5.6 Add 3 Baldwin validator tests to `test_config.py`: (a) Baldwin + `learn_episodes_per_eval=0` raises; (b) Baldwin + `warm_start_path` raises; (c) Baldwin + no `hyperparam_schema` raises. Plus a positive test: (d) Baldwin + arch-changing field is ALLOWED (the documented difference vs Lamarckian).
-- [ ] 5.7 Add a smoke-style test to `test_loop_smoke.py`: 3-gen × pop 4 Baldwin run on a tiny config; assert no `inheritance/` directory is created; lineage gen-0 rows have empty `inherited_from`; lineage gen-1+ rows all have the same non-empty `inherited_from` (the prior-gen elite ID).
+- [x] 5.1 Extended `EvolutionConfig.inheritance` Literal in `config_loader.py` to `Literal["none", "lamarckian", "baldwin"]`.
+- [x] 5.2 Extended `_validate_inheritance` for Baldwin: rules 1, 2, 4 apply to any non-`none` inheritance. Rule 3 (`inheritance_elite_count != 1`) restricted to `lamarckian` only — Baldwin ignores the field. Validator messages updated to be Baldwin-aware. The `_validate_hyperparam_schema` architecture-changing-fields rejection also restricted to `lamarckian` only (Baldwin doesn't load weights so shape mismatches are fine).
+- [x] 5.3 Extended `--inheritance` CLI flag choices in `scripts/run_evolution.py` to include `"baldwin"`. Updated help text to describe the trait-flow vs weight-flow distinction.
+- [x] 5.4 Extended the strategy construction to include `BaldwinInheritance()` for the `"baldwin"` arm. Added explicit `InheritanceStrategy` type annotation on the `inheritance` local so pyright accepts the three-branch construction.
+- [x] 5.5 Updated the CLI guard's error message at `scripts/run_evolution.py` to cover both Lamarckian (TypeError on weight_capture_path kwarg) and Baldwin (signal collapse on frozen-eval) failure modes when `inheritance != "none" + --fitness success_rate`.
+- [x] 5.6 Added 5 Baldwin validator tests to `test_config.py`: (a) Baldwin + `learn_episodes_per_eval=0` raises; (b) Baldwin + `warm_start_path` raises; (c) Baldwin + no `hyperparam_schema` raises; (d) Baldwin + arch-changing field is ALLOWED (documented difference vs Lamarckian); (e) Baldwin ignores `elite_count != 1` but still enforces `> population_size`.
+- [x] 5.7 Added Baldwin smoke test to `test_loop_smoke.py`: 3-gen × pop 4 Baldwin run via a new `_make_baldwin_loop` helper. Asserts no `inheritance/` directory; gen-0 rows have empty `inherited_from`; gen-1+ rows share a single non-empty `inherited_from` value (the prior-gen elite ID).
 
 ## 6. Spec sync to evolution-framework
 
-- [ ] 6.1 Confirm the spec delta at `openspec/changes/add-baldwin-evolution/specs/evolution-framework/spec.md` covers all three new requirement scenarios (Baldwin Inheritance, Early Stop, modified Inheritance Strategy) per the `openspec validate --strict` pass that landed with the proposal.
-- [ ] 6.2 Update the existing `openspec/specs/evolution-framework/spec.md` "Inheritance Strategy" requirement directly is NOT done in this PR — the delta sync runs at archival time per the openspec-archive-change skill workflow.
+- [x] 6.1 Confirmed the spec delta at `openspec/changes/add-baldwin-evolution/specs/evolution-framework/spec.md` covers all three new requirement scenarios (Baldwin Inheritance, Early Stop, modified Inheritance Strategy) per the `openspec validate --strict` pass that landed with the proposal.
+- [x] 6.2 Update the existing `openspec/specs/evolution-framework/spec.md` "Inheritance Strategy" requirement directly is NOT done in this PR — the delta sync runs at archival time per the openspec-archive-change skill workflow.
 
 ## 7. Pre-pilot smoke
 

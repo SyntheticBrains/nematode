@@ -44,8 +44,10 @@ from pathlib import Path
 import numpy as np
 from pydantic import ValidationError
 from quantumnematode.evolution import (
+    BaldwinInheritance,
     EpisodicSuccessRate,
     EvolutionLoop,
+    InheritanceStrategy,
     LamarckianInheritance,
     LearnedPerformanceFitness,
     NoInheritance,
@@ -99,13 +101,15 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--inheritance",
         type=str,
-        choices=["none", "lamarckian"],
+        choices=["none", "lamarckian", "baldwin"],
         default=None,
         help=(
             "Override evolution.inheritance. 'lamarckian' enables per-genome "
-            "warm-start from the prior generation's elite parent. Requires "
-            "hyperparam_schema and learn_episodes_per_eval > 0; mutually "
-            "exclusive with warm_start_path. See evolution-framework spec."
+            "warm-start from the prior generation's elite parent (weight flow). "
+            "'baldwin' records the prior elite ID in the lineage CSV but does "
+            "NOT propagate weights — every child trains from-scratch (trait "
+            "flow only). Both require hyperparam_schema and learn_episodes_per_eval > 0; "
+            "both are mutually exclusive with warm_start_path. See evolution-framework spec."
         ),
     )
     parser.add_argument(
@@ -331,7 +335,7 @@ def _resolve_output_dir(
     return output_dir.name, output_dir
 
 
-def main() -> int:  # noqa: C901, PLR0911, PLR0915 — sequential CLI entry point; splitting hurts readability
+def main() -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915 — sequential CLI entry point; splitting hurts readability
     """Entry point."""
     args = parse_arguments()
     logger.setLevel(args.log_level)
@@ -390,21 +394,27 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0915 — sequential CLI entry poin
     else:
         fitness = EpisodicSuccessRate()
 
-    # Inheritance + --fitness success_rate is a TypeError waiting to
-    # happen: the loop computes weight_capture_path for every child
-    # (because inheritance is active), the worker forwards it as a
-    # kwarg, and EpisodicSuccessRate.evaluate doesn't accept the
-    # kwarg.  Catch the combination at startup with a clear pointer
-    # to --fitness learned_performance.  EvolutionConfig validators
-    # don't see the --fitness flag, so this guard belongs in the CLI.
+    # Inheritance + --fitness success_rate is broken in two distinct ways
+    # (one TypeError, one signal-collapse): the loop computes
+    # weight_capture_path for every child (Lamarckian) — the worker
+    # forwards it as a kwarg, and EpisodicSuccessRate.evaluate doesn't
+    # accept the kwarg → TypeError.  Or under Baldwin, the loop tries
+    # to record elite-parent lineage from a trained-elite-fitness signal
+    # — but frozen-eval has no train phase, so the "elite" is selected
+    # purely on fresh-init brain noise, collapsing the Baldwin signal.
+    # Catch the combination at startup with a clear pointer to
+    # --fitness learned_performance.  EvolutionConfig validators don't
+    # see the --fitness flag, so this guard belongs in the CLI.
     if evolution_config.inheritance != "none" and args.fitness == "success_rate":
         logger.error(
             "evolution.inheritance is %r but --fitness success_rate (the "
             "default) is selected. Inheritance writes per-genome weight "
-            "checkpoints after each train phase; EpisodicSuccessRate is "
-            "frozen-weight and has no train phase.  Use --fitness "
-            "learned_performance, or set inheritance: none in the "
-            "evolution: block (or via --inheritance none).",
+            "checkpoints (Lamarckian) or records elite-parent lineage "
+            "from the trained-elite-fitness signal (Baldwin) after each "
+            "train phase; EpisodicSuccessRate is frozen-weight and has "
+            "no train phase.  Use --fitness learned_performance, or set "
+            "inheritance: none in the evolution: block (or via "
+            "--inheritance none).",
             evolution_config.inheritance,
         )
         return 1
@@ -484,12 +494,18 @@ def main() -> int:  # noqa: C901, PLR0911, PLR0915 — sequential CLI entry poin
     # Construct the inheritance strategy from the resolved evolution
     # config.  Default "none" → NoInheritance() (loop runs as a
     # frozen-weight evolution loop); "lamarckian" → LamarckianInheritance
-    # with the configured elite count.  Validators on EvolutionConfig
+    # with the configured elite count; "baldwin" → BaldwinInheritance
+    # (no per-genome weight checkpoints, but the prior generation's
+    # elite ID is recorded in lineage CSV's `inherited_from` for every
+    # child of the next generation).  Validators on EvolutionConfig
     # already rejected unsafe combinations at YAML/CLI parse time.
+    inheritance: InheritanceStrategy
     if evolution_config.inheritance == "lamarckian":
         inheritance = LamarckianInheritance(
             elite_count=evolution_config.inheritance_elite_count,
         )
+    elif evolution_config.inheritance == "baldwin":
+        inheritance = BaldwinInheritance()
     else:
         inheritance = NoInheritance()
 

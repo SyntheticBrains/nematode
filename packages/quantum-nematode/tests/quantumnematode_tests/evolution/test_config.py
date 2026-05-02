@@ -634,3 +634,98 @@ def test_inheritance_defaults_preserve_pre_m3_behaviour() -> None:
     cfg = EvolutionConfig()
     assert cfg.inheritance == "none"
     assert cfg.inheritance_elite_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Baldwin inheritance validators
+# ---------------------------------------------------------------------------
+
+
+def test_inheritance_baldwin_with_learn_episodes_zero_raises() -> None:
+    """``inheritance: baldwin`` + ``learn_episodes_per_eval: 0`` SHALL raise."""
+    with pytest.raises(ValidationError, match="learn_episodes_per_eval"):
+        EvolutionConfig(inheritance="baldwin", learn_episodes_per_eval=0)
+
+
+def test_inheritance_baldwin_with_warm_start_path_raises(tmp_path: Path) -> None:
+    """``inheritance: baldwin`` + ``warm_start_path`` SHALL raise (signal collapse)."""
+    fake_path = tmp_path / "fake.pt"
+    with pytest.raises(ValidationError, match="mutually exclusive"):
+        EvolutionConfig(
+            inheritance="baldwin",
+            learn_episodes_per_eval=10,
+            warm_start_path=fake_path,
+        )
+
+
+def test_inheritance_baldwin_without_hyperparam_schema_raises(tmp_path: Path) -> None:
+    """``inheritance: baldwin`` requires ``hyperparam_schema`` SHALL raise."""
+    yaml_content = {
+        "max_steps": 100,
+        "brain": {"name": "mlpppo", "config": {}},
+        "evolution": {
+            "inheritance": "baldwin",
+            "learn_episodes_per_eval": 10,
+            "population_size": 4,
+        },
+    }
+    yaml_path = tmp_path / "no_schema.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    with pytest.raises(ValidationError, match="no hyperparam_schema is set"):
+        load_simulation_config(str(yaml_path))
+
+
+def test_inheritance_baldwin_permits_architecture_changing_schema_entries(
+    tmp_path: Path,
+) -> None:
+    """``inheritance: baldwin`` + arch-changing schema field SHALL load successfully.
+
+    Documented difference vs Lamarckian: Baldwin doesn't load weights, so
+    shape mismatches are fine — a future Baldwin arm can evolve
+    ``actor_hidden_dim`` etc. without tripping the architecture-changing
+    rejection that gates Lamarckian.
+    """
+    yaml_content = {
+        "max_steps": 100,
+        "brain": {"name": "mlpppo", "config": {}},
+        "evolution": {
+            "inheritance": "baldwin",
+            "learn_episodes_per_eval": 10,
+            "population_size": 4,
+        },
+        "hyperparam_schema": [
+            {"name": "actor_hidden_dim", "type": "int", "bounds": [32, 128]},
+        ],
+    }
+    yaml_path = tmp_path / "baldwin_arch_schema.yml"
+    yaml_path.write_text(yaml.safe_dump(yaml_content))
+    # SHOULD NOT raise.
+    sim_config = load_simulation_config(str(yaml_path))
+    assert sim_config.evolution is not None
+    assert sim_config.evolution.inheritance == "baldwin"
+
+
+def test_inheritance_baldwin_ignores_elite_count_not_one() -> None:
+    """``inheritance: baldwin`` + ``inheritance_elite_count != 1`` SHALL NOT raise.
+
+    Documented difference vs Lamarckian: Baldwin ignores the field
+    (Baldwin is conceptually single-elite by construction; the field
+    exists for forward-compatibility with future multi-elite Baldwin
+    variants).  The ``> population_size`` check still applies.
+    """
+    # Baldwin + elite_count=3 + population_size=12 → loads cleanly.
+    cfg = EvolutionConfig(
+        inheritance="baldwin",
+        learn_episodes_per_eval=10,
+        inheritance_elite_count=3,
+        population_size=12,
+    )
+    assert cfg.inheritance_elite_count == 3
+    # The > population_size structural check still fires.
+    with pytest.raises(ValidationError, match=r"exceeds evolution\.population_size"):
+        EvolutionConfig(
+            inheritance="baldwin",
+            learn_episodes_per_eval=10,
+            inheritance_elite_count=20,
+            population_size=12,
+        )
