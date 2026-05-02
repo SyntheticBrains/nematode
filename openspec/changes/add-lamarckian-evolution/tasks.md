@@ -18,9 +18,9 @@ Single PR. Order is dependency-first: Protocol + config + validators land before
 
 ## 3. LearnedPerformanceFitness kwargs
 
-- [ ] 3.1 Add `warm_start_path_override: Path | None = None` and `weight_capture_path: Path | None = None` kwargs to `LearnedPerformanceFitness.evaluate` in `packages/quantum-nematode/quantumnematode/evolution/fitness.py`. Signature stays back-compatible (defaults are `None`); `EpisodicSuccessRate.evaluate` does not accept the kwargs.
-- [ ] 3.2 In the warm-start branch (currently the conditional that calls `load_weights(brain, evolution_config.warm_start_path)`), prefer `warm_start_path_override` when set; fall through to `evolution_config.warm_start_path` otherwise. The validator (task 2.2) makes the two mutually exclusive at YAML load time, so in practice only one is ever set.
-- [ ] 3.3 After the K-train loop completes and BEFORE the L-eval phase begins, if `weight_capture_path is not None`, call `save_weights(brain, weight_capture_path)`. Create the parent directory with `mkdir(parents=True, exist_ok=True)` first.
+- [x] 3.1 Add `warm_start_path_override: Path | None = None` and `weight_capture_path: Path | None = None` kwargs to `LearnedPerformanceFitness.evaluate` in `packages/quantum-nematode/quantumnematode/evolution/fitness.py`. Signature stays back-compatible (defaults are `None`); `EpisodicSuccessRate.evaluate` does not accept the kwargs.
+- [x] 3.2 In the warm-start branch (currently the conditional that calls `load_weights(brain, evolution_config.warm_start_path)`), prefer `warm_start_path_override` when set; fall through to `evolution_config.warm_start_path` otherwise. The validator (task 2.2) makes the two mutually exclusive at YAML load time, so in practice only one is ever set.
+- [x] 3.3 After the K-train loop completes and BEFORE the L-eval phase begins, if `weight_capture_path is not None`, call `save_weights(brain, weight_capture_path)`. Create the parent directory with `mkdir(parents=True, exist_ok=True)` first.
 
 ## 4. EvolutionLoop hook + GC + checkpoint v2
 
