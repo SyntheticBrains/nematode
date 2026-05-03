@@ -770,7 +770,7 @@ The `CHECKPOINT_VERSION` SHALL be bumped (currently to `3`) to reflect the new p
 - **WHEN** the loop runs
 - **THEN** `EvolutionConfig.early_stop_on_saturation` SHALL be `None`
 - **AND** the loop SHALL iterate exactly `generations` times regardless of fitness
-- **AND** the lineage and history CSVs SHALL contain exactly `generations` rows (per arm) — byte-equivalent to runs where the field is absent
+- **AND** the `lineage.csv` SHALL contain exactly `population_size * generations` data rows (per the "Lineage Tracking" requirement above) and the `history.csv` SHALL contain exactly `generations` rows — byte-equivalent to runs where the `early_stop_on_saturation` field is absent
 
 #### Scenario: Early-stop fires after N consecutive non-improving generations
 
