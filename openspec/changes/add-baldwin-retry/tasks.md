@@ -27,11 +27,11 @@
 
 ## 4. Campaign scripts
 
-- [ ] 4.1 Create `scripts/campaigns/phase5_baldwin_retry_baldwin.sh`. Pattern matches `scripts/campaigns/phase5_m4_baldwin_lstmppo_klinotaxis_predator.sh` (M4) but extends to n = 8 seeds (42-49) and points at the new 8-field config.
-- [ ] 4.2 Create `scripts/campaigns/phase5_baldwin_retry_control.sh`. Same structure as the Baldwin script but uses the new control config (8-field, `inheritance: none`).
-- [ ] 4.3 Create `scripts/campaigns/phase5_baldwin_retry_lamarckian_rerun.sh`. Re-uses M3 lamarckian config (existing 4-field) under the M4.5 code revision; n = 8 seeds (42-49) — the n=8 sweep provides the comparative-gate baseline at apples-to-apples sample size with Baldwin/Control (per task 3.3). Output to a distinct directory so M4 lamarckian artefacts are preserved.
-- [ ] 4.4 Each campaign script SHALL document its expected wall-time per the design's compute estimate (~2.5-3 hours per arm at n = 8 with parallel = 4 + early-stop saturation enabled).
-- [ ] 4.5 Run `uv run pre-commit run --files scripts/campaigns/phase5_baldwin_retry_*.sh` clean.
+- [x] 4.1 Created `scripts/campaigns/phase5_baldwin_retry_baldwin.sh` — patterned after M4's Baldwin script with two diffs: 8-field config + n=8 seeds (42-49). OUTPUT_ROOT is `evolution_results/baldwin_retry_baldwin_lstmppo_klinotaxis_predator` (distinct from M4's directory).
+- [x] 4.2 Created `scripts/campaigns/phase5_baldwin_retry_control.sh`. Same structure as the Baldwin script but uses the matching 8-field control config + `--inheritance none`. OUTPUT_ROOT distinct from Baldwin's.
+- [x] 4.3 Created `scripts/campaigns/phase5_baldwin_retry_lamarckian_rerun.sh`. Reuses M3's existing lamarckian config (4-field) under the M4.5 code revision; n=8 seeds. Documented the schema-asymmetry rationale inline (Lamarckian doesn't participate in audit-A1 schema-equalisation; sole role is comparative-gate baseline at n=8). Adds `--early-stop-on-saturation 5` at runtime since the M3 config doesn't set it. OUTPUT_ROOT distinct from M4 Lamarckian rerun's.
+- [x] 4.4 Each script's header documents expected wall-time per the design's compute estimate (~2.5-3 hours per arm at parallel=4 with early-stop enabled; total pilot wall ~3-4 hours with all three arms in parallel + F1 post-pilot).
+- [x] 4.5 Pre-commit clean on all three scripts (mdformat n/a; bash scripts pass the file-end + large-files + tests hooks). Scripts marked executable via `chmod +x`.
 
 ## 5. Aggregator updates
 
