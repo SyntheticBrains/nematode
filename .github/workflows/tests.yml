@@ -52,6 +52,20 @@ jobs:
           uv sync --extra cpu --extra pixel --extra torch --dev
 
       - name: Run tests
+        env:
+          # Pin BLAS thread pools to 1 to prevent CPU oversubscription
+          # under pytest-xdist parallelism.  The default torch BLAS pool
+          # is sized to the runner's vCPU count, which on a 4-core
+          # ubuntu-latest runner means 4 xdist workers each spawning 4+
+          # BLAS threads under load — ~16+ contended threads on 4 cores.
+          # That oversubscription was triggering runner-agent timeouts
+          # (cancellations + exit-code-143 SIGTERM kills) on this repo's
+          # heavier evolution-loop test suite.  Single-threaded BLAS
+          # leaves all parallelism to xdist.
+          OMP_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
         run: |
           uv run pytest -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
