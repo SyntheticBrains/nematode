@@ -356,7 +356,9 @@ def _format_summary(  # noqa: PLR0913
         seeds,
     )
     schema_status = (
-        "PASS" if schema_ok else f"FAIL (|Δ| = {abs_delta:.4f} > {SCHEMA_EQUALISATION_TOLERANCE})"
+        "PASS"
+        if schema_ok
+        else f"FAIL (abs delta = {abs_delta:.4f} > {SCHEMA_EQUALISATION_TOLERANCE})"
     )
 
     max_gens = max(
@@ -407,7 +409,7 @@ def _format_summary(  # noqa: PLR0913
         "|-----|------------------------------|",
         f"| Baldwin | {baldwin_g0:.4f} |",
         f"| Control | {ctrl_g0:.4f} |",
-        f"| **\\|Δ\\|** | **{abs_delta:.4f}** (tolerance: {SCHEMA_EQUALISATION_TOLERANCE}) |",
+        f"| **Abs delta** | **{abs_delta:.4f}** (tolerance: {SCHEMA_EQUALISATION_TOLERANCE}) |",
         f"| **Status** | **{schema_status}** |",
         "",
     ]

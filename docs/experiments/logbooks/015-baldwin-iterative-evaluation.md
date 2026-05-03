@@ -102,7 +102,7 @@ GO if all three; PIVOT if speed only; STOP otherwise.
 |---|---|
 | Baldwin | 0.7150 |
 | Control | 0.7150 |
-| **\|Δ\|** | **0.0000** (tolerance: 0.05) |
+| **Abs delta** | **0.0000** (tolerance: 0.05) |
 | **Status** | **PASS** |
 
 **Audit A1 closed perfectly.** Identical 8-field schema + identical TPE seed → byte-identical gen-0 starting populations across arms. M4's measured `|Δ| = 0.14` (with mismatched schemas) is now `|Δ| = 0.0000` (with matched schemas).
@@ -198,7 +198,7 @@ The n=4 subset (seeds 42-45) gives gen-to-0.92 `[2, 3, 3, 6]`, mean 3.5 — broa
 |---|---|
 | Pilot launch → all 3 arms done | ~4h 6min (parallel; each arm individually 3.5-4h) |
 | F1 evaluator (K'=10 + K'=25) | ~2 min |
-| Aggregator | <1 min |
+| Aggregator | \<1 min |
 | **Total** | **~4h 6min** |
 
 Longer than the smoke's 3h projection because early-stop fired on only 1/8 Baldwin seeds (seed-44 at gen 14). 6/8 Baldwin seeds and 7/8 Control seeds ran the full 20-gen budget.

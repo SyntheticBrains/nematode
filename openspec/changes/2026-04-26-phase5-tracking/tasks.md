@@ -150,6 +150,7 @@ The M4 audit (task M4.10 above) identified three blocking design flaws + two sig
 **Iteration step 1 verdict** (logbook 015): Audit A1-A5 all addressed; framework's current Baldwin abstraction proven structurally null vs Control (5 conditions ⇒ bit-identical genome populations, verified empirically). M4.6 will implement an abstraction with selection feedback and re-evaluate.
 
 **Reusable infrastructure shipped** (consumable by M4.6 and beyond):
+
 - Redesigned F1 evaluator (`scripts/campaigns/baldwin_f1_postpilot_eval.py`) — paired K'-train + L-eval, schema-prior baseline, append-mode CSV
 - 4-way aggregator (`scripts/campaigns/aggregate_baldwin_retry_pilot.py`) — schema-equalisation pre-flight + 3 gates + INCONCLUSIVE override
 - 8-field pilot configs (Baldwin + matching Control)

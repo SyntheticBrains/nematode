@@ -10,29 +10,32 @@
 |-----|------------------------------|
 | Baldwin | 0.7150 |
 | Control | 0.7150 |
-| **\|Δ\|** | **0.0000** (tolerance: 0.05) |
+| **Abs delta** | **0.0000** (tolerance: 0.05) |
 | **Status** | **PASS** |
 
 ### Decision Gates
 
-- **Speed gate** (mean_gen_baldwin + 2 <= mean_gen_control): FAIL
+- **Speed gate** (mean_gen_baldwin + 2 \<= mean_gen_control): FAIL
+
   - Baldwin mean gen-to-0.92: 6.38
   - Control mean gen-to-0.92: 6.38
   - Margin: +0.00 (need >= 2)
 
 - **F1 learning-acceleration gate** (mean elite - mean baseline > 0.05, K' = 25): PASS
-  - Baldwin elite mean (K'=25, L=25):    0.110
+
+  - Baldwin elite mean (K'=25, L=25): 0.110
   - Schema-prior baseline mean (K'=25, L=25): 0.000
   - Signal delta mean: +0.110 (need > 0.05)
 
-- **Comparative gate** (mean_gen_baldwin <= mean_gen_lamarckian + 4): PASS
+- **Comparative gate** (mean_gen_baldwin \<= mean_gen_lamarckian + 4): PASS
+
   - Baldwin mean gen-to-0.92: 6.38
   - Lamarckian mean gen-to-0.92: 2.75
   - Margin: +0.38 (need >= 0)
 
 **Decision**: STOP ❌
 
-The speed gate failed: Baldwin does not accelerate convergence over the from-scratch control by the required margin.  Per the pre-registered STOP semantic (Decision 6): the Baldwin Effect is NOT exhibited on this testbed.  M5 (co-evolution) proceeds without Baldwin in its substrate; M6 (transgenerational memory) uses Lamarckian.  No further Baldwin pilot in this Phase.
+The speed gate failed: Baldwin does not accelerate convergence over the from-scratch control by the required margin. Per the pre-registered STOP semantic (Decision 6): the Baldwin Effect is NOT exhibited on this testbed. M5 (co-evolution) proceeds without Baldwin in its substrate; M6 (transgenerational memory) uses Lamarckian. No further Baldwin pilot in this Phase.
 
 ### Per-seed convergence speed (generations to first reach best_fitness >= 0.92) + F1 learning-acceleration
 
