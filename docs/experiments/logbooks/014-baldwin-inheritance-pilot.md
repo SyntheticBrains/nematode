@@ -1,14 +1,14 @@
 # 014: Baldwin Inheritance — M4 (LSTMPPO + klinotaxis + pursuit predators, TPE)
 
-**Status**: `complete` — M4 **STOP ❌**. Speed gate FAIL (Baldwin = control mean 8.50, margin +0.00 vs need ≥2); Genetic-assimilation gate FAIL (F1 innate-only mean 0.000, baseline 0.170, margin -0.17 vs need ≥+0.10); Comparative gate trivially PASS. Baldwin Effect does not manifest as evolutionary acceleration on this codebase + arm. M5 (Co-evolution) is unblocked independently (its dependency is M0 + M1, not M4); M6 (transgenerational memory) needs an alternative substrate since Baldwin's hyperparameter genome alone produces zero useful priors here.
+**Status**: `complete (framework shipped) — INCONCLUSIVE ⚠️ on the science`. The framework changes (kind() Protocol method, BaldwinInheritance strategy, two-guard loop split, weight_init_scale brain field, --early-stop-on-saturation flag) are validated and shipped. The 3-arm pilot ran cleanly and Lamarckian rerun reproduces M3 exactly. **However, a post-pilot audit found three design flaws that prevent the data from definitively answering "does Baldwin work on this codebase + arm?".** The literal aggregator verdict is STOP (Speed gate FAIL margin +0.00, Genetic-assimilation gate FAIL margin -0.17, Comparative gate PASS), but the gates were calibrated against confounded comparisons. See § Audit and § Decision below. M4.5 (the proper Baldwin re-evaluation) is recorded as the follow-up.
 
 **Branch**: `feat/m4-baldwin-evolution` (PR pending)
 
 **Date Started**: 2026-05-03
 
-**Date Last Updated**: 2026-05-03 — M4 closed STOP. Baldwin's mean gen-to-0.92 (8.50) exactly matches control's (8.50); F1 innate-only is at floor (0.0 across all 4 seeds). Lamarckian rerun reproduces M3 exactly (mean 4.50). The negative result is published: see § Decision and § Conclusions.
+**Date Last Updated**: 2026-05-03 — M4 closed INCONCLUSIVE after post-pilot audit. Verdict text below preserves the literal aggregator output for traceability + adds the audit findings + a redesigned M4.5 plan. Lamarckian rerun reproduces M3 exactly (mean 4.50, all 4 seeds at 1.00) — confirms the framework changes are byte-equivalent for the M3 path.
 
-This logbook covers Phase 5 M4 in a single PR: framework, pilot, two re-run controls (M3 lamarckian + M3 from-scratch on the M4 code revision), F1 innate-only post-pilot evaluation, and the **STOP** verdict. The headline finding is **the Baldwin Effect does not manifest as evolutionary acceleration on this codebase + arm: TPE-evolved learnability hyperparameters (including the new `weight_init_scale` and `entropy_decay_episodes` knobs) produce convergence speed identical to a 4-field schema without those knobs, AND the elite hyperparameter genome alone (without the K=50 train phase) produces zero successful episodes — no genetic assimilation observed.**
+This logbook covers Phase 5 M4 in a single PR: framework, pilot, two re-run controls (M3 lamarckian + M3 from-scratch on the M4 code revision), F1 innate-only post-pilot evaluation, the literal aggregator output, and the **post-pilot audit that demoted the verdict from STOP to INCONCLUSIVE**. The headline finding is **the framework works correctly (Lamarckian rerun reproduces M3 exactly), but the M4 experimental design has three confounders — schema-shift between Baldwin and Control, a biologically incoherent F1 test, and an apples-to-oranges F1-vs-baseline comparison — that prevent a clean answer about whether Baldwin Effect manifests on this codebase. M4.5 (a follow-up PR) will redesign the comparison.**
 
 ## Objective
 
@@ -135,9 +135,9 @@ Lamarckian rerun reproduces M3's published numbers exactly: all 4 seeds reach 1.
 
 ## Analysis
 
-### The two new evolvable knobs were genuinely tested but didn't help
+### The two new evolvable knobs were genuinely tested
 
-A central concern from design Risk 1 was that TPE might converge on `weight_init_scale ≈ 1.0` and `entropy_decay_episodes ≈ 500` (the brain defaults), making the new fields uninformative and explaining a speed-gate failure as "field never tested" rather than "field tested and found ineffective". The data rules this out:
+A central concern from design Risk 1 was that TPE might converge on `weight_init_scale ≈ 1.0` and `entropy_decay_episodes ≈ 500` (the brain defaults), making the new fields uninformative. The data rules this out:
 
 | Seed | weight_init_scale | entropy_decay_episodes |
 |---|---|---|
@@ -147,44 +147,118 @@ A central concern from design Risk 1 was that TPE might converge on `weight_init
 | 45 | 0.57 | 1562 |
 | (default) | 1.00 | 500 |
 
-TPE explored the schema range for both fields. `weight_init_scale` evolved values across [0.57, 1.33] — substantially off the 1.0 default; seed 45's 0.57 is at the schema's lower edge [0.5, 2.0]. `entropy_decay_episodes` consistently evolved upward (1022-1562 across all seeds vs the 500 default), suggesting TPE wants slower entropy decay than M3's brain default. So the speed-gate FAIL is a real result: TPE found non-default values for these knobs, and those values produce convergence speed identical to the M3 control's 4-field schema. The two new knobs offer no exploitable signal on this arm.
+TPE explored the schema range for both fields. `weight_init_scale` evolved values across [0.57, 1.33] — substantially off the 1.0 default. `entropy_decay_episodes` consistently evolved upward (1022-1562 across all seeds vs the 500 default), suggesting TPE wants slower entropy decay than M3's brain default. So Risk 1 is empirically falsified: the new fields ARE being explored. Whether they help is a separate question that the M4 design (per § Audit below) doesn't actually answer.
 
-### F1 innate-only is at floor
+### Lamarckian rerun reproduces M3 exactly
 
-All 4 Baldwin seeds produced exactly 0 successful episodes when their elite hyperparameter genome was instantiated and evaluated with K=0 (no training). The hand-tuned baseline produces ~17% — meaning the Baldwin elite genome alone is *worse* than hand-tuning, not better. This is the textbook NEGATIVE Baldwin signal: the genome encodes hyperparameter values that are good when COMBINED with K=50 training, but the genome alone (without training) produces no useful behaviour. There is no genetic assimilation here — the hyperparameter genome is just a learning-rate-and-friends specification, not a behavioural prior.
+M3 published: lamarckian gen-to-0.92 per seed = [3, 4, 4, 7], mean 4.50, all 4 seeds reach 1.00 final. M4 lamarckian rerun (same config, same seeds, M4 code revision): **identical** numbers. This confirms the M4 framework changes (kind() Protocol method, two-guard loop split, early-stop monitor, weight_init_scale brain field default 1.0) are byte-equivalent for the M3 lamarckian path — no regression. The framework work is solid.
 
-The 0.0 vs 0.17 baseline gap is interesting in the other direction too: random-init brains under TPE-evolved hyperparams perform WORSE than random-init brains under hand-tuned hyperparams. Plausible explanation: TPE's evolved hyperparams are finely tuned to interact with the K=50 train phase's dynamics; without that training, the random-init policy's initial action distribution (driven partly by the evolved `entropy_coef` and `weight_init_scale`) is a poor explore-vs-exploit balance for frozen-eval.
+### What the literal aggregator said vs what the data actually proves
 
-### Lamarckian's seed-42 rescue replicated; Baldwin did NOT rescue seed 42
+The aggregator's gates fired FAIL/FAIL/PASS on Baldwin vs control vs Lamarckian. Taken at face value, that's a STOP verdict. But the post-pilot audit (§ Audit below) found three design flaws that mean **the gates were comparing confounded populations**. The literal STOP verdict is preserved here for traceability, but the science it claims to settle is actually unsettled.
 
-M3's headline anecdote was Lamarckian rescuing seed 42 (control saturated at 0.88, lamarckian reached 1.00). The M4 reruns reproduce this exactly: Lamarckian seed 42 reaches 1.00 at gen 7; M4-control seed 42 saturates at 0.84. Baldwin seed 42 also fails to rescue — saturating at 0.88 (same as M3 control's seed 42). So the rescue mechanism is specifically the **trained-weight transfer**, not the elite-ID information flow that Baldwin replicates.
+## Audit
 
-This isolates the source of M3's speed lift: the +5.25 gen acceleration M3 reported was *causally driven by the bit-exact transfer of trained weights*, not by any TPE-posterior effect downstream of "the prior gen had a winner". When the trait-only signal (Baldwin) replicates the elite-ID flow without the weights, the speed lift evaporates entirely.
+After the pilot completed and the literal STOP verdict was drafted, a fresh-eyes audit of the design + execution + data found three issues that any one of which would invalidate the verdict. All three together mean the M4 pilot did not measure what the gates claimed to measure. Verdict downgraded from STOP to **INCONCLUSIVE** as a result.
 
-### Schema confounder ruled out
+### Audit finding A1 (BLOCKING): Schema-shift confounder — Baldwin and Control gen-0 are not comparable
 
-The Baldwin schema (6 fields) is a strict superset of the control schema (4 fields). If the speed-gate failure were caused by the M4 control rerun underperforming the M3 control (e.g. because of the kind() Protocol refactor or the early-stop flag), Baldwin might still look fast in absolute terms. The M4 control rerun produces mean gen-to-0.92 of 8.50, vs M3's published 9.75 — slightly faster, plausibly explained by the early-stop flag preventing seeds 43/44 from accumulating the late-gen flat plateau that pulled M3's published mean up. So the M4 control is, if anything, a stronger comparison than M3's, not a weaker one — strengthening the Baldwin-vs-control finding.
+Baldwin evolves a **6-field** schema (M3 control's 4 + `weight_init_scale` + `entropy_decay_episodes`); the Control rerun evolves a **4-field** schema. With the same `--seed 42`, TPE samples completely different parameter vectors at gen-0. Result: **Baldwin's gen-0 starting populations are systematically weaker than Control's**:
+
+| Seed | Baldwin gen-0 best | Control gen-0 best | Delta |
+|---|---|---|---|
+| 42 | 0.84 | 0.84 | 0.00 (coincidence) |
+| 43 | 0.12 | 0.56 | **-0.44** |
+| 44 | 0.56 | 0.64 | -0.08 |
+| 45 | 0.80 | 0.84 | -0.04 |
+| **mean** | **0.580** | **0.720** | **-0.140** |
+
+Baldwin starts in a worse position before any inheritance signal can fire. The Speed gate "FAIL with margin +0.00" might actually mean Baldwin OVERCAME a -0.14pp starting deficit just to match Control. Without controlling for starting position, we cannot attribute the speed-gate result to Baldwin's mechanism vs the schema's TPE-sampling distribution.
+
+The spec scenario "First generation runs from-scratch under any inheritance strategy" claims gen-0 is bit-equivalent across arms, **but only when schemas match**. The M4 pilot violates that precondition.
+
+### Audit finding A2 (BLOCKING): F1 innate-only test is biologically incoherent for Baldwin
+
+The Baldwin Effect doesn't predict the genome alone (without learning) produces useful behaviour. It predicts the genome encodes priors that **accelerate learning** from random init. The right F1 test is something like:
+
+- Take elite genome → instantiate brain → train K' = 10 episodes → measure success rate
+- Compare to: random/baseline genome → instantiate brain → train K' = 10 episodes → measure success rate
+- Baldwin signal is "elite genome learns faster"
+
+What the F1 test as designed actually measured:
+
+- Take elite genome → instantiate brain → **0 episodes** (frozen-eval) → measure success rate
+- Random LSTM weights with no learning → 0% success (predictable; LSTMs with random weights can't navigate a 1000-step task with predators)
+
+Of course F1 = 0.0 across all 4 seeds — random LSTM policies can't solve this task with any hyperparameter setting. The test was rigged to fail by design. It measures "do random weights succeed at the task" (answer: no, regardless of hyperparams), not genetic assimilation.
+
+### Audit finding A3 (BLOCKING): F1 baseline comparison is apples-to-oranges
+
+The "baseline mean 0.170" comes from `scripts/run_simulation.py --runs 100` — this **trains** the brain over 100 episodes with hand-tuned hyperparams and reports the average success rate over those 100 episodes (early failures + late successes after learning).
+
+Comparing F1 (0 episodes, no learning) vs baseline (100 training episodes) compares fundamentally different things:
+
+- Baseline includes learning → can be > 0.
+- F1 excludes learning → bounded near 0 regardless of hyperparam choice.
+
+Even if Baldwin's elite hyperparams were perfectly tuned, F1 ≈ 0.0 was the only possible outcome. The +0.10pp gate threshold was meaningless given the test design.
+
+Compounding A3: the baseline's brain config has 5 sensory modules including STAM; the Baldwin pilot's brain has 4 modules without STAM. So the F1 vs baseline comparison is also unequal in input dimensionality. (This is an existing M3 confounder, not new in M4.)
+
+### Audit finding A4 (significant): n=4 seeds is statistically underpowered
+
+Excluding seed 42 (which never reached 0.92 in either Baldwin or Control):
+
+- Baldwin: [8, 7, 3] mean 6.0, sd 2.6
+- Control: [5, 5, 8] mean 6.0, sd 1.7
+
+Same mean but high variance. With n=3 effective seeds and the speed-gate's ±2 generation threshold being roughly 1 sigma, a t-test would have p ≈ 1.0. We can't statistically distinguish ±3 gens at this sample size. The conclusion "Baldwin = control" is more honestly "we don't have enough seeds to tell".
+
+### Audit finding A5 (significant): The chosen innate-bias knobs may not be optimal for K=50
+
+`weight_init_scale ∈ [0.5, 2.0]`: affects only initial weights. After K=50 PPO updates, the initial scale's effect is largely washed out by gradient descent. Not a great innate-bias knob for a 50-episode train phase.
+
+`entropy_decay_episodes ∈ [200, 2000]`: controls when entropy decays from start to end values. Within a K=50 train phase, only the early portion of any 200-2000 ep schedule fires. So the field's effective contribution over 50 episodes is "entropy stays near the start value for most of training" regardless of decay length.
+
+Better innate-bias knobs (for an M4.5 retry) would be (a) brain architecture fields (`actor_hidden_dim`, `actor_num_layers`) — Baldwin's Decision 3 explicitly permits arch-changing schemas; (b) explicit `entropy_coef_start` to let TPE balance early exploration; (c) `value_loss_coef`.
+
+### What we DID prove
+
+1. **The framework works correctly.** Baldwin path runs; lineage tracks correctly; no `inheritance/` directory; kind()-gated two-guard split is sound.
+2. **Lamarckian rerun reproduces M3 exactly.** Real and meaningful: framework changes don't regress M3's verified behaviour.
+3. **TPE explores the new schema fields.** Risk 1 (canary for "field never tested") was correctly canaried and falsified.
+
+### What we did NOT properly evaluate
+
+1. Whether Baldwin produces a meaningful learning-speed prior (F1 design failure A2).
+2. Whether the schema confounder (A1) explains the speed-gate FAIL.
+3. Whether n=4 seeds (A4) gives statistical power for ±2 gen detection.
+4. Whether different innate-bias knobs (A5) would have shown signal.
 
 ## Decision
 
-**STOP ❌.** Baldwin inheritance, as implemented (trait-only — elite-ID lineage flow, no weight transfer), does NOT accelerate evolutionary convergence on the M3 predator arm. The two new evolvable knobs (`weight_init_scale`, `entropy_decay_episodes`) were genuinely explored by TPE but produce no exploitable signal beyond the M3 control's 4-field schema. The elite genome alone (F1 innate-only with K=0) produces zero successful episodes — no genetic assimilation observed.
+**INCONCLUSIVE ⚠️.** The framework is shipped. The literal aggregator verdict was STOP, but the post-pilot audit identified three blocking design flaws (schema-shift confounder, biologically incoherent F1 test, apples-to-oranges F1 baseline) that mean the gates compared confounded populations rather than the Baldwin mechanism vs no-Baldwin. We can't claim "Baldwin doesn't work on this codebase" from this data — only "the M4 design as built doesn't show signal".
 
-The negative result is itself informative: M3's Lamarckian acceleration (+5.25 gens) is causally driven by the bit-exact transfer of trained weights, not by any optimiser-posterior side-effect of the elite-ID lineage flow that Baldwin replicates. M3's speed lift requires the actual trained policy, not just the genome that produced it.
+The framework changes (kind() Protocol method, BaldwinInheritance, two-guard split, weight_init_scale brain field, --early-stop-on-saturation flag) are clean, validated additions and are shipped in this PR. The Baldwin science question is deferred to **M4.5** (a follow-up PR with a redesigned comparison).
 
 ## Conclusions
 
-1. **The Baldwin Effect does not manifest on this codebase + arm.** Speed gate FAIL with Baldwin and control producing identical mean gen-to-0.92 (8.50). The richer 6-field hyperparameter schema offers no acceleration over the M3 control's 4-field schema, even though TPE genuinely explored the new fields' bounds.
-2. **Genetic assimilation is not observed.** The elite hyperparameter genome alone, evaluated with K=0 frozen-eval, produces 0 successful episodes — *worse* than the hand-tuned baseline's 17%. Whatever the TPE-evolved hyperparams are doing, they don't encode behavioural priors that work without the K=50 train phase.
-3. **M3's Lamarckian acceleration is causally weight-transfer, not lineage-flow.** Baldwin replicates M3's elite-ID lineage flow without the weight transfer; the speed lift evaporates entirely. This isolates the source of M3's +5.25 gen finding to the bit-exact trained-weight propagation.
-4. **The Lamarckian rerun reproduces M3 exactly.** All 4 lamarckian seeds reach 1.00 with mean gen-to-0.92 of 4.50, matching M3's published numbers. Confirms the M4 code revision (kind() Protocol + early-stop monitor + weight_init_scale brain field) is byte-equivalent for the M3 lamarckian path — no regression introduced.
-5. **The framework changes are still useful.** The kind()-based two-guard split, the BaldwinInheritance strategy, the early-stop flag, and the weight_init_scale brain field are all clean, validated additions to the framework. They're the substrate any future trait-flow strategy (M5 co-evolution, M6 transgenerational memory) will plug into. Baldwin's STOP doesn't block their reuse — it just informs the framing of M5 and M6.
+1. **The framework changes are correct and worth shipping.** Lamarckian rerun reproduces M3 exactly; Baldwin path runs cleanly; all 162 evolution tests pass. The kind() Protocol extension, two-guard loop split, BaldwinInheritance strategy, weight_init_scale brain field, and early-stop flag are validated substrate for future trait-flow strategies (M5/M6) and any M4.5 retry.
+2. **The Baldwin science is unsettled.** The literal STOP verdict was based on three confounded comparisons — Baldwin's 6-field schema starts in worse positions than Control's 4-field schema (audit A1); the F1 test as designed couldn't detect learning-acceleration (A2); the F1 baseline comparison was apples-to-oranges training-vs-frozen-eval (A3). We cannot conclude Baldwin doesn't work; we can only conclude this design didn't measure what we intended.
+3. **TPE explores the new innate-bias knobs.** Risk 1 falsified — `weight_init_scale` and `entropy_decay_episodes` were sampled across the schema range, not stuck at defaults. So if/when a redesigned M4.5 reruns, the schema knobs are at least active; whether they produce a learning-acceleration signal under a properly designed F1 test is the open question.
+4. **n=4 seeds is too few.** With per-seed gen-to-092 standard deviation around ±2 generations, the speed-gate's ±2 threshold is roughly 1 sigma — not statistically meaningful. M4.5 should run ≥8 seeds.
 
 ## Next Steps
 
-- **M5 (Co-evolution arms race)** is **unblocked**. M5's dependencies are M0 + M1 (per the Phase 5 tracker), neither of which depends on M4's outcome. The framework's evolution loop, hyperparam encoder, and lineage tracking are reused unchanged.
-- **M6 (transgenerational memory)** needs to be re-evaluated. The original framing assumed Baldwin's success would prove that the genome encodes inheritable priors; with M4 STOP, that path is closed. M6 should be re-scoped to use **Lamarckian** as its substrate (or a new mechanism like direct brain-state transfer) since M3 proved that the trained-weight pathway DOES propagate useful behaviour. The "transgenerational memory" framing makes more sense with weight transfer than with hyperparameter-only.
-- **Future PR** (low-priority): consider whether to add a "dynamic Baldwin" variant where the K-train budget itself is evolvable (per-genome K from a schema entry). Current Baldwin holds K=50 fixed; a richer Baldwin might evolve K to test whether shorter or longer training amortises better against the saturation gate. Out of scope for M4.
-- **Future PR** (cleanup): the F1 evaluator script (`scripts/campaigns/baldwin_f1_postpilot_eval.py`) is generic — it can re-evaluate any pilot's elite genome with K=0. Could be promoted to a general-purpose `evolution_postpilot_frozen_eval.py` if other arms want F1 metrics. Out of scope for M4 (the script is named for its specific use case but is not Baldwin-coupled).
+- **M4.5 (Baldwin retry, follow-up PR)** is the proper Baldwin re-evaluation. Scope:
+  1. **Equalise schemas.** Run a 6-field control alongside the Baldwin pilot (matching schemas → identical TPE prior at gen 0 → same starting populations across arms). This eliminates audit finding A1.
+  2. **Redesign F1 to test learning-speed.** Replace the K=0 frozen-eval pass with a "K=10 with elite genome vs K=10 with random/baseline genome" comparison — the textbook Baldwin signature. This eliminates audit finding A2 + A3.
+  3. **Increase n to ≥8 seeds.** Standard error on per-seed gen-to-092 ≈ ±2 across 4 seeds; doubling n halves the sd → enough power to detect a ±2 gen difference. This eliminates audit finding A4.
+  4. **Reconsider innate-bias knobs.** Baldwin's design Decision 3 explicitly permits arch-changing schema fields (`actor_hidden_dim`, `actor_num_layers`). M4.5 should try those instead of (or alongside) `weight_init_scale` and `entropy_decay_episodes`. This addresses audit finding A5.
+  5. **Calibrate gates against the M4 reruns**, not the M3 published numbers. M4 control = 8.50, not 9.75.
+- **M5 (Co-evolution arms race)** is **unblocked independently**. M5's dependencies are M0 + M1 (per the Phase 5 tracker), neither of which depends on M4's outcome. The framework's evolution loop, hyperparam encoder, lineage tracking, and the new kind()-based Protocol substrate are reused unchanged. M5 can proceed in parallel with M4.5.
+- **M6 (transgenerational memory)** is **deferred until M4.5 settles the Baldwin question**. If M4.5 produces a clean GO, M6 can use Baldwin as a substrate. If M4.5 confirms STOP, M6 needs Lamarckian (or a new mechanism). Don't pick the M6 substrate on M4's INCONCLUSIVE data.
+- **The framework deliverables** (kind() Protocol method + BaldwinInheritance + two-guard split + weight_init_scale + --early-stop-on-saturation + the F1 evaluator script + the 4-way aggregator) ship as-is in this PR. The OpenSpec change (`add-baldwin-evolution`) is **NOT archived**: it stays open as the substrate for M4.5 and as the historical record of the audit findings + redesign plan.
 
 ## Data References
 

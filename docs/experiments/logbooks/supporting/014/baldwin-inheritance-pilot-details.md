@@ -2,9 +2,12 @@
 
 Detail-level data and discussion for the M4 logbook. The main logbook
 (`docs/experiments/logbooks/014-baldwin-inheritance-pilot.md`) contains
-the headline findings and the **STOP** verdict; this file contains
-per-seed tables, the evolved-hyperparameter distributions, the F1
-innate-only forensic discussion, and the wall-time breakdown.
+the headline findings and the **INCONCLUSIVE** verdict (with the
+literal aggregator STOP output preserved for traceability); this file
+contains per-seed tables, the evolved-hyperparameter distributions,
+the F1 innate-only forensic discussion (now framed as audit evidence),
+the wall-time breakdown, and the gen-0 schema-shift confounder
+analysis that drove the verdict downgrade.
 
 ## Per-seed final-fitness tables
 
@@ -107,13 +110,86 @@ Per-seed wall-time variance under parallel contention was significant:
 
 `early_stop_on_saturation: 5` saved roughly half the per-seed wall on saturating arms; without it, every seed would have run the full 20 generations.
 
-## Schema confounder check
+## Schema-shift confounder (audit finding A1)
 
-The Baldwin pilot evolves 6 fields; the M3 control's 4. Did the speed-gate FAIL because the new evolvable knobs didn't help, or because the control's 4-field schema was "missing" critical degrees of freedom that Baldwin's extra fields couldn't compensate for?
+The Baldwin pilot evolves a 6-field schema; the Control rerun evolves a 4-field schema. With the same `--seed 42`, TPE samples completely different parameter vectors at gen-0 because the schema dimensions differ. Result: **Baldwin's gen-0 starting populations are systematically weaker than Control's**, before any Baldwin-vs-no-Baldwin signal can fire.
 
-Cross-check on the 4 retained fields (actor_lr, critic_lr, gamma, entropy_coef): Baldwin's evolved values for those 4 fields are broadly comparable to M3's published lamarckian-arm + control-arm evolved values. The two new fields (`weight_init_scale`, `entropy_decay_episodes`) added exploration room but didn't change the speed metric.
+Per-arm gen-0 best fitness across the 4 seeds:
 
-So the answer is "the new knobs didn't help" — not "the schema was inappropriate". The Baldwin signal is genuinely absent on this arm, given this fitness landscape and this K=50 budget.
+| Seed | Baldwin gen-0 best | Lamarckian gen-0 best | Control gen-0 best | Baldwin - Control delta |
+|---|---|---|---|---|
+| 42 | 0.84 | 0.84 | 0.84 | 0.00 (coincidence — same set of fitnesses, different IDs hold the 0.84) |
+| 43 | 0.12 | 0.56 | 0.56 | **-0.44** |
+| 44 | 0.56 | 0.64 | 0.64 | **-0.08** |
+| 45 | 0.80 | 0.84 | 0.84 | **-0.04** |
+| **mean** | **0.580** | **0.720** | **0.720** | **-0.140** |
+
+The Lamarckian and Control reruns produce identical gen-0 statistics across all seeds (both use the M3 4-field schema → identical TPE samples under same seed). Baldwin's 6-field schema produces different samples → systematically weaker initial populations.
+
+Implication for the Speed-gate verdict (Baldwin = control mean 8.50, margin +0.00):
+
+- Baldwin started from gen-0 mean 0.58, Control from 0.72 (-0.14pp deficit on average).
+- Baldwin matched Control's mean gen-to-0.92 despite that deficit.
+- We can't tell whether Baldwin's mechanism is (a) doing nothing useful, or (b) producing acceleration that's exactly cancelled by the worse starting position.
+
+The literal aggregator output called this STOP. The audit downgrades it to INCONCLUSIVE: we did not measure what the Speed gate claimed to measure.
+
+For M4.5, the fix is to run a 6-field control alongside the 6-field Baldwin pilot — same schema, same TPE prior, same gen-0 sampling distribution → directly comparable.
+
+## F1 innate-only test design failure (audit findings A2 + A3)
+
+The F1 innate-only test as implemented:
+
+- Take Baldwin elite genome → instantiate brain at the elite hyperparameters → random-init weights → run L=25 frozen-eval episodes (NO learning).
+- Result: 0/25 successes across all 4 seeds.
+
+What the Baldwin Effect actually predicts:
+
+- The genome encodes a prior that **accelerates learning** (not eliminates it).
+- The right F1 test: "elite genome + K' training episodes" vs "baseline genome + K' training episodes" → does the elite learn faster?
+
+What the gate compared:
+
+- F1 score (0.0): random LSTM weights with no learning, on a 1000-step navigation task with predators. Random LSTM action policies fail this task uniformly regardless of hyperparams.
+- Baseline (0.17): hand-tuned hyperparams + 100 *training* episodes. Includes learning.
+
+So the comparison was apples-to-oranges:
+
+- F1 = 0 episodes of learning → bounded near 0 by definition.
+- Baseline = 100 episodes of learning → can be > 0.
+
+The +0.10pp threshold could never have been crossed. Even an oracle Baldwin genome would have produced F1 ≈ 0 because the test wasn't measuring learning at all.
+
+Compounding: the baseline brain config has 5 sensory modules (including STAM); the Baldwin pilot brain has 4 (no STAM). So even a properly designed F1 test would face this input-dimensionality confounder. (Inherited from M3 — not new in M4.)
+
+For M4.5, the fix is to redesign F1 as a learning-acceleration test: per-seed elite genome runs K=10 training episodes from random init; baseline genome (a synthetic "neutral hyperparameters" genome — perhaps the brain config defaults) does the same; compare K=10 success rates.
+
+## Sample-size limitation (audit finding A4)
+
+n=4 seeds is too few to distinguish ±2 generations on the speed gate.
+
+Excluding seed 42 (which never reached 0.92 in either Baldwin or Control):
+
+- Baldwin: [8, 7, 3] → mean 6.0, sample sd 2.6
+- Control: [5, 5, 8] → mean 6.0, sample sd 1.7
+
+Standard error of the mean ≈ sd / sqrt(n=3) ≈ 1.5 generations. The Speed gate's ±2 threshold is roughly 1 sigma — not statistically meaningful with n=3 effective seeds. A two-sample t-test would have p ≈ 1.0.
+
+For M4.5, n ≥ 8 seeds halves the standard error → roughly 2-sigma sensitivity for the same ±2 threshold.
+
+## Innate-bias-knob choice (audit finding A5)
+
+`weight_init_scale ∈ [0.5, 2.0]` and `entropy_decay_episodes ∈ [200, 2000]` may not be the best Baldwin-signal knobs for a K=50 budget:
+
+- `weight_init_scale` affects only initial weights. After K=50 PPO updates the gradient flow largely washes out the initial scale (especially at the actor's small-init output layer which is preserved at gain=0.01 unchanged). Effective contribution to "innate behaviour after K=50" is small.
+- `entropy_decay_episodes ∈ [200, 2000]` controls when entropy decays from 0.02 to 0.005. Within K=50, only the early portion of any 200-2000 ep schedule fires → entropy stays roughly at the start value regardless of decay length.
+
+For M4.5, candidate knobs that have larger effects within K=50:
+
+- Architecture fields (`actor_hidden_dim`, `actor_num_layers`) — Baldwin's design Decision 3 explicitly permits arch-changing schemas (validator's arch-changing-fields rejection applies only to Lamarckian).
+- `entropy_coef_start` (the start value, not just the decay schedule).
+- `value_loss_coef`.
+- `lr_warmup_episodes` (already in brain config; default 50 = exactly the K phase length).
 
 ## Cross-arm code-revision check
 

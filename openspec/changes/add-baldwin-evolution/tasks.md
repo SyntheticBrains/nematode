@@ -98,7 +98,17 @@
 
 ## 15. PR + archive
 
-- [ ] 15.1 Run `uv run pre-commit run -a` clean.
-- [ ] 15.2 Run `uv run pytest -m "not nightly" --tb=short -q` clean (M3 tests must pass unchanged).
-- [ ] 15.3 Open draft PR via `gh pr create --draft`. Title: "feat(m4): Baldwin Effect inheritance pilot + early-stop + weight_init_scale". Body summarises the verdict, the three gates' outcomes, and links logbook 014.
-- [ ] 15.4 After review approval, archive the OpenSpec change via the `openspec-archive-change` skill: syncs the spec delta into `openspec/specs/evolution-framework/spec.md` and moves `openspec/changes/add-baldwin-evolution/` to `openspec/changes/archive/YYYY-MM-DD-add-baldwin-evolution/`.
+- [x] 15.1 Ran `uv run pre-commit run` on the changed files clean.
+- [x] 15.2 Ran `uv run pytest -m "not nightly" --tb=short -q` clean — 2333 tests pass (28 new tests added across the M4 framework groups; M3 paths byte-equivalent).
+- [ ] 15.3 Open draft PR via `gh pr create --draft`. Title: "feat(m4): Baldwin Effect framework + INCONCLUSIVE pilot + audit". Body summarises the framework deliverables, the literal aggregator output, the post-pilot audit findings (A1-A5), and the M4.5 follow-up plan. Links logbook 014. Awaiting user approval to push branch + open the PR.
+- [ ] 15.4 ~~After review approval, archive the OpenSpec change via the `openspec-archive-change` skill~~ — **DEFERRED**. Per the post-pilot audit (M4 task 10) and the user's call to ship M4 as INCONCLUSIVE rather than STOP, the OpenSpec change `add-baldwin-evolution` is NOT archived in this PR. It stays open as the substrate for M4.5 (the proper Baldwin re-evaluation with matched 6-field schemas, learning-acceleration F1 test, n≥8 seeds, possibly architecture-changing innate-bias knobs) and as the historical record of the audit findings + redesign plan. M4.5 may either branch from this change (extend with an "M4.5 follow-up" task group) or open a sibling change `add-baldwin-evolution-v2` once its scope is settled.
+
+## 16. Post-pilot audit + INCONCLUSIVE downgrade (added in this PR)
+
+- [x] 16.1 Conducted post-pilot audit on the literal STOP verdict from the aggregator. Found three blocking design flaws (A1: schema-shift confounder; A2: F1 test biologically incoherent; A3: F1 baseline apples-to-oranges) plus two significant issues (A4: n=4 seeds underpowered; A5: chosen knobs may not be optimal for K=50).
+- [x] 16.2 Updated logbook 014 (`docs/experiments/logbooks/014-baldwin-inheritance-pilot.md`) to reflect the INCONCLUSIVE verdict: replaced the Decision/Conclusions/Next Steps sections with audit-grounded text; preserved the literal aggregator STOP output for traceability; added § Audit section with the five findings; added M4.5 follow-up plan to § Next Steps.
+- [x] 16.3 Updated supporting appendix (`docs/experiments/logbooks/supporting/014/baldwin-inheritance-pilot-details.md`) with the schema-shift evidence (per-arm gen-0 best-fitness table showing Baldwin -0.14pp deficit), the F1 design-failure analysis, the sample-size discussion, and the knob-choice rationale for M4.5.
+- [x] 16.4 Updated `docs/experiments/README.md` M4 entry from "STOP" to "completed (framework shipped) — INCONCLUSIVE on the science" with audit summary.
+- [x] 16.5 Updated `docs/roadmap.md` M4 row to "✅ framework shipped, ⚠️ INCONCLUSIVE on the science" with audit summary + M4.5 forward reference.
+- [x] 16.6 Updated tracker (`openspec/changes/2026-04-26-phase5-tracking/tasks.md`): M4 status flipped from STOP to INCONCLUSIVE with audit summary; added M4.10 task for the audit; added a new M4.5 section with 7 sub-tasks scoping the proper retry.
+- [x] 16.7 Updated this OpenSpec change's tasks (this file): M4.2/M4.3/M4.5/M4.9 task notes amended to reference the audit findings; task 15.4 changed to DEFERRED (not archiving the change in this PR).
