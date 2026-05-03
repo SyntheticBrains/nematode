@@ -194,6 +194,38 @@ def test_early_stop_counter_resets_on_strict_improvement(tmp_path: Path) -> None
     assert len(rows) == 1 + 9 * pop
 
 
+def test_early_stop_compares_to_prev_gen_not_running_max(tmp_path: Path) -> None:
+    """Trajectory ``[0.3, 0.5, 0.4, 0.45, 0.46, 0.47, 0.48, 0.49]`` with N=3 → never fires.
+
+    The trajectory regresses from 0.5 to 0.4 at gen 3 then recovers
+    monotonically (0.45 > 0.4, 0.46 > 0.45, ...).  Under the
+    spec-correct prev-gen comparison, gens 4-8 are all strict
+    improvements over the immediately-prior generation, so the counter
+    resets each time and never reaches N=3.
+
+    Under the (rejected) running-max comparison, every gen 3+ would be
+    counted as non-improving because none surpass the all-time peak of
+    0.5, and the counter would fire at gen 5.  This test pins the
+    correct semantics and would have caught the original bug.
+    """
+    pop = 4
+    trajectory = [0.3, 0.5, 0.4, 0.45, 0.46, 0.47, 0.48, 0.49]
+    fitness = ScriptedFitness(trajectory, pop)
+    loop = _make_loop(
+        tmp_path,
+        fitness=fitness,
+        generations=8,
+        population_size=pop,
+        early_stop_on_saturation=3,
+    )
+    loop.run()
+
+    # Lineage should have 8 generations x pop rows + header (no early-stop).
+    with (tmp_path / "lineage.csv").open() as handle:
+        rows = list(csv.reader(handle))
+    assert len(rows) == 1 + 8 * pop
+
+
 # ---------------------------------------------------------------------------
 # Resume preserves the counter
 # ---------------------------------------------------------------------------

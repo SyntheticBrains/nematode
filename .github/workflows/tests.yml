@@ -66,8 +66,18 @@ jobs:
           MKL_NUM_THREADS: "1"
           OPENBLAS_NUM_THREADS: "1"
           NUMEXPR_NUM_THREADS: "1"
+        # ``-n 2`` overrides pyproject's ``addopts = "-n auto"`` (xdist
+        # picks the LAST -n on the command line).  ``-n auto`` would
+        # spawn 4 xdist workers on a 4-vCPU runner; the smoke tests in
+        # ``test_smoke.py`` then ``subprocess.run(...)`` ``run_simulation.py``,
+        # forking a 5th heavy Python process under load that intermittently
+        # tipped the runner over (one in three CI runs canceled with
+        # "operation was canceled" right when ``test_run_simulation_smoke``
+        # launched, even with BLAS pinned to 1).  ``-n 2`` keeps total
+        # Python processes ≤ 4 even when a worker forks a subprocess,
+        # eliminating the contention without serialising the suite.
         run: |
-          uv run pytest -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
+          uv run pytest -n 2 -m "not nightly" --cov --cov-branch --cov-report=xml --cov-report=term -v --tb=short --color=yes
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

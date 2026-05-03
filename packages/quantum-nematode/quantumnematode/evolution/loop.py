@@ -618,16 +618,32 @@ class EvolutionLoop:
                 # Early-stop counter update.  Placed BEFORE the inheritance
                 # guards so the counter reflects the just-evaluated
                 # generation by the time the early-stop check fires at the
-                # end of the body.  ``_last_best_fitness is None`` is the
-                # gen-1 bootstrap branch: no previous to compare against,
-                # treat as an "improvement" (counter stays 0) and record
-                # the bootstrap value for gen-2's comparison.
+                # end of the body.
+                #
+                # Compare ``current_best`` against the **previous
+                # generation's** best (``prev``), not against a running
+                # maximum.  A noisy regression-then-recovery trajectory like
+                # ``[0.3, 0.5, 0.4, 0.45, 0.46]`` should reset the counter
+                # at gen 4 (0.45 > 0.4 = prev gen) instead of penalising
+                # every gen that fails to surpass the all-time peak — the
+                # spec says "strictly greater than the prior generation's"
+                # and we honour that literally.
+                #
+                # ``prev is None`` is the gen-1 bootstrap branch: no
+                # previous to compare against, treat as an "improvement"
+                # (counter stays 0).
+                #
+                # ``_last_best_fitness`` is assigned UNCONDITIONALLY at the
+                # end so the next generation's ``prev`` is the actual prior
+                # value, regardless of whether this generation improved
+                # over its prior or not.
+                prev = self._last_best_fitness
                 current_best = max(fitnesses)
-                if self._last_best_fitness is None or current_best > self._last_best_fitness:
+                if prev is None or current_best > prev:
                     self._gens_without_improvement = 0
-                    self._last_best_fitness = current_best
                 else:
                     self._gens_without_improvement += 1
+                self._last_best_fitness = current_best
 
                 # Inheritance step (two-guard split):
                 #
